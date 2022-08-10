@@ -37,7 +37,7 @@ type PackageIndexEntry = struct {
 /// A package resolution context, used when resolving package URLs relative to
 /// another package.
 type ResolutionContext = struct {
-    bytes bytes:MAX_RESOLUTION_CONTEXT_SIZE;
+    bytes vector<uint8>:MAX_RESOLUTION_CONTEXT_SIZE;
 };
 
 // TODO(fxbug.dev/100050): Change this length to something smaller once

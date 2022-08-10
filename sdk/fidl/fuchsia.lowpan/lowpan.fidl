@@ -22,7 +22,7 @@ alias PowerDbm = int8;
 ///
 /// On 802.15.4 networks, this is an EUI64.
 @available(added=9)
-alias MacAddress = bytes:8;
+alias MacAddress = vector<uint8>:8;
 
 /// Type describing the name of the network interface.
 ///

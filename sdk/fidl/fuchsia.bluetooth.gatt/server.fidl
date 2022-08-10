@@ -27,7 +27,7 @@ protocol LocalServiceDelegate {
         id uint64;
         offset int32;
     }) -> (struct {
-        value bytes:optional;
+        value vector<uint8>:<MAX, optional>;
         status ErrorCode;
     });
 
@@ -36,7 +36,7 @@ protocol LocalServiceDelegate {
     OnWriteValue(struct {
         id uint64;
         offset uint16;
-        value bytes;
+        value vector<uint8>:MAX;
     }) -> (struct {
         status ErrorCode;
     });
@@ -47,7 +47,7 @@ protocol LocalServiceDelegate {
     OnWriteWithoutResponse(struct {
         id uint64;
         offset uint16;
-        value bytes;
+        value vector<uint8>:MAX;
     });
 };
 
@@ -69,7 +69,7 @@ protocol LocalService {
     NotifyValue(struct {
         characteristic_id uint64;
         peer_id bt.PeerIdString;
-        value bytes;
+        value vector<uint8>:MAX;
         confirm bool;
     });
 };

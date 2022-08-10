@@ -124,7 +124,7 @@ type RepositoryConfig = table {
 /// The only supported algorithm at the moment is ed25519.
 type RepositoryKeyConfig = flexible union {
     /// The raw ed25519 public key as binary data.
-    1: ed25519_key bytes;
+    1: ed25519_key vector<uint8>:MAX;
 };
 
 /// Where the repository storage is written to.

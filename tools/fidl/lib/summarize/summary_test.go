@@ -316,7 +316,7 @@ library l
 library l;
 type Vectors = struct {
     params vector<int32>:10;
-    blob bytes;
+    blob vector<uint8>;
     nullable_vector_of_strings vector<string>:<24, optional>;
     vector_of_nullable_strings vector<string:optional>;
     complex vector<vector<array<float32, 16>>>;
@@ -1060,7 +1060,7 @@ type Document = struct {
 library l;
 type Vectors = struct {
     params vector<int32>:10;
-    blob bytes;
+    blob vector<uint8>;
     nullable_vector_of_strings vector<string>:<24, optional>;
     vector_of_nullable_strings vector<string:optional>;
     complex vector<vector<array<float32, 16>>>;

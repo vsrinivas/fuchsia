@@ -18,8 +18,8 @@ const ENCRYPTION_SCHEME_CENC string = "cenc";
 const ENCRYPTION_SCHEME_CBC1 string = "cbc1";
 const ENCRYPTION_SCHEME_CENS string = "cens";
 const ENCRYPTION_SCHEME_CBCS string = "cbcs";
-alias EncryptionKeyId = bytes:MAX_KEY_ID_SIZE;
-alias EncryptionInitVector = bytes:MAX_INIT_VECTOR_SIZE;
+alias EncryptionKeyId = vector<uint8>:MAX_KEY_ID_SIZE;
+alias EncryptionInitVector = vector<uint8>:MAX_INIT_VECTOR_SIZE;
 
 type EncryptionSubsampleEntry = struct {
     clear_bytes uint32;

@@ -143,7 +143,7 @@ type Vectors = struct {
     params vector<int32>:10;
 
     // a vector of bytes, no upper bound on size
-    blob bytes;
+    blob vector<uint8>;
 
     // a nullable vector of up to 24 strings
     nullable_vector_of_strings vector<string>:<24, optional>;
@@ -315,7 +315,7 @@ type Message = struct {
 // [START builtin-aliases]
 type RawBytes = struct {
     head byte;
-    rest bytes;
+    rest vector<uint8>;
 };
 // [END builtin-aliases]
 

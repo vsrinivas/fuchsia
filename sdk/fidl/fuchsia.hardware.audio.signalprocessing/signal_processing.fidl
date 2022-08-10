@@ -138,7 +138,7 @@ type ElementState = table {
 
     /// If included, an opaque object of octets for exchanging vendor specific information.
     @available(added=HEAD)
-    4: vendor_specific_data bytes:MAX_BYTES_ELEMENT_VENDOR_SPECIFIC;
+    4: vendor_specific_data vector<uint8>:MAX_BYTES_ELEMENT_VENDOR_SPECIFIC;
 };
 
 /// Edge pairs between processing elements used to define ordering in processing elements

@@ -38,7 +38,7 @@ type SnoopPacket = struct {
     /// Original length of the packet before truncation.
     original_len uint32;
     /// Payload sent over the HCI.
-    payload bytes;
+    payload vector<uint8>:MAX;
 };
 
 /// Interface to receive packets recorded as received or transmitted for a Bluetooth host.

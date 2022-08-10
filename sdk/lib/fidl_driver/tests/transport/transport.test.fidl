@@ -29,7 +29,7 @@ protocol OneWayTest {
     OneWay(struct {
         // The choice of byte vectors is intentional:
         // It gives coverage to a case which potentially uses multiple iovec entries.
-        payload bytes;
+        payload vector<uint8>;
     });
 };
 

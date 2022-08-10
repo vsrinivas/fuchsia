@@ -81,7 +81,6 @@ bool Builtin::IsInternal() const {
     case Identity::kClientEnd:
     case Identity::kServerEnd:
     case Identity::kByte:
-    case Identity::kBytes:
     case Identity::kOptional:
     case Identity::kMax:
     case Identity::kHead:
@@ -225,7 +224,6 @@ std::unique_ptr<Library> Library::CreateRootLibrary() {
   insert("client_end", Builtin::Identity::kClientEnd);
   insert("server_end", Builtin::Identity::kServerEnd);
   insert("byte", Builtin::Identity::kByte);
-  insert("bytes", Builtin::Identity::kBytes);
   insert("TransportErr", Builtin::Identity::kTransportErr);
   insert("optional", Builtin::Identity::kOptional);
   insert("MAX", Builtin::Identity::kMax);

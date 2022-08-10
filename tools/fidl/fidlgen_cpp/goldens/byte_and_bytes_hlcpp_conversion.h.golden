@@ -24,18 +24,12 @@ struct HLCPPToNaturalTraits<::test::byteandbytes::ByteAndBytes> {
 ::test::byteandbytes::ByteAndBytes NaturalToHLCPPTraits<::test_byteandbytes::ByteAndBytes>::Convert(::test_byteandbytes::ByteAndBytes&& value) {
   ::test::byteandbytes::ByteAndBytes hlcpp;
   hlcpp.single_byte = ::fidl::NaturalToHLCPP(std::move(value.single_byte()));
-  hlcpp.many_bytes = ::fidl::NaturalToHLCPP(std::move(value.many_bytes()));
-  hlcpp.only_one_k_bytes = ::fidl::NaturalToHLCPP(std::move(value.only_one_k_bytes()));
-  hlcpp.opt_only_one_k_bytes = ::fidl::NaturalToHLCPP(std::move(value.opt_only_one_k_bytes()));
   return hlcpp;
 }
 
 ::test_byteandbytes::ByteAndBytes HLCPPToNaturalTraits<::test::byteandbytes::ByteAndBytes>::Convert(::test::byteandbytes::ByteAndBytes&& value) {
   return ::test_byteandbytes::ByteAndBytes{{
       .single_byte = ::fidl::HLCPPToNatural(std::move(value.single_byte)),
-      .many_bytes = ::fidl::HLCPPToNatural(std::move(value.many_bytes)),
-      .only_one_k_bytes = ::fidl::HLCPPToNatural(std::move(value.only_one_k_bytes)),
-      .opt_only_one_k_bytes = ::fidl::HLCPPToNatural(std::move(value.opt_only_one_k_bytes)),
   }};
 }
 

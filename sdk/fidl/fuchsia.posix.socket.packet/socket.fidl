@@ -182,7 +182,7 @@ protocol Socket {
             packet_type PacketType;
             interface_type HardwareType;
         }>;
-        data bytes;
+        data vector<uint8>:MAX;
         control @generated_name("RecvControlData") table {
             /// Socket level ancillary data.
             1: socket fuchsia.posix.socket.SocketRecvControlData;
@@ -198,7 +198,7 @@ protocol Socket {
     /// + request `flags` flags for the send request.
     SendMsg(struct {
         packet_info box<PacketInfo>;
-        data bytes:MAX;
+        data vector<uint8>:MAX;
         control @generated_name("SendControlData") table {
             /// Socket level ancillary data.
             1: socket fuchsia.posix.socket.SocketSendControlData;

@@ -289,10 +289,10 @@ type TypeDecl= struct {
   v1 vector<bool>:16;
   v2 vector<bool>:optional;
   v3 vector<bool>:<16,optional>;
-  b4 bytes;
-  b5 bytes:16;
-  b6 bytes:optional;
-  b7 bytes:<16,optional>;
+  b4 vector<uint8>;
+  b5 vector<uint8>:16;
+  b6 vector<uint8>:optional;
+  b7 vector<uint8>:<16,optional>;
   s8 string;
   s9 string:16;
   s10 string:optional;

@@ -2398,7 +2398,13 @@
       },
       "partial_type_ctor": {
         "name": "vector",
-        "args": [],
+        "args": [
+          {
+            "name": "uint8",
+            "args": [],
+            "nullable": false
+          }
+        ],
         "nullable": false
       }
     },

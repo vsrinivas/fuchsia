@@ -8,13 +8,13 @@ using fuchsia.bluetooth as bt;
 @deprecated("Use ServiceData instead")
 type ServiceDataEntry = struct {
     uuid bt.UuidString;
-    data bytes;
+    data vector<uint8>:MAX;
 };
 
 @deprecated("Use ManufacturerData instead")
 type ManufacturerSpecificDataEntry = struct {
     company_id uint16;
-    data bytes;
+    data vector<uint8>:MAX;
 };
 
 /// Represents advertising and scan response data advertised by a broadcaster or peripheral.

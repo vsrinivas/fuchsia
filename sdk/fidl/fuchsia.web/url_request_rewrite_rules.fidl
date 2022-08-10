@@ -63,7 +63,7 @@ type UrlRequestRewriteAddHeaders = table {
 ///   [RFC 7230 section 3.2](https://tools.ietf.org/html/rfc7230#section-3.2).
 type UrlRequestRewriteRemoveHeader = table {
     1: query_pattern Url;
-    2: header_name bytes:MAX_HEADERS_COUNT;
+    2: header_name vector<uint8>:MAX_HEADERS_COUNT;
 };
 
 /// If `pattern` is found in the URL request query, replaces it with `substitution`.

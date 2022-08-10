@@ -8,9 +8,9 @@ using zx;
 /// A unique label for a given credential.
 alias Label = uint64;
 /// A low entropy secret key a PIN.
-alias LeSecret = bytes:1024;
+alias LeSecret = vector<uint8>:1024;
 /// A high entropy secret.
-alias HeSecret = bytes:1024;
+alias HeSecret = vector<uint8>:1024;
 
 /// Defines a single entry in the table of failed authentication attempt number
 /// to authentication delay for a given credential.

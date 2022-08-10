@@ -86,7 +86,7 @@ type DataStoreParams = resource table {
 
     /// Certificate to use for encrypting provisioning messages. This field is
     /// optional.
-    2: provision_server_certificate bytes;
+    2: provision_server_certificate vector<uint8>:MAX;
 
     /// The client endpoint of the [`ProvisioningFetcher`] to be used when this
     /// data store requires provisioning. If the DRM system requires data store

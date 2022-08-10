@@ -26,9 +26,9 @@ protocol AttestationSigner {
     /// Returns the raw bytes of the `signature` string on success. Otherwise,
     /// an error status is returned.
     SignData(struct {
-        plaintext bytes;
+        plaintext vector<uint8>:MAX;
     }) -> (struct {
         status AttestationSignerStatus;
-        signature bytes:optional;
+        signature vector<uint8>:<MAX, optional>;
     });
 };

@@ -53,11 +53,11 @@ type KeyProvider = strict enum {
 };
 
 type Signature = struct {
-    bytes bytes:512;
+    bytes vector<uint8>:512;
 };
 
 type PublicKey = struct {
-    bytes bytes:256;
+    bytes vector<uint8>:256;
 };
 
 @discoverable
@@ -110,7 +110,7 @@ protocol KeyManager {
     /// data should be in asn.1 encoded DER format. If the `key_name` is not unique, you would get
     /// `KEY_ALREADY_EXISTS`.
     ImportAsymmetricPrivateKey(resource struct {
-        data bytes;
+        data vector<uint8>:MAX;
         key_name string:MAX_KEY_NAME_SIZE;
         key_algorithm AsymmetricKeyAlgorithm;
         key server_end:AsymmetricPrivateKey;

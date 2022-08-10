@@ -72,4 +72,4 @@ const MAX_RESOLUTION_CONTEXT_LENGTH uint32 = 8192;
 /// A byte array that persists a value used by the target `Resolver` to locate
 /// and resolve a component by relative path (for example, by a subpackage
 /// name).
-alias Context = bytes:MAX_RESOLUTION_CONTEXT_LENGTH;
+alias Context = vector<uint8>:MAX_RESOLUTION_CONTEXT_LENGTH;

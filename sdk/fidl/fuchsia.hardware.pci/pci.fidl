@@ -53,7 +53,7 @@ type PciDevice = struct {
     base_addresses vector<BaseAddress>:BASE_ADDRESS_COUNT;
     capabilities vector<Capability>:MAX_CAPABILITIES;
     ext_capabilities vector<ExtendedCapability>:MAX_EXT_CAPABILITIES;
-    config bytes:BASE_CONFIG_SIZE;
+    config vector<uint8>:BASE_CONFIG_SIZE;
     bus_id uint8;
     device_id uint8;
     function_id uint8;
@@ -91,7 +91,7 @@ protocol Bus {
         offset uint64;
         size uint64;
     }) -> (struct {
-        buffer bytes;
+        buffer vector<uint8>:MAX;
     }) error zx.status;
 };
 

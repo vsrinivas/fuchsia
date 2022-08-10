@@ -254,7 +254,7 @@ protocol Primary {
     /// the commands are completed.
     ExecuteImmediateCommands(struct {
         context_id ContextId;
-        command_data bytes:MAX_IMMEDIATE_COMMANDS_DATA_SIZE;
+        command_data vector<uint8>:MAX_IMMEDIATE_COMMANDS_DATA_SIZE;
         semaphores vector<ObjectId>:MAX;
     });
 

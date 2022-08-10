@@ -20,9 +20,9 @@ protocol Iovar {
     Get(struct {
         iface_idx int32;
         cmd int32;
-        request bytes:MAX_BUFFER_SIZE;
+        request vector<uint8>:MAX_BUFFER_SIZE;
     }) -> (struct {
-        result bytes:MAX_BUFFER_SIZE;
+        result vector<uint8>:MAX_BUFFER_SIZE;
     }) error zx.status;
 
     /// + request `iface_idx` interface index in the firmware
@@ -32,6 +32,6 @@ protocol Iovar {
     Set(struct {
         iface_idx int32;
         cmd int32;
-        request bytes:MAX_BUFFER_SIZE;
+        request vector<uint8>:MAX_BUFFER_SIZE;
     }) -> (struct {}) error zx.status;
 };

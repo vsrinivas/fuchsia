@@ -10,7 +10,7 @@ type ReadValue = table {
     /// Characteristic or descriptor handle. Always present.
     1: handle Handle;
     /// The value of the characteristic or descriptor. Always present.
-    2: value bytes:MAX_VALUE_LENGTH;
+    2: value vector<uint8>:MAX_VALUE_LENGTH;
     /// True if `value` might be truncated (the buffer was completely filled
     /// by the server). `ReadCharacteristic` or `ReadDescriptor` should be used
     /// to read the complete value.
@@ -107,7 +107,7 @@ protocol RemoteService {
     /// * error Returns `FAILURE` if the server returns an error.
     WriteCharacteristic(struct {
         handle Handle;
-        value bytes:MAX_VALUE_LENGTH;
+        value vector<uint8>:MAX_VALUE_LENGTH;
         options WriteOptions;
     }) -> (struct {}) error Error;
 
@@ -148,7 +148,7 @@ protocol RemoteService {
     /// * error Returns `FAILURE` if the server returns an error.
     WriteDescriptor(struct {
         handle Handle;
-        value bytes:MAX_VALUE_LENGTH;
+        value vector<uint8>:MAX_VALUE_LENGTH;
         options WriteOptions;
     }) -> (struct {}) error Error;
 

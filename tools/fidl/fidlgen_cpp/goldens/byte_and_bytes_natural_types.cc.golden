@@ -4,8 +4,5 @@
 
 ::test_byteandbytes::ByteAndBytes::Storage_ test_byteandbytes::ByteAndBytes::CloneStorage_() const {
   return Storage_{
-      ::fidl::internal::NaturalClone(storage_.single_byte),
-      ::fidl::internal::NaturalClone(storage_.many_bytes),
-      ::fidl::internal::NaturalClone(storage_.only_one_k_bytes),
-      ::fidl::internal::NaturalClone(storage_.opt_only_one_k_bytes)};
+      ::fidl::internal::NaturalClone(storage_.single_byte)};
 }

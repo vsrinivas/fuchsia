@@ -22,7 +22,7 @@ const MAX_COUNT_TRANSACTIONS uint32 = 256;
 /// target.
 type DataTransfer = flexible union {
     1: read_size uint32;
-    2: write_data bytes:MAX_TRANSFER_SIZE;
+    2: write_data vector<uint8>:MAX_TRANSFER_SIZE;
 };
 
 /// `data_transfer` is mandatory, and specifies whether this transaction has a read or a write
@@ -36,7 +36,7 @@ type Transaction = table {
 };
 
 /// Used to return data from read transfers.
-alias ReadData = bytes:MAX_TRANSFER_SIZE;
+alias ReadData = vector<uint8>:MAX_TRANSFER_SIZE;
 
 @discoverable
 protocol Device {

@@ -6,7 +6,7 @@ library manual.conformance.large;
 /// A table with a large field [`filler`] which causes envelopes of the
 /// subsequent tables to cross over 64 KiB.
 type LargeTable = table {
-    1: filler bytes;
+    1: filler vector<uint8>;
     2: overflow table {
         1: placeholder array<uint8, 100>;
     };

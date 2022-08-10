@@ -13,7 +13,7 @@ type Compression = struct {
 
     /// Opaque ‘out-of-band’ parameters describing the compression
     /// of the stream.
-    parameters bytes:optional;
+    parameters vector<uint8>:<MAX, optional>;
 };
 
 // TODO: Use mimetypes for these?

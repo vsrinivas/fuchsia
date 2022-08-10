@@ -195,11 +195,11 @@ protocol Controller {
     ///     failures to send/receive datagrams from the target address.
     PollUdp(struct {
         target fuchsia.net.SocketAddress;
-        payload bytes:MAX_UDP_POLL_LENGTH;
+        payload vector<uint8>:MAX_UDP_POLL_LENGTH;
         timeout zx.duration;
         num_retries uint16;
     }) -> (struct {
-        payload bytes:MAX_UDP_POLL_LENGTH;
+        payload vector<uint8>:MAX_UDP_POLL_LENGTH;
     }) error Error;
 
     /// Joins a multicast group.

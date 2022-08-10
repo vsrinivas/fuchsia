@@ -54,7 +54,7 @@ type BssDescription = struct {
     capability_info CapabilityInfo;
 
     /// All info elements present in the beacon or probe response frame.
-    ies bytes;
+    ies vector<uint8>:MAX;
 
     // List up non-standard, Fuchsia only parameters
     channel fuchsia.wlan.common.WlanChannel;

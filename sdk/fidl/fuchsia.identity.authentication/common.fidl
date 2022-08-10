@@ -73,12 +73,12 @@ alias EnrollmentId = uint64;
 /// and subsequently read by the authentication mechanism that produced the
 /// enrollment. It is meaningful only to the authenticator, and opaque to its
 /// clients.
-alias EnrollmentData = bytes:ENROLLMENT_DATA_MAX_SIZE;
+alias EnrollmentData = vector<uint8>:ENROLLMENT_DATA_MAX_SIZE;
 
 /// Pseudo-random data associated with an enrollment of an authentication
 /// mechanism capable of storage unlock. It is reproduced only upon
 /// successful authentication against that enrollment.
-alias PrekeyMaterial = bytes:PREKEY_MATERIAL_MAX_SIZE;
+alias PrekeyMaterial = vector<uint8>:PREKEY_MATERIAL_MAX_SIZE;
 
 /// An authentication event is a statement which an authentication mechanism
 /// makes about the presence and/or engagement of an account owner, and thus

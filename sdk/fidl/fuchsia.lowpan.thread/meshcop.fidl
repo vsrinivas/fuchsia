@@ -68,7 +68,7 @@ protocol Meshcop {
             /// Maximum theoretical length is 253 bytes, which is two bytes less
             /// than the TXT record maximum length to account for a single-byte
             /// key and key/value separator byte.
-            value bytes:253;
+            value vector<uint8>:253;
         }>:32;
     }) -> ();
 };

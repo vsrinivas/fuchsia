@@ -13,9 +13,9 @@ type DatagramSocketRecvMsgRequest = struct {
 };
 
 type DatagramSocketRecvMsgResponse = struct {
-    addr bytes:128;
-    data bytes;
-    control bytes;
+    addr vector<uint8>:128;
+    data vector<uint8>;
+    control vector<uint8>;
     truncated uint32;
 };
 
@@ -31,9 +31,9 @@ type DatagramSocketRecvMsgResultStruct = struct {
 // The following are based on fuchsia.posix.socket.DatagramSocket.SendMsg2:
 
 type DatagramSocketSendMsg2Request = struct {
-    addr bytes:128;
-    data bytes:MAX;
-    control bytes;
+    addr vector<uint8>:128;
+    data vector<uint8>:MAX;
+    control vector<uint8>;
     flags int16;
 };
 

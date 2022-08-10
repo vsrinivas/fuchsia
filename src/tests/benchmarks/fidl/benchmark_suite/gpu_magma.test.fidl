@@ -8,6 +8,6 @@ alias koid = uint64;
 // Based on fuchsia.gpu.magma.Primary.ExecuteImmediateCommand.
 type ExecuteImmediateCommandsRequest = struct {
     context_id uint32;
-    command_data bytes:2048;
+    command_data vector<uint8>:2048;
     semaphores vector<koid>;
 };

@@ -181,7 +181,7 @@ type CreateContextParams = resource table {
 
     /// Specifies a set of header names for which [Cross-Origin Resource Sharing
     /// (CORS)](https://www.w3.org/TR/cors/) checks should not be enforced.
-   10: cors_exempt_headers vector<bytes:MAX>:MAX;
+   10: cors_exempt_headers vector<vector<uint8>:MAX>:MAX;
 
     /// Specifies the storage to use to persistent content licensing related data (e.g.
     /// provisioning data, persistent session data). By default these data will be placed under the

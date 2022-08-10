@@ -21,7 +21,7 @@ type ValueChangedParameters = table {
     /// peer's configuration as notified by `LocalService.PeerUpdate`. Any bytes exceeding that
     /// limit are truncated internally by the stack.
     /// Mandatory.
-    2: value bytes:MAX_VALUE_LENGTH;
+    2: value vector<uint8>:MAX_VALUE_LENGTH;
     /// Only signal a subset of peers.  
     /// If not present or empty, all peers that can be updated are signaled.
     /// If included, only the set of peers in this list will be signaled.  
@@ -68,7 +68,7 @@ protocol LocalService {
         handle Handle;
         offset int32;
     }) -> (struct {
-        value bytes:MAX_VALUE_LENGTH;
+        value vector<uint8>:MAX_VALUE_LENGTH;
     }) error Error;
 
     /// Called when a peer issues a request to write the value of a characteristic or descriptor. It
@@ -88,7 +88,7 @@ protocol LocalService {
         1: peer_id bt.PeerId;
         2: handle Handle;
         3: offset uint32;
-        4: value bytes:MAX_VALUE_LENGTH;
+        4: value vector<uint8>:MAX_VALUE_LENGTH;
     }) -> (struct {}) error Error;
 
     /// Called to provide GATT information specific to a peer. PeerUpdate will not be called unless

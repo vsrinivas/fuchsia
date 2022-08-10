@@ -260,7 +260,7 @@ const VIRTIO_WAYLAND_MAX_IMAGE_INFO_SIZE uint32 = 128;
 type VirtioImage = resource struct {
     vmo zx.handle:VMO;
     token zx.handle:<EVENTPAIR, optional>;
-    info bytes:VIRTIO_WAYLAND_MAX_IMAGE_INFO_SIZE;
+    info vector<uint8>:VIRTIO_WAYLAND_MAX_IMAGE_INFO_SIZE;
 };
 
 const VIRTIO_WAYLAND_INVALID_VFD_ID uint32 = 0;

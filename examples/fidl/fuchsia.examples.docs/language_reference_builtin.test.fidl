@@ -5,5 +5,4 @@
 library builtin;
 
 alias byte = uint8;
-alias bytes = vector<byte>;
 // [END builtin]

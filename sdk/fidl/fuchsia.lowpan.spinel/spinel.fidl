@@ -137,7 +137,7 @@ protocol Device {
     ///
     /// See `->OnReadyForSendFrames()` for flow-control considerations.
     SendFrame(struct {
-        data bytes:MAX_FRAME_SIZE;
+        data vector<uint8>:MAX_FRAME_SIZE;
     });
 
     /// Increases the number of additional frames that the caller is
@@ -201,7 +201,7 @@ protocol Device {
     ///
     /// See `ReadyToReceiveFrames()` for flow-control considerations.
     -> OnReceiveFrame(struct {
-        data bytes:MAX_FRAME_SIZE;
+        data vector<uint8>:MAX_FRAME_SIZE;
     });
 
     /// The callback used to indicate that an error has occurred.

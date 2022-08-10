@@ -6,10 +6,7 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.wlan.tap") {
   # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [
-    "event-names-must-start-with-on",
-    "vector-bounds-not-specified",
-  ]
+  excluded_checks = [ "event-names-must-start-with-on" ]
 
   sources = [ "wlantap.fidl" ]
 

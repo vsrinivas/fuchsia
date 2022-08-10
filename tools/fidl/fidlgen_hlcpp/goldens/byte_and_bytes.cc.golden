@@ -18,9 +18,6 @@ void ByteAndBytes::Encode(::fidl::Encoder* _encoder, size_t _offset,
     memcpy(_encoder->template GetPtr<ByteAndBytes>(_offset), this, sizeof(ByteAndBytes));
   } else {
     ::fidl::Encode(_encoder, &single_byte, _offset + 0);
-    ::fidl::Encode(_encoder, &many_bytes, _offset + 8);
-    ::fidl::Encode(_encoder, &only_one_k_bytes, _offset + 24);
-    ::fidl::Encode(_encoder, &opt_only_one_k_bytes, _offset + 40);
   }
 }
 
@@ -29,23 +26,11 @@ void ByteAndBytes::Decode(::fidl::Decoder* _decoder, ByteAndBytes* _value, size_
     memcpy(_value, _decoder->template GetPtr<ByteAndBytes>(_offset), sizeof(ByteAndBytes));
   } else {
     ::fidl::Decode(_decoder, &_value->single_byte, _offset + 0);
-    ::fidl::Decode(_decoder, &_value->many_bytes, _offset + 8);
-    ::fidl::Decode(_decoder, &_value->only_one_k_bytes, _offset + 24);
-    ::fidl::Decode(_decoder, &_value->opt_only_one_k_bytes, _offset + 40);
   }
 }
 
 zx_status_t ByteAndBytes::Clone(ByteAndBytes* _result) const {
   zx_status_t _status = ::fidl::Clone(single_byte, &_result->single_byte);
-  if (_status != ZX_OK)
-    return _status;
-  _status = ::fidl::Clone(many_bytes, &_result->many_bytes);
-  if (_status != ZX_OK)
-    return _status;
-  _status = ::fidl::Clone(only_one_k_bytes, &_result->only_one_k_bytes);
-  if (_status != ZX_OK)
-    return _status;
-  _status = ::fidl::Clone(opt_only_one_k_bytes, &_result->opt_only_one_k_bytes);
   if (_status != ZX_OK)
     return _status;
   return ZX_OK;

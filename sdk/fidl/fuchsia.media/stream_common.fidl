@@ -18,7 +18,7 @@ type Value = strict union {
     3: int64_value int64;
     4: string_value string;
     // Prefer using oob_bytes instead.
-    5: bytes_value bytes;
+    5: bytes_value vector<uint8>:MAX;
 };
 
 /// Parameter
@@ -352,8 +352,8 @@ const ENCRYPTION_SCHEME_CBC1 string = "cbc1";
 const ENCRYPTION_SCHEME_CENS string = "cens";
 const ENCRYPTION_SCHEME_CBCS string = "cbcs";
 
-alias KeyId = bytes:MAX_KEY_ID_SIZE;
-alias InitVector = bytes:MAX_INIT_VECTOR_SIZE;
+alias KeyId = vector<uint8>:MAX_KEY_ID_SIZE;
+alias InitVector = vector<uint8>:MAX_INIT_VECTOR_SIZE;
 
 /// SubsampleEntry
 ///
@@ -706,7 +706,7 @@ type FormatDetails = table {
     // bytes here, we could potentially increase this restriction some, but
     // this interface isn't designed to support OOB config blobs that approach
     // ZX_CHANNEL_MAX_MSG_BYTES.
-    3: oob_bytes bytes;
+    3: oob_bytes vector<uint8>:MAX;
 
     // Decoder input format:
     //

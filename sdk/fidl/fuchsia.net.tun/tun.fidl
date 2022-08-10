@@ -126,7 +126,7 @@ type Frame = table {
     /// Valid iff non-empty.
     ///
     /// Required.
-    2: data bytes:MAX_MTU;
+    2: data vector<uint8>:MAX_MTU;
     /// Extra frame metadata.
     ///
     /// This is an opaque holder for extra information that is associated with
@@ -146,7 +146,7 @@ type Frame = table {
         /// Additional frame information value.
         ///
         /// If not set, interpreted as empty bytes.
-        info bytes:4096;
+        info vector<uint8>:4096;
         /// Frame flags. `RxFlags` for `WriteFrame` and `TxFlags` for
         /// `ReadFrame`.
         ///

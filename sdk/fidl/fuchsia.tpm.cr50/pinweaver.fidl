@@ -55,12 +55,12 @@ alias Hash = array<byte, HASH_SIZE>;
 /// the CR50. These form the leaf hashes of the Merkle tree.
 alias Mac = array<byte, MAC_SIZE>;
 /// Opaque metadata for credential as produced by the PinWeaver server.
-alias CredMetadata = bytes:CREDENTIAL_METADATA_MAX_SIZE;
+alias CredMetadata = vector<uint8>:CREDENTIAL_METADATA_MAX_SIZE;
 /// A low entropy or user provided secret such as a pin or password.
-alias LeSecret = bytes:LE_SECRET_MAX_SIZE;
+alias LeSecret = vector<uint8>:LE_SECRET_MAX_SIZE;
 /// A high entropy secret that is randomly generated and usable for symmetric
 /// key encryption.
-alias HeSecret = bytes:HE_SECRET_MAX_SIZE;
+alias HeSecret = vector<uint8>:HE_SECRET_MAX_SIZE;
 /// The list of auxiliary hashes for a particular leaf node. These are the
 /// hashes which together with the leaf nodes HMAC are required to recompute
 /// the updated root hash of the hash tree.

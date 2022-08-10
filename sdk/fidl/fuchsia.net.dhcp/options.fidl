@@ -240,7 +240,7 @@ type Option = flexible union {
    42: network_time_protocol_servers Addresses;
 
     /// An opaque object of octets for exchanging vendor-specific information.
-   43: vendor_specific_information bytes:255;
+   43: vendor_specific_information vector<uint8>:255;
 
     /// A list of NetBIOS name server addresses available to the client, listed in order of
     /// preference.

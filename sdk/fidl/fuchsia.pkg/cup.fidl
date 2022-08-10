@@ -28,15 +28,15 @@ protocol Cup {
 
 type CupData = table {
     /// Omaha request json
-    1: request bytes:65536;
+    1: request vector<uint8>:65536;
     /// The public key id
     2: key_id uint64;
     /// ECDSA nonce.
     3: nonce array<byte, 32>;
     /// Omaha response json
-    4: response bytes:65536;
+    4: response vector<uint8>:65536;
     /// DER encoded ECDSA signature
-    5: signature bytes:72;
+    5: signature vector<uint8>:72;
 };
 
 type WriteError = strict enum {

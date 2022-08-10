@@ -23,13 +23,13 @@ const MAX_URI_LENGTH uint16 = 278;
 /// Entry in the `service_data` field of a [`fuchsia.bluetooth.le/AdvertisingData`].
 type ServiceData = struct {
     uuid bt.Uuid;
-    data bytes:MAX_SERVICE_DATA_LENGTH;
+    data vector<uint8>:MAX_SERVICE_DATA_LENGTH;
 };
 
 /// Entry in the `manufacturer_data` field of a [`fuchsia.bluetooth.le/AdvertisingData`].
 type ManufacturerData = struct {
     company_id uint16;
-    data bytes:MAX_MANUFACTURER_DATA_LENGTH;
+    data vector<uint8>:MAX_MANUFACTURER_DATA_LENGTH;
 };
 
 /// Represents advertising and scan response data that are transmitted by a LE peripheral or

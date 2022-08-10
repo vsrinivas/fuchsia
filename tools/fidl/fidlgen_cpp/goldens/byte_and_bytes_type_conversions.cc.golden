@@ -6,19 +6,11 @@ namespace fidl {
 namespace internal {
 
 ::test_byteandbytes::ByteAndBytes WireNaturalConversionTraits<::test_byteandbytes::wire::ByteAndBytes, ::test_byteandbytes::ByteAndBytes>::ToNatural(::test_byteandbytes::wire::ByteAndBytes src) {
-  return ::test_byteandbytes::ByteAndBytes{{
-      .single_byte = WireNaturalConversionTraits<uint8_t, uint8_t>::ToNatural(std::move(src.single_byte)),
-      .many_bytes = WireNaturalConversionTraits<::fidl::VectorView<uint8_t>, ::std::vector<uint8_t>>::ToNatural(std::move(src.many_bytes)),
-      .only_one_k_bytes = WireNaturalConversionTraits<::fidl::VectorView<uint8_t>, ::std::vector<uint8_t>>::ToNatural(std::move(src.only_one_k_bytes)),
-      .opt_only_one_k_bytes = WireNaturalConversionTraits<::fidl::VectorView<uint8_t>, ::std::optional<::std::vector<uint8_t>>>::ToNatural(std::move(src.opt_only_one_k_bytes)),
-  }};
+  return ::test_byteandbytes::ByteAndBytes(WireNaturalConversionTraits<uint8_t, uint8_t>::ToNatural(std::move(src.single_byte)));
 }
 ::test_byteandbytes::wire::ByteAndBytes WireNaturalConversionTraits<::test_byteandbytes::wire::ByteAndBytes, ::test_byteandbytes::ByteAndBytes>::ToWire(fidl::AnyArena& arena, ::test_byteandbytes::ByteAndBytes src) {
   return ::test_byteandbytes::wire::ByteAndBytes{
       .single_byte = WireNaturalConversionTraits<uint8_t, uint8_t>::ToWire(arena, std::move(src.single_byte())),
-      .many_bytes = WireNaturalConversionTraits<::fidl::VectorView<uint8_t>, ::std::vector<uint8_t>>::ToWire(arena, std::move(src.many_bytes())),
-      .only_one_k_bytes = WireNaturalConversionTraits<::fidl::VectorView<uint8_t>, ::std::vector<uint8_t>>::ToWire(arena, std::move(src.only_one_k_bytes())),
-      .opt_only_one_k_bytes = WireNaturalConversionTraits<::fidl::VectorView<uint8_t>, ::std::optional<::std::vector<uint8_t>>>::ToWire(arena, std::move(src.opt_only_one_k_bytes())),
   };
 }
 

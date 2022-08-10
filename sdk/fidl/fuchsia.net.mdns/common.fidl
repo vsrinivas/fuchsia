@@ -34,7 +34,7 @@ alias subtype_name = string:63;
 /// strings consist of a key and value separated by '='. TXT strings must be
 /// at most 255 characters long and are UTF-8-encoded.
 @available(added=9)
-alias txt_character_string = bytes:255;
+alias txt_character_string = vector<uint8>:255;
 
 /// Specifies network media on which a service instance should be published.
 type Media = strict bits : uint32 {

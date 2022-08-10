@@ -19,7 +19,7 @@ using zx;
 type EapolIndication = struct {
     src_addr ieee80211.MacAddr;
     dst_addr ieee80211.MacAddr;
-    data bytes;
+    data vector<uint8>:MAX;
 };
 
 // BandInfo groups capabilities defined per band.
@@ -146,7 +146,7 @@ type StartCaptureFramesResponse = struct {
 };
 
 type CapturedFrameResult = struct {
-    frame bytes;
+    frame vector<uint8>:MAX;
 };
 
 /// Non-IEEE custom structure to inform a SoftMAC device about the association negotiation outcome.
@@ -154,15 +154,15 @@ type CapturedFrameResult = struct {
 type NegotiatedCapabilities = struct {
     channel fuchsia.wlan.common.WlanChannel;
     capability_info internal.CapabilityInfo;
-    rates bytes:internal.MAX_ASSOC_BASIC_RATES;
+    rates vector<uint8>:internal.MAX_ASSOC_BASIC_RATES;
     wmm_param box<WmmParameter>;
     ht_cap box<ieee80211.HtCapabilities>;
     vht_cap box<ieee80211.VhtCapabilities>;
 };
 
 type PmkInfo = struct {
-    pmk bytes;
-    pmkid bytes;
+    pmk vector<uint8>:MAX;
+    pmkid vector<uint8>:MAX;
 };
 
 type SaeHandshakeIndication = struct {
@@ -178,5 +178,5 @@ type SaeFrame = struct {
     peer_sta_address ieee80211.MacAddr;
     status_code ieee80211.StatusCode;
     seq_num uint16;
-    sae_fields bytes;
+    sae_fields vector<uint8>:MAX;
 };

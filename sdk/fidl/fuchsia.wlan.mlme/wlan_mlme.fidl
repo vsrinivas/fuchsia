@@ -25,7 +25,7 @@ type KeyType = strict enum {
 
 type SetKeyDescriptor = struct {
     // Specs specify a bit string, we use byte array.
-    key bytes;
+    key vector<uint8>:MAX;
     key_id uint16;
     key_type KeyType;
     address ieee80211.MacAddr;
@@ -210,9 +210,9 @@ type AssociateIndication = struct {
     capability_info internal.CapabilityInfo;
     listen_interval uint16;
     ssid ieee80211.Ssid:optional;
-    rates bytes:internal.MAX_ASSOC_BASIC_RATES;
+    rates vector<uint8>:internal.MAX_ASSOC_BASIC_RATES;
     // BSSMembershipSelectorSet
-    rsne bytes:optional;
+    rsne vector<uint8>:<MAX, optional>;
 
     // etc
 };
@@ -243,7 +243,7 @@ type AssociateResponse = struct {
 
     // This combines both the BSSBasicRateSet and the OperationalRateSet, as the MLME will split
     // them up.
-    rates bytes:internal.MAX_ASSOC_BASIC_RATES;
+    rates vector<uint8>:internal.MAX_ASSOC_BASIC_RATES;
 
     // etc
 };
@@ -311,13 +311,13 @@ type StartRequest = struct {
 
     // This combines both the BSSBasicRateSet and the OperationalRateSet, as the MLME will split
     // them up.
-    rates bytes:internal.MAX_ASSOC_BASIC_RATES;
+    rates vector<uint8>:internal.MAX_ASSOC_BASIC_RATES;
 
     // TODO(porce): Conditionally present. See IEEE Std 802.11-2016, 10.2, 11.8, 11.10.
     // See also dot11MultiDomainCapabilityActivated.
     country Country;
 
-    mesh_id bytes:ieee80211.MAX_MESH_ID_BYTE_LEN;
+    mesh_id vector<uint8>:ieee80211.MAX_MESH_ID_BYTE_LEN;
 
     // TODO(hahnr): Add additional elements.
 
@@ -325,7 +325,7 @@ type StartRequest = struct {
     // primitive. However, IEEE doesn't define any other primitive to configure the RSN after its
     // BSS was started. The RSNE must be available when the BSS is started, and thus, this is the
     // right place to transfer the RSNE to the MLME.
-    rsne bytes:optional;
+    rsne vector<uint8>:<MAX, optional>;
 
     // Combined with what MLME knows about the device capabilities,
     // following parameters determine what to be advertised to the peer
@@ -389,7 +389,7 @@ type DeleteKeysRequest = struct {
 type EapolRequest = struct {
     src_addr ieee80211.MacAddr;
     dst_addr ieee80211.MacAddr;
-    data bytes;
+    data vector<uint8>:MAX;
 };
 
 // MLME-EAPOL.confirm (IEEE Std 802.11-2016 6.3.22.2)
@@ -424,8 +424,8 @@ type MeshPeeringCommon = struct {
     peer_sta_address ieee80211.MacAddr;
     protocol_id uint16;
     local_link_id uint16;
-    mesh_id bytes:32;
-    rates vector<uint8>;
+    mesh_id vector<uint8>:32;
+    rates vector<uint8>:MAX;
     mesh_config MeshConfiguration;
     ht_cap box<ieee80211.HtCapabilities>;
     ht_op box<ieee80211.HtOperation>;
@@ -448,7 +448,7 @@ type MeshPeeringConfirmAction = struct {
 type MeshPeeringParams = struct {
     peer_sta_address ieee80211.MacAddr;
     local_aid uint16;
-    rates vector<uint8>;
+    rates vector<uint8>:MAX;
     // TODO(gbonik): HT/VHT caps
 };
 

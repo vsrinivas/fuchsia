@@ -113,7 +113,7 @@ protocol Device {
 
 type BeaconInfo = table {
     /// The MAC address associated with this beacon.
-    1: address bytes:16;
+    1: address vector<uint8>:16;
 
     /// The identity of the network being advertised by
     /// this beacon.

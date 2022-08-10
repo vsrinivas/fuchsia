@@ -9,7 +9,7 @@ type ReadByTypeResult = table {
     /// Characteristic or descriptor id.
     1: id uint64;
     /// Truncated value of characteristic or descriptor, if it was read successfully.
-    2: value bytes:MAX_READ_BY_TYPE_VALUE_LENGTH;
+    2: value vector<uint8>:MAX_READ_BY_TYPE_VALUE_LENGTH;
     /// Reason the value could not be read, if reading it resulted in an error.
     3: error Error;
 };
@@ -33,7 +33,7 @@ protocol RemoteService {
         id uint64;
     }) -> (struct {
         status bt.Status;
-        value bytes;
+        value vector<uint8>:MAX;
     });
 
     /// Reads the complete value of a characteristic with the given `id`. This
@@ -54,7 +54,7 @@ protocol RemoteService {
         max_bytes uint16;
     }) -> (struct {
         status bt.Status;
-        value bytes:MAX_VALUE_LENGTH;
+        value vector<uint8>:MAX_VALUE_LENGTH;
     });
 
     /// Writes `value` to the characteristic with `id`. This operation may return
@@ -64,7 +64,7 @@ protocol RemoteService {
     ///      property.
     WriteCharacteristic(struct {
         id uint64;
-        value bytes;
+        value vector<uint8>:MAX;
     }) -> (struct {
         status bt.Status;
     });
@@ -86,7 +86,7 @@ protocol RemoteService {
     WriteLongCharacteristic(struct {
         id uint64;
         offset uint16;
-        value bytes:MAX_VALUE_LENGTH;
+        value vector<uint8>:MAX_VALUE_LENGTH;
         write_options WriteOptions;
     }) -> (struct {
         status bt.Status;
@@ -97,7 +97,7 @@ protocol RemoteService {
     /// cannot be confirmed.
     WriteCharacteristicWithoutResponse(struct {
         id uint64;
-        value bytes;
+        value vector<uint8>:MAX;
     });
 
     /// Reads the value of the characteristic descriptor with `id` and returns it
@@ -111,7 +111,7 @@ protocol RemoteService {
         id uint64;
     }) -> (struct {
         status bt.Status;
-        value bytes;
+        value vector<uint8>:MAX;
     });
 
     /// Reads the complete value of a characteristic descriptor with the given `id`.
@@ -131,7 +131,7 @@ protocol RemoteService {
         max_bytes uint16;
     }) -> (struct {
         status bt.Status;
-        value bytes;
+        value vector<uint8>:MAX;
     });
 
     /// Writes `value` to the characteristic descriptor with `id`. This operation
@@ -141,7 +141,7 @@ protocol RemoteService {
     ///      Characteristic Configuration descriptor).
     WriteDescriptor(struct {
         id uint64;
-        value bytes;
+        value vector<uint8>:MAX;
     }) -> (struct {
         status bt.Status;
     });
@@ -163,7 +163,7 @@ protocol RemoteService {
     WriteLongDescriptor(struct {
         id uint64;
         offset uint16;
-        value bytes:MAX_VALUE_LENGTH;
+        value vector<uint8>:MAX_VALUE_LENGTH;
     }) -> (struct {
         status bt.Status;
     });
@@ -214,7 +214,7 @@ protocol RemoteService {
     /// Called when a characteristic value notification or indication is received.
     -> OnCharacteristicValueUpdated(struct {
         id uint64;
-        value bytes;
+        value vector<uint8>:MAX;
     });
 };
 

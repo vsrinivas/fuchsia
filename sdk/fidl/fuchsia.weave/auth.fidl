@@ -21,7 +21,7 @@ const MAX_PUBLIC_KEY_SIZE uint32 = 65;
 /// implementation-defined, the bytes are only bounded by MAX. The bytes should
 /// be considered opaque, both in structure and in content, as the value is only
 /// meaningful to operations such as [`Provisioner.GenerateKeyPair`].
-alias PrivateKey = bytes:MAX;
+alias PrivateKey = vector<uint8>:MAX;
 
 /// This protocol is used for just-in-time provisioning operations.
 @discoverable
@@ -36,7 +36,7 @@ protocol Provisioner {
     /// a key-pair compatible with the Signer protocol (e.g. P256).
     GenerateKeyPair() -> (struct {
         wrapped_private_key PrivateKey;
-        public_key bytes:MAX_PUBLIC_KEY_SIZE;
+        public_key vector<uint8>:MAX_PUBLIC_KEY_SIZE;
     }) error ErrorCode;
 };
 
@@ -49,9 +49,9 @@ protocol Signer {
     /// that is supported by Weave, and must take the standard form of an ASN.1
     /// DER SEQUENCE. This operation must support SHA1 and SHA256 hash values.
     SignHash(struct {
-        hash bytes:32;
+        hash vector<uint8>:32;
     }) -> (struct {
-        signature bytes:MAX_SIGNATURE_SIZE;
+        signature vector<uint8>:MAX_SIGNATURE_SIZE;
     }) error ErrorCode;
 
     /// Sign the provided `hash` with the provided `wrapped_private_key`. On
@@ -61,10 +61,10 @@ protocol Signer {
     /// hash values.
     @transitional
     SignHashWithPrivateKey(struct {
-        hash bytes:32;
+        hash vector<uint8>:32;
         wrapped_private_key PrivateKey;
     }) -> (struct {
-        signature bytes:MAX_SIGNATURE_SIZE;
+        signature vector<uint8>:MAX_SIGNATURE_SIZE;
     }) error ErrorCode;
 };
 
@@ -74,7 +74,7 @@ protocol Signer {
 protocol FactoryDataManager {
     /// Return the device `pairing_code` on success.
     GetPairingCode() -> (struct {
-        pairing_code bytes:16;
+        pairing_code vector<uint8>:16;
     }) error ErrorCode;
 
     /// Returns the factory provisioned Weave certificate in PEM format.

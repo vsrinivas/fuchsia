@@ -32,10 +32,10 @@ type Error = strict enum {
 /// An HTTP header field.
 type Header = struct {
     /// The name of the header field.
-    name bytes;
+    name vector<uint8>:MAX;
 
     /// The value of the header field.
-    value bytes;
+    value vector<uint8>:MAX;
 };
 
 /// The body of an HTTP request.
@@ -104,7 +104,7 @@ type Response = resource table {
     4: status_code uint32;
 
     /// The HTTP status line.
-    5: status_line bytes;
+    5: status_line vector<uint8>:MAX;
 
     /// The HTTP response headers.
     6: headers vector<Header>:MAX;

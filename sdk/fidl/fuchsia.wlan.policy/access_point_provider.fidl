@@ -69,9 +69,8 @@ protocol AccessPointStateUpdates {
     /// individual activity.  Registered listeners are responsible for deciding
     /// what information has changed (this is dependent on when they last
     /// acknowledged the update).
-    // NOLINTNEXTLINE vector-bounds-not-specified
     OnAccessPointStateUpdate(struct {
-        access_points vector<AccessPointState>;
+        access_points vector<AccessPointState>:MAX;
     }) -> ();
 };
 

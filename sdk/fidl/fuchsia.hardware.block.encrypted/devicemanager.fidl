@@ -23,7 +23,7 @@ protocol DeviceManager {
     /// Returns `ZX_ERR_BAD_STATE` if the device is not currently sealed.
     /// Returns `ZX_OK` on success.
     Format(struct {
-        key bytes:MAX_KEY_SIZE;
+        key vector<uint8>:MAX_KEY_SIZE;
         slot uint8;
     }) -> (struct {
         status zx.status;
@@ -39,7 +39,7 @@ protocol DeviceManager {
     /// Returns other errors if operations on the underlying block device return errors.
     /// Returns `ZX_OK` on success.
     Unseal(struct {
-        key bytes:MAX_KEY_SIZE;
+        key vector<uint8>:MAX_KEY_SIZE;
         slot uint8;
     }) -> (struct {
         status zx.status;

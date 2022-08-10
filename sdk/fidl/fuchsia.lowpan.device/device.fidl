@@ -16,10 +16,10 @@ type Identity = table {
     /// have differing bytecode representations.
     ///
     /// [1]: https://tools.ietf.org/html/rfc3454
-    1: raw_name bytes:63;
+    1: raw_name vector<uint8>:63;
 
     /// Extended PANID.
-    2: xpanid bytes:8;
+    2: xpanid vector<uint8>:8;
 
     /// String identifying the type of network.
     ///
@@ -232,7 +232,7 @@ type Credential = flexible union {
     /// is a 16-byte value.
     ///
     /// Note that this value is not a password.
-    1: network_key bytes:32;
+    1: network_key vector<uint8>:32;
 };
 
 /// Combined State for LoWPAN Devices

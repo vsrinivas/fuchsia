@@ -16,7 +16,7 @@ const ACCOUNT_PRE_AUTH_STATE_MAX_SIZE uint32 = 10240;
 /// opaque blob by the AccountManager on behalf of the AccountHandler. This
 /// partitioning means neither component has access to both the device-encrypted
 /// disk and the account-encrypted disk.
-alias AccountPreAuthState = bytes:ACCOUNT_PRE_AUTH_STATE_MAX_SIZE;
+alias AccountPreAuthState = vector<uint8>:ACCOUNT_PRE_AUTH_STATE_MAX_SIZE;
 
 /// The control channel for an AccountHandler component.
 ///

@@ -99,11 +99,11 @@ type Telemetry = table {
     /// the Thread 1.1.1 specification.
     ///
     /// Only present on Thread networks.
-   14: thread_network_data bytes:255;
+   14: thread_network_data vector<uint8>:255;
 
     /// The current Thread stable network data, in raw binary form, as defined in section 5.13 of
     /// the Thread 1.1.1 specification.
     ///
     /// Only present on Thread networks.
-   15: thread_stable_network_data bytes:255;
+   15: thread_stable_network_data vector<uint8>:255;
 };

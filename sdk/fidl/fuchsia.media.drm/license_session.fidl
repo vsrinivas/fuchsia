@@ -34,7 +34,7 @@ type LicenseInitData = struct {
     /// data. Common types include "cenc", "keyids", "webm", and "hls". CDMs may
     /// also define their own.
     type LicenseInitDataType;
-    data bytes;
+    data vector<uint8>:MAX;
 };
 
 /// A message originating from the [`LicenseSession`] that the caller must route

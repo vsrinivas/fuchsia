@@ -51,7 +51,7 @@ type ImplementationDefinedEvent = table {
     /// Custom binary payload whose structure is defined by the MetricsRecorder
     /// implementation. For example, it can represent a custom event protocol
     /// buffer serialized to its wire format.
-    1: data bytes;
+    1: data vector<uint8>:MAX;
 
     /// Event identifier required if it's not already included in binary `data`.
     /// This field takes precedence over any equivalent name included in binary

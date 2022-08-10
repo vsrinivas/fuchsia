@@ -67,7 +67,7 @@ type WlanTxInfo = struct {
 /// An outgoing packet that is to be "sent" by the wlantap device. `data` contains the packet
 /// in its wire format.
 type WlanTxPacket = struct {
-    data vector<uint8>;
+    data vector<uint8>:MAX;
     info WlanTxInfo;
 };
 
@@ -110,7 +110,7 @@ protocol WlantapPhy {
     /// The device "receives" a frame "over the air" and pass it up to driver.
     Rx(struct {
         wlan_softmac_id uint16;
-        data vector<uint8>;
+        data vector<uint8>:MAX;
         info WlanRxInfo;
     });
     /// The device report its status to the driver. (Not used).

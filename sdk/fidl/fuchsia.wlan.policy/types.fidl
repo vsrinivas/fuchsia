@@ -44,10 +44,10 @@ type Credential = flexible union {
     1: none Empty;
 
     /// Plaintext password (handled as binary data).
-    2: password bytes;
+    2: password vector<uint8>:MAX;
 
     /// Hash representation of the network passphrase (handled as binary data).
-    3: psk bytes;
+    3: psk vector<uint8>:MAX;
 };
 
 /// Operating band for wlan control request and status updates.

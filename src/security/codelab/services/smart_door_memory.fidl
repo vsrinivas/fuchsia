@@ -39,7 +39,7 @@ protocol MemoryReset {
 protocol Reader {
     // Read all content in the smart door memory.
     Read() -> (struct {
-        bytes bytes:MAX;
+        bytes vector<uint8>:MAX;
     }) error Error;
 };
 
@@ -48,7 +48,7 @@ protocol Writer {
     // Write the bytes into the smart door memory.
     // If success, following reads should read the same bytes out.
     Write(struct {
-        bytes bytes:MAX;
+        bytes vector<uint8>:MAX;
     }) -> (struct {
         bytes_written uint32;
     }) error Error;

@@ -101,7 +101,7 @@ type RemoteDirectory = resource table {
 /// If executable files are required, use ExecutableFile instead.
 type File = table {
     1: name string;
-    2: contents bytes;
+    2: contents vector<uint8>:MAX;
 };
 
 /// Vmo-backed file object which supports opening as readable + writable.

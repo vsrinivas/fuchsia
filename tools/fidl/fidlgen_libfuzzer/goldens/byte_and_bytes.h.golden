@@ -18,7 +18,7 @@ using ByteAndBytes = ::test::byteandbytes::ByteAndBytes;
 template <>
 struct MinSize<ByteAndBytes> {
   operator size_t() {
-    return MinSize<uint8_t>() + MinSize<::std::vector<uint8_t>>() + MinSize<::std::vector<uint8_t>>() + MinSize<::fidl::VectorPtr<uint8_t>>();
+    return MinSize<uint8_t>();
   }
 };
 template <>
@@ -26,16 +26,10 @@ struct Allocate<ByteAndBytes> {
   ByteAndBytes operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<ByteAndBytes>());
     ByteAndBytes out;
-    const size_t slack_per_member = (*size - MinSize<ByteAndBytes>()) / 4;
+    const size_t slack_per_member = (*size - MinSize<ByteAndBytes>()) / 1;
     size_t out_size;
     out_size = MinSize<uint8_t>() + slack_per_member;
     out.single_byte = Allocate<uint8_t>{}(src, &out_size);
-    out_size = MinSize<::std::vector<uint8_t>>() + slack_per_member;
-    out.many_bytes = Allocate<::std::vector<uint8_t>>{}(src, &out_size);
-    out_size = MinSize<::std::vector<uint8_t>>() + slack_per_member;
-    out.only_one_k_bytes = Allocate<::std::vector<uint8_t>>{}(src, &out_size);
-    out_size = MinSize<::fidl::VectorPtr<uint8_t>>() + slack_per_member;
-    out.opt_only_one_k_bytes = Allocate<::fidl::VectorPtr<uint8_t>>{}(src, &out_size);
     return out;
   }
 };

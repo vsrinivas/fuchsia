@@ -47,8 +47,8 @@
             "is_virtual": false,
             "file": "../../tools/fidl/fidlc/testdata/vectors.test.fidl",
             "data": "vector_of_vector_of_bool",
-            "start_offset": 254,
-            "end_offset": 278
+            "start_offset": 262,
+            "end_offset": 286
           },
           "type": {
             "kind": "vector"

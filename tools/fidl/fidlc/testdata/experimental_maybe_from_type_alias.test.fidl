@@ -2,7 +2,7 @@ library test.experimentalmaybefromtypealias;
 
 protocol MyProtocol {};
 
-alias AliasOfBytes = bytes;
+alias AliasOfBytes = vector<uint8>;
 alias AliasOfString = string;
 alias U64 = uint64;
 alias Vector = vector<uint64>:optional;

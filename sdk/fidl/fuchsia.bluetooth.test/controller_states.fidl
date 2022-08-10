@@ -63,8 +63,8 @@ type LegacyAdvertisingState = table {
     5: interval_max uint16;
 
     /// Any configured advertising and scan response data. Present only if either field is non-zero.
-    6: advertising_data bytes:MAX_LEGACY_ADVERTISING_DATA_LENGTH;
-    7: scan_response bytes:MAX_LEGACY_ADVERTISING_DATA_LENGTH;
+    6: advertising_data vector<uint8>:MAX_LEGACY_ADVERTISING_DATA_LENGTH;
+    7: scan_response vector<uint8>:MAX_LEGACY_ADVERTISING_DATA_LENGTH;
 };
 
 /// Represents the LE scan state. The fields are present if scan parameters have been

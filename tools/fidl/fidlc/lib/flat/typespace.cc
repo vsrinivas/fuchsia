@@ -192,8 +192,6 @@ const Type* Typespace::Creator::Create() {
       return CreateTransportSideType(TransportSide::kServer);
     case Builtin::Identity::kByte:
       return CreatePrimitiveType(types::PrimitiveSubtype::kUint8);
-    case Builtin::Identity::kBytes:
-      return CreateBytesType();
     case Builtin::Identity::kTransportErr:
       return CreateInternalType(BuiltinToInternalSubtype(builtin->id).value());
     case Builtin::Identity::kOptional:
@@ -267,18 +265,6 @@ const Type* Typespace::Creator::CreateVectorType() {
   out_params_->element_type_raw = parameters_.items[0]->AsTypeCtor();
 
   VectorType type(layout_.resolved().name(), element_type);
-  std::unique_ptr<Type> constrained_type;
-  type.ApplyConstraints(resolver_, constraints_, layout_, &constrained_type, out_params_);
-  return typespace_->Intern(std::move(constrained_type));
-}
-
-const Type* Typespace::Creator::CreateBytesType() {
-  if (!EnsureNumberOfLayoutParams(0))
-    return nullptr;
-
-  // Note that we name the type "vector", not "bytes".
-  VectorType type(typespace_->vector_layout_name_.value(),
-                  typespace_->GetPrimitiveType(types::PrimitiveSubtype::kUint8));
   std::unique_ptr<Type> constrained_type;
   type.ApplyConstraints(resolver_, constraints_, layout_, &constrained_type, out_params_);
   return typespace_->Intern(std::move(constrained_type));

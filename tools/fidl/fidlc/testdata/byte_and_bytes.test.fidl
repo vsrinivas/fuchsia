@@ -2,7 +2,4 @@ library test.byteandbytes;
 
 type ByteAndBytes = struct {
     single_byte byte;
-    many_bytes bytes;
-    only_one_k_bytes bytes:1024;
-    opt_only_one_k_bytes bytes:<1024, optional>;
 };

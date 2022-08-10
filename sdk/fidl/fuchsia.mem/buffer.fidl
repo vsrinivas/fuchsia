@@ -36,7 +36,7 @@ type Buffer = resource struct {
 /// need to be provided out-of-line in a `Buffer`).
 type Data = flexible resource union {
     /// The binary data provided inline in the message.
-    1: bytes bytes;
+    1: bytes vector<uint8>:MAX;
 
     /// The binary data provided out-of-line in a `Buffer`.
     2: buffer Buffer;

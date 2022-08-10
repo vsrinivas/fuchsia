@@ -54,9 +54,9 @@ protocol ControllerExt {
     /// disconnects or does not return a response in set amount of time.
     SendRawVendorDependentCommand(struct {
         pdu_id uint8;
-        command bytes;
+        command vector<uint8>:MAX;
     }) -> (struct {
-        response bytes;
+        response vector<uint8>:MAX;
     }) error avrcp.ControllerError;
 };
 
@@ -75,8 +75,8 @@ protocol BrowseControllerExt {
     ///         parameters.
     SendRawBrowseCommand(struct {
         pdu_id uint8;
-        command bytes;
+        command vector<uint8>:MAX;
     }) -> (struct {
-        response bytes;
+        response vector<uint8>:MAX;
     }) error avrcp.BrowseControllerError;
 };

@@ -983,7 +983,7 @@ type byte = struct {
 
 type container = struct {
     f1 byte;
-    f2 bytes;
+    f2 vector<uint8>;
 };
 )FIDL");
   ASSERT_COMPILED(library);

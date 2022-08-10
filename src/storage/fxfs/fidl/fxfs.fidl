@@ -26,8 +26,8 @@ protocol Crypt {
         purpose KeyPurpose;
     }) -> (struct {
         wrapping_key_id uint64;
-        wrapped_key bytes:48;
-        unwrapped_key bytes:32;
+        wrapped_key vector<uint8>:48;
+        unwrapped_key vector<uint8>:32;
     }) error zx.status;
 
     /// Unwraps a key that is wrapped by the key identified by `wrapping_key_id`.  `owner` must be
@@ -37,9 +37,9 @@ protocol Crypt {
     UnwrapKey(struct {
         wrapping_key_id uint64;
         owner uint64;
-        key bytes:48;
+        key vector<uint8>:48;
     }) -> (struct {
-        unwrapped_key bytes:32;
+        unwrapped_key vector<uint8>:32;
     }) error zx.status;
 };
 
@@ -55,7 +55,7 @@ protocol CryptManagement {
     /// CryptManagement::SetActiveKeys is called.
     AddWrappingKey(struct {
         wrapping_key_id uint64;
-        key bytes:32;
+        key vector<uint8>:32;
     }) -> (struct {}) error zx.status;
 
     /// Updates the key which will be used for wrapping keys (Crypt::CreateKey).  `purpose`

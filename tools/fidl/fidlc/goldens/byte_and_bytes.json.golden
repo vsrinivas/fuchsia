@@ -54,229 +54,32 @@
           },
           "field_shape_v1": {
             "offset": 0,
-            "padding": 7
+            "padding": 0
           },
           "field_shape_v2": {
             "offset": 0,
-            "padding": 7
-          }
-        },
-        {
-          "type": {
-            "kind": "vector",
-            "element_type": {
-              "kind": "primitive",
-              "subtype": "uint8",
-              "type_shape_v1": {
-                "inline_size": 1,
-                "alignment": 1,
-                "depth": 0,
-                "max_handles": 0,
-                "max_out_of_line": 0,
-                "has_padding": false,
-                "has_envelope": false,
-                "has_flexible_envelope": false
-              },
-              "type_shape_v2": {
-                "inline_size": 1,
-                "alignment": 1,
-                "depth": 0,
-                "max_handles": 0,
-                "max_out_of_line": 0,
-                "has_padding": false,
-                "has_envelope": false,
-                "has_flexible_envelope": false
-              }
-            },
-            "nullable": false,
-            "type_shape_v1": {
-              "inline_size": 16,
-              "alignment": 8,
-              "depth": 1,
-              "max_handles": 0,
-              "max_out_of_line": 4294967295,
-              "has_padding": true,
-              "has_envelope": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 16,
-              "alignment": 8,
-              "depth": 1,
-              "max_handles": 0,
-              "max_out_of_line": 4294967295,
-              "has_padding": true,
-              "has_envelope": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "many_bytes",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/byte_and_bytes.test.fidl",
-            "line": 5,
-            "column": 5,
-            "length": 10
-          },
-          "field_shape_v1": {
-            "offset": 8,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 8,
-            "padding": 0
-          }
-        },
-        {
-          "type": {
-            "kind": "vector",
-            "element_type": {
-              "kind": "primitive",
-              "subtype": "uint8",
-              "type_shape_v1": {
-                "inline_size": 1,
-                "alignment": 1,
-                "depth": 0,
-                "max_handles": 0,
-                "max_out_of_line": 0,
-                "has_padding": false,
-                "has_envelope": false,
-                "has_flexible_envelope": false
-              },
-              "type_shape_v2": {
-                "inline_size": 1,
-                "alignment": 1,
-                "depth": 0,
-                "max_handles": 0,
-                "max_out_of_line": 0,
-                "has_padding": false,
-                "has_envelope": false,
-                "has_flexible_envelope": false
-              }
-            },
-            "maybe_element_count": 1024,
-            "nullable": false,
-            "type_shape_v1": {
-              "inline_size": 16,
-              "alignment": 8,
-              "depth": 1,
-              "max_handles": 0,
-              "max_out_of_line": 1024,
-              "has_padding": true,
-              "has_envelope": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 16,
-              "alignment": 8,
-              "depth": 1,
-              "max_handles": 0,
-              "max_out_of_line": 1024,
-              "has_padding": true,
-              "has_envelope": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "only_one_k_bytes",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/byte_and_bytes.test.fidl",
-            "line": 6,
-            "column": 5,
-            "length": 16
-          },
-          "field_shape_v1": {
-            "offset": 24,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 24,
-            "padding": 0
-          }
-        },
-        {
-          "type": {
-            "kind": "vector",
-            "element_type": {
-              "kind": "primitive",
-              "subtype": "uint8",
-              "type_shape_v1": {
-                "inline_size": 1,
-                "alignment": 1,
-                "depth": 0,
-                "max_handles": 0,
-                "max_out_of_line": 0,
-                "has_padding": false,
-                "has_envelope": false,
-                "has_flexible_envelope": false
-              },
-              "type_shape_v2": {
-                "inline_size": 1,
-                "alignment": 1,
-                "depth": 0,
-                "max_handles": 0,
-                "max_out_of_line": 0,
-                "has_padding": false,
-                "has_envelope": false,
-                "has_flexible_envelope": false
-              }
-            },
-            "maybe_element_count": 1024,
-            "nullable": true,
-            "type_shape_v1": {
-              "inline_size": 16,
-              "alignment": 8,
-              "depth": 1,
-              "max_handles": 0,
-              "max_out_of_line": 1024,
-              "has_padding": true,
-              "has_envelope": false,
-              "has_flexible_envelope": false
-            },
-            "type_shape_v2": {
-              "inline_size": 16,
-              "alignment": 8,
-              "depth": 1,
-              "max_handles": 0,
-              "max_out_of_line": 1024,
-              "has_padding": true,
-              "has_envelope": false,
-              "has_flexible_envelope": false
-            }
-          },
-          "name": "opt_only_one_k_bytes",
-          "location": {
-            "filename": "../../tools/fidl/fidlc/testdata/byte_and_bytes.test.fidl",
-            "line": 7,
-            "column": 5,
-            "length": 20
-          },
-          "field_shape_v1": {
-            "offset": 40,
-            "padding": 0
-          },
-          "field_shape_v2": {
-            "offset": 40,
             "padding": 0
           }
         }
       ],
       "resource": false,
       "type_shape_v1": {
-        "inline_size": 56,
-        "alignment": 8,
-        "depth": 1,
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
         "max_handles": 0,
-        "max_out_of_line": 4294967295,
-        "has_padding": true,
+        "max_out_of_line": 0,
+        "has_padding": false,
         "has_envelope": false,
         "has_flexible_envelope": false
       },
       "type_shape_v2": {
-        "inline_size": 56,
-        "alignment": 8,
-        "depth": 1,
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
         "max_handles": 0,
-        "max_out_of_line": 4294967295,
-        "has_padding": true,
+        "max_out_of_line": 0,
+        "has_padding": false,
         "has_envelope": false,
         "has_flexible_envelope": false
       }

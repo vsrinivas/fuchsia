@@ -253,7 +253,7 @@ type ObjectList = struct {
 type Object = flexible union {
     1: integer_val uint64;
     2: string_val string:MAX;
-    3: buffer_val bytes;
+    3: buffer_val vector<uint8>:MAX;
     4: package_val ObjectList;
     5: reference_val Handle;
     6: processor_val Processor;

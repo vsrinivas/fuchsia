@@ -753,7 +753,7 @@ protocol SynchronousDatagramSocket {
         flags RecvMsgFlags;
     }) -> (struct {
         addr fuchsia.net.SocketAddress:optional;
-        data bytes;
+        data vector<uint8>:MAX;
         control DatagramSocketRecvControlData;
         truncated uint32;
     }) error fuchsia.posix.Errno;
@@ -780,7 +780,7 @@ protocol SynchronousDatagramSocket {
         flags RecvMsgFlags;
     }) -> (struct {
         addr fuchsia.net.SocketAddress:optional;
-        data bytes;
+        data vector<uint8>:MAX;
         control DatagramSocketRecvControlData;
         truncated uint32;
     }) error fuchsia.posix.Errno;
@@ -798,7 +798,7 @@ protocol SynchronousDatagramSocket {
     @selector("fuchsia.posix.socket/DatagramSocket.SendMsg")
     SendMsgDeprecated(struct {
         addr fuchsia.net.SocketAddress:optional;
-        data bytes:MAX;
+        data vector<uint8>:MAX;
         control DatagramSocketSendControlData;
         flags SendMsgFlags;
     }) -> (struct {
@@ -815,7 +815,7 @@ protocol SynchronousDatagramSocket {
     /// - response `len` the number of bytes sent.
     SendMsg(struct {
         addr fuchsia.net.SocketAddress:optional;
-        data bytes:MAX;
+        data vector<uint8>:MAX;
         control DatagramSocketSendControlData;
         flags SendMsgFlags;
     }) -> (struct {

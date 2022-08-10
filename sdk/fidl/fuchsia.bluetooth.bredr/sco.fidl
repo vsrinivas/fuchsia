@@ -117,7 +117,7 @@ protocol ScoConnection {
     // closure.
     Read() -> (struct {
         status_flag RxPacketStatus;
-        data bytes:MAX;
+        data vector<uint8>:MAX;
     });
 
     // Write `data` to the SCO connection.
@@ -125,7 +125,7 @@ protocol ScoConnection {
     // Only one Write request may be pending at a time. Additional requests will result in protocol
     // closure.
     Write(struct {
-        data bytes:MAX;
+        data vector<uint8>:MAX;
     }) -> ();
 };
 

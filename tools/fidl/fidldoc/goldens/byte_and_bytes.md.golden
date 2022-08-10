@@ -21,30 +21,6 @@
             <td></td>
             <td>No default</td>
         </tr>
-        <tr id="ByteAndBytes.many_bytes">
-            <td><code>many_bytes</code></td>
-            <td>
-                <code>vector&lt;uint8&gt;</code>
-            </td>
-            <td></td>
-            <td>No default</td>
-        </tr>
-        <tr id="ByteAndBytes.only_one_k_bytes">
-            <td><code>only_one_k_bytes</code></td>
-            <td>
-                <code>vector&lt;uint8&gt;[1024]</code>
-            </td>
-            <td></td>
-            <td>No default</td>
-        </tr>
-        <tr id="ByteAndBytes.opt_only_one_k_bytes">
-            <td><code>opt_only_one_k_bytes</code></td>
-            <td>
-                <code>vector&lt;uint8&gt;[1024]?</code>
-            </td>
-            <td></td>
-            <td>No default</td>
-        </tr>
 </table>
 
 

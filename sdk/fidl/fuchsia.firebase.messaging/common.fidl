@@ -52,7 +52,7 @@ type Message = table {
 
     /// Binary payload. For webpush and non-json messages, this is the body of
     /// the request entity.
-    3: payload bytes:4096;
+    3: payload vector<uint8>:4096;
 
     /// Message ID. This can be specified by sender. Internally a hash of the
     /// message ID and other elements will be used for storage. The ID must be

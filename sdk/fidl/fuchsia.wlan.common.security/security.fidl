@@ -13,7 +13,7 @@ type WepCredentials = struct {
     ///
     /// This field is always a binary key; ASCII hexadecimal encoding should not
     /// be used here.
-    key bytes;
+    key vector<uint8>:MAX;
 };
 
 /// WPA credentials.
@@ -28,7 +28,7 @@ type WpaCredentials = flexible union {
     /// This field is expected to use UTF-8 or compatible encoding. This is more
     /// permissive than the passphrase to PSK mapping specified in IEEE Std
     /// 802.11-2016 Appendix J.4, but UTF-8 is typically used in practice.
-    2: passphrase bytes:63;
+    2: passphrase vector<uint8>:63;
 };
 
 /// Credentials used to authenticate with a WLAN.

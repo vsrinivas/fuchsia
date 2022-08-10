@@ -15,7 +15,7 @@ const MAX_DATASET_TLV_LEN uint8 = 254;
 /// [Thread Specification](https://www.threadgroup.org/ThreadSpec).
 ///
 /// [1]: https://openthread.io/reference/struct/ot-operational-dataset-tlvs#structot_operational_dataset_tlvs
-alias OperationalDatasetTlvs = bytes:MAX_DATASET_TLV_LEN;
+alias OperationalDatasetTlvs = vector<uint8>:MAX_DATASET_TLV_LEN;
 
 /// Protocol for connecting to [`Dataset`] on a LoWPAN device.
 @discoverable

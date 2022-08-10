@@ -41,6 +41,6 @@ protocol CastKeySigner {
     /// the operation succeeds. The chain contains Cast key cert,
     /// one or more intermediate CA certs and root CA cert.
     GetCertificateChain() -> (struct {
-        cert_chain vector<bytes:2048>:16;
+        cert_chain vector<vector<uint8>:2048>:16;
     }) error ErrorCode;
 };

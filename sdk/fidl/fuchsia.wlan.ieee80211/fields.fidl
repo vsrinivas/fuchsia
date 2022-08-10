@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 library fuchsia.wlan.ieee80211;
 
-alias Ssid = bytes:MAX_SSID_BYTE_LEN;
+alias Ssid = vector<uint8>:MAX_SSID_BYTE_LEN;
 
 // CSsid is intended for use only in source code using C bindings where
 // the Ssid alias does not exist.

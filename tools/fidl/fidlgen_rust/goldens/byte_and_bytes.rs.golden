@@ -25,17 +25,17 @@ use {
     futures::future::{self, MaybeDone, TryFutureExt},
 };
 
-#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(
+    Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, zerocopy::AsBytes, zerocopy::FromBytes,
+)]
+#[repr(C)]
 pub struct ByteAndBytes {
     pub single_byte: u8,
-    pub many_bytes: Vec<u8>,
-    pub only_one_k_bytes: Vec<u8>,
-    pub opt_only_one_k_bytes: Option<Vec<u8>>,
 }
 
 impl fidl::encoding::Persistable for ByteAndBytes {}
 
-fidl_struct! {
+fidl_struct_copy! {
     name: ByteAndBytes,
     members: [
         single_byte {
@@ -43,36 +43,11 @@ fidl_struct! {
             offset_v1: 0,
             offset_v2: 0,
         },
-        many_bytes {
-            ty: Vec<u8>,
-            offset_v1: 8,
-            offset_v2: 8,
-        },
-        only_one_k_bytes {
-            ty: Vec<u8>,
-            offset_v1: 24,
-            offset_v2: 24,
-        },
-        opt_only_one_k_bytes {
-            ty: Option<Vec<u8>>,
-            offset_v1: 40,
-            offset_v2: 40,
-        },
     ],
-    padding_v1: [
-        {
-            ty: u64,
-            offset: 0,
-            mask: 0xffffffffffffff00u64,
-        },],
-    padding_v2: [
-        {
-            ty: u64,
-            offset: 0,
-            mask: 0xffffffffffffff00u64,
-        },],
-    size_v1: 56,
-    size_v2: 56,
-    align_v1: 8,
-    align_v2: 8,
+    padding_v1: [],
+    padding_v2: [],
+    size_v1: 1,
+    size_v2: 1,
+    align_v1: 1,
+    align_v2: 1,
 }

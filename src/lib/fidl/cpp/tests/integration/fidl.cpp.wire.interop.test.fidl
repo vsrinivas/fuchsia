@@ -16,7 +16,7 @@ type Node = table {
 };
 
 type File = struct {
-    content bytes;
+    content vector<uint8>;
 };
 
 type Directory = struct {

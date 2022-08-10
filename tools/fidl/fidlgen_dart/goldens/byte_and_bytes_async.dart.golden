@@ -42,77 +42,36 @@ import 'package:zircon/zircon.dart' as $zircon;
 class ByteAndBytes extends $fidl.Struct {
   const ByteAndBytes({
     required this.singleByte,
-    required this.manyBytes,
-    required this.onlyOneKBytes,
-    this.optOnlyOneKBytes,
   });
   ByteAndBytes.clone(
     ByteAndBytes $orig, {
     int? singleByte,
-    Uint8List? manyBytes,
-    Uint8List? onlyOneKBytes,
-    Uint8List? optOnlyOneKBytes,
   }) : this(
           singleByte: singleByte ?? $orig.singleByte,
-          manyBytes: manyBytes ?? $orig.manyBytes,
-          onlyOneKBytes: onlyOneKBytes ?? $orig.onlyOneKBytes,
-          optOnlyOneKBytes: optOnlyOneKBytes ?? $orig.optOnlyOneKBytes,
-        );
-
-  ByteAndBytes.cloneWithout(
-    ByteAndBytes $orig, {
-    bool optOnlyOneKBytes = false,
-  }) : this(
-          singleByte: $orig.singleByte,
-          manyBytes: $orig.manyBytes,
-          onlyOneKBytes: $orig.onlyOneKBytes,
-          optOnlyOneKBytes: optOnlyOneKBytes ? null : $orig.optOnlyOneKBytes,
         );
 
   ByteAndBytes $cloneWith({
     int? singleByte,
-    Uint8List? manyBytes,
-    Uint8List? onlyOneKBytes,
-    $fidl.OptionalNullable<Uint8List?> optOnlyOneKBytes =
-        const $fidl.OptionalNullable.undefined(),
   }) {
     return ByteAndBytes(
       singleByte: singleByte ?? this.singleByte,
-      manyBytes: manyBytes ?? this.manyBytes,
-      onlyOneKBytes: onlyOneKBytes ?? this.onlyOneKBytes,
-      optOnlyOneKBytes: optOnlyOneKBytes.or(this.optOnlyOneKBytes),
     );
   }
 
   final int singleByte;
-  final Uint8List manyBytes;
-  final Uint8List onlyOneKBytes;
-  final Uint8List? optOnlyOneKBytes;
 
   @override
   List<Object?> get $fields {
     return <Object?>[
       singleByte,
-      manyBytes,
-      onlyOneKBytes,
-      optOnlyOneKBytes,
     ];
   }
 
   static const $fieldType0 = $fidl.Uint8Type();
-  static const $fieldType1 = $fidl.VectorType<int, Uint8List>(
-      element: $fidl.Uint8Type(), maybeElementCount: null);
-  static const $fieldType2 = $fidl.VectorType<int, Uint8List>(
-      element: $fidl.Uint8Type(), maybeElementCount: 1024);
-  static const $fieldType3 = $fidl.NullableVectorType<int, Uint8List>(
-      element: $fidl.Uint8Type(), maybeElementCount: 1024);
 
   @override
   void $encode($fidl.Encoder $encoder, int $offset, int $depth) {
     $fieldType0.encode($encoder, singleByte, $offset + 0, $depth);
-    $fieldType1.encode($encoder, manyBytes, $offset + 8, $depth);
-    $fieldType2.encode($encoder, onlyOneKBytes, $offset + 24, $depth);
-    $fieldType3.encode($encoder, optOnlyOneKBytes, $offset + 40, $depth);
   }
 
   static ByteAndBytes _structDecode(
@@ -120,13 +79,8 @@ class ByteAndBytes extends $fidl.Struct {
     switch ($decoder.wireFormat) {
       case $fidl.WireFormat.v1:
       case $fidl.WireFormat.v2:
-        $decoder.checkPadding($offset + 1, 7);
         return ByteAndBytes(
-            singleByte: $fieldType0.decode($decoder, $offset + 0, $depth),
-            manyBytes: $fieldType1.decode($decoder, $offset + 8, $depth),
-            onlyOneKBytes: $fieldType2.decode($decoder, $offset + 24, $depth),
-            optOnlyOneKBytes:
-                $fieldType3.decode($decoder, $offset + 40, $depth));
+            singleByte: $fieldType0.decode($decoder, $offset + 0, $depth));
       default:
         throw $fidl.FidlError('unknown wire format');
     }
@@ -137,4 +91,4 @@ class ByteAndBytes extends $fidl.Struct {
 // ignore: recursive_compile_time_constant
 const $fidl.StructType<ByteAndBytes> kByteAndBytes_Type =
     $fidl.StructType<ByteAndBytes>(
-        inlineSize: 56, structDecode: ByteAndBytes._structDecode);
+        inlineSize: 1, structDecode: ByteAndBytes._structDecode);

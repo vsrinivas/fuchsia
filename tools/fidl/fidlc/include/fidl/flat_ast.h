@@ -201,7 +201,6 @@ struct Builtin : public Decl {
     kServerEnd,
     // Layouts (aliases)
     kByte,
-    kBytes,
     // Layouts (internal)
     kTransportErr,
     // Constraints
