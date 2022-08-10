@@ -89,13 +89,18 @@ class PipelineStage {
   // the stage has allocated packets for frames before `frame`, it can free those packets now. After
   // the destination stream is advanced, the source streams are advanced, recursively.
   //
-  // This must *not* be called while the stage is _locked_, i.e., until an acquired packet by a
-  // `Read` call is destroyed.
+  // This must *not* be called while the stage is _locked_, i.e., until the packet returned by the
+  // last `Read` call is destroyed, nor while the stage is _stopped_, i.e., when
+  // `presentation_time_to_frac_frame()` returns `std::nullopt`.
   void Advance(MixJobContext& ctx, Fixed frame);
 
   // Reads the destination stream of this stage, and returns the acquired packet. The parameters
   // `start_frame` and `frame_count` represent a range of frames on the destination stream's frame
   // timeline.
+  //
+  // This must *not* be called while the stage is _locked_, i.e., until the packet returned by the
+  // last `Read` call is destroyed, nor while the stage is _stopped_, i.e., when
+  // `presentation_time_to_frac_frame()` returns `std::nullopt`.
   //
   // ## Returned Packet
   //
@@ -125,8 +130,11 @@ class PipelineStage {
   // ## The Passage of Time
   //
   // Each stage maintains a current frame position, which always moves forward. The position is
-  // explicitly advanced to a destination `frame` via `Advance(frame)` call. Similarly, a `Read`
+  // explicitly advanced to a destination `frame` via an `Advance(frame)` call. Similarly, a `Read`
   // call advances the position as follows:
+  //
+  // * When `Read` is called, the position is advanced to `start_frame` (iff the next readable frame
+  //   iess than `start_frame`).
   //
   // * If `std::nullopt` is returned, the position is advanced to `start_frame + frame_count`.
   //
@@ -180,6 +188,10 @@ class PipelineStage {
     return presentation_time_to_frac_frame_;
   }
 
+  // Updates `presentation_time_to_frac_frame`. See discussion in ../docs/timelines.md.
+  // If `f` is not `std::nullopt`, it must be an invertible function.
+  virtual void UpdatePresentationTimeToFracFrame(std::optional<TimelineFunction> f) = 0;
+
   // Sets the stage's thread.
   void set_thread(ThreadPtr thread) { std::atomic_store(&thread_, std::move(thread)); }
 
@@ -199,9 +211,17 @@ class PipelineStage {
   PipelineStage(PipelineStage&&) = delete;
   PipelineStage& operator=(PipelineStage&&) = delete;
 
-  // Implements `Advance` by an internal `AdvanceSelf` function, which advances this stage, the
-  // `AdvanceSelfImpl` function, which is the stage-specific implementation of `AdvanceSelf`, and
-  // the `AdvanceSourcesImpl` function, which advances all connected source streams accordingly.
+  // `Advance(ctx, frame)` is implemented by the following code:
+  //
+  // ```
+  // if (AdvanceSelf(frame)) {
+  //   AdvanceSourcesImpl(ctx, frame);
+  // }
+  // ```
+  //
+  // `AdvanceSelf` advances this PipelineStage's `next_readable_frame` to the given `frame`, then
+  // calls `AdvanceSelfImpl`, which discards any stage-specific cached data that is not needed past
+  // `frame`. `AdvanceSourcesImpl` advances this PipelineStage's connected source streams.
   virtual void AdvanceSelfImpl(Fixed frame) = 0;
   virtual void AdvanceSourcesImpl(MixJobContext& ctx, Fixed frame) = 0;
 
@@ -257,6 +277,12 @@ class PipelineStage {
   // If `start_frame` is not specified, the packet is forwarded unchanged.
   [[nodiscard]] std::optional<Packet> ForwardPacket(
       std::optional<Packet>&& packet, std::optional<Fixed> start_frame = std::nullopt);
+
+  // Implementation detail of `UpdatePresentationTimeToFracFrame`.
+  void set_presentation_time_to_frac_frame(std::optional<TimelineFunction> f) {
+    FX_CHECK(!f || f->invertible());
+    presentation_time_to_frac_frame_ = f;
+  }
 
  private:
   // Advances this stage, and returns whether it's needed to advance sources or not.

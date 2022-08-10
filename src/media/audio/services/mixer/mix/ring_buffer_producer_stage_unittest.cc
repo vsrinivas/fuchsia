@@ -36,6 +36,8 @@ class RingBufferProducerStageTest : public ::testing::Test {
     FX_CHECK(status == ZX_OK);
     ring_buffer_producer_stage_.emplace(kFormat, DefaultClockKoid(), std::move(vmo_mapper_),
                                         kFrameCount, [this]() { return safe_read_frame_; });
+    ring_buffer_producer_stage_->UpdatePresentationTimeToFracFrame(
+        DefaultPresentationTimeToFracFrame(kFormat));
   }
 
   RingBufferProducerStage& ring_buffer_producer_stage() { return *ring_buffer_producer_stage_; }

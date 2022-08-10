@@ -51,6 +51,9 @@ class FakeStage : public PipelineStage {
   // TODO(fxbug.dev/87651): Use this instead of the constructor.
   void AddSource(PipelineStagePtr source, std::unordered_set<GainControlId> gain_ids) override {}
   void RemoveSource(PipelineStagePtr source) override {}
+  void UpdatePresentationTimeToFracFrame(std::optional<TimelineFunction> f) override {
+    set_presentation_time_to_frac_frame(f);
+  }
 
   void AdvanceSelfImpl(Fixed frame) override {
     if (advance_calls_.empty() || frame > advance_calls_.back()) {
@@ -123,6 +126,10 @@ class PassthroughStage : public PipelineStage {
   // TODO(fxbug.dev/87651): Use this instead of the constructor.
   void AddSource(PipelineStagePtr source, std::unordered_set<GainControlId> gain_ids) override {}
   void RemoveSource(PipelineStagePtr source) override {}
+  void UpdatePresentationTimeToFracFrame(std::optional<TimelineFunction> f) override {
+    set_presentation_time_to_frac_frame(f);
+    source_->UpdatePresentationTimeToFracFrame(f);
+  }
 
   void AdvanceSelfImpl(Fixed frame) override {}
   void AdvanceSourcesImpl(MixJobContext& ctx, Fixed frame) override {
@@ -180,14 +187,15 @@ class PipelineStageTest : public ::testing::TestWithParam<PipelineType> {
       default:
         FX_CHECK(false) << GetParam();
     }
-    switch (GetParam()) {
-      case FakeStageWithCaching:
-      case FakeStageWithoutCaching:
-        return fake_stage_;
-      case FakeStageWithCachingThenPassthrough:
-      case FakeStageWithoutCachingThenPassthrough:
-        return std::make_shared<PassthroughStage>(fake_stage_);
+
+    std::shared_ptr<PipelineStage> stage = fake_stage_;
+    if (GetParam() == FakeStageWithCachingThenPassthrough ||
+        GetParam() == FakeStageWithoutCachingThenPassthrough) {
+      stage = std::make_shared<PassthroughStage>(fake_stage_);
     }
+
+    stage->UpdatePresentationTimeToFracFrame(DefaultPresentationTimeToFracFrame(stage->format()));
+    return stage;
   }
 
   void ExpectNullPacket(const std::optional<PipelineStage::Packet>& packet) {
@@ -237,7 +245,7 @@ TEST_P(PipelineStageTest, EmptySource) {
   auto stage = MakeStage(std::vector<FakeStage::QueuedPacket>());
   auto packet = stage->Read(DefaultCtx(), Fixed(0), 20);
   ExpectNullPacket(packet);
-  ExpectAdvanceCalls({Fixed(20)});
+  ExpectAdvanceCalls({Fixed(0), Fixed(20)});
 }
 
 TEST_P(PipelineStageTest, OnePacketFullyConsume) {
@@ -256,7 +264,7 @@ TEST_P(PipelineStageTest, OnePacketFullyConsume) {
       auto packet = stage->Read(DefaultCtx(), Fixed(0), 200);
       ExpectPacket(packet, Fixed(0), Fixed(100), payload);
     }
-    ExpectAdvanceCalls({Fixed(100)});
+    ExpectAdvanceCalls({Fixed(0), Fixed(100)});
   }
 
   {
@@ -286,12 +294,7 @@ TEST_P(PipelineStageTest, OnePacketPartialConsume) {
       packet->set_frames_consumed(0);
       ExpectPacket(packet, Fixed(0), Fixed(100), payload);
     }
-    // When caching, we don't see any `Advance` calls until we consume the entire packet.
-    if (UseCaching()) {
-      ExpectAdvanceCalls({});
-    } else {
-      ExpectAdvanceCalls({Fixed(0)});
-    }
+    ExpectAdvanceCalls({Fixed(0)});
   }
 
   {
@@ -393,7 +396,7 @@ TEST_P(PipelineStageTest, MultiplePacketsFullyConsume) {
       auto packet = stage->Read(DefaultCtx(), Fixed(0), 1000);
       ExpectPacket(packet, Fixed(0), Fixed(100), payload_1);
     }
-    ExpectAdvanceCalls({Fixed(100)});
+    ExpectAdvanceCalls({Fixed(0), Fixed(100)});
   }
 
   {
@@ -450,11 +453,12 @@ TEST_P(PipelineStageTest, MultiplePacketsPartialConsume) {
       packet->set_frames_consumed(50);
       ExpectPacket(packet, Fixed(0), Fixed(100), payload_1);
     }
-    // When caching, we don't see any `Advance` calls until we consume the entire packet.
+    // We always advance to the first read frame.
+    // When caching, we don't see any more `Advance` calls until we consume the entire packet.
     if (UseCaching()) {
-      ExpectAdvanceCalls({});
+      ExpectAdvanceCalls({Fixed(0)});
     } else {
-      ExpectAdvanceCalls({Fixed(50)});
+      ExpectAdvanceCalls({Fixed(0), Fixed(50)});
     }
   }
 

@@ -27,6 +27,9 @@ class ProducerStage : public PipelineStage {
   void RemoveSource(PipelineStagePtr source) final {
     FX_CHECK(false) << "ProducerStage should not have a source";
   }
+  void UpdatePresentationTimeToFracFrame(std::optional<TimelineFunction> f) override {
+    set_presentation_time_to_frac_frame(f);
+  }
 
  protected:
   ProducerStage(std::string_view name, Format format, zx_koid_t reference_clock_koid)

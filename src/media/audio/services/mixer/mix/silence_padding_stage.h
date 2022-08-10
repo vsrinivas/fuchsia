@@ -113,6 +113,12 @@ class SilencePaddingStage : public PipelineStage {
                                 << " does not match with " << source->name();
     source_ = nullptr;
   }
+  void UpdatePresentationTimeToFracFrame(std::optional<TimelineFunction> f) final {
+    set_presentation_time_to_frac_frame(f);
+    if (source_) {
+      source_->UpdatePresentationTimeToFracFrame(f);
+    }
+  }
 
   // Returns the source.
   const PipelineStagePtr& source() const { return source_; }

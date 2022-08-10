@@ -60,10 +60,9 @@ class SimplePacketQueueProducerStage : public ProducerStage {
   }
 
  protected:
-  // Implements `PipelineStage`. Not marked `final` so subclasses can override.
-  void AdvanceSelfImpl(Fixed frame) override;
-  std::optional<Packet> ReadImpl(MixJobContext& ctx, Fixed start_frame,
-                                 int64_t frame_count) override;
+  // Implements `PipelineStage`.
+  void AdvanceSelfImpl(Fixed frame) final;
+  std::optional<Packet> ReadImpl(MixJobContext& ctx, Fixed start_frame, int64_t frame_count) final;
 
   // For access to AdvanceSelfImpl.
   friend class PacketQueueProducerStage;

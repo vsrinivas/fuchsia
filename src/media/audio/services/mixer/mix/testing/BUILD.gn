@@ -22,6 +22,7 @@ source_set("testing") {
   public_deps = [
     "//sdk/lib/syslog/cpp",
     "//src/media/audio/lib/clock",
+    "//src/media/audio/lib/format2",
     "//src/media/audio/services/mixer/mix",
     "//zircon/system/ulib/zx",
   ]

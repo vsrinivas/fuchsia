@@ -33,4 +33,8 @@ MixJobContext& DefaultCtx() { return *global_defaults.mix_job_ctx; }
 const ClockSnapshots& DefaultClockSnapshots() { return global_defaults.clock_snapshots; }
 zx_koid_t DefaultClockKoid() { return global_defaults.clock->koid(); }
 
+TimelineFunction DefaultPresentationTimeToFracFrame(const Format& format) {
+  return TimelineFunction(0, 0, format.frac_frames_per_ns());
+}
+
 }  // namespace media_audio

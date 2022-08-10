@@ -4,6 +4,11 @@
 
 ## Reference time, media time, and frame time
 
+**TODO (fxbug.dev/87651): consider renaming "media time" and "frame time" to
+"media units" and "frame units", reserving "time" for values read from an actual
+clock. (If we do this, TBD if we will use "media timestamp" to refer to a single
+point on the media timeline.)**
+
 Every edge in the mix graph represents a single audio stream, where each audio
 stream contains a sequence of timestamped frames. We measure the progress of
 time in three ways:
@@ -88,8 +93,8 @@ Producers don't necessarily represent a continuously advancing stream. Producers
 may represent static streams that are being navigated dynamically by "loop" or
 "seek" events, as in typical media players. When a Producer is started, it
 starts producing from some point in the stream. When the Producer stops, then
-restarts, it can restart at any media time, including at an older media time,
-e.g. to implement a "seek backwards" action.
+restarts, it can restart at any media time, including at an older media time to
+implement a "seek backwards" action.
 
 Hence, given a sequence *Start at (Tr0, Tm0), Stop at (Tr1, Tm1), Start at (Tr2,
 Tm2)*, we always have *Tr0 ≤ Tr1 ≤ Tr2*, because reference time advances
@@ -99,123 +104,287 @@ at Producers we have *Tm0 ≤ Tm1* with no constraints *Tm2* because Producers
 
 ## Translating between media time and frame time
 
-At each Consumer and Producer, we define a translation between media time *Tm*
-and frame time *Tf*. As above, we use a TimelineFunction with the following
-values:
+Each Consumer has a single frame timeline that is used to drive mix jobs. We
+translate from media time *Tm* to frame *Tf* using the function *Tf = Tm * ∆f /
+∆m*, where every *∆f* frames correspond to *∆m* steps of media time. Since *∆f*
+and *∆m* are constants set when the Consumer is created, this function never
+changes.
 
-*   A pair of *(Tm0, Tf0)*, representing the epoch.
-*   A rate *∆f / ∆m*, where every *∆m* steps of frame time correspond to *∆m*
-    steps of media time.
+Each Producer has *internal* and *downstream* frame timelines. The internal
+frame timeline is defined relative to the Producer's media timeline, using the
+same function above: *Tf = Tm * ∆f / ∆m*. The downstream frame timeline is
+described in the next section and is unrelated to the Producer's media timeline.
 
-For simplicity, the epoch is always *(0, 0)*, which means *Tf = Tm * ∆f / ∆m*.
-When media time is expressed in units frames, then *∆f = ∆m* and media and frame
-times are equivalent.
+## Frame time in mix jobs
 
-## Translating between frame time and presentation time
+On `Graph.Start(Tr0, Tm0)`, a Consumer starts generating a sequence of output
+frames starting from the frame at media time *Tm0*, which is frame *Tf0 = Tm0 *
+∆f / ∆m*. This entire process is driven by frame time: the Consumer asks its
+source for frame *Tf0*, which asks its source for *Tf0* (and possibly additional
+frames, e.g. to resample), and so on, until we reach a Producer, which
+interprets *Tf0* as a *downstream frame*, translates that to an *internal
+frame*, then returns the requested frame.
 
-At each ConsumerStage and ProducerStage, we have translations from *Tf* to *Tm*
-and *Tm* to *Tr* which can be computed into a translation from *Tf* to *Tr*. As
-before, we say that *Tr* is the *presentation timestamp* for frame *Tf*.
+If a Consumer's source graph uses a single clock and frame rate, and the graph
+does not have any Splitters, then all PipelineStages use a frame timeline
+identical to the root Consumer. If there are multiple clocks or frame rates,
+then we need translations at MixerStages as follows:
 
-As mentioned above, media time is defined at Consumers and Producers only, via
-`Graph.Start` and `Graph.Stop` actions from clients. At Consumers and Producers,
-we use media time to define frame time. All other PipelineStages operate
-exclusively on frame time, which gets pushed "upwards" from Consumers. If the
-mix graph uses a single clock and has no Splitters, then all PipelineStages
-(except the Producers) will use the same frame timeline. In the general case,
-frame timelines can change at Mixers (when a source stream uses a different
-clock or frame rate than the destination stream) and at Splitters (which can
-have multiple destination streams).
+*   If a Mixer's source has a different frame rate, we compute the source frame
+    *Tfs* from the destination frame *Tfd* using the formula *Tfs = Tfd * FRs /
+    FRd*, where *FRs* and *FRd* are the frame rates of the source and
+    destination streams, respectively. Put differently, the frame timelines of
+    the source and destination share the same epoch (when *Tfd=0*, *Tfs=0*) but
+    have different rates.
 
-Each PipelineStage has a property `std::optional<TimelineFunction>
-presentation_time_to_frac_frame` which holds the stage's current translation
-from presentation time to frame time. On each call to `Graph.Start` or
-`Graph.stop`, we compute the Consumer's `presentation_time_to_frac_frame`, as
-described above, then pass that value up the tree by calling the following
-recursive pseudocode:
+*   If a Mixer's source has a different clock, we compute *Tfs* from *Tfd*
+    through a multi-step translation from destination frame, to presentation
+    timestamp (destination clock), to presentation timestamp (system monotonic
+    clock), to presentation timestamp (source clock), to source frame. This
+    requires a translation between frames and presentation time, as defined in
+    the next section. (In practice, this translation can be imprecise because of
+    [clock reconciliation](clocks.md).)
+
+*   If a Mixer's source has a different frame rate and clock, we combine the
+    above two translations.
+
+### Translating between frame time and presentation time
+
+At every PipelineState, we can define a translation from frame *Tf* to that
+frame's presentation time *Tr*. As before, we say that *Tr* is the *presentation
+timestamp* for frame *Tf*. This translation is stored in the property
+`std::optional<TimelineFunction> presentation_time_to_frac_frame`.
+
+At each ConsumerStage, the translation from *Tf* to *Tr* is defined by a
+two-step translation from *Tf* to *Tm* to *Tr*. When a ConsumerStage is started
+or stopped, we recompute that ConsumerStage's `presentation_time_to_frac_frame`
+then recurse upwards, as shown in the following recursive pseudocode:
 
 ```cpp
-void UpdateFrameTimeline(std::optional<TimelineFunction> presentation_time_to_frac_frame) {
-  if (this is a MixerStage) {
-    this.presentation_time_to_frac_frame = presentation_time_to_frac_frame;
+void UpdatePresentationTimeToFracFrame(std::optional<TimelineFunction> f) {
+  if (this is a ConsumerStage) {
+    this.presentation_time_to_frac_frame = compose Tf-to-Tm with Tm-to-Tr;
+    source.UpdateFrameTimeline(this.presentation_time_to_frac_frame);
+  }
+  else if (this is a MixerStage) {
+    this.presentation_time_to_frac_frame = f;
     for (auto source : this.sources) {
-      if (source.reference_clock == this.reference_clock || !presentation_time_to_frac_frame) {
-        source.UpdateFrameTimeline(presentation_time_to_frac_frame);
-      } else {
-        // When the clock changes, rebase the TimelineFunction. Given that
-        // presentation_time_to_frac_frame has epoch (Tf, Tr) and rate ∆f/∆r,
-        // compute the time Tr' which is equivalent to Tr in the source's
-        // reference clock, then pass epoch (Tf, Tr') and rate ∆f/∆r upwards.
-        auto new_f = presentation_time_to_frac_frame;
-        new_f.reference_time = source.MonoTimeToRef(
-             this.RefTimeToMono(presentation_time_to_frac_frame->reference_time));
-        source.UpdateFrameTimeline(new_f);
+      // Adjust `f` based on the source's clock and frame rate, as described in the prior section.
+      auto new_f = ...;
+      source.UpdateFrameTimeline(new_f);
     }
   }
-  else if (this is Splitter) {
-    // Initially, the SplitterStage is stopped. When the first destination stream
-    // is started, we use that stream's TimelineFunction. We continue using that
-    // TimelineFunction until all destinations are stopped, at which point the
-    // Splitter also stops. When another destination is started, we use that
-    // destination's TimelineFunction (with caveats below), and so on.
+  else if (this is CustomStage) {
+    this.presentation_time_to_frac_frame = f;
+    source.UpdatePresentationTimeToFracFrame(f);
   }
-  else if (this is Custom) {
-    // If this stage has a single destination stream, pass presentation_time_to_frac_frame
-    // to all sources. If the stage has multiple destination streams, treat this
-    // like a Splitter.
-  }
-  else {
-    // Must be a Producer. Stop recursing.
-    // The Producer computes its own presentation_time_to_frac_frame on Stop/Start.
+  else if (this is a ProducerStage) {
+    // `f` defines the translation from presentation time to downstream frame.
+    this.presentation_time_to_frac_frame = f;
+    // See next section.
+    if (is child of Splitter) {
+      send `UpdatePresentationTimeToFracFrame(f)` message to the Splitter's ConsumerStage
+    }
   }
 }
 ```
 
-Since all non-Producer stages get their frame timelines directly from Consumers,
-and since Consumers' frame time cannot go backwards, then frame time cannot go
-backwards at any non-Producer stage. The exception is when Splitters go through
-a transition from Started, to Stopped, back to Started. When the Splitter
-restarts, it may use the frame timeline of a different Consumer than when the
-Splitter was first started. To account for this difference, the Splitter (and
-all of its sources, recursively, not including Producers) must be
-[`Reset`](https://cs.opensource.google/fuchsia/fuchsia/+/main:src/media/audio/audio_core/stream.h;drc=6646d5fa6b2f5550f57912dd64b8c1c01039cf99;l=241)
-to account for the fact that frame time may change in an arbitrary way. For a
-similar reason, Producers must `Reset` each time they are restarted.
+At Producers, recall that we have two frame timelines (*internal* and
+*downstream*). The above pseudocode computes the translation from *downstream*
+frame to presentation time. Separately, the translation from *internal* frame to
+presentation time is defined by a two-step translation from internal frame, to
+media timestamp, to presentation timestamp. This internal translation is updated
+each time the Producer is started or stopped.
+
+### Propagating Start and Stop across Splitters
+
+So far we have focused on PipelineStage trees. If the mix graph has Splitter
+nodes, then each SplitterNode is composed of a ConsumerStage, which represents
+the Splitter's source stream, and multiple ProducerStages, which represent the
+Splitter's destination streams. Within a SplitterNode, the ConsumerStage's frame
+timeline can be defined arbitrarily, while each ProducerStage's *internal* frame
+timeline should match the ConsumerStage's frame timeline. This ensures that
+ProducerStages will perform frame timeline translations on behalf of the
+SplitterNode. To minimize translations, the ConsumerStage's frame timeline
+should match at least one ProducerStage's *downstream* frame timeline. We use a
+heuristic as follows:
+
+When a ConsumerNode is started or stopped, we propagate this signal upwards
+through SplitterNodes. Suppose a SplitterNode has a source edge represented by
+ConsumerStage C and destination edges represented by ProducerStages P1 and P2,
+which feed into Consumers C1 and C2, respectively. When C1 is started or
+stopped, C1 will call `UpdatePresentationTimeToFracFrame(f)`, which eventually
+propagates upwards to P1. As shown above, P1 forwards `f` (over a thread-safe
+message queue) to C, which handles that message as follows:
+
+*   If the Splitter is stopped and `f != nullopt` (the Splitter is being
+    started), set `C.presentation_time_to_frac_frame = f`, then send P1 a
+    message telling P1 to set its internal frame timeline to `f`. This will use
+    the same frame timeline from C1 through P1 through C's source tree (modulo
+    frame rate and clock changes).
+
+*   If the Splitter is started and `f != nullopt`, the Splitter has two
+    destination streams that have started and may have different frame
+    timelines. For example, this happens when C2 starts after C1. In this case,
+    the Splitter sticks with its current frame timeline. C sends P2 a message
+    telling P2 to set its internal frame timeline to match
+    `C.presentation_time_to_frac_frame`. This ensures that P2 can appropriately
+    schedule packets received from C.
+
+*   If the Splitter is started and `f == nullopt`, C decrements its count of
+    started destination edges. Once this count reaches zero, C also stops.
+
+A special case happens when the Splitter goes through a transition from Started,
+to Stopped, back to Started, such as in the following sequence:
+
+*   P1 starts
+*   P2 starts
+*   P1 and P2 stop
+*   P2 starts
+
+When the Splitter starts the first time, it uses the same frame timeline as C1.
+When the Splitter starts the second time, it uses the same frame timeline as C2.
+Since there is no relationship between the frame timelines of C1 and C2, it's
+possible that C2's frame timeline is behind C1's, which makes the Splitter's
+frame time appear to go backwards. To account for this possibility, C's source
+tree must be [`Reset`](TODO<fxbug.dev/87651>: add link) to account for the fact
+that frame time may change in an arbitrary way.
+
+### Example
+
+The following example demonstrates how frame time can propagate through a mix
+graph. As we walk the graph upwards from a Consumer, note that frame timelines
+change in just in two cases: at MixerStages (when the source has a different
+frame rate or clock) and within ProducerStages (where the internal frame
+timeline may differ from the downstream frame timeline).
+
+<!-- frame-time-example.png
+
+To generate the image, copy to a file and run `dot -Tpng <file> > images/frame-time-example.png`.
+
+```dot
+digraph G {
+  rankdir = "TB";
+
+  p0 [
+    fontname = "Courier New",
+    label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+      <tr><td><b> Producer0 </b><br/></td></tr>
+      <tr><td align="left">[MT1] media time </td></tr>
+      <tr><td align="left">[FT1] internal frame time </td></tr>
+      <tr><td align="left">[FT2] downstream frame time </td></tr>
+    </table>>,
+    shape=plain
+  ];
+
+  mixer [
+    fontname = "Courier New",
+    label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+      <tr><td><b> Mixer </b><br/></td></tr>
+      <tr><td align="left">[FT3] frame time </td></tr>
+    </table>>,
+    shape=plain
+  ];
+
+  subgraph cluster_splitter {
+    label = "Splitter";
+    labeljust = l;
+    c0 [
+      fontname = "Courier New",
+      label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+        <tr><td><b> Consumer0 </b><br/></td></tr>
+        <tr><td align="left">[FT3] frame time </td></tr>
+      </table>>,
+      shape=plain
+    ];
+    p1 [
+      fontname = "Courier New",
+      label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+        <tr><td><b> Producer1 </b><br/></td></tr>
+        <tr><td align="left">[FT3] internal frame time </td></tr>
+        <tr><td align="left">[FT3] downstream frame time </td></tr>
+      </table>>,
+      shape=plain
+    ];
+    p2 [
+      fontname = "Courier New",
+      label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+        <tr><td><b> Producer2 </b><br/></td></tr>
+        <tr><td align="left">[FT3] internal frame time </td></tr>
+        <tr><td align="left">[FT4] downstream frame time </td></tr>
+      </table>>,
+      shape=plain
+    ];
+  }
+
+  custom1 [
+    fontname = "Courier New",
+    label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+      <tr><td><b> Custom1 </b><br/></td></tr>
+      <tr><td align="left">[FT3] frame time </td></tr>
+    </table>>,
+    shape=plain
+  ];
+
+  custom2 [
+    fontname = "Courier New",
+    label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+      <tr><td><b> Custom2 </b><br/></td></tr>
+      <tr><td align="left">[FT4] frame time </td></tr>
+    </table>>,
+    shape=plain
+  ];
+
+  c1 [
+    fontname = "Courier New",
+    label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+      <tr><td><b> Consumer1 </b><br/></td></tr>
+      <tr><td align="left">[FT3] frame time </td></tr>
+      <tr><td align="left">[MT3] media time </td></tr>
+    </table>>,
+    shape=plain
+  ];
+
+  c2 [
+    fontname = "Courier New",
+    label=<<table border="0" cellborder="1" cellspacing="0" cellpadding="4">
+      <tr><td><b> Consumer2 </b><br/></td></tr>
+      <tr><td align="left">[FT4] frame time </td></tr>
+      <tr><td align="left">[MT4] media time </td></tr>
+    </table>>,
+    shape=plain
+  ];
+
+  p0 -> mixer [ label=<<i align="left">&nbsp;clock and<br align="left"/>&nbsp;frame rate change</i>> ];
+  mixer -> c0;
+  c0 -> p1 -> custom1 -> c1;
+  c0 -> p2 -> custom2 -> c2;
+}
+```
+
+-->
+
+![Frame time example](images/frame-time-example.png)
 
 ### Optimality
 
-This algorithm upwards minimizes the number of frame timeline translations in
-most cases. The exceptions involve Splitters: if the Splitter has destination
-streams A and B, where A is started, then B is started, then A is stopped, then
-while A is stopped, it would be optimal to switch the Splitter to use B's
-timeline, but for simplicity we don't bother doing this.
+This algorithm minimizes the number of frame timeline translations in most
+cases. The exceptions involve Splitters: we sometimes use more frame timeline
+translations in Splitters than strictly necessary. For example, if the Splitter
+has destination streams A and B, where A is started, then B is started, then A
+is stopped, then while A is stopped, it would be optimal to switch the Splitter
+to use B's timeline, but for simplicity we don't bother doing this.
 
 ### Concurrency
 
-If the graph has no Splitters, `UpdateFrameTimeline` can run in an entirely
-single-threaded way, since it touches only the set of nodes "owned" by the
-Consumer which was started or stopped. If the graph has Splitters, then each
-time we encounter a Splitter node we may need to hop to a different thread to
-update the Splitter's source stream.
+If the graph has no Splitters, `UpdatePresentationTimeToFracFrame` can run in an
+entirely single-threaded way. If the graph has Splitters, then each time we
+encounter a Splitter node we may need to hop to a different thread to update the
+Splitter's source stream. As discussed above, this is done using message queues.
 
-We run this algorithm directly on PipelineStages, starting from the Consumer
-stage which was started or stopped. When we reach a ProducerStage which is a
-child of a Splitter node, the ProducerStage sends a message to the Splitter's
-ConsumerStage telling that stage to start (or stop) using the frame timeline
-passed to UpdateFrameTimeline. With the Splitter's ConsumerStage receives this
-message, it runs the algorithm summarized in UpdateFrameTimeline:
-
-*   When the Splitter's ConsumerStage transitions from "stopped" to "started",
-    it passes its frame timeline down to the Splitter's ProducerStage(s) in a
-    "start" message. To ensure the producers are using the correct frame
-    timeline before they start serving packets, this message is sent before any
-    packets.
-
-*   When the Splitter's ConsumerStage transitions from "started" to "stopped",
-    it needs not do anything because all producers must already be stopped.
-
-*   If a new destination stream is added to the Splitter while it is started,
-    the new producer is given a "start" message before any packets.
+To ensure that the Splitter's consumer and producer stages have coherent frame
+timelines, the ConsumerStage does not send any packets to ProducerStage P until
+after it has sent a message to update P's internal frame timeline.
 
 ## Other ideas
 

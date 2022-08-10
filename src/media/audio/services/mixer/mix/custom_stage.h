@@ -39,6 +39,10 @@ class CustomStage : public PipelineStage {
     source_.AddSource(std::move(source), std::move(gain_ids));
   }
   void RemoveSource(PipelineStagePtr source) final { source_.RemoveSource(std::move(source)); }
+  void UpdatePresentationTimeToFracFrame(std::optional<TimelineFunction> f) final {
+    set_presentation_time_to_frac_frame(f);
+    source_.UpdatePresentationTimeToFracFrame(f);
+  }
 
  protected:
   void AdvanceSelfImpl(Fixed frame) final;

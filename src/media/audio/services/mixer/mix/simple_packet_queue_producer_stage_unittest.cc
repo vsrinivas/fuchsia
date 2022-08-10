@@ -34,7 +34,10 @@ class SimplePacketQueueProducerStageTest : public ::testing::Test {
       : packet_queue_producer_stage_({
             .format = kFormat,
             .reference_clock_koid = DefaultClockKoid(),
-        }) {}
+        }) {
+    packet_queue_producer_stage_.UpdatePresentationTimeToFracFrame(
+        DefaultPresentationTimeToFracFrame(kFormat));
+  }
 
   const void* PushPacket(uint32_t packet_id, int64_t start = 0, int64_t length = 1) {
     auto& packet = NewPacket(packet_id, start, length);
