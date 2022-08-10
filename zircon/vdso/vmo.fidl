@@ -381,7 +381,7 @@ protocol vmo {
     /// actually resizing the VMO.
     ///
     /// The data in the VMO between the given size and the end of the VMO (i.e., the next page boundary)
-    /// will be overritten with zeros.
+    /// will be overwritten with zeros.
     ///
     /// ## Rights
     ///
