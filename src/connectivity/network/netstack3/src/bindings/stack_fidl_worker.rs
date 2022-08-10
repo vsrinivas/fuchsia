@@ -193,7 +193,7 @@ where
 
         let id = {
             let Ctx { sync_ctx, non_sync_ctx } = &mut *ctx;
-            let eth_id = netstack3_core::add_ethernet_device(sync_ctx, non_sync_ctx, mac_addr, mtu);
+            let eth_id = netstack3_core::device::add_ethernet_device(sync_ctx, non_sync_ctx, mac_addr, mtu);
             let (interface_control_stop_sender, interface_control_stop_receiver) =
                 futures::channel::oneshot::channel();
             let (control_sender, control_receiver) =

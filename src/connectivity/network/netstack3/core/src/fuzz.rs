@@ -311,7 +311,7 @@ fn dispatch(
     use FuzzAction::*;
     match action {
         ReceiveFrame(ArbitraryFrame { frame_type: _, buf, description: _ }) => {
-            crate::receive_frame(sync_ctx, non_sync_ctx, device_id, buf)
+            crate::device::receive_frame(sync_ctx, non_sync_ctx, device_id, buf)
                 .expect("error receiving frame")
         }
         AdvanceTime(SmallDuration(duration)) => {
@@ -329,7 +329,7 @@ pub(crate) fn single_device_arbitrary_packets(input: FuzzInput) {
     let FuzzInput { actions } = input;
 
     let Ctx { sync_ctx, non_sync_ctx } = &mut ctx;
-    let device_id = crate::add_ethernet_device(
+    let device_id = crate::device::add_ethernet_device(
         sync_ctx,
         non_sync_ctx,
         UnicastAddr::new(net_mac!("10:20:30:40:50:60")).unwrap(),

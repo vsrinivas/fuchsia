@@ -507,7 +507,7 @@ async fn remove_interface(ctx: NetstackContext, id: BindingId) {
             .devices
             .remove_device(id)
             .expect("device lifetime should be tied to channel lifetime");
-        netstack3_core::remove_device(sync_ctx, non_sync_ctx, info.core_id());
+        netstack3_core::device::remove_device(sync_ctx, non_sync_ctx, info.core_id());
         info
     };
     let handler = match device_info.into_info() {

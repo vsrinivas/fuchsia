@@ -24,11 +24,11 @@ use net_types::{
 };
 use netstack3_core::{
     context::{CounterContext, EventContext, InstantContext, RngContext, TimerContext},
-    get_all_ip_addr_subnets, get_ipv4_configuration, get_ipv6_configuration,
+    device::{DeviceId, DeviceLayerEventDispatcher},
+    get_all_ip_addr_subnets,
     icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
     transport::tcp::socket::ListenerId,
-    update_ipv4_configuration, update_ipv6_configuration, AddableEntry, AddableEntryEither,
-    BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, IpExt, NonSyncContext, RingBuffer,
+    AddableEntry, AddableEntryEither, BufferUdpContext, Ctx, IpExt, NonSyncContext, RingBuffer,
     TcpNonSyncContext, TimerId, UdpBoundId, UdpContext,
 };
 use packet::{Buf, BufferMut, Serializer};
@@ -649,7 +649,7 @@ impl TestSetupBuilder {
             let mut stack = TestStack::new();
             stack
                 .with_ctx(|Ctx { sync_ctx, non_sync_ctx }| {
-                    let loopback = netstack3_core::add_loopback_device(
+                    let loopback = netstack3_core::device::add_loopback_device(
                         sync_ctx,
                         non_sync_ctx,
                         DEFAULT_LOOPBACK_MTU,
@@ -658,12 +658,22 @@ impl TestSetupBuilder {
                     crate::bindings::add_loopback_ip_addrs(sync_ctx, non_sync_ctx, loopback)
                         .expect("add loopback addresses");
 
-                    update_ipv4_configuration(sync_ctx, non_sync_ctx, loopback, |config| {
-                        config.ip_config.ip_enabled = true;
-                    });
-                    update_ipv6_configuration(sync_ctx, non_sync_ctx, loopback, |config| {
-                        config.ip_config.ip_enabled = true;
-                    });
+                    netstack3_core::device::update_ipv4_configuration(
+                        sync_ctx,
+                        non_sync_ctx,
+                        loopback,
+                        |config| {
+                            config.ip_config.ip_enabled = true;
+                        },
+                    );
+                    netstack3_core::device::update_ipv6_configuration(
+                        sync_ctx,
+                        non_sync_ctx,
+                        loopback,
+                        |config| {
+                            config.ip_config.ip_enabled = true;
+                        },
+                    );
                 })
                 .await;
 
@@ -901,7 +911,7 @@ async fn test_ethernet_link_up_down() {
     // hasn't been called)
     let mut ctx = t.ctx(0).await;
     let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
-    netstack3_core::receive_frame(sync_ctx, non_sync_ctx, core_id, Buf::new(&mut [], ..))
+    netstack3_core::device::receive_frame(sync_ctx, non_sync_ctx, core_id, Buf::new(&mut [], ..))
         .expect("error receiving frame");
 }
 
@@ -910,8 +920,10 @@ fn check_ip_enabled<NonSyncCtx: NonSyncContext>(
     core_id: DeviceId,
     expected: bool,
 ) {
-    let ipv4_enabled = get_ipv4_configuration(sync_ctx, core_id).ip_config.ip_enabled;
-    let ipv6_enabled = get_ipv6_configuration(sync_ctx, core_id).ip_config.ip_enabled;
+    let ipv4_enabled =
+        netstack3_core::device::get_ipv4_configuration(sync_ctx, core_id).ip_config.ip_enabled;
+    let ipv6_enabled =
+        netstack3_core::device::get_ipv6_configuration(sync_ctx, core_id).ip_config.ip_enabled;
 
     assert_eq!((ipv4_enabled, ipv6_enabled), (expected, expected));
 }

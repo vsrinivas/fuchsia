@@ -3788,7 +3788,7 @@ mod tests {
 
         let config = Ipv6::DUMMY_CONFIG;
         let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
-        let device = crate::add_ethernet_device(
+        let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
             config.local_mac,
@@ -3881,7 +3881,7 @@ mod tests {
         let cfg = DUMMY_CONFIG_V6;
         let Ctx { mut sync_ctx, mut non_sync_ctx } =
             DummyEventDispatcherBuilder::from_config(cfg.clone()).build();
-        let device = crate::add_ethernet_device(
+        let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
             cfg.local_mac,
@@ -4019,7 +4019,7 @@ mod tests {
             // assigned state rather than the tentative state.
             let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyCtx::default();
             let local_mac = v6_config.local_mac;
-            let device = crate::add_ethernet_device(
+            let device = crate::device::add_ethernet_device(
                 &mut sync_ctx,
                 &mut non_sync_ctx,
                 local_mac,

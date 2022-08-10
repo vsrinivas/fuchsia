@@ -1119,7 +1119,7 @@ mod tests {
         check(&sync_ctx, &[][..]);
 
         let loopback_device =
-            crate::add_loopback_device(&mut sync_ctx, &mut non_sync_ctx, 55 /* mtu */)
+            crate::device::add_loopback_device(&mut sync_ctx, &mut non_sync_ctx, 55 /* mtu */)
                 .expect("error adding loopback device");
         check(&sync_ctx, &[loopback_device][..]);
 
@@ -1130,7 +1130,7 @@ mod tests {
             remote_ip: _,
             remote_mac: _,
         } = DUMMY_CONFIG_V4;
-        let ethernet_device = crate::add_ethernet_device(
+        let ethernet_device = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
             local_mac,
@@ -1159,7 +1159,7 @@ mod tests {
         let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
 
         let loopback_device =
-            crate::add_loopback_device(&mut sync_ctx, &mut non_sync_ctx, 55 /* mtu */)
+            crate::device::add_loopback_device(&mut sync_ctx, &mut non_sync_ctx, 55 /* mtu */)
                 .expect("error adding loopback device");
 
         let expected = [
@@ -1176,7 +1176,7 @@ mod tests {
     fn test_add_ethernet_device_routes() {
         let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
 
-        let ethernet_device = crate::add_ethernet_device(
+        let ethernet_device = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
             UnicastAddr::new(net_mac!("aa:bb:cc:dd:ee:ff")).expect("MAC is unicast"),

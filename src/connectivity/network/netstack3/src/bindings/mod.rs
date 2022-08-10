@@ -59,9 +59,9 @@ use netstack3_core::{
     add_ip_addr_subnet,
     context::{CounterContext, EventContext, InstantContext, RngContext, TimerContext},
     data_structures::id_map::IdMap,
+    device::{DeviceId, DeviceLayerEventDispatcher},
     error::NetstackError,
-    handle_timer, icmp, update_ipv4_configuration, update_ipv6_configuration, BufferUdpContext,
-    Ctx, DeviceId, DeviceLayerEventDispatcher, IpDeviceConfiguration, IpExt,
+    handle_timer, icmp, BufferUdpContext, Ctx, IpDeviceConfiguration, IpExt,
     Ipv4DeviceConfiguration, Ipv6DeviceConfiguration, NonSyncContext, SlaacConfiguration, SyncCtx,
     TimerId, UdpBoundId, UdpConnId, UdpContext, UdpListenerId,
 };
@@ -557,10 +557,10 @@ fn set_interface_enabled<NonSyncCtx: NonSyncContext + AsRef<Devices> + AsMut<Dev
         .notify(InterfaceUpdate::OnlineChanged(should_enable))
         .expect("interfaces worker not running");
 
-    update_ipv4_configuration(sync_ctx, non_sync_ctx, core_id, |config| {
+    netstack3_core::device::update_ipv4_configuration(sync_ctx, non_sync_ctx, core_id, |config| {
         config.ip_config.ip_enabled = should_enable;
     });
-    update_ipv6_configuration(sync_ctx, non_sync_ctx, core_id, |config| {
+    netstack3_core::device::update_ipv6_configuration(sync_ctx, non_sync_ctx, core_id, |config| {
         config.ip_config.ip_enabled = should_enable;
     });
 
@@ -727,9 +727,12 @@ impl NetstackSeed {
 
             // Add and initialize the loopback interface with the IPv4 and IPv6
             // loopback addresses and on-link routes to the loopback subnets.
-            let loopback =
-                netstack3_core::add_loopback_device(sync_ctx, non_sync_ctx, DEFAULT_LOOPBACK_MTU)
-                    .expect("error adding loopback device");
+            let loopback = netstack3_core::device::add_loopback_device(
+                sync_ctx,
+                non_sync_ctx,
+                DEFAULT_LOOPBACK_MTU,
+            )
+            .expect("error adding loopback device");
             let devices: &mut Devices = non_sync_ctx.as_mut();
             let (control_sender, control_receiver) =
                 interfaces_admin::OwnedControlHandle::new_channel();
@@ -760,22 +763,32 @@ impl NetstackSeed {
                 })
                 .expect("error adding loopback device");
             // Don't need DAD and IGMP/MLD on loopback.
-            update_ipv4_configuration(sync_ctx, non_sync_ctx, loopback, |config| {
-                *config = Ipv4DeviceConfiguration {
-                    ip_config: IpDeviceConfiguration { ip_enabled: true, gmp_enabled: false },
-                };
-            });
-            update_ipv6_configuration(sync_ctx, non_sync_ctx, loopback, |config| {
-                *config = Ipv6DeviceConfiguration {
-                    dad_transmits: None,
-                    max_router_solicitations: None,
-                    slaac_config: SlaacConfiguration {
-                        enable_stable_addresses: true,
-                        temporary_address_configuration: None,
-                    },
-                    ip_config: IpDeviceConfiguration { ip_enabled: true, gmp_enabled: false },
-                };
-            });
+            netstack3_core::device::update_ipv4_configuration(
+                sync_ctx,
+                non_sync_ctx,
+                loopback,
+                |config| {
+                    *config = Ipv4DeviceConfiguration {
+                        ip_config: IpDeviceConfiguration { ip_enabled: true, gmp_enabled: false },
+                    };
+                },
+            );
+            netstack3_core::device::update_ipv6_configuration(
+                sync_ctx,
+                non_sync_ctx,
+                loopback,
+                |config| {
+                    *config = Ipv6DeviceConfiguration {
+                        dad_transmits: None,
+                        max_router_solicitations: None,
+                        slaac_config: SlaacConfiguration {
+                            enable_stable_addresses: true,
+                            temporary_address_configuration: None,
+                        },
+                        ip_config: IpDeviceConfiguration { ip_enabled: true, gmp_enabled: false },
+                    };
+                },
+            );
             add_loopback_ip_addrs(sync_ctx, non_sync_ctx, loopback)
                 .expect("error adding loopback addresses");
 

@@ -532,7 +532,7 @@ impl DummyEventDispatcherBuilder {
             .into_iter()
             .enumerate()
             .map(|(idx, (mac, ip_subnet))| {
-                let id = crate::add_ethernet_device(
+                let id = crate::device::add_ethernet_device(
                     sync_ctx,
                     non_sync_ctx,
                     mac,

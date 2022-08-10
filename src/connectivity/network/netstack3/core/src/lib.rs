@@ -34,7 +34,7 @@ mod algorithm;
 pub mod benchmarks;
 pub mod context;
 pub mod data_structures;
-mod device;
+pub mod device;
 pub mod error;
 #[cfg(fuzz)]
 mod fuzz;
@@ -48,11 +48,6 @@ pub mod transport;
 use log::trace;
 
 pub use crate::{
-    device::{
-        add_ethernet_device, add_loopback_device, get_ipv4_configuration, get_ipv6_configuration,
-        receive_frame, remove_device, update_ipv4_configuration, update_ipv6_configuration,
-        DeviceId, DeviceLayerEventDispatcher,
-    },
     ip::{
         device::{
             dad::DadEvent,
@@ -102,6 +97,7 @@ use packet::{Buf, BufferMut, EmptyBuf};
 
 use crate::{
     context::{CounterContext, EventContext, RngContext, TimerContext},
+    device::DeviceId,
     device::{DeviceLayerState, DeviceLayerTimerId},
     ip::{
         device::{Ipv4DeviceTimerId, Ipv6DeviceTimerId},
@@ -229,7 +225,7 @@ impl<C: NonSyncContext + Default> Default for StackState<C> {
 
 /// The non synchronized context for the stack with a buffer.
 pub trait BufferNonSyncContextInner<B: BufferMut>:
-    DeviceLayerEventDispatcher<B>
+    device::DeviceLayerEventDispatcher<B>
     + BufferUdpContext<Ipv4, B>
     + BufferUdpContext<Ipv6, B>
     + BufferIcmpContext<Ipv4, B>
@@ -238,7 +234,7 @@ pub trait BufferNonSyncContextInner<B: BufferMut>:
 }
 impl<
         B: BufferMut,
-        C: DeviceLayerEventDispatcher<B>
+        C: device::DeviceLayerEventDispatcher<B>
             + BufferUdpContext<Ipv4, B>
             + BufferUdpContext<Ipv6, B>
             + BufferIcmpContext<Ipv4, B>
@@ -555,7 +551,7 @@ mod tests {
     fn test_add_remove_ip_addresses<I: Ip + TestIpExt>() {
         let config = I::DUMMY_CONFIG;
         let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
-        let device = crate::add_ethernet_device(
+        let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
             config.local_mac,

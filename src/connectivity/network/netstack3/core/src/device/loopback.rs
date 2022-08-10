@@ -77,7 +77,7 @@ mod tests {
     fn test_loopback_methods() {
         const MTU: u32 = 66;
         let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
-        let device = crate::add_loopback_device(&mut sync_ctx, &mut non_sync_ctx, MTU)
+        let device = crate::device::add_loopback_device(&mut sync_ctx, &mut non_sync_ctx, MTU)
             .expect("error adding loopback device");
         crate::device::testutil::enable_device(&mut sync_ctx, &mut non_sync_ctx, device);
 

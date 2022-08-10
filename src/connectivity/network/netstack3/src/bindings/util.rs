@@ -17,8 +17,9 @@ use net_types::{
 };
 use net_types::{SpecifiedAddr, Witness};
 use netstack3_core::{
+    device::DeviceId,
     error::{ExistsError, NetstackError, NotFoundError},
-    AddRouteError, AddableEntry, AddableEntryEither, DeviceId, EntryEither,
+    AddRouteError, AddableEntry, AddableEntryEither, EntryEither,
 };
 
 use crate::bindings::socket::{IntoErrno, IpSockAddrExt, SockAddr};
@@ -657,7 +658,7 @@ mod tests {
             let mut state = ctx.try_lock().unwrap();
             let state: &mut Ctx<_> = &mut state;
 
-            let core = netstack3_core::add_ethernet_device(
+            let core = netstack3_core::device::add_ethernet_device(
                 &mut state.sync_ctx,
                 &mut state.non_sync_ctx,
                 UnicastAddr::new(Mac::new([2, 3, 4, 5, 6, 7])).unwrap(),

@@ -109,7 +109,7 @@ impl NetdeviceWorker {
 
             let mut ctx = ctx.lock().await;
             let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
-            netstack3_core::receive_frame(
+            netstack3_core::device::receive_frame(
                 sync_ctx,
                 non_sync_ctx,
                 id,
@@ -217,7 +217,8 @@ impl DeviceHandler {
         };
         let ctx = &mut ns.ctx.lock().await;
         let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
-        let core_id = netstack3_core::add_ethernet_device(sync_ctx, non_sync_ctx, mac_addr, mtu);
+        let core_id =
+            netstack3_core::device::add_ethernet_device(sync_ctx, non_sync_ctx, mac_addr, mtu);
         state_entry.insert(core_id);
         let make_info = |id| {
             let name = name.unwrap_or_else(|| format!("eth{}", id));

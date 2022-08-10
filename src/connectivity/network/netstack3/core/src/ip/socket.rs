@@ -1088,7 +1088,7 @@ mod tests {
         let Ctx { mut sync_ctx, mut non_sync_ctx } =
             DummyEventDispatcherBuilder::from_config(cfg).build();
         let loopback_device_id =
-            crate::add_loopback_device(&mut sync_ctx, &mut non_sync_ctx, u16::MAX.into())
+            crate::device::add_loopback_device(&mut sync_ctx, &mut non_sync_ctx, u16::MAX.into())
                 .expect("create the loopback interface");
         crate::device::testutil::enable_device(
             &mut sync_ctx,
@@ -1478,7 +1478,7 @@ mod tests {
         }
 
         let loopback_device_id =
-            crate::add_loopback_device(&mut sync_ctx, &mut non_sync_ctx, u16::MAX.into())
+            crate::device::add_loopback_device(&mut sync_ctx, &mut non_sync_ctx, u16::MAX.into())
                 .expect("create the loopback interface");
         crate::device::testutil::enable_device(
             &mut sync_ctx,

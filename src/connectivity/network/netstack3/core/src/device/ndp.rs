@@ -573,7 +573,7 @@ mod tests {
         };
         net.with_context("local", |Ctx { sync_ctx, non_sync_ctx }| {
             assert_eq!(
-                crate::add_ethernet_device(
+                crate::device::add_ethernet_device(
                     sync_ctx,
                     non_sync_ctx,
                     mac,
@@ -586,7 +586,7 @@ mod tests {
         });
         net.with_context("remote", |Ctx { sync_ctx, non_sync_ctx }| {
             assert_eq!(
-                crate::add_ethernet_device(
+                crate::device::add_ethernet_device(
                     sync_ctx,
                     non_sync_ctx,
                     mac,
@@ -724,7 +724,7 @@ mod tests {
         // ongoing.
 
         let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
-        let dev_id = crate::add_ethernet_device(
+        let dev_id = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
             local_mac(),
@@ -788,7 +788,7 @@ mod tests {
     #[test]
     fn test_dad_three_transmits_no_conflicts() {
         let Ctx { mut sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
-        let dev_id = crate::add_ethernet_device(
+        let dev_id = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
             local_mac(),
@@ -930,7 +930,7 @@ mod tests {
     #[test]
     fn test_dad_multiple_ips_simultaneously() {
         let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
-        let dev_id = crate::add_ethernet_device(
+        let dev_id = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
             local_mac(),
@@ -1034,7 +1034,7 @@ mod tests {
     #[test]
     fn test_dad_cancel_when_ip_removed() {
         let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
-        let dev_id = crate::add_ethernet_device(
+        let dev_id = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
             local_mac(),
@@ -1338,8 +1338,12 @@ mod tests {
         let config = Ipv6::DUMMY_CONFIG;
         let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
         let hw_mtu = 5000;
-        let device =
-            crate::add_ethernet_device(&mut sync_ctx, &mut non_sync_ctx, local_mac(), hw_mtu);
+        let device = crate::device::add_ethernet_device(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            local_mac(),
+            hw_mtu,
+        );
         let src_mac = Mac::new([10, 11, 12, 13, 14, 15]);
         let src_ip = src_mac.to_ipv6_link_local().addr();
 
@@ -1438,7 +1442,7 @@ mod tests {
         let Ctx { mut sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
 
         assert_empty(non_sync_ctx.frames_sent());
-        let device_id = crate::add_ethernet_device(
+        let device_id = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
             dummy_config.local_mac,
@@ -1529,7 +1533,7 @@ mod tests {
 
         let Ctx { mut sync_ctx, mut non_sync_ctx } = crate::testutil::DummyCtx::default();
         assert_empty(non_sync_ctx.frames_sent());
-        let device_id = crate::add_ethernet_device(
+        let device_id = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
             dummy_config.local_mac,
@@ -1598,7 +1602,7 @@ mod tests {
         assert_empty(non_sync_ctx.frames_sent());
         assert_empty(non_sync_ctx.timer_ctx().timers());
 
-        let device = crate::add_ethernet_device(
+        let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
             dummy_config.local_mac,
@@ -1682,7 +1686,7 @@ mod tests {
 
         let dummy_config = Ipv6::DUMMY_CONFIG;
         let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
-        let device = crate::add_ethernet_device(
+        let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
             dummy_config.local_mac,
@@ -1885,7 +1889,7 @@ mod tests {
 
         let config = Ipv6::DUMMY_CONFIG;
         let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
-        let device = crate::add_ethernet_device(
+        let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
             config.local_mac,
@@ -2020,7 +2024,7 @@ mod tests {
         let config = Ipv6::DUMMY_CONFIG;
         let mut ctx = DummyEventDispatcherBuilder::default().build();
         let Ctx { sync_ctx, non_sync_ctx } = &mut ctx;
-        let device = crate::add_ethernet_device(
+        let device = crate::device::add_ethernet_device(
             sync_ctx,
             non_sync_ctx,
             config.local_mac,
@@ -2324,7 +2328,7 @@ mod tests {
     fn test_host_slaac_invalid_prefix_information() {
         let config = Ipv6::DUMMY_CONFIG;
         let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
-        let device = crate::add_ethernet_device(
+        let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
             config.local_mac,
@@ -2372,7 +2376,7 @@ mod tests {
     fn test_host_slaac_address_deprecate_while_tentative() {
         let config = Ipv6::DUMMY_CONFIG;
         let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
-        let device = crate::add_ethernet_device(
+        let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
             config.local_mac,
@@ -2595,7 +2599,7 @@ mod tests {
 
         let config = Ipv6::DUMMY_CONFIG;
         let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
-        let device = crate::add_ethernet_device(
+        let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
             config.local_mac,
@@ -2814,7 +2818,7 @@ mod tests {
         set_logger_for_test();
         let config = Ipv6::DUMMY_CONFIG;
         let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
-        let device = crate::add_ethernet_device(
+        let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
             config.local_mac,
@@ -2967,7 +2971,7 @@ mod tests {
         set_logger_for_test();
         let config = Ipv6::DUMMY_CONFIG;
         let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
-        let device = crate::add_ethernet_device(
+        let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
             config.local_mac,
@@ -3097,7 +3101,7 @@ mod tests {
         set_logger_for_test();
         let config = Ipv6::DUMMY_CONFIG;
         let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
-        let device = crate::add_ethernet_device(
+        let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
             config.local_mac,
@@ -3278,7 +3282,7 @@ mod tests {
         set_logger_for_test();
         let config = Ipv6::DUMMY_CONFIG;
         let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
-        let device = crate::add_ethernet_device(
+        let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
             config.local_mac,
@@ -3630,7 +3634,7 @@ mod tests {
     fn test_remove_stable_slaac_address() {
         let config = Ipv6::DUMMY_CONFIG;
         let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
-        let device = crate::add_ethernet_device(
+        let device = crate::device::add_ethernet_device(
             &mut sync_ctx,
             &mut non_sync_ctx,
             config.local_mac,

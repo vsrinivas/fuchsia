@@ -3711,7 +3711,7 @@ mod tests {
 
         let loopback_device_id =
             net.with_context(LOCAL_CTX_NAME, |Ctx { sync_ctx, non_sync_ctx }| {
-                crate::add_loopback_device(sync_ctx, non_sync_ctx, u16::MAX.into())
+                crate::device::add_loopback_device(sync_ctx, non_sync_ctx, u16::MAX.into())
                     .expect("create the loopback interface")
             });
 
