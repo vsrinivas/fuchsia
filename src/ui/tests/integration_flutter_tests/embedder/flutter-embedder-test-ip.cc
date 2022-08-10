@@ -245,7 +245,8 @@ INSTANTIATE_TEST_SUITE_P(
         "fuchsia-pkg://fuchsia.com/gfx-root-presenter-test-ui-stack#meta/test-ui-stack.cm",
         "fuchsia-pkg://fuchsia.com/gfx-scene-manager-test-ui-stack#meta/test-ui-stack.cm"));
 
-TEST_P(FlutterEmbedderTestIp, Embedding) {
+// TODO(fxb/106074): Re-enable when we fix the test flaky on CQ.
+TEST_P(FlutterEmbedderTestIp, DISABLED_Embedding) {
   BuildRealmAndLaunchApp(kParentViewUrl);
 
   // Take screenshot until we see the child-view's embedded color.
@@ -258,7 +259,8 @@ TEST_P(FlutterEmbedderTestIp, Embedding) {
       }));
 }
 
-TEST_P(FlutterEmbedderTestIp, HittestEmbedding) {
+// TODO(fxb/106074): Re-enable when we fix the test flaky on CQ.
+TEST_P(FlutterEmbedderTestIp, DISABLED_HittestEmbedding) {
   BuildRealmAndLaunchApp(kParentViewUrl);
 
   // Take screenshot until we see the child-view's embedded color.
@@ -277,7 +279,8 @@ TEST_P(FlutterEmbedderTestIp, HittestEmbedding) {
   }));
 }
 
-TEST_P(FlutterEmbedderTestIp, HittestDisabledEmbedding) {
+// TODO(fxb/106074): Re-enable when we fix the test flaky on CQ.
+TEST_P(FlutterEmbedderTestIp, DISABLED_HittestDisabledEmbedding) {
   BuildRealmAndLaunchApp(kParentViewUrl, {"--no-hitTestable"});
 
   // Take screenshots until we see the child-view's embedded color.
@@ -298,7 +301,8 @@ TEST_P(FlutterEmbedderTestIp, HittestDisabledEmbedding) {
       }));
 }
 
-TEST_P(FlutterEmbedderTestIp, EmbeddingWithOverlay) {
+// TODO(fxb/106074): Re-enable when we fix the test flaky on CQ.
+TEST_P(FlutterEmbedderTestIp, DISABLED_EmbeddingWithOverlay) {
   BuildRealmAndLaunchApp(kParentViewUrl, {"--showOverlay"});
 
   // Take screenshot until we see the child-view's embedded color.
@@ -315,7 +319,8 @@ TEST_P(FlutterEmbedderTestIp, EmbeddingWithOverlay) {
       }));
 }
 
-TEST_P(FlutterEmbedderTestIp, HittestEmbeddingWithOverlay) {
+// TODO(fxb/106074): Re-enable when we fix the test flaky on CQ.
+TEST_P(FlutterEmbedderTestIp, DISABLED_HittestEmbeddingWithOverlay) {
   BuildRealmAndLaunchApp(kParentViewUrl, {"--showOverlay"});
 
   // Take screenshot until we see the child-view's embedded color.
