@@ -18,6 +18,7 @@
 #include "fidl/fuchsia.io/cpp/markers.h"
 #include "lib/fidl/cpp/wire/internal/transport_channel.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
+#include "src/lib/storage/fs_management/cpp/options.h"
 #include "src/storage/fshost/copier.h"
 #include "src/storage/fshost/fs-manager.h"
 #include "src/storage/fshost/fshost-boot-args.h"
@@ -104,27 +105,30 @@ class FilesystemMounter {
   // protocol.
   // Performs the mechanical action of mounting a filesystem, without validating the type of
   // filesystem being mounted.
-  zx::status<> MountLegacyFilesystem(FsManager::MountPoint point, const char* binary,
+  zx::status<> MountLegacyFilesystem(FsManager::MountPoint point, fs_management::DiskFormat df,
+                                     const char* binary_path,
                                      const fs_management::MountOptions& options,
-                                     zx::channel block_device_client);
+                                     zx::channel block_device) const;
 
-  // Actually launches the filesystem component.
-  //
-  // TODO(fxbug.dev/91577): All filesystems should be launched as components. Once they are, remove
-  // LaunchFs.
+  // Actually launches the filesystem component.  Note that for non-componentized filesystems there
+  // is the LaunchFsNative variant which allows control over where the endpoint is bound to.
   //
   // Virtualized to enable testing.
-  virtual zx::status<StartedFilesystem> LaunchFsComponent(
-      zx::channel block_device, const fs_management::MountOptions& options,
-      const fs_management::DiskFormat& format);
+  virtual zx::status<StartedFilesystem> LaunchFs(zx::channel block_device,
+                                                 const fs_management::MountOptions& options,
+                                                 fs_management::DiskFormat format) const;
 
-  // Actually launches the filesystem process.
+  // Actually launches the filesystem.
   //
   // Virtualized to enable testing.
-  virtual zx_status_t LaunchFs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids,
-                               size_t len);
+  virtual zx::status<> LaunchFsNative(fidl::ServerEnd<fuchsia_io::Directory> server,
+                                      const char* binary, zx::channel block_device,
+                                      const fs_management::MountOptions& options) const;
 
   static zx::status<std::string> GetDevicePath(const zx::channel& block_device);
+  static zx::status<zx::channel> CloneBlockDevice(const zx::channel& block_device);
+  zx_status_t CopyDataToLegacyFilesystem(fs_management::DiskFormat df, zx::channel device,
+                                         const Copier& copier) const;
 
   FsManager& fshost_;
   const fshost_config::Config& config_;

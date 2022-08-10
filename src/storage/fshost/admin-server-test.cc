@@ -178,7 +178,13 @@ TEST_F(AdminServerTest, GetDevicePathForBuiltInFilesystem) {
   ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
   auto [fd, fs_type] = WaitForMount("data");
   ASSERT_TRUE(fd);
-  EXPECT_TRUE(fs_type == VFS_TYPE_MINFS || fs_type == VFS_TYPE_FXFS);
+  auto expected_fs_type = VFS_TYPE_MINFS;
+  if (DataFilesystemFormat() == "f2fs") {
+    expected_fs_type = VFS_TYPE_F2FS;
+  } else if (DataFilesystemFormat() == "fxfs") {
+    expected_fs_type = VFS_TYPE_FXFS;
+  }
+  EXPECT_EQ(fs_type, expected_fs_type);
 
   struct statvfs buf;
   ASSERT_EQ(fstatvfs(fd.get(), &buf), 0);

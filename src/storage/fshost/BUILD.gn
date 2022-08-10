@@ -316,6 +316,7 @@ template("fshost_integration_test") {
       "//src/lib/storage/fs_management",
       "//src/lib/storage/ramdevice_client/cpp",
       "//src/lib/testing/predicates",
+      "//src/storage/bin/f2fs",
       "//src/storage/bin/minfs:minfs-component",
       "//src/storage/blobfs",
       "//src/storage/fxfs:fxfs_component",
@@ -396,6 +397,14 @@ fshost_integration_test("fshost-fxfs-integration-test") {
   data_filesystem_format = "fxfs"
 }
 
+fshost_integration_test("fshost-f2fs-integration-test") {
+  test_component_name = "test-fshost-f2fs"
+  test_component_target = "//src/storage/fshost/testing:test-fshost-f2fs"
+
+  # Ideally these would come from the configuration of "test_component_target".
+  data_filesystem_format = "f2fs"
+}
+
 test("disk-migration-test") {
   # Note that these mirror the config variables set in
   # "//src/storage/fshost/testing:test-fshost-fxfs-disk-migration" but we don't
@@ -455,6 +464,7 @@ fuchsia_test_package("fshost-tests") {
   }
   test_components = [
     ":fshost-fxfs-integration-test",
+    ":fshost-f2fs-integration-test",
     ":fshost-integration-test",
     ":fshost-test",
     ":fshost-inspect-test",

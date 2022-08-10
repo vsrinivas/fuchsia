@@ -41,8 +41,9 @@ constexpr size_t kDeviceSize = static_cast<const size_t>(kBlockCount) * kBlockSi
 
 using MigrationTest = testing::FshostIntegrationTest;
 
-TEST_F(MigrationTest, MigratesZxcryptMinfsToFxfs) {
-  if (DataFilesystemFormat() != "fxfs") {
+TEST_F(MigrationTest, MigratesZxcryptMinfs) {
+  if (DataFilesystemFormat() != "fxfs" && DataFilesystemFormat() != "f2fs") {
+    std::cerr << "Skipping test" << std::endl;
     return;
   }
   PauseWatcher();  // Pause whilst we create a ramdisk.
@@ -99,15 +100,14 @@ TEST_F(MigrationTest, MigratesZxcryptMinfsToFxfs) {
 
   ResumeWatcher();
 
-  // Now reattach the ram-disk.  Fshost should reformat the filesystem as Fxfs and copy the data
-  // into it.
+  // Now reattach the ram-disk.  Fshost should reformat the filesystem and copy the data into it.
   auto ramdisk_or = storage::RamDisk::CreateWithVmo(std::move(vmo), kBlockSize);
   ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
 
-  // Fxfs should be automatically mounted.
+  // The filesystem should be automatically mounted.
   auto [root_fd, fs_type] = WaitForMount("data");
   EXPECT_TRUE(root_fd);
-  EXPECT_EQ(fs_type, VFS_TYPE_FXFS);
+  EXPECT_EQ(fs_type, DataFilesystemFormat() == "fxfs" ? VFS_TYPE_FXFS : VFS_TYPE_F2FS);
 
   // The data should have been copied over.
   auto fd = fbl::unique_fd(::openat(root_fd.get(), "file", O_RDONLY));
@@ -116,14 +116,16 @@ TEST_F(MigrationTest, MigratesZxcryptMinfsToFxfs) {
   ASSERT_EQ(::read(fd.get(), buf, sizeof(buf)), static_cast<ssize_t>(strlen(kFileContents)));
   ASSERT_STREQ(buf, kFileContents);
 
-  // We should ensure the device isn't zxcrypt-formatted.
-  std::string device_path = ramdisk_or->path() + partition_path_suffix;
-  fprintf(stderr, "%s\n", device_path.c_str());
-  struct stat st;
-  ASSERT_TRUE(::stat(device_path.c_str(), &st) == 0)
-      << "Failed to stat " << device_path << ": " << strerror(errno);
-  std::string zxcrypt_path = device_path + "/zxcrypt";
-  ASSERT_FALSE(::stat(zxcrypt_path.c_str(), &st) == 0) << zxcrypt_path << " shouldn't exist.";
+  if (DataFilesystemFormat() == "fxfs") {
+    // We should ensure the device isn't zxcrypt-formatted.
+    std::string device_path = ramdisk_or->path() + partition_path_suffix;
+    fprintf(stderr, "%s\n", device_path.c_str());
+    struct stat st;
+    ASSERT_TRUE(::stat(device_path.c_str(), &st) == 0)
+        << "Failed to stat " << device_path << ": " << strerror(errno);
+    std::string zxcrypt_path = device_path + "/zxcrypt";
+    ASSERT_FALSE(::stat(zxcrypt_path.c_str(), &st) == 0) << zxcrypt_path << " shouldn't exist.";
+  }
 
   // No crash reports should have been filed.
   auto client_end = service::Connect<fuchsia_feedback_testing::FakeCrashReporterQuerier>();

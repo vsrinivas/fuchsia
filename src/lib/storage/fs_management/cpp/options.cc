@@ -48,8 +48,6 @@ zx::status<fuchsia_fs_startup::wire::StartOptions> MountOptions::as_start_option
   options.verbose = verbose_mount;
   options.sandbox_decompression = sandbox_decompression;
   options.write_compression_level = write_compression_level;
-  if (migrate_root)
-    options.migrate_root = migrate_root();
 
   if (write_compression_algorithm) {
     if (*write_compression_algorithm == "ZSTD_CHUNKED") {

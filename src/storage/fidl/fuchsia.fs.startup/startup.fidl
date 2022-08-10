@@ -6,7 +6,6 @@ library fuchsia.fs.startup;
 
 using fuchsia.fxfs;
 using fuchsia.hardware.block;
-using fuchsia.io;
 using zx;
 
 /// Compression algorithm specifier.
@@ -52,12 +51,6 @@ type StartOptions = resource struct {
     /// An optional eviction policy specifier for the filesystem to use for in-memory structures
     /// (if the filesystem supports it), specifically for pager-backed files.
     cache_eviction_policy_override EvictionPolicyOverride;
-
-    // If set, provides the caller with the opportunity to migrate data before the mount is
-    // finalised.  The mount will be blocked until the channel is closed.
-    // TODO(fxbug.dev/93066): Remove this.
-    @deprecated
-    migrate_root server_end:<fuchsia.io.Directory, optional>;
 };
 
 /// Options for how to format filesystems.

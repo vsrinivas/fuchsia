@@ -60,11 +60,6 @@ struct MountOptions {
 
   // If set, use the specified component URL rather than a default.
   std::string component_url;
-  // If set, provides the caller with the opportunity to migrate data before the mount is finalised.
-  // The mount will be blocked until the channel and any other channels opened via this channel are
-  // closed.
-  // TODO(fxbug.dev/93066): Remove this.
-  std::function<fidl::ServerEnd<fuchsia_io::Directory>()> migrate_root;
 
   // Generate the argv list for launching a process based on this set of options.
   __EXPORT

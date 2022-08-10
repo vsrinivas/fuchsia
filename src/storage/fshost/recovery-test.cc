@@ -72,6 +72,8 @@ TEST_F(FsRecoveryTest, EmptyPartitionRecoveryTest) {
     expected_type = VFS_TYPE_MINFS;
   } else if (DataFilesystemFormat() == "fxfs") {
     expected_type = VFS_TYPE_FXFS;
+  } else if (DataFilesystemFormat() == "f2fs") {
+    expected_type = VFS_TYPE_F2FS;
   } else {
     ASSERT_TRUE(false);
   }
@@ -124,6 +126,8 @@ TEST_F(FsRecoveryTest, CorruptDataRecoveryTest) {
         ::memcpy(buf, fs_management::kMinfsMagic, sizeof(fs_management::kMinfsMagic));
       } else if (DataFilesystemFormat() == "fxfs") {
         ::memcpy(buf, fs_management::kFxfsMagic, sizeof(fs_management::kFxfsMagic));
+      } else if (DataFilesystemFormat() == "f2fs") {
+        ::memcpy(buf, fs_management::kF2fsMagic, sizeof(fs_management::kF2fsMagic));
       } else {
         ASSERT_TRUE(false) << "Unsupported test configuration, data filesystem format: "
                            << DataFilesystemFormat();
@@ -139,7 +143,7 @@ TEST_F(FsRecoveryTest, CorruptDataRecoveryTest) {
   auto ramdisk_or = storage::RamDisk::CreateWithVmo(std::move(vmo), kBlockSize);
   ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
 
-  // Minfs should be automatically mounted.
+  // The new filesystem should be automatically mounted.
   auto [fd, fs_type] = WaitForMount("data");
   EXPECT_TRUE(fd);
   uint64_t expected_type = 0ul;
@@ -147,6 +151,8 @@ TEST_F(FsRecoveryTest, CorruptDataRecoveryTest) {
     expected_type = VFS_TYPE_MINFS;
   } else if (DataFilesystemFormat() == "fxfs") {
     expected_type = VFS_TYPE_FXFS;
+  } else if (DataFilesystemFormat() == "f2fs") {
+    expected_type = VFS_TYPE_F2FS;
   } else {
     ASSERT_TRUE(false);
   }
@@ -160,7 +166,9 @@ TEST_F(FsRecoveryTest, CorruptDataRecoveryTest) {
   auto client = fidl::BindSyncClient(std::move(*client_end));
   auto res = client->WatchFile();
   ASSERT_EQ(res.status(), ZX_OK);
-  ASSERT_EQ(res.value().num_filed, 1ul);
+  // Crash reporting is not enabled for f2fs.
+  unsigned long expected_num_filed = DataFilesystemFormat() == "f2fs" ? 0 : 1;
+  ASSERT_EQ(res.value().num_filed, expected_num_filed);
 }
 
 }  // namespace

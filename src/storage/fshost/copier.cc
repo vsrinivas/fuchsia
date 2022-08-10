@@ -144,7 +144,7 @@ zx::status<Copier> Copier::Read(fbl::unique_fd root_fd,
 
 zx_status_t Copier::Write(fbl::unique_fd root_fd) const {
   std::vector<std::pair<fbl::unique_fd, const DirectoryEntries*>> pending;
-  pending.emplace_back(std::move(root_fd), &entries_);
+  pending.emplace_back(root_fd.duplicate(), &entries_);
   while (!pending.empty()) {
     fbl::unique_fd fd = std::move(pending.back().first);
     const DirectoryEntries* entries = pending.back().second;
@@ -173,6 +173,10 @@ zx_status_t Copier::Write(fbl::unique_fd root_fd) const {
         pending.emplace_back(std::move(child_fd), &directory.entries);
       }
     }
+  }
+  if (syncfs(root_fd.get())) {
+    FX_LOGS(ERROR) << "Failed to sync filesystem state: " << strerror(errno);
+    return ZX_ERR_BAD_STATE;
   }
   return ZX_OK;
 }

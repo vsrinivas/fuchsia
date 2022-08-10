@@ -82,9 +82,6 @@ class BlockDevice : public BlockDeviceInterface {
   zx_status_t MountData(const fs_management::MountOptions& options, std::optional<Copier> copier,
                         zx::channel block_device);
 
-  // Copies source data for filesystems that aren't components.
-  zx_status_t CopySourceData(const Copier& copier) const;
-
   fbl::unique_fd fd_;
   mutable std::optional<fuchsia_hardware_block::wire::BlockInfo> info_;
   mutable fs_management::DiskFormat content_format_;

@@ -125,7 +125,13 @@ TEST_F(BlockDeviceManagerIntegration, MaxSize) {
   ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
   auto [fd, fs_type] = WaitForMount("data");
   ASSERT_TRUE(fd);
-  EXPECT_TRUE(fs_type == VFS_TYPE_MINFS || fs_type == VFS_TYPE_FXFS);
+  auto expected_fs_type = VFS_TYPE_MINFS;
+  if (DataFilesystemFormat() == "f2fs") {
+    expected_fs_type = VFS_TYPE_F2FS;
+  } else if (DataFilesystemFormat() == "fxfs") {
+    expected_fs_type = VFS_TYPE_FXFS;
+  }
+  EXPECT_EQ(fs_type, expected_fs_type);
 
   // FVM will be at something like "/dev/sys/platform/00:00:2d/ramctl/ramdisk-1/block/fvm"
   std::string fvm_path = ramdisk_or.value().path() + "/fvm";
@@ -199,7 +205,13 @@ TEST_F(BlockDeviceManagerIntegration, MinfsPartitionsRenamedToPreferredName) {
   ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
   auto [fd, fs_type] = WaitForMount("data");
   ASSERT_TRUE(fd);
-  EXPECT_TRUE(fs_type == VFS_TYPE_MINFS || fs_type == VFS_TYPE_FXFS);
+  auto expected_fs_type = VFS_TYPE_MINFS;
+  if (DataFilesystemFormat() == "f2fs") {
+    expected_fs_type = VFS_TYPE_F2FS;
+  } else if (DataFilesystemFormat() == "fxfs") {
+    expected_fs_type = VFS_TYPE_FXFS;
+  }
+  EXPECT_EQ(fs_type, expected_fs_type);
 
   // FVM will be at something like "/dev/sys/platform/00:00:2d/ramctl/ramdisk-1/block/fvm"
   std::string fvm_path = ramdisk_or.value().path() + "/fvm";

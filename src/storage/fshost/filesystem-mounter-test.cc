@@ -90,9 +90,9 @@ class TestMounter : public FilesystemMounter {
 
   void ExpectFilesystem(FilesystemType fs) { expected_filesystem_ = fs; }
 
-  zx::status<StartedFilesystem> LaunchFsComponent(zx::channel block_device,
-                                                  const fs_management::MountOptions& options,
-                                                  const fs_management::DiskFormat& format) final {
+  zx::status<StartedFilesystem> LaunchFs(zx::channel block_device,
+                                         const fs_management::MountOptions& options,
+                                         fs_management::DiskFormat format) const final {
     switch (expected_filesystem_) {
       case FilesystemType::kBlobfs:
         EXPECT_EQ(format, fs_management::kDiskFormatBlobfs);
@@ -107,39 +107,23 @@ class TestMounter : public FilesystemMounter {
     return zx::ok(fs_management::StartedSingleVolumeFilesystem());
   }
 
-  zx_status_t LaunchFs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids,
-                       size_t len) final {
-    if (argc != 2) {
-      return ZX_ERR_INVALID_ARGS;
-    }
-
+  zx::status<> LaunchFsNative(fidl::ServerEnd<fuchsia_io::Directory> server, const char* binary,
+                              zx::channel block_device,
+                              const fs_management::MountOptions& options) const final {
     switch (expected_filesystem_) {
       case FilesystemType::kDurable:
-        EXPECT_EQ(std::string_view(argv[0]), kMinfsPath);
-        EXPECT_EQ(len, 2ul);
+        EXPECT_EQ(std::string_view(binary), kMinfsPath);
         break;
       case FilesystemType::kFactoryfs:
-        EXPECT_EQ(std::string_view(argv[0]), kFactoryfsPath);
+        EXPECT_EQ(std::string_view(binary), kFactoryfsPath);
         break;
       default:
         ADD_FAILURE() << "Unexpected filesystem type";
     }
 
-    EXPECT_EQ(std::string_view(argv[1]), "mount");
+    fidl::BindServer(loop_.dispatcher(), std::move(server), std::make_unique<FakeDirectoryImpl>());
 
-    EXPECT_EQ(ids[0], PA_DIRECTORY_REQUEST);
-    EXPECT_EQ(ids[1], FS_HANDLE_BLOCK_DEVICE_ID);
-
-    fidl::BindServer(loop_.dispatcher(),
-                     fidl::ServerEnd<fuchsia_io::Directory>(zx::channel(hnd[0])),
-                     std::make_unique<FakeDirectoryImpl>());
-
-    // Close all other handles.
-    for (size_t i = 1; i < len; i++) {
-      EXPECT_OK(zx_handle_close(hnd[i]));
-    }
-
-    return ZX_OK;
+    return zx::ok();
   }
 
   zx_status_t RouteData(fidl::UnownedClientEnd<fuchsia_io::Directory> export_root,

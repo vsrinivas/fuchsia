@@ -104,6 +104,42 @@ group("test-fshost-fxfs") {
   ]
 }
 
+cmc_merge("test-fshost-f2fs.cml") {
+  sources = [
+    "//src/storage/fshost/meta/base_fshost.cml",
+    "//src/storage/fshost/meta/config.cml",
+    "//src/storage/fshost/meta/core_fshost.cml",
+    "//src/storage/fshost/meta/cpp_fshost.cml",
+    "//src/storage/fshost/meta/f2fs_fshost.cml",
+  ]
+}
+
+fuchsia_component_manifest("test-fshost-f2fs-manifest") {
+  testonly = true
+  component_name = "test-fshost-f2fs"
+  manifest_outputs = get_target_outputs(":test-fshost-f2fs.cml")
+  manifest = manifest_outputs[0]
+  deps = [ ":test-fshost-f2fs.cml" ]
+}
+
+fuchsia_component("test-fshost-f2fs-comp") {
+  testonly = true
+
+  deps = [
+    "//src/security/policy/zxcrypt:null",
+    "//src/storage/fshost",
+  ]
+  cm_label = ":test-fshost-f2fs-manifest"
+}
+
+group("test-fshost-f2fs") {
+  testonly = true
+  deps = [
+    ":integration_test_config_f2fs",
+    ":test-fshost-f2fs-comp",
+  ]
+}
+
 cmc_merge("test-fshost-no-watcher.cml") {
   sources = [
     "//src/storage/fshost/meta/base_fshost.cml",
@@ -207,6 +243,12 @@ generated_fshost_config("integration_test_config_fxfs") {
   component_name = "test-fshost-fxfs"
   forward_variables_from(integration_test_config, "*")
   data_filesystem_format = "fxfs"
+}
+
+generated_fshost_config("integration_test_config_f2fs") {
+  component_name = "test-fshost-f2fs"
+  forward_variables_from(integration_test_config, "*")
+  data_filesystem_format = "f2fs"
 }
 
 generated_fshost_config("integration_test_config_fxfs_disk_migration") {

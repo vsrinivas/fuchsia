@@ -149,17 +149,18 @@ class TestMinfsMounter : public FilesystemMounter {
   TestMinfsMounter(FsManager& fshost, const fshost_config::Config* config)
       : FilesystemMounter(fshost, config) {}
 
-  zx::status<StartedFilesystem> LaunchFsComponent(zx::channel block_device,
-                                                  const fs_management::MountOptions& options,
-                                                  const fs_management::DiskFormat& format) final {
+  zx::status<StartedFilesystem> LaunchFs(zx::channel block_device,
+                                         const fs_management::MountOptions& options,
+                                         fs_management::DiskFormat format) const final {
     EXPECT_EQ(format, fs_management::kDiskFormatMinfs);
     return zx::ok(fs_management::StartedSingleVolumeFilesystem());
   }
 
-  zx_status_t LaunchFs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids,
-                       size_t len) final {
-    ADD_FAILURE() << "Unexpected call to LaunchFs";
-    return ZX_ERR_NOT_SUPPORTED;
+  zx::status<> LaunchFsNative(fidl::ServerEnd<fuchsia_io::Directory> server, const char* binary,
+                              zx::channel block_device,
+                              const fs_management::MountOptions& options) const final {
+    ADD_FAILURE() << "Unexpected call to LaunchFsNative";
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
   zx_status_t RouteData(fidl::UnownedClientEnd<fuchsia_io::Directory> export_root,
