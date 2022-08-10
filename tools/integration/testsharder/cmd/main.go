@@ -79,7 +79,7 @@ func parseFlags() testsharderFlags {
 	flag.BoolVar(&flags.pave, "pave", false, "whether the shards generated should pave or netboot fuchsia")
 	flag.BoolVar(&flags.skipUnaffected, "skip-unaffected", false, "whether the shards should ignore hermetic, unaffected tests")
 	flag.BoolVar(&flags.perShardPackageRepos, "per-shard-package-repos", false, "whether to construct a local package repo for each shard")
-	flag.BoolVar(&flags.cacheTestPackages, "cache-test-packages", true, "whether the test packages should be cached on disk in the local package repo")
+	flag.BoolVar(&flags.cacheTestPackages, "cache-test-packages", false, "whether the test packages should be cached on disk in the local package repo")
 	flag.Usage = usage
 
 	flag.Parse()
@@ -245,7 +245,7 @@ func execute(ctx context.Context, flags testsharderFlags, m buildModules) error 
 			if len(pkgRepos) < 1 {
 				return errors.New("build did not generate a package repository")
 			}
-			if err := s.CreatePackageRepo(flags.buildDir, pkgRepos[0].Path, flags.cacheTestPackages); err != nil {
+			if err := s.CreatePackageRepo(flags.buildDir, pkgRepos[0].Path, flags.cacheTestPackages || flags.hermeticDeps); err != nil {
 				return err
 			}
 		}
