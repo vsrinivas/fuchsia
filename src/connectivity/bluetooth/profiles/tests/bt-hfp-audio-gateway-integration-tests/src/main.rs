@@ -21,17 +21,17 @@ use {
     },
     fuchsia_zircon::Duration,
     futures::{channel::mpsc, stream::StreamExt, TryFutureExt},
-    mock_piconet_client_v2::{BtProfileComponent, PiconetHarness, PiconetMember},
+    mock_piconet_client::{BtProfileComponent, PiconetHarness, PiconetMember},
     realmbuilder_mock_helpers::{mock_component, mock_dev},
     std::convert::TryInto,
     test_call_manager::TestCallManager,
 };
 
-/// HFP-AG component V2 URL.
-const HFP_AG_URL_V2: &str =
+/// HFP-AG component URL.
+const HFP_AG_URL: &str =
     "fuchsia-pkg://fuchsia.com/bt-hfp-audio-gateway-integration-tests#meta/bt-hfp-audio-gateway.cm";
-/// RFCOMM component v2 URL.
-const RFCOMM_URL_V2: &str =
+/// RFCOMM component URL.
+const RFCOMM_URL: &str =
     "fuchsia-pkg://fuchsia.com/bt-hfp-audio-gateway-integration-tests#meta/bt-rfcomm.cm";
 /// Mock A2DP Controller component v2 URL.
 const MOCK_A2DP_CONTROLLER_URL: &str =
@@ -126,7 +126,7 @@ impl HfpAgIntegrationTest {
         let spec = test_harness
             .add_mock_piconet_member(
                 MOCK_PICONET_MEMBER_MONIKER.to_string(),
-                Some(RFCOMM_URL_V2.to_string()),
+                Some(RFCOMM_URL.to_string()),
             )
             .await
             .expect("failed to add mock piconet member");
@@ -139,8 +139,8 @@ impl HfpAgIntegrationTest {
         let hfp_under_test = test_harness
             .add_profile_with_capabilities(
                 HFP_AG_MONIKER.to_string(),
-                HFP_AG_URL_V2.to_string(),
-                Some(RFCOMM_URL_V2.to_string()),
+                HFP_AG_URL.to_string(),
+                Some(RFCOMM_URL.to_string()),
                 vec![],
                 vec![Capability::protocol::<HfpMarker>().into()],
             )

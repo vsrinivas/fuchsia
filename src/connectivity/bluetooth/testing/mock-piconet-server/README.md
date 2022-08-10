@@ -8,9 +8,6 @@ The server manages a fake piconet of peers, and simulates the behavior of the
 register mock peers in the piconet, launch profiles to test, and drive peer behavior. The server supports establishing L2CAP connections.
 For RFCOMM connections, test writers should use the [RFCOMM component](../../profiles/bt-rfcomm) as an intermediary.
 
-The Mock Piconet Server currently supports integration tests written in both CFv1 and CFv2 frameworks.
-Integration test authors should use the CFv2 variant of the MPS.
-
 ## Build Configuration
 
 To include the mock piconet server and its tests in your build, add:
@@ -29,16 +26,13 @@ Make sure to include the MPS component in the `deps` of your integration test pa
 
 The Mock Piconet Server provides a client-facing library of utilities to launch and interact
 with the server.
-To use the tools provided in the library, add `//src/connectivity/bluetooth/testing/mock-piconet-server:lib_v2` to the
+To use the tools provided in the library, add `//src/connectivity/bluetooth/testing/mock-piconet-server:lib` to the
 `BUILD.gn` of your test component.
 
 ## Examples
 
-For CFv1, import the `ProfileTestHarness` to your test to get started. Instantiate the ProfileTestHarness and register mock peers using
-the `ProfileTestHarness::register_peer` method. You can then emulate peer behavior by either operating directly on the mock peer or
-launching a Bluetooth profile. For an example using the v1 framework, check out the [A2DP Source Integration Tests](../../profiles/tests/bt-a2dp-source-integration-tests/src/main.rs).
-
-For CFv2, import the `PiconetHarness` to your test to get started. Define the topology by adding profiles-under-test or mock
-piconet members to be driven by the test code. Use the [CFv2 Library](src/lib_v2.rs) to route capabilities needed & exposed by the
+Import the `PiconetHarness` to your test to get started. Define the topology by adding profiles-under-test or mock
+piconet members to be driven by the test code. Use the [client library](src/lib_v2.rs) to route capabilities needed & exposed by the
 test.
-For an example using the v2 framework, check out the [AVRCP Integration Tests](../../profiles/tests/bt-avrcp-integration-tests/src/main.rs).
+Check out the [AVRCP Integration Tests](../../profiles/tests/bt-avrcp-integration-tests/src/main.rs)
+for an example.

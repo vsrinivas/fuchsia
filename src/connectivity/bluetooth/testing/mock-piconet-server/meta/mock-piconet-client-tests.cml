@@ -8,6 +8,6 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/mock_piconet_client_v2_lib_test",
+        binary: "bin/mock_piconet_client_lib_test",
     },
 }

@@ -12,10 +12,10 @@ use fixture::fixture;
 use fuchsia_bluetooth::types::Uuid;
 use fuchsia_component_test::{Capability, RealmInstance};
 use futures::stream::StreamExt;
-use mock_piconet_client_v2::{BtProfileComponent, PiconetHarness, PiconetMember};
+use mock_piconet_client::{BtProfileComponent, PiconetHarness, PiconetMember};
 
-/// A2DP Source component V2 URL.
-const A2DP_URL_V2: &str =
+/// A2DP Source component URL.
+const A2DP_URL: &str =
     "fuchsia-pkg://fuchsia.com/bt-a2dp-source-integration-tests#meta/bt-a2dp-source.cm";
 const A2DP_SOURCE_MONIKER: &str = "bt-a2dp-source-profile";
 /// Name prefix for mock peers
@@ -72,7 +72,7 @@ async fn setup_piconet_with_a2dp_source_and_mock_peer() -> A2dpSourceIntegration
     let a2dp_src_under_test = test_harness
         .add_profile_with_capabilities(
             A2DP_SOURCE_MONIKER.to_string(),
-            A2DP_URL_V2.to_string(),
+            A2DP_URL.to_string(),
             None,
             use_capabilities,
             vec![],

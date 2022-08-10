@@ -18,7 +18,7 @@ rustc_test("tests_bin") {
     "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
     "//src/connectivity/bluetooth/lib/fuchsia-audio-dai",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
-    "//src/connectivity/bluetooth/testing/mock-piconet-server:lib_v2",
+    "//src/connectivity/bluetooth/testing/mock-piconet-server:lib",
     "//src/connectivity/bluetooth/testing/realmbuilder-mock-helpers",
     "//src/connectivity/bluetooth/testing/test-call-manager",
     "//src/connectivity/lib/at-commands",
@@ -72,7 +72,7 @@ fuchsia_test_package("bt-hfp-audio-gateway-integration-tests") {
     "//src/connectivity/bluetooth/testing/mock-a2dp-controller:mock-a2dp-controller",
 
     # Mock Piconet Server
-    "//src/connectivity/bluetooth/testing/mock-piconet-server:component-v2",
+    "//src/connectivity/bluetooth/testing/mock-piconet-server:component",
   ]
 }
 

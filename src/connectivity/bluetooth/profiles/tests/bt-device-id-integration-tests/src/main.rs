@@ -8,10 +8,10 @@ use fuchsia_bluetooth::types::PeerId;
 use fuchsia_component_test::{Capability, RealmInstance};
 use fuchsia_zircon as zx;
 use futures::{future::Either, pin_mut, Future, FutureExt, StreamExt};
-use mock_piconet_client_v2::{BtProfileComponent, PiconetHarness, PiconetMember};
+use mock_piconet_client::{BtProfileComponent, PiconetHarness, PiconetMember};
 use tracing::info;
 
-const DEVICE_ID_URL_V2: &str =
+const DEVICE_ID_URL: &str =
     "fuchsia-pkg://fuchsia.com/bt-device-id-integration-tests#meta/bt-device-id.cm";
 
 /// The moniker for the DeviceID component under test.
@@ -35,7 +35,7 @@ async fn setup_test_topology() -> (RealmInstance, BtProfileComponent, PiconetMem
     let di_profile = test_harness
         .add_profile_with_capabilities(
             DEVICE_ID_MONIKER.to_string(),
-            DEVICE_ID_URL_V2.to_string(),
+            DEVICE_ID_URL.to_string(),
             None,
             vec![],
             expose,

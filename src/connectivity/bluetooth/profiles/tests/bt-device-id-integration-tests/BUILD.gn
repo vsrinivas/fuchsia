@@ -14,7 +14,7 @@ rustc_test("tests_bin") {
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr_rust",
     "//sdk/fidl/fuchsia.bluetooth.deviceid:fuchsia.bluetooth.deviceid_rust",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
-    "//src/connectivity/bluetooth/testing/mock-piconet-server:lib_v2",
+    "//src/connectivity/bluetooth/testing/mock-piconet-server:lib",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component-test",
@@ -46,7 +46,7 @@ fuchsia_test_package("bt-device-id-integration-tests") {
     "//src/connectivity/bluetooth/profiles/bt-device-id:component",
 
     # Mock Piconet Server component.
-    "//src/connectivity/bluetooth/testing/mock-piconet-server:component-v2",
+    "//src/connectivity/bluetooth/testing/mock-piconet-server:component",
   ]
 }
 

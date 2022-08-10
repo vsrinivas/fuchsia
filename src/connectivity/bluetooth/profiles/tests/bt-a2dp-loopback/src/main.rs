@@ -11,7 +11,7 @@ use fidl_fuchsia_tracing_provider::RegistryMarker;
 use fuchsia_async as fasync;
 use fuchsia_component_test::{Capability, RealmInstance};
 use fuchsia_zircon as zx;
-use mock_piconet_client_v2::{BtProfileComponent, PiconetHarness};
+use mock_piconet_client::{BtProfileComponent, PiconetHarness};
 use tracing::info;
 
 const A2DP_SOURCE_URL: &str =

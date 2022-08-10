@@ -6,59 +6,42 @@ import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 
-# Deps shared between v1 and v2 version of library.
-shared_deps = [
-  "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr_rust",
-  "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
-  "//src/lib/fidl/rust/fidl",
-  "//src/lib/fuchsia-async",
-  "//src/lib/fuchsia-component",
-  "//src/lib/zircon/rust:fuchsia-zircon",
-  "//third_party/rust_crates:anyhow",
-  "//third_party/rust_crates:futures",
-]
-
-rustc_library("lib_v1") {
+rustc_library("lib") {
   edition = "2021"
   name = "mock_piconet_client"
   testonly = true
   with_unit_tests = true
 
-  deps = shared_deps
-
-  sources = [ "src/lib.rs" ]
-
-  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
-}
-
-rustc_library("lib_v2") {
-  edition = "2021"
-  name = "mock_piconet_client_v2"
-  testonly = true
-  with_unit_tests = true
-
-  deps = shared_deps + [
-           "//sdk/fidl/fuchsia.component.test:fuchsia.component.test_rust",
-           "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
-           "//src/lib/fuchsia-component-test",
-           "//src/sys/lib/cm_rust",
-           "//third_party/rust_crates:tracing",
-         ]
+  deps = [
+    "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr_rust",
+    "//sdk/fidl/fuchsia.component.test:fuchsia.component.test_rust",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
+    "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/lib/cm_rust",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
+  ]
 
   test_deps = [ "//third_party/rust_crates:assert_matches" ]
 
-  sources = [ "src/lib_v2.rs" ]
+  sources = [ "src/lib.rs" ]
 
-  source_root = "src/lib_v2.rs"
+  source_root = "src/lib.rs"
 
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
-fuchsia_unittest_package("mock-piconet-client-v2-tests") {
-  manifest = "meta/mock-piconet-client-v2-tests.cml"
+fuchsia_unittest_package("mock-piconet-client-tests") {
+  manifest = "meta/mock-piconet-client-tests.cml"
   deps = [
-    ":component-v2",
-    ":lib_v2_test",
+    ":component",
+    ":lib_test",
   ]
 }
 
@@ -106,21 +89,12 @@ rustc_binary("bin") {
 
 fuchsia_component("component") {
   component_name = "mock-piconet-server"
-  manifest = "meta/mock-piconet-server.cmx"
-  deps = [ ":bin" ]
-}
-
-fuchsia_component("component-v2") {
-  component_name = "mock-piconet-server-v2"
   manifest = "meta/mock-piconet-server.cml"
   deps = [ ":bin" ]
 }
 
 fuchsia_package("mock-piconet-server") {
-  deps = [
-    ":component",
-    ":component-v2",
-  ]
+  deps = [ ":component" ]
 }
 
 fuchsia_unittest_package("mock-piconet-server-tests") {
@@ -130,7 +104,7 @@ fuchsia_unittest_package("mock-piconet-server-tests") {
 group("tests") {
   testonly = true
   deps = [
-    ":mock-piconet-client-v2-tests",
+    ":mock-piconet-client-tests",
     ":mock-piconet-server-tests",
 
     # Packages for components that are injected into the tests.

@@ -19,12 +19,12 @@ use {
     fuchsia_component_test::Capability,
     fuchsia_zircon as zx,
     futures::{join, stream::StreamExt, TryFutureExt},
-    mock_piconet_client_v2::{BtProfileComponent, PiconetHarness, PiconetMember},
+    mock_piconet_client::{BtProfileComponent, PiconetHarness, PiconetMember},
     std::convert::TryInto,
 };
 
-/// AVRCP component V2 URL.
-const AVRCP_URL_V2: &str = "fuchsia-pkg://fuchsia.com/bt-avrcp-integration-tests#meta/bt-avrcp.cm";
+/// AVRCP component URL.
+const AVRCP_URL: &str = "fuchsia-pkg://fuchsia.com/bt-avrcp-integration-tests#meta/bt-avrcp.cm";
 /// Attribute ID for SDP Support Features.
 const SDP_SUPPORTED_FEATURES: u16 = 0x0311;
 /// Name prefix for mock peers
@@ -43,7 +43,7 @@ impl AvrcpIntegrationTest {
         let observer = piconet
             .add_profile_with_capabilities(
                 "bt-avrcp-profile".to_string(),
-                AVRCP_URL_V2.to_string(),
+                AVRCP_URL.to_string(),
                 None,
                 vec![],
                 vec![Capability::protocol::<PeerManagerMarker>().into()],

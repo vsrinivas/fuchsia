@@ -10,19 +10,18 @@ use {
     fuchsia_component_test::{Capability, RealmInstance},
     fuchsia_zircon::Duration,
     futures::{pin_mut, stream::StreamExt},
-    mock_piconet_client_v2::{BtProfileComponent, PiconetHarness, PiconetMember},
+    mock_piconet_client::{BtProfileComponent, PiconetHarness, PiconetMember},
     profile_client::{ProfileClient, ProfileEvent},
     std::convert::TryInto,
 };
 
-/// RFCOMM component V2 URL.
+/// RFCOMM component URL.
 /// The RFCOMM component is a unique component in that it functions as a proxy for the
 /// `fuchsia.bluetooth.bredr.Profile` protocol. Consequently, it both connects to and provides the
 /// `fuchsia.bluetooth.bredr.Profile` protocol.
 /// It only manages Profile requests that require RFCOMM - any non-RFCOMM requests
 /// are relayed to the upstream `fuchsia.bluetooth.bredr.Profile` provider.
-const RFCOMM_URL_V2: &str =
-    "fuchsia-pkg://fuchsia.com/bt-rfcomm-integration-tests#meta/bt-rfcomm.cm";
+const RFCOMM_URL: &str = "fuchsia-pkg://fuchsia.com/bt-rfcomm-integration-tests#meta/bt-rfcomm.cm";
 
 /// The moniker for the RFCOMM component under test.
 const RFCOMM_MONIKER: &str = "bt-rfcomm";
@@ -74,7 +73,7 @@ async fn add_rfcomm_component(
 ) -> BtProfileComponent {
     let expose = vec![Capability::protocol::<bredr::ProfileMarker>().into()];
     test_harness
-        .add_profile_with_capabilities(name, RFCOMM_URL_V2.to_string(), None, vec![], expose)
+        .add_profile_with_capabilities(name, RFCOMM_URL.to_string(), None, vec![], expose)
         .await
         .expect("failed to add RFCOMM profile")
 }
