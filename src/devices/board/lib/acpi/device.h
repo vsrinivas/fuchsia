@@ -239,14 +239,6 @@ class Device : public DeviceType,
 
   std::optional<svc::Outgoing> outgoing_;
 
-  // These two bools are used to determine where we call the passthrough device's
-  // device_init_reply() from. We need to call it after the parent's init reply so that in DFv2 the
-  // passthrough device doesn't racily fill in the place in devfs where its parent would go with
-  // fake nodes.
-  // TODO(fxbug.dev/104710): remove this once compat shim accurately emulates DFv1.
-  std::mutex passthrough_init_lock_;
-  bool passthrough_init_called_ __TA_GUARDED(passthrough_init_lock_) = false;
-  bool parent_init_called_ __TA_GUARDED(passthrough_init_lock_) = false;
   // Passthrough device -- the one that drivers actually bind to. This is a child of this |Device|
   // instance.
   zx_device_t* passthrough_dev_;

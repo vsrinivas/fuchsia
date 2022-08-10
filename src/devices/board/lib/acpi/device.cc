@@ -174,17 +174,6 @@ zx_status_t Device::ReportCurrentResources() {
 }
 
 void Device::DdkInit(ddk::InitTxn txn) {
-  auto finish = fit::defer([this]() {
-    // TODO(fxbug.dev/104710): remove this once compat shim accurately emulates DFv1.
-    std::scoped_lock lock(passthrough_init_lock_);
-    parent_init_called_ = true;
-    if (passthrough_init_called_) {
-      // If the passthrough device has had its init hook called, reply to it so that it gets added
-      // to devfs.
-      device_init_reply_args_t args;
-      device_init_reply(passthrough_dev_, ZX_OK, &args);
-    }
-  });
   auto use_global_lock = acpi_->EvaluateObject(acpi_handle_, "_GLK", std::nullopt);
   if (use_global_lock.is_ok()) {
     if (use_global_lock->Type == ACPI_TYPE_INTEGER && use_global_lock->Integer.Value == 1) {
@@ -704,19 +693,6 @@ zx::status<> Device::AddDevice(const char* name, cpp20::span<zx_device_prop_t> p
 
   static const zx_protocol_device_t passthrough_proto = {
       .version = DEVICE_OPS_VERSION,
-      // TODO(fxbug.dev/104710): remove this once compat shim accurately emulates DFv1.
-      .init =
-          [](void* dev) {
-            Device* d = static_cast<Device*>(dev);
-            std::scoped_lock lock(d->passthrough_init_lock_);
-            d->passthrough_init_called_ = true;
-            if (d->parent_init_called_) {
-              // Only add the device to devfs if our parent has been added.
-              device_init_reply_args_t args;
-              device_init_reply(d->passthrough_dev_, ZX_OK, &args);
-            }
-          },
-
       .release = [](void* dev) {},
   };
 
