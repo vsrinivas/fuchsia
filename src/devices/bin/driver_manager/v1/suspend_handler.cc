@@ -182,7 +182,7 @@ void SuspendHandler::Suspend(uint32_t flags, SuspendCallback callback) {
       suspend_callback_(ZX_OK);
     }
   };
-  // We don't need to suspend anything except sys_device and it's children,
+  // We don't need to suspend anything except sys_device and its children,
   // since we do not run suspend hooks for children of test or misc
 
   suspend_task_ = SuspendTask::Create(coordinator_->sys_device(), sflags_, std::move(completion));

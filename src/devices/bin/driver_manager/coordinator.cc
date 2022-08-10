@@ -635,7 +635,7 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev,
     bool need_proxy_rpc = !(dev->flags & DEV_CTX_IMMORTAL);
 
     if (need_proxy_rpc || dev == sys_device_) {
-      // create rpc channel for proxy device to talk to the busdev it proxys
+      // create rpc channel for proxy device to talk to the busdev it proxies
       if ((r = zx::channel::create(0, &h0, &h1)) < 0) {
         return r;
       }

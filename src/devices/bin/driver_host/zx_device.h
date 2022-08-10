@@ -557,7 +557,7 @@ struct zx_device
   // True when this device is a composite device, distinguishing this device from a fragment.
   bool is_composite_ = false;
 
-  // If this device is a fragment of a composite, or if this device is a composite device itsefl,
+  // If this device is a fragment of a composite, or if this device is a composite device itself,
   // this points to the composite control structure.
   fbl::RefPtr<CompositeDevice> composite_;
 

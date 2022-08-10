@@ -598,6 +598,8 @@ class Device
   const fbl::String libname_;
   const fbl::String args_;
 
+  // The device's parent in the device tree. If this is a composite device, its
+  // parent will be null.
   fbl::RefPtr<Device> parent_;
   const uint32_t protocol_id_;
 
@@ -625,10 +627,6 @@ class Device
   fbl::TaggedDoublyLinkedList<CompositeDeviceFragment*, CompositeDeviceFragment::DeviceListTag>
       fragments_;
 
-  // - If this device is part of a composite device, this is inhabited by
-  //   CompositeDeviceFragment* and it points to the fragment that matched it.
-  //   Note that this is only set on the device that matched the fragment, not
-  //   the "fragment device" added by the fragment driver.
   // - If this device is a composite device, this is inhabited by
   //   CompositeDevice* and it points to the composite that describes it.
   // - Otherwise, it is inhabited by UnassociatedWithComposite

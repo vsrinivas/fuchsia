@@ -219,7 +219,7 @@ type DeviceType = resource union {
     /// The device has no parent to communicate with and no driver to load.
     1: stub StubDevice;
 
-    /// The device acts as a proxy for it's parent and talks to it via it's
+    /// The device acts as a proxy for its parent and talks to it via its
     /// proxy channel.
     2: proxy ProxyDevice;
 
@@ -236,7 +236,7 @@ type DeviceType = resource union {
 /// Protocol for controlling a driver host process from the driver manager
 protocol DriverHostController {
     /// Create a device in the driver host. |type| describes what type of device
-    /// is set up, how it communicates with it's parent (if it has one).
+    /// is set up, how it communicates with its parent (if it has one).
     ///
     /// `local_device_id` will be a unique value within the device's devhost
     CreateDevice(resource struct {

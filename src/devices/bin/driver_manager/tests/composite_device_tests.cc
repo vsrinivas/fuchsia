@@ -52,6 +52,8 @@ class FidlTransaction : public fidl::Transaction {
   std::optional<fidl::UnbindInfo> detected_error_;
 };
 
+// A fake DriverHostController server that checks that it receives a
+// CreateDevice message for a composite device.
 class FakeCompositeDevhost : public fidl::WireServer<fuchsia_device_manager::DriverHostController> {
  public:
   FakeCompositeDevhost(
@@ -87,6 +89,8 @@ class FakeCompositeDevhost : public fidl::WireServer<fuchsia_device_manager::Dri
   fidl::ServerEnd<fuchsia_device_manager::DeviceController>* device_controller_server_;
 };
 
+// A fake DriverHostController server that checks that it receives a
+// CreateDevice message for a new proxy device.
 class FakeNewProxyDevhost : public fidl::WireServer<fuchsia_device_manager::DriverHostController> {
  public:
   FakeNewProxyDevhost(
@@ -120,6 +124,7 @@ class FakeNewProxyDevhost : public fidl::WireServer<fuchsia_device_manager::Driv
 void CheckCreateDeviceReceived(
     fidl::WireServer<fuchsia_device_manager::DriverHostController>* fake_dev_host,
     const fidl::ServerEnd<fdm::DriverHostController>& controller, DeviceState* composite) {
+  // Manually read a FIDL message off the DriverHostController channel.
   uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   fidl_channel_handle_metadata_t handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
@@ -135,8 +140,12 @@ void CheckCreateDeviceReceived(
   auto* header = msg.header();
   FidlTransaction txn(header->txid, zx::unowned(controller.channel()));
 
+  // Dispatch the message to the fake server.
   fidl::WireDispatch(fake_dev_host, std::move(msg), &txn);
   ASSERT_FALSE(txn.detected_error());
+
+  // The fake server holds a reference to the composite which it should populate
+  // with the channels. Check that that happened.
   ASSERT_TRUE(composite->coordinator_client.is_valid());
   ASSERT_TRUE(composite->controller_server.is_valid());
 }

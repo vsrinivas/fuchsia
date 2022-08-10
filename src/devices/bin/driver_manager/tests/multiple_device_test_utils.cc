@@ -322,7 +322,7 @@ void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const 
       parent, std::move(*controller_client), std::move(*coordinator_server),
       /* props_data */ nullptr,
       /* props_count */ 0, /* str_props_data */ nullptr,
-      /* str_props_count */ 0, name, /* driver_path */ protocol_id, driver.data(), /* args */ {},
+      /* str_props_count */ 0, name, protocol_id, /* driver_path */ driver.data(), /* args */ {},
       /* skip_autobind */ false, has_init, always_init, std::move(inspect),
       /* client_remote */ zx::channel(), /* outgoing_dir */ std::move(outgoing_dir), &state.device);
   state.device->flags |= DEV_CTX_ALLOW_MULTI_COMPOSITE;

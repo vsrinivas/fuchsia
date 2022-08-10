@@ -76,6 +76,9 @@ class CoordinatorForTest {
   Coordinator coordinator_;
 };
 
+// Stands in for a device in the driver host (with its Coordinator and
+// DeviceController FIDL connections), which does not actually exist in these
+// unit tests.
 class DeviceState : public fidl::WireServer<fdm::DeviceController> {
  public:
   DeviceState() = default;
