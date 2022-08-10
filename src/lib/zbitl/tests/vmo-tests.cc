@@ -277,6 +277,63 @@ void TestLargeFileDecompression() {
   }
 }
 
+template <typename TestTraits>
+void TestInheritedResizability() {
+  using CreationTestTraits = typename TestTraits::creation_traits;
+
+  // Resizable if parent was resizable.
+  {
+    files::ScopedTempDir dir;
+    fbl::unique_fd fd;
+    size_t size = 0;
+    ASSERT_NO_FATAL_FAILURE(OpenTestDataZbi(TestDataZbiType::kOneItem, dir.path(), &fd, &size));
+
+    typename TestTraits::Context context;
+    ASSERT_NO_FATAL_FAILURE(
+        TestTraits::template Create</*Resizable=*/true>(std::move(fd), size, &context));
+    zbitl::View view(context.TakeStorage());
+
+    auto copy_result = view.Copy(view.begin(), view.end());
+    ASSERT_FALSE(copy_result.is_error()) << ViewCopyErrorString(copy_result.error_value());
+
+    auto created = std::move(copy_result).value();
+    const zx::vmo& vmo = CreationTestTraits::GetVmo(created);
+
+    zx_info_vmo_t info = {};
+    ASSERT_EQ(ZX_OK, vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+    EXPECT_NE(0u, info.flags & ZX_INFO_VMO_RESIZABLE);
+
+    auto result = view.take_error();
+    EXPECT_FALSE(result.is_error()) << ViewErrorString(result.error_value());
+  }
+
+  // Non-resizable if parent was non-resizable.
+  {
+    files::ScopedTempDir dir;
+    fbl::unique_fd fd;
+    size_t size = 0;
+    ASSERT_NO_FATAL_FAILURE(OpenTestDataZbi(TestDataZbiType::kOneItem, dir.path(), &fd, &size));
+
+    typename TestTraits::Context context;
+    ASSERT_NO_FATAL_FAILURE(
+        TestTraits::template Create</*Resizable=*/false>(std::move(fd), size, &context));
+    zbitl::View view(context.TakeStorage());
+
+    auto copy_result = view.Copy(view.begin(), view.end());
+    ASSERT_FALSE(copy_result.is_error()) << ViewCopyErrorString(copy_result.error_value());
+
+    auto created = std::move(copy_result).value();
+    const zx::vmo& vmo = CreationTestTraits::GetVmo(created);
+
+    zx_info_vmo_t info = {};
+    ASSERT_EQ(ZX_OK, vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+    EXPECT_EQ(0u, info.flags & ZX_INFO_VMO_RESIZABLE);
+
+    auto result = view.take_error();
+    EXPECT_FALSE(result.is_error()) << ViewErrorString(result.error_value());
+  }
+}
+
 TEST(ZbitlViewVmoTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<VmoTestTraits>());
 }
@@ -291,6 +348,10 @@ TEST_COPY_CREATION(ZbitlViewVmoTests, VmoTestTraits)
 
 TEST(ZbitlViewVmoTests, LargeFileDecompression) {
   ASSERT_NO_FATAL_FAILURE(TestLargeFileDecompression<VmoTestTraits>());
+}
+
+TEST(ZbitlViewVmoTests, InheritedResizability) {
+  ASSERT_NO_FATAL_FAILURE(TestInheritedResizability<VmoTestTraits>());
 }
 
 TEST(ZbitlImageVmoTests, Appending) { ASSERT_NO_FATAL_FAILURE(TestAppending<VmoTestTraits>()); }
@@ -315,6 +376,10 @@ TEST_COPY_CREATION(ZbitlViewUnownedVmoTests, UnownedVmoTestTraits)
 
 TEST(ZbitlViewUnownedVmoTests, LargeFileDecompression) {
   ASSERT_NO_FATAL_FAILURE(TestLargeFileDecompression<UnownedVmoTestTraits>());
+}
+
+TEST(ZbitlViewUnownedVmoTests, InheritedResizability) {
+  ASSERT_NO_FATAL_FAILURE(TestInheritedResizability<UnownedVmoTestTraits>());
 }
 
 TEST(ZbitlImageUnownedVmoTests, Appending) {
@@ -346,6 +411,10 @@ TEST(ZbitlViewMapUnownedVmoTests, LargeFileDecompression) {
   ASSERT_NO_FATAL_FAILURE(TestLargeFileDecompression<MapUnownedVmoTestTraits>());
 }
 
+TEST(ZbitlViewMapUnownedVmoTests, InheritedResizability) {
+  ASSERT_NO_FATAL_FAILURE(TestInheritedResizability<MapUnownedVmoTestTraits>());
+}
+
 TEST(ZbitlImageMapUnownedVmoTests, Appending) {
   ASSERT_NO_FATAL_FAILURE(TestAppending<MapUnownedVmoTestTraits>());
 }
@@ -370,6 +439,10 @@ TEST_COPY_CREATION(ZbitlViewMapOwnedVmoTests, MapOwnedVmoTestTraits)
 
 TEST(ZbitlViewMapOwnedVmoTests, LargeFileDecompression) {
   ASSERT_NO_FATAL_FAILURE(TestLargeFileDecompression<MapOwnedVmoTestTraits>());
+}
+
+TEST(ZbitlViewMapOwnedVmoTests, InheritedResizability) {
+  ASSERT_NO_FATAL_FAILURE(TestInheritedResizability<MapOwnedVmoTestTraits>());
 }
 
 TEST(ZbitlImageMapOwnedVmoTests, Appending) {

@@ -45,13 +45,15 @@ zx_status_t netboot_prepare_zbi(zx::vmo zbi_in, std::string_view cmdline, zx::vm
   } else {
     *kernel_zbi = std::move(result).value();
   }
-  // Ditto for data items (i.e., the remainder).
-  if (auto result = view.Copy(second, view.end()); result.is_error()) {
+  // Ditto for data items (i.e., the remainder) - though this one needs to be
+  // extensible in order to append the CMDLINE item.
+  if (zx_status_t status = zx::vmo::create(0u, ZX_VMO_RESIZABLE, data_zbi); status != ZX_OK) {
+    return status;
+  }
+  if (auto result = view.Copy(*data_zbi, second, view.end()); result.is_error()) {
     printf("netbootloader: failed to copy data_zbi items: ");
     PrintViewCopyError(result.error_value());
     return ZX_ERR_INTERNAL;
-  } else {
-    *data_zbi = std::move(result).value();
   }
 
   zbitl::Image data_img(zx::unowned_vmo{*data_zbi});

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/zbitl/vmo.h>
+#include <zircon/syscalls/object.h>
 
 #include <cstddef>
 #include <memory>
@@ -10,6 +11,19 @@
 #include <fbl/alloc_checker.h>
 
 namespace zbitl {
+
+namespace {
+
+fitx::result<zx_status_t, bool> IsResizable(const zx::vmo& vmo) {
+  zx_info_vmo_t info = {};
+  zx_status_t status = vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr);
+  if (status != ZX_OK) {
+    return fitx::error{status};
+  }
+  return fitx::ok((info.flags & ZX_INFO_VMO_RESIZABLE) != 0);
+}
+
+}  // namespace
 
 fitx::result<zx_status_t, uint32_t> StorageTraits<zx::vmo>::Capacity(const zx::vmo& vmo) {
   uint64_t size;
@@ -62,13 +76,22 @@ fitx::result<zx_status_t> StorageTraits<zx::vmo>::Write(const zx::vmo& vmo, uint
   return fitx::ok();
 }
 
-fitx::result<zx_status_t, zx::vmo> StorageTraits<zx::vmo>::Create(const zx::vmo&, uint32_t size,
+fitx::result<zx_status_t, zx::vmo> StorageTraits<zx::vmo>::Create(const zx::vmo& old, uint32_t size,
                                                                   uint32_t initial_zero_size) {
   // While `initial_zero_size` is a required parameter for the creation trait,
   // it is unnecessary in the case of VMOs, as newly-created instances are
   // always zero-filled.
+
+  // Make the new VMO resizable only if the original is.
+  uint32_t options = 0;
+  if (auto result = IsResizable(old); result.is_error()) {
+    return result.take_error();
+  } else if (result.value()) {
+    options |= ZX_VMO_RESIZABLE;
+  }
+
   zx::vmo vmo;
-  if (zx_status_t status = zx::vmo::create(size, ZX_VMO_RESIZABLE, &vmo); status != ZX_OK) {
+  if (zx_status_t status = zx::vmo::create(size, options, &vmo); status != ZX_OK) {
     return fitx::error{status};
   }
   return fitx::ok(std::move(vmo));
@@ -80,9 +103,16 @@ StorageTraits<zx::vmo>::DoClone(const zx::vmo& original, uint32_t offset, uint32
   const uint32_t clone_start = offset & -uint32_t{ZX_PAGE_SIZE};
   const uint32_t clone_size = slop + length;
 
+  // Make the child resizable only if the parent is.
+  uint32_t options = ZX_VMO_CHILD_SNAPSHOT;
+  if (auto result = IsResizable(original); result.is_error()) {
+    return result.take_error();
+  } else if (result.value()) {
+    options |= ZX_VMO_CHILD_RESIZABLE;
+  }
+
   zx::vmo clone;
-  zx_status_t status = original.create_child(ZX_VMO_CHILD_SNAPSHOT | ZX_VMO_CHILD_RESIZABLE,
-                                             clone_start, clone_size, &clone);
+  zx_status_t status = original.create_child(options, clone_start, clone_size, &clone);
   if (status == ZX_OK && slop > 0) {
     // Explicitly zero the partial page before the range so it remains unseen.
     status = clone.op_range(ZX_VMO_OP_ZERO, 0, slop, nullptr, 0);

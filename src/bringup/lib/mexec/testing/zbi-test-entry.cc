@@ -92,13 +92,16 @@ zx::status<> ZbiTestEntry::Init(int argc, char** argv) {
       kernel_zbi_ = std::move(result).value();
     }
 
-    if (auto result = view.Copy(second, view.end()); result.is_error()) {
+    // Ensure that the data ZBI is resizable, as it wil be extended in
+    // `mexec::PrepareDataZbi()` below.
+    if (zx_status_t status = zx::vmo::create(0u, ZX_VMO_RESIZABLE, &data_zbi_); status != ZX_OK) {
+      return zx::error{status};
+    }
+    if (auto result = view.Copy(data_zbi_, second, view.end()); result.is_error()) {
       printf("%s: failed to copy out data ZBI: ", program_name);
       zbitl::PrintViewCopyError(result.error_value());
       view.ignore_error();
       return zx::error(ZX_ERR_INTERNAL);
-    } else {
-      data_zbi_ = std::move(result).value();
     }
 
     if (auto result = view.take_error(); result.is_error()) {
