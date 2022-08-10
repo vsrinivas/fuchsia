@@ -7,7 +7,7 @@ use {
     packet_encoding::{Decodable, Encodable},
     std::collections::HashSet,
     std::convert::{TryFrom, TryInto},
-    tracing::warn,
+    tracing::{info, warn},
 };
 
 use crate::packets::{
@@ -34,6 +34,46 @@ impl GetFolderItemsCommand {
     // Create a new command for getting media players.
     pub fn new_media_player_list(start_item: u32, end_item: u32) -> Self {
         Self { scope: Scope::MediaPlayerList, start_item, end_item, attribute_list: None }
+    }
+
+    // Create a new command for getting virtual file system.
+    pub fn new_virtual_file_system(
+        start_item: u32,
+        end_item: u32,
+        attr_option: fidl_avrcp::AttributeRequestOption,
+    ) -> Self {
+        Self {
+            scope: Scope::MediaPlayerVirtualFilesystem,
+            start_item,
+            end_item,
+            attribute_list: Self::attr_list_from_fidl(attr_option),
+        }
+    }
+
+    // Create a new command for getting now playing list.
+    pub fn new_now_playing_list(
+        start_item: u32,
+        end_item: u32,
+        attr_option: fidl_avrcp::AttributeRequestOption,
+    ) -> Self {
+        Self {
+            scope: Scope::NowPlaying,
+            start_item,
+            end_item,
+            attribute_list: Self::attr_list_from_fidl(attr_option),
+        }
+    }
+
+    fn attr_list_from_fidl(
+        attr_option: fidl_avrcp::AttributeRequestOption,
+    ) -> Option<Vec<MediaAttributeId>> {
+        match attr_option {
+            fidl_avrcp::AttributeRequestOption::GetAll(true) => None,
+            fidl_avrcp::AttributeRequestOption::GetAll(false) => Some(vec![]),
+            fidl_avrcp::AttributeRequestOption::AttributeList(attr_list) => {
+                Some(attr_list.iter().map(Into::into).collect())
+            }
+        }
     }
 
     /// Returns the scope associated with the command.
@@ -66,12 +106,6 @@ impl Decodable for GetFolderItemsCommand {
         }
 
         let scope = Scope::try_from(buf[0])?;
-
-        // We currently don't support folder items for anything other than MediaPlayerList.
-        // TODO(fxdev.bug/97014): remove once we add support for other folder items.
-        if scope != Scope::MediaPlayerList {
-            return Err(Error::InvalidParameter);
-        }
 
         let start_item = u32::from_be_bytes(buf[1..5].try_into().unwrap());
         let end_item = u32::from_be_bytes(buf[5..9].try_into().unwrap());
@@ -628,7 +662,7 @@ impl Decodable for MediaElementItem {
     }
 }
 
-// The FIDL MediaPlayerItem contains a subset of fields in the AVRCP MediaPlayerItem.
+/// The FIDL MediaPlayerItem contains a subset of fields in the AVRCP MediaPlayerItem.
 /// This is because the current Fuchsia MediaPlayer does not provide information for the
 /// omitted fields. Consequently, this conversion populates the missing fields with
 /// static response values.
@@ -677,6 +711,49 @@ impl TryFrom<BrowseableItem> for fidl_avrcp::MediaPlayerItem {
                 displayable_name: Some(p.name),
                 ..fidl_avrcp::MediaPlayerItem::EMPTY
             }),
+            _ => Err(fidl_avrcp::BrowseControllerError::PacketEncoding),
+        }
+    }
+}
+
+impl TryFrom<BrowseableItem> for fidl_avrcp::FileSystemItem {
+    type Error = fidl_avrcp::BrowseControllerError;
+
+    fn try_from(src: BrowseableItem) -> Result<Self, Self::Error> {
+        match src {
+            BrowseableItem::MediaElement(e) => {
+                let mut attrs = fidl_avrcp::MediaAttributes::EMPTY;
+                for attr in e.attributes {
+                    match attr.attribute_id {
+                        MediaAttributeId::Title => attrs.title = Some(attr.value),
+                        MediaAttributeId::ArtistName => attrs.artist_name = Some(attr.value),
+                        MediaAttributeId::AlbumName => attrs.album_name = Some(attr.value),
+                        MediaAttributeId::TrackNumber => attrs.track_number = Some(attr.value),
+                        MediaAttributeId::TotalNumberOfTracks => {
+                            attrs.total_number_of_tracks = Some(attr.value)
+                        }
+                        MediaAttributeId::Genre => attrs.genre = Some(attr.value),
+                        MediaAttributeId::PlayingTime => attrs.playing_time = Some(attr.value),
+                        MediaAttributeId::DefaultCoverArt => {
+                            info!("ignoring default cover art due to missing implementation")
+                        }
+                    };
+                }
+                Ok(Self::MediaElement(fidl_avrcp::MediaElementItem {
+                    media_element_uid: Some(e.element_uid),
+                    media_type: Some(e.media_type.into()),
+                    displayable_name: Some(e.name.clone()),
+                    attributes: Some(attrs),
+                    ..fidl_avrcp::MediaElementItem::EMPTY
+                }))
+            }
+            BrowseableItem::Folder(f) => Ok(Self::Folder(fidl_avrcp::FolderItem {
+                folder_uid: Some(f.folder_uid),
+                folder_type: Some(f.folder_type.into()),
+                is_playable: Some(f.is_playable),
+                displayable_name: Some(f.name),
+                ..fidl_avrcp::FolderItem::EMPTY
+            })),
             _ => Err(fidl_avrcp::BrowseControllerError::PacketEncoding),
         }
     }
@@ -931,11 +1008,6 @@ mod tests {
     /// Sending payloads that are malformed and/or contain invalid parameters should be
     /// gracefully handled.
     fn test_get_folder_items_command_decode_invalid_buf() {
-        // Unsupported Scope provided in buffer.
-        let invalid_scope_buf = [0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00];
-        let cmd = GetFolderItemsCommand::decode(&invalid_scope_buf[..]);
-        assert!(cmd.is_err());
-
         // Incomplete buffer.
         let invalid_format_buf = [0x00, 0x00, 0x00, 0x01];
         let cmd = GetFolderItemsCommand::decode(&invalid_format_buf[..]);

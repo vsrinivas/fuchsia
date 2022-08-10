@@ -38,10 +38,11 @@ macro_rules! gen_avc_commands {
 
 /// Macro to generate a command enum and its impl.
 macro_rules! gen_commands {
-    ($name:ident {
+    ($(#[$meta:meta])* $name:ident {
         $($variant:ident = ($val:expr, [$($arg:expr),*], $help:expr)),*,
     }) => {
         /// Enum of all possible commands
+        $(#[$meta])*
         #[derive(PartialEq)]
         pub enum $name {
             $($variant),*
@@ -171,10 +172,15 @@ gen_avc_commands! {
 
 // `Cmd` is the declarative specification of all commands that bt-cli accepts.
 gen_commands! {
+    #[derive(Debug)]
     Cmd {
         AvcCommand = ("key", ["command"], "send an AVC passthrough keypress event"),
+        GetVirtualFileSystem =  ("get-file-system", ["start_index", "end_index", "attributes"],
+            "Get media player virtual file system items from target. Note that `attributes` is a comma-separated attribute IDs. Use special keyword \"ALL\" to specify all attributes. Leave empty to specify no attributes. Example: `<command> <start_index> <end_index> 1,2,3` OR `<command> <start_index> <end_index> ALL`"),
         GetMediaAttributes = ("get-media", [], "gets currently playing media attributes"),
         GetMediaPlayerList =  ("get-media-players", ["start_index", "end_index"], "Get list of media players from target"),
+        GetNowPlaying =  ("get-now-playing", ["start_index", "end_index", "attributes"],
+            "Get now playing list from target. Note that `attributes` is a comma-separated attribute IDs. Use special keyword \"ALL\" to specify all attributes. Leave empty to specify no attributes. Example: `<command> <start_index> <end_index> 1,2,3` OR `<command> <start_index> <end_index> ALL`"),
         GetPlayStatus = ("get-play-status", [], "gets the status of the currently playing media at the TG"),
         GetPlayerApplicationSettings = ("get-player-application-settings",
             ["Optional: id1 id2 ..."],

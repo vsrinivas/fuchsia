@@ -5,6 +5,7 @@
 use {
     anyhow::Error,
     assert_matches::assert_matches,
+    async_utils::PollExt,
     bt_avctp::{AvcCommand, AvcPeer, AvcResponseType, AvctpCommand, AvctpPeer},
     fidl::endpoints::{create_endpoints, create_proxy, create_proxy_and_stream},
     fidl_fuchsia_bluetooth_avrcp::{self as fidl_avrcp, *},
@@ -801,16 +802,15 @@ fn peer_manager_with_browse_controller_client() {
         .get_browse_controller_for_target(&mut fake_peer_id.into(), browse_controller_server);
     pin_mut!(get_browse_controller_fut);
 
-    assert!(exec.run_until_stalled(&mut get_browse_controller_fut).is_pending());
-    match exec.run_until_stalled(&mut peer_controller_request_receiver.next()) {
-        Poll::Ready(Some(request)) => {
-            peer_manager.handle_service_request(request);
-        }
-        x => panic!("Expected request to be ready, got {:?} instead.", x),
-    };
+    exec.run_until_stalled(&mut get_browse_controller_fut).expect_pending("should be pending");
+    peer_manager.handle_service_request(
+        exec.run_until_stalled(&mut peer_controller_request_receiver.next())
+            .expect("should be ready")
+            .expect("should be some value"),
+    );
     assert_matches!(
         exec.run_until_stalled(&mut get_browse_controller_fut),
-        futures::task::Poll::Ready(Ok(Ok(())))
+        Poll::Ready(Ok(Ok(())))
     );
 
     // Get test browse controller client.
@@ -820,16 +820,16 @@ fn peer_manager_with_browse_controller_client() {
         ext_proxy.get_controller_for_target(&mut fake_peer_id.into(), browse_controller_ext_server);
     pin_mut!(get_test_browse_controller_fut);
 
-    assert!(exec.run_until_stalled(&mut get_test_browse_controller_fut).is_pending());
-    match exec.run_until_stalled(&mut peer_controller_request_receiver.next()) {
-        Poll::Ready(Some(request)) => {
-            peer_manager.handle_service_request(request);
-        }
-        x => panic!("Expected request to be ready, got {:?} instead.", x),
-    };
+    exec.run_until_stalled(&mut get_test_browse_controller_fut)
+        .expect_pending("should not be ready");
+    peer_manager.handle_service_request(
+        exec.run_until_stalled(&mut peer_controller_request_receiver.next())
+            .expect("should be ready")
+            .expect("should be some value"),
+    );
     assert_matches!(
         exec.run_until_stalled(&mut get_test_browse_controller_fut),
-        futures::task::Poll::Ready(Ok(Ok(())))
+        Poll::Ready(Ok(Ok(())))
     );
 
     // Start testing actual commands.
@@ -837,11 +837,18 @@ fn peer_manager_with_browse_controller_client() {
 
     // Test IsConnected.
     let mut is_browse_connected_fut = browse_controller_ext_proxy.is_connected();
+    assert!(exec
+        .run_until_stalled(&mut is_browse_connected_fut)
+        .expect("should be ready")
+        .unwrap());
 
-    match exec.run_until_stalled(&mut is_browse_connected_fut) {
-        Poll::Ready(Ok(true)) => {}
-        x => panic!("Expected request to be ready, got {:?} instead.", x),
-    };
+    // Test GetNowPlayingItems, which should fail since SetBrowsedPlayer isn't set.
+    let mut get_now_playing_fut = browse_controller_proxy.get_now_playing_items(
+        START_INDEX,
+        END_INDEX,
+        &mut AttributeRequestOption::GetAll(true),
+    );
+    assert_matches!(exec.run_until_stalled(&mut get_now_playing_fut), Poll::Ready(Ok(Err(_))));
 
     // Test SetBrowsedPlayer.
     const PLAYER_ID: u16 = 1004;
@@ -849,23 +856,21 @@ fn peer_manager_with_browse_controller_client() {
     pin_mut!(set_browsed_player_fut);
 
     assert!(exec.run_until_stalled(&mut set_browsed_player_fut).is_pending());
-    match exec.run_until_stalled(&mut avctp_cmd_stream.try_next()) {
-        Poll::Ready(Ok(Some(command))) => {
-            let params = decode_avctp_command(&command, PduId::SetBrowsedPlayer);
-            let cmd = SetBrowsedPlayerCommand::decode(&params)
-                .expect("should have received valid command");
-            assert_eq!(cmd.player_id(), PLAYER_ID);
-            // Create mock response.
-            let resp = SetBrowsedPlayerResponse::new_success(1, 1, vec!["folder1".to_string()])
-                .expect("should be initialized");
-            send_avctp_response(PduId::SetBrowsedPlayer, &resp, &command);
-        }
-        x => panic!("Expected request to be ready, got {:?} instead.", x),
-    };
-    assert_matches!(
-        exec.run_until_stalled(&mut set_browsed_player_fut),
-        futures::task::Poll::Ready(Ok(Ok(())))
-    );
+    let command = exec
+        .run_until_stalled(&mut avctp_cmd_stream.try_next())
+        .expect("should be ready")
+        .unwrap()
+        .expect("has valid command");
+    // Ensure command params are correct.
+    let params = decode_avctp_command(&command, PduId::SetBrowsedPlayer);
+    let cmd = SetBrowsedPlayerCommand::decode(&params).expect("should have received valid command");
+    assert_eq!(cmd.player_id(), PLAYER_ID);
+    // Create mock response.
+    let resp = SetBrowsedPlayerResponse::new_success(1, 1, vec!["folder1".to_string()])
+        .expect("should be initialized");
+    send_avctp_response(PduId::SetBrowsedPlayer, &resp, &command);
+
+    assert_matches!(exec.run_until_stalled(&mut set_browsed_player_fut), Poll::Ready(Ok(Ok(()))));
 
     // Test GetMediaPlayerItems.
     const START_INDEX: u32 = 0;
@@ -875,28 +880,59 @@ fn peer_manager_with_browse_controller_client() {
     pin_mut!(get_media_players_fut);
 
     assert!(exec.run_until_stalled(&mut get_media_players_fut).is_pending());
-    match exec.run_until_stalled(&mut avctp_cmd_stream.try_next()) {
-        Poll::Ready(Ok(Some(command))) => {
-            let params = decode_avctp_command(&command, PduId::GetFolderItems);
-            let cmd =
-                GetFolderItemsCommand::decode(&params).expect("should have received valid command");
-            match cmd.scope() {
-                Scope::MediaPlayerList => {
-                    assert_eq!(cmd.start_item(), START_INDEX);
-                    assert_eq!(cmd.end_item(), END_INDEX);
-                    assert!(cmd.attribute_list().is_none());
-                }
-                _ => panic!("unexpected get folder items scope"),
-            }
-            // Create mock response.
-            let resp = GetFolderItemsResponse::new_success(1, vec![]);
-            send_avctp_response(PduId::GetFolderItems, &resp, &command);
-        }
-        x => panic!("Expected request to be ready, got {:?} instead.", x),
-    };
+    let command = exec
+        .run_until_stalled(&mut avctp_cmd_stream.try_next())
+        .expect("should be ready")
+        .unwrap()
+        .expect("has valid command");
+    // Ensure command params are correct.
+    let params = decode_avctp_command(&command, PduId::GetFolderItems);
+    let cmd = GetFolderItemsCommand::decode(&params).expect("should have received valid command");
+    assert_matches!(cmd.scope(),
+    Scope::MediaPlayerList => {
+        assert_eq!(cmd.start_item(), START_INDEX);
+        assert_eq!(cmd.end_item(), END_INDEX);
+        assert!(cmd.attribute_list().is_none());
+    });
+    // Create mock response.
+    let resp = GetFolderItemsResponse::new_success(1, vec![]);
+    send_avctp_response(PduId::GetFolderItems, &resp, &command);
+
     assert_matches!(
     exec.run_until_stalled(&mut get_media_players_fut),
     Poll::Ready(Ok(Ok(list))) => {
         assert_eq!(list.len(), 0);
     });
+
+    // Test GetFileSystemItems. SetBrowsedPlayer was already called.
+    let get_file_system_fut = browse_controller_proxy.get_file_system_items(
+        START_INDEX,
+        END_INDEX,
+        &mut AttributeRequestOption::GetAll(false),
+    );
+    pin_mut!(get_file_system_fut);
+
+    assert!(exec.run_until_stalled(&mut get_file_system_fut).is_pending());
+    let command = exec
+        .run_until_stalled(&mut avctp_cmd_stream.try_next())
+        .expect("should be ready")
+        .unwrap()
+        .expect("has valid command");
+    // Ensure command params are correct.
+    let params = decode_avctp_command(&command, PduId::GetFolderItems);
+    let cmd = GetFolderItemsCommand::decode(&params).expect("should have received valid command");
+    assert_matches!(cmd.scope(),
+    Scope::MediaPlayerVirtualFilesystem => {
+        assert_eq!(cmd.start_item(), START_INDEX);
+                    assert_eq!(cmd.end_item(), END_INDEX);
+                    assert_eq!(cmd.attribute_list().unwrap().len(), 0);
+    });
+    // Create mock response.
+    let resp = GetFolderItemsResponse::new_success(1, vec![]);
+    send_avctp_response(PduId::GetFolderItems, &resp, &command);
+
+    assert_matches!(
+        exec.run_until_stalled(&mut get_file_system_fut),
+        futures::task::Poll::Ready(_)
+    );
 }

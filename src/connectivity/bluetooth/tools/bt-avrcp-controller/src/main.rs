@@ -8,9 +8,10 @@ use {
     fidl::encoding::Decodable as FidlDecodable,
     fidl::endpoints::create_endpoints,
     fidl_fuchsia_bluetooth_avrcp::{
-        self as fidl_avrcp, BrowseControllerMarker, BrowseControllerProxy, ControllerEvent,
-        ControllerEventStream, ControllerMarker, ControllerProxy, Notifications, PeerManagerMarker,
-        PlayerApplicationSettingAttributeId, MAX_ATTRIBUTES,
+        self as fidl_avrcp, AttributeRequestOption, BrowseControllerMarker, BrowseControllerProxy,
+        ControllerEvent, ControllerEventStream, ControllerMarker, ControllerProxy,
+        MediaAttributeId, Notifications, PeerManagerMarker, PlayerApplicationSettingAttributeId,
+        MAX_ATTRIBUTES,
     },
     fidl_fuchsia_bluetooth_avrcp_test::{
         BrowseControllerExtMarker, BrowseControllerExtProxy, ControllerExtMarker,
@@ -63,6 +64,63 @@ async fn send_passthrough<'a>(
     match controller.send_command(cmd.unwrap()).await? {
         Ok(_) => Ok(String::from("")),
         Err(e) => Err(format_err!("Error sending AVC Command: {:?}", e)),
+    }
+}
+
+async fn get_folder_items_with_attrs<'a>(
+    cmd: Cmd,
+    args: &'a [&'a str],
+    controller: &'a BrowseControllerProxy,
+) -> Result<String, Error> {
+    if args.len() < 2 {
+        return Ok(format!("usage: {}", cmd.cmd_help()));
+    }
+
+    let start_index = args[0].to_string().parse::<u32>()?;
+    let end_index = args[1].to_string().parse::<u32>()?;
+    let mut attr_request = if args.len() == 3 {
+        let arg = args[2].to_string();
+        match arg.as_str() {
+            "All" => AttributeRequestOption::GetAll(true),
+            _ => {
+                let attrs = arg.split(",");
+                let mut attributes = vec![];
+                for a in attrs {
+                    let raw_attr = a.parse::<u32>()?;
+                    attributes.push(MediaAttributeId::from_primitive(raw_attr).ok_or(
+                        format_err!(
+                            "Invalid MediaAttributeId value: {:?}. Valid value range is [1 - 8]",
+                            raw_attr,
+                        ),
+                    )?);
+                }
+                AttributeRequestOption::AttributeList(attributes)
+            }
+        }
+    } else {
+        AttributeRequestOption::GetAll(false)
+    };
+
+    match cmd {
+        Cmd::GetVirtualFileSystem => {
+            match controller
+                .get_file_system_items(start_index, end_index, &mut attr_request)
+                .await?
+            {
+                Ok(items) => Ok(format!("File system: {:#?}", items)),
+                Err(e) => Err(format_err!("Error fetching file system: {:?}", e)),
+            }
+        }
+        Cmd::GetNowPlaying => {
+            match controller
+                .get_now_playing_items(start_index, end_index, &mut attr_request)
+                .await?
+            {
+                Ok(items) => Ok(format!("Now playing: {:#?}", items)),
+                Err(e) => Err(format_err!("Error fetching now playing: {:?}", e)),
+            }
+        }
+        _ => panic!("get_folder_items_with_attrs should not have been called with {:?}", cmd),
     }
 }
 
@@ -300,8 +358,15 @@ async fn handle_cmd<'a>(
         let cmd = raw_cmd.parse();
         let res = match cmd {
             Ok(Cmd::AvcCommand) => send_passthrough(args, &controller).await,
+            Ok(Cmd::GetVirtualFileSystem) => {
+                get_folder_items_with_attrs(Cmd::GetVirtualFileSystem, args, &browse_controller)
+                    .await
+            }
             Ok(Cmd::GetMediaAttributes) => get_media(args, &controller).await,
             Ok(Cmd::GetMediaPlayerList) => get_media_player_list(args, &browse_controller).await,
+            Ok(Cmd::GetNowPlaying) => {
+                get_folder_items_with_attrs(Cmd::GetNowPlaying, args, &browse_controller).await
+            }
             Ok(Cmd::GetPlayStatus) => get_play_status(args, &controller).await,
             Ok(Cmd::GetPlayerApplicationSettings) => {
                 get_player_application_settings(args, &controller).await

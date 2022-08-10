@@ -39,6 +39,15 @@ impl From<Error> for fidl_avrcp::BrowseControllerError {
     }
 }
 
+fn into_media_element_item(
+    x: fidl_avrcp::FileSystemItem,
+) -> Result<fidl_avrcp::MediaElementItem, fidl_avrcp::BrowseControllerError> {
+    match x {
+        fidl_avrcp::FileSystemItem::MediaElement(m) => Ok(m),
+        _ => Err(fidl_avrcp::BrowseControllerError::PacketEncoding),
+    }
+}
+
 /// Controller interface for a remote peer returned by the PeerManager using the
 /// ControllerRequest stream for a given ControllerRequest.
 #[derive(Debug)]
@@ -295,6 +304,47 @@ impl Controller {
         }
     }
 
+    fn check_browsed_player(&self) -> Result<(), fidl_avrcp::BrowseControllerError> {
+        // AVRCP 1.6.2 Section 6.9.3 states that `SetBrowsedPlayer` command
+        // shall be sent successfully before any other commands are sent on the
+        // browsing channel except GetFolderItems in the Media Player List
+        // scope.
+        if self.browsable_player.lock().is_none() {
+            return Err(fidl_avrcp::BrowseControllerError::NoAvailablePlayers);
+        }
+        Ok(())
+    }
+
+    pub async fn get_folder_items(
+        &self,
+        cmd: &GetFolderItemsCommand,
+    ) -> Result<GetFolderItemsResponseParams, fidl_avrcp::BrowseControllerError> {
+        let buf = self.send_browse_command(PduId::GetFolderItems, cmd).await?;
+        let response = GetFolderItemsResponse::decode(&buf[..])?;
+        trace!("get_folder_items received response {:?}", response);
+        match response {
+            GetFolderItemsResponse::Failure(status) => Err(status.into()),
+            GetFolderItemsResponse::Success(r) => Ok(r),
+        }
+    }
+
+    pub async fn get_file_system_items(
+        &self,
+        start_index: u32,
+        end_index: u32,
+        attribute_option: fidl_avrcp::AttributeRequestOption,
+    ) -> Result<Vec<fidl_avrcp::FileSystemItem>, fidl_avrcp::BrowseControllerError> {
+        let _ = self.check_browsed_player()?;
+
+        let cmd = GetFolderItemsCommand::new_virtual_file_system(
+            start_index,
+            end_index,
+            attribute_option,
+        );
+        let response = self.get_folder_items(&cmd).await?;
+        response.item_list().into_iter().map(TryInto::try_into).collect()
+    }
+
     pub async fn get_media_player_items(
         &self,
         start_index: u32,
@@ -303,17 +353,26 @@ impl Controller {
         // AVRCP 1.6.2 Section 6.9.3 states that GetFolderItems in the Media Player List scope command can be sent before
         // SetBrowsedPlayer command is sent over the browse channel.
         let cmd = GetFolderItemsCommand::new_media_player_list(start_index, end_index);
+        let response = self.get_folder_items(&cmd).await?;
+        response.item_list().into_iter().map(TryInto::try_into).collect()
+    }
 
-        let buf = self.send_browse_command(PduId::GetFolderItems, &cmd).await?;
-        let response =
-            GetFolderItemsResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
-        trace!("get_media_player_items received response {:?}", response);
-        match response {
-            GetFolderItemsResponse::Failure(status) => Err(status.into()),
-            GetFolderItemsResponse::Success(r) => {
-                r.item_list().into_iter().map(|item| item.try_into()).collect()
-            }
-        }
+    pub async fn get_now_playing_items(
+        &self,
+        start_index: u32,
+        end_index: u32,
+        attribute_option: fidl_avrcp::AttributeRequestOption,
+    ) -> Result<Vec<fidl_avrcp::MediaElementItem>, fidl_avrcp::BrowseControllerError> {
+        let _ = self.check_browsed_player()?;
+
+        let cmd =
+            GetFolderItemsCommand::new_now_playing_list(start_index, end_index, attribute_option);
+        let response = self.get_folder_items(&cmd).await?;
+        response
+            .item_list()
+            .into_iter()
+            .map(|item| item.try_into().and_then(into_media_element_item))
+            .collect()
     }
 
     async fn send_browse_command(
@@ -322,7 +381,7 @@ impl Controller {
         command: &impl Encodable<Error = PacketError>,
     ) -> Result<Vec<u8>, Error> {
         let mut buf = vec![0; command.encoded_len()];
-        let _ = command.encode(&mut buf[..]).map_err(|e| Error::PacketError(e))?;
+        let _ = command.encode(&mut buf[..])?;
         self.send_raw_browse_command(u8::from(&pdu_id), &buf).await
     }
 

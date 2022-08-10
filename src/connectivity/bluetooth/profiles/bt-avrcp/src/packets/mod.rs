@@ -128,6 +128,21 @@ pub_decodable_enum! {
     }
 }
 
+impl From<&fidl_avrcp::MediaAttributeId> for MediaAttributeId {
+    fn from(attr_id: &fidl_avrcp::MediaAttributeId) -> Self {
+        match attr_id {
+            fidl_avrcp::MediaAttributeId::Title => Self::Title,
+            fidl_avrcp::MediaAttributeId::ArtistName => Self::ArtistName,
+            fidl_avrcp::MediaAttributeId::AlbumName => Self::AlbumName,
+            fidl_avrcp::MediaAttributeId::TrackNumber => Self::TrackNumber,
+            fidl_avrcp::MediaAttributeId::TotalNumberOfTracks => Self::TotalNumberOfTracks,
+            fidl_avrcp::MediaAttributeId::Genre => Self::Genre,
+            fidl_avrcp::MediaAttributeId::PlayingTime => Self::PlayingTime,
+            fidl_avrcp::MediaAttributeId::DefaultCoverArt => Self::DefaultCoverArt,
+        }
+    }
+}
+
 pub_decodable_enum! {
     PduId<u8, Error, InvalidParameter> {
         GetCapabilities => 0x10,
@@ -208,10 +223,33 @@ pub_decodable_enum! {
     }
 }
 
+impl From<FolderType> for fidl_avrcp::FolderType {
+    fn from(t: FolderType) -> Self {
+        match t {
+            FolderType::Mixed => Self::Mixed,
+            FolderType::Titles => Self::Titles,
+            FolderType::Albums => Self::Albums,
+            FolderType::Artists => Self::Artists,
+            FolderType::Genres => Self::Genres,
+            FolderType::Playlists => Self::Playlists,
+            FolderType::Years => Self::Years,
+        }
+    }
+}
+
 pub_decodable_enum! {
     MediaType<u8, Error, OutOfRange> {
         Audio => 0x00,
         Video => 0x01,
+    }
+}
+
+impl From<MediaType> for fidl_avrcp::MediaType {
+    fn from(t: MediaType) -> Self {
+        match t {
+            MediaType::Audio => Self::Audio,
+            MediaType::Video => Self::Video,
+        }
     }
 }
 
