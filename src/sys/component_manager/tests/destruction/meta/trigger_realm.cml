@@ -13,12 +13,12 @@
     children: [
         {
             name: "trigger_a",
-            url: "fuchsia-pkg://fuchsia.com/destruction_integration_test#meta/trigger.cm",
+            url: "#meta/trigger.cm",
             startup: "eager",
         },
         {
             name: "trigger_b",
-            url: "fuchsia-pkg://fuchsia.com/destruction_integration_test#meta/trigger.cm",
+            url: "#meta/trigger.cm",
             startup: "eager",
         },
     ],

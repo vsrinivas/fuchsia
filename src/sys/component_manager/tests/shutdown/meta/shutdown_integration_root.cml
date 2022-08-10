@@ -7,7 +7,7 @@
     children: [
         {
             name: "power_switch",
-            url: "fuchsia-pkg://fuchsia.com/shutdown_integration_test#meta/system_controller_consumer.cm",
+            url: "#meta/system_controller_consumer.cm",
             startup: "eager",
         },
     ],

@@ -10,7 +10,7 @@
     children: [
         {
             name: "memfs",
-            url: "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/memfs.cm",
+            url: "#meta/memfs.cm",
             startup: "eager",
         },
     ],

@@ -19,7 +19,6 @@ pub(crate) mod binder;
 pub(crate) mod collection;
 pub(crate) mod directory_ready_notifier;
 pub(crate) mod framework;
-pub(crate) mod fuchsia_pkg_resolver;
 pub(crate) mod root_stop_notifier;
 
 mod constants;

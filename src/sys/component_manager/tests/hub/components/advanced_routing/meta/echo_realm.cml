@@ -10,12 +10,12 @@
     children: [
         {
             name: "echo_server",
-            url: "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/echo_server.cm",
+            url: "#meta/echo_server.cm",
             startup: "eager",
         },
         {
             name: "reporter",
-            url: "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/advanced_routing_reporter.cm",
+            url: "#meta/advanced_routing_reporter.cm",
             startup: "eager",
         },
     ],

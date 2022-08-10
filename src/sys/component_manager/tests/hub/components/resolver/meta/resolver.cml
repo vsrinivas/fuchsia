@@ -10,11 +10,11 @@
     children: [
         {
             name: "child_a",
-            url: "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/hub_client.cm",
+            url: "#meta/hub_client.cm",
         },
         {
             name: "child_b",
-            url: "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/hub_client.cm",
+            url: "#meta/hub_client.cm",
         },
     ],
     use: [

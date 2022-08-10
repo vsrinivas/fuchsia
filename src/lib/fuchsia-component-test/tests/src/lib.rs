@@ -1088,23 +1088,6 @@ async fn echo_clients_in_nested_component_manager() -> Result<(), Error> {
     {
         let builder = RealmBuilder::new().await?;
         builder
-            .add_child("echo-client", V2_ECHO_CLIENT_ABSOLUTE_URL, ChildOptions::new().eager())
-            .await?;
-        let mut receive_echo_server_called = setup_echo_client_realm(&builder).await?;
-        let realm_instance =
-            builder.build_in_nested_component_manager("#meta/component_manager.cm").await?;
-
-        assert!(
-            receive_echo_server_called.next().await.is_some(),
-            "failed to observe the mock server report a successful connection",
-        );
-
-        realm_instance.destroy().await?;
-    }
-
-    {
-        let builder = RealmBuilder::new().await?;
-        builder
             .add_child("echo-client", V2_ECHO_CLIENT_RELATIVE_URL, ChildOptions::new().eager())
             .await?;
         let mut receive_echo_server_called = setup_echo_client_realm(&builder).await?;

@@ -5,7 +5,7 @@
     children: [
         {
             name: "grandchild",
-            url: "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/grandchild.cm",
+            url: "#meta/grandchild.cm",
             startup: "eager",
         },
     ],

@@ -5,7 +5,7 @@
     children: [
         {
             name: "child",
-            url: "fuchsia-pkg://fuchsia.com/diagnostics-integration-test#meta/child.cm",
+            url: "#meta/child.cm",
             startup: "eager",
         },
     ],

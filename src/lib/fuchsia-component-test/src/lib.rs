@@ -825,7 +825,6 @@ impl RealmBuilder {
                     ))
                     .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
                     .capability(Capability::protocol_by_name("fuchsia.process.Launcher"))
-                    .capability(Capability::protocol_by_name("fuchsia.sys.Loader"))
                     .capability(Capability::protocol_by_name("fuchsia.tracing.provider.Registry"))
                     .from(Ref::parent())
                     .to(Ref::child("component_manager")),

@@ -12,7 +12,7 @@
     children: [
         {
             name: "looper",
-            url: "fuchsia-pkg://fuchsia.com/binder_integration_test#meta/looper.cm",
+            url: "#meta/looper.cm",
         },
     ],
     use: [

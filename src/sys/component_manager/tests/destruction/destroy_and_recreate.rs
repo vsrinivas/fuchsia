@@ -26,10 +26,7 @@ async fn main() {
         let mut collection_ref = fdecl::CollectionRef { name: "coll".to_string() };
         let child_decl = fdecl::Child {
             name: Some("trigger".to_string()),
-            url: Some(
-                "fuchsia-pkg://fuchsia.com/destruction_integration_test#meta/trigger_realm.cm"
-                    .to_string(),
-            ),
+            url: Some("#meta/trigger_realm.cm".to_string()),
             startup: Some(fdecl::StartupMode::Lazy),
             environment: None,
             ..fdecl::Child::EMPTY
@@ -73,10 +70,7 @@ async fn main() {
         let mut collection_ref = fdecl::CollectionRef { name: "coll".to_string() };
         let child_decl = fdecl::Child {
             name: Some("trigger".to_string()),
-            url: Some(
-                "fuchsia-pkg://fuchsia.com/destruction_integration_test#meta/trigger_realm.cm"
-                    .to_string(),
-            ),
+            url: Some("#meta/trigger_realm.cm".to_string()),
             startup: Some(fdecl::StartupMode::Lazy),
             environment: None,
             ..fdecl::Child::EMPTY

@@ -18,10 +18,7 @@ async fn main() {
 
     let factory = ScopedInstanceFactory::new("coll");
     let instance = factory
-        .new_named_instance(
-            "parent",
-            "fuchsia-pkg://fuchsia.com/diagnostics-integration-test#meta/parent.cm",
-        )
+        .new_named_instance("parent", "#meta/parent.cm")
         .await
         .expect("create scoped instance");
     instance.start_with_binder_sync().await.expect("connect to binder");

@@ -29,7 +29,6 @@ template("component_manager") {
     "//sdk/fidl/fuchsia.mem:fuchsia.mem_rust",
     "//sdk/fidl/fuchsia.process:fuchsia.process_rust",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_rust",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys_rust",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//sdk/fidl/fuchsia.time:fuchsia.time_rust",
     "//src/lib/diagnostics/inspect/contrib/rust",
@@ -138,7 +137,6 @@ template("component_manager") {
     "src/elf_runner/runtime_dir.rs",
     "src/elf_runner/stdout.rs",
     "src/framework.rs",
-    "src/fuchsia_pkg_resolver.rs",
     "src/lib.rs",
     "src/model/actions/destroy.rs",
     "src/model/actions/destroy_child.rs",
@@ -392,10 +390,6 @@ group("bootfs") {
     ":bin",
     "//src/sys/startup:bootfs",
   ]
-}
-
-component_config("component_manager_appmgr_config") {
-  sources = [ "configs/appmgr_config.json5" ]
 }
 
 component_config("component_manager_realm_builder_config") {

@@ -5,11 +5,11 @@
     children: [
         {
             name: "archivist",
-            url: "fuchsia-pkg://fuchsia.com/diagnostics-integration-test#meta/archivist-for-embedding.cm",
+            url: "#meta/archivist-for-embedding.cm",
         },
         {
             name: "cleanup",
-            url: "fuchsia-pkg://fuchsia.com/diagnostics-integration-test#meta/cleanup.cm",
+            url: "#meta/cleanup.cm",
             startup: "eager",
         },
     ],

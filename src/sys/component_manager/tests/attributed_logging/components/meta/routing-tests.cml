@@ -7,7 +7,7 @@
         // which the parent (this component) does not offer.
         {
             name: "child",
-            url: "fuchsia-pkg://fuchsia.com/attributed-logging-test#meta/use-unoffered.cm",
+            url: "#meta/use-unoffered.cm",
             startup: "eager",
         },
 
@@ -15,7 +15,7 @@
         // a capability from other components to the child.
         {
             name: "offers-to-children-unavailable",
-            url: "fuchsia-pkg://fuchsia.com/attributed-logging-test#meta/offers-to-children-unavailable.cm",
+            url: "#meta/offers-to-children-unavailable.cm",
             startup: "eager",
         },
     ],

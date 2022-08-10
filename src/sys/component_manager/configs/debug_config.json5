@@ -46,7 +46,6 @@
             event_stream: "capability_requested_v2",
         },
     ],
-    builtin_pkg_resolver: "appmgr_bridge",
     builtin_boot_resolver: "boot",
     log_all_events: true,
 }

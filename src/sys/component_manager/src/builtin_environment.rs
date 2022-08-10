@@ -47,7 +47,6 @@ use {
         directory_ready_notifier::DirectoryReadyNotifier,
         elf_runner::ElfRunner,
         framework::RealmCapabilityHost,
-        fuchsia_pkg_resolver,
         model::{
             component::ComponentManagerInstance,
             environment::Environment,
@@ -76,15 +75,12 @@ use {
     cm_types::Url,
     fidl::{
         endpoints::{create_endpoints, create_proxy, ServerEnd},
-        prelude::*,
         AsHandleRef,
     },
-    fidl_fuchsia_component_internal::{BuiltinBootResolver, BuiltinPkgResolver, OutDirContents},
+    fidl_fuchsia_component_internal::{BuiltinBootResolver, OutDirContents},
     fidl_fuchsia_diagnostics_types::Task as DiagnosticsTask,
-    fidl_fuchsia_io as fio,
-    fidl_fuchsia_sys::{LoaderMarker, LoaderProxy},
-    fuchsia_async as fasync,
-    fuchsia_component::{client, server::*},
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
+    fuchsia_component::server::*,
     fuchsia_inspect::{self as inspect, component, health::Reporter, Inspector},
     fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType},
     fuchsia_zbi::{ZbiParser, ZbiType},
@@ -300,10 +296,7 @@ impl BuiltinEnvironmentBuilder {
         };
 
         let boot_resolver = if self.add_environment_resolvers {
-            let boot_resolver =
-                register_boot_resolver(&mut self.resolvers, &runtime_config).await?;
-            register_appmgr_resolver(&mut self.resolvers, &runtime_config)?;
-            boot_resolver
+            register_boot_resolver(&mut self.resolvers, &runtime_config).await?
         } else {
             None
         };
@@ -1222,38 +1215,4 @@ fn register_realm_builder_resolver(
     resolvers
         .register(REALM_BUILDER_SCHEME.to_string(), Box::new(BuiltinResolver(resolver.clone())));
     Ok(resolver)
-}
-
-/// Adds the namespace resolvers according to the policy in the RuntimeConfig.
-fn register_appmgr_resolver(
-    resolvers: &mut ResolverRegistry,
-    runtime_config: &RuntimeConfig,
-) -> Result<(), Error> {
-    match &runtime_config.builtin_pkg_resolver {
-        BuiltinPkgResolver::AppmgrBridge => {
-            if let Some(loader) = connect_sys_loader()? {
-                resolvers.register(
-                    fuchsia_pkg_resolver::SCHEME.to_string(),
-                    Box::new(fuchsia_pkg_resolver::FuchsiaPkgResolver::new(loader)),
-                );
-            } else {
-                warn!("Could not create appmgr bridge resolver because fuchsia.sys.Loader was not found in component manager namespace. Verify configuration correctness.");
-            }
-        }
-        BuiltinPkgResolver::None => {}
-    }
-    Ok(())
-}
-
-/// Checks if the appmgr loader service is available through our namespace and connects to it if
-/// so. If not available, returns Ok(None).
-fn connect_sys_loader() -> Result<Option<LoaderProxy>, Error> {
-    let service_path = PathBuf::from(format!("/svc/{}", LoaderMarker::PROTOCOL_NAME));
-    if !service_path.exists() {
-        return Ok(None);
-    }
-
-    let loader = client::connect_to_protocol::<LoaderMarker>()
-        .context("error connecting to system loader")?;
-    return Ok(Some(loader));
 }

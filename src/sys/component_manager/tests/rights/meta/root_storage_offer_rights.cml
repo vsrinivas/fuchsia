@@ -7,11 +7,11 @@
     children: [
         {
             name: "use_storage",
-            url: "fuchsia-pkg://fuchsia.com/rights_integration_test#meta/use_storage.cm",
+            url: "#meta/use_storage.cm",
         },
         {
             name: "expose_dir_rights",
-            url: "fuchsia-pkg://fuchsia.com/rights_integration_test#meta/expose_dir_rights.cm",
+            url: "#meta/expose_dir_rights.cm",
         },
     ],
     capabilities: [

@@ -11,7 +11,7 @@
         // which doesn't actually offer Trigger to the parent.
         {
             name: "child-for-offer-from-parent",
-            url: "fuchsia-pkg://fuchsia.com/attributed-logging-test#meta/use-unoffered.cm",
+            url: "#meta/use-unoffered.cm",
             startup: "eager",
         },
 
@@ -19,20 +19,20 @@
         // which doesn't actually provide it.
         {
             name: "child-for-offer-from-sibling",
-            url: "fuchsia-pkg://fuchsia.com/attributed-logging-test#meta/use-unoffered.cm",
+            url: "#meta/use-unoffered.cm",
             startup: "eager",
         },
 
         // A child which the parent thinks will provide Trigger, but does not.
         {
             name: "child-that-doesnt-expose",
-            url: "fuchsia-pkg://fuchsia.com/attributed-logging-test#meta/empty.cm",
+            url: "#meta/empty.cm",
         },
 
         // A child which doesn't `use` the Trigger capability, but tries to open it.
         {
             name: "child-open-unrequested",
-            url: "fuchsia-pkg://fuchsia.com/attributed-logging-test#meta/without-use.cm",
+            url: "#meta/without-use.cm",
             startup: "eager",
         },
     ],

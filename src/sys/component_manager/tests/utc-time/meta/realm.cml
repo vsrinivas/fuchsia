@@ -5,12 +5,12 @@
     children: [
         {
             name: "maintainer",
-            url: "fuchsia-pkg://fuchsia.com/utc-time-tests#meta/maintainer-component.cm",
+            url: "#meta/maintainer-component.cm",
             startup: "eager",
         },
         {
             name: "time_client",
-            url: "fuchsia-pkg://fuchsia.com/utc-time-tests#meta/time-client.cm",
+            url: "#meta/time-client.cm",
             startup: "eager",
         },
     ],

@@ -27,10 +27,7 @@ async fn collections() {
         let mut collection_ref = fdecl::CollectionRef { name: "coll".to_string() };
         let child_decl = fdecl::Child {
             name: Some(name.to_string()),
-            url: Some(format!(
-                "fuchsia-pkg://fuchsia.com/collections_integration_test#meta/trigger_{}.cm",
-                name
-            )),
+            url: Some(format!("#meta/trigger_{}.cm", name)),
             startup: Some(fdecl::StartupMode::Lazy),
             environment: None,
             ..fdecl::Child::EMPTY
@@ -89,10 +86,7 @@ async fn collections() {
         let mut collection_ref = fdecl::CollectionRef { name: "coll".to_string() };
         let child_decl = fdecl::Child {
             name: Some("a".to_string()),
-            url: Some(
-                "fuchsia-pkg://fuchsia.com/collections_integration_test#meta/trigger_realm.cm"
-                    .to_string(),
-            ),
+            url: Some("#meta/trigger_realm.cm".to_string()),
             startup: Some(fdecl::StartupMode::Lazy),
             environment: None,
             ..fdecl::Child::EMPTY
@@ -131,10 +125,7 @@ async fn child_args() {
         let mut collection_ref = fdecl::CollectionRef { name: "not_single_run".to_string() };
         let child_decl = fdecl::Child {
             name: Some(name.to_string()),
-            url: Some(format!(
-                "fuchsia-pkg://fuchsia.com/collections_integration_test#meta/trigger_{}.cm",
-                name
-            )),
+            url: Some(format!("#meta/trigger_{}.cm", name)),
             startup: Some(fdecl::StartupMode::Lazy),
             environment: None,
             ..fdecl::Child::EMPTY
@@ -158,9 +149,7 @@ async fn child_args() {
         let mut collection_ref = fdecl::CollectionRef { name: "single_run".to_owned() };
         let child_decl = fdecl::Child {
             name: Some("write_startup_socket".to_owned()),
-            url: Some(
-                "fuchsia-pkg://fuchsia.com/collections_integration_test#meta/write_startup_socket.cm".to_owned(),
-            ),
+            url: Some("#meta/write_startup_socket.cm".to_owned()),
             startup: Some(fdecl::StartupMode::Lazy),
             environment: None,
             ..fdecl::Child::EMPTY
@@ -205,9 +194,7 @@ async fn child_args() {
         let mut collection_ref = fdecl::CollectionRef { name: "single_run".to_owned() };
         let child_decl = fdecl::Child {
             name: Some("write_startup_socket_2".to_owned()),
-            url: Some(
-                "fuchsia-pkg://fuchsia.com/collections_integration_test#meta/write_startup_socket.cm".to_owned(),
-            ),
+            url: Some("#meta/write_startup_socket.cm".to_owned()),
             startup: Some(fdecl::StartupMode::Lazy),
             environment: None,
             ..fdecl::Child::EMPTY

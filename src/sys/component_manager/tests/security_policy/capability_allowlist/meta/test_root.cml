@@ -6,11 +6,11 @@
         /// This service exposes the services to the root realm, which are passed down to the three children realms.
         {
             name: "policy_service",
-            url: "fuchsia-pkg://fuchsia.com/security-policy-capability-allowlist-integration-test#meta/policy_service.cm",
+            url: "#meta/policy_service.cm",
         },
         {
             name: "dir_service",
-            url: "fuchsia-pkg://fuchsia.com/security-policy-capability-allowlist-integration-test#meta/dir_service.cm",
+            url: "#meta/dir_service.cm",
         },
 
         // Three children which are all identical except for their identity
@@ -19,15 +19,15 @@
         // has #policy_allowed alone allowlisted.
         {
             name: "policy_allowed",
-            url: "fuchsia-pkg://fuchsia.com/security-policy-capability-allowlist-integration-test#meta/cap_getter.cm",
+            url: "#meta/cap_getter.cm",
         },
         {
             name: "policy_denied",
-            url: "fuchsia-pkg://fuchsia.com/security-policy-capability-allowlist-integration-test#meta/cap_getter.cm",
+            url: "#meta/cap_getter.cm",
         },
         {
             name: "policy_not_violated",
-            url: "fuchsia-pkg://fuchsia.com/security-policy-capability-allowlist-integration-test#meta/cap_getter.cm",
+            url: "#meta/cap_getter.cm",
         },
     ],
     offer: [

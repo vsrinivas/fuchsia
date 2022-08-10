@@ -9,15 +9,15 @@
         // has #policy_allowed alone allowlisted.
         {
             name: "policy_allowed",
-            url: "fuchsia-pkg://fuchsia.com/security-policy-critical-integration-test#meta/exit_on_command.cm",
+            url: "#meta/exit_on_command.cm",
         },
         {
             name: "policy_denied",
-            url: "fuchsia-pkg://fuchsia.com/security-policy-critical-integration-test#meta/exit_on_command.cm",
+            url: "#meta/exit_on_command.cm",
         },
         {
             name: "policy_not_requested",
-            url: "fuchsia-pkg://fuchsia.com/security-policy-critical-integration-test#meta/exit_on_command_no_request.cm",
+            url: "#meta/exit_on_command_no_request.cm",
         },
     ],
     expose: [

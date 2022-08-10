@@ -5,12 +5,12 @@
     children: [
         {
             name: "memfs",
-            url: "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/memfs.cm",
+            url: "#meta/memfs.cm",
             startup: "eager",
         },
         {
             name: "storage_user",
-            url: "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/storage_user.cm",
+            url: "#meta/storage_user.cm",
             startup: "eager",
         },
     ],

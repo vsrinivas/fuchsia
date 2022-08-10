@@ -84,12 +84,6 @@ async fn main() {
 
     expect_file_content("/hub/start_reason", "Instance is an eager child").await;
 
-    expect_file_content(
-        "/sibling_hub/exec/resolved_url",
-        "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/echo_server.cm",
-    )
-    .await;
-
     // Verify that the a read-only hub cannot be opened as RW.
     //
     // The call to `open_directory_in_namespace` will not fail because fdio does not wait for

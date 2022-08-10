@@ -12,7 +12,7 @@
     children: [
         {
             name: "component_manager",
-            url: "fuchsia-pkg://fuchsia.com/component_manager_panic_test#meta/component_manager.cm",
+            url: "#meta/component_manager.cm",
         },
     ],
     capabilities: [

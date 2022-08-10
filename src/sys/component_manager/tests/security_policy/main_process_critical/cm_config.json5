@@ -41,7 +41,6 @@
             event: "directory_ready",
         },
     ],
-    builtin_pkg_resolver: "appmgr_bridge",
     realm_builder_resolver_and_runner: "namespace",
     log_all_events: true,
 }

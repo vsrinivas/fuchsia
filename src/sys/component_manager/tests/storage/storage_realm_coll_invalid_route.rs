@@ -21,9 +21,7 @@ async fn main() {
     let mut collection_ref = fdecl::CollectionRef { name: String::from("coll_bad_route") };
     let child_decl = fdecl::Child {
         name: Some(String::from("storage_user")),
-        url: Some(String::from(
-            "fuchsia-pkg://fuchsia.com/storage_integration_test#meta/only_exits.cm",
-        )),
+        url: Some(String::from("#meta/only_exits.cm")),
         startup: Some(fdecl::StartupMode::Lazy),
         environment: None,
         ..fdecl::Child::EMPTY

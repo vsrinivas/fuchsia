@@ -6,11 +6,11 @@
     children: [
         {
             name: "use_dir_rights",
-            url: "fuchsia-pkg://fuchsia.com/rights_integration_test#meta/use_dir_rights.cm",
+            url: "#meta/use_dir_rights.cm",
         },
         {
             name: "expose_dir_rights",
-            url: "fuchsia-pkg://fuchsia.com/rights_integration_test#meta/expose_dir_rights.cm",
+            url: "#meta/expose_dir_rights.cm",
         },
     ],
     offer: [

@@ -8,15 +8,15 @@
         // security policy used alongside this test has #policy_allowed alone allowlisted.
         {
             name: "policy_allowed",
-            url: "fuchsia-pkg://fuchsia.com/security-policy-vmex-integration-test#meta/protected_ops.cm",
+            url: "#meta/protected_ops.cm",
         },
         {
             name: "policy_denied",
-            url: "fuchsia-pkg://fuchsia.com/security-policy-vmex-integration-test#meta/protected_ops.cm",
+            url: "#meta/protected_ops.cm",
         },
         {
             name: "policy_not_requested",
-            url: "fuchsia-pkg://fuchsia.com/security-policy-vmex-integration-test#meta/protected_ops_no_request.cm",
+            url: "#meta/protected_ops_no_request.cm",
         },
     ],
     expose: [

@@ -23,11 +23,7 @@ use {
 async fn boot_resolver_can_be_routed_from_component_manager() {
     let builder = RealmBuilder::new().await.unwrap();
     let component_manager = builder
-        .add_child(
-            "component-manager",
-            "fuchsia-pkg://fuchsia.com/boot-resolver-routing-tests#meta/component_manager.cm",
-            ChildOptions::new(),
-        )
+        .add_child("component-manager", "#meta/component_manager.cm", ChildOptions::new())
         .await
         .unwrap();
     let mock_boot = builder

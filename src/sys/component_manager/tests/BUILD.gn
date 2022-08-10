@@ -9,7 +9,6 @@ group("tests") {
 
   deps = [
     "attributed_logging:attributed-logging-test",
-    "base_resolver_test",
     "binder:tests",
     "bootfs:tests",
     "capability_provider_vfs_compliance:tests",

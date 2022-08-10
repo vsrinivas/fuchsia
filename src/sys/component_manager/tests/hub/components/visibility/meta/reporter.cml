@@ -10,7 +10,7 @@
     children: [
         {
             name: "child",
-            url: "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/child.cm",
+            url: "#meta/child.cm",
         },
     ],
     use: [

@@ -69,10 +69,7 @@ async fn crash_receiver(
 #[fasync::run_singlethreaded(test)]
 async fn crashed_component_generates_a_record() -> Result<(), Error> {
     let expected_crash_info = fsys::ComponentCrashInfo {
-        url: Some(
-            "fuchsia-pkg://fuchsia.com/crash-introspect-test#meta/report_then_panic_on_start.cm"
-                .to_string(),
-        ),
+        url: Some("realm-builder://1/report_then_panic_on_start".to_string()),
         moniker: Some("/report_then_panic_on_start".to_string()),
         ..fsys::ComponentCrashInfo::EMPTY
     };
@@ -90,7 +87,7 @@ async fn crashed_component_generates_a_record() -> Result<(), Error> {
     let report_then_panic_on_start = builder
         .add_child(
             "report_then_panic_on_start",
-            "fuchsia-pkg://fuchsia.com/crash-introspect-test#meta/report_then_panic_on_start.cm",
+            "#meta/report_then_panic_on_start.cm",
             ChildOptions::new().eager(),
         )
         .await?;
