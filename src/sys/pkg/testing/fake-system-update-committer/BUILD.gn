@@ -1,0 +1,39 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("fake-system-update-committer-bin") {
+  with_unit_tests = true
+  output_name = "fake-system-update-committer"
+  edition = "2021"
+  deps = [
+    "//sdk/fidl/fuchsia.update:fuchsia.update_rust",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+
+  test_deps = [ "//src/lib/fidl/rust/fidl" ]
+
+  sources = [ "src/main.rs" ]
+}
+
+fuchsia_component("fake-system-update-committer") {
+  component_name = "fake-system-update-committer"
+  manifest = "meta/fake-system-update-committer.cml"
+  deps = [ ":fake-system-update-committer-bin" ]
+}
+
+fuchsia_unittest_package("fake-system-update-committer-tests") {
+  deps = [ ":fake-system-update-committer-bin_test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":fake-system-update-committer-tests" ]
+}
