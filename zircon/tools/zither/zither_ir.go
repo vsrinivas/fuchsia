@@ -60,6 +60,8 @@ func (decl Decl) Name() fidlgen.Name {
 	switch decl := decl.value.(type) {
 	case *Const:
 		return decl.Name
+	case *Enum:
+		return decl.Name
 	default:
 		panic(fmt.Sprintf("unknown declaration type: %s", reflect.TypeOf(decl).Name()))
 	}
@@ -74,6 +76,17 @@ func (decl Decl) AsConst() Const {
 	return *decl.value.(*Const)
 }
 
+func (decl Decl) IsEnum() bool {
+	_, ok := decl.value.(*Enum)
+	return ok
+}
+
+func (decl Decl) AsEnum() Enum {
+	return *decl.value.(*Enum)
+}
+
+type declMap map[string]fidlgen.Declaration
+
 // NewSummary creates a Summary from FIDL IR. The resulting list of
 // declarations are ordered according to `order`.
 func NewSummary(ir fidlgen.Root, order DeclOrder) (*Summary, error) {
@@ -82,35 +95,48 @@ func NewSummary(ir fidlgen.Root, order DeclOrder) (*Summary, error) {
 		return nil, err
 	}
 
-	var decls []fidlgen.Declaration
+	// We will process declarations in topological order (with respect to
+	// dependency) and record declarations as we go; that way, we when we
+	// process a particular declaration we will have full knowledge of is
+	// dependencies, and by extension itself. This ordering exists just for
+	// ease of processing and is independent of that prescribed by `order`.
+	g := fidlgen_cpp.NewDeclDepGraph(ir)
+	decls := g.SortedDecls()
+	processed := make(declMap)
+
+	s := &Summary{Name: name}
+	for _, decl := range decls {
+		var summarized interface{}
+		var err error
+		switch decl := decl.(type) {
+		case *fidlgen.Const:
+			summarized, err = newConst(*decl, processed)
+		case *fidlgen.Enum:
+			summarized, err = newEnum(*decl)
+		default:
+			return nil, fmt.Errorf("unsupported declaration type: %s", fidlgen.GetDeclType(decl))
+		}
+		if err != nil {
+			return nil, err
+		}
+		s.Decls = append(s.Decls, Decl{summarized})
+		processed[string(decl.GetName())] = decl
+	}
+
+	// Now reorder declarations in the order expected by the backends.
 	switch order {
 	case SourceDeclOrder:
-		ir.ForEachDecl(func(decl fidlgen.Declaration) {
-			decls = append(decls, decl)
-		})
-		sort.Slice(decls, func(i, j int) bool {
-			return fidlgen.LocationCmp(decls[i].GetLocation(), decls[j].GetLocation())
+		sort.Slice(s.Decls, func(i, j int) bool {
+			ith := processed[s.Decls[i].Name().String()]
+			jth := processed[s.Decls[j].Name().String()]
+			return fidlgen.LocationCmp(ith.GetLocation(), jth.GetLocation())
 		})
 	case DependencyDeclOrder:
-		g := fidlgen_cpp.NewDeclDepGraph(ir)
-		decls = g.SortedDecls()
+		// Already in this order.
 	default:
 		panic(fmt.Sprintf("unknown declaration order: %v", order))
 	}
 
-	s := &Summary{Name: name}
-	for _, decl := range decls {
-		switch decl := decl.(type) {
-		case *fidlgen.Const:
-			c, err := newConst(*decl)
-			if err != nil {
-				return nil, err
-			}
-			s.Decls = append(s.Decls, Decl{c})
-		default:
-			return nil, fmt.Errorf("unsupported declaration type: %s", fidlgen.GetDeclType(decl))
-		}
-	}
 	return s, nil
 }
 
@@ -153,7 +179,7 @@ type Const struct {
 	Comments []string
 }
 
-func newConst(c fidlgen.Const) (*Const, error) {
+func newConst(c fidlgen.Const, decls declMap) (*Const, error) {
 	var kind TypeKind
 	var typ string
 	switch c.Type.Kind {
@@ -171,7 +197,15 @@ func newConst(c fidlgen.Const) (*Const, error) {
 		typ = string(fidlgen.StringType)
 		kind = TypeKindString
 	case fidlgen.IdentifierType:
-		panic("TODO(fxbug.dev/51002): Support enums and bits")
+		typ = string(c.Type.Identifier)
+		switch decls[typ].(type) {
+		case *fidlgen.Enum:
+			kind = TypeKindEnum
+		case *fidlgen.Bits:
+			panic("TODO(fxbug.dev/51002): Support bits")
+		default:
+			return nil, fmt.Errorf("%v has unsupported constant type: %s", c.Name, fidlgen.GetDeclType(decls[typ]))
+		}
 	default:
 		return nil, fmt.Errorf("%v has unsupported constant type: %s", c.Name, c.Type.Kind)
 	}
@@ -212,4 +246,52 @@ func newConst(c fidlgen.Const) (*Const, error) {
 		Expression: expr,
 		Comments:   c.DocComments(),
 	}, nil
+}
+
+// Enum represents an FIDL enum declaration.
+type Enum struct {
+	// Name is the full name of the associated FIDL declaration.
+	Name fidlgen.Name
+
+	// The primitive subtype underlying the Enum.
+	Subtype fidlgen.PrimitiveSubtype
+
+	// Members is the list of member values of the enum.
+	Members []EnumMember
+
+	// Comments that comprise the original docstring of the FIDL declaration.
+	Comments []string
+}
+
+// EnumMember represents a FIDL enum value.
+type EnumMember struct {
+	// Name is the name of the member.
+	Name string
+
+	// Value is the member's value.
+	Value string
+
+	// Comments that comprise the original docstring of the FIDL declaration.
+	Comments []string
+}
+
+func newEnum(enum fidlgen.Enum) (*Enum, error) {
+	name, err := fidlgen.ReadName(string(enum.Name))
+	if err != nil {
+		return nil, err
+	}
+
+	e := &Enum{
+		Subtype:  enum.Type,
+		Name:     name,
+		Comments: enum.DocComments(),
+	}
+	for _, member := range enum.Members {
+		e.Members = append(e.Members, EnumMember{
+			Name:     string(member.Name),
+			Value:    member.Value.Expression,
+			Comments: member.DocComments(),
+		})
+	}
+	return e, nil
 }

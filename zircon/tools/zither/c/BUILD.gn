@@ -11,6 +11,7 @@ go_library("c") {
   sources = [
     "c.go",
     "templates/const.tmpl",
+    "templates/enum.tmpl",
     "templates/file.tmpl",
   ]
   deps = [

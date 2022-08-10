@@ -25,8 +25,12 @@ type Generator struct {
 
 func NewGenerator(formatter fidlgen.Formatter) *Generator {
 	gen := fidlgen.NewGenerator("CTemplates", templates, formatter, template.FuncMap{
-		"ConstName":  ConstName,
-		"ConstValue": ConstValue,
+		"PrimitiveTypeName": PrimitiveTypeName,
+		"ConstName":         ConstName,
+		"ConstValue":        ConstValue,
+		"EnumName":          EnumName,
+		"EnumMemberName":    EnumMemberName,
+		"EnumMemberValue":   EnumMemberValue,
 	})
 	return &Generator{*gen}
 }
@@ -50,8 +54,8 @@ func (gen *Generator) Generate(summary zither.Summary, outputDir string) ([]stri
 // Template functions.
 //
 
-// primitiveTypeName returns the C type name for a given a primitive FIDL type.
-func primitiveTypeName(typ fidlgen.PrimitiveSubtype) string {
+// PrimitiveTypeName returns the C type name for a given a primitive FIDL type.
+func PrimitiveTypeName(typ fidlgen.PrimitiveSubtype) string {
 	switch typ {
 	case fidlgen.Bool:
 		return "bool"
@@ -63,16 +67,28 @@ func primitiveTypeName(typ fidlgen.PrimitiveSubtype) string {
 	}
 }
 
+func nameParts(name fidlgen.Name) []string {
+	return append(name.LibraryName().Parts(), name.DeclarationName())
+}
+
 // ConstName returns the name of a generated C "constant".
 func ConstName(c zither.Const) string {
-	parts := append(c.Name.LibraryName().Parts(), c.Name.DeclarationName())
+	parts := nameParts(c.Name)
 	return fidlgen.ConstNameToAllCapsSnake(strings.Join(parts, "_"))
 }
 
 // ConstValue returns the right-hand side of a generated C "constant" declaration.
 func ConstValue(c zither.Const) string {
 	if c.Identifier != nil {
-		return ConstName(zither.Const{Name: *c.Identifier})
+		switch c.Kind {
+		case zither.TypeKindEnum:
+			enum, member := c.Identifier.SplitMember()
+			return EnumMemberName(zither.Enum{Name: enum}, zither.EnumMember{Name: member})
+		case zither.TypeKindBits:
+			panic("// TODO(fxbug.dev/91102): Support bits")
+		default:
+			return ConstName(zither.Const{Name: *c.Identifier})
+		}
 	}
 
 	switch c.Kind {
@@ -80,7 +96,7 @@ func ConstValue(c zither.Const) string {
 		return fmt.Sprintf("%q", c.Value)
 	case zither.TypeKindBool, zither.TypeKindInteger:
 		fidlType := fidlgen.PrimitiveSubtype(c.Type)
-		cType := primitiveTypeName(fidlType)
+		cType := PrimitiveTypeName(fidlType)
 		val := c.Value
 		if c.Kind == zither.TypeKindInteger {
 			// In the case of an signed type, the unsigned-ness will be
@@ -89,10 +105,28 @@ func ConstValue(c zither.Const) string {
 		}
 		return fmt.Sprintf("((%s)(%s))", cType, val)
 	case zither.TypeKindEnum:
-		panic("TODO(fxbug.dev/51002): Support enums")
+		// Enum constants should have been handled above.
+		panic(fmt.Sprintf("enum constants must be given by an identifier: %#v", c))
 	case zither.TypeKindBits:
 		panic("TODO(fxbug.dev/51002): Support bits")
 	default:
-		panic(fmt.Sprintf("unknown constant kind: %s", c.Type))
+		panic(fmt.Sprintf("%s has unknown constant kind: %s", c.Name, c.Type))
 	}
+}
+
+// EnumName returns the type name of a generated C "enum".
+func EnumName(enum zither.Enum) string {
+	parts := nameParts(enum.Name)
+	return fidlgen.ToSnakeCase(strings.Join(parts, "_")) + "_t"
+}
+
+// EnumMemberName returns the name of a generated C "enum" member.
+func EnumMemberName(enum zither.Enum, member zither.EnumMember) string {
+	parts := append(nameParts(enum.Name), member.Name)
+	return fidlgen.ConstNameToAllCapsSnake(strings.Join(parts, "_"))
+}
+
+// EnumMemberValue returns the value of a generated C "enum" member.
+func EnumMemberValue(enum zither.Enum, member zither.EnumMember) string {
+	return fmt.Sprintf("((%s)(%su))", EnumName(enum), member.Value)
 }

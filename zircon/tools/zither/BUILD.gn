@@ -18,6 +18,7 @@ group("tests") {
     # golden testing
     ":constants",
     ":empty",
+    ":enums",
   ]
 }
 
@@ -312,6 +313,19 @@ zither_golden_test("constants") {
     {
       backend = "c"
       files = [ "constants.h" ]
+    },
+  ]
+}
+
+# FIDL: testdata/enums/
+# Goldens: testdata/enums/goldens/${backend}/
+zither_golden_test("enums") {
+  sources = [ "enums.test.fidl" ]
+
+  cases = [
+    {
+      backend = "c"
+      files = [ "enums.h" ]
     },
   ]
 }

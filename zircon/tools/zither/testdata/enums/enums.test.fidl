@@ -1,0 +1,98 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library zither.enums;
+
+type Color = strict enum : uint8 {
+    RED = 0;
+    ORANGE = 1;
+    YELLOW = 2;
+    GREEN = 3;
+    BLUE = 4;
+    INDIGO = 5;
+    VIOLET = 6;
+};
+
+type Uint8Limits = strict enum : uint8 {
+    MIN = 0;
+    MAX = 0b11111111;
+};
+
+type Uint16Limits = strict enum : uint16 {
+    MIN = 0;
+    MAX = 0xffff;
+};
+
+type Uint32Limits = strict enum : uint32 {
+    MIN = 0;
+    MAX = 0xffffffff;
+};
+
+type Uint64Limits = strict enum : uint64 {
+    MIN = 0;
+    MAX = 0xffffffffffffffff;
+};
+
+type Int8Limits = strict enum : int8 {
+    MIN = -0x80;
+    MAX = 0x7f;
+};
+
+type Int16Limits = strict enum : int16 {
+    MIN = -0x8000;
+    MAX = 0x7fff;
+};
+
+type Int32Limits = strict enum : int32 {
+    MIN = -0x80000000;
+    MAX = 0x7fffffff;
+};
+
+type Int64Limits = strict enum : int64 {
+    MIN = -0x8000000000000000;
+    MAX = 0x7fffffffffffffff;
+};
+
+/// Enum with a one-line comment.
+type EnumWithOneLineComment = strict enum : uint8 {
+    /// Enum member with one-line comment.
+    MEMBER_WITH_ONE_LINE_COMMENT = 0;
+
+    /// Enum member
+    ///     with a
+    ///         many-line
+    ///           comment.
+    MEMBER_WITH_MANY_LINE_COMMENT = 1;
+};
+
+
+/// Enum
+///     with a
+///         many-line
+///           comment.
+type EnumWithManyLineComment = strict enum : uint16 {
+    MEMBER = 0;
+};
+
+//
+// Enum value constants.
+//
+
+const RED Color = Color.RED;
+const UINT8_MIN Uint8Limits = Uint8Limits.MIN;
+const UINT8_MAX Uint8Limits = Uint8Limits.MAX;
+const UINT16_MIN Uint16Limits = Uint16Limits.MIN;
+const UINT16_MAX Uint16Limits = Uint16Limits.MAX;
+const UINT32_MIN Uint32Limits = Uint32Limits.MIN;
+const UINT32_MAX Uint32Limits = Uint32Limits.MAX;
+const UINT64_MIN Uint64Limits = Uint64Limits.MIN;
+const UINT64_MAX Uint64Limits = Uint64Limits.MAX;
+const INT8_MIN Int8Limits = Int8Limits.MIN;
+const INT8_MAX Int8Limits = Int8Limits.MAX;
+const INT16_MIN Int16Limits = Int16Limits.MIN;
+const INT16_MAX Int16Limits = Int16Limits.MAX;
+const INT32_MIN Int32Limits = Int32Limits.MIN;
+const INT32_MAX Int32Limits = Int32Limits.MAX;
+const INT64_MIN Int64Limits = Int64Limits.MIN;
+const INT64_MAX Int64Limits = Int64Limits.MAX;

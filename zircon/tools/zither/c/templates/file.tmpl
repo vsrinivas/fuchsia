@@ -21,11 +21,15 @@ extern "C" {
 
 {{ if .IsConst }}
 {{ template "GenerateCConst" .AsConst }}
-{{ end }}
 
+{{ else if .IsEnum }}
+{{ template "GenerateCEnum" .AsEnum }}
+
+{{ end }}
 {{ end }}
 
 #if defined(__cplusplus)
 }
 #endif
+
 {{ end }}

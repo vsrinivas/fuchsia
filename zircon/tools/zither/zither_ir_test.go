@@ -6,6 +6,8 @@ package zither_test
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -146,6 +148,12 @@ const DEFINED_IN_TERMS_OF_ANOTHER_STRING string = SOME_STRING;
 
 const DEFINED_IN_TERMS_OF_ANOTHER_UINT16 uint16 = HEX_UINT16;
 
+type Uint8Enum = strict enum : uint8 {
+	MAX = 0xff;
+};
+
+const UINT8_ENUM_VALUE Uint8Enum = Uint8Enum.MAX;
+
 /// This is a one-line comment.
 const COMMENTED_BOOL bool = true;
 
@@ -169,6 +177,7 @@ const COMMENTED_STRING string = "YYY";
 
 	someStringName := fidlgen.MustReadName("example/SOME_STRING")
 	hexUint16Name := fidlgen.MustReadName("example/HEX_UINT16")
+	uint8EnumMaxName := fidlgen.MustReadName("example/Uint8Enum.MAX")
 
 	// Listed in declaration order for readability, but similarly sorted.
 	expected := []zither.Const{
@@ -259,6 +268,13 @@ const COMMENTED_STRING string = "YYY";
 			Identifier: &hexUint16Name,
 		},
 		{
+			Name:       fidlgen.MustReadName("example/UINT8_ENUM_VALUE"),
+			Kind:       zither.TypeKindEnum,
+			Type:       "example/Uint8Enum",
+			Value:      "255",
+			Identifier: &uint8EnumMaxName,
+		},
+		{
 			Name:     fidlgen.MustReadName("example/COMMENTED_BOOL"),
 			Kind:     zither.TypeKindBool,
 			Type:     "bool",
@@ -271,6 +287,87 @@ const COMMENTED_STRING string = "YYY";
 			Type:     "string",
 			Value:    "YYY",
 			Comments: []string{" This is", "   a", "       many-line", " comment."},
+		},
+	}
+
+	if diff := cmp.Diff(expected, actual, cmpNameOpt); diff != "" {
+		t.Error(diff)
+	}
+}
+
+func TestCanSummarizeEnums(t *testing.T) {
+	ir := fidlgentest.EndToEndTest{T: t}.Single(`
+library example;
+
+/// This is a uint8 enum.
+type Uint8Enum = enum : uint8 {
+  /// This is a member.
+  TWO = 0b10;
+
+  /// This is
+  /// another
+  /// member.
+  SEVENTEEN = 17;
+};
+
+/// This
+/// is
+/// an
+/// int64 enum.
+type Int64Enum = enum : int64 {
+  MINUS_HEX_ABCD = -0xabcd;
+  HEX_DEADBEEF = 0xdeadbeef;
+};
+`)
+	sum, err := zither.NewSummary(ir, zither.SourceDeclOrder)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Normalize member order by name for a stable comparison.
+	var actual []zither.Enum
+	for _, decl := range sum.Decls {
+		if decl.IsEnum() {
+			enum := decl.AsEnum()
+			sort.Slice(enum.Members, func(i, j int) bool {
+				return strings.Compare(enum.Members[i].Name, enum.Members[j].Name) < 0
+			})
+			actual = append(actual, enum)
+		}
+	}
+
+	expected := []zither.Enum{
+		{
+			Subtype:  "uint8",
+			Name:     fidlgen.MustReadName("example/Uint8Enum"),
+			Comments: []string{" This is a uint8 enum."},
+			Members: []zither.EnumMember{
+				{
+					Name:     "SEVENTEEN",
+					Value:    "17",
+					Comments: []string{" This is", " another", " member."},
+				},
+				{
+					Name:     "TWO",
+					Value:    "0b10",
+					Comments: []string{" This is a member."},
+				},
+			},
+		},
+		{
+			Subtype:  "int64",
+			Name:     fidlgen.MustReadName("example/Int64Enum"),
+			Comments: []string{" This", " is", " an", " int64 enum."},
+			Members: []zither.EnumMember{
+				{
+					Name:  "HEX_DEADBEEF",
+					Value: "0xdeadbeef",
+				},
+				{
+					Name:  "MINUS_HEX_ABCD",
+					Value: "-0xabcd",
+				},
+			},
 		},
 	}
 
