@@ -148,6 +148,9 @@ pub struct Component {
     /// Parent job in which all test processes should be executed.
     pub job: zx::Job,
 
+    /// Use direct vDSO for this test.
+    pub use_direct_vdso: bool,
+
     /// Handle to library loader cache.
     lib_loader_cache: LibraryLoaderCacheProxy,
 
@@ -209,8 +212,10 @@ impl Component {
 
         // It's safe to unwrap `start_info.program` below because if the field
         // were empty, this func would have a returned an error by now.
-        let environ = runner::get_environ(&start_info.program.as_ref().unwrap())
+        let program = start_info.program.as_ref().unwrap();
+        let environ = runner::get_environ(program)
             .map_err(|e| ComponentError::InvalidArgs(url.clone(), e.into()))?;
+        let use_direct_vdso = runner::get_bool(program, "use_direct_vdso").unwrap_or(false);
 
         let ns = start_info.ns.ok_or_else(|| ComponentError::MissingNamespace(url.clone()))?;
         let ns = ComponentNamespace::try_from(ns)
@@ -247,6 +252,7 @@ impl Component {
                 environ,
                 ns: ns,
                 job: job_default().create_child_job().map_err(ComponentError::CreateJob)?,
+                use_direct_vdso,
                 executable_vmo,
                 lib_loader_cache,
             },
@@ -292,6 +298,7 @@ impl Component {
             job: args.job,
             lib_loader_cache,
             executable_vmo,
+            use_direct_vdso: false,
         })
     }
 }
