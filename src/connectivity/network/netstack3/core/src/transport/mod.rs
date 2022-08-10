@@ -108,14 +108,20 @@ pub(crate) struct TransportLayerState<C: TcpNonSyncContext> {
 }
 
 impl<C: NonSyncContext> TcpSyncContext<Ipv4, C> for SyncCtx<C> {
-    fn get_tcp_state_mut(&mut self) -> &mut TcpSockets<Ipv4, Self::DeviceId, C> {
-        &mut self.state.transport.tcpv4
+    fn with_tcp_sockets_mut<O, F: FnOnce(&mut TcpSockets<Ipv4, Self::DeviceId, C>) -> O>(
+        &mut self,
+        cb: F,
+    ) -> O {
+        cb(&mut self.state.transport.tcpv4)
     }
 }
 
 impl<C: NonSyncContext> TcpSyncContext<Ipv6, C> for SyncCtx<C> {
-    fn get_tcp_state_mut(&mut self) -> &mut TcpSockets<Ipv6, Self::DeviceId, C> {
-        &mut self.state.transport.tcpv6
+    fn with_tcp_sockets_mut<O, F: FnOnce(&mut TcpSockets<Ipv6, Self::DeviceId, C>) -> O>(
+        &mut self,
+        cb: F,
+    ) -> O {
+        cb(&mut self.state.transport.tcpv6)
     }
 }
 

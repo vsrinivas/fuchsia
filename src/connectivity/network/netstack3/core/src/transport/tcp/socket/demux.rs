@@ -18,7 +18,10 @@ use packet_formats::{
 use thiserror::Error;
 
 use crate::{
-    ip::{BufferIpTransportContext, BufferTransportIpContext, TransportReceiveError},
+    ip::{
+        socket::IpSocket as _, BufferIpTransportContext, BufferTransportIpContext,
+        TransportReceiveError,
+    },
     socket::{
         address::{AddrVecIter, ConnAddr, ConnIpAddr, IpPortSpec, ListenerAddr},
         AddrVec, SocketTypeState as _, SocketTypeStateMut as _,
@@ -29,7 +32,7 @@ use crate::{
         seqnum::WindowSize,
         socket::{
             isn::generate_isn, Acceptor, Connection, ConnectionId, ListenerId, MaybeListener,
-            SocketAddr, TcpIpTransportContext, TcpNonSyncContext, TcpSyncContext,
+            SocketAddr, TcpIpTransportContext, TcpNonSyncContext, TcpSockets, TcpSyncContext,
         },
         state::{Closed, State},
         Control, UserError,
@@ -87,38 +90,55 @@ where
         let mut addrs_to_search =
             AddrVecIter::<IpPortSpec<I, SC::DeviceId>>::with_device(conn_addr.into(), device);
 
-        let conn_id = addrs_to_search.find_map(|addr| -> Option<ConnectionId> {match addr {
-            // Connections are always searched before listeners because they
-            // are more specific.
-            AddrVec::Conn(conn_addr) => {
-                sync_ctx.get_tcp_state_mut().socketmap.conns().get_by_addr(&conn_addr).cloned()
-            }
-            AddrVec::Listen(listener_addr) => {
-                if incoming.contents.control() != Some(Control::SYN) {
-                    return None;
-                }
-                // If we have a listener and the incoming segment is a SYN, we
-                // allocate a new connection entry in the demuxer.
-                // TODO(https://fxbug.dev/101992): Support SYN cookies.
-                let maybe_listener_id =
-                    sync_ctx.get_tcp_state_mut().socketmap.listeners().get_by_addr(&listener_addr).cloned()
-                    ;
-                maybe_listener_id.and_then(|listener_id| {
-                    let socketmap = &mut sync_ctx.get_tcp_state_mut().socketmap;
-                    let (maybe_listener, (), _): &(_, _, ListenerAddr<_, _, _>) =
-                        socketmap.listeners().get_by_id(&listener_id).expect("invalid listener_id");
-
-                    let listener = match maybe_listener {
-                        MaybeListener::Bound(_) => {
-                            // If the socket is only bound, but not listening.
-                            return None;
-                        }
-                        MaybeListener::Listener(listener) => listener,
+        let conn_id = addrs_to_search.find_map(|addr| -> Option<ConnectionId> {
+            match addr {
+                // Connections are always searched before listeners because they
+                // are more specific.
+                AddrVec::Conn(conn_addr) => sync_ctx.with_tcp_sockets_mut(|sockets| {
+                    sockets.socketmap.conns().get_by_addr(&conn_addr).cloned()
+                }),
+                AddrVec::Listen(listener_addr) => {
+                    if incoming.contents.control() != Some(Control::SYN) {
+                        return None;
+                    }
+                    // If we have a listener and the incoming segment is a SYN, we
+                    // allocate a new connection entry in the demuxer.
+                    // TODO(https://fxbug.dev/101992): Support SYN cookies.
+                    let listener_id = if let Some(id) = sync_ctx.with_tcp_sockets_mut(|sockets| {
+                        sockets.socketmap.listeners().get_by_addr(&listener_addr).cloned()
+                    }) {
+                        id
+                    } else {
+                        return None;
                     };
 
-                    if listener.pending.len() == listener.backlog.get() {
-                        // TODO(https://fxbug.dev/101993): Increment the counter.
-                        trace!("incoming SYN dropped because of the full backlog of the listener");
+                    let is_listener_and_can_accept = sync_ctx.with_tcp_sockets_mut(|sockets| {
+                        let socketmap = &mut sockets.socketmap;
+                        let (maybe_listener, (), _): &(_, _, ListenerAddr<_, _, _>) = socketmap
+                            .listeners()
+                            .get_by_id(&listener_id)
+                            .expect("invalid listener_id");
+
+                        let listener = match maybe_listener {
+                            MaybeListener::Bound(_) => {
+                                // If the socket is only bound, but not listening.
+                                return false;
+                            }
+                            MaybeListener::Listener(listener) => listener,
+                        };
+
+                        if listener.pending.len() == listener.backlog.get() {
+                            // TODO(https://fxbug.dev/101993): Increment the counter.
+                            trace!(
+                                "incoming SYN dropped because of the full backlog of the listener"
+                            );
+                            return false;
+                        }
+
+                        true
+                    });
+
+                    if !is_listener_and_can_accept {
                         return None;
                     }
 
@@ -134,82 +154,92 @@ where
                         Err(err) => {
                             // TODO(https://fxbug.dev/101993): Increment the counter.
                             trace!(
-                                "cannot construct an ip socket to the SYN originator: {:?}, ignoring",
-                                err
-                            );
+                            "cannot construct an ip socket to the SYN originator: {:?}, ignoring",
+                            err
+                        );
                             return None;
                         }
                     };
 
-                    let isn = generate_isn::<I::Addr>(
-                        now.duration_since(sync_ctx.get_tcp_state_mut().isn_ts),
-                        SocketAddr {
-                            ip: local_ip,
-                            port: local_port,
-                        }, SocketAddr {
-                            ip: remote_ip,
-                            port: remote_port,
-                        }, &sync_ctx.get_tcp_state_mut().secret);
-                    let socketmap = &mut sync_ctx.get_tcp_state_mut().socketmap;
-                    // TODO(https://fxbug.dev/102135): Inherit the socket
-                    // options from the listener.
-                    let conn_id = socketmap
-                        .conns_mut().try_insert(
-                            ConnAddr {
-                                ip: ConnIpAddr {
-                                    local: (local_ip,
-                                    local_port),
-                                    remote: (remote_ip, remote_port),
-                                },
-                                device: None,
-                            },
-                            Connection {
-                                acceptor: Some(Acceptor::Pending(ListenerId(listener_id.into()))),
-                                state: State::Listen(Closed::listen(isn)),
-                                ip_sock,
-                            },
-                            // TODO(https://fxbug.dev/101596): Support sharing for TCP sockets.
-                            (),
-                        )
-                        .expect("failed to create a new connection");
+                    sync_ctx.with_tcp_sockets_mut(
+                        |TcpSockets { secret, isn_ts, port_alloc: _, inactive: _, socketmap }| {
+                            let isn = generate_isn::<I::Addr>(
+                                ctx.now().duration_since(*isn_ts),
+                                SocketAddr { ip: ip_sock.local_ip().clone(), port: local_port },
+                                SocketAddr { ip: ip_sock.remote_ip().clone(), port: remote_port },
+                                secret,
+                            );
 
-                    let (maybe_listener, _, _): (_, &(), &ListenerAddr<_, _, _>) = sync_ctx
-                        .get_tcp_state_mut()
-                        .socketmap
-                        .listeners_mut().get_by_id_mut(&listener_id)
-                        .expect("the listener must still be active");
+                            let isn = generate_isn::<I::Addr>(
+                                now.duration_since(*isn_ts),
+                                SocketAddr { ip: local_ip, port: local_port },
+                                SocketAddr { ip: remote_ip, port: remote_port },
+                                secret,
+                            );
+                            // TODO(https://fxbug.dev/102135): Inherit the socket
+                            // options from the listener.
+                            let conn_id = socketmap
+                                .conns_mut()
+                                .try_insert(
+                                    ConnAddr {
+                                        ip: ConnIpAddr {
+                                            local: (local_ip, local_port),
+                                            remote: (remote_ip, remote_port),
+                                        },
+                                        device: None,
+                                    },
+                                    Connection {
+                                        acceptor: Some(Acceptor::Pending(ListenerId(
+                                            listener_id.into(),
+                                        ))),
+                                        state: State::Listen(Closed::listen(isn)),
+                                        ip_sock,
+                                    },
+                                    // TODO(https://fxbug.dev/101596): Support sharing for TCP sockets.
+                                    (),
+                                )
+                                .expect("failed to create a new connection");
 
-                    match maybe_listener {
-                        MaybeListener::Bound(_) => {
-                            unreachable!("the listener must be active because we got here");
-                        }
-                        MaybeListener::Listener(listener) => {
-                            listener.pending.push(conn_id);
-                            Some(conn_id)
-                        }
-                    }
-                })
+                            let (maybe_listener, _, _): (_, &(), &ListenerAddr<_, _, _>) =
+                                socketmap
+                                    .listeners_mut()
+                                    .get_by_id_mut(&listener_id)
+                                    .expect("the listener must still be active");
+
+                            match maybe_listener {
+                                MaybeListener::Bound(_) => {
+                                    unreachable!("the listener must be active because we got here");
+                                }
+                                MaybeListener::Listener(listener) => {
+                                    listener.pending.push(conn_id);
+                                    Some(conn_id)
+                                }
+                            }
+                        },
+                    )
+                }
             }
-        }});
+        });
 
         let reply = match &conn_id {
             Some(id) => {
-                let (Connection { acceptor: _, state, ip_sock }, _, _): (
-                    _,
-                    &(),
-                    &ConnAddr<_, _, _, _>,
-                ) = sync_ctx
-                    .get_tcp_state_mut()
-                    .socketmap
-                    .conns_mut()
-                    .get_by_id_mut(id)
-                    .expect("inconsistent state: invalid connection id");
+                sync_ctx.with_tcp_sockets_mut(|sockets| {
+                    let (Connection { acceptor: _, state, ip_sock }, _, _): (
+                        _,
+                        &(),
+                        &ConnAddr<_, _, _, _>,
+                    ) = sockets
+                        .socketmap
+                        .conns_mut()
+                        .get_by_id_mut(id)
+                        .expect("inconsistent state: invalid connection id");
 
-                // Note: We should avoid the clone if we can teach rustc that
-                // `ip_sock` (which is inside `state`) is disjoint from the
-                // memory that `send_ip_packet` consults inside `sync_ctx`. If
-                // that is possible we can use the reference directly.
-                state.on_segment(incoming, now).map(|seg| (seg, ip_sock.clone()))
+                    // Note: We should avoid the clone if we can teach rustc that
+                    // `ip_sock` (which is inside `state`) is disjoint from the
+                    // memory that `send_ip_packet` consults inside `sync_ctx`. If
+                    // that is possible we can use the reference directly.
+                    state.on_segment(incoming, now).map(|seg| (seg, ip_sock.clone()))
+                })
             }
             None => {
                 // There is no existing TCP state, pretend it is closed
@@ -251,39 +281,39 @@ where
         }
 
         let _: Option<()> = conn_id.and_then(|conn_id| {
-            let (conn, _, _): (_, &(), &ConnAddr<_, _, _, _>) = sync_ctx
-                .get_tcp_state_mut()
-                .socketmap
-                .conns_mut()
-                .get_by_id_mut(&conn_id)
-                .expect("inconsistent state: invalid connection id");
-            let acceptor_id = match conn {
-                Connection {
-                    acceptor: Some(Acceptor::Pending(listener_id)),
-                    state: State::Established(_),
-                    ip_sock: _,
-                } => {
-                    let listener_id = *listener_id;
-                    conn.acceptor = Some(Acceptor::Ready(listener_id));
-                    Some(listener_id)
-                }
-                Connection { acceptor: _, state: _, ip_sock: _ } => None,
-            };
-            acceptor_id.map(|acceptor_id| {
-                let acceptor = sync_ctx
-                    .get_tcp_state_mut()
-                    .get_listener_by_id_mut(acceptor_id)
-                    .expect("orphaned acceptee");
-                let pos = acceptor
-                    .pending
-                    .iter()
-                    .position(|x| x == &conn_id)
-                    .expect("acceptee is not found in acceptor's pending queue");
-                let conn = acceptor.pending.swap_remove(pos);
-                acceptor.ready.push_back(conn);
-                ctx.on_new_connection(acceptor_id);
+            sync_ctx.with_tcp_sockets_mut(|sockets| {
+                let (conn, _, _): (_, &(), &ConnAddr<_, _, _, _>) = sockets
+                    .socketmap
+                    .conns_mut()
+                    .get_by_id_mut(&conn_id)
+                    .expect("inconsistent state: invalid connection id");
+                let acceptor_id = match conn {
+                    Connection {
+                        acceptor: Some(Acceptor::Pending(listener_id)),
+                        state: State::Established(_),
+                        ip_sock: _,
+                    } => {
+                        let listener_id = *listener_id;
+                        conn.acceptor = Some(Acceptor::Ready(listener_id));
+                        Some(listener_id)
+                    }
+                    Connection { acceptor: _, state: _, ip_sock: _ } => None,
+                };
+                acceptor_id.map(|acceptor_id| {
+                    let acceptor =
+                        sockets.get_listener_by_id_mut(acceptor_id).expect("orphaned acceptee");
+                    let pos = acceptor
+                        .pending
+                        .iter()
+                        .position(|x| x == &conn_id)
+                        .expect("acceptee is not found in acceptor's pending queue");
+                    let conn = acceptor.pending.swap_remove(pos);
+                    acceptor.ready.push_back(conn);
+                    ctx.on_new_connection(acceptor_id);
+                })
             })
         });
+
         Ok(())
     }
 }

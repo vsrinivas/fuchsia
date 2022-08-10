@@ -75,8 +75,11 @@ pub trait TcpNonSyncContext: InstantContext {
 
 /// Sync context for TCP.
 pub trait TcpSyncContext<I: IpExt, C: TcpNonSyncContext>: IpDeviceIdContext<I> {
-    /// Gets tcp socket states of this context.
-    fn get_tcp_state_mut(&mut self) -> &mut TcpSockets<I, Self::DeviceId, C>;
+    /// Calls the function with a mutable reference to TCP socket state.
+    fn with_tcp_sockets_mut<O, F: FnOnce(&mut TcpSockets<I, Self::DeviceId, C>) -> O>(
+        &mut self,
+        cb: F,
+    ) -> O;
 }
 
 /// Socket address includes the ip address and the port number.
@@ -368,7 +371,7 @@ where
     C: TcpNonSyncContext,
     SC: TcpSyncContext<I, C>,
 {
-    UnboundId(sync_ctx.get_tcp_state_mut().inactive.push(Inactive))
+    UnboundId(sync_ctx.with_tcp_sockets_mut(|sockets| sockets.inactive.push(Inactive)))
 }
 
 /// Possible errors for the bind operation.
@@ -397,14 +400,16 @@ where
 {
     // TODO(https://fxbug.dev/104300): Check if local_ip is a unicast address.
     let port = match port {
-        None => {
-            let TcpSockets { secret: _, isn_ts: _, port_alloc, inactive: _, socketmap } =
-                sync_ctx.get_tcp_state_mut();
-            match port_alloc.try_alloc(&local_ip, &socketmap) {
-                Some(port) => NonZeroU16::new(port).expect("ephemeral ports must be non-zero"),
-                None => return Err(BindError::NoPort),
-            }
-        }
+        None => sync_ctx.with_tcp_sockets_mut(
+            |TcpSockets { secret: _, isn_ts: _, port_alloc, inactive: _, socketmap }| {
+                match port_alloc.try_alloc(&local_ip, &socketmap) {
+                    Some(port) => {
+                        Ok(NonZeroU16::new(port).expect("ephemeral ports must be non-zero"))
+                    }
+                    None => Err(BindError::NoPort),
+                }
+            },
+        )?,
         Some(port) => port,
     };
     bind_inner(sync_ctx, ctx, id, local_ip, port)
@@ -423,8 +428,9 @@ where
     SC: TcpSyncContext<I, C> + TransportIpContext<I, C>,
 {
     let idmap_key = id.into();
-    let inactive =
-        sync_ctx.get_tcp_state_mut().inactive.remove(idmap_key).expect("invalid unbound socket id");
+    let inactive = sync_ctx
+        .with_tcp_sockets_mut(|sockets| sockets.inactive.remove(idmap_key))
+        .expect("invalid unbound socket id");
     let local_ip = SpecifiedAddr::new(local_ip);
     if let Some(ip) = local_ip {
         if sync_ctx.get_device_with_assigned_addr(ip).is_none() {
@@ -432,18 +438,24 @@ where
         }
     }
     sync_ctx
-        .get_tcp_state_mut()
-        .socketmap
-        .listeners_mut()
-        .try_insert(
-            ListenerAddr { ip: ListenerIpAddr { addr: local_ip, identifier: port }, device: None },
-            MaybeListener::Bound(inactive.clone()),
-            // TODO(https://fxbug.dev/101596): Support sharing for TCP sockets.
-            (),
-        )
+        .with_tcp_sockets_mut(|sockets| {
+            sockets.socketmap.listeners_mut().try_insert(
+                ListenerAddr {
+                    ip: ListenerIpAddr { addr: local_ip, identifier: port },
+                    device: None,
+                },
+                MaybeListener::Bound(inactive.clone()),
+                // TODO(https://fxbug.dev/101596): Support sharing for TCP sockets.
+                (),
+            )
+        })
         .map(|MaybeListenerId(x)| BoundId(x))
         .map_err(|_: (InsertError, MaybeListener, ())| {
-            assert_eq!(sync_ctx.get_tcp_state_mut().inactive.insert(idmap_key, inactive), None);
+            assert_eq!(
+                sync_ctx
+                    .with_tcp_sockets_mut(|sockets| sockets.inactive.insert(idmap_key, inactive)),
+                None
+            );
             BindError::Conflict
         })
 }
@@ -461,20 +473,20 @@ where
     SC: TcpSyncContext<I, C>,
 {
     let id = MaybeListenerId::from(id);
-    let (listener, _, _): (_, &(), &ListenerAddr<_, _, _>) = sync_ctx
-        .get_tcp_state_mut()
-        .socketmap
-        .listeners_mut()
-        .get_by_id_mut(&id)
-        .expect("invalid listener id");
-    match listener {
-        MaybeListener::Bound(_) => {
-            *listener = MaybeListener::Listener(Listener::new(backlog));
+    sync_ctx.with_tcp_sockets_mut(|sockets| {
+        let (listener, _, _): (_, &(), &ListenerAddr<_, _, _>) =
+            sockets.socketmap.listeners_mut().get_by_id_mut(&id).expect("invalid listener id");
+
+        match listener {
+            MaybeListener::Bound(_) => {
+                *listener = MaybeListener::Listener(Listener::new(backlog));
+            }
+            MaybeListener::Listener(_) => {
+                unreachable!("invalid bound id that points to a listener entry")
+            }
         }
-        MaybeListener::Listener(_) => {
-            unreachable!("invalid bound id that points to a listener entry")
-        }
-    }
+    });
+
     ListenerId(id.into())
 }
 
@@ -496,18 +508,18 @@ where
     C: TcpNonSyncContext,
     SC: TcpSyncContext<I, C>,
 {
-    let listener =
-        sync_ctx.get_tcp_state_mut().get_listener_by_id_mut(id).expect("invalid listener id");
-    let conn_id = listener.ready.pop_front().ok_or(AcceptError::WouldBlock)?;
-    let (conn, _, conn_addr): (_, &(), _) = sync_ctx
-        .get_tcp_state_mut()
-        .socketmap
-        .conns_mut()
-        .get_by_id_mut(&conn_id)
-        .expect("failed to retrieve the connection state");
-    conn.acceptor = None;
-    let (remote_ip, remote_port) = conn_addr.ip.remote;
-    Ok((conn_id, SocketAddr { ip: remote_ip, port: remote_port }))
+    sync_ctx.with_tcp_sockets_mut(|sockets| {
+        let listener = sockets.get_listener_by_id_mut(id).expect("invalid listener id");
+        let conn_id = listener.ready.pop_front().ok_or(AcceptError::WouldBlock)?;
+        let (conn, _, conn_addr): (_, &(), _) = sockets
+            .socketmap
+            .conns_mut()
+            .get_by_id_mut(&conn_id)
+            .expect("failed to retrieve the connection state");
+        conn.acceptor = None;
+        let (remote_ip, remote_port) = conn_addr.ip.remote;
+        Ok((conn_id, SocketAddr { ip: remote_ip, port: remote_port }))
+    })
 }
 
 /// Possible errors when connecting a socket.
@@ -532,22 +544,21 @@ where
     SC: TcpSyncContext<I, C> + BufferTransportIpContext<I, C, Buf<Vec<u8>>>,
 {
     let bound_id = MaybeListenerId::from(id);
-    let (bound, (), bound_addr) = sync_ctx
-        .get_tcp_state_mut()
-        .socketmap
-        .listeners()
-        .get_by_id(&bound_id)
-        .expect("invalid socket id");
-    assert_matches!(bound, MaybeListener::Bound(_));
     let ListenerAddr { ip: ListenerIpAddr { addr: local_ip, identifier: local_port }, device } =
-        *bound_addr;
+        sync_ctx.with_tcp_sockets_mut(|sockets| {
+            let (bound, (), bound_addr) =
+                sockets.socketmap.listeners().get_by_id(&bound_id).expect("invalid socket id");
+            assert_matches!(bound, MaybeListener::Bound(_));
+            *bound_addr
+        });
     let ip_sock = sync_ctx
         .new_ip_socket(ctx, device, local_ip, remote.ip, IpProto::Tcp.into(), None)
         .map_err(|err| match err {
             IpSockCreationError::Route(_) => ConnectError::NoRoute,
         })?;
     let conn_id = connect_inner(sync_ctx, ctx, ip_sock, local_port, remote.port)?;
-    let _: Option<_> = sync_ctx.get_tcp_state_mut().socketmap.listeners_mut().remove(&bound_id);
+    let _: Option<_> = sync_ctx
+        .with_tcp_sockets_mut(|sockets| sockets.socketmap.listeners_mut().remove(&bound_id));
     Ok(conn_id)
 }
 
@@ -568,16 +579,16 @@ where
         .map_err(|err| match err {
             IpSockCreationError::Route(_) => ConnectError::NoRoute,
         })?;
-    let local_port = {
-        let TcpSockets { secret: _, isn_ts: _, port_alloc, inactive: _, socketmap } =
-            sync_ctx.get_tcp_state_mut();
-        match port_alloc.try_alloc(&*ip_sock.local_ip(), &socketmap) {
-            Some(port) => NonZeroU16::new(port).expect("ephemeral ports must be non-zero"),
-            None => return Err(ConnectError::NoPort),
-        }
-    };
+    let local_port = sync_ctx.with_tcp_sockets_mut(
+        |TcpSockets { secret: _, isn_ts: _, port_alloc, inactive: _, socketmap }| match port_alloc
+            .try_alloc(&*ip_sock.local_ip(), &socketmap)
+        {
+            Some(port) => Ok(NonZeroU16::new(port).expect("ephemeral ports must be non-zero")),
+            None => Err(ConnectError::NoPort),
+        },
+    )?;
     let conn_id = connect_inner(sync_ctx, ctx, ip_sock, local_port, remote.port)?;
-    let _: Option<_> = sync_ctx.get_tcp_state_mut().inactive.remove(id.into());
+    let _: Option<_> = sync_ctx.with_tcp_sockets_mut(|sockets| sockets.inactive.remove(id.into()));
     Ok(conn_id)
 }
 
@@ -593,43 +604,49 @@ where
     C: TcpNonSyncContext,
     SC: TcpSyncContext<I, C> + BufferTransportIpContext<I, C, Buf<Vec<u8>>>,
 {
-    let isn = generate_isn::<I::Addr>(
-        ctx.now().duration_since(sync_ctx.get_tcp_state_mut().isn_ts),
-        SocketAddr { ip: ip_sock.local_ip().clone(), port: local_port },
-        SocketAddr { ip: ip_sock.remote_ip().clone(), port: remote_port },
-        &sync_ctx.get_tcp_state_mut().secret,
-    );
-    let conn_addr = ConnAddr {
-        ip: ConnIpAddr {
-            local: (ip_sock.local_ip().clone(), local_port),
-            remote: (ip_sock.remote_ip().clone(), remote_port),
+    let (syn, conn_addr, conn_id) = sync_ctx.with_tcp_sockets_mut(
+        |TcpSockets { secret, isn_ts, port_alloc: _, inactive: _, socketmap }| {
+            let isn = generate_isn::<I::Addr>(
+                ctx.now().duration_since(*isn_ts),
+                SocketAddr { ip: ip_sock.local_ip().clone(), port: local_port },
+                SocketAddr { ip: ip_sock.remote_ip().clone(), port: remote_port },
+                secret,
+            );
+            let conn_addr = ConnAddr {
+                ip: ConnIpAddr {
+                    local: (ip_sock.local_ip().clone(), local_port),
+                    remote: (ip_sock.remote_ip().clone(), remote_port),
+                },
+                // TODO(https://fxbug.dev/102103): Support SO_BINDTODEVICE.
+                device: None,
+            };
+            let now = ctx.now();
+            let (syn_sent, syn) = Closed::<Initial>::connect(isn, now);
+            let conn_id = socketmap
+                .conns_mut()
+                .try_insert(
+                    conn_addr.clone(),
+                    Connection {
+                        acceptor: None,
+                        state: State::SynSent(syn_sent),
+                        ip_sock: ip_sock.clone(),
+                    },
+                    // TODO(https://fxbug.dev/101596): Support sharing for TCP sockets.
+                    (),
+                )
+                .expect("failed to insert connection");
+
+            (syn, conn_addr, conn_id)
         },
-        // TODO(https://fxbug.dev/102103): Support SO_BINDTODEVICE.
-        device: None,
-    };
-    let now = ctx.now();
-    let (syn_sent, syn) = Closed::<Initial>::connect(isn, now);
-    let conn_id = sync_ctx
-        .get_tcp_state_mut()
-        .socketmap
-        .conns_mut()
-        .try_insert(
-            conn_addr.clone(),
-            Connection {
-                acceptor: None,
-                state: State::SynSent(syn_sent),
-                ip_sock: ip_sock.clone(),
-            },
-            // TODO(https://fxbug.dev/101596): Support sharing for TCP sockets.
-            (),
-        )
-        .expect("failed to insert connection");
+    );
+
     sync_ctx
         .send_ip_packet(ctx, &ip_sock, tcp_serialize_segment(syn, conn_addr.ip), None)
         .map_err(|(body, err)| {
             warn!("tcp: failed to send ip packet {:?}: {:?}", body, err);
             assert_matches!(
-                sync_ctx.get_tcp_state_mut().socketmap.conns_mut().remove(&conn_id),
+                sync_ctx
+                    .with_tcp_sockets_mut(|sockets| sockets.socketmap.conns_mut().remove(&conn_id)),
                 Some(_)
             );
             ConnectError::NoRoute
@@ -766,8 +783,14 @@ mod tests {
     }
 
     impl<I: TcpTestIpExt> TcpSyncContext<I, TcpNonSyncCtx> for TcpSyncCtx<I> {
-        fn get_tcp_state_mut(&mut self) -> &mut TcpSockets<I, DummyDeviceId, TcpNonSyncCtx> {
-            &mut self.get_mut().sockets
+        fn with_tcp_sockets_mut<
+            O,
+            F: FnOnce(&mut TcpSockets<I, DummyDeviceId, TcpNonSyncCtx>) -> O,
+        >(
+            &mut self,
+            cb: F,
+        ) -> O {
+            cb(&mut self.get_mut().sockets)
         }
     }
 
