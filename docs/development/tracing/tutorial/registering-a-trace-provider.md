@@ -85,27 +85,54 @@ For example:
 
 ## Give the trace manager component access {#give-trace-manager-component-access}
 
-In the component manifest file (a `.cmx` file) of your component, you must
+In the component manifest file (a `.cml` file) of your component, you must
 specify that it needs to communicate with the Fuchsia trace manager.
 
 Note: For information on component manifests, see
 [Component Manifests](/docs/concepts/components/v1/component_manifests.md).
 
 To give the trace manager component access, specify
-`fuchsia.tracing.provider.Registry` as a "services". For example:
+the protocol `fuchsia.tracing.provider.Registry` as a `use` declaration. For
+example:
 
-* {.cmx file}
+* {.cml file}
 
-  ```json
+  ```json5
   {
-      "program": {
-          "binary": "bin/app"
+      program: {
+          runner: "elf",
+          binary: "bin/app",
       },
-      "sandbox": {
-          "services": [
-              "fuchsia.tracing.provider.Registry"
-          ]
-      }
+      use: [
+          {
+              protocol: [
+                  "fuchsia.tracing.provider.Registry",
+              ],
+          },
+      ],
+  }
+  ```
+
+If your component is in core, you should route the capability from
+trace\_manager to your component directly in `core.cml`. Otherwise, you
+should do so in your component's core\_shard.cml.
+
+* {.cml file}
+
+  ```json5
+  // component.core_shard.cml
+  {
+  offer: [
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            from: "#trace_manager",
+            to: "#your_component",
+
+            // Allows manifest validation to succeed if tracing is not compiled
+            // into the product
+            source_availability: "unknown",
+        },
+  ]
   }
   ```
 
