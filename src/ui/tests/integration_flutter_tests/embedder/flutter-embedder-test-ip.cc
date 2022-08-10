@@ -239,14 +239,16 @@ void FlutterEmbedderTestIp::TryInject(int32_t x, int32_t y) {
       dispatcher(), [this, x, y] { TryInject(x, y); }, kTapRetryInterval);
 }
 
+// TODO(fxb/106074): Re-enable gfx scene manager variant by adding the following
+// as an additional parameter:
+//
+// "fuchsia-pkg://fuchsia.com/gfx-scene-manager-test-ui-stack#meta/test-ui-stack.cm"
 INSTANTIATE_TEST_SUITE_P(
     FlutterEmbedderTestIpWithParams, FlutterEmbedderTestIp,
     ::testing::Values(
-        "fuchsia-pkg://fuchsia.com/gfx-root-presenter-test-ui-stack#meta/test-ui-stack.cm",
-        "fuchsia-pkg://fuchsia.com/gfx-scene-manager-test-ui-stack#meta/test-ui-stack.cm"));
+        "fuchsia-pkg://fuchsia.com/gfx-root-presenter-test-ui-stack#meta/test-ui-stack.cm"));
 
-// TODO(fxb/106074): Re-enable when we fix the test flaky on CQ.
-TEST_P(FlutterEmbedderTestIp, DISABLED_Embedding) {
+TEST_P(FlutterEmbedderTestIp, Embedding) {
   BuildRealmAndLaunchApp(kParentViewUrl);
 
   // Take screenshot until we see the child-view's embedded color.
@@ -259,8 +261,7 @@ TEST_P(FlutterEmbedderTestIp, DISABLED_Embedding) {
       }));
 }
 
-// TODO(fxb/106074): Re-enable when we fix the test flaky on CQ.
-TEST_P(FlutterEmbedderTestIp, DISABLED_HittestEmbedding) {
+TEST_P(FlutterEmbedderTestIp, HittestEmbedding) {
   BuildRealmAndLaunchApp(kParentViewUrl);
 
   // Take screenshot until we see the child-view's embedded color.
@@ -279,8 +280,7 @@ TEST_P(FlutterEmbedderTestIp, DISABLED_HittestEmbedding) {
   }));
 }
 
-// TODO(fxb/106074): Re-enable when we fix the test flaky on CQ.
-TEST_P(FlutterEmbedderTestIp, DISABLED_HittestDisabledEmbedding) {
+TEST_P(FlutterEmbedderTestIp, HittestDisabledEmbedding) {
   BuildRealmAndLaunchApp(kParentViewUrl, {"--no-hitTestable"});
 
   // Take screenshots until we see the child-view's embedded color.
@@ -301,8 +301,7 @@ TEST_P(FlutterEmbedderTestIp, DISABLED_HittestDisabledEmbedding) {
       }));
 }
 
-// TODO(fxb/106074): Re-enable when we fix the test flaky on CQ.
-TEST_P(FlutterEmbedderTestIp, DISABLED_EmbeddingWithOverlay) {
+TEST_P(FlutterEmbedderTestIp, EmbeddingWithOverlay) {
   BuildRealmAndLaunchApp(kParentViewUrl, {"--showOverlay"});
 
   // Take screenshot until we see the child-view's embedded color.
@@ -319,8 +318,7 @@ TEST_P(FlutterEmbedderTestIp, DISABLED_EmbeddingWithOverlay) {
       }));
 }
 
-// TODO(fxb/106074): Re-enable when we fix the test flaky on CQ.
-TEST_P(FlutterEmbedderTestIp, DISABLED_HittestEmbeddingWithOverlay) {
+TEST_P(FlutterEmbedderTestIp, HittestEmbeddingWithOverlay) {
   BuildRealmAndLaunchApp(kParentViewUrl, {"--showOverlay"});
 
   // Take screenshot until we see the child-view's embedded color.
