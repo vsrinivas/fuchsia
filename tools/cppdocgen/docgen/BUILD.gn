@@ -1,0 +1,33 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+
+assert(is_host)
+
+go_library("docgen") {
+  name = "go.fuchsia.dev/fuchsia/tools/cppdocgen/docgen"
+  sources = [
+    "index.go",
+    "write.go",
+    "write_function.go",
+    "write_function_test.go",
+    "write_header.go",
+    "write_header_test.go",
+    "write_index.go",
+    "write_record.go",
+    "write_record_test.go",
+  ]
+  deps = [ "../clangdoc" ]
+}
+
+go_test("test") {
+  output_name = "docgen_test"
+  gopackages = [ "go.fuchsia.dev/fuchsia/tools/cppdocgen/docgen" ]
+  deps = [
+    ":docgen",
+    "../clangdoc",
+  ]
+}
