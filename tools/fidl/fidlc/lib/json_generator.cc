@@ -734,8 +734,8 @@ void JSONGenerator::Generate(const flat::LayoutInvocation& value) {
 
     GenerateObjectMember("nullable", value.nullability);
 
-    if (value.size_resolved)
-      GenerateObjectMember("maybe_size", *value.size_resolved);
+    if (value.size_raw)
+      GenerateObjectMember("maybe_size", *value.size_raw);
   });
 }
 

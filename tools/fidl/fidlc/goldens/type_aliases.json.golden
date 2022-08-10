@@ -325,7 +325,16 @@
             "name": "test.typealiases/vec_of_strings",
             "args": [],
             "nullable": false,
-            "maybe_size": "9"
+            "maybe_size": {
+              "kind": "literal",
+              "value": "9",
+              "expression": "9",
+              "literal": {
+                "kind": "numeric",
+                "value": "9",
+                "expression": "9"
+              }
+            }
           },
           "name": "field_of_vec_of_strings_at_most_nine",
           "location": {

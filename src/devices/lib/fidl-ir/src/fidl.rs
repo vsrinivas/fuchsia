@@ -443,7 +443,7 @@ pub struct MethodParameter<'a> {
     pub _type: Type,
     pub name: &'a Identifier,
     pub location: &'a Option<Location>,
-    pub experimental_maybe_from_type_alias: Option<&'a FieldTypeConstructor>,
+    pub experimental_maybe_from_type_alias: Option<&'a TypeConstructor>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -493,7 +493,7 @@ pub struct StructMember {
     pub field_shape_v1: FieldShape,
     pub maybe_attributes: Option<Vec<Attribute>>,
     pub maybe_default_value: Option<Constant>,
-    pub experimental_maybe_from_type_alias: Option<FieldTypeConstructor>,
+    pub experimental_maybe_from_type_alias: Option<TypeConstructor>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -555,7 +555,7 @@ pub struct UnionMember {
     pub max_out_of_line: Option<Count>,
     pub offset: Option<Count>,
     pub maybe_attributes: Option<Vec<Attribute>>,
-    pub experimental_maybe_from_type_alias: Option<FieldTypeConstructor>,
+    pub experimental_maybe_from_type_alias: Option<TypeConstructor>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -577,17 +577,6 @@ pub struct TypeConstructor {
     pub args: Vec<TypeConstructor>,
     pub nullable: bool,
     pub maybe_size: Option<Constant>,
-    pub maybe_handle_subtype: Option<HandleSubtype>,
-}
-
-// This looks like it should be TypeConstructor, but fidlc does not generate the same data for
-// alias information in struct/union's vs. top-level aliases.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct FieldTypeConstructor {
-    pub name: String,
-    pub args: Vec<TypeConstructor>,
-    pub nullable: bool,
-    pub maybe_size: Option<String>, // This is the difference with TypeConstructor.
     pub maybe_handle_subtype: Option<HandleSubtype>,
 }
 

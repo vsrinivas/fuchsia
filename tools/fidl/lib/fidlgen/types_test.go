@@ -9,7 +9,6 @@ import (
 	"math"
 	"reflect"
 	"sort"
-	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -21,21 +20,6 @@ import (
 // trailing newline.
 func toDocComment(input string) string {
 	return " " + input + "\n"
-}
-
-// Compares two fidlgen.Locations lexicographically on filename and then on
-// the location within the file.
-func LocationCmp(a, b *fidlgen.Location) bool {
-	if cmp := strings.Compare(a.Filename, b.Filename); cmp != 0 {
-		return cmp < 0
-	}
-	if a.Line != b.Line {
-		return a.Line < b.Line
-	}
-	if a.Column != b.Column {
-		return a.Column < b.Column
-	}
-	return a.Length < b.Length
 }
 
 func TestCanUnmarshalLargeOrdinal(t *testing.T) {
@@ -161,7 +145,7 @@ func TestCanUnmarshalSignedEnums(t *testing.T) {
 
 	// Sort by location for easier comparison with expected values.
 	sort.Slice(root.Enums, func(i, j int) bool {
-		return LocationCmp(&root.Enums[i].Location, &root.Enums[j].Location)
+		return fidlgen.LocationCmp(root.Enums[i].Location, root.Enums[j].Location)
 	})
 
 	expected := []fidlgen.Enum{
@@ -343,7 +327,7 @@ func TestCanUnmarshalBits(t *testing.T) {
 
 	// Sort by location for easier comparison with expected values.
 	sort.Slice(root.Bits, func(i, j int) bool {
-		return LocationCmp(&root.Bits[i].Location, &root.Bits[j].Location)
+		return fidlgen.LocationCmp(root.Bits[i].Location, root.Bits[j].Location)
 	})
 
 	uint8Shape := fidlgen.TypeShape{
@@ -473,12 +457,12 @@ func TestCanUnmarshalLocation(t *testing.T) {
 
 		const CONST_A bool = false;
 
-		      const CONST_B uint32 = 10;		
+		      const CONST_B uint32 = 10;
 	`)
 
 	// Sort by location for easier comparison with expected values.
 	sort.Slice(root.Consts, func(i, j int) bool {
-		return LocationCmp(&root.Consts[i].Location, &root.Consts[j].Location)
+		return fidlgen.LocationCmp(root.Consts[i].Location, root.Consts[j].Location)
 	})
 
 	expected := []fidlgen.Const{
@@ -538,7 +522,7 @@ func TestCanUnmarshalTypeAliases(t *testing.T) {
 
 	// Sort results by location for easier comparison.
 	sort.Slice(root.TypeAliases, func(i, j int) bool {
-		return LocationCmp(&root.TypeAliases[i].Location, &root.TypeAliases[j].Location)
+		return fidlgen.LocationCmp(root.TypeAliases[i].Location, root.TypeAliases[j].Location)
 	})
 
 	expected := []fidlgen.TypeAlias{

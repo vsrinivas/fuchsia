@@ -134,7 +134,7 @@ fn field_to_c_str(
     ident: &Identifier,
     indent: &str,
     preserve_names: bool,
-    alias: &Option<FieldTypeConstructor>,
+    alias: &Option<TypeConstructor>,
     ir: &FidlIr,
 ) -> Result<String, Error> {
     let mut accum = String::new();

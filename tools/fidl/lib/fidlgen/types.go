@@ -173,6 +173,11 @@ func (eci EncodedCompoundIdentifier) DeclName() EncodedCompoundIdentifier {
 		strings.Join(parts, "."), ci.Name))
 }
 
+// IsBuiltIn gives whether the identifier corresponds to a built-in type.
+func (eci EncodedCompoundIdentifier) IsBuiltIn() bool {
+	return eci.LibraryName() == ""
+}
+
 // Parse converts an EncodedCompoundIdentifier back into a CompoundIdentifier.
 func (eci EncodedCompoundIdentifier) Parse() CompoundIdentifier {
 	parts := eci.Parts()
@@ -449,6 +454,21 @@ type Location struct {
 	Line     int    `json:"line"`
 	Column   int    `json:"column"`
 	Length   int    `json:"length"`
+}
+
+// Compares two fidlgen.Locations lexicographically on filename and then on
+// the location within the file.
+func LocationCmp(a, b Location) bool {
+	if cmp := strings.Compare(a.Filename, b.Filename); cmp != 0 {
+		return cmp < 0
+	}
+	if a.Line != b.Line {
+		return a.Line < b.Line
+	}
+	if a.Column != b.Column {
+		return a.Column < b.Column
+	}
+	return a.Length < b.Length
 }
 
 type TypeKind string
@@ -910,7 +930,7 @@ type PartialTypeConstructor struct {
 type NewType struct {
 	Decl
 	Type  Type                    `json:"type"`
-	Alias *PartialTypeConstructor `json:"experimental_maybe_from_type_alias"`
+	Alias *PartialTypeConstructor `json:"experimental_maybe_from_type_alias,omitempty"`
 }
 
 // Union represents the declaration of a FIDL union.
@@ -926,12 +946,13 @@ type Union struct {
 // union.
 type UnionMember struct {
 	Attributes
-	Reserved     bool       `json:"reserved"`
-	Ordinal      int        `json:"ordinal"`
-	Type         Type       `json:"type"`
-	Name         Identifier `json:"name"`
-	Offset       int        `json:"offset"`
-	MaxOutOfLine int        `json:"max_out_of_line"`
+	Reserved       bool                    `json:"reserved"`
+	Ordinal        int                     `json:"ordinal"`
+	Type           Type                    `json:"type"`
+	Name           Identifier              `json:"name"`
+	Offset         int                     `json:"offset"`
+	MaxOutOfLine   int                     `json:"max_out_of_line"`
+	MaybeTypeAlias *PartialTypeConstructor `json:"experimental_maybe_from_type_alias,omitempty"`
 }
 
 // Table represents a declaration of a FIDL table.
@@ -945,12 +966,13 @@ type Table struct {
 // TableMember represents the declaration of a field in a FIDL table.
 type TableMember struct {
 	Attributes
-	Reserved          bool       `json:"reserved"`
-	Type              Type       `json:"type"`
-	Name              Identifier `json:"name"`
-	Ordinal           int        `json:"ordinal"`
-	MaybeDefaultValue *Constant  `json:"maybe_default_value,omitempty"`
-	MaxOutOfLine      int        `json:"max_out_of_line"`
+	Reserved          bool                    `json:"reserved"`
+	Type              Type                    `json:"type"`
+	Name              Identifier              `json:"name"`
+	Ordinal           int                     `json:"ordinal"`
+	MaybeDefaultValue *Constant               `json:"maybe_default_value,omitempty"`
+	MaybeTypeAlias    *PartialTypeConstructor `json:"experimental_maybe_from_type_alias,omitempty"`
+	MaxOutOfLine      int                     `json:"max_out_of_line"`
 }
 
 // byTableOrdinal is a wrapper type for sorting a []TableMember.
@@ -992,12 +1014,13 @@ type Struct struct {
 // StructMember represents the declaration of a field in a FIDL struct.
 type StructMember struct {
 	Attributes
-	Type              Type       `json:"type"`
-	Name              Identifier `json:"name"`
-	MaybeDefaultValue *Constant  `json:"maybe_default_value,omitempty"`
-	MaxHandles        int        `json:"max_handles"`
-	FieldShapeV1      FieldShape `json:"field_shape_v1"`
-	FieldShapeV2      FieldShape `json:"field_shape_v2"`
+	Type              Type                    `json:"type"`
+	Name              Identifier              `json:"name"`
+	MaybeDefaultValue *Constant               `json:"maybe_default_value,omitempty"`
+	MaybeTypeAlias    *PartialTypeConstructor `json:"experimental_maybe_from_type_alias,omitempty"`
+	MaxHandles        int                     `json:"max_handles"`
+	FieldShapeV1      FieldShape              `json:"field_shape_v1"`
+	FieldShapeV2      FieldShape              `json:"field_shape_v2"`
 }
 
 // EmptyStructMember returns a StructMember that's suitable as the sole member
@@ -1309,8 +1332,13 @@ type Const struct {
 // Resource gives the declaration of a FIDL resource.
 type Resource struct {
 	Decl
-	Type       Type   `json:"type"`
-	Properties []Decl `json:"properties"`
+	Type       Type               `json:"type"`
+	Properties []ResourceProperty `json:"properties"`
+}
+
+type ResourceProperty struct {
+	Decl
+	Type Type `json:"type"`
 }
 
 // Strictness represents whether a FIDL object is strict or flexible. See

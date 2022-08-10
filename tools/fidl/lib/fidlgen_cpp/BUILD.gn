@@ -12,6 +12,8 @@ go_library("fidlgen_cpp") {
     "bits.go",
     "codegen_options.go",
     "const.go",
+    "dep_graph.go",
+    "dep_graph_test.go",
     "enum.go",
     "generator.go",
     "handles.go",
