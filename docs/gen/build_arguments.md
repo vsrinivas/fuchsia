@@ -2819,6 +2819,15 @@ above changes.
 
 From //build/security.gni:21
 
+### full_resolver_enable_subpackages
+Whether to allow full-resolver to resolve subpackages.
+TODO(fxbug.dev/102652): This configuration will be removed when subpackages
+is generally available.
+
+**Current value (from the default):** `false`
+
+From //build/security.gni:191
+
 ### futex_tracing_enabled
 Enables kernel tracing of futex interactions
 
@@ -2950,7 +2959,7 @@ From //build/go/go_build.gni:22
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/dartlang/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/.gocache"`
 
 From //build/go/go_build.gni:18
 
@@ -6195,7 +6204,7 @@ From //build/security.gni:172
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"dartlang/thinlto-cache"`
+**Current value (from the default):** `"thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
@@ -6302,15 +6311,6 @@ From //out/not-default/args.gn:13
 **Overridden from the default:** `[]`
 
 From //BUILD.gn:64
-
-### full_resolver_enable_subpackages
-Whether to allow full-resolver to resolve subpackages.
-TODO(fxbug.dev/102652): This configuration will be removed when subpackages
-is generally available.
-
-**Current value (from the default):** `false`
-
-From //build/security.gni:191
 
 ### update_kernels
 (deprecated) List of kernel images to include in the update (OTA) package.
@@ -6681,7 +6681,7 @@ From //src/bringup/bin/virtcon/virtcon_args.gni:14
 ### virtio_vsock_legacy_inprocess
 Enable to use the legacy vsock device.
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
 From //src/virtualization/bin/args.gni:7
 
