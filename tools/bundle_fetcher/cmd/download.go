@@ -235,9 +235,19 @@ func getGCSURIBasedOnFileURI(ctx context.Context, sink dataSink, fileURI, produc
 	if err != nil {
 		return "", err
 	}
-	baseURI := filepath.Join(productBundleJSONPath, u.Path)
+	baseURI := filepath.Join(filepath.Dir(productBundleJSONPath), u.Path)
+
 	// Check that the path actually exists in GCS.
 	validPath, err := sink.doesPathExist(ctx, baseURI)
+
+	// If the path does not exist, fallback to the old path.
+	// TODO: Delete this once artifactory uploads using the new paths.
+	if !validPath {
+		logger.Debugf(ctx, "falling back to old path format for product bundle: %s", productBundleJSONPath)
+		baseURI = filepath.Join(productBundleJSONPath, u.Path)
+		validPath, err = sink.doesPathExist(ctx, baseURI)
+	}
+
 	if err != nil {
 		return "", err
 	}
