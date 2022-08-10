@@ -50,6 +50,7 @@ group("tests") {
     ":guest_unit_tests",
     ":virtualization_block_tests_pkg",
     ":virtualization_core_tests_pkg",
+    ":virtualization_gpu_tests_pkg",
     ":virtualization_input_tests_pkg",
     ":virtualization_net_tests_pkg",
     ":virtualization_vsock_tests_pkg",
@@ -62,7 +63,6 @@ group("tests") {
     deps += [
       # TODO(fxbug.dev/64348): These tests needs to be reworked so that they
       # interact correctly with Scenic.
-      # ":virtualization_gpu_tests_pkg",
       ":termina_integration_tests",
       ":virtualization_sound_tests_pkg",
     ]
@@ -354,6 +354,7 @@ executable("virtualization_gpu_tests") {
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//third_party/googletest:gmock",
+    "//third_party/rapidjson",
   ]
 }
 
@@ -370,7 +371,7 @@ fuchsia_test_package("virtualization_gpu_tests_pkg") {
   package_name = "virtualization-gpu-tests"
   test_components = [ ":virtualization_gpu_tests_cmp" ]
   test_specs = {
-    environments = guest_envs
+    environments = guest_vulkan_envs
     log_settings = {
       max_severity = "ERROR"
     }

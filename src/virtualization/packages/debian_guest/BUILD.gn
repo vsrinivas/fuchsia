@@ -35,6 +35,7 @@ guest_prebuilt("kernel") {
 romfs_image("tests") {
   deps = [
     "//src/virtualization/tests/virtio_block_test_util(${linux_exe_toolchain})",
+    "//src/virtualization/tests/virtio_gpu_test_util(${linux_exe_toolchain})",
     "//src/virtualization/tests/virtio_input_test_util(${linux_exe_toolchain})",
     "//src/virtualization/tests/virtio_net_test_util(${linux_exe_toolchain})",
     "//src/virtualization/tests/virtio_rng_test_util(${linux_exe_toolchain})",
@@ -43,6 +44,7 @@ romfs_image("tests") {
 
   inputs = [
     "${linux_exe_path}/virtio_block_test_util",
+    "${linux_exe_path}/virtio_gpu_test_util",
     "${linux_exe_path}/virtio_input_test_util",
     "${linux_exe_path}/virtio_net_test_util",
     "${linux_exe_path}/virtio_rng_test_util",

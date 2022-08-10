@@ -118,7 +118,11 @@ class EnclosedGuest {
   //
   // This is appropriate for tests that interact with UI stack in some way and need to interact with
   // the test UI stack.
-  void WaitForDisplay();
+  struct DisplayInfo {
+    uint32_t width;
+    uint32_t height;
+  };
+  DisplayInfo WaitForDisplay();
 
  protected:
   // Waits until the guest is ready to run test utilities, called by Start.

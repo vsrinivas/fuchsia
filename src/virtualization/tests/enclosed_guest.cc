@@ -441,7 +441,7 @@ zx_status_t ZirconEnclosedGuest::BuildLaunchInfo(GuestLaunchInfo* launch_info) {
   return ZX_OK;
 }
 
-void EnclosedGuest::WaitForDisplay() {
+EnclosedGuest::DisplayInfo EnclosedGuest::WaitForDisplay() {
   // Wait for the display view to render.
   std::optional<ViewDescriptor> view_descriptor;
   RunLoopUntil(
@@ -449,12 +449,18 @@ void EnclosedGuest::WaitForDisplay() {
         view_descriptor = FindDisplayView(*ui_test_manager_);
         return view_descriptor.has_value();
       },
-      zx::time::infinite());
+      zx::deadline_after(zx::sec(20)));
 
   // Now wait for the view to get focus.
   auto koid = view_descriptor->view_ref_koid();
   RunLoopUntil([this, koid] { return ui_test_manager_->ViewIsFocused(koid); },
                zx::time::infinite());
+
+  const auto& extent = view_descriptor->layout().extent;
+  return DisplayInfo{
+      .width = static_cast<uint32_t>(std::round(extent.max.x - extent.min.x)),
+      .height = static_cast<uint32_t>(std::round(extent.max.y - extent.min.y)),
+  };
 }
 
 namespace {
