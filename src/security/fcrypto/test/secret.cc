@@ -85,6 +85,19 @@ TEST(Secret, Clear) {
   secret.Clear();
 }
 
+TEST(Secret, MoveDestructive) {
+  Secret src;
+  ASSERT_OK(src.Generate(kSize));
+  uint8_t buf[kSize];
+  memcpy(buf, src.get(), kSize);
+
+  Secret dst(std::move(src));
+
+  EXPECT_BYTES_EQ(buf, dst.get(), kSize);
+  EXPECT_EQ(src.len(), 0);
+  EXPECT_EQ(src.get(), nullptr);
+}
+
 }  // namespace
 }  // namespace testing
 }  // namespace crypto

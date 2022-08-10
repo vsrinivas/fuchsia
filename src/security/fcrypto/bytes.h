@@ -25,6 +25,9 @@ class __EXPORT Bytes final {
   Bytes();
   ~Bytes();
 
+  Bytes(Bytes&&) noexcept;
+  Bytes& operator=(Bytes&&) noexcept;
+
   // Accessors
   const uint8_t* get() const { return buf_.get(); }
   uint8_t* get() { return buf_.get(); }

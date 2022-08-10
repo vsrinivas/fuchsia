@@ -33,6 +33,19 @@ Secret::Secret() : buf_(nullptr), len_(0) {}
 
 Secret::~Secret() { Clear(); }
 
+Secret::Secret(Secret&& o) noexcept : buf_(std::move(o.buf_)), len_(o.len_) {
+  o.buf_ = nullptr;
+  o.len_ = 0;
+}
+
+Secret& Secret::operator=(Secret&& o) noexcept {
+  buf_ = std::move(o.buf_);
+  len_ = o.len_;
+  o.buf_ = nullptr;
+  o.len_ = 0;
+  return *this;
+}
+
 zx_status_t Secret::Allocate(size_t len, uint8_t** out) {
   ZX_ASSERT(len != 0 && out);
 

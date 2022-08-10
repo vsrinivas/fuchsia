@@ -124,6 +124,19 @@ TEST(Bytes, Comparison) {
   EXPECT_TRUE(bytes2 != bytes1);
 }
 
+TEST(Bytes, MoveDestructive) {
+  Bytes src;
+  ASSERT_OK(src.Randomize(kSize));
+  uint8_t buf[kSize];
+  memcpy(buf, src.get(), kSize);
+
+  Bytes dst(std::move(src));
+
+  EXPECT_BYTES_EQ(buf, dst.get(), kSize);
+  EXPECT_EQ(src.len(), 0);
+  EXPECT_EQ(src.get(), nullptr);
+}
+
 }  // namespace
 }  // namespace testing
 }  // namespace crypto

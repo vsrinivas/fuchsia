@@ -27,6 +27,9 @@ class __EXPORT Secret final {
   Secret();
   ~Secret();
 
+  Secret(Secret&&) noexcept;
+  Secret& operator=(Secret&&) noexcept;
+
   // Accessors
   const uint8_t* get() const { return buf_.get(); }
   size_t len() const { return len_; }

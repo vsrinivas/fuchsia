@@ -37,6 +37,19 @@ namespace crypto {
 Bytes::Bytes() : buf_(nullptr), len_(0) {}
 Bytes::~Bytes() {}
 
+Bytes::Bytes(Bytes&& o) noexcept : buf_(std::move(o.buf_)), len_(o.len_) {
+  o.buf_ = nullptr;
+  o.len_ = 0;
+}
+
+Bytes& Bytes::operator=(Bytes&& o) noexcept {
+  buf_ = std::move(o.buf_);
+  len_ = o.len_;
+  o.buf_ = nullptr;
+  o.len_ = 0;
+  return *this;
+}
+
 zx_status_t Bytes::Randomize(size_t len) {
   zx_status_t status = Resize(len);
   if (status != ZX_OK) {
