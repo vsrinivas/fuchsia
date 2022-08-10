@@ -1069,7 +1069,7 @@ where
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 struct AvailableMessage<A> {
     source_addr: A,
     source_port: u16,
@@ -1123,6 +1123,12 @@ impl<A> AvailableMessageQueue<A> {
             *available_messages_size -= msg.data.len();
             msg
         })
+    }
+
+    fn peek(&self) -> Option<&AvailableMessage<A>> {
+        let Self { available_messages, available_messages_size: _, max_available_messages_size: _ } =
+            self;
+        available_messages.front()
     }
 
     fn is_empty(&self) -> bool {
@@ -1554,16 +1560,16 @@ where
                             want_addr,
                             data_len,
                             want_control: _,
-                            flags: _,
+                            flags,
                             responder,
                         } => {
-                            // TODO(brunodalbo) handle control and flags
+                            // TODO(brunodalbo) handle control
                             responder_send!(
                                 responder,
                                 &mut self
                                     .make_handler()
                                     .await
-                                    .recv_msg(want_addr, data_len as usize)
+                                    .recv_msg(want_addr, data_len as usize, flags)
                             );
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::RecvMsgDeprecated {
@@ -2425,6 +2431,7 @@ where
         &mut self,
         want_addr: bool,
         data_len: usize,
+        flags: fposix_socket::RecvMsgFlags,
     ) -> Result<
         (
             Option<Box<fnet::SocketAddress>>,
@@ -2436,7 +2443,12 @@ where
     > {
         let () = self.need_rights(fio::OpenFlags::RIGHT_READABLE)?;
         let state = self.get_state_mut();
-        let available = if let Some(front) = state.available_data.pop() {
+        let front = if flags.contains(fposix_socket::RecvMsgFlags::PEEK) {
+            state.available_data.peek().cloned()
+        } else {
+            state.available_data.pop()
+        };
+        let available = if let Some(front) = front {
             front
         } else {
             if let SocketState::BoundConnect { shutdown_read, .. } = state.info.state {
@@ -3914,6 +3926,66 @@ mod tests {
 
     declare_tests!(
         set_receive_buffer_after_delivery,
+        icmp #[should_panic = "not yet implemented: https://fxbug.dev/47321: needs Core implementation"]
+    );
+
+    async fn send_recv_loopback_peek<A: TestSockAddr, T>(
+        proto: fposix_socket::DatagramSocketProtocol,
+    ) {
+        let (_t, proxy) = prepare_test::<A>(proto).await;
+        let mut addr =
+            A::create(<<A::AddrType as IpAddress>::Version as Ip>::LOOPBACK_ADDRESS.get(), 100);
+
+        let () = proxy.bind(&mut addr).await.unwrap().expect("bind succeeds");
+        let () = proxy.connect(&mut addr).await.unwrap().expect("connect succeeds");
+
+        const DATA: &[u8] = &[1, 2, 3, 4, 5];
+        assert_eq!(
+            proxy
+                .send_msg(
+                    None,
+                    DATA,
+                    fposix_socket::DatagramSocketSendControlData::EMPTY,
+                    fposix_socket::SendMsgFlags::empty()
+                )
+                .await
+                .unwrap()
+                .expect("send_msg should succeed"),
+            DATA.len().try_into().unwrap()
+        );
+
+        // First try receiving the message with PEEK set.
+        let (_addr, data, _control, truncated) = loop {
+            match proxy
+                .recv_msg(false, u32::MAX, false, fposix_socket::RecvMsgFlags::PEEK)
+                .await
+                .unwrap()
+            {
+                Ok(peek) => break peek,
+                Err(fposix::Errno::Eagain) => {
+                    // The sent datagram hasn't been received yet, so check for
+                    // it again in a moment.
+                    continue;
+                }
+                Err(e) => panic!("unexpected error: {e:?}"),
+            }
+        };
+        assert_eq!(truncated, 0);
+        assert_eq!(data.as_slice(), DATA);
+
+        // Now that the message has for sure been received, it can be retrieved
+        // without checking for Eagain.
+        let (_addr, data, _control, truncated) = proxy
+            .recv_msg(false, u32::MAX, false, fposix_socket::RecvMsgFlags::empty())
+            .await
+            .unwrap()
+            .expect("recv should succeed");
+        assert_eq!(truncated, 0);
+        assert_eq!(data.as_slice(), DATA);
+    }
+
+    declare_tests!(
+        send_recv_loopback_peek,
         icmp #[should_panic = "not yet implemented: https://fxbug.dev/47321: needs Core implementation"]
     );
 }
