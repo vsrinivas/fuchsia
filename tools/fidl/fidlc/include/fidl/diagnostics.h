@@ -277,6 +277,10 @@ constexpr ErrorDef ErrInlineSizeExceeds64k(
 // be grouped into a single "expected foo but got bar" error, along with
 // ErrExpectedValueButGotType.
 constexpr ErrorDef ErrOnlyClientEndsInServices("service members must be client_end:P");
+constexpr ErrorDef<std::string_view, std::string_view, std::string_view, std::string_view>
+    ErrMismatchedTransportInServices(
+        "service member {} is over the {} transport, but member {} is over the {} transport. "
+        "Multiple transports are not allowed.");
 constexpr ErrorDef<types::Openness, flat::Name, types::Openness, flat::Name>
     ErrComposedProtocolTooOpen(
         "{} protocol '{}' cannot compose {} protocol '{}'; composed protocol may not be more open "

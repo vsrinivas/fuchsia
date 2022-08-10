@@ -1154,6 +1154,8 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
 
 void CompileStep::CompileService(Service* service_decl) {
   Scope<std::string> scope;
+  std::string_view associated_transport;
+  std::string_view first_member_with_that_transport;
 
   CompileAttributeList(service_decl->attributes.get());
   for (auto& member : service_decl->members) {
@@ -1184,6 +1186,19 @@ void CompileStep::CompileService(Service* service_decl) {
     }
     if (member.type_ctor->type->nullability != types::Nullability::kNonnullable) {
       Fail(ErrOptionalServiceMember, member.name);
+    }
+
+    // Enforce that all client_end members are over the same transport.
+    // TODO(fxbug.dev/106184): We may need to revisit this restriction.
+    if (associated_transport.empty()) {
+      associated_transport = transport_side_type->protocol_transport;
+      first_member_with_that_transport = member.name.data();
+      continue;
+    }
+    if (associated_transport != transport_side_type->protocol_transport) {
+      Fail(ErrMismatchedTransportInServices, member.name, member.name.data(),
+           transport_side_type->protocol_transport, first_member_with_that_transport,
+           associated_transport);
     }
   }
 }

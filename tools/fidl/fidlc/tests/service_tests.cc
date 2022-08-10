@@ -132,4 +132,22 @@ type CannotUseService = struct {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrExpectedType);
 }
 
+TEST(ServiceTests, BadCannotUseMoreThanOneProtocolTransportKind) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol ChannelProtocol {};
+
+@transport("Driver")
+protocol DriverProtocol {};
+
+service SomeService {
+  a client_end:ChannelProtocol;
+  b client_end:DriverProtocol;
+};
+
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMismatchedTransportInServices);
+}
+
 }  // namespace
