@@ -6,6 +6,7 @@
         {
             name: "battery_manager",
             url: "fuchsia-pkg://fuchsia.com/battery-manager#meta/battery_manager.cm",
+            environment: "#core-env",
         },
     ],
     use: [
