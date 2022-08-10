@@ -174,6 +174,7 @@ gen_commands! {
     Cmd {
         AvcCommand = ("key", ["command"], "send an AVC passthrough keypress event"),
         GetMediaAttributes = ("get-media", [], "gets currently playing media attributes"),
+        GetMediaPlayerList =  ("get-media-players", ["start_index", "end_index"], "Get list of media players from target"),
         GetPlayStatus = ("get-play-status", [], "gets the status of the currently playing media at the TG"),
         GetPlayerApplicationSettings = ("get-player-application-settings",
             ["Optional: id1 id2 ..."],

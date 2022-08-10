@@ -33,12 +33,14 @@ impl BrowseControllerService {
 
     async fn handle_fidl_request(&mut self, request: BrowseControllerRequest) -> Result<(), Error> {
         match request {
+            BrowseControllerRequest::GetMediaPlayerItems { start_index, end_index, responder } => {
+                responder.send(
+                    &mut self.controller.get_media_player_items(start_index, end_index).await,
+                )?
+            }
             BrowseControllerRequest::SetBrowsedPlayer { player_id, responder } => responder
                 .send(&mut self.controller.set_browsed_player(player_id).await.map(Into::into))?,
             BrowseControllerRequest::GetFileSystemItems { responder, .. } => {
-                responder.send(&mut Err(BrowseControllerError::CommandNotImplemented))?
-            }
-            BrowseControllerRequest::GetMediaPlayerItems { responder, .. } => {
                 responder.send(&mut Err(BrowseControllerError::CommandNotImplemented))?
             }
             BrowseControllerRequest::GetNowPlayingItems { responder, .. } => {

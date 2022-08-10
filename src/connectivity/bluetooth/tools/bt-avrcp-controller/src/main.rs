@@ -76,6 +76,23 @@ async fn get_media<'a>(
     }
 }
 
+async fn get_media_player_list<'a>(
+    args: &'a [&'a str],
+    controller: &'a BrowseControllerProxy,
+) -> Result<String, Error> {
+    if args.len() != 2 {
+        return Ok(format!("usage: {}", Cmd::GetMediaPlayerList.cmd_help()));
+    }
+
+    let start_index = args[0].to_string().parse::<u32>()?;
+    let end_index = args[1].to_string().parse::<u32>()?;
+
+    match controller.get_media_player_items(start_index, end_index).await? {
+        Ok(players) => Ok(format!("Media players: {:#?}", players)),
+        Err(e) => Err(format_err!("Error fetching media players: {:?}", e)),
+    }
+}
+
 async fn get_play_status<'a>(
     _args: &'a [&'a str],
     controller: &'a ControllerProxy,
@@ -284,6 +301,7 @@ async fn handle_cmd<'a>(
         let res = match cmd {
             Ok(Cmd::AvcCommand) => send_passthrough(args, &controller).await,
             Ok(Cmd::GetMediaAttributes) => get_media(args, &controller).await,
+            Ok(Cmd::GetMediaPlayerList) => get_media_player_list(args, &browse_controller).await,
             Ok(Cmd::GetPlayStatus) => get_play_status(args, &controller).await,
             Ok(Cmd::GetPlayerApplicationSettings) => {
                 get_player_application_settings(args, &controller).await

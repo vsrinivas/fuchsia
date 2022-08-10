@@ -295,6 +295,27 @@ impl Controller {
         }
     }
 
+    pub async fn get_media_player_items(
+        &self,
+        start_index: u32,
+        end_index: u32,
+    ) -> Result<Vec<fidl_avrcp::MediaPlayerItem>, fidl_avrcp::BrowseControllerError> {
+        // AVRCP 1.6.2 Section 6.9.3 states that GetFolderItems in the Media Player List scope command can be sent before
+        // SetBrowsedPlayer command is sent over the browse channel.
+        let cmd = GetFolderItemsCommand::new_media_player_list(start_index, end_index);
+
+        let buf = self.send_browse_command(PduId::GetFolderItems, &cmd).await?;
+        let response =
+            GetFolderItemsResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
+        trace!("get_media_player_items received response {:?}", response);
+        match response {
+            GetFolderItemsResponse::Failure(status) => Err(status.into()),
+            GetFolderItemsResponse::Success(r) => {
+                r.item_list().into_iter().map(|item| item.try_into()).collect()
+            }
+        }
+    }
+
     async fn send_browse_command(
         &self,
         pdu_id: PduId,

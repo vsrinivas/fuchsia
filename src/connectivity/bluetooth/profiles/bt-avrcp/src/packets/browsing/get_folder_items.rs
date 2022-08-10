@@ -31,19 +31,29 @@ impl GetFolderItemsCommand {
     /// 1 byte for scope, 4 for start_item, 4 for end_item, 1 for attribute_count.
     pub const MIN_PACKET_SIZE: usize = 10;
 
-    #[allow(unused)]
-    pub fn new(
-        scope: Scope,
-        start_item: u32,
-        end_item: u32,
-        attribute_list: Option<Vec<MediaAttributeId>>,
-    ) -> Self {
-        Self { scope, start_item, end_item, attribute_list }
+    // Create a new command for getting media players.
+    pub fn new_media_player_list(start_item: u32, end_item: u32) -> Self {
+        Self { scope: Scope::MediaPlayerList, start_item, end_item, attribute_list: None }
     }
 
     /// Returns the scope associated with the command.
     pub fn scope(&self) -> Scope {
         self.scope
+    }
+
+    #[cfg(test)]
+    pub fn start_item(&self) -> u32 {
+        self.start_item
+    }
+
+    #[cfg(test)]
+    pub fn end_item(&self) -> u32 {
+        self.end_item
+    }
+
+    #[cfg(test)]
+    pub fn attribute_list(&self) -> Option<&Vec<MediaAttributeId>> {
+        self.attribute_list.as_ref()
     }
 }
 
@@ -106,8 +116,7 @@ impl Encodable for GetFolderItemsCommand {
     type Error = Error;
 
     fn encoded_len(&self) -> usize {
-        Self::MIN_PACKET_SIZE
-            + 4 * self.attribute_list.as_ref().map_or(MediaAttributeId::VARIANTS.len(), |a| a.len())
+        Self::MIN_PACKET_SIZE + 4 * self.attribute_list.as_ref().map_or(0, |a| a.len())
     }
 
     fn encode(&self, buf: &mut [u8]) -> PacketResult<()> {
@@ -124,7 +133,7 @@ impl Encodable for GetFolderItemsCommand {
         let (num_attributes, attribute_list) = match &self.attribute_list {
             Some(x) if x.is_empty() => (0xff, vec![]), // No attributes.
             Some(x) => (u8::try_from(x.len()).map_err(|_| Error::OutOfRange)?, x.clone()),
-            None => (0x00, MediaAttributeId::VARIANTS.to_vec()), // All attributes.
+            None => (0x00, vec![]), // All attributes, attribute ID is omitted.
         };
         buf[9] = num_attributes;
 
@@ -143,7 +152,6 @@ impl Encodable for GetFolderItemsCommand {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-#[allow(unused)]
 pub enum BrowseableItem {
     MediaPlayer(MediaPlayerItem),
     Folder(FolderItem),
@@ -656,6 +664,24 @@ impl From<fidl_avrcp::MediaPlayerItem> for BrowseableItem {
     }
 }
 
+impl TryFrom<BrowseableItem> for fidl_avrcp::MediaPlayerItem {
+    type Error = fidl_avrcp::BrowseControllerError;
+
+    fn try_from(src: BrowseableItem) -> Result<Self, Self::Error> {
+        match src {
+            BrowseableItem::MediaPlayer(p) => Ok(fidl_avrcp::MediaPlayerItem {
+                player_id: Some(p.player_id),
+                major_type: fidl_avrcp::MajorPlayerType::from_bits(p.major_player_type),
+                sub_type: fidl_avrcp::PlayerSubType::from_bits(p.player_sub_type),
+                playback_status: Some(p.play_status.into()),
+                displayable_name: Some(p.name),
+                ..fidl_avrcp::MediaPlayerItem::EMPTY
+            }),
+            _ => Err(fidl_avrcp::BrowseControllerError::PacketEncoding),
+        }
+    }
+}
+
 /// AVRCP 1.6.2 section 6.9.3.2 SetBrowsedPlayer.
 #[derive(Debug)]
 pub enum GetFolderItemsResponse {
@@ -681,12 +707,11 @@ impl GetFolderItemsResponse {
     /// 1 byte for status, 2 for uid counter, 2 for number of items.
     const MIN_SUCCESS_RESPONSE_SIZE: usize = 5;
 
-    #[allow(unused)]
     pub fn new_success(uid_counter: u16, item_list: Vec<BrowseableItem>) -> Self {
         Self::Success(GetFolderItemsResponseParams { uid_counter, item_list })
     }
 
-    #[allow(unused)]
+    #[cfg(test)]
     pub fn new_failure(status: StatusCode) -> Result<Self, Error> {
         if status == StatusCode::Success {
             return Err(Error::InvalidMessage);
@@ -732,6 +757,13 @@ impl Decodable for GetFolderItemsResponse {
             return Ok(Self::Failure(status));
         }
         Ok(Self::Success(GetFolderItemsResponseParams::decode(buf)?))
+    }
+}
+
+impl GetFolderItemsResponseParams {
+    // Returns a list of browseable items from a successful GetFolderItem response.
+    pub fn item_list(self) -> Vec<BrowseableItem> {
+        self.item_list
     }
 }
 
@@ -822,23 +854,42 @@ mod tests {
     #[test]
     /// Encoding a GetFolderItemsCommand successfully produces a byte buffer.
     fn test_get_folder_items_command_encode() {
-        let cmd = GetFolderItemsCommand::new(
-            Scope::MediaPlayerList,
-            1,
-            4,
-            Some(vec![MediaAttributeId::Title, MediaAttributeId::Genre]),
-        );
+        let cmd = GetFolderItemsCommand::new_media_player_list(1, 4);
+
+        assert_eq!(cmd.encoded_len(), 10);
+        let mut buf = vec![0; cmd.encoded_len()];
+        let _ = cmd.encode(&mut buf[..]).expect("should be ok");
+        assert_eq!(buf, &[0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x04, 0x00]);
+
+        let cmd = GetFolderItemsCommand {
+            scope: Scope::MediaPlayerVirtualFilesystem,
+            start_item: 1,
+            end_item: 4,
+            attribute_list: Some(vec![MediaAttributeId::Title, MediaAttributeId::Genre]),
+        };
 
         assert_eq!(cmd.encoded_len(), 18);
         let mut buf = vec![0; cmd.encoded_len()];
-        assert_eq!(cmd.encode(&mut buf[..]).map_err(|e| format!("{:?}", e)), Ok(()));
+        let _ = cmd.encode(&mut buf[..]).expect("should be ok");
         assert_eq!(
             buf,
             &[
-                0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x04, 0x02, 0x00, 0x00, 0x00, 0x01,
+                0x01, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x04, 0x02, 0x00, 0x00, 0x00, 0x01,
                 0x00, 0x00, 0x00, 0x06
             ]
         );
+
+        let cmd = GetFolderItemsCommand {
+            scope: Scope::NowPlaying,
+            start_item: 1,
+            end_item: 4,
+            attribute_list: Some(vec![]),
+        };
+
+        assert_eq!(cmd.encoded_len(), 10);
+        let mut buf = vec![0; cmd.encoded_len()];
+        let _ = cmd.encode(&mut buf[..]).expect("should be ok");
+        assert_eq!(buf, &[0x03, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x04, 0xFF,]);
     }
 
     #[test]

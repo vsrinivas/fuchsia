@@ -866,4 +866,37 @@ fn peer_manager_with_browse_controller_client() {
         exec.run_until_stalled(&mut set_browsed_player_fut),
         futures::task::Poll::Ready(Ok(Ok(())))
     );
+
+    // Test GetMediaPlayerItems.
+    const START_INDEX: u32 = 0;
+    const END_INDEX: u32 = 5;
+    let get_media_players_fut =
+        browse_controller_proxy.get_media_player_items(START_INDEX, END_INDEX);
+    pin_mut!(get_media_players_fut);
+
+    assert!(exec.run_until_stalled(&mut get_media_players_fut).is_pending());
+    match exec.run_until_stalled(&mut avctp_cmd_stream.try_next()) {
+        Poll::Ready(Ok(Some(command))) => {
+            let params = decode_avctp_command(&command, PduId::GetFolderItems);
+            let cmd =
+                GetFolderItemsCommand::decode(&params).expect("should have received valid command");
+            match cmd.scope() {
+                Scope::MediaPlayerList => {
+                    assert_eq!(cmd.start_item(), START_INDEX);
+                    assert_eq!(cmd.end_item(), END_INDEX);
+                    assert!(cmd.attribute_list().is_none());
+                }
+                _ => panic!("unexpected get folder items scope"),
+            }
+            // Create mock response.
+            let resp = GetFolderItemsResponse::new_success(1, vec![]);
+            send_avctp_response(PduId::GetFolderItems, &resp, &command);
+        }
+        x => panic!("Expected request to be ready, got {:?} instead.", x),
+    };
+    assert_matches!(
+    exec.run_until_stalled(&mut get_media_players_fut),
+    Poll::Ready(Ok(Ok(list))) => {
+        assert_eq!(list.len(), 0);
+    });
 }
