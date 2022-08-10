@@ -150,6 +150,16 @@ class Realm final {
   Realm& RouteReadOnlyDirectory(const std::string& name, std::vector<Ref> to,
                                 DirectoryContents directory);
 
+#if __Fuchsia_API_level__ >= 9
+  /// Load the packaged configuration of the component if available.
+  Realm& InitMutableConfigFromPackage(const std::string& name);
+#endif
+
+#if __Fuchsia_API_level__ >= 9
+  /// Allow setting configuration values without loading packaged configuration.
+  Realm& InitMutableConfigToEmpty(const std::string& name);
+#endif
+
   /// Replaces the value of a given configuration field
   Realm& SetConfigValue(const std::string& name, const std::string& key, ConfigValue value);
 
@@ -227,6 +237,16 @@ class RealmBuilder final {
   // See |Realm.RouteReadOnlyDirectory| for more details.
   RealmBuilder& RouteReadOnlyDirectory(const std::string& name, std::vector<Ref> to,
                                        DirectoryContents directory);
+
+#if __Fuchsia_API_level__ >= 9
+  /// Load the packaged configuration of the component if available.
+  RealmBuilder& InitMutableConfigFromPackage(const std::string& name);
+#endif
+
+#if __Fuchsia_API_level__ >= 9
+  /// Allow setting configuration values without loading packaged configuration.
+  RealmBuilder& InitMutableConfigToEmpty(const std::string& name);
+#endif
 
   /// Replaces the value of a given configuration field for the root realm.
   RealmBuilder& SetConfigValue(const std::string& name, const std::string& key, ConfigValue value);

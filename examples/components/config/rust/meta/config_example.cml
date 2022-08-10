@@ -17,6 +17,7 @@
             type: "string",
             max_size: 512,
         },
+        delay_ms: { type: "uint64" },
     },
 
     // [END config]

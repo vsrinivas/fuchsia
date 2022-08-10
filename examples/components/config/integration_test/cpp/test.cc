@@ -19,6 +19,8 @@
 using ContentVector = std::vector<fuchsia::diagnostics::FormattedContent>;
 using inspect::contrib::DiagnosticsData;
 
+constexpr char kChildUrl[] = "#meta/config_example.cm";
+
 class IntegrationTest : public gtest::RealLoopFixture {
  protected:
   DiagnosticsData GetInspectJson(const std::string& name) {
@@ -43,37 +45,77 @@ class IntegrationTest : public gtest::RealLoopFixture {
 
     return std::move(result.value()[0]);
   }
-
-  void RunTest(const std::string& url, const std::string& name, bool replace_config_value) {
-    auto realm_builder = component_testing::RealmBuilder::Create();
-    auto options =
-        component_testing::ChildOptions{.startup_mode = component_testing::StartupMode::EAGER};
-    realm_builder.AddChild(name, url, options);
-
-    if (replace_config_value) {
-      // [START config_replace]
-      realm_builder.SetConfigValue(name, "greeting", "Fuchsia");
-      // [END config_replace]
-    }
-
-    realm_builder.AddRoute(component_testing::Route{
-        .capabilities = {component_testing::Protocol{"fuchsia.logger.LogSink"}},
-        .source = component_testing::ParentRef(),
-        .targets = {component_testing::ChildRef{name}}});
-    auto realm = realm_builder.Build();
-
-    auto data = GetInspectJson(name);
-
-    if (replace_config_value) {
-      EXPECT_EQ(rapidjson::Value("Fuchsia"), data.GetByPath({"root", "config", "greeting"}));
-    } else {
-      EXPECT_EQ(rapidjson::Value("World"), data.GetByPath({"root", "config", "greeting"}));
-    }
-  }
 };
 
-TEST_F(IntegrationTest, ConfigCpp) { RunTest("#meta/config_example.cm", "config_example", false); }
+TEST_F(IntegrationTest, ConfigCpp) {
+  auto realm_builder = component_testing::RealmBuilder::Create();
+  auto options =
+      component_testing::ChildOptions{.startup_mode = component_testing::StartupMode::EAGER};
+  auto child_name = "config_example_replace_none";
+  realm_builder.AddChild(child_name, kChildUrl, options);
 
-TEST_F(IntegrationTest, ConfigCppReplace) {
-  RunTest("#meta/config_example.cm", "config_example_replace", true);
+  realm_builder.AddRoute(component_testing::Route{
+      .capabilities = {component_testing::Protocol{"fuchsia.logger.LogSink"}},
+      .source = component_testing::ParentRef(),
+      .targets = {component_testing::ChildRef{child_name}}});
+  auto realm = realm_builder.Build();
+
+  auto data = GetInspectJson(child_name);
+
+  EXPECT_EQ(rapidjson::Value("World"), data.GetByPath({"root", "config", "greeting"}));
+  EXPECT_EQ(rapidjson::Value(100), data.GetByPath({"root", "config", "delay_ms"}));
+}
+
+TEST_F(IntegrationTest, ConfigCppReplaceSome) {
+  auto realm_builder = component_testing::RealmBuilder::Create();
+  auto options =
+      component_testing::ChildOptions{.startup_mode = component_testing::StartupMode::EAGER};
+  auto child_name = "config_example_replace_some";
+  realm_builder.AddChild(child_name, kChildUrl, options);
+
+  // [START config_load]
+  realm_builder.InitMutableConfigFromPackage(child_name);
+  // [END config_load]
+
+  // [START config_replace]
+  realm_builder.SetConfigValue(child_name, "greeting", "Fuchsia");
+  // [END config_replace]
+
+  realm_builder.AddRoute(component_testing::Route{
+      .capabilities = {component_testing::Protocol{"fuchsia.logger.LogSink"}},
+      .source = component_testing::ParentRef(),
+      .targets = {component_testing::ChildRef{child_name}}});
+  auto realm = realm_builder.Build();
+
+  auto data = GetInspectJson(child_name);
+
+  EXPECT_EQ(rapidjson::Value("Fuchsia"), data.GetByPath({"root", "config", "greeting"}));
+  EXPECT_EQ(rapidjson::Value(100), data.GetByPath({"root", "config", "delay_ms"}));
+}
+
+TEST_F(IntegrationTest, ConfigCppReplaceAll) {
+  auto realm_builder = component_testing::RealmBuilder::Create();
+  auto options =
+      component_testing::ChildOptions{.startup_mode = component_testing::StartupMode::EAGER};
+  auto child_name = "config_example_replace_all";
+  realm_builder.AddChild(child_name, kChildUrl, options);
+
+  // [START config_empty]
+  realm_builder.InitMutableConfigToEmpty(child_name);
+  // [END config_empty]
+
+  realm_builder.SetConfigValue(child_name, "greeting", "Fuchsia");
+  realm_builder.SetConfigValue(child_name, "delay_ms",
+                               component_testing::ConfigValue::Uint64(200u));
+
+  realm_builder.AddRoute(component_testing::Route{
+      .capabilities = {component_testing::Protocol{"fuchsia.logger.LogSink"}},
+      .source = component_testing::ParentRef(),
+      .targets = {component_testing::ChildRef{child_name}}});
+  auto realm = realm_builder.Build();
+
+  auto data = GetInspectJson(child_name);
+
+  EXPECT_EQ(rapidjson::Value("Fuchsia"), data.GetByPath({"root", "config", "greeting"}));
+  EXPECT_EQ(rapidjson::Value(200), data.GetByPath({"root", "config", "delay_ms"}));
 }

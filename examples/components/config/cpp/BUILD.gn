@@ -60,6 +60,7 @@ fuchsia_structured_config_values("values_from_gn") {
   cm_label = ":manifest"
   values = {
     greeting = config_example_cpp_greeting
+    delay_ms = 100
   }
 }
 

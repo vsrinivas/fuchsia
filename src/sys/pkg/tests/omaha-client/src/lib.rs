@@ -373,6 +373,7 @@ impl TestEnvBuilder {
             .add_child("omaha_client_service", OMAHA_CLIENT_CML, ChildOptions::new().eager())
             .await
             .unwrap();
+        builder.init_mutable_config_from_package(&omaha_client_service).await.unwrap();
         for (k, v) in self.omaha_client_config_bool_overrides {
             builder.set_config_value_bool(&omaha_client_service, &k, v).await.unwrap();
         }

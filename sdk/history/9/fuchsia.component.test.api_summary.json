@@ -270,6 +270,16 @@
         "name": "fuchsia.component.test/Realm.GetRealmDecl"
     },
     {
+        "declaration": "(string:100 name) -> (fuchsia.component.test/Realm_InitMutableConfigFromPackage_Result result)",
+        "kind": "protocol/member",
+        "name": "fuchsia.component.test/Realm.InitMutableConfigFromPackage"
+    },
+    {
+        "declaration": "(string:100 name) -> (fuchsia.component.test/Realm_InitMutableConfigToEmpty_Result result)",
+        "kind": "protocol/member",
+        "name": "fuchsia.component.test/Realm.InitMutableConfigToEmpty"
+    },
+    {
         "declaration": "(string:100 name,vector<fuchsia.component.decl/Ref> to,fuchsia.component.test/DirectoryContents directory_contents) -> (fuchsia.component.test/Realm_ReadOnlyDirectory_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.component.test/Realm.ReadOnlyDirectory"
@@ -322,6 +332,11 @@
         "kind": "enum/member",
         "name": "fuchsia.component.test/RealmBuilderError.CHILD_DECL_NOT_VISIBLE",
         "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.component.test/RealmBuilderError.CONFIG_OVERRIDE_UNSUPPORTED",
+        "value": "21"
     },
     {
         "kind": "enum/member",
@@ -621,6 +636,44 @@
     {
         "kind": "union",
         "name": "fuchsia.component.test/Realm_GetRealmDecl_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.component.test/Realm_InitMutableConfigFromPackage_Response"
+    },
+    {
+        "declaration": "fuchsia.component.test/RealmBuilderError",
+        "kind": "union/member",
+        "name": "fuchsia.component.test/Realm_InitMutableConfigFromPackage_Result.err"
+    },
+    {
+        "declaration": "fuchsia.component.test/Realm_InitMutableConfigFromPackage_Response",
+        "kind": "union/member",
+        "name": "fuchsia.component.test/Realm_InitMutableConfigFromPackage_Result.response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.component.test/Realm_InitMutableConfigFromPackage_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.component.test/Realm_InitMutableConfigToEmpty_Response"
+    },
+    {
+        "declaration": "fuchsia.component.test/RealmBuilderError",
+        "kind": "union/member",
+        "name": "fuchsia.component.test/Realm_InitMutableConfigToEmpty_Result.err"
+    },
+    {
+        "declaration": "fuchsia.component.test/Realm_InitMutableConfigToEmpty_Response",
+        "kind": "union/member",
+        "name": "fuchsia.component.test/Realm_InitMutableConfigToEmpty_Result.response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.component.test/Realm_InitMutableConfigToEmpty_Result",
         "strictness": "strict"
     },
     {

@@ -576,6 +576,87 @@ void main() {
       }
     });
 
+    test('packaged config', () async {
+      RealmInstance? realmInstance;
+      try {
+        final builder = await RealmBuilder.create();
+
+        const echoServerName = 'localEchoServer';
+        const echoClientName = 'v2EchoClient';
+
+        final v2EchoClientStructuredConfig = await builder.addChild(
+          echoClientName,
+          v2EchoClientStructuredConfigUrl,
+          ChildOptions()..eager(),
+        );
+
+        // NOTE: Important! This test updates the default configuration values
+        // in the successful calls to `setConfigValue...()` below (after the
+        // try/catch blocks).
+        //
+        // If this test was changed to run the EchoClient without first
+        // replacing some configurations, the EchoClient's default configuration
+        // values (as presently implemented) cause EchoClient to generate a
+        // string that exceeds the `echoString()` FIDL API's [MAX_STRING_LENGTH]
+        // (presently only 32, as declared in `echo.fidl`). This would cause the
+        // client to crash with a FIDL error, and the request would never reach
+        // the server.
+
+        final echoRequestReceived = Completer<String?>();
+
+        final localEchoServer = await builder.addLocalChild(
+          echoServerName,
+          onRun: (handles, onStop) async {
+            LocalEcho(handles, echoRequestReceived: echoRequestReceived);
+
+            // Keep the component alive until the test is complete
+            await onStop.future;
+          },
+        );
+
+        // load the packaged defaults for echo_bool and echo_num
+        await builder
+            .initMutableConfigFromPackage(v2EchoClientStructuredConfig);
+
+        // succeed at replacing all fields with proper constraints
+        await builder.setConfigValueString(
+            v2EchoClientStructuredConfig, 'echo_string', 'Foobar!');
+        await builder.setConfigValueStringVector(v2EchoClientStructuredConfig,
+            'echo_string_vector', ['Hey', 'Folks']);
+
+        // Route logging to children
+        await builder.addRoute(Route()
+          ..capability(ProtocolCapability(flogger.LogSink.$serviceName))
+          ..from(Ref.parent())
+          ..to(Ref.child(localEchoServer))
+          ..to(Ref.child(v2EchoClientStructuredConfig)));
+
+        // Route the echo service from server to client
+        await builder.addRoute(Route()
+          ..capability(ProtocolCapability(fecho.Echo.$serviceName))
+          ..from(Ref.child(localEchoServer))
+          ..to(Ref.child(v2EchoClientStructuredConfig)));
+
+        // The EchoClient at the referenced URL should be using this string:
+        const echoClientStructuredConfigRequest =
+            'Foobar!, Hey, Folks, false, 100';
+
+        // Start the realm instance.
+        realmInstance = await builder.build();
+
+        final requestedEchoString = await echoRequestReceived.future;
+
+        expect(requestedEchoString, echoClientStructuredConfigRequest);
+      } on Exception catch (err, stacktrace) {
+        checkCommonExceptions(err, stacktrace);
+        rethrow;
+      } finally {
+        if (realmInstance != null) {
+          realmInstance.root.close();
+        }
+      }
+    });
+
     test('replace config', () async {
       RealmInstance? realmInstance;
       try {
@@ -614,6 +695,9 @@ void main() {
           },
         );
 
+        // we want to test that there's no config schema, allow modification
+        await builder.initMutableConfigFromPackage(localEchoServer);
+
         // fail to replace a config field in a component that doesn't have a config schema
         var caught = false;
         try {
@@ -624,6 +708,22 @@ void main() {
         } finally {
           expect(caught, true);
         }
+
+        // fail to replace config if a strategy hasn't been selected
+        caught = false;
+        try {
+          await builder.setConfigValueString(
+              v2EchoClientStructuredConfig, 'echo_string', 'Foobar!');
+        } on fidl.MethodException<fctest.RealmBuilderError> catch (err) {
+          expect(err.value, fctest.RealmBuilderError.configOverrideUnsupported);
+          caught = true;
+        } finally {
+          expect(caught, true);
+        }
+
+        // select a config strategy for subsequent calls
+        await builder
+            .initMutableConfigFromPackage(v2EchoClientStructuredConfig);
 
         // fail to replace a field that doesn't exist
         caught = false;

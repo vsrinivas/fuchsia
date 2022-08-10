@@ -68,7 +68,7 @@ TEST_F(RealmBuilderTest, RoutesProtocolFromChild) {
   EXPECT_EQ(response, fidl::StringPtr("hello"));
 }
 
-TEST_F(RealmBuilderTest, StructuredConfig) {
+TEST_F(RealmBuilderTest, PackagedConfigValuesOnly) {
   static constexpr char kEchoServerSc[] = "echo_server_sc";
 
   auto realm_builder = RealmBuilder::Create();
@@ -90,11 +90,12 @@ TEST_F(RealmBuilderTest, StructuredConfig) {
                 "hello][1,0,][1,2,][2,3,][3,4,][4,5,][-1,-2,][-2,-3,][-3,-4,][-4,-5,][foo,bar,]"));
 }
 
-TEST_F(RealmBuilderTest, SetConfigValue) {
+TEST_F(RealmBuilderTest, SetConfigValuesOnly) {
   static constexpr char kEchoServerSc[] = "echo_server_sc";
 
   auto realm_builder = RealmBuilder::Create();
   realm_builder.AddChild(kEchoServerSc, kEchoServerScUrl);
+  realm_builder.InitMutableConfigToEmpty(kEchoServerSc);
   realm_builder.SetConfigValue(kEchoServerSc, "my_flag", ConfigValue::Bool(true));
   realm_builder.SetConfigValue(kEchoServerSc, "my_uint8", ConfigValue::Uint8(1));
   realm_builder.SetConfigValue(kEchoServerSc, "my_uint16", ConfigValue::Uint16(1));
@@ -129,6 +130,37 @@ TEST_F(RealmBuilderTest, SetConfigValue) {
   EXPECT_EQ(response, fidl::StringPtr("hello "
                                       "[1][1][1][1][1][-1][-1][-1][-1][foo][0,1,][1,1,][1,1,][1,1,]"
                                       "[1,1,][-1,1,][-1,1,][-1,1,][-1,1,][bar,foo,]"));
+}
+
+TEST_F(RealmBuilderTest, MixPackagedAndSetConfigValues) {
+  static constexpr char kEchoServerSc[] = "echo_server_sc";
+
+  auto realm_builder = RealmBuilder::Create();
+  realm_builder.AddChild(kEchoServerSc, kEchoServerScUrl);
+  realm_builder.InitMutableConfigFromPackage(kEchoServerSc);
+  realm_builder.SetConfigValue(kEchoServerSc, "my_flag", ConfigValue::Bool(true));
+  realm_builder.SetConfigValue(kEchoServerSc, "my_uint8", ConfigValue::Uint8(1));
+  realm_builder.SetConfigValue(kEchoServerSc, "my_uint16", ConfigValue::Uint16(1));
+  realm_builder.SetConfigValue(kEchoServerSc, "my_uint32", ConfigValue::Uint32(1));
+  realm_builder.SetConfigValue(kEchoServerSc, "my_uint64", ConfigValue::Uint64(1));
+  realm_builder.SetConfigValue(kEchoServerSc, "my_int8", ConfigValue::Int8(-1));
+  realm_builder.SetConfigValue(kEchoServerSc, "my_int16", ConfigValue::Int16(-1));
+  realm_builder.SetConfigValue(kEchoServerSc, "my_int32", ConfigValue::Int32(-1));
+  realm_builder.SetConfigValue(kEchoServerSc, "my_int64", ConfigValue::Int64(-1));
+  realm_builder.SetConfigValue(kEchoServerSc, "my_string", "foo");
+  realm_builder.AddRoute(Route{.capabilities = {Protocol{test::placeholders::Echo::Name_}},
+                               .source = ChildRef{kEchoServerSc},
+                               .targets = {ParentRef()}});
+  realm_builder.AddRoute(Route{.capabilities = {Protocol{fuchsia::logger::LogSink::Name_}},
+                               .source = ParentRef(),
+                               .targets = {ChildRef{kEchoServerSc}}});
+  auto realm = realm_builder.Build(dispatcher());
+  auto echo = realm.ConnectSync<test::placeholders::Echo>();
+  fidl::StringPtr response;
+  ASSERT_EQ(echo->EchoString("hello", &response), ZX_OK);
+  EXPECT_EQ(response, fidl::StringPtr("hello "
+                                      "[1][1][1][1][1][-1][-1][-1][-1][foo][1,0,][1,2,][2,3,][3,4,]"
+                                      "[4,5,][-1,-2,][-2,-3,][-3,-4,][-4,-5,][foo,bar,]"));
 }
 
 TEST_F(RealmBuilderTest, SetConfigValueFails) {

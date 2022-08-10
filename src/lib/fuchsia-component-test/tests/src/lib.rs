@@ -804,7 +804,7 @@ async fn altered_echo_client_args() -> Result<(), Error> {
 }
 
 #[fuchsia::test]
-async fn echo_client_structured_config() -> Result<(), Error> {
+async fn config_packaged_values_only() -> Result<(), Error> {
     let (send_echo_server_called, mut receive_echo_server_called) = mpsc::channel(1);
 
     let builder = RealmBuilder::new().await?;
@@ -854,7 +854,7 @@ async fn echo_client_structured_config() -> Result<(), Error> {
 }
 
 #[fuchsia::test]
-async fn echo_client_structured_config_replace() -> Result<(), Error> {
+async fn config_set_values_only() -> Result<(), Error> {
     let (send_echo_server_called, mut receive_echo_server_called) = mpsc::channel(1);
 
     let builder = RealmBuilder::new().await?;
@@ -882,10 +882,20 @@ async fn echo_client_structured_config_replace() -> Result<(), Error> {
         .await?;
 
     // fail to replace a config field in a component that doesn't have a config schema
+    builder.init_mutable_config_to_empty(&echo_server).await.unwrap();
     assert_matches!(
         builder.set_config_value_bool(&echo_server, "echo_bool", false).await,
         Err(RealmBuilderError::ServerError(ftest::RealmBuilderError::NoConfigSchema))
     );
+
+    // fail to replace a config field for a component that hasn't opted in
+    assert_matches!(
+        builder.set_config_value_string(&echo_client, "doesnt_exist", "test").await,
+        Err(RealmBuilderError::ServerError(ftest::RealmBuilderError::ConfigOverrideUnsupported))
+    );
+
+    // allow setting config values now
+    builder.init_mutable_config_to_empty(&echo_client).await.unwrap();
 
     // fail to replace a field that doesn't exist
     assert_matches!(
@@ -956,6 +966,70 @@ async fn echo_client_structured_config_replace() -> Result<(), Error> {
     assert!(receive_echo_server_called.next().await.is_some());
 
     Ok(())
+}
+
+#[fuchsia::test]
+async fn config_mix_packaged_and_set_values() {
+    let (send_echo_server_called, mut receive_echo_server_called) = mpsc::channel(1);
+
+    let builder = RealmBuilder::new().await.unwrap();
+    let echo_client = builder
+        .add_child(
+            "echo_client",
+            V2_ECHO_CLIENT_STRUCTURED_CONFIG_RELATIVE_URL,
+            ChildOptions::new().eager(),
+        )
+        .await
+        .unwrap();
+
+    let echo_server = builder
+        .add_local_child(
+            "echo_server",
+            move |handles| {
+                echo_server_mock(
+                    "Foobar!, Hey, Folks, false, 100",
+                    send_echo_server_called.clone(),
+                    handles,
+                )
+                .boxed()
+            },
+            ChildOptions::new(),
+        )
+        .await
+        .unwrap();
+
+    // use the packaged values for fields not set by this test
+    builder.init_mutable_config_from_package(&echo_client).await.unwrap();
+
+    // succeed at replacing two of four fields with proper constraints
+    builder.set_config_value_string(&echo_client, "echo_string", "Foobar!").await.unwrap();
+    builder
+        .set_config_value_string_vector(&echo_client, "echo_string_vector", ["Hey", "Folks"])
+        .await
+        .unwrap();
+
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol::<fecho::EchoMarker>())
+                .from(&echo_server)
+                .to(&echo_client),
+        )
+        .await
+        .unwrap();
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                .from(Ref::parent())
+                .to(&echo_client),
+        )
+        .await
+        .unwrap();
+
+    let _instance = builder.build().await.unwrap();
+
+    assert!(receive_echo_server_called.next().await.is_some());
 }
 
 async fn setup_echo_client_realm(builder: &RealmBuilder) -> Result<mpsc::Receiver<()>, Error> {

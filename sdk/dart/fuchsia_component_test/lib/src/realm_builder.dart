@@ -818,6 +818,22 @@ class SubRealmBuilder {
     return realmProxy.replaceRealmDecl(decl);
   }
 
+  /// Load the component's packaged config if available.
+  Future<void> initMutableConfigFromPackage(
+    ChildRef childRef,
+  ) {
+    childRef.checkScope(realmPath);
+    return realmProxy.initMutableConfigFromPackage(childRef.name);
+  }
+
+  /// Allow setting config values without loading packaged config.
+  Future<void> initMutableConfigToEmpty(
+    ChildRef childRef,
+  ) {
+    childRef.checkScope(realmPath);
+    return realmProxy.initMutableConfigToEmpty(childRef.name);
+  }
+
   /// Replaces a value of a given configuration field
   Future<void> setConfigValue(
     ChildRef childRef,
@@ -1270,6 +1286,20 @@ class RealmBuilder {
     fdecl.Component decl,
   ) {
     return rootRealm.replaceRealmDecl(decl);
+  }
+
+  /// Load the component's packaged configuration values if available.
+  Future<void> initMutableConfigFromPackage(
+    ChildRef childRef,
+  ) {
+    return rootRealm.initMutableConfigFromPackage(childRef);
+  }
+
+  /// Allow setting config values without loading packaged values.
+  Future<void> initMutableConfigToEmpty(
+    ChildRef childRef,
+  ) {
+    return rootRealm.initMutableConfigToEmpty(childRef);
   }
 
   /// Replaces a value of a given configuration field

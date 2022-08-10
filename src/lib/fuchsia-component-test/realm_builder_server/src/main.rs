@@ -446,6 +446,38 @@ impl Realm {
                         }
                     }
                 }
+                ftest::RealmRequest::InitMutableConfigFromPackage { name, responder } => {
+                    if self.realm_has_been_built.load(Ordering::Relaxed) {
+                        responder.send(&mut Err(ftest::RealmBuilderError::BuildAlreadyCalled))?;
+                        continue;
+                    }
+
+                    self.realm_node
+                        .get_sub_realm(&name)
+                        .await?
+                        .state
+                        .lock()
+                        .await
+                        .config_override_policy = ConfigOverridePolicy::LoadPackagedValuesFirst;
+
+                    responder.send(&mut Ok(()))?;
+                }
+                ftest::RealmRequest::InitMutableConfigToEmpty { name, responder } => {
+                    if self.realm_has_been_built.load(Ordering::Relaxed) {
+                        responder.send(&mut Err(ftest::RealmBuilderError::BuildAlreadyCalled))?;
+                        continue;
+                    }
+
+                    self.realm_node
+                        .get_sub_realm(&name)
+                        .await?
+                        .state
+                        .lock()
+                        .await
+                        .config_override_policy = ConfigOverridePolicy::RequireAllValuesFromBuilder;
+
+                    responder.send(&mut Ok(()))?;
+                }
                 // TODO(https://fxbug.dev/103951) delete this
                 ftest::RealmRequest::ReplaceConfigValue { name, key, value, responder } => {
                     self.handle_replace_config_value_soft_transition(name, key, value, responder)
@@ -623,6 +655,12 @@ impl Realm {
         value_spec: fconfig::ValueSpec,
     ) -> Result<(), RealmBuilderError> {
         let child_node = self.realm_node.get_sub_realm(&name).await?;
+
+        let override_policy = child_node.state.lock().await.config_override_policy;
+        if matches!(override_policy, ConfigOverridePolicy::DisallowValuesFromBuilder) {
+            return Err(RealmBuilderError::ConfigOverrideUnsupported { name });
+        }
+
         let decl = child_node.get_decl().await;
         let config = decl.config.ok_or(RealmBuilderError::NoConfigSchema(name.clone()))?;
         cm_fidl_validator::validate_value_spec(&value_spec)
@@ -766,6 +804,10 @@ struct RealmNodeState {
     /// of a component is read in from the package directory during resolve.
     config_value_replacements: HashMap<usize, cm_rust::ValueSpec>,
 
+    /// Policy for allowing values from SetConfigValue and whether to also load a component's
+    /// packaged/default values.
+    config_override_policy: ConfigOverridePolicy,
+
     /// Children stored in this HashMap can be mutated. Children stored in `decl.children` can not.
     /// Any children stored in `mutable_children` do NOT have a corresponding `ChildDecl` stored in
     /// `decl.children`, the two should be fully mutually exclusive.
@@ -838,6 +880,14 @@ impl RealmNodeState {
         }
         Ok(())
     }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub enum ConfigOverridePolicy {
+    #[default]
+    DisallowValuesFromBuilder,
+    LoadPackagedValuesFirst,
+    RequireAllValuesFromBuilder,
 }
 
 #[derive(Debug, Clone)]
@@ -1097,6 +1147,7 @@ impl RealmNode2 {
                     name.clone(),
                     Some(Clone::clone(&package_dir)),
                     config_value_replacements,
+                    state_guard.config_override_policy,
                 )
                 .await
             {
@@ -1784,6 +1835,10 @@ enum RealmBuilderError {
         "Could not replace config value for child '{0}'. The value provided is invalid: {1:?}"
     )]
     ConfigValueInvalid(String, anyhow::Error),
+
+    /// The caller never told us how to merge their config overrides with the packaged ones.
+    #[error("Could not replace config value for child '{name}' because no override strategy has been selected. First call InitMutableConfigFromPackage or InitMutableConfigToEmpty.")]
+    ConfigOverrideUnsupported { name: String },
 }
 
 impl From<RealmBuilderError> for ftest::RealmBuilderError {
@@ -1809,6 +1864,7 @@ impl From<RealmBuilderError> for ftest::RealmBuilderError {
             RealmBuilderError::NoConfigSchema(_) => Self::NoConfigSchema,
             RealmBuilderError::NoSuchConfigField { .. } => Self::NoSuchConfigField,
             RealmBuilderError::ConfigValueInvalid(_, _) => Self::ConfigValueInvalid,
+            RealmBuilderError::ConfigOverrideUnsupported { .. } => Self::ConfigOverrideUnsupported,
         }
     }
 }

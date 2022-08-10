@@ -1844,6 +1844,58 @@
               "returnType": "Future<fdecl.Component>",
               "type": "MethodDeclarationImpl"
             },
+            "initMutableConfigFromPackage": {
+              "SimpleFormalParameterImpl": {
+                "childRef": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "childRef",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "ChildRef"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "initMutableConfigFromPackage",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "initMutableConfigToEmpty": {
+              "SimpleFormalParameterImpl": {
+                "childRef": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "childRef",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "ChildRef"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "initMutableConfigToEmpty",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
             "replaceComponentDecl": {
               "SimpleFormalParameterImpl": {
                 "childRef": {
@@ -4634,6 +4686,58 @@
               "isStatic": false,
               "name": "getRealmDecl",
               "returnType": "Future<fdecl.Component>",
+              "type": "MethodDeclarationImpl"
+            },
+            "initMutableConfigFromPackage": {
+              "SimpleFormalParameterImpl": {
+                "childRef": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "childRef",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "ChildRef"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "initMutableConfigFromPackage",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "initMutableConfigToEmpty": {
+              "SimpleFormalParameterImpl": {
+                "childRef": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "childRef",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "ChildRef"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "initMutableConfigToEmpty",
+              "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },
             "replaceComponentDecl": {

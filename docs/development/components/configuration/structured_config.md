@@ -235,6 +235,37 @@ a component.
 
 Realm Builder validates the replaced value against the component's configuration schema.
 
+When setting values dynamically, Realm Builder requires users to choose whether
+or not to load packaged configuration values for the launched component.
+
+To load a component's packaged values when providing a subset of values in code:
+
+* {C++}
+
+  ```cpp
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/config/integration_test/cpp/test.cc" region_tag="config_load" adjust_indentation="auto" %}
+  ```
+
+* {Rust}
+
+  ```rust
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/config/integration_test/rust/lib.rs" region_tag="config_load" adjust_indentation="auto" %}
+  ```
+
+To set all of a component's values in code without using packaged values:
+
+* {C++}
+
+  ```cpp
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/config/integration_test/cpp/test.cc" region_tag="config_empty" adjust_indentation="auto" %}
+  ```
+
+* {Rust}
+
+  ```rust
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/config/integration_test/rust/lib.rs" region_tag="config_empty" adjust_indentation="auto" %}
+  ```
+
 [cml-ref-doc]: https://fuchsia.dev/reference/cml#config
 [sa-sc-docs]: assembling_structured_config.md
 [rb-feature-matrix]: /docs/development/testing/components/realm_builder.md#language-feature-matrix

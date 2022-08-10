@@ -126,6 +126,11 @@ type RealmBuilderError = strict enum : uint32 {
     /// A config value is invalid. This may mean a type mismatch or an issue
     /// with constraints like string/vector length.
     CONFIG_VALUE_INVALID = 20;
+
+    /// A config value cannot be set because the realm has not chosen its override
+    /// policy.
+    @available(added=9)
+    CONFIG_OVERRIDE_UNSUPPORTED = 21;
 };
 
 protocol Builder {
@@ -554,6 +559,23 @@ protocol Realm {
         directory_contents DirectoryContents;
     }) -> (struct {}) error RealmBuilderError;
 
+    /// Load any packaged configuration for `name` before using values provided to
+    /// the builder.
+    ///
+    /// Allows calling `SetConfigValue` to override packaged configuration.
+    @available(added=9)
+    InitMutableConfigFromPackage(struct {
+        name fuchsia.component.name;
+    }) -> (struct {}) error RealmBuilderError;
+
+    /// Use only values provided to the builder for `name`'s configuration.
+    ///
+    /// Allows calling `SetConfigValue` to provide configuration.
+    @available(added=9)
+    InitMutableConfigToEmpty(struct {
+        name fuchsia.component.name;
+    }) -> (struct {}) error RealmBuilderError;
+
     // TODO(https://fxbug.dev/103951) delete once all petals are on API level 9
     ReplaceConfigValue(struct {
         name fuchsia.component.name;
@@ -564,6 +586,9 @@ protocol Realm {
     /// Sets the configuration value for a field specified by `key`.
     /// The component specified must have a config schema with this field.
     /// The value must conform to all constraints as defined by the schema.
+    ///
+    /// This method must be called after either `InitMutableConfigFromPackage` or
+    /// `InitMutableConfigToEmpty`.
     ///
     /// Errors:
     /// - `NO_CONFIG_SCHEMA`: component does not have a config schema

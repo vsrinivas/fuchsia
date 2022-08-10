@@ -8,6 +8,9 @@
 #include <lib/sys/inspect/cpp/component.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include <chrono>
+#include <thread>
+
 // [START imports]
 // Import the header as if it's located in the same directory as BUILD.gn:
 #include "examples/components/config/cpp/example_config.h"
@@ -18,6 +21,9 @@ int main(int argc, const char* argv[], char* envp[]) {
   // Retrieve configuration
   auto c = example_config::Config::TakeFromStartupHandle();
   // [END get_config]
+
+  // Delay our print by the configured interval.
+  std::this_thread::sleep_for(std::chrono::milliseconds(c.delay_ms()));
 
   // Print greeting to the log
   FX_LOGS(INFO) << "Hello, " << c.greeting() << "!";

@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Context, Error},
+    crate::ConfigOverridePolicy,
+    anyhow::{Context, Error},
     cm_fidl_validator,
-    cm_rust::{FidlIntoNative, NativeIntoFidl},
+    cm_rust::NativeIntoFidl,
     fidl::endpoints::{create_endpoints, ServerEnd},
     fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fcdecl,
     fidl_fuchsia_component_resolution as fresolution, fidl_fuchsia_io as fio,
@@ -23,8 +24,18 @@ const RESOLVER_SCHEME: &'static str = "realm-builder";
 
 #[derive(Clone)]
 struct ResolveableComponent {
+    /// The component's declaration/manifest.
     decl: fcdecl::Component,
+
+    /// The component's package directory, if available.
     package_dir: Option<fio::DirectoryProxy>,
+
+    /// Whether to rely on the `value_source` field in the component manifest or to only use
+    /// values provided as replacements.
+    config_override_policy: ConfigOverridePolicy,
+
+    /// Any configuration values provided by the caller. If `use_packaged_config` is false, must
+    /// provide a value for every field in the component's schema.
     config_value_replacements: HashMap<usize, cm_rust::ValueSpec>,
 }
 
@@ -45,6 +56,7 @@ impl Registry {
     // Only used for unit tests
     #[cfg(test)]
     pub async fn get_decl_for_url(self: &Arc<Self>, url: &str) -> Option<cm_rust::ComponentDecl> {
+        use cm_rust::FidlIntoNative;
         let url = Url::parse(url).expect("Failed to parse component URL.");
         let component = self.component_decls.lock().await.get(&url).cloned();
         component.map(|c| c.decl.fidl_into_native())
@@ -57,6 +69,7 @@ impl Registry {
         name: String,
         package_dir: Option<fio::DirectoryProxy>,
         config_value_replacements: HashMap<usize, cm_rust::ValueSpec>,
+        config_override_policy: ConfigOverridePolicy,
     ) -> Result<String, cm_fidl_validator::error::ErrorList> {
         cm_fidl_validator::validate(decl)?;
 
@@ -67,7 +80,12 @@ impl Registry {
         *next_unique_component_id_guard += 1;
         component_decls_guard.insert(
             Url::parse(&url).expect("Generated invalid component URL."),
-            ResolveableComponent { decl: decl.clone(), package_dir, config_value_replacements },
+            ResolveableComponent {
+                decl: decl.clone(),
+                package_dir,
+                config_value_replacements,
+                config_override_policy,
+            },
         );
         Ok(url)
     }
@@ -82,55 +100,72 @@ impl Registry {
         .detach();
     }
 
-    async fn get_config_data(
+    async fn resolve_structured_config(
         decl: &fcdecl::Component,
-        package_dir: &Option<fio::DirectoryProxy>,
+        package_dir: Option<&fio::DirectoryProxy>,
         config_value_replacements: &HashMap<usize, cm_rust::ValueSpec>,
     ) -> Result<Option<fmem::Data>, Error> {
-        if let Some(fcdecl::ConfigSchema { value_source, .. }) = &decl.config {
-            if let Some(fcdecl::ConfigValueSource::PackagePath(path)) = value_source {
-                if let Some(p) = package_dir {
-                    let data = mem_util::open_file_data(p, path).await?;
-                    let data =
-                        Self::verify_and_replace_config_values(data, config_value_replacements)
-                            .await?;
-                    Ok(Some(data))
-                } else {
-                    return Err(anyhow!(
-                        "Expected package directory for opening config values at {:?}, but none was provided.",
-                        path
-                    ));
+        if let Some(schema) = &decl.config {
+            let existing_values = match (&schema.value_source, package_dir) {
+                (Some(fcdecl::ConfigValueSource::PackagePath(path)), Some(dir)) => {
+                    Some(mem_util::open_file_data(dir, path).await?)
                 }
-            } else {
-                return Err(anyhow!(
-                    "Expected ConfigValueSource::PackagePath, got {:?}.",
-                    value_source
-                ));
-            }
+                // fall back to using any overrides we got
+                _ => None,
+            };
+
+            Ok(Some(
+                Self::verify_and_replace_config_values(
+                    schema,
+                    existing_values,
+                    config_value_replacements,
+                )
+                .await?,
+            ))
         } else {
             Ok(None)
         }
     }
 
     async fn verify_and_replace_config_values(
-        values_data: fmem::Data,
+        schema: &fcdecl::ConfigSchema,
+        values_data: Option<fmem::Data>,
         config_value_replacements: &HashMap<usize, cm_rust::ValueSpec>,
     ) -> Result<fmem::Data, Error> {
-        let bytes = mem_util::bytes_from_data(&values_data)?;
-        let values_data = fidl::encoding::decode_persistent(&bytes)?;
-        cm_fidl_validator::validate_values_data(&values_data)?;
-        let mut values_data: cm_rust::ValuesData = values_data.fidl_into_native();
+        let mut values_data: fconfig::ValuesData = if let Some(v) = values_data {
+            let bytes = mem_util::bytes_from_data(&v)?;
+            let values_data = fidl::encoding::decode_persistent(&bytes)?;
+            cm_fidl_validator::validate_values_data(&values_data)?;
+            values_data
+        } else {
+            // make a boilerplate ValuesData that our replacements can fill
+            let num_expected_values = schema
+                .fields
+                .as_ref()
+                .expect("schema must have fields TODO real error handling")
+                .len();
+            let blank_values = (0..num_expected_values)
+                .map(|_| fconfig::ValueSpec { value: None, ..fconfig::ValueSpec::EMPTY })
+                .collect::<Vec<_>>();
+            fconfig::ValuesData {
+                checksum: schema.checksum.clone(),
+                values: Some(blank_values),
+                ..fconfig::ValuesData::EMPTY
+            }
+        };
 
         for (index, replacement) in config_value_replacements {
             let value = values_data
                 .values
+                .as_mut()
+                .expect("either validated or constructed above")
                 .get_mut(*index)
                 .expect("Config Value File and Schema should have the same number of fields!");
-            *value = replacement.clone();
+            *value = replacement.clone().native_into_fidl();
         }
 
-        let mut values_data: fconfig::ValuesData = values_data.native_into_fidl();
-        cm_fidl_validator::validate_values_data(&values_data)?;
+        cm_fidl_validator::validate_values_data(&values_data)
+            .context("ensuring all values are populated")?;
 
         let data = fidl::encoding::encode_persistent(&mut values_data)?;
         let data = fmem::Data::Bytes(data);
@@ -179,8 +214,12 @@ impl Registry {
         component_url: &str,
         resolveable_component: ResolveableComponent,
     ) -> Result<fresolution::Component, Error> {
-        let ResolveableComponent { decl, package_dir, config_value_replacements } =
-            resolveable_component;
+        let ResolveableComponent {
+            decl,
+            package_dir,
+            config_value_replacements,
+            config_override_policy,
+        } = resolveable_component;
         let package = if let Some(p) = &package_dir {
             let (client_end, server_end) = create_endpoints::<fio::DirectoryMarker>()?;
             p.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, ServerEnd::new(server_end.into_channel()))?;
@@ -193,8 +232,23 @@ impl Registry {
             None
         };
 
-        let config_values =
-            Self::get_config_data(&decl, &package_dir, &config_value_replacements).await?;
+        let package_dir_for_config = match config_override_policy {
+            ConfigOverridePolicy::DisallowValuesFromBuilder => {
+                assert!(
+                    config_value_replacements.is_empty(),
+                    "cannot have received overrides if disallowed"
+                );
+                package_dir.as_ref()
+            }
+            ConfigOverridePolicy::LoadPackagedValuesFirst => package_dir.as_ref(),
+            ConfigOverridePolicy::RequireAllValuesFromBuilder => None,
+        };
+        let config_values = Self::resolve_structured_config(
+            &decl,
+            package_dir_for_config,
+            &config_value_replacements,
+        )
+        .await?;
         Ok(fresolution::Component {
             url: Some(component_url.to_string()),
             decl: Some(encode(decl)?),
@@ -245,9 +299,20 @@ impl Registry {
         package_dir
             .clone(fio::OpenFlags::CLONE_SAME_RIGHTS, ServerEnd::new(server_end.into_channel()))
             .map_err(|_| fresolution::ResolverError::Io)?;
-        let config_values = Self::get_config_data(
+        let package_dir_for_config = match component.config_override_policy {
+            ConfigOverridePolicy::DisallowValuesFromBuilder => {
+                assert!(
+                    component.config_value_replacements.is_empty(),
+                    "cannot have received config overrides if disallowed"
+                );
+                Some(&package_dir)
+            }
+            ConfigOverridePolicy::LoadPackagedValuesFirst => Some(&package_dir),
+            ConfigOverridePolicy::RequireAllValuesFromBuilder => None,
+        };
+        let config_values = Self::resolve_structured_config(
             &component_decl,
-            &Some(package_dir),
+            package_dir_for_config,
             &component.config_value_replacements,
         )
         .await

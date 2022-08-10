@@ -99,6 +99,7 @@ impl TestEnv {
             Config::PinweaverOrScrypt => (true, true),
             Config::ScryptOnly => (true, false),
         };
+        builder.init_mutable_config_to_empty(&password_authenticator).await.unwrap();
         builder
             .set_config_value_bool(&password_authenticator, "allow_scrypt", allow_scrypt)
             .await

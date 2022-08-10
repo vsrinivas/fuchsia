@@ -1,4 +1,7 @@
 {
     // Print "Hello, World!" by default.
     greeting: "World",
+
+    // Sleep for only 100ms by default.
+    delay_ms: 100,
 }

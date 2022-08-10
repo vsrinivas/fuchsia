@@ -16,6 +16,9 @@ async fn main() {
     let config = Config::take_from_startup_handle();
     // [END get_config]
 
+    // Delay our print by the configured interval.
+    std::thread::sleep(std::time::Duration::from_millis(config.delay_ms));
+
     // Print greeting to the log
     info!("Hello, {}!", config.greeting);
 

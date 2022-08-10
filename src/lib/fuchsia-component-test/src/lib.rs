@@ -956,6 +956,22 @@ impl RealmBuilder {
         self.root_realm.add_route(route).await
     }
 
+    /// Load the component's structured config values from its package before applying overrides.
+    pub async fn init_mutable_config_from_package(
+        &self,
+        name: impl Into<ChildRef>,
+    ) -> Result<(), Error> {
+        self.root_realm.init_mutable_config_from_package(name).await
+    }
+
+    /// Allow setting config values without loading any packaged values first.
+    pub async fn init_mutable_config_to_empty(
+        &self,
+        name: impl Into<ChildRef>,
+    ) -> Result<(), Error> {
+        self.root_realm.init_mutable_config_to_empty(name).await
+    }
+
     /// Replaces a value of a given configuration field
     pub async fn set_config_value(
         &self,
@@ -1314,6 +1330,29 @@ impl SubRealmBuilder {
     /// Replaces the decl for this realm
     pub async fn replace_realm_decl(&self, decl: cm_rust::ComponentDecl) -> Result<(), Error> {
         self.realm_proxy.replace_realm_decl(decl.native_into_fidl()).await?.map_err(Into::into)
+    }
+
+    /// Load the packaged structured config values for the component.
+    pub async fn init_mutable_config_from_package(
+        &self,
+        child_ref: impl Into<ChildRef>,
+    ) -> Result<(), Error> {
+        let child_ref = child_ref.into();
+        child_ref.check_scope(&self.realm_path)?;
+        self.realm_proxy
+            .init_mutable_config_from_package(&child_ref.name)
+            .await?
+            .map_err(Into::into)
+    }
+
+    /// Load the packaged structured config values for the component.
+    pub async fn init_mutable_config_to_empty(
+        &self,
+        child_ref: impl Into<ChildRef>,
+    ) -> Result<(), Error> {
+        let child_ref = child_ref.into();
+        child_ref.check_scope(&self.realm_path)?;
+        self.realm_proxy.init_mutable_config_to_empty(&child_ref.name).await?.map_err(Into::into)
     }
 
     /// Replaces a value of a given configuration field
@@ -2493,6 +2532,12 @@ mod tests {
             name: String,
             to: Vec<fdecl::Ref>,
         },
+        InitMutableConfigFromPackage {
+            name: String,
+        },
+        InitMutableConfigToEmpty {
+            name: String,
+        },
         SetConfigValue {
             name: String,
             key: String,
@@ -2600,6 +2645,20 @@ mod tests {
                     ftest::RealmRequest::ReadOnlyDirectory { responder, name, to, .. } => {
                         report_requests
                             .send(ServerRequest::ReadOnlyDirectory { name, to })
+                            .await
+                            .unwrap();
+                        responder.send(&mut Ok(())).unwrap();
+                    }
+                    ftest::RealmRequest::InitMutableConfigFromPackage { name, responder } => {
+                        report_requests
+                            .send(ServerRequest::InitMutableConfigFromPackage { name })
+                            .await
+                            .unwrap();
+                        responder.send(&mut Ok(())).unwrap();
+                    }
+                    ftest::RealmRequest::InitMutableConfigToEmpty { name, responder } => {
+                        report_requests
+                            .send(ServerRequest::InitMutableConfigToEmpty { name })
                             .await
                             .unwrap();
                         responder.send(&mut Ok(())).unwrap();
@@ -2868,6 +2927,8 @@ mod tests {
         let (builder, _server_task, mut receive_server_requests) =
             new_realm_builder_and_server_task();
         let child_a = builder.add_child("a", "test://a", ChildOptions::new()).await.unwrap();
+        builder.init_mutable_config_from_package(&child_a).await.unwrap();
+        builder.init_mutable_config_to_empty(&child_a).await.unwrap();
         builder.set_config_value_bool(&child_a, "test_bool", false).await.unwrap();
         builder.set_config_value_int16(&child_a, "test_int16", -2).await.unwrap();
         builder.set_config_value_string(&child_a, "test_string", "test").await.unwrap();
@@ -2880,6 +2941,16 @@ mod tests {
             receive_server_requests.next().await,
             Some(ServerRequest::AddChild { name, url, options })
                 if &name == "a" && &url == "test://a" && options == ChildOptions::new().into()
+        );
+
+        assert_matches!(
+            receive_server_requests.next().await,
+            Some(ServerRequest::InitMutableConfigFromPackage { name }) if &name == "a"
+        );
+
+        assert_matches!(
+            receive_server_requests.next().await,
+            Some(ServerRequest::InitMutableConfigToEmpty { name }) if &name == "a"
         );
 
         assert_matches!(

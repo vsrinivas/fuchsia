@@ -15,7 +15,6 @@ rustc_test("rust_bin") {
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component-test",
-    "//third_party/rust_crates:anyhow",
   ]
 
   sources = [ "rust/lib.rs" ]
