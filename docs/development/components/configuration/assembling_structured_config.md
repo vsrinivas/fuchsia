@@ -9,7 +9,7 @@ To vary your component's configuration by product or build type you must declare
 a schema, identify how values will be derived from a product's configuration,
 and generate your component's config.
 
-# Define a configuration schema
+## Define a configuration schema
 
 Your component must have a declared configuration schema in its manifest. For
 example:
@@ -21,7 +21,7 @@ example:
 
 For more information see the [documentation for structured config][sc-docs].
 
-# Identify product assembly configuration
+## Identify product assembly configuration
 
 Many configuration options can be represented as the difference between
 [`eng` builds and non-`eng` builds][build-types].
@@ -32,7 +32,7 @@ be used (note that this list is publicly viewable, please use Google-internal
 lists to discuss internal-only configuration). Once a schema has been decided,
 add it to the [product configuration library][config-schema].
 
-# Configure the package
+## Configure the package
 
 Determine your package's name and your component's manifest resource path.
 Define logic to populate configuration for it in the [product assembly
@@ -46,7 +46,7 @@ type:
 Note: A given component cannot mix [configuration values produced by GN][gn-doc]
 and values produced by software assembly.
 
-# Update size limits configuration (if any)
+## Update size limits configuration (if any)
 
 When producing configuration values for a package, product assembly must write
 its outputs to a different location in the build directory than the path
