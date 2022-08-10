@@ -51,9 +51,8 @@ type Config = table {
     /// If not present, interpreted as 1.
     7: num_threads uint32;
 
-    /// Which builtin resolver to use for the fuchsia-pkg scheme.
-    /// If not present, interpreted as BuiltinPkgResolver.NONE.
-    8: builtin_pkg_resolver BuiltinPkgResolver;
+    /// Used to be builtin_pkg_resolver.
+    8: reserved;
 
     /// Determine what content to expose through the component manager's
     /// outgoing directory.
@@ -89,17 +88,6 @@ type Config = table {
     /// these capabilities from realm builder are available to a nested
     /// component manager that is undergoing an integration test.
    16: realm_builder_resolver_and_runner RealmBuilderResolverAndRunner;
-};
-
-/// The builtin resolver to use for the fuchsia-pkg scheme, if any.
-type BuiltinPkgResolver = strict enum : uint8 {
-    /// No builtin package resolver is used. Products supply a package resolver as a component, or
-    /// can opt to not include one at all.
-    NONE = 1;
-
-    /// Try to use the `fuchsia.sys.Loader` protocol from the namespace, typically this is provided
-    /// by `appmgr`. Test scenarios commonly use this option.
-    APPMGR_BRIDGE = 3;
 };
 
 /// The builtin resolver to use for the fuchsia-boot scheme, if any.

@@ -9,9 +9,9 @@ use {
     fidl::encoding::decode_persistent,
     fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_component_internal::{
-        self as component_internal, BuiltinBootResolver, BuiltinPkgResolver,
-        CapabilityPolicyAllowlists, DebugRegistrationPolicyAllowlists, LogDestination,
-        OutDirContents, RealmBuilderResolverAndRunner,
+        self as component_internal, BuiltinBootResolver, CapabilityPolicyAllowlists,
+        DebugRegistrationPolicyAllowlists, LogDestination, OutDirContents,
+        RealmBuilderResolverAndRunner,
     },
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker, MonikerError},
     std::{
@@ -67,10 +67,6 @@ pub struct RuntimeConfig {
 
     /// The list of capabilities offered from component manager as built-in capabilities.
     pub builtin_capabilities: Vec<cm_rust::CapabilityDecl>,
-
-    /// Which builtin resolver to use for the fuchsia-pkg scheme. If not supplied this defaults to
-    /// the NONE option.
-    pub builtin_pkg_resolver: BuiltinPkgResolver,
 
     /// Determine what content to expose through the component manager's
     /// outgoing directory.
@@ -212,7 +208,6 @@ impl Default for RuntimeConfig {
             num_threads: 1,
             namespace_capabilities: vec![],
             builtin_capabilities: vec![],
-            builtin_pkg_resolver: BuiltinPkgResolver::None,
             out_dir_contents: OutDirContents::None,
             root_component_url: Default::default(),
             component_id_index_path: None,
@@ -382,9 +377,6 @@ impl TryFrom<component_internal::Config> for RuntimeConfig {
                 .unwrap_or(default.use_builtin_process_launcher),
             maintain_utc_clock: config.maintain_utc_clock.unwrap_or(default.maintain_utc_clock),
             num_threads,
-            builtin_pkg_resolver: config
-                .builtin_pkg_resolver
-                .unwrap_or(default.builtin_pkg_resolver),
             out_dir_contents: config.out_dir_contents.unwrap_or(default.out_dir_contents),
             root_component_url,
             component_id_index_path: config.component_id_index_path,
@@ -622,7 +614,6 @@ mod tests {
             num_threads: None,
             namespace_capabilities: None,
             builtin_capabilities: None,
-            builtin_pkg_resolver: None,
             out_dir_contents: None,
             root_component_url: None,
             component_id_index_path: None,
@@ -633,7 +624,6 @@ mod tests {
             debug: Some(false),
             list_children_batch_size: Some(5),
             maintain_utc_clock: Some(false),
-            builtin_pkg_resolver: None,
             use_builtin_process_launcher: Some(true),
             security_policy: Some(component_internal::SecurityPolicy {
                 job_policy: Some(component_internal::JobPolicyAllowlists {
@@ -661,7 +651,6 @@ mod tests {
             maintain_utc_clock: false,
             use_builtin_process_launcher:true,
             num_threads: 10,
-            builtin_pkg_resolver: BuiltinPkgResolver::None,
             ..Default::default() }),
         all_fields_some => (
             component_internal::Config {
@@ -669,7 +658,6 @@ mod tests {
                 list_children_batch_size: Some(42),
                 maintain_utc_clock: Some(true),
                 use_builtin_process_launcher: Some(false),
-                builtin_pkg_resolver: Some(component_internal::BuiltinPkgResolver::None),
                 security_policy: Some(component_internal::SecurityPolicy {
                     job_policy: Some(component_internal::JobPolicyAllowlists {
                         main_process_critical: Some(vec!["/something/important".to_string()]),
@@ -873,7 +861,6 @@ mod tests {
                         name: "bar_event".into(),
                     }),
                 ],
-                builtin_pkg_resolver: BuiltinPkgResolver::None,
                 out_dir_contents: OutDirContents::Svc,
                 root_component_url: Some(Url::new(FOO_PKG_URL.to_string()).unwrap()),
                 component_id_index_path: Some("/boot/config/component_id_index".to_string()),
@@ -893,7 +880,6 @@ mod tests {
                 list_children_batch_size: None,
                 maintain_utc_clock: None,
                 use_builtin_process_launcher: None,
-                builtin_pkg_resolver: None,
                 security_policy: Some(component_internal::SecurityPolicy {
                     job_policy: Some(component_internal::JobPolicyAllowlists {
                         main_process_critical: None,
@@ -925,7 +911,6 @@ mod tests {
                 list_children_batch_size: None,
                 maintain_utc_clock: None,
                 use_builtin_process_launcher: None,
-                builtin_pkg_resolver: None,
                 security_policy: Some(component_internal::SecurityPolicy {
                     job_policy: None,
                     capability_policy: Some(component_internal::CapabilityPolicyAllowlists {
@@ -959,7 +944,6 @@ mod tests {
                 list_children_batch_size: None,
                 maintain_utc_clock: None,
                 use_builtin_process_launcher: None,
-                builtin_pkg_resolver: None,
                 security_policy: Some(component_internal::SecurityPolicy {
                     job_policy: None,
                     capability_policy: Some(component_internal::CapabilityPolicyAllowlists {
@@ -993,7 +977,6 @@ mod tests {
                 list_children_batch_size: None,
                 maintain_utc_clock: None,
                 use_builtin_process_launcher: None,
-                builtin_pkg_resolver: None,
                 security_policy: None,
                 num_threads: None,
                 namespace_capabilities: None,
@@ -1051,7 +1034,6 @@ mod tests {
                 maintain_utc_clock: None,
                 use_builtin_process_launcher: None,
                 num_threads: None,
-                builtin_pkg_resolver: None,
                 out_dir_contents: None,
                 root_component_url: Some(FOO_PKG_URL.to_string()),
                 ..component_internal::Config::EMPTY
