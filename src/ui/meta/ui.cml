@@ -199,6 +199,7 @@
                 "fuchsia.ui.display.internal.DisplayPower",
                 "fuchsia.ui.display.singleton.Info",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
+                "fuchsia.ui.pointer.augment.GlobalMouse",
                 "fuchsia.ui.pointerinjector.Registry",
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.ui.views.ViewRefInstalled",

@@ -6,6 +6,7 @@
 #define SRC_UI_SCENIC_LIB_INPUT_MOUSE_SYSTEM_H_
 
 #include <fuchsia/ui/pointer/augment/cpp/fidl.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -62,6 +63,7 @@ class MouseSystem : public fuchsia::ui::pointer::augment::GlobalMouse {
   std::shared_ptr<const view_tree::Snapshot>& view_tree_snapshot_;
   HitTester& hit_tester_;
   const RequestFocusFunc request_focus_;
+  fidl::BindingSet<fuchsia::ui::pointer::augment::GlobalMouse> global_mouse_upgrade_registry_;
 
   //// Mouse state
   // Struct for tracking the mouse state of a particular event stream.

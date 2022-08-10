@@ -21,7 +21,9 @@ MouseSystem::MouseSystem(sys::ComponentContext* context,
                          HitTester& hit_tester, fit::function<void(zx_koid_t)> request_focus)
     : view_tree_snapshot_(view_tree_snapshot),
       hit_tester_(hit_tester),
-      request_focus_(std::move(request_focus)) {}
+      request_focus_(std::move(request_focus)) {
+  context->outgoing()->AddPublicService(global_mouse_upgrade_registry_.GetHandler(this));
+}
 
 void MouseSystem::RegisterMouseSource(
     fidl::InterfaceRequest<fuchsia::ui::pointer::MouseSource> mouse_source_request,

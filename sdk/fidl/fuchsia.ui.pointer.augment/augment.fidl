@@ -60,6 +60,7 @@ type ErrorForGlobalMouse = resource struct {
 
 /// A method for a client to receive view-global visibility for mouse behavior.
 /// - The augmented data are scoped to the view of the client.
+@discoverable
 protocol GlobalMouse {
     /// An exchange from an `original` mouse protocol endpoint to an `augmented`
     /// mouse protocol endpoint. If successful, `error` is empty, `original` is
