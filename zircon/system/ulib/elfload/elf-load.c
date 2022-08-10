@@ -90,7 +90,7 @@ static zx_status_t choose_load_bias(zx_handle_t root_vmar, const elf_load_header
 
   bool first = true;
   uintptr_t low = 0, high = 0;
-  uint32_t max_perm = 0;
+  uint32_t max_perm = PF_R;
   const size_t kPageSize = zx_system_get_page_size();
   for (uint_fast16_t i = 0; i < header->e_phnum; ++i) {
     if (phdrs[i].p_type == PT_LOAD) {
@@ -128,9 +128,10 @@ static zx_status_t finish_load_segment(zx_handle_t vmar, zx_handle_t vmo,
                                        const char vmo_name[ZX_MAX_NAME_LEN], const elf_phdr_t* ph,
                                        size_t start_offset, size_t size, uintptr_t file_start,
                                        uintptr_t file_end, size_t partial_page) {
+  const zx_vm_option_t exec = ZX_VM_PERM_EXECUTE | ZX_VM_PERM_READ_IF_XOM_UNSUPPORTED;
   const zx_vm_option_t options = ZX_VM_SPECIFIC | ((ph->p_flags & PF_R) ? ZX_VM_PERM_READ : 0) |
                                  ((ph->p_flags & PF_W) ? ZX_VM_PERM_WRITE : 0) |
-                                 ((ph->p_flags & PF_X) ? ZX_VM_PERM_EXECUTE : 0);
+                                 ((ph->p_flags & PF_X) ? exec : 0);
 
   uintptr_t start;
   if (ph->p_filesz == ph->p_memsz)
