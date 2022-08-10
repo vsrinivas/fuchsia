@@ -977,7 +977,7 @@ impl JournalingObject for SimpleAllocator {
         mutation: Mutation,
         context: &ApplyContext<'_, '_>,
         _assoc_obj: AssocObj<'_>,
-    ) {
+    ) -> Result<(), Error> {
         match mutation {
             Mutation::Allocator(AllocatorMutation::MarkForDeletion(owner_object_id)) => {
                 let mut inner = self.inner.lock().unwrap();
@@ -1097,10 +1097,9 @@ impl JournalingObject for SimpleAllocator {
                     }
                 }
             }
-            // TODO(fxbug.dev/95979): ideally, we'd return an error here instead. This should only
-            // be possible with a bad mutation during replay.
-            _ => panic!("unexpected mutation! {:?}", mutation),
+            _ => bail!("unexpected mutation: {:?}", mutation),
         }
+        Ok(())
     }
 
     fn drop_mutation(&self, mutation: Mutation, transaction: &Transaction<'_>) {

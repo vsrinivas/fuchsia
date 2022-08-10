@@ -332,7 +332,7 @@ impl SuperBlock {
                     },
                     AssocObj::None,
                 )
-                .await;
+                .await?;
         }
 
         Ok((super_block, instance, root_parent))

@@ -327,7 +327,7 @@ impl ObjectManager {
         mutation: Mutation,
         context: &ApplyContext<'_, '_>,
         associated_object: AssocObj<'_>,
-    ) {
+    ) -> Result<(), Error> {
         debug!(oid = object_id, ?mutation, "applying mutation");
         let object = {
             let mut inner = self.inner.write().unwrap();
@@ -360,7 +360,7 @@ impl ObjectManager {
                     inner.stores.remove(&object_id);
                     inner.reservations.remove(&object_id);
                     inner.journal_checkpoints.remove(&object_id);
-                    return;
+                    return Ok(());
                 }
                 _ => {
                     if object_id != inner.root_parent_store_object_id {
@@ -388,7 +388,7 @@ impl ObjectManager {
             self.lazy_open_store(object_id)
         });
         associated_object.map(|o| o.will_apply_mutation(&mutation, object_id, self));
-        object.apply_mutation(mutation, context, associated_object).await;
+        object.apply_mutation(mutation, context, associated_object).await
     }
 
     /// Called by the journaling system to replay the given mutations.  `checkpoint` indicates the
@@ -399,7 +399,7 @@ impl ObjectManager {
         mutations: Vec<(u64, Mutation)>,
         context: &ApplyContext<'_, '_>,
         end_offset: u64,
-    ) {
+    ) -> Result<(), Error> {
         debug!(checkpoint = context.checkpoint.file_offset, "REPLAY");
         let txn_size = {
             let mut inner = self.inner.write().unwrap();
@@ -417,8 +417,9 @@ impl ObjectManager {
                 }
                 continue;
             }
-            self.apply_mutation(object_id, mutation, context, AssocObj::None).await;
+            self.apply_mutation(object_id, mutation, context, AssocObj::None).await?;
         }
+        Ok(())
     }
 
     /// Called by the journaling system to apply a transaction.  `checkpoint` indicates the location
@@ -428,7 +429,7 @@ impl ObjectManager {
         &self,
         transaction: &mut Transaction<'_>,
         checkpoint: &JournalCheckpoint,
-    ) -> Option<Mutation> {
+    ) -> Result<Option<Mutation>, Error> {
         // Record old values so we can see what changes as a result of this transaction.
         let old_amount = self.metadata_reservation().amount();
         let old_required = self.inner.read().unwrap().required_reservation();
@@ -438,11 +439,11 @@ impl ObjectManager {
         let context =
             ApplyContext { mode: ApplyMode::Live(transaction), checkpoint: checkpoint.clone() };
         for TxnMutation { object_id, mutation, associated_object } in mutations {
-            self.apply_mutation(object_id, mutation, &context, associated_object).await;
+            self.apply_mutation(object_id, mutation, &context, associated_object).await?;
         }
         debug!("END TXN");
 
-        if let MetadataReservation::Borrowed = transaction.metadata_reservation {
+        Ok(if let MetadataReservation::Borrowed = transaction.metadata_reservation {
             // If this transaction is borrowing metadata, figure out what has changed and return a
             // mutation with the updated value for borrowed.  The transaction might have allocated
             // or deallocated some data from the metadata reservation, or it might have made a
@@ -465,7 +466,7 @@ impl ObjectManager {
             debug_assert_eq!(self.metadata_reservation().amount(), old_amount);
             debug_assert_eq!(self.inner.read().unwrap().required_reservation(), old_required);
             None
-        }
+        })
     }
 
     /// Called by the journaling system after a transaction has been written providing the end

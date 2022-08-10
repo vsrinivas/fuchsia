@@ -684,7 +684,7 @@ impl Journal {
                             &ApplyContext { mode: ApplyMode::Replay, checkpoint },
                             end_offset,
                         )
-                        .await;
+                        .await?;
                 }
                 break reader.journal_file_checkpoint();
             }
@@ -1161,7 +1161,10 @@ impl Journal {
             // the potential to fire assertions.  With that said, this should only occur if there
             // has been another panic, since we take care not to drop futures at other other times.
             let maybe_mutation =
-                self.objects.apply_transaction(transaction, &checkpoint_before).await;
+                self.objects.apply_transaction(transaction, &checkpoint_before).await.expect(
+                    "apply_transaction should not fail in live mode;\
+                     filesystem will be in an inconsistent state",
+                );
             checkpoint_after = {
                 let mut inner = self.inner.lock().unwrap();
                 if let Some(mutation) = maybe_mutation {

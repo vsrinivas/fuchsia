@@ -1214,7 +1214,7 @@ impl ObjectStore {
                     &context,
                     AssocObj::None,
                 )
-                .await;
+                .await?;
             }
         }
 
@@ -1413,7 +1413,7 @@ impl JournalingObject for ObjectStore {
         mutation: Mutation,
         context: &ApplyContext<'_, '_>,
         _assoc_obj: AssocObj<'_>,
-    ) {
+    ) -> Result<(), Error> {
         // It's not safe to fully open a store until replay is fully complete (because subsequent
         // mutations could render current records invalid).
 
@@ -1458,10 +1458,9 @@ impl JournalingObject for ObjectStore {
             Mutation::UpdateMutationsKey(UpdateMutationsKey(key)) => {
                 self.store_info.lock().unwrap().set_mutations_key(key);
             }
-            // TODO(fxbug.dev/95979): ideally, we'd return an error here instead. This should only
-            // be possible with a bad mutation during replay.
-            _ => panic!("unexpected mutation: {:?}", mutation),
+            _ => bail!("unexpected mutation: {:?}", mutation),
         }
+        Ok(())
     }
 
     fn drop_mutation(&self, _mutation: Mutation, _transaction: &Transaction<'_>) {}

@@ -145,7 +145,7 @@ pub trait JournalingObject: Send + Sync {
         mutation: Mutation,
         context: &ApplyContext<'_, '_>,
         assoc_obj: AssocObj<'_>,
-    );
+    ) -> Result<(), Error>;
 
     /// Called when a transaction fails to commit.
     fn drop_mutation(&self, mutation: Mutation, transaction: &Transaction<'_>);

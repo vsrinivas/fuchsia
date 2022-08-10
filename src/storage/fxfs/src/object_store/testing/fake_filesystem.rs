@@ -128,7 +128,7 @@ impl TransactionHandler for FakeFilesystem {
             version: Version { major: 0xffff, minor: 0 },
         };
         self.lock_manager.commit_prepare(transaction).await;
-        self.object_manager.apply_transaction(transaction, &checkpoint).await;
+        self.object_manager.apply_transaction(transaction, &checkpoint).await?;
         Ok(0)
     }
 

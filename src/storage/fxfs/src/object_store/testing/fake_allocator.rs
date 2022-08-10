@@ -133,7 +133,8 @@ impl JournalingObject for FakeAllocator {
         _mutation: Mutation,
         _context: &ApplyContext<'_, '_>,
         _associated_object: AssocObj<'_>,
-    ) {
+    ) -> Result<(), Error> {
+        Ok(())
     }
 
     fn drop_mutation(&self, _mutation: Mutation, _transaction: &Transaction<'_>) {}
