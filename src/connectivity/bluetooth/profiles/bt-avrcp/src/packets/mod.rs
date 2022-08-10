@@ -575,6 +575,16 @@ impl VendorCommand for RawVendorDependentPacket {
 }
 
 #[cfg(test)]
+#[track_caller]
+pub fn decode_avc_vendor_command(command: &bt_avctp::AvcCommand) -> Result<(PduId, &[u8]), Error> {
+    let packet_body = command.body();
+    let preamble = VendorDependentPreamble::decode(packet_body)?;
+    let body = &packet_body[preamble.encoded_len()..];
+    let pdu_id = PduId::try_from(preamble.pdu_id)?;
+    Ok((pdu_id, body))
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use fidl_fuchsia_bluetooth_avrcp as fidl;
