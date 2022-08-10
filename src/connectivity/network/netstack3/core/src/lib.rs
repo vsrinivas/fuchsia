@@ -65,6 +65,7 @@ pub use crate::{
         AddableEntry, AddableEntryEither, EntryEither, IpDeviceIdContext, IpExt, IpLayerEvent,
         Ipv4StateBuilder, Ipv6StateBuilder, TransportIpContext,
     },
+    socket::datagram::SetMulticastMembershipError,
     transport::{
         tcp::{
             buffer::{ReceiveBuffer, RingBuffer, SendBuffer},

@@ -319,21 +319,15 @@ fn pick_matching_interface<
     SC: DatagramStateContext<A, C, S>,
 >(
     sync_ctx: &SC,
-    device: Option<A::DeviceId>,
-    address: Option<SpecifiedAddr<A::IpAddr>>,
+    interface: MulticastInterfaceSelector<A::IpAddr, A::DeviceId>,
 ) -> Result<Option<A::DeviceId>, SetMulticastMembershipError> {
-    match (device, address) {
-        (Some(device), None) => Ok(Some(device)),
-        (Some(device), Some(addr)) => sync_ctx
-            .get_device_with_assigned_addr(addr)
-            .and_then(|found_device| (device == found_device).then(|| device))
-            .ok_or(SetMulticastMembershipError::AddressNotAvailable)
-            .map(Some),
-        (None, Some(addr)) => sync_ctx
+    match interface {
+        MulticastInterfaceSelector::Interface(device) => Ok(Some(device)),
+        MulticastInterfaceSelector::AnyInterfaceWithRoute => Ok(None),
+        MulticastInterfaceSelector::LocalAddress(addr) => sync_ctx
             .get_device_with_assigned_addr(addr)
             .ok_or(SetMulticastMembershipError::NoDeviceWithAddress)
             .map(Some),
-        (None, None) => Ok(None),
     }
 }
 
@@ -360,6 +354,13 @@ pub(crate) enum DatagramSocketId<S: DatagramSocketSpec> {
     Unbound(S::UnboundId),
     Listener(S::ListenerId),
     Connected(S::ConnId),
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub enum MulticastInterfaceSelector<A, D> {
+    LocalAddress(SpecifiedAddr<A>),
+    Interface(D),
+    AnyInterfaceWithRoute,
 }
 
 /// Sets the specified socket's membership status for the given group.
@@ -391,8 +392,7 @@ pub(crate) fn set_multicast_membership<
     ctx: &mut C,
     id: impl Into<DatagramSocketId<S>>,
     multicast_group: MulticastAddr<A::IpAddr>,
-    local_interface_address: Option<SpecifiedAddr<A::IpAddr>>,
-    interface_identifier: Option<A::DeviceId>,
+    interface: MulticastInterfaceSelector<A::IpAddr, A::DeviceId>,
     want_membership: bool,
 ) -> Result<(), SetMulticastMembershipError>
 where
@@ -403,8 +403,7 @@ where
     S::ConnAddrState: SocketMapAddrStateSpec<Id = S::ConnId, SharingState = S::ConnSharingState>,
 {
     let id = id.into();
-    let interface =
-        pick_matching_interface(sync_ctx, interface_identifier, local_interface_address)?;
+    let interface = pick_matching_interface(sync_ctx, interface)?;
 
     let interface = sync_ctx.with_sockets(|state| {
         let DatagramSockets { bound, unbound, lazy_port_alloc: _ } = state;

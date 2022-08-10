@@ -53,8 +53,8 @@ use crate::{
         address::{ConnAddr, ConnIpAddr, IpPortSpec, ListenerAddr, ListenerIpAddr},
         datagram::{
             ConnState, DatagramSocketId, DatagramSocketSpec, DatagramSockets, DatagramStateContext,
-            DatagramStateNonSyncContext, ListenerState, MulticastMemberships,
-            SetMulticastMembershipError, UnboundSocketState,
+            DatagramStateNonSyncContext, ListenerState, MulticastInterfaceSelector,
+            MulticastMemberships, SetMulticastMembershipError, UnboundSocketState,
         },
         posix::{
             PosixAddrState, PosixAddrVecIter, PosixAddrVecTag, PosixConflictPolicy,
@@ -1689,8 +1689,7 @@ pub fn set_udp_multicast_membership<
     ctx: &mut C,
     id: UdpSocketId<I>,
     multicast_group: MulticastAddr<I::Addr>,
-    local_interface_address: Option<SpecifiedAddr<I::Addr>>,
-    interface_identifier: Option<SC::DeviceId>,
+    interface: MulticastInterfaceSelector<I::Addr, SC::DeviceId>,
     want_membership: bool,
 ) -> Result<(), SetMulticastMembershipError> {
     crate::socket::datagram::set_multicast_membership(
@@ -1698,8 +1697,7 @@ pub fn set_udp_multicast_membership<
         ctx,
         id,
         multicast_group,
-        local_interface_address,
-        interface_identifier,
+        interface,
         want_membership,
     )
     .map_err(Into::into)
@@ -2886,8 +2884,7 @@ mod tests {
             &mut non_sync_ctx,
             unbound.into(),
             multicast_addr,
-            Some(local_ip),
-            None,
+            MulticastInterfaceSelector::LocalAddress(local_ip),
             true,
         )
         .expect("join multicast group should succeed");
@@ -2923,8 +2920,7 @@ mod tests {
                 &mut non_sync_ctx,
                 conn.into(),
                 multicast_addr,
-                Some(local_ip),
-                None,
+                MulticastInterfaceSelector::LocalAddress(local_ip),
                 true
             ),
             Err(SetMulticastMembershipError::NoMembershipChange)
@@ -2951,8 +2947,7 @@ mod tests {
             &mut non_sync_ctx,
             unbound.into(),
             multicast_addr,
-            Some(local_ip),
-            None,
+            MulticastInterfaceSelector::LocalAddress(local_ip),
             true,
         )
         .expect("join multicast group should succeed");
@@ -2998,8 +2993,7 @@ mod tests {
                 &mut non_sync_ctx,
                 listener.into(),
                 multicast_addr,
-                Some(local_ip),
-                None,
+                MulticastInterfaceSelector::LocalAddress(local_ip),
                 true
             ),
             Err(SetMulticastMembershipError::NoMembershipChange)
@@ -4405,8 +4399,7 @@ mod tests {
 
     fn try_join_leave_multicast<I: Ip + TestIpExt>(
         mcast_addr: MulticastAddr<I::Addr>,
-        interface_addr: Option<SpecifiedAddr<I::Addr>>,
-        interface_id: Option<MultipleDevicesId>,
+        interface: MulticastInterfaceSelector<I::Addr, MultipleDevicesId>,
         make_socket: impl FnOnce(
             &mut MultiDeviceDummySyncCtx<I>,
             &mut DummyNonSyncCtx<I>,
@@ -4429,8 +4422,7 @@ mod tests {
             &mut non_sync_ctx,
             socket,
             mcast_addr,
-            interface_addr,
-            interface_id,
+            interface,
             true,
         );
 
@@ -4441,8 +4433,7 @@ mod tests {
                 &mut non_sync_ctx,
                 socket,
                 mcast_addr,
-                interface_addr,
-                interface_id,
+                interface,
                 false,
             )
             .expect("leaving group failed");
@@ -4498,19 +4489,24 @@ mod tests {
         .into()
     }
 
+    fn iface_id<A>(id: MultipleDevicesId) -> MulticastInterfaceSelector<A, MultipleDevicesId> {
+        MulticastInterfaceSelector::Interface(id)
+    }
+    fn iface_addr<A: IpAddress>(
+        addr: SpecifiedAddr<A>,
+    ) -> MulticastInterfaceSelector<A, MultipleDevicesId> {
+        MulticastInterfaceSelector::LocalAddress(addr)
+    }
+
     #[ip_test]
-    #[test_case(None, Some(MultipleDevicesId::A), leave_unbound::<I>; "device_no_addr_unbound")]
-    #[test_case(Some(local_ip::<I>()), None, leave_unbound::<I>; "addr_no_device_unbound")]
-    #[test_case(Some(local_ip::<I>()), Some(MultipleDevicesId::A), leave_unbound::<I>; "device_and_addr_unbound")]
-    #[test_case(None, Some(MultipleDevicesId::A), bind_as_listener::<I>; "device_no_addr_listener")]
-    #[test_case(Some(local_ip::<I>()), None, bind_as_listener::<I>; "addr_no_device_listener")]
-    #[test_case(Some(local_ip::<I>()), Some(MultipleDevicesId::A), bind_as_listener::<I>; "device_and_addr_listener")]
-    #[test_case(None, Some(MultipleDevicesId::A), bind_as_connected::<I>; "device_no_addr_connected")]
-    #[test_case(Some(local_ip::<I>()), None, bind_as_connected::<I>; "addr_no_device_connected")]
-    #[test_case(Some(local_ip::<I>()), Some(MultipleDevicesId::A), bind_as_connected::<I>; "device_and_addr_connected")]
+    #[test_case(iface_id(MultipleDevicesId::A), leave_unbound::<I>; "device_no_addr_unbound")]
+    #[test_case(iface_addr(local_ip::<I>()), leave_unbound::<I>; "addr_no_device_unbound")]
+    #[test_case(iface_id(MultipleDevicesId::A), bind_as_listener::<I>; "device_no_addr_listener")]
+    #[test_case(iface_addr(local_ip::<I>()), bind_as_listener::<I>; "addr_no_device_listener")]
+    #[test_case(iface_id(MultipleDevicesId::A), bind_as_connected::<I>; "device_no_addr_connected")]
+    #[test_case(iface_addr(local_ip::<I>()), bind_as_connected::<I>; "addr_no_device_connected")]
     fn test_join_leave_multicast_succeeds<I: Ip + TestIpExt>(
-        interface_addr: Option<SpecifiedAddr<I::Addr>>,
-        interface_id: Option<MultipleDevicesId>,
+        interface: MulticastInterfaceSelector<I::Addr, MultipleDevicesId>,
         make_socket: impl FnOnce(
             &mut MultiDeviceDummySyncCtx<I>,
             &mut DummyNonSyncCtx<I>,
@@ -4522,41 +4518,12 @@ mod tests {
         let mcast_addr = I::get_multicast_addr(3);
 
         let (result, multicast_memberships) =
-            try_join_leave_multicast(mcast_addr, interface_addr, interface_id, make_socket);
+            try_join_leave_multicast(mcast_addr, interface, make_socket);
         assert_eq!(result, Ok(()));
         assert_eq!(
             multicast_memberships,
             HashMap::from([((MultipleDevicesId::A, mcast_addr), nonzero!(1usize))])
         );
-    }
-
-    #[ip_test]
-    #[test_case(local_ip::<I>(), MultipleDevicesId::B, leave_unbound;
-        "wrong_addr_unbound")]
-    #[test_case(local_ip::<I>(), MultipleDevicesId::B, bind_as_listener;
-        "wrong_addr_listener")]
-    #[test_case(local_ip::<I>(), MultipleDevicesId::B, bind_as_connected;
-        "wrong_addr_connected")]
-    fn test_join_leave_multicast_interface_id_and_ip_mismatch<I: Ip + TestIpExt>(
-        interface_addr: SpecifiedAddr<I::Addr>,
-        interface_id: MultipleDevicesId,
-        make_socket: impl FnOnce(
-            &mut MultiDeviceDummySyncCtx<I>,
-            &mut DummyNonSyncCtx<I>,
-            UdpUnboundId<I>,
-        ) -> UdpSocketId<I>,
-    ) where
-        MultiDeviceDummySyncCtx<I>: DummyDeviceSyncCtxBound<I, MultipleDevicesId>,
-    {
-        let mcast_addr = I::get_multicast_addr(3);
-        let (result, multicast_memberships) = try_join_leave_multicast(
-            mcast_addr,
-            Some(interface_addr),
-            Some(interface_id),
-            make_socket,
-        );
-        assert_eq!(result, Err(SetMulticastMembershipError::AddressNotAvailable));
-        assert_eq!(multicast_memberships, HashMap::default());
     }
 
     #[ip_test]
@@ -4583,8 +4550,9 @@ mod tests {
         let mcast_addr = I::get_multicast_addr(3);
         let (result, multicast_memberships) = try_join_leave_multicast(
             mcast_addr,
-            interface_addr,
-            None,
+            interface_addr
+                .map(MulticastInterfaceSelector::LocalAddress)
+                .unwrap_or(MulticastInterfaceSelector::AnyInterfaceWithRoute),
             |sync_ctx, non_sync_ctx, unbound| {
                 set_unbound_udp_device(sync_ctx, non_sync_ctx, unbound, Some(bound_device));
                 make_socket(sync_ctx, non_sync_ctx, unbound)
@@ -4615,8 +4583,7 @@ mod tests {
             &mut non_sync_ctx,
             unbound.into(),
             group,
-            Some(local_ip::<I>()),
-            None,
+            MulticastInterfaceSelector::LocalAddress(local_ip::<I>()),
             true,
         )
         .expect("join group failed");
@@ -4647,8 +4614,7 @@ mod tests {
             &mut non_sync_ctx,
             unbound.into(),
             first_group,
-            Some(local_ip),
-            None,
+            MulticastInterfaceSelector::LocalAddress(local_ip),
             true,
         )
         .expect("join group failed");
@@ -4667,8 +4633,7 @@ mod tests {
             &mut non_sync_ctx,
             list.into(),
             second_group,
-            Some(local_ip),
-            None,
+            MulticastInterfaceSelector::LocalAddress(local_ip),
             true,
         )
         .expect("join group failed");
@@ -4701,8 +4666,7 @@ mod tests {
             &mut non_sync_ctx,
             unbound.into(),
             first_group,
-            Some(local_ip),
-            None,
+            MulticastInterfaceSelector::LocalAddress(local_ip),
             true,
         )
         .expect("join group failed");
@@ -4722,8 +4686,7 @@ mod tests {
             &mut non_sync_ctx,
             conn.into(),
             second_group,
-            Some(local_ip),
-            None,
+            MulticastInterfaceSelector::LocalAddress(local_ip),
             true,
         )
         .expect("join group failed");
