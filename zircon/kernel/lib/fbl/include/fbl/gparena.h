@@ -29,14 +29,25 @@ class __OWNER(void) GPArena {
     DEBUG_ASSERT(count_ == 0);
     if (vmar_ != nullptr) {
       // Unmap all of our memory and free our resources.
+      const size_t committed_len = committed_ - start_;
+      if (committed_len > 0) {
+        vmo_->Unpin(0, committed_len);
+      }
       vmar_->Destroy();
       vmar_.reset();
     }
+    vmo_.reset();
   }
 
   zx_status_t Init(const char* name, size_t max_count) {
-    if (!max_count)
+    if (!max_count) {
       return ZX_ERR_INVALID_ARGS;
+    }
+
+    if (vmar_) {
+      // Already initialized.
+      return ZX_ERR_BAD_STATE;
+    }
 
     // Carve out some memory from the kernel root VMAR
     const size_t mem_sz = ROUNDUP(max_count * ObjectSize, PAGE_SIZE);
@@ -66,7 +77,10 @@ class __OWNER(void) GPArena {
     }
     // The VMAR's parent holds a ref, so it won't be destroyed
     // automatically when we return.
-    auto destroy_vmar = fit::defer([this]() { vmar_->Destroy(); });
+    auto destroy_vmar = fit::defer([this]() {
+      vmar_->Destroy();
+      vmar_.reset();
+    });
 
     st = vmar_->CreateVmMapping(0,  // mapping_offset
                                 mem_sz,
@@ -79,6 +93,7 @@ class __OWNER(void) GPArena {
       return ZX_ERR_NO_MEMORY;
     }
 
+    vmo_ = ktl::move(vmo);
     top_ = committed_ = start_ = mapping_->base();
     end_ = start_ + mem_sz;
 
@@ -225,8 +240,14 @@ class __OWNER(void) GPArena {
       }
       const size_t offset = reinterpret_cast<vaddr_t>(committed) - start_;
       const size_t len = nc - committed;
-      zx_status_t st = mapping_->MapRange(offset, len, /* commit */ true);
+      zx_status_t st = vmo_->CommitRangePinned(offset, len, true);
       if (st != ZX_OK) {
+        return false;
+      }
+      st = mapping_->MapRange(offset, len, /* commit */ true);
+      if (st != ZX_OK) {
+        // Unpin the range.
+        vmo_->Unpin(offset, len);
         // Try to clean up any committed pages, but don't require
         // that it succeeds.
         mapping_->DecommitRange(offset, len);
@@ -250,11 +271,12 @@ class __OWNER(void) GPArena {
                 "ObjectSize must be common alignment multiple");
   fbl::RefPtr<VmAddressRegion> vmar_;
   fbl::RefPtr<VmMapping> mapping_;
+  fbl::RefPtr<VmObject> vmo_;
 
   uintptr_t start_ = 0;
   // top_ is the address of the next object to be allocated from the arena.
   ktl::atomic<uintptr_t> top_ = 0;
-  // start_ .. committed_ represents the committed and mapped portion of the arena.
+  // start_ .. committed_ represents the committed, pinned and mapped portion of the arena.
   ktl::atomic<uintptr_t> committed_ = 0;
   // start_ .. end_ represent the total virtual address reservation for the arena, and committed_
   // may not grow past end_.
