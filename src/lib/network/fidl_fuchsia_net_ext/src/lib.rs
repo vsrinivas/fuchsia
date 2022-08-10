@@ -145,6 +145,42 @@ impl std::str::FromStr for IpAddress {
     }
 }
 
+macro_rules! generate_address_type {
+    ( $new_type:ident, $std_type:ident ) => {
+        #[derive(PartialEq, Eq, Debug, Clone, Copy)]
+        pub struct $new_type(pub std::net::$std_type);
+
+        impl std::fmt::Display for $new_type {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+                let Self(addr) = self;
+                write!(f, "{}", addr)
+            }
+        }
+
+        impl From<fidl::$new_type> for $new_type {
+            fn from(fidl::$new_type { addr }: fidl::$new_type) -> Self {
+                Self(addr.into())
+            }
+        }
+
+        impl Into<fidl::$new_type> for $new_type {
+            fn into(self) -> fidl::$new_type {
+                let Self(addr) = self;
+                fidl::$new_type { addr: addr.octets() }
+            }
+        }
+
+        impl std::str::FromStr for $new_type {
+            type Err = std::net::AddrParseError;
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                Ok(Self(s.parse()?))
+            }
+        }
+    };
+}
+generate_address_type!(Ipv4Address, Ipv4Addr);
+generate_address_type!(Ipv6Address, Ipv6Addr);
+
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub struct Subnet {
     pub addr: IpAddress,
