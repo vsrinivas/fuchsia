@@ -15,7 +15,6 @@ rustc_binary("empty_bin") {
 
 fuchsia_component("pass_with_config") {
   manifest = "meta/test_with_config.cml"
-  restricted_features = [ "structured_config" ]
   deps = [ ":empty_bin" ]
   visibility = [ ":*" ]
 }
@@ -28,7 +27,6 @@ fuchsia_structured_config_values("pass_with_config_values") {
 
 fuchsia_component("fail_missing_config") {
   manifest = "meta/test_with_config.cml"
-  restricted_features = [ "structured_config" ]
   deps = [ ":empty_bin" ]
   visibility = [ ":*" ]
 }

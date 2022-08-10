@@ -28,7 +28,6 @@ fuchsia_component_manifest("manifest") {
   testonly = true
   component_name = "rust_receiver"
   manifest = "meta/receiver.cml"
-  restricted_features = [ "structured_config" ]
 }
 
 fuchsia_structured_config_rust_lib("config_lib") {

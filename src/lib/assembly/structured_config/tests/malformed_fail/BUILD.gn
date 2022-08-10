@@ -8,13 +8,11 @@ import("//build/rust/rustc_test.gni")
 
 fuchsia_component("fail_missing_program") {
   manifest = "meta/test_without_program.cml"
-  restricted_features = [ "structured_config" ]
   visibility = [ ":*" ]
 }
 
 fuchsia_component("fail_bad_runner") {
   manifest = "meta/test_with_fake_runner.cml"
-  restricted_features = [ "structured_config" ]
   visibility = [ ":*" ]
 }
 

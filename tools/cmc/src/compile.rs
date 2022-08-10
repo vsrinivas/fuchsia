@@ -722,7 +722,7 @@ mod tests {
         },
     }}
 
-    test_compile_with_features! { FeatureSet::from(vec![Feature::StructuredConfig]), {
+    test_compile_with_features! { FeatureSet::from(vec![]), {
         test_compile_config => {
             input = json!({
                 "config": {

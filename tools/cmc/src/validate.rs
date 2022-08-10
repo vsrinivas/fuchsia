@@ -1287,8 +1287,6 @@ impl<'a> ValidationContext<'a> {
         &self,
         fields: &BTreeMap<cml::ConfigKey, cml::ConfigValueType>,
     ) -> Result<(), Error> {
-        self.features.check(Feature::StructuredConfig)?;
-
         if fields.is_empty() {
             return Err(Error::validate("'config' section is empty"));
         }
@@ -5618,8 +5616,8 @@ mod tests {
         ),
     }
 
-    // Tests structured config when the feature is enabled
-    test_validate_cml_with_feature! { FeatureSet::from(vec![Feature::StructuredConfig]), {
+    // Tests structured config
+    test_validate_cml_with_feature! { FeatureSet::from(vec![]), {
         test_cml_configs(
             json!({
                 "config": {
@@ -5869,22 +5867,6 @@ mod tests {
             Err(Error::Parse { err, .. }) if &err == "expected a non-zero value"
         ),
     }}
-
-    // Tests structured config when the feature is disabled
-    test_validate_cml! {
-        test_cml_config_without_config_feature(
-            json!({
-                "config": {
-                    "verbosity": {
-                        "type": "string",
-                        "max_size": 50
-                    },
-                    "timeout": { "type": "uint64" },
-                }
-            }),
-            Err(Error::RestrictedFeature(s)) if s == "structured_config"
-        ),
-    }
 
     // Tests the use of `allowed_offers` when the "DynamicOffers" feature is set.
     test_validate_cml_with_feature! { FeatureSet::from(vec![Feature::DynamicOffers]), {

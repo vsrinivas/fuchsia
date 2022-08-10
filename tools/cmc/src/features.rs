@@ -43,9 +43,6 @@ pub enum Feature {
     /// Allows `ComponentDecl.allowed_offers` to be specified in CML.
     DynamicOffers,
 
-    /// Enables structured configuration support in CML.
-    StructuredConfig,
-
     /// Allows `hub` framework capability to be used.
     Hub,
 
@@ -58,7 +55,6 @@ impl FromStr for Feature {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "dynamic_offers" => Ok(Feature::DynamicOffers),
-            "structured_config" => Ok(Feature::StructuredConfig),
             "hub" => Ok(Feature::Hub),
             "allow_long_names" => Ok(Feature::AllowLongNames),
             _ => Err(format!("unrecognized feature \"{}\"", s)),
@@ -70,7 +66,6 @@ impl fmt::Display for Feature {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(match self {
             Feature::DynamicOffers => "dynamic_offers",
-            Feature::StructuredConfig => "structured_config",
             Feature::Hub => "hub",
             Feature::AllowLongNames => "allow_long_names",
         })
@@ -84,7 +79,6 @@ mod tests {
     #[test]
     fn feature_is_parsed() {
         assert_eq!(Feature::DynamicOffers, "dynamic_offers".parse::<Feature>().unwrap());
-        assert_eq!(Feature::StructuredConfig, "structured_config".parse::<Feature>().unwrap());
         assert_eq!(Feature::Hub, "hub".parse::<Feature>().unwrap());
         assert_eq!(Feature::AllowLongNames, "allow_long_names".parse::<Feature>().unwrap());
     }
@@ -92,7 +86,6 @@ mod tests {
     #[test]
     fn feature_is_printed() {
         assert_eq!("dynamic_offers", Feature::DynamicOffers.to_string());
-        assert_eq!("structured_config", Feature::StructuredConfig.to_string());
         assert_eq!("hub", Feature::Hub.to_string());
         assert_eq!("allow_long_names", Feature::AllowLongNames.to_string());
     }

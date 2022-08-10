@@ -125,10 +125,7 @@ template("cm") {
     #
     # Useful for features which we want to allow globally in tree but
     # restrict out of tree.
-    restricted_features += [
-      "hub",
-      "structured_config",
-    ]
+    restricted_features += [ "hub" ]
 
     # Opt-in to the requested restricted_features.
     args += [ "--features" ] + restricted_features
