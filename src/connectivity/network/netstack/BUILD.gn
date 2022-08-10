@@ -205,6 +205,7 @@ go_library("lib") {
     "fuchsia_net_stack.go",
     "fuchsia_net_stack_test.go",
     "fuchsia_posix_socket.go",
+    "fuchsia_posix_socket_test.go",
     "main.go",
     "ndp.go",
     "ndp_test.go",

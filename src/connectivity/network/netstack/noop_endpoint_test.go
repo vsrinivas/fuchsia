@@ -14,6 +14,7 @@ import (
 	"fidl/fuchsia/net/interfaces"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
@@ -115,7 +116,7 @@ func (n *noopObserver) SetOnLinkOnlineChanged(fn func(bool)) {
 	n.onLinkOnlineChanged = fn
 }
 
-func addNoopEndpoint(t *testing.T, ns *Netstack, name string) *ifState {
+func addLinkEndpoint(t *testing.T, ns *Netstack, name string, ep stack.LinkEndpoint) *ifState {
 	t.Helper()
 	ifs, err := ns.addEndpoint(
 		func(nicid tcpip.NICID) string {
@@ -129,7 +130,7 @@ func addNoopEndpoint(t *testing.T, ns *Netstack, name string) *ifState {
 				return candidate
 			}
 		},
-		&noopEndpoint{},
+		ep,
 		&noopController{},
 		nil,                    /* observer */
 		defaultInterfaceMetric, /* metric */
@@ -139,4 +140,95 @@ func addNoopEndpoint(t *testing.T, ns *Netstack, name string) *ifState {
 		t.Fatal(err)
 	}
 	return ifs
+}
+
+func addNoopEndpoint(t *testing.T, ns *Netstack, name string) *ifState {
+	t.Helper()
+	return addLinkEndpoint(t, ns, name, &noopEndpoint{})
+}
+
+var _ stack.LinkEndpoint = (*sentinelEndpoint)(nil)
+
+type waitPair struct {
+	waitFor uint
+	ch      chan struct{}
+}
+
+type sentinelEndpoint struct {
+	noopEndpoint
+	mu struct {
+		sync.Mutex
+		pkts          stack.PacketBufferList
+		blocking      bool
+		totalEnqueued uint
+		waiters       []waitPair
+	}
+}
+
+func (ep *sentinelEndpoint) waitForLocked(amount uint) chan struct{} {
+	amount += uint(ep.mu.totalEnqueued)
+	ch := make(chan struct{})
+	ep.mu.waiters = append(ep.mu.waiters, waitPair{waitFor: amount, ch: ch})
+	ep.signalWaitersLocked()
+	return ch
+}
+
+func (ep *sentinelEndpoint) WaitFor(amount uint) chan struct{} {
+	ep.mu.Lock()
+	defer ep.mu.Unlock()
+	return ep.waitForLocked(amount)
+}
+
+func (ep *sentinelEndpoint) signalWaitersLocked() {
+	newWaiters := ep.mu.waiters[:0]
+	for _, waiter := range ep.mu.waiters {
+		if ep.mu.totalEnqueued >= waiter.waitFor {
+			close(waiter.ch)
+		} else {
+			newWaiters = append(newWaiters, waiter)
+		}
+	}
+	ep.mu.waiters = newWaiters
+}
+
+func (ep *sentinelEndpoint) WritePackets(pkts stack.PacketBufferList) (int, tcpip.Error) {
+	ep.mu.Lock()
+	defer ep.mu.Unlock()
+	if ep.mu.blocking {
+		for _, pb := range pkts.AsSlice() {
+			pb.IncRef()
+			ep.mu.pkts.PushBack(pb)
+		}
+	}
+	ep.mu.totalEnqueued += uint(pkts.Len())
+	ep.signalWaitersLocked()
+	return ep.noopEndpoint.WritePackets(pkts)
+}
+
+func (ep *sentinelEndpoint) Drain() (uint, chan struct{}) {
+	ep.mu.Lock()
+	defer ep.mu.Unlock()
+	drained := ep.drainLocked()
+	return drained, ep.waitForLocked(drained)
+}
+
+func (ep *sentinelEndpoint) drainLocked() uint {
+	drained := ep.mu.pkts.Len()
+	ep.mu.pkts.Reset()
+	return uint(drained)
+}
+
+func (ep *sentinelEndpoint) Enqueued() uint {
+	ep.mu.Lock()
+	defer ep.mu.Unlock()
+	return ep.mu.totalEnqueued
+}
+
+func (ep *sentinelEndpoint) SetBlocking(blocking bool) {
+	ep.mu.Lock()
+	defer ep.mu.Unlock()
+	ep.mu.blocking = blocking
+	if !ep.mu.blocking {
+		ep.drainLocked()
+	}
 }

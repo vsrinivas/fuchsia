@@ -8,6 +8,7 @@
 package netstack
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"flag"
@@ -129,12 +130,14 @@ func TestDelRouteErrors(t *testing.T) {
 	}
 }
 
-// TestStackNICEnableDisable tests that the NIC in stack.Stack is enabled or
-// disabled when the underlying link is brought up or down, respectively.
-func TestStackNICEnableDisable(t *testing.T) {
-	addGoleakCheck(t)
-	ns, _ := newNetstack(t, netstackTestOptions{})
-	ifs := addNoopEndpoint(t, ns, "")
+func (ifs *ifState) IsUp() bool {
+	ifs.mu.Lock()
+	defer ifs.mu.Unlock()
+	return ifs.IsUpLocked()
+}
+
+func installAndValidateIface(t *testing.T, ns *Netstack, addEndpoint func(*testing.T, *Netstack, string) *ifState) *ifState {
+	ifs := addEndpoint(t, ns, "")
 	t.Cleanup(ifs.RemoveByUser)
 
 	// The NIC should initially be disabled in stack.Stack.
@@ -142,13 +145,7 @@ func TestStackNICEnableDisable(t *testing.T) {
 		t.Fatalf("got ns.stack.CheckNIC(%d) = true, want = false", ifs.nicid)
 	}
 
-	isUp := func() bool {
-		ifs.mu.Lock()
-		defer ifs.mu.Unlock()
-		return ifs.IsUpLocked()
-	}
-
-	if isUp() {
+	if ifs.IsUp() {
 		t.Fatal("got initial link state up, want down")
 	}
 
@@ -160,9 +157,18 @@ func TestStackNICEnableDisable(t *testing.T) {
 		t.Fatalf("got ns.stack.CheckNIC(%d) = false, want = true", ifs.nicid)
 	}
 
-	if !isUp() {
+	if !ifs.IsUp() {
 		t.Fatal("got post-up link state down, want up")
 	}
+	return ifs
+}
+
+// TestStackNICEnableDisable tests that the NIC in stack.Stack is enabled or
+// disabled when the underlying link is brought up or down, respectively.
+func TestStackNICEnableDisable(t *testing.T) {
+	addGoleakCheck(t)
+	ns, _ := newNetstack(t, netstackTestOptions{})
+	ifs := installAndValidateIface(t, ns, addNoopEndpoint)
 
 	// Bringing the link down should disable the NIC in stack.Stack.
 	if err := ifs.Down(); err != nil {
@@ -172,7 +178,7 @@ func TestStackNICEnableDisable(t *testing.T) {
 		t.Fatalf("got ns.stack.CheckNIC(%d) = true, want = false", ifs.nicid)
 	}
 
-	if isUp() {
+	if ifs.IsUp() {
 		t.Fatal("got post-down link state up, want down")
 	}
 }
@@ -1411,6 +1417,16 @@ func TestAddAddressesThenChangePrefix(t *testing.T) {
 	compareInterfaceAddresses(t, gotAddrs, wantAddrs)
 }
 
+func addAddressAndRoute(t *testing.T, ns *Netstack, ifState *ifState, addr tcpip.ProtocolAddress) {
+	if ok, reason := ifState.addAddress(addr, tcpipstack.AddressProperties{}); !ok {
+		t.Fatalf("ifState.addAddress(%s, {}): %s", addr.AddressWithPrefix, reason)
+	}
+	route := addressWithPrefixRoute(ifState.nicid, addr.AddressWithPrefix)
+	if err := ns.AddRoute(route, metricNotSet /* dynamic */, false); err != nil {
+		t.Fatalf("ns.AddRoute(%s, 0, false): %s", route, err)
+	}
+}
+
 func TestAddRouteParameterValidation(t *testing.T) {
 	addGoleakCheck(t)
 	ns, _ := newNetstack(t, netstackTestOptions{})
@@ -1425,13 +1441,7 @@ func TestAddRouteParameterValidation(t *testing.T) {
 	ifState := addNoopEndpoint(t, ns, "")
 	t.Cleanup(ifState.RemoveByUser)
 
-	if ok, reason := ifState.addAddress(addr, tcpipstack.AddressProperties{}); !ok {
-		t.Fatalf("ifState.addAddress(%s, {}): %s", addr.AddressWithPrefix, reason)
-	}
-	route := addressWithPrefixRoute(ifState.nicid, addr.AddressWithPrefix)
-	if err := ns.AddRoute(route, metricNotSet /* dynamic */, false); err != nil {
-		t.Fatalf("ns.AddRoute(%s, 0, false): %s", route, err)
-	}
+	addAddressAndRoute(t, ns, ifState, addr)
 
 	tests := []struct {
 		name    string
@@ -1672,5 +1682,100 @@ func TestDHCPAcquired(t *testing.T) {
 				t.Errorf("NIC %d not found in %v", ifState.nicid, infoMap)
 			}
 		})
+	}
+}
+
+func TestInFlightPacketsConsumeUDPSendBuffer(t *testing.T) {
+	addGoleakCheck(t)
+	ns, _ := newNetstack(t, netstackTestOptions{})
+	linkEp := &sentinelEndpoint{}
+	linkEp.SetBlocking(true)
+	ifState := installAndValidateIface(t, ns, func(t *testing.T, ns *Netstack, name string) *ifState {
+		return addLinkEndpoint(t, ns, name, linkEp)
+	})
+	t.Cleanup(ifState.RemoveByUser)
+
+	addr := tcpip.ProtocolAddress{
+		Protocol: ipv4.ProtocolNumber,
+		AddressWithPrefix: tcpip.AddressWithPrefix{
+			Address:   tcpip.Address("\xf0\xf0\xf0\xf0"),
+			PrefixLen: 24,
+		},
+	}
+	addAddressAndRoute(t, ns, ifState, addr)
+
+	wq := new(waiter.Queue)
+	var eventOut struct {
+		mu       sync.Mutex
+		returned bool
+	}
+	eventOutReturned := func() bool {
+		eventOut.mu.Lock()
+		defer eventOut.mu.Unlock()
+		return eventOut.returned
+	}
+	cb := func(m waiter.EventMask) {
+		eventOut.mu.Lock()
+		defer eventOut.mu.Unlock()
+		if m&waiter.EventOut != 0 {
+			eventOut.returned = true
+		}
+	}
+	entry := waiter.NewFunctionEntry(waiter.EventOut, cb)
+	wq.EventRegister(&entry)
+
+	ep, err := ns.stack.NewEndpoint(header.UDPProtocolNumber, header.IPv4ProtocolNumber, wq)
+	if err != nil {
+		t.Fatalf("ns.stack.NewEndpoint(%d, %d, _): %s", header.UDPProtocolNumber, header.IPv4ProtocolNumber, err)
+	}
+
+	fullAddress := &tcpip.FullAddress{
+		NIC:  ifState.nicid,
+		Addr: addr.AddressWithPrefix.Address,
+		Port: 42,
+	}
+	var r bytes.Reader
+	data := []byte{0, 1, 2, 3, 4}
+	validateWrite := func(
+		expectedCount int64,
+		expectedErr tcpip.Error,
+	) error {
+		r.Reset(data)
+		writeOpts := tcpip.WriteOptions{
+			To: fullAddress,
+		}
+		n, err := ep.Write(&r, writeOpts)
+		if diff := cmp.Diff(expectedErr, err); diff != "" {
+			return fmt.Errorf("got ep.Write(_, %#v) = (_, %#v), want (_, %#v)", writeOpts, err, expectedErr)
+		}
+		if n != expectedCount {
+			return fmt.Errorf("got ep.Write(_, %#v) = (%d, _), want (%d, _)", writeOpts, n, expectedCount)
+		}
+		return nil
+	}
+
+	// Write() succeeds when length(data) > sizeof(send buf) > 0; thereafter,
+	// the send buffer is exhausted.
+	ep.SocketOptions().SetSendBufferSize(int64(len(data))-1, false)
+	if err := validateWrite(int64(len(data)), nil); err != nil {
+		t.Fatal(err)
+	}
+
+	// Expect Write() blocks when the send buffer is exhausted.
+	if err := validateWrite(0, &tcpip.ErrWouldBlock{}); err != nil {
+		t.Fatal(err)
+	}
+
+	if eventOutReturned() {
+		t.Fatalf("got waiter.EventOut before endpoint was unblocked")
+	}
+	linkEp.Drain()
+	if !eventOutReturned() {
+		t.Fatalf("expect waiter.EventOut signaled when endpoint is unblocked")
+	}
+
+	// Expect Write() succeeds now that the send buffer has space.
+	if err := validateWrite(int64(len(data)), nil); err != nil {
+		t.Fatal(err)
 	}
 }

@@ -547,10 +547,14 @@ func (ep *endpoint) GetTimestamp(fidl.Context) (socket.BaseSocketGetTimestampRes
 	return socket.BaseSocketGetTimestampResultWithResponse(socket.BaseSocketGetTimestampResponse{Value: value}), nil
 }
 
-func (ep *endpoint) SetTimestamp(_ fidl.Context, value socket.TimestampOption) (socket.BaseSocketSetTimestampResult, error) {
+func (ep *endpoint) setTimestamp(value socket.TimestampOption) {
 	ep.mu.Lock()
 	ep.mu.sockOptTimestamp = value
 	ep.mu.Unlock()
+}
+
+func (ep *endpoint) SetTimestamp(_ fidl.Context, value socket.TimestampOption) (socket.BaseSocketSetTimestampResult, error) {
+	ep.setTimestamp(value)
 	return socket.BaseSocketSetTimestampResultWithResponse(socket.BaseSocketSetTimestampResponse{}), nil
 }
 
@@ -1026,8 +1030,12 @@ func (ep *endpoint) DropIpv6Membership(_ fidl.Context, membership socket.Ipv6Mul
 	return socket.BaseNetworkSocketDropIpv6MembershipResultWithResponse(socket.BaseNetworkSocketDropIpv6MembershipResponse{}), nil
 }
 
-func (ep *endpoint) SetIpv6ReceiveTrafficClass(_ fidl.Context, value bool) (socket.BaseNetworkSocketSetIpv6ReceiveTrafficClassResult, error) {
+func (ep *endpoint) setIpv6ReceiveTrafficClass(value bool) {
 	ep.ep.SocketOptions().SetReceiveTClass(value)
+}
+
+func (ep *endpoint) SetIpv6ReceiveTrafficClass(_ fidl.Context, value bool) (socket.BaseNetworkSocketSetIpv6ReceiveTrafficClassResult, error) {
+	ep.setIpv6ReceiveTrafficClass(value)
 	return socket.BaseNetworkSocketSetIpv6ReceiveTrafficClassResultWithResponse(socket.BaseNetworkSocketSetIpv6ReceiveTrafficClassResponse{}), nil
 }
 
@@ -1036,8 +1044,12 @@ func (ep *endpoint) GetIpv6ReceiveTrafficClass(fidl.Context) (socket.BaseNetwork
 	return socket.BaseNetworkSocketGetIpv6ReceiveTrafficClassResultWithResponse(socket.BaseNetworkSocketGetIpv6ReceiveTrafficClassResponse{Value: value}), nil
 }
 
-func (ep *endpoint) SetIpv6ReceiveHopLimit(_ fidl.Context, value bool) (socket.BaseNetworkSocketSetIpv6ReceiveHopLimitResult, error) {
+func (ep *endpoint) setIpv6ReceiveHopLimit(value bool) {
 	ep.ep.SocketOptions().SetReceiveHopLimit(value)
+}
+
+func (ep *endpoint) SetIpv6ReceiveHopLimit(_ fidl.Context, value bool) (socket.BaseNetworkSocketSetIpv6ReceiveHopLimitResult, error) {
+	ep.setIpv6ReceiveHopLimit(value)
 	return socket.BaseNetworkSocketSetIpv6ReceiveHopLimitResultWithResponse(socket.BaseNetworkSocketSetIpv6ReceiveHopLimitResponse{}), nil
 }
 
@@ -1046,8 +1058,12 @@ func (ep *endpoint) GetIpv6ReceiveHopLimit(fidl.Context) (socket.BaseNetworkSock
 	return socket.BaseNetworkSocketGetIpv6ReceiveHopLimitResultWithResponse(socket.BaseNetworkSocketGetIpv6ReceiveHopLimitResponse{Value: value}), nil
 }
 
-func (ep *endpoint) SetIpv6ReceivePacketInfo(_ fidl.Context, value bool) (socket.BaseNetworkSocketSetIpv6ReceivePacketInfoResult, error) {
+func (ep *endpoint) setIpv6ReceivePacketInfo(value bool) {
 	ep.ep.SocketOptions().SetIPv6ReceivePacketInfo(value)
+}
+
+func (ep *endpoint) SetIpv6ReceivePacketInfo(_ fidl.Context, value bool) (socket.BaseNetworkSocketSetIpv6ReceivePacketInfoResult, error) {
+	ep.setIpv6ReceivePacketInfo(value)
 	return socket.BaseNetworkSocketSetIpv6ReceivePacketInfoResultWithResponse(socket.BaseNetworkSocketSetIpv6ReceivePacketInfoResponse{}), nil
 }
 
@@ -1056,8 +1072,12 @@ func (ep *endpoint) GetIpv6ReceivePacketInfo(fidl.Context) (socket.BaseNetworkSo
 	return socket.BaseNetworkSocketGetIpv6ReceivePacketInfoResultWithResponse(socket.BaseNetworkSocketGetIpv6ReceivePacketInfoResponse{Value: value}), nil
 }
 
-func (ep *endpoint) SetIpReceiveTypeOfService(_ fidl.Context, value bool) (socket.BaseNetworkSocketSetIpReceiveTypeOfServiceResult, error) {
+func (ep *endpoint) setIpReceiveTypeOfService(value bool) {
 	ep.ep.SocketOptions().SetReceiveTOS(value)
+}
+
+func (ep *endpoint) SetIpReceiveTypeOfService(_ fidl.Context, value bool) (socket.BaseNetworkSocketSetIpReceiveTypeOfServiceResult, error) {
+	ep.setIpReceiveTypeOfService(value)
 	return socket.BaseNetworkSocketSetIpReceiveTypeOfServiceResultWithResponse(socket.BaseNetworkSocketSetIpReceiveTypeOfServiceResponse{}), nil
 }
 
@@ -1066,8 +1086,12 @@ func (ep *endpoint) GetIpReceiveTypeOfService(fidl.Context) (socket.BaseNetworkS
 	return socket.BaseNetworkSocketGetIpReceiveTypeOfServiceResultWithResponse(socket.BaseNetworkSocketGetIpReceiveTypeOfServiceResponse{Value: value}), nil
 }
 
-func (ep *endpoint) SetIpReceiveTtl(_ fidl.Context, value bool) (socket.BaseNetworkSocketSetIpReceiveTtlResult, error) {
+func (ep *endpoint) setIpReceiveTtl(value bool) {
 	ep.ep.SocketOptions().SetReceiveTTL(value)
+}
+
+func (ep *endpoint) SetIpReceiveTtl(_ fidl.Context, value bool) (socket.BaseNetworkSocketSetIpReceiveTtlResult, error) {
+	ep.setIpReceiveTtl(value)
 	return socket.BaseNetworkSocketSetIpReceiveTtlResultWithResponse(socket.BaseNetworkSocketSetIpReceiveTtlResponse{}), nil
 }
 
@@ -1951,11 +1975,27 @@ var (
 	udpRxPreludeSize = udp_serde.RxUdpPreludeSize()
 )
 
-func newDatagramSocket(eps *endpointWithSocket) (socket.DatagramSocketWithCtxInterface, error) {
-	localC, peerC, err := zx.NewChannel(0)
+func newDatagramSocketImpl(ns *Netstack, transProto tcpip.TransportProtocolNumber, netProto tcpip.NetworkProtocolNumber, ep tcpip.Endpoint, wq *waiter.Queue) (*datagramSocketImpl, error) {
+	eps, err := newEndpointWithSocket(
+		ep,
+		wq,
+		transProto,
+		netProto,
+		ns,
+		zx.SocketDatagram,
+	)
 	if err != nil {
-		return socket.DatagramSocketWithCtxInterface{}, err
+		return nil, err
 	}
+
+	// Receive all control messages that might be passed to the client.
+	eps.setTimestamp(socket.TimestampOptionNanosecond)
+	eps.setIpReceiveTypeOfService(true)
+	eps.setIpReceiveTtl(true)
+	eps.setIpv6ReceiveTrafficClass(true)
+	eps.setIpv6ReceiveHopLimit(true)
+	eps.setIpv6ReceivePacketInfo(true)
+
 	s := &datagramSocketImpl{
 		endpointWithSocket: eps,
 		entry:              &waiter.Entry{},
@@ -1981,12 +2021,9 @@ func newDatagramSocket(eps *endpointWithSocket) (socket.DatagramSocketWithCtxInt
 	// Initialize CV used to drain the socket.
 	s.localEDrainedCond = &sync.Cond{L: &sync.Mutex{}}
 
-	s.addConnection(context.Background(), fidlio.NodeWithCtxInterfaceRequest{Channel: localC})
-	_ = syslog.DebugTf("NewDatagram", "%p", s)
-
 	// Datagram sockets should be readable/writeable immediately upon creation.
 	s.startReadWriteLoops(s.loopRead, s.loopWrite)
-	return socket.DatagramSocketWithCtxInterface{Channel: peerC}, nil
+	return s, nil
 }
 
 // loopRead shuttles signals and data from the tcpip.Endpoint to the zircon socket.
@@ -2043,6 +2080,10 @@ func (s *datagramSocketImpl) loopRead(ch chan<- struct{}) {
 // loopWrite shuttles datagrams from the zircon socket to the tcpip.Endpoint.
 func (s *datagramSocketImpl) loopWrite(ch chan<- struct{}) {
 	defer close(ch)
+
+	waitEntry, notifyCh := waiter.NewChannelEntry(waiter.EventOut)
+	s.wq.EventRegister(&waitEntry)
+	defer s.wq.EventUnregister(&waitEntry)
 
 	buf := make([]byte, udpTxPreludeSize+maxUDPPayloadSize)
 	s.localEDrainedCond.L.Lock()
@@ -2101,28 +2142,35 @@ func (s *datagramSocketImpl) loopWrite(ch chan<- struct{}) {
 
 		v = v[udpTxPreludeSize:]
 
-		var r bytes.Reader
-		r.Reset(v)
-		lenPrev := len(v)
-		written, writeErr := s.ep.Write(&r, opts)
+		for {
+			var r bytes.Reader
+			r.Reset(v)
+			lenPrev := len(v)
+			written, writeErr := s.ep.Write(&r, opts)
 
-		if writeErr == nil {
-			if int(written) != lenPrev {
-				panic(fmt.Sprintf("UDP disallows short writes; saw: %d/%d", written, lenPrev))
-			}
-		} else {
-			switch writeErr.(type) {
-			case *tcpip.ErrWouldBlock:
-				// TODO(https://fxbug.dev/101570): Handle tcpip.ErrWouldBlock.
-				panic(fmt.Sprintf("can't handle tcpip.ErrWouldBlock"))
-			case *tcpip.ErrConnectionRefused:
-				// TODO(https://fxbug.dev/104640): Propagate ErrConnectionRefused to client.
-				_ = syslog.Warnf("UDP Endpoint.Write(): %s", err)
-			default:
-				if s.handleEndpointWriteError(writeErr, udp.ProtocolNumber) {
-					return
+			if writeErr == nil {
+				if int(written) != lenPrev {
+					panic(fmt.Sprintf("UDP disallows short writes; saw: %d/%d", written, lenPrev))
+				}
+			} else {
+				switch writeErr.(type) {
+				case *tcpip.ErrWouldBlock:
+					select {
+					case <-notifyCh:
+						continue
+					case <-s.endpointWithSocket.closing:
+						return
+					}
+				case *tcpip.ErrConnectionRefused:
+					// TODO(https://fxbug.dev/104640): Propagate ErrConnectionRefused to client.
+					_ = syslog.Warnf("UDP Endpoint.Write(): %s", err)
+				default:
+					if s.handleEndpointWriteError(writeErr, udp.ProtocolNumber) {
+						return
+					}
 				}
 			}
+			break
 		}
 	}
 }
@@ -3822,31 +3870,19 @@ func (sp *providerImpl) DatagramSocket(ctx fidl.Context, domain socket.Domain, p
 		return socket.ProviderDatagramSocketResultWithResponse(socket.ProviderDatagramSocketResponseWithSynchronousDatagramSocket(socket.SynchronousDatagramSocketWithCtxInterface{Channel: peerC})), nil
 	}
 
-	socketEp, err := newEndpointWithSocket(
-		ep,
-		wq,
-		transProto,
-		netProto,
-		sp.ns,
-		zx.SocketDatagram,
-	)
+	s, err := newDatagramSocketImpl(sp.ns, transProto, netProto, ep, wq)
 	if err != nil {
 		return socket.ProviderDatagramSocketResult{}, err
 	}
 
-	// Receive all control messages that might be passed to the client.
-	socketEp.SetTimestamp(ctx, socket.TimestampOptionNanosecond)
-	socketEp.SetIpReceiveTypeOfService(ctx, true)
-	socketEp.SetIpReceiveTtl(ctx, true)
-	socketEp.SetIpv6ReceiveTrafficClass(ctx, true)
-	socketEp.SetIpv6ReceiveHopLimit(ctx, true)
-	socketEp.SetIpv6ReceivePacketInfo(ctx, true)
-
-	datagramSocketInterface, err := newDatagramSocket(socketEp)
+	localC, peerC, err := zx.NewChannel(0)
 	if err != nil {
 		return socket.ProviderDatagramSocketResult{}, err
 	}
-	return socket.ProviderDatagramSocketResultWithResponse(socket.ProviderDatagramSocketResponseWithDatagramSocket(socket.DatagramSocketWithCtxInterface{Channel: datagramSocketInterface.Channel})), nil
+
+	s.addConnection(context.Background(), fidlio.NodeWithCtxInterfaceRequest{Channel: localC})
+	_ = syslog.DebugTf("NewDatagram", "%p", s)
+	return socket.ProviderDatagramSocketResultWithResponse(socket.ProviderDatagramSocketResponseWithDatagramSocket(socket.DatagramSocketWithCtxInterface{Channel: peerC})), nil
 }
 
 func (sp *providerImpl) StreamSocket(_ fidl.Context, domain socket.Domain, proto socket.StreamSocketProtocol) (socket.ProviderStreamSocketResult, error) {
