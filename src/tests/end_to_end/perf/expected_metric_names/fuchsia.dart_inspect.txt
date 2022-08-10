@@ -1,0 +1,16 @@
+fuchsia.dart_inspect.basic_benchmarks: basic/addNode
+fuchsia.dart_inspect.basic_benchmarks: basic/alloc
+fuchsia.dart_inspect.basic_benchmarks: basic/delNode
+fuchsia.dart_inspect.basic_benchmarks: basic/incDouble
+fuchsia.dart_inspect.basic_benchmarks: basic/increment
+fuchsia.dart_inspect.basic_benchmarks: basic/resetByte
+fuchsia.dart_inspect.basic_benchmarks: basic/resetByteLong
+fuchsia.dart_inspect.basic_benchmarks: basic/resetString
+fuchsia.dart_inspect.basic_benchmarks: basic/resetStringLong
+fuchsia.dart_inspect.basic_benchmarks: basic/setByte
+fuchsia.dart_inspect.basic_benchmarks: basic/setByteLong
+fuchsia.dart_inspect.basic_benchmarks: basic/setDouble
+fuchsia.dart_inspect.basic_benchmarks: basic/setInt
+fuchsia.dart_inspect.basic_benchmarks: basic/setString
+fuchsia.dart_inspect.basic_benchmarks: basic/setStringLong
+fuchsia.dart_inspect.basic_benchmarks: basic/url

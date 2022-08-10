@@ -116,6 +116,7 @@ void main() {
       registry: {
         'dart_inspect': _metricsProcessor,
       },
+      expectedMetricNamesFile: 'fuchsia.dart_inspect.txt',
     );
   }, timeout: Timeout.none);
 }
