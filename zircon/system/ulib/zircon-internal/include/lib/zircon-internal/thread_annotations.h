@@ -29,10 +29,11 @@
 // TA_ASSERT_SHARED(x)          function asserts that |x| is held for shared reading
 // TA_REQ(x)                    function requires that the caller hold the mutex |x|
 // TA_REQ_SHARED(x)             function requires that the caller hold the mutex |x| for shared
-// reading TA_EXCL(x)                   function requires that the caller not be holding the mutex
-// |x| TA_RET_CAP(x)                function returns a reference to the mutex |x| TA_SCOPED_CAP type
-// represents a scoped or RAII-style wrapper around a capability TA_NO_THREAD_SAFETY_ANALYSIS
-// function is excluded entirely from thread safety analysis
+//                              reading
+// TA_EXCL(x)                   function requires that the caller not be holding the mutex |x|
+// TA_RET_CAP(x)                function returns a reference to the mutex |x|
+// TA_SCOPED_CAP type           represents a scoped or RAII-style wrapper around a capability
+// TA_NO_THREAD_SAFETY_ANALYSIS function is excluded entirely from thread safety analysis
 
 #ifdef __clang__
 #define THREAD_ANNOTATION(x) __attribute__((x))
