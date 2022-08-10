@@ -119,6 +119,14 @@ zx_device_prop_t pci_device_props[] = {
       {std::size(sysmem_match), sysmem_match},
   };
 
+  const zx_bind_inst_t sysmem_fidl_match[] = {
+      BI_MATCH_IF(EQ, BIND_FIDL_PROTOCOL, ZX_FIDL_PROTOCOL_SYSMEM),
+  };
+
+  const device_fragment_part_t sysmem_fidl_fragment[] = {
+      {std::size(sysmem_fidl_match), sysmem_fidl_match},
+  };
+
   const zx_bind_inst_t acpi_fragment_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_ACPI),
       BI_ABORT_IF(NE, BIND_ACPI_BUS_TYPE, bind_fuchsia_acpi::BIND_ACPI_BUS_TYPE_PCI),
@@ -134,6 +142,7 @@ zx_device_prop_t pci_device_props[] = {
   const device_fragment_t fragments[] = {
       {"pci", std::size(pci_fragment), pci_fragment},
       {"sysmem", std::size(sysmem_fragment), sysmem_fragment},
+      {"sysmem-fidl", std::size(sysmem_fidl_fragment), sysmem_fidl_fragment},
       {"acpi", std::size(acpi_fragment), acpi_fragment},
   };
 
