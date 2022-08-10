@@ -87,7 +87,6 @@ where
     }
 
     /// Gets an iterator over all tracked devices.
-    #[cfg(test)]
     pub fn iter_devices(&self) -> impl Iterator<Item = &DeviceInfo<C, I>> {
         self.devices.iter()
     }
@@ -224,6 +223,10 @@ where
 {
     pub fn core_id(&self) -> C {
         self.core_id.clone()
+    }
+
+    pub fn id(&self) -> BindingId {
+        self.id.clone()
     }
 
     pub fn info(&self) -> &I {

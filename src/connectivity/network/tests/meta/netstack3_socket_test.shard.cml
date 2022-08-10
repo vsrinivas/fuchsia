@@ -1,0 +1,10 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/connectivity/network/netstack3/meta/client.shard.cml",
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+}

@@ -59,6 +59,23 @@ test("netstack_dgramsocket_c_api_test") {
   }
 }
 
+test("netstack_if_nameindex_c_api_test") {
+  sources = [ "if_nameindex_test.cc" ]
+
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//zircon/system/ulib/fbl",
+  ]
+
+  if (is_fuchsia) {
+    deps += [
+      "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_cpp_wire",
+      "//src/lib/testing/predicates",
+    ]
+  }
+}
+
 test("netstack_streamsocket_c_api_test") {
   sources = [
     "streamsocket_test.cc",
@@ -120,6 +137,7 @@ netstack_socket_tests_without_manifest = [
   "netstack_dgramsocket_c_api_test",
   "netstack_streamsocket_c_api_test",
   "netstack_bsdsocket_c_api_test",
+  "netstack_if_nameindex_c_api_test",
 ]
 
 foreach(test, netstack_socket_tests_without_manifest) {
@@ -179,6 +197,7 @@ tests_with_fast_udp = [
   "bsdsocket_c_api_test",
   "dgramsocket_c_api_test",
   "fuchsia_c_api_test",
+  "if_nameindex_c_api_test",
 ]
 
 netstack_tests_with_fast_udp = []
@@ -193,11 +212,25 @@ foreach(test, tests_with_fast_udp) {
   }
 }
 
+tests_with_netstack3 = [ "if_nameindex_c_api_test" ]
+
+netstack3_tests = []
+
+foreach(test, tests_with_netstack3) {
+  name = "netstack3_${test}"
+  netstack3_tests += [ name ]
+  fuchsia_unittest_component("${name}_component") {
+    component_name = name
+    deps = [ ":netstack_${test}" ]
+    manifest = "meta/${name}.cml"
+  }
+}
+
 fuchsia_test_package("netstack-c-api-tests") {
   test_components = []
   foreach(test,
           netstack_tests_without_manifest + netstack_tests_with_manifest +
-              netstack_tests_with_fast_udp) {
+              netstack_tests_with_fast_udp + netstack3_tests) {
     test_components += [ ":${test}_component" ]
   }
 
@@ -208,6 +241,7 @@ fuchsia_test_package("netstack-c-api-tests") {
     # netstack is under test.
     "//src/connectivity/network/netstack:component-debug",
     "//src/connectivity/network/netstack:component-with-fast-udp-debug",
+    "//src/connectivity/network/netstack3:component",
 
     # cat is used to test FD passing in :netstack_fuchsia_c_api_test.
     "//third_party/sbase:cat_bin",
@@ -230,6 +264,7 @@ group("tests") {
     public_deps += [
       ":netstack_bsdsocket_c_api_test($host_toolchain)",
       ":netstack_dgramsocket_c_api_test($host_toolchain)",
+      ":netstack_if_nameindex_c_api_test($host_toolchain)",
       ":netstack_packetsocket_c_api_test($host_toolchain)",
       ":netstack_rawsocket_c_api_test($host_toolchain)",
       ":netstack_streamsocket_c_api_test($host_toolchain)",

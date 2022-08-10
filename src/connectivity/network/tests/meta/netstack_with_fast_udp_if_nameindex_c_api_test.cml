@@ -1,0 +1,13 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/connectivity/network/dns/meta/client.shard.cml",
+        "//src/connectivity/network/tests/meta/netstack_with_fast_udp_socket_test.shard.cml",
+    ],
+    program: {
+        binary: "test/netstack_if_nameindex_c_api_test",
+        environ: [ "FAST_UDP=true" ],
+    },
+}

@@ -21,7 +21,7 @@ use net_types::{
 };
 use netstack3_core::{
     error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError, ZonedAddressError},
-    IpSockCreationError, IpSockRouteError, IpSockSendError, IpSockUnroutableError,
+    Ctx, IpSockCreationError, IpSockRouteError, IpSockSendError, IpSockUnroutableError,
     UdpConnectListenerError, UdpSendError, UdpSendListenerError, UdpSockCreationError,
 };
 
@@ -56,13 +56,33 @@ where
     stream
         .try_fold(ctx, |ctx, req| async {
             match req {
-                psocket::ProviderRequest::InterfaceIndexToName { index: _, responder } => {
-                    // TODO(https://fxbug.dev/48969): implement this method.
-                    responder_send!(responder, &mut Err(zx::Status::NOT_FOUND.into_raw()));
+                psocket::ProviderRequest::InterfaceIndexToName { index, responder } => {
+                    let mut response = {
+                        let ctx = ctx.lock().await;
+                        let Ctx { sync_ctx: _, non_sync_ctx } = &*ctx;
+                        let result = AsRef::<Devices>::as_ref(&non_sync_ctx)
+                            .get_device(index)
+                            .map(|device_info| device_info.info().common_info().name.clone())
+                            .ok_or(zx::Status::NOT_FOUND.into_raw());
+                        result
+                    };
+                    responder_send!(responder, &mut response);
                 }
-                psocket::ProviderRequest::InterfaceNameToIndex { name: _, responder } => {
-                    // TODO(https://fxbug.dev/48969): implement this method.
-                    responder_send!(responder, &mut Err(zx::Status::NOT_FOUND.into_raw()));
+                psocket::ProviderRequest::InterfaceNameToIndex { name, responder } => {
+                    let mut response = {
+                        let ctx = ctx.lock().await;
+                        let Ctx { sync_ctx: _, non_sync_ctx } = &*ctx;
+                        let devices = AsRef::<Devices>::as_ref(&non_sync_ctx);
+                        let result = devices
+                            .iter_devices()
+                            .find_map(|device_info| {
+                                (device_info.info().common_info().name == name)
+                                    .then_some(device_info.id())
+                            })
+                            .ok_or(zx::Status::NOT_FOUND.into_raw());
+                        result
+                    };
+                    responder_send!(responder, &mut response);
                 }
                 psocket::ProviderRequest::InterfaceNameToFlags { name: _, responder } => {
                     // TODO(https://fxbug.dev/48969): implement this method.
