@@ -56,8 +56,14 @@ zx_status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
   const size_t vmar_sz = vmo_sz + guard_sz;
 
   // Create the VMO.
-  fbl::RefPtr<VmObjectPaged> vmo;
-  zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, vmo_sz, &vmo);
+  fbl::RefPtr<VmObjectPaged> control_vmo;
+  fbl::RefPtr<VmObjectPaged> data_vmo;
+  zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, control_mem_sz, &control_vmo);
+  if (status != ZX_OK) {
+    LTRACEF("Arena '%s': can't create %zu-byte VMO\n", name, vmo_sz);
+    return status;
+  }
+  status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, data_mem_sz, &data_vmo);
   if (status != ZX_OK) {
     LTRACEF("Arena '%s': can't create %zu-byte VMO\n", name, vmo_sz);
     return status;
@@ -69,8 +75,10 @@ zx_status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
   DEBUG_ASSERT(root_vmar != nullptr);
 
   char vname[32];
-  snprintf(vname, sizeof(vname), "arena:%s", name);
-  vmo->set_name(vname, sizeof(vname));
+  snprintf(vname, sizeof(vname), "arena:%s/control", name);
+  control_vmo->set_name(vname, sizeof(vname));
+  snprintf(vname, sizeof(vname), "arena:%s/data", name);
+  data_vmo->set_name(vname, sizeof(vname));
 
   // Create the VMAR.
   fbl::RefPtr<VmAddressRegion> vmar;
@@ -92,7 +100,7 @@ zx_status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
   st = vmar->CreateVmMapping(0,  // mapping_offset
                              control_mem_sz,
                              false,  // align_pow2
-                             VMAR_FLAG_SPECIFIC, vmo,
+                             VMAR_FLAG_SPECIFIC, control_vmo,
                              0,  // vmo_offset
                              ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE, "control",
                              &control_mapping);
@@ -107,8 +115,8 @@ zx_status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
   st = vmar->CreateVmMapping(control_mem_sz + guard_sz,  // mapping_offset
                              data_mem_sz,
                              false,  // align_pow2
-                             VMAR_FLAG_SPECIFIC, vmo,
-                             control_mem_sz,  // vmo_offset
+                             VMAR_FLAG_SPECIFIC, data_vmo,
+                             0,  // vmo_offset
                              ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE, "data",
                              &data_mapping);
   if (st != ZX_OK || data_mapping == nullptr) {
@@ -119,12 +127,12 @@ zx_status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
   // TODO(dbort): Add a VmMapping flag that says "do not demand page",
   // requiring and ensuring that we commit our pages manually.
 
-  control_.Init("control", control_mapping, sizeof(Node));
-  data_.Init("data", data_mapping, ob_size);
+  control_.Init("control", control_vmo, control_mapping, sizeof(Node));
+  data_.Init("data", data_vmo, data_mapping, ob_size);
 
   count_ = 0u;
 
-  vmar_ = vmar;
+  vmar_ = ktl::move(vmar);
   destroy_vmar.cancel();
 
   if (LOCAL_TRACE) {
@@ -133,13 +141,24 @@ zx_status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
   return ZX_OK;
 }
 
-void Arena::Pool::Init(const char* name, fbl::RefPtr<VmMapping> mapping, size_t slot_size) {
+Arena::Pool::~Pool() {
+  if (vmo_) {
+    const size_t committed_len = committed_ - start_;
+    if (committed_len > 0) {
+      vmo_->Unpin(0, committed_len);
+    }
+  }
+}
+
+void Arena::Pool::Init(const char* name, fbl::RefPtr<VmObject> vmo, fbl::RefPtr<VmMapping> mapping,
+                       size_t slot_size) {
   DEBUG_ASSERT(mapping != nullptr);
   DEBUG_ASSERT(slot_size > 0);
 
   strlcpy(const_cast<char*>(name_), name, sizeof(name_));
   slot_size_ = slot_size;
-  mapping_ = mapping;
+  mapping_ = ktl::move(mapping);
+  vmo_ = ktl::move(vmo);
   committed_max_ = committed_ = top_ = start_ = reinterpret_cast<char*>(mapping_->base());
   end_ = start_ + mapping_->size();
 
@@ -167,8 +186,14 @@ void* Arena::Pool::Pop() {
     LTRACEF("%s: commit 0x%p..0x%p\n", name_, committed_, nc);
     const size_t offset = reinterpret_cast<vaddr_t>(committed_) - mapping_->base();
     const size_t len = nc - committed_;
-    zx_status_t st = mapping_->MapRange(offset, len, /* commit */ true);
+    zx_status_t st = vmo_->CommitRangePinned(offset, len, true);
     if (st != ZX_OK) {
+      return nullptr;
+    }
+    st = mapping_->MapRange(offset, len, /* commit */ true);
+    if (st != ZX_OK) {
+      // Unpin the range.
+      vmo_->Unpin(offset, len);
       LTRACEF("%s: can't map range 0x%p..0x%p: %d\n", name_, committed_, nc, st);
       // Try to clean up any committed pages, but don't require
       // that it succeeds.
@@ -201,6 +226,7 @@ void Arena::Pool::Push(void* p) {
     LTRACEF("%s: decommit 0x%p..0x%p\n", name_, nc, committed_);
     const size_t offset = reinterpret_cast<vaddr_t>(nc) - mapping_->base();
     const size_t len = committed_ - nc;
+    vmo_->Unpin(offset, len);
     // If this fails or decommits less than we asked for, oh well.
     mapping_->DecommitRange(offset, len);
     committed_ = nc;

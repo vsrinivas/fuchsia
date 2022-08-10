@@ -63,10 +63,12 @@ class __OWNER(void) Arena {
   // necessary, avoiding demand-paging.
   class Pool {
    public:
-    // Initializes the pool. |mapping| must be fully backed by its
-    // VMO, but should not have any committed pages. |slot_size|
+    ~Pool();
+    // Initializes the pool. |mapping| must be fully backed by
+    // vmo, but should not have any committed pages. |slot_size|
     // is the size of object returned/accepted by Pop/Push.
-    void Init(const char* name, fbl::RefPtr<VmMapping> mapping, size_t slot_size);
+    void Init(const char* name, fbl::RefPtr<VmObject> vmo, fbl::RefPtr<VmMapping> mapping,
+              size_t slot_size);
 
     // Returns a pointer to a |slot_size| piece of memory, or nullptr
     // if there is no memory available.
@@ -100,6 +102,7 @@ class __OWNER(void) Arena {
     const char name_[32] = {};
 
     fbl::RefPtr<VmMapping> mapping_;
+    fbl::RefPtr<VmObject> vmo_;
     size_t slot_size_;
     char* start_;
     char* top_;            // |start|..|top| contains all allocated slots.
