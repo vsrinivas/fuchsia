@@ -124,6 +124,21 @@ TEST(Bytes, Comparison) {
   EXPECT_TRUE(bytes2 != bytes1);
 }
 
+TEST(Bytes, Clear) {
+  Bytes bytes;
+  bytes.Clear();
+
+  EXPECT_OK(bytes.Randomize(kSize));
+  EXPECT_EQ(bytes.len(), kSize);
+  EXPECT_NOT_NULL(bytes.get());
+
+  bytes.Clear();
+  EXPECT_EQ(bytes.len(), 0);
+  EXPECT_NULL(bytes.get());
+
+  bytes.Clear();
+}
+
 TEST(Bytes, MoveDestructive) {
   Bytes src;
   ASSERT_OK(src.Randomize(kSize));

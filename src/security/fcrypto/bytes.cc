@@ -35,7 +35,7 @@ namespace crypto {
 // Public methods
 
 Bytes::Bytes() : buf_(nullptr), len_(0) {}
-Bytes::~Bytes() {}
+Bytes::~Bytes() { Clear(); }
 
 Bytes::Bytes(Bytes&& o) noexcept : buf_(std::move(o.buf_)), len_(o.len_) {
   o.buf_ = nullptr;
@@ -115,6 +115,14 @@ zx_status_t Bytes::Copy(const void* buf, size_t len, zx_off_t off) {
   memcpy(buf_.get() + off, buf, len);
 
   return ZX_OK;
+}
+
+void Bytes::Clear() {
+  if (buf_) {
+    mandatory_memset(buf_.get(), 0, len_);
+  }
+  buf_.reset();
+  len_ = 0;
 }
 
 const uint8_t& Bytes::operator[](zx_off_t off) const {

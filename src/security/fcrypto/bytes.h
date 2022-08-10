@@ -48,6 +48,9 @@ class __EXPORT Bytes final {
     return Copy(src.get(), src.len(), dst_off);
   }
 
+  // Erases and frees the underlying buffer.
+  void Clear();
+
   // Array access operators.  Assert that |off| is not out of bounds.
   const uint8_t& operator[](zx_off_t off) const;
   uint8_t& operator[](zx_off_t off);
