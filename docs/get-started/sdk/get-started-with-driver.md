@@ -83,7 +83,7 @@ Do the following:
 1. To verify the Fuchsia SDK environment setup, build the sample drivers:
 
    ```posix-terminal
-   tools/bazel build --config=fuchsia_x64 //src/qemu_edu
+   tools/bazel build --config=fuchsia_x64 //src/qemu_edu/drivers:qemu_edu
    ```
 
    The first build may take a few minutes to download dependencies, such as
@@ -94,9 +94,9 @@ Do the following:
    end:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ tools/bazel build --config=fuchsia_x64 //src/qemu_edu
+   $ tools/bazel build --config=fuchsia_x64 //src/qemu_edu/drivers:qemu_edu
    ...
-   INFO: Elapsed time: 170.374s, Critical Path: 33.72s
+   INFO: Elapsed time: 129.268s, Critical Path: 35.22s
    INFO: 773 processes: 507 internal, 266 linux-sandbox.
    INFO: Build completed successfully, 773 total actions
    ```
@@ -322,18 +322,18 @@ Do the following:
 2. Build and publish the `qemu_edu` driver component:
 
    ```posix-terminal
-   tools/bazel run --config=fuchsia_x64 //src/qemu_edu:pkg.component
+   tools/bazel run --config=fuchsia_x64 //src/qemu_edu/drivers:pkg.component
    ```
 
    This command prints output similar to the following:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ tools/bazel run --config=fuchsia_x64 //src/qemu_edu:pkg.component
-   INFO: Analyzed target //src/qemu_edu:pkg.component (8 packages loaded, 498 targets configured).
+   $ tools/bazel run --config=fuchsia_x64 //src/qemu_edu/drivers:pkg.component
+   INFO: Analyzed target //src/qemu_edu/drivers:pkg.component (8 packages loaded, 498 targets configured).
    INFO: Found 1 target...
-   Target //src/qemu_edu:pkg.component up-to-date:
-     bazel-bin/src/qemu_edu/pkg.component_run_component.sh
-   INFO: Elapsed time: 47.995s, Critical Path: 38.38s
+   Target //src/qemu_edu/drivers:pkg.component up-to-date:
+     bazel-bin/src/qemu_edu/drivers/pkg.component_run_component.sh
+   INFO: Elapsed time: 48.802s, Critical Path: 40.71s
    INFO: 791 processes: 516 internal, 274 linux-sandbox, 1 local.
    INFO: Build completed successfully, 791 total actions
    INFO: Build completed successfully, 791 total actions
@@ -440,23 +440,23 @@ Do the following:
 1. Build and run the `eductl` component:
 
    ```posix-terminal
-   tools/bazel run --config=fuchsia_x64 //src/qemu_edu:eductl_pkg.eductl_component
+   tools/bazel run --config=fuchsia_x64 //src/qemu_edu/tools:pkg.component
    ```
 
    This command prints output similar to the following:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ tools/bazel run --config=fuchsia_x64 //src/qemu_edu:eductl_pkg.eductl_component
-   INFO: Analyzed target //src/qemu_edu:eductl_pkg.eductl_component (0 packages loaded, 19 targets configured).
+   $ tools/bazel run --config=fuchsia_x64 //src/qemu_edu/tools:pkg.component
+   INFO: Analyzed target //src/qemu_edu/tools:pkg.component (0 packages loaded, 19 targets configured).
    INFO: Found 1 target...
-   Target //src/qemu_edu:eductl_pkg.eductl_component up-to-date:
-     bazel-bin/src/qemu_edu/eductl_pkg.eductl_component_run_component.sh
-   INFO: Elapsed time: 2.028s, Critical Path: 1.50s
+   Target //src/qemu_edu/tools:pkg.component up-to-date:
+     bazel-bin/src/qemu_edu/tools/pkg.component_run_component.sh
+   INFO: Elapsed time: 2.039s, Critical Path: 1.54s
    INFO: 23 processes: 7 internal, 15 linux-sandbox, 1 local.
    INFO: Build completed successfully, 23 total actions
    INFO: Build completed successfully, 23 total actions
-   added repository bazel.eductl.pkg.eductl.component
-   URL: fuchsia-pkg://bazel.eductl.pkg.eductl.component/eductl#meta/eductl.cm
+   added repository bazel.pkg.component
+   URL: fuchsia-pkg://bazel.pkg.component/eductl#meta/eductl.cm
    Moniker: /core/ffx-laboratory:eductl
    Creating component instance...
    Starting component instance...
@@ -476,7 +476,6 @@ Do the following:
    ...
    [214.156][universe-pkg-drivers:root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_][qemu-edu,driver][I]: [src/qemu_edu/qemu_edu.cc:234] Replying with factorial=479001600
    [214.157][ffx-laboratory:eductl][][I] Factorial(12) = 479001600
-   ...
    ```
 
    These lines show that the driver replied the result of `factorial=479001600`
@@ -602,7 +601,7 @@ Do the following:
    directory (for instance, `cd $HOME/drivers`).
 
    ```posix-terminal
-   tools/bazel run --config=fuchsia_x64 //src/qemu_edu:eductl_pkg.eductl_component
+   tools/bazel run --config=fuchsia_x64 //src/qemu_edu/tools:pkg.component
    ```
 
    In the `zxdb` terminal, verify that the debugger is stopped at the driver’s
@@ -610,11 +609,11 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    🛑 thread 2 on bp 1 qemu_edu::QemuEduDriver::ComputeFactorial(qemu_edu::QemuEduDriver*, fidl::WireServer<fuchsia_hardware_qemuedu::Device>::ComputeFactorialRequestView, fidl::Completer<fidl::internal::WireCompleterBase<fuchsia_hardware_qemuedu::Device::ComputeFactorial> >::Sync&) • qemu_edu.cc:218
-      216 // Driver Service: Compute factorial on the edu device
-      217 void QemuEduDriver::ComputeFactorial(ComputeFactorialRequestView request,
-    {{ '<strong>' }}▶ 218                                      ComputeFactorialCompleter::Sync& completer) { {{ '</strong>' }}
-      219   // Write a value into the factorial register.
-      220   uint32_t input = request->input;
+      202 // Driver Service: Compute factorial on the edu device
+      203 void QemuEduDriver::ComputeFactorial(ComputeFactorialRequestView request,
+    {{ '<strong>' }}▶ 204                                      ComputeFactorialCompleter::Sync& completer) { {{ '</strong>' }}
+      205   // Write a value into the factorial register.
+      206   uint32_t input = request->input;
    [zxdb]
    ```
 
@@ -628,28 +627,28 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    [zxdb] list
-      213   return zx::ok();
-      214 }
-      215
-      216 // Driver Service: Compute factorial on the edu device
-      217 void QemuEduDriver::ComputeFactorial(ComputeFactorialRequestView request,
-    {{ '<strong>' }}▶ 218                                      ComputeFactorialCompleter::Sync& completer) { {{ '</strong>' }}
-      219   // Write a value into the factorial register.
-      220   uint32_t input = request->input;
-      221
-      222   mmio_->Write32(input, edu_device_registers::kFactorialCompoutationOffset);
-      223
-      224   // Busy wait on the factorial status bit.
-      225   while (true) {
-      226     const auto status = edu_device_registers::Status::Get().ReadFrom(&*mmio_);
-      227     if (!status.busy())
-      228       break;
+      199 // [END interrupt_mmio]
+      200
+      201 // [START compute_factorial]
+      202 // Driver Service: Compute factorial on the edu device
+      203 void QemuEduDriver::ComputeFactorial(ComputeFactorialRequestView request,
+    {{ '<strong>' }}▶ 204                                      ComputeFactorialCompleter::Sync& completer) { {{ '</strong>' }}
+      205   // Write a value into the factorial register.
+      206   uint32_t input = request->input;
+      207
+      208   mmio_->Write32(input, edu_device_registers::kFactorialCompoutationOffset);
+      209
+      210   // Busy wait on the factorial status bit.
+      211   while (true) {
+      212     const auto status = edu_device_registers::Status::Get().ReadFrom(&*mmio_);
+      213     if (!status.busy())
+      214       break;
    [zxdb]
    ```
 
 7. In the `zxdb` terminal, step through the code using the `next`
    command until the value of `factorial` is read from the device (that is,
-   until the line 234 is reached):
+   until the line 220 is reached):
 
    <pre class="devsite-click-to-copy">
    <span class="no-select">[zxdb] </span>next
@@ -661,11 +660,11 @@ Do the following:
    ...
    [zxdb] next
    🛑 thread 2 qemu_edu::QemuEduDriver::ComputeFactorial(qemu_edu::QemuEduDriver*, fidl::WireServer<fuchsia_hardware_qemuedu::Device>::ComputeFactorialRequestView, fidl::Completer<fidl::internal::WireCompleterBase<fuchsia_hardware_qemuedu::Device::ComputeFactorial> >::Sync&) • qemu_edu.cc:234
-      232   uint32_t factorial = mmio_->Read32(edu_device_registers::kFactorialCompoutationOffset);
-      233
-    {{ '<strong>' }}▶ 234   FDF_SLOG(INFO, "Replying with", KV("factorial", factorial));{{ '</strong>' }}
-      235   completer.Reply(factorial);
-      236 }
+      218   uint32_t factorial = mmio_->Read32(edu_device_registers::kFactorialCompoutationOffset);
+      219
+    {{ '<strong>' }}▶ 220   FDF_SLOG(INFO, "Replying with", KV("factorial", factorial));{{ '</strong>' }}
+      221   completer.Reply(factorial);
+      222 }
    [zxdb]
    ```
 
@@ -725,13 +724,13 @@ Do the following:
 1. Use a text editor to open the source code of the sample driver, for example:
 
    ```posix-terminal
-   nano src/qemu_edu/qemu_edu.cc
+   nano src/qemu_edu/drivers/qemu_edu.cc
    ```
 
 1. In the `QemuEduDriver::ComputeFactorial` function,
    between the line
    `uint32_t factorial = mmio_->Read32(regs::kFactorialCompoutationOffset);`
-   (Line 232) and the `FDF_SLOG()` call (Line 234), add the following line:
+   (Line 218) and the `FDF_SLOG()` call (Line 220), add the following line:
 
    ```
    factorial=12345;
@@ -769,13 +768,13 @@ Do the following:
 1. Rebuild and run the modified sample driver:
 
    ```posix-terminal
-   tools/bazel run --config=fuchsia_x64 //src/qemu_edu:pkg.component
+   tools/bazel run --config=fuchsia_x64 //src/qemu_edu/drivers:pkg.component
    ```
 
 1. Run the tools component:
 
    ```posix-terminal
-   tools/bazel run --config=fuchsia_x64 //src/qemu_edu:eductl_pkg.eductl_component
+   tools/bazel run --config=fuchsia_x64 //src/qemu_edu/tools:pkg.component
    ```
 
 1. To verify that change, view the device logs:
@@ -791,7 +790,6 @@ Do the following:
    ...
    [94.914][universe-pkg-drivers:root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_][qemu-edu,driver][I]: [src/qemu_edu/qemu_edu.cc:234] Replying with factorial=12345
    [94.916][ffx-laboratory:eductl][][I] Factorial(12) = 12345
-   ...
    ```
 
    These lines show that the `qemu_edu` driver replied with the
