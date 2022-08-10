@@ -98,6 +98,17 @@ legacy_base_package_labels += [
   "//src/proc/bundles:starnix",
 ]
 
+# USB camera support
+legacy_base_package_labels += [
+  "//src/camera/bin/usb_device_watcher",
+  "//src/camera/bin/usb_device",
+  "//src/camera/drivers/usb_video",
+]
+
+core_realm_shards += [ "//src/camera:usb_webcam_core_shard" ]
+
+base_driver_package_labels += [ "//src/camera/drivers/usb_video" ]
+
 product_bootfs_labels += [
   # hide the virtual console on boot
   "//products/kernel_cmdline:virtcon.hide-on-boot",
