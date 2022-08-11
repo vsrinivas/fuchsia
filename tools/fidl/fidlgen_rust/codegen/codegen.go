@@ -19,12 +19,26 @@ const (
 	// AllowlistTestdataGoldens allows golden testing of allowlist support by
 	// permitting the //tools/fidl/fidlc/testdata/allowlist.fidl file.
 	AllowlistTestdataGoldens AllowlistName = "testdata_goldens"
+	// AllowlistExperimentalOverflowing specifies prototype implementers of the
+	// large messages FIDL feature.
+	// TODO(fxbug.dev/106641): Remove when prototyping phase is complete.
+	AllowlistExperimentalOverflowing AllowlistName = "experimental_overflowing"
 )
 
 // al is a global map of all currently enabled allowlists.
 var al = AllowlistMap{
 	AllowlistName(AllowlistTestdataGoldens): []EncodedLibraryIdentifier{
 		EncodedLibraryIdentifier("test.allowlist"),
+	},
+	AllowlistName(AllowlistExperimentalOverflowing): []EncodedLibraryIdentifier{
+		// Internal testing
+		EncodedLibraryIdentifier("fidl.rust.test.external"),
+		// Prototype implementers
+		EncodedLibraryIdentifier("fuchsia.component.resolution"),
+		EncodedLibraryIdentifier("fuchsia.net.management.name"),
+		EncodedLibraryIdentifier("fuchsia.driver.development"),
+		EncodedLibraryIdentifier("fuchsia.wlan.policy"),
+		EncodedLibraryIdentifier("fuchsia.wlan.sme"),
 	},
 }
 

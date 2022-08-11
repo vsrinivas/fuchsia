@@ -172,6 +172,33 @@ type Protocol struct {
 	ProtocolName string
 }
 
+// Overflowing stores information about a method's payloads, indicating whether
+// it is possible for either of them to overflow on either encode or decode.
+// TODO(fxbug.dev/106641): this information will be included in the IR in the
+// final implementation. For the current prototype, inferring it from a user
+// supplied (but allowlist guarded) `@experimental_overflowing` attribute is
+// sufficient.
+type Overflowing struct {
+	// OnRequestEncode indicates whether or not the parent method's request
+	// payload may be so large on encode as to require overflow handling.
+	OnRequestEncode bool
+	// OnRequestDecode indicates whether or not the parent method's request
+	// payload may be so large on decode as to require overflow handling. This
+	// will always be true if OnRequestEncode is true, as the maximum size on
+	// decode is always larger than encode. This is because only the latter may
+	// include unknown, arbitrarily large data.
+	OnRequestDecode bool
+	// OnResponseEncode indicates whether or not the parent method's response
+	// payload may be so large on encode as to require overflow handling.
+	OnResponseEncode bool
+	// OnResponseDecode indicates whether or not the parent method's response
+	// payload may be so large on decode as to require overflow handling. This
+	// will always be true if OnResponseEncode is true, as the maximum size on
+	// decode is always larger than encode. This is because only the latter may
+	// include unknown, arbitrarily large data.
+	OnResponseDecode bool
+}
+
 // Method is a method defined in a protocol.
 type Method struct {
 	// Raw JSON IR data about this method. Embedded to provide access to fields
@@ -202,6 +229,8 @@ type Method struct {
 	// If error syntax was used, this will contain information about the result
 	// union.
 	Result *Result
+	// Stores overflowing information for this method's payloads.
+	Overflowing Overflowing
 }
 
 // DynamicFlags gets rust code for the DynamicFlags value that should be set for
@@ -1085,13 +1114,36 @@ func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 			compiledResponseParameterList = getParametersFromType(v.ResponsePayload)
 		}
 
+		// TODO(fxbug.dev/106641): This feature is currently restricted to
+		// allowlisted libraries. It is a "dirty" implementation of the final
+		// feature, with some checks (like determining whether or not overflowing
+		// checks are needed for both encode and decode, rather than just the
+		// latter) being omitted.
+		overflowing := Overflowing{}
+		if c.allowlists.Contains(AllowlistExperimentalOverflowing) {
+			attr, found := v.Attributes.LookupAttribute("experimental_overflowing")
+			if found {
+				reqArg, hasReq := attr.LookupArg("request")
+				if hasReq && reqArg.ValueString() != "false" {
+					overflowing.OnRequestEncode = true
+					overflowing.OnRequestDecode = true
+				}
+				resArg, hasRes := attr.LookupArg("response")
+				if hasRes && resArg.ValueString() != "false" {
+					overflowing.OnResponseEncode = true
+					overflowing.OnResponseDecode = true
+				}
+			}
+		}
+
 		r.Methods = append(r.Methods, Method{
-			Method:    v,
-			Name:      name,
-			CamelName: camelName,
-			Request:   compiledRequestParameterList,
-			Response:  compiledResponseParameterList,
-			Result:    foundResult,
+			Method:      v,
+			Name:        name,
+			CamelName:   camelName,
+			Request:     compiledRequestParameterList,
+			Response:    compiledResponseParameterList,
+			Result:      foundResult,
+			Overflowing: overflowing,
 		})
 	}
 

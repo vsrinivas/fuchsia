@@ -6,6 +6,7 @@
 
 mod data_types;
 mod handle_rights;
+mod large_messages;
 mod persistence;
 mod stream_handler_test;
 mod unknown_interactions;

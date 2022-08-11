@@ -93,7 +93,8 @@ impl ExampleUseOfErrorSyntaxSynchronousProxy {
         (fidl_test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResult),
         fidl::Error,
     > {
-        let _value: fidl_test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResultHandleWrapper = self.client.send_query(&mut (s),
+        let _value: fidl_test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailResultHandleWrapper =
+                self.client.send_query::<_, _,false,false>(&mut (s),
                 0x3179cf8f46814221,
                 fidl::encoding::DynamicFlags::empty(),
                 ___deadline,
@@ -106,7 +107,7 @@ impl ExampleUseOfErrorSyntaxSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(ExampleUseOfErrorSyntaxCallWhichMayFailResult), fidl::Error> {
         let _value: ExampleUseOfErrorSyntaxCallWhichMayFailResultHandleWrapper =
-            self.client.send_query(
+            self.client.send_query::<_, _, false, false>(
                 &mut (s),
                 0x3424ff83ce3004a2,
                 fidl::encoding::DynamicFlags::empty(),
@@ -192,7 +193,7 @@ impl ExampleUseOfErrorSyntaxProxyInterface for ExampleUseOfErrorSyntaxProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -212,7 +213,7 @@ impl ExampleUseOfErrorSyntaxProxyInterface for ExampleUseOfErrorSyntaxProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })

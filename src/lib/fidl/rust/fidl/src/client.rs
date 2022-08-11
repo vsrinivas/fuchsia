@@ -8,8 +8,9 @@ use {
     crate::{
         create_trace_provider,
         encoding::{
-            decode_transaction_header, Decodable, Decoder, DynamicFlags, Encodable, Encoder,
-            EpitaphBody, TransactionHeader, TransactionMessage,
+            decode_transaction_header, maybe_overflowing_on_decode, maybe_overflowing_on_encode,
+            Decodable, Decoder, DynamicFlags, Encodable, Encoder, EpitaphBody, TransactionHeader,
+            TransactionMessage,
         },
         handle::{AsyncChannel, HandleDisposition, MessageBufEtc},
         Error,
@@ -26,21 +27,29 @@ use {
     std::{collections::VecDeque, marker::Unpin, mem, pin::Pin, sync::Arc},
 };
 
-fn decode_transaction_body<D: Decodable>(mut buf: MessageBufEtc) -> Result<D, Error> {
+fn decode_transaction_body<D: Decodable, const OVERFLOWABLE: bool>(
+    mut buf: MessageBufEtc,
+) -> Result<D, Error> {
     let (bytes, handles) = buf.split_mut();
     let (header, body_bytes) = decode_transaction_header(bytes)?;
     let mut output = D::new_empty();
-    Decoder::decode_into(&header, body_bytes, handles, &mut output)?;
+
+    if OVERFLOWABLE {
+        maybe_overflowing_on_decode(&mut output, &header, body_bytes, handles)?;
+    } else {
+        Decoder::decode_into(&header, body_bytes, handles, &mut output)?;
+    }
+
     Ok(output)
 }
 
 /// Decodes the body of a transaction.
 /// Exposed for generated code.
-pub fn decode_transaction_body_fut<D: Decodable, T>(
+pub fn decode_transaction_body_fut<D: Decodable, T, const OVERFLOWABLE: bool>(
     buf: MessageBufEtc,
     transform: fn(Result<D, Error>) -> Result<T, Error>,
 ) -> Ready<Result<T, Error>> {
-    future::ready(transform(decode_transaction_body(buf)))
+    future::ready(transform(decode_transaction_body::<_, OVERFLOWABLE>(buf)))
 }
 
 /// A FIDL client which can be used to send buffers and receive responses via a channel.
@@ -219,7 +228,12 @@ impl Client {
     }
 
     /// Send an encodable query and receive a decodable response.
-    pub fn send_query<E: Encodable, D: Decodable>(
+    pub fn send_query<
+        E: Encodable,
+        D: Decodable,
+        const REQUEST_ENCODE_OVERFLOWABLE: bool,
+        const RESPONSE_DECODE_OVERFLOWABLE: bool,
+    >(
         &self,
         msg: &mut E,
         ordinal: u64,
@@ -231,15 +245,21 @@ impl Client {
                 body: msg,
             };
             Encoder::encode(bytes, handles, msg)?;
+
+            if REQUEST_ENCODE_OVERFLOWABLE {
+                maybe_overflowing_on_encode(bytes, handles)?;
+            }
+
             Ok(())
         });
 
         QueryResponseFut(match send_result {
-            Ok(res_fut) => {
-                future::maybe_done(res_fut.and_then(|buf| {
-                    decode_transaction_body_fut::<D, D>(buf, std::convert::identity)
-                }))
-            }
+            Ok(res_fut) => future::maybe_done(res_fut.and_then(|buf| {
+                decode_transaction_body_fut::<D, D, RESPONSE_DECODE_OVERFLOWABLE>(
+                    buf,
+                    std::convert::identity,
+                )
+            })),
             Err(e) => MaybeDone::Done(Err(e)),
         })
     }
@@ -771,7 +791,10 @@ impl ClientInner {
 pub mod sync {
     //! Synchronous FIDL Client
 
-    use fuchsia_zircon::{self as zx, AsHandleRef};
+    use {
+        crate::encoding::{maybe_overflowing_on_decode, maybe_overflowing_on_encode},
+        fuchsia_zircon::{self as zx, AsHandleRef},
+    };
 
     use super::*;
 
@@ -821,7 +844,12 @@ pub mod sync {
         }
 
         /// Send a new message expecting a response.
-        pub fn send_query<E: Encodable, D: Decodable>(
+        pub fn send_query<
+            E: Encodable,
+            D: Decodable,
+            const REQUEST_ENCODE_OVERFLOWABLE: bool,
+            const RESPONSE_DECODE_OVERFLOWABLE: bool,
+        >(
             &self,
             msg: &mut E,
             ordinal: u64,
@@ -837,6 +865,10 @@ pub mod sync {
             };
             Encoder::encode(&mut write_bytes, &mut write_handles, msg)?;
 
+            if REQUEST_ENCODE_OVERFLOWABLE {
+                maybe_overflowing_on_encode(&mut write_bytes, &mut write_handles)?;
+            }
+
             let mut buf = zx::MessageBufEtc::new();
             buf.ensure_capacity_bytes(zx::sys::ZX_CHANNEL_MAX_MSG_BYTES as usize);
             buf.ensure_capacity_handle_infos(zx::sys::ZX_CHANNEL_MAX_MSG_HANDLES as usize);
@@ -850,7 +882,13 @@ pub mod sync {
             let (bytes, mut handle_infos) = buf.split();
             let (header, body_bytes) = decode_transaction_header(&bytes)?;
             let mut output = D::new_empty();
-            Decoder::decode_into(&header, body_bytes, &mut handle_infos, &mut output)?;
+
+            if RESPONSE_DECODE_OVERFLOWABLE {
+                maybe_overflowing_on_decode(&mut output, &header, body_bytes, &mut handle_infos)?;
+            } else {
+                Decoder::decode_into(&header, body_bytes, &mut handle_infos, &mut output)?;
+            }
+
             Ok(output)
         }
 
@@ -988,7 +1026,7 @@ mod tests {
             );
         });
         let response_data = client
-            .send_query::<u8, u8>(
+            .send_query::<u8, u8, false, false>(
                 &mut SEND_DATA.clone(),
                 SEND_ORDINAL,
                 DynamicFlags::empty(),
@@ -1027,7 +1065,7 @@ mod tests {
             );
         });
         let response_data = client
-            .send_query::<u8, u8>(
+            .send_query::<u8, u8, false, false>(
                 &mut SEND_DATA.clone(),
                 SEND_ORDINAL,
                 DynamicFlags::empty(),
@@ -1163,7 +1201,11 @@ mod tests {
             .on_timeout(300.millis().after_now(), || panic!("did not receiver message in time!"));
 
         let sender = client
-            .send_query::<u8, u8>(&mut SEND_DATA.clone(), SEND_ORDINAL, DynamicFlags::empty())
+            .send_query::<u8, u8, false, false>(
+                &mut SEND_DATA.clone(),
+                SEND_ORDINAL,
+                DynamicFlags::empty(),
+            )
             .map_ok(|x| assert_eq!(x, SEND_DATA))
             .unwrap_or_else(|e| panic!("fidl error: {:?}", e));
 
@@ -1193,8 +1235,9 @@ mod tests {
             .on_timeout(300.millis().after_now(), || panic!("did not receive message in time!"));
 
         let sender = async move {
-            let result =
-                client.send_query::<u8, u8>(&mut 55, 42 << 32, DynamicFlags::empty()).await;
+            let result = client
+                .send_query::<u8, u8, false, false>(&mut 55, 42 << 32, DynamicFlags::empty())
+                .await;
             assert_matches!(
                 result,
                 Err(crate::Error::ClientChannelClosed {
@@ -1310,7 +1353,8 @@ mod tests {
             .then(|(x, stream)| {
                 let x = x.expect("should contain one element");
                 let x = x.expect("fidl error");
-                let x: i32 = decode_transaction_body(x).expect("failed to decode event");
+                let x: i32 =
+                    decode_transaction_body::<_, false>(x).expect("failed to decode event");
                 assert_eq!(x, 55);
                 stream.into_future()
             })
@@ -1350,7 +1394,8 @@ mod tests {
                 .then(|(x, stream)| {
                     let x = x.expect("should contain one element");
                     let x = x.expect("fidl error");
-                    let x: i32 = decode_transaction_body(x).expect("failed to decode event");
+                    let x: i32 =
+                        decode_transaction_body::<_, false>(x).expect("failed to decode event");
                     assert_eq!(x, 55);
                     stream.into_future()
                 })
@@ -1571,7 +1616,8 @@ mod tests {
         // next, poll on a response
         let (response_waker, _response_waker_count) = new_count_waker();
         let response_cx = &mut Context::from_waker(&response_waker);
-        let mut response_future = client.send_query::<u8, u8>(&mut 55, 42, DynamicFlags::empty());
+        let mut response_future =
+            client.send_query::<u8, u8, false, false>(&mut 55, 42, DynamicFlags::empty());
         assert!(response_future.poll_unpin(response_cx).is_pending());
 
         // then, make sure we can still take the event receiver without panicking
@@ -1628,7 +1674,7 @@ mod tests {
                         .send(&mut SEND_DATA.clone(), SEND_ORDINAL, DynamicFlags::empty())
                         .err(),
                     SendQuery => client
-                        .send_query::<u8, u8>(
+                        .send_query::<u8, u8, false, false>(
                             &mut SEND_DATA.clone(),
                             SEND_ORDINAL,
                             DynamicFlags::empty(),
@@ -1636,7 +1682,7 @@ mod tests {
                         .await
                         .err(),
                     CheckQuery => client
-                        .send_query::<u8, u8>(
+                        .send_query::<u8, u8, false, false>(
                             &mut SEND_DATA.clone(),
                             SEND_ORDINAL,
                             DynamicFlags::empty(),
@@ -1680,7 +1726,7 @@ mod tests {
         let server = AsyncChannel::from_channel(server_end).unwrap();
 
         // Sending works, and checking when a message successfully sends returns itself.
-        let active_fut = client.send_query::<u8, u8>(
+        let active_fut = client.send_query::<u8, u8, false, false>(
             &mut SEND_DATA.clone(),
             SEND_ORDINAL,
             DynamicFlags::empty(),
@@ -1707,7 +1753,7 @@ mod tests {
         // Close the server channel, meaning the next query will fail before it even starts.
         drop(server);
 
-        let query_fut = client.send_query::<u8, u8>(
+        let query_fut = client.send_query::<u8, u8, false, false>(
             &mut SEND_DATA.clone(),
             SEND_ORDINAL,
             DynamicFlags::empty(),
@@ -1739,7 +1785,7 @@ mod tests {
         {
             // Create a send future to insert a message interest but drop it
             // before a response can be received.
-            let _sender = client.send_query::<u8, u8>(
+            let _sender = client.send_query::<u8, u8, false, false>(
                 &mut SEND_DATA.clone(),
                 SEND_ORDINAL,
                 DynamicFlags::empty(),
@@ -1773,7 +1819,11 @@ mod tests {
             .on_timeout(300.millis().after_now(), || panic!("did not receiver message in time!"));
 
         let sender = client
-            .send_query::<u8, u8>(&mut SEND_DATA.clone(), SEND_ORDINAL, DynamicFlags::empty())
+            .send_query::<u8, u8, false, false>(
+                &mut SEND_DATA.clone(),
+                SEND_ORDINAL,
+                DynamicFlags::empty(),
+            )
             .map_ok(|x| assert_eq!(x, SEND_DATA))
             .unwrap_or_else(|e| panic!("fidl error: {:?}", e));
 

@@ -883,6 +883,99 @@ pub trait Encodable: LayoutObject {
 
 assert_obj_safe!(Encodable);
 
+/// An inlinable function that checks the if the message that was just encoded is larger than the
+/// overflowing limit (64KiB in the case of zx channel), and splits it into a control plane and data
+/// plane: the control plane is just the header of the original encoded message, and pushed onto the
+/// channel like normal, while the data plane is a VMO attached to that control plane message as a
+/// handle. This function handles all of the plumbing required to make this happen: splitting the
+/// byte buffer into two parts, flipping the correct dynamic flag, writing the VMO, and validating
+/// that everything is properly formed.
+#[inline]
+pub fn maybe_overflowing_on_encode(
+    _write_bytes: &mut Vec<u8>,
+    _write_handles: &mut Vec<HandleDisposition<'_>>,
+) -> Result<()> {
+    // TODO(fxbug.dev/106641): how do we handle overflow for emulated channels?
+    #[cfg(target_os = "fuchsia")]
+    {
+        if _write_bytes.len() > fuchsia_zircon::sys::ZX_CHANNEL_MAX_MSG_BYTES as usize {
+            let header_size = mem::size_of::<TransactionHeader>();
+            let body_size = (_write_bytes.len() - header_size) as u64;
+            let data_plane = &_write_bytes[header_size.._write_bytes.len()];
+
+            if !_write_handles.is_empty() {
+                return Err(Error::OverflowIncorrectHandleCount);
+            }
+
+            // Build a VMO, then put all of the data_plane information in the VMO.
+            let mut vmo = fuchsia_zircon::Vmo::create(body_size)
+                .map_err(|status| Error::OverflowCouldNotWrite { status })?;
+            vmo.write(data_plane, 0).map_err(|status| Error::OverflowCouldNotWrite { status })?;
+
+            // Add the handle for the VMO to the handles array.
+            _write_handles.push(HandleDisposition {
+                handle_op: HandleOp::Move(take_handle(&mut vmo)),
+                object_type: ObjectType::VMO,
+                // TODO(fxbug.dev/106641): generate properly constrained rights!
+                rights: Rights::SAME_RIGHTS,
+                result: Status::OK,
+            });
+
+            // Flip the dynamic flag representing |byte_overflow|.
+            let control_plane = &mut _write_bytes[0..header_size];
+            let mut dyn_flags = DynamicFlags::from_bits_truncate(control_plane[6]);
+            dyn_flags.insert(DynamicFlags::BYTE_OVERFLOW);
+            control_plane[6] = dyn_flags.bits();
+
+            // Truncate the message to contain only the control plane, aka the transaction
+            // header.
+            _write_bytes.resize(header_size, 0);
+        }
+    }
+    Ok(())
+}
+
+/// An inlinable function that checks the if the message that is about to be decoded is an
+/// overflowing message (that is, if its header has the |byte_overflow| flag flipped). If so, this
+/// helper function grabs the VMO attached to the message, reads out the data contained therein, and
+/// uses that data as the body of the message to be decoded. This newly re-assembled message is then
+/// passed into the original decoding function.
+#[inline]
+pub fn maybe_overflowing_on_decode<D: Decodable>(
+    decoded: &mut D,
+    header: &TransactionHeader,
+    body_bytes: &[u8],
+    handles: &mut Vec<HandleInfo>,
+) -> Result<()> {
+    // TODO(fxbug.dev/106641): how do we handle overflow for emulated channels?
+    #[cfg(target_os = "fuchsia")]
+    {
+        if header.dynamic_flags().contains(DynamicFlags::BYTE_OVERFLOW) {
+            if handles.len() != 1 {
+                return Err(Error::OverflowIncorrectHandleCount);
+            }
+            if !body_bytes.is_empty() {
+                return Err(Error::OverflowControlPlaneBodyNotEmpty);
+            }
+
+            // Make a syscall to get the actual size of the VMO, and validate immutability.
+            // TODO(fxbug.dev/106641): probably should do this like we do take_next_handle()
+            let vmo = fuchsia_zircon::Vmo::from(handles.remove(0).handle);
+            let size =
+                vmo.get_content_size().map_err(|status| Error::OverflowCouldNotRead { status })?;
+            let mut overflow_bytes = vec![0; size as usize];
+
+            vmo.read(&mut overflow_bytes, 0)
+                .map_err(|status| Error::OverflowCouldNotRead { status })?;
+            Decoder::decode_into(header, &overflow_bytes[0..size as usize], handles, decoded)?;
+            return Ok(());
+        }
+    }
+
+    Decoder::decode_into(header, body_bytes, handles, decoded)?;
+    Ok(())
+}
+
 /// A type which can be FIDL-decoded from a buffer.
 ///
 /// This trait is not object-safe, since `new_empty` returns `Self`. This is not
@@ -4014,6 +4107,8 @@ bitflags! {
     /// Bitflags type to flags that aid in dynamically identifying features of
     /// the request.
     pub struct DynamicFlags: u8 {
+        /// Indicates that the message's data plane is stored elsewhere out of band.
+        const BYTE_OVERFLOW = 0x40;
         /// Indicates that the request is for a flexible method.
         const FLEXIBLE = 0x80;
     }

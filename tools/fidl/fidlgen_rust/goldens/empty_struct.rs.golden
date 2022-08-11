@@ -81,7 +81,7 @@ impl EmptyProtocolSynchronousProxy {
         mut e: &mut Empty,
         ___deadline: zx::Time,
     ) -> Result<(Empty), fidl::Error> {
-        let _value: (Empty,) = self.client.send_query(
+        let _value: (Empty,) = self.client.send_query::<_, _, false, false>(
             &mut (e),
             0x76a931254962cea,
             fidl::encoding::DynamicFlags::empty(),
@@ -152,7 +152,7 @@ impl EmptyProtocolProxyInterface for EmptyProtocolProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })

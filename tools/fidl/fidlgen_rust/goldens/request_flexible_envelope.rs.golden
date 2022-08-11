@@ -176,7 +176,7 @@ impl ProtocolSynchronousProxy {
         mut s: &mut StrictFoo,
         ___deadline: zx::Time,
     ) -> Result<(FlexibleFoo), fidl::Error> {
-        let _value: (FlexibleFoo,) = self.client.send_query(
+        let _value: (FlexibleFoo,) = self.client.send_query::<_, _, false, false>(
             &mut (s),
             0x9b8c7d3d118df13,
             fidl::encoding::DynamicFlags::empty(),
@@ -189,7 +189,7 @@ impl ProtocolSynchronousProxy {
         mut s: &mut FlexibleFoo,
         ___deadline: zx::Time,
     ) -> Result<(StrictFoo), fidl::Error> {
-        let _value: (StrictFoo,) = self.client.send_query(
+        let _value: (StrictFoo,) = self.client.send_query::<_, _, false, false>(
             &mut (s),
             0x480c77690533acb7,
             fidl::encoding::DynamicFlags::empty(),
@@ -267,7 +267,7 @@ impl ProtocolProxyInterface for ProtocolProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -289,7 +289,7 @@ impl ProtocolProxyInterface for ProtocolProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })

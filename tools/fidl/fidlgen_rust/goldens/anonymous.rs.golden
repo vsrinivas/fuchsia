@@ -562,12 +562,13 @@ impl SomeProtocolSynchronousProxy {
         mut table_member: TableMember,
         ___deadline: zx::Time,
     ) -> Result<(SomeProtocolSomeMethodResult), fidl::Error> {
-        let _value: SomeProtocolSomeMethodResultHandleWrapper = self.client.send_query(
-            &mut (union_member, table_member),
-            0x22ea52ec7a5146d8,
-            fidl::encoding::DynamicFlags::empty(),
-            ___deadline,
-        )?;
+        let _value: SomeProtocolSomeMethodResultHandleWrapper =
+            self.client.send_query::<_, _, false, false>(
+                &mut (union_member, table_member),
+                0x22ea52ec7a5146d8,
+                fidl::encoding::DynamicFlags::empty(),
+                ___deadline,
+            )?;
         Ok(_value.map(|_value| _value.0))
     }
 }
@@ -636,7 +637,7 @@ impl SomeProtocolProxyInterface for SomeProtocolProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
