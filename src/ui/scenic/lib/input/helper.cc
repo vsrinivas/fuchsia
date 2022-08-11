@@ -4,7 +4,7 @@
 
 #include "src/ui/scenic/lib/input/helper.h"
 
-#include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 
 #include "src/ui/scenic/lib/utils/math.h"
 
@@ -13,13 +13,6 @@ namespace scenic_impl::input {
 using PointerEventPhase = fuchsia::ui::input::PointerEventPhase;
 using GfxPointerEvent = fuchsia::ui::input::PointerEvent;
 
-trace_flow_id_t PointerTraceHACK(float fa, float fb) {
-  uint32_t ia, ib;
-  memcpy(&ia, &fa, sizeof(uint32_t));
-  memcpy(&ib, &fb, sizeof(uint32_t));
-  return (((uint64_t)ia) << 32) | ib;
-}
-
 std::pair<float, float> ReversePointerTraceHACK(trace_flow_id_t trace_id) {
   float fhigh, flow;
   const uint32_t ihigh = (uint32_t)(trace_id >> 32);
@@ -27,26 +20,6 @@ std::pair<float, float> ReversePointerTraceHACK(trace_flow_id_t trace_id) {
   memcpy(&fhigh, &ihigh, sizeof(uint32_t));
   memcpy(&flow, &ilow, sizeof(uint32_t));
   return {fhigh, flow};
-}
-
-Phase GfxPhaseToInternalPhase(PointerEventPhase phase) {
-  switch (phase) {
-    case PointerEventPhase::ADD:
-      return Phase::kAdd;
-    case PointerEventPhase::UP:
-      return Phase::kUp;
-    case PointerEventPhase::MOVE:
-      return Phase::kChange;
-    case PointerEventPhase::DOWN:
-      return Phase::kDown;
-    case PointerEventPhase::REMOVE:
-      return Phase::kRemove;
-    case PointerEventPhase::CANCEL:
-      return Phase::kCancel;
-    default:
-      FX_CHECK(false) << "Should never be reached";
-      return Phase::kInvalid;
-  }
 }
 
 PointerEventPhase InternalPhaseToGfxPhase(Phase phase) {
@@ -67,29 +40,6 @@ PointerEventPhase InternalPhaseToGfxPhase(Phase phase) {
       FX_CHECK(false) << "Should never be reached.";
       return static_cast<PointerEventPhase>(0);
   };
-}
-
-InternalTouchEvent GfxPointerEventToInternalEvent(const fuchsia::ui::input::PointerEvent& event,
-                                                  zx_koid_t scene_koid, float screen_width,
-                                                  float screen_height,
-                                                  const glm::mat4& context_from_screen_transform) {
-  InternalTouchEvent internal_event;
-  internal_event.timestamp = event.event_time;
-  internal_event.device_id = event.device_id;
-  internal_event.pointer_id = event.pointer_id;
-  // Define the viewport to match screen dimensions and location.
-  internal_event.viewport.extents =
-      Extents({{/*min*/ {0.f, 0.f}, /*max*/ {screen_width, screen_height}}});
-  internal_event.viewport.context_from_viewport_transform = context_from_screen_transform;
-  internal_event.position_in_viewport = {event.x, event.y};
-  // Using scene_koid as both context and target, since it's guaranteed to be the root and thus
-  // to deliver events to any client in the scene graph.
-  internal_event.context = scene_koid;
-  internal_event.target = scene_koid;
-  internal_event.phase = GfxPhaseToInternalPhase(event.phase);
-  internal_event.buttons = event.buttons;
-
-  return internal_event;
 }
 
 GfxPointerEvent InternalTouchEventToGfxPointerEvent(const InternalTouchEvent& internal_event,

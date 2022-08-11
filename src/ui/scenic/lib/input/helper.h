@@ -7,31 +7,15 @@
 
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/trace/event.h>
 
 #include "src/ui/scenic/lib/input/internal_pointer_event.h"
 #include "src/ui/scenic/lib/view_tree/snapshot_types.h"
 
 namespace scenic_impl::input {
 
-// TODO(fxbug.dev/24476): Remove this.
-// Turn two floats (high bits, low bits) into a 64-bit uint.
-trace_flow_id_t PointerTraceHACK(float fa, float fb);
-
-// TODO(fxbug.dev/24476): Remove this.
-// Turn a 64-bit uint to two floats (high bits, low bits).
-std::pair<float, float> ReversePointerTraceHACK(trace_flow_id_t n);
-
 // For converting between phase enum types.
 // No support for HOVER phase.
 fuchsia::ui::input::PointerEventPhase InternalPhaseToGfxPhase(Phase phase);
-Phase GfxPhaseToInternalPhase(fuchsia::ui::input::PointerEventPhase phase);
-
-// Turns a gfx pointer event into an InternalTouchEvent.
-InternalTouchEvent GfxPointerEventToInternalEvent(const fuchsia::ui::input::PointerEvent& event,
-                                                  zx_koid_t scene_koid, float screen_width,
-                                                  float screen_height,
-                                                  const glm::mat4& context_from_screen_transform);
 
 // Turns an InternalTouchEvent into a gfx pointer event.
 // Does not support HOVER events.

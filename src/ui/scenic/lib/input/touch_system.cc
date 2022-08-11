@@ -7,6 +7,7 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 #include <zircon/status.h>
 
 #include <src/lib/fostr/fidl/fuchsia/ui/input/accessibility/formatting.h>

@@ -54,9 +54,8 @@ source_set("utils") {
   ]
 
   deps = [
-    "//src/ui/lib/escher/geometry:escher_geometry",
+    "//src/ui/scenic/lib/utils",
     "//zircon/system/ulib/inspect",
-    "//zircon/system/ulib/trace",
   ]
 
   public_deps = [ "//src/ui/scenic/lib/view_tree:view_tree_snapshot" ]
