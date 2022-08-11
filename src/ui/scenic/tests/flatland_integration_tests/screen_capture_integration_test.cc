@@ -43,7 +43,7 @@ using fuchsia::ui::composition::FrameInfo;
 using fuchsia::ui::composition::GetNextFrameArgs;
 using fuchsia::ui::composition::ParentViewportWatcher;
 using fuchsia::ui::composition::RegisterBufferCollectionArgs;
-using fuchsia::ui::composition::RegisterBufferCollectionUsage;
+using fuchsia::ui::composition::RegisterBufferCollectionUsages;
 using fuchsia::ui::composition::ScreenCapture;
 using fuchsia::ui::composition::ScreenCaptureConfig;
 using fuchsia::ui::composition::ScreenCaptureError;
@@ -207,7 +207,7 @@ TEST_F(ScreenCaptureIntegrationTest, SingleColorUnrotatedScreenshot) {
       CreateBufferCollectionInfo2WithConstraints(
           utils::CreateDefaultConstraints(/*buffer_count=*/1, image_width, image_height),
           std::move(ref_pair.export_token), flatland_allocator_.get(), sysmem_allocator_.get(),
-          RegisterBufferCollectionUsage::DEFAULT);
+          RegisterBufferCollectionUsages::DEFAULT);
 
   std::vector<uint8_t> write_values;
   for (uint32_t i = 0; i < num_pixels_; ++i) {
@@ -233,7 +233,7 @@ TEST_F(ScreenCaptureIntegrationTest, SingleColorUnrotatedScreenshot) {
           utils::CreateDefaultConstraints(/*buffer_count=*/1, render_target_width,
                                           render_target_height),
           std::move(scr_ref_pair.export_token), flatland_allocator_.get(), sysmem_allocator_.get(),
-          RegisterBufferCollectionUsage::SCREENSHOT);
+          RegisterBufferCollectionUsages::SCREENSHOT);
 
   // Configure buffers in ScreenCapture client.
   ScreenCaptureConfig sc_args;
@@ -295,7 +295,7 @@ TEST_F(ScreenCaptureIntegrationTest, MultiColor180DegreeRotationScreenshot) {
       CreateBufferCollectionInfo2WithConstraints(
           utils::CreateDefaultConstraints(/*buffer_count=*/1, image_width, image_height),
           std::move(ref_pair.export_token), flatland_allocator_.get(), sysmem_allocator_.get(),
-          RegisterBufferCollectionUsage::DEFAULT);
+          RegisterBufferCollectionUsages::DEFAULT);
 
   // Write the image with half green, half red
   std::vector<uint8_t> write_values;
@@ -327,7 +327,7 @@ TEST_F(ScreenCaptureIntegrationTest, MultiColor180DegreeRotationScreenshot) {
           utils::CreateDefaultConstraints(/*buffer_count=*/1, render_target_width,
                                           render_target_height),
           std::move(scr_ref_pair.export_token), flatland_allocator_.get(), sysmem_allocator_.get(),
-          RegisterBufferCollectionUsage::SCREENSHOT);
+          RegisterBufferCollectionUsages::SCREENSHOT);
 
   // Configure buffers in ScreenCapture client.
   ScreenCaptureConfig sc_args;
@@ -403,7 +403,7 @@ TEST_F(ScreenCaptureIntegrationTest, MultiColor90DegreeRotationScreenshot) {
       CreateBufferCollectionInfo2WithConstraints(
           utils::CreateDefaultConstraints(/*buffer_count=*/1, image_width, image_height),
           std::move(ref_pair.export_token), flatland_allocator_.get(), sysmem_allocator_.get(),
-          RegisterBufferCollectionUsage::DEFAULT);
+          RegisterBufferCollectionUsages::DEFAULT);
 
   // Write the image with the color scheme displayed in ASCII above.
   std::vector<uint8_t> write_values;
@@ -464,7 +464,7 @@ TEST_F(ScreenCaptureIntegrationTest, MultiColor90DegreeRotationScreenshot) {
           utils::CreateDefaultConstraints(/*buffer_count=*/1, render_target_width,
                                           render_target_height),
           std::move(scr_ref_pair.export_token), flatland_allocator_.get(), sysmem_allocator_.get(),
-          RegisterBufferCollectionUsage::SCREENSHOT);
+          RegisterBufferCollectionUsages::SCREENSHOT);
 
   // Configure buffers in ScreenCapture client.
   ScreenCaptureConfig sc_args;
@@ -561,7 +561,7 @@ TEST_F(ScreenCaptureIntegrationTest, MultiColor270DegreeRotationScreenshot) {
       CreateBufferCollectionInfo2WithConstraints(
           utils::CreateDefaultConstraints(/*buffer_count=*/1, image_width, image_height),
           std::move(ref_pair.export_token), flatland_allocator_.get(), sysmem_allocator_.get(),
-          RegisterBufferCollectionUsage::DEFAULT);
+          RegisterBufferCollectionUsages::DEFAULT);
 
   // Write the image with the color scheme displayed in ASCII above.
   std::vector<uint8_t> write_values;
@@ -622,7 +622,7 @@ TEST_F(ScreenCaptureIntegrationTest, MultiColor270DegreeRotationScreenshot) {
           utils::CreateDefaultConstraints(/*buffer_count=*/1, render_target_width,
                                           render_target_height),
           std::move(scr_ref_pair.export_token), flatland_allocator_.get(), sysmem_allocator_.get(),
-          RegisterBufferCollectionUsage::SCREENSHOT);
+          RegisterBufferCollectionUsages::SCREENSHOT);
 
   // Configure buffers in ScreenCapture client.
   ScreenCaptureConfig sc_args;
@@ -720,7 +720,7 @@ TEST_F(ScreenCaptureIntegrationTest, FilledRectScreenshot) {
           utils::CreateDefaultConstraints(/*buffer_count=*/1, render_target_width,
                                           render_target_height),
           std::move(scr_ref_pair.export_token), flatland_allocator_.get(), sysmem_allocator_.get(),
-          RegisterBufferCollectionUsage::SCREENSHOT);
+          RegisterBufferCollectionUsages::SCREENSHOT);
 
   // Configure buffers in ScreenCapture client.
   ScreenCaptureConfig sc_args;
@@ -791,7 +791,7 @@ TEST_F(ScreenCaptureIntegrationTest, ChangeFilledRectScreenshots) {
           utils::CreateDefaultConstraints(/*buffer_count=*/2, render_target_width,
                                           render_target_height),
           std::move(scr_ref_pair.export_token), flatland_allocator_.get(), sysmem_allocator_.get(),
-          RegisterBufferCollectionUsage::SCREENSHOT);
+          RegisterBufferCollectionUsages::SCREENSHOT);
 
   // Configure buffers in ScreenCapture client.
   ScreenCaptureConfig sc_args;

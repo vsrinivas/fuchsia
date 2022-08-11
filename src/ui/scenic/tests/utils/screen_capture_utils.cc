@@ -18,7 +18,7 @@ using fuchsia::ui::composition::ChildViewWatcher;
 using fuchsia::ui::composition::ContentId;
 using fuchsia::ui::composition::ParentViewportWatcher;
 using fuchsia::ui::composition::RegisterBufferCollectionArgs;
-using fuchsia::ui::composition::RegisterBufferCollectionUsage;
+using fuchsia::ui::composition::RegisterBufferCollectionUsages;
 using fuchsia::ui::composition::TransformId;
 using fuchsia::ui::composition::ViewportProperties;
 
@@ -107,7 +107,7 @@ fuchsia::sysmem::BufferCollectionInfo_2 CreateBufferCollectionInfo2WithConstrain
     fuchsia::sysmem::BufferCollectionConstraints constraints,
     allocation::BufferCollectionExportToken export_token,
     fuchsia::ui::composition::Allocator_Sync* flatland_allocator,
-    fuchsia::sysmem::Allocator_Sync* sysmem_allocator, RegisterBufferCollectionUsage usage) {
+    fuchsia::sysmem::Allocator_Sync* sysmem_allocator, RegisterBufferCollectionUsages usage) {
   RegisterBufferCollectionArgs rbc_args = {};
   zx_status_t status;
   // Create Sysmem tokens.
@@ -115,7 +115,7 @@ fuchsia::sysmem::BufferCollectionInfo_2 CreateBufferCollectionInfo2WithConstrain
 
   rbc_args.set_export_token(std::move(export_token));
   rbc_args.set_buffer_collection_token(std::move(dup_token));
-  rbc_args.set_usage(usage);
+  rbc_args.set_usages(usage);
 
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
   status = sysmem_allocator->BindSharedCollection(std::move(local_token),

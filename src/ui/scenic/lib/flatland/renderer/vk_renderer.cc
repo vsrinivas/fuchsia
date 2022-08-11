@@ -380,8 +380,9 @@ bool VkRenderer::ImportBufferImage(const allocation::ImageMetadata& metadata,
         return false;
       }
 
-      escher::ImagePtr readback_image = ExtractImage(metadata, readback_collection_itr->second.vk_collection,
-                                    vk::ImageUsageFlagBits::eTransferDst);
+      escher::ImagePtr readback_image =
+          ExtractImage(metadata, readback_collection_itr->second.vk_collection,
+                       vk::ImageUsageFlagBits::eTransferDst);
       if (!readback_image) {
         FX_LOGS(ERROR) << "Could not extract readback image.";
         return false;

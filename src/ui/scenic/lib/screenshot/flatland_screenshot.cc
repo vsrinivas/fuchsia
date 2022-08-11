@@ -70,7 +70,7 @@ FlatlandScreenshot::FlatlandScreenshot(
   fuchsia::ui::composition::RegisterBufferCollectionArgs args = {};
   args.set_export_token(std::move(ref_pair.export_token));
   args.set_buffer_collection_token(std::move(dup_token));
-  args.set_usage(fuchsia::ui::composition::RegisterBufferCollectionUsage::SCREENSHOT);
+  args.set_usages(fuchsia::ui::composition::RegisterBufferCollectionUsages::SCREENSHOT);
 
   flatland_allocator_->RegisterBufferCollection(
       std::move(args),

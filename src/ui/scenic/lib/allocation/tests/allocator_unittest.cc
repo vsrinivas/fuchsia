@@ -10,6 +10,7 @@
 #include <gtest/gtest.h>
 
 #include "fuchsia/math/cpp/fidl.h"
+#include "fuchsia/ui/composition/cpp/fidl.h"
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/scenic/lib/allocation/buffer_collection_import_export_tokens.h"
@@ -19,11 +20,13 @@
 using ::testing::_;
 using ::testing::Return;
 
+using allocation::BufferCollectionUsage;
 using fuchsia::ui::composition::Allocator_RegisterBufferCollection_Result;
 using fuchsia::ui::composition::BufferCollectionExportToken;
 using fuchsia::ui::composition::BufferCollectionImportToken;
 using fuchsia::ui::composition::RegisterBufferCollectionArgs;
 using fuchsia::ui::composition::RegisterBufferCollectionUsage;
+using fuchsia::ui::composition::RegisterBufferCollectionUsages;
 
 namespace allocation {
 namespace test {
@@ -301,12 +304,14 @@ TEST_P(AllocatorTestParameterized, BufferCollectionImportPassesAndFailsOnDiffere
 
   // Return failure from the local importer.
   EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(koid, _, _, _, _))
-      .WillOnce(Return(true));
+      .Times(testing::AtLeast(0))
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(*local_mock_buffer_collection_importer, ImportBufferCollection(koid, _, _, _, _))
       .WillOnce(Return(false));
 
   // Expect buffer collection to be released from both instances.
-  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(koid, _)).Times(1);
+  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(koid, _))
+      .Times(testing::AtLeast(0));
   EXPECT_CALL(*local_mock_buffer_collection_importer, ReleaseBufferCollection(koid, _)).Times(0);
 
   REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, CreateToken(), usage, false);
@@ -443,6 +448,63 @@ TEST_F(AllocatorTest, RegisterDefaultAndScreenshotBufferCollections) {
         processed_callback = true;
       });
   EXPECT_TRUE(processed_callback);
+}
+
+TEST_F(AllocatorTest, RegisterBufferCollectionCombined) {
+  // Create default importer.
+  std::vector<std::shared_ptr<BufferCollectionImporter>> default_importers;
+  auto default_mock_buffer_collection_importer = new MockBufferCollectionImporter();
+  auto default_buffer_collection_importer =
+      std::shared_ptr<BufferCollectionImporter>(default_mock_buffer_collection_importer);
+  default_importers.push_back(default_buffer_collection_importer);
+
+  // Create screenshot importer.
+  std::vector<std::shared_ptr<BufferCollectionImporter>> screenshot_importers;
+  auto screenshot_mock_buffer_collection_importer = new MockBufferCollectionImporter();
+  auto screenshot_buffer_collection_importer =
+      std::shared_ptr<BufferCollectionImporter>(screenshot_mock_buffer_collection_importer);
+  screenshot_importers.push_back(screenshot_buffer_collection_importer);
+
+  // Create allocator.
+  std::shared_ptr<Allocator> allocator =
+      std::make_shared<Allocator>(context_provider_.context(), default_importers,
+                                  screenshot_importers, utils::CreateSysmemAllocatorSyncPtr());
+
+  // Register with the default importer and the screenshot importer.
+  BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
+  const auto koid = fsl::GetKoid(ref_pair.export_token.value.get());
+
+  EXPECT_CALL(*default_mock_buffer_collection_importer, ImportBufferCollection(koid, _, _, _, _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*screenshot_mock_buffer_collection_importer, ImportBufferCollection(koid, _, _, _, _))
+      .WillOnce(Return(true));
+
+  RegisterBufferCollectionUsages usages;
+  usages |= RegisterBufferCollectionUsages::DEFAULT;
+  usages |= RegisterBufferCollectionUsages::SCREENSHOT;
+
+  RegisterBufferCollectionArgs args;
+  args.set_export_token(std::move(ref_pair.export_token));
+  args.set_buffer_collection_token(CreateToken());
+  args.set_usages(usages);
+
+  bool processed_callback = false;
+  allocator->RegisterBufferCollection(
+      std::move(args), [&processed_callback](Allocator_RegisterBufferCollection_Result result) {
+        EXPECT_FALSE(result.is_err());
+        processed_callback = true;
+      });
+  EXPECT_TRUE(processed_callback);
+
+  // Cleanup.
+  EXPECT_CALL(*default_mock_buffer_collection_importer,
+              ReleaseBufferCollection(_, BufferCollectionUsage::kClientImage))
+      .Times(1);
+  EXPECT_CALL(*screenshot_mock_buffer_collection_importer,
+              ReleaseBufferCollection(_, BufferCollectionUsage::kRenderTarget))
+      .Times(1);
+
+  allocator.reset();
 }
 
 }  // namespace test

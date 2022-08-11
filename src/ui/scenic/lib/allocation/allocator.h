@@ -60,6 +60,11 @@ class Allocator : public fuchsia::ui::composition::Allocator {
                      fuchsia::ui::composition::RegisterBufferCollectionUsage>
       buffer_collections_;
 
+  // Keep track of buffer collection id usage types for garbage collection.
+  std::unordered_map<GlobalBufferCollectionId,
+                     fuchsia::ui::composition::RegisterBufferCollectionUsages>
+      buffer_collection_usages_;
+
   // Should be last.
   fxl::WeakPtrFactory<Allocator> weak_factory_;
 };

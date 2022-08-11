@@ -18,7 +18,7 @@ using testing::_;
 using allocation::Allocator;
 using allocation::BufferCollectionImporter;
 using fuchsia::ui::composition::RegisterBufferCollectionArgs;
-using fuchsia::ui::composition::RegisterBufferCollectionUsage;
+using fuchsia::ui::composition::RegisterBufferCollectionUsages;
 using screen_capture::ScreenCaptureBufferCollectionImporter;
 
 namespace screen_capture2 {
@@ -47,7 +47,7 @@ void CreateBufferCollectionInfo2WithConstraints(
 
   rbc_args.set_export_token(std::move(export_token));
   rbc_args.set_buffer_collection_token(std::move(dup_token));
-  rbc_args.set_usage(RegisterBufferCollectionUsage::SCREENSHOT);
+  rbc_args.set_usages(RegisterBufferCollectionUsages::SCREENSHOT);
 
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
   status = sysmem_allocator->BindSharedCollection(std::move(local_token),

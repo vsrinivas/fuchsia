@@ -137,7 +137,7 @@ impl ScenicFacade {
         let args = ui_comp::RegisterBufferCollectionArgs {
             export_token: Some(export_token),
             buffer_collection_token: Some(dup_token),
-            usage: Some(ui_comp::RegisterBufferCollectionUsage::Screenshot),
+            usages: Some(ui_comp::RegisterBufferCollectionUsages::SCREENSHOT),
             ..ui_comp::RegisterBufferCollectionArgs::EMPTY
         };
 

@@ -35,6 +35,18 @@ type RegisterBufferCollectionUsage = strict enum {
     SCREENSHOT = 1;
 };
 
+/// The possible usages for a registered buffer collection. Can be a combination of options.
+@available(added=9)
+type RegisterBufferCollectionUsages = flexible bits : uint16 {
+    /// The specified buffer collection can be used for Flatland and GFX image creation.
+    ///
+    /// See [`fuchsia.ui.composition/Flatland.CreateImage`] for more.
+    DEFAULT = 0x0001;
+
+    /// The specified buffer collection can be used for screenshotting purposes.
+    SCREENSHOT = 0x0002;
+};
+
 /// The table of arguments for [`RegisterBufferCollection`]. Note that some
 /// fields below are REQUIRED.
 type RegisterBufferCollectionArgs = resource table {
@@ -68,7 +80,20 @@ type RegisterBufferCollectionArgs = resource table {
     ///
     /// This field is OPTIONAL. If `usage` is omitted it will be treated as if
     /// it has the DEFAULT option.
+    ///
+    /// # Deprecation
+    ///
+    /// This arg is deprecated at API version 9 with addition of |usages|.
+    @available(deprecated=9, note="use usages")
     3: usage RegisterBufferCollectionUsage;
+
+    /// The client can register a buffer collection for various uses and has the ability to
+    /// combine usages if multiple are needed.
+    ///
+    /// This field is OPTIONAL. If `usages` is omitted it will be treated as if
+    /// it has only the DEFAULT option.
+    @available(added=9)
+    4: usages RegisterBufferCollectionUsages;
 };
 
 @discoverable

@@ -116,7 +116,7 @@ void ViewProviderImpl::WriteToSysmem(uint8_t* write_values, uint32_t image_width
   fuchsia::ui::composition::RegisterBufferCollectionArgs args = {};
   args.set_export_token(std::move(ref_pair.export_token));
   args.set_buffer_collection_token(std::move(dup_token));
-  args.set_usage(fuchsia::ui::composition::RegisterBufferCollectionUsage::DEFAULT);
+  args.set_usages(fuchsia::ui::composition::RegisterBufferCollectionUsages::DEFAULT);
 
   fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
   status = sysmem_allocator_->BindSharedCollection(std::move(local_token),

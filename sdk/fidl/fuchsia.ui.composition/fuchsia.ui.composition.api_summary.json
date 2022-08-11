@@ -532,6 +532,11 @@
         "name": "fuchsia.ui.composition/RegisterBufferCollectionArgs.usage"
     },
     {
+        "declaration": "fuchsia.ui.composition/RegisterBufferCollectionUsages",
+        "kind": "table/member",
+        "name": "fuchsia.ui.composition/RegisterBufferCollectionArgs.usages"
+    },
+    {
         "kind": "table",
         "name": "fuchsia.ui.composition/RegisterBufferCollectionArgs",
         "resourceness": "resource"
@@ -562,6 +567,22 @@
         "kind": "enum",
         "name": "fuchsia.ui.composition/RegisterBufferCollectionUsage",
         "strictness": "strict"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.ui.composition/RegisterBufferCollectionUsages.DEFAULT",
+        "value": "1"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.ui.composition/RegisterBufferCollectionUsages.SCREENSHOT",
+        "value": "2"
+    },
+    {
+        "declaration": "uint16",
+        "kind": "bits",
+        "name": "fuchsia.ui.composition/RegisterBufferCollectionUsages",
+        "strictness": "flexible"
     },
     {
         "kind": "enum/member",

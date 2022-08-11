@@ -18,7 +18,7 @@ using fuchsia::math::Vec;
 using fuchsia::ui::composition::ChildViewWatcher;
 using fuchsia::ui::composition::ContentId;
 using fuchsia::ui::composition::ParentViewportWatcher;
-using fuchsia::ui::composition::RegisterBufferCollectionUsage;
+using fuchsia::ui::composition::RegisterBufferCollectionUsages;
 using fuchsia::ui::composition::TransformId;
 using fuchsia::ui::composition::ViewportProperties;
 
@@ -53,7 +53,7 @@ fuchsia::sysmem::BufferCollectionInfo_2 CreateBufferCollectionInfo2WithConstrain
     fuchsia::sysmem::BufferCollectionConstraints constraints,
     allocation::BufferCollectionExportToken export_token,
     fuchsia::ui::composition::Allocator_Sync* flatland_allocator,
-    fuchsia::sysmem::Allocator_Sync* sysmem_allocator, RegisterBufferCollectionUsage usage);
+    fuchsia::sysmem::Allocator_Sync* sysmem_allocator, RegisterBufferCollectionUsages usage);
 
 // This function returns a linear buffer of pixels of size width * height.
 std::vector<uint8_t> ExtractScreenCapture(

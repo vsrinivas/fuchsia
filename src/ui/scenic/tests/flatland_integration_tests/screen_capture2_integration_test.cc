@@ -44,7 +44,7 @@ using fuchsia::ui::composition::Flatland;
 using fuchsia::ui::composition::FlatlandDisplay;
 using fuchsia::ui::composition::ParentViewportWatcher;
 using fuchsia::ui::composition::RegisterBufferCollectionArgs;
-using fuchsia::ui::composition::RegisterBufferCollectionUsage;
+using fuchsia::ui::composition::RegisterBufferCollectionUsages;
 using fuchsia::ui::composition::TransformId;
 using fuchsia::ui::composition::ViewportProperties;
 using fuchsia::ui::composition::internal::FrameInfo;
@@ -150,7 +150,7 @@ class ScreenCapture2IntegrationTest : public gtest::RealLoopFixture {
     fuchsia::sysmem::BufferCollectionInfo_2 sc_buffer_collection_info =
         CreateBufferCollectionInfo2WithConstraints(
             constraints, std::move(scr_ref_pair.export_token), flatland_allocator_.get(),
-            sysmem_allocator_.get(), RegisterBufferCollectionUsage::SCREENSHOT);
+            sysmem_allocator_.get(), RegisterBufferCollectionUsages::SCREENSHOT);
 
     // Configure ScreenCapture client.
     ScreenCaptureConfig sc_args;
@@ -204,7 +204,7 @@ TEST_F(ScreenCapture2IntegrationTest, SingleColorCapture) {
       CreateBufferCollectionInfo2WithConstraints(
           utils::CreateDefaultConstraints(/*buffer_count=*/1, image_width, image_height),
           std::move(ref_pair.export_token), flatland_allocator_.get(), sysmem_allocator_.get(),
-          RegisterBufferCollectionUsage::DEFAULT);
+          RegisterBufferCollectionUsages::DEFAULT);
 
   std::vector<uint8_t> write_values;
   for (uint32_t i = 0; i < num_pixels_; ++i) {
@@ -417,7 +417,7 @@ TEST_F(ScreenCapture2IntegrationTest, ClientReleaseBufferCapture) {
       CreateBufferCollectionInfo2WithConstraints(
           utils::CreateDefaultConstraints(/*buffer_count=*/1, image_width, image_height),
           std::move(ref_pair.export_token), flatland_allocator_.get(), sysmem_allocator_.get(),
-          RegisterBufferCollectionUsage::DEFAULT);
+          RegisterBufferCollectionUsages::DEFAULT);
 
   fuchsia::sysmem::BufferCollectionInfo_2 sc_buffer_collection_info = ConfigureScreenCapture(
       utils::CreateDefaultConstraints(/*buffer_count=*/1, image_width, image_height),
