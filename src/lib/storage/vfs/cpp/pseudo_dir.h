@@ -7,6 +7,7 @@
 
 #include <fidl/fuchsia.io/cpp/wire.h>
 
+#include <cstdint>
 #include <memory>
 #include <mutex>
 #include <string_view>
@@ -14,6 +15,7 @@
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 #include <fbl/string.h>
 
 #include "vnode.h"

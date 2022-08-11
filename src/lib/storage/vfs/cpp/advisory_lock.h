@@ -10,8 +10,11 @@
 #endif
 
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <lib/fit/function.h>
+#include <zircon/types.h>
 
-#include "lib/fit/function.h"
+#include <fbl/ref_ptr.h>
+
 #include "src/lib/storage/vfs/cpp/vnode.h"
 
 namespace fs {

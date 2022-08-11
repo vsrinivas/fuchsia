@@ -6,7 +6,16 @@
 #define SRC_LIB_STORAGE_VFS_CPP_PAGED_VNODE_H_
 
 #include <lib/async/cpp/wait.h>
+#include <lib/async/dispatcher.h>
+#include <lib/zx/port.h>
+#include <lib/zx/status.h>
+#include <lib/zx/vmo.h>
 #include <zircon/compiler.h>
+
+#include <cstdint>
+
+#include <fbl/recycler.h>
+#include <fbl/ref_ptr.h>
 
 #include "src/lib/storage/vfs/cpp/paged_vfs.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"

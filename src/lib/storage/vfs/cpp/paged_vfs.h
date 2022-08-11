@@ -5,9 +5,18 @@
 #ifndef SRC_LIB_STORAGE_VFS_CPP_PAGED_VFS_H_
 #define SRC_LIB_STORAGE_VFS_CPP_PAGED_VFS_H_
 
+#include <lib/async/dispatcher.h>
 #include <lib/zx/pager.h>
 #include <lib/zx/status.h>
+#include <lib/zx/thread.h>
 #include <lib/zx/vmo.h>
+#include <zircon/types.h>
+
+#include <cstddef>
+#include <cstdint>
+#include <map>
+#include <memory>
+#include <vector>
 
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/lib/storage/vfs/cpp/pager_thread_pool.h"

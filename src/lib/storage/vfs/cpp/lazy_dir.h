@@ -5,9 +5,12 @@
 #ifndef SRC_LIB_STORAGE_VFS_CPP_LAZY_DIR_H_
 #define SRC_LIB_STORAGE_VFS_CPP_LAZY_DIR_H_
 
+#include <cstddef>
+#include <cstdint>
 #include <string_view>
 
 #include <fbl/ref_counted.h>
+#include <fbl/ref_ptr.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>
 

@@ -5,6 +5,10 @@
 #include "src/lib/storage/vfs/cpp/paged_vnode.h"
 
 #include <lib/async/task.h>
+#include <zircon/errors.h>
+
+#include <memory>
+#include <mutex>
 
 #include "src/lib/storage/vfs/cpp/paged_vfs.h"
 

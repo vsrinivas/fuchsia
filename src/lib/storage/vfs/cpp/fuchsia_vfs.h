@@ -12,7 +12,12 @@
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
+#include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
+#include <zircon/types.h>
+
+#include <cstdint>
+#include <string>
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_hash_table.h>

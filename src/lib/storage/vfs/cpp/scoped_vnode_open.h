@@ -5,6 +5,11 @@
 #ifndef SRC_LIB_STORAGE_VFS_CPP_SCOPED_VNODE_OPEN_H_
 #define SRC_LIB_STORAGE_VFS_CPP_SCOPED_VNODE_OPEN_H_
 
+#include <zircon/errors.h>
+#include <zircon/types.h>
+
+#include <fbl/ref_ptr.h>
+
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 

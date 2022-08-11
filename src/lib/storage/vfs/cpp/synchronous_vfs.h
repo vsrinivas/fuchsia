@@ -10,6 +10,8 @@
 #endif
 
 #include <lib/async/cpp/task.h>
+#include <lib/async/dispatcher.h>
+#include <lib/zx/channel.h>
 
 #include <memory>
 

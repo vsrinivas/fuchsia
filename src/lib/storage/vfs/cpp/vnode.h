@@ -18,6 +18,7 @@
 #include <zircon/types.h>
 
 #include <map>
+#include <memory>
 #include <string_view>
 #include <type_traits>
 #include <utility>

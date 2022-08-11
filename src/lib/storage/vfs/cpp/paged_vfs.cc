@@ -6,6 +6,8 @@
 
 #include <zircon/syscalls-next.h>
 
+#include <mutex>
+
 #include <fbl/auto_lock.h>
 
 #include "src/lib/storage/vfs/cpp/paged_vnode.h"

@@ -11,15 +11,18 @@
 
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/wire/transaction.h>
 #include <lib/fit/function.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/event.h>
-#include <stdint.h>
+#include <lib/zx/status.h>
 #include <zircon/fidl.h>
 
 #include <memory>
 
 #include <fbl/intrusive_double_list.h>
+#include <fbl/ref_ptr.h>
 
 #include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"

@@ -9,7 +9,10 @@
 #include <lib/fit/traits.h>
 #include <lib/zx/channel.h>
 
+#include <type_traits>
+
 #include <fbl/macros.h>
+#include <fbl/ref_ptr.h>
 
 #include "vnode.h"
 

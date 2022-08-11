@@ -6,7 +6,9 @@
 #define SRC_LIB_STORAGE_VFS_CPP_PSEUDO_FILE_H_
 
 #include <lib/fit/function.h>
+#include <zircon/types.h>
 
+#include <cstddef>
 #include <string_view>
 
 #include <fbl/macros.h>
