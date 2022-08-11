@@ -9,7 +9,7 @@ use std::{
     convert::TryInto as _,
     fmt::Debug,
     marker::PhantomData,
-    num::{NonZeroU16, ParseIntError, TryFromIntError},
+    num::{NonZeroU16, NonZeroU64, ParseIntError, TryFromIntError},
     ops::{Deref as _, DerefMut as _},
 };
 
@@ -29,7 +29,7 @@ use futures::{StreamExt as _, TryFutureExt as _};
 use log::{error, trace, warn};
 use net_types::{
     ip::{Ip, IpVersion, Ipv4, Ipv6},
-    SpecifiedAddr, ZonedAddr,
+    MulticastAddr, SpecifiedAddr, ZonedAddr,
 };
 use netstack3_core::{
     data_structures::{
@@ -38,6 +38,7 @@ use netstack3_core::{
     },
     error::LocalAddressError,
     ip::{icmp, socket::IpSockSendError, IpDeviceIdContext, IpExt, TransportIpContext},
+    socket::datagram::{MulticastInterfaceSelector, SetMulticastMembershipError},
     transport::udp::{
         self as core_udp, BufferUdpContext, BufferUdpStateContext, BufferUdpStateNonSyncContext,
         UdpBoundId, UdpConnId, UdpConnInfo, UdpConnectListenerError, UdpContext, UdpListenerId,
@@ -59,15 +60,15 @@ use thiserror::Error;
 use crate::bindings::{
     devices::Devices,
     util::{
-        DeviceNotFoundError, SocketAddressError, TryFromFidlWithContext,
-        TryIntoCoreWithContext as _, TryIntoFidlWithContext,
+        DeviceNotFoundError, SocketAddressError, TryFromFidlWithContext, TryIntoCoreWithContext,
+        TryIntoFidlWithContext,
     },
     CommonInfo, Lockable, LockableContext,
 };
 
 use super::{
-    IntoErrno, IpSockAddrExt, SockAddr, SocketWorkerProperties, ZXSIO_SIGNAL_INCOMING,
-    ZXSIO_SIGNAL_OUTGOING,
+    IntoErrno, IpSockAddrExt, SockAddr, SockMulticastMembership, SocketWorkerProperties,
+    ZXSIO_SIGNAL_INCOMING, ZXSIO_SIGNAL_OUTGOING,
 };
 
 // These values were picked to match Linux behavior.
@@ -216,6 +217,7 @@ pub(crate) trait TransportState<I: Ip, C, SC: IpDeviceIdContext<I>>: Transport<I
     type ConnectListenerError: IntoErrno;
     type ReconnectConnError: IntoErrno;
     type SetSocketDeviceError: IntoErrno;
+    type SetMulticastMembershipError: IntoErrno;
     type LocalIdentifier: OptionFromU16 + Into<u16>;
     type RemoteIdentifier: OptionFromU16 + Into<u16>;
 
@@ -303,6 +305,15 @@ pub(crate) trait TransportState<I: Ip, C, SC: IpDeviceIdContext<I>>: Transport<I
     fn set_reuse_port(sync_ctx: &mut SC, ctx: &mut C, id: Self::UnboundId, reuse_port: bool);
 
     fn get_reuse_port(sync_ctx: &SC, ctx: &mut C, id: SocketId<I, Self>) -> bool;
+
+    fn set_multicast_membership(
+        sync_ctx: &mut SC,
+        ctx: &mut C,
+        id: SocketId<I, Self>,
+        multicast_group: MulticastAddr<I::Addr>,
+        interface: MulticastInterfaceSelector<I::Addr, SC::DeviceId>,
+        want_membership: bool,
+    ) -> Result<(), Self::SetMulticastMembershipError>;
 }
 
 /// An abstraction over transport protocols that allows data to be sent via the Core.
@@ -374,6 +385,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> Transpor
     type ConnectListenerError = UdpConnectListenerError;
     type ReconnectConnError = UdpConnectListenerError;
     type SetSocketDeviceError = LocalAddressError;
+    type SetMulticastMembershipError = SetMulticastMembershipError;
     type LocalIdentifier = NonZeroU16;
     type RemoteIdentifier = NonZeroU16;
 
@@ -504,6 +516,24 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> Transpor
 
     fn get_reuse_port(sync_ctx: &SC, ctx: &mut C, id: SocketId<I, Self>) -> bool {
         core_udp::get_udp_posix_reuse_port(sync_ctx, ctx, id.into())
+    }
+
+    fn set_multicast_membership(
+        sync_ctx: &mut SC,
+        ctx: &mut C,
+        id: SocketId<I, Self>,
+        multicast_group: MulticastAddr<I::Addr>,
+        interface: MulticastInterfaceSelector<I::Addr, SC::DeviceId>,
+        want_membership: bool,
+    ) -> Result<(), Self::SetMulticastMembershipError> {
+        core_udp::set_udp_multicast_membership(
+            sync_ctx,
+            ctx,
+            id.into(),
+            multicast_group,
+            interface,
+            want_membership,
+        )
     }
 }
 
@@ -827,6 +857,7 @@ impl<I: IcmpEchoIpExt, NonSyncCtx: NonSyncContext>
     type ConnectListenerError = icmp::IcmpSockCreationError;
     type ReconnectConnError = icmp::IcmpSockCreationError;
     type SetSocketDeviceError = LocalAddressError;
+    type SetMulticastMembershipError = LocalAddressError;
     type LocalIdentifier = u16;
     type RemoteIdentifier = IcmpRemoteIdentifier;
 
@@ -966,6 +997,20 @@ impl<I: IcmpEchoIpExt, NonSyncCtx: NonSyncContext>
         _ctx: &mut NonSyncCtx,
         _id: SocketId<I, Self>,
     ) -> bool {
+        todo!("https://fxbug.dev/47321: needs Core implementation")
+    }
+
+    fn set_multicast_membership(
+        _sync_ctx: &mut SyncCtx<NonSyncCtx>,
+        _ctx: &mut NonSyncCtx,
+        _id: SocketId<I, Self>,
+        _multicast_group: MulticastAddr<I::Addr>,
+        _interface: MulticastInterfaceSelector<
+            I::Addr,
+            <SyncCtx<NonSyncCtx> as IpDeviceIdContext<I>>::DeviceId,
+        >,
+        _want_membership: bool,
+    ) -> Result<(), Self::SetMulticastMembershipError> {
         todo!("https://fxbug.dev/47321: needs Core implementation")
     }
 }
@@ -1294,6 +1339,7 @@ where
         IdMapCollectionKey
             + TryFromFidlWithContext<u64, Error = DeviceNotFoundError>
             + TryIntoFidlWithContext<u64, Error = DeviceNotFoundError>
+            + TryFromFidlWithContext<NonZeroU64, Error = DeviceNotFoundError>
             + TryFromFidlWithContext<
                 <I::SocketAddress as SockAddr>::Zone,
                 Error = DeviceNotFoundError,
@@ -1872,28 +1918,44 @@ where
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::AddIpMembership {
-                            membership: _,
+                            membership,
                             responder,
                         } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                            responder_send!(responder, &mut {
+                                match I::MulticastMembership::new(membership) {
+                                    Some(membership) => self.make_handler().await.set_multicast_membership(membership, true),
+                                    None => Err(fposix::Errno::Enoprotoopt),
+                            }});
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::DropIpMembership {
-                            membership: _,
+                            membership,
                             responder,
                         } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                            responder_send!(responder, &mut {
+                                match I::MulticastMembership::new(membership) {
+                                    Some(membership) => self.make_handler().await.set_multicast_membership(membership, false),
+                                    None => Err(fposix::Errno::Enoprotoopt),
+                            }});
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::AddIpv6Membership {
-                            membership: _,
+                            membership,
                             responder,
                         } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                            responder_send!(responder, &mut {
+                                match I::MulticastMembership::new(membership) {
+                                    Some(membership) => self.make_handler().await.set_multicast_membership(membership, true),
+                                    None => Err(fposix::Errno::Enoprotoopt),
+                            }});
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::DropIpv6Membership {
-                            membership: _,
+                            membership,
                             responder,
                         } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                            responder_send!(responder, &mut {
+                                match I::MulticastMembership::new(membership) {
+                                    Some(membership) => self.make_handler().await.set_multicast_membership(membership, false),
+                                    None => Err(fposix::Errno::Enoprotoopt),
+                            }});
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::SetIpv6ReceiveTrafficClass {
                             value: _,
@@ -2665,12 +2727,64 @@ where
     }
 }
 
+impl<'a, I, T, SC> RequestHandler<'a, I, T, SC>
+where
+    I: SocketCollectionIpExt<T> + IpExt + IpSockAddrExt,
+    T: Transport<Ipv4>,
+    T: Transport<Ipv6>,
+    T: TransportState<
+        I,
+        <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
+        SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx>,
+    >,
+    SC: RequestHandlerContext<I, T>,
+    SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx>:
+        TransportIpContext<I, <SC as RequestHandlerContext<I, T>>::NonSyncCtx>,
+    <SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx> as IpDeviceIdContext<I>>::DeviceId:
+        IdMapCollectionKey + TryFromFidlWithContext<NonZeroU64, Error = DeviceNotFoundError>,
+    <SC as RequestHandlerContext<I, T>>::NonSyncCtx:
+        AsRef<
+            Devices<
+                <SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx> as IpDeviceIdContext<
+                    I,
+                >>::DeviceId,
+            >,
+        >,
+{
+    fn set_multicast_membership(
+        mut self,
+        membership: I::MulticastMembership,
+        want_membership: bool,
+    ) -> Result<(), fposix::Errno> {
+        let (mcast_addr, interface) = membership.into_addr_selector();
+        let multicast_group = MulticastAddr::new(mcast_addr).ok_or(fposix::Errno::Einval)?;
+
+        let state: &SocketState<_, _> = &self.get_state().info.state;
+        let id = state.into();
+
+        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
+        let interface =
+            interface.try_into_core_with_ctx(non_sync_ctx).map_err(IntoErrno::into_errno)?;
+
+        T::set_multicast_membership(
+            sync_ctx,
+            non_sync_ctx,
+            id,
+            multicast_group,
+            interface,
+            want_membership,
+        )
+        .map_err(IntoErrno::into_errno)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     use anyhow::Error;
     use fidl::{
+        encoding::Decodable,
         endpoints::{Proxy, ServerEnd},
         AsyncChannel,
     };
@@ -2678,18 +2792,21 @@ mod tests {
     use fuchsia_zircon::{self as zx, AsHandleRef};
     use futures::StreamExt;
 
-    use crate::bindings::integration_tests::{
-        test_ep_name, StackSetupBuilder, TestSetup, TestSetupBuilder, TestStack,
-    };
     use crate::bindings::socket::testutil::TestSockAddr;
+    use crate::bindings::{
+        integration_tests::{
+            test_ep_name, StackSetupBuilder, TestSetup, TestSetupBuilder, TestStack,
+        },
+        util::IntoFidl,
+    };
     use net_types::{
-        ip::{Ip, IpAddress},
+        ip::{Ip, IpAddr, IpAddress},
         Witness as _,
     };
 
     async fn prepare_test<A: TestSockAddr>(
         proto: fposix_socket::DatagramSocketProtocol,
-    ) -> (TestSetup, fposix_socket::SynchronousDatagramSocketProxy) {
+    ) -> (TestSetup, fposix_socket::SynchronousDatagramSocketProxy, zx::EventPair) {
         let mut t = TestSetupBuilder::new()
             .add_endpoint()
             .add_stack(
@@ -2699,8 +2816,8 @@ mod tests {
             .build()
             .await
             .unwrap();
-        let proxy = get_socket::<A>(t.get(0), proto).await;
-        (t, proxy)
+        let (proxy, event) = get_socket_and_event::<A>(t.get(0), proto).await;
+        (t, proxy, event)
     }
 
     async fn get_socket<A: TestSockAddr>(
@@ -2786,7 +2903,7 @@ mod tests {
     }
 
     async fn connect_failure<A: TestSockAddr, T>(proto: fposix_socket::DatagramSocketProtocol) {
-        let (_t, proxy) = prepare_test::<A>(proto).await;
+        let (_t, proxy, _event) = prepare_test::<A>(proto).await;
 
         // Pass a bad domain.
         let res = proxy
@@ -2822,7 +2939,7 @@ mod tests {
     );
 
     async fn connect<A: TestSockAddr, T>(proto: fposix_socket::DatagramSocketProtocol) {
-        let (_t, proxy) = prepare_test::<A>(proto).await;
+        let (_t, proxy, _event) = prepare_test::<A>(proto).await;
         let () = proxy
             .connect(&mut A::create(A::REMOTE_ADDR, 200))
             .await
@@ -2843,7 +2960,7 @@ mod tests {
     );
 
     async fn connect_loopback<A: TestSockAddr, T>(proto: fposix_socket::DatagramSocketProtocol) {
-        let (_t, proxy) = prepare_test::<A>(proto).await;
+        let (_t, proxy, _event) = prepare_test::<A>(proto).await;
         let () = proxy
             .connect(&mut A::create(
                 <<A::AddrType as IpAddress>::Version as Ip>::LOOPBACK_ADDRESS.get(),
@@ -2859,7 +2976,7 @@ mod tests {
     async fn connect_any<A: TestSockAddr, T>(proto: fposix_socket::DatagramSocketProtocol) {
         // Pass an unspecified remote address. This should be treated as the
         // loopback address.
-        let (_t, proxy) = prepare_test::<A>(proto).await;
+        let (_t, proxy, _event) = prepare_test::<A>(proto).await;
 
         const PORT: u16 = 1010;
         let () = proxy
@@ -2880,7 +2997,7 @@ mod tests {
     );
 
     async fn bind<A: TestSockAddr, T>(proto: fposix_socket::DatagramSocketProtocol) {
-        let (mut t, socket) = prepare_test::<A>(proto).await;
+        let (mut t, socket, _event) = prepare_test::<A>(proto).await;
         let stack = t.get(0);
         // Can bind to local address.
         let () =
@@ -2910,7 +3027,7 @@ mod tests {
     );
 
     async fn bind_then_connect<A: TestSockAddr, T>(proto: fposix_socket::DatagramSocketProtocol) {
-        let (_t, socket) = prepare_test::<A>(proto).await;
+        let (_t, socket, _event) = prepare_test::<A>(proto).await;
         // Can bind to local address.
         let () =
             socket.bind(&mut A::create(A::LOCAL_ADDR, 200)).await.unwrap().expect("bind suceeds");
@@ -2930,7 +3047,7 @@ mod tests {
     async fn connect_then_disconnect<A: TestSockAddr, T>(
         proto: fposix_socket::DatagramSocketProtocol,
     ) {
-        let (_t, socket) = prepare_test::<A>(proto).await;
+        let (_t, socket, _event) = prepare_test::<A>(proto).await;
 
         let remote_addr = A::create(A::REMOTE_ADDR, 1010);
         let () = socket.connect(&mut remote_addr.clone()).await.unwrap().expect("connect succeeds");
@@ -3895,7 +4012,7 @@ mod tests {
     async fn send_recv_loopback_peek<A: TestSockAddr, T>(
         proto: fposix_socket::DatagramSocketProtocol,
     ) {
-        let (_t, proxy) = prepare_test::<A>(proto).await;
+        let (_t, proxy, _event) = prepare_test::<A>(proto).await;
         let mut addr =
             A::create(<<A::AddrType as IpAddress>::Version as Ip>::LOOPBACK_ADDRESS.get(), 100);
 
@@ -3949,6 +4066,80 @@ mod tests {
 
     declare_tests!(
         send_recv_loopback_peek,
+        icmp #[should_panic = "not yet implemented: https://fxbug.dev/47321: needs Core implementation"]
+    );
+
+    // TODO(https://fxbug.dev/92678): add a syscall test to exercise this
+    // behavior.
+    async fn multicast_join_receive<A: TestSockAddr, T>(
+        proto: fposix_socket::DatagramSocketProtocol,
+    ) {
+        let (mut t, proxy, event) = prepare_test::<A>(proto).await;
+
+        let mcast_addr = <<A::AddrType as IpAddress>::Version as Ip>::MULTICAST_SUBNET.network();
+        let id = t.get(0).get_endpoint_id(1);
+
+        match mcast_addr.into() {
+            IpAddr::V4(mcast_addr) => {
+                proxy.add_ip_membership(&mut fposix_socket::IpMulticastMembership {
+                    mcast_addr: mcast_addr.into_fidl(),
+                    iface: id,
+                    ..Decodable::new_empty()
+                })
+            }
+            IpAddr::V6(mcast_addr) => {
+                proxy.add_ipv6_membership(&mut fposix_socket::Ipv6MulticastMembership {
+                    mcast_addr: mcast_addr.into_fidl(),
+                    iface: id,
+                    ..Decodable::new_empty()
+                })
+            }
+        }
+        .await
+        .unwrap()
+        .expect("add membership should succeed");
+
+        const PORT: u16 = 100;
+        const DATA: &[u8] = &[1, 2, 3, 4, 5];
+
+        let () = proxy
+            .bind(&mut A::create(
+                <<A::AddrType as IpAddress>::Version as Ip>::UNSPECIFIED_ADDRESS,
+                PORT,
+            ))
+            .await
+            .unwrap()
+            .expect("bind succeeds");
+
+        assert_eq!(
+            proxy
+                .send_msg(
+                    Some(&mut A::create(mcast_addr, PORT)),
+                    DATA,
+                    fposix_socket::DatagramSocketSendControlData::EMPTY,
+                    fposix_socket::SendMsgFlags::empty()
+                )
+                .await
+                .unwrap()
+                .expect("send_msg should succeed"),
+            DATA.len().try_into().unwrap()
+        );
+
+        let _signals = event
+            .wait_handle(ZXSIO_SIGNAL_INCOMING, zx::Time::INFINITE)
+            .expect("socket should receive");
+
+        let (_addr, data, _control, truncated) = proxy
+            .recv_msg(false, u32::MAX, false, fposix_socket::RecvMsgFlags::empty())
+            .await
+            .unwrap()
+            .expect("recv should succeed");
+        assert_eq!(truncated, 0);
+        assert_eq!(data.as_slice(), DATA);
+    }
+
+    declare_tests!(
+        multicast_join_receive,
         icmp #[should_panic = "not yet implemented: https://fxbug.dev/47321: needs Core implementation"]
     );
 }

@@ -356,10 +356,15 @@ pub(crate) enum DatagramSocketId<S: DatagramSocketSpec> {
     Connected(S::ConnId),
 }
 
+/// Selector for the device to affect when changing multicast membership
+/// settings.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum MulticastInterfaceSelector<A, D> {
+    /// Use the device with the assigned address.
     LocalAddress(SpecifiedAddr<A>),
+    /// Use the device with the specified identifier.
     Interface(D),
+    /// Pick any device with a route to the multicast target address.
     AnyInterfaceWithRoute,
 }
 

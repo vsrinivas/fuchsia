@@ -6,7 +6,7 @@
 //! sockets.
 
 pub(crate) mod address;
-pub(crate) mod datagram;
+pub mod datagram;
 pub(crate) mod posix;
 
 use alloc::{collections::HashMap, vec::Vec};

@@ -22,6 +22,7 @@ use net_types::{
 use netstack3_core::{
     error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError, ZonedAddressError},
     ip::socket::{IpSockCreationError, IpSockRouteError, IpSockSendError, IpSockUnroutableError},
+    socket::datagram::{MulticastInterfaceSelector, SetMulticastMembershipError},
     transport::udp::{
         UdpConnectListenerError, UdpSendError, UdpSendListenerError, UdpSockCreationError,
     },
@@ -282,18 +283,98 @@ impl SockAddr for fnet::Ipv4SocketAddress {
     }
 }
 
-/// Extension trait that associates a [`SockAddr`] implementation to an IP
-/// version. We provide implementations for [`Ipv4`] and [`Ipv6`].
+/// Extension trait that associates a [`SockAddr`] and [`MulticastMembership`]
+/// implementation to an IP version. We provide implementations for [`Ipv4`] and
+/// [`Ipv6`].
 pub(crate) trait IpSockAddrExt: Ip {
     type SocketAddress: SockAddr<AddrType = Self::Addr>;
+    type MulticastMembership: SockMulticastMembership<AddrType = Self::Addr> + Send;
 }
 
 impl IpSockAddrExt for Ipv4 {
     type SocketAddress = fnet::Ipv4SocketAddress;
+    type MulticastMembership = psocket::IpMulticastMembership;
 }
 
 impl IpSockAddrExt for Ipv6 {
     type SocketAddress = fnet::Ipv6SocketAddress;
+    type MulticastMembership = psocket::Ipv6MulticastMembership;
+}
+
+pub(crate) enum IpMulticastMembership {
+    V4(psocket::IpMulticastMembership),
+    V6(psocket::Ipv6MulticastMembership),
+}
+
+impl From<psocket::IpMulticastMembership> for IpMulticastMembership {
+    fn from(membership: psocket::IpMulticastMembership) -> Self {
+        Self::V4(membership)
+    }
+}
+
+impl From<psocket::Ipv6MulticastMembership> for IpMulticastMembership {
+    fn from(membership: psocket::Ipv6MulticastMembership) -> Self {
+        Self::V6(membership)
+    }
+}
+
+/// A trait for generalizing over multicast membership options for sockets.
+pub(crate) trait SockMulticastMembership: Sized {
+    type AddrType: IpAddress;
+
+    fn new(membership: impl Into<IpMulticastMembership>) -> Option<Self>;
+
+    fn into_addr_selector(
+        self,
+    ) -> (Self::AddrType, MulticastInterfaceSelector<Self::AddrType, NonZeroU64>);
+}
+
+impl SockMulticastMembership for psocket::IpMulticastMembership {
+    type AddrType = Ipv4Addr;
+
+    fn new(membership: impl Into<IpMulticastMembership>) -> Option<Self> {
+        match membership.into() {
+            IpMulticastMembership::V4(m) => Some(m),
+            IpMulticastMembership::V6(_) => None,
+        }
+    }
+
+    fn into_addr_selector(
+        self,
+    ) -> (Self::AddrType, MulticastInterfaceSelector<Self::AddrType, NonZeroU64>) {
+        let Self { mcast_addr, iface, local_addr } = self;
+        // Match Linux behavior by ignoring the address if an interface
+        // identifier is provided.
+        let selector = NonZeroU64::new(iface)
+            .map(MulticastInterfaceSelector::Interface)
+            .or_else(|| {
+                SpecifiedAddr::new(local_addr.into_core())
+                    .map(MulticastInterfaceSelector::LocalAddress)
+            })
+            .unwrap_or(MulticastInterfaceSelector::AnyInterfaceWithRoute);
+        (mcast_addr.into_core(), selector)
+    }
+}
+
+impl SockMulticastMembership for psocket::Ipv6MulticastMembership {
+    type AddrType = Ipv6Addr;
+
+    fn new(membership: impl Into<IpMulticastMembership>) -> Option<Self> {
+        match membership.into() {
+            IpMulticastMembership::V6(m) => Some(m),
+            IpMulticastMembership::V4(_) => None,
+        }
+    }
+
+    fn into_addr_selector(
+        self,
+    ) -> (Self::AddrType, MulticastInterfaceSelector<Self::AddrType, NonZeroU64>) {
+        let Self { mcast_addr, iface } = self;
+        let selector = NonZeroU64::new(iface)
+            .map(MulticastInterfaceSelector::Interface)
+            .unwrap_or(MulticastInterfaceSelector::AnyInterfaceWithRoute);
+        (mcast_addr.into_core(), selector)
+    }
 }
 
 #[cfg(test)]
@@ -480,6 +561,18 @@ impl IntoErrno for UdpConnectListenerError {
         match self {
             Self::Ip(err) => err.into_errno(),
             Self::Zone(err) => err.into_errno(),
+        }
+    }
+}
+
+impl IntoErrno for SetMulticastMembershipError {
+    fn into_errno(self) -> Errno {
+        match self {
+            Self::AddressNotAvailable | Self::NoDeviceWithAddress | Self::NoDeviceAvailable => {
+                Errno::Enodev
+            }
+            Self::NoMembershipChange => Errno::Eaddrinuse,
+            Self::WrongDevice => Errno::Einval,
         }
     }
 }
