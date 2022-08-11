@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 use anyhow;
-use fuchsia_zircon as zx;
 use inspect_format::{BlockType, Error as FormatError};
+
+#[cfg(target_os = "fuchsia")]
+use fuchsia_zircon as zx;
 
 /// Errors that Inspect API functions can return.
 #[derive(Clone, Debug, thiserror::Error)]
@@ -13,9 +15,11 @@ pub enum Error {
     Fidl(String),
 
     #[error("Failed to allocate vmo")]
+    #[cfg(target_os = "fuchsia")]
     AllocateVmo(#[source] zx::Status),
 
     #[error("Failed to get vmo size")]
+    #[cfg(target_os = "fuchsia")]
     VmoSize(#[source] zx::Status),
 
     #[error("Failed to free {value_type} index={index}")]

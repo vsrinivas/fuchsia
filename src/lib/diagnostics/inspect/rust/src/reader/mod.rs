@@ -34,15 +34,19 @@
 use {
     crate::reader::snapshot::{ScannedBlock, Snapshot},
     diagnostics_hierarchy::{testing::DiagnosticsHierarchyGetter, *},
-    fuchsia_zircon::Vmo,
     inspect_format::{constants, utils, BlockType, PropertyFormat},
     maplit::btreemap,
     std::{borrow::Cow, cmp::min, collections::BTreeMap, convert::TryFrom},
 };
 
+#[cfg(target_os = "fuchsia")]
+use fuchsia_zircon::Vmo;
+
 pub use {
     crate::reader::{
-        error::ReaderError, readable_tree::ReadableTree, tree_reader::read,
+        error::ReaderError,
+        readable_tree::{ReadableTree, SnapshotSource, SnapshotSourceT},
+        tree_reader::read,
         tree_reader::read_with_timeout,
     },
     diagnostics_hierarchy::{
@@ -63,16 +67,16 @@ mod tree_reader;
 #[derive(Clone, Debug, PartialEq)]
 pub struct PartialNodeHierarchy {
     /// The name of this node.
-    pub(in crate) name: String,
+    pub(crate) name: String,
 
     /// The properties for the node.
-    pub(in crate) properties: Vec<Property>,
+    pub(crate) properties: Vec<Property>,
 
     /// The children of this node.
-    pub(in crate) children: Vec<PartialNodeHierarchy>,
+    pub(crate) children: Vec<PartialNodeHierarchy>,
 
     /// Links this node hierarchy haven't expanded yet.
-    pub(in crate) links: Vec<LinkValue>,
+    pub(crate) links: Vec<LinkValue>,
 }
 
 impl PartialNodeHierarchy {
@@ -146,6 +150,7 @@ impl TryFrom<Snapshot> for PartialNodeHierarchy {
     }
 }
 
+#[cfg(target_os = "fuchsia")]
 impl TryFrom<&Vmo> for PartialNodeHierarchy {
     type Error = ReaderError;
 
@@ -541,8 +546,9 @@ mod tests {
     use {
         super::*,
         crate::{
-            assert_data_tree, assert_json_diff, ArrayProperty, ExponentialHistogramParams,
-            HistogramProperty, Inspector, LinearHistogramParams, StringReference,
+            assert_data_tree, assert_json_diff, reader::readable_tree::SnapshotSource,
+            ArrayProperty, ExponentialHistogramParams, HistogramProperty, Inspector,
+            LinearHistogramParams, StringReference,
         },
         anyhow::Error,
         futures::prelude::*,
@@ -821,7 +827,7 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn from_invalid_utf8_string() {
+    async fn from_invalid_utf8_string() {
         // Creates a perfectly normal Inspector with a perfectly normal string
         // property with a perfectly normal value.
         let inspector = Inspector::new();
@@ -830,8 +836,8 @@ mod tests {
 
         // Now we will excavate the bytes that comprise the string property, then mess with them on
         // purpose to produce an invalid UTF8 string in the property.
-        let vmo = inspector.vmo.unwrap();
-        let snapshot = Snapshot::try_from(&*vmo).expect("getting snapshot");
+        let vmo = inspector.vmo().await.unwrap();
+        let snapshot = Snapshot::try_from(&vmo).expect("getting snapshot");
         let block = snapshot.get_block(prop.block_index()).expect("getting block");
 
         // The first byte of the actual property string is at this byte offset in the VMO.
@@ -840,9 +846,9 @@ mod tests {
             + constants::HEADER_SIZE_BYTES;
 
         // Get the raw VMO bytes to mess with.
-        let vmo_size = vmo.get_size().expect("VMO size");
+        let vmo_size = vmo.size().expect("VMO size");
         let mut buf = vec![0u8; vmo_size as usize];
-        vmo.read(&mut buf[..], /*offset=*/ 0).expect("read is a success");
+        vmo.read_bytes(&mut buf[..], /*offset=*/ 0).expect("read is a success");
 
         // Mess up the first byte of the string property value such that the byte is an invalid
         // UTF8 character.  Then build a new node hierarchy based off those bytes, see if invalid
@@ -858,15 +864,15 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn test_invalid_array_slots() -> Result<(), Error> {
+    async fn test_invalid_array_slots() -> Result<(), Error> {
         let inspector = Inspector::new();
         let root = inspector.root();
         let array = root.create_int_array("int-array", 3);
 
-        let vmo = inspector.vmo.unwrap();
-        let vmo_size = vmo.get_size()?;
+        let vmo = inspector.vmo().await.unwrap();
+        let vmo_size = vmo.size()?;
         let mut buf = vec![0u8; vmo_size as usize];
-        vmo.read(&mut buf[..], /*offset=*/ 0)?;
+        vmo.read_bytes(&mut buf[..], /*offset=*/ 0)?;
 
         // Mess up with the block slots by setting them to a too big number.
         let offset = utils::offset_for_index(array.block_index()) + 8;

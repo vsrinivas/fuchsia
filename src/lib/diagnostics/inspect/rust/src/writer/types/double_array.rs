@@ -6,7 +6,7 @@ use crate::writer::{ArithmeticArrayProperty, ArrayProperty, Inner, InnerValueTyp
 use tracing::error;
 
 #[cfg(test)]
-use {inspect_format::Block, mapped_vmo::Mapping, std::sync::Arc};
+use inspect_format::{Block, Container};
 
 /// Inspect double array data type.
 ///
@@ -86,7 +86,7 @@ impl ArithmeticArrayProperty for DoubleArrayProperty {
 #[cfg(test)]
 impl DoubleArrayProperty {
     /// Returns the [`Block`][Block] associated with this value.
-    pub fn get_block(&self) -> Option<Block<Arc<Mapping>>> {
+    pub fn get_block(&self) -> Option<Block<Container>> {
         self.inner.inner_ref().and_then(|inner_ref| {
             inner_ref
                 .state

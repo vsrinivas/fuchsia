@@ -114,7 +114,10 @@ pub fn serve_inspect_stats() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{assert_data_tree, health::Reporter, testing::AnyProperty};
+    use crate::{
+        assert_data_tree, assert_json_diff, health::Reporter, hierarchy::DiagnosticsHierarchy,
+        testing::AnyProperty,
+    };
     use futures::FutureExt;
 
     #[fuchsia::test]
@@ -176,10 +179,7 @@ mod tests {
     #[fuchsia::test]
     fn record_on_inspector() {
         let inspector = super::inspector();
-        assert_eq!(
-            inspector.vmo.as_ref().unwrap().get_size().unwrap(),
-            constants::DEFAULT_VMO_SIZE_BYTES as u64
-        );
+        assert_eq!(inspector.max_size().unwrap(), constants::DEFAULT_VMO_SIZE_BYTES);
         inspector.root().record_int("a", 1);
         assert_data_tree!(inspector, root: contains {
             a: 1i64,
@@ -189,7 +189,7 @@ mod tests {
     #[fuchsia::test]
     fn init_inspector_with_size() {
         super::init_inspector_with_size(8192);
-        assert_eq!(super::inspector().vmo.as_ref().unwrap().get_size().unwrap(), 8192);
+        assert_eq!(super::inspector().max_size().unwrap(), 8192);
     }
 
     #[fuchsia::test]
@@ -204,7 +204,7 @@ mod tests {
             }
             .boxed()
         });
-        assert_data_tree!(inspector, root: {
+        assert_json_diff!(inspector, root: {
             foo: {
                 a: 1u64,
             },

@@ -40,8 +40,14 @@
 
 use {
     super::{Property, StringProperty},
-    fuchsia_zircon as zx,
+    injectable_time::TimeSource,
 };
+
+#[cfg(not(target_os = "fuchsia"))]
+use injectable_time::UtcTime as TimeType;
+
+#[cfg(target_os = "fuchsia")]
+use injectable_time::MonotonicTime as TimeType;
 
 /// A trait of a standardized health checker.
 ///
@@ -124,18 +130,18 @@ impl Node {
     /// Creates a new health checking node as a child of `parent`.  The initial observed state
     /// is `STARTING_UP`, and remains so until the programs call one of `set_ok` or `set_unhealthy`.
     pub fn new(parent: &super::Node) -> Self {
-        Self::new_internal(parent, zx::Time::get_monotonic())
+        return Self::new_internal(parent, TimeType::new());
     }
 
     // Creates a health node using a specified timestamp. Useful for tests.
     #[cfg(test)]
-    pub fn new_with_timestamp(parent: &super::Node, timestamp: zx::Time) -> Self {
-        Self::new_internal(parent, timestamp)
+    pub fn new_with_timestamp<T: TimeSource>(parent: &super::Node, timestamper: T) -> Self {
+        Self::new_internal(parent, timestamper)
     }
 
-    fn new_internal(parent: &super::Node, timestamp: zx::Time) -> Self {
+    fn new_internal<T: TimeSource>(parent: &super::Node, timestamper: T) -> Self {
         let node = parent.create_child(FUCHSIA_INSPECT_HEALTH);
-        node.record_int("start_timestamp_nanos", timestamp.into_nanos());
+        node.record_int("start_timestamp_nanos", timestamper.now());
         let status = node.create_string(STATUS_PROPERTY_KEY, Status::StartingUp.to_string());
         let message = None;
         Node { node, status, message }
@@ -168,6 +174,7 @@ mod tests {
     use {
         super::*,
         crate::{assert_data_tree, Inspector},
+        injectable_time::FakeTime,
     };
 
     #[fuchsia::test]
@@ -177,7 +184,9 @@ mod tests {
         // In the beginning, the inspector has no stats.
         assert_data_tree!(inspector, root: contains {});
 
-        let mut health = Node::new_with_timestamp(root, zx::Time::from_nanos(42));
+        let fake_time = FakeTime::new();
+        fake_time.set_ticks(42);
+        let mut health = Node::new_with_timestamp(root, fake_time);
         assert_data_tree!(inspector,
         root: contains {
             "fuchsia.inspect.Health": {

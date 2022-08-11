@@ -11,7 +11,7 @@ use inspect_format::constants;
 use tracing::error;
 
 #[cfg(test)]
-use {inspect_format::Block, mapped_vmo::Mapping, std::sync::Arc};
+use inspect_format::{Block, Container};
 
 #[derive(Debug)]
 /// An exponential histogram property for int values.
@@ -58,7 +58,7 @@ impl IntExponentialHistogramProperty {
     }
 
     #[cfg(test)]
-    fn get_block(&self) -> Option<Block<Arc<Mapping>>> {
+    fn get_block(&self) -> Option<Block<Container>> {
         self.array.get_block()
     }
 }

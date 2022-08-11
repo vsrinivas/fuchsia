@@ -4,9 +4,11 @@
 
 use crate::writer::Error as WriterError;
 use diagnostics_hierarchy::Error as HierarchyError;
-use fuchsia_zircon as zx;
 use inspect_format::{BlockType, Error as FormatError};
 use thiserror::Error;
+
+#[cfg(target_os = "fuchsia")]
+use fuchsia_zircon as zx;
 
 #[derive(Debug, Error)]
 pub enum ReaderError {
@@ -53,6 +55,7 @@ pub enum ReaderError {
     NoOpInspector,
 
     #[error("Failed to call vmo")]
+    #[cfg(target_os = "fuchsia")]
     Vmo(zx::Status),
 
     #[error("Error creating node hierarchy")]
@@ -72,6 +75,9 @@ pub enum ReaderError {
 
     #[error("Failed to lock inspector state")]
     FailedToLockState(#[source] WriterError),
+
+    #[error("Offset out of bounds while reading")]
+    OffsetOutOfBounds,
 }
 
 impl From<FormatError> for ReaderError {

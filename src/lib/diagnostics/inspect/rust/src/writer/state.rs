@@ -6,13 +6,11 @@ use {
     crate::writer::{error::Error, heap::Heap, Inspector, StringReference},
     anyhow,
     derivative::Derivative,
-    fuchsia_zircon as zx,
     futures::future::BoxFuture,
     inspect_format::{
-        constants, utils, BlockType, Error as FormatError,
+        constants, utils, BlockType, Container, Error as FormatError,
         {ArrayFormat, Block, LinkNodeDisposition, PropertyFormat},
     },
-    mapped_vmo::Mapping,
     num_traits::ToPrimitive,
     parking_lot::{Mutex, MutexGuard},
     std::{
@@ -24,6 +22,9 @@ use {
     },
     tracing::error,
 };
+
+#[cfg(target_os = "fuchsia")]
+use fuchsia_zircon as zx;
 
 /// Callback used to fill inspector lazy nodes.
 pub type LazyNodeContextFnArc =
@@ -69,7 +70,7 @@ macro_rules! locked_state_metric_fns {
                 name: impl Into<StringReference<'b>>,
                 value: $type,
                 parent_index: u32,
-            ) -> Result<Block<Arc<Mapping>>, Error> {
+            ) -> Result<Block<Container>, Error> {
                 self.inner_lock.[<create_ $name _metric>](name, value, parent_index)
             }
 
@@ -104,7 +105,7 @@ macro_rules! metric_fns {
                 name: impl Into<StringReference<'b>>,
                 value: $type,
                 parent_index: u32,
-            ) -> Result<Block<Arc<Mapping>>, Error> {
+            ) -> Result<Block<Container>, Error> {
                 let (block, name_block) = self.allocate_reserved_value(
                     name, parent_index, constants::MIN_ORDER_SIZE)?;
                 block.[<become_ $name _value>](value, name_block.index(), parent_index)?;
@@ -152,7 +153,7 @@ macro_rules! locked_state_array_fns {
                 slots: usize,
                 array_format: ArrayFormat,
                 parent_index: u32,
-            ) -> Result<Block<Arc<Mapping>>, Error> {
+            ) -> Result<Block<Container>, Error> {
                 self.inner_lock.[<create_ $name _array>](name, slots, array_format, parent_index)
             }
 
@@ -186,7 +187,7 @@ macro_rules! arithmetic_array_fns {
                 slots: usize,
                 array_format: ArrayFormat,
                 parent_index: u32,
-            ) -> Result<Block<Arc<Mapping>>, Error> {
+            ) -> Result<Block<Container>, Error> {
                 let block_size =
                     slots as usize * std::mem::size_of::<$type>() + constants::MIN_ORDER_SIZE;
                 if block_size > constants::MAX_ORDER_SIZE {
@@ -236,7 +237,7 @@ macro_rules! arithmetic_array_fns {
 #[derive(Clone, Debug)]
 pub struct State {
     /// A reference to the header block in the VMO.
-    pub(crate) header: Block<Arc<Mapping>>,
+    pub(crate) header: Block<Container>,
 
     /// The inner state that actually performs the operations.
     /// This should always be accessed by locking the mutex and then locking the header.
@@ -250,10 +251,11 @@ impl PartialEq for State {
     }
 }
 
+#[cfg(target_os = "fuchsia")]
 impl State {
     /// Create a |State| object wrapping the given Heap. This will cause the
     /// heap to be initialized with a header.
-    pub fn create(mut heap: Heap, vmo: Arc<zx::Vmo>) -> Result<Self, Error> {
+    pub fn create(mut heap: Heap<Container>, vmo: Arc<zx::Vmo>) -> Result<Self, Error> {
         let mut block = heap.allocate_block(inspect_format::utils::order_to_size(
             constants::HEADER_ORDER as usize,
         ))?;
@@ -262,7 +264,24 @@ impl State {
         let inner = Arc::new(Mutex::new(InnerState::new(heap, vmo)));
         Ok(Self { inner, header: block })
     }
+}
 
+#[cfg(not(target_os = "fuchsia"))]
+impl State {
+    /// Create a |State| object wrapping the given Heap. This will cause the
+    /// heap to be initialized with a header.
+    pub fn create(mut heap: Heap<Container>) -> Result<Self, Error> {
+        let mut block = heap.allocate_block(inspect_format::utils::order_to_size(
+            constants::HEADER_ORDER as usize,
+        ))?;
+        block.become_header(heap.current_size())?;
+        heap.set_header_block(&block)?;
+        let inner = Arc::new(Mutex::new(InnerState::new(heap)));
+        Ok(Self { inner, header: block })
+    }
+}
+
+impl State {
     /// Locks the state mutex and inspect vmo. The state will be unlocked on drop.
     /// This can fail when the header is already locked.
     pub fn try_lock<'a>(&'a self) -> Result<LockedStateGuard<'a>, Error> {
@@ -303,6 +322,17 @@ impl State {
 
         Some(state.heap.bytes())
     }
+
+    /// Copies the bytes in the VMO into the returned vector.
+    pub fn clone_container(&self) -> Container {
+        let state = self.inner.lock();
+        state.heap.container()
+    }
+
+    #[cfg(test)]
+    pub fn generation_count(&self) -> u64 {
+        self.header.header_generation_count().unwrap()
+    }
 }
 
 /// Statistics about the current inspect state.
@@ -329,24 +359,27 @@ pub struct Stats {
 }
 
 pub struct LockedStateGuard<'a> {
-    header: &'a Block<Arc<Mapping>>,
+    header: &'a Block<Container>,
     inner_lock: MutexGuard<'a, InnerState>,
+}
+
+#[cfg(target_os = "fuchsia")]
+impl<'a> LockedStateGuard<'a> {
+    /// Freezes the VMO, does a CoW duplication, thaws the parent, and returns the child.
+    pub fn frozen_vmo_copy(&mut self) -> Result<Option<zx::Vmo>, Error> {
+        self.inner_lock.frozen_vmo_copy(self.header)
+    }
 }
 
 impl<'a> LockedStateGuard<'a> {
     fn new(
-        header: &'a Block<Arc<Mapping>>,
+        header: &'a Block<Container>,
         inner_lock: MutexGuard<'a, InnerState>,
     ) -> Result<Self, Error> {
         if inner_lock.transaction_count == 0 {
             header.lock_header()?;
         }
         Ok(Self { header, inner_lock })
-    }
-
-    /// Freezes the VMO, does a CoW duplication, thaws the parent, and returns the child.
-    pub fn frozen_vmo_copy(&mut self) -> Result<Option<zx::Vmo>, Error> {
-        self.inner_lock.frozen_vmo_copy(self.header)
     }
 
     /// Returns statistics about the current inspect state.
@@ -371,7 +404,7 @@ impl<'a> LockedStateGuard<'a> {
         &mut self,
         name: impl Into<StringReference<'b>>,
         parent_index: u32,
-    ) -> Result<Block<Arc<Mapping>>, Error> {
+    ) -> Result<Block<Container>, Error> {
         self.inner_lock.create_node(name, parent_index)
     }
 
@@ -383,7 +416,7 @@ impl<'a> LockedStateGuard<'a> {
         parent_index: u32,
         disposition: LinkNodeDisposition,
         callback: F,
-    ) -> Result<Block<Arc<Mapping>>, Error>
+    ) -> Result<Block<Container>, Error>
     where
         F: Fn() -> BoxFuture<'static, Result<Inspector, anyhow::Error>> + Sync + Send + 'static,
     {
@@ -406,7 +439,7 @@ impl<'a> LockedStateGuard<'a> {
         value: &[u8],
         format: PropertyFormat,
         parent_index: u32,
-    ) -> Result<Block<Arc<Mapping>>, Error> {
+    ) -> Result<Block<Container>, Error> {
         self.inner_lock.create_property(name, value, format, parent_index)
     }
 
@@ -419,13 +452,13 @@ impl<'a> LockedStateGuard<'a> {
     pub fn get_or_create_string_reference<'b>(
         &mut self,
         value: impl Into<StringReference<'b>>,
-    ) -> Result<Block<Arc<Mapping>>, Error> {
+    ) -> Result<Block<Container>, Error> {
         self.inner_lock.get_or_create_string_reference(value)
     }
 
     /// Free a STRING_REFERENCE block and necessary EXTENTs.
     #[cfg(test)]
-    pub fn maybe_free_string_reference(&mut self, block: Block<Arc<Mapping>>) -> Result<(), Error> {
+    pub fn maybe_free_string_reference(&mut self, block: Block<Container>) -> Result<(), Error> {
         self.inner_lock.maybe_free_string_reference(block)
     }
 
@@ -449,7 +482,7 @@ impl<'a> LockedStateGuard<'a> {
         name: impl Into<StringReference<'b>>,
         value: bool,
         parent_index: u32,
-    ) -> Result<Block<Arc<Mapping>>, Error> {
+    ) -> Result<Block<Container>, Error> {
         self.inner_lock.create_bool(name, value, parent_index)
     }
 
@@ -475,7 +508,7 @@ impl<'a> LockedStateGuard<'a> {
         name: impl Into<StringReference<'b>>,
         slots: usize,
         parent_index: u32,
-    ) -> Result<Block<Arc<Mapping>>, Error> {
+    ) -> Result<Block<Container>, Error> {
         self.inner_lock.create_string_array(name, slots, parent_index)
     }
 
@@ -495,12 +528,12 @@ impl<'a> LockedStateGuard<'a> {
         content: &str,
         disposition: LinkNodeDisposition,
         parent_index: u32,
-    ) -> Result<Block<Arc<Mapping>>, Error> {
+    ) -> Result<Block<Container>, Error> {
         self.inner_lock.allocate_link(name, content, disposition, parent_index)
     }
 
     #[cfg(test)]
-    pub fn heap(&self) -> &Heap {
+    pub fn heap(&self) -> &Heap<Container> {
         &self.inner_lock.heap
     }
 }
@@ -519,7 +552,8 @@ impl Drop for LockedStateGuard<'_> {
 #[derive(Derivative)]
 #[derivative(Debug)]
 struct InnerState {
-    heap: Heap,
+    heap: Heap<Container>,
+    #[cfg(target_os = "fuchsia")]
     vmo: Arc<zx::Vmo>,
     next_unique_link_id: AtomicU64,
     transaction_count: usize,
@@ -531,9 +565,10 @@ struct InnerState {
     callbacks: HashMap<String, LazyNodeContextFnArc>,
 }
 
+#[cfg(target_os = "fuchsia")]
 impl InnerState {
     /// Creates a new inner state that performs all operations on the heap.
-    pub fn new(heap: Heap, vmo: Arc<zx::Vmo>) -> Self {
+    pub fn new(heap: Heap<Container>, vmo: Arc<zx::Vmo>) -> Self {
         Self {
             heap,
             vmo,
@@ -544,7 +579,7 @@ impl InnerState {
         }
     }
 
-    fn frozen_vmo_copy(&self, header: &Block<Arc<Mapping>>) -> Result<Option<zx::Vmo>, Error> {
+    fn frozen_vmo_copy(&self, header: &Block<Container>) -> Result<Option<zx::Vmo>, Error> {
         if self.transaction_count > 0 {
             return Ok(None);
         }
@@ -561,13 +596,29 @@ impl InnerState {
         header.thaw_header(old)?;
         Ok(ret)
     }
+}
 
+#[cfg(not(target_os = "fuchsia"))]
+impl InnerState {
+    /// Creates a new inner state that performs all operations on the heap.
+    pub fn new(heap: Heap<Container>) -> Self {
+        Self {
+            heap,
+            next_unique_link_id: AtomicU64::new(0),
+            callbacks: HashMap::new(),
+            transaction_count: 0,
+            string_reference_ids: HashMap::new(),
+        }
+    }
+}
+
+impl InnerState {
     /// Allocate a NODE block with the given |name| and |parent_index|.
     fn create_node<'b>(
         &mut self,
         name: impl Into<StringReference<'b>>,
         parent_index: u32,
-    ) -> Result<Block<Arc<Mapping>>, Error> {
+    ) -> Result<Block<Container>, Error> {
         let (block, name_block) =
             self.allocate_reserved_value(name, parent_index, constants::MIN_ORDER_SIZE)?;
         block.become_node(name_block.index(), parent_index)?;
@@ -582,7 +633,7 @@ impl InnerState {
         parent_index: u32,
         disposition: LinkNodeDisposition,
         callback: F,
-    ) -> Result<Block<Arc<Mapping>>, Error>
+    ) -> Result<Block<Container>, Error>
     where
         F: Fn() -> BoxFuture<'static, Result<Inspector, anyhow::Error>> + Sync + Send + 'static,
     {
@@ -624,7 +675,7 @@ impl InnerState {
         content: &str,
         disposition: LinkNodeDisposition,
         parent_index: u32,
-    ) -> Result<Block<Arc<Mapping>>, Error> {
+    ) -> Result<Block<Container>, Error> {
         let (value_block, name_block) =
             self.allocate_reserved_value(name, parent_index, constants::MIN_ORDER_SIZE)?;
         let result = self.get_or_create_string_reference(content).and_then(|content_block| {
@@ -660,7 +711,7 @@ impl InnerState {
         value: &[u8],
         format: PropertyFormat,
         parent_index: u32,
-    ) -> Result<Block<Arc<Mapping>>, Error> {
+    ) -> Result<Block<Container>, Error> {
         let (block, name_block) =
             self.allocate_reserved_value(name, parent_index, constants::MIN_ORDER_SIZE)?;
         block.become_property(name_block.index(), parent_index, format)?;
@@ -677,7 +728,7 @@ impl InnerState {
     fn get_or_create_string_reference<'b>(
         &mut self,
         value: impl Into<StringReference<'b>>,
-    ) -> Result<Block<Arc<Mapping>>, Error> {
+    ) -> Result<Block<Container>, Error> {
         let string_reference = value.into();
         match self.string_reference_ids.get(&string_reference.id()) {
             None => {
@@ -697,7 +748,7 @@ impl InnerState {
     /// Given a string, write the canonical value out, allocating as needed.
     fn write_string_reference_payload(
         &mut self,
-        block: &Block<Arc<Mapping>>,
+        block: &Block<Container>,
         value: &str,
     ) -> Result<(), Error> {
         let head_extent = match self.inline_string_reference(&block, value.as_bytes()) {
@@ -715,7 +766,7 @@ impl InnerState {
     /// If the data overflows, return the number of bytes written.
     fn inline_string_reference(
         &mut self,
-        block: &Block<Arc<Mapping>>,
+        block: &Block<Container>,
         value: &[u8],
     ) -> Result<Option<usize>, Error> {
         // only returns an error if you call with wrong block type
@@ -729,14 +780,14 @@ impl InnerState {
 
     /// Decrement the reference count on the block and free it if the count is 0.
     /// This is the function to call if you want to give up your hold on a StringReference.
-    fn release_string_reference(&mut self, block: Block<Arc<Mapping>>) -> Result<(), Error> {
+    fn release_string_reference(&mut self, block: Block<Container>) -> Result<(), Error> {
         block.decrement_string_reference_count()?;
         self.maybe_free_string_reference(block)
     }
 
     /// Free a STRING_REFERENCE if the count is 0. This should not be
     /// directly called outside of tests.
-    fn maybe_free_string_reference(&mut self, block: Block<Arc<Mapping>>) -> Result<(), Error> {
+    fn maybe_free_string_reference(&mut self, block: Block<Container>) -> Result<(), Error> {
         if block.string_reference_count()? != 0 {
             return Ok(());
         }
@@ -767,7 +818,7 @@ impl InnerState {
     }
 
     /// Read a StringReference
-    fn read_string_reference(&mut self, block: Block<Arc<Mapping>>) -> Result<String, Error> {
+    fn read_string_reference(&mut self, block: Block<Container>) -> Result<String, Error> {
         let mut content = block.inline_string_reference()?;
         let mut next = block.next_extent()?;
         while next != 0 {
@@ -839,7 +890,7 @@ impl InnerState {
         name: impl Into<StringReference<'b>>,
         value: bool,
         parent_index: u32,
-    ) -> Result<Block<Arc<Mapping>>, Error> {
+    ) -> Result<Block<Container>, Error> {
         let (block, name_block) =
             self.allocate_reserved_value(name, parent_index, constants::MIN_ORDER_SIZE)?;
         block.become_bool_value(value, name_block.index(), parent_index)?;
@@ -865,7 +916,7 @@ impl InnerState {
         name: impl Into<StringReference<'b>>,
         slots: usize,
         parent_index: u32,
-    ) -> Result<Block<Arc<Mapping>>, Error> {
+    ) -> Result<Block<Container>, Error> {
         // array_element_size will never fail for BlockType::StringReference.
         let block_size = slots as usize * BlockType::StringReference.array_element_size().unwrap()
             + constants::MIN_ORDER_SIZE;
@@ -937,7 +988,7 @@ impl InnerState {
         name: impl Into<StringReference<'b>>,
         parent_index: u32,
         block_size: usize,
-    ) -> Result<(Block<Arc<Mapping>>, Block<Arc<Mapping>>), Error> {
+    ) -> Result<(Block<Container>, Block<Container>), Error> {
         let block = self.heap.allocate_block(block_size)?;
         let name_block = match self.get_or_create_string_reference(name) {
             Ok(b) => {
@@ -975,7 +1026,7 @@ impl InnerState {
         }
     }
 
-    fn delete_value(&mut self, block: Block<Arc<Mapping>>) -> Result<(), Error> {
+    fn delete_value(&mut self, block: Block<Container>) -> Result<(), Error> {
         // Decrement parent child count.
         let parent_index = block.parent_index()?;
         if parent_index != constants::ROOT_INDEX {
@@ -1010,7 +1061,7 @@ impl InnerState {
 
     fn inner_set_property_value(
         &mut self,
-        block: &Block<Arc<Mapping>>,
+        block: &Block<Container>,
         value: &[u8],
     ) -> Result<(), Error> {
         self.free_extents(block.property_extent_index()?)?;
@@ -1068,7 +1119,6 @@ mod tests {
         Inspector,
     };
     use futures::prelude::*;
-    use std::convert::TryFrom;
 
     #[fuchsia::test]
     fn test_create() {
@@ -1963,7 +2013,8 @@ mod tests {
             match callback().await {
                 Ok(inspector) => {
                     let hierarchy =
-                        PartialNodeHierarchy::try_from(&*inspector.vmo.unwrap()).unwrap();
+                        PartialNodeHierarchy::try_from(Snapshot::try_from(&inspector).unwrap())
+                            .unwrap();
                     assert_data_tree!(hierarchy, root: {
                         a: 1u64,
                     });

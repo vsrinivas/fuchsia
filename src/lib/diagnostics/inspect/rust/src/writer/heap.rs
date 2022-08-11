@@ -7,26 +7,30 @@
 //! [inspect-vmo]: https://fuchsia.dev/fuchsia-src/reference/diagnostics/inspect/vmo-format
 
 use crate::writer::Error;
-use inspect_format::{constants, utils, Block, BlockType};
-use mapped_vmo::Mapping;
+use inspect_format::{
+    constants, utils, Block, BlockContainerEq, BlockType, Container, ReadableBlockContainer,
+    WritableBlockContainer,
+};
 use num_traits::ToPrimitive;
-use std::{cmp::min, convert::TryInto, sync::Arc};
+use std::{cmp::min, convert::TryInto};
 
 /// The inspect heap.
 #[derive(Debug)]
-pub struct Heap {
-    mapping: Arc<Mapping>,
+pub struct Heap<T> {
+    mapping: T,
     current_size_bytes: usize,
     free_head_per_order: [u32; constants::NUM_ORDERS],
     allocated_blocks: usize,
     deallocated_blocks: usize,
     failed_allocations: usize,
-    header: Option<Block<Arc<Mapping>>>,
+    header: Option<Block<T>>,
 }
 
-impl Heap {
+impl<T: Into<Container> + ReadableBlockContainer + WritableBlockContainer + BlockContainerEq>
+    Heap<T>
+{
     /// Creates a new heap on the underlying mapped VMO.
-    pub fn new(mapping: Arc<Mapping>) -> Result<Self, Error> {
+    pub fn new(mapping: T) -> Result<Self, Error> {
         let mut heap = Heap {
             mapping: mapping,
             current_size_bytes: 0,
@@ -47,7 +51,7 @@ impl Heap {
 
     /// Returns the maximum size of this heap in bytes.
     pub fn maximum_size(&self) -> usize {
-        self.mapping.len()
+        self.mapping.size()
     }
 
     /// Returns the number of blocks allocated since the creation of this heap.
@@ -66,7 +70,7 @@ impl Heap {
     }
 
     /// Allocates a new block of the given `min_size`.
-    pub fn allocate_block(&mut self, min_size: usize) -> Result<Block<Arc<Mapping>>, Error> {
+    pub fn allocate_block(&mut self, min_size: usize) -> Result<Block<T>, Error> {
         let min_fit_order = utils::fit_order(min_size);
         if min_fit_order >= constants::NUM_ORDERS {
             return Err(Error::InvalidBlockOrder(min_fit_order));
@@ -93,7 +97,7 @@ impl Heap {
     }
 
     /// Marks the memory region pointed by the given `block` as free.
-    pub fn free_block(&mut self, block: Block<Arc<Mapping>>) -> Result<(), Error> {
+    pub fn free_block(&mut self, block: Block<T>) -> Result<(), Error> {
         let block_type = block.block_type();
         if block_type == BlockType::Free {
             return Err(Error::BlockAlreadyFree(block.index()));
@@ -120,7 +124,7 @@ impl Heap {
     }
 
     /// Returns the block at the given `index` or an error if the index is out of bounds.
-    pub fn get_block(&self, index: u32) -> Result<Block<Arc<Mapping>>, Error> {
+    pub fn get_block(&self, index: u32) -> Result<Block<T>, Error> {
         let offset = utils::offset_for_index(index);
         if offset >= self.current_size_bytes {
             return Err(Error::invalid_index(index, "offset exceeds current size"));
@@ -133,20 +137,24 @@ impl Heap {
     }
 
     /// Returns a copy of the bytes stored in this Heap.
-    pub(in crate) fn bytes(&self) -> Vec<u8> {
+    pub(crate) fn bytes(&self) -> Vec<u8> {
         let mut result = vec![0u8; self.current_size_bytes];
-        self.mapping.read(&mut result[..]);
+        self.mapping.read_bytes(0, &mut result[..]);
         result
     }
 
-    pub fn set_header_block(&mut self, header: &Block<Arc<Mapping>>) -> Result<(), Error> {
+    pub(crate) fn container(&self) -> Container {
+        self.mapping.clone().into()
+    }
+
+    pub fn set_header_block(&mut self, header: &Block<T>) -> Result<(), Error> {
         header.set_header_vmo_size(self.current_size_bytes.try_into().unwrap())?;
         self.header = Some(header.clone());
         Ok(())
     }
 
     fn grow_heap(&mut self, requested_size: usize) -> Result<(), Error> {
-        let mapping_size = self.mapping.len() as usize;
+        let mapping_size = self.mapping.size();
         if requested_size > mapping_size {
             self.failed_allocations += 1;
             return Err(Error::HeapMaxSizeReached);
@@ -188,7 +196,7 @@ impl Heap {
         }
     }
 
-    fn remove_free(&mut self, block: &Block<Arc<Mapping>>) -> Result<bool, Error> {
+    fn remove_free(&mut self, block: &Block<T>) -> Result<bool, Error> {
         let order = block.order();
         let index = block.index();
         if order >= constants::NUM_ORDERS {
@@ -210,7 +218,7 @@ impl Heap {
         Ok(false)
     }
 
-    fn split_block(&mut self, block: &Block<Arc<Mapping>>) -> Result<(), Error> {
+    fn split_block(&mut self, block: &Block<T>) -> Result<(), Error> {
         if block.order() >= constants::NUM_ORDERS {
             return Err(Error::InvalidBlockOrderAtIndex(block.order(), block.index()));
         }
@@ -238,7 +246,14 @@ mod tests {
         super::*,
         crate::reader::snapshot::{BackingBuffer, BlockIterator},
         inspect_format::{BlockHeader, Payload},
+        std::sync::Arc,
     };
+
+    #[cfg(target_os = "fuchsia")]
+    use mapped_vmo::Mapping;
+
+    #[cfg(not(target_os = "fuchsia"))]
+    use {std::sync::Mutex, std::vec::Vec};
 
     struct BlockDebug {
         index: u32,
@@ -246,7 +261,12 @@ mod tests {
         block_type: BlockType,
     }
 
-    fn validate(expected: &[BlockDebug], heap: &Heap) {
+    fn validate<
+        T: Into<Container> + ReadableBlockContainer + WritableBlockContainer + BlockContainerEq,
+    >(
+        expected: &[BlockDebug],
+        heap: &Heap<T>,
+    ) {
         let buffer = BackingBuffer::from(heap.bytes());
         let actual: Vec<BlockDebug> = BlockIterator::from(&buffer)
             .map(|block| BlockDebug {
@@ -263,9 +283,25 @@ mod tests {
         }
     }
 
+    #[cfg(target_os = "fuchsia")]
+    macro_rules! create_mapping {
+        ($size:expr) => {{
+            Mapping::allocate($size).unwrap().0
+        }};
+    }
+
+    #[cfg(not(target_os = "fuchsia"))]
+    macro_rules! create_mapping {
+        ($size:expr) => {{
+            let mut data = Vec::new();
+            data.resize($size, 0);
+            Mutex::new(data)
+        }};
+    }
+
     #[fuchsia::test]
     fn new_heap() {
-        let (mapping, _) = Mapping::allocate(4096).unwrap();
+        let mapping = create_mapping!(4096);
         let heap = Heap::new(Arc::new(mapping)).unwrap();
         assert_eq!(heap.current_size_bytes, 4096);
         assert_eq!(heap.free_head_per_order, [0; 8]);
@@ -284,7 +320,7 @@ mod tests {
 
     #[fuchsia::test]
     fn allocate_and_free() {
-        let (mapping, _) = Mapping::allocate(4096).unwrap();
+        let mapping = create_mapping!(4096);
         let mut heap = Heap::new(Arc::new(mapping)).unwrap();
 
         // Allocate some small blocks and ensure they are all in order.
@@ -384,7 +420,7 @@ mod tests {
 
     #[fuchsia::test]
     fn allocation_counters_work() {
-        let (mapping, _) = Mapping::allocate(4096).unwrap();
+        let mapping = create_mapping!(4096);
         let mut heap = Heap::new(Arc::new(mapping)).unwrap();
 
         let block_count_to_allocate: usize = 50;
@@ -412,7 +448,7 @@ mod tests {
 
     #[fuchsia::test]
     fn allocate_merge() {
-        let (mapping, _) = Mapping::allocate(4096).unwrap();
+        let mapping = create_mapping!(4096);
         let mut heap = Heap::new(Arc::new(mapping)).unwrap();
         for i in 0..=3 {
             let block = heap.allocate_block(constants::MIN_ORDER_SIZE).unwrap();
@@ -456,7 +492,7 @@ mod tests {
 
     #[fuchsia::test]
     fn extend() {
-        let (mapping, _) = Mapping::allocate(8 * 2048).unwrap();
+        let mapping = create_mapping!(8 * 2048);
         let mut heap = Heap::new(Arc::new(mapping)).unwrap();
 
         let b = heap.allocate_block(2048).unwrap();
@@ -509,7 +545,7 @@ mod tests {
 
     #[fuchsia::test]
     fn extend_error() {
-        let (mapping, _) = Mapping::allocate(4 * 2048).unwrap();
+        let mapping = create_mapping!(4 * 2048);
         let mut heap = Heap::new(Arc::new(mapping)).unwrap();
 
         let b = heap.allocate_block(2048).unwrap();
@@ -551,7 +587,7 @@ mod tests {
 
     #[fuchsia::test]
     fn dont_reinterpret_upper_block_contents() {
-        let (mapping, _) = Mapping::allocate(4096).unwrap();
+        let mapping = create_mapping!(4096);
         let mapping_arc = Arc::new(mapping);
         let mut heap = Heap::new(mapping_arc.clone()).unwrap();
 
@@ -592,7 +628,7 @@ mod tests {
 
     #[fuchsia::test]
     fn update_header_vmo_size() {
-        let (mapping, _) = Mapping::allocate(3 * 4096).unwrap();
+        let mapping = create_mapping!(3 * 4096);
         let mut heap = Heap::new(Arc::new(mapping)).unwrap();
         let mut block = heap
             .allocate_block(inspect_format::utils::order_to_size(constants::HEADER_ORDER as usize))

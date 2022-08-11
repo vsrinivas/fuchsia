@@ -6,15 +6,17 @@
 //! implicit tree.
 
 use {
-    crate::{reader::error::ReaderError, Inspector},
-    fuchsia_zircon as zx,
-    fuchsia_zircon::Vmo,
-    inspect_format::{constants, utils, Block, BlockType, ReadableBlockContainer},
-    mapped_vmo::Mapping,
+    crate::{
+        reader::{error::ReaderError, SnapshotSource, SnapshotSourceT},
+        Inspector,
+    },
+    inspect_format::{constants, utils, Block, BlockType, Container, ReadableBlockContainer},
     std::cmp,
     std::convert::TryFrom,
-    std::sync::Arc,
 };
+
+#[cfg(target_os = "fuchsia")]
+use {fuchsia_zircon as zx, fuchsia_zircon::Vmo, mapped_vmo::Mapping, std::sync::Arc};
 
 pub use crate::reader::tree_reader::SnapshotTree;
 
@@ -48,23 +50,26 @@ impl Snapshot {
     /// Try to take a consistent snapshot of the given VMO once.
     ///
     /// Returns a Snapshot on success or an Error if a consistent snapshot could not be taken.
-    pub fn try_once_from_vmo(vmo: &Vmo) -> Result<Snapshot, ReaderError> {
-        Snapshot::try_once_with_callback(vmo, &mut || {})
+    pub fn try_once_from_vmo(source: &impl SnapshotSource) -> Result<Snapshot, ReaderError> {
+        Snapshot::try_once_with_callback(source, &mut || {})
     }
 
-    fn try_once_with_callback<F>(vmo: &Vmo, read_callback: &mut F) -> Result<Snapshot, ReaderError>
+    fn try_once_with_callback<F>(
+        source: &impl SnapshotSource,
+        read_callback: &mut F,
+    ) -> Result<Snapshot, ReaderError>
     where
         F: FnMut() -> (),
     {
         // Read the generation count one time
         let mut header_bytes: [u8; 32] = [0; 32];
-        vmo.read(&mut header_bytes, 0).map_err(ReaderError::Vmo)?;
+        source.read_bytes(&mut header_bytes, 0)?;
         let header_block = Block::new(&header_bytes[..], 0);
         let generation = header_block.header_generation_count();
 
         if let Ok(gen) = generation {
             if gen == constants::VMO_FROZEN {
-                match BackingBuffer::try_from(vmo) {
+                match source.to_backing_buffer() {
                     Ok(buffer) => return Ok(Snapshot { buffer }),
                     // on error, try and read via the full snapshot algo
                     Err(_) => {}
@@ -76,17 +81,17 @@ impl Snapshot {
             let vmo_size = if order == constants::HeaderSize::LARGE as usize {
                 cmp::min(header_block.header_vmo_size()? as u64, constants::MAX_VMO_SIZE as u64)
             } else {
-                cmp::min(vmo.get_size().map_err(ReaderError::Vmo)?, constants::MAX_VMO_SIZE as u64)
+                cmp::min(source.size()?, constants::MAX_VMO_SIZE as u64)
             };
             let mut buffer = vec![0u8; vmo_size as usize];
-            vmo.read(&mut buffer[..], 0).map_err(ReaderError::Vmo)?;
+            source.read_bytes(&mut buffer[..], 0)?;
             if cfg!(test) {
                 read_callback();
             }
 
             // Read the generation count one more time to ensure the previous buffer read is
             // consistent.
-            vmo.read(&mut header_bytes, 0).map_err(ReaderError::Vmo)?;
+            source.read_bytes(&mut header_bytes, 0)?;
             match header_generation_count(&header_bytes[..]) {
                 None => return Err(ReaderError::InconsistentSnapshot),
                 Some(new_generation) if new_generation != gen => {
@@ -99,13 +104,16 @@ impl Snapshot {
         Err(ReaderError::InconsistentSnapshot)
     }
 
-    fn try_from_with_callback<F>(vmo: &Vmo, mut read_callback: F) -> Result<Snapshot, ReaderError>
+    fn try_from_with_callback<F>(
+        source: &impl SnapshotSource,
+        mut read_callback: F,
+    ) -> Result<Snapshot, ReaderError>
     where
         F: FnMut() -> (),
     {
         let mut i = 0;
         loop {
-            match Snapshot::try_once_with_callback(&vmo, &mut read_callback) {
+            match Snapshot::try_once_with_callback(source, &mut read_callback) {
                 Ok(snapshot) => return Ok(snapshot),
                 Err(e) => {
                     if i >= SNAPSHOT_TRIES {
@@ -160,16 +168,20 @@ impl TryFrom<Vec<u8>> for Snapshot {
     type Error = ReaderError;
 
     fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
-        Snapshot::try_from(&bytes[..])
+        if header_generation_count(&bytes).is_some() {
+            Ok(Snapshot { buffer: BackingBuffer::from(bytes) })
+        } else {
+            return Err(ReaderError::MissingHeaderOrLocked);
+        }
     }
 }
 
 /// Construct a snapshot from a VMO.
-impl TryFrom<&Vmo> for Snapshot {
+impl TryFrom<&SnapshotSourceT> for Snapshot {
     type Error = ReaderError;
 
-    fn try_from(vmo: &Vmo) -> Result<Self, Self::Error> {
-        Snapshot::try_from_with_callback(vmo, || {})
+    fn try_from(source: &SnapshotSourceT) -> Result<Self, Self::Error> {
+        Snapshot::try_from_with_callback(source, || {})
     }
 }
 
@@ -177,11 +189,17 @@ impl TryFrom<&Inspector> for Snapshot {
     type Error = ReaderError;
 
     fn try_from(inspector: &Inspector) -> Result<Self, Self::Error> {
-        inspector
+        #[cfg(target_os = "fuchsia")]
+        return inspector
             .vmo
             .as_ref()
             .ok_or(ReaderError::NoOpInspector)
-            .and_then(|vmo| Snapshot::try_from(&**vmo))
+            .and_then(|vmo| Snapshot::try_from(&**vmo));
+
+        #[cfg(not(target_os = "fuchsia"))]
+        return Snapshot::try_from(
+            inspector.clone_heap_container().as_ref().ok_or(ReaderError::NoOpInspector)?,
+        );
     }
 }
 
@@ -220,8 +238,8 @@ impl<'a> Iterator for BlockIterator<'a> {
 
 #[derive(Debug)]
 pub enum BackingBuffer {
-    Map(Arc<Mapping>),
     Vector(Vec<u8>),
+    Map(Container),
 }
 
 impl From<Vec<u8>> for BackingBuffer {
@@ -230,8 +248,8 @@ impl From<Vec<u8>> for BackingBuffer {
     }
 }
 
-impl From<Arc<Mapping>> for BackingBuffer {
-    fn from(m: Arc<Mapping>) -> Self {
+impl From<Container> for BackingBuffer {
+    fn from(m: Container) -> Self {
         BackingBuffer::Map(m)
     }
 }
@@ -239,7 +257,7 @@ impl From<Arc<Mapping>> for BackingBuffer {
 impl BackingBuffer {
     pub fn len(&self) -> usize {
         match &self {
-            BackingBuffer::Map(m) => m.len(),
+            BackingBuffer::Map(m) => ReadableBlockContainer::size(m),
             BackingBuffer::Vector(v) => v.len(),
         }
     }
@@ -248,12 +266,17 @@ impl BackingBuffer {
 impl ReadableBlockContainer for &BackingBuffer {
     fn read_bytes(&self, offset: usize, bytes: &mut [u8]) -> usize {
         match self {
-            BackingBuffer::Map(m) => m.read_bytes(offset, bytes),
+            BackingBuffer::Map(ref m) => ReadableBlockContainer::read_bytes(m, offset, bytes),
             BackingBuffer::Vector(b) => (b.as_ref() as &[u8]).read_bytes(offset, bytes),
         }
     }
+
+    fn size(&self) -> usize {
+        self.len()
+    }
 }
 
+#[cfg(target_os = "fuchsia")]
 impl TryFrom<&Vmo> for BackingBuffer {
     type Error = zx::Status;
     fn try_from(vmo: &zx::Vmo) -> Result<Self, Self::Error> {
@@ -269,16 +292,32 @@ impl TryFrom<&Vmo> for BackingBuffer {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*, anyhow::Error, inspect_format::WritableBlockContainer, mapped_vmo::Mapping,
-        std::sync::Arc,
-    };
+    use {super::*, anyhow::Error, inspect_format::WritableBlockContainer, std::sync::Arc};
+
+    #[cfg(not(target_os = "fuchsia"))]
+    use {std::sync::Mutex, std::vec::Vec};
+
+    #[cfg(target_os = "fuchsia")]
+    use mapped_vmo::Mapping;
+
+    #[cfg(target_os = "fuchsia")]
+    fn create_mapping(size: usize) -> (Arc<Mapping>, zx::Vmo) {
+        let (m, v) = Mapping::allocate(size).unwrap();
+        (Arc::new(m), v)
+    }
+
+    #[cfg(not(target_os = "fuchsia"))]
+    fn create_mapping(size: usize) -> (Arc<Mutex<Vec<u8>>>, Arc<Mutex<Vec<u8>>>) {
+        let mut data = Vec::new();
+        data.resize(size, 0);
+        let data = Arc::new(Mutex::new(data));
+        (data.clone(), data)
+    }
 
     #[fuchsia::test]
     fn scan() -> Result<(), Error> {
         let size = 4096;
-        let (mapping, vmo) = Mapping::allocate(size)?;
-        let mapping_ref = Arc::new(mapping);
+        let (mapping_ref, vmo) = create_mapping(size);
         let mut header =
             Block::new_free(mapping_ref.clone(), 0, constants::HEADER_ORDER as usize, 0)?;
         header.become_reserved()?;
@@ -328,8 +367,7 @@ mod tests {
 
     #[fuchsia::test]
     fn scan_bad_header() -> Result<(), Error> {
-        let (mapping, vmo) = Mapping::allocate(4096)?;
-        let mapping_ref = Arc::new(mapping);
+        let (mapping_ref, vmo) = create_mapping(4096);
 
         // create a header block with an invalid version number
         mapping_ref.write_bytes(
@@ -348,8 +386,7 @@ mod tests {
 
     #[fuchsia::test]
     fn invalid_type() -> Result<(), Error> {
-        let (mapping, vmo) = Mapping::allocate(4096)?;
-        let mapping_ref = Arc::new(mapping);
+        let (mapping_ref, vmo) = create_mapping(4096);
         mapping_ref.write_bytes(0, &[0x00, 0xff, 0x01]);
         assert!(Snapshot::try_from(&vmo).is_err());
         Ok(())
@@ -357,8 +394,7 @@ mod tests {
 
     #[fuchsia::test]
     fn invalid_order() -> Result<(), Error> {
-        let (mapping, vmo) = Mapping::allocate(4096)?;
-        let mapping_ref = Arc::new(mapping);
+        let (mapping_ref, vmo) = create_mapping(4096);
         mapping_ref.write_bytes(0, &[0xff, 0xff]);
         assert!(Snapshot::try_from(&vmo).is_err());
         Ok(())
@@ -367,8 +403,7 @@ mod tests {
     #[fuchsia::test]
     fn invalid_pending_write() -> Result<(), Error> {
         let size = 4096;
-        let (mapping, vmo) = Mapping::allocate(size)?;
-        let mapping_ref = Arc::new(mapping);
+        let (mapping_ref, vmo) = create_mapping(size);
         let mut header =
             Block::new_free(mapping_ref.clone(), 0, constants::HEADER_ORDER as usize, 0)?;
         header.become_reserved()?;
@@ -381,8 +416,7 @@ mod tests {
     #[fuchsia::test]
     fn invalid_magic_number() -> Result<(), Error> {
         let size = 4096;
-        let (mapping, vmo) = Mapping::allocate(size)?;
-        let mapping_ref = Arc::new(mapping);
+        let (mapping_ref, vmo) = create_mapping(size);
         let mut header =
             Block::new_free(mapping_ref.clone(), 0, constants::HEADER_ORDER as usize, 0)?;
         header.become_reserved()?;
@@ -395,8 +429,7 @@ mod tests {
     #[fuchsia::test]
     fn invalid_generation_count() -> Result<(), Error> {
         let size = 4096;
-        let (mapping, vmo) = Mapping::allocate(size)?;
-        let mapping_ref = Arc::new(mapping);
+        let (mapping_ref, vmo) = create_mapping(size);
         let mut header =
             Block::new_free(mapping_ref.clone(), 0, constants::HEADER_ORDER as usize, 0)?;
         header.become_reserved()?;
@@ -421,18 +454,22 @@ mod tests {
     #[fuchsia::test]
     fn snapshot_frozen_vmo() -> Result<(), Error> {
         let size = 4096;
-        let (mapping, vmo) = Mapping::allocate(size)?;
-        let mapping_ref = Arc::new(mapping);
+        let (mapping_ref, vmo) = create_mapping(size);
         let mut header =
             Block::new_free(mapping_ref.clone(), 0, constants::HEADER_ORDER as usize, 0)?;
         header.become_reserved()?;
         header.become_header(size)?;
-        vmo.write(&[0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF], 8).unwrap();
+        mapping_ref.write_bytes(8, &[0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF]);
 
         let snapshot = Snapshot::try_from(&vmo)?;
+
+        #[cfg(target_os = "fuchsia")]
         assert!(matches!(snapshot.buffer, BackingBuffer::Map(_)));
 
-        vmo.write(&[2u8; 8], 8).unwrap();
+        #[cfg(not(target_os = "fuchsia"))]
+        assert!(matches!(snapshot.buffer, BackingBuffer::Vector(_)));
+
+        mapping_ref.write_bytes(8, &[2u8; 8]);
         let snapshot = Snapshot::try_from(&vmo)?;
         assert!(matches!(snapshot.buffer, BackingBuffer::Vector(_)));
 
@@ -442,8 +479,7 @@ mod tests {
     #[fuchsia::test]
     fn snapshot_vmo_with_unused_space() -> Result<(), Error> {
         let size = 4 * constants::PAGE_SIZE_BYTES;
-        let (mapping, vmo) = Mapping::allocate(size)?;
-        let mapping_ref = Arc::new(mapping);
+        let (mapping_ref, vmo) = create_mapping(size);
         let mut header =
             Block::new_free(mapping_ref.clone(), 0, constants::HEADER_ORDER as usize, 0)?;
         header.become_reserved()?;
@@ -458,8 +494,7 @@ mod tests {
     #[fuchsia::test]
     fn snapshot_vmo_with_very_large_vmo() -> Result<(), Error> {
         let size = 2 * constants::MAX_VMO_SIZE;
-        let (mapping, vmo) = Mapping::allocate(size)?;
-        let mapping_ref = Arc::new(mapping);
+        let (mapping_ref, vmo) = create_mapping(size);
         let mut header =
             Block::new_free(mapping_ref.clone(), 0, constants::HEADER_ORDER as usize, 0)?;
         header.become_reserved()?;
@@ -474,8 +509,7 @@ mod tests {
     #[fuchsia::test]
     fn snapshot_vmo_with_header_without_size_info() -> Result<(), Error> {
         let size = 2 * constants::PAGE_SIZE_BYTES;
-        let (mapping, vmo) = Mapping::allocate(size)?;
-        let mapping_ref = Arc::new(mapping);
+        let (mapping_ref, vmo) = create_mapping(size);
         let mut header = Block::new_free(mapping_ref.clone(), 0, 0, 0)?;
         header.become_reserved()?;
         header.become_header(constants::PAGE_SIZE_BYTES)?;

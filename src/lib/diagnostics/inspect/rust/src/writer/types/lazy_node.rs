@@ -5,7 +5,7 @@
 use crate::writer::{Error, Inner, InnerType, InspectType, State};
 
 #[cfg(test)]
-use {inspect_format::Block, mapped_vmo::Mapping, std::sync::Arc};
+use inspect_format::{Block, Container};
 
 /// Inspect Lazy Node data type.
 /// NOTE: do not rely on PartialEq implementation for true comparison.
@@ -37,7 +37,7 @@ impl InnerType for InnerLazyNodeType {
 #[cfg(test)]
 impl LazyNode {
     /// Returns the [`Block`][Block] associated with this value.
-    pub fn get_block(&self) -> Option<Block<Arc<Mapping>>> {
+    pub fn get_block(&self) -> Option<Block<Container>> {
         self.inner.inner_ref().and_then(|inner_ref| {
             inner_ref
                 .state

@@ -76,6 +76,7 @@
 //! [inspect-vmo]: https://fuchsia.dev/fuchsia-src/reference/diagnostics/inspect/vmo-format
 //! [inspector]: Inspector
 
+#[cfg(target_os = "fuchsia")]
 pub mod component;
 pub mod health;
 pub mod reader;

@@ -6,7 +6,7 @@ use crate::writer::{Inner, InnerValueType, InspectType, Property};
 use tracing::error;
 
 #[cfg(test)]
-use {inspect_format::Block, mapped_vmo::Mapping, std::sync::Arc};
+use inspect_format::{Block, Container};
 
 /// Inspect API Bool Property data type.
 ///
@@ -42,7 +42,7 @@ crate::impl_inspect_type_internal!(BoolProperty);
 #[cfg(test)]
 impl BoolProperty {
     /// Returns the [`Block`][Block] associated with this value.
-    pub fn get_block(&self) -> Option<Block<Arc<Mapping>>> {
+    pub fn get_block(&self) -> Option<Block<Container>> {
         self.inner.inner_ref().and_then(|inner_ref| {
             inner_ref
                 .state

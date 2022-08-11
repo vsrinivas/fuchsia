@@ -13,13 +13,11 @@ use crate::writer::{
 use diagnostics_hierarchy::{
     ArrayFormat, ExponentialHistogramParams, LinearHistogramParams, LinkNodeDisposition,
 };
-use fuchsia_zircon as zx;
-use futures::{future::BoxFuture, FutureExt};
+use futures::future::BoxFuture;
 use inspect_format::{constants, PropertyFormat};
-use std::sync::Arc;
 
 #[cfg(test)]
-use {inspect_format::Block, mapped_vmo::Mapping};
+use inspect_format::{Block, Container};
 
 /// Inspect Node data type.
 ///
@@ -442,31 +440,6 @@ impl Node {
         self.record(property);
     }
 
-    /// Creates a lazy node from the given VMO.
-    #[must_use]
-    pub fn create_lazy_child_from_vmo<'b>(
-        &self,
-        name: impl Into<StringReference<'b>>,
-        vmo: Arc<zx::Vmo>,
-    ) -> LazyNode {
-        self.create_lazy_child(name, move || {
-            let vmo_clone = vmo.clone();
-            async move { Ok(Inspector::no_op_from_vmo(vmo_clone)) }.boxed()
-        })
-    }
-
-    /// Records a lazy node from the given VMO.
-    pub fn record_lazy_child_from_vmo<'b>(
-        &self,
-        name: impl Into<StringReference<'b>>,
-        vmo: Arc<zx::Vmo>,
-    ) {
-        self.record_lazy_child(name, move || {
-            let vmo_clone = vmo.clone();
-            async move { Ok(Inspector::no_op_from_vmo(vmo_clone)) }.boxed()
-        });
-    }
-
     /// Add a string property to this node.
     #[must_use]
     pub fn create_string<'b>(
@@ -566,7 +539,7 @@ impl Node {
 
     /// Returns the [`Block`][Block] associated with this value.
     #[cfg(test)]
-    pub(crate) fn get_block(&self) -> Option<Block<Arc<Mapping>>> {
+    pub(crate) fn get_block(&self) -> Option<Block<Container>> {
         self.inner.inner_ref().and_then(|inner_ref| {
             inner_ref
                 .state
@@ -603,15 +576,11 @@ mod tests {
     use super::*;
     use crate::{
         assert_json_diff, reader,
-        writer::{
-            private::InspectTypeInternal, testing_utils::get_state, ArrayProperty, Error,
-            NumericProperty,
-        },
+        writer::{private::InspectTypeInternal, testing_utils::get_state, ArrayProperty},
     };
     use diagnostics_hierarchy::{assert_data_tree, DiagnosticsHierarchy};
-    use fuchsia_zircon::{AsHandleRef, Peered};
+    use futures::FutureExt;
     use inspect_format::BlockType;
-    use std::convert::TryFrom;
 
     #[fuchsia::test]
     fn node() {
@@ -824,24 +793,6 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn inspector_lazy_from_vmo() {
-        let inspector = Inspector::new();
-        inspector.root().record_uint("test", 3);
-
-        let embedded_inspector = Inspector::new();
-        embedded_inspector.root().record_uint("test2", 4);
-        let vmo = embedded_inspector.duplicate_vmo().unwrap();
-
-        inspector.root().record_lazy_child_from_vmo("lazy", Arc::new(vmo));
-        assert_data_tree!(inspector, root: {
-            test: 3u64,
-            lazy: {
-                test2: 4u64,
-            }
-        });
-    }
-
-    #[fuchsia::test]
     fn record() {
         let inspector = Inspector::new();
         let property = inspector.root().create_uint("a", 1);
@@ -955,6 +906,34 @@ mod tests {
     }
 
     #[fuchsia::test]
+    fn string_arrays_on_record() {
+        let inspector = Inspector::new();
+        inspector.root().record_child("child", |node| {
+            node.record_int("my_int", 1i64);
+
+            let arr: crate::StringArrayProperty<'static> =
+                node.create_string_array("my_string_array", 1);
+            arr.set(0, "test");
+            node.record(arr);
+        });
+        assert_data_tree!(inspector, root: {
+            child: {
+                my_int: 1i64,
+                my_string_array: vec!["test"]
+            }
+        });
+    }
+}
+
+// Tests that either refer explicitly to VMOs or utilize zircon signals.
+#[cfg(all(test, target_os = "fuchsia"))]
+mod fuchsia_tests {
+    use super::*;
+    use crate::{assert_json_diff, hierarchy::DiagnosticsHierarchy, reader, NumericProperty};
+    use fuchsia_zircon::{self as zx, AsHandleRef, Peered};
+    use std::convert::TryFrom;
+
+    #[fuchsia::test]
     async fn atomic_update_reader() {
         let inspector = Inspector::new();
 
@@ -1005,7 +984,7 @@ mod tests {
             wait_and_notify_writer! {{
                 let hierarchy: DiagnosticsHierarchy<String> =
                     reader::PartialNodeHierarchy::try_from(&vmo).unwrap().into();
-                assert_data_tree!(hierarchy, root: {
+                assert_json_diff!(hierarchy, root: {
                    value: 2i64,
                    child: {
                        a: 1i64,
@@ -1040,31 +1019,12 @@ mod tests {
 
         // Ensure that the variable that we mutated internally can be used.
         child.record_int("c", 3);
-        assert_data_tree!(inspector, root: {
+        assert_json_diff!(inspector, root: {
             value: 2i64,
             child: {
                 a: 1i64,
                 b: 2i64,
                 c: 3i64,
-            }
-        });
-    }
-
-    #[fuchsia::test]
-    fn string_arrays_on_record() {
-        let inspector = Inspector::new();
-        inspector.root().record_child("child", |node| {
-            node.record_int("my_int", 1i64);
-
-            let arr: crate::StringArrayProperty<'static> =
-                node.create_string_array("my_string_array", 1);
-            arr.set(0, "test");
-            node.record(arr);
-        });
-        assert_data_tree!(inspector, root: {
-            child: {
-                my_int: 1i64,
-                my_string_array: vec!["test"]
             }
         });
     }

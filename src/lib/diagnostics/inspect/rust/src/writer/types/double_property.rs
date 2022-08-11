@@ -6,7 +6,7 @@ use crate::writer::{Error, Inner, InnerValueType, InspectType, NumericProperty, 
 use tracing::error;
 
 #[cfg(test)]
-use {inspect_format::Block, mapped_vmo::Mapping, std::sync::Arc};
+use inspect_format::{Block, Container};
 
 /// Inspect double property type.
 ///
@@ -79,7 +79,7 @@ impl NumericProperty<'_> for DoubleProperty {
 #[cfg(test)]
 impl DoubleProperty {
     /// Returns the [`Block`][Block] associated with this value.
-    pub fn get_block(&self) -> Option<Block<Arc<Mapping>>> {
+    pub fn get_block(&self) -> Option<Block<Container>> {
         self.inner.inner_ref().and_then(|inner_ref| {
             inner_ref
                 .state

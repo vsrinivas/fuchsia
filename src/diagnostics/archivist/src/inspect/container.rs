@@ -18,6 +18,7 @@ use fuchsia_zircon as zx;
 use futures::{FutureExt, Stream};
 use inspect_fidl_load as deprecated_inspect;
 use lazy_static::lazy_static;
+use std::time::Duration;
 use std::{collections::VecDeque, convert::TryFrom, sync::Arc};
 use tracing::warn;
 
@@ -66,6 +67,8 @@ impl SnapshotData {
     ) -> SnapshotData {
         match data {
             InspectData::Tree(tree) => {
+                let lazy_child_timeout =
+                    Duration::from_nanos(lazy_child_timeout.into_nanos() as u64);
                 match SnapshotTree::try_from_with_timeout(&tree, lazy_child_timeout).await {
                     Ok(snapshot_tree) => {
                         SnapshotData::successful(ReadSnapshot::Tree(snapshot_tree), filename)

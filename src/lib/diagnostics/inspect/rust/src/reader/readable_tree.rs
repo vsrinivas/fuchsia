@@ -6,11 +6,90 @@
 //! that can be interpreted using the `fuchsia.inspect.Tree` protocol.
 
 use {
-    crate::{reader::ReaderError, Inspector},
+    crate::{
+        reader::{snapshot::BackingBuffer, ReaderError},
+        Inspector,
+    },
     async_trait::async_trait,
+};
+
+#[cfg(target_os = "fuchsia")]
+use {
     fidl_fuchsia_inspect::{TreeMarker, TreeNameIteratorMarker, TreeProxy},
     fuchsia_zircon as zx,
 };
+
+pub trait SnapshotSource {
+    // Copy bytes from self to dest.
+    fn read_bytes(&self, dest: &mut [u8], offset: u64) -> Result<(), ReaderError>;
+
+    fn size(&self) -> Result<u64, ReaderError>;
+
+    // Convert data into a BackingBuffer.
+    fn to_backing_buffer(&self) -> Result<BackingBuffer, ReaderError>;
+}
+
+#[cfg(target_os = "fuchsia")]
+mod target {
+    use super::SnapshotSource;
+    use crate::reader::{snapshot::BackingBuffer, ReaderError};
+    use fuchsia_zircon as zx;
+
+    // A type alias representing a data source that can be snapshotted.
+    pub type SnapshotSourceT = zx::Vmo;
+
+    impl SnapshotSource for SnapshotSourceT {
+        fn read_bytes(&self, dest: &mut [u8], offset: u64) -> Result<(), ReaderError> {
+            self.read(dest, offset).map_err(ReaderError::Vmo)
+        }
+
+        fn size(&self) -> Result<u64, ReaderError> {
+            self.get_size().map_err(ReaderError::Vmo)
+        }
+
+        fn to_backing_buffer(&self) -> Result<BackingBuffer, ReaderError> {
+            BackingBuffer::try_from(self).map_err(ReaderError::Vmo)
+        }
+    }
+}
+
+#[cfg(not(target_os = "fuchsia"))]
+mod target {
+    use super::SnapshotSource;
+    use crate::reader::{snapshot::BackingBuffer, ReaderError};
+    use inspect_format::ReadableBlockContainer;
+    use std::sync::Arc;
+    use std::sync::Mutex;
+    use std::vec::Vec;
+
+    // A type alias representing a data source that can be snapshotted.
+    pub type SnapshotSourceT = Arc<Mutex<Vec<u8>>>;
+
+    impl SnapshotSource for SnapshotSourceT {
+        fn read_bytes(&self, dest: &mut [u8], offset: u64) -> Result<(), ReaderError> {
+            let offset = offset as usize;
+            if offset >= ReadableBlockContainer::size(self) {
+                return Err(ReaderError::OffsetOutOfBounds);
+            }
+
+            let _ = ReadableBlockContainer::read_bytes(self, offset, dest);
+
+            Ok(())
+        }
+
+        fn size(&self) -> Result<u64, ReaderError> {
+            Ok(ReadableBlockContainer::size(self) as u64)
+        }
+
+        fn to_backing_buffer(&self) -> Result<BackingBuffer, ReaderError> {
+            Ok(BackingBuffer::from(
+                self.try_lock().map_err(|_| ReaderError::MissingHeaderOrLocked)?.clone(),
+            ))
+        }
+    }
+}
+
+pub use target::*;
 
 /// Trait implemented by structs that can provide inspect data and their lazy links.
 #[async_trait]
@@ -19,7 +98,7 @@ pub trait ReadableTree: Sized {
     async fn tree_names(&self) -> Result<Vec<String>, ReaderError>;
 
     /// Returns the vmo of the current root node.
-    async fn vmo(&self) -> Result<zx::Vmo, ReaderError>;
+    async fn vmo(&self) -> Result<SnapshotSourceT, ReaderError>;
 
     /// Loads the lazy link of the given `name`.
     async fn read_tree(&self, name: &str) -> Result<Self, ReaderError>;
@@ -27,8 +106,12 @@ pub trait ReadableTree: Sized {
 
 #[async_trait]
 impl ReadableTree for Inspector {
-    async fn vmo(&self) -> Result<zx::Vmo, ReaderError> {
-        self.duplicate_vmo().ok_or(ReaderError::DuplicateVmo)
+    async fn vmo(&self) -> Result<SnapshotSourceT, ReaderError> {
+        #[cfg(target_os = "fuchsia")]
+        return self.duplicate_vmo().ok_or(ReaderError::DuplicateVmo);
+
+        #[cfg(not(target_os = "fuchsia"))]
+        return self.clone_heap_container().ok_or(ReaderError::NoOpInspector);
     }
 
     async fn tree_names(&self) -> Result<Vec<String>, ReaderError> {
@@ -56,6 +139,7 @@ impl ReadableTree for Inspector {
     }
 }
 
+#[cfg(target_os = "fuchsia")]
 #[async_trait]
 impl ReadableTree for TreeProxy {
     async fn vmo(&self) -> Result<zx::Vmo, ReaderError> {

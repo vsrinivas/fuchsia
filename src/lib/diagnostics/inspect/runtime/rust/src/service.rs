@@ -185,6 +185,7 @@ mod tests {
     use fuchsia_zircon as zx;
     use futures::FutureExt;
     use std::convert::TryFrom;
+    use std::time::Duration;
 
     #[fuchsia::test]
     async fn get_contents() -> Result<(), Error> {
@@ -298,7 +299,7 @@ mod tests {
         root.record_int("int", 3);
 
         let proxy = spawn_server(inspector, TreeServerSettings::default())?;
-        let result = read_with_timeout(&proxy, zx::Duration::from_seconds(5)).await?;
+        let result = read_with_timeout(&proxy, Duration::from_secs(5)).await?;
         assert_json_diff!(result, root: {
             child: "value",
             int: 3i64,
