@@ -1,0 +1,60 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components/fuchsia_package.gni")
+import("//build/go/go_test.gni")
+import("//build/rust/rustc_binary.gni")
+
+if (is_host) {
+  rustc_test("ffx_connection_test") {
+    testonly = true
+    edition = "2021"
+    source_root = "src/tests.rs"
+
+    sources = [
+      "src/tests.rs",
+      "src/util.rs",
+    ]
+    deps = [
+      "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
+      "//src/developer/ffx/daemon:lib",
+      "//src/developer/ffx/lib/isolate:lib",
+      "//src/developer/ffx/lib/target:lib",
+      "//src/lib/diagnostics/selectors",
+      "//src/lib/fidl/rust/fidl",
+      "//src/lib/fuchsia",
+      "//src/lib/fuchsia-async",
+      "//src/lib/testing/fixture",
+      "//src/testing/fidl/proxy_stressor/fidl:test.proxy.stress-rustc",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:async-lock",
+      "//third_party/rust_crates:futures",
+      "//third_party/rust_crates:tracing",
+    ]
+
+    non_rust_deps = [ ":ffx_bin" ]
+
+    test_environments = [ nuc_env ]
+  }
+
+  out_dir = "${root_out_dir}/src/developer/ffx/tests/connection"
+
+  host_test_data("ffx_bin") {
+    deps = [ "//src/developer/ffx:host" ]
+    sources = [ "${host_tools_dir}/ffx" ]
+    outputs = [ "${out_dir}/{{source_file_part}}" ]
+  }
+}
+
+fuchsia_package("ffx_connection_test_components") {
+  deps = [ "//src/testing/fidl/proxy_stressor" ]
+}
+
+group("tests") {
+  deps = [
+    ":ffx_connection_test($host_toolchain)",
+    ":ffx_connection_test_components",
+  ]
+  testonly = true
+}

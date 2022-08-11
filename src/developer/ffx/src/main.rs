@@ -15,18 +15,17 @@ use {
     ffx_lib_args::{from_env, redact_arg_values, Ffx},
     ffx_lib_sub_command::SubCommand,
     ffx_metrics::{add_ffx_launch_and_timing_events, init_metrics_svc},
+    ffx_target::{get_remote_proxy, open_target_with_fut},
     ffx_writer::Writer,
-    fidl::{endpoints::create_proxy, prelude::*},
+    fidl::endpoints::create_proxy,
     fidl_fuchsia_developer_ffx::{
-        DaemonError, DaemonProxy, FastbootMarker, FastbootProxy, TargetCollectionMarker,
-        TargetMarker, TargetProxy, TargetQuery, VersionInfo,
+        DaemonError, DaemonProxy, FastbootMarker, FastbootProxy, TargetProxy, VersionInfo,
     },
-    fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
+    fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
     fuchsia_async::TimeoutExt,
-    futures::{select, FutureExt},
+    futures::FutureExt,
     std::default::Default,
     std::fs::File,
-    std::future::Future,
     std::io::Write,
     std::path::PathBuf,
     std::str::FromStr,
@@ -62,51 +61,6 @@ impl Default for Injection {
     }
 }
 
-#[tracing::instrument(level = "info")]
-fn open_target_with_fut<'a>(
-    target: Option<String>,
-    is_default_target: bool,
-    daemon_proxy: DaemonProxy,
-    target_timeout: Duration,
-) -> Result<(TargetProxy, impl Future<Output = Result<()>> + 'a)> {
-    let (tc_proxy, tc_server_end) = create_proxy::<TargetCollectionMarker>()?;
-    let (target_proxy, target_server_end) = create_proxy::<TargetMarker>()?;
-    let t_clone = target.clone();
-    let target_collection_fut = async move {
-        daemon_proxy
-            .connect_to_protocol(
-                TargetCollectionMarker::PROTOCOL_NAME,
-                tc_server_end.into_channel(),
-            )
-            .await?
-            .map_err(|err| FfxError::DaemonError { err, target: t_clone, is_default_target })?;
-        Result::<()>::Ok(())
-    };
-    let t_clone = target.clone();
-    let target_handle_fut = async move {
-        timeout(
-            target_timeout,
-            tc_proxy.open_target(
-                TargetQuery { string_matcher: t_clone.clone(), ..TargetQuery::EMPTY },
-                target_server_end,
-            ),
-        )
-        .await
-        .map_err(|_| FfxError::DaemonError {
-            err: DaemonError::Timeout,
-            target: t_clone,
-            is_default_target,
-        })??
-        .map_err(|err| FfxError::OpenTargetError { err, target, is_default_target })?;
-        Result::<()>::Ok(())
-    };
-    let fut = async move {
-        let ((), ()) = futures::try_join!(target_collection_fut, target_handle_fut)?;
-        Ok(())
-    };
-    Ok((target_proxy, fut))
-}
-
 impl Injection {
     async fn target(&self) -> Result<Option<String>> {
         self.target
@@ -123,46 +77,7 @@ impl Injection {
         let daemon_proxy = self.daemon_factory().await?;
         let target = self.target().await?;
         let proxy_timeout = proxy_timeout().await?;
-        let (target_proxy, target_proxy_fut) = open_target_with_fut(
-            target.clone(),
-            is_default_target(),
-            daemon_proxy.clone(),
-            proxy_timeout.clone(),
-        )?;
-        let mut target_proxy_fut = target_proxy_fut.boxed_local().fuse();
-        let (remote_proxy, remote_server_end) = create_proxy::<RemoteControlMarker>()?;
-        let mut open_remote_control_fut =
-            target_proxy.open_remote_control(remote_server_end).boxed_local().fuse();
-        let res = loop {
-            select! {
-                res = open_remote_control_fut => {
-                    match res {
-                        Err(e) => {
-                            // Getting here is most likely the result of a PEER_CLOSED error, which
-                            // may be because the target_proxy closure has propagated faster than
-                            // the error (which can happen occasionally). To counter this, wait for
-                            // the target proxy to complete, as it will likely only need to be
-                            // polled once more (open_remote_control_fut partially depends on it).
-                            target_proxy_fut.await?;
-                            return Err(e.into());
-                        }
-                        Ok(r) => break(r),
-                    }
-                }
-                res = target_proxy_fut => {
-                    res?
-                }
-            }
-        };
-        match res {
-            Ok(_) => Ok(remote_proxy),
-            Err(err) => Err(anyhow::Error::new(FfxError::TargetConnectionError {
-                err,
-                target,
-                is_default_target: is_default_target(),
-                logs: Some(target_proxy.get_ssh_logs().await?),
-            })),
-        }
+        get_remote_proxy(target, is_default_target(), daemon_proxy, proxy_timeout).await
     }
 
     async fn fastboot_factory_inner(&self) -> Result<FastbootProxy> {
@@ -553,7 +468,7 @@ mod test {
     use ascendd;
     use async_lock::Mutex;
     use async_net::unix::UnixListener;
-    use fidl::endpoints::ClientEnd;
+    use fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker, RequestStream};
     use fidl_fuchsia_developer_ffx::{DaemonMarker, DaemonRequest, DaemonRequestStream};
     use fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream};
     use fuchsia_async::Task;

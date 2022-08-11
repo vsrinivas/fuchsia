@@ -69,6 +69,7 @@ template("ffx") {
              "//src/developer/ffx/lib/timeout:lib",
              "//src/developer/ffx/lib/version:lib",
              "//src/developer/ffx/lib/writer:lib",
+             "//src/developer/ffx/lib/target:lib",
              "//src/developer/ffx/plugins/daemon:ffx_daemon_plugin_args",
              "//src/developer/ffx/plugins/daemon:ffx_daemon_plugin_sub_command",
              "//src/lib/analytics/rust:lib",

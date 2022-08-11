@@ -31,7 +31,8 @@ async fn create_daemon_proxy(id: &mut NodeId) -> Result<DaemonProxy> {
     Ok(DaemonProxy::new(proxy))
 }
 
-pub async fn get_daemon_proxy_single_link(
+pub async fn get_daemon_proxy_by_ascendd(
+    ascendd_socket_path: &str,
     exclusions: Option<Vec<NodeId>>,
 ) -> Result<(NodeId, DaemonProxy, Pin<Box<impl Future<Output = Result<()>>>>), FfxError> {
     // Start a race betwen:
@@ -39,8 +40,7 @@ pub async fn get_daemon_proxy_single_link(
     // - A timeout
     // - Getting a FIDL proxy over the link
 
-    let ascendd_socket_path = constants::get_socket().await;
-    let link = hoist::hoist().run_single_ascendd_link(ascendd_socket_path.clone()).fuse();
+    let link = hoist::hoist().run_single_ascendd_link(ascendd_socket_path.to_string()).fuse();
     let mut link = Box::pin(link);
     let find = find_next_daemon(exclusions).fuse();
     let mut find = Box::pin(find);
@@ -56,6 +56,13 @@ pub async fn get_daemon_proxy_single_link(
         proxy = find => proxy.map_err(|e| ffx_error!("Error connecting to Daemon at socket: {}: {:#?}\nRun `ffx doctor` for further diagnostics.", ascendd_socket_path, e)),
     };
     res.map(|(nodeid, proxy)| (nodeid, proxy, link))
+}
+
+pub async fn get_daemon_proxy_single_link(
+    exclusions: Option<Vec<NodeId>>,
+) -> Result<(NodeId, DaemonProxy, Pin<Box<impl Future<Output = Result<()>>>>), FfxError> {
+    let ascendd_socket_path = constants::get_socket().await;
+    get_daemon_proxy_by_ascendd(&ascendd_socket_path, exclusions).await
 }
 
 async fn find_next_daemon<'a>(exclusions: Option<Vec<NodeId>>) -> Result<(NodeId, DaemonProxy)> {
