@@ -991,7 +991,7 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
   // when the time slice should expire from the perspective of the target
   // preemption time. Use a small epsilon to avoid tripping the consistency
   // check below.
-  const SchedDuration deadline_time_slice_epsilon{1};
+  const SchedDuration deadline_time_slice_epsilon{100};
 
   // Fair and deadline tasks have different time slice accounting strategies:
   // - A fair task expires when the total runtime meets or exceeds the time
