@@ -15,6 +15,7 @@ use alloc::{boxed::Box, vec::Vec};
 use core::{
     fmt::{self, Debug, Display, Formatter},
     marker::PhantomData,
+    num::NonZeroU32,
 };
 
 use derivative::Derivative;
@@ -22,14 +23,11 @@ use log::{debug, trace};
 use net_types::{
     ethernet::Mac,
     ip::{
-        AddrSubnet, AddrSubnetEither, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr,
-        Ipv6SourceAddr, Subnet,
+        AddrSubnet, AddrSubnetEither, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet,
     },
     MulticastAddr, SpecifiedAddr, UnicastAddr,
 };
 use packet::{Buf, BufferMut, EmptyBuf, Serializer};
-use packet_formats::icmp::ndp::NdpPacket;
-use zerocopy::ByteSlice;
 
 use crate::{
     context::{
@@ -43,7 +41,6 @@ use crate::{
         },
         link::LinkDevice,
         loopback::LoopbackDeviceState,
-        ndp::NdpPacketHandler,
         state::IpLinkDeviceState,
     },
     error::{ExistsError, NotFoundError, NotSupportedError},
@@ -489,6 +486,17 @@ impl<NonSyncCtx: NonSyncContext> Ipv6DeviceContext<NonSyncCtx> for SyncCtx<NonSy
                 Some(ethernet::get_mac(self, id).to_eui64_with_magic(Mac::DEFAULT_EUI_MAGIC))
             }
             DeviceIdInner::Loopback => None,
+        }
+    }
+
+    fn set_link_mtu(&mut self, device_id: Self::DeviceId, mtu: NonZeroU32) {
+        if mtu.get() < Ipv6::MINIMUM_LINK_MTU.into() {
+            return;
+        }
+
+        match device_id.inner() {
+            DeviceIdInner::Ethernet(id) => ethernet::set_mtu(self, id, mtu),
+            DeviceIdInner::Loopback => {}
         }
     }
 }
@@ -1037,29 +1045,6 @@ pub fn update_ipv6_configuration<
 /// [RFC 4862]: https://tools.ietf.org/html/rfc4862
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub struct Tentative<T>(T, bool);
-
-/// This implementation of `NdpPacketHandler` is consumed by ICMPv6.
-impl<NonSyncCtx: NonSyncContext> NdpPacketHandler<NonSyncCtx, DeviceId> for SyncCtx<NonSyncCtx> {
-    fn receive_ndp_packet<B: ByteSlice>(
-        &mut self,
-        ctx: &mut NonSyncCtx,
-        device: DeviceId,
-        src_ip: Ipv6SourceAddr,
-        dst_ip: SpecifiedAddr<Ipv6Addr>,
-        packet: NdpPacket<B>,
-    ) {
-        trace!("device::receive_ndp_packet");
-
-        match device.inner() {
-            DeviceIdInner::Ethernet(id) => {
-                crate::device::ndp::receive_ndp_packet(self, ctx, id, src_ip, dst_ip, packet);
-            }
-            DeviceIdInner::Loopback => {
-                unimplemented!("TODO(https://fxbug.dev/72378): Handle NDP on loopback")
-            }
-        }
-    }
-}
 
 #[cfg(test)]
 pub(crate) mod testutil {

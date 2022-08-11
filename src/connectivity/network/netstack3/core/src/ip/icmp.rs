@@ -4,7 +4,11 @@
 
 //! The Internet Control Message Protocol (ICMP).
 
-use core::{convert::TryInto as _, fmt::Debug, num::NonZeroU8};
+use core::{
+    convert::TryInto as _,
+    fmt::Debug,
+    num::{NonZeroU32, NonZeroU8},
+};
 
 use derivative::Derivative;
 use log::{debug, error, trace};
@@ -43,7 +47,6 @@ use crate::{
     data_structures::{
         id_map::IdMap, id_map_collection::IdMapCollectionKey, token_bucket::TokenBucket,
     },
-    device::ndp::NdpPacketHandler,
     device::FrameDestination,
     error::NotFoundError,
     ip::{
@@ -1179,7 +1182,6 @@ fn receive_ndp_packet<
     C: IcmpNonSyncCtx<Ipv6>,
     SC: InnerIcmpv6Context<C>
         + Ipv6DeviceHandler<C>
-        + NdpPacketHandler<C, <SC as IpDeviceIdContext<Ipv6>>::DeviceId>
         + RouteDiscoveryHandler<C>
         + SlaacHandler<C>
         + NudIpHandler<Ipv6, C>
@@ -1189,7 +1191,6 @@ fn receive_ndp_packet<
     ctx: &mut C,
     device_id: SC::DeviceId,
     src_ip: Ipv6SourceAddr,
-    dst_ip: SpecifiedAddr<Ipv6Addr>,
     packet: NdpPacket<B>,
 ) {
     // TODO(https://fxbug.dev/97319): Make sure IP's hop limit is set to 255 as
@@ -1433,7 +1434,6 @@ fn receive_ndp_packet<
             //   If the received Cur Hop Limit value is specified, the host
             //   SHOULD set its CurHopLimit variable to the received value.
             //
-            //
             // TODO(https://fxbug.dev/101357): Control whether or not we should
             // update the default hop limit.
             if let Some(hop_limit) = ra.current_hop_limit() {
@@ -1454,8 +1454,7 @@ fn receive_ndp_packet<
                     NdpOption::TargetLinkLayerAddress(_)
                     | NdpOption::RedirectedHeader { .. }
                     | NdpOption::RecursiveDnsServer(_)
-                    | NdpOption::RouteInformation(_)
-                    | NdpOption::Mtu(_) => {}
+                    | NdpOption::RouteInformation(_) => {}
                     NdpOption::SourceLinkLayerAddress(addr) => {
                         // As per RFC 4861 section 6.3.4,
                         //
@@ -1550,16 +1549,18 @@ fn receive_ndp_packet<
                             );
                         }
                     }
+                    NdpOption::Mtu(mtu) => {
+                        // TODO(https://fxbug.dev/101357): Control whether or
+                        // not we should update the link's MTU in response to
+                        // RAs.
+                        if let Some(mtu) = NonZeroU32::new(mtu) {
+                            Ipv6DeviceHandler::set_link_mtu(sync_ctx, device_id, mtu);
+                        }
+                    }
                 }
             }
         }
     }
-
-    // Remove this call once NUD and parameter discovery is moved to IP.
-    //
-    // TODO(https://fxbug.dev/99830): Move NUD to IP.
-    // TODO(https://fxbug.dev/101601): Move parameter discovery to IP.
-    sync_ctx.receive_ndp_packet(ctx, device_id, src_ip, dst_ip, packet)
 }
 
 impl<
@@ -1570,7 +1571,6 @@ impl<
             + Ipv6DeviceHandler<C>
             + PmtuHandler<Ipv6, C>
             + MldPacketHandler<C, <SC as IpDeviceIdContext<Ipv6>>::DeviceId>
-            + NdpPacketHandler<C, <SC as IpDeviceIdContext<Ipv6>>::DeviceId>
             + RouteDiscoveryHandler<C>
             + SlaacHandler<C>
             + NudIpHandler<Ipv6, C>
@@ -1639,9 +1639,7 @@ impl<
                     receive_icmp_echo_reply(sync_ctx, ctx, src_ip.get(), dst_ip, id, seq, buffer);
                 }
             }
-            Icmpv6Packet::Ndp(packet) => {
-                receive_ndp_packet(sync_ctx, ctx, device, src_ip, dst_ip, packet)
-            }
+            Icmpv6Packet::Ndp(packet) => receive_ndp_packet(sync_ctx, ctx, device, src_ip, packet),
             Icmpv6Packet::PacketTooBig(packet_too_big) => {
                 ctx.increment_counter("<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet::packet_too_big");
                 trace!("<IcmpIpTransportContext as BufferIpTransportContext<Ipv6>>::receive_ip_packet: Received a Packet Too Big message");
@@ -2975,14 +2973,19 @@ fn connect_icmp_inner<I: IcmpIpExt + IpExt, S: IpSocket<I>>(
 #[cfg(test)]
 mod tests {
     use alloc::{format, vec, vec::Vec};
-    use core::{convert::TryInto, fmt::Debug, num::NonZeroU16, time::Duration};
+    use core::{
+        convert::TryInto,
+        fmt::Debug,
+        num::{NonZeroU16, NonZeroU32},
+        time::Duration,
+    };
 
     use net_types::ip::{AddrSubnet, Ip, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet};
     use packet::{Buf, Serializer};
     use packet_formats::{
         icmp::{
-            mld::MldPacket, ndp::NdpPacket, IcmpEchoReply, IcmpEchoRequest, IcmpMessage,
-            IcmpPacket, IcmpUnusedCode, Icmpv4TimestampRequest, MessageBody,
+            mld::MldPacket, IcmpEchoReply, IcmpEchoRequest, IcmpMessage, IcmpPacket,
+            IcmpUnusedCode, Icmpv4TimestampRequest, MessageBody,
         },
         ip::{IpPacketBuilder, IpProto},
         testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame,
@@ -4062,19 +4065,6 @@ mod tests {
         Icmpv6State
     );
 
-    impl NdpPacketHandler<Dummyv6NonSyncCtx, DummyDeviceId> for Dummyv6SyncCtx {
-        fn receive_ndp_packet<B: ByteSlice>(
-            &mut self,
-            _ctx: &mut Dummyv6NonSyncCtx,
-            _device: DummyDeviceId,
-            _src_ip: Ipv6SourceAddr,
-            _dst_ip: SpecifiedAddr<Ipv6Addr>,
-            _packet: NdpPacket<B>,
-        ) {
-            unimplemented!()
-        }
-    }
-
     impl MldPacketHandler<Dummyv6NonSyncCtx, DummyDeviceId> for Dummyv6SyncCtx {
         fn receive_mld_packet<B: ByteSlice>(
             &mut self,
@@ -4166,6 +4156,10 @@ mod tests {
             _device_id: Self::DeviceId,
             _addr: UnicastAddr<Ipv6Addr>,
         ) -> Result<bool, NotFoundError> {
+            unimplemented!()
+        }
+
+        fn set_link_mtu(&mut self, _device_id: Self::DeviceId, _mtu: NonZeroU32) {
             unimplemented!()
         }
     }

@@ -20,22 +20,13 @@
 
 use core::num::NonZeroU8;
 
-use log::trace;
-use net_types::{
-    ip::{Ip, Ipv6, Ipv6Addr, Ipv6SourceAddr},
-    LinkLocalUnicastAddr, SpecifiedAddr,
-};
+use net_types::ip::Ipv6;
 use nonzero_ext::nonzero;
-use packet_formats::icmp::{
-    ndp::{options::NdpOption, NdpPacket, RouterSolicitation},
-    IcmpPacket,
-};
-use zerocopy::ByteSlice;
 
 use crate::{
-    context::{CounterContext, InstantContext},
+    context::InstantContext,
     device::{link::LinkDevice, DeviceIdContext},
-    ip::device::state::{IpDeviceState, SlaacConfig},
+    ip::device::state::IpDeviceState,
 };
 
 // Node Constants
@@ -63,14 +54,8 @@ pub(crate) const HOP_LIMIT_DEFAULT: NonZeroU8 = nonzero!(64u8);
 // and `TimerContext` impls would conflict for similar reasons).
 
 /// The non-synchronized execution context for NDP.
-pub(crate) trait NdpNonSyncContext<D: LinkDevice, DeviceId>:
-    InstantContext + CounterContext
-{
-}
-impl<DeviceId, D: LinkDevice, C: CounterContext + InstantContext> NdpNonSyncContext<D, DeviceId>
-    for C
-{
-}
+pub(crate) trait NdpNonSyncContext<D: LinkDevice, DeviceId>: InstantContext {}
+impl<DeviceId, D: LinkDevice, C: InstantContext> NdpNonSyncContext<D, DeviceId> for C {}
 
 /// The execution context for an NDP device.
 pub(crate) trait NdpContext<D: LinkDevice, C: NdpNonSyncContext<D, Self::DeviceId>>:
@@ -78,182 +63,6 @@ pub(crate) trait NdpContext<D: LinkDevice, C: NdpNonSyncContext<D, Self::DeviceI
 {
     /// Gets the IP state for this device.
     fn get_ip_device_state(&self, device_id: Self::DeviceId) -> &IpDeviceState<C::Instant, Ipv6>;
-
-    /// Set Link MTU.
-    ///
-    /// `set_mtu` is used when a host receives a Router Advertisement with the
-    /// MTU option.
-    ///
-    /// `set_mtu` MAY set the device's new MTU to a value less than `mtu` if the
-    /// device does not support using `mtu` as its new MTU. `set_mtu` MUST NOT
-    /// use a new MTU value that is greater than `mtu`.
-    ///
-    /// See [RFC 4861 section 6.3.4] for more information.
-    ///
-    /// # Panics
-    ///
-    /// `set_mtu` is allowed to panic if `mtu` is less than the IPv6 minimum
-    /// link MTU, [`Ipv6::MINIMUM_LINK_MTU`].
-    ///
-    /// [RFC 4861 section 6.3.4]: https://tools.ietf.org/html/rfc4861#section-6.3.4
-    fn set_mtu(&mut self, ctx: &mut C, device_id: Self::DeviceId, mtu: u32);
-
-    /// Can `device_id` route IP packets not destined for it?
-    ///
-    /// If `is_router` returns `true`, we know that both the `device_id` and the
-    /// netstack (`ctx`) have routing enabled; if `is_router` returns false,
-    /// either `device_id` or the netstack (`ctx`) has routing disabled.
-    fn is_router_device(&self, device_id: Self::DeviceId) -> bool {
-        self.get_ip_device_state(device_id).routing_enabled
-    }
-}
-
-/// A handler for incoming NDP packets.
-///
-/// An implementation of `NdpPacketHandler` is provided by the device layer (see
-/// the `crate::device` module) to the IP layer so that it can pass incoming NDP
-/// packets. It can also be mocked for use in testing.
-pub(crate) trait NdpPacketHandler<C, DeviceId> {
-    /// Receive an NDP packet.
-    fn receive_ndp_packet<B: ByteSlice>(
-        &mut self,
-        ctx: &mut C,
-        device: DeviceId,
-        src_ip: Ipv6SourceAddr,
-        dst_ip: SpecifiedAddr<Ipv6Addr>,
-        packet: NdpPacket<B>,
-    );
-}
-
-pub(crate) fn receive_ndp_packet<
-    D: LinkDevice,
-    C: NdpNonSyncContext<D, SC::DeviceId>,
-    SC: NdpContext<D, C>,
-    B,
->(
-    sync_ctx: &mut SC,
-    ctx: &mut C,
-    device_id: SC::DeviceId,
-    src_ip: Ipv6SourceAddr,
-    _dst_ip: SpecifiedAddr<Ipv6Addr>,
-    packet: NdpPacket<B>,
-) where
-    B: ByteSlice,
-{
-    // TODO(ghanan): Make sure the IP packet's hop limit was set to 255 as per
-    //               RFC 4861 sections 4.1, 4.2, 4.3, 4.4, and 4.5 (each type of
-    //               NDP packet).
-
-    match packet {
-        NdpPacket::RouterSolicitation(p) => {
-            let _: IcmpPacket<Ipv6, B, RouterSolicitation> = p;
-
-            trace!("receive_ndp_packet: Received NDP RS");
-
-            if !sync_ctx.is_router_device(device_id) {
-                // Hosts MUST silently discard Router Solicitation messages as
-                // per RFC 4861 section 6.1.1.
-                trace!(
-                    "receive_ndp_packet: device {:?} is not a router, discarding NDP RS",
-                    device_id
-                );
-                return;
-            }
-        }
-        NdpPacket::RouterAdvertisement(p) => {
-            // Note that some parts of RFC 4861 w.r.t RAs are handled elsewhere.
-            //
-            // TODO(https://fxbug.dev/93817): Pull SLAAC handling into IP
-            // so this module doesn't handle RAs at all.
-
-            // Nodes MUST silently discard any received Router Advertisement
-            // message where the IP source address is not a link-local
-            // address as routers must use their link-local address as the
-            // source for Router Advertisements so hosts can uniquely
-            // identify routers, as per RFC 4861 section 6.1.2.
-            let src_ip = match match src_ip {
-                Ipv6SourceAddr::Unicast(ip) => LinkLocalUnicastAddr::new(ip),
-                Ipv6SourceAddr::Unspecified => None,
-            } {
-                Some(ip) => {
-                    trace!("receive_ndp_packet: NDP RA source={:?}", ip);
-                    ip
-                }
-                None => {
-                    trace!(
-                        "receive_ndp_packet: NDP RA source={:?} is not link-local; discarding",
-                        src_ip
-                    );
-                    return;
-                }
-            };
-
-            // TODO(ghanan): Make sure IP's hop limit is set to 255 as per RFC
-            // 4861 section 6.1.2.
-
-            ctx.increment_counter("ndp::rx_router_advertisement");
-
-            if sync_ctx.is_router_device(device_id) {
-                trace!("receive_ndp_packet: received NDP RA as a router, discarding NDP RA");
-                return;
-            }
-
-            for option in p.body().iter() {
-                match option {
-                    NdpOption::Mtu(mtu) => {
-                        trace!("receive_ndp_packet: mtu option with mtu = {:?}", mtu);
-
-                        // TODO(ghanan): Make updating the MTU from an RA
-                        // message configurable.
-                        if mtu >= Ipv6::MINIMUM_LINK_MTU.into() {
-                            // `set_mtu` may panic if `mtu` is less than
-                            // `MINIMUM_LINK_MTU` but we just checked to make
-                            // sure that `mtu` is at least `MINIMUM_LINK_MTU` so
-                            // we know `set_mtu` will not panic.
-                            sync_ctx.set_mtu(ctx, device_id, mtu);
-                        } else {
-                            trace!("receive_ndp_packet: NDP RA: not setting link MTU (from {:?}) to {:?} as it is less than Ipv6::MINIMUM_LINK_MTU", src_ip, mtu);
-                        }
-                    }
-                    // These are handled elsewhere.
-                    //
-                    // TODO(https://fxbub.dev/99830): Move all of NDP handling
-                    // to IP.
-                    NdpOption::SourceLinkLayerAddress(_)
-                    | NdpOption::TargetLinkLayerAddress(_)
-                    | NdpOption::RedirectedHeader { .. }
-                    | NdpOption::RecursiveDnsServer(_)
-                    | NdpOption::RouteInformation(_)
-                    | NdpOption::PrefixInformation(_) => {}
-                }
-            }
-        }
-        NdpPacket::NeighborSolicitation(_) | NdpPacket::NeighborAdvertisement(_) => {}
-        NdpPacket::Redirect(_) => log_unimplemented!((), "NDP Redirect not implemented"),
-    }
-}
-#[derive(PartialEq, Eq)]
-enum SlaacType {
-    Static,
-    Temporary,
-}
-
-impl core::fmt::Debug for SlaacType {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            SlaacType::Static => f.write_str("static"),
-            SlaacType::Temporary => f.write_str("temporary"),
-        }
-    }
-}
-
-impl<'a, Instant> From<&'a SlaacConfig<Instant>> for SlaacType {
-    fn from(slaac_config: &'a SlaacConfig<Instant>) -> Self {
-        match slaac_config {
-            SlaacConfig::Static { .. } => SlaacType::Static,
-            SlaacConfig::Temporary { .. } => SlaacType::Temporary,
-        }
-    }
 }
 
 #[cfg(test)]
@@ -268,19 +77,20 @@ mod tests {
     };
 
     use assert_matches::assert_matches;
+    use log::trace;
     use net_declare::net::{mac, subnet_v6};
     use net_types::{
         ethernet::Mac,
-        ip::{AddrSubnet, Ipv6Scope, Subnet},
+        ip::{AddrSubnet, Ip as _, Ipv6Addr, Ipv6Scope, Subnet},
         ScopeableAddress as _, UnicastAddr, Witness as _,
     };
-    use packet::{Buf, EmptyBuf, InnerPacketBuilder as _, ParseBuffer, Serializer as _};
+    use packet::{Buf, EmptyBuf, InnerPacketBuilder as _, Serializer as _};
     use packet_formats::{
         icmp::{
             ndp::{
-                options::{NdpOptionBuilder, PrefixInformation},
-                NeighborAdvertisement, OptionSequenceBuilder, Options, RouterAdvertisement,
-                RouterSolicitation,
+                options::{NdpOption, NdpOptionBuilder, PrefixInformation},
+                NdpPacket, NeighborAdvertisement, OptionSequenceBuilder, Options,
+                RouterAdvertisement, RouterSolicitation,
             },
             IcmpEchoRequest, IcmpPacketBuilder, IcmpUnusedCode, Icmpv6Packet,
         },
@@ -290,6 +100,7 @@ mod tests {
         utils::NonZeroDuration,
     };
     use rand::RngCore;
+    use zerocopy::ByteSlice;
 
     use crate::{
         algorithm::{
@@ -312,7 +123,7 @@ mod tests {
                 slaac::{SlaacConfiguration, SlaacTimerId, TemporarySlaacAddressConfiguration},
                 state::{
                     AddrConfig, AddressState, Ipv6AddressEntry, Ipv6DeviceConfiguration, Lifetime,
-                    TemporarySlaacConfig,
+                    SlaacConfig, TemporarySlaacConfig,
                 },
                 with_assigned_ipv6_addr_subnets, Ipv6DeviceHandler, Ipv6DeviceTimerId,
             },
@@ -328,8 +139,6 @@ mod tests {
     };
 
     const REQUIRED_NDP_IP_PACKET_HOP_LIMIT: u8 = 255;
-
-    type IcmpParseArgs = packet_formats::icmp::IcmpParseArgs<Ipv6Addr>;
 
     // TODO(https://github.com/rust-lang/rust/issues/67441): Make these constants once const
     // Option::unwrap is stablized
@@ -347,35 +156,6 @@ mod tests {
 
     fn remote_ip() -> UnicastAddr<Ipv6Addr> {
         UnicastAddr::from_witness(DUMMY_CONFIG_V6.remote_ip).unwrap()
-    }
-
-    fn router_advertisement_message(
-        src_ip: Ipv6Addr,
-        dst_ip: Ipv6Addr,
-        current_hop_limit: u8,
-        managed_flag: bool,
-        other_config_flag: bool,
-        router_lifetime: u16,
-        reachable_time: u32,
-        retransmit_timer: u32,
-    ) -> Buf<Vec<u8>> {
-        Buf::new(Vec::new(), ..)
-            .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
-                src_ip,
-                dst_ip,
-                IcmpUnusedCode,
-                RouterAdvertisement::new(
-                    current_hop_limit,
-                    managed_flag,
-                    other_config_flag,
-                    router_lifetime,
-                    reachable_time,
-                    retransmit_timer,
-                ),
-            ))
-            .serialize_vec_outer()
-            .unwrap()
-            .into_inner()
     }
 
     fn neighbor_advertisement_message(
@@ -1154,32 +934,60 @@ mod tests {
             DummyEventDispatcherBuilder::from_config(config.clone()).build();
         let device_id = DeviceId::new_ethernet(0);
 
-        let mut icmpv6_packet_buf = OptionSequenceBuilder::new(options.iter())
+        let icmpv6_packet_buf = OptionSequenceBuilder::new(options.iter())
             .into_serializer()
             .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
                 src_ip,
-                config.local_ip,
+                Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
                 IcmpUnusedCode,
                 RouterSolicitation::default(),
             ))
+            .encapsulate(Ipv6PacketBuilder::new(
+                src_ip,
+                Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
+                REQUIRED_NDP_IP_PACKET_HOP_LIMIT,
+                Ipv6Proto::Icmpv6,
+            ))
             .serialize_vec_outer()
             .unwrap();
-        let icmpv6_packet = icmpv6_packet_buf
-            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
-            .unwrap();
-
-        sync_ctx.receive_ndp_packet(
+        receive_ipv6_packet(
+            &mut sync_ctx,
             &mut non_sync_ctx,
             device_id,
-            src_ip.try_into().unwrap(),
-            config.local_ip,
-            icmpv6_packet.unwrap_ndp(),
+            FrameDestination::Multicast,
+            icmpv6_packet_buf,
         );
         assert_eq!(get_counter_val(&non_sync_ctx, "ndp::rx_router_solicitation"), 0);
     }
 
     #[test]
     fn test_receiving_router_advertisement_validity_check() {
+        fn router_advertisement_message(src_ip: Ipv6Addr, dst_ip: Ipv6Addr) -> Buf<Vec<u8>> {
+            EmptyBuf
+                .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+                    src_ip,
+                    dst_ip,
+                    IcmpUnusedCode,
+                    RouterAdvertisement::new(
+                        0,     /* current_hop_limit */
+                        false, /* managed_flag */
+                        false, /* other_config_flag */
+                        0,     /* router_lifetime */
+                        0,     /* reachable_time */
+                        0,     /* retransmit_timer */
+                    ),
+                ))
+                .encapsulate(Ipv6PacketBuilder::new(
+                    src_ip,
+                    dst_ip,
+                    REQUIRED_NDP_IP_PACKET_HOP_LIMIT,
+                    Ipv6Proto::Icmpv6,
+                ))
+                .serialize_vec_outer()
+                .unwrap()
+                .unwrap_b()
+        }
+
         let config = Ipv6::DUMMY_CONFIG;
         let src_mac = [10, 11, 12, 13, 14, 15];
         let src_ip = Ipv6Addr::from([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 10]);
@@ -1190,25 +998,13 @@ mod tests {
         // Test receiving NDP RA where source IP is not a link local address
         // (should not receive).
 
-        let mut icmpv6_packet_buf = router_advertisement_message(
-            src_ip.into(),
-            config.local_ip.get(),
-            1,
-            false,
-            false,
-            3,
-            4,
-            5,
-        );
-        let icmpv6_packet = icmpv6_packet_buf
-            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
-            .unwrap();
-        sync_ctx.receive_ndp_packet(
+        let icmpv6_packet_buf = router_advertisement_message(src_ip.into(), config.local_ip.get());
+        receive_ipv6_packet(
+            &mut sync_ctx,
             &mut non_sync_ctx,
             device_id,
-            src_ip.try_into().unwrap(),
-            config.local_ip,
-            icmpv6_packet.unwrap_ndp(),
+            FrameDestination::Unicast,
+            icmpv6_packet_buf,
         );
         assert_eq!(get_counter_val(&non_sync_ctx, "ndp::rx_router_advertisement"), 0);
 
@@ -1216,17 +1012,13 @@ mod tests {
         // receive).
 
         let src_ip = Mac::new(src_mac).to_ipv6_link_local().addr().get();
-        let mut icmpv6_packet_buf =
-            router_advertisement_message(src_ip, config.local_ip.get(), 1, false, false, 3, 4, 5);
-        let icmpv6_packet = icmpv6_packet_buf
-            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
-            .unwrap();
-        sync_ctx.receive_ndp_packet(
+        let icmpv6_packet_buf = router_advertisement_message(src_ip, config.local_ip.get());
+        receive_ipv6_packet(
+            &mut sync_ctx,
             &mut non_sync_ctx,
             device_id,
-            src_ip.try_into().unwrap(),
-            config.local_ip,
-            icmpv6_packet.unwrap_ndp(),
+            FrameDestination::Unicast,
+            icmpv6_packet_buf,
         );
         assert_eq!(get_counter_val(&non_sync_ctx, "ndp::rx_router_advertisement"), 1);
     }
@@ -1311,14 +1103,19 @@ mod tests {
                     src_ip,
                     dst_ip,
                     IcmpUnusedCode,
-                    RouterAdvertisement::new(1, false, false, 3, 4, 5),
+                    RouterAdvertisement::new(0, false, false, 0, 0, 0),
+                ))
+                .encapsulate(Ipv6PacketBuilder::new(
+                    src_ip,
+                    dst_ip,
+                    REQUIRED_NDP_IP_PACKET_HOP_LIMIT,
+                    Ipv6Proto::Icmpv6,
                 ))
                 .serialize_vec_outer()
                 .unwrap()
                 .unwrap_b()
         }
 
-        let config = Ipv6::DUMMY_CONFIG;
         let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
         let hw_mtu = 5000;
         let device = crate::device::add_ethernet_device(
@@ -1335,16 +1132,14 @@ mod tests {
         // Receive a new RA with a valid MTU option (but the new MTU should only
         // be 5000 as that is the max MTU of the device).
 
-        let mut icmpv6_packet_buf = packet_buf(src_ip.get(), config.local_ip.get(), 5781);
-        let icmpv6_packet = icmpv6_packet_buf
-            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
-            .unwrap();
-        sync_ctx.receive_ndp_packet(
+        let icmpv6_packet_buf =
+            packet_buf(src_ip.get(), Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(), 5781);
+        receive_ipv6_packet(
+            &mut sync_ctx,
             &mut non_sync_ctx,
             device,
-            Ipv6SourceAddr::from_witness(src_ip).unwrap(),
-            config.local_ip,
-            icmpv6_packet.unwrap_ndp(),
+            FrameDestination::Multicast,
+            icmpv6_packet_buf,
         );
         assert_eq!(get_counter_val(&non_sync_ctx, "ndp::rx_router_advertisement"), 1);
         assert_eq!(crate::ip::IpDeviceContext::<Ipv6, _>::get_mtu(&sync_ctx, device), hw_mtu);
@@ -1352,17 +1147,17 @@ mod tests {
         // Receive a new RA with an invalid MTU option (value is lower than IPv6
         // min MTU).
 
-        let mut icmpv6_packet_buf =
-            packet_buf(src_ip.get(), config.local_ip.get(), u32::from(Ipv6::MINIMUM_LINK_MTU) - 1);
-        let icmpv6_packet = icmpv6_packet_buf
-            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
-            .unwrap();
-        sync_ctx.receive_ndp_packet(
+        let icmpv6_packet_buf = packet_buf(
+            src_ip.get(),
+            Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
+            u32::from(Ipv6::MINIMUM_LINK_MTU) - 1,
+        );
+        receive_ipv6_packet(
+            &mut sync_ctx,
             &mut non_sync_ctx,
             device,
-            Ipv6SourceAddr::from_witness(src_ip).unwrap(),
-            config.local_ip,
-            icmpv6_packet.unwrap_ndp(),
+            FrameDestination::Multicast,
+            icmpv6_packet_buf,
         );
         assert_eq!(get_counter_val(&non_sync_ctx, "ndp::rx_router_advertisement"), 2);
         assert_eq!(crate::ip::IpDeviceContext::<Ipv6, _>::get_mtu(&sync_ctx, device), hw_mtu);
@@ -1370,17 +1165,17 @@ mod tests {
         // Receive a new RA with a valid MTU option (value is exactly IPv6 min
         // MTU).
 
-        let mut icmpv6_packet_buf =
-            packet_buf(src_ip.get(), config.local_ip.get(), Ipv6::MINIMUM_LINK_MTU.into());
-        let icmpv6_packet = icmpv6_packet_buf
-            .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
-            .unwrap();
-        sync_ctx.receive_ndp_packet(
+        let icmpv6_packet_buf = packet_buf(
+            src_ip.get(),
+            Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
+            Ipv6::MINIMUM_LINK_MTU.into(),
+        );
+        receive_ipv6_packet(
+            &mut sync_ctx,
             &mut non_sync_ctx,
             device,
-            Ipv6SourceAddr::from_witness(src_ip).unwrap(),
-            config.local_ip,
-            icmpv6_packet.unwrap_ndp(),
+            FrameDestination::Multicast,
+            icmpv6_packet_buf,
         );
         assert_eq!(get_counter_val(&non_sync_ctx, "ndp::rx_router_advertisement"), 3);
         assert_eq!(

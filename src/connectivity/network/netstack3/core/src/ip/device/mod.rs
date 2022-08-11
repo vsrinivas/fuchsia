@@ -13,7 +13,7 @@ pub mod slaac;
 pub mod state;
 
 use alloc::{boxed::Box, vec::Vec};
-use core::num::NonZeroU8;
+use core::num::{NonZeroU32, NonZeroU8};
 
 #[cfg(test)]
 use net_types::ip::IpVersion;
@@ -334,6 +334,9 @@ pub(crate) trait Ipv6DeviceContext<C: IpDeviceNonSyncContext<Ipv6, Self::DeviceI
     /// A `None` value indicates the device does not have an EUI-64 based
     /// interface identifier.
     fn get_eui64_iid(&self, device_id: Self::DeviceId) -> Option<[u8; 8]>;
+
+    /// Sets the link MTU for the device.
+    fn set_link_mtu(&mut self, device_id: Self::DeviceId, mtu: NonZeroU32);
 }
 
 /// An implementation of an IP device.
@@ -385,6 +388,9 @@ pub(crate) trait Ipv6DeviceHandler<C>: IpDeviceHandler<Ipv6, C> {
         device_id: Self::DeviceId,
         addr: UnicastAddr<Ipv6Addr>,
     ) -> Result<bool, NotFoundError>;
+
+    /// Sets the link MTU for the device.
+    fn set_link_mtu(&mut self, device_id: Self::DeviceId, mtu: NonZeroU32);
 }
 
 impl<
@@ -442,6 +448,10 @@ impl<
             }
             IpAddressState::Assigned => false,
         })
+    }
+
+    fn set_link_mtu(&mut self, device_id: Self::DeviceId, mtu: NonZeroU32) {
+        Ipv6DeviceContext::set_link_mtu(self, device_id, mtu)
     }
 }
 

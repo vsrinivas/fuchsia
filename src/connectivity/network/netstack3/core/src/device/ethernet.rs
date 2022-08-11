@@ -4,12 +4,12 @@
 
 //! The Ethernet protocol.
 
-use core::fmt::Debug;
+use core::{fmt::Debug, num::NonZeroU32};
 
 use log::trace;
 use net_types::{
     ethernet::Mac,
-    ip::{AddrSubnet, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
+    ip::{AddrSubnet, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
     BroadcastAddress, MulticastAddr, MulticastAddress, SpecifiedAddr, UnicastAddr, UnicastAddress,
     Witness,
 };
@@ -799,31 +799,33 @@ pub(super) fn get_mac<
     &sync_ctx.get_state_with(device_id).link.mac
 }
 
+pub(super) fn set_mtu<
+    C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>,
+    SC: EthernetIpLinkDeviceContext<C>,
+>(
+    sync_ctx: &mut SC,
+    device_id: SC::DeviceId,
+    mtu: NonZeroU32,
+) {
+    let dev_state = &mut sync_ctx.get_state_mut_with(device_id).link;
+    let mut mtu = mtu.get();
+
+    // If `mtu` is greater than what the device supports, set `mtu` to the
+    // maximum MTU the device supports.
+    if mtu > dev_state.hw_mtu {
+        trace!("ethernet::ndp_device::set_mtu: MTU of {:?} is greater than the device {:?}'s max MTU of {:?}, using device's max MTU instead", mtu, device_id, dev_state.hw_mtu);
+        mtu = dev_state.hw_mtu;
+    }
+
+    trace!("ethernet::ndp_device::set_mtu: setting link MTU to {:?}", mtu);
+    dev_state.mtu = mtu;
+}
+
 impl<C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>, SC: EthernetIpLinkDeviceContext<C>>
     NdpContext<EthernetLinkDevice, C> for SC
 {
     fn get_ip_device_state(&self, device_id: Self::DeviceId) -> &IpDeviceState<C::Instant, Ipv6> {
         &self.get_state_with(device_id).ip.ipv6.ip_state
-    }
-
-    fn set_mtu(&mut self, _ctx: &mut C, device_id: SC::DeviceId, mut mtu: u32) {
-        // TODO(ghanan): Should this new MTU be updated only from the netstack's
-        //               perspective or be exposed to the device hardware?
-
-        // `mtu` must not be less than the minimum IPv6 MTU.
-        assert!(mtu >= Ipv6::MINIMUM_LINK_MTU.into());
-
-        let dev_state = &mut self.get_state_mut_with(device_id).link;
-
-        // If `mtu` is greater than what the device supports, set `mtu` to the
-        // maximum MTU the device supports.
-        if mtu > dev_state.hw_mtu {
-            trace!("ethernet::ndp_device::set_mtu: MTU of {:?} is greater than the device {:?}'s max MTU of {:?}, using device's max MTU instead", mtu, device_id, dev_state.hw_mtu);
-            mtu = dev_state.hw_mtu;
-        }
-
-        trace!("ethernet::ndp_device::set_mtu: setting link MTU to {:?}", mtu);
-        dev_state.mtu = mtu;
     }
 }
 
@@ -840,7 +842,7 @@ impl LinkDevice for EthernetLinkDevice {
 mod tests {
     use alloc::{collections::hash_map::HashMap, vec, vec::Vec};
 
-    use net_types::ip::IpVersion;
+    use net_types::ip::{Ip, IpVersion};
     use packet::Buf;
     use packet_formats::{
         icmp::{IcmpDestUnreachable, IcmpIpExt},
