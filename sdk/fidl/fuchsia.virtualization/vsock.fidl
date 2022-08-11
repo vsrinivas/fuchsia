@@ -90,11 +90,7 @@ protocol HostVsockEndpoint {
     ///
     /// Possible errors:
     ///     - ZX_ERR_ALREADY_BOUND: A client is already listening on this port.
-    // TOOD(fxbug.dev/97355): Update Listen to take a Listener struct as the only argument.
-    Listen(resource struct {
-        port uint32;
-        acceptor client_end:HostVsockAcceptor;
-    }) -> (struct {}) error zx.status;
+    Listen(Listener) -> (struct {}) error zx.status;
 
     /// Attempts to create a vsock connection to a guest on 'guest_port'. Uses a dynamically chosen
     /// ephemeral host port.
