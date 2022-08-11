@@ -594,4 +594,19 @@
         label: "Spinel Driver",
         moniker: "core/lowpan-spinel-driver",
     },
+    {
+        id: 223,
+        label: "Factory Store Providers",
+        moniker: "core/factory_store_providers",
+    },
+    {
+        id: 224,
+        label: "Accessibility Manager",
+        moniker: "core/ui/a11y_manager",
+    },
+    {
+        id: 225,
+        label: "BT Snoop",
+        moniker: "core/bt-snoop",
+    },
 ]

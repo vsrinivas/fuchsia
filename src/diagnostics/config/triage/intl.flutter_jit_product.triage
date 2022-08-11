@@ -2,9 +2,21 @@
 // File issues at: https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=component%3AI18N
 {
     select: {
-        close_status: "INSPECT:flutter_jit_product_runner.cmx:root/os:tz_data_close_status",
-        dst_status: "INSPECT:flutter_jit_product_runner.cmx:root/os:dst_status",
-        tz_data_status: "INSPECT:flutter_jit_product_runner.cmx:root/os:tz_data_status",
+        close_status: [
+            "INSPECT:flutter_jit_product_runner.cmx:root/os:tz_data_close_status",
+            "INSPECT:core/session-manager/session\\:session/flutter_jit_product_runner:root/os:tz_data_close_status",
+            "INSPECT:core/flutter_jit_product_runner:root/os:tz_data_close_status",
+        ],
+        dst_status: [
+            "INSPECT:flutter_jit_product_runner.cmx:root/os:dst_status",
+            "INSPECT:core/session-manager/session\\:session/flutter_jit_product_runner:root/os:dst_status",
+            "INSPECT:core/flutter_jit_product_runner:root/os:dst_status",
+        ],
+        tz_data_status: [
+            "INSPECT:flutter_jit_product_runner.cmx:root/os:tz_data_status",
+            "INSPECT:core/session-manager/session\\:session/flutter_jit_product_runner:root/os:tz_data_status",
+            "INSPECT:core/flutter_jit_product_runner:root/os:tz_data_status",
+        ],
     },
     eval: {
         close_error: "And(Not(Missing(close_status)), close_status != 0)",

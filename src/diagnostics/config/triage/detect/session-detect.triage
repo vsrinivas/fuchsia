@@ -1,67 +1,72 @@
 {
-  select: {
-    session_startup_timestamps: "INSPECT:basemgr.cmx:root/session_started_at/*:@time",
-  },
-  eval: {
-       most_recent_startup_timestamp: "Fold(Fn([a, b], Max(a, b)), session_startup_timestamps, 0)",
-       // Detect runs every 8 minutes and we want to catch the session startup as soon as possible
-       // to make sure the snapshot logs cover it.
-       is_recent_startup: "most_recent_startup_timestamp > (Now() - Minutes(15))",
-       num_session_restarts: "Count(session_startup_timestamps) - 1",
-  },
-  act: {
-    session_restart: {
-      type: "Snapshot",
-      trigger: "And(is_recent_startup, num_session_restarts > 0)",
-      // We still only file at most a snapshot an hour, the minimum for Detect.
-      repeat: "Hours(1)",
-      signature: "session-restart",
-    },
-  },
-  test: {
-    recent_session_restart: {
-      yes: [
-        "session_restart",
-      ],
-      now: "Minutes(20)",
-      values: {
+    select: {
         session_startup_timestamps: [
-          6e10, // initial session startup.
-          6e11, // 600s is less than 15min ago from 20min.
+            "INSPECT:basemgr.cmx:root/session_started_at/*:@time",
+            "INSPECT:core/session-manager/session\\:session:root/session_started_at/*:@time",
         ],
-      },
     },
-    no_recent_session_restart: {
-      no: [
-        "session_restart",
-      ],
-      now: "Hours(1)",
-      values: {
-        session_startup_timestamps: [
-          6e10, // initial session startup.
-          6e11, // 600s is way more than 15min ago from 1h.
-        ],
-      },
+    eval: {
+        most_recent_startup_timestamp: "Fold(Fn([a, b], Max(a, b)), session_startup_timestamps, 0)",
+
+        // Detect runs every 8 minutes and we want to catch the session startup as soon as possible
+        // to make sure the snapshot logs cover it.
+        is_recent_startup: "most_recent_startup_timestamp > (Now() - Minutes(15))",
+        num_session_restarts: "Count(session_startup_timestamps) - 1",
     },
-    no_session_restart: {
-      no: [
-        "session_restart",
-      ],
-      now: "Hours(1)",
-      values: {
-        session_startup_timestamps: [
-          6e10, // initial session startup.
-        ],
-      },
+    act: {
+        session_restart: {
+            type: "Snapshot",
+            trigger: "And(is_recent_startup, num_session_restarts > 0)",
+
+            // We still only file at most a snapshot an hour, the minimum for Detect.
+            repeat: "Hours(1)",
+            signature: "session-restart",
+        },
     },
-    no_session_startup: {
-      no: [
-        "session_restart",
-      ],
-      now: "Hours(1)",
-      values: {
-        session_startup_timestamps: [],
-      },
+    test: {
+        recent_session_restart: {
+            yes: [
+                "session_restart",
+            ],
+            now: "Minutes(20)",
+            values: {
+                session_startup_timestamps: [
+                    6e10, // initial session startup.
+                    6e11, // 600s is less than 15min ago from 20min.
+                ],
+            },
+        },
+        no_recent_session_restart: {
+            no: [
+                "session_restart",
+            ],
+            now: "Hours(1)",
+            values: {
+                session_startup_timestamps: [
+                    6e10, // initial session startup.
+                    6e11, // 600s is way more than 15min ago from 1h.
+                ],
+            },
+        },
+        no_session_restart: {
+            no: [
+                "session_restart",
+            ],
+            now: "Hours(1)",
+            values: {
+                session_startup_timestamps: [
+                    6e10, // initial session startup.
+                ],
+            },
+        },
+        no_session_startup: {
+            no: [
+                "session_restart",
+            ],
+            now: "Hours(1)",
+            values: {
+                session_startup_timestamps: [],
+            },
+        },
     },
-  },
 }
