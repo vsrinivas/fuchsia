@@ -1,5 +1,5 @@
-NAME            SERIAL       TYPE       STATE      ADDRS/IP                               RCS
-fooberdoober*   <unknown>    Unknown    Unknown    [[101:101:101:101:101:101:101:101],    N
-                                                    122.24.25.25]                         
-<unknown-1>     cereal       Unknown    Unknown    [[fe80::101:101:101:101%137]]          N
-<unknown-2>     <unknown>    Unknown    Unknown    [[fe80::101:101:101:100%42]]           N
+NAME            SERIAL       TYPE       STATE      ADDRS/IP                             RCS
+fooberdoober*   <unknown>    Unknown    Unknown    [101:101:101:101:101:101:101:101,    N
+                                                    122.24.25.25]                       
+<unknown-1>     cereal       Unknown    Unknown    [fe80::101:101:101:101%137]          N
+<unknown-2>     <unknown>    Unknown    Unknown    [fe80::101:101:101:100%42]           N

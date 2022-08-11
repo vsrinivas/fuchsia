@@ -1101,7 +1101,8 @@ impl DaemonEventHandler {
             // Since this is only used for matching and not connecting,
             // we simply choose the first address in the list.
             if let Some(addr) = t.addresses.first() {
-                let addr_str = format!("{}", addr);
+                let addr_str =
+                    if addr.ip().is_ipv6() { format!("[{}]", addr) } else { format!("{}", addr) };
 
                 if let Some(p) = t.ssh_port.as_ref() {
                     Some(format!("{}:{}", addr_str, p))
@@ -2731,7 +2732,7 @@ mod tests {
                 addresses: vec![TargetAddr::new("[fe80::1%1000]:0").unwrap()],
                 ..TargetInfo::default()
             }),
-            Some("[fe80::1%1000]".to_string())
+            Some("fe80::1%1000".to_string())
         )
     }
 

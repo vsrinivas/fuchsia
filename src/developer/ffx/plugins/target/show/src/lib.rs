@@ -16,6 +16,7 @@ use {
     fidl_fuchsia_intl::RegulatoryDomain,
     fidl_fuchsia_update_channelcontrol::ChannelControlProxy,
     std::io::{stdout, Write},
+    std::net::SocketAddr,
     std::time::Duration,
     timeout::timeout,
 };
@@ -126,12 +127,14 @@ async fn gather_target_show(target_proxy: TargetProxy) -> Result<ShowEntry> {
         .await?
         .map_err(|e| anyhow!("Failed to get ssh address: {:?}", e))?;
     let ifaces_str = {
-        let addr = TargetAddr::from(&addr_info);
-        let port = match addr_info {
-            TargetAddrInfo::Ip(_info) => 22,
-            TargetAddrInfo::IpPort(info) => info.port,
-        };
-        format!("{}:{}", addr, port)
+        let mut socket_addr = SocketAddr::from(TargetAddr::from(&addr_info));
+        if let TargetAddrInfo::IpPort(ref ipp) = addr_info {
+            socket_addr.set_port(ipp.port);
+        } else {
+            socket_addr.set_port(22);
+        }
+        // TODO: pretty format the interface name
+        format!("{}", socket_addr)
     };
     Ok(ShowEntry::group(
         "Target",

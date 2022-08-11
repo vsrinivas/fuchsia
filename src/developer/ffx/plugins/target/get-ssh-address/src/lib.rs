@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    addr::TargetAddr,
     anyhow::Result,
     errors::FfxError,
     ffx_core::ffx_plugin,
@@ -11,7 +10,10 @@ use {
     fidl_fuchsia_developer_ffx::{
         DaemonError, TargetAddrInfo, TargetCollectionProxy, TargetMarker, TargetQuery,
     },
+    fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address},
+    netext::scope_id_to_name,
     std::io::{stdout, Write},
+    std::net::IpAddr,
     std::time::Duration,
     timeout::timeout,
 };
@@ -59,17 +61,34 @@ async fn get_ssh_address_impl<W: Write>(
         target: t_clone,
         is_default_target,
     })??;
-    let (addr, port) = match res {
-        TargetAddrInfo::Ip(ref _info) => {
-            let target = TargetAddr::from(&res);
-            (target, 0)
+    let (ip, scope, port) = match res {
+        TargetAddrInfo::Ip(info) => {
+            let ip = match info.ip {
+                IpAddress::Ipv6(Ipv6Address { addr }) => IpAddr::from(addr),
+                IpAddress::Ipv4(Ipv4Address { addr }) => IpAddr::from(addr),
+            };
+            (ip, info.scope_id, 0)
         }
-        TargetAddrInfo::IpPort(ref info) => {
-            let target = TargetAddr::from(&res);
-            (target, info.port)
+        TargetAddrInfo::IpPort(info) => {
+            let ip = match info.ip {
+                IpAddress::Ipv6(Ipv6Address { addr }) => IpAddr::from(addr),
+                IpAddress::Ipv4(Ipv4Address { addr }) => IpAddr::from(addr),
+            };
+            (ip, info.scope_id, info.port)
         }
     };
-    write!(writer, "{}", addr)?;
+    match ip {
+        IpAddr::V4(ip) => {
+            write!(writer, "{}", ip)?;
+        }
+        IpAddr::V6(ip) => {
+            write!(writer, "[{}", ip)?;
+            if scope > 0 {
+                write!(writer, "%{}", scope_id_to_name(scope))?;
+            }
+            write!(writer, "]")?;
+        }
+    }
     write!(writer, ":{}", if port == 0 { DEFAULT_SSH_PORT } else { port })?;
     writeln!(writer)?;
     Ok(())
