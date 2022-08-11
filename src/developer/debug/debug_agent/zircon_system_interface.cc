@@ -39,7 +39,7 @@ zx::job GetRootZxJob(const sys::ServiceDirectory& services) {
 
 ZirconSystemInterface::ZirconSystemInterface()
     : services_(sys::ServiceDirectory::CreateFromNamespace()),
-      component_manager_(services_),
+      component_manager_(this, services_),
       limbo_provider_(services_) {
   if (zx::job zx_root = GetRootZxJob(*services_); zx_root.is_valid())
     root_job_ = std::make_unique<ZirconJobHandle>(std::move(zx_root));

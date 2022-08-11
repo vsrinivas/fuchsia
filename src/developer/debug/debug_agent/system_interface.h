@@ -23,7 +23,11 @@ class LimboProvider;
 // but for the system (for which there's not a clearly owned handle).
 class SystemInterface {
  public:
+  SystemInterface() = default;
   virtual ~SystemInterface() = default;
+
+  // SystemInterface shouldn't be movable because ComponentManager keeps a pointer to us.
+  SystemInterface(SystemInterface&&) = delete;
 
   // Returns system statistics.
   virtual uint32_t GetNumCpus() const = 0;

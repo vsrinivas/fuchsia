@@ -145,8 +145,8 @@ void DebugAgent::OnStatus(const debug_ipc::StatusRequest& request, debug_ipc::St
     debug_ipc::ProcessRecord process_record = {};
     process_record.process_koid = process_koid;
     process_record.process_name = proc->process_handle().GetName();
-    process_record.component = system_interface_->GetComponentManager().FindComponentInfo(
-        proc->process_handle(), *system_interface_);
+    process_record.component =
+        system_interface_->GetComponentManager().FindComponentInfo(proc->process_handle());
 
     auto threads = proc->GetThreads();
     process_record.threads.reserve(threads.size());
@@ -165,8 +165,8 @@ void DebugAgent::OnStatus(const debug_ipc::StatusRequest& request, debug_ipc::St
       debug_ipc::ProcessRecord process_record = {};
       process_record.process_koid = process_koid;
       process_record.process_name = record.process->GetName();
-      process_record.component = system_interface_->GetComponentManager().FindComponentInfo(
-          *record.process, *system_interface_);
+      process_record.component =
+          system_interface_->GetComponentManager().FindComponentInfo(*record.process);
 
       // For now, only fill the thread blocked on exception.
       process_record.threads.push_back(record.thread->GetThreadRecord(process_koid));
@@ -608,8 +608,8 @@ void SendAttachReply(DebugAgent* debug_agent, uint32_t transaction_id, const deb
   if (process) {
     reply.koid = process->GetKoid();
     reply.name = process->GetName();
-    reply.component = debug_agent->system_interface().GetComponentManager().FindComponentInfo(
-        *process, debug_agent->system_interface());
+    reply.component =
+        debug_agent->system_interface().GetComponentManager().FindComponentInfo(*process);
   }
 
   debug_ipc::MessageWriter writer;
@@ -831,8 +831,7 @@ void DebugAgent::OnProcessStart(std::unique_ptr<ProcessHandle> process_handle) {
   notify.koid = process_handle->GetKoid();
   notify.name = process_handle->GetName();
   notify.timestamp = GetNowTimestamp();
-  notify.component = system_interface_->GetComponentManager().FindComponentInfo(*process_handle,
-                                                                                *system_interface_);
+  notify.component = system_interface_->GetComponentManager().FindComponentInfo(*process_handle);
 
   DebuggedProcessCreateInfo create_info(std::move(process_handle));
   create_info.stdio = std::move(stdio);

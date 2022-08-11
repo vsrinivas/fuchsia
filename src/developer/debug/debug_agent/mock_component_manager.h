@@ -13,7 +13,8 @@ namespace debug_agent {
 
 class MockComponentManager : public ComponentManager {
  public:
-  MockComponentManager() = default;
+  explicit MockComponentManager(SystemInterface* system_interface)
+      : ComponentManager(system_interface) {}
   ~MockComponentManager() override = default;
 
   auto& component_info() { return component_info_; }

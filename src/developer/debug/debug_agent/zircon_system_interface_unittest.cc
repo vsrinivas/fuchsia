@@ -88,8 +88,7 @@ TEST_F(ZirconSystemInterfaceTest, FindComponentInfo) {
   zx::process::self()->duplicate(ZX_RIGHT_SAME_RIGHTS, &handle);
   ZirconProcessHandle self(std::move(handle));
 
-  auto component_info =
-      system_interface.GetComponentManager().FindComponentInfo(self, system_interface);
+  auto component_info = system_interface.GetComponentManager().FindComponentInfo(self);
 
   ASSERT_TRUE(component_info);
   // The moniker is empty because it's actually "." in the test environment and the "." is stripped.

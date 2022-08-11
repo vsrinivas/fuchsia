@@ -6,6 +6,7 @@
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/sys2/cpp/fidl.h>
 #include <lib/fit/defer.h>
 #include <lib/sys/cpp/termination_reason.h>
 #include <lib/syslog/cpp/macros.h>
@@ -23,6 +24,7 @@
 #include "src/developer/debug/shared/logging/file_line_function.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop.h"
+#include "src/developer/debug/shared/status.h"
 
 namespace debug_agent {
 
@@ -31,7 +33,8 @@ namespace {
 // Maximum time we wait for reading "elf/job_id" in the runtime directory.
 constexpr uint64_t kMaxWaitMsForJobId = 1000;
 
-uint64_t next_component_id = 1;
+// Maximum time we wait for a component to start.
+constexpr uint64_t kMaxWaitMsForComponent = 1000;
 
 // Attempts to link a zircon socket into the new component's file descriptor number represented by
 // |fd|. If successful, the socket will be connected and a (one way) communication channel with that
@@ -101,83 +104,37 @@ void ReadElfJobId(fuchsia::io::DirectoryHandle runtime_dir_handle, const std::st
       });
 }
 
-// Class designed to help setup a component and then launch it. These setups are necessary because
-// the agent needs some information about how the component will be launch before it actually
-// launches it. This is because the debugger will set itself to "catch" the component when it starts
-// as a process.
-class V1ComponentLauncher {
- public:
-  explicit V1ComponentLauncher(std::shared_ptr<sys::ServiceDirectory> services)
-      : services_(std::move(services)) {}
-
-  // Will fail if |argv| is invalid. The first element should be the component url needed to launch.
-  zx_status_t Prepare(std::vector<std::string> argv,
-                      ZirconComponentManager::ComponentDescription* description,
-                      StdioHandles* handles);
-
-  // The launcher has to be already successfully prepared. The lifetime of the controller is bound
-  // to the lifetime of the component.
-  fuchsia::sys::ComponentControllerPtr Launch();
-
- private:
-  std::shared_ptr<sys::ServiceDirectory> services_;
-  fuchsia::sys::LaunchInfo launch_info_;
-};
-
-zx_status_t V1ComponentLauncher::Prepare(std::vector<std::string> argv,
-                                         ZirconComponentManager::ComponentDescription* description,
-                                         StdioHandles* handles) {
-  FX_DCHECK(services_);
-  FX_DCHECK(!argv.empty());
-
-  auto pkg_url = argv.front();
-  debug::ComponentDescription url_desc;
-  if (!debug::ExtractComponentFromPackageUrl(pkg_url, &url_desc)) {
-    FX_LOGS(WARNING) << "Invalid package url: " << pkg_url;
-    return ZX_ERR_INVALID_ARGS;
+std::string to_string(fuchsia::component::Error err) {
+  static const char* const errors[] = {
+      "INTERNAL",                   // 1
+      "INVALID_ARGUMENTS",          // 2
+      "UNSUPPORTED",                // 3
+      "ACCESS_DENIED",              // 4
+      "INSTANCE_NOT_FOUND",         // 5
+      "INSTANCE_ALREADY_EXISTS",    // 6
+      "INSTANCE_CANNOT_START",      // 7
+      "INSTANCE_CANNOT_RESOLVE",    // 8
+      "COLLECTION_NOT_FOUND",       // 9
+      "RESOURCE_UNAVAILABLE",       // 10
+      "INSTANCE_DIED",              // 11
+      "RESOURCE_NOT_FOUND",         // 12
+      "INSTANCE_CANNOT_UNRESOLVE",  // 13
+  };
+  int n = static_cast<int>(err);
+  if (n < 1 || n > 13) {
+    return "Invalid error";
   }
-
-  // Prepare the launch info. The parameters to the component do not include
-  // the component URL.
-  launch_info_.url = argv.front();
-  if (argv.size() > 1) {
-    launch_info_.arguments.emplace();
-    for (size_t i = 1; i < argv.size(); i++)
-      launch_info_.arguments->push_back(std::move(argv[i]));
-  }
-
-  *description = {};
-  description->component_id = next_component_id++;
-  description->url = pkg_url;
-  description->filter = url_desc.component_name + ".cmx";
-
-  *handles = {};
-  handles->out = AddStdio(STDOUT_FILENO, &launch_info_);
-  handles->err = AddStdio(STDERR_FILENO, &launch_info_);
-
-  return ZX_OK;
-}
-
-fuchsia::sys::ComponentControllerPtr V1ComponentLauncher::Launch() {
-  FX_DCHECK(services_);
-
-  fuchsia::sys::LauncherSyncPtr launcher;
-  services_->Connect(launcher.NewRequest());
-
-  // Controller is a way to manage the newly created component. We need it in
-  // order to receive the terminated events. Sadly, there is no component
-  // started event. This also makes us need an async::Loop so that the fidl
-  // plumbing can work.
-  fuchsia::sys::ComponentControllerPtr controller;
-  launcher->CreateComponent(std::move(launch_info_), controller.NewRequest());
-
-  return controller;
+  return errors[n - 1];
 }
 
 }  // namespace
 
-ZirconComponentManager::ZirconComponentManager(std::shared_ptr<sys::ServiceDirectory> services)
-    : services_(std::move(services)), event_stream_binding_(this), weak_factory_(this) {
+ZirconComponentManager::ZirconComponentManager(SystemInterface* system_interface,
+                                               std::shared_ptr<sys::ServiceDirectory> services)
+    : ComponentManager(system_interface),
+      services_(std::move(services)),
+      event_stream_binding_(this),
+      weak_factory_(this) {
   // 1. Subscribe to "debug_started" and "stopped" events.
   fuchsia::sys2::EventSourceSyncPtr event_source;
   services_->Connect(event_source.NewRequest());
@@ -287,6 +244,7 @@ void ZirconComponentManager::OnEvent(fuchsia::sys2::Event event) {
           DEBUG_LOG(Process) << "Component stopped job_id=" << it->first
                              << " moniker=" << it->second.moniker << " url=" << it->second.url;
           running_component_info_.erase(it);
+          expected_v2_components_.erase(moniker);
           break;
         }
       }
@@ -305,80 +263,143 @@ std::optional<debug_ipc::ComponentInfo> ZirconComponentManager::FindComponentInf
 }
 
 debug::Status ZirconComponentManager::LaunchComponent(const std::vector<std::string>& argv) {
-  V1ComponentLauncher launcher(services_);
-  ComponentDescription description;
+  if (argv.empty()) {
+    return debug::Status("No argument provided for LaunchComponent");
+  }
+  if (cpp20::ends_with(std::string_view{argv[0]}, ".cmx")) {
+    return LaunchV1Component(argv);
+  }
+  return LaunchV2Component(argv);
+}
+
+debug::Status ZirconComponentManager::LaunchV1Component(const std::vector<std::string>& argv) {
+  std::string url = argv.front();
+  std::string name = url.substr(url.find_last_of('/') + 1);
+
+  if (expected_v1_components_.count(name)) {
+    return debug::Status(name + " is being launched");
+  }
+
+  // Prepare the launch info. The parameters to the component do not include the component URL.
+  fuchsia::sys::LaunchInfo launch_info;
+  launch_info.url = url;
+  if (argv.size() > 1) {
+    launch_info.arguments.emplace();
+    for (size_t i = 1; i < argv.size(); i++)
+      launch_info.arguments->push_back(argv[i]);
+  }
+
   StdioHandles handles;
-  if (zx_status_t status = launcher.Prepare(argv, &description, &handles); status != ZX_OK) {
+  handles.out = AddStdio(STDOUT_FILENO, &launch_info);
+  handles.err = AddStdio(STDERR_FILENO, &launch_info);
+
+  DEBUG_LOG(Process) << "Launching component url=" << url;
+
+  fuchsia::sys::LauncherSyncPtr launcher;
+  services_->Connect(launcher.NewRequest());
+  fuchsia::sys::ComponentControllerPtr controller;
+  auto status = launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
+  if (status != ZX_OK)
     return debug::ZxStatus(status);
+
+  // We don't need to wait for the termination.
+  controller->Detach();
+
+  expected_v1_components_.emplace(name, std::move(handles));
+
+  debug::MessageLoop::Current()->PostTimer(
+      FROM_HERE, kMaxWaitMsForComponent, [weak_this = weak_factory_.GetWeakPtr(), name]() {
+        if (weak_this && weak_this->expected_v1_components_.count(name)) {
+          FX_LOGS(WARNING) << "Timeout waiting for component " << name << " to start.";
+          weak_this->expected_v1_components_.erase(name);
+        }
+      });
+
+  return debug::Status();
+}
+
+debug::Status ZirconComponentManager::LaunchV2Component(const std::vector<std::string>& argv) {
+  constexpr char kParentMoniker[] = "./core";
+  constexpr char kCollection[] = "ffx-laboratory";
+
+  // url: fuchsia-pkg://fuchsia.com/crasher#meta/cpp_crasher.cm
+  std::string url = argv[0];
+  size_t name_start = url.find_last_of('/') + 1;
+  // name: cpp_crasher
+  std::string name = url.substr(name_start, url.find_last_of('.') - name_start);
+  // moniker: /core/ffx-laboratory:cpp_crasher
+  std::string moniker = std::string(kParentMoniker + 1) + "/" + kCollection + ":" + name;
+
+  if (argv.size() != 1) {
+    return debug::Status("v2 components cannot accept command line arguments");
   }
-  FX_DCHECK(expected_v1_components_.count(description.filter) == 0);
-
-  DEBUG_LOG(Process) << "Launching component url=" << description.url
-                     << " filter=" << description.filter
-                     << " component_id=" << description.component_id;
-
-  // Launch the component.
-  auto controller = launcher.Launch();
-  if (!controller) {
-    FX_LOGS(WARNING) << "Could not launch component " << description.url;
-    return debug::Status("Could not launch component.");
+  if (expected_v2_components_.count(moniker)) {
+    return debug::Status(url + " is already launched");
   }
 
-  controller.events().OnTerminated = [mgr = weak_factory_.GetWeakPtr(), description](
-                                         int64_t return_code,
-                                         fuchsia::sys::TerminationReason reason) {
-    // If the agent is gone, there isn't anything more to do.
-    if (mgr)
-      mgr->OnV1ComponentTerminated(return_code, description, reason);
+  fuchsia::sys2::LifecycleControllerSyncPtr lifecycle_controller;
+  auto status = services_->Connect(lifecycle_controller.NewRequest(),
+                                   "fuchsia.sys2.LifecycleController.root");
+  if (status != ZX_OK)
+    return debug::ZxStatus(status);
+
+  DEBUG_LOG(Process) << "Launching component url=" << url << " moniker=" << moniker;
+
+  fuchsia::sys2::LifecycleController_CreateChild_Result create_res;
+  auto create_child = [&]() {
+    fuchsia::component::decl::Child child_decl;
+    child_decl.set_name(name);
+    child_decl.set_url(url);
+    child_decl.set_startup(fuchsia::component::decl::StartupMode::LAZY);
+    return lifecycle_controller->CreateChild(kParentMoniker, {kCollection}, std::move(child_decl),
+                                             {}, &create_res);
   };
+  status = create_child();
+  if (status != ZX_OK)
+    return debug::ZxStatus(status);
 
-  ExpectedV1Component expected_component;
-  expected_component.description = description;
-  expected_component.handles = std::move(handles);
-  expected_component.controller = std::move(controller);
-  expected_v1_components_[description.filter] = std::move(expected_component);
+  if (create_res.is_err() &&
+      create_res.err() == fuchsia::component::Error::INSTANCE_ALREADY_EXISTS) {
+    fuchsia::sys2::LifecycleController_DestroyChild_Result destroy_res;
+    fuchsia::component::decl::ChildRef child_ref{.name = name, .collection = kCollection};
+    status = lifecycle_controller->DestroyChild(kParentMoniker, child_ref, &destroy_res);
+    if (status != ZX_OK)
+      return debug::ZxStatus(status);
+    if (destroy_res.is_err())
+      return debug::Status("Failed to destroy component " + moniker + ": " +
+                           to_string(destroy_res.err()));
+    status = create_child();
+    if (status != ZX_OK)
+      return debug::ZxStatus(status);
+  }
+  if (create_res.is_err())
+    return debug::Status("Failed to create the component: " + to_string(create_res.err()));
 
+  fuchsia::sys2::LifecycleController_Start_Result start_res;
+  // LifecycleController::Start accepts relative monikers.
+  status = lifecycle_controller->Start("." + moniker, &start_res);
+  if (status != ZX_OK)
+    return debug::ZxStatus(status);
+  if (start_res.is_err())
+    return debug::Status("Failed to start the component: " + to_string(start_res.err()));
+
+  expected_v2_components_.insert(moniker);
   return debug::Status();
 }
 
 bool ZirconComponentManager::OnProcessStart(const ProcessHandle& process, StdioHandles* out_stdio) {
   if (auto it = expected_v1_components_.find(process.GetName());
       it != expected_v1_components_.end()) {
-    *out_stdio = std::move(it->second.handles);
-
-    uint64_t component_id = it->second.description.component_id;
-    running_v1_components_[component_id] = std::move(it->second.controller);
-
+    *out_stdio = std::move(it->second);
     expected_v1_components_.erase(it);
     return true;
   }
+  if (auto component = ComponentManager::FindComponentInfo(process);
+      component && expected_v2_components_.count(component->moniker)) {
+    // It'll be erased in the stopped event.
+    return true;
+  }
   return false;
-}
-
-void ZirconComponentManager::OnV1ComponentTerminated(int64_t return_code,
-                                                     const ComponentDescription& description,
-                                                     fuchsia::sys::TerminationReason reason) {
-  DEBUG_LOG(Process) << "Component " << description.url << " exited with "
-                     << sys::HumanReadableTerminationReason(reason);
-
-  // TODO(donosoc): This need to be communicated over to the client.
-  if (reason != fuchsia::sys::TerminationReason::EXITED) {
-    FX_LOGS(WARNING) << "Component " << description.url << " exited with "
-                     << sys::HumanReadableTerminationReason(reason);
-  }
-
-  // We look for the filter and remove it.
-  // If we couldn't find it, the component was already caught and cleaned.
-  expected_v1_components_.erase(description.filter);
-
-  if (debug::IsDebugLoggingActive()) {
-    std::stringstream ss;
-    ss << "Still expecting the following components: " << expected_v1_components_.size();
-    for (auto& expected : expected_v1_components_) {
-      ss << std::endl << "* " << expected.first;
-    }
-    DEBUG_LOG(Process) << ss.str();
-  }
 }
 
 }  // namespace debug_agent

@@ -54,7 +54,7 @@ bool Filter::MatchesProcess(const ProcessHandle& process, SystemInterface& syste
       break;  // Fall through
   }
   // All unhandled filter types at this point require component information.
-  auto info = system_interface.GetComponentManager().FindComponentInfo(process, system_interface);
+  auto info = system_interface.GetComponentManager().FindComponentInfo(process);
   if (!info) {
     return false;
   }

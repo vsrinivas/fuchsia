@@ -30,8 +30,7 @@ class MockProcess;
 class MockDebugAgentHarness {
  public:
   explicit MockDebugAgentHarness(
-      std::unique_ptr<MockSystemInterface> system_interface =
-          std::make_unique<MockSystemInterface>(MockSystemInterface::CreateWithData()))
+      std::unique_ptr<MockSystemInterface> system_interface = MockSystemInterface::CreateWithData())
       : system_interface_(system_interface.get()), agent_(std::move(system_interface)) {
     agent_.Connect(&stream_backend_.stream());
   }

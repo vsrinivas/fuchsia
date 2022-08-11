@@ -16,7 +16,7 @@ std::unique_ptr<BinaryLauncher> MockSystemInterface::GetLauncher() const {
   return nullptr;
 }
 
-MockSystemInterface MockSystemInterface::CreateWithData() {
+std::unique_ptr<MockSystemInterface> MockSystemInterface::CreateWithData() {
   // Job 121.
   MockProcessHandle job121_p1(19, "job121-p1");
   job121_p1.set_threads({MockThreadHandle(20, "initial-thread")});
@@ -66,9 +66,9 @@ MockSystemInterface MockSystemInterface::CreateWithData() {
   root.set_child_processes({root_p1, root_p2, root_p3});
   root.set_child_jobs({job1});
 
-  MockSystemInterface system_interface(std::move(root));
+  auto system_interface = std::make_unique<MockSystemInterface>(std::move(root));
 
-  system_interface.mock_component_manager().component_info().emplace(
+  system_interface->mock_component_manager().component_info().emplace(
       job1.GetKoid(),
       debug_ipc::ComponentInfo{.moniker = "/moniker",
                                .url = "fuchsia-pkg://devhost/package#meta/component.cm"});

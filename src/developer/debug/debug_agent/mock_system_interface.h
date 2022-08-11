@@ -16,9 +16,8 @@ namespace debug_agent {
 
 class MockSystemInterface final : public SystemInterface {
  public:
-  explicit MockSystemInterface(MockJobHandle root_job) : root_job_(std::move(root_job)) {}
-
-  MockSystemInterface(MockSystemInterface&&) = default;
+  explicit MockSystemInterface(MockJobHandle root_job)
+      : root_job_(std::move(root_job)), component_manager_(this) {}
 
   MockLimboProvider& mock_limbo_provider() { return limbo_provider_; }
   MockComponentManager& mock_component_manager() { return component_manager_; }
@@ -58,7 +57,7 @@ class MockSystemInterface final : public SystemInterface {
   //            t: 22 initial-thread
   //            t: 23 second-thread
   //            t: 24 third-thread
-  static MockSystemInterface CreateWithData();
+  static std::unique_ptr<MockSystemInterface> CreateWithData();
 
  private:
   MockJobHandle root_job_;

@@ -24,50 +24,50 @@ TEST(Filter, MatchProcess) {
   //      j: 17 job12
   //        j: 18 job121
   //          p: 19 job121-p1
-  auto process = system_interface.GetProcess(19);
+  auto process = system_interface->GetProcess(19);
 
   // Process name.
   debug_ipc::Filter filter{.type = debug_ipc::Filter::Type::kProcessName, .pattern = "job121-p1"};
-  EXPECT_TRUE(Filter(filter).MatchesProcess(*process, system_interface));
+  EXPECT_TRUE(Filter(filter).MatchesProcess(*process, *system_interface));
   filter = {.type = debug_ipc::Filter::Type::kProcessName, .pattern = "p1"};
-  EXPECT_FALSE(Filter(filter).MatchesProcess(*process, system_interface));
+  EXPECT_FALSE(Filter(filter).MatchesProcess(*process, *system_interface));
   filter = {.type = debug_ipc::Filter::Type::kProcessNameSubstr, .pattern = "p1"};
-  EXPECT_TRUE(Filter(filter).MatchesProcess(*process, system_interface));
+  EXPECT_TRUE(Filter(filter).MatchesProcess(*process, *system_interface));
   filter = {.type = debug_ipc::Filter::Type::kProcessNameSubstr, .pattern = "p2"};
-  EXPECT_FALSE(Filter(filter).MatchesProcess(*process, system_interface));
+  EXPECT_FALSE(Filter(filter).MatchesProcess(*process, *system_interface));
 
   // Job koid.
   filter = {.type = debug_ipc::Filter::Type::kProcessNameSubstr, .pattern = "p1", .job_koid = 1};
-  EXPECT_TRUE(Filter(filter).MatchesProcess(*process, system_interface));
+  EXPECT_TRUE(Filter(filter).MatchesProcess(*process, *system_interface));
   filter = {.type = debug_ipc::Filter::Type::kProcessNameSubstr, .job_koid = 8};
-  EXPECT_TRUE(Filter(filter).MatchesProcess(*process, system_interface));
+  EXPECT_TRUE(Filter(filter).MatchesProcess(*process, *system_interface));
   filter = {.type = debug_ipc::Filter::Type::kProcessNameSubstr, .pattern = "p1", .job_koid = 2};
-  EXPECT_FALSE(Filter(filter).MatchesProcess(*process, system_interface));
+  EXPECT_FALSE(Filter(filter).MatchesProcess(*process, *system_interface));
   filter = {.type = debug_ipc::Filter::Type::kProcessName, .pattern = "p1", .job_koid = 1};
-  EXPECT_FALSE(Filter(filter).MatchesProcess(*process, system_interface));
+  EXPECT_FALSE(Filter(filter).MatchesProcess(*process, *system_interface));
 
   // Component info.
   filter = {.type = debug_ipc::Filter::Type::kComponentName, .pattern = "component.cm"};
-  EXPECT_TRUE(Filter(filter).MatchesProcess(*process, system_interface));
+  EXPECT_TRUE(Filter(filter).MatchesProcess(*process, *system_interface));
   filter = {.type = debug_ipc::Filter::Type::kComponentMoniker, .pattern = "/moniker"};
-  EXPECT_TRUE(Filter(filter).MatchesProcess(*process, system_interface));
+  EXPECT_TRUE(Filter(filter).MatchesProcess(*process, *system_interface));
   filter = {.type = debug_ipc::Filter::Type::kComponentUrl,
             .pattern = "fuchsia-pkg://devhost/package#meta/component.cm"};
-  EXPECT_TRUE(Filter(filter).MatchesProcess(*process, system_interface));
+  EXPECT_TRUE(Filter(filter).MatchesProcess(*process, *system_interface));
 }
 
 TEST(Filter, ApplyToJob) {
   auto system_interface = MockSystemInterface::CreateWithData();
-  auto root = system_interface.GetRootJob();
+  auto root = system_interface->GetRootJob();
 
   debug_ipc::Filter filter{.type = debug_ipc::Filter::Type::kProcessName, .pattern = "root-p1"};
-  EXPECT_EQ(1ull, Filter(filter).ApplyToJob(*root, system_interface).size());
+  EXPECT_EQ(1ull, Filter(filter).ApplyToJob(*root, *system_interface).size());
   filter = {.type = debug_ipc::Filter::Type::kProcessNameSubstr, .pattern = "p1"};
-  EXPECT_EQ(4ull, Filter(filter).ApplyToJob(*root, system_interface).size());
+  EXPECT_EQ(4ull, Filter(filter).ApplyToJob(*root, *system_interface).size());
   filter = {.type = debug_ipc::Filter::Type::kProcessNameSubstr, .pattern = "p1", .job_koid = 8};
-  EXPECT_EQ(3ull, Filter(filter).ApplyToJob(*root, system_interface).size());
+  EXPECT_EQ(3ull, Filter(filter).ApplyToJob(*root, *system_interface).size());
   filter = {.type = debug_ipc::Filter::Type::kComponentName, .pattern = "component.cm"};
-  EXPECT_EQ(5ull, Filter(filter).ApplyToJob(*root, system_interface).size());
+  EXPECT_EQ(5ull, Filter(filter).ApplyToJob(*root, *system_interface).size());
 }
 
 }  // namespace

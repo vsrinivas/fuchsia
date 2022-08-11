@@ -24,15 +24,20 @@
                 // Used by fdio for running executables.
                 "fuchsia.process.Launcher",
 
-                // for executables with "#!resolve" directive.
-
-                // For running v1 components.
+                // To launch v1 components.
                 "fuchsia.sys.Launcher",
 
                 // To watch and attach to v2 components.
                 "fuchsia.sys2.EventSource",
+
+                // To launch v2 components.
+                "fuchsia.sys2.LifecycleController.root",
                 "fuchsia.sys2.RealmExplorer.root",
                 "fuchsia.sys2.RealmQuery.root",
+
+                // To launch v2 tests.
+                "fuchsia.test.manager.Query",
+                "fuchsia.test.manager.RunBuilder",
             ],
             from: "parent",
         },

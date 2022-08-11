@@ -11,6 +11,8 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <zircon/types.h>
 
+#include <set>
+
 #include "src/developer/debug/debug_agent/component_manager.h"
 #include "src/developer/debug/debug_agent/system_interface.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -19,13 +21,8 @@ namespace debug_agent {
 
 class ZirconComponentManager : public ComponentManager, public fuchsia::sys2::EventStream {
  public:
-  struct ComponentDescription {
-    uint64_t component_id = 0;  // 0 is invalid.
-    std::string url;
-    std::string filter;
-  };
-
-  explicit ZirconComponentManager(std::shared_ptr<sys::ServiceDirectory> services);
+  ZirconComponentManager(SystemInterface* system_interface,
+                         std::shared_ptr<sys::ServiceDirectory> services);
   ~ZirconComponentManager() override = default;
 
   // ComponentManager implementation.
@@ -41,29 +38,24 @@ class ZirconComponentManager : public ComponentManager, public fuchsia::sys2::Ev
   void SetReadyCallback(fit::callback<void()> callback);
 
  private:
-  void OnV1ComponentTerminated(int64_t return_code, const ComponentDescription& description,
-                               fuchsia::sys::TerminationReason reason);
+  debug::Status LaunchV1Component(const std::vector<std::string>& argv);
+  debug::Status LaunchV2Component(const std::vector<std::string>& argv);
 
   fit::callback<void()> ready_callback_ = []() {};
 
   std::shared_ptr<sys::ServiceDirectory> services_;
 
+  // Information of all running components in the system, indexed by their job koids.
   std::map<zx_koid_t, debug_ipc::ComponentInfo> running_component_info_;
   fidl::Binding<fuchsia::sys2::EventStream> event_stream_binding_;
 
-  // Each component launch is assigned an unique filter and id. This is because new components are
-  // attached via the job filter mechanism. When a particular filter attached, we use this id to
-  // know which component launch just happened and we can communicate it to the client.
-  struct ExpectedV1Component {
-    ComponentDescription description;
-    StdioHandles handles;
-    fuchsia::sys::ComponentControllerPtr controller;
-  };
-  std::map<std::string, ExpectedV1Component> expected_v1_components_;
+  // Mapping from the process names to the stdio handles of v1 components that have been launched
+  // but haven't been seen by |OnProcessStart|.
+  std::map<std::string, StdioHandles> expected_v1_components_;
 
-  // References to the running components. These need to be kept alive to keep the components
-  // running.
-  std::map<uint64_t, fuchsia::sys::ComponentControllerPtr> running_v1_components_;
+  // Monikers of v2 components we're expecting.
+  // There's no way to set stdio handle for v2 components yet.
+  std::set<std::string> expected_v2_components_;
 
   fxl::WeakPtrFactory<ZirconComponentManager> weak_factory_;
 };

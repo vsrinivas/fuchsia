@@ -16,6 +16,7 @@
                 "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
                 "fuchsia.sys2.EventSource",
+                "fuchsia.sys2.LifecycleController.root",
                 "fuchsia.sys2.RealmExplorer.root",
                 "fuchsia.sys2.RealmQuery.root",
             ],
@@ -28,6 +29,14 @@
                 "stopped",
             ],
             from: "parent",
+            to: "#debug_agent",
+        },
+        {
+            protocol: [
+                "fuchsia.test.manager.Query",
+                "fuchsia.test.manager.RunBuilder",
+            ],
+            from: "#test_manager",
             to: "#debug_agent",
         },
         {

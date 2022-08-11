@@ -28,14 +28,16 @@ class SystemInterface;
 // framework which would also be managed by this class.
 class ComponentManager {
  public:
+  // ComponentManager needs |SystemInterface::GetParentJobKoid| for |FindComponentInfo|.
+  explicit ComponentManager(SystemInterface* system_interface)
+      : system_interface_(system_interface) {}
   virtual ~ComponentManager() = default;
 
   // Find the component information if the job is the root job of an ELF component.
   virtual std::optional<debug_ipc::ComponentInfo> FindComponentInfo(zx_koid_t job_koid) const = 0;
 
   // Find the component information if the process runs in the context of a component.
-  std::optional<debug_ipc::ComponentInfo> FindComponentInfo(
-      const ProcessHandle& process, SystemInterface& system_interface) const;
+  std::optional<debug_ipc::ComponentInfo> FindComponentInfo(const ProcessHandle& process) const;
 
   // Launches the component with the given command line.
   //
@@ -50,6 +52,9 @@ class ComponentManager {
   // If it was not a component launch, returns false (the caller normally won't know if a launch is
   // a component without asking us, so it isn't necessarily an error).
   virtual bool OnProcessStart(const ProcessHandle& process, StdioHandles* out_stdio) = 0;
+
+ private:
+  SystemInterface* system_interface_;
 };
 
 }  // namespace debug_agent

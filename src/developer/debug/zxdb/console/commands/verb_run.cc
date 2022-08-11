@@ -116,8 +116,7 @@ void LaunchComponent(const Command& cmd) {
 
     if (reply.status.has_error()) {
       // TODO(donosoc): This should interpret the component termination reason values.
-      Console::get()->Output(Err("Could not start component %s: %s", reply.process_name.c_str(),
-                                 reply.status.message().c_str()));
+      Console::get()->Output(Err("Could not start component: %s", reply.status.message().c_str()));
       return;
     }
 
