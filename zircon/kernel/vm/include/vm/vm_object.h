@@ -589,8 +589,10 @@ class VmObject : public VmHierarchyBase,
   // See GetPage for a description of the core functionality.
   // Beyond GetPage this allows for retrieving information about multiple pages, storing them in a
   // |LookupInfo| output struct. The |max_out_pages| is required to be strictly greater than 0, but
-  // not greater than LookupInfo::kMaxPages. |mark_dirty| specifies whether pages looked up should
-  // be marked dirty, e.g. when called from a zx_vmo_write or a write fault.
+  // not greater than LookupInfo::kMaxPages. |mark_dirty| specifies whether pages looked up for a
+  // write (VMM_PF_FLAG_WRITE) should be marked dirty, e.g. when called from a zx_vmo_write or a
+  // write fault. Note that |mark_dirty| only carries any meaning if VMM_PF_FLAG_WRITE is set, as it
+  // is specifying the dirty action on a write.
   //
   // Collecting additional pages essentially treats the VMO's content as immutable, and will not
   // perform page write forking or any page allocations, but may update page tracking metadata. For

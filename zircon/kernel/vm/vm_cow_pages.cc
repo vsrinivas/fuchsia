@@ -2419,6 +2419,9 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
     return ZX_ERR_NOT_FOUND;
   }
 
+  // We assume we are writing from this point on. Otherwise, we should have returned above.
+  DEBUG_ASSERT(writing);
+
   vm_page_t* res_page;
   if (!page_owner->is_hidden_locked() || p == vm_get_zero_page()) {
     // If the page source is preserving content (is a PagerProxy), and is configured to trap dirty
@@ -2430,7 +2433,8 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
     // PrepareForWriteLocked() would do the right thing depending on ShouldTrapDirtyTransitions(),
     // however we choose to avoid the extra work only to have it be a no-op if dirty transitions
     // should not be trapped.
-    if (is_source_preserving_page_content_locked() && page_source_->ShouldTrapDirtyTransitions()) {
+    if (is_source_preserving_page_content_locked() && page_source_->ShouldTrapDirtyTransitions() &&
+        mark_dirty == DirtyTrackingAction::DirtyAllPagesOnWrite) {
       // The only page we can be forking here is the zero page. A non-slice child VMO does not
       // support dirty page tracking.
       DEBUG_ASSERT(p == vm_get_zero_page());
@@ -2470,9 +2474,9 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
     }
     VmPageOrMarker insert = VmPageOrMarker::Page(res_page);
 
-    // We could be allocating a page to replace a zero page marker in a pager-backed VMO. We're
-    // going to write to the page, so mark it Dirty. AddPageLocked below will then insert the page
-    // into the appropriate page queue.
+    // We could be allocating a page to replace a zero page marker in a pager-backed VMO. If we were
+    // asked to dirty the page, mark it Dirty, otherwise mark it Clean. AddPageLocked below will
+    // then insert the page into the appropriate page queue.
     if (is_source_preserving_page_content_locked()) {
       // The only page we can be forking here is the zero page. A non-slice child VMO does not
       // support dirty page tracking.
@@ -2483,8 +2487,12 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
       // The forked page was just allocated, and so cannot be a loaned page.
       DEBUG_ASSERT(!res_page->is_loaned());
 
-      // Mark the forked page dirty.
-      UpdateDirtyStateLocked(res_page, offset, DirtyState::Dirty, /*is_pending_add=*/true);
+      // Mark the forked page dirty or clean depending on the mark_dirty action requested.
+      UpdateDirtyStateLocked(res_page, offset,
+                             mark_dirty == DirtyTrackingAction::DirtyAllPagesOnWrite
+                                 ? DirtyState::Dirty
+                                 : DirtyState::Clean,
+                             /*is_pending_add=*/true);
     }
 
     zx_status_t status = AddPageLocked(&insert, offset, CanOverwriteContent::Zero, nullptr);

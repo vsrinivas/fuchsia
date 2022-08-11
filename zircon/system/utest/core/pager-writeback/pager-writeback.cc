@@ -6112,4 +6112,39 @@ TEST(PagerWriteback, DirtyLargeRange) {
   ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
+// Tests that committing both actual pages and zero page markers does not dirty the pages.
+TEST_WITH_AND_WITHOUT_TRAP_DIRTY(NoDirtyOnCommit, 0) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(2, create_option, &vmo));
+
+  // Supply an actual page and a zero page marker.
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+  zx::vmo empty_src;
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &empty_src));
+  ASSERT_OK(pager.pager().supply_pages(vmo->vmo(), zx_system_get_page_size(),
+                                       zx_system_get_page_size(), empty_src, 0));
+
+  // Commit the entire VMO.
+  ASSERT_OK(vmo->vmo().op_range(ZX_VMO_OP_COMMIT, 0, 2 * zx_system_get_page_size(), nullptr, 0));
+
+  // Both pages should be committed.
+  zx_info_vmo_t info;
+  ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+  ASSERT_EQ(2 * zx_system_get_page_size(), info.committed_bytes);
+
+  // No pages should be dirty.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // The VMO wasn't modified.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // No page requests seen.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+}
+
 }  // namespace pager_tests
