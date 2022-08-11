@@ -6,29 +6,71 @@ library fuchsia.starnix.developer;
 using fuchsia.url;
 using zx;
 
+/// A protocol used to instantiate and interact with components run by Starnix.
+///
+/// Several `Manager` methods allow clients to choose a "galaxy." A galaxy is a Starnix runner
+/// instance configured with a particular system image, init task, etc.
+///
+/// For example, the `starbionic` galaxy runs components in a bionic (Android libc) based
+/// environment.
+///
+/// Some methods allow clients to specify the name of a galaxy explicitly, while others rely on the
+/// `runner` field of a provided component's `.cml`.
+@discoverable
+protocol Manager {
+    /// Connects `bridge_socket` to a vsocket at `port` in the specified galaxy.
+    VsockConnect(resource struct {
+        /// The galaxy to connect the socket to.
+        galaxy string:MAX;
+
+        /// The port to which the socket should be connected.
+        port uint32;
+
+        /// The socket handle that will be used by the galaxy.
+        bridge_socket zx.handle:SOCKET;
+    });
+
+    /// Starts a given component in the `Manager`'s component collection.
+    ///
+    /// This is useful in configurations where `fuchsia.element.Manager` is not available. However,
+    /// if the component is graphical, this will not cause the component to be displayed.
+    Start(struct {
+        /// The URL of the component to start.
+        url fuchsia.url.Url;
+    }) -> ();
+
+    /// Starts a shell component.
+    ///
+    /// The shell component to launch is optionally specified by `params.url`. The galaxy in which
+    /// the shell will run is determined by the `.cml` file of the shell component (i.e., by which
+    /// runner it uses). For example, a shell component with its `runner` set to `starbionic` will
+    /// run in the `starbionic` galaxy.
+    ///
+    /// If no shell component is specified, the `Manager` will choose a default shell component to
+    /// launch and connect to.
+    StartShell(resource struct {
+        params ShellParams;
+        controller server_end:ShellController;
+    });
+};
+
 type ShellParams = resource table {
+    /// A socket handle that will be connected to the shell's standard input. Optional.
     1: standard_in zx.handle:SOCKET;
+
+    /// A socket handle that will be connected to the shell's standard output. Optional.
     2: standard_out zx.handle:SOCKET;
+
+    /// A socket handle that will be connected to the shell's standard error. Optional.
     3: standard_err zx.handle:SOCKET;
+
+    /// The URL of the shell component to launch. If not present, the `Manager` will choose a
+    /// default shell component and launch it in the appropriate galaxy. Optional.
+    4: url fuchsia.url.Url;
 };
 
 protocol ShellController {
     -> OnTerminated(struct {
         return_code int32;
-    });
-};
-
-@discoverable
-protocol Manager {
-    VsockConnect(resource struct {
-        port uint32;
-        bridge_socket zx.handle:SOCKET;
-    });
-    Start(struct {
-        url fuchsia.url.Url;
-    }) -> ();
-    StartShell(resource struct {
-        params ShellParams;
-        controller server_end:ShellController;
     });
 };

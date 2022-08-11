@@ -65,8 +65,8 @@ pub async fn adb_starnix(
             fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
 
         manager_proxy
-            .vsock_connect(ADB_DEFAULT_PORT, sbridge)
-            .map_err(|_| anyhow!("Error connecting to adbd"))?;
+            .vsock_connect("starbionic", ADB_DEFAULT_PORT, sbridge)
+            .map_err(|e| anyhow!("Error connecting to adbd: {:?}", e))?;
 
         fasync::Task::spawn(async move {
             serve_adb_connection(stream, cbridge)

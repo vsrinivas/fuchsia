@@ -19,12 +19,14 @@ use rand::Rng;
 #[fuchsia::main(logging_tags = ["starnix_manager"])]
 async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
+
     fs.dir("svc").add_fidl_service(move |stream| {
         fasync::Task::local(async move {
             serve_starnix_manager(stream).await.expect("failed to start manager.")
         })
         .detach();
     });
+
     fs.take_and_serve_directory_handle()?;
     fs.collect::<()>().await;
 
@@ -49,8 +51,8 @@ pub async fn serve_starnix_manager(
             fstardev::ManagerRequest::StartShell { params, controller, .. } => {
                 start_shell(params, controller).await?;
             }
-            fstardev::ManagerRequest::VsockConnect { port, bridge_socket, .. } => {
-                connect_to_vsock(port, bridge_socket).unwrap_or_else(|e| {
+            fstardev::ManagerRequest::VsockConnect { galaxy, port, bridge_socket, .. } => {
+                connect_to_vsock(port, bridge_socket, &galaxy).unwrap_or_else(|e| {
                     tracing::error!("failed to connect to vsock {:?}", e);
                 });
             }
@@ -82,11 +84,12 @@ async fn start_shell(
         .await
 }
 
-/// Connects `bridge_socket` to the vsocket at `port` in the current galaxy.
+/// Connects `bridge_socket` to the vsocket at `port` in the specified galaxy.
 ///
 /// Returns an error if the FIDL connection to the galaxy failed.
-fn connect_to_vsock(port: u32, bridge_socket: fidl::Socket) -> Result<(), Error> {
-    let galaxy = fclient::connect_to_protocol::<fstargalaxy::ControllerMarker>()?;
+fn connect_to_vsock(port: u32, bridge_socket: fidl::Socket, galaxy: &str) -> Result<(), Error> {
+    let service_prefix = "/".to_string() + galaxy;
+    let galaxy = fclient::connect_to_protocol_at::<fstargalaxy::ControllerMarker>(&service_prefix)?;
 
     galaxy.vsock_connect(port, bridge_socket).context("Failed to call vsock connect on galaxy")
 }

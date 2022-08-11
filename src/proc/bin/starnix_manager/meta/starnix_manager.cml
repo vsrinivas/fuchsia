@@ -41,6 +41,22 @@
         {
             protocol: "fuchsia.starnix.galaxy.Controller",
             from: "#starbionic",
+            path: "/starbionic/fuchsia.starnix.galaxy.Controller",
+        },
+        {
+            protocol: "fuchsia.starnix.galaxy.Controller",
+            from: "#stardroid",
+            path: "/stardroid/fuchsia.starnix.galaxy.Controller",
+        },
+        {
+            protocol: "fuchsia.starnix.galaxy.Controller",
+            from: "#starmium",
+            path: "/starmium/fuchsia.starnix.galaxy.Controller",
+        },
+        {
+            protocol: "fuchsia.starnix.galaxy.Controller",
+            from: "#starless",
+            path: "/starless/fuchsia.starnix.galaxy.Controller",
         },
         {
             protocol: "fuchsia.component.Realm",
