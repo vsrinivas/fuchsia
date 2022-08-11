@@ -2958,7 +2958,7 @@ From //build/go/go_build.gni:22
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/dartlang/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/.gocache"`
 
 From //build/go/go_build.gni:18
 
@@ -6203,7 +6203,7 @@ From //build/security.gni:172
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"dartlang/thinlto-cache"`
+**Current value (from the default):** `"thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
@@ -6437,15 +6437,6 @@ Use link time optimization (LTO).
 **Current value (from the default):** `false`
 
 From //build/config/lto/config.gni:7
-
-### use_modern_input_injection
-Set this to true when configuring gn args to use the modern input injection
-protocol `fuchsia.input.injection.InputDeviceRegistry`. If not set, input-synthesis
-defaults to connect to `fuchsia.ui.input.InputDeviceRegistry`.
-
-**Current value (from the default):** `false`
-
-From //src/lib/ui/input-synthesis/BUILD.gn:14
 
 ### use_netstack3
 DO NOT SET THIS IN A PRODUCT DEFINITION!!  FOR NETSTACK DEVELOPER USE ONLY
