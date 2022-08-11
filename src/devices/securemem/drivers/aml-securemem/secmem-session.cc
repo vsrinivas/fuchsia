@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <iterator>
+#include <limits>
 
 #include <fbl/algorithm.h>
 #include <safemath/checked_math.h>
@@ -423,6 +424,75 @@ bool SecmemSession::DetectIsAdjustAndSkipDeviceSecureModeUpdateAvailable() {
   ZX_ASSERT(enable_result == TEEC_SUCCESS);
 
   return is_adjust_known_available_;
+}
+
+// Defer figuring out max_range_count_ until first request to protect a range, at which point we'll
+// have a big contiguous chunk to use for detection.  Then use AdjustRange() to detect whether a
+// range was really created.
+uint32_t SecmemSession::GetMaxClientUsableProtectedRangeCount(uint64_t phys_base,
+                                                              uint64_t size_bytes) {
+  ZX_DEBUG_ASSERT(is_detect_called_);
+  // Only called once during early init.
+  ZX_DEBUG_ASSERT(!is_get_max_client_usable_protected_range_count_called_);
+  // As needed, we can create a separate earlier properties query to get this alignment before the
+  // phys range is allocated.  At the moment, sysmem just knows.
+  ZX_DEBUG_ASSERT(phys_base % kProtectionRangeGranularity == 0);
+  ZX_DEBUG_ASSERT(size_bytes % kProtectionRangeGranularity == 0);
+
+  is_get_max_client_usable_protected_range_count_called_ = true;
+  if (!is_adjust_known_available_) {
+    LOG(INFO, "!is_adjust_known_available_");
+    return 1;
+  }
+
+  uint32_t create_enable_flags = 0;
+  create_enable_flags |= kEnableFlag_SubCommand_Enable << kEnableFlag_SubCommand_Shift;
+  create_enable_flags |= kEnableFlag_EnableDisable_SkipDeviceSecureModeUpdate;
+  ZX_DEBUG_ASSERT(phys_base <= std::numeric_limits<uint32_t>::max());
+  uint32_t start_0 = static_cast<uint32_t>(phys_base);
+  // We create each range at 128KiB, then adjust the size to 64KiB by shortening at the end.  We do
+  // this because the create doesn't report failure from the FW (legacy behavior) even if the number
+  // of REE-usable HW protection ranges is exhausted, while adjust does return failure.
+  constexpr uint32_t kStartingLength = 2 * kProtectionRangeGranularity;
+  constexpr uint32_t kHoldLength = kProtectionRangeGranularity;
+  uint32_t adjust_flags = 0;
+  adjust_flags |= kEnableFlag_SubCommand_Adjust << kEnableFlag_SubCommand_Shift;
+  // at_start is already 0
+  // longer is already 0
+  // we want 64KiB and the exponent is already 0
+  uint32_t range_ordinal = 0;
+  for (range_ordinal = 0;; ++range_ordinal) {
+    if (start_0 + range_ordinal * kHoldLength + kStartingLength > phys_base + size_bytes) {
+      LOG(INFO, "range count capped due to size of secure heap (unexpected)");
+      break;
+    }
+    TEEC_Result create_result = InvokeProtectMemory(start_0 + range_ordinal * kHoldLength,
+                                                    kStartingLength, create_enable_flags);
+    if (create_result != TEEC_SUCCESS) {
+      LOG(INFO, "FW changed to ever report failure from HW protection range create? - result: 0x%x",
+          create_result);
+      break;
+    }
+    TEEC_Result adjust_result =
+        InvokeProtectMemory(start_0 + range_ordinal * kHoldLength, kStartingLength, adjust_flags);
+    if (adjust_result != TEEC_SUCCESS) {
+      // Normal when we've run out of REE-usable ranges, so don't log anything here.
+      break;
+    }
+  };
+  uint32_t range_count = range_ordinal;
+  LOG(INFO, "range_count: %u", range_count);
+  uint32_t disable_flags = 0;
+  disable_flags |= kEnableFlag_SubCommand_Disable << kEnableFlag_SubCommand_Shift;
+  disable_flags |= kEnableFlag_EnableDisable_SkipDeviceSecureModeUpdate;
+  for (range_ordinal = 0; range_ordinal < range_count; ++range_ordinal) {
+    TEEC_Result disable_result =
+        InvokeProtectMemory(start_0 + range_ordinal * kHoldLength, kHoldLength, disable_flags);
+    // The FW never reports a failure from disable (legacy behavior).  If this assert does fire,
+    // this process will exit, and sysmem will exit, and the device will reboot.
+    ZX_ASSERT_MSG(disable_result == TEEC_SUCCESS, "disable_result: 0x%x", disable_result);
+  }
+  return range_count;
 }
 
 TEEC_Result SecmemSession::ProtectMemoryRange(uint32_t start, uint32_t length,

@@ -1297,7 +1297,7 @@
         "name": "fuchsia.sysmem/SecureMem.DeleteSecureHeapPhysicalRange"
     },
     {
-        "declaration": "(fuchsia.sysmem/HeapType heap) -> (fuchsia.sysmem/SecureMem_GetPhysicalSecureHeapProperties_Result result)",
+        "declaration": "(fuchsia.sysmem/SecureHeapAndRange entire_heap) -> (fuchsia.sysmem/SecureMem_GetPhysicalSecureHeapProperties_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/SecureMem.GetPhysicalSecureHeapProperties"
     },

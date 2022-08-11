@@ -16,7 +16,6 @@
 #include <fbl/algorithm.h>
 #include <safemath/safe_math.h>
 
-#include "fidl/fuchsia.sysmem/cpp/wire_types.h"
 #include "lib/async/cpp/task.h"
 #include "lib/fidl/llcpp/arena.h"
 #include "lib/fidl/llcpp/vector_view.h"
@@ -25,7 +24,6 @@
 namespace {
 
 constexpr uint32_t kProtectedRangeGranularity = 64u * 1024;
-constexpr uint32_t kMaxClientUsableProtectedRangeCount = 10;
 
 bool VerifyRange(uint64_t physical_address, size_t size_bytes, uint32_t required_alignment) {
   if (physical_address % required_alignment != 0) {
@@ -291,7 +289,7 @@ void SysmemSecureMemServer::GetPhysicalSecureHeapProperties(
   fidl::Arena allocator;
   fuchsia_sysmem::wire::SecureHeapProperties properties;
   zx_status_t status =
-      GetPhysicalSecureHeapPropertiesInternal(request->heap, allocator, &properties);
+      GetPhysicalSecureHeapPropertiesInternal(request->entire_heap, allocator, &properties);
   if (status != ZX_OK) {
     LOG(INFO, "GetPhysicalSecureHeapPropertiesInternal() failed - status: %d", status);
     completer.ReplyError(status);
@@ -467,23 +465,44 @@ zx_status_t SysmemSecureMemServer::GetPhysicalSecureHeapsInternal(
 }
 
 zx_status_t SysmemSecureMemServer::GetPhysicalSecureHeapPropertiesInternal(
-    fuchsia_sysmem::wire::HeapType heap, fidl::AnyArena& allocator,
+    const fuchsia_sysmem::wire::SecureHeapAndRange& entire_heap, fidl::AnyArena& allocator,
     fuchsia_sysmem::wire::SecureHeapProperties* properties) {
   ZX_DEBUG_ASSERT(thrd_current() == loop_thread_);
+
+  if (!entire_heap.has_heap()) {
+    LOG(INFO, "!entire_heap.has_heap()");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (!entire_heap.has_range()) {
+    LOG(INFO, "!entire_heap.has_range()");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (!entire_heap.range().has_physical_address()) {
+    LOG(INFO, "!entire_heap.range().has_physical_address()");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (!entire_heap.range().has_size_bytes()) {
+    LOG(INFO, "!entire_heap.range().has_size_bytes()");
+    return ZX_ERR_INVALID_ARGS;
+  }
 
   if (!TrySetupSecmemSession()) {
     // Logging in TrySetupSecmemSession
     return ZX_ERR_INTERNAL;
   }
 
-  if (heap != fuchsia_sysmem::wire::HeapType::kAmlogicSecure) {
+  if (entire_heap.heap() != fuchsia_sysmem::wire::HeapType::kAmlogicSecure) {
     LOG(INFO, "heap != kAmlogicSecure");
     return ZX_ERR_INVALID_ARGS;
   }
 
   is_dynamic_ = secmem_session_->DetectIsAdjustAndSkipDeviceSecureModeUpdateAvailable();
-  max_range_count_ = is_dynamic_ ? kMaxClientUsableProtectedRangeCount : 1;
   is_dynamic_checked_ = true;
+  max_range_count_ = secmem_session_->GetMaxClientUsableProtectedRangeCount(
+      entire_heap.range().physical_address(), entire_heap.range().size_bytes());
 
   auto builder = fuchsia_sysmem::wire::SecureHeapProperties::Builder(allocator);
   builder.heap(fuchsia_sysmem::wire::HeapType::kAmlogicSecure);

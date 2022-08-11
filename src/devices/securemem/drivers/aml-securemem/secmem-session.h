@@ -25,6 +25,8 @@ class SecmemSession {
   ~SecmemSession();
 
   [[nodiscard]] bool DetectIsAdjustAndSkipDeviceSecureModeUpdateAvailable();
+  [[nodiscard]] uint32_t GetMaxClientUsableProtectedRangeCount(uint64_t phys_base,
+                                                               uint64_t size_bytes);
   // If !DetectIsAdjustAndSkipDeviceSecureModeUpdateAvailable(), is_skip_device_secure_mode_update
   // must be false.
   [[nodiscard]] TEEC_Result ProtectMemoryRange(uint32_t start, uint32_t length,
@@ -59,6 +61,7 @@ class SecmemSession {
 
   bool is_detect_called_ = false;
   bool is_adjust_known_available_ = false;
+  bool is_get_max_client_usable_protected_range_count_called_ = false;
 };
 
 #endif  // SRC_DEVICES_SECUREMEM_DRIVERS_AML_SECUREMEM_SECMEM_SESSION_H_

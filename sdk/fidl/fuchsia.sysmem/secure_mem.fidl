@@ -51,6 +51,21 @@ protocol SecureMem {
 
     /// This request from sysmem to the securemem driver gets the properties of
     /// a protected/secure heap.
+    ///
+    /// This only handles heaps with a single contiguous physical extent.
+    ///
+    /// The heap's entire physical range is indicated in case this request needs
+    /// some physical space to auto-detect how many ranges are REE-usable.  Any
+    /// temporary HW protection ranges will be deleted before this request
+    /// completes.
+    @available(added=9)
+    GetPhysicalSecureHeapProperties(struct {
+        entire_heap SecureHeapAndRange;
+    }) -> (struct {
+        properties SecureHeapProperties;
+    }) error zx.status;
+
+    @available(added=7, deprecated=8, removed=9)
     GetPhysicalSecureHeapProperties(struct {
         heap HeapType;
     }) -> (struct {

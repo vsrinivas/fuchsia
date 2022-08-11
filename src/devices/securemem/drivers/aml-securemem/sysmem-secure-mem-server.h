@@ -16,6 +16,7 @@
 
 #include <tee-client-api/tee_client_api.h>
 
+#include "fidl/fuchsia.sysmem/cpp/wire_types.h"
 #include "secmem-session.h"
 
 // This is used with fidl::BindSingleInFlightOnly() to dispatch fuchsia::sysmem::Tee requests.
@@ -107,7 +108,7 @@ class SysmemSecureMemServer : public fidl::WireServer<fuchsia_sysmem::SecureMem>
   zx_status_t GetPhysicalSecureHeapsInternal(
       fidl::AnyArena* allocator, fuchsia_sysmem::wire::SecureHeapsAndRanges* heaps_and_ranges);
   zx_status_t GetPhysicalSecureHeapPropertiesInternal(
-      fuchsia_sysmem::wire::HeapType heap, fidl::AnyArena& allocator,
+      const fuchsia_sysmem::wire::SecureHeapAndRange& entire_heap, fidl::AnyArena& allocator,
       fuchsia_sysmem::wire::SecureHeapProperties* properties);
   zx_status_t AddSecureHeapPhysicalRangeInternal(
       fuchsia_sysmem::wire::SecureHeapAndRange heap_range);
