@@ -12,8 +12,8 @@ use {
 /// Result type alias for brevity.
 pub type Result<T> = result::Result<T, Error>;
 
-/// The Error type of the fuchsia-media library
-#[derive(Error, Debug, PartialEq)]
+/// The Error type of the fuchsia-audio-device-output
+#[derive(Error, Debug)]
 pub enum Error {
     /// The value that was received was out of range
     #[error("Value was out of range")]
@@ -38,6 +38,10 @@ pub enum Error {
     /// Other IO Error
     #[error("Encountered an IO error: {}", _0)]
     IOError(zx::Status),
+
+    /// Encountered a FIDL error reading a request
+    #[error("Encountered an error on a RequestStream: {}", _0)]
+    RequestStreamError(#[from] fidl::Error),
 
     /// Action tried in an invalid state
     #[error("Tried to do an action in an invalid state")]
@@ -69,6 +73,21 @@ pub enum AudioSampleFormat {
     TwentyFourIn32 { unsigned: bool, invert_endian: bool },
     ThirtyTwo { unsigned: bool, invert_endian: bool },
     Float { invert_endian: bool },
+}
+
+impl AudioSampleFormat {
+    fn is_unsigned(&self) -> bool {
+        use AudioSampleFormat::*;
+        match self {
+            Eight { unsigned }
+            | Sixteen { unsigned, .. }
+            | TwentyFourPacked { unsigned, .. }
+            | TwentyIn32 { unsigned, .. }
+            | TwentyFourIn32 { unsigned, .. }
+            | ThirtyTwo { unsigned, .. } => *unsigned,
+            Float { .. } => false,
+        }
+    }
 }
 
 /// Constructs a AudioSampleFormat from a fidl_fuchsia_hardware_audio::SampleFormat.
@@ -136,5 +155,25 @@ impl AudioSampleFormat {
             | AudioSampleFormat::Float { .. } => 4,
         };
         Ok(channels * bytes_per_channel)
+    }
+}
+
+impl std::fmt::Display for AudioSampleFormat {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.is_unsigned() {
+            f.write_str("u")?;
+        } else {
+            f.write_str("i")?;
+        }
+        use AudioSampleFormat::*;
+        match self {
+            Eight { .. } => f.write_str("8"),
+            Sixteen { .. } => f.write_str("16"),
+            TwentyFourPacked { .. } => f.write_str("24p"),
+            TwentyIn32 { .. } => f.write_str("20(32)"),
+            TwentyFourIn32 { .. } => f.write_str("24(32)"),
+            ThirtyTwo { .. } => f.write_str("32"),
+            Float { .. } => f.write_str("float"),
+        }
     }
 }

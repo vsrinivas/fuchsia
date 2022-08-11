@@ -359,14 +359,17 @@ mod tests {
         let _handle = vmo.set_format(TEST_FPS, TEST_FORMAT, TEST_CHANNELS, TEST_FRAMES, 0).unwrap();
 
         let start_time = fasync::Time::now();
-        assert_eq!(Ok(()), vmo.start(start_time));
-        assert_eq!(Err(Error::InvalidState), vmo.start(start_time));
+        vmo.start(start_time).unwrap();
+        match vmo.start(start_time) {
+            Err(Error::InvalidState) => {}
+            x => panic!("Expected Err(InvalidState) from double start but got {:?}", x),
+        };
 
-        assert_eq!(Ok(true), vmo.stop());
+        assert_eq!(true, vmo.stop().unwrap());
         // stop is idempotent, but will return false if it was already stopped
-        assert_eq!(Ok(false), vmo.stop());
+        assert_eq!(false, vmo.stop().unwrap());
 
-        assert_eq!(Ok(()), vmo.start(start_time));
+        vmo.start(start_time).unwrap();
     }
 
     fn test_frames_before_exact(
@@ -377,7 +380,7 @@ mod tests {
     ) {
         let _ = vmo.stop();
         let start_time = fasync::Time::from_nanos(time_nanos);
-        assert_eq!(Ok(()), vmo.start(start_time));
+        vmo.start(start_time).unwrap();
         assert_eq!(frames, vmo.frames_before(start_time + duration));
     }
 
@@ -387,7 +390,7 @@ mod tests {
         let _exec = fasync::TestExecutor::new().expect("executor");
 
         let start_time = fasync::Time::now();
-        assert_eq!(Ok(()), vmo.start(start_time));
+        vmo.start(start_time).unwrap();
 
         assert_eq!(0, vmo.frames_before(start_time));
 
@@ -417,7 +420,7 @@ mod tests {
         exec.set_fake_time(fasync::Time::from_nanos(1_000_000_000));
 
         let start_time = fasync::Time::now();
-        assert_eq!(Ok(()), vmo.start(start_time));
+        vmo.start(start_time).unwrap();
 
         let half_dur = TEST_VMO_DURATION / 2;
         let quart_frames = TEST_FRAMES / 4;
@@ -490,7 +493,7 @@ mod tests {
         res.expect_pending("should be pending before start");
 
         let start_time = fasync::Time::now();
-        assert_eq!(Ok(()), vmo.start(start_time));
+        vmo.start(start_time).unwrap();
 
         // Woken when we start.
         assert_eq!(count, 1);
@@ -533,7 +536,7 @@ mod tests {
 
         // Start in the past so we can be sure the frames are in the past.
         let start_time = fasync::Time::now() - half_dur;
-        assert_eq!(Ok(()), vmo.start(start_time));
+        vmo.start(start_time).unwrap();
 
         let mut no_wake_cx = Context::from_waker(futures_test::task::panic_waker_ref());
         let res = vmo.poll_frames(0, 0, &mut no_wake_cx);
@@ -553,7 +556,7 @@ mod tests {
 
         let start_time = fasync::Time::now();
 
-        assert_eq!(Ok(()), vmo.start(start_time));
+        vmo.start(start_time).unwrap();
 
         // Just before the frame finishes, we shouldn't be able to get it.
         exec.set_fake_time(start_time + THREE_FRAME_NANOS.nanos() - 1.nanos());

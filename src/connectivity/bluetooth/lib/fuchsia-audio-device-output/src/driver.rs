@@ -7,13 +7,14 @@ use {
     async_helpers::maybe_stream::MaybeStream,
     fidl::{endpoints::ClientEnd, prelude::*},
     fidl_fuchsia_hardware_audio::*,
-    fidl_fuchsia_media, fuchsia_async as fasync,
+    fidl_fuchsia_media, fuchsia_async as fasync, fuchsia_inspect as inspect,
+    fuchsia_inspect_derive::{AttachError, IValue, Inspect},
     fuchsia_zircon::{self as zx, DurationNum},
     futures::{
         select,
         stream::{FusedStream, Stream},
         task::{Context, Poll},
-        StreamExt,
+        FutureExt, StreamExt,
     },
     parking_lot::Mutex,
     std::{pin::Pin, sync::Arc},
@@ -23,27 +24,60 @@ use {
 use crate::frame_vmo;
 use crate::types::{AudioSampleFormat, Error, Result};
 
+enum OutputOrTask {
+    Output(SoftPcmOutput),
+    Task(fasync::Task<Result<()>>),
+    Complete,
+}
+
+impl OutputOrTask {
+    fn start(&mut self) {
+        *self = match std::mem::replace(self, OutputOrTask::Complete) {
+            OutputOrTask::Output(pcm) => {
+                OutputOrTask::Task(fasync::Task::spawn(pcm.process_requests()))
+            }
+            x => x,
+        }
+    }
+}
+
 /// A Stream that produces audio frames.
 /// Usually acquired via SoftPcmOutput::take_frame_stream().
 // TODO: return the time that the first frame is meant to be presented?
 pub struct AudioFrameStream {
-    /// The VMO that is receiving the frames.
+    /// Handle to the VMO that is receiving the frames.
     frame_vmo: Arc<Mutex<frame_vmo::FrameVmo>>,
     /// The index of the next frame we should retrieve.
     next_frame_index: usize,
     /// Minimum number of frames to return.
     min_packet_frames: usize,
-    /// Handle to remove the audio device processing future when this is dropped.
-    control_handle: StreamConfigControlHandle,
+    /// SoftPcmOutput this is attached to, or the task currently processing the FIDL requests.
+    output: OutputOrTask,
+    /// Inspect node
+    inspect: inspect::Node,
 }
 
 impl AudioFrameStream {
-    fn new(
-        frame_vmo: Arc<Mutex<frame_vmo::FrameVmo>>,
-        min_packet_frames: usize,
-        control_handle: StreamConfigControlHandle,
-    ) -> AudioFrameStream {
-        AudioFrameStream { frame_vmo, next_frame_index: 0, min_packet_frames, control_handle }
+    fn new(output: SoftPcmOutput) -> AudioFrameStream {
+        AudioFrameStream {
+            frame_vmo: output.frame_vmo.clone(),
+            next_frame_index: 0,
+            min_packet_frames: output.min_packet_frames,
+            output: OutputOrTask::Output(output),
+            inspect: Default::default(),
+        }
+    }
+
+    /// Start the requests task if not started, and poll the task.
+    fn poll_task(&mut self, cx: &mut Context<'_>) -> Poll<Result<()>> {
+        if let OutputOrTask::Complete = &self.output {
+            return Poll::Ready(Err(Error::InvalidState));
+        }
+        if let OutputOrTask::Task(ref mut task) = &mut self.output {
+            return task.poll_unpin(cx);
+        }
+        self.output.start();
+        self.poll_task(cx)
     }
 }
 
@@ -51,6 +85,10 @@ impl Stream for AudioFrameStream {
     type Item = Result<Vec<u8>>;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        if let Poll::Ready(r) = self.poll_task(cx) {
+            self.output = OutputOrTask::Complete;
+            return Poll::Ready(r.err().map(Result::Err));
+        }
         let result = {
             let mut lock = self.frame_vmo.lock();
             futures::ready!(lock.poll_frames(self.next_frame_index, self.min_packet_frames, cx))
@@ -73,13 +111,24 @@ impl Stream for AudioFrameStream {
 
 impl FusedStream for AudioFrameStream {
     fn is_terminated(&self) -> bool {
-        false
+        match self.output {
+            OutputOrTask::Complete => true,
+            _ => false,
+        }
     }
 }
 
-impl Drop for AudioFrameStream {
-    fn drop(&mut self) {
-        self.control_handle.shutdown();
+impl Inspect for &mut AudioFrameStream {
+    fn iattach(
+        self,
+        parent: &fuchsia_inspect::Node,
+        name: impl AsRef<str>,
+    ) -> core::result::Result<(), AttachError> {
+        self.inspect = parent.create_child(name.as_ref());
+        if let OutputOrTask::Output(ref mut o) = &mut self.output {
+            return o.iattach(&self.inspect, "soft_pcm_output");
+        }
+        Ok(())
     }
 }
 
@@ -101,6 +150,7 @@ pub(crate) fn frames_from_duration(frames_per_second: usize, duration: fasync::D
 
 /// A software fuchsia audio output, which implements Audio Driver Streaming Interface
 /// as defined in //docs/concepts/drivers/driver_interfaces/audio_streaming.md
+#[derive(Inspect)]
 pub struct SoftPcmOutput {
     /// The Stream channel handles format negotiation, plug detection, and gain
     stream_config_stream: StreamConfigRequestStream,
@@ -136,6 +186,28 @@ pub struct SoftPcmOutput {
 
     /// Replied to gain state watch.
     gain_state_replied: bool,
+
+    /// Inspect node
+    #[inspect(forward)]
+    inspect: SoftPcmInspect,
+}
+
+#[derive(Default, Inspect)]
+struct SoftPcmInspect {
+    inspect_node: inspect::Node,
+    ring_buffer_format: IValue<Option<String>>,
+    frame_vmo_status: IValue<Option<String>>,
+}
+
+impl SoftPcmInspect {
+    fn record_current_format(&mut self, current: &(u32, AudioSampleFormat, u16)) {
+        self.ring_buffer_format
+            .iset(Some(format!("{} rate: {} channels: {}", current.1, current.0, current.2)));
+    }
+
+    fn record_vmo_status(&mut self, new: &str) {
+        self.frame_vmo_status.iset(Some(new.to_owned()));
+    }
 }
 
 impl SoftPcmOutput {
@@ -192,15 +264,13 @@ impl SoftPcmOutput {
             frame_vmo: Arc::new(Mutex::new(frame_vmo::FrameVmo::new()?)),
             plug_state_replied: false,
             gain_state_replied: false,
+            inspect: Default::default(),
         };
 
-        let rb = stream.frame_vmo.clone();
-        let control = stream.stream_config_stream.control_handle().clone();
-        fasync::Task::spawn(stream.process_requests()).detach();
-        Ok((client, AudioFrameStream::new(rb, min_packet_frames, control)))
+        Ok((client, AudioFrameStream::new(stream)))
     }
 
-    async fn process_requests(mut self) {
+    async fn process_requests(mut self) -> Result<()> {
         loop {
             select! {
                 stream_config_request = self.stream_config_stream.next() => {
@@ -212,11 +282,11 @@ impl SoftPcmOutput {
                         },
                         Some(Err(e)) => {
                             warn!("stream config error: {:?}, stopping", e);
-                            return
+                            return Err(e.into());
                         },
                         None => {
-                            warn!("no stream config error, stopping");
-                            return
+                            warn!("stream config disconnected, stopping");
+                            return Ok(());
                         },
                     }
                 }
@@ -228,12 +298,12 @@ impl SoftPcmOutput {
                             }
                         },
                         Some(Err(e)) => {
-                            warn!("ring buffer error: {:?}, stopping", e);
-                            return
+                            warn!("ring buffer error: {:?}, dropping ringbuffer", e);
+                            let _ = MaybeStream::take(&mut self.ring_buffer_stream);
                         },
                         None => {
-                            warn!("no ring buffer error, stopping");
-                            return
+                            warn!("ring buffer finished, dropping");
+                            let _ = MaybeStream::take(&mut self.ring_buffer_stream);
                         },
                     }
                 }
@@ -281,8 +351,9 @@ impl SoftPcmOutput {
             StreamConfigRequest::CreateRingBuffer { format, ring_buffer, control_handle: _ } => {
                 let pcm = (format.pcm_format.ok_or(format_err!("No pcm_format included")))?;
                 self.ring_buffer_stream.set(ring_buffer.into_stream()?);
-                self.current_format =
-                    Some((pcm.frame_rate, pcm.into(), pcm.number_of_channels.into()))
+                let current = (pcm.frame_rate, pcm.into(), pcm.number_of_channels.into());
+                self.inspect.record_current_format(&current);
+                self.current_format = Some(current);
             }
             StreamConfigRequest::WatchGainState { responder } => {
                 if self.gain_state_replied == true {
@@ -363,6 +434,7 @@ impl SoftPcmOutput {
                 // Require a minimum amount of frames for three fetches of packets.
                 let min_frames_from_duration = 3 * self.min_packet_frames as u32;
                 let ring_buffer_frames = min_frames.max(min_frames_from_duration);
+                self.inspect.record_vmo_status("gotten");
                 match self.frame_vmo.lock().set_format(
                     fps,
                     format,
@@ -370,7 +442,8 @@ impl SoftPcmOutput {
                     ring_buffer_frames as usize,
                     clock_recovery_notifications_per_ring,
                 ) {
-                    Err(_) => {
+                    Err(e) => {
+                        warn!("Error on vmo set format: {:?}", e);
                         let mut error = Err(GetVmoError::InternalError);
                         responder.send(&mut error)?;
                     }
@@ -382,6 +455,7 @@ impl SoftPcmOutput {
             }
             RingBufferRequest::Start { responder } => {
                 let time = fasync::Time::now();
+                self.inspect.record_vmo_status(&format!("started @ {time:?}"));
                 match self.frame_vmo.lock().start(time.into()) {
                     Ok(()) => responder.send(time.into_nanos() as i64)?,
                     Err(e) => {
@@ -395,6 +469,7 @@ impl SoftPcmOutput {
                     if !stopped {
                         info!("Stopping an unstarted ring buffer");
                     }
+                    self.inspect.record_vmo_status(&format!("stopped @ {:?}", fasync::Time::now()));
                     responder.send()?;
                 }
                 Err(e) => {
@@ -419,6 +494,7 @@ mod tests {
 
     use fidl_fuchsia_media::{AudioChannelId, AudioPcmMode, PcmFormat};
 
+    use async_utils::PollExt;
     use fixture::fixture;
     use futures::future;
 
@@ -505,6 +581,10 @@ mod tests {
     #[fuchsia::test]
     #[rustfmt::skip]
     fn soft_pcm_audio_out(mut exec: fasync::TestExecutor, stream_config: StreamConfigProxy, mut frame_stream: AudioFrameStream) {
+        let mut frame_fut = frame_stream.next();
+        // Poll the frame stream, which should start the processing of proxy requests.
+        exec.run_until_stalled(&mut frame_fut).expect_pending("no frames yet");
+
         let result = exec.run_until_stalled(&mut stream_config.get_properties());
         assert!(result.is_ready());
         let props1 = match result {
@@ -596,9 +676,7 @@ mod tests {
             panic!("start error");
         }
 
-        let mut frame_fut = frame_stream.next();
-        let result = exec.run_until_stalled(&mut frame_fut);
-        assert!(!result.is_ready());
+        exec.run_until_stalled(&mut frame_fut).expect_pending("no frames until time passes");
 
         // Run the ring buffer for a bit over 1 second.
         exec.set_fake_time(fasync::Time::after(zx::Duration::from_millis(1001)));
@@ -638,6 +716,9 @@ mod tests {
         stream_config: StreamConfigProxy,
         mut frame_stream: AudioFrameStream,
     ) {
+        let mut frame_fut = frame_stream.next();
+        // Poll the frame stream, which should start the processing of proxy requests.
+        exec.run_until_stalled(&mut frame_fut).expect_pending("no frames at the start");
         let _stream_config_properties = exec.run_until_stalled(&mut stream_config.get_properties());
         let _formats = exec.run_until_stalled(&mut stream_config.get_supported_formats());
         let (ring_buffer, server) = fidl::endpoints::create_proxy::<RingBufferMarker>()
@@ -654,6 +735,7 @@ mod tests {
             }),
             ..Format::EMPTY
         };
+        let mut frame_fut = frame_stream.next();
 
         let result = stream_config.create_ring_buffer(format, server);
         assert!(result.is_ok());
@@ -687,8 +769,6 @@ mod tests {
         let mut position_info = ring_buffer.watch_clock_recovery_position_info();
         let result = exec.run_until_stalled(&mut position_info);
         assert!(!result.is_ready());
-
-        let mut frame_fut = frame_stream.next();
 
         // Now advance in between notifications, with a 2 seconds total in the ring buffer
         // and 10 notifications per ring we can get watch notifications every 200 msecs.

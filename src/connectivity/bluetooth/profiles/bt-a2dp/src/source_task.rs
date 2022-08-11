@@ -68,8 +68,9 @@ impl SourceTaskBuilder {
             frames_per_second: codec_config.sampling_frequency()?,
             channel_map,
         };
-        let source_stream = sources::build_stream(&peer_id, pcm_format.clone(), self.source_type)
-            .map_err(|_e| MediaTaskError::ConfigurationNotSupported)?;
+        let source_stream =
+            sources::build_stream(&peer_id, pcm_format.clone(), self.source_type, None)
+                .map_err(|_e| MediaTaskError::ConfigurationNotSupported)?;
         if let Err(e) = EncodedStream::build(pcm_format.clone(), source_stream, codec_config) {
             trace!("SourceTaskBuilder: can't build encoded stream: {:?}", e);
             return Err(MediaTaskError::Other(format!("Can't build encoded stream: {}", e)));
@@ -133,9 +134,13 @@ impl Inspect for &mut ConfiguredSourceTask {
 
 impl MediaTaskRunner for ConfiguredSourceTask {
     fn start(&mut self, stream: MediaStream) -> Result<Box<dyn MediaTask>, MediaTaskError> {
-        let source_stream =
-            sources::build_stream(&self.peer_id, self.pcm_format.clone(), self.source_type)
-                .map_err(|e| MediaTaskError::Other(format!("Building stream: {}", e)))?;
+        let source_stream = sources::build_stream(
+            &self.peer_id,
+            self.pcm_format.clone(),
+            self.source_type,
+            Some(&self.inspect),
+        )
+        .map_err(|e| MediaTaskError::Other(format!("Building stream: {}", e)))?;
         let encoded_stream =
             EncodedStream::build(self.pcm_format.clone(), source_stream, &self.codec_config)
                 .map_err(|e| MediaTaskError::Other(format!("Can't build encoded stream: {}", e)))?;

@@ -7,6 +7,7 @@ use fidl_fuchsia_media::{AudioDeviceEnumeratorMarker, PcmFormat};
 use fuchsia_async as fasync;
 use fuchsia_audio_device_output::driver::SoftPcmOutput;
 use fuchsia_bluetooth::types::PeerId;
+use fuchsia_inspect_derive::Inspect;
 use fuchsia_zircon::{self as zx, DurationNum};
 use futures::stream::{BoxStream, FusedStream};
 use futures::task::{Context, Poll};
@@ -146,9 +147,16 @@ pub fn build_stream(
     peer_id: &PeerId,
     pcm_format: PcmFormat,
     source_type: AudioSourceType,
+    inspect_parent: Option<&fuchsia_inspect::Node>,
 ) -> Result<BoxStream<'static, fuchsia_audio_device_output::Result<Vec<u8>>>, Error> {
     Ok(match source_type {
-        AudioSourceType::AudioOut => AudioOutStream::new(peer_id, pcm_format)?.boxed(),
+        AudioSourceType::AudioOut => {
+            let mut stream = AudioOutStream::new(peer_id, pcm_format)?;
+            if let Some(parent) = inspect_parent {
+                let _ = stream.iattach(parent, "audio_out_stream");
+            }
+            stream.boxed()
+        }
         AudioSourceType::BigBen => SawWaveStream::new_big_ben(pcm_format).boxed(),
     })
 }

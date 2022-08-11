@@ -5,16 +5,14 @@
 use {
     anyhow::Context,
     fidl_fuchsia_media::{AudioChannelId, AudioDeviceEnumeratorMarker, AudioPcmMode, PcmFormat},
-    fuchsia_async as fasync,
     fuchsia_audio_device_output::driver::SoftPcmOutput,
     fuchsia_zircon::DurationNum,
     futures::StreamExt,
     tracing::info,
 };
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main(logging_tags = ["audio-device-output-harness"])]
 async fn main() -> Result<(), anyhow::Error> {
-    fuchsia_syslog::init().expect("Unable to initialize logger");
     const LOCAL_MONOTONIC_CLOCK_DOMAIN: u32 = 0;
     let pcm_format = PcmFormat {
         pcm_mode: AudioPcmMode::Linear,
@@ -33,13 +31,20 @@ async fn main() -> Result<(), anyhow::Error> {
         12.millis(),
     )?;
 
+    // Spawn a task to read all the frames from the audio.
+    // This should be started before adding it to the AudioDeviceEnumerator as it will not respond
+    // to the enumerator test queries until it is active.
+    let audio_read_task = fuchsia_async::Task::spawn(async move {
+        info!("Starting frame stream read loop");
+        while let Some(Ok(_frame)) = frame_stream.next().await {}
+        info!("Frame stream loop completed");
+    });
+
     let svc = fuchsia_component::client::connect_to_protocol::<AudioDeviceEnumeratorMarker>()
         .context("Failed to connect to AudioDeviceEnumerator")?;
     svc.add_device_by_channel("AudioOutHarness", false, client)?;
 
-    info!("Starting frame stream read loop");
-    while let Some(Ok(_frame)) = frame_stream.next().await {}
-    info!("Frame stream loop done");
+    audio_read_task.await;
 
     Ok(())
 }

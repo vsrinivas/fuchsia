@@ -391,7 +391,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn sink_task_works_without_session() {
         let mut exec = fasync::TestExecutor::new().expect("executor should build");
         let (proxy, mut session_requests) =
@@ -442,7 +442,7 @@ mod tests {
         };
     }
 
-    #[test]
+    #[fuchsia::test]
     fn dropped_task_reports_metrics() {
         let mut exec = fasync::TestExecutor::new().expect("executor should build");
         let (send, mut recv) = fake_cobalt_sender();
@@ -494,7 +494,7 @@ mod tests {
         (exec, sbc_config, inspect)
     }
 
-    #[test]
+    #[fuchsia::test]
     /// Test that cobalt metrics are sent after stream ends
     fn test_cobalt_metrics() {
         let mut exec = fasync::TestExecutor::new().expect("executor should build");
@@ -537,7 +537,7 @@ mod tests {
         })
     }
 
-    #[test]
+    #[fuchsia::test]
     fn media_stream_empty() {
         let (mut exec, sbc_config, inspect) = setup_media_stream_test();
         let (player, _sink_requests, _consumer_requests, _vmo) =
@@ -555,7 +555,7 @@ mod tests {
         };
     }
 
-    #[test]
+    #[fuchsia::test]
     fn media_stream_error() {
         let (mut exec, sbc_config, inspect) = setup_media_stream_test();
         let (player, _sink_requests, _consumer_requests, _vmo) =
@@ -581,7 +581,7 @@ mod tests {
         futures::stream::repeat_with(|| Ok(vec![0xF0, 0x9F, 0x92, 0x96]))
     }
 
-    #[test]
+    #[fuchsia::test]
     fn media_player_fails_start() {
         let (mut exec, sbc_config, inspect) = setup_media_stream_test();
         let (player, mut sink_requests, mut consumer_requests, _vmo) =
@@ -612,7 +612,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn media_player_fails_generation() {
         let (mut exec, _sbc_config, inspect) = setup_media_stream_test();
         let player_gen = Box::new(|| Err(anyhow::format_err!("No player available")));
@@ -628,7 +628,7 @@ mod tests {
         };
     }
 
-    #[test]
+    #[fuchsia::test]
     fn media_stream_stats() {
         let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor should build");
         let sbc_config = MediaCodecConfig::min_sbc();
@@ -706,7 +706,7 @@ mod tests {
         };
     }
 
-    #[test]
+    #[fuchsia::test]
     fn media_stream_task_reopens_player() {
         let mut exec = fasync::TestExecutor::new_with_fake_time().expect("executor should build");
 
