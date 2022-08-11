@@ -159,7 +159,13 @@ void Dwc2::HandleInEpInterrupt() {
         DIEPINT::Get(ep_num).ReadFrom(mmio).set_ahberr(1).WriteTo(mmio);
       }
       if (diepint.timeout()) {
-        zxlogf(ERROR, "Unhandled interrupt diepint.timeout for ep_num %u", ep_num);
+        if (ep_num == DWC_EP0_IN) {
+          zxlogf(ERROR, "Unhandled IN EP0 diepint.timeout at txn phase %d", ep0_state_);
+        } else if (ep_num == DWC_EP0_OUT) {
+          zxlogf(ERROR, "Unhandled OUT EP0 diepint.timeout at txn phase %d", ep0_state_);
+        } else {
+          zxlogf(ERROR, "Unhandled interrupt diepint.timeout for ep_num %u", ep_num);
+        }
         DIEPINT::Get(ep_num).ReadFrom(mmio).set_timeout(1).WriteTo(mmio);
       }
       if (diepint.intktxfemp()) {
