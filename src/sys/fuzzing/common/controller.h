@@ -66,6 +66,9 @@ class ControllerImpl : public Controller {
   // Returns a promise to configure the runner if needed.
   ZxPromise<> Initialize();
 
+  // Sends the "done marker" for long-running workflows as described in `fuchsia.fuzzer.Controller`.
+  void Finish();
+
   fidl::Binding<Controller> binding_;
   ExecutorPtr executor_;
   RunnerPtr runner_;

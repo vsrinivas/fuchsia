@@ -8,12 +8,16 @@
 #include <zircon/sanitizer.h>
 #include <zircon/status.h>
 
+#include <iostream>
+
 #include "src/sys/fuzzing/common/async-socket.h"
 #include "src/sys/fuzzing/common/async-types.h"
 #include "src/sys/fuzzing/common/corpus-reader-client.h"
 #include "src/sys/fuzzing/common/options.h"
 
 namespace fuzzing {
+
+using ::fuchsia::fuzzer::DONE_MARKER;
 
 ControllerImpl::ControllerImpl(ExecutorPtr executor)
     : binding_(this), executor_(std::move(executor)) {
@@ -56,6 +60,12 @@ ZxPromise<> ControllerImpl::Initialize() {
                return configure.result();
              })
       .wrap_with(scope_);
+}
+
+void ControllerImpl::Finish() {
+  std::cout << std::endl << DONE_MARKER << std::endl;
+  std::cerr << std::endl << DONE_MARKER << std::endl;
+  FX_LOGS(INFO) << DONE_MARKER;
 }
 
 ///////////////////////////////////////////////////////////////
@@ -166,6 +176,7 @@ void ControllerImpl::Execute(FidlInput fidl_input, ExecuteCallback callback) {
                       artifact_ = Artifact(result.value(), std::move(input));
                     }
                     callback(std::move(result));
+                    Finish();
                   })
                   .wrap_with(scope_);
   executor_->schedule_task(std::move(task));
@@ -180,8 +191,9 @@ void ControllerImpl::Minimize(FidlInput fidl_input, MinimizeCallback callback) {
             artifact_ = Artifact(FuzzResult::NO_ERRORS, input.Duplicate());
             return fpromise::ok(AsyncSocketWrite(executor_, std::move(input)));
           })
-          .then([callback = std::move(callback)](ZxResult<FidlInput>& result) {
+          .then([this, callback = std::move(callback)](ZxResult<FidlInput>& result) {
             callback(std::move(result));
+            Finish();
           })
           .wrap_with(scope_);
   executor_->schedule_task(std::move(task));
@@ -196,8 +208,9 @@ void ControllerImpl::Cleanse(FidlInput fidl_input, CleanseCallback callback) {
             artifact_ = Artifact(FuzzResult::NO_ERRORS, input.Duplicate());
             return fpromise::ok(AsyncSocketWrite(executor_, std::move(input)));
           })
-          .then([callback = std::move(callback)](ZxResult<FidlInput>& result) {
+          .then([this, callback = std::move(callback)](ZxResult<FidlInput>& result) {
             callback(std::move(result));
+            Finish();
           })
           .wrap_with(scope_);
   executor_->schedule_task(std::move(task));
@@ -210,8 +223,9 @@ void ControllerImpl::Fuzz(FuzzCallback callback) {
                     artifact_ = artifact.Duplicate();
                     return fpromise::ok(AsyncSocketWrite(executor_, std::move(artifact)));
                   })
-                  .then([callback = std::move(callback)](ZxResult<FidlArtifact>& result) {
+                  .then([this, callback = std::move(callback)](ZxResult<FidlArtifact>& result) {
                     callback(std::move(result));
+                    Finish();
                   })
                   .wrap_with(scope_);
   executor_->schedule_task(std::move(task));
@@ -220,8 +234,9 @@ void ControllerImpl::Fuzz(FuzzCallback callback) {
 void ControllerImpl::Merge(MergeCallback callback) {
   auto task = Initialize()
                   .and_then(runner_->Merge())
-                  .then([callback = std::move(callback)](ZxResult<>& result) {
+                  .then([this, callback = std::move(callback)](ZxResult<>& result) {
                     callback(result.is_ok() ? ZX_OK : result.error());
+                    Finish();
                   });
   executor_->schedule_task(std::move(task));
 }
