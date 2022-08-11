@@ -101,7 +101,6 @@ impl synthesizer::InputDevice for self::InputDevice {
 
     fn tap(&mut self, pos: Option<(u32, u32)>, time: u64) -> Result<(), Error> {
         let fingers = pos.and_then(|(x, y)| {
-            // Note: we use finger_id `1` for consistency with the legacy_backend.
             Some(vec![Touch { finger_id: 1, x: x as i32, y: y as i32, width: 0, height: 0 }])
         });
         self.multi_finger_tap(fingers, time)

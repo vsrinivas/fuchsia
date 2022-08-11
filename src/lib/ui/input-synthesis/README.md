@@ -128,14 +128,6 @@ makes use of the test FIDL.
 Note: Because this approach uses an implicit `InputDeviceRegistry`, it may be relevant to use the
 appropriate [build argument](#build-args) for your use case.
 
-## Build args
-
-### `use_modern_input_injection`
-
-Set this to true when configuring gn args to use the modern input injection
-protocol `fuchsia.input.injection.InputDeviceRegistry`. If not set, `input-synthesis`
-defaults to connect to `fuchsia.ui.input.InputDeviceRegistry`.
-
 ## Planned work
 
 The legacy portion of the library is scheduled for removal along with the deprecation of Root

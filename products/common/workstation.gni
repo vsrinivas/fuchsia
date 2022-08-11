@@ -147,9 +147,6 @@ core_realm_shards += [
   "//src/media/audio/audio_core:core_shard",
 ]
 
-# Enable input injection for testing through `fuchsia.input.injection.InputDeviceRegistry`.
-use_modern_input_injection = true
-
 # Create an additional (initially empty) account partition in FVM to enable
 # user data protection.
 include_account_in_fvm = true

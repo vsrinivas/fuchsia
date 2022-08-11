@@ -15,7 +15,6 @@ use {
     std::time::Duration,
 };
 
-pub mod legacy_backend;
 pub mod modern_backend;
 pub mod synthesizer;
 
@@ -249,31 +248,19 @@ pub async fn add_mouse_device_command(
 /// of `synthesizer::InputDeviceRegistry`.
 ///
 /// # Returns
-/// * Ok(`modern_backend::InputDeviceRegistry`) if `use_modern_input_injection` is true and
+/// * Ok(`modern_backend::InputDeviceRegistry`) if
 ///   `fuchsia.input.injection.InputDeviceRegistry` is available.
-/// * Ok(`legacy_backend::InputDeviceRegistry`) if `use_modern_input_injection` is false and
-///   `fuchsia.ui.input.InputDeviceRegistry` is available.
 /// * Err otherwise. E.g.,
-///   * Neither protocol was available.
+///   * Protocol was not available.
 ///   * Access to `/svc` was denied.
 async fn get_backend() -> Result<Box<dyn InputDeviceRegistry>, Error> {
-    if cfg!(use_modern_input_injection) {
-        let modern_registry =
-            new_protocol_connector::<fidl_fuchsia_input_injection::InputDeviceRegistryMarker>()?;
-        if modern_registry.exists().await? {
-            return Ok(Box::new(modern_backend::InputDeviceRegistry::new(
-                modern_registry.connect()?,
-            )));
-        }
-    } else {
-        let legacy_registry =
-            new_protocol_connector::<fidl_fuchsia_ui_input::InputDeviceRegistryMarker>()?;
-        if legacy_registry.exists().await? {
-            return Ok(Box::new(legacy_backend::InputDeviceRegistry::new()));
-        }
+    let registry =
+        new_protocol_connector::<fidl_fuchsia_input_injection::InputDeviceRegistryMarker>()?;
+    if registry.exists().await? {
+        return Ok(Box::new(modern_backend::InputDeviceRegistry::new(registry.connect()?)));
     }
 
-    Err(format_err!("no available InputDeviceRegistry"))
+    Err(format_err!("fuchsia.input.injection.InputDeviceRegistry not available"))
 }
 
 /// Similar to [get_backend] but looks for the input injection backend inside the directory `dir`.

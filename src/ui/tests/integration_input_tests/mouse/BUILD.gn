@@ -61,11 +61,6 @@ executable("mouse-input-test-bin") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/zx",
   ]
-
-  configs += [
-    # Allow passing the test even on configs where there is no modern injection.
-    "//src/lib/ui/input-synthesis:use_modern_input_injection",
-  ]
 }
 
 fuchsia_component("mouse-input-test-component") {

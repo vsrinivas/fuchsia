@@ -92,9 +92,6 @@ policy_labels.swd = "unrestricted"
 # //build/security/policies_swd.gni.
 policy_labels.update_checker = "system_update_checker"
 
-# Enable input injection for testing through `fuchsia.input.injection.InputDeviceRegistry`.
-use_modern_input_injection = true
-
 # session_manager also needs a core realm shard but they currently vary between products, they
 # must be added in individual product configs.
 legacy_base_package_labels += [ "//src/session/bin/session_manager" ]
