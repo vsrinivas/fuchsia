@@ -31,10 +31,10 @@ func TestDeserializeSendMsgAddressFailures(t *testing.T) {
 		errCondition DeserializeSendMsgAddressErrorCondition
 		expectedErr  error
 	}{
-		{"nil buffer", DeserializeSendMsgAddressErrInputBufferNil, InputBufferNullErr{}},
-		{"buffer too small", DeserializeSendMsgAddressErrInputBufferTooSmall, InputBufferTooSmallErr{}},
-		{"nonzero prelude", DeserializeSendMsgAddressErrNonZeroPrelude, NonZeroPreludeErr{}},
-		{"failed to decode", DeserializeSendMsgAddressErrFailedToDecode, FailedToDecodeErr{}},
+		{"nil buffer", DeserializeSendMsgAddressErrInputBufferNil, &InputBufferNullErr{}},
+		{"buffer too small", DeserializeSendMsgAddressErrInputBufferTooSmall, &InputBufferTooSmallErr{}},
+		{"nonzero prelude", DeserializeSendMsgAddressErrNonZeroPrelude, &NonZeroPreludeErr{}},
+		{"failed to decode", DeserializeSendMsgAddressErrFailedToDecode, &FailedToDecodeErr{}},
 	} {
 
 		t.Run(fmt.Sprintf("%s", testCase.name), func(t *testing.T) {
@@ -81,9 +81,9 @@ func TestSerializeRecvMsgMetaFailures(t *testing.T) {
 		errCondition SerializeRecvMsgMetaErrorCondition
 		expectedErr  error
 	}{
-		{"nil buffer", SerializeRecvMsgMetaErrOutputBufferNil, InputBufferNullErr{}},
-		{"buffer too small", SerializeRecvMsgMetaErrOutputBufferTooSmall, InputBufferTooSmallErr{}},
-		{"payload too large", SerializeRecvMsgMetaErrPayloadTooLarge, PayloadSizeExceedsMaxAllowedErr{payloadSize: tooBigPayloadSize, maxAllowed: maxPayloadSize}},
+		{"nil buffer", SerializeRecvMsgMetaErrOutputBufferNil, &InputBufferNullErr{}},
+		{"buffer too small", SerializeRecvMsgMetaErrOutputBufferTooSmall, &InputBufferTooSmallErr{}},
+		{"payload too large", SerializeRecvMsgMetaErrPayloadTooLarge, &PayloadSizeExceedsMaxAllowedErr{payloadSize: tooBigPayloadSize, maxAllowed: maxPayloadSize}},
 	} {
 		for _, netProto := range []tcpip.NetworkProtocolNumber{
 			header.IPv4ProtocolNumber,
@@ -177,8 +177,8 @@ func TestSerializeSendFromAddrFailures(t *testing.T) {
 		setupBuffer func(*[]byte)
 		expectedErr error
 	}{
-		{"nil buffer", func(buf *[]byte) { *buf = nil }, InputBufferNullErr{}},
-		{"buffer too small", func(buf *[]byte) { *buf = (*buf)[:preludeOffset-1] }, InputBufferTooSmallErr{}},
+		{"nil buffer", func(buf *[]byte) { *buf = nil }, &InputBufferNullErr{}},
+		{"buffer too small", func(buf *[]byte) { *buf = (*buf)[:preludeOffset-1] }, &InputBufferTooSmallErr{}},
 	} {
 
 		t.Run(fmt.Sprintf("%s", testCase.name), func(t *testing.T) {

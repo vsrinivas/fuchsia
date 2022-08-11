@@ -36,13 +36,13 @@ func RxUdpPreludeSize() uint32 {
 func convertDeserializeSendMsgMetaErr(err C.DeserializeSendMsgMetaError) error {
 	switch err {
 	case C.DeserializeSendMsgMetaErrorInputBufferNull:
-		return InputBufferNullErr{}
+		return &InputBufferNullErr{}
 	case C.DeserializeSendMsgMetaErrorInputBufferTooSmall:
-		return InputBufferTooSmallErr{}
+		return &InputBufferTooSmallErr{}
 	case C.DeserializeSendMsgMetaErrorNonZeroPrelude:
-		return NonZeroPreludeErr{}
+		return &NonZeroPreludeErr{}
 	case C.DeserializeSendMsgMetaErrorFailedToDecode:
-		return FailedToDecodeErr{}
+		return &FailedToDecodeErr{}
 	default:
 		panic(fmt.Sprintf("unknown deserialization result %#v", err))
 	}
@@ -100,15 +100,15 @@ func convertSerializeRecvMsgMetaErr(err C.SerializeRecvMsgMetaError) error {
 	case C.SerializeRecvMsgMetaErrorNone:
 		return nil
 	case C.SerializeRecvMsgMetaErrorOutputBufferNull:
-		return InputBufferNullErr{}
+		return &InputBufferNullErr{}
 	case C.SerializeRecvMsgMetaErrorOutputBufferTooSmall:
-		return InputBufferTooSmallErr{}
+		return &InputBufferTooSmallErr{}
 	case C.SerializeRecvMsgMetaErrorFromAddrBufferNull:
 		panic(fmt.Sprintf("got unexpected C.SerializeRecvMsgMetaErrorFromAddrBufferNull error"))
 	case C.SerializeRecvMsgMetaErrorFromAddrBufferTooSmall:
 		panic(fmt.Sprintf("got unexpected C.SerializeRecvMsgMetaErrorFromAddrBufferTooSmall error"))
 	case C.SerializeRecvMsgMetaErrorFailedToEncode:
-		return FailedToEncodeErr{}
+		return &FailedToEncodeErr{}
 	default:
 		panic(fmt.Sprintf("unknown deserialization result %#v", err))
 	}
@@ -129,7 +129,7 @@ func SerializeRecvMsgMeta(protocol tcpip.NetworkProtocolNumber, res tcpip.ReadRe
 	}
 
 	if res.Count > int(math.MaxUint16) {
-		return PayloadSizeExceedsMaxAllowedErr{payloadSize: res.Count, maxAllowed: math.MaxUint16}
+		return &PayloadSizeExceedsMaxAllowedErr{payloadSize: res.Count, maxAllowed: math.MaxUint16}
 	}
 
 	recv_meta := C.RecvMsgMeta{
@@ -167,11 +167,11 @@ func convertSerializeSendMsgMetaErr(err C.SerializeSendMsgMetaError) error {
 	case C.SerializeSendMsgMetaErrorNone:
 		return nil
 	case C.SerializeSendMsgMetaErrorOutputBufferNull:
-		return InputBufferNullErr{}
+		return &InputBufferNullErr{}
 	case C.SerializeSendMsgMetaErrorOutputBufferTooSmall:
-		return InputBufferTooSmallErr{}
+		return &InputBufferTooSmallErr{}
 	case C.SerializeSendMsgMetaErrorFailedToEncode:
-		return FailedToEncodeErr{}
+		return &FailedToEncodeErr{}
 	default:
 		panic(fmt.Sprintf("unknown serialization result %#v", err))
 	}
