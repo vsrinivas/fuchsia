@@ -1,0 +1,99 @@
+# Copyright 2022 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/zbi/zbi_input.gni")
+import("//zircon/kernel/phys/test/phys_zbi_test.gni")
+
+# Define a Turducken ZBI test.
+#
+# This takes a zbi_executable() or other zbi_input()-compatible target that
+# supplies the bootable ZBI kernel item.  It packs a ZBI using that kernel
+# and a payload (usually ZBI_TYPE_STORAGE_KERNEL) usually containing a
+# compressed ZBI image and makes that a zbi_test() target with $target_name.
+# The inner zbi_input() target is called "$target_name.input".
+#
+# Parameters
+#
+#  * kernel
+#    - Required: Label of a zbi_executable() target, expected to have
+#      //zircon/kernel/phys/test:turducken in its own $deps.
+#    - Type: label
+#
+#  * args
+#    - Optional: As for zbi_input().
+#    - Type: list(string)
+#    - Default: [ "--compressed=zstd.max" ]
+#
+#  * data_deps, deps
+#    - Optional: As for zbi_input().
+#    - Type: list(label)
+#
+#  * sources
+#    - Optional: As for zbi_input().
+#    - Type: list(file)
+#
+#  * timeout
+#    - Optional: As for phys_zbi_test().
+#    - Type: integer or false
+#
+#  * type
+#    - Optional: As for zbi_input().
+#    - Type: string
+#    - Default: "kernel"
+#
+template("turducken_zbi_test") {
+  turducken = target_name
+  turkey = invoker.kernel
+  duck = "$target_name.input"
+
+  phys_zbi_test(turducken) {
+    forward_variables_from(invoker,
+                           [
+                             "timeout",
+                             "visibility",
+                           ])
+    test_deps = [
+      ":$duck",
+      turkey,
+    ]
+  }
+
+  zbi_input(duck) {
+    visibility = [ ":*" ]
+    testonly = true
+
+    if (defined(invoker.type)) {
+      type = invoker.type
+    } else {
+      type = "kernel"
+    }
+
+    if (defined(invoker.args)) {
+      args = invoker.args
+    } else {
+      args = [ "--compressed=zstd.max" ]
+    }
+
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "deps",
+                             "sources",
+                           ])
+  }
+}
+
+# A Mobius Turducken test packs itself inside itself.
+template("mobius_turducken_test") {
+  turducken_zbi_test(target_name) {
+    sources = []
+    forward_variables_from(invoker, [ "visibility" ])
+    forward_variables_from(invoker, "*", [ "visibility" ])
+    if (toolchain_environment == "kernel.phys") {
+      sources += get_target_outputs(kernel)
+    }
+  }
+}

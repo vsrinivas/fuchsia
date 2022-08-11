@@ -1,0 +1,71 @@
+# Copyright 2022 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/zbi/zbi_input.gni")
+import("//zircon/kernel/phys/qemu.gni")
+import("//zircon/kernel/phys/zbi_executable.gni")
+
+# Build a ZBI test that uses the physboot framework.
+#
+# This is a shorthand for defining a zbi_test() target that uses a
+# zbi_executable() target named "$target_name.executable".  The executable is
+# automatically marked testonly and given deps so it has an entry point that
+# calls the "test-main.h" TestMain function.
+#
+# Parameters
+#
+#   * test_deps
+#     - Optional: Passed as `deps` to zbi_test().
+#     - Type: list(label)
+#
+#   * timeout
+#     - Optional: Passed through to zbi_test().
+#     - Type: seconds
+#     - Default: qemu_short_timeout
+#
+# Other parameters are as for zbi_executable().
+#
+template("phys_zbi_test") {
+  if (defined(invoker.test_deps)) {
+    test_deps = invoker.test_deps
+  } else {
+    test_deps = [ ":$target_name.executable" ]
+    zbi_executable("$target_name.executable") {
+      visibility = [ ":*" ]
+      testonly = true
+      deps = []
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "target_name",
+                               "test_deps",
+                               "timeout",
+                             ])
+      deps += [ "//zircon/kernel/phys/test:zbi-test-main" ]
+    }
+  }
+
+  zbi_test(target_name) {
+    args = []
+    deps = test_deps
+
+    # TODO(mcgrathr): enable on hardware too
+    device_types = [
+      "AEMU",
+      "QEMU",
+    ]
+
+    if (defined(invoker.timeout)) {
+      if (invoker.timeout != false) {
+        timeout = invoker.timeout
+      }
+    } else {
+      # Set a short timeout since the tests don't reliably reboot the
+      # machine.
+      timeout = qemu_short_timeout
+    }
+  }
+}
