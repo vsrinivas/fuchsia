@@ -15,6 +15,7 @@ use rand::RngCore;
 
 use crate::{
     ip::{IpDeviceId, IpExt},
+    sync::Mutex,
     transport::tcp::socket::{isn::IsnGenerator, TcpNonSyncContext, TcpSockets},
 };
 
@@ -52,11 +53,14 @@ pub(crate) enum UserError {
 
 pub(crate) struct TcpState<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext> {
     pub(crate) isn_generator: IsnGenerator<C::Instant>,
-    pub(crate) sockets: TcpSockets<I, D, C>,
+    pub(crate) sockets: Mutex<TcpSockets<I, D, C>>,
 }
 
 impl<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext> TcpState<I, D, C> {
     pub(crate) fn new(now: C::Instant, rng: &mut impl RngCore) -> Self {
-        Self { isn_generator: IsnGenerator::new(now, rng), sockets: TcpSockets::new(rng) }
+        Self {
+            isn_generator: IsnGenerator::new(now, rng),
+            sockets: Mutex::new(TcpSockets::new(rng)),
+        }
     }
 }

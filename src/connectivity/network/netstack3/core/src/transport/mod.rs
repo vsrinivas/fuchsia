@@ -120,7 +120,7 @@ impl<C: NonSyncContext> TcpSyncContext<Ipv4, C> for SyncCtx<C> {
         cb: F,
     ) -> O {
         let TcpState { isn_generator, sockets } = &mut self.state.transport.tcpv4;
-        cb(isn_generator, sockets)
+        cb(isn_generator, &mut sockets.lock())
     }
 }
 
@@ -133,7 +133,7 @@ impl<C: NonSyncContext> TcpSyncContext<Ipv6, C> for SyncCtx<C> {
         cb: F,
     ) -> O {
         let TcpState { isn_generator, sockets } = &mut self.state.transport.tcpv6;
-        cb(isn_generator, sockets)
+        cb(isn_generator, &mut sockets.lock())
     }
 }
 
