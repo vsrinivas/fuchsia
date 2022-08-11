@@ -18,7 +18,13 @@ pub struct PointerSensorScaleHandler {
 struct MutableState {
     /// The time of the last processed mouse move event.
     last_move_timestamp: Option<zx::Time>,
+    /// The time of the last processed mouse scroll event.
+    last_scroll_timestamp: Option<zx::Time>,
 }
+
+/// For tick based scrolling, PointerSensorScaleHandler scales tick * 120 to logical
+/// pixel.
+const PIXELS_PER_TICK: f32 = 120.0;
 
 #[async_trait(?Send)]
 impl UnhandledInputHandler for PointerSensorScaleHandler {
@@ -68,6 +74,59 @@ impl UnhandledInputHandler for PointerSensorScaleHandler {
                             ),
                             wheel_delta_v,
                             wheel_delta_h,
+                            phase,
+                            affected_buttons,
+                            pressed_buttons,
+                        },
+                    ),
+                    device_descriptor: input_device::InputDeviceDescriptor::Mouse(
+                        mouse_binding::MouseDeviceDescriptor {
+                            absolute_x_range,
+                            absolute_y_range,
+                            buttons,
+                            counts_per_mm,
+                            device_id,
+                            wheel_h_range,
+                            wheel_v_range,
+                        },
+                    ),
+                    event_time,
+                    handled: input_device::Handled::No,
+                    trace_id: None,
+                };
+                vec![input_event]
+            }
+            input_device::UnhandledInputEvent {
+                device_event:
+                    input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
+                        location,
+                        wheel_delta_v,
+                        wheel_delta_h,
+                        phase: phase @ mouse_binding::MousePhase::Wheel,
+                        affected_buttons,
+                        pressed_buttons,
+                    }),
+                device_descriptor:
+                    input_device::InputDeviceDescriptor::Mouse(mouse_binding::MouseDeviceDescriptor {
+                        absolute_x_range,
+                        absolute_y_range,
+                        buttons,
+                        counts_per_mm,
+                        device_id,
+                        wheel_h_range,
+                        wheel_v_range,
+                    }),
+                event_time,
+                trace_id: _,
+            } => {
+                let scaled_wheel_delta_v = self.scale_scroll(wheel_delta_v, event_time);
+                let scaled_wheel_delta_h = self.scale_scroll(wheel_delta_h, event_time);
+                let input_event = input_device::InputEvent {
+                    device_event: input_device::InputDeviceEvent::Mouse(
+                        mouse_binding::MouseEvent {
+                            location,
+                            wheel_delta_v: scaled_wheel_delta_v,
+                            wheel_delta_h: scaled_wheel_delta_h,
                             phase,
                             affected_buttons,
                             pressed_buttons,
@@ -140,7 +199,12 @@ impl PointerSensorScaleHandler {
     ///
     /// Returns `Rc<Self>`.
     pub fn new() -> Rc<Self> {
-        Rc::new(Self { mutable_state: RefCell::new(MutableState { last_move_timestamp: None }) })
+        Rc::new(Self {
+            mutable_state: RefCell::new(MutableState {
+                last_move_timestamp: None,
+                last_scroll_timestamp: None,
+            }),
+        })
     }
 
     // Linearly scales `movement_mm_per_sec`.
@@ -262,6 +326,72 @@ impl PointerSensorScaleHandler {
                 Position { x: 0.0, y: 0.0 }
             }
             _ => scaled_movement_mm,
+        }
+    }
+
+    /// `scroll_mm` scale with the curve algorithm.
+    /// `scroll_tick` scale with 120.
+    fn scale_scroll(
+        &self,
+        wheel_delta: Option<mouse_binding::WheelDelta>,
+        event_time: zx::Time,
+    ) -> Option<mouse_binding::WheelDelta> {
+        match wheel_delta {
+            None => None,
+            Some(mouse_binding::WheelDelta {
+                raw_data: mouse_binding::RawWheelDelta::Ticks(tick),
+                ..
+            }) => Some(mouse_binding::WheelDelta {
+                raw_data: mouse_binding::RawWheelDelta::Ticks(tick),
+                physical_pixel: Some(tick as f32 * PIXELS_PER_TICK),
+            }),
+            Some(mouse_binding::WheelDelta {
+                raw_data: mouse_binding::RawWheelDelta::Millimeters(mm),
+                ..
+            }) => {
+                // Determine the duration of this `scroll`.
+                let elapsed_time_secs =
+                    match self.mutable_state.borrow_mut().last_scroll_timestamp.replace(event_time)
+                    {
+                        Some(last_event_time) => (event_time - last_event_time)
+                            .clamp(MIN_PLAUSIBLE_EVENT_DELAY, MAX_PLAUSIBLE_EVENT_DELAY),
+                        None => MAX_PLAUSIBLE_EVENT_DELAY,
+                    }
+                    .into_nanos() as f32
+                        / 1E9;
+
+                let velocity = mm.abs() / elapsed_time_secs;
+
+                if velocity < MIN_MEASURABLE_VELOCITY_MM_PER_SEC {
+                    // Avoid division by zero that would come from computing
+                    // `scale_factor` below.
+                    return Some(mouse_binding::WheelDelta {
+                        raw_data: mouse_binding::RawWheelDelta::Millimeters(mm),
+                        physical_pixel: None,
+                    });
+                }
+
+                let scale_factor = Self::scale_euclidean_velocity(velocity) / velocity;
+
+                // Apply the scale factor and return the result.
+                let scaled_scroll_mm = scale_factor * mm;
+
+                if scaled_scroll_mm.is_infinite() || scaled_scroll_mm.is_nan() {
+                    fx_log_err!(
+                        "skipped scroll; scaled scroll of {:?} is infinite or NaN.",
+                        scaled_scroll_mm,
+                    );
+                    return Some(mouse_binding::WheelDelta {
+                        raw_data: mouse_binding::RawWheelDelta::Millimeters(mm),
+                        physical_pixel: None,
+                    });
+                }
+
+                Some(mouse_binding::WheelDelta {
+                    raw_data: mouse_binding::RawWheelDelta::Millimeters(mm),
+                    physical_pixel: Some(scaled_scroll_mm),
+                })
+            }
         }
     }
 }
@@ -765,23 +895,387 @@ mod tests {
         }
     }
 
-    mod metadata_preservation {
-        use super::*;
+    mod scroll_scaling_tick {
+        use {super::*, test_case::test_case};
+
+        #[test_case(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: Position::zero(),
+                millimeters: Position::zero(),
+            }),
+            wheel_delta_v: Some(mouse_binding::WheelDelta {
+                raw_data: mouse_binding::RawWheelDelta::Ticks(1),
+                physical_pixel: None,
+            }),
+            wheel_delta_h: None,
+            phase: mouse_binding::MousePhase::Wheel,
+            affected_buttons: hashset! {},
+            pressed_buttons: hashset! {},
+        } => (Some(PIXELS_PER_TICK), None); "v")]
+        #[test_case(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: Position::zero(),
+                millimeters: Position::zero(),
+            }),
+            wheel_delta_v: None,
+            wheel_delta_h: Some(mouse_binding::WheelDelta {
+                raw_data: mouse_binding::RawWheelDelta::Ticks(1),
+                physical_pixel: None,
+            }),
+            phase: mouse_binding::MousePhase::Wheel,
+            affected_buttons: hashset! {},
+            pressed_buttons: hashset! {},
+        } => (None, Some(PIXELS_PER_TICK)); "h")]
+        #[fuchsia::test(allow_stalls = false)]
+        async fn scaled(event: mouse_binding::MouseEvent) -> (Option<f32>, Option<f32>) {
+            let handler = PointerSensorScaleHandler::new();
+            let unhandled_event = make_unhandled_input_event(event);
+
+            let events = handler.clone().handle_unhandled_input_event(unhandled_event).await;
+            assert_matches!(
+                events.as_slice(),
+                [input_device::InputEvent {
+                    device_event: input_device::InputDeviceEvent::Mouse(
+                        mouse_binding::MouseEvent { .. }
+                    ),
+                    ..
+                }]
+            );
+            if let input_device::InputEvent {
+                device_event:
+                    input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
+                        wheel_delta_v,
+                        wheel_delta_h,
+                        ..
+                    }),
+                ..
+            } = events[0].clone()
+            {
+                match (wheel_delta_v, wheel_delta_h) {
+                    (None, None) => return (None, None),
+                    (None, Some(delta_h)) => return (None, delta_h.physical_pixel),
+                    (Some(delta_v), None) => return (delta_v.physical_pixel, None),
+                    (Some(delta_v), Some(delta_h)) => {
+                        return (delta_v.physical_pixel, delta_h.physical_pixel)
+                    }
+                }
+            } else {
+                unreachable!();
+            }
+        }
+    }
+
+    mod scroll_scaling_mm {
+        use {super::*, pretty_assertions::assert_eq};
+
+        async fn get_scaled_scroll_mm(
+            wheel_delta_v_mm: Option<f32>,
+            wheel_delta_h_mm: Option<f32>,
+            duration: zx::Duration,
+        ) -> (Option<mouse_binding::WheelDelta>, Option<mouse_binding::WheelDelta>) {
+            let handler = PointerSensorScaleHandler::new();
+
+            // Send a don't-care value through to seed the last timestamp.
+            let input_event = input_device::UnhandledInputEvent {
+                device_event: input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
+                    location: mouse_binding::MouseLocation::Relative(Default::default()),
+                    wheel_delta_v: Some(mouse_binding::WheelDelta {
+                        raw_data: mouse_binding::RawWheelDelta::Millimeters(1.0),
+                        physical_pixel: None,
+                    }),
+                    wheel_delta_h: None,
+                    phase: mouse_binding::MousePhase::Wheel,
+                    affected_buttons: hashset! {},
+                    pressed_buttons: hashset! {},
+                }),
+                device_descriptor: DEVICE_DESCRIPTOR.clone(),
+                event_time: zx::Time::from_nanos(0),
+                trace_id: None,
+            };
+            handler.clone().handle_unhandled_input_event(input_event).await;
+
+            // Send in the requested motion.
+            let input_event = input_device::UnhandledInputEvent {
+                device_event: input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
+                    location: mouse_binding::MouseLocation::Relative(Default::default()),
+                    wheel_delta_v: match wheel_delta_v_mm {
+                        None => None,
+                        Some(delta) => Some(mouse_binding::WheelDelta {
+                            raw_data: mouse_binding::RawWheelDelta::Millimeters(delta),
+                            physical_pixel: None,
+                        }),
+                    },
+                    wheel_delta_h: match wheel_delta_h_mm {
+                        None => None,
+                        Some(delta) => Some(mouse_binding::WheelDelta {
+                            raw_data: mouse_binding::RawWheelDelta::Millimeters(delta),
+                            physical_pixel: None,
+                        }),
+                    },
+                    phase: mouse_binding::MousePhase::Wheel,
+                    affected_buttons: hashset! {},
+                    pressed_buttons: hashset! {},
+                }),
+                device_descriptor: DEVICE_DESCRIPTOR.clone(),
+                event_time: zx::Time::from_nanos(duration.into_nanos()),
+                trace_id: None,
+            };
+            let transformed_events =
+                handler.clone().handle_unhandled_input_event(input_event).await;
+
+            assert_eq!(transformed_events.len(), 1);
+
+            if let input_device::InputEvent {
+                device_event:
+                    input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
+                        wheel_delta_v: delta_v,
+                        wheel_delta_h: delta_h,
+                        ..
+                    }),
+                ..
+            } = transformed_events[0].clone()
+            {
+                return (delta_v, delta_h);
+            } else {
+                unreachable!()
+            }
+        }
+
+        fn velocity_to_mm(velocity_mm_per_sec: f32, duration: zx::Duration) -> f32 {
+            velocity_mm_per_sec * (duration.into_nanos() as f32 / 1E9)
+        }
 
         #[fuchsia::test(allow_stalls = false)]
-        async fn does_not_consume_event() {
+        async fn low_speed_horizontal_scroll_scales_linearly() {
+            const TICK_DURATION: zx::Duration = zx::Duration::from_millis(8);
+            const MOTION_A_MM: f32 = 1.0 / COUNTS_PER_MM;
+            const MOTION_B_MM: f32 = 2.0 / COUNTS_PER_MM;
+            assert_lt!(
+                MOTION_B_MM,
+                velocity_to_mm(MEDIUM_SPEED_RANGE_BEGIN_MM_PER_SEC, TICK_DURATION)
+            );
+
+            let (_, scaled_a_h) =
+                get_scaled_scroll_mm(None, Some(MOTION_A_MM), TICK_DURATION).await;
+
+            let (_, scaled_b_h) =
+                get_scaled_scroll_mm(None, Some(MOTION_B_MM), TICK_DURATION).await;
+
+            match (scaled_a_h, scaled_b_h) {
+                (Some(a_h), Some(b_h)) => {
+                    assert_ne!(a_h.physical_pixel, None);
+                    assert_ne!(b_h.physical_pixel, None);
+                    assert_ne!(a_h.physical_pixel.unwrap(), 0.0);
+                    assert_ne!(b_h.physical_pixel.unwrap(), 0.0);
+                    assert_near!(
+                        b_h.physical_pixel.unwrap() / a_h.physical_pixel.unwrap(),
+                        2.0,
+                        SCALE_EPSILON
+                    );
+                }
+                _ => {
+                    panic!("wheel delta is none");
+                }
+            }
+        }
+
+        #[fuchsia::test(allow_stalls = false)]
+        async fn low_speed_vertical_scroll_scales_linearly() {
+            const TICK_DURATION: zx::Duration = zx::Duration::from_millis(8);
+            const MOTION_A_MM: f32 = 1.0 / COUNTS_PER_MM;
+            const MOTION_B_MM: f32 = 2.0 / COUNTS_PER_MM;
+            assert_lt!(
+                MOTION_B_MM,
+                velocity_to_mm(MEDIUM_SPEED_RANGE_BEGIN_MM_PER_SEC, TICK_DURATION)
+            );
+
+            let (scaled_a_v, _) =
+                get_scaled_scroll_mm(Some(MOTION_A_MM), None, TICK_DURATION).await;
+
+            let (scaled_b_v, _) =
+                get_scaled_scroll_mm(Some(MOTION_B_MM), None, TICK_DURATION).await;
+
+            match (scaled_a_v, scaled_b_v) {
+                (Some(a_v), Some(b_v)) => {
+                    assert_ne!(a_v.physical_pixel, None);
+                    assert_ne!(b_v.physical_pixel, None);
+                    assert_near!(
+                        b_v.physical_pixel.unwrap() / a_v.physical_pixel.unwrap(),
+                        2.0,
+                        SCALE_EPSILON
+                    );
+                }
+                _ => {
+                    panic!("wheel delta is none");
+                }
+            }
+        }
+
+        #[fuchsia::test(allow_stalls = false)]
+        async fn medium_speed_horizontal_scroll_scales_quadratically() {
+            const TICK_DURATION: zx::Duration = zx::Duration::from_millis(8);
+            const MOTION_A_MM: f32 = 7.0 / COUNTS_PER_MM;
+            const MOTION_B_MM: f32 = 14.0 / COUNTS_PER_MM;
+            assert_gt!(
+                MOTION_A_MM,
+                velocity_to_mm(MEDIUM_SPEED_RANGE_BEGIN_MM_PER_SEC, TICK_DURATION)
+            );
+            assert_lt!(
+                MOTION_B_MM,
+                velocity_to_mm(MEDIUM_SPEED_RANGE_END_MM_PER_SEC, TICK_DURATION)
+            );
+
+            let (_, scaled_a_h) =
+                get_scaled_scroll_mm(None, Some(MOTION_A_MM), TICK_DURATION).await;
+
+            let (_, scaled_b_h) =
+                get_scaled_scroll_mm(None, Some(MOTION_B_MM), TICK_DURATION).await;
+
+            match (scaled_a_h, scaled_b_h) {
+                (Some(a_h), Some(b_h)) => {
+                    assert_ne!(a_h.physical_pixel, None);
+                    assert_ne!(b_h.physical_pixel, None);
+                    assert_ne!(a_h.physical_pixel.unwrap(), 0.0);
+                    assert_ne!(b_h.physical_pixel.unwrap(), 0.0);
+                    assert_near!(
+                        b_h.physical_pixel.unwrap() / a_h.physical_pixel.unwrap(),
+                        4.0,
+                        SCALE_EPSILON
+                    );
+                }
+                _ => {
+                    panic!("wheel delta is none");
+                }
+            }
+        }
+
+        #[fuchsia::test(allow_stalls = false)]
+        async fn medium_speed_vertical_scroll_scales_quadratically() {
+            const TICK_DURATION: zx::Duration = zx::Duration::from_millis(8);
+            const MOTION_A_MM: f32 = 7.0 / COUNTS_PER_MM;
+            const MOTION_B_MM: f32 = 14.0 / COUNTS_PER_MM;
+            assert_gt!(
+                MOTION_A_MM,
+                velocity_to_mm(MEDIUM_SPEED_RANGE_BEGIN_MM_PER_SEC, TICK_DURATION)
+            );
+            assert_lt!(
+                MOTION_B_MM,
+                velocity_to_mm(MEDIUM_SPEED_RANGE_END_MM_PER_SEC, TICK_DURATION)
+            );
+
+            let (scaled_a_v, _) =
+                get_scaled_scroll_mm(Some(MOTION_A_MM), None, TICK_DURATION).await;
+
+            let (scaled_b_v, _) =
+                get_scaled_scroll_mm(Some(MOTION_B_MM), None, TICK_DURATION).await;
+
+            match (scaled_a_v, scaled_b_v) {
+                (Some(a_v), Some(b_v)) => {
+                    assert_ne!(a_v.physical_pixel, None);
+                    assert_ne!(b_v.physical_pixel, None);
+                    assert_near!(
+                        b_v.physical_pixel.unwrap() / a_v.physical_pixel.unwrap(),
+                        4.0,
+                        SCALE_EPSILON
+                    );
+                }
+                _ => {
+                    panic!("wheel delta is none");
+                }
+            }
+        }
+
+        #[fuchsia::test(allow_stalls = false)]
+        async fn high_speed_horizontal_scroll_scaling_is_inreasing() {
+            const TICK_DURATION: zx::Duration = zx::Duration::from_millis(8);
+            const MOTION_A_MM: f32 = 16.0 / COUNTS_PER_MM;
+            const MOTION_B_MM: f32 = 20.0 / COUNTS_PER_MM;
+            assert_gt!(
+                MOTION_A_MM,
+                velocity_to_mm(MEDIUM_SPEED_RANGE_END_MM_PER_SEC, TICK_DURATION)
+            );
+
+            let (_, scaled_a_h) =
+                get_scaled_scroll_mm(None, Some(MOTION_A_MM), TICK_DURATION).await;
+
+            let (_, scaled_b_h) =
+                get_scaled_scroll_mm(None, Some(MOTION_B_MM), TICK_DURATION).await;
+
+            match (scaled_a_h, scaled_b_h) {
+                (Some(a_h), Some(b_h)) => {
+                    assert_ne!(a_h.physical_pixel, None);
+                    assert_ne!(b_h.physical_pixel, None);
+                    assert_ne!(a_h.physical_pixel.unwrap(), 0.0);
+                    assert_ne!(b_h.physical_pixel.unwrap(), 0.0);
+                    assert_gt!(b_h.physical_pixel.unwrap(), a_h.physical_pixel.unwrap());
+                }
+                _ => {
+                    panic!("wheel delta is none");
+                }
+            }
+        }
+
+        #[fuchsia::test(allow_stalls = false)]
+        async fn high_speed_vertical_scroll_scaling_is_inreasing() {
+            const TICK_DURATION: zx::Duration = zx::Duration::from_millis(8);
+            const MOTION_A_MM: f32 = 16.0 / COUNTS_PER_MM;
+            const MOTION_B_MM: f32 = 20.0 / COUNTS_PER_MM;
+            assert_gt!(
+                MOTION_A_MM,
+                velocity_to_mm(MEDIUM_SPEED_RANGE_END_MM_PER_SEC, TICK_DURATION)
+            );
+
+            let (scaled_a_v, _) =
+                get_scaled_scroll_mm(Some(MOTION_A_MM), None, TICK_DURATION).await;
+
+            let (scaled_b_v, _) =
+                get_scaled_scroll_mm(Some(MOTION_B_MM), None, TICK_DURATION).await;
+
+            match (scaled_a_v, scaled_b_v) {
+                (Some(a_v), Some(b_v)) => {
+                    assert_ne!(a_v.physical_pixel, None);
+                    assert_ne!(b_v.physical_pixel, None);
+                    assert_gt!(b_v.physical_pixel.unwrap(), a_v.physical_pixel.unwrap());
+                }
+                _ => {
+                    panic!("wheel delta is none");
+                }
+            }
+        }
+    }
+
+    mod metadata_preservation {
+        use {super::*, test_case::test_case};
+
+        #[test_case(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: Position { x: 1.5, y: 4.5 },
+                millimeters: Position { x: 1.5 / COUNTS_PER_MM, y: 4.5 / COUNTS_PER_MM },
+            }),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
+            phase: mouse_binding::MousePhase::Move,
+            affected_buttons: hashset! {},
+            pressed_buttons: hashset! {},
+        }; "move event")]
+        #[test_case(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: Position::zero(),
+                millimeters: Position::zero(),
+            }),
+            wheel_delta_v: Some(mouse_binding::WheelDelta {
+                raw_data: mouse_binding::RawWheelDelta::Ticks(1),
+                physical_pixel: None,
+            }),
+            wheel_delta_h: None,
+            phase: mouse_binding::MousePhase::Wheel,
+            affected_buttons: hashset! {},
+            pressed_buttons: hashset! {},
+        }; "wheel event")]
+        #[fuchsia::test(allow_stalls = false)]
+        async fn does_not_consume_event(event: mouse_binding::MouseEvent) {
             let handler = PointerSensorScaleHandler::new();
-            let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
-                    counts: Position { x: 1.5, y: 4.5 },
-                    millimeters: Position { x: 1.5 / COUNTS_PER_MM, y: 4.5 / COUNTS_PER_MM },
-                }),
-                wheel_delta_v: None,
-                wheel_delta_h: None,
-                phase: mouse_binding::MousePhase::Move,
-                affected_buttons: hashset! {},
-                pressed_buttons: hashset! {},
-            });
+            let input_event = make_unhandled_input_event(event);
             assert_matches!(
                 handler.clone().handle_unhandled_input_event(input_event).await.as_slice(),
                 [input_device::InputEvent { handled: input_device::Handled::No, .. }]
@@ -790,20 +1284,35 @@ mod tests {
 
         // Downstream handlers, and components consuming the `MouseEvent`, may be
         // sensitive to the speed of motion. So it's important to preserve timestamps.
+        #[test_case(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: Position { x: 1.5, y: 4.5 },
+                millimeters: Position { x: 1.5 / COUNTS_PER_MM, y: 4.5 / COUNTS_PER_MM },
+            }),
+            wheel_delta_v: None,
+            wheel_delta_h: None,
+            phase: mouse_binding::MousePhase::Move,
+            affected_buttons: hashset! {},
+            pressed_buttons: hashset! {},
+        }; "move event")]
+        #[test_case(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: Position::zero(),
+                millimeters: Position::zero(),
+            }),
+            wheel_delta_v: Some(mouse_binding::WheelDelta {
+                raw_data: mouse_binding::RawWheelDelta::Ticks(1),
+                physical_pixel: None,
+            }),
+            wheel_delta_h: None,
+            phase: mouse_binding::MousePhase::Wheel,
+            affected_buttons: hashset! {},
+            pressed_buttons: hashset! {},
+        }; "wheel event")]
         #[fuchsia::test(allow_stalls = false)]
-        async fn preserves_event_time() {
+        async fn preserves_event_time(event: mouse_binding::MouseEvent) {
             let handler = PointerSensorScaleHandler::new();
-            let mut input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
-                    counts: Position { x: 1.5, y: 4.5 },
-                    millimeters: Position { x: 1.5 / COUNTS_PER_MM, y: 4.5 / COUNTS_PER_MM },
-                }),
-                wheel_delta_v: None,
-                wheel_delta_h: None,
-                phase: mouse_binding::MousePhase::Move,
-                affected_buttons: hashset! {},
-                pressed_buttons: hashset! {},
-            });
+            let mut input_event = make_unhandled_input_event(event);
             const EVENT_TIME: zx::Time = zx::Time::from_nanos(42);
             input_event.event_time = EVENT_TIME;
             assert_matches!(

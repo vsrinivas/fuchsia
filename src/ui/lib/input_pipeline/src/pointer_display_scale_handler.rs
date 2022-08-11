@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fuchsia_syslog::fx_log_err;
+
 use {
     crate::{input_device, input_handler::UnhandledInputHandler, mouse_binding, utils::Position},
     anyhow::{format_err, Error},
@@ -69,6 +71,40 @@ impl UnhandledInputHandler for PointerDisplayScaleHandler {
                 };
                 vec![input_event]
             }
+            input_device::UnhandledInputEvent {
+                device_event:
+                    input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
+                        location,
+                        wheel_delta_v,
+                        wheel_delta_h,
+                        phase: phase @ mouse_binding::MousePhase::Wheel,
+                        affected_buttons,
+                        pressed_buttons,
+                    }),
+                device_descriptor: device_descriptor @ input_device::InputDeviceDescriptor::Mouse(_),
+                event_time,
+                trace_id: _,
+            } => {
+                let scaled_wheel_delta_v = self.scale_wheel_delta(wheel_delta_v);
+                let scaled_wheel_delta_h = self.scale_wheel_delta(wheel_delta_h);
+                let input_event = input_device::InputEvent {
+                    device_event: input_device::InputDeviceEvent::Mouse(
+                        mouse_binding::MouseEvent {
+                            location,
+                            wheel_delta_v: scaled_wheel_delta_v,
+                            wheel_delta_h: scaled_wheel_delta_h,
+                            phase,
+                            affected_buttons,
+                            pressed_buttons,
+                        },
+                    ),
+                    device_descriptor,
+                    event_time,
+                    handled: input_device::Handled::No,
+                    trace_id: None,
+                };
+                vec![input_event]
+            }
             _ => vec![input_device::InputEvent::from(unhandled_input_event)],
         }
     }
@@ -105,6 +141,28 @@ impl PointerDisplayScaleHandler {
     /// Scales `motion`, using the configuration in `self`.
     fn scale_motion(self: &Rc<Self>, motion: Position) -> Position {
         motion * self.scale_factor
+    }
+
+    /// Scales `wheel_delta`, using the configuration in `self`.
+    fn scale_wheel_delta(
+        self: &Rc<Self>,
+        wheel_delta: Option<mouse_binding::WheelDelta>,
+    ) -> Option<mouse_binding::WheelDelta> {
+        match wheel_delta {
+            None => None,
+            Some(delta) => Some(mouse_binding::WheelDelta {
+                raw_data: delta.raw_data,
+                physical_pixel: match delta.physical_pixel {
+                    None => {
+                        // this should never reach as pointer_sensor_scale_handler should
+                        // fill this field.
+                        fx_log_err!("physical_pixel is none");
+                        None
+                    }
+                    Some(pixel) => Some(self.scale_factor * pixel),
+                },
+            }),
+        }
     }
 }
 
@@ -220,20 +278,39 @@ mod tests {
                );
     }
 
-    #[fuchsia::test(allow_stalls = false)]
-    async fn does_not_consume_event() {
-        let handler = PointerDisplayScaleHandler::new(2.0).expect("failed to make handler");
-        let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
+    #[test_case(
+        mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
                 counts: Position { x: 1.5, y: 4.5 },
-                millimeters: Position { x: 1.5 / COUNTS_PER_MM, y: 4.5 / COUNTS_PER_MM },
+                millimeters: Position {
+                    x: 1.5 / COUNTS_PER_MM,
+                    y: 4.5 / COUNTS_PER_MM },
             }),
             wheel_delta_v: None,
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {},
             pressed_buttons: hashset! {},
-        });
+        }; "move event")]
+    #[test_case(
+        mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: Position::zero(),
+                millimeters: Position::zero(),
+            }),
+            wheel_delta_v: Some(mouse_binding::WheelDelta {
+                raw_data: mouse_binding::RawWheelDelta::Ticks(1),
+                physical_pixel: Some(1.0),
+            }),
+            wheel_delta_h: None,
+            phase: mouse_binding::MousePhase::Wheel,
+            affected_buttons: hashset! {},
+            pressed_buttons: hashset! {},
+        }; "wheel event")]
+    #[fuchsia::test(allow_stalls = false)]
+    async fn does_not_consume(event: mouse_binding::MouseEvent) {
+        let handler = PointerDisplayScaleHandler::new(2.0).expect("failed to make handler");
+        let input_event = make_unhandled_input_event(event);
         assert_matches!(
             handler.clone().handle_unhandled_input_event(input_event).await.as_slice(),
             [input_device::InputEvent { handled: input_device::Handled::No, .. }]
@@ -244,7 +321,7 @@ mod tests {
     #[test_case(hashset! {      1}; "one button")]
     #[test_case(hashset! {1, 2, 3}; "multiple buttons")]
     #[fuchsia::test(allow_stalls = false)]
-    async fn preserves_buttons(input_buttons: HashSet<u8>) {
+    async fn preserves_buttons_move_event(input_buttons: HashSet<u8>) {
         let handler = PointerDisplayScaleHandler::new(2.0).expect("failed to make handler");
         let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
@@ -261,51 +338,195 @@ mod tests {
             handler.clone().handle_unhandled_input_event(input_event).await.as_slice(),
             [input_device::InputEvent {
                 device_event:
-                    input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent { affected_buttons, pressed_buttons, .. }),
+                    input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent { affected_buttons, pressed_buttons, ..}),
                 ..
             }] if *affected_buttons == input_buttons && *pressed_buttons == input_buttons
         );
     }
 
+    #[test_case(hashset! {       }; "empty buttons")]
+    #[test_case(hashset! {      1}; "one button")]
+    #[test_case(hashset! {1, 2, 3}; "multiple buttons")]
     #[fuchsia::test(allow_stalls = false)]
-    async fn preserves_descriptor() {
+    async fn preserves_buttons_wheel_event(input_buttons: HashSet<u8>) {
         let handler = PointerDisplayScaleHandler::new(2.0).expect("failed to make handler");
         let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: Position::zero(),
+                millimeters: Position::zero(),
+            }),
+            wheel_delta_v: Some(mouse_binding::WheelDelta {
+                raw_data: mouse_binding::RawWheelDelta::Ticks(1),
+                physical_pixel: Some(1.0),
+            }),
+            wheel_delta_h: None,
+            phase: mouse_binding::MousePhase::Wheel,
+            affected_buttons: input_buttons.clone(),
+            pressed_buttons: input_buttons.clone(),
+        });
+        assert_matches!(
+            handler.clone().handle_unhandled_input_event(input_event).await.as_slice(),
+            [input_device::InputEvent {
+                device_event:
+                    input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent { affected_buttons, pressed_buttons, ..}),
+                ..
+            }] if *affected_buttons == input_buttons && *pressed_buttons == input_buttons
+        );
+    }
+
+    #[test_case(
+        mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
                 counts: Position { x: 1.5, y: 4.5 },
-                millimeters: Position { x: 1.5 / COUNTS_PER_MM, y: 4.5 / COUNTS_PER_MM },
+                millimeters: Position {
+                    x: 1.5 / COUNTS_PER_MM,
+                    y: 4.5 / COUNTS_PER_MM },
             }),
             wheel_delta_v: None,
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {},
             pressed_buttons: hashset! {},
-        });
+        }; "move event")]
+    #[test_case(
+        mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: Position::zero(),
+                millimeters: Position::zero(),
+            }),
+            wheel_delta_v: Some(mouse_binding::WheelDelta {
+                raw_data: mouse_binding::RawWheelDelta::Ticks(1),
+                physical_pixel: Some(1.0),
+            }),
+            wheel_delta_h: None,
+            phase: mouse_binding::MousePhase::Wheel,
+            affected_buttons: hashset! {},
+            pressed_buttons: hashset! {},
+        }; "wheel event")]
+    #[fuchsia::test(allow_stalls = false)]
+    async fn preserves_descriptor(event: mouse_binding::MouseEvent) {
+        let handler = PointerDisplayScaleHandler::new(2.0).expect("failed to make handler");
+        let input_event = make_unhandled_input_event(event);
         assert_matches!(
             handler.clone().handle_unhandled_input_event(input_event).await.as_slice(),
             [input_device::InputEvent { device_descriptor: DEVICE_DESCRIPTOR, .. }]
         );
     }
 
-    #[fuchsia::test(allow_stalls = false)]
-    async fn preserves_event_time() {
-        let handler = PointerDisplayScaleHandler::new(2.0).expect("failed to make handler");
-        let mut input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
+    #[test_case(
+        mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
                 counts: Position { x: 1.5, y: 4.5 },
-                millimeters: Position { x: 1.5 / COUNTS_PER_MM, y: 4.5 / COUNTS_PER_MM },
+                millimeters: Position {
+                    x: 1.5 / COUNTS_PER_MM,
+                    y: 4.5 / COUNTS_PER_MM },
             }),
             wheel_delta_v: None,
             wheel_delta_h: None,
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {},
             pressed_buttons: hashset! {},
-        });
+        }; "move event")]
+    #[test_case(
+        mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: Position::zero(),
+                millimeters: Position::zero(),
+            }),
+            wheel_delta_v: Some(mouse_binding::WheelDelta {
+                raw_data: mouse_binding::RawWheelDelta::Ticks(1),
+                physical_pixel: Some(1.0),
+            }),
+            wheel_delta_h: None,
+            phase: mouse_binding::MousePhase::Wheel,
+            affected_buttons: hashset! {},
+            pressed_buttons: hashset! {},
+        }; "wheel event")]
+    #[fuchsia::test(allow_stalls = false)]
+    async fn preserves_event_time(event: mouse_binding::MouseEvent) {
+        let handler = PointerDisplayScaleHandler::new(2.0).expect("failed to make handler");
+        let mut input_event = make_unhandled_input_event(event);
         const EVENT_TIME: zx::Time = zx::Time::from_nanos(42);
         input_event.event_time = EVENT_TIME;
         assert_matches!(
             handler.clone().handle_unhandled_input_event(input_event).await.as_slice(),
             [input_device::InputEvent { event_time: EVENT_TIME, .. }]
         );
+    }
+
+    #[test_case(
+        Some(mouse_binding::WheelDelta {
+            raw_data: mouse_binding::RawWheelDelta::Ticks(1),
+            physical_pixel: Some(1.0),
+        }),
+        None => (Some(2.0), None); "v tick h none"
+    )]
+    #[test_case(
+        None, Some(mouse_binding::WheelDelta {
+            raw_data: mouse_binding::RawWheelDelta::Ticks(1),
+            physical_pixel: Some(1.0),
+        })  => (None, Some(2.0)); "v none h tick"
+    )]
+    #[test_case(
+        Some(mouse_binding::WheelDelta {
+            raw_data: mouse_binding::RawWheelDelta::Millimeters(1.0),
+            physical_pixel: Some(1.0),
+        }),
+        None => (Some(2.0), None); "v mm h none"
+    )]
+    #[test_case(
+        None, Some(mouse_binding::WheelDelta {
+            raw_data: mouse_binding::RawWheelDelta::Millimeters(1.0),
+            physical_pixel: Some(1.0),
+        }) => (None, Some(2.0)); "v none h mm"
+    )]
+    #[fuchsia::test(allow_stalls = false)]
+    async fn applied_scale_scroll_event(
+        wheel_delta_v: Option<mouse_binding::WheelDelta>,
+        wheel_delta_h: Option<mouse_binding::WheelDelta>,
+    ) -> (Option<f32>, Option<f32>) {
+        let handler = PointerDisplayScaleHandler::new(2.0).expect("failed to make handler");
+        let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
+            location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                counts: Position::zero(),
+                millimeters: Position::zero(),
+            }),
+            wheel_delta_v,
+            wheel_delta_h,
+            phase: mouse_binding::MousePhase::Wheel,
+            affected_buttons: hashset! {},
+            pressed_buttons: hashset! {},
+        });
+        let events = handler.clone().handle_unhandled_input_event(input_event).await;
+        assert_matches!(
+            events.as_slice(),
+            [input_device::InputEvent {
+                device_event: input_device::InputDeviceEvent::Mouse(
+                    mouse_binding::MouseEvent { .. }
+                ),
+                ..
+            }]
+        );
+        if let input_device::InputEvent {
+            device_event:
+                input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
+                    wheel_delta_v,
+                    wheel_delta_h,
+                    ..
+                }),
+            ..
+        } = events[0].clone()
+        {
+            match (wheel_delta_v, wheel_delta_h) {
+                (None, None) => return (None, None),
+                (None, Some(delta_h)) => return (None, delta_h.physical_pixel),
+                (Some(delta_v), None) => return (delta_v.physical_pixel, None),
+                (Some(delta_v), Some(delta_h)) => {
+                    return (delta_v.physical_pixel, delta_h.physical_pixel)
+                }
+            }
+        } else {
+            unreachable!();
+        }
     }
 }
