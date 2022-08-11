@@ -58,19 +58,6 @@ group("tools") {
   deps = [ "//build/validate:non_production_tag" ]
 }
 
-# TODO(fxbug.dev/69738): Remove tools-system once all usages are removed.
-# Same as "tools" above, but for tools that are hosted by the system package.
-group("tools-system") {
-  testonly = true
-  deps = [ "//src/connectivity/bluetooth/hci/emulator" ]
-}
-
-# Drivers that the "tools" group requires.
-group("tools-drivers") {
-  testonly = true
-  deps = [ "//src/connectivity/bluetooth/hci/emulator" ]
-}
-
 group("build_infra") {
   public_deps = [ "//tools:build_infra" ]
 }
