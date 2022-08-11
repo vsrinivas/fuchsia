@@ -830,53 +830,12 @@ TEST_F(BlockWatcherTest, TestBlockWatcherUnmatchedResume) {
   ASSERT_EQ(result.value().status, ZX_ERR_BAD_STATE);
 }
 
-TEST_F(BlockWatcherTest, TestMultiplePause) {
+TEST_F(BlockWatcherTest, TestSecondPauseFails) {
   ASSERT_NO_FATAL_FAILURE(PauseWatcher());
-  ASSERT_NO_FATAL_FAILURE(PauseWatcher());
-  int next_device_number = 0;
-
-  // Add a block device.
-  storage::RamDisk client;
-  ASSERT_NO_FATAL_FAILURE(client = CreateGptRamdisk());
-
-  // Figure out what the next device number will be.
-  {
-    files::Glob glob("/dev/class/block/*");
-    ASSERT_GT(glob.size(), 0ul);
-    auto iterator = glob.end();
-    --iterator;
-    ASSERT_EQ(sscanf(*iterator, "/dev/class/block/%d", &next_device_number), 1);
-  }
-  next_device_number++;
-
-  // Resume once.
+  auto result = block_watcher()->Pause();
+  ASSERT_EQ(result.status(), ZX_OK);
+  ASSERT_EQ(result->status, ZX_ERR_BAD_STATE);
   ASSERT_NO_FATAL_FAILURE(ResumeWatcher());
-
-  storage::RamDisk client2;
-  ASSERT_NO_FATAL_FAILURE(client2 = CreateGptRamdisk());
-  ASSERT_NO_FATAL_FAILURE(WaitForBlockDevice(next_device_number));
-  next_device_number++;
-
-  ASSERT_EQ(wait_for_device(client2.path().c_str(), ZX_TIME_INFINITE), ZX_OK);
-  // Resume again. The block watcher should be running again.
-  ASSERT_NO_FATAL_FAILURE(ResumeWatcher());
-
-  // Make sure neither device was seen by the watcher.
-  storage::RamDisk client3;
-  ASSERT_NO_FATAL_FAILURE(CheckEventsDropped(next_device_number, client3));
-
-  // Pause again.
-  ASSERT_NO_FATAL_FAILURE(PauseWatcher());
-  storage::RamDisk client4;
-  client4 = CreateGptRamdisk();
-  ASSERT_NO_FATAL_FAILURE(WaitForBlockDevice(next_device_number));
-  next_device_number++;
-  // Resume again.
-  ASSERT_NO_FATAL_FAILURE(ResumeWatcher());
-
-  // Make sure the last device wasn't added.
-  storage::RamDisk client5;
-  ASSERT_NO_FATAL_FAILURE(CheckEventsDropped(next_device_number, client5));
 }
 
 TEST_F(BlockWatcherTest, TestResumeThenImmediatelyPause) {

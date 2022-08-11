@@ -40,14 +40,19 @@ namespace skipblock = fuchsia_hardware_skipblock;
 // Not static so test can manipulate it.
 zx_duration_t g_wipe_timeout = ZX_SEC(3);
 
+std::atomic_uint32_t g_pause_count = 0;
+
 BlockWatcherPauser::~BlockWatcherPauser() {
   if (valid_) {
-    auto result = watcher_->Resume();
-    if (result.status() != ZX_OK) {
-      ERROR("Failed to unpause the block watcher: %s\n", zx_status_get_string(result.status()));
-    } else if (result.value().status != ZX_OK) {
-      ERROR("Failed to unpause the block watcher: %s\n",
-            zx_status_get_string(result.value().status));
+    const uint32_t old_count = g_pause_count.fetch_sub(1);
+    if (old_count == 1) {
+      auto result = watcher_->Resume();
+      if (result.status() != ZX_OK) {
+        ERROR("Failed to unpause the block watcher: %s\n", zx_status_get_string(result.status()));
+      } else if (result.value().status != ZX_OK) {
+        ERROR("Failed to unpause the block watcher: %s\n",
+              zx_status_get_string(result.value().status));
+      }
     }
   }
 }
@@ -68,11 +73,17 @@ zx::status<BlockWatcherPauser> BlockWatcherPauser::Create(
 }
 
 zx::status<> BlockWatcherPauser::Pause() {
-  auto result = watcher_->Pause();
-  auto status = zx::make_status(result.ok() ? result.value().status : result.status());
+  const uint32_t old_count = g_pause_count.fetch_add(1);
+  if (old_count == 0) {
+    auto result = watcher_->Pause();
+    auto status = zx::make_status(result.ok() ? result.value().status : result.status());
 
-  valid_ = status.is_ok();
-  return status;
+    valid_ = status.is_ok();
+    return status;
+  }
+
+  valid_ = true;
+  return zx::ok();
 }
 
 zx::status<zx::channel> OpenPartition(const fbl::unique_fd& devfs_root, const char* path,

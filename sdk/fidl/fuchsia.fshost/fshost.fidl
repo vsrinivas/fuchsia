@@ -10,15 +10,17 @@ using fuchsia.io;
 /// Manages the block watcher.
 @discoverable
 protocol BlockWatcher {
-    /// Pauses the block watcher. This causes the block watcher to drop all
-    /// new block device events.
-    /// Returns ZX_ERR_UNAVAILABLE if the watcher has been paused too many times.
+    /// Pauses the block watcher. This will return when the block watcher has stopped processing
+    /// new device events.
+    ///
+    /// Returns ZX_ERR_BAD_STATE if the block watcher is paused more than once.
     Pause() -> (struct {
         status zx.status;
     });
 
-    /// Resumes the block watcher. The block watcher won't resume until every
-    /// Pause() call has had a corresponding Resume().
+    /// Resumes the block watcher. This will return when the block watcher is once again processing
+    /// new device events.
+    ///
     /// Returns ZX_ERR_BAD_STATE if the watcher isn't paused.
     Resume() -> (struct {
         status zx.status;

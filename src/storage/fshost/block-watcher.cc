@@ -122,7 +122,7 @@ void BlockWatcher::Thread() {
         FX_LOGS(INFO) << "block watcher paused";
         pause_condition_.notify_all();
         // We were told to pause. Wait until we're resumed before re-starting the watch.
-        while (pause_count_ > 0) {
+        while (should_pause_) {
           pause_condition_.wait(lock_);
         }
         break;
@@ -140,7 +140,7 @@ void BlockWatcher::ShutDown() {
   if (thread_.joinable()) {
     {
       std::scoped_lock guard(lock_);
-      pause_count_ = -1;
+      should_pause_ = false;
     }
     pause_condition_.notify_all();
     pause_event_.signal(0, kSignalWatcherShutDown);
@@ -155,31 +155,31 @@ void BlockWatcher::ShutDown() {
 zx_status_t BlockWatcher::Pause() {
   auto guard = std::lock_guard(lock_);
 
+  // If we are told to pause, but we are already paused, it's an error.
+  if (should_pause_) {
+    return ZX_ERR_BAD_STATE;
+  }
+
   // Wait to resume before continuing.
-  while (pause_count_ == 0 && is_paused_ && pause_event_)
+  while (!should_pause_ && is_paused_ && pause_event_)
     pause_condition_.wait(lock_);
 
-  if (pause_count_ == std::numeric_limits<int>::max() || pause_count_ < 0) {
-    return ZX_ERR_UNAVAILABLE;
-  }
   if (!pause_event_) {
     // Refuse to pause -- the watcher won't actually stop.
     return ZX_ERR_BAD_STATE;
   }
-  if (pause_count_ == 0) {
-    // Tell the watcher to pause.
-    zx_status_t status = pause_event_.signal(0, kSignalWatcherPaused);
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "failed to set paused signal: " << zx_status_get_string(status);
-      return status;
-    }
 
-    pause_count_++;
-  } else {
-    pause_count_++;
+  should_pause_ = true;
+
+  // Tell the watcher to pause.
+  zx_status_t status = pause_event_.signal(0, kSignalWatcherPaused);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "failed to set paused signal: " << zx_status_get_string(status);
+    return status;
   }
 
-  while (!is_paused_) {
+  // Don't return from the pause call until the block watcher is actually paused.
+  while (should_pause_ && !is_paused_) {
     if (!pause_event_)
       return ZX_ERR_BAD_STATE;
     pause_condition_.wait(lock_);
@@ -191,25 +191,30 @@ zx_status_t BlockWatcher::Pause() {
 zx_status_t BlockWatcher::Resume() {
   auto guard = std::lock_guard(lock_);
 
-  // Wait to pause before continuing.
-  while (pause_count_ > 0 && !is_paused_ && pause_event_)
-    pause_condition_.wait(lock_);
-
-  if (pause_count_ <= 0 || !pause_event_) {
+  // If we are told to resume, but we aren't actually paused, it's an error.
+  if (!should_pause_) {
     return ZX_ERR_BAD_STATE;
   }
 
-  pause_count_--;
-  if (pause_count_ == 0) {
-    // Clear the pause signal.
-    pause_event_.signal(kSignalWatcherPaused, 0);
-    pause_condition_.notify_all();
+  // Wait to pause before continuing.
+  while (should_pause_ && !is_paused_ && pause_event_)
+    pause_condition_.wait(lock_);
+
+  if (!pause_event_) {
+    // Refuse to resume -- the watcher won't actually restart.
+    return ZX_ERR_BAD_STATE;
   }
+
+  should_pause_ = false;
+
+  // Clear the pause signal.
+  pause_event_.signal(kSignalWatcherPaused, 0);
+  pause_condition_.notify_all();
 
   // If this resume would cause the watcher to resume, wait until the watcher has actually resumed.
   // This helps avoid races in tests where they immediately create devices after resuming and
   // expecting fshost to have noticed.
-  while (pause_count_ == 0 && is_paused_) {
+  while (!should_pause_ && is_paused_) {
     if (!pause_event_)
       return ZX_ERR_BAD_STATE;
     pause_condition_.wait(lock_);
@@ -228,12 +233,12 @@ bool BlockWatcher::Callback(Watcher& watcher, int dirfd, fio::wire::WatchEvent e
   // Note that WATCH_EVENT_EXISTING is only received on the first run of the watcher,
   // so we don't need to worry about ignoring it on subsequent runs.
   std::lock_guard guard(lock_);
-  if (event == fio::wire::WatchEvent::kIdle && pause_count_ > 0) {
+  if (event == fio::wire::WatchEvent::kIdle && should_pause_) {
     return true;
   }
   // If we lost the race and the watcher was paused sometime between
   // zx_object_wait_many returning and us acquiring the lock, bail out.
-  if (pause_count_ != 0) {
+  if (should_pause_) {
     return false;
   }
 
