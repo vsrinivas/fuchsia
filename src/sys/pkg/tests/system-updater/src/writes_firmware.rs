@@ -2,7 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {super::*, pretty_assertions::assert_eq};
+use {
+    super::*,
+    fidl_fuchsia_update_installer_ext::{
+        Progress, StageFailureReason, State, UpdateInfo, UpdateInfoAndProgress,
+    },
+    pretty_assertions::assert_eq,
+};
 
 #[fasync::run_singlethreaded(test)]
 async fn writes_bootloader() {
@@ -247,7 +253,59 @@ async fn fails_on_firmware_write_error() {
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake zbi")
+        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
         .add_file("firmware", "fake firmware");
 
-    env.run_update().await.expect_err("update should fail");
+    let mut attempt = env.start_update().await.unwrap();
+    let info = UpdateInfo::builder().download_size(0).build();
+    let progress = Progress::builder().fraction_completed(0.0).bytes_downloaded(0).build();
+    assert_eq!(attempt.next().await.unwrap().unwrap(), State::Prepare);
+    assert_eq!(
+        attempt.next().await.unwrap().unwrap(),
+        State::Stage(
+            UpdateInfoAndProgress::builder()
+                .info(info.clone())
+                .progress(Progress::builder().fraction_completed(0.0).bytes_downloaded(0).build())
+                .build()
+        )
+    );
+    assert_eq!(
+        attempt.next().await.unwrap().unwrap(),
+        State::FailStage(
+            UpdateInfoAndProgress::builder()
+                .info(info)
+                .progress(progress)
+                .build()
+                .with_stage_reason(StageFailureReason::Internal)
+        )
+    );
+
+    assert_eq!(
+        env.take_interactions(),
+        vec![
+            Paver(PaverEvent::QueryCurrentConfiguration),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::VerifiedBootMetadata
+            }),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::Kernel
+            }),
+            Paver(PaverEvent::QueryCurrentConfiguration),
+            Paver(PaverEvent::QueryConfigurationStatus { configuration: paver::Configuration::A }),
+            Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: paver::Configuration::B
+            }),
+            Paver(PaverEvent::BootManagerFlush),
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            ReplaceRetainedPackages(vec![]),
+            Gc,
+            Paver(PaverEvent::WriteFirmware {
+                configuration: paver::Configuration::B,
+                firmware_type: "".to_string(),
+                payload: b"fake firmware".to_vec()
+            }),
+        ]
+    );
 }
