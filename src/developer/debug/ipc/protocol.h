@@ -12,7 +12,7 @@
 
 namespace debug_ipc {
 
-constexpr uint32_t kProtocolVersion = 42;
+constexpr uint32_t kProtocolVersion = 43;
 
 // This is so that it's obvious if the timestamp wasn't properly set (that number should be at
 // least 30,000 years) but it's not the max so that if things add to it then time keeps moving
@@ -101,6 +101,7 @@ struct HelloReply {
 enum class InferiorType : uint32_t {
   kBinary,
   kComponent,
+  kTest,
   kLast,
 };
 const char* InferiorTypeToString(InferiorType);
@@ -121,9 +122,6 @@ struct StatusReply {
 };
 
 struct LaunchRequest {
-  // TODO(fxbug.dev/5796): zxdb should be able to recognize when something is a binary
-  //               or a component. Replying with the type is probably OK as it
-  //               makes the client handling a bit easier.
   InferiorType inferior_type = InferiorType::kLast;
 
   // argv[0] is the app to launch.
@@ -131,19 +129,12 @@ struct LaunchRequest {
 };
 struct LaunchReply {
   uint64_t timestamp = kTimestampDefault;
-  // The client needs to react differently depending on whether we started a
-  // process or a component.
-  InferiorType inferior_type;
 
   // Result of launch.
   debug::Status status;
 
-  // These fields are mutually exclusive. If InferiorType is process, then
-  // process_id != 0 and component_id == 0. If it's component, it's the other
-  // way around.
+  // process_id and process_name are only valid when inferior_type is kBinary.
   uint64_t process_id = 0;
-  uint64_t component_id = 0;
-
   std::string process_name;
 };
 
@@ -385,22 +376,17 @@ struct WriteRegistersReply {
 struct NotifyProcessStarting {
   uint64_t timestamp = kTimestampDefault;
   enum class Type : uint32_t {
-    kNormal,  // Normal process startup.
-    kLimbo,   // Process entered the limbo. See debug_agent/limbo_provider.h.
+    kAttach,  // The process was attached from a filter.
+    kLaunch,  // The process was attached from a component launching.
+    kLimbo,   // The process entered the limbo and is NOT attached.
 
     kLast,  // Not valid, for verification purposes.
   };
   static const char* TypeToString(Type);
 
-  Type type = Type::kNormal;
+  Type type = Type::kAttach;
 
   uint64_t koid = 0;
-  // When components are launched from the debugger, they look like normal
-  // processes starting. The debug agent sets an id to them so the debugger can
-  // detect them and start them as they would normal processes.
-  //
-  // 0 means non set.
-  uint32_t component_id = 0;
   std::string name;
 
   // The component information if the process is running in a component.

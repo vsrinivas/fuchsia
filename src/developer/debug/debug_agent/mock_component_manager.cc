@@ -15,15 +15,12 @@ std::optional<debug_ipc::ComponentInfo> MockComponentManager::FindComponentInfo(
   return std::nullopt;
 }
 
-debug::Status MockComponentManager::LaunchComponent(DebugAgent& debug_agent,
-                                                    const std::vector<std::string>& argv,
-                                                    uint64_t* component_id) {
-  *component_id = 0;
+debug::Status MockComponentManager::LaunchComponent(const std::vector<std::string>& argv) {
   return debug::Status("Not supported");
 }
 
-uint64_t MockComponentManager::OnProcessStart(const Filter& filter, StdioHandles& out_stdio) {
-  return 0;
+bool MockComponentManager::OnProcessStart(const ProcessHandle& process, StdioHandles* out_stdio) {
+  return false;
 }
 
 }  // namespace debug_agent

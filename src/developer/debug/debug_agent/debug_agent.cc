@@ -12,6 +12,8 @@
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
 
+#include <algorithm>
+
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/binary_launcher.h"
 #include "src/developer/debug/debug_agent/component_manager.h"
@@ -24,6 +26,7 @@
 #include "src/developer/debug/ipc/agent_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
+#include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/shared/stream_buffer.h"
@@ -179,14 +182,15 @@ void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request, debug_ipc::La
       LaunchProcess(request, reply);
       return;
     case debug_ipc::InferiorType::kComponent:
-      LaunchComponent(request, reply);
+      reply->timestamp = GetNowTimestamp();
+      reply->status = system_interface_->GetComponentManager().LaunchComponent(request.argv);
       return;
+    case debug_ipc::InferiorType::kTest:  // not hooked up yet.
     case debug_ipc::InferiorType::kLast:
-      break;
+      reply->timestamp = GetNowTimestamp();
+      reply->status = debug::Status("Invalid inferior type to launch.");
+      return;
   }
-
-  reply->timestamp = GetNowTimestamp();
-  reply->status = debug::Status("Invalid inferior type to launch.");
 }
 
 void DebugAgent::OnKill(const debug_ipc::KillRequest& request, debug_ipc::KillReply* reply) {
@@ -772,7 +776,6 @@ debug::Status DebugAgent::AttachToExistingProcess(zx_koid_t process_koid, uint32
 void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
                                debug_ipc::LaunchReply* reply) {
   FX_DCHECK(!request.argv.empty());
-  reply->inferior_type = debug_ipc::InferiorType::kBinary;
   DEBUG_LOG(Process) << "Launching binary " << request.argv.front();
 
   std::unique_ptr<BinaryLauncher> launcher = system_interface_->GetLauncher();
@@ -801,70 +804,54 @@ void DebugAgent::LaunchProcess(const debug_ipc::LaunchRequest& request,
   reply->process_name = new_process->process_handle().GetName();
 }
 
-void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
-                                 debug_ipc::LaunchReply* reply) {
-  *reply = {};
-
-  // This is a hack. It will fail if the debugger isn't already attached to either the system or
-  // component root jobs. Ideally we would get the exact parent job for the component being launched
-  // and not depend on what the client may have already attached to.
-  DebuggedJob* job = GetDebuggedJob(attached_root_job_koid_);
-  if (!job) {
-    reply->status = debug::Status(
-        "Could not obtain component root job. It could be another debugger is "
-        "already running or this is a user OS build.");
-    FX_LOGS(WARNING) << reply->status.message();
-    return;
-  }
-
-  reply->inferior_type = debug_ipc::InferiorType::kComponent;
-  reply->status = system_interface_->GetComponentManager().LaunchComponent(*this, request.argv,
-                                                                           &reply->component_id);
-}
-
-void DebugAgent::AppendFilter(debug_ipc::Filter filter) { filters_.emplace_back(filter); }
-
 void DebugAgent::OnProcessStart(std::unique_ptr<ProcessHandle> process_handle) {
-  std::optional<Filter> matched_filter;
-  for (const auto& filter : filters_) {
-    if (filter.MatchesProcess(*process_handle, *system_interface_)) {
-      matched_filter = filter;
-      break;
-    }
+  if (procs_.find(process_handle->GetKoid()) != procs_.end()) {
+    return;  // The process might have been attached in |LaunchProcess|.
   }
-  if (!matched_filter) {
+
+  debug_ipc::NotifyProcessStarting::Type type = debug_ipc::NotifyProcessStarting::Type::kLast;
+  StdioHandles stdio;  // Will be filled in only for components.
+
+  if (system_interface_->GetComponentManager().OnProcessStart(*process_handle, &stdio)) {
+    type = debug_ipc::NotifyProcessStarting::Type::kLaunch;
+  } else if (std::any_of(filters_.begin(), filters_.end(), [&](const Filter& filter) {
+               return filter.MatchesProcess(*process_handle, *system_interface_);
+             })) {
+    type = debug_ipc::NotifyProcessStarting::Type::kAttach;
+  } else {
     return;
   }
 
   DEBUG_LOG(Process) << "Process starting, koid: " << process_handle->GetKoid();
 
-  auto process_koid = process_handle->GetKoid();
-  StdioHandles stdio;  // Will be filled in only for components.
-  uint64_t component_id =
-      system_interface_->GetComponentManager().OnProcessStart(*matched_filter, stdio);
-
-  // Send notification, then create debug process so that thread notification is sent after this.
+  // Prepare the notification but don't send yet because |process_handle| will be moved and
+  // |AddDebuggedProcess| may fail.
   debug_ipc::NotifyProcessStarting notify;
-  notify.koid = process_koid;
+  notify.type = type;
+  notify.koid = process_handle->GetKoid();
   notify.name = process_handle->GetName();
-  notify.component_id = component_id;
   notify.timestamp = GetNowTimestamp();
-
-  debug_ipc::MessageWriter writer;
-  debug_ipc::WriteNotifyProcessStarting(notify, &writer);
-  stream()->Write(writer.MessageComplete());
+  notify.component = system_interface_->GetComponentManager().FindComponentInfo(*process_handle,
+                                                                                *system_interface_);
 
   DebuggedProcessCreateInfo create_info(std::move(process_handle));
   create_info.stdio = std::move(stdio);
 
   DebuggedProcess* new_process = nullptr;
-  AddDebuggedProcess(std::move(create_info), &new_process);
+  debug::Status status = AddDebuggedProcess(std::move(create_info), &new_process);
 
-  if (new_process) {
-    // In some edge-cases (see DebuggedProcess::RegisterDebugState() for more) the loader state is
-    // known at startup. Send it if so.
-    new_process->SuspendAndSendModulesIfKnown();
+  if (status.has_error()) {
+    FX_LOGS(WARNING) << "Failed to attach to process " << notify.koid << ": " << status.message();
+    return;
   }
+
+  debug_ipc::MessageWriter writer;
+  debug_ipc::WriteNotifyProcessStarting(notify, &writer);
+  stream()->Write(writer.MessageComplete());
+
+  // In some edge-cases (see DebuggedProcess::RegisterDebugState() for more) the loader state is
+  // known at startup. Send it if so.
+  new_process->SuspendAndSendModulesIfKnown();
 }
 
 void DebugAgent::InjectProcessForTest(std::unique_ptr<DebuggedProcess> process) {

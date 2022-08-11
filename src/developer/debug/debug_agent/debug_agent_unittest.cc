@@ -307,7 +307,6 @@ TEST_F(DebugAgentTests, OnEnterLimbo) {
     auto& process_start = harness.stream_backend()->process_starts()[0];
     EXPECT_EQ(process_start.type, debug_ipc::NotifyProcessStarting::Type::kLimbo);
     EXPECT_EQ(process_start.koid, kProcKoid1);
-    EXPECT_EQ(process_start.component_id, 0u);
     EXPECT_EQ(process_start.name, "proc1");
   }
 }

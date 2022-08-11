@@ -242,10 +242,8 @@ bool ReadRequest(MessageReader* reader, LaunchRequest* request, uint32_t* transa
 void WriteReply(const LaunchReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kLaunch, transaction_id);
   writer->WriteUint64(reply.timestamp);
-  writer->WriteUint32(static_cast<uint32_t>(reply.inferior_type));
   Serialize(reply.status, writer);
   writer->WriteUint64(reply.process_id);
-  writer->WriteUint64(reply.component_id);
   writer->WriteString(reply.process_name);
 }
 
@@ -620,7 +618,6 @@ void WriteNotifyProcessStarting(const NotifyProcessStarting& notify, MessageWrit
   writer->WriteUint64(notify.timestamp);
   writer->WriteUint32(static_cast<uint32_t>(notify.type));
   writer->WriteUint64(notify.koid);
-  writer->WriteUint32(notify.component_id);
   writer->WriteString(notify.name);
   SerializeOptional(notify.component, writer);
 }

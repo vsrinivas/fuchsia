@@ -5,6 +5,7 @@
 #include "src/developer/debug/debug_agent/system_interface.h"
 
 #include "src/developer/debug/debug_agent/component_manager.h"
+#include "src/developer/debug/shared/logging/logging.h"
 
 namespace debug_agent {
 
@@ -62,6 +63,7 @@ zx_koid_t SystemInterface::GetParentJobKoid(zx_koid_t job) {
 }
 
 void SystemInterface::RefreshParentJobs() {
+  DEBUG_LOG(Agent) << "RefreshParentJobs called";
   parent_jobs_.clear();
   debug_ipc::ProcessTreeRecord record = GetProcessTree();
   std::function<void(const debug_ipc::ProcessTreeRecord&, zx_koid_t)> visit_each_record =

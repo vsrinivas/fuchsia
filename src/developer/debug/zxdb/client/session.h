@@ -144,11 +144,6 @@ class Session : public SettingStoreObserver {
   fxl::ObserverList<BreakpointObserver>& breakpoint_observers() { return breakpoint_observers_; }
   fxl::ObserverList<DownloadObserver>& download_observers() { return download_observers_; }
 
-  // When the client tells the agent to launch a component, it will return an unique id identifying
-  // that launch. Later, when the component effectively starts, the session will use that ID to know
-  // which component it is.
-  void ExpectComponent(uint32_t component_id);
-
   // Dispatches these particular notification types from the agent. These are public since tests
   // will commonly want to synthesize these events.
   //
@@ -254,10 +249,6 @@ class Session : public SettingStoreObserver {
 
   std::map<uint32_t, Callback> pending_;
   uint32_t next_transaction_id_ = 1;  // Reserve 0 for notifications.
-
-  // Component ids that the session is currently waiting on. See ExpectComponent comments for more
-  // information on these ids.
-  std::set<uint32_t> expected_components_;
 
   System system_;
 

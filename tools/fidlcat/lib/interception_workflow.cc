@@ -463,7 +463,6 @@ void InterceptionWorkflow::Launch(zxdb::Target* target, const std::vector<std::s
           } else {
             on_err(err);
           }
-          target->session()->ExpectComponent(reply.component_id);
           if (target->GetProcess() != nullptr) {
             SetBreakpoints(target->GetProcess(), reply.timestamp);
           }

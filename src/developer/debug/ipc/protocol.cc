@@ -87,11 +87,13 @@ const char* MsgHeader::TypeToString(MsgHeader::Type type) {
 const char* InferiorTypeToString(InferiorType type) {
   switch (type) {
     case InferiorType::kBinary:
-      return "kBinary";
+      return "Binary";
     case InferiorType::kComponent:
-      return "kComponent";
+      return "Component";
+    case InferiorType::kTest:
+      return "Test";
     case InferiorType::kLast:
-      return "kLast";
+      return "Last";
   }
 
   FX_NOTREACHED();
@@ -149,7 +151,8 @@ const char* ResumeRequest::HowToString(How how) {
 const char* NotifyProcessStarting::TypeToString(Type type) {
   // clang-format off
   switch (type) {
-    case Type::kNormal: return "Normal";
+    case Type::kAttach: return "Attach";
+    case Type::kLaunch: return "Launch";
     case Type::kLimbo: return "Limbo";
     case Type::kLast: return "<last>";
   }

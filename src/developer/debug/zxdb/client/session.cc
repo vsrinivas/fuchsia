@@ -370,7 +370,7 @@ void Session::OnStreamError() {
     LOGS(Error) << "The debug agent has disconnected.\n"
                    "The system may have halted, or this may be a bug. "
                    "If you believe it is a bug, please file a report, "
-                   "adding the system crash log (fx syslog) if possible.";
+                   "adding the system crash log (ffx log) if possible.";
   }
 }
 
@@ -630,18 +630,11 @@ void Session::DispatchProcessStarting(const debug_ipc::NotifyProcessStarting& no
   if (!found_target)  // No empty target, make a new one.
     found_target = system_.CreateNewTargetImpl(nullptr);
 
-  if (notify.component_id == 0) {
-    found_target->ProcessCreatedInJob(notify.koid, notify.name, notify.timestamp, notify.component);
-    return;
-  }
-
-  // We should be expecting this component.
-  auto it = expected_components_.find(notify.component_id);
-  FX_DCHECK(it != expected_components_.end());
-  found_target->ProcessCreatedAsComponent(notify.koid, notify.name, notify.timestamp);
-
-  // Now that the target is created, we can resume the process and make the first thread to execute.
-  found_target->process()->Continue(false);
+  auto start_type = notify.type == debug_ipc::NotifyProcessStarting::Type::kAttach
+                        ? Process::StartType::kAttach
+                        : Process::StartType::kLaunch;
+  found_target->CreateProcess(start_type, notify.koid, notify.name, notify.timestamp,
+                              notify.component);
 }
 
 void Session::DispatchNotifyIO(const debug_ipc::NotifyIO& notify) {
@@ -845,11 +838,6 @@ void Session::AddDownloadObserver(DownloadObserver* observer) {
 
 void Session::RemoveDownloadObserver(DownloadObserver* observer) {
   download_observers_.RemoveObserver(observer);
-}
-
-void Session::ExpectComponent(uint32_t component_id) {
-  FX_DCHECK(expected_components_.count(component_id) == 0);
-  expected_components_.insert(component_id);
 }
 
 fxl::WeakPtr<Session> Session::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }

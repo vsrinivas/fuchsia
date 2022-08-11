@@ -46,27 +46,14 @@ std::unique_ptr<TargetImpl> TargetImpl::Clone(System* system) {
   return result;
 }
 
-void TargetImpl::ProcessCreatedInJob(uint64_t koid, const std::string& process_name,
-                                     uint64_t timestamp,
-                                     std::optional<debug_ipc::ComponentInfo> component_info) {
-  FX_DCHECK(state_ == State::kNone);
+void TargetImpl::CreateProcess(Process::StartType start_type, uint64_t koid,
+                               const std::string& process_name, uint64_t timestamp,
+                               std::optional<debug_ipc::ComponentInfo> component_info) {
   FX_DCHECK(!process_.get());  // Shouldn't have a process.
 
   state_ = State::kRunning;
-  process_ =
-      CreateProcessImpl(koid, process_name, Process::StartType::kAttach, std::move(component_info));
-
-  for (auto& observer : session()->process_observers())
-    observer.DidCreateProcess(process_.get(), timestamp);
-}
-
-void TargetImpl::ProcessCreatedAsComponent(uint64_t koid, const std::string& process_name,
-                                           uint64_t timestamp) {
-  FX_DCHECK(state_ == State::kNone);
-  FX_DCHECK(!process_.get());
-
-  state_ = State::kRunning;
-  process_ = CreateProcessImpl(koid, process_name, Process::StartType::kComponent, std::nullopt);
+  process_ = std::make_unique<ProcessImpl>(this, koid, process_name, start_type,
+                                           std::move(component_info));
 
   for (auto& observer : session()->process_observers())
     observer.DidCreateProcess(process_.get(), timestamp);
@@ -101,10 +88,11 @@ void TargetImpl::SetArgs(std::vector<std::string> args) { args_ = std::move(args
 
 void TargetImpl::Launch(CallbackWithTimestamp callback) {
   Err err;
-  if (state_ != State::kNone)
+  if (state_ != State::kNone) {
     err = Err("Can't launch, program is already running or starting.");
-  else if (args_.empty())
+  } else if (args_.empty()) {
     err = Err("No program specified to launch.");
+  }
 
   if (err.has_error()) {
     // Avoid reentering caller to dispatch the error.
@@ -259,17 +247,11 @@ void TargetImpl::OnLaunchOrAttachReply(CallbackWithTimestamp callback, const Err
   } else {
     Process::StartType start_type =
         state_ == State::kAttaching ? Process::StartType::kAttach : Process::StartType::kLaunch;
-    state_ = State::kRunning;
-    process_ = CreateProcessImpl(koid, process_name, start_type, std::move(component_info));
+    CreateProcess(start_type, koid, process_name, timestamp, std::move(component_info));
   }
 
   if (callback)
     callback(GetWeakPtr(), err, timestamp);
-
-  if (state_ == State::kRunning) {
-    for (auto& observer : session()->process_observers())
-      observer.DidCreateProcess(process_.get(), timestamp);
-  }
 }
 
 void TargetImpl::OnKillOrDetachReply(ProcessObserver::DestroyReason reason, const Err& err,
@@ -301,12 +283,6 @@ void TargetImpl::OnKillOrDetachReply(ProcessObserver::DestroyReason reason, cons
   }
 
   callback(GetWeakPtr(), issue_err);
-}
-
-std::unique_ptr<ProcessImpl> TargetImpl::CreateProcessImpl(
-    uint64_t koid, const std::string& name, Process::StartType start_type,
-    std::optional<debug_ipc::ComponentInfo> component_info) {
-  return std::make_unique<ProcessImpl>(this, koid, name, start_type, std::move(component_info));
 }
 
 }  // namespace zxdb

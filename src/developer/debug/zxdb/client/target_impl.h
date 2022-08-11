@@ -31,15 +31,9 @@ class TargetImpl : public Target {
   // process information is not cloned.
   std::unique_ptr<TargetImpl> Clone(System* system);
 
-  // Notification that a new process was created from a job filter. The process will not have
-  // started running yet.
-  void ProcessCreatedInJob(uint64_t koid, const std::string& process_name, uint64_t timestamp,
-                           std::optional<debug_ipc::ComponentInfo> component_info);
-
-  // Notification that a new process was created as a new component. We need the distinction because
-  // they look identical as a process caught by a job filter.
-  void ProcessCreatedAsComponent(uint64_t koid, const std::string& process_name,
-                                 uint64_t timestamp);
+  // Create a process in the target. The process should have been attached in debug_agent.
+  void CreateProcess(Process::StartType start_type, uint64_t koid, const std::string& process_name,
+                     uint64_t timestamp, std::optional<debug_ipc::ComponentInfo> component_info);
 
   // Tests can use this to create a target for mocking purposes without making any IPC. To destroy
   // call ImplicitlyDetach().
@@ -79,11 +73,6 @@ class TargetImpl : public Target {
 
   void OnKillOrDetachReply(ProcessObserver::DestroyReason reason, const Err& err,
                            const debug::Status& status, Callback callback, uint64_t timestamp);
-
-  // Actual creation that unified common behaviour.
-  std::unique_ptr<ProcessImpl> CreateProcessImpl(
-      uint64_t koid, const std::string& name, Process::StartType,
-      std::optional<debug_ipc::ComponentInfo> component_info);
 
   System* system_;  // Owns |this|.
 

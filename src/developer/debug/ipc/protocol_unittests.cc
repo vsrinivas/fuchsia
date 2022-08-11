@@ -180,20 +180,16 @@ TEST(Protocol, LaunchRequest) {
 
 TEST(Protocol, LaunchReply) {
   LaunchReply initial;
-  initial.inferior_type = InferiorType::kComponent;
   initial.status = debug::Status(debug::Status::InternalValues(), debug::Status::kPlatformError,
                                  1346, "message");
   initial.process_id = 0x1234;
-  initial.component_id = 0x5678;
   initial.process_name = "winword.exe";
   initial.timestamp = kTestTimestampDefault;
 
   LaunchReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
-  EXPECT_EQ(second.inferior_type, InferiorType::kComponent);
   EXPECT_EQ(initial.status, second.status);
   EXPECT_EQ(initial.process_id, second.process_id);
-  EXPECT_EQ(initial.component_id, second.component_id);
   EXPECT_EQ(initial.process_name, second.process_name);
   EXPECT_EQ(initial.timestamp, second.timestamp);
 }
@@ -1073,7 +1069,6 @@ TEST(Protocol, NotifyProcessStarting) {
   NotifyProcessStarting initial;
   initial.type = NotifyProcessStarting::Type::kLimbo;
   initial.koid = 10;
-  initial.component_id = 2;
   initial.name = "some_process";
   initial.timestamp = kTestTimestampDefault;
   initial.component = ComponentInfo{.moniker = "moniker", .url = "url"};
@@ -1084,7 +1079,6 @@ TEST(Protocol, NotifyProcessStarting) {
 
   EXPECT_EQ(second.type, initial.type);
   EXPECT_EQ(initial.koid, second.koid);
-  EXPECT_EQ(initial.component_id, second.component_id);
   EXPECT_EQ(initial.name, second.name);
   EXPECT_EQ(initial.timestamp, second.timestamp);
   ASSERT_TRUE(second.component);

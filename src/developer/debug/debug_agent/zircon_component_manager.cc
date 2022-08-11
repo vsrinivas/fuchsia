@@ -304,11 +304,7 @@ std::optional<debug_ipc::ComponentInfo> ZirconComponentManager::FindComponentInf
   return std::nullopt;
 }
 
-debug::Status ZirconComponentManager::LaunchComponent(DebugAgent& debug_agent,
-                                                      const std::vector<std::string>& argv,
-                                                      uint64_t* component_id) {
-  *component_id = 0;
-
+debug::Status ZirconComponentManager::LaunchComponent(const std::vector<std::string>& argv) {
   V1ComponentLauncher launcher(services_);
   ComponentDescription description;
   StdioHandles handles;
@@ -317,14 +313,9 @@ debug::Status ZirconComponentManager::LaunchComponent(DebugAgent& debug_agent,
   }
   FX_DCHECK(expected_v1_components_.count(description.filter) == 0);
 
-  debug_agent.AppendFilter(debug_ipc::Filter{.type = debug_ipc::Filter::Type::kProcessName,
-                                             .pattern = description.filter});
-
   DEBUG_LOG(Process) << "Launching component url=" << description.url
                      << " filter=" << description.filter
                      << " component_id=" << description.component_id;
-
-  *component_id = description.component_id;
 
   // Launch the component.
   auto controller = launcher.Launch();
@@ -333,9 +324,6 @@ debug::Status ZirconComponentManager::LaunchComponent(DebugAgent& debug_agent,
     return debug::Status("Could not launch component.");
   }
 
-  // TODO(donosoc): This should hook into the debug agent so it can correctly
-  //                shutdown the state associated with waiting for this
-  //                component.
   controller.events().OnTerminated = [mgr = weak_factory_.GetWeakPtr(), description](
                                          int64_t return_code,
                                          fuchsia::sys::TerminationReason reason) {
@@ -353,18 +341,18 @@ debug::Status ZirconComponentManager::LaunchComponent(DebugAgent& debug_agent,
   return debug::Status();
 }
 
-uint64_t ZirconComponentManager::OnProcessStart(const Filter& filter, StdioHandles& out_stdio) {
-  if (auto it = expected_v1_components_.find(filter.filter().pattern);
+bool ZirconComponentManager::OnProcessStart(const ProcessHandle& process, StdioHandles* out_stdio) {
+  if (auto it = expected_v1_components_.find(process.GetName());
       it != expected_v1_components_.end()) {
-    out_stdio = std::move(it->second.handles);
+    *out_stdio = std::move(it->second.handles);
 
     uint64_t component_id = it->second.description.component_id;
     running_v1_components_[component_id] = std::move(it->second.controller);
 
     expected_v1_components_.erase(it);
-    return component_id;
+    return true;
   }
-  return 0;
+  return false;
 }
 
 void ZirconComponentManager::OnV1ComponentTerminated(int64_t return_code,

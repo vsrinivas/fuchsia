@@ -52,7 +52,6 @@ class Process : public ClientObject {
   // This is useful for user feedback.
   enum class StartType {
     kAttach,
-    kComponent,
     kLaunch,
   };
 

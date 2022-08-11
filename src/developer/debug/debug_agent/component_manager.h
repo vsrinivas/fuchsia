@@ -39,19 +39,17 @@ class ComponentManager {
 
   // Launches the component with the given command line.
   //
-  // DebugAgent is needed here to insert a filter to capture the new component.
-  virtual debug::Status LaunchComponent(DebugAgent& debug_agent,
-                                        const std::vector<std::string>& argv,
-                                        uint64_t* component_id) = 0;
+  // The component URL is in argv[0].
+  virtual debug::Status LaunchComponent(const std::vector<std::string>& argv) = 0;
 
   // Notification that a process has started.
   //
-  // If this process launch was a component, this function will fill in the given stdio handles
-  // and return the id associated with the component launch.
+  // If the process starts because of a |LaunchComponent|, this function will fill in the given
+  // stdio handles and return true.
   //
   // If it was not a component launch, returns false (the caller normally won't know if a launch is
   // a component without asking us, so it isn't necessarily an error).
-  virtual uint64_t OnProcessStart(const Filter& filter, StdioHandles& out_stdio) = 0;
+  virtual bool OnProcessStart(const ProcessHandle& process, StdioHandles* out_stdio) = 0;
 };
 
 }  // namespace debug_agent

@@ -59,10 +59,6 @@ class DebugAgent : public RemoteAPI,
   Breakpoint* GetBreakpoint(uint32_t breakpoint_id);
   void RemoveBreakpoint(uint32_t breakpoint_id);
 
-  // Manually add a filter. Only intended to be used by ComponentManager to launch v1 components.
-  // TODO(dangyi): Deprecate launching v1 components.
-  void AppendFilter(debug_ipc::Filter filter);
-
   // ProcessStartHandler implementation.
   void OnProcessStart(std::unique_ptr<ProcessHandle> process) override;
 
@@ -150,8 +146,6 @@ class DebugAgent : public RemoteAPI,
   debug::Status AttachToExistingProcess(zx_koid_t process_koid, uint32_t transaction_id);
 
   void LaunchProcess(const debug_ipc::LaunchRequest&, debug_ipc::LaunchReply*);
-
-  void LaunchComponent(const debug_ipc::LaunchRequest&, debug_ipc::LaunchReply*);
 
   // Process Limbo ---------------------------------------------------------------------------------
 

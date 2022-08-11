@@ -235,19 +235,9 @@ bool ReadReply(MessageReader* reader, LaunchReply* reply, uint32_t* transaction_
 
   if (!reader->ReadUint64(&reply->timestamp))
     return false;
-
-  uint32_t inferior_type;
-  if (!reader->ReadUint32(&inferior_type) ||
-      inferior_type >= static_cast<uint32_t>(InferiorType::kLast)) {
-    return false;
-  }
-  reply->inferior_type = static_cast<InferiorType>(inferior_type);
-
   if (!Deserialize(reader, &reply->status))
     return false;
   if (!reader->ReadUint64(&reply->process_id))
-    return false;
-  if (!reader->ReadUint64(&reply->component_id))
     return false;
   if (!reader->ReadString(&reply->process_name))
     return false;
@@ -649,8 +639,6 @@ bool ReadNotifyProcessStarting(MessageReader* reader, NotifyProcessStarting* pro
   process->type = static_cast<NotifyProcessStarting::Type>(type);
 
   if (!reader->ReadUint64(&process->koid))
-    return false;
-  if (!reader->ReadUint32(&process->component_id))
     return false;
   if (!reader->ReadString(&process->name))
     return false;

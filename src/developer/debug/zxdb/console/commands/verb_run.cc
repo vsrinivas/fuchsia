@@ -113,8 +113,6 @@ void LaunchComponent(const Command& cmd) {
       Console::get()->Output(err);
       return;
     }
-    FX_DCHECK(reply.inferior_type == debug_ipc::InferiorType::kComponent)
-        << "Expected Component, Got: " << debug_ipc::InferiorTypeToString(reply.inferior_type);
 
     if (reply.status.has_error()) {
       // TODO(donosoc): This should interpret the component termination reason values.
@@ -127,11 +125,9 @@ void LaunchComponent(const Command& cmd) {
 
     // We tell the session we will be expecting this component.
     FX_DCHECK(reply.process_id == 0);
-    FX_DCHECK(reply.component_id != 0);
-    target->session()->ExpectComponent(reply.component_id);
   };
 
-  cmd.target()->session()->remote_api()->Launch(std::move(request), std::move(launch_cb));
+  cmd.target()->session()->remote_api()->Launch(request, std::move(launch_cb));
 }
 
 Err RunVerbRun(ConsoleContext* context, const Command& cmd, CommandCallback callback = nullptr) {
@@ -139,12 +135,6 @@ Err RunVerbRun(ConsoleContext* context, const Command& cmd, CommandCallback call
   Err err = cmd.ValidateNouns({Noun::kProcess});
   if (err.has_error())
     return err;
-
-  // May need to create a new target.
-  auto err_or_target = GetRunnableTarget(context, cmd);
-  if (err_or_target.has_error())
-    return err_or_target.err();
-  Target* target = err_or_target.value();
 
   // Output warning about this possibly not working.
   OutputBuffer warning(Syntax::kWarning, GetExclamation());
@@ -154,6 +144,12 @@ Err RunVerbRun(ConsoleContext* context, const Command& cmd, CommandCallback call
   Console::get()->Output(warning);
 
   if (!cmd.HasSwitch(kRunComponentSwitch)) {
+    // May need to create a new target.
+    auto err_or_target = GetRunnableTarget(context, cmd);
+    if (err_or_target.has_error())
+      return err_or_target.err();
+    Target* target = err_or_target.value();
+
     if (cmd.args().empty()) {
       // Use the args already set on the target.
       if (target->GetArgs().empty())

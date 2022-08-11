@@ -20,9 +20,8 @@ class MockComponentManager : public ComponentManager {
 
   // ComponentManager implementation.
   std::optional<debug_ipc::ComponentInfo> FindComponentInfo(zx_koid_t job_koid) const override;
-  debug::Status LaunchComponent(DebugAgent& debug_agent, const std::vector<std::string>& argv,
-                                uint64_t* component_id) override;
-  uint64_t OnProcessStart(const Filter& filter, StdioHandles& out_stdio) override;
+  debug::Status LaunchComponent(const std::vector<std::string>& argv) override;
+  bool OnProcessStart(const ProcessHandle& process, StdioHandles* out_stdio) override;
 
  private:
   std::map<zx_koid_t, debug_ipc::ComponentInfo> component_info_;

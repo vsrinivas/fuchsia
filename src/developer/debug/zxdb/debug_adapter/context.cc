@@ -253,7 +253,6 @@ void DebugAdapterContext::DidCreateProcess(Process* process, uint64_t timestamp)
     case Process::StartType::kAttach:
       event.startMethod = "attach";
       break;
-    case Process::StartType::kComponent:
     case Process::StartType::kLaunch:
       event.startMethod = "launch";
       break;

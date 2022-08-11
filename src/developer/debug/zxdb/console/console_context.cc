@@ -678,7 +678,6 @@ void ConsoleContext::DidCreateProcess(Process* process, uint64_t timestamp) {
     case Process::StartType::kAttach:
       out.Append("Attached ");
       break;
-    case Process::StartType::kComponent:
     case Process::StartType::kLaunch:
       out.Append("Launched ");
       break;
