@@ -9,6 +9,13 @@
             url: "#meta/expose_dir_rights.cm",
         },
     ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [ "#expose_dir_rights" ],
+        },
+    ],
     expose: [
         {
             directory: "read_only",

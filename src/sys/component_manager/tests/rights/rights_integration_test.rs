@@ -200,7 +200,6 @@ async fn storage_offer_from_rw_dir() {
 }
 
 // Verifies you can't write to storage if its backing source capability is not writable.
-#[ignore] // TODO(https://fxbug.dev/103991) re-enable after fixing racy logic in run_test
 #[fasync::run_singlethreaded(test)]
 async fn storage_offer_from_r_dir_fails() {
     run_test("#meta/root_invalid_storage_offer_rights.cm", "Failed to write to file").await

@@ -53,6 +53,7 @@ rustc_binary("use_dir_rights_bin") {
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/lib/fdio/rust:fdio",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/sys/component_manager/tests/fidl:components_rust",
@@ -69,6 +70,7 @@ rustc_binary("use_storage_bin") {
   source_root = "use_storage.rs"
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-fs",

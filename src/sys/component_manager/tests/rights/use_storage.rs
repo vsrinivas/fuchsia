@@ -8,10 +8,9 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_fs::{self, OpenFlags},
     futures::{StreamExt, TryStreamExt},
-    std::path::PathBuf,
 };
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main]
 async fn main() {
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
@@ -24,6 +23,19 @@ async fn main() {
     fs.collect::<()>().await;
 }
 
+async fn open_and_write_file(dir: &fio::DirectoryProxy) -> Result<(), Error> {
+    // We are opening the file with the DESCRIBE flag and waiting for a response (no pipelining).
+    // This should fail if the directory failed to route due to a rights issue.
+    let file = fuchsia_fs::directory::open_file(
+        &dir,
+        "test",
+        OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE,
+    )
+    .await?;
+    fuchsia_fs::write_file_bytes(&file, b"test_data").await?;
+    Ok(())
+}
+
 async fn run_trigger_service(mut stream: ftest::TriggerRequestStream) -> Result<(), Error> {
     while let Some(event) = stream.try_next().await? {
         let ftest::TriggerRequest::Run { responder } = event;
@@ -31,12 +43,7 @@ async fn run_trigger_service(mut stream: ftest::TriggerRequestStream) -> Result<
             "/data",
             OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
         )?;
-        let file = fuchsia_fs::open_file(
-            &data_proxy,
-            &PathBuf::from("test"),
-            OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE,
-        )?;
-        let msg = if let Err(_) = fuchsia_fs::write_file_bytes(&file, b"test_data").await {
+        let msg = if open_and_write_file(&data_proxy).await.is_err() {
             "Failed to write to file"
         } else {
             "All tests passed"

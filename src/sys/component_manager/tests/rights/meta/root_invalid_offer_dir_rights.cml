@@ -45,6 +45,14 @@
             from: "#expose_dir_rights",
             to: "#use_dir_rights",
         },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#expose_dir_rights",
+                "#use_dir_rights",
+            ],
+        },
     ],
     expose: [
         {
