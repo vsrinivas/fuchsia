@@ -815,6 +815,7 @@ func (i *Instance) WaitForAnyLogMessage(msgs ...string) (string, error) {
 			i.printStderr()
 			return "", err
 		}
+		fmt.Print(line)
 		for _, msg := range msgs {
 			if strings.Contains(line, msg) {
 				return msg, nil
