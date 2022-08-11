@@ -315,7 +315,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add> f
   explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_drivertwoway::TwoWay> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>* request);
   explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>* response)
       : ::fidl::BaseWireResult<::test_drivertwoway::TwoWay::Add>(fidl::Status::Ok()), decoded_(response) {
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 
   explicit WireUnownedResult(
@@ -323,7 +323,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add> f
       ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_drivertwoway::TwoWay::Add>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
   }
 
@@ -340,7 +340,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add> f
 
  private:
   ::fdf::Arena arena_;
-  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>> decoded_;
+  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>> decoded_;
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_drivertwoway::TwoWay> : public ::fidl::internal::BaseEventHandlerInterface {

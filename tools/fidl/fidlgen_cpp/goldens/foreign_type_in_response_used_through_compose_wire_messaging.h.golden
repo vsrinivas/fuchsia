@@ -323,7 +323,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_foreigntypeinresponseusedthroughco
 
  private:
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
-  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>> decoded_;
+  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>> decoded_;
 };
 
 template <>
@@ -332,7 +332,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_foreigntypeinresponseusedth
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_foreigntypeinresponseusedthroughcompose::Top> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* request);
   explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* response)
       : ::fidl::BaseWireResult<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(fidl::Status::Ok()), decoded_(response) {
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 
   explicit WireUnownedResult(
@@ -340,7 +340,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_foreigntypeinresponseusedth
       ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(decoded) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
   }
 
@@ -352,7 +352,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_foreigntypeinresponseusedth
   ~WireUnownedResult() = default;
 
  private:
-  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>> decoded_;
+  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>> decoded_;
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_foreigntypeinresponseusedthroughcompose::Top> : public ::fidl::internal::BaseEventHandlerInterface {

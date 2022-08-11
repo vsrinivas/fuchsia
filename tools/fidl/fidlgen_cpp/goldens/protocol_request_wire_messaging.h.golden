@@ -953,7 +953,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocolrequest::Parent::GetChild>
 
  private:
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
-  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild>> decoded_;
+  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild>> decoded_;
 };
 
 template <>
@@ -962,7 +962,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolrequest::Parent::Ge
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChild>* request);
   explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild>* response)
       : ::fidl::BaseWireResult<::test_protocolrequest::Parent::GetChild>(fidl::Status::Ok()), decoded_(response) {
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 
   explicit WireUnownedResult(
@@ -970,7 +970,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolrequest::Parent::Ge
       ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_protocolrequest::Parent::GetChild>(decoded) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
   }
 
@@ -982,7 +982,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolrequest::Parent::Ge
   ~WireUnownedResult() = default;
 
  private:
-  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild>> decoded_;
+  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild>> decoded_;
 };
 
 template <>
@@ -1006,7 +1006,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocolrequest::Parent::GetChildR
 
  private:
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
-  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>> decoded_;
+  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>> decoded_;
 };
 
 template <>
@@ -1015,7 +1015,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolrequest::Parent::Ge
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChildRequest>* request);
   explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>* response)
       : ::fidl::BaseWireResult<::test_protocolrequest::Parent::GetChildRequest>(fidl::Status::Ok()), decoded_(response) {
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 
   explicit WireUnownedResult(
@@ -1023,7 +1023,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolrequest::Parent::Ge
       ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_protocolrequest::Parent::GetChildRequest>(decoded) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
   }
 
@@ -1035,7 +1035,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolrequest::Parent::Ge
   ~WireUnownedResult() = default;
 
  private:
-  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>> decoded_;
+  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>> decoded_;
 };
 
 template <>

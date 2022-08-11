@@ -613,7 +613,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_requestflexibleenvelope::Protocol:
 
  private:
   ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
-  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> decoded_;
+  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> decoded_;
 };
 
 template <>
@@ -622,7 +622,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_requestflexibleenvelope::Pr
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>* request);
   explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>* response)
       : ::fidl::BaseWireResult<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>(fidl::Status::Ok()), decoded_(response) {
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 
   explicit WireUnownedResult(
@@ -630,7 +630,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_requestflexibleenvelope::Pr
       ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>(decoded) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
   }
 
@@ -642,7 +642,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_requestflexibleenvelope::Pr
   ~WireUnownedResult() = default;
 
  private:
-  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> decoded_;
+  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> decoded_;
 };
 
 template <>
@@ -666,7 +666,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_requestflexibleenvelope::Protocol:
 
  private:
   ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
-  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> decoded_;
+  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> decoded_;
 };
 
 template <>
@@ -675,7 +675,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_requestflexibleenvelope::Pr
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>* request);
   explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>* response)
       : ::fidl::BaseWireResult<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>(fidl::Status::Ok()), decoded_(response) {
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 
   explicit WireUnownedResult(
@@ -683,7 +683,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_requestflexibleenvelope::Pr
       ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>(decoded) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
   }
 
@@ -695,7 +695,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_requestflexibleenvelope::Pr
   ~WireUnownedResult() = default;
 
  private:
-  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> decoded_;
+  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> decoded_;
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_requestflexibleenvelope::Protocol> : public ::fidl::internal::BaseEventHandlerInterface {

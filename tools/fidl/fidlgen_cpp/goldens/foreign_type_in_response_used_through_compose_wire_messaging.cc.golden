@@ -28,7 +28,7 @@ extern "C" const fidl_type_t test_middle_MiddleGetFooTopResponseTable;
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_foreigntypeinresponseusedthroughcompose {
@@ -63,7 +63,7 @@ namespace test_foreigntypeinresponseusedthroughcompose {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_foreigntypeinresponseusedthroughcompose {

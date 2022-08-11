@@ -30,7 +30,7 @@ extern "C" const fidl_type_t test_anonymous_SomeProtocolSomeMethodTopResponseTab
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_anonymous {
@@ -65,7 +65,7 @@ namespace test_anonymous {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_anonymous {

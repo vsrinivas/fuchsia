@@ -366,7 +366,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -402,7 +402,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -429,7 +429,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -465,7 +465,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -492,7 +492,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -528,7 +528,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -555,7 +555,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -591,7 +591,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -618,7 +618,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -654,7 +654,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -681,7 +681,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -717,7 +717,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -744,7 +744,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -780,7 +780,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -807,7 +807,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -843,7 +843,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -870,7 +870,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -906,7 +906,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -933,7 +933,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -969,7 +969,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -996,7 +996,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -1032,7 +1032,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -1059,7 +1059,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -1095,7 +1095,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -1122,7 +1122,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -1158,7 +1158,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -1185,7 +1185,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -1221,7 +1221,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -1248,7 +1248,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -1284,7 +1284,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -1311,7 +1311,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -1347,7 +1347,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -4522,7 +4522,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -4558,7 +4558,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -4585,7 +4585,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -4621,7 +4621,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -4648,7 +4648,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -4684,7 +4684,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -4711,7 +4711,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -4747,7 +4747,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -4774,7 +4774,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -4810,7 +4810,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -4837,7 +4837,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -4873,7 +4873,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -4900,7 +4900,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -4936,7 +4936,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -4963,7 +4963,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -4999,7 +4999,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -7270,7 +7270,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -7306,7 +7306,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -7333,7 +7333,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -7369,7 +7369,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -7396,7 +7396,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -7432,7 +7432,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -7459,7 +7459,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -7495,7 +7495,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -7522,7 +7522,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -7558,7 +7558,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -7585,7 +7585,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -7621,7 +7621,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -7648,7 +7648,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -7684,7 +7684,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -7711,7 +7711,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__
@@ -7747,7 +7747,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
 #endif  // __Fuchsia__

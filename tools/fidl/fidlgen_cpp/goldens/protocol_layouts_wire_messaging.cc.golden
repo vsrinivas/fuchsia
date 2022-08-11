@@ -229,7 +229,7 @@ namespace test_protocollayouts {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_protocollayouts {
@@ -264,7 +264,7 @@ namespace test_protocollayouts {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_protocollayouts {
@@ -288,7 +288,7 @@ namespace test_protocollayouts {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_protocollayouts {
@@ -323,7 +323,7 @@ namespace test_protocollayouts {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_protocollayouts {
@@ -384,7 +384,7 @@ namespace test_protocollayouts {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_protocollayouts {
@@ -419,7 +419,7 @@ namespace test_protocollayouts {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_protocollayouts {
@@ -443,7 +443,7 @@ namespace test_protocollayouts {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_protocollayouts {
@@ -478,7 +478,7 @@ namespace test_protocollayouts {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_protocollayouts {
@@ -539,7 +539,7 @@ namespace test_protocollayouts {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_protocollayouts {
@@ -574,7 +574,7 @@ namespace test_protocollayouts {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_protocollayouts {
@@ -598,7 +598,7 @@ namespace test_protocollayouts {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_protocollayouts {
@@ -633,7 +633,7 @@ namespace test_protocollayouts {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_protocollayouts {
@@ -694,7 +694,7 @@ namespace test_protocollayouts {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_protocollayouts {
@@ -729,7 +729,7 @@ namespace test_protocollayouts {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_protocollayouts {
@@ -753,7 +753,7 @@ namespace test_protocollayouts {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_protocollayouts {
@@ -788,7 +788,7 @@ namespace test_protocollayouts {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_protocollayouts {
@@ -849,7 +849,7 @@ namespace test_protocollayouts {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_protocollayouts {
@@ -884,7 +884,7 @@ namespace test_protocollayouts {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_protocollayouts {
@@ -908,7 +908,7 @@ namespace test_protocollayouts {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_protocollayouts {
@@ -943,7 +943,7 @@ namespace test_protocollayouts {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_protocollayouts {

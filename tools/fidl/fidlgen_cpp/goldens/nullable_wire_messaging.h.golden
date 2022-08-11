@@ -353,7 +353,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_nullable::SimpleProtocol::Add> fin
 
  private:
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
-  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add>> decoded_;
+  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add>> decoded_;
 };
 
 template <>
@@ -362,7 +362,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_nullable::SimpleProtocol::A
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_nullable::SimpleProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>* request);
   explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add>* response)
       : ::fidl::BaseWireResult<::test_nullable::SimpleProtocol::Add>(fidl::Status::Ok()), decoded_(response) {
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 
   explicit WireUnownedResult(
@@ -370,7 +370,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_nullable::SimpleProtocol::A
       ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_nullable::SimpleProtocol::Add>(decoded) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
   }
 
@@ -382,7 +382,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_nullable::SimpleProtocol::A
   ~WireUnownedResult() = default;
 
  private:
-  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add>> decoded_;
+  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add>> decoded_;
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_nullable::SimpleProtocol> : public ::fidl::internal::BaseEventHandlerInterface {

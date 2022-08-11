@@ -90,7 +90,7 @@ extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequestRequestT
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_protocolrequest {
@@ -125,7 +125,7 @@ namespace test_protocolrequest {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_protocolrequest {
@@ -149,7 +149,7 @@ namespace test_protocolrequest {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_protocolrequest {
@@ -184,7 +184,7 @@ namespace test_protocolrequest {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_protocolrequest {

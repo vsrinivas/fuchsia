@@ -38,7 +38,7 @@ extern "C" const fidl_type_t test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMa
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_errorsyntax {
@@ -73,7 +73,7 @@ namespace test_errorsyntax {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_errorsyntax {
@@ -97,7 +97,7 @@ namespace test_errorsyntax {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_errorsyntax {
@@ -132,7 +132,7 @@ namespace test_errorsyntax {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_errorsyntax {

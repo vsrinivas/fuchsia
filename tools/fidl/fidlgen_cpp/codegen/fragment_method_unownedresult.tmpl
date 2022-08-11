@@ -20,7 +20,7 @@ class [[nodiscard]] {{ .WireUnownedResult }} final : public {{ .BaseWireResult }
   {{- if .HasResponse }}
     explicit {{ .WireUnownedResult.Self }}({{ .WireTransactionalResponse }}* response)
         : {{ .BaseWireResult }}(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit {{ .WireUnownedResult.Self }}(
@@ -29,7 +29,7 @@ class [[nodiscard]] {{ .WireUnownedResult }} final : public {{ .BaseWireResult }
     ) : {{ .BaseWireResult }}(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
   {{- end }}
@@ -43,7 +43,7 @@ class [[nodiscard]] {{ .WireUnownedResult }} final : public {{ .BaseWireResult }
 
   {{ if .HasResponse -}}
   private:
-    ::fidl::internal::DecodedValue<{{ .WireTransactionalResponse }}> decoded_;
+    ::fidl::DecodedValue<{{ .WireTransactionalResponse }}> decoded_;
   {{- end }}
 };
 
@@ -106,7 +106,7 @@ class [[nodiscard]] {{ .WireUnownedResult }} final : public {{ .BaseWireResult }
     if (ok()) {
       decoded_ = decoded.Take();
 
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
   {{- else }}
     outgoing.Write(client_end.handle());

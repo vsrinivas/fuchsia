@@ -214,7 +214,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -244,7 +244,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -274,7 +274,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -304,7 +304,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -334,7 +334,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -364,7 +364,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -394,7 +394,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -424,7 +424,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -454,7 +454,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -484,7 +484,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -514,7 +514,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -544,7 +544,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -574,7 +574,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -604,7 +604,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -634,7 +634,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -664,7 +664,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -2188,7 +2188,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDri
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -2218,7 +2218,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDri
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -2248,7 +2248,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDri
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -2278,7 +2278,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDri
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -2308,7 +2308,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDri
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -2338,7 +2338,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDri
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -2368,7 +2368,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDri
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -2398,7 +2398,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDri
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -3290,7 +3290,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedD
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -3320,7 +3320,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedD
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -3350,7 +3350,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedD
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -3380,7 +3380,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedD
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -3410,7 +3410,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedD
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -3440,7 +3440,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedD
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -3470,7 +3470,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedD
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {
@@ -3500,7 +3500,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedD
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
 }namespace test_unknowninteractions {

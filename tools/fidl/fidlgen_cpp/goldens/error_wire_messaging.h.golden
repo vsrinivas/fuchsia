@@ -356,7 +356,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_error::Example::Foo> final : publi
 
  private:
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
-  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> decoded_;
+  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> decoded_;
 };
 
 template <>
@@ -365,7 +365,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_error::Example::Foo> final 
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_error::Example> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>* request);
   explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_error::Example::Foo>* response)
       : ::fidl::BaseWireResult<::test_error::Example::Foo>(fidl::Status::Ok()), decoded_(response) {
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 
   explicit WireUnownedResult(
@@ -373,7 +373,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_error::Example::Foo> final 
       ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_error::Example::Foo>(decoded) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
   }
 
@@ -385,7 +385,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_error::Example::Foo> final 
   ~WireUnownedResult() = default;
 
  private:
-  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> decoded_;
+  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> decoded_;
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_error::Example> : public ::fidl::internal::BaseEventHandlerInterface {

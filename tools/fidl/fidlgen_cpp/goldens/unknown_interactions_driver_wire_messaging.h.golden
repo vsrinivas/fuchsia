@@ -4074,7 +4074,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -4083,7 +4083,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -4100,7 +4100,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>> decoded_;
 };
 
 template<>
@@ -4115,7 +4115,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -4124,7 +4124,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -4141,7 +4141,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields>> decoded_;
 };
 
 template<>
@@ -4156,7 +4156,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -4165,7 +4165,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -4182,7 +4182,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion>> decoded_;
 };
 
 template<>
@@ -4197,7 +4197,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -4206,7 +4206,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -4223,7 +4223,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable>> decoded_;
 };
 
 template<>
@@ -4238,7 +4238,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -4247,7 +4247,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -4264,7 +4264,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>> decoded_;
 };
 
 template<>
@@ -4279,7 +4279,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -4288,7 +4288,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -4305,7 +4305,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>> decoded_;
 };
 
 template<>
@@ -4320,7 +4320,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -4329,7 +4329,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -4346,7 +4346,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>> decoded_;
 };
 
 template<>
@@ -4361,7 +4361,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -4370,7 +4370,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -4387,7 +4387,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>> decoded_;
 };
 
 
@@ -4399,7 +4399,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -4408,7 +4408,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -4425,7 +4425,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>> decoded_;
 };
 
 template<>
@@ -4440,7 +4440,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -4449,7 +4449,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -4466,7 +4466,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>> decoded_;
 };
 
 template<>
@@ -4481,7 +4481,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -4490,7 +4490,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -4507,7 +4507,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion>> decoded_;
 };
 
 template<>
@@ -4522,7 +4522,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -4531,7 +4531,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -4548,7 +4548,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable>> decoded_;
 };
 
 template<>
@@ -4563,7 +4563,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -4572,7 +4572,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -4589,7 +4589,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>> decoded_;
 };
 
 template<>
@@ -4604,7 +4604,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -4613,7 +4613,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -4630,7 +4630,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>> decoded_;
 };
 
 template<>
@@ -4645,7 +4645,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -4654,7 +4654,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -4671,7 +4671,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>> decoded_;
 };
 
 template<>
@@ -4686,7 +4686,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -4695,7 +4695,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -4712,7 +4712,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>> decoded_;
 };
 template<>
 class ::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsDriverProtocol> : public ::fidl::internal::BaseEventHandlerInterface, public ::fidl::UnknownEventHandler<::test_unknowninteractions::UnknownInteractionsDriverProtocol> {
@@ -7667,7 +7667,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -7676,7 +7676,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -7693,7 +7693,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>> decoded_;
 };
 
 template<>
@@ -7708,7 +7708,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -7717,7 +7717,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -7734,7 +7734,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields>> decoded_;
 };
 
 template<>
@@ -7749,7 +7749,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -7758,7 +7758,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -7775,7 +7775,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion>> decoded_;
 };
 
 template<>
@@ -7790,7 +7790,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -7799,7 +7799,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -7816,7 +7816,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable>> decoded_;
 };
 
 template<>
@@ -7831,7 +7831,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -7840,7 +7840,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -7857,7 +7857,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>> decoded_;
 };
 
 template<>
@@ -7872,7 +7872,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -7881,7 +7881,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -7898,7 +7898,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>> decoded_;
 };
 
 template<>
@@ -7913,7 +7913,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -7922,7 +7922,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -7939,7 +7939,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>> decoded_;
 };
 
 template<>
@@ -7954,7 +7954,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -7963,7 +7963,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -7980,7 +7980,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>> decoded_;
 };
 template<>
 class ::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> : public ::fidl::internal::BaseEventHandlerInterface, public ::fidl::UnknownEventHandler<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> {
@@ -10465,7 +10465,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -10474,7 +10474,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -10491,7 +10491,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>> decoded_;
 };
 
 template<>
@@ -10506,7 +10506,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -10515,7 +10515,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -10532,7 +10532,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields>> decoded_;
 };
 
 template<>
@@ -10547,7 +10547,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -10556,7 +10556,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -10573,7 +10573,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion>> decoded_;
 };
 
 template<>
@@ -10588,7 +10588,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -10597,7 +10597,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -10614,7 +10614,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable>> decoded_;
 };
 
 template<>
@@ -10629,7 +10629,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -10638,7 +10638,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -10655,7 +10655,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>> decoded_;
 };
 
 template<>
@@ -10670,7 +10670,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -10679,7 +10679,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -10696,7 +10696,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>> decoded_;
 };
 
 template<>
@@ -10711,7 +10711,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -10720,7 +10720,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -10737,7 +10737,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>> decoded_;
 };
 
 template<>
@@ -10752,7 +10752,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>* response)
         : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -10761,7 +10761,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     ) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -10778,7 +10778,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>> decoded_;
 };
 template<>
 class ::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> : public ::fidl::internal::BaseEventHandlerInterface {

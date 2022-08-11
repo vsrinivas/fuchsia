@@ -608,7 +608,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_emptystruct::EmptyProtocol::SendAn
 
  private:
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
-  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> decoded_;
+  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> decoded_;
 };
 
 template <>
@@ -617,7 +617,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_emptystruct::EmptyProtocol:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>* request);
   explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>* response)
       : ::fidl::BaseWireResult<::test_emptystruct::EmptyProtocol::SendAndReceive>(fidl::Status::Ok()), decoded_(response) {
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 
   explicit WireUnownedResult(
@@ -625,7 +625,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_emptystruct::EmptyProtocol:
       ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_emptystruct::EmptyProtocol::SendAndReceive>(decoded) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
   }
 
@@ -637,7 +637,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_emptystruct::EmptyProtocol:
   ~WireUnownedResult() = default;
 
  private:
-  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> decoded_;
+  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> decoded_;
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_emptystruct::EmptyProtocol> : public ::fidl::internal::BaseEventHandlerInterface {

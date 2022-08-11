@@ -30,7 +30,7 @@ class [[nodiscard]] {{ .WireUnownedResult }} final : public {{ .BaseWireResult }
   {{- if .HasResponse }}
     explicit {{ .WireUnownedResult.Self }}({{ .WireTransactionalResponse }}* response)
         : {{ .BaseWireResult }}(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit {{ .WireUnownedResult.Self }}(
@@ -39,7 +39,7 @@ class [[nodiscard]] {{ .WireUnownedResult }} final : public {{ .BaseWireResult }
     ) : {{ .BaseWireResult }}(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
   {{- end }}
@@ -59,7 +59,7 @@ class [[nodiscard]] {{ .WireUnownedResult }} final : public {{ .BaseWireResult }
 
    private:
     ::fdf::Arena arena_;
-    ::fidl::internal::DecodedValue<{{ .WireTransactionalResponse }}> decoded_;
+    ::fidl::DecodedValue<{{ .WireTransactionalResponse }}> decoded_;
   {{- end }}
 };
 {{- end }}
@@ -99,7 +99,7 @@ class [[nodiscard]] {{ .WireUnownedResult }} final : public {{ .BaseWireResult }
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
     arena_ = std::move(response_storage.arena);
   {{- else }}

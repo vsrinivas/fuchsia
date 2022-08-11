@@ -30,7 +30,7 @@ extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_inheritance {
@@ -65,7 +65,7 @@ namespace test_inheritance {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_inheritance {
@@ -224,7 +224,7 @@ extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_inheritance {
@@ -259,7 +259,7 @@ namespace test_inheritance {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_inheritance {

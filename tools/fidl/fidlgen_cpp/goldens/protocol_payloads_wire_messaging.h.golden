@@ -3835,7 +3835,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocolpayloads::MainProtocol::Tw
   ~WireResult() = default;
    private:
     ::fidl::internal::InlineMessageBuffer<24> bytes_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed>> decoded_;
 };
 
 template<>
@@ -3844,7 +3844,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolpayloads::MainProto
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposed>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed>* response)
         : ::fidl::BaseWireResult<::test_protocolpayloads::MainProtocol::TwoWayComposed>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -3853,7 +3853,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolpayloads::MainProto
     ) : ::fidl::BaseWireResult<::test_protocolpayloads::MainProtocol::TwoWayComposed>(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -3865,7 +3865,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolpayloads::MainProto
   ~WireUnownedResult() = default;
 
   private:
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposed>> decoded_;
 };
 
 template<>
@@ -3889,7 +3889,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocolpayloads::MainProtocol::Tw
   ~WireResult() = default;
    private:
     ::fidl::internal::InlineMessageBuffer<48> bytes_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>> decoded_;
 };
 
 template<>
@@ -3898,7 +3898,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolpayloads::MainProto
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>* response)
         : ::fidl::BaseWireResult<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -3907,7 +3907,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolpayloads::MainProto
     ) : ::fidl::BaseWireResult<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -3919,7 +3919,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolpayloads::MainProto
   ~WireUnownedResult() = default;
 
   private:
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>> decoded_;
 };
 
 
@@ -3976,7 +3976,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocolpayloads::MainProtocol::Tw
   ~WireResult() = default;
    private:
     ::fidl::internal::InlineMessageBuffer<24> bytes_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>> decoded_;
 };
 
 template<>
@@ -3985,7 +3985,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolpayloads::MainProto
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>* response)
         : ::fidl::BaseWireResult<::test_protocolpayloads::MainProtocol::TwoWayLocal>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -3994,7 +3994,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolpayloads::MainProto
     ) : ::fidl::BaseWireResult<::test_protocolpayloads::MainProtocol::TwoWayLocal>(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -4006,7 +4006,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolpayloads::MainProto
   ~WireUnownedResult() = default;
 
   private:
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocal>> decoded_;
 };
 
 template<>
@@ -4030,7 +4030,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocolpayloads::MainProtocol::Tw
   ~WireResult() = default;
    private:
     ::fidl::internal::InlineMessageBuffer<48> bytes_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>> decoded_;
 };
 
 template<>
@@ -4039,7 +4039,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolpayloads::MainProto
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>* response)
         : ::fidl::BaseWireResult<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -4048,7 +4048,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolpayloads::MainProto
     ) : ::fidl::BaseWireResult<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -4060,7 +4060,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolpayloads::MainProto
   ~WireUnownedResult() = default;
 
   private:
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>> decoded_;
 };
 
 
@@ -4117,7 +4117,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocolpayloads::MainProtocol::Tw
   ~WireResult() = default;
    private:
     ::fidl::internal::InlineMessageBuffer<24> bytes_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>> decoded_;
 };
 
 template<>
@@ -4126,7 +4126,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolpayloads::MainProto
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImport>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>* response)
         : ::fidl::BaseWireResult<::test_protocolpayloads::MainProtocol::TwoWayImport>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -4135,7 +4135,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolpayloads::MainProto
     ) : ::fidl::BaseWireResult<::test_protocolpayloads::MainProtocol::TwoWayImport>(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -4147,7 +4147,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolpayloads::MainProto
   ~WireUnownedResult() = default;
 
   private:
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImport>> decoded_;
 };
 
 template<>
@@ -4171,7 +4171,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocolpayloads::MainProtocol::Tw
   ~WireResult() = default;
    private:
     ::fidl::internal::InlineMessageBuffer<48> bytes_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>> decoded_;
 };
 
 template<>
@@ -4180,7 +4180,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolpayloads::MainProto
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>* response)
         : ::fidl::BaseWireResult<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -4189,7 +4189,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolpayloads::MainProto
     ) : ::fidl::BaseWireResult<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -4201,7 +4201,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolpayloads::MainProto
   ~WireUnownedResult() = default;
 
   private:
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>> decoded_;
 };
 
 
@@ -4258,7 +4258,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocolpayloads::MainProtocol::Tw
   ~WireResult() = default;
    private:
     ::fidl::internal::InlineMessageBuffer<24> bytes_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>> decoded_;
 };
 
 template<>
@@ -4267,7 +4267,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolpayloads::MainProto
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>* response)
         : ::fidl::BaseWireResult<::test_protocolpayloads::MainProtocol::TwoWayAnon>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -4276,7 +4276,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolpayloads::MainProto
     ) : ::fidl::BaseWireResult<::test_protocolpayloads::MainProtocol::TwoWayAnon>(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -4288,7 +4288,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolpayloads::MainProto
   ~WireUnownedResult() = default;
 
   private:
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnon>> decoded_;
 };
 
 template<>
@@ -4312,7 +4312,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocolpayloads::MainProtocol::Tw
   ~WireResult() = default;
    private:
     ::fidl::internal::InlineMessageBuffer<48> bytes_;
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>> decoded_;
 };
 
 template<>
@@ -4321,7 +4321,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolpayloads::MainProto
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>* response)
         : ::fidl::BaseWireResult<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>(fidl::Status::Ok()), decoded_(response) {
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
 
     explicit WireUnownedResult(
@@ -4330,7 +4330,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolpayloads::MainProto
     ) : ::fidl::BaseWireResult<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        ExtractValueFromDecoded(decoded_.Value());
+        ExtractValueFromDecoded(decoded_.pointer());
       }
     }
 
@@ -4342,7 +4342,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolpayloads::MainProto
   ~WireUnownedResult() = default;
 
   private:
-    ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>> decoded_;
+    ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>> decoded_;
 };
 template<>
 class ::fidl::internal::WireEventHandlerInterface<::test_protocolpayloads::MainProtocol> : public ::fidl::internal::BaseEventHandlerInterface {

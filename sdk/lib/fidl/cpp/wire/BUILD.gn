@@ -40,6 +40,7 @@ sdk_source_set("wire") {
     "include/lib/fidl/cpp/wire/arena.h",
     "include/lib/fidl/cpp/wire/array.h",
     "include/lib/fidl/cpp/wire/coding_errors.h",
+    "include/lib/fidl/cpp/wire/decoded_value.h",
     "include/lib/fidl/cpp/wire/envelope.h",
     "include/lib/fidl/cpp/wire/internal/display_error.h",
     "include/lib/fidl/cpp/wire/internal/transport.h",

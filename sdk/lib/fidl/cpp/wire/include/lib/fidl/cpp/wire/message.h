@@ -6,6 +6,7 @@
 #define LIB_FIDL_CPP_WIRE_INCLUDE_LIB_FIDL_CPP_WIRE_MESSAGE_H_
 
 #include <lib/fidl/cpp/transaction_header.h>
+#include <lib/fidl/cpp/wire/decoded_value.h>
 #include <lib/fidl/cpp/wire/internal/transport.h>
 #include <lib/fidl/cpp/wire/message_storage.h>
 #include <lib/fidl/cpp/wire/status.h>
@@ -650,50 +651,6 @@ class DecodedMessageBase : public ::fidl::Status {
   uint8_t* bytes_ = nullptr;
 };
 
-// |DecodedValue| is a RAII wrapper around a FIDL value that ensures that the
-// handles within the object tree rooted at value are closed when the object
-// goes out of scope.
-template <typename FidlType>
-class DecodedValue {
- public:
-  // Constructs an empty |DecodedValue|.
-  DecodedValue() = default;
-
-  // Adopts an existing decoded |value|, claiming handles located within this tree.
-  explicit DecodedValue(FidlType* value) : value_(value) {}
-
-  ~DecodedValue() {
-    if constexpr (::fidl::IsResource<FidlType>::value) {
-      if (Value() != nullptr) {
-        Value()->_CloseHandles();
-      }
-    }
-  }
-
-  DecodedValue(DecodedValue&& other) noexcept {
-    value_ = other.value_;
-    other.value_ = nullptr;
-  }
-
-  DecodedValue& operator=(DecodedValue&& other) noexcept {
-    if (this != &other) {
-      value_ = other.value_;
-      other.value_ = nullptr;
-    }
-    return *this;
-  }
-
-  FidlType* Value() { return value_; }
-  const FidlType* Value() const { return value_; }
-
-  // Release the ownership of the decoded value. The handles won't be closed
-  // when the current object is destroyed.
-  void Release() { value_ = nullptr; }
-
- private:
-  FidlType* value_ = nullptr;
-};
-
 // This type exists because of class initialization order.
 // If these are members of UnownedEncodedMessage, they will be initialized before
 // UnownedEncodedMessageBase
@@ -932,11 +889,11 @@ class DecodedMessage<FidlType, Transport,
   // After calling this method, the |DecodedMessage| object should not be used anymore.
   void ReleasePrimaryObject() { Base::ResetBytes(); }
 
-  ::fidl::internal::DecodedValue<FidlType> Take() {
+  ::fidl::DecodedValue<FidlType> Take() {
     ZX_ASSERT(Base::ok());
     FidlType* value = PrimaryObject();
     ReleasePrimaryObject();
-    return ::fidl::internal::DecodedValue<FidlType>(value);
+    return ::fidl::DecodedValue<FidlType>(value);
   }
 };
 
@@ -1003,11 +960,11 @@ class DecodedMessage<FidlType, Transport,
   // After calling this method, the |DecodedMessage| object should not be used anymore.
   void ReleasePrimaryObject() { Base::ResetBytes(); }
 
-  ::fidl::internal::DecodedValue<FidlType> Take() {
+  ::fidl::DecodedValue<FidlType> Take() {
     ZX_ASSERT(Base::ok());
     FidlType* value = PrimaryObject();
     ReleasePrimaryObject();
-    return ::fidl::internal::DecodedValue<FidlType>(value);
+    return ::fidl::DecodedValue<FidlType>(value);
   }
 };
 

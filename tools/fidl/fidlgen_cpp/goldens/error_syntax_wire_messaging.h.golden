@@ -621,7 +621,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_errorsyntax::ExampleUseOfErrorSynt
 
  private:
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
-  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> decoded_;
+  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> decoded_;
 };
 
 template <>
@@ -630,7 +630,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_errorsyntax::ExampleUseOfEr
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>* request);
   explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>* response)
       : ::fidl::BaseWireResult<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>(fidl::Status::Ok()), decoded_(response) {
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 
   explicit WireUnownedResult(
@@ -638,7 +638,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_errorsyntax::ExampleUseOfEr
       ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>(decoded) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
   }
 
@@ -650,7 +650,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_errorsyntax::ExampleUseOfEr
   ~WireUnownedResult() = default;
 
  private:
-  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> decoded_;
+  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> decoded_;
 };
 
 template <>
@@ -674,7 +674,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_errorsyntax::ExampleUseOfErrorSynt
 
  private:
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
-  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> decoded_;
+  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> decoded_;
 };
 
 template <>
@@ -683,7 +683,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_errorsyntax::ExampleUseOfEr
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>* request);
   explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>* response)
       : ::fidl::BaseWireResult<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>(fidl::Status::Ok()), decoded_(response) {
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 
   explicit WireUnownedResult(
@@ -691,7 +691,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_errorsyntax::ExampleUseOfEr
       ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>(decoded) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
-      ExtractValueFromDecoded(decoded_.Value());
+      ExtractValueFromDecoded(decoded_.pointer());
     }
   }
 
@@ -703,7 +703,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_errorsyntax::ExampleUseOfEr
   ~WireUnownedResult() = default;
 
  private:
-  ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> decoded_;
+  ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> decoded_;
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_errorsyntax::ExampleUseOfErrorSyntax> : public ::fidl::internal::BaseEventHandlerInterface {

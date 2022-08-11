@@ -28,7 +28,7 @@ extern "C" const fidl_type_t test_bottom_BottomGetFooTopResponseTable;
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_transitivedependenciescompose {
@@ -63,7 +63,7 @@ namespace test_transitivedependenciescompose {
   if (ok()) {
     decoded_ = decoded.Take();
 
-    ExtractValueFromDecoded(decoded_.Value());
+    ExtractValueFromDecoded(decoded_.pointer());
   }
 }
 namespace test_transitivedependenciescompose {
