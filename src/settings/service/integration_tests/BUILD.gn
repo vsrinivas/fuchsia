@@ -18,5 +18,6 @@ group("integration_tests") {
     "night_mode_tests",
     "privacy_tests",
     "setup_tests",
+    "volume_change_earcons_tests",
   ]
 }
