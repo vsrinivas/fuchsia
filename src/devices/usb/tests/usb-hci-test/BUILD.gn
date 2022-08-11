@@ -28,7 +28,7 @@ group("tests") {
 }
 
 fuchsia_unittest_package("usb-hci-test-package") {
-  manifest = "meta/usb-hci-test.cmx"
+  manifest = "meta/usb-hci-test.cml"
   deps = [ ":usb-hci-test" ]
 
   test_specs = {
