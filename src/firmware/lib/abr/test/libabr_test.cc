@@ -597,7 +597,7 @@ TEST(LibabrTest, GetSlotSuffix) {
 }
 
 TEST(LibabrTest, GetSlotSuffixInvalidIndex) {
-  EXPECT_EQ(std::string(""), AbrGetSlotSuffix((AbrSlotIndex)-1));
+  EXPECT_EQ(std::string(""), AbrGetSlotSuffix((AbrSlotIndex)3));
 }
 
 void MarkSlotActive(AbrSlotIndex slot_index) {
