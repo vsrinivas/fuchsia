@@ -93,6 +93,11 @@ func newCachedPkgRepo(ctx context.Context, repoPath, repoURL, blobURL string) (*
 	if err != nil {
 		return nil, err
 	}
+	// Create the /blobs subdirectory if it doesn't already exist.
+	blobsSubdir := filepath.Join(repoPath, "blobs")
+	if err := os.MkdirAll(blobsSubdir, os.ModePerm); err != nil {
+		return nil, err
+	}
 	return &cachedPkgRepo{
 		loggerCtx:  ctx,
 		fileServer: http.FileServer(http.Dir(repoPath)),
