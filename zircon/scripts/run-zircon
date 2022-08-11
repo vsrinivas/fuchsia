@@ -377,7 +377,12 @@ case $ARCH in
           ARGS+=" -enable-kvm -cpu host"
           GIC=host
         elif (( $DO_HVF )); then
-          ARGS+=" -machine accel=hvf -cpu host"
+          ARGS+=" -machine accel=hvf"
+          if [[ $HOST_ARCH == "arm64" ]]; then
+            # M1s only support 36 bits of physical address space.
+            ARGS+=",highmem=off"
+          fi
+          ARGS+=" -cpu host"
           # at the moment GICv3 appears to not pass through HVF properly
           GIC=2
         else
