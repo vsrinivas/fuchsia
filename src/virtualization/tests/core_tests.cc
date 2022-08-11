@@ -36,6 +36,29 @@ constexpr uint64_t kGuestMemoryForMemoryTests = 4 * kOneGibibyte + 512 * kOneMeb
 template <class T>
 using CoreGuestTest = GuestTest<T>;
 
+void TestGetMemStats(const char* trace_context,
+                     const fuchsia::virtualization::BalloonControllerSyncPtr& balloon_controller) {
+  SCOPED_TRACE(trace_context);
+  // 5.5.6.4 Memory Statistics Tags
+  constexpr uint16_t VIRTIO_BALLOON_S_MEMFREE = 4;
+  constexpr uint16_t VIRTIO_BALLOON_S_MEMTOT = 5;
+  constexpr uint16_t VIRTIO_BALLOON_S_AVAIL = 6;
+  ::fidl::VectorPtr<::fuchsia::virtualization::MemStat> mem_stats;
+  int32_t mem_stats_status = 0;
+  zx_status_t status = balloon_controller->GetMemStats(&mem_stats_status, &mem_stats);
+  EXPECT_EQ(status, ZX_OK);
+  EXPECT_EQ(mem_stats_status, ZX_OK);
+  std::unordered_map<uint16_t, uint64_t> stats;
+  for (auto& el : mem_stats.value()) {
+    stats[el.tag] = el.val;
+  }
+  EXPECT_GT(stats[VIRTIO_BALLOON_S_MEMTOT], 0u);
+  EXPECT_GT(stats[VIRTIO_BALLOON_S_MEMFREE], 0u);
+  EXPECT_GT(stats[VIRTIO_BALLOON_S_AVAIL], 0u);
+  EXPECT_LE(stats[VIRTIO_BALLOON_S_MEMFREE], stats[VIRTIO_BALLOON_S_MEMTOT]);
+  EXPECT_LE(stats[VIRTIO_BALLOON_S_AVAIL], stats[VIRTIO_BALLOON_S_MEMTOT]);
+}
+
 // This test suite contains all guest tests that don't require a specific configuration of devices.
 // They are grouped together so that they share guests and reduce the number of times guests are
 // started, which is time consuming. Note that this means that some tests need to dynamically check
@@ -58,6 +81,7 @@ TYPED_TEST(CoreGuestTest, VirtioBalloon) {
   uint32_t initial_num_pages;
   zx_status_t status = balloon_controller->GetNumPages(&initial_num_pages);
   ASSERT_EQ(status, ZX_OK);
+  TestGetMemStats("Before inflate", balloon_controller);
 
   // Request an increase to the number of pages in the balloon.
   status = balloon_controller->RequestNumPages(initial_num_pages + kVirtioBalloonPageCount);
@@ -74,6 +98,7 @@ TYPED_TEST(CoreGuestTest, VirtioBalloon) {
       break;
     }
   }
+  TestGetMemStats("After inflate", balloon_controller);
 
   // Request a decrease to the number of pages in the balloon back to the
   // initial value.
@@ -87,6 +112,7 @@ TYPED_TEST(CoreGuestTest, VirtioBalloon) {
       break;
     }
   }
+  TestGetMemStats("After deflate", balloon_controller);
 }
 
 TYPED_TEST(CoreGuestTest, VirtioConsole) {
