@@ -200,40 +200,6 @@ git branch -d <branch_name>
 When writing a change message, follow the [Commit message style
 guide](/docs/contribute/commit-message-style-guide.md).
 
-### Contribute a change to the API {#contribute-a-change-to-the-api}
-
-To contribute to the
-[Fuchsia API Surface](/docs/glossary/README.md#fuchsia-api-surface), do the following:
-
-* Evaluate whether your change is large or small.
-
-    * If you have a small, incremental change to the API, contribute your
-    change by completing the steps in
-    [create a change in Gerrit](#create-a-change-in-gerrit), as you would for
-    any Fuchsia source code change.
-    * If you have a large change to the API, that is, a change that
-    significantly expands on the fuction of the API or modifies the
-    API extensively, do the following:
-        * Create an [RFC](/docs/contribute/governance/rfcs/TEMPLATE.md) that
-        explains the design of your modification to the API.
-        * This RFC should be reviewed through the normal [RFC
-        process](/docs/contribute/governance/rfcs/rfc_process.md). The API
-        reviewer for the relevant area should be a stakeholder in the RFC. See
-        the [Fuchsia API Council
-        Charter](/docs/contribute/governance/api_council.md#area) to identify
-        API reviewers.
-        * After your API RFC is approved, contribute your change by
-        completing the steps in
-        [create a change in Gerrit](#create-a-change-in-gerrit), as you would
-        for any Fuchsia source code change.
-
-* [Request a code review](#request-a-code-review) from an API council
-member. Select your API council reviewer based on the area of the
-Fuchsia API that you're modifying. For a list of API council members and their
-areas of focus, see
-[Membership](/docs/contribute/governance/api_council.md#membership) in the
-Fuchsia API Council Charter.
-
 ### Manage changes that span multiple repositories {#manage-changes-that-span-multiple-repos}
 
 To understand how to manage changes that span different repositories (petals),
