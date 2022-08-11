@@ -16,9 +16,9 @@ driver_bind_rules("goldfish-bind") {
 
 common_deps = [
   ":goldfish-bind",
-  "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
   "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_cpp_wire",
   "//sdk/fidl/fuchsia.hardware.goldfish.pipe:fuchsia.hardware.goldfish.pipe_cpp_wire",
+  "//sdk/fidl/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_llcpp",
   "//sdk/lib/driver_runtime:driver_runtime_cpp",
   "//src/devices/lib/acpi",
   "//src/devices/lib/driver",

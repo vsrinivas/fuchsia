@@ -6,9 +6,10 @@
 
 #include <fidl/fuchsia.hardware.goldfish.pipe/cpp/wire.h>
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
+#include <fidl/fuchsia.hardware.sysmem/cpp/wire_test_base.h>
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
-#include <fuchsia/hardware/sysmem/cpp/banjo-mock.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/zx/channel.h>
@@ -113,12 +114,69 @@ class VmoMapping {
 
 }  // namespace
 
+class FakeSysmem : public fidl::testing::WireTestBase<fuchsia_hardware_sysmem::Sysmem> {
+ public:
+  FakeSysmem(async::Loop* loop) : loop_(loop) {}
+
+  void ConnectServer(ConnectServerRequestView request,
+                     ConnectServerCompleter::Sync& completer) override {
+    zx_info_handle_basic_t info;
+    request->allocator_request.handle()->get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info),
+                                                  nullptr, nullptr);
+    request_koid_ = info.koid;
+
+    // Quit the loop to signal to the test that processing has finished and it
+    // can check the public fields of this class.
+    //
+    // TODO(fxbug.dev/102293): Remove once FIDL clients are async.
+    loop_->Quit();
+  }
+
+  void RegisterHeap(RegisterHeapRequestView request,
+                    RegisterHeapCompleter::Sync& completer) override {
+    if (heap_request_koids_.find(request->heap) != heap_request_koids_.end()) {
+      completer.Close(ZX_ERR_ALREADY_BOUND);
+      return;
+    }
+
+    if (!request->heap_connection.is_valid()) {
+      completer.Close(ZX_ERR_BAD_HANDLE);
+      return;
+    }
+
+    zx_info_handle_basic_t info;
+    request->heap_connection.handle()->get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr,
+                                                nullptr);
+    heap_request_koids_[request->heap] = info.koid;
+
+    // See comment on ConnectServer above for explanation.
+    loop_->Quit();
+  }
+
+  void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) final {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  zx_koid_t request_koid_ = ZX_KOID_INVALID;
+  std::map<uint64_t, zx_koid_t> heap_request_koids_;
+
+ private:
+  async::Loop* loop_;
+};
+
 // Test suite creating fake PipeDevice on a mock ACPI bus.
 class PipeDeviceTest : public zxtest::Test {
  public:
   PipeDeviceTest()
+      // The goldfish-pipe server must live on a different thread because the
+      // test code makes synchronous FIDL calls to it. The sysmem server must
+      // live on the same thread because the test code reads its public fields
+      // without synchronizing access.
       : async_loop_(&kAsyncLoopConfigNeverAttachToThread),
+        sysmem_loop_(&kAsyncLoopConfigAttachToCurrentThread),
+        fake_sysmem_(&sysmem_loop_),
         fake_root_(MockDevice::FakeRootParent()) {}
+
   // |zxtest::Test|
   void SetUp() override {
     ASSERT_OK(async_loop_.StartThread("pipe-device-test-dispatcher"));
@@ -160,41 +218,19 @@ class PipeDeviceTest : public zxtest::Test {
       completer.ReplySuccess(std::move(out_bti));
     });
 
-    mock_sysmem_.mock_connect().ExpectCallWithMatcher([this](const zx::channel& connection) {
-      zx_info_handle_basic_t info;
-      connection.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-      sysmem_request_koid_ = info.koid;
-      return ZX_OK;
-    });
-
-    auto register_heap = [this](uint64_t heap, const zx::channel& connection) -> zx_status_t {
-      if (sysmem_heap_request_koids_.find(heap) != sysmem_heap_request_koids_.end()) {
-        return ZX_ERR_ALREADY_BOUND;
-      }
-      if (!connection.is_valid()) {
-        return ZX_ERR_BAD_HANDLE;
-      }
-      zx_info_handle_basic_t info;
-      connection.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-      sysmem_heap_request_koids_[heap] = info.koid;
-      return ZX_OK;
-    };
-
-    for (const auto heap : kSysmemHeaps) {
-      uint64_t heap_id = static_cast<uint64_t>(heap);
-      mock_sysmem_.mock_register_heap().ExpectCallWithMatcher(
-          [register_heap, heap_id](uint64_t heap, const zx::channel& connection) {
-            EXPECT_EQ(heap, heap_id);
-            return register_heap(heap, connection);
-          });
-    }
-
     auto acpi_client = mock_acpi_fidl_.CreateClient(async_loop_.dispatcher());
     ASSERT_OK(acpi_client.status_value());
 
     fake_root_->AddProtocol(ZX_PROTOCOL_ACPI, nullptr, nullptr, "acpi");
-    fake_root_->AddProtocol(ZX_PROTOCOL_SYSMEM, mock_sysmem_.GetProto()->ops,
-                            mock_sysmem_.GetProto()->ctx, "sysmem");
+    fake_root_->AddFidlProtocol(
+        fidl::DiscoverableProtocolName<fuchsia_hardware_sysmem::Sysmem>,
+        [this](zx::channel channel) {
+          fidl::BindServer(sysmem_loop_.dispatcher(),
+                           fidl::ServerEnd<fuchsia_hardware_sysmem::Sysmem>(std::move(channel)),
+                           &fake_sysmem_);
+          return ZX_OK;
+        },
+        "sysmem-fidl");
 
     auto dut = std::make_unique<PipeDevice>(fake_root_.get(), std::move(acpi_client.value()));
     ASSERT_OK(dut->Bind());
@@ -225,7 +261,8 @@ class PipeDeviceTest : public zxtest::Test {
 
  protected:
   async::Loop async_loop_;
-  ddk::MockSysmem mock_sysmem_;
+  async::Loop sysmem_loop_;
+  FakeSysmem fake_sysmem_;
   acpi::mock::Device mock_acpi_fidl_;
   std::shared_ptr<MockDevice> fake_root_;
   PipeDevice* dut_;
@@ -236,9 +273,6 @@ class PipeDeviceTest : public zxtest::Test {
   zx::bti acpi_bti_;
   zx::vmo vmo_control_;
   zx::interrupt irq_;
-
-  zx_koid_t sysmem_request_koid_ = ZX_KOID_INVALID;
-  std::map<uint64_t, zx_koid_t> sysmem_heap_request_koids_;
 };
 
 TEST_F(PipeDeviceTest, Bind) {
@@ -415,8 +449,20 @@ TEST_F(PipeDeviceTest, ConnectToSysmem) {
   server_koid = info.koid;
 
   ASSERT_OK(client_->ConnectSysmem(std::move(sysmem_server)).status());
-  ASSERT_NE(sysmem_request_koid_, ZX_KOID_INVALID);
-  ASSERT_EQ(sysmem_request_koid_, server_koid);
+  // We need to make sure that the fake_sysmem_ server has finished processing
+  // the request before we check the results, so we run its loop here and the
+  // server calls loop.Quit() when it's done processing. We can't just call
+  // RunUntilIdle because the FIDL call goes first to the goldfish-pipe server,
+  // which then calls the sysmem server; if we called RunUntilIdle it may return
+  // immediately before the goldfish-pipe server has had a chance to call the
+  // sysmem server.
+  //
+  // TODO(fxbug.dev/102293): Make the FIDL clients async so we can avoid this
+  // awkwardness.
+  ASSERT_EQ(sysmem_loop_.Run(), ZX_ERR_CANCELED);
+  ASSERT_OK(sysmem_loop_.ResetQuit());
+  ASSERT_NE(fake_sysmem_.request_koid_, ZX_KOID_INVALID);
+  ASSERT_EQ(fake_sysmem_.request_koid_, server_koid);
 
   for (const auto& heap : kSysmemHeaps) {
     zx::channel heap_server, heap_client;
@@ -429,15 +475,19 @@ TEST_F(PipeDeviceTest, ConnectToSysmem) {
 
     uint64_t heap_id = static_cast<uint64_t>(heap);
     ASSERT_OK(client_->RegisterSysmemHeap(heap_id, std::move(heap_server)).status());
-    ASSERT_TRUE(sysmem_heap_request_koids_.find(heap_id) != sysmem_heap_request_koids_.end());
-    ASSERT_NE(sysmem_heap_request_koids_.at(heap_id), ZX_KOID_INVALID);
-    ASSERT_EQ(sysmem_heap_request_koids_.at(heap_id), server_koid);
+    // See comment on ConnectSysmem above for explanation.
+    ASSERT_EQ(sysmem_loop_.Run(), ZX_ERR_CANCELED);
+    ASSERT_OK(sysmem_loop_.ResetQuit());
+    ASSERT_TRUE(fake_sysmem_.heap_request_koids_.find(heap_id) !=
+                fake_sysmem_.heap_request_koids_.end());
+    ASSERT_NE(fake_sysmem_.heap_request_koids_.at(heap_id), ZX_KOID_INVALID);
+    ASSERT_EQ(fake_sysmem_.heap_request_koids_.at(heap_id), server_koid);
   }
 }
 
 TEST_F(PipeDeviceTest, ChildDevice) {
   // Test creating multiple child devices. Each child device can access the
-  // GoldfishPipe banjo protocol, and they should share the same parent device.
+  // GoldfishPipe FIDL protocol, and they should share the same parent device.
 
   auto child1 = std::make_unique<PipeChildDevice>(dut_, async_loop_.dispatcher());
   auto child2 = std::make_unique<PipeChildDevice>(dut_, async_loop_.dispatcher());

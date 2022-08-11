@@ -8,6 +8,7 @@
 #include <fidl/fuchsia.hardware.goldfish.pipe/cpp/wire.h>
 #include <fidl/fuchsia.hardware.goldfish.pipe/cpp/wire_test_base.h>
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
+#include <fidl/fuchsia.hardware.sysmem/cpp/wire_test_base.h>
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fidl-async/cpp/bind.h>
@@ -82,8 +83,6 @@ class InstanceDeviceTest : public zxtest::Test {
     auto acpi_result = mock_acpi_.CreateClient(loop_.dispatcher());
     ASSERT_OK(acpi_result.status_value());
 
-    pipe_device_ =
-        std::make_unique<FakePipeDevice>(fake_root_.get(), std::move(acpi_result.value()));
     fake_root_->AddFidlProtocol(
         fidl::DiscoverableProtocolName<fuchsia_hardware_goldfish_pipe::GoldfishPipe>,
         [this](zx::channel channel) {
@@ -94,6 +93,17 @@ class InstanceDeviceTest : public zxtest::Test {
           return ZX_OK;
         },
         "goldfish-pipe");
+    fake_root_->AddFidlProtocol(
+        fidl::DiscoverableProtocolName<fuchsia_hardware_sysmem::Sysmem>,
+        [](zx::channel channel) {
+          // The device connects to the protocol in its constructor but does not
+          // otherwise use it, so we don't need to bind a server here.
+          return ZX_OK;
+        },
+        "sysmem-fidl");
+
+    pipe_device_ =
+        std::make_unique<FakePipeDevice>(fake_root_.get(), std::move(acpi_result.value()));
 
     loop_.StartThread("goldfish-pipe-thread");
 

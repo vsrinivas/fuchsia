@@ -6,6 +6,7 @@
 #define SRC_GRAPHICS_DRIVERS_MISC_GOLDFISH_PIPE_DEVICE_H_
 
 #include <fidl/fuchsia.hardware.goldfish.pipe/cpp/wire.h>
+#include <fidl/fuchsia.hardware.sysmem/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/loop.h>
 #include <lib/ddk/device.h>
@@ -26,7 +27,6 @@
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
 
-#include "fuchsia/hardware/sysmem/cpp/banjo.h"
 #include "src/devices/lib/acpi/client.h"
 
 namespace goldfish {
@@ -73,7 +73,7 @@ class PipeDevice : public DeviceType {
     zx::event pipe_event;
   };
 
-  ddk::SysmemProtocolClient sysmem_;
+  fidl::WireSyncClient<fuchsia_hardware_sysmem::Sysmem> sysmem_;
   acpi::Client acpi_fidl_;
   zx::interrupt irq_;
   zx::bti bti_;

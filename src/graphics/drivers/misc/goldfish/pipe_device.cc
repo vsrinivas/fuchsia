@@ -115,7 +115,15 @@ zx_status_t PipeDevice::Create(void* ctx, zx_device_t* device) {
 }
 
 PipeDevice::PipeDevice(zx_device_t* parent, acpi::Client client)
-    : DeviceType(parent), sysmem_(parent, "sysmem"), acpi_fidl_(std::move(client)) {}
+    : DeviceType(parent), acpi_fidl_(std::move(client)) {
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_sysmem::Sysmem>();
+  ZX_DEBUG_ASSERT(endpoints.is_ok());
+  zx_status_t status = device_connect_fragment_fidl_protocol(
+      parent, "sysmem-fidl", fidl::DiscoverableProtocolName<fuchsia_hardware_sysmem::Sysmem>,
+      endpoints->server.TakeChannel().release());
+  ZX_DEBUG_ASSERT(status == ZX_OK);
+  sysmem_ = fidl::BindSyncClient(std::move(endpoints->client));
+}
 
 PipeDevice::~PipeDevice() {
   if (irq_.is_valid()) {
@@ -311,13 +319,17 @@ zx_status_t PipeDevice::GetBti(zx::bti* out_bti) {
 zx_status_t PipeDevice::ConnectSysmem(zx::channel connection) {
   TRACE_DURATION("gfx", "PipeDevice::ConnectSysmem");
 
-  return sysmem_.Connect(std::move(connection));
+  auto result =
+      sysmem_->ConnectServer(fidl::ServerEnd<fuchsia_sysmem::Allocator>(std::move(connection)));
+  return result.status();
 }
 
 zx_status_t PipeDevice::RegisterSysmemHeap(uint64_t heap, zx::channel connection) {
   TRACE_DURATION("gfx", "PipeDevice::RegisterSysmemHeap");
 
-  return sysmem_.RegisterHeap(heap, std::move(connection));
+  auto result =
+      sysmem_->RegisterHeap(heap, fidl::ClientEnd<fuchsia_sysmem2::Heap>(std::move(connection)));
+  return result.status();
 }
 
 int PipeDevice::IrqHandler() {
