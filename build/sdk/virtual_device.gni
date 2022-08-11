@@ -23,7 +23,8 @@ import("//build/product.gni")
 #     the product bundle metadata.
 #
 #   output(optional)
-#     Location to write the output manifest
+#     Location to copy the output manifest (optionally copied from the
+#     generated file location at "$target_gen_dir/virtual_device.json")
 #
 #   testonly (optional)
 #   visibility (optional)
@@ -111,11 +112,7 @@ template("virtual_device_specification") {
     }
   }
 
-  if (defined(invoker.output)) {
-    file = invoker.output
-  } else {
-    file = "${target_gen_dir}/virtual_device.json"
-  }
+  file = "${target_gen_dir}/virtual_device.json"
   generator_target = "${target_name}_json_generator"
 
   generated_file(generator_target) {
@@ -133,6 +130,21 @@ template("virtual_device_specification") {
           type = "manifest"
         },
       ]
+    }
+  }
+
+  if (defined(invoker.output)) {
+    copy_target = "${target_name}_json_copy"
+    copy_file = invoker.output
+    copy(copy_target) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      sources = [ file ]
+      outputs = [ copy_file ]
+      deps = [ ":${generator_target}" ]
     }
   }
 
@@ -178,5 +190,9 @@ template("virtual_device_specification") {
       ":${template_target}",
       ":${validator_target}",
     ]
+
+    if (defined(copy_target)) {
+      deps += [ ":${copy_target}" ]
+    }
   }
 }

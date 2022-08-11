@@ -21,7 +21,8 @@ import("//build/json/validate_json.gni")
 #     the product bundle metadata.
 #
 #   output(optional)
-#     Location to write the output manifest
+#     Location to copy the output manifest (optionally copied from the
+#     generated file location at "$target_gen_dir/physical_device.json")
 #
 #   deps (optional)
 #   public_deps (optional)
@@ -56,11 +57,7 @@ template("physical_device_manifest") {
     }
   }
 
-  if (defined(invoker.output)) {
-    file = invoker.output
-  } else {
-    file = "$target_gen_dir/physical_device.json"
-  }
+  file = "$target_gen_dir/physical_device.json"
   generator_target = "${target_name}_json_generator"
   generated_file(generator_target) {
     visibility = [ ":*" ]
@@ -77,6 +74,21 @@ template("physical_device_manifest") {
           type = "manifest"
         },
       ]
+    }
+  }
+
+  if (defined(invoker.output)) {
+    copy_target = "${target_name}_json_copy"
+    copy_file = invoker.output
+    copy(copy_target) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      sources = [ file ]
+      outputs = [ copy_file ]
+      deps = [ ":${generator_target}" ]
     }
   }
 
@@ -111,5 +123,9 @@ template("physical_device_manifest") {
       ":${generator_target}",
       ":${validator_target}",
     ]
+
+    if (defined(copy_target)) {
+      deps += [ ":${copy_target}" ]
+    }
   }
 }
