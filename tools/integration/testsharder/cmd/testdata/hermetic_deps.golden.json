@@ -59,10 +59,8 @@
         },
         "deps": [
             "images.json",
-            "multiboot.bin",
-            "repo_AEMU"
+            "multiboot.bin"
         ],
-        "pkg_repo": "repo_AEMU",
         "timeout_secs": 0,
         "summary": {
             "tests": null
