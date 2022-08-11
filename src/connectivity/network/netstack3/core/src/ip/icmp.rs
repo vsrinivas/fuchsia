@@ -51,7 +51,7 @@ use crate::{
             nud::NudIpHandler,
             route_discovery::{Ipv6DiscoveredRoute, RouteDiscoveryHandler},
             slaac::SlaacHandler,
-            Ipv6DeviceHandler,
+            IpDeviceHandler, Ipv6DeviceHandler,
         },
         gmp::mld::MldPacketHandler,
         path_mtu::PmtuHandler,
@@ -1412,19 +1412,33 @@ fn receive_ndp_packet<
 
             ctx.increment_counter("ndp::rx_router_advertisement");
 
+            let ra = p.message();
+
             // As per RFC 4861 section 6.3.4,
             //   The RetransTimer variable SHOULD be copied from the Retrans
             //   Timer field, if it is specified.
             //
             // TODO(https://fxbug.dev/101357): Control whether or not we should
             // update the retransmit timer.
-            if let Some(retransmit_timer) = p.message().retransmit_timer() {
+            if let Some(retransmit_timer) = ra.retransmit_timer() {
                 Ipv6DeviceHandler::set_discovered_retrans_timer(
                     sync_ctx,
                     ctx,
                     device_id,
                     retransmit_timer,
                 );
+            }
+
+            // As per RFC 4861 section 6.3.4:
+            //   If the received Cur Hop Limit value is specified, the host
+            //   SHOULD set its CurHopLimit variable to the received value.
+            //
+            //
+            // TODO(https://fxbug.dev/101357): Control whether or not we should
+            // update the default hop limit.
+            if let Some(hop_limit) = ra.current_hop_limit() {
+                trace!("receive_ndp_packet: NDP RA: updating device's hop limit to {:?} for router: {:?}", ra.current_hop_limit(), src_ip);
+                IpDeviceHandler::set_default_hop_limit(sync_ctx, device_id, hop_limit);
             }
 
             RouteDiscoveryHandler::update_route(
@@ -4125,6 +4139,10 @@ mod tests {
     impl IpDeviceHandler<Ipv6, Dummyv6NonSyncCtx> for Dummyv6SyncCtx {
         fn is_router_device(&self, _device_id: Self::DeviceId) -> bool {
             unimplemented!()
+        }
+
+        fn set_default_hop_limit(&mut self, _device_id: Self::DeviceId, _hop_limit: NonZeroU8) {
+            unreachable!()
         }
     }
 

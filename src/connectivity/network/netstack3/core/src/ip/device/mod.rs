@@ -188,7 +188,9 @@ pub(crate) fn handle_ipv6_timer<
 
 /// An extension trait adding IP device properties.
 pub(crate) trait IpDeviceIpExt<Instant, DeviceId>: IpDeviceStateIpExt<Instant> {
-    type State: AsRef<IpDeviceState<Instant, Self>> + AsRef<IpDeviceConfiguration>;
+    type State: AsRef<IpDeviceState<Instant, Self>>
+        + AsMut<IpDeviceState<Instant, Self>>
+        + AsRef<IpDeviceConfiguration>;
     type Timer;
 }
 
@@ -337,6 +339,8 @@ pub(crate) trait Ipv6DeviceContext<C: IpDeviceNonSyncContext<Ipv6, Self::DeviceI
 /// An implementation of an IP device.
 pub(crate) trait IpDeviceHandler<I: Ip, C>: IpDeviceIdContext<I> {
     fn is_router_device(&self, device_id: Self::DeviceId) -> bool;
+
+    fn set_default_hop_limit(&mut self, device_id: Self::DeviceId, hop_limit: NonZeroU8);
 }
 
 impl<
@@ -347,6 +351,12 @@ impl<
 {
     fn is_router_device(&self, device_id: Self::DeviceId) -> bool {
         is_ip_routing_enabled(self, device_id)
+    }
+
+    fn set_default_hop_limit(&mut self, device_id: Self::DeviceId, hop_limit: NonZeroU8) {
+        self.with_ip_device_state_mut(device_id, |state| {
+            AsMut::<IpDeviceState<_, _>>::as_mut(state).default_hop_limit = hop_limit;
+        })
     }
 }
 

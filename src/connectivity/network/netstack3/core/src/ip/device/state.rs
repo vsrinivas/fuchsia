@@ -202,6 +202,12 @@ impl<I: Instant> AsRef<IpDeviceState<I, Ipv4>> for Ipv4DeviceState<I> {
     }
 }
 
+impl<I: Instant> AsMut<IpDeviceState<I, Ipv4>> for Ipv4DeviceState<I> {
+    fn as_mut(&mut self) -> &mut IpDeviceState<I, Ipv4> {
+        &mut self.ip_state
+    }
+}
+
 impl<I: Instant> AsRef<IpDeviceConfiguration> for Ipv4DeviceState<I> {
     fn as_ref(&self) -> &IpDeviceConfiguration {
         &self.config.ip_config
@@ -292,6 +298,12 @@ impl<I: Instant> Default for Ipv6DeviceState<I> {
 impl<I: Instant> AsRef<IpDeviceState<I, Ipv6>> for Ipv6DeviceState<I> {
     fn as_ref(&self) -> &IpDeviceState<I, Ipv6> {
         &self.ip_state
+    }
+}
+
+impl<I: Instant> AsMut<IpDeviceState<I, Ipv6>> for Ipv6DeviceState<I> {
+    fn as_mut(&mut self) -> &mut IpDeviceState<I, Ipv6> {
+        &mut self.ip_state
     }
 }
 

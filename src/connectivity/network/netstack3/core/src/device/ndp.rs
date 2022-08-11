@@ -204,21 +204,6 @@ pub(crate) fn receive_ndp_packet<
                 return;
             }
 
-            let ra = p.message();
-
-            // As per RFC 4861 section 6.3.4:
-            // If the received Cur Hop Limit value is specified, the host SHOULD
-            // set its CurHopLimit variable to the received value.
-            //
-            // TODO(ghanan): Make the updating of this field from the RA message
-            //               configurable since the RFC does not say we MUST
-            //               update the field.
-            if let Some(hop_limit) = ra.current_hop_limit() {
-                trace!("receive_ndp_packet: NDP RA: updating device's hop limit to {:?} for router: {:?}", ra.current_hop_limit(), src_ip);
-
-                sync_ctx.get_ip_device_state_mut(device_id).default_hop_limit = hop_limit;
-            }
-
             for option in p.body().iter() {
                 match option {
                     NdpOption::Mtu(mtu) => {
@@ -295,7 +280,7 @@ mod tests {
         ip::{AddrSubnet, Ipv6Scope, Subnet},
         ScopeableAddress as _, UnicastAddr, Witness as _,
     };
-    use packet::{Buf, InnerPacketBuilder as _, ParseBuffer, Serializer as _};
+    use packet::{Buf, EmptyBuf, InnerPacketBuilder as _, ParseBuffer, Serializer as _};
     use packet_formats::{
         icmp::{
             ndp::{
@@ -1265,26 +1250,30 @@ mod tests {
             let config = Ipv6::DUMMY_CONFIG;
             let device_id = DeviceId::new_ethernet(0);
             let src_ip = config.remote_mac.to_ipv6_link_local().addr();
+            let src_ip: Ipv6Addr = src_ip.get();
 
-            let mut icmpv6_packet_buf = router_advertisement_message(
-                src_ip.get(),
-                config.local_ip.get(),
-                hop_limit,
-                false,
-                false,
-                0,
-                0,
-                0,
-            );
-            let icmpv6_packet = icmpv6_packet_buf
-                .parse_with::<_, Icmpv6Packet<_>>(IcmpParseArgs::new(src_ip, config.local_ip))
-                .unwrap();
-            sync_ctx.receive_ndp_packet(
+            let icmpv6_packet_buf = EmptyBuf
+                .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+                    src_ip,
+                    Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
+                    IcmpUnusedCode,
+                    RouterAdvertisement::new(hop_limit, false, false, 0, 0, 0),
+                ))
+                .encapsulate(Ipv6PacketBuilder::new(
+                    src_ip,
+                    Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS.get(),
+                    REQUIRED_NDP_IP_PACKET_HOP_LIMIT,
+                    Ipv6Proto::Icmpv6,
+                ))
+                .serialize_vec_outer()
+                .unwrap()
+                .unwrap_b();
+            receive_ipv6_packet(
+                sync_ctx,
                 ctx,
                 device_id,
-                Ipv6SourceAddr::from_witness(src_ip).unwrap(),
-                config.local_ip,
-                icmpv6_packet.unwrap_ndp(),
+                FrameDestination::Multicast,
+                icmpv6_packet_buf,
             );
             assert_eq!(get_ipv6_hop_limit(sync_ctx, device_id).get(), hop_limit);
             crate::ip::send_ipv6_packet_from_device(
