@@ -28,6 +28,7 @@
                 "fuchsia.buildinfo.Provider",
                 "fuchsia.developer.remotecontrol.RemoteDiagnosticsBridge",
                 "fuchsia.device.NameProvider",
+                "fuchsia.fuzzer.Manager",
                 "fuchsia.hwinfo.Device",
                 "fuchsia.net.interfaces.State",
                 "fuchsia.overnet.Overnet",

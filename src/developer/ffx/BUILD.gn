@@ -45,6 +45,7 @@ if (is_host) {
       "//src/developer/ffx/plugins/efi:ffx_efi",
       "//src/developer/ffx/plugins/emulator:ffx_emulator",
       "//src/developer/ffx/plugins/flutter:ffx_flutter",
+      "//src/developer/ffx/plugins/fuzz:ffx_fuzz",
       "//src/developer/ffx/plugins/input:ffx_input",
       "//src/developer/ffx/plugins/inspect:ffx_inspect",
       "//src/developer/ffx/plugins/log:ffx_log",

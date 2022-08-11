@@ -73,7 +73,7 @@ type Status = table {
     /// Number of runs performed so far.
     2: runs uint32;
 
-    /// Time spent so far, in seconds.
+    /// Time spent so far.
     3: elapsed zx.duration;
 
     /// Number of program edges covered so far.

@@ -213,3 +213,18 @@ protocol Controller {
         result zx.status;
     });
 };
+
+/// Marker indicating the last message in a diagnostic output stream.
+///
+/// In addition to the FIDL interactions described above, a client of `fuchsia.fuzzer.Controller`
+/// typically also receives the standard output, standard error, and system log from the fuzzer's
+/// realm, e.g. via `fuchsia.test_manager.RunBuilder` and its controllers and events. These streams
+/// have no guaranteed order with respect to FIDL responses. This is a particular problem for
+/// the long-running workflows. As a result, the streams need to include an "in-band" signal that
+/// the diagnostics for a particular workflow are complete. Clients processing the output may use
+/// this marker to synchronize them and the FIDL response for a workflow.
+///
+/// The string is intentionally somewhat long to mitigate the likelihood of it being emitted by the
+/// code under test.
+///
+const DONE_MARKER string = "DONE: A long-running `fuchsia.fuzzer.Controller` workflow is complete.";
