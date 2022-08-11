@@ -1,0 +1,3 @@
+include /src/lib/network/fidl_fuchsia_net_ext/OWNERS
+
+# COMPONENT: NetworkStack
