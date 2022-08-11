@@ -6,18 +6,24 @@
 
 #include <vector>
 
+#include <ffl/string.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "ffl/fixed.h"
 #include "fidl/fuchsia.mediastreams/cpp/wire_types.h"
 #include "src/media/audio/lib/format2/fixed.h"
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/lib/processing/gain.h"
+#include "src/media/audio/lib/timeline/timeline_function.h"
+#include "src/media/audio/lib/timeline/timeline_rate.h"
 
 namespace media_audio {
 namespace {
 
 using ::fuchsia_mediastreams::wire::AudioSampleFormat;
+using ::media::TimelineFunction;
+using ::media::TimelineRate;
 using ::testing::IsNull;
 using ::testing::NotNull;
 
@@ -120,81 +126,98 @@ TEST(SamplerTest, MixSampleUnity) {
   }
 }
 
-constexpr Fixed kTestSourcePos = Fixed(123) + Fixed::FromRaw(4567);
-
 TEST(SamplerStateTest, Defaults) {
   Sampler::State state;
   EXPECT_EQ(state.step_size(), kOneFrame);
   EXPECT_EQ(state.rate_modulo(), 0ull);
   EXPECT_EQ(state.denominator(), 1ull);
   EXPECT_EQ(state.source_pos_modulo(), 0ull);
+  EXPECT_EQ(state.next_dest_frame(), 0);
+  EXPECT_EQ(state.next_source_frame(), 0);
+  EXPECT_EQ(state.source_pos_error(), zx::duration(0));
 }
 
-TEST(SamplerStateTest, SetRateModuloAndDenominatorScale) {
+TEST(SamplerStateTest, ResetPositions) {
+  Sampler::State state;
+  EXPECT_EQ(state.next_dest_frame(), 0);
+  EXPECT_EQ(state.next_source_frame(), 0);
+
+  state.set_source_pos_modulo(1u);
+  state.set_source_pos_error(zx::duration(-777));
+
+  state.ResetPositions(100, TimelineFunction(TimelineRate(17u, 1u)));
+  EXPECT_EQ(state.next_dest_frame(), 100);
+  EXPECT_EQ(state.next_source_frame(), Fixed::FromRaw(1700));
+  EXPECT_EQ(state.source_pos_modulo(), 0ull);
+  EXPECT_EQ(state.source_pos_error(), zx::duration(0));
+}
+
+TEST(SamplerStateTest, ResetSourceStrideScale) {
   Sampler::State state;
   EXPECT_EQ(state.source_pos_modulo(), 0ull);
   EXPECT_EQ(state.denominator(), 1ull);
 
   // Zero stays zero: `source_pos_modulo` remains 0.
-  auto source_pos = state.SetRateModuloAndDenominator(3, 10);
+  state.ResetSourceStride(TimelineRate(Fixed(10).raw_value() + 3, 10));
   EXPECT_EQ(state.source_pos_modulo(), 0ull);
   EXPECT_EQ(state.denominator(), 10ull);
-  EXPECT_EQ(source_pos, Fixed(0));
+  EXPECT_EQ(state.next_source_frame(), Fixed(0));
 
   // Integer scale: `5/10 => 10/20`
   state.set_source_pos_modulo(5);
-  source_pos = state.SetRateModuloAndDenominator(7, 20, kTestSourcePos);
+  state.ResetSourceStride(TimelineRate(Fixed(20).raw_value() + 7, 20));
   EXPECT_EQ(state.source_pos_modulo(), 10ull);
   EXPECT_EQ(state.denominator(), 20ull);
-  EXPECT_EQ(source_pos, kTestSourcePos);
+  EXPECT_EQ(state.next_source_frame(), Fixed(0));
 }
 
-TEST(SamplerStateTest, SetRateModuloAndDenominatorRound) {
+TEST(SamplerStateTest, ResetSourceStrideRound) {
   Sampler::State state;
-  auto source_pos = state.SetRateModuloAndDenominator(7, 20);
-  EXPECT_EQ(source_pos, Fixed(0));
+  state.ResetSourceStride(TimelineRate(Fixed(20).raw_value() + 7, 20));
+  EXPECT_EQ(state.next_source_frame(), Fixed(0));
   state.set_source_pos_modulo(10);
 
   // Round-up: `10/20 == 8.5/17 => 9/17`.
-  source_pos = state.SetRateModuloAndDenominator(2, 17, kTestSourcePos);
+  state.ResetSourceStride(TimelineRate(Fixed(17).raw_value() + 2, 17));
+  EXPECT_EQ(state.next_source_frame(), Fixed(0));
   EXPECT_EQ(state.source_pos_modulo(), 9ull);
   EXPECT_EQ(state.denominator(), 17ull);
-  EXPECT_EQ(source_pos, kTestSourcePos);
 
   // Round-down: `9/17 == 16'000'000'000.41/30'222'222'223 => 16'000'000'000/30'222'222'223`
-  source_pos = state.SetRateModuloAndDenominator(1'234'567'890, 30'222'222'223, kTestSourcePos);
+  state.ResetSourceStride(
+      TimelineRate(Fixed(30'222'222'223).raw_value() + 1'234'567'890, 30'222'222'223));
+  EXPECT_EQ(state.next_source_frame(), Fixed(0));
   EXPECT_EQ(state.source_pos_modulo(), 16'000'000'000ull);
   EXPECT_EQ(state.denominator(), 30'222'222'223ull);
-  EXPECT_EQ(source_pos, kTestSourcePos);
 }
 
-TEST(SamplerStateTest, SetRateModuloAndDenominatorZeroRate) {
+TEST(SamplerStateTest, ResetSourceStrideZeroRate) {
   Sampler::State state;
-  auto source_pos = state.SetRateModuloAndDenominator(7, 20, kTestSourcePos);
-  EXPECT_EQ(source_pos, kTestSourcePos);
+  state.ResetSourceStride(TimelineRate(Fixed(20).raw_value() + 7, 20));
+  EXPECT_EQ(state.next_source_frame(), Fixed(0));
   state.set_source_pos_modulo(10);
 
-  source_pos = state.SetRateModuloAndDenominator(0, 1);
   // No change (to `source_pos_modulo` OR `denominator`): `10/20 => 10/20`.
+  state.ResetSourceStride(TimelineRate(Fixed(1).raw_value(), 1));
+  EXPECT_EQ(state.next_source_frame(), Fixed(0));
   EXPECT_EQ(state.source_pos_modulo(), 10ull);
   EXPECT_EQ(state.denominator(), 20ull);
-  EXPECT_EQ(source_pos, Fixed(0));
 }
 
-TEST(SamplerStateTest, SetRateModuloAndDenominatorModuloRollover) {
+TEST(SamplerStateTest, ResetSourceStrideModuloRollover) {
   Sampler::State state;
-  auto source_pos = state.SetRateModuloAndDenominator(7, 20);
-  EXPECT_EQ(source_pos, Fixed(0));
+  state.ResetSourceStride(TimelineRate(Fixed(20).raw_value() + 7, 20));
+  EXPECT_EQ(state.next_source_frame(), Fixed(0));
   state.set_source_pos_modulo(19);
 
-  source_pos = state.SetRateModuloAndDenominator(3, 5, kTestSourcePos);
   // Round-up: `19/20 == 4.75/5 => 5/5 => 0/5 + Fixed::FromRaw(1)`.
+  state.ResetSourceStride(TimelineRate(Fixed(5).raw_value() + 3, 5));
+  EXPECT_EQ(state.next_source_frame(), Fixed::FromRaw(1));
   EXPECT_EQ(state.source_pos_modulo(), 0ull);
   EXPECT_EQ(state.denominator(), 5ull);
-  EXPECT_EQ(source_pos, Fixed(kTestSourcePos + Fixed::FromRaw(1)));
 }
 
-TEST(SamplerStateTest, DestFromSourceLengthNoModulo) {
+TEST(SamplerStateTest, DestFromSourceLength) {
   Sampler::State state;
 
   // Integral length and step, no remainder:
@@ -202,197 +225,212 @@ TEST(SamplerStateTest, DestFromSourceLengthNoModulo) {
   EXPECT_EQ(state.DestFromSourceLength(Fixed(1)), 1);
   EXPECT_EQ(state.DestFromSourceLength(Fixed(2)), 2);
 
-  state.set_step_size(Fixed(3));
+  state.ResetSourceStride(TimelineRate(Fixed(3).raw_value(), 1));
   EXPECT_EQ(state.DestFromSourceLength(Fixed(3)), 1);
 
-  state.set_step_size(Fixed(2));
+  state.ResetSourceStride(TimelineRate(Fixed(2).raw_value(), 1));
   EXPECT_EQ(state.DestFromSourceLength(Fixed(4)), 2);
 
   // Integral length and step, with remainder:
-  state.set_step_size(Fixed(2));
+  state.ResetSourceStride(TimelineRate(Fixed(2).raw_value(), 1));
   EXPECT_EQ(state.DestFromSourceLength(Fixed(3)), 2);
 
-  state.set_step_size(Fixed(4));
+  state.ResetSourceStride(TimelineRate(Fixed(4).raw_value(), 1));
   EXPECT_EQ(state.DestFromSourceLength(Fixed(9)), 3);
 
   // Fractional length and step, with remainder:
-  state.set_step_size(Fixed(1));
+  state.ResetSourceStride(TimelineRate(Fixed(1).raw_value(), 1));
   EXPECT_EQ(state.DestFromSourceLength(Fixed::FromRaw(1)), 1);
   EXPECT_EQ(state.DestFromSourceLength(Fixed(1) + Fixed::FromRaw(1)), 2);
 
-  state.set_step_size(ffl::FromRatio(3, 4));
+  state.ResetSourceStride(TimelineRate(Fixed(3).raw_value(), 4));
   EXPECT_EQ(state.DestFromSourceLength(Fixed(3) - Fixed::FromRaw(1)), 4);
   EXPECT_EQ(state.DestFromSourceLength(Fixed(3)), 4);
   EXPECT_EQ(state.DestFromSourceLength(Fixed(3) + Fixed::FromRaw(1)), 5);
 
-  state.set_step_size(ffl::FromRatio(9, 8));
+  state.ResetSourceStride(TimelineRate(Fixed(9).raw_value(), 8));
   EXPECT_EQ(state.DestFromSourceLength(Fixed(18) - Fixed::FromRaw(1)), 16);
   EXPECT_EQ(state.DestFromSourceLength(Fixed(18)), 16);
   EXPECT_EQ(state.DestFromSourceLength(Fixed(18) + Fixed::FromRaw(1)), 17);
 
-  // Ideally, this would result in 3 steps needed, but step_size was reduced to `Fixed::FromRaw(1)`
-  // precision and thus is slightly less than a perfect 2/3, so 3 steps is _just_ short.
-  state.set_step_size(ffl::FromRatio(2, 3));
-  EXPECT_EQ(state.DestFromSourceLength(Fixed(2)), 4);
-  // _Just_ short by exactly one fractional frame, in fact.
+  state.ResetSourceStride(TimelineRate(Fixed(2).raw_value(), 3));
   EXPECT_EQ(state.DestFromSourceLength(Fixed(2) - Fixed::FromRaw(1)), 3);
-}
-
-TEST(SamplerStateTest, DestFromSourceLengthWithModulo) {
-  Sampler::State state;
-
-  // `source_pos_modulo` but no `rate_modulo`, where the initial `source_pos_modulo` should be
-  // entirely ignored.
-  state.set_step_size(ffl::FromRatio(3, 4));
-  state.SetRateModuloAndDenominator(0, 21, Fixed(20));
-  EXPECT_EQ(state.DestFromSourceLength(Fixed(3)), 4);
-
-  state.set_step_size(ffl::FromRatio(9, 8));
-  state.SetRateModuloAndDenominator(0, 999, Fixed(998));
-  EXPECT_EQ(state.DestFromSourceLength(Fixed(18)), 16);
-
-  // `rate_modulo` adds up to just one unit shy of rolling over (initial mod is 0 or unspecified).
-  state.set_step_size(ffl::FromRatio(2, 3));
-  state.SetRateModuloAndDenominator(33, 100, Fixed(0));
-  EXPECT_EQ(state.DestFromSourceLength(Fixed(2)), 4);
-
-  // `rate_modulo` adds up to just one unit shy of rolling over (non-zero initial mod is specified).
-  state.set_step_size(ffl::FromRatio(2, 3));
-  state.SetRateModuloAndDenominator(32, 100, Fixed(6));
-  EXPECT_EQ(state.DestFromSourceLength(Fixed(2)), 4);
-
-  // `rate_modulo` exactly rolls over (no or 0 initial_mod).
-  state.set_step_size(ffl::FromRatio(2, 3));
-  state.SetRateModuloAndDenominator(1, 3, Fixed(0));
-  EXPECT_EQ(state.DestFromSourceLength(Fixed(2)), 3);
-
-  state.set_step_size(ffl::FromRatio(9, 8));
-  state.SetRateModuloAndDenominator(1, 16, Fixed(0));
-  EXPECT_EQ(state.DestFromSourceLength(Fixed(18) + Fixed::FromRaw(1)), 16);
-
-  // `rate_modulo` exactly rolls over (non-zero initial mod).
-  state.set_step_size(ffl::FromRatio(2, 3));
-  state.SetRateModuloAndDenominator(33, 100);
-  state.set_source_pos_modulo(1);
-  EXPECT_EQ(state.DestFromSourceLength(Fixed(2)), 3);
-
-  state.set_step_size(ffl::FromRatio(2, 3));
-  state.SetRateModuloAndDenominator(31, 100);
-  state.set_source_pos_modulo(7);
-  EXPECT_EQ(state.DestFromSourceLength(Fixed(2)), 3);
-
-  state.set_step_size(ffl::FromRatio(9, 8));
-  state.SetRateModuloAndDenominator(1, 32);
-  state.set_source_pos_modulo(16);
-  EXPECT_EQ(state.DestFromSourceLength(Fixed(18) + Fixed::FromRaw(1)), 16);
 }
 
 TEST(SamplerStateTest, DestFromSourceLengthLimits) {
   const Fixed max_length = Fixed::Max();
-  const Fixed max_step_size = Fixed::Max();
-  const uint64_t max_denominator = std::numeric_limits<uint64_t>::max();
-  const uint64_t max_rate_modulo = max_denominator - 1u;
-
-  const Fixed min_step_size = Fixed::FromRaw(1);
-  const uint64_t min_nonzero_rate_modulo = 1u;
 
   Sampler::State state;
 
-  // Largest return value without modulo factors.
-  state.set_step_size(min_step_size);
+  // Largest return value.
+  state.ResetSourceStride(TimelineRate(1, 1));
   EXPECT_EQ(state.DestFromSourceLength(max_length), std::numeric_limits<int64_t>::max());
-  // Largest return value with modulo factors.
-  state.SetRateModuloAndDenominator(min_nonzero_rate_modulo, max_denominator);
+
+  state.ResetSourceStride(
+      TimelineRate(std::numeric_limits<int64_t>::max(), std::numeric_limits<int64_t>::max()));
   EXPECT_EQ(state.DestFromSourceLength(max_length), std::numeric_limits<int64_t>::max());
 
   // The largest possible step size is equal to the largest possible length.
-  state.set_step_size(max_step_size);
-  state.SetRateModuloAndDenominator(0, 1);
+  state.ResetSourceStride(TimelineRate(std::numeric_limits<int64_t>::max(), 1));
   EXPECT_EQ(state.DestFromSourceLength(max_length), 1);
-  state.SetRateModuloAndDenominator(max_rate_modulo, max_denominator, Fixed(max_denominator - 1u));
-  EXPECT_EQ(state.DestFromSourceLength(max_length), 1);
-
-  // The largest possible `rate_modulo`/`source_pos_modulo` contribution, relative to `step_size`.
-  state.set_step_size(min_step_size);
-  state.SetRateModuloAndDenominator(max_rate_modulo, max_denominator);
-  EXPECT_EQ(state.DestFromSourceLength(max_length), std::numeric_limits<int64_t>::max() / 2 + 1);
-}
-
-TEST(SamplerTest, DestFromSourceLengthPosModuloContribution) {
-  const Fixed max_length = Fixed::Max();
-  const Fixed min_step_size = Fixed::FromRaw(1);
-
-  const uint64_t max_denominator = std::numeric_limits<uint64_t>::max();
-  const uint64_t large_denominator = static_cast<uint64_t>(std::numeric_limits<int64_t>::max());
-
-  const uint64_t max_rate_modulo = max_denominator - 1u;
-  const uint64_t min_nonzero_rate_modulo = 1u;
-
-  const uint64_t large_source_pos_modulo = large_denominator + 2u;
-
-  Sampler::State state;
-
-  // With smaller denominator, `rate_modulo` contributes 1 frac frame which reduces steps by 1.
-  state.set_step_size(min_step_size);
-  state.SetRateModuloAndDenominator(min_nonzero_rate_modulo, large_denominator);
-  state.set_source_pos_modulo(1);
-  EXPECT_EQ(state.DestFromSourceLength(max_length), std::numeric_limits<int64_t>::max() - 1);
-
-  // ...at just 1 initial position modulo less, we require an additional step to cover the delta.
-  state.set_source_pos_modulo(0);
-  EXPECT_EQ(state.DestFromSourceLength(max_length), std::numeric_limits<int64_t>::max());
-
-  // This exact large initial position modulo ultimately reduces steps by 1.
-  state.SetRateModuloAndDenominator(min_nonzero_rate_modulo, max_denominator);
-  state.set_source_pos_modulo(large_source_pos_modulo);
-  EXPECT_EQ(state.DestFromSourceLength(max_length), std::numeric_limits<int64_t>::max() - 1);
-
-  // ...at just 1 initial position modulo less, we require an additional step to cover the delta.
-  state.set_source_pos_modulo(large_source_pos_modulo - 1);
-  EXPECT_EQ(state.DestFromSourceLength(max_length), std::numeric_limits<int64_t>::max());
-
-  // Very small `step_size` and large `rate_modulo` where `source_pos_modulo` exactly makes the
-  // difference, starting values:
-  //    length 7FFFFFFF'FFFFFFFF, `step_size` 0'00000001, `rate_modulo`/`denominator` FF..FB/FF..FF,
-  //    `source_pos_modulo` 1
-  // After 40..00 steps:
-  // *  `step_size` contributes 40..00
-  //     `rate_modulo` advances 3F..FE'C0..00 / FF..FF, which == 3F..FE
-  // *   `rate_modulo`contributes 3F..FE
-  //     `source_pos_modulo` advances by 3F..FE'C0..00 % FF..FF, which == FF..FE (/ FF..FF)
-  //     ... plus initial modulo 1 (/ FF..FF), to exactly equal FF..FF / FF..FF
-  // *   `source_pos_modulo` contributes 1.
-  //
-  // 40..00 + 3F..FE + 1 == 7F..FF, exactly the length we needed to cover.
-  state.SetRateModuloAndDenominator(max_rate_modulo - 3, max_denominator);
-  state.set_source_pos_modulo(1);
-  EXPECT_EQ(state.DestFromSourceLength(max_length), std::numeric_limits<int64_t>::max() / 2 + 1);
-
-  // ...at just 1 initial position modulo less, we require an additional step to cover the delta.
-  state.set_source_pos_modulo(0);
-  EXPECT_EQ(state.DestFromSourceLength(max_length), std::numeric_limits<int64_t>::max() / 2 + 2);
 }
 
 TEST(SamplerStateTest, SourceFromDestLength) {
   Sampler::State state;
-  state.set_step_size(Fixed(2) + Fixed::FromRaw(11));
 
-  // No `rate_modulo`:
-  //    `3 * (2+11/8192 + (0/7)/8192) + (6/7)/8192 == 6+33/8192 + (6/7)/8192 == 6+33/8192`
-  state.SetRateModuloAndDenominator(0, 7, Fixed(6));
-  EXPECT_EQ(state.SourceFromDestLength(3), Fixed(Fixed(6) + Fixed::FromRaw(33)));
+  // Integral step:
+  EXPECT_EQ(state.SourceFromDestLength(0), Fixed(0));
+  EXPECT_EQ(state.SourceFromDestLength(1), Fixed(1));
+  EXPECT_EQ(state.SourceFromDestLength(2), Fixed(2));
 
-  // `source_pos_modulo` almost rolls over:
-  //    `3 * (2+11/8192 + (5/7)/8192) + (5/7)/8192 == 6+33/8192 + (20/7)/8192 == 6+35/8192`
-  state.SetRateModuloAndDenominator(5, 7);
-  state.set_source_pos_modulo(5);
-  EXPECT_EQ(state.SourceFromDestLength(3), Fixed(Fixed(6) + Fixed::FromRaw(35)));
+  state.ResetSourceStride(TimelineRate(Fixed(3).raw_value(), 1));
+  EXPECT_EQ(state.SourceFromDestLength(1), Fixed(3));
 
-  // `source_pos_modulo` exacly rolls over:
-  //    `3 * (2+11/8192 + (5/7)/8192) + (6/7)/8192 == 6+33/8192 + (21/7)/8192 == 6+36/8192`
-  state.SetRateModuloAndDenominator(5, 7);
-  state.set_source_pos_modulo(6);
-  EXPECT_EQ(state.SourceFromDestLength(3), Fixed(Fixed(6) + Fixed::FromRaw(36)));
+  state.ResetSourceStride(TimelineRate(Fixed(2).raw_value(), 1));
+  EXPECT_EQ(state.SourceFromDestLength(2), Fixed(4));
+
+  // Fractional step:
+  state.ResetSourceStride(TimelineRate(Fixed(1).raw_value(), 2));
+  EXPECT_EQ(state.SourceFromDestLength(3), Fixed(1) + ffl::FromRatio(1, 2));
+
+  state.ResetSourceStride(TimelineRate(Fixed(2).raw_value(), 3));
+  EXPECT_EQ(state.SourceFromDestLength(1), ffl::FromRatio(2, 3));
+
+  state.ResetSourceStride(TimelineRate(Fixed(2).raw_value(), 3));
+  EXPECT_EQ(state.SourceFromDestLength(3), Fixed(2));
+
+  state.ResetSourceStride(TimelineRate(Fixed(9).raw_value(), 8));
+  EXPECT_EQ(state.SourceFromDestLength(1), ffl::FromRatio(9, 8));
+
+  state.ResetSourceStride(TimelineRate(Fixed(9).raw_value(), 8));
+  EXPECT_EQ(state.SourceFromDestLength(8), Fixed(9));
+}
+
+TEST(SamplerStateTest, MonoTimeFromRunningSource) {
+  media_audio::Sampler::State state;
+
+  // 44100 Hz stream with +987ppm clock adjustment, started at ~59 sec after bootup.
+  state.set_next_source_frame(Fixed(296) + Fixed::FromRaw(306));
+  state.ResetSourceStride(TimelineRate(Fixed(78125).raw_value() + 1, 78125));
+  state.set_source_pos_modulo(26574);
+  EXPECT_EQ(state.MonoTimeFromRunningSource(
+                TimelineFunction(0, 59'468'459'010, {441'435'267, 1'220'703'125})),
+            zx::time(59'475'165'257));
+
+  // 48000 Hz stream with +4ppm clock adjustment +4ppm, started at ~319 sec after bootup.
+  state.set_next_source_frame(Fixed(-743) + Fixed::FromRaw(-1286));
+  state.ResetSourceStride(TimelineRate(Fixed(15625).raw_value() + 1, 15625));
+  state.set_source_pos_modulo(5627);
+  EXPECT_EQ(state.MonoTimeFromRunningSource(
+                TimelineFunction(0, 319'214'380'550, {96'000'384, 244'140'625})),
+            zx::time(319'198'898'176));
+
+  // 6000 Hz stream with -3ppm clock adjustment, started at ~134 sec after bootup.
+  state.set_next_source_frame(Fixed(-143) + Fixed::FromRaw(-3293));
+  state.ResetSourceStride(TimelineRate(Fixed(1).raw_value(), 1));
+  state.set_source_pos_modulo(0);
+  EXPECT_EQ(state.MonoTimeFromRunningSource(
+                TimelineFunction(0, 134'260'312'077, {11'999'964, 244'140'625})),
+            zx::time(134'236'411'676));
+
+  // same stream, from a mix 32 millisecs later
+  state.set_next_source_frame(Fixed(48) + Fixed::FromRaw(4892));
+  state.ResetSourceStride(TimelineRate(Fixed(15625).raw_value() + 1, 15625));
+  state.set_source_pos_modulo(15167);
+  EXPECT_EQ(state.MonoTimeFromRunningSource(
+                TimelineFunction(0, 134'260'312'077, {11'999'964, 244'140'625})),
+            zx::time(134'268'411'649));
+
+  // Synthetic example that overflows a int128 if we don't prevent it
+  //
+  // 191999 Hz (prime) stream with -997 (prime) clock adjustment, stream-start 1 year after bootup,
+  // seeked to a running source position of 6e12 frames: about 1 year also.
+  //
+  // We expect a zx::time that is roughly 2 yrs (now + stream position), more than 6.2e16 nsec.
+  // If this particular calculation overflows, the result is positive but approx half the magnitude.
+  state.set_next_source_frame(Fixed(6'000'000'000'000) + Fixed::FromRaw(8191));
+  state.ResetSourceStride(TimelineRate(1, std::numeric_limits<uint64_t>::max()));
+  state.set_source_pos_modulo(std::numeric_limits<uint64_t>::max() - 1);
+  EXPECT_GT(state.MonoTimeFromRunningSource(
+                TimelineFunction(0, 31'556'736'000'000'000, {191'807'576'997, 122'070'312'500})),
+            zx::time(62'838'086'000'000'000));
+}
+
+class SamplerStatePositionTest : public testing::Test {
+ protected:
+  static void TestWithNoRateModulo(bool advance_source_pos_modulo) {
+    media_audio::Sampler::State state;
+    state.ResetSourceStride(TimelineRate(Fixed(2).raw_value(), 1));
+    state.set_source_pos_modulo(1u);
+    state.set_next_source_frame(Fixed(3));
+    state.set_source_pos_error(zx::duration(-17));
+    state.set_next_dest_frame(2);
+
+    if (advance_source_pos_modulo) {
+      state.AdvanceAllPositionsTo(11);
+    } else {
+      state.UpdateRunningPositionsBy(9);
+    }
+
+    // These should be unchanged.
+    EXPECT_EQ(state.source_pos_error(), zx::duration(-17));
+    EXPECT_EQ(state.source_pos_modulo(), 1u);
+
+    // These should be updated.
+    EXPECT_EQ(state.next_dest_frame(), 11u);
+    EXPECT_EQ(state.next_source_frame(), Fixed(21))
+        << "next_source_frame " << ffl::String::DecRational << state.next_source_frame();
+  }
+
+  static void TestWithRateModulo(bool advance_source_pos_modulo) {
+    media_audio::Sampler::State state;
+    state.ResetSourceStride(TimelineRate(Fixed(5).raw_value() + 2, 5));
+    state.set_source_pos_modulo(2u);
+    state.set_next_dest_frame(2);
+    state.set_next_source_frame(Fixed(3));
+    state.set_source_pos_error(zx::duration(-17));
+
+    if (advance_source_pos_modulo) {
+      state.AdvanceAllPositionsTo(11);
+    } else {
+      state.UpdateRunningPositionsBy(9);
+    }
+
+    // This should be unchanged.
+    EXPECT_EQ(state.source_pos_error(), zx::duration(-17));
+
+    // These should be updated.
+    EXPECT_EQ(state.next_dest_frame(), 11u);
+    if (advance_source_pos_modulo) {
+      // rate_mod/denom is 2/5, so `source_pos_modulo` should increase by (9 * 2), from 2 to 20.
+      // source_pos_modulo / denominator (20 / 5) is 4, so source_pos adds 4 subframes.
+      // The remaining source_pos_modulo (20 % 5) is 0.
+      // Thus new source_pos should be 12 frames (3+9), 4 subframes, modulo 0/5.
+      EXPECT_EQ(state.source_pos_modulo(), 0ull);
+    } else {
+      // rate_mod/denom is 2/5, so `source_pos_modulo` increased by (9 * 2) and ended up as 2 (22).
+      // source_pos_modulo / denominator (22 / 5) is 4, so source_pos adds 4 subframes.
+      // The remaining source_pos_modulo (22 % 5) is 2.
+      // Thus new source_pos should be 12 frames (3+9), 4 subframes, modulo 2/5.
+      EXPECT_EQ(state.source_pos_modulo(), 2ull);
+    }
+    EXPECT_EQ(state.next_source_frame(), Fixed(Fixed(12) + Fixed::FromRaw(4)))
+        << "next_source_frame " << ffl::String::DecRational << state.next_source_frame();
+  }
+};
+
+TEST_F(SamplerStatePositionTest, AdvanceAllPositionsWithNoRateModulo) {
+  TestWithNoRateModulo(/*advance_source_pos_modulo=*/true);
+}
+TEST_F(SamplerStatePositionTest, UpdateRunningPositionsWithNoRateModulo) {
+  TestWithNoRateModulo(/*advance_source_pos_modulo=*/false);
+}
+
+TEST_F(SamplerStatePositionTest, AdvanceAllPositionsWithRateModulo) {
+  TestWithRateModulo(/*advance_source_pos_modulo=*/true);
+}
+TEST_F(SamplerStatePositionTest, UpdateRunningPositionsWithRateModulo) {
+  TestWithRateModulo(/*advance_source_pos_modulo=*/false);
 }
 
 }  // namespace

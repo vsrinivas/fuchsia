@@ -13,6 +13,7 @@
 #include "src/media/audio/lib/analysis/generators.h"
 #include "src/media/audio/lib/format/constants.h"
 #include "src/media/audio/lib/processing/gain.h"
+#include "src/media/audio/lib/timeline/timeline_rate.h"
 
 namespace media::audio::test {
 
@@ -54,7 +55,7 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
   int64_t dest_offset = 0;
   auto source_frames = kFreqTestBufSize;
   auto source_offset = Fixed(0);
-  mixer->Mix(&accum.samples()[0], kFreqTestBufSize, &dest_offset, &source.samples()[0],
+  mixer->Mix(accum.samples().data(), kFreqTestBufSize, &dest_offset, source.samples().data(),
              source_frames, &source_offset, false);
   EXPECT_EQ(dest_offset, kFreqTestBufSize);
   EXPECT_EQ(source_offset, Fixed(source_frames));
@@ -137,7 +138,7 @@ double MeasureOutputNoiseFloor(double* sinad_db) {
       GenerateCosineAudio(accum_format, kFreqTestBufSize, FrequencySet::kReferenceFreq, amplitude);
 
   AudioBuffer dest(dest_format, kFreqTestBufSize);
-  output_producer->ProduceOutput(&accum.samples()[0], &dest.samples()[0], kFreqTestBufSize);
+  output_producer->ProduceOutput(accum.samples().data(), &dest.samples()[0], kFreqTestBufSize);
 
   // Copy result to double-float buffer, FFT (freq-analyze) it at high-res
   auto result = MeasureAudioFreq(AudioBufferSlice(&dest), FrequencySet::kReferenceFreq);
@@ -231,11 +232,8 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, int32_t source_frames, double* leve
   AudioBuffer accum(format, num_dest_frames);
 
   // We use this to keep ongoing source_pos_modulo across multiple Mix() calls.
-  auto& bk = mixer->bookkeeping();
-  bk.set_step_size(kOneFrame * source_frames / num_dest_frames);
-  bk.SetRateModuloAndDenominator(
-      Fixed(kOneFrame * source_frames - bk.step_size() * num_dest_frames).raw_value(),
-      num_dest_frames);
+  auto& state = mixer->state();
+  state.ResetSourceStride(TimelineRate(Fixed(source_frames).raw_value(), num_dest_frames));
 
   bool use_full_set = FrequencySet::UseFullFrequencySet;
   // kReferenceFreqs[] contains the full set of test frequencies (47). kSummaryIdxs is a subset of
@@ -273,14 +271,14 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, int32_t source_frames, double* leve
     // Maintain ongoing source_pos_modulo across multiple Mix() calls for that frequency.
     int64_t dest_frames, dest_offset = 0;
     auto source_frames = source.NumFrames();
-    bk.set_source_pos_modulo(0);
+    state.set_source_pos_modulo(0);
 
     // First "prime" the resampler by sending a mix command exactly at the end of the source buffer.
     // This allows it to cache the frames at buffer's end. For our testing, buffers are periodic, so
     // these frames are exactly what would have immediately preceded the first data in the buffer.
     // This enables resamplers with significant side width to perform as they would in steady-state.
     auto source_offset = Fixed(source_frames);
-    mixer->Mix(&accum.samples()[0], num_dest_frames, &dest_offset, &source.samples()[0],
+    mixer->Mix(accum.samples().data(), num_dest_frames, &dest_offset, source.samples().data(),
                source_frames, &source_offset, false);
     EXPECT_EQ(dest_offset, 0u);
     EXPECT_EQ(source_offset, Fixed(source_frames));
@@ -289,7 +287,7 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, int32_t source_frames, double* leve
     source_offset = Fixed(0);
     for (uint32_t packet = 0; packet < kResamplerTestNumPackets; ++packet) {
       dest_frames = num_dest_frames * (packet + 1) / kResamplerTestNumPackets;
-      mixer->Mix(&accum.samples()[0], dest_frames, &dest_offset, &source.samples()[0],
+      mixer->Mix(accum.samples().data(), dest_frames, &dest_offset, source.samples().data(),
                  source_frames, &source_offset, false);
       if (source_offset + mixer->pos_filter_width() >= Fixed(source_frames)) {
         source_offset -= Fixed(source_frames);
@@ -304,7 +302,7 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, int32_t source_frames, double* leve
 
       // Wrap around in the source buffer -- making the offset slightly negative. We can do
       // this, within the positive filter width of this sampler.
-      mixer->Mix(&accum.samples()[0], dest_frames, &dest_offset, &source.samples()[0],
+      mixer->Mix(accum.samples().data(), dest_frames, &dest_offset, source.samples().data(),
                  source_frames, &source_offset, false);
     }
     EXPECT_EQ(dest_offset, dest_frames);
@@ -726,11 +724,7 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
   auto accum = AudioBuffer(dest_format, num_dest_frames);
 
   // We use this to keep ongoing source_pos_modulo across multiple Mix() calls.
-  auto& bk = mixer->bookkeeping();
-  bk.set_step_size(kOneFrame * source_frames / num_dest_frames);
-  bk.SetRateModuloAndDenominator(
-      Fixed(kOneFrame * source_frames - bk.step_size() * num_dest_frames).raw_value(),
-      num_dest_frames);
+  mixer->state().ResetSourceStride(TimelineRate(Fixed(source_frames).raw_value(), num_dest_frames));
 
   int64_t dest_frames, dest_offset = 0;
 
@@ -740,7 +734,7 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
   // This enables resamplers with significant side width to perform as they would in steady-state.
 
   auto source_offset = Fixed(source_frames);
-  mixer->Mix(&accum.samples()[0], num_dest_frames, &dest_offset, &source.samples()[0],
+  mixer->Mix(accum.samples().data(), num_dest_frames, &dest_offset, source.samples().data(),
              source_frames, &source_offset, false);
   EXPECT_EQ(dest_offset, 0u);
   EXPECT_EQ(source_offset, Fixed(source_frames));
@@ -749,8 +743,8 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
   source_offset = Fixed(0);
   for (uint32_t packet = 0; packet < kResamplerTestNumPackets; ++packet) {
     dest_frames = num_dest_frames * (packet + 1) / kResamplerTestNumPackets;
-    mixer->Mix(&accum.samples()[0], dest_frames, &dest_offset, &source.samples()[0], source_frames,
-               &source_offset, false);
+    mixer->Mix(accum.samples().data(), dest_frames, &dest_offset, source.samples().data(),
+               source_frames, &source_offset, false);
   }
   auto expected_source_offset = Fixed(source_frames);
   if (dest_offset < dest_frames) {
@@ -766,8 +760,8 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
     // Wrap around in the source buffer -- making the offset slightly negative. We can do
     // this, within the positive filter width of this sampler.
     source_offset -= Fixed(source_frames);
-    mixer->Mix(&accum.samples()[0], dest_frames, &dest_offset, &source.samples()[0], source_frames,
-               &source_offset, false);
+    mixer->Mix(accum.samples().data(), dest_frames, &dest_offset, source.samples().data(),
+               source_frames, &source_offset, false);
     expected_source_offset = Fixed(0);
   }
   EXPECT_EQ(dest_offset, dest_frames);

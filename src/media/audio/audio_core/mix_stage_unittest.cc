@@ -23,6 +23,7 @@
 #include "src/media/audio/lib/clock/utils.h"
 #include "src/media/audio/lib/format/constants.h"
 #include "src/media/audio/lib/processing/gain.h"
+#include "src/media/audio/lib/timeline/timeline_rate.h"
 
 using testing::Each;
 using testing::FloatEq;
@@ -829,11 +830,10 @@ TEST_F(MixStageTest, PositionResetAndAdvance) {
       3.0, zx::msec(2), [&packet_released] { packet_released = true; }));
 
   auto mixer = mix_stage_->AddInput(packet_queue, 0.0f, Mixer::Resampler::WindowedSinc);
-  auto& info = mixer->source_info();
-  auto& bookkeeping = mixer->bookkeeping();
+  auto& state = mixer->state();
 
-  bookkeeping.SetRateModuloAndDenominator(76543, 98765);
-  bookkeeping.set_source_pos_modulo(23456);
+  state.ResetSourceStride(TimelineRate(Fixed(98765).raw_value() + 76543, 98765));
+  state.set_source_pos_modulo(23456);
 
   auto source_pos_for_read_lock = Fixed(0);
   // The first mix resets position, so the above will be overwritten and we'll advance from zero.
@@ -847,18 +847,16 @@ TEST_F(MixStageTest, PositionResetAndAdvance) {
     source_pos_for_read_lock += Fixed(dest_frames_per_mix);
 
     // At a 48k nominal rate, we expect rate_modulo to be 47999 and denom to be 48000.
-    EXPECT_EQ(bookkeeping.step_size(), Fixed(kOneFrame - Fixed::FromRaw(1)))
-        << ffl::String::DecRational << bookkeeping.step_size();
-    EXPECT_EQ(bookkeeping.rate_modulo(),
-              static_cast<uint64_t>(kDefaultFormat.frames_per_second()) - 1);
-    EXPECT_EQ(bookkeeping.denominator(), static_cast<uint64_t>(kDefaultFormat.frames_per_second()));
+    EXPECT_EQ(state.step_size(), Fixed(kOneFrame - Fixed::FromRaw(1)))
+        << ffl::String::DecRational << state.step_size();
+    EXPECT_EQ(state.rate_modulo(), static_cast<uint64_t>(kDefaultFormat.frames_per_second()) - 1);
+    EXPECT_EQ(state.denominator(), static_cast<uint64_t>(kDefaultFormat.frames_per_second()));
 
     // source_pos_modulo should show that we lose 1 source_pos_modulo per dest frame.
-    EXPECT_EQ(bookkeeping.source_pos_modulo(),
-              bookkeeping.denominator() - source_pos_for_read_lock.Floor());
+    EXPECT_EQ(state.source_pos_modulo(), state.denominator() - source_pos_for_read_lock.Floor());
     // ... which also means we'll be one frac-frame behind.
-    EXPECT_EQ(info.next_source_frame(), Fixed(Fixed(info.next_dest_frame()) - Fixed::FromRaw(1)))
-        << ffl::String::DecRational << info.next_source_frame();
+    EXPECT_EQ(state.next_source_frame(), Fixed(Fixed(state.next_dest_frame()) - Fixed::FromRaw(1)))
+        << ffl::String::DecRational << state.next_source_frame();
   }
 
   {
@@ -870,20 +868,18 @@ TEST_F(MixStageTest, PositionResetAndAdvance) {
     EXPECT_EQ(dest_frames_per_mix, buffer->length());
     source_pos_for_read_lock += Fixed(dest_frames_per_mix);
 
-    EXPECT_EQ(bookkeeping.step_size(), Fixed(kOneFrame - Fixed::FromRaw(1)))
-        << ffl::String::DecRational << bookkeeping.step_size();
-    EXPECT_EQ(bookkeeping.rate_modulo(),
-              static_cast<uint64_t>(kDefaultFormat.frames_per_second()) - 1);
-    EXPECT_EQ(bookkeeping.denominator(), static_cast<uint64_t>(kDefaultFormat.frames_per_second()));
+    EXPECT_EQ(state.step_size(), Fixed(kOneFrame - Fixed::FromRaw(1)))
+        << ffl::String::DecRational << state.step_size();
+    EXPECT_EQ(state.rate_modulo(), static_cast<uint64_t>(kDefaultFormat.frames_per_second()) - 1);
+    EXPECT_EQ(state.denominator(), static_cast<uint64_t>(kDefaultFormat.frames_per_second()));
 
-    EXPECT_EQ(bookkeeping.source_pos_modulo(),
-              bookkeeping.denominator() - source_pos_for_read_lock.Floor());
-    EXPECT_EQ(info.next_source_frame(), Fixed(Fixed(info.next_dest_frame()) - Fixed::FromRaw(1)))
-        << ffl::String::DecRational << info.next_source_frame();
+    EXPECT_EQ(state.source_pos_modulo(), state.denominator() - source_pos_for_read_lock.Floor());
+    EXPECT_EQ(state.next_source_frame(), Fixed(Fixed(state.next_dest_frame()) - Fixed::FromRaw(1)))
+        << ffl::String::DecRational << state.next_source_frame();
   }
 
   // Subsequent mixes should not reset position, so this change should persist.
-  bookkeeping.set_source_pos_modulo(bookkeeping.source_pos_modulo() + 17);
+  state.set_source_pos_modulo(state.source_pos_modulo() + 17);
   {
     auto buffer = mix_stage_->ReadLock(rlctx, Fixed(source_pos_for_read_lock), dest_frames_per_mix);
     RunLoopUntilIdle();
@@ -893,17 +889,16 @@ TEST_F(MixStageTest, PositionResetAndAdvance) {
     EXPECT_EQ(dest_frames_per_mix, buffer->length());
     source_pos_for_read_lock += Fixed(dest_frames_per_mix);
 
-    EXPECT_EQ(bookkeeping.step_size(), Fixed(kOneFrame - Fixed::FromRaw(1)))
-        << ffl::String::DecRational << bookkeeping.step_size();
-    EXPECT_EQ(bookkeeping.rate_modulo(),
-              static_cast<uint64_t>(kDefaultFormat.frames_per_second()) - 1);
-    EXPECT_EQ(bookkeeping.denominator(), static_cast<uint64_t>(kDefaultFormat.frames_per_second()));
+    EXPECT_EQ(state.step_size(), Fixed(kOneFrame - Fixed::FromRaw(1)))
+        << ffl::String::DecRational << state.step_size();
+    EXPECT_EQ(state.rate_modulo(), static_cast<uint64_t>(kDefaultFormat.frames_per_second()) - 1);
+    EXPECT_EQ(state.denominator(), static_cast<uint64_t>(kDefaultFormat.frames_per_second()));
 
     // source_pos_modulo shows the offset, and still losing 1 source_pos_modulo per dest frame
-    EXPECT_EQ(bookkeeping.source_pos_modulo(),
-              bookkeeping.denominator() - source_pos_for_read_lock.Floor() + 17);
-    EXPECT_EQ(info.next_source_frame(), Fixed(Fixed(info.next_dest_frame()) - Fixed::FromRaw(1)))
-        << ffl::String::DecRational << info.next_source_frame();
+    EXPECT_EQ(state.source_pos_modulo(),
+              state.denominator() - source_pos_for_read_lock.Floor() + 17);
+    EXPECT_EQ(state.next_source_frame(), Fixed(Fixed(state.next_dest_frame()) - Fixed::FromRaw(1)))
+        << ffl::String::DecRational << state.next_source_frame();
   }
 
   packet_queue->Flush();
@@ -918,7 +913,7 @@ TEST_F(MixStageTest, DontCrashOnDestOffsetRoundingError) {
   auto input = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_factory(),
                                                      zx_system_get_page_size());
 
-  // As summarized in the calculations at the link below, the following hard-coded source_info
+  // As summarized in the calculations at the link below, the following hard-coded state
   // values result in dest_offset = 301. In order for this offset to not overflow the dest buffer,
   // we need at least 302 frames in the MixStage output buffer.
   // https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=67996#c22
@@ -940,9 +935,8 @@ TEST_F(MixStageTest, DontCrashOnDestOffsetRoundingError) {
 
   auto stream = std::make_shared<testing::FakeStream>(kDefaultFormat, context().clock_factory());
   auto mixer = mix_stage_->AddInput(input, std::nullopt, Mixer::Resampler::SampleAndHold);
-  mixer->source_info().set_next_source_frame(Fixed::FromRaw(2414202275419));
-  mixer->bookkeeping().set_step_size(kOneFrame);
-  mixer->bookkeeping().SetRateModuloAndDenominator(0, 1);
+  mixer->state().set_next_source_frame(Fixed::FromRaw(2414202275419));
+  mixer->state().ResetSourceStride(TimelineRate(Fixed(1).raw_value(), 1));
 
   // So the next ReadLock call returns a buffer with:
   // start = Fixed::FromRaw(2414204747776)
@@ -985,19 +979,17 @@ TEST_F(MixStageTest, PositionSkip) {
     // At a 48k nominal rate, we expect rate_modulo to be 47999 and denom to be 48000.
     // source_pos_modulo should show that we lose 1 source_pos_modulo per dest frame.
     // ... which also means our running source position will be 1 frac-frame behind.
-    auto& bookkeeping = mixer->bookkeeping();
-    EXPECT_EQ(bookkeeping.step_size(), Fixed(kOneFrame - Fixed::FromRaw(1)))
-        << ffl::String::DecRational << bookkeeping.step_size();
-    EXPECT_EQ(bookkeeping.rate_modulo(),
-              static_cast<uint64_t>(kDefaultFormat.frames_per_second()) - 1);
-    EXPECT_EQ(bookkeeping.denominator(), static_cast<uint64_t>(kDefaultFormat.frames_per_second()));
+    auto& state = mixer->state();
+    EXPECT_EQ(state.step_size(), Fixed(kOneFrame - Fixed::FromRaw(1)))
+        << ffl::String::DecRational << state.step_size();
+    EXPECT_EQ(state.rate_modulo(), static_cast<uint64_t>(kDefaultFormat.frames_per_second()) - 1);
+    EXPECT_EQ(state.denominator(), static_cast<uint64_t>(kDefaultFormat.frames_per_second()));
 
-    auto& info = mixer->source_info();
-    EXPECT_EQ(info.next_dest_frame(), source_pos_for_read_lock.Floor());
-    EXPECT_EQ(info.next_source_frame(), Fixed(Fixed(info.next_dest_frame()) - Fixed::FromRaw(1)))
-        << ffl::String::DecRational << info.next_source_frame();
+    EXPECT_EQ(state.next_dest_frame(), source_pos_for_read_lock.Floor());
+    EXPECT_EQ(state.next_source_frame(), Fixed(Fixed(state.next_dest_frame()) - Fixed::FromRaw(1)))
+        << ffl::String::DecRational << state.next_source_frame();
 
-    EXPECT_EQ(bookkeeping.source_pos_modulo(), bookkeeping.denominator() - dest_frames_per_mix);
+    EXPECT_EQ(state.source_pos_modulo(), state.denominator() - dest_frames_per_mix);
   }
 
   packet_queue->Flush();
@@ -1030,7 +1022,7 @@ class MixStagePositionTest : public MixStageTest {
 
     auto packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function_, clock);
     auto mixer = mix_stage_->AddInput(packet_queue, 0.0f, Mixer::Resampler::WindowedSinc);
-    auto& info = mixer->source_info();
+    auto& state = mixer->state();
     auto cleanup = fit::defer([this, packet_queue]() { mix_stage_->RemoveInput(*packet_queue); });
 
     // This method is called multiple times from the same test.
@@ -1044,8 +1036,8 @@ class MixStagePositionTest : public MixStageTest {
     RunLoopUntilIdle();
 
     EXPECT_NE(mixer->source_ref_clock_to_frac_source_frames_generation, kInvalidGenerationId);
-    EXPECT_EQ(info.next_dest_frame(), kDestFramesPerMix);
-    EXPECT_EQ(info.source_pos_error(), zx::duration(0));
+    EXPECT_EQ(state.next_dest_frame(), kDestFramesPerMix);
+    EXPECT_EQ(state.source_pos_error(), zx::duration(0));
 
     // Advance time.
     context().clock_factory()->AdvanceMonoTimeBy(zx::msec(10));
@@ -1057,38 +1049,37 @@ class MixStagePositionTest : public MixStageTest {
     clock->SetRate(0);
 
     // Inject error, mix
-    info.set_next_source_frame(frac_source_error + info.next_source_frame());
+    state.set_next_source_frame(frac_source_error + state.next_source_frame());
 
-    auto& bookkeeping = mixer->bookkeeping();
     FX_CHECK(source_pos_modulo < denominator);
     if (denominator > 1) {
-      bookkeeping.SetRateModuloAndDenominator(1, denominator);
-      bookkeeping.set_source_pos_modulo(std::min(source_pos_modulo, bookkeeping.denominator() - 1));
+      state.ResetSourceStride(TimelineRate(Fixed(denominator).raw_value() + 1, denominator));
+      state.set_source_pos_modulo(std::min(source_pos_modulo, state.denominator() - 1));
     }
     mix_stage_->ReadLock(rlctx, Fixed(kDestFramesPerMix), kDestFramesPerMix);
     RunLoopUntilIdle();
 
-    EXPECT_EQ(info.next_dest_frame(), 2 * kDestFramesPerMix);
-    return info.source_pos_error();
+    EXPECT_EQ(state.next_dest_frame(), 2 * kDestFramesPerMix);
+    return state.source_pos_error();
   }
 
   void ExpectPositionOffsetsAfterMix(int64_t pre_mix_dest_offset, Fixed pre_mix_source_offset,
                                      int64_t post_mix_dest_offset, Fixed post_mix_source_offset) {
     Fixed expect_long_running_source_pos =
-        info().next_source_frame() + Fixed(kDestFramesPerMix) + post_mix_source_offset;
-    info().set_next_source_frame(info().next_source_frame() + pre_mix_source_offset);
+        state().next_source_frame() + Fixed(kDestFramesPerMix) + post_mix_source_offset;
+    state().set_next_source_frame(state().next_source_frame() + pre_mix_source_offset);
 
     auto expect_long_running_dest_pos =
-        info().next_dest_frame() + kDestFramesPerMix + post_mix_dest_offset;
-    info().set_next_dest_frame(info().next_dest_frame() + pre_mix_dest_offset);
+        state().next_dest_frame() + kDestFramesPerMix + post_mix_dest_offset;
+    state().set_next_dest_frame(state().next_dest_frame() + pre_mix_dest_offset);
 
     mix_stage_->ReadLock(rlctx, Fixed(kDestFramesPerMix), kDestFramesPerMix);
-    EXPECT_EQ(info().next_source_frame(), expect_long_running_source_pos);
-    EXPECT_EQ(info().next_dest_frame(), expect_long_running_dest_pos);
+    EXPECT_EQ(state().next_source_frame(), expect_long_running_source_pos);
+    EXPECT_EQ(state().next_dest_frame(), expect_long_running_dest_pos);
   }
 
   media::audio::Mixer& mixer() { return *mixer_; }
-  media::audio::Mixer::SourceInfo& info() { return mixer_->source_info(); }
+  media_audio::Sampler::State& state() { return mixer_->state(); }
 
  private:
   std::shared_ptr<media::audio::Mixer> mixer_;
@@ -1106,7 +1097,7 @@ TEST_F(MixStagePositionTest, SourceDestPositionRelationship) {
   SetUpWithClock(std::move(clone_of_device_clock_));
   EXPECT_EQ(mixer().source_ref_clock_to_frac_source_frames_generation, 1u);
 
-  auto long_running_source_pos = info().next_source_frame();
+  auto long_running_source_pos = state().next_source_frame();
   // Pause the timeline and request another mix: position relationship should be cleared
   timeline_function_->Update(TimelineFunction(Fixed(kDestFramesPerMix).raw_value(),
                                               zx::clock::get_monotonic().get(), {0, 1}));
@@ -1119,10 +1110,10 @@ TEST_F(MixStagePositionTest, SourceDestPositionRelationship) {
       TimelineRate(Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
   mix_stage_->ReadLock(rlctx, Fixed(2 * kDestFramesPerMix), kDestFramesPerMix);
   EXPECT_EQ(mixer().source_ref_clock_to_frac_source_frames_generation, 3u);
-  EXPECT_EQ(info().next_source_frame(), long_running_source_pos + Fixed(2 * kDestFramesPerMix))
-      << ffl::String::DecRational << info().next_source_frame();
+  EXPECT_EQ(state().next_source_frame(), long_running_source_pos + Fixed(2 * kDestFramesPerMix))
+      << ffl::String::DecRational << state().next_source_frame();
 
-  EXPECT_EQ(info().next_dest_frame(), Fixed(3 * kDestFramesPerMix).Floor());
+  EXPECT_EQ(state().next_dest_frame(), Fixed(3 * kDestFramesPerMix).Floor());
 }
 
 // Verify that SourceInfo.source_pos_error is set to zero if less than one fractional frame.
@@ -1264,13 +1255,13 @@ TEST_F(MixStagePositionTest, SourceDiscontinuityWithinThreshold) {
 
   // Artificially decrement long-running source position by less than 2ms but more than 1 subframe
   // MixStage should accept the source error, rate-adjust, then advance
-  auto expect_long_running_dest_pos = info().next_dest_frame() + kDestFramesPerMix;
-  Fixed expect_long_running_source_pos = info().next_source_frame() + Fixed(kDestFramesPerMix);
-  info().set_next_source_frame(info().next_source_frame() - Fixed::FromRaw(512));
+  auto expect_long_running_dest_pos = state().next_dest_frame() + kDestFramesPerMix;
+  Fixed expect_long_running_source_pos = state().next_source_frame() + Fixed(kDestFramesPerMix);
+  state().set_next_source_frame(state().next_source_frame() - Fixed::FromRaw(512));
 
   mix_stage_->ReadLock(rlctx, Fixed(kDestFramesPerMix), kDestFramesPerMix);
-  EXPECT_LT(info().next_source_frame(), expect_long_running_source_pos);
-  EXPECT_EQ(info().next_dest_frame(), expect_long_running_dest_pos);
+  EXPECT_LT(state().next_source_frame(), expect_long_running_source_pos);
+  EXPECT_EQ(state().next_dest_frame(), expect_long_running_dest_pos);
 }
 
 }  // namespace media::audio

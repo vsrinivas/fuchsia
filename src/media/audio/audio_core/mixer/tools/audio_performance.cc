@@ -13,6 +13,7 @@
 #include "src/media/audio/lib/format/audio_buffer.h"
 #include "src/media/audio/lib/format/traits.h"
 #include "src/media/audio/lib/processing/gain.h"
+#include "src/media/audio/lib/timeline/timeline_rate.h"
 
 // Convenience abbreviation within this source file to shorten names
 using Resampler = ::media::audio::Mixer::Resampler;
@@ -432,11 +433,8 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const Limits& limits
   auto accum = std::make_unique<float[]>(dest_frame_count * cfg.num_output_chans);
   int64_t dest_offset, previous_dest_offset;
 
-  auto& bk = mixer->bookkeeping();
-  bk.set_step_size(Fixed(cfg.source_rate) / cfg.dest_rate);
-  bk.SetRateModuloAndDenominator(
-      Fixed(cfg.source_rate).raw_value() - (bk.step_size().raw_value() * cfg.dest_rate),
-      cfg.dest_rate);
+  auto& state = mixer->state();
+  state.ResetSourceStride(TimelineRate(Fixed(cfg.source_rate).raw_value(), cfg.dest_rate));
 
   float gain_db;
   bool source_mute = false;
@@ -483,7 +481,7 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const Limits& limits
     // For repeatability, start each run at exactly the same position.
     dest_offset = 0;
     auto source_offset = Fixed(0);
-    bk.set_source_pos_modulo(0);
+    state.set_source_pos_modulo(0);
 
     auto t0 = zx::clock::get_monotonic();
 

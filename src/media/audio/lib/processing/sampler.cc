@@ -5,81 +5,90 @@
 #include "src/media/audio/lib/processing/sampler.h"
 
 #include <lib/trace/event.h>
+#include <lib/zx/time.h>
 
 #include <cstdint>
 #include <limits>
 
 #include "lib/syslog/cpp/macros.h"
+#include "src/media/audio/lib/format2/fixed.h"
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/lib/processing/point_sampler.h"
 #include "src/media/audio/lib/processing/sinc_sampler.h"
+#include "src/media/audio/lib/timeline/timeline_function.h"
 
 namespace media_audio {
 
-std::unique_ptr<Sampler> Sampler::Create(const Format& source_format, const Format& dest_format,
-                                         Type type) {
-  TRACE_DURATION("audio", "Sampler::Create");
-
-  switch (type) {
-    case Type::kDefault:
-      if (source_format.frames_per_second() == dest_format.frames_per_second()) {
-        return PointSampler::Create(source_format, dest_format);
-      }
-      return SincSampler::Create(source_format, dest_format);
-    case Type::kPointSampler:
-      return PointSampler::Create(source_format, dest_format);
-    case Type::kSincSampler:
-      return SincSampler::Create(source_format, dest_format);
-  }
+void Sampler::State::AdvanceAllPositionsTo(int64_t dest_target_frame) {
+  AdvancePositionsBy(dest_target_frame - next_dest_frame_, /*advance_source_pos_modulo=*/true);
 }
 
-Fixed Sampler::State::SetRateModuloAndDenominator(uint64_t rate_modulo, uint64_t denominator,
-                                                  Fixed source_pos_modulo) {
+void Sampler::State::AdvanceAllPositionsBy(int64_t dest_frames) {
+  AdvancePositionsBy(dest_frames, /*advance_source_pos_modulo=*/true);
+}
+
+void Sampler::State::UpdateRunningPositionsBy(int64_t dest_frames) {
+  AdvancePositionsBy(dest_frames, /*advance_source_pos_modulo=*/false);
+}
+
+void Sampler::State::ResetSourceStride(
+    const media::TimelineRate& source_frac_frame_per_dest_frame) {
   if constexpr (kTracePositionEvents) {
-    TRACE_DURATION("audio", __func__, "rate_modulo", rate_modulo, "denominator", denominator);
+    TRACE_DURATION("audio", __func__, "rate_modulo", rate_modulo_, "denominator", denominator_);
   }
-  FX_CHECK(denominator > 0);
-  FX_CHECK(rate_modulo < denominator);
-  FX_CHECK(denominator_ > 0) << "denominator: " << denominator_;
-  FX_CHECK(rate_modulo_ < denominator_)
-      << "rate_modulo: " << rate_modulo_ << ", denominator: " << denominator_;
-  FX_CHECK(source_pos_modulo_ < denominator_)
-      << "source_pos_modulo: " << source_pos_modulo_ << ", denominator: " << denominator_;
+
+  step_size_ = Fixed::FromRaw(source_frac_frame_per_dest_frame.Scale(1));
+  // Now that we have a new step size, calculate the new rate modulo and denominator values to
+  // account for the limitations of `step_size_`.
+  rate_modulo_ = source_frac_frame_per_dest_frame.subject_delta() -
+                 (source_frac_frame_per_dest_frame.reference_delta() * step_size_.raw_value());
+  const uint64_t new_denominator = source_frac_frame_per_dest_frame.reference_delta();
+  FX_CHECK(new_denominator > 0) << "new_denominator: " << new_denominator;
+  FX_CHECK(rate_modulo_ < new_denominator)
+      << "rate_modulo: " << rate_modulo_ << ", new_denominator: " << new_denominator;
 
   // Only rescale `source_pos_modulo_` if `denominator_` changes, unless the new rate is zero (even
   // if they requested a different denominator). That way we largely retain our running sub-frame
-  // fraction, across `rate_modulo` and `denominator` changes.
-  if (denominator != denominator_ && rate_modulo) {
-    // Ensure that `new_source_pos_mod / denominator == source_pos_modulo_ / denominator_`, which
-    // means `new_source_pos_mod = source_pos_modulo_ * denominator / denominator_`.
+  // fraction, across rate modulo and denominator changes.
+  if (new_denominator != denominator_ && rate_modulo_ > 0) {
+    // Ensure that `new_source_pos_modulo / new_denominator == source_pos_modulo_ / denominator_`,
+    // which means `new_source_pos_modulo = source_pos_modulo_ * new_denominator / denominator_`.
     // For higher precision, round the result by adding "1/2":
-    //   `new_source_pos_mod = floor((source_pos_modulo_ * denominator / denominator_) + 1/2)`
+    //
+    //   ```
+    //   new_source_pos_modulo =
+    //       floor((source_pos_modulo_ * new_denominator / denominator_) + 1/2)
+    //   ```
+    //
     // Avoid float math and floor, and let int-division do the truncation for us:
-    //   `new_source_pos_mod = (source_pos_modulo_ * denominator + denominator_ / 2) / denominator_`
+    //
+    //   ```
+    //   new_source_pos_modulo =
+    //       (source_pos_modulo_ * new_denominator + denominator_ / 2) / denominator_
+    //   ```
     //
     // The max `source_pos_modulo_` is `UINT64_MAX - 1`. New and old denominators should never be
-    // equal; but even if both are `UINT64_MAX`, the maximum `source_pos_modulo_ * denominator`
+    // equal; but even if both are `UINT64_MAX`, the maximum `source_pos_modulo_ * new_denominator`
     // product is `< UINT128_MAX - UINT64_MAX`. Even after adding `UINT64_MAX / 2 (for rounding),
-    // `new_source_pos_mod` cannot overflow its `uint128_t`.
+    // `new_source_pos_modulo` cannot overflow its `uint128_t`.
     //
-    // `source_pos_modulo_` is strictly `< denominator_`. Our conceptual "+1/2" for rounding could
-    // only make `new_source_pos_mod` EQUAL to `denominator_`, never exceed it. So our new
+    // Since `source_pos_modulo_ < denominator_`, our conceptual "+1/2" for rounding could only make
+    // `new_source_pos_modulo` eequal to `denominator_`, but never exceed it. So our new
     // `source_pos_modulo_` cannot overflow its `uint64_t`.
-    __uint128_t new_source_pos_mod = static_cast<__uint128_t>(source_pos_modulo_) * denominator;
-    new_source_pos_mod += static_cast<__uint128_t>(denominator_ / 2);
-    new_source_pos_mod /= static_cast<__uint128_t>(denominator_);
+    __uint128_t new_source_pos_modulo =
+        static_cast<__uint128_t>(source_pos_modulo_) * new_denominator;
+    new_source_pos_modulo += static_cast<__uint128_t>(denominator_ / 2);
+    new_source_pos_modulo /= static_cast<__uint128_t>(denominator_);
 
-    if (static_cast<uint64_t>(new_source_pos_mod) == denominator) {
-      new_source_pos_mod = 0;
-      source_pos_modulo += Fixed::FromRaw(1);
+    if (static_cast<uint64_t>(new_source_pos_modulo) == new_denominator) {
+      new_source_pos_modulo = 0;
+      next_source_frame_ += Fixed::FromRaw(1);
     }
-
-    source_pos_modulo_ = static_cast<uint64_t>(new_source_pos_mod);
-    denominator_ = denominator;
+    source_pos_modulo_ = static_cast<uint64_t>(new_source_pos_modulo);
+    denominator_ = new_denominator;
+    FX_CHECK(source_pos_modulo_ < denominator_)
+        << "source_pos_modulo: " << source_pos_modulo_ << ", new_denominator: " << denominator_;
   }
-  rate_modulo_ = rate_modulo;
-
-  return source_pos_modulo;
 }
 
 int64_t Sampler::State::DestFromSourceLength(Fixed source_length) const {
@@ -138,6 +147,149 @@ Fixed Sampler::State::SourceFromDestLength(int64_t dest_length) const {
   const int64_t source_length_raw =
       step_size_.raw_value() * dest_length + static_cast<int64_t>(mod_contribution);
   return Fixed::FromRaw(source_length_raw);
+}
+
+// This method resets long-running and per-Mix position counters, called when a destination
+// discontinuity occurs. It sets next_dest_frame_ to the specified value and calculates
+// next_source_frame_ based on the dest_frames_to_frac_source_frames transform.
+void Sampler::State::ResetPositions(
+    int64_t target_dest_frame, const media::TimelineFunction& dest_frames_to_frac_source_frames) {
+  if constexpr (kTracePositionEvents) {
+    TRACE_DURATION("audio", __func__, "target_dest_frame", target_dest_frame);
+  }
+  next_dest_frame_ = target_dest_frame;
+  next_source_frame_ = Fixed::FromRaw(dest_frames_to_frac_source_frames.Apply(target_dest_frame));
+  source_pos_error_ = zx::duration(0);
+  source_pos_modulo_ = 0;
+}
+
+zx::time Sampler::State::MonoTimeFromRunningSource(
+    const media::TimelineFunction& clock_mono_to_frac_source_frames) const {
+  FX_DCHECK(source_pos_modulo_ < denominator_);
+
+  const __int128_t frac_source_from_offset =
+      static_cast<__int128_t>(next_source_frame_.raw_value()) -
+      clock_mono_to_frac_source_frames.subject_time();
+
+  // The calculation that would first overflow a `int128` is the partial calculation:
+  //    `frac_source_from_offset * denominator * reference_delta`
+  //
+  // For our passed-in params, the maximal denominator that will *not* overflow is:
+  //    `MAX_INT128 / abs(frac_source_from_offset) / reference_delta`
+  //
+  // `__int128_t` doesn't have an `abs` implementation right now so we do it manually. We add one
+  // fractional frame to accommodate any `source_pos_modulo_` contribution.
+  const __int128_t abs_frac_source_from_offset =
+      (frac_source_from_offset < 0 ? -frac_source_from_offset : frac_source_from_offset) + 1;
+  const __int128_t max_denominator = std::numeric_limits<__int128_t>::max() /
+                                     abs_frac_source_from_offset /
+                                     clock_mono_to_frac_source_frames.reference_delta();
+
+  __int128_t source_pos_modulo_128 = static_cast<__int128_t>(source_pos_modulo_);
+  __int128_t denominator_128 = static_cast<__int128_t>(denominator_);
+
+  // A minimum denominator of 2 allows us to round to the nearest nsec, rather than floor.
+  if (denominator_128 == 1) {
+    denominator_128 = 2;
+    // If denominator is 1 then `source_pos_modulo_128` is 0, so no point in doubling it.
+  } else {
+    // If denominator is large enough to cause overflow, scale it down for this calculation.
+    while (denominator_128 > max_denominator) {
+      denominator_128 >>= 1;
+      source_pos_modulo_128 >>= 1;
+    }
+    // While scaling down, don't let `source_pos_modulo_128` become equal to `denominator_128`.
+    source_pos_modulo_128 = std::min(source_pos_modulo_128, denominator_128 - 1);
+  }
+
+  // First portion of our `TimelineFunction::Apply`.
+  const __int128_t frac_src_modulo =
+      frac_source_from_offset * denominator_128 + source_pos_modulo_128;
+
+  // Middle portion, including rate factors.
+  __int128_t mono_modulo = frac_src_modulo * clock_mono_to_frac_source_frames.reference_delta();
+  mono_modulo /= clock_mono_to_frac_source_frames.subject_delta();
+
+  // Final portion, including adding in the mono offset.
+  const __int128_t mono_offset_modulo =
+      static_cast<__int128_t>(clock_mono_to_frac_source_frames.reference_time()) * denominator_128;
+  mono_modulo += mono_offset_modulo;
+
+  // While reducing from `mono_modulo` to nsec, we add `denominator_128 / 2` in order to round.
+  const __int128_t final_mono = (mono_modulo + denominator_128 / 2) / denominator_128;
+  // `final_mono` is 128-bit so we can double-check that we haven't overflowed. But we reduced
+  // `denominator_128` as needed to avoid all overflows.
+  FX_DCHECK(final_mono <= std::numeric_limits<int64_t>::max() &&
+            final_mono >= std::numeric_limits<int64_t>::min())
+      << "0x" << std::hex << static_cast<uint64_t>(final_mono >> 64) << "'"
+      << static_cast<uint64_t>(final_mono & std::numeric_limits<uint64_t>::max());
+
+  return zx::time(static_cast<zx_time_t>(final_mono));
+}
+
+void Sampler::State::AdvancePositionsBy(int64_t dest_frames, bool advance_source_pos_modulo) {
+  FX_CHECK(dest_frames >= 0) << "Unexpected negative advance:"
+                             << " dest_frames=" << dest_frames << " denom=" << denominator_
+                             << " rate_mod=" << rate_modulo_ << " "
+                             << " source_pos_mod=" << source_pos_modulo_;
+
+  int64_t frac_source_frame_delta = step_size_.raw_value() * dest_frames;
+  if constexpr (kTracePositionEvents) {
+    TRACE_DURATION("audio", __func__, "dest_frames", dest_frames, "advance_source_pos_modulo",
+                   advance_source_pos_modulo, "frac_source_frame_delta", frac_source_frame_delta);
+  }
+
+  if (rate_modulo_ > 0) {
+    // `rate_modulo_` and `source_pos_modulo_` can be as large as `UINT64_MAX - 1`, so we use
+    // 128-bit to avoid overflow.
+    const __int128_t denominator_128 = denominator_;
+    __int128_t source_pos_modulo_128 = static_cast<__int128_t>(rate_modulo_) * dest_frames;
+    if (advance_source_pos_modulo) {
+      source_pos_modulo_128 += source_pos_modulo_;
+    }
+
+    const uint64_t new_source_pos_modulo =
+        static_cast<uint64_t>(source_pos_modulo_128 % denominator_128);
+    if (advance_source_pos_modulo) {
+      source_pos_modulo_ = new_source_pos_modulo;
+    } else {
+      // `source_pos_modulo_` has already been advanced; it is already at its eventual value.
+      // `new_source_pos_modulo` is what `source_pos_modulo` would have become, if it had started at
+      // zero. Now advance `source_pos_modulo_128` by the difference (which is what its initial
+      // value must have been), just in case this causes `frac_source_frame_delta` to increment.
+      source_pos_modulo_128 += source_pos_modulo_;
+      source_pos_modulo_128 -= new_source_pos_modulo;
+      if (source_pos_modulo_ < new_source_pos_modulo) {
+        source_pos_modulo_128 += denominator_128;
+      }
+    }
+    frac_source_frame_delta += static_cast<int64_t>(source_pos_modulo_128 / denominator_128);
+  }
+  next_source_frame_ = Fixed::FromRaw(next_source_frame_.raw_value() + frac_source_frame_delta);
+  next_dest_frame_ += dest_frames;
+  if constexpr (kTracePositionEvents) {
+    TRACE_DURATION("audio", "AdvancePositionsBy End", "nest_source_frame",
+                   next_source_frame_.Integral().Floor(), "next_source_frame_.frac",
+                   next_source_frame_.Fraction().raw_value(), "next_dest_frame_", next_dest_frame_,
+                   "source_pos_modulo", source_pos_modulo_);
+  }
+}
+
+std::unique_ptr<Sampler> Sampler::Create(const Format& source_format, const Format& dest_format,
+                                         Type type) {
+  TRACE_DURATION("audio", "Sampler::Create");
+
+  switch (type) {
+    case Type::kDefault:
+      if (source_format.frames_per_second() == dest_format.frames_per_second()) {
+        return PointSampler::Create(source_format, dest_format);
+      }
+      return SincSampler::Create(source_format, dest_format);
+    case Type::kPointSampler:
+      return PointSampler::Create(source_format, dest_format);
+    case Type::kSincSampler:
+      return SincSampler::Create(source_format, dest_format);
+  }
 }
 
 }  // namespace media_audio

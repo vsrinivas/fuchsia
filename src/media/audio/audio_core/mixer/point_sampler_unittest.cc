@@ -10,6 +10,7 @@
 #include "src/media/audio/lib/format2/channel_mapper.h"
 #include "src/media/audio/lib/format2/sample_converter.h"
 #include "src/media/audio/lib/processing/gain.h"
+#include "src/media/audio/lib/timeline/timeline_rate.h"
 
 namespace media::audio::mixer {
 namespace {
@@ -887,9 +888,7 @@ TEST_F(PointSamplerPositionTest, SourceOffsetAtEnd) {
   std::array<float, 4> accum{0.0f};
   int64_t dest_offset = 0;
 
-  auto& bk = mixer->bookkeeping();
-  bk.set_step_size(kOneFrame);
-
+  mixer->state().ResetSourceStride(TimelineRate(Fixed(1).raw_value(), 1));
   mixer->Mix(accum.data(), accum.size(), &dest_offset, source.data(), source.size(), &source_offset,
              false);
 

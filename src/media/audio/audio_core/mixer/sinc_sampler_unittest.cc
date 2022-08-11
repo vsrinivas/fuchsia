@@ -13,6 +13,7 @@
 #include "src/media/audio/lib/format/constants.h"
 #include "src/media/audio/lib/processing/filter.h"
 #include "src/media/audio/lib/processing/gain.h"
+#include "src/media/audio/lib/timeline/timeline_rate.h"
 
 namespace media::audio::mixer {
 namespace {
@@ -212,8 +213,7 @@ TEST_F(SincSamplerOutputTest, UnityConstant) {
     source[idx] = 1.0f;
   }
 
-  auto& bk = mixer->bookkeeping();
-  bk.set_step_size(kOneFrame);
+  mixer->state().ResetSourceStride(TimelineRate(Fixed(1).raw_value(), 1));
 
   // Mix the first half of the destination
   mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), kSourceLen, &source_offset,
@@ -255,10 +255,7 @@ TEST_F(SincSamplerOutputTest, DownSampleConstant) {
     source[idx] = 1.0f;
   }
 
-  auto& bk = mixer->bookkeeping();
-  bk.set_step_size(kOneFrame * kSourceRate / kDestRate);
-  bk.SetRateModuloAndDenominator(
-      Fixed(kOneFrame * kSourceRate - bk.step_size() * kDestRate).raw_value(), kDestRate);
+  mixer->state().ResetSourceStride(TimelineRate(Fixed(kSourceRate).raw_value(), kDestRate));
 
   // Mix the first half of the destination
   mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), kSourceLen, &source_offset,
@@ -299,10 +296,7 @@ TEST_F(SincSamplerOutputTest, UpSampleConstant) {
     source[idx] = 1.0f;
   }
 
-  auto& bk = mixer->bookkeeping();
-  bk.set_step_size(kOneFrame * kSourceRate / kDestRate);
-  bk.SetRateModuloAndDenominator(
-      kOneFrame.raw_value() * kSourceRate - bk.step_size().raw_value() * kDestRate, kDestRate);
+  mixer->state().ResetSourceStride(TimelineRate(Fixed(kSourceRate).raw_value(), kDestRate));
 
   // Mix the first half of the destination
   mixer->Mix(dest.get(), kDestLen / 2, &dest_offset, source.get(), kSourceLen, &source_offset,
@@ -421,7 +415,7 @@ class SincSamplerPositionTest : public SincSamplerTest {
   void TestFractionalPositionAtFrameBoundary(bool mute);
   void TestFractionalPositionJustBeforeFrameBoundary(bool mute);
   void TestSourceOffsetAtEnd(bool mute);
-  void TestRateModulo(bool include_rate_modulo, bool mute);
+  void TestRateModulo(bool mute);
   void TestPositionModuloFromZeroNoRollover(bool mute);
   void TestPositionModuloFromNonZeroNoRollover(bool mute);
   void TestPositionModuloFromZeroRollover(bool mute);
@@ -482,11 +476,11 @@ void SincSamplerPositionTest::TestFractionalPositionAtFrameBoundary(bool mute) {
 
   // Source (offset 46.00 of 50) has 4. Dest (offset 1 of 10) wants 9. Expect to advance by 4.
   std::array<float, 50> source{0.0f};
-  int64_t source_frames = source.size();
+  const int64_t source_frames = source.size();
   Fixed source_offset = Fixed(source_frames - 4) - mixer->pos_filter_width();
 
   std::array<float, 10> accum{0.0f};
-  int64_t dest_frames = accum.size();
+  const int64_t dest_frames = accum.size();
   int64_t dest_offset = 1;
 
   int64_t expect_advance = 4;
@@ -517,11 +511,11 @@ void SincSamplerPositionTest::TestFractionalPositionJustBeforeFrameBoundary(bool
 
   // Source (offset 45.99 of 50) has 4.01(5). Dest (offset 1 of 10) wants 9. Expect to advance by 5.
   std::array<float, 50> source{0.0f};
-  int64_t source_frames = source.size();
+  const int64_t source_frames = source.size();
   Fixed source_offset = Fixed(source_frames - 4) - mixer->pos_filter_width() - Fixed::FromRaw(1);
 
   std::array<float, 10> accum{0.0f};
-  int64_t dest_frames = accum.size();
+  const int64_t dest_frames = accum.size();
   int64_t dest_offset = 1;
 
   int64_t expect_advance = 5;
@@ -551,17 +545,15 @@ void SincSamplerPositionTest::TestSourceOffsetAtEnd(bool mute) {
   ASSERT_NE(mixer, nullptr);
 
   std::array<float, 50> source{0.0f};
-  int64_t source_frames = source.size();
+  const int64_t source_frames = source.size();
   Fixed source_offset = Fixed(source.size()) - mixer->pos_filter_width();
   const auto initial_source_offset = source_offset;
 
   std::array<float, 50> accum{0.0f};
-  int64_t dest_frames = accum.size();
+  const int64_t dest_frames = accum.size();
   int64_t dest_offset = 0;
 
-  auto& bk = mixer->bookkeeping();
-  bk.set_step_size(kOneFrame);
-
+  mixer->state().ResetSourceStride(TimelineRate(Fixed(1).raw_value(), 1));
   mixer->gain.SetSourceGain(mute ? media_audio::kMinGainDb : media_audio::kUnityGainDb);
   mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
              false);
@@ -575,45 +567,33 @@ TEST_F(SincSamplerPositionTest, SourceOffsetAtEndMute) { TestSourceOffsetAtEnd(t
 // Validate that RateModulo is taken into account, in position calculations.
 //
 // Position accounting uses different code when muted, so also run these position tests when muted.
-void SincSamplerPositionTest::TestRateModulo(bool include_rate_modulo, bool mute) {
+void SincSamplerPositionTest::TestRateModulo(bool mute) {
   auto mixer = SelectSincSampler(1, 1, 32000, 48000, fuchsia::media::AudioSampleFormat::SIGNED_16);
   ASSERT_NE(mixer, nullptr);
 
   // Provide the entire large source buffer, so that Mix will be limited by the dest amount.
   std::array<float, 50> source{0.0f};
-  int64_t source_frames = source.size();
+  const int64_t source_frames = source.size();
   auto source_offset = Fixed(0);
   auto expect_source_offset = Fixed(2);
 
   std::array<float, 3> accum{0.0f};
-  int64_t dest_frames = accum.size();
+  const int64_t dest_frames = accum.size();
   int64_t dest_offset = 0;
 
-  auto& bk = mixer->bookkeeping();
-  bk.set_step_size(kOneFrame * 2 / 3);
-
-  if (include_rate_modulo) {
-    bk.SetRateModuloAndDenominator(Fixed(2).raw_value() - bk.step_size().raw_value() * 3, 3);
-    ASSERT_EQ(bk.rate_modulo(),
-              static_cast<uint64_t>(Fixed(Fixed(2) - (bk.step_size() * 3)).raw_value()));
-  }
-
+  auto& state = mixer->state();
+  state.ResetSourceStride(TimelineRate(Fixed(2).raw_value(), 3));
+  ASSERT_EQ(state.rate_modulo(),
+            static_cast<uint64_t>(Fixed(Fixed(2) - (state.step_size() * 3)).raw_value()));
   mixer->gain.SetSourceMute(mute);
   mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
              false);
 
   EXPECT_EQ(dest_offset, dest_frames);
-  if (include_rate_modulo) {
-    EXPECT_EQ(source_offset, expect_source_offset);
-  } else {
-    EXPECT_LT(source_offset, expect_source_offset);
-  }
+  EXPECT_EQ(source_offset, expect_source_offset);
 }
-// We run the above check without, and then with, rate_modulo.
-TEST_F(SincSamplerPositionTest, WithoutRateModulo) { TestRateModulo(false, false); }
-TEST_F(SincSamplerPositionTest, WithoutRateModuloMute) { TestRateModulo(false, true); }
-TEST_F(SincSamplerPositionTest, RateModulo) { TestRateModulo(true, false); }
-TEST_F(SincSamplerPositionTest, RateModuloMute) { TestRateModulo(true, true); }
+TEST_F(SincSamplerPositionTest, RateModulo) { TestRateModulo(false); }
+TEST_F(SincSamplerPositionTest, RateModuloMute) { TestRateModulo(true); }
 
 // For "almost-but-not-rollover" cases, we generate 3 output samples, leaving source and dest at pos
 // 3 and source_pos_modulo at 9999/10000.
@@ -626,23 +606,25 @@ void SincSamplerPositionTest::TestPositionModuloFromZeroNoRollover(bool mute) {
   ASSERT_NE(mixer, nullptr);
 
   std::array<float, 50> source{0.0f};
-  int64_t source_frames = source.size();
+  const int64_t source_frames = source.size();
   Fixed source_offset = Fixed(0);
 
   std::array<float, 3> accum{0.0f};
-  int64_t dest_frames = accum.size();
+  const int64_t dest_frames = accum.size();
   int64_t dest_offset = 0;
 
-  auto& bk = mixer->bookkeeping();
-  bk.set_step_size(kOneFrame);
-  bk.SetRateModuloAndDenominator(3333, 10000);
+  auto& state = mixer->state();
+  state.ResetSourceStride(TimelineRate(Fixed(10000).raw_value() + 3333, 10000));
+  EXPECT_EQ(state.step_size(), kOneFrame);
+  EXPECT_EQ(state.rate_modulo(), 3333ul);
+  EXPECT_EQ(state.denominator(), 10000ul);
 
   mixer->gain.SetSourceGain(mute ? media_audio::kMinGainDb : media_audio::kUnityGainDb);
   mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
              false);
   EXPECT_EQ(dest_offset, dest_frames);
   EXPECT_EQ(source_offset, Fixed(3)) << ffl::String::DecRational << source_offset;
-  EXPECT_EQ(bk.source_pos_modulo(), 9999u);
+  EXPECT_EQ(state.source_pos_modulo(), 9999u);
 }
 TEST_F(SincSamplerPositionTest, SourcePosModuloFromZeroAlmostRollover) {
   TestPositionModuloFromZeroNoRollover(false);
@@ -651,30 +633,32 @@ TEST_F(SincSamplerPositionTest, SourcePosModuloFromZeroAlmostRolloverMute) {
   TestPositionModuloFromZeroNoRollover(true);
 }
 
-// Same as above (ending at one less than rollover), starting source_pos_modulo at a non-zero value.
+// Same as above (ending at two less than rollover), starting source_pos_modulo at a non-zero value.
 void SincSamplerPositionTest::TestPositionModuloFromNonZeroNoRollover(bool mute) {
   auto mixer = SelectSincSampler(1, 1, 44100, 44100, fuchsia::media::AudioSampleFormat::FLOAT);
   ASSERT_NE(mixer, nullptr);
 
   std::array<float, 50> source{0.0f};
-  int64_t source_frames = source.size();  // mix amount is constrained by dest availability
+  const int64_t source_frames = source.size();  // mix amount is constrained by dest availability
   Fixed source_offset = Fixed(0);
 
   std::array<float, 3> accum{0.0f};
-  int64_t dest_frames = accum.size();
+  const int64_t dest_frames = accum.size();
   int64_t dest_offset = 0;
 
-  auto& bk = mixer->bookkeeping();
-  bk.set_step_size(kOneFrame);
-  bk.SetRateModuloAndDenominator(3332, 10000);
-  bk.set_source_pos_modulo(3);
+  auto& state = mixer->state();
+  state.ResetSourceStride(TimelineRate(Fixed(10000).raw_value() + 3331, 10000));
+  EXPECT_EQ(state.step_size(), kOneFrame);
+  EXPECT_EQ(state.rate_modulo(), 3331ul);
+  EXPECT_EQ(state.denominator(), 10000ul);
+  state.set_source_pos_modulo(6);
 
   mixer->gain.SetSourceMute(mute);
   mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
              false);
   EXPECT_EQ(dest_offset, dest_frames);
   EXPECT_EQ(source_offset, Fixed(3)) << ffl::String::DecRational << source_offset;
-  EXPECT_EQ(bk.source_pos_modulo(), 9999u);
+  EXPECT_EQ(state.source_pos_modulo(), 9999u);
 }
 TEST_F(SincSamplerPositionTest, SourcePosModuloFromNonZeroAlmostRollover) {
   TestPositionModuloFromNonZeroNoRollover(false);
@@ -691,23 +675,25 @@ void SincSamplerPositionTest::TestPositionModuloFromZeroRollover(bool mute) {
   ASSERT_NE(mixer, nullptr);
 
   std::array<float, 50> source{0.0f};
-  int64_t source_frames = source.size();  // mix amount is constrained by dest availability
+  const int64_t source_frames = source.size();  // mix amount is constrained by dest availability
   Fixed source_offset = Fixed(1) - Fixed::FromRaw(1);
 
   std::array<float, 3> accum{0.0f};
-  int64_t dest_frames = accum.size();
+  const int64_t dest_frames = accum.size();
   int64_t dest_offset = 1;
 
-  auto& bk = mixer->bookkeeping();
-  bk.set_step_size(kOneFrame);
-  bk.SetRateModuloAndDenominator(5000, 10000);
+  auto& state = mixer->state();
+  state.ResetSourceStride(TimelineRate(Fixed(10000).raw_value() + 5000, 10000));
+  EXPECT_EQ(state.step_size(), kOneFrame);
+  EXPECT_EQ(state.rate_modulo(), 1ul);
+  EXPECT_EQ(state.denominator(), 2ul);
 
   mixer->gain.SetSourceGain(mute ? media_audio::kMinGainDb : media_audio::kUnityGainDb);
   mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
              false);
   EXPECT_EQ(dest_offset, static_cast<int64_t>(dest_frames));
   EXPECT_EQ(source_offset, Fixed(3)) << ffl::String::DecRational << source_offset;
-  EXPECT_EQ(bk.source_pos_modulo(), 0u);
+  EXPECT_EQ(state.source_pos_modulo(), 0u);
 }
 TEST_F(SincSamplerPositionTest, SourcePosModuloFromZeroExactRollover) {
   TestPositionModuloFromZeroRollover(false);
@@ -722,24 +708,26 @@ void SincSamplerPositionTest::TestPositionModuloFromNonZeroRollover(bool mute) {
   ASSERT_NE(mixer, nullptr);
 
   std::array<float, 50> source{0.0f};
-  int64_t source_frames = source.size();  // mix amount is constrained by dest availability
+  const int64_t source_frames = source.size();  // mix amount is constrained by dest availability
   Fixed source_offset = Fixed(1) - Fixed::FromRaw(1);
 
   std::array<float, 3> accum{0.0f};
-  int64_t dest_frames = accum.size();
+  const int64_t dest_frames = accum.size();
   int64_t dest_offset = 1;
 
-  auto& bk = mixer->bookkeeping();
-  bk.set_step_size(kOneFrame);
-  bk.SetRateModuloAndDenominator(3332, 10000);
-  bk.set_source_pos_modulo(3336);
+  auto& state = mixer->state();
+  state.ResetSourceStride(TimelineRate(Fixed(10000).raw_value() + 3331, 10000));
+  EXPECT_EQ(state.step_size(), kOneFrame);
+  EXPECT_EQ(state.rate_modulo(), 3331ul);
+  EXPECT_EQ(state.denominator(), 10000ul);
+  state.set_source_pos_modulo(3338);
 
   mixer->gain.SetSourceMute(mute);
   mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
              false);
   EXPECT_EQ(dest_offset, dest_frames);
   EXPECT_EQ(source_offset, Fixed(3)) << ffl::String::DecRational << source_offset;
-  EXPECT_EQ(bk.source_pos_modulo(), 0u);
+  EXPECT_EQ(state.source_pos_modulo(), 0u);
 }
 TEST_F(SincSamplerPositionTest, SourcePosModuloFromNonZeroExactRollover) {
   TestPositionModuloFromNonZeroRollover(false);
@@ -758,17 +746,19 @@ void SincSamplerPositionTest::TestSourcePosModuloExactRolloverForCompletion(bool
   ASSERT_NE(mixer, nullptr);
 
   std::array<float, 10> source{0.0f};
-  int64_t source_frames = source.size();
+  const int64_t source_frames = source.size();
   Fixed source_offset = Fixed(source_frames) - Fixed(2) - mixer->pos_filter_width();
 
   std::array<float, 3> accum{0.0f};
-  int64_t dest_frames = accum.size();
+  const int64_t dest_frames = accum.size();
   int64_t dest_offset = 0;
 
-  auto& bk = mixer->bookkeeping();
-  bk.set_step_size(kOneFrame - Fixed::FromRaw(1));
-  bk.SetRateModuloAndDenominator(2, 3);
-  bk.set_source_pos_modulo(2);
+  auto& state = mixer->state();
+  state.ResetSourceStride(TimelineRate(Fixed(3).raw_value() - 1, 3));
+  EXPECT_EQ(state.step_size(), kOneFrame - Fixed::FromRaw(1));
+  EXPECT_EQ(state.rate_modulo(), 2ul);
+  EXPECT_EQ(state.denominator(), 3ul);
+  state.set_source_pos_modulo(2);
 
   mixer->gain.SetSourceGain(mute ? media_audio::kMinGainDb : media_audio::kUnityGainDb);
   mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
@@ -776,7 +766,7 @@ void SincSamplerPositionTest::TestSourcePosModuloExactRolloverForCompletion(bool
   EXPECT_EQ(dest_offset, 2);
   EXPECT_EQ(source_offset, Fixed(Fixed(source_frames) - mixer->pos_filter_width()))
       << ffl::String::DecRational << source_offset;
-  EXPECT_EQ(bk.source_pos_modulo(), 0u);
+  EXPECT_EQ(state.source_pos_modulo(), 0u);
 }
 TEST_F(SincSamplerPositionTest, SourcePosModuloExactRolloverCausesEarlyComplete) {
   TestSourcePosModuloExactRolloverForCompletion(false);
