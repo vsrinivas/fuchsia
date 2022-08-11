@@ -23,11 +23,6 @@ class GuestConfigParserTest : public ::testing::Test {
     }
     return st;
   }
-
-  zx_status_t ParseArgs(std::vector<const char*> args) {
-    args.insert(args.begin(), "exe_name");
-    return guest_config::ParseArguments(static_cast<int>(args.size()), args.data(), &config_);
-  }
 };
 
 TEST_F(GuestConfigParserTest, DefaultValues) {
@@ -60,39 +55,6 @@ TEST_F(GuestConfigParserTest, ParseConfig) {
   ASSERT_EQ("kernel cmdline", config_.cmdline());
 }
 
-TEST_F(GuestConfigParserTest, ParseDisallowedArgs) {
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, ParseArgs({"--linux=linux_path"}));
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, ParseArgs({"--ramdisk=ramdisk_path"}));
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, ParseArgs({"--block=/pkg/data/block_path"}));
-}
-
-TEST_F(GuestConfigParserTest, ParseArgs) {
-  ASSERT_EQ(ZX_OK, ParseArgs({"--cpus=8"}));
-  ASSERT_EQ(8, config_.cpus());
-}
-
-TEST_F(GuestConfigParserTest, InvalidCpusArgs) {
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, ParseArgs({"--cpus=invalid"}));
-}
-
-TEST_F(GuestConfigParserTest, UnknownArgument) {
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, ParseArgs({"--invalid-arg"}));
-}
-
-TEST_F(GuestConfigParserTest, BooleanFlag) {
-  ASSERT_EQ(ZX_OK, ParseArgs({"--virtio-balloon=false"}));
-  ASSERT_FALSE(config_.virtio_balloon());
-
-  config_.clear_virtio_balloon();
-  ASSERT_EQ(ZX_OK, ParseArgs({"--virtio-balloon=true"}));
-  ASSERT_TRUE(config_.virtio_balloon());
-}
-
-TEST_F(GuestConfigParserTest, CommandLineAppend) {
-  ASSERT_EQ(ZX_OK, ParseArgs({"--cmdline-add=foo", "--cmdline-add=bar"}));
-  EXPECT_THAT(config_.cmdline_add(), testing::ElementsAre("foo", "bar"));
-}
-
 TEST_F(GuestConfigParserTest, BlockSpecJson) {
   ASSERT_EQ(ZX_OK, ParseConfig(
                        R"JSON({
@@ -114,53 +76,4 @@ TEST_F(GuestConfigParserTest, BlockSpecJson) {
   ASSERT_EQ(fuchsia::virtualization::BlockFormat::FILE, spec1.format);
 
   EXPECT_THAT(paths_, testing::ElementsAre("/pkg/data/foo", "/dev/class/block/001"));
-}
-
-TEST_F(GuestConfigParserTest, Memory_512) {
-  ASSERT_EQ(ZX_OK, ParseArgs({"--memory=512"}));  // Bytes are assumed by default.
-  EXPECT_EQ(512ul, config_.guest_memory());
-}
-
-TEST_F(GuestConfigParserTest, Memory_768b) {
-  ASSERT_EQ(ZX_OK, ParseArgs({"--memory=768b"}));
-  EXPECT_EQ(768ul, config_.guest_memory());
-}
-
-TEST_F(GuestConfigParserTest, Memory_1024k) {
-  ASSERT_EQ(ZX_OK, ParseArgs({"--memory=1024k"}));
-  EXPECT_EQ(1ul << 20, config_.guest_memory());
-}
-
-TEST_F(GuestConfigParserTest, Memory_2M) {
-  ASSERT_EQ(ZX_OK, ParseArgs({"--memory=2M"}));
-  EXPECT_EQ(2ul << 20, config_.guest_memory());
-}
-
-TEST_F(GuestConfigParserTest, Memory_4G) {
-  ASSERT_EQ(ZX_OK, ParseArgs({"--memory=4G"}));
-  EXPECT_EQ(4ul << 30, config_.guest_memory());
-}
-
-TEST_F(GuestConfigParserTest, Memory_MultipleEntriesUsesLastValue) {
-  ASSERT_EQ(ZX_OK, ParseArgs({"--memory=1M", "--memory=2M"}));
-  EXPECT_EQ(2ul << 20, config_.guest_memory());
-}
-
-TEST_F(GuestConfigParserTest, Memory_IllegalModifier) {
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, ParseArgs({"--memory=5l"}));
-}
-
-TEST_F(GuestConfigParserTest, Memory_NonNumber) {
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, ParseArgs({"--memory=abc"}));
-}
-
-TEST_F(GuestConfigParserTest, VirtioGpu) {
-  fuchsia::virtualization::GuestConfig config;
-
-  ASSERT_EQ(ZX_OK, ParseArgs({"--virtio-gpu=true"}));
-  ASSERT_TRUE(config_.virtio_gpu());
-
-  config_.clear_virtio_gpu();
-  ASSERT_EQ(ZX_OK, ParseArgs({"--virtio-gpu=false"}));
-  ASSERT_FALSE(config_.virtio_gpu());
 }

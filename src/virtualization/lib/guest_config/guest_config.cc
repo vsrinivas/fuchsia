@@ -390,31 +390,6 @@ std::unordered_map<std::string, std::unique_ptr<OptionHandler>> GetAllOptionHand
 
 }  // namespace
 
-void PrintCommandLineUsage(const char* program_name) {
-  // clang-format off
-  std::cerr << "usage: " << program_name << " [OPTIONS]\n";
-  std::cerr << "\n";
-  std::cerr << "OPTIONS:\n";
-  std::cerr << "\t--cmdline-add=[string]  Adds 'string' to the existing kernel command line.\n";
-  std::cerr << "\t--cpus=[number]         Number of virtual CPUs available to the guest\n";
-  std::cerr << "\t--default-net           Enable a default net device (defaults to true)\n";
-  std::cerr << "\t--memory=[bytes]        Allocate 'bytes' of memory for the guest.\n";
-  std::cerr << "\t                        The suffixes 'k', 'M', and 'G' are accepted\n";
-  std::cerr << "\t                        (default " << GetDefaultGuestMemory() << " bytes)\n";
-  std::cerr << "\t--virtio-balloon        Enable virtio-balloon (default)\n";
-  std::cerr << "\t--virtio-console        Enable virtio-console (default)\n";
-  std::cerr << "\t--virtio-gpu            Enable virtio-gpu and virtio-input (default)\n";
-  std::cerr << "\t--virtio-rng            Enable virtio-rng (default)\n";
-  std::cerr << "\t--virtio-sound          Enable virtio-sound (default)\n";
-  std::cerr << "\t--virtio-sound-input    Enable virtio-sound input (default false)\n";
-  std::cerr << "\t--virtio-vsock          Enable virtio-vsock (default)\n";
-  std::cerr << "\n";
-  std::cerr << " By default the guest is configured with one net device\n";
-  std::cerr << "To remove the default device pass --default-net=false.\n";
-  std::cerr << "\n";
-  // clang-format on
-}
-
 void SetDefaults(GuestConfig* cfg) {
   for (const auto& [name, handler] : GetCmdlineOptionHanders()) {
     handler->MaybeSetDefault(cfg);
@@ -431,29 +406,6 @@ void SetDefaults(GuestConfig* cfg) {
   if (!cfg->has_vsock_listeners()) {
     cfg->mutable_vsock_listeners();
   }
-}
-
-zx_status_t ParseArguments(int argc, const char** argv, fuchsia::virtualization::GuestConfig* cfg) {
-  fxl::CommandLine cl = fxl::CommandLineFromArgcArgv(argc, argv);
-
-  if (cl.positional_args().size() > 0) {
-    FX_LOGS(ERROR) << "Unknown positional option: " << cl.positional_args()[0];
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  auto handlers = GetCmdlineOptionHanders();
-  for (const fxl::CommandLine::Option& option : cl.options()) {
-    auto entry = handlers.find(option.name);
-    if (entry == handlers.end()) {
-      FX_LOGS(ERROR) << "Unknown option --" << option.name;
-      return ZX_ERR_INVALID_ARGS;
-    }
-    auto status = entry->second->Set(cfg, option.name, option.value, /* override= */ true);
-    if (status != ZX_OK) {
-      return ZX_ERR_INVALID_ARGS;
-    }
-  }
-  return ZX_OK;
 }
 
 zx_status_t ParseConfig(const std::string& data, OpenAt open_at, GuestConfig* cfg) {

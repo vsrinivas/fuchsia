@@ -10,10 +10,6 @@
 
 namespace guest_config {
 
-void PrintCommandLineUsage(const char* program_name);
-// Parses command-line arguments.
-zx_status_t ParseArguments(int argc, const char** argv, fuchsia::virtualization::GuestConfig* cfg);
-
 using OpenAt = fit::function<zx_status_t(const std::string& path,
                                          fidl::InterfaceRequest<fuchsia::io::File> file)>;
 // Parses json configuration.
