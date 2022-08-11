@@ -8,9 +8,15 @@ use crate::api::{
     ConfigError,
 };
 use crate::cache::load_config;
+use crate::environment::Environment;
 use analytics::{is_opted_in, set_opt_in_status};
-use anyhow::{Context, Result};
-use std::{convert::From, io::Write, path::PathBuf};
+use anyhow::{anyhow, Context, Result};
+use futures::future::{BoxFuture, FutureExt};
+use std::{
+    convert::From,
+    io::Write,
+    path::{Path, PathBuf},
+};
 
 pub use config_macros::FfxConfigBacked;
 
@@ -30,9 +36,9 @@ mod storage;
 
 pub use api::query::{BuildOverride, ConfigQuery, SelectMode};
 
-pub use cache::{global_env, global_env_context, init, test_init, TestEnv};
-pub use environment::Environment;
-pub use storage::ConfigMap;
+pub use cache::{env_file, init, test_init};
+
+pub use paths::default_env_path;
 
 pub use ssh_key::SshKeyFiles;
 
@@ -135,10 +141,28 @@ where
     query(with).get().await
 }
 
-pub async fn print_config<W: Write>(mut writer: W) -> Result<()> {
-    let config = load_config(global_env()?, None).await?;
+async fn check_config_files(level: &ConfigLevel, build_dir: Option<&Path>) -> Result<()> {
+    let e = env_file().ok_or_else(|| anyhow!("Could not find environment file"))?;
+    let mut environment = Environment::load(&e)?;
+    environment.check(level, build_dir).await
+}
+
+pub async fn print_config<W: Write>(mut writer: W, build_dir: Option<&Path>) -> Result<()> {
+    let config = load_config(build_dir).await?;
     let read_guard = config.read().await;
     writeln!(writer, "{}", *read_guard).context("displaying config")
+}
+
+/// Finds the currently active default build directory based on the known sdk path,
+/// using that as the build root if it's an InTree sdk.
+pub(crate) fn default_build_dir() -> BoxFuture<'static, Option<PathBuf>> {
+    async move {
+        match get_sdk_root().await {
+            (Ok(sdk_path), sdk_type) if sdk_type == SDK_TYPE_IN_TREE => Some(sdk_path),
+            _ => None,
+        }
+    }
+    .boxed()
 }
 
 pub async fn get_log_dirs() -> Result<Vec<String>> {
@@ -241,6 +265,20 @@ mod test {
     use std::collections::HashSet;
     use std::path::PathBuf;
     use tempfile::tempdir;
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_check_config_files_fails() {
+        let levels = vec![
+            ConfigLevel::Runtime,
+            ConfigLevel::Default,
+            ConfigLevel::Global,
+            ConfigLevel::Build,
+        ];
+        for level in levels {
+            let result = check_config_files(&level, None).await;
+            assert!(result.is_err());
+        }
+    }
 
     #[test]
     fn test_config_levels_make_sense_from_first() {

@@ -6,8 +6,8 @@ use {
     anyhow::{anyhow, Context, Result},
     errors::{ffx_bail, ffx_bail_with_code},
     ffx_config::{
-        api::ConfigError, get, print_config, set_metrics_status, show_metrics_status,
-        BuildOverride, ConfigLevel,
+        api::ConfigError, env_file, environment::Environment, get, print_config,
+        set_metrics_status, show_metrics_status, ConfigLevel,
     },
     ffx_config_plugin_args::{
         AddCommand, AnalyticsCommand, AnalyticsControlCommand, ConfigCommand, EnvAccessCommand,
@@ -75,7 +75,7 @@ async fn exec_get<W: Write + Sync>(get_cmd: &GetCommand, writer: W) -> Result<()
                 output(writer, value)
             }
         },
-        None => print_config(writer /*, get_cmd.query().get_build_dir().await.as_deref()*/).await,
+        None => print_config(writer, get_cmd.query().get_build_dir().await.as_deref()).await,
     }
 }
 
@@ -91,13 +91,12 @@ async fn exec_add(add_cmd: &AddCommand) -> Result<()> {
     add_cmd.query().add(Value::String(format!("{}", add_cmd.value))).await
 }
 
-async fn exec_env_set<W: Write + Sync>(mut writer: W, s: &EnvSetCommand) -> Result<()> {
-    let build_dir = match (s.level, s.build_dir.as_deref()) {
-        (ConfigLevel::Build, Some(build_dir)) => Some(BuildOverride::Path(build_dir)),
-        _ => None,
-    };
-    let env_context = ffx_config::global_env_context().context("Discovering ffx context")?;
-    let env_file = env_context.env_path().context("Getting ffx environment file path")?;
+async fn exec_env_set<W: Write + Sync>(
+    mut writer: W,
+    env: &mut Environment,
+    s: &EnvSetCommand,
+) -> Result<()> {
+    let env_file = env.get_path().context("Trying to set on environment not backed by a file")?;
 
     if !env_file.exists() {
         writeln!(writer, "\"{}\" does not exist, creating empty json file", env_file.display())?;
@@ -109,11 +108,11 @@ async fn exec_env_set<W: Write + Sync>(mut writer: W, s: &EnvSetCommand) -> Resu
     // Double check read/write permissions and create the file if it doesn't exist.
     let _ = OpenOptions::new().read(true).write(true).create(true).open(&s.file)?;
 
-    let mut env = env_context.load().context("Loading environment file")?;
-
     match &s.level {
         ConfigLevel::User => env.set_user(Some(&s.file)),
-        ConfigLevel::Build => env.set_build(&s.file, build_dir)?,
+        ConfigLevel::Build => {
+            env.set_build(s.build_dir.as_deref().context("Missing --build-dir flag")?, &s.file)
+        }
         ConfigLevel::Global => env.set_global(Some(&s.file)),
         _ => ffx_bail!("This configuration is not stored in the environment."),
     }
@@ -121,26 +120,18 @@ async fn exec_env_set<W: Write + Sync>(mut writer: W, s: &EnvSetCommand) -> Resu
 }
 
 async fn exec_env<W: Write + Sync>(env_command: &EnvCommand, mut writer: W) -> Result<()> {
+    let file = env_file().ok_or(anyhow!("Could not find environment file"))?;
+    let mut env = Environment::load(&file)?;
     match &env_command.access {
         Some(a) => match a {
-            EnvAccessCommand::Set(s) => exec_env_set(writer, s).await,
+            EnvAccessCommand::Set(s) => exec_env_set(writer, &mut env, s).await,
             EnvAccessCommand::Get(g) => {
-                writeln!(
-                    writer,
-                    "{}",
-                    &ffx_config::global_env()
-                        .context("Loading environment file")?
-                        .display(&g.level)
-                )?;
+                writeln!(writer, "{}", env.display(&g.level))?;
                 Ok(())
             }
         },
         None => {
-            writeln!(
-                writer,
-                "{}",
-                &ffx_config::global_env().context("Loading environment file")?.display(&None)
-            )?;
+            writeln!(writer, "{}", env.display(&None))?;
             Ok(())
         }
     }
@@ -162,16 +153,18 @@ async fn exec_analytics(analytics_cmd: &AnalyticsCommand) -> Result<()> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use ffx_config::test_init;
+    use tempfile::NamedTempFile;
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_exec_env_set_set_values() -> Result<()> {
-        let test_env = test_init().await?;
         let writer = Vec::<u8>::new();
+        let tmp_file = NamedTempFile::new().expect("tmp access failed");
+        let mut env = Environment::new_empty(Some(tmp_file.path()));
         let cmd =
             EnvSetCommand { file: "test.json".into(), level: ConfigLevel::User, build_dir: None };
-        exec_env_set(writer, &cmd).await?;
-        assert_eq!(cmd.file, test_env.load().get_user().unwrap());
+        exec_env_set(writer, &mut env, &cmd).await?;
+        let result = Environment::load(&tmp_file)?;
+        assert_eq!(cmd.file, result.get_user().unwrap());
         Ok(())
     }
 }

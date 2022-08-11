@@ -93,10 +93,9 @@ pub(crate) fn get_config_base_path() -> Result<PathBuf> {
     Ok(path)
 }
 
-pub const ENV_FILE: &str = ".ffx_env";
-
-pub(crate) fn default_env_path() -> Result<PathBuf> {
+pub fn default_env_path() -> Result<PathBuf> {
     // Environment file that keeps track of configuration files
+    const ENV_FILE: &str = ".ffx_env";
     get_config_base_path().map(|mut path| {
         path.push(ENV_FILE);
         path
