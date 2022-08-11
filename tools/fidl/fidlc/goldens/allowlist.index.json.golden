@@ -1,0 +1,21 @@
+{
+  "name": "test.allowlist",
+  "lib_declarations": [
+    {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/allowlist.test.fidl",
+      "data": "test.allowlist",
+      "start_offset": 173,
+      "end_offset": 187
+    }
+  ],
+  "using_declarations": [],
+  "dependencies": [],
+  "dependency_identifiers": [],
+  "consts": [],
+  "enums": [],
+  "unions": [],
+  "tables": [],
+  "structs": [],
+  "protocols": []
+}

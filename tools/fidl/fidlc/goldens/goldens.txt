@@ -1,3 +1,6 @@
+allowlist.index.json.golden
+allowlist.json.golden
+allowlist.tables.c.golden
 anonymous.index.json.golden
 anonymous.json.golden
 anonymous.tables.c.golden

@@ -5,6 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 standalone_libraries = [
+  "allowlist.test.fidl",
   "anonymous.test.fidl",
   "arrays.test.fidl",
   "bits.test.fidl",

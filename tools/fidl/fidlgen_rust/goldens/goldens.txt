@@ -1,3 +1,4 @@
+allowlist.rs.golden
 anonymous.rs.golden
 arrays.rs.golden
 bindings_denylist.rs.golden

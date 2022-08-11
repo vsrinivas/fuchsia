@@ -17,6 +17,8 @@ import (
 
 type EncodedCompoundIdentifier = fidlgen.EncodedCompoundIdentifier
 
+type EncodedLibraryIdentifier = fidlgen.EncodedLibraryIdentifier
+
 type Bits struct {
 	fidlgen.Bits
 	Name    string
@@ -260,6 +262,7 @@ type ServiceMember struct {
 }
 
 type Root struct {
+	AllowlistedBy   MatchedAllowlists
 	ExternCrates    []string
 	Bits            []Bits
 	Consts          []Const
@@ -532,6 +535,7 @@ var handleSubtypeConsts = map[fidlgen.HandleSubtype]string{
 }
 
 type compiler struct {
+	allowlists   MatchedAllowlists
 	decls        fidlgen.DeclInfoMap
 	library      fidlgen.LibraryIdentifier
 	externCrates map[string]struct{}
@@ -1702,11 +1706,67 @@ func (dc *derivesCompiler) fillDerivesForType(ogType fidlgen.Type) derives {
 	}
 }
 
-func Compile(r fidlgen.Root) Root {
+// AllowlistName is a newtyped string that stores the name of some allowlist.
+type AllowlistName = string
+
+// MatchedAllowlists is a slice of the AllowlistNames that matched for a given
+// library.
+type MatchedAllowlists struct {
+	matched map[AllowlistName]struct{}
+}
+
+// All returns a slice of all matched allowlists.
+func (ma MatchedAllowlists) All() []AllowlistName {
+	out := make([]AllowlistName, 0)
+	for allowlist := range ma.matched {
+		out = append(out, allowlist)
+	}
+
+	return out
+}
+
+// Contains checks if a given allowlist is included in the set of matches.
+func (ma MatchedAllowlists) Contains(name string) bool {
+	n := AllowlistName(name)
+	for an := range ma.matched {
+		if n == an {
+			return true
+		}
+	}
+	return false
+}
+
+// Empty checks if there are any matched allowlists.
+func (ma MatchedAllowlists) Empty() bool {
+	return len(ma.matched) == 0
+}
+
+// AllowlistMap is a map of AllowlistNames to the libraries that that allowlist
+// permits.
+type AllowlistMap map[AllowlistName][]EncodedLibraryIdentifier
+
+// Match returns a slice of all allowlists that permit the given library.
+func (l AllowlistMap) Match(name EncodedLibraryIdentifier) MatchedAllowlists {
+	matched := make(map[AllowlistName]struct{})
+	for allowlist, libs := range l {
+		for _, lib := range libs {
+			if name == lib {
+				matched[allowlist] = struct{}{}
+			}
+		}
+	}
+
+	return MatchedAllowlists{matched}
+}
+
+func Compile(r fidlgen.Root, a AllowlistMap) Root {
 	r = r.ForBindings("rust")
-	root := Root{}
+	root := Root{
+		AllowlistedBy: a.Match(r.Name),
+	}
 	thisLibParsed := r.Name.Parse()
 	c := compiler{
+		allowlists:             root.AllowlistedBy,
 		decls:                  r.DeclInfo(),
 		library:                thisLibParsed,
 		externCrates:           map[string]struct{}{},

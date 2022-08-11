@@ -14,6 +14,20 @@ import (
 //go:embed *.tmpl
 var templates embed.FS
 
+// All currently active allowlists
+const (
+	// AllowlistTestdataGoldens allows golden testing of allowlist support by
+	// permitting the //tools/fidl/fidlc/testdata/allowlist.fidl file.
+	AllowlistTestdataGoldens AllowlistName = "testdata_goldens"
+)
+
+// al is a global map of all currently enabled allowlists.
+var al = AllowlistMap{
+	AllowlistName(AllowlistTestdataGoldens): []EncodedLibraryIdentifier{
+		EncodedLibraryIdentifier("test.allowlist"),
+	},
+}
+
 type Generator struct{ *fidlgen.Generator }
 
 func NewGenerator(rustfmtPath, rustfmtConfigPath string) *Generator {
@@ -27,6 +41,6 @@ func NewGenerator(rustfmtPath, rustfmtConfigPath string) *Generator {
 }
 
 func (gen *Generator) GenerateFidl(ir fidlgen.Root, outputFilename string) error {
-	tree := Compile(ir)
+	tree := Compile(ir, al)
 	return gen.GenerateFile(outputFilename, "GenerateSourceFile", tree)
 }
