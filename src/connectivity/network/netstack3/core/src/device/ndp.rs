@@ -79,12 +79,6 @@ pub(crate) trait NdpContext<D: LinkDevice, C: NdpNonSyncContext<D, Self::DeviceI
     /// Gets the IP state for this device.
     fn get_ip_device_state(&self, device_id: Self::DeviceId) -> &IpDeviceState<C::Instant, Ipv6>;
 
-    /// Gets the IP state for this device mutably.
-    fn get_ip_device_state_mut(
-        &mut self,
-        device_id: Self::DeviceId,
-    ) -> &mut IpDeviceState<C::Instant, Ipv6>;
-
     /// Set Link MTU.
     ///
     /// `set_mtu` is used when a host receives a Router Advertisement with the

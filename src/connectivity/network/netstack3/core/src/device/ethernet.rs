@@ -806,13 +806,6 @@ impl<C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>, SC: EthernetIpLinkDevi
         &self.get_state_with(device_id).ip.ipv6.ip_state
     }
 
-    fn get_ip_device_state_mut(
-        &mut self,
-        device_id: Self::DeviceId,
-    ) -> &mut IpDeviceState<C::Instant, Ipv6> {
-        &mut self.get_state_mut_with(device_id).ip.ipv6.ip_state
-    }
-
     fn set_mtu(&mut self, _ctx: &mut C, device_id: SC::DeviceId, mut mtu: u32) {
         // TODO(ghanan): Should this new MTU be updated only from the netstack's
         //               perspective or be exposed to the device hardware?
