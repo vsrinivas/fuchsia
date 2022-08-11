@@ -178,6 +178,17 @@ class ScsilibDiskTest : public zxtest::Test {
               break;
             }
             case 1: {
+              scsi::ModeSense6CDB decoded_cdb = {};
+              memcpy(&decoded_cdb, cdb.iov_base, cdb.iov_len);
+              EXPECT_EQ(decoded_cdb.opcode, scsi::Opcode::MODE_SENSE_6);
+              EXPECT_EQ(decoded_cdb.page_code, scsi::kCachingPageCode);
+              EXPECT_EQ(decoded_cdb.disable_block_descriptors, 0b1000);
+              scsi::CachingModePage response = {};
+              response.page_code = scsi::kCachingPageCode;
+              memcpy(data_in.iov_base, reinterpret_cast<char*>(&response), sizeof(response));
+              break;
+            }
+            case 2: {
               scsi::ReadCapacity16CDB decoded_cdb = {};
               memcpy(&decoded_cdb, cdb.iov_base, cdb.iov_len);
               scsi::ReadCapacity16ParameterData response = {};
@@ -191,7 +202,7 @@ class ScsilibDiskTest : public zxtest::Test {
 
           return ZX_OK;
         },
-        /*times=*/2);
+        /*times=*/3);
   }
 
   ScsiControllerForTest controller_;
@@ -218,6 +229,18 @@ TEST_F(ScsilibDiskTest, TestCreateDestroy) {
           memcpy(reinterpret_cast<scsi::InquiryCDB*>(&decoded_cdb), cdb.iov_base, cdb.iov_len);
           EXPECT_EQ(decoded_cdb.opcode, scsi::Opcode::INQUIRY);
         } else if (seq == 1) {
+          // Then MODE SENSE (6).
+          EXPECT_EQ(cdb.iov_len, 6);
+          scsi::ModeSense6CDB decoded_cdb = {};
+          memcpy(reinterpret_cast<scsi::ModeSense6CDB*>(&decoded_cdb), cdb.iov_base, cdb.iov_len);
+          EXPECT_EQ(decoded_cdb.opcode, scsi::Opcode::MODE_SENSE_6);
+          EXPECT_EQ(decoded_cdb.page_code, scsi::kCachingPageCode);
+          EXPECT_EQ(decoded_cdb.disable_block_descriptors, 0b1000);
+
+          scsi::CachingModePage response = {};
+          response.page_code = scsi::kCachingPageCode;
+          memcpy(data_in.iov_base, reinterpret_cast<char*>(&response), sizeof(response));
+        } else if (seq == 2) {
           // Then READ CAPACITY (16).
           EXPECT_EQ(cdb.iov_len, 16);
           scsi::ReadCapacity16CDB decoded_cdb = {};
@@ -235,7 +258,7 @@ TEST_F(ScsilibDiskTest, TestCreateDestroy) {
 
         return ZX_OK;
       },
-      /*times=*/2);
+      /*times=*/3);
 
   std::shared_ptr<MockDevice> fake_parent = MockDevice::FakeRootParent();
   EXPECT_EQ(scsi::Disk::Create(&controller_, fake_parent.get(), kTarget, kLun, kTransferSize),

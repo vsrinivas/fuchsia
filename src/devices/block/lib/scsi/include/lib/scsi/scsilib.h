@@ -17,6 +17,8 @@
 
 namespace scsi {
 
+const uint8_t kCachingPageCode = 0x8;
+
 enum class Opcode : uint8_t {
   TEST_UNIT_READY = 0x00,
   INQUIRY = 0x12,
@@ -96,7 +98,7 @@ struct VPDPageList {
 
 struct ModeSense6CDB {
   Opcode opcode;
-  // If disable_block_descriptors(4) is '1', device will not return Block Descriptors.
+  // If disable_block_descriptors(3) is '1', device will not return Block Descriptors.
   uint8_t disable_block_descriptors;
   // page_code(7 downto 6) is 'page control'. Should be 00h for current devices.
   uint8_t page_code;
@@ -119,6 +121,26 @@ struct ModeSense6ParameterHeader {
 } __PACKED;
 
 static_assert(sizeof(ModeSense6ParameterHeader) == 4, "Mode sense 6 parameters must be 4 bytes");
+
+struct CachingModePage {
+  ModeSense6ParameterHeader header;
+  uint8_t page_code;
+  uint8_t page_length;
+  // control_bits (2) is write_cache_enabled.
+  uint8_t control_bits;
+  uint8_t retention_priorities;
+  uint16_t prefetch_transfer_length;
+  uint16_t min_prefetch;
+  uint16_t max_prefetch;
+  uint16_t max_prefetch_ceiling;
+  uint8_t control_bits_1;
+  uint8_t num_cache_segments;
+  uint16_t cache_segment_size;
+  uint8_t reserved;
+  uint8_t obsolete[3];
+} __PACKED;
+
+static_assert(sizeof(CachingModePage) == 24, "Caching Mode Page must be 24 bytes");
 
 struct ReadCapacity16CDB {
   Opcode opcode;
@@ -258,6 +280,7 @@ class Disk : public DeviceType, public ddk::BlockImplProtocol<Disk, ddk::base_pr
   const uint16_t lun_;
 
   bool removable_;
+  bool write_cache_enabled_;
   uint64_t blocks_;
   uint32_t block_size_;
   uint32_t max_xfer_size_;  // In block_size_ units.

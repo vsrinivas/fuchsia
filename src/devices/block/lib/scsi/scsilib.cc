@@ -78,6 +78,29 @@ zx_status_t Disk::Bind() {
 
   removable_ = (inquiry_data.removable & 0x80);
 
+  // Determine if the disk has write cache enabled.
+  ModeSense6CDB mode_sense_cdb = {};
+  CachingModePage caching_mode_page = {};
+  mode_sense_cdb.opcode = Opcode::MODE_SENSE_6;
+  // Only fetch the caching mode page and get the current values.
+  mode_sense_cdb.page_code = kCachingPageCode;
+  mode_sense_cdb.allocation_length = sizeof(caching_mode_page);
+  // Do not return any block descriptors.
+  mode_sense_cdb.disable_block_descriptors = 0b1000;
+  status = controller_->ExecuteCommandSync(
+      /*target=*/target_, /*lun=*/lun_,
+      /*cdb=*/{&mode_sense_cdb, sizeof(mode_sense_cdb)},
+      /*data_out=*/{nullptr, 0},
+      /*data_in=*/{&caching_mode_page, sizeof(caching_mode_page)});
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (caching_mode_page.page_code != kCachingPageCode) {
+    zxlogf(ERROR, "failed to retrieve caching mode page");
+    return ZX_ERR_INTERNAL;
+  }
+  write_cache_enabled_ = caching_mode_page.control_bits & 0b100;
+
   ReadCapacity16CDB read_capacity_cdb = {};
   ReadCapacity16ParameterData read_capacity_data = {};
   read_capacity_cdb.opcode = Opcode::READ_CAPACITY_16;
@@ -191,7 +214,11 @@ void Disk::BlockImplQueue(block_op_t* op, block_impl_queue_callback completion_c
                                               /*data_out=*/{data, length},
                                               /*data_in=*/{nullptr, 0}, ScsiLibCompletionCb,
                                               scsilib_cookie);
-  } else {
+  } else if (op_type == BLOCK_OP_FLUSH) {
+    if (!write_cache_enabled_) {
+      completion_cb(cookie, ZX_OK, op);
+      return;
+    }
     Synchronize10CDB cdb = {};
     cdb.opcode = Opcode::SYNCHRONIZE_CACHE_10;
     // Prefer writing to storage medium (instead of nv cache) and return only
