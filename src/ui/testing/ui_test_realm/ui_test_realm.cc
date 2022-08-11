@@ -73,6 +73,14 @@ constexpr auto kInputPipelineName = "input-pipeline";
 constexpr auto kTextManagerName = "text-manager";
 constexpr auto kSceneProviderName = "scene-provider";
 
+// Contents of config file used to allow scenic to use gfx.
+constexpr auto kUseGfxScenicConfig = R"(
+{
+  "flatland_buffer_collection_import_mode": "renderer_only",
+  "i_can_haz_flatland": false
+}
+)";
+
 // Contents of config file used to force scenic to use flatland.
 constexpr auto kUseFlatlandScenicConfig = R"(
 {
@@ -348,9 +356,12 @@ void UITestRealm::RouteConfigData() {
   auto config_directory_contents = component_testing::DirectoryContents();
   std::vector<Ref> targets;
 
-  // Override scenic's Override "i_can_haz_flatland" if necessary.
+  // Override scenic's "i_can_haz_flatland" flag.
   if (config_.use_flatland) {
     config_directory_contents.AddFile("scenic_config", kUseFlatlandScenicConfig);
+    targets.push_back(ChildRef{kScenicName});
+  } else {
+    config_directory_contents.AddFile("scenic_config", kUseGfxScenicConfig);
     targets.push_back(ChildRef{kScenicName});
   }
 
