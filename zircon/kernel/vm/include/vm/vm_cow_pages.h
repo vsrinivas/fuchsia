@@ -679,9 +679,14 @@ class VmCowPages final
     // with a non-loaned page.  Option 2: When reclaiming a loaned page we could replace instead of
     // evicting (this may be simpler).
 
-    // Currently we can only borrow if we have a suitable PageSource, since this suitable page
-    // source is currently 1:1 with having the needed backlinks for reclaim.
-    bool source_is_suitable = page_source_ && page_source_->properties().is_preserving_page_content;
+    // Currently there needs to be a page source for any borrowing to be possible, due to
+    // requirements of a backlink and other assumptions in the VMO code. Returning early here in the
+    // absence of a page source simplifies the rest of the logic.
+    if (!page_source_) {
+      return false;
+    }
+
+    bool source_is_suitable = page_source_->properties().is_preserving_page_content;
     // This ensures that if borrowing is globally disabled (no borrowing sites enabled), that we'll
     // return false.  We could delete this bool without damaging correctness, but we want to
     // mitigate a call site that maybe fails to check its call-site-specific settings such as
