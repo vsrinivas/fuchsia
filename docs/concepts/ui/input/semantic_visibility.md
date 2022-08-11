@@ -1,4 +1,4 @@
-# Semantic Visibility
+# Semantic Visibility {#semantic-visibility}
 
 ## Background
 
