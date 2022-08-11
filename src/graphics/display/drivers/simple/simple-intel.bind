@@ -4,12 +4,12 @@
 
 composite simple_intel;
 
+using fuchsia.hardware.sysmem;
 using fuchsia.pci;
-using fuchsia.sysmem;
 
 // TODO(fxbug.dev/93333): Once DFv2 is stable, pci should be the primary node.
 primary node "sysmem" {
-  fuchsia.BIND_PROTOCOL == fuchsia.sysmem.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_FIDL_PROTOCOL == fuchsia.hardware.sysmem.BIND_FIDL_PROTOCOL.SYSMEM;
 }
 
 node "pci" {

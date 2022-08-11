@@ -13,6 +13,7 @@ source_set("shared") {
     "//sdk/banjo/fuchsia.hardware.display.controller:fuchsia.hardware.display.controller_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.pci:fuchsia.hardware.pci_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_cpp_wire",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire",
     "//sdk/fidl/fuchsia.sysmem2:fuchsia.sysmem2_cpp_wire",
     "//src/devices/lib/driver",
@@ -70,6 +71,7 @@ template("simple_fuchsia_driver") {
 
     header_output = "simple-${driver_name}-bind.h"
     deps = [
+      "//src/devices/bind/fuchsia.hardware.sysmem",
       "//src/devices/bind/fuchsia.pci",
       "//src/devices/bind/fuchsia.sysmem",
     ]

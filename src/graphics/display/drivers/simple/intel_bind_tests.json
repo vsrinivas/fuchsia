@@ -11,7 +11,7 @@
             },
             {
                 "device": {
-                    "fuchsia.BIND_PROTOCOL": "fuchsia.sysmem.BIND_PROTOCOL.DEVICE"
+                    "fuchsia.BIND_FIDL_PROTOCOL": "fuchsia.hardware.sysmem.BIND_FIDL_PROTOCOL.DEVICE"
                 },
                 "expected": "match",
                 "name": "Match sysmem"
