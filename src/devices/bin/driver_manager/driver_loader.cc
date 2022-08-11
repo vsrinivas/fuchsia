@@ -105,6 +105,21 @@ MatchedCompositeDevice CreateMatchedCompositeDevice(
   return composite;
 }
 
+bool VerifyMatchedDeviceGroupNodeInfo(fdi::wire::MatchedDeviceGroupNodeInfo info) {
+  if (!info.has_device_groups() || info.device_groups().empty()) {
+    return false;
+  }
+
+  for (auto& device_group : info.device_groups()) {
+    if (!device_group.has_topological_path() || device_group.topological_path().empty() ||
+        !device_group.has_node_index()) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 bool ShouldUseUniversalResolver(fdi::wire::DriverPackageType package_type) {
   return package_type == fdi::wire::DriverPackageType::kUniverse ||
          package_type == fdi::wire::DriverPackageType::kCached;
@@ -229,6 +244,18 @@ const Driver* DriverLoader::LoadDriverUrl(const std::string& driver_url,
   return &driver_index_drivers_.back();
 }
 
+const Driver* DriverLoader::LoadDriverUrl(fdi::wire::MatchedDriverInfo driver_info) {
+  if (!driver_info.has_driver_url()) {
+    LOGF(ERROR, "Driver info is missing the driver URL");
+    return nullptr;
+  }
+
+  std::string driver_url(driver_info.driver_url().get());
+  bool use_universe_resolver =
+      driver_info.has_package_type() && ShouldUseUniversalResolver(driver_info.package_type());
+  return LoadDriverUrl(driver_url, use_universe_resolver);
+}
+
 bool DriverLoader::MatchesLibnameDriverIndex(const std::string& driver_url,
                                              std::string_view libname) {
   if (libname.compare(driver_url) == 0) {
@@ -248,23 +275,19 @@ bool DriverLoader::MatchesLibnameDriverIndex(const std::string& driver_url,
   return result.value() == libname;
 }
 
-zx_status_t DriverLoader::AddDeviceGroup(std::string_view topological_path,
-                                         fidl::VectorView<fdf::wire::DeviceGroupNode> nodes) {
-  fidl::Arena allocator;
-  auto device_group = fdf::wire::DeviceGroup::Builder(allocator)
-                          .topological_path(fidl::StringView(allocator, topological_path))
-                          .nodes(std::move(nodes))
-                          .Build();
-
-  auto result = driver_index_.sync()->AddDeviceGroup(device_group);
-
-  // TODO(fxb/103208): Handle a matched composite driver in DFv1.
-  if (result.ok() || result.status() == ZX_ERR_NOT_FOUND) {
-    return ZX_OK;
+zx::status<fuchsia_driver_index::MatchedCompositeInfo> DriverLoader::AddDeviceGroup(
+    fuchsia_driver_framework::wire::DeviceGroup group) {
+  auto result = driver_index_.sync()->AddDeviceGroup(group);
+  if (!result.ok()) {
+    LOGF(ERROR, "DriverIndex::AddDeviceGroup failed %d", result.status());
+    return zx::error(result.status());
   }
 
-  LOGF(ERROR, "DriverIndex::AddDeviceGroup failed: %d", result.status());
-  return result.status();
+  if (result->is_error()) {
+    return result->take_error();
+  }
+
+  return zx::ok(fidl::ToNatural(result->value()->composite_driver));
 }
 
 const std::vector<MatchedDriver> DriverLoader::MatchDeviceDriverIndex(
@@ -378,14 +401,13 @@ const std::vector<MatchedDriver> DriverLoader::MatchPropertiesDriverIndex(
 
   for (auto driver : drivers) {
     if (driver.is_device_group_node()) {
-      auto device_group_info = CreateMatchedDeviceGroupNodeInfo(driver.device_group_node());
-      if (device_group_info.is_error()) {
+      if (!VerifyMatchedDeviceGroupNodeInfo(driver.device_group_node())) {
         LOGF(ERROR,
              "DriverIndex: MatchDriverV1 response is missing fields in MatchedDeviceGroupInfo");
         continue;
       }
 
-      matched_drivers.push_back(device_group_info.value());
+      matched_drivers.push_back(fidl::ToNatural(driver.device_group_node()));
       continue;
     }
 
@@ -405,17 +427,12 @@ const std::vector<MatchedDriver> DriverLoader::MatchPropertiesDriverIndex(
       continue;
     }
 
-    std::string driver_url(fidl_driver_info->driver_url().get());
-    bool use_universe_resolver = false;
-    if (fidl_driver_info->has_package_type()) {
-      use_universe_resolver = ShouldUseUniversalResolver(fidl_driver_info->package_type());
-    }
-
-    auto loaded_driver = LoadDriverUrl(driver_url, use_universe_resolver);
+    auto loaded_driver = LoadDriverUrl(fidl_driver_info.value());
     if (!loaded_driver) {
       continue;
     }
 
+    std::string driver_url(fidl_driver_info->driver_url().get());
     if (!fidl_driver_info->is_fallback() && config.only_return_base_and_fallback_drivers &&
         IsFuchsiaBootScheme(driver_url)) {
       continue;

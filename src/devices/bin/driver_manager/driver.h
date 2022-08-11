@@ -39,20 +39,8 @@ struct MatchedCompositeDriverInfo {
   MatchedDriverInfo driver_info;
 };
 
-struct MatchedDeviceGroupInfo {
-  std::string topological_path;
-  uint32_t node_index;
-};
-
-struct MatchedDeviceGroupNodeInfo {
-  std::vector<MatchedDeviceGroupInfo> groups;
-};
-
-zx::status<MatchedDeviceGroupNodeInfo> CreateMatchedDeviceGroupNodeInfo(
-    fuchsia_driver_index::wire::MatchedDeviceGroupNodeInfo fidl_info);
-
-using MatchedDriver =
-    std::variant<MatchedDriverInfo, MatchedCompositeDriverInfo, MatchedDeviceGroupNodeInfo>;
+using MatchedDriver = std::variant<MatchedDriverInfo, MatchedCompositeDriverInfo,
+                                   fuchsia_driver_index::MatchedDeviceGroupNodeInfo>;
 
 struct Driver : public fbl::DoublyLinkedListable<std::unique_ptr<Driver>> {
   Driver() = default;

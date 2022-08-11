@@ -62,6 +62,7 @@
 #include "src/devices/bin/driver_manager/driver_host_loader_service.h"
 #include "src/devices/bin/driver_manager/manifest_parser.h"
 #include "src/devices/bin/driver_manager/package_resolver.h"
+#include "src/devices/bin/driver_manager/v1/device_group_v1.h"
 #include "src/devices/bin/driver_manager/v1/driver_development.h"
 #include "src/devices/bin/driver_manager/v1/unbind_task.h"
 #include "src/devices/lib/log/log.h"
@@ -262,6 +263,8 @@ Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manag
       std::make_unique<BindDriverManager>(this, fit::bind_member<&Coordinator::AttemptBind>(this));
 
   device_manager_ = std::make_unique<DeviceManager>(this, config_.crash_policy);
+
+  device_group_manager_ = std::make_unique<DeviceGroupManager>(this);
 
   suspend_resume_manager_ = std::make_unique<SuspendResumeManager>(this, config_.suspend_timeout);
   firmware_loader_ =
@@ -859,29 +862,19 @@ zx_status_t Coordinator::AddDeviceGroup(
     return ZX_ERR_INVALID_ARGS;
   }
 
-  char device_path[fdm::wire::kDevicePathMax + 1];
-  zx_status_t status = GetTopologicalPath(dev, device_path, sizeof(device_path));
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  // Append the device name to the path.
-  auto topological_path = std::string(device_path) + "/";
+  std::string topological_path = "/";
   topological_path.append(name);
 
-  status = driver_loader_.AddDeviceGroup(topological_path, group_desc.fragments);
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to add device group to the driver index.\n");
-    return status;
+  fidl::Arena allocator;
+  auto device_group = fdf::wire::DeviceGroup::Builder(allocator)
+                          .topological_path(fidl::StringView(allocator, topological_path))
+                          .nodes(std::move(group_desc.fragments))
+                          .Build();
+  auto result = device_group_manager_->AddDeviceGroup(device_group);
+  if (!result.is_ok()) {
+    LOGF(ERROR, "Failed to add device group to the device group manager.");
   }
-
-  status = bind_driver_manager_->AddDeviceGroup(topological_path, name, group_desc);
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to add device group to the bind driver manager.\n");
-    return status;
-  }
-
-  return ZX_OK;
+  return result.status_value();
 }
 
 zx_status_t Coordinator::BindDriver(Driver* drv) {
@@ -1084,6 +1077,26 @@ zx_status_t Coordinator::InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& 
 }
 
 std::string Coordinator::GetFragmentDriverUrl() const { return "#driver/fragment.so"; }
+
+zx::status<std::unique_ptr<DeviceGroup>> Coordinator::CreateDeviceGroup(
+    fuchsia_driver_framework::wire::DeviceGroup group, fdi::MatchedCompositeInfo driver) {
+  return device_group::DeviceGroupV1::Create(group, driver, this);
+}
+
+void Coordinator::MatchAndBindAllNodes() {
+  for (auto& dev : device_manager_->devices()) {
+    auto status = bind_driver_manager_->MatchAndBindWithDriverIndex(
+        fbl::RefPtr(&dev), DriverLoader::MatchDeviceConfig{});
+    if (status != ZX_OK) {
+      LOGF(ERROR, "Failed to bind device '%s': %d", dev.name().data(), status);
+    }
+  }
+}
+
+zx::status<fdi::MatchedCompositeInfo> Coordinator::AddDeviceGroupToDriverIndex(
+    fuchsia_driver_framework::wire::DeviceGroup group) {
+  return driver_loader_.AddDeviceGroup(group);
+}
 
 void Coordinator::RestartDriverHosts(RestartDriverHostsRequestView request,
                                      RestartDriverHostsCompleter::Sync& completer) {

@@ -349,15 +349,17 @@ TEST_F(DriverLoaderTest, TestReturnOnlyDeviceGroups) {
 
   ASSERT_EQ(drivers.size(), 2);
 
-  auto device_group_result_1 = std::get<MatchedDeviceGroupNodeInfo>(drivers[0]);
-  ASSERT_EQ(1, device_group_result_1.groups.size());
-  ASSERT_STREQ("test/path/device_group_1", device_group_result_1.groups.at(0).topological_path);
-  ASSERT_EQ(1, device_group_result_1.groups.at(0).node_index);
+  auto device_group_result_1 = std::get<fdi::MatchedDeviceGroupNodeInfo>(drivers[0]);
+  ASSERT_EQ(1, device_group_result_1.device_groups().value().size());
+  ASSERT_STREQ("test/path/device_group_1",
+               device_group_result_1.device_groups().value().at(0).topological_path().value());
+  ASSERT_EQ(1, device_group_result_1.device_groups().value().at(0).node_index());
 
-  auto device_group_result_2 = std::get<MatchedDeviceGroupNodeInfo>(drivers[1]);
-  ASSERT_EQ(1, device_group_result_2.groups.size());
-  ASSERT_STREQ("test/path/device_group_2", device_group_result_2.groups.at(0).topological_path);
-  ASSERT_EQ(0, device_group_result_2.groups.at(0).node_index);
+  auto device_group_result_2 = std::get<fdi::MatchedDeviceGroupNodeInfo>(drivers[1]);
+  ASSERT_EQ(1, device_group_result_2.device_groups().value().size());
+  ASSERT_STREQ("test/path/device_group_2",
+               device_group_result_2.device_groups().value().at(0).topological_path().value());
+  ASSERT_EQ(0, device_group_result_2.device_groups().value().at(0).node_index());
 }
 
 TEST_F(DriverLoaderTest, TestReturnDriversAndDeviceGroups) {
@@ -398,10 +400,11 @@ TEST_F(DriverLoaderTest, TestReturnDriversAndDeviceGroups) {
   ASSERT_EQ(driver_name, std::get<MatchedDriverInfo>(drivers[0]).driver->libname);
 
   // Check device group.
-  auto device_group_result = std::get<MatchedDeviceGroupNodeInfo>(drivers[1]);
-  ASSERT_EQ(1, device_group_result.groups.size());
-  ASSERT_STREQ("test/path/device_group", device_group_result.groups.at(0).topological_path);
-  ASSERT_EQ(1, device_group_result.groups.at(0).node_index);
+  auto device_group_result = std::get<fdi::MatchedDeviceGroupNodeInfo>(drivers[1]);
+  ASSERT_EQ(1, device_group_result.device_groups().value().size());
+  ASSERT_STREQ("test/path/device_group",
+               device_group_result.device_groups().value().at(0).topological_path().value());
+  ASSERT_EQ(1, device_group_result.device_groups().value().at(0).node_index().value());
 }
 
 TEST_F(DriverLoaderTest, TestReturnDeviceGroupNoTopologicalPath) {
@@ -482,12 +485,14 @@ TEST_F(DriverLoaderTest, TestReturnDeviceGroupMultipleNodes) {
 
   ASSERT_EQ(drivers.size(), 1);
 
-  auto device_group_result = std::get<MatchedDeviceGroupNodeInfo>(drivers[0]);
-  ASSERT_EQ(2, device_group_result.groups.size());
-  ASSERT_STREQ("test/path/device_group_1", device_group_result.groups.at(0).topological_path);
-  ASSERT_EQ(1, device_group_result.groups.at(0).node_index);
-  ASSERT_STREQ("test/path/device_group_2", device_group_result.groups.at(1).topological_path);
-  ASSERT_EQ(3, device_group_result.groups.at(1).node_index);
+  auto device_group_result = std::get<fdi::MatchedDeviceGroupNodeInfo>(drivers[0]);
+  ASSERT_EQ(2, device_group_result.device_groups().value().size());
+  ASSERT_STREQ("test/path/device_group_1",
+               device_group_result.device_groups().value().at(0).topological_path().value());
+  ASSERT_EQ(1, device_group_result.device_groups().value().at(0).node_index().value());
+  ASSERT_STREQ("test/path/device_group_2",
+               device_group_result.device_groups().value().at(1).topological_path().value());
+  ASSERT_EQ(3, device_group_result.device_groups().value().at(1).node_index().value());
 }
 
 TEST_F(DriverLoaderTest, TestEphemeralDriver) {

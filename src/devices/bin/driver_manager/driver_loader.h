@@ -7,6 +7,7 @@
 
 #include <fidl/fuchsia.driver.development/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
+#include <fidl/fuchsia.driver.index/cpp/fidl.h>
 #include <threads.h>
 
 #include <fbl/intrusive_double_list.h>
@@ -55,8 +56,8 @@ class DriverLoader {
     bool only_return_base_and_fallback_drivers = false;
   };
 
-  zx_status_t AddDeviceGroup(std::string_view topological_path,
-                             fidl::VectorView<fdf::wire::DeviceGroupNode> nodes);
+  zx::status<fuchsia_driver_index::MatchedCompositeInfo> AddDeviceGroup(
+      fuchsia_driver_framework::wire::DeviceGroup group);
 
   const std::vector<MatchedDriver> MatchDeviceDriverIndex(const fbl::RefPtr<Device>& dev,
                                                           const MatchDeviceConfig& config);
@@ -66,6 +67,7 @@ class DriverLoader {
   const Driver* LibnameToDriver(std::string_view libname) const;
 
   const Driver* LoadDriverUrl(const std::string& driver_url, bool use_universe_resolver = false);
+  const Driver* LoadDriverUrl(fdi::wire::MatchedDriverInfo driver_info);
 
   zx::status<std::vector<fuchsia_driver_development::wire::DriverInfo>> GetDriverInfo(
       fidl::AnyArena& allocator, fidl::VectorView<fidl::StringView> filter);

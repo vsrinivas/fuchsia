@@ -122,52 +122,6 @@ zx_status_t CompositeDevice::Create(std::string_view name,
   return ZX_OK;
 }
 
-zx::status<std::unique_ptr<CompositeDevice>> CompositeDevice::CreateForDeviceGroup(
-    std::string_view name, fuchsia_device_manager::wire::DeviceGroupDescriptor group_desc) {
-  fbl::String name_obj(name);
-
-  fbl::Array<zx_device_prop_t> properties(new zx_device_prop_t[group_desc.props.count() + 1],
-                                          group_desc.props.count() + 1);
-  memcpy(properties.data(), group_desc.props.data(),
-         group_desc.props.count() * sizeof(group_desc.props.data()[0]));
-
-  // Set a property unique to composite devices.
-  properties[group_desc.props.count()].id = BIND_COMPOSITE;
-  properties[group_desc.props.count()].value = 1;
-
-  fbl::Array<std::unique_ptr<Metadata>> metadata(
-      new std::unique_ptr<Metadata>[group_desc.metadata.count()], group_desc.metadata.count());
-
-  fbl::Array<StrProperty> str_properties = ConvertStringProperties(group_desc.str_props);
-
-  for (size_t i = 0; i < group_desc.metadata.count(); i++) {
-    std::unique_ptr<Metadata> md;
-    zx_status_t status = Metadata::Create(group_desc.metadata[i].data.count(), &md);
-    if (status != ZX_OK) {
-      return zx::error(status);
-      ;
-    }
-
-    md->type = group_desc.metadata[i].key;
-    md->length = group_desc.metadata[i].data.count();
-    memcpy(md->Data(), group_desc.metadata[i].data.data(), md->length);
-    metadata[i] = std::move(md);
-  }
-
-  auto dev = std::make_unique<CompositeDevice>(
-      std::move(name), std::move(properties), std::move(str_properties),
-      group_desc.fragments.count(), 0, group_desc.spawn_colocated, std::move(metadata), false);
-  for (uint32_t i = 0; i < group_desc.fragments.count(); ++i) {
-    const auto& node = group_desc.fragments[i];
-    std::string name(node.name.data(), node.name.size());
-    auto fragment = std::make_unique<CompositeDeviceFragment>(dev.get(), name, i,
-                                                              fbl::Array<const zx_bind_inst_t>());
-    dev->unbound_fragments_.push_back(std::move(fragment));
-  }
-
-  return zx::ok(std::move(dev));
-}
-
 std::unique_ptr<CompositeDevice> CompositeDevice::CreateFromDriverIndex(
     MatchedCompositeDriverInfo driver) {
   fbl::String name(driver.composite.name);

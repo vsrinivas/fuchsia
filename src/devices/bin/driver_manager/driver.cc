@@ -152,34 +152,6 @@ void found_driver(zircon_driver_note_payload_t* note, const zx_bind_inst_t* bi,
 
 }  // namespace
 
-zx::status<MatchedDeviceGroupNodeInfo> CreateMatchedDeviceGroupNodeInfo(
-    fuchsia_driver_index::wire::MatchedDeviceGroupNodeInfo fidl_info) {
-  if (!fidl_info.has_device_groups() || fidl_info.device_groups().empty()) {
-    LOGF(ERROR, "MatchedDeviceGroupNodeInfo needs to contain as least one device group");
-    return zx::error(ZX_ERR_INVALID_ARGS);
-  }
-
-  MatchedDeviceGroupNodeInfo node_info;
-  for (auto& fidl_device_group : fidl_info.device_groups()) {
-    if (!fidl_device_group.has_topological_path() || !fidl_device_group.has_node_index()) {
-      LOGF(ERROR, "MatchedDeviceGroupInfo missing field(s)");
-      continue;
-    }
-
-    node_info.groups.push_back(MatchedDeviceGroupInfo{
-        .topological_path = std::string(fidl_device_group.topological_path().get()),
-        .node_index = fidl_device_group.node_index(),
-    });
-  }
-
-  if (node_info.groups.empty()) {
-    LOGF(ERROR, "No valid MatchedDeviceGroupInfo in MatchedDeviceGroupNodeInfo");
-    return zx::error(ZX_ERR_INVALID_ARGS);
-  }
-
-  return zx::ok(node_info);
-}
-
 void find_loadable_drivers(fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args,
                            const std::string& path, DriverLoadCallback func) {
   DIR* dir = opendir(path.c_str());

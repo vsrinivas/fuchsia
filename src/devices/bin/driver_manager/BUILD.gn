@@ -94,6 +94,8 @@ source_set("lib") {
     "system_instance.h",
     "system_state_manager.cc",
     "system_state_manager.h",
+    "v1/device_group_v1.cc",
+    "v1/device_group_v1.h",
     "v1/device_manager.cc",
     "v1/device_manager.h",
     "v1/driver_development.cc",

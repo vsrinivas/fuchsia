@@ -42,6 +42,7 @@
 #include "src/devices/bin/driver_manager/debug_dump.h"
 #include "src/devices/bin/driver_manager/devfs.h"
 #include "src/devices/bin/driver_manager/device.h"
+#include "src/devices/bin/driver_manager/device_group/device_group_manager.h"
 #include "src/devices/bin/driver_manager/driver.h"
 #include "src/devices/bin/driver_manager/driver_host.h"
 #include "src/devices/bin/driver_manager/driver_loader.h"
@@ -122,7 +123,8 @@ struct CoordinatorConfig {
   DriverHostCrashPolicy crash_policy = DriverHostCrashPolicy::kRestartDriverHost;
 };
 
-class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDevelopment>,
+class Coordinator : public CompositeManagerBridge,
+                    public fidl::WireServer<fuchsia_driver_development::DriverDevelopment>,
                     public fidl::WireServer<fuchsia_device_manager::Administrator> {
  public:
   Coordinator(const Coordinator&) = delete;
@@ -243,6 +245,8 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
 
   DeviceManager* device_manager() const { return device_manager_.get(); }
 
+  DeviceGroupManager* device_group_manager() const { return device_group_manager_.get(); }
+
   BindDriverManager* bind_driver_manager() const { return bind_driver_manager_.get(); }
 
   FirmwareLoader* firmware_loader() const { return firmware_loader_.get(); }
@@ -254,6 +258,14 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   zx::vmo& mexec_data_zbi() { return mexec_data_zbi_; }
 
  private:
+  // CompositeManagerBridge interface
+  zx::status<std::unique_ptr<DeviceGroup>> CreateDeviceGroup(
+      fuchsia_driver_framework::wire::DeviceGroup group,
+      fuchsia_driver_index::MatchedCompositeInfo driver) override;
+  void MatchAndBindAllNodes() override;
+  zx::status<fuchsia_driver_index::MatchedCompositeInfo> AddDeviceGroupToDriverIndex(
+      fuchsia_driver_framework::wire::DeviceGroup group) override;
+
   // fuchsia.driver.development/DriverDevelopment interface
   void RestartDriverHosts(RestartDriverHostsRequestView request,
                           RestartDriverHostsCompleter::Sync& completer) override;
@@ -310,6 +322,8 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   std::unique_ptr<SuspendResumeManager> suspend_resume_manager_;
 
   std::unique_ptr<DeviceManager> device_manager_;
+
+  std::unique_ptr<DeviceGroupManager> device_group_manager_;
 
   std::unique_ptr<BindDriverManager> bind_driver_manager_;
 };
