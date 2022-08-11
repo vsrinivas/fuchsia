@@ -450,6 +450,7 @@ hermeticity:
 | `fuchsia.boot.WriteOnlyLog` | Write to kernel log |
 | `fuchsia.logger.LogSink` | Write to syslog |
 | `fuchsia.process.Launcher` | Launch a child process from the test package |
+| `fuchsia.diagnostics.ArchiveAccessor` | Read diagnostics output by components in the test |
 | `fuchsia.sys2.EventSource` | Access to event protocol |
 
 The hermeticity is retained because these capabilities are carefully curated
