@@ -355,7 +355,14 @@ impl NetworkSelector {
         let result =
             match select_best_connection_candidate(networks, ignore_list, &mut inspect_node) {
                 Some((selected, channel, bssid)) => Some(
-                    augment_bss_with_active_scan(selected, channel, bssid, iface_manager).await,
+                    augment_bss_with_active_scan(
+                        selected,
+                        channel,
+                        bssid,
+                        iface_manager,
+                        self.telemetry_sender.clone(),
+                    )
+                    .await,
                 ),
                 None => None,
             };
@@ -375,8 +382,13 @@ impl NetworkSelector {
         network: types::NetworkIdentifier,
     ) -> Option<types::ConnectionCandidate> {
         // TODO: check if we have recent enough scan results that we can pull from instead?
-        let scan_results =
-            scan::perform_directed_active_scan(&sme_proxy, &network.ssid, None).await;
+        let scan_results = scan::perform_directed_active_scan(
+            &sme_proxy,
+            &network.ssid,
+            None,
+            Some(self.telemetry_sender.clone()),
+        )
+        .await;
 
         let (result, num_candidates) = match scan_results {
             Err(_) => (None, Err(())),
@@ -544,6 +556,7 @@ async fn augment_bss_with_active_scan(
     channel: types::WlanChan,
     bssid: types::Bssid,
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
+    telemetry_sender: TelemetrySender,
 ) -> types::ConnectionCandidate {
     // This internal function encapsulates all the logic and has a Result<> return type, allowing us
     // to use the `?` operator inside it to reduce nesting.
@@ -552,6 +565,7 @@ async fn augment_bss_with_active_scan(
         channel: types::WlanChan,
         bssid: types::Bssid,
         iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
+        telemetry_sender: TelemetrySender,
     ) -> Result<fidl_internal::BssDescription, ()> {
         // Ensure that a scan is necessary. If this expression returns `Unknown`, then either the
         // network has been scanned but the observation is unknown or the network has not be
@@ -586,6 +600,7 @@ async fn augment_bss_with_active_scan(
             &sme_proxy,
             &selected_network.network.ssid,
             Some(vec![channel.primary]),
+            Some(telemetry_sender),
         )
         .await
         .map_err(|_| {
@@ -612,7 +627,15 @@ async fn augment_bss_with_active_scan(
         Ok(bss_description)
     }
 
-    match get_enhanced_bss_description(&selected_network, channel, bssid, iface_manager).await {
+    match get_enhanced_bss_description(
+        &selected_network,
+        channel,
+        bssid,
+        iface_manager,
+        telemetry_sender,
+    )
+    .await
+    {
         Ok(new_bss_description) => {
             let combined_scanned = selected_network.scanned.take().map(|original_scanned| {
                 types::ScannedCandidate { bss_description: new_bss_description, ..original_scanned }
@@ -723,6 +746,7 @@ mod tests {
                 network_config::{PastConnectionData, PastConnectionsByBssid},
                 SavedNetworksManager,
             },
+            telemetry::ScanIssue,
             util::testing::{
                 create_inspect_persistence_channel, create_wlan_hasher, generate_channel,
                 generate_random_bss, generate_random_scan_result,
@@ -2065,6 +2089,7 @@ mod tests {
             bss_1.channel,
             bss_1.bssid,
             test_values.iface_manager.clone(),
+            test_values.network_selector.telemetry_sender.clone(),
         );
         pin_mut!(fut);
 
@@ -2106,6 +2131,7 @@ mod tests {
             bss_1.channel,
             bss_1.bssid,
             test_values.iface_manager.clone(),
+            test_values.network_selector.telemetry_sender.clone(),
         );
         pin_mut!(fut);
 
@@ -2717,6 +2743,12 @@ mod tests {
         // Check that nothing is returned
         let results = exec.run_singlethreaded(&mut network_selection_fut);
         assert_eq!(results, None);
+
+        // Verify that the scan defect is sent to telemetry.
+        assert_variant!(
+            telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::ScanDefect(ScanIssue::ScanFailure)))
+        );
 
         // Verify that NetworkSelectionDecision telemetry event is sent
         assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {

@@ -244,6 +244,8 @@ pub enum TelemetryEvent {
     IfaceCreationFailure,
     /// Notify the telemtry event loop that a PHY has failed to destroy an interface.
     IfaceDestructionFailure,
+    /// Notify telemetry that an unexpected issue occurred while scanning.
+    ScanDefect(ScanIssue),
 }
 
 #[derive(Clone, Debug)]
@@ -268,6 +270,23 @@ pub enum NetworkSelectionType {
     Undirected,
     /// Looking for the best BSS for a particular network
     Directed,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum ScanIssue {
+    ScanFailure,
+    AbortedScan,
+    EmptyScanResults,
+}
+
+impl ScanIssue {
+    fn into_metric_id(&self) -> u32 {
+        match self {
+            ScanIssue::ScanFailure => metrics::CLIENT_SCAN_FAILURE_METRIC_ID,
+            ScanIssue::AbortedScan => metrics::ABORTED_SCAN_METRIC_ID,
+            ScanIssue::EmptyScanResults => metrics::EMPTY_SCAN_RESULTS_METRIC_ID,
+        }
+    }
 }
 
 /// Capacity of "first come, first serve" slots available to clients of
@@ -1149,6 +1168,9 @@ impl Telemetry {
             }
             TelemetryEvent::IfaceDestructionFailure => {
                 self.stats_logger.log_iface_destruction_failure().await;
+            }
+            TelemetryEvent::ScanDefect(issue) => {
+                self.stats_logger.log_scan_issue(issue).await;
             }
         }
     }
@@ -2543,6 +2565,10 @@ impl StatsLogger {
             1,
             &[]
         )
+    }
+
+    async fn log_scan_issue(&mut self, issue: ScanIssue) {
+        log_cobalt_1dot1!(self.cobalt_1dot1_proxy, log_occurrence, issue.into_metric_id(), 1, &[])
     }
 }
 
@@ -5946,6 +5972,34 @@ mod tests {
         test_helper.drain_cobalt_events(&mut test_fut);
         let logged_metrics =
             test_helper.get_logged_metrics(metrics::INTERFACE_DESTRUCTION_FAILURE_METRIC_ID);
+        assert_eq!(logged_metrics.len(), 1);
+    }
+
+    #[test_case(
+        TelemetryEvent::ScanDefect(ScanIssue::ScanFailure),
+        metrics::CLIENT_SCAN_FAILURE_METRIC_ID
+    )]
+    #[test_case(
+        TelemetryEvent::ScanDefect(ScanIssue::AbortedScan),
+        metrics::ABORTED_SCAN_METRIC_ID
+    )]
+    #[test_case(
+        TelemetryEvent::ScanDefect(ScanIssue::EmptyScanResults),
+        metrics::EMPTY_SCAN_RESULTS_METRIC_ID
+    )]
+    #[fuchsia::test(add_test_attr = false)]
+    fn test_scan_defect_metrics(event: TelemetryEvent, expected_metric_id: u32) {
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        // Send a notification that interface creation has failed.
+        test_helper.telemetry_sender.send(event);
+
+        // Run the telemetry loop until it stalls.
+        assert_variant!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
+
+        // Expect that Cobalt has been notified of the metric
+        test_helper.drain_cobalt_events(&mut test_fut);
+        let logged_metrics = test_helper.get_logged_metrics(expected_metric_id);
         assert_eq!(logged_metrics.len(), 1);
     }
 

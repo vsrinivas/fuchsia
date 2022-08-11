@@ -10,7 +10,7 @@ use {
             select_subset_potentially_hidden_networks, SavedNetworksManagerApi, ScanResultType,
         },
         mode_management::iface_manager_api::IfaceManagerApi,
-        telemetry::{TelemetryEvent, TelemetrySender},
+        telemetry::{ScanIssue, TelemetryEvent, TelemetrySender},
     },
     anyhow::{format_err, Error},
     async_trait::async_trait,
@@ -56,6 +56,7 @@ pub trait ScanResultUpdate: Sync + Send {
 async fn sme_scan(
     sme_proxy: &fidl_sme::ClientSmeProxy,
     scan_request: fidl_sme::ScanRequest,
+    telemetry_sender: Option<TelemetrySender>,
 ) -> Result<Vec<wlan_common::scan::ScanResult>, types::ScanError> {
     let (local, remote) = fidl::endpoints::create_proxy().map_err(|e| {
         error!("Failed to create FIDL proxy for scan: {:?}", e);
@@ -97,6 +98,10 @@ async fn sme_scan(
                 return Ok(scanned_networks);
             }
             fidl_sme::ScanTransactionEvent::OnError { error } => {
+                if let Some(telemetry_sender) = telemetry_sender {
+                    log_metric_for_scan_error(&error.code, telemetry_sender)
+                }
+
                 return match error.code {
                     fidl_sme::ScanErrorCode::ShouldWait
                     | fidl_sme::ScanErrorCode::CanceledByDriverOrFirmware => {
@@ -107,7 +112,7 @@ async fn sme_scan(
                         error!("Scan error from SME: {:?}", error);
                         Err(types::ScanError::GeneralError)
                     }
-                }
+                };
             }
         };
     }
@@ -156,7 +161,7 @@ pub(crate) async fn perform_scan(
                 return;
             }
         };
-        match sme_scan(&sme_proxy, scan_request.clone()).await {
+        match sme_scan(&sme_proxy, scan_request.clone(), telemetry_sender.clone()).await {
             Ok(results) => {
                 record_undirected_scan_results(&results, saved_networks_manager.clone()).await;
                 insert_bss_to_network_bss_map(&mut bss_by_network, results, true);
@@ -180,12 +185,19 @@ pub(crate) async fn perform_scan(
         }
     }
 
+    // If the passive scan results are empty, report an empty scan results metric.
+    if bss_by_network.is_empty() {
+        if let Some(telemetry_sender) = telemetry_sender.clone() {
+            telemetry_sender.send(TelemetryEvent::ScanDefect(ScanIssue::EmptyScanResults))
+        }
+    }
+
     let requested_active_scan_ids: Vec<types::NetworkIdentifier> =
         select_subset_potentially_hidden_networks(saved_networks_manager.get_networks().await);
 
     // Record active scan decisions to metrics. This is optional, based on
     // the scan reason and if the caller would like metrics logged.
-    if let Some(telemetry_sender) = telemetry_sender {
+    if let Some(telemetry_sender) = telemetry_sender.clone() {
         match scan_reason {
             ScanReason::NetworkSelection => {
                 telemetry_sender.send(TelemetryEvent::ActiveScanRequested {
@@ -208,7 +220,7 @@ pub(crate) async fn perform_scan(
             types::ScanError::GeneralError
         });
         let sme_scan_result = match sme_proxy {
-            Ok(proxy) => sme_scan(&proxy, scan_request).await,
+            Ok(proxy) => sme_scan(&proxy, scan_request, telemetry_sender).await,
             Err(err) => Err(err),
         };
         match sme_scan_result {
@@ -277,13 +289,14 @@ pub(crate) async fn perform_directed_active_scan(
     sme_proxy: &fidl_sme::ClientSmeProxy,
     ssid: &types::Ssid,
     channels: Option<Vec<u8>>,
+    telemetry_sender: Option<TelemetrySender>,
 ) -> Result<Vec<types::ScanResult>, types::ScanError> {
     let scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
         ssids: vec![ssid.to_vec()],
         channels: channels.unwrap_or(vec![]),
     });
 
-    let sme_result = sme_scan(sme_proxy, scan_request).await;
+    let sme_result = sme_scan(sme_proxy, scan_request, telemetry_sender).await;
     sme_result.map(|results| {
         let mut bss_by_network: HashMap<SmeNetworkIdentifier, Vec<types::Bss>> = HashMap::new();
         insert_bss_to_network_bss_map(&mut bss_by_network, results, false);
@@ -572,6 +585,18 @@ async fn send_scan_error_over_fidl(
     Ok(())
 }
 
+fn log_metric_for_scan_error(reason: &fidl_sme::ScanErrorCode, telemetry_sender: TelemetrySender) {
+    let metric_type = match *reason {
+        fidl_sme::ScanErrorCode::NotSupported
+        | fidl_sme::ScanErrorCode::InternalError
+        | fidl_sme::ScanErrorCode::InternalMlmeError => ScanIssue::ScanFailure,
+        fidl_sme::ScanErrorCode::ShouldWait
+        | fidl_sme::ScanErrorCode::CanceledByDriverOrFirmware => ScanIssue::AbortedScan,
+    };
+
+    telemetry_sender.send(TelemetryEvent::ScanDefect(metric_type));
+}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -587,7 +612,11 @@ mod tests {
         anyhow::Error,
         fidl::endpoints::{create_proxy, Proxy},
         fuchsia_async as fasync, fuchsia_zircon as zx,
-        futures::{channel::oneshot, lock::Mutex, task::Poll},
+        futures::{
+            channel::{mpsc, oneshot},
+            lock::Mutex,
+            task::Poll,
+        },
         pin_utils::pin_mut,
         std::{convert::TryInto, sync::Arc},
         test_case::test_case,
@@ -1090,14 +1119,21 @@ mod tests {
         fidl_scan_results
     }
 
+    fn create_telemetry_sender_and_receiver() -> (TelemetrySender, mpsc::Receiver<TelemetryEvent>) {
+        let (sender, receiver) = mpsc::channel::<TelemetryEvent>(100);
+        let sender = TelemetrySender::new(sender);
+        (sender, receiver)
+    }
+
     #[fuchsia::test]
     fn sme_scan_with_passive_request() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
+        let (telemetry_sender, mut telemetry_receiver) = create_telemetry_sender_and_receiver();
 
         // Issue request to scan.
         let scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-        let scan_fut = sme_scan(&sme_proxy, scan_request.clone());
+        let scan_fut = sme_scan(&sme_proxy, scan_request.clone(), Some(telemetry_sender));
         pin_mut!(scan_fut);
 
         // Request scan data from SME
@@ -1129,12 +1165,16 @@ mod tests {
 
         // No further requests to the sme
         assert_variant!(exec.run_until_stalled(&mut sme_stream.next()), Poll::Pending);
+
+        // No metric should be logged since the scan was successful.
+        assert_variant!(telemetry_receiver.try_next(), Ok(None))
     }
 
     #[fuchsia::test]
     fn sme_scan_with_active_request() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
+        let (telemetry_sender, mut telemetry_receiver) = create_telemetry_sender_and_receiver();
 
         // Issue request to scan.
         let scan_request = fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
@@ -1144,7 +1184,7 @@ mod tests {
             ],
             channels: vec![1, 20],
         });
-        let scan_fut = sme_scan(&sme_proxy, scan_request.clone());
+        let scan_fut = sme_scan(&sme_proxy, scan_request.clone(), Some(telemetry_sender));
         pin_mut!(scan_fut);
 
         // Request scan data from SME
@@ -1176,23 +1216,54 @@ mod tests {
 
         // No further requests to the sme
         assert_variant!(exec.run_until_stalled(&mut sme_stream.next()), Poll::Pending);
+
+        // No metric should be logged since the scan was successful.
+        assert_variant!(telemetry_receiver.try_next(), Ok(None))
     }
 
-    #[test_case(fidl_sme::ScanErrorCode::InternalError, types::ScanError::GeneralError; "SME scan error InternalError")]
-    #[test_case(fidl_sme::ScanErrorCode::NotSupported, types::ScanError::GeneralError; "SME scan error NotSupported")]
-    #[test_case(fidl_sme::ScanErrorCode::ShouldWait, types::ScanError::Cancelled; "SME scan error ShouldWait")]
-    #[test_case(fidl_sme::ScanErrorCode::CanceledByDriverOrFirmware, types::ScanError::Cancelled; "SME scan error CanceledByDriverOrFirmware")]
+    #[test_case(
+        fidl_sme::ScanErrorCode::InternalError,
+        types::ScanError::GeneralError,
+        ScanIssue::ScanFailure;
+        "SME scan error InternalError"
+    )]
+    #[test_case(
+        fidl_sme::ScanErrorCode::InternalMlmeError,
+        types::ScanError::GeneralError,
+        ScanIssue::ScanFailure;
+        "SME scan error InternalError due to MLME"
+    )]
+    #[test_case(
+        fidl_sme::ScanErrorCode::NotSupported,
+        types::ScanError::GeneralError,
+        ScanIssue::ScanFailure;
+        "SME scan error NotSupported"
+    )]
+    #[test_case(
+        fidl_sme::ScanErrorCode::ShouldWait,
+        types::ScanError::Cancelled,
+        ScanIssue::AbortedScan;
+        "SME scan error ShouldWait"
+    )]
+    #[test_case(
+        fidl_sme::ScanErrorCode::CanceledByDriverOrFirmware,
+        types::ScanError::Cancelled,
+        ScanIssue::AbortedScan;
+        "SME scan error CanceledByDriverOrFirmware"
+    )]
     #[fuchsia::test(add_test_attr = false)]
     fn sme_scan_error(
         sme_error_code: fidl_sme::ScanErrorCode,
         expected_scan_error: types::ScanError,
+        expected_issue: ScanIssue,
     ) {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
+        let (telemetry_sender, mut telemetry_receiver) = create_telemetry_sender_and_receiver();
 
         // Issue request to scan.
         let scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-        let scan_fut = sme_scan(&sme_proxy, scan_request.clone());
+        let scan_fut = sme_scan(&sme_proxy, scan_request.clone(), Some(telemetry_sender));
         pin_mut!(scan_fut);
 
         // Request scan data from SME
@@ -1223,16 +1294,22 @@ mod tests {
 
         // No further requests to the sme
         assert_variant!(exec.run_until_stalled(&mut sme_stream.next()), Poll::Pending);
+
+        // Verify that the expected scan defect is logged.
+        assert_variant!(telemetry_receiver.try_next(), Ok(Some(TelemetryEvent::ScanDefect(issue))) => {
+            assert_eq!(issue, expected_issue)
+        })
     }
 
     #[fuchsia::test]
     fn sme_scan_channel_closed() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
+        let (telemetry_sender, mut telemetry_receiver) = create_telemetry_sender_and_receiver();
 
         // Issue request to scan.
         let scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
-        let scan_fut = sme_scan(&sme_proxy, scan_request);
+        let scan_fut = sme_scan(&sme_proxy, scan_request, Some(telemetry_sender));
         pin_mut!(scan_fut);
 
         // Request scan data from SME
@@ -1257,6 +1334,9 @@ mod tests {
 
         // No further requests to the sme
         assert_variant!(exec.run_until_stalled(&mut sme_stream.next()), Poll::Pending);
+
+        // No metric should be logged since the interface went away.
+        assert_variant!(telemetry_receiver.try_next(), Ok(None))
     }
 
     #[fuchsia::test]
@@ -1266,6 +1346,7 @@ mod tests {
         let (network_selector, network_selector_results) = MockScanResultConsumer::new();
         let (location_sensor, location_sensor_results) = MockScanResultConsumer::new();
         let saved_networks_manager = Arc::new(FakeSavedNetworksManager::new());
+        let (telemetry_sender, mut telemetry_receiver) = create_telemetry_sender_and_receiver();
 
         // Issue request to scan.
         let (iter, iter_server) =
@@ -1277,7 +1358,7 @@ mod tests {
             network_selector,
             location_sensor,
             ScanReason::NetworkSelection,
-            None,
+            Some(telemetry_sender),
         );
         pin_mut!(scan_fut);
 
@@ -1338,6 +1419,74 @@ mod tests {
             *exec.run_singlethreaded(location_sensor_results.lock()),
             Some(internal_aps.clone())
         );
+
+        // Since the scanning process went off without a hitch, there should not be any defect
+        // metrics logged.
+        assert_variant!(
+            telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::ActiveScanRequested { num_ssids_requested: 0 }))
+        );
+        assert_variant!(telemetry_receiver.try_next(), Ok(None));
+    }
+
+    #[fuchsia::test]
+    fn empty_scan_results() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let (client, mut sme_stream) = exec.run_singlethreaded(create_iface_manager());
+        let (network_selector, network_selector_results) = MockScanResultConsumer::new();
+        let (location_sensor, location_sensor_results) = MockScanResultConsumer::new();
+        let saved_networks_manager = Arc::new(FakeSavedNetworksManager::new());
+        let (telemetry_sender, mut telemetry_receiver) = create_telemetry_sender_and_receiver();
+
+        // Issue request to scan.
+        let (iter, iter_server) =
+            fidl::endpoints::create_proxy().expect("failed to create iterator");
+        let scan_fut = perform_scan(
+            client,
+            saved_networks_manager,
+            Some(iter_server),
+            network_selector,
+            location_sensor,
+            ScanReason::NetworkSelection,
+            Some(telemetry_sender),
+        );
+        pin_mut!(scan_fut);
+
+        // Request a chunk of scan results. Progress until waiting on response from server side of
+        // the iterator.
+        let mut output_iter_fut = iter.get_next();
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Pending);
+        // Progress scan handler forward so that it will respond to the iterator get next request.
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Pending);
+
+        // Create mock scan data and send it via the SME
+        let expected_scan_request = fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {});
+        validate_sme_scan_request_and_send_results(
+            &mut exec,
+            &mut sme_stream,
+            &expected_scan_request,
+            vec![],
+        );
+
+        // Process response from SME (which is empty) and expect the future to complete.
+        assert_variant!(exec.run_until_stalled(&mut scan_fut), Poll::Ready(()));
+
+        // Check for results
+        assert_variant!(exec.run_until_stalled(&mut output_iter_fut), Poll::Ready(result) => {
+            let results = result.expect("Failed to get next scan results").unwrap();
+            assert!(results.is_empty());
+        });
+
+        // Check both successful scan consumers got results
+        assert_eq!(*exec.run_singlethreaded(network_selector_results.lock()), Some(vec![]));
+        assert_eq!(*exec.run_singlethreaded(location_sensor_results.lock()), Some(vec![]));
+
+        // Verify that an empty scan result has been logged
+        assert_variant!(
+            telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::ScanDefect(issue))) => {
+                assert_eq!(issue, ScanIssue::EmptyScanResults)
+        })
     }
 
     /// Verify that only a passive scan occurs if all saved networks have a 0
@@ -2590,6 +2739,7 @@ mod tests {
             &sme_proxy,
             &scan_fut_desired_ssid,
             Some(desired_channels.clone()),
+            None,
         );
         pin_mut!(scan_fut);
 
@@ -2803,5 +2953,25 @@ mod tests {
             aggregate_results.extend(results);
         });
         assert_eq!(aggregate_results, fidl_scan_results);
+    }
+
+    #[test_case(fidl_sme::ScanErrorCode::NotSupported, ScanIssue::ScanFailure)]
+    #[test_case(fidl_sme::ScanErrorCode::InternalError, ScanIssue::ScanFailure)]
+    #[test_case(fidl_sme::ScanErrorCode::InternalMlmeError, ScanIssue::ScanFailure)]
+    #[test_case(fidl_sme::ScanErrorCode::ShouldWait, ScanIssue::AbortedScan)]
+    #[test_case(fidl_sme::ScanErrorCode::CanceledByDriverOrFirmware, ScanIssue::AbortedScan)]
+    #[fuchsia::test(add_test_attr = false)]
+    fn test_scan_error_metric_conversion(
+        scan_error: fidl_sme::ScanErrorCode,
+        expected_issue: ScanIssue,
+    ) {
+        let (telemetry_sender, mut telemetry_receiver) = create_telemetry_sender_and_receiver();
+        log_metric_for_scan_error(&scan_error, telemetry_sender);
+        assert_variant!(
+            telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::ScanDefect(issue))
+        ) => {
+            assert_eq!(issue, expected_issue)
+        });
     }
 }
