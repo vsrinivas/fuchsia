@@ -9,10 +9,11 @@ use crate::common::{
 use anyhow::format_err;
 use fidl_fuchsia_media::AudioRenderUsage;
 use fidl_fuchsia_settings::{
-    AudioProxy, AudioSettings, AudioStreamSettingSource, AudioStreamSettings, Volume,
+    AudioProxy, AudioSettings, AudioStreamSettingSource, AudioStreamSettings, Error, Volume,
 };
 use futures::channel::mpsc::Receiver;
 use futures::StreamExt;
+use test_case::test_case;
 
 mod common;
 mod mock_audio_core_service;
@@ -334,4 +335,100 @@ async fn test_volume_rounding() {
     )
     .await
     .expect("changed audio requests received");
+}
+
+// Verifies that invalid inputs return an error for Set calls.
+#[test_case(AudioStreamSettings {
+    stream: Some(AudioRenderUsage::Media),
+    source: Some(AudioStreamSettingSource::User),
+    user_volume: None,
+    ..AudioStreamSettings::EMPTY
+} ; "missing user volume")]
+#[test_case(AudioStreamSettings {
+    stream: Some(AudioRenderUsage::Media),
+    source: Some(AudioStreamSettingSource::User),
+    user_volume: Some(Volume {
+        level: None,
+        muted: None,
+        ..Volume::EMPTY
+    }),
+..AudioStreamSettings::EMPTY
+} ; "missing user volume and muted")]
+#[test_case(AudioStreamSettings {
+    stream: None,
+    source: Some(AudioStreamSettingSource::User),
+    user_volume: Some(Volume {
+        level: Some(CHANGED_VOLUME_LEVEL),
+        muted: Some(CHANGED_VOLUME_MUTED),
+        ..Volume::EMPTY
+    }),
+    ..AudioStreamSettings::EMPTY
+} ; "missing stream")]
+#[test_case(AudioStreamSettings {
+    stream: Some(AudioRenderUsage::Media),
+    source: None,
+    user_volume: Some(Volume {
+        level: Some(CHANGED_VOLUME_LEVEL),
+        muted: Some(CHANGED_VOLUME_MUTED),
+        ..Volume::EMPTY
+    }),
+    ..AudioStreamSettings::EMPTY
+} ; "missing source")]
+#[fuchsia::test]
+async fn invalid_missing_input_tests(setting: AudioStreamSettings) {
+    let audio_test = AudioTest::create();
+
+    // We don't care about verifying calls to audio core for this test, don't request any events
+    // from the audio core mock.
+    let (audio_request_sender, _) = futures::channel::mpsc::channel::<AudioCoreRequest>(0);
+    let instance =
+        audio_test.create_realm(audio_request_sender, vec![]).await.expect("setting up test realm");
+
+    let audio_proxy = AudioTest::connect_to_audio_marker(&instance);
+
+    let result = audio_proxy
+        .set(AudioSettings { streams: Some(vec![setting]), ..AudioSettings::EMPTY })
+        .await
+        .expect("set completed");
+    assert_eq!(result, Err(Error::Failed));
+}
+
+// Verifies that the input to Set calls can be missing certain parts and still be valid.
+#[test_case(AudioStreamSettings {
+    stream: Some(AudioRenderUsage::Media),
+    source: Some(AudioStreamSettingSource::User),
+    user_volume: Some(Volume {
+        level: None,
+        muted: Some(CHANGED_VOLUME_MUTED),
+        ..Volume::EMPTY
+    }),
+    ..AudioStreamSettings::EMPTY
+} ; "missing user volume")]
+#[test_case(AudioStreamSettings {
+    stream: Some(AudioRenderUsage::Media),
+    source: Some(AudioStreamSettingSource::User),
+    user_volume: Some(Volume {
+        level: Some(CHANGED_VOLUME_LEVEL),
+        muted: None,
+        ..Volume::EMPTY
+    }),
+    ..AudioStreamSettings::EMPTY
+} ; "missing muted")]
+#[fuchsia::test]
+async fn valid_missing_input_tests(setting: AudioStreamSettings) {
+    let audio_test = AudioTest::create();
+
+    // We don't care about verifying calls to audio core for this test, don't request any events
+    // from the audio core mock.
+    let (audio_request_sender, _) = futures::channel::mpsc::channel::<AudioCoreRequest>(0);
+    let instance =
+        audio_test.create_realm(audio_request_sender, vec![]).await.expect("setting up test realm");
+
+    let audio_proxy = AudioTest::connect_to_audio_marker(&instance);
+
+    let result = audio_proxy
+        .set(AudioSettings { streams: Some(vec![setting]), ..AudioSettings::EMPTY })
+        .await
+        .expect("set completed");
+    assert_eq!(result, Ok(()));
 }
