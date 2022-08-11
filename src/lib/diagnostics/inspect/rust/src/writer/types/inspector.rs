@@ -80,6 +80,13 @@ impl Inspector {
     /// This produces a copy-on-write VMO with a generation count marked as
     /// VMO_FROZEN. The resulting VMO is read-only.
     ///
+    /// Failure
+    /// This function returns `None` for failure. That can happen for
+    /// a few reasons.
+    ///   1) It is a semantic error to freeze a VMO while an atomic transaction
+    ///      is in progress, because that transaction is supposed to be atomic.
+    ///   2) VMO errors. This can include running out of space or debug assertions.
+    ///
     /// Note: the generation count for the original VMO is updated immediately. Since
     /// the new VMO is page-by-page copy-on-write, at least the first page of the
     /// VMO will immediately do a true copy. The practical implications of this
@@ -106,7 +113,7 @@ impl Inspector {
     /// The output will be truncated to only those bytes that are needed to accurately read the
     /// stored data.
     pub fn copy_vmo_data(&self) -> Option<Vec<u8>> {
-        self.root_node.inner.inner_ref().map(|inner_ref| inner_ref.state.copy_vmo_bytes())
+        self.root_node.inner.inner_ref().and_then(|inner_ref| inner_ref.state.copy_vmo_bytes())
     }
 
     /// Returns the root node of the inspect hierarchy.
@@ -300,5 +307,18 @@ mod tests {
 
         let frozen_insp = Inspector::no_op_from_vmo(Arc::new(vmo.unwrap()));
         assert!(frozen_insp.is_frozen().is_ok());
+    }
+
+    #[fuchsia::test]
+    fn transactions_block_freezing() {
+        let inspector = Inspector::new();
+        inspector.atomic_update(|_| assert!(inspector.frozen_vmo_copy().is_none()));
+    }
+
+    #[fuchsia::test]
+    fn transactions_block_copying() {
+        let inspector = Inspector::new();
+        inspector.atomic_update(|_| assert!(inspector.copy_vmo().is_none()));
+        inspector.atomic_update(|_| assert!(inspector.copy_vmo_data().is_none()));
     }
 }

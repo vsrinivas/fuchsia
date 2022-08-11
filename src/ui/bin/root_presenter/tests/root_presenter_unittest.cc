@@ -172,7 +172,7 @@ class RootPresenterTest : public gtest::RealLoopFixture,
   std::vector<inspect::UintArrayValue::HistogramBucket> GetHistogramBuckets(
       const std::vector<std::string>& path, const std::string& property) {
     inspect::Hierarchy root =
-        inspect::ReadFromVmo(root_presenter()->inspector()->CopyVmo()).take_value();
+        inspect::ReadFromVmo(root_presenter()->inspector()->CopyVmo().value()).take_value();
 
     const inspect::Hierarchy* parent = root.GetByPath(path);
     FX_CHECK(parent) << "no node found at path " << fxl::JoinStrings(path, "/");
