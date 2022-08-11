@@ -69,8 +69,8 @@ use netstack3_core::{
         },
         icmp, IpExt,
     },
-    BufferUdpContext, Ctx, NonSyncContext, SyncCtx, TimerId, UdpBoundId, UdpConnId, UdpContext,
-    UdpListenerId,
+    transport::udp::{BufferUdpContext, UdpBoundId, UdpConnId, UdpContext, UdpListenerId},
+    Ctx, NonSyncContext, SyncCtx, TimerId,
 };
 
 /// Default MTU for loopback.

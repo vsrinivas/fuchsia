@@ -31,9 +31,14 @@ use netstack3_core::{
         types::{AddableEntry, AddableEntryEither},
         IpExt,
     },
-    transport::tcp::socket::ListenerId,
-    BufferUdpContext, Ctx, NonSyncContext, RingBuffer, TcpNonSyncContext, TimerId, UdpBoundId,
-    UdpContext,
+    transport::{
+        tcp::{
+            buffer::RingBuffer,
+            socket::{ListenerId, TcpNonSyncContext},
+        },
+        udp::{BufferUdpContext, UdpBoundId, UdpContext},
+    },
+    Ctx, NonSyncContext, TimerId,
 };
 use packet::{Buf, BufferMut, Serializer};
 use packet_formats::icmp::{IcmpEchoReply, IcmpMessage, IcmpUnusedCode};
@@ -232,7 +237,7 @@ impl<I: SocketCollectionIpExt<Udp> + IpExt, B: BufferMut> BufferUdpContext<I, B>
 {
     fn receive_udp_from_conn(
         &mut self,
-        conn: netstack3_core::UdpConnId<I>,
+        conn: netstack3_core::transport::udp::UdpConnId<I>,
         src_ip: I::Addr,
         src_port: NonZeroU16,
         body: &B,
@@ -243,7 +248,7 @@ impl<I: SocketCollectionIpExt<Udp> + IpExt, B: BufferMut> BufferUdpContext<I, B>
     /// Receive a UDP packet for a listener.
     fn receive_udp_from_listen(
         &mut self,
-        listener: netstack3_core::UdpListenerId<I>,
+        listener: netstack3_core::transport::udp::UdpListenerId<I>,
         src_ip: I::Addr,
         dst_ip: I::Addr,
         src_port: Option<NonZeroU16>,

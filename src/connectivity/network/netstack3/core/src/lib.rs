@@ -45,30 +45,10 @@ mod sync;
 mod testutil;
 pub mod transport;
 
-use log::trace;
-
-pub use crate::transport::{
-    tcp::{
-        buffer::{ReceiveBuffer, RingBuffer, SendBuffer},
-        socket::TcpNonSyncContext,
-    },
-    udp::{
-        connect_udp, connect_udp_listener, create_udp_unbound, disconnect_udp_connected,
-        get_udp_bound_device, get_udp_conn_info, get_udp_listener_info, get_udp_posix_reuse_port,
-        listen_udp, reconnect_udp, remove_udp_conn, remove_udp_listener, remove_udp_unbound,
-        send_udp, send_udp_conn, send_udp_listener, set_bound_udp_device,
-        set_udp_multicast_membership, set_udp_posix_reuse_port, set_unbound_udp_device,
-        BufferUdpContext, BufferUdpStateContext, BufferUdpStateNonSyncContext, UdpBoundId,
-        UdpConnId, UdpConnInfo, UdpConnectListenerError, UdpContext, UdpListenerId,
-        UdpListenerInfo, UdpSendError, UdpSendListenerError, UdpSockCreationError, UdpSocketId,
-        UdpStateContext, UdpStateNonSyncContext, UdpUnboundId,
-    },
-    TransportStateBuilder,
-};
-
 use alloc::vec::Vec;
 use core::{fmt::Debug, marker::PhantomData, time};
 
+use log::trace;
 use net_types::{
     ip::{AddrSubnetEither, IpAddr, Ipv4, Ipv6, SubnetEither},
     SpecifiedAddr,
@@ -157,14 +137,14 @@ macro_rules! map_addr_version {
 /// A builder for [`StackState`].
 #[derive(Default, Clone)]
 pub struct StackStateBuilder {
-    transport: TransportStateBuilder,
+    transport: transport::TransportStateBuilder,
     ipv4: ip::Ipv4StateBuilder,
     ipv6: ip::Ipv6StateBuilder,
 }
 
 impl StackStateBuilder {
     /// Get the builder for the transport layer state.
-    pub fn transport_builder(&mut self) -> &mut TransportStateBuilder {
+    pub fn transport_builder(&mut self) -> &mut transport::TransportStateBuilder {
         &mut self.transport
     }
 
@@ -206,8 +186,8 @@ impl<C: NonSyncContext + Default> Default for StackState<C> {
 /// The non synchronized context for the stack with a buffer.
 pub trait BufferNonSyncContextInner<B: BufferMut>:
     device::DeviceLayerEventDispatcher<B>
-    + BufferUdpContext<Ipv4, B>
-    + BufferUdpContext<Ipv6, B>
+    + transport::udp::BufferUdpContext<Ipv4, B>
+    + transport::udp::BufferUdpContext<Ipv6, B>
     + BufferIcmpContext<Ipv4, B>
     + BufferIcmpContext<Ipv6, B>
 {
@@ -215,8 +195,8 @@ pub trait BufferNonSyncContextInner<B: BufferMut>:
 impl<
         B: BufferMut,
         C: device::DeviceLayerEventDispatcher<B>
-            + BufferUdpContext<Ipv4, B>
-            + BufferUdpContext<Ipv6, B>
+            + transport::udp::BufferUdpContext<Ipv4, B>
+            + transport::udp::BufferUdpContext<Ipv6, B>
             + BufferIcmpContext<Ipv4, B>
             + BufferIcmpContext<Ipv6, B>,
     > BufferNonSyncContextInner<B> for C
@@ -243,11 +223,11 @@ pub trait NonSyncContext:
     + EventContext<ip::IpLayerEvent<DeviceId, Ipv6>>
     + EventContext<ip::device::dad::DadEvent<DeviceId>>
     + EventContext<ip::device::route_discovery::Ipv6RouteDiscoveryEvent<DeviceId>>
-    + UdpContext<Ipv4>
-    + UdpContext<Ipv6>
+    + transport::udp::UdpContext<Ipv4>
+    + transport::udp::UdpContext<Ipv6>
     + IcmpContext<Ipv4>
     + IcmpContext<Ipv6>
-    + TcpNonSyncContext
+    + transport::tcp::socket::TcpNonSyncContext
     + 'static
 {
 }
@@ -263,11 +243,11 @@ impl<
             + EventContext<ip::IpLayerEvent<DeviceId, Ipv6>>
             + EventContext<ip::device::dad::DadEvent<DeviceId>>
             + EventContext<ip::device::route_discovery::Ipv6RouteDiscoveryEvent<DeviceId>>
-            + UdpContext<Ipv4>
-            + UdpContext<Ipv6>
+            + transport::udp::UdpContext<Ipv4>
+            + transport::udp::UdpContext<Ipv6>
             + IcmpContext<Ipv4>
             + IcmpContext<Ipv6>
-            + TcpNonSyncContext
+            + transport::tcp::socket::TcpNonSyncContext
             + 'static,
     > NonSyncContext for C
 {

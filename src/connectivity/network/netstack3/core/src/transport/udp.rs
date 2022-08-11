@@ -108,6 +108,7 @@ impl UdpStateBuilder {
 /// Convenience alias to make names shorter.
 type UdpBoundSocketMap<I, D> = BoundSocketMap<IpPortSpec<I, D>, Udp<I, D, IpSock<I, D>>>;
 
+/// A collection of UDP sockets.
 #[derive(Derivative)]
 #[derivative(Default(bound = ""))]
 pub struct UdpSockets<I: Ip + IpExt, D: IpDeviceId>(

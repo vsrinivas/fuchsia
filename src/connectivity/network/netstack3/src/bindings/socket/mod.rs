@@ -22,7 +22,10 @@ use net_types::{
 use netstack3_core::{
     error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError, ZonedAddressError},
     ip::socket::{IpSockCreationError, IpSockRouteError, IpSockSendError, IpSockUnroutableError},
-    Ctx, UdpConnectListenerError, UdpSendError, UdpSendListenerError, UdpSockCreationError,
+    transport::udp::{
+        UdpConnectListenerError, UdpSendError, UdpSendListenerError, UdpSockCreationError,
+    },
+    Ctx,
 };
 
 use crate::bindings::{

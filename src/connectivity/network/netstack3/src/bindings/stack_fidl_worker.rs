@@ -26,8 +26,10 @@ use futures::{TryFutureExt as _, TryStreamExt as _};
 use log::{debug, error};
 use net_types::{ethernet::Mac, SpecifiedAddr, UnicastAddr};
 use netstack3_core::{
-    add_ip_addr_subnet, add_route, del_ip_addr, del_route, ip::types::AddableEntryEither,
-    transport::tcp::buffer::ReceiveBuffer, Ctx, TcpNonSyncContext,
+    add_ip_addr_subnet, add_route, del_ip_addr, del_route,
+    ip::types::AddableEntryEither,
+    transport::tcp::{buffer::ReceiveBuffer, socket::TcpNonSyncContext},
+    Ctx,
 };
 
 pub(crate) struct StackFidlWorker<C> {

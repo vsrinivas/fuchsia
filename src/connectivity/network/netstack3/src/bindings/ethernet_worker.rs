@@ -16,8 +16,8 @@ use fuchsia_zircon as zx;
 use futures::{TryFutureExt as _, TryStreamExt as _};
 use log::{debug, error, info, trace};
 use netstack3_core::{
-    device::receive_frame, transport::tcp::buffer::ReceiveBuffer, BufferNonSyncContext, Ctx,
-    TcpNonSyncContext,
+    device::receive_frame, transport::tcp::buffer::ReceiveBuffer,
+    transport::tcp::socket::TcpNonSyncContext, BufferNonSyncContext, Ctx,
 };
 use packet::serialize::Buf;
 use std::ops::DerefMut as _;

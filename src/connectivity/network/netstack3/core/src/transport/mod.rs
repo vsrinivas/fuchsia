@@ -61,17 +61,18 @@ mod integration;
 // https://github.com/rust-lang/rust/issues/54727
 #[allow(unused)]
 pub mod tcp;
-pub(crate) mod udp;
+pub mod udp;
 
 use net_types::ip::{Ipv4, Ipv6};
 
 use crate::{
     device::DeviceId,
+    transport::tcp::socket::TcpNonSyncContext,
     transport::{
         tcp::socket::{TcpSockets, TcpSyncContext},
         udp::{UdpState, UdpStateBuilder},
     },
-    NonSyncContext, RngContext, SyncCtx, TcpNonSyncContext,
+    NonSyncContext, RngContext, SyncCtx,
 };
 
 /// A builder for transport layer state.
