@@ -8,7 +8,7 @@ use fidl_fuchsia_io as fio;
 use fidl_fuchsia_process as fprocess;
 use fidl_fuchsia_starnix_developer as fstardev;
 use fuchsia_runtime::{HandleInfo, HandleType};
-use fuchsia_zircon::{self as zx, sys::ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET, HandleBased};
+use fuchsia_zircon::{self as zx, sys::ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET};
 use process_builder::elf_parse;
 use std::convert::TryFrom;
 use std::sync::Arc;
@@ -172,24 +172,6 @@ pub fn parse_numbered_handles(
         files.insert(FdNumber::from_raw(2), stdio);
     }
     Ok(StartupHandles { shell_controller })
-}
-
-/// Creates a `HandleInfo` from the provided socket and file descriptor.
-///
-/// The file descriptor is encoded as a `PA_HND(PA_FD, <file_descriptor>)` before being stored in
-/// the `HandleInfo`.
-///
-/// Returns an error if `socket` is `None`.
-pub fn handle_info_from_socket(
-    socket: Option<fidl::Socket>,
-    file_descriptor: u16,
-) -> Result<fprocess::HandleInfo, Error> {
-    if let Some(socket) = socket {
-        let info = HandleInfo::new(HandleType::FileDescriptor, file_descriptor);
-        Ok(fprocess::HandleInfo { handle: socket.into_handle(), id: info.as_raw() })
-    } else {
-        Err(anyhow!("Failed to create HandleInfo for {}", file_descriptor))
-    }
 }
 
 /// Create a filesystem to access the content of the fuchsia directory available at `fs_src` inside

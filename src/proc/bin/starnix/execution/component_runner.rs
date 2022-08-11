@@ -4,15 +4,12 @@
 
 use crate::device::run_component_features;
 use ::runner::{get_program_string, get_program_strvec};
-use anyhow::{anyhow, format_err, Context, Error};
+use anyhow::{anyhow, Error};
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_component as fcomponent;
-use fidl_fuchsia_component_decl as fdecl;
 use fidl_fuchsia_component_runner::{ComponentControllerMarker, ComponentStartInfo};
 use fidl_fuchsia_io as fio;
-use fuchsia_component::client as fclient;
 use fuchsia_zircon as zx;
-use rand::Rng;
 use std::ffi::CString;
 use std::sync::Arc;
 use tracing::info;
@@ -183,38 +180,4 @@ fn mount_component_pkg_data(
     let fs = create_remotefs_filesystem(&galaxy.kernel, pkg, ".")?;
     mount_point.mount(WhatToMount::Fs(fs), MountFlags::empty())?;
     Ok(pkg_path.to_owned())
-}
-
-/// Creates a new child component in the `playground` collection.
-///
-/// # Parameters
-/// - `url`: The URL of the component to create.
-/// - `args`: The `CreateChildArgs` that are passed to the component manager.
-pub async fn create_child_component(
-    url: String,
-    args: fcomponent::CreateChildArgs,
-) -> Result<(), Error> {
-    // TODO(fxbug.dev/74511): The amount of setup required here is a bit lengthy. Ideally,
-    // fuchsia-component would provide language-specific bindings for the Realm API that could
-    // reduce this logic to a few lines.
-
-    const COLLECTION: &str = "playground";
-    let realm = fclient::realm().context("failed to connect to Realm service")?;
-    let mut collection_ref = fdecl::CollectionRef { name: COLLECTION.into() };
-    let id: u64 = rand::thread_rng().gen();
-    let child_name = format!("starnix-{}", id);
-    let child_decl = fdecl::Child {
-        name: Some(child_name.clone()),
-        url: Some(url),
-        startup: Some(fdecl::StartupMode::Lazy),
-        environment: None,
-        ..fdecl::Child::EMPTY
-    };
-    let () = realm
-        .create_child(&mut collection_ref, child_decl, args)
-        .await?
-        .map_err(|e| format_err!("failed to create child: {:?}", e))?;
-    // The component is run in a `SingleRun` collection instance, and will be automatically
-    // deleted when it exits.
-    Ok(())
 }

@@ -3,16 +3,10 @@
 // found in the LICENSE file.
 
 use crate::execution::Galaxy;
-use anyhow::Error;
-use fidl::endpoints::ServerEnd;
-use fidl_fuchsia_component as fcomponent;
+use anyhow::{anyhow, Error};
 use fidl_fuchsia_component_runner as fcrunner;
-use fidl_fuchsia_process as fprocess;
-use fidl_fuchsia_starnix_developer as fstardev;
 use fidl_fuchsia_starnix_galaxy as fstargalaxy;
-use fuchsia_async as fasync;
-use fuchsia_runtime::{HandleInfo, HandleType};
-use fuchsia_zircon::HandleBased;
+use fuchsia_async::{self as fasync, DurationExt};
 use futures::TryStreamExt;
 use std::sync::Arc;
 use tracing::error;
@@ -21,52 +15,6 @@ use crate::fs::fuchsia::create_fuchsia_pipe;
 use crate::types::OpenFlags;
 
 use super::*;
-
-pub async fn serve_starnix_manager(
-    mut request_stream: fstardev::ManagerRequestStream,
-    galaxy: Arc<Galaxy>,
-) -> Result<(), Error> {
-    while let Some(event) = request_stream.try_next().await? {
-        match event {
-            fstardev::ManagerRequest::Start { url, responder } => {
-                let args = fcomponent::CreateChildArgs {
-                    numbered_handles: None,
-                    ..fcomponent::CreateChildArgs::EMPTY
-                };
-                if let Err(e) = create_child_component(url, args).await {
-                    error!("failed to create child component: {}", e);
-                }
-                responder.send()?;
-            }
-            fstardev::ManagerRequest::StartShell { params, controller, .. } => {
-                start_shell(params, controller).await?;
-            }
-            fstardev::ManagerRequest::VsockConnect { port, bridge_socket, .. } => {
-                connect_to_vsock(port, bridge_socket, &galaxy).unwrap_or_else(|e| {
-                    tracing::error!("failed to connect to vsock {:?}", e);
-                });
-            }
-        }
-    }
-    Ok(())
-}
-
-fn connect_to_vsock(
-    port: u32,
-    bridge_socket: fidl::Socket,
-    galaxy: &Arc<Galaxy>,
-) -> Result<(), Error> {
-    let socket = galaxy.kernel.default_abstract_vsock_namespace.lookup(&port)?;
-
-    let pipe = create_fuchsia_pipe(
-        &galaxy.system_task,
-        bridge_socket,
-        OpenFlags::RDWR | OpenFlags::NONBLOCK,
-    )?;
-    socket.remote_connection(pipe)?;
-
-    Ok(())
-}
 
 pub async fn serve_component_runner(
     mut request_stream: fcrunner::ComponentRunnerRequestStream,
@@ -88,32 +36,47 @@ pub async fn serve_component_runner(
     Ok(())
 }
 
-async fn start_shell(
-    params: fstardev::ShellParams,
-    controller: ServerEnd<fstardev::ShellControllerMarker>,
+pub async fn serve_galaxy_controller(
+    mut request_stream: fstargalaxy::ControllerRequestStream,
+    galaxy: Arc<Galaxy>,
 ) -> Result<(), Error> {
-    let controller_handle_info = fprocess::HandleInfo {
-        handle: controller.into_channel().into_handle(),
-        id: HandleInfo::new(HandleType::User0, 0).as_raw(),
-    };
-    let numbered_handles = vec![
-        handle_info_from_socket(params.standard_in, 0)?,
-        handle_info_from_socket(params.standard_out, 1)?,
-        handle_info_from_socket(params.standard_err, 2)?,
-        controller_handle_info,
-    ];
-    let args = fcomponent::CreateChildArgs {
-        numbered_handles: Some(numbered_handles),
-        ..fcomponent::CreateChildArgs::EMPTY
-    };
-
-    create_child_component("fuchsia-pkg://fuchsia.com/starnix_android#meta/sh.cm".to_string(), args)
-        .await
+    while let Some(event) = request_stream.try_next().await? {
+        match event {
+            fstargalaxy::ControllerRequest::VsockConnect { port, bridge_socket, .. } => {
+                connect_to_vsock(port, bridge_socket, &galaxy).await.unwrap_or_else(|e| {
+                    tracing::error!("failed to connect to vsock {:?}", e);
+                });
+            }
+        }
+    }
+    Ok(())
 }
 
-pub async fn serve_galaxy_controller(
-    mut _request_stream: fstargalaxy::ControllerRequestStream,
-    _galaxy: Arc<Galaxy>,
+async fn connect_to_vsock(
+    port: u32,
+    bridge_socket: fidl::Socket,
+    galaxy: &Arc<Galaxy>,
 ) -> Result<(), Error> {
+    static MAX_WAITS: u32 = 10;
+    let mut waits = 0;
+    let socket = loop {
+        match galaxy.kernel.default_abstract_vsock_namespace.lookup(&port) {
+            Ok(socket) => break Ok(socket),
+            _ => {}
+        };
+        fasync::Timer::new(fasync::Duration::from_millis(100).after_now()).await;
+        waits += 1;
+        if waits >= MAX_WAITS {
+            break Err(anyhow!("Failed to find socket."));
+        }
+    }?;
+
+    let pipe = create_fuchsia_pipe(
+        &galaxy.system_task,
+        bridge_socket,
+        OpenFlags::RDWR | OpenFlags::NONBLOCK,
+    )?;
+    socket.remote_connection(pipe)?;
+
     Ok(())
 }

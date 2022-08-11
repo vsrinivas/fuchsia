@@ -2,6 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/starnix_manager",
+    },
     children: [
         {
             name: "starbionic",
@@ -25,6 +30,21 @@
             name: "playground",
             environment: "#starnix-env",
             durability: "single_run",
+        },
+    ],
+    capabilities: [
+        {
+            protocol: [ "fuchsia.starnix.developer.Manager" ],
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.starnix.galaxy.Controller",
+            from: "#starbionic",
+        },
+        {
+            protocol: "fuchsia.component.Realm",
+            from: "framework",
         },
     ],
     offer: [
@@ -59,18 +79,6 @@
                 "#starmium",
             ],
             availability: "optional",
-        },
-        {
-            // Note that it's important that the runner gets access to starnix_manger's realm
-            // instance, so it can create components in the "#playground" collection.
-            protocol: "fuchsia.component.Realm",
-            from: "framework",
-            to: [
-                "#starbionic",
-                "#stardroid",
-                "#starless",
-                "#starmium",
-            ],
         },
         {
             protocol: [ "fuchsia.logger.LogSink" ],
@@ -110,11 +118,8 @@
             as: "starless",
         },
         {
-            // In principle, this protocol should be exposed by the
-            // starnix_manager component itself, but that is blocked
-            // behind fxb/74087
             protocol: "fuchsia.starnix.developer.Manager",
-            from: "#starbionic",
+            from: "self",
         },
     ],
     environments: [

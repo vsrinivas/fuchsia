@@ -20,7 +20,7 @@
         {
             protocol: [
                 "fuchsia.component.runner.ComponentRunner",
-                "fuchsia.starnix.developer.Manager",
+                "fuchsia.starnix.galaxy.Controller",
             ],
         },
     ],
@@ -32,9 +32,6 @@
         },
         {
             protocol: [
-                // Note that this is the parent's realm. This is used to create children in
-                // starnix_manager's collection.
-                "fuchsia.component.Realm",
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
@@ -62,10 +59,7 @@
         {
             protocol: [
                 "fuchsia.component.runner.ComponentRunner",
-
-                // In principle, this protocol should be exposed by a separate
-                // starnix_manager component, but that is blocked behind fxb/74087
-                "fuchsia.starnix.developer.Manager",
+                "fuchsia.starnix.galaxy.Controller",
             ],
             from: "self",
         },

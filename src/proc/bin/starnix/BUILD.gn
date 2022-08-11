@@ -15,7 +15,7 @@ declare_args() {
 
 group("starnix") {
   if (target_cpu == "x64") {
-    deps = [ ":starnix_package" ]
+    deps = [ ":starnix_runner_bin" ]
   }
 }
 
@@ -37,7 +37,6 @@ if (target_cpu == "x64") {
     deps = [
       ":starnix_runner_config",
       "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
-      "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
       "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner_rust",
       "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
       "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_rust",
@@ -80,7 +79,6 @@ if (target_cpu == "x64") {
       "//third_party/rust_crates:once_cell",
       "//third_party/rust_crates:parking_lot",
       "//third_party/rust_crates:paste",
-      "//third_party/rust_crates:rand",
       "//third_party/rust_crates:regex",
       "//third_party/rust_crates:scopeguard",
       "//third_party/rust_crates:slab",
@@ -268,22 +266,5 @@ if (target_cpu == "x64") {
         max_severity = "ERROR"
       }
     }
-  }
-}
-
-fuchsia_component("starnix_manager") {
-  manifest = "meta/starnix_manager.cml"
-}
-
-core_shard("starnix_manager_core_shard") {
-  shard_file = "meta/starnix_manager.core_shard.cml"
-}
-
-fuchsia_package("starnix_package") {
-  package_name = "starnix"
-
-  deps = [ ":starnix_manager" ]
-  if (target_cpu == "x64") {
-    deps += [ ":starnix_runner_bin" ]
   }
 }

@@ -1,0 +1,50 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+import("//src/sys/core/build/core_shard.gni")
+
+group("starnix_manager") {
+  deps = [ ":starnix_package" ]
+}
+
+rustc_binary("starnix_manager_bin") {
+  name = "starnix_manager"
+  edition = "2021"
+  with_unit_tests = true
+
+  source_root = "main.rs"
+  deps = [
+    "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
+    "//sdk/fidl/fuchsia.process:fuchsia.process_rust",
+    "//sdk/fidl/fuchsia.starnix.developer:fuchsia.starnix.developer_rust",
+    "//sdk/fidl/fuchsia.starnix.galaxy:fuchsia.starnix.galaxy_rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-runtime",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:tracing",
+  ]
+
+  sources = [ "main.rs" ]
+}
+
+core_shard("starnix_manager_core_shard") {
+  shard_file = "meta/starnix_manager.core_shard.cml"
+}
+
+fuchsia_package_with_single_component("starnix_package") {
+  manifest = "meta/starnix_manager.cml"
+  package_name = "starnix"
+  component_name = "starnix_manager"
+
+  deps = [ ":starnix_manager_bin" ]
+}
