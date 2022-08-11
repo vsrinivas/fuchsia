@@ -3238,6 +3238,17 @@ pub(crate) mod testconsts {
     pub(crate) const TEST_SERVER_ID_LEN: usize = 3;
     pub(crate) const SERVER_ID: [[u8; TEST_SERVER_ID_LEN]; 3] =
         [[100, 101, 102], [110, 111, 112], [120, 121, 122]];
+
+    pub(crate) const REPLY_ADDRESSES: [Ipv6Addr; 3] = [
+        std_ip_v6!("::ffff:5447:123"),
+        std_ip_v6!("::ffff:5447:456"),
+        std_ip_v6!("::ffff:5447:789"),
+    ];
+    pub(crate) const CONFIGURED_ADDRESSES: [Ipv6Addr; 3] = [
+        std_ip_v6!("::ffff:c00a:123"),
+        std_ip_v6!("::ffff:c00a:456"),
+        std_ip_v6!("::ffff:c00a:789"),
+    ];
 }
 
 #[cfg(test)]
@@ -3247,14 +3258,14 @@ pub(crate) mod testutil {
     use testconsts::*;
 
     pub(crate) fn to_configured_addresses(
-        address_count: u32,
-        preferred_addresses: Vec<Ipv6Addr>,
+        address_count: usize,
+        preferred_addresses: impl IntoIterator<Item = Ipv6Addr>,
     ) -> HashMap<v6::IAID, Option<Ipv6Addr>> {
         let addresses = preferred_addresses
             .into_iter()
             .map(Some)
             .chain(std::iter::repeat(None))
-            .take(usize::try_from(address_count).unwrap());
+            .take(address_count);
 
         let configured_addresses: HashMap<v6::IAID, Option<Ipv6Addr>> =
             (0..).map(v6::IAID::new).zip(addresses).collect();
@@ -3453,19 +3464,16 @@ pub(crate) mod testutil {
         // exchange.
         let transaction_id = [1, 2, 3];
         let configured_addresses = to_configured_addresses(
-            u32::try_from(addresses_to_assign.len()).unwrap(),
-            addresses_to_assign
-                .iter()
-                .map(
-                    |TestIdentityAssociation {
-                         address,
-                         preferred_lifetime: _,
-                         valid_lifetime: _,
-                         t1: _,
-                         t2: _,
-                     }| *address,
-                )
-                .collect(),
+            addresses_to_assign.len(),
+            addresses_to_assign.iter().map(
+                |TestIdentityAssociation {
+                     address,
+                     preferred_lifetime: _,
+                     valid_lifetime: _,
+                     t1: _,
+                     t2: _,
+                 }| *address,
+            ),
         );
         let options_to_request = if expected_dns_servers.is_empty() {
             Vec::new()
@@ -3866,7 +3874,6 @@ pub(crate) mod testutil {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use net_declare::std_ip_v6;
     use packet::ParsablePacket;
     use rand::rngs::mock::StepRng;
     use test_case::test_case;
@@ -4028,15 +4035,18 @@ mod tests {
 
     // Test starting the client in stateful mode with different address
     // configurations.
-    #[test_case(1, Vec::new(), Vec::new())]
-    #[test_case(2, vec![std_ip_v6!("::ffff:c00a:1ff")], vec![v6::OptionCode::DnsServers])]
+    #[test_case(1, std::iter::empty(), Vec::new(); "one_addr_no_hint")]
     #[test_case(
-       2,
-       vec![std_ip_v6!("::ffff:c00a:2ff"), std_ip_v6!("::ffff:c00a:3ff")],
-       vec![v6::OptionCode::DnsServers])]
+        2, std::iter::once(CONFIGURED_ADDRESSES[0]), vec![v6::OptionCode::DnsServers];
+        "two_addr_one_hint"
+    )]
+    #[test_case(
+        2, (&CONFIGURED_ADDRESSES[0..2]).iter().copied(), vec![v6::OptionCode::DnsServers];
+        "two_addr_two_hints"
+    )]
     fn send_solicit(
-        address_count: u32,
-        preferred_addresses: Vec<Ipv6Addr>,
+        address_count: usize,
+        preferred_addresses: impl IntoIterator<Item = Ipv6Addr>,
         options_to_request: Vec<v6::OptionCode>,
     ) {
         // The client is checked inside `start_and_assert_server_discovery`.
@@ -4050,78 +4060,47 @@ mod tests {
         );
     }
 
-    #[test]
-    fn compute_preferred_address_count() {
+    #[test_case(
+        1, std::iter::empty(), std::iter::once(CONFIGURED_ADDRESSES[0]), 0;
+        "zero"
+    )]
+    #[test_case(
+        2, CONFIGURED_ADDRESSES[0..2].iter().copied(), CONFIGURED_ADDRESSES[0..2].iter().copied(), 2;
+        "two"
+    )]
+    #[test_case(
+        4,
+        CONFIGURED_ADDRESSES.iter().copied(),
+        std::iter::once(CONFIGURED_ADDRESSES[0]).chain(REPLY_ADDRESSES.iter().copied()),
+        1;
+        "one"
+    )]
+    fn compute_preferred_address_count(
+        configure_count: usize,
+        hints: impl IntoIterator<Item = Ipv6Addr>,
+        got_addresses: impl IntoIterator<Item = Ipv6Addr>,
+        want: usize,
+    ) {
         // No preferred addresses configured.
         let got_addresses: HashMap<v6::IAID, IdentityAssociation> = (0..)
             .map(v6::IAID::new)
-            .zip(vec![IdentityAssociation::new_default(std_ip_v6!("::ffff:c00a:1ff"))].into_iter())
+            .zip(got_addresses.into_iter().map(IdentityAssociation::new_default))
             .collect();
-        let configured_addresses = testutil::to_configured_addresses(1, vec![]);
+        let configured_addresses = testutil::to_configured_addresses(configure_count, hints);
         assert_eq!(
             super::compute_preferred_address_count(&got_addresses, &configured_addresses),
-            0
-        );
-        assert_eq!(
-            super::compute_preferred_address_count(&HashMap::new(), &configured_addresses),
-            0
-        );
-
-        // All obtained addresses are preferred addresses.
-        let got_addresses: HashMap<v6::IAID, IdentityAssociation> = (0..)
-            .map(v6::IAID::new)
-            .zip(
-                vec![
-                    IdentityAssociation::new_default(std_ip_v6!("::ffff:c00a:1ff")),
-                    IdentityAssociation::new_default(std_ip_v6!("::ffff:c00a:2ff")),
-                ]
-                .into_iter(),
-            )
-            .collect();
-        let configured_addresses = testutil::to_configured_addresses(
-            2,
-            vec![std_ip_v6!("::ffff:c00a:1ff"), std_ip_v6!("::ffff:c00a:2ff")],
-        );
-        assert_eq!(
-            super::compute_preferred_address_count(&got_addresses, &configured_addresses),
-            2
-        );
-
-        // Only one of the obtained addresses is a preferred address.
-        let got_addresses: HashMap<v6::IAID, IdentityAssociation> = (0..)
-            .map(v6::IAID::new)
-            .zip(
-                vec![
-                    IdentityAssociation::new_default(std_ip_v6!("::ffff:c00a:1ff")),
-                    IdentityAssociation::new_default(std_ip_v6!("::ffff:c00a:3ff")),
-                    IdentityAssociation::new_default(std_ip_v6!("::ffff:c00a:5ff")),
-                    IdentityAssociation::new_default(std_ip_v6!("::ffff:c00a:6ff")),
-                ]
-                .into_iter(),
-            )
-            .collect();
-        let configured_addresses = testutil::to_configured_addresses(
-            3,
-            vec![
-                std_ip_v6!("::ffff:c00a:2ff"),
-                std_ip_v6!("::ffff:c00a:3ff"),
-                std_ip_v6!("::ffff:c00a:4ff"),
-            ],
-        );
-        assert_eq!(
-            super::compute_preferred_address_count(&got_addresses, &configured_addresses),
-            1
+            want,
         );
     }
 
     #[test]
     fn advertise_message_is_complete() {
-        let preferred_address = std_ip_v6!("::ffff:c00a:1ff");
-        let configured_addresses = testutil::to_configured_addresses(2, vec![preferred_address]);
+        let configured_addresses =
+            testutil::to_configured_addresses(2, std::iter::once(CONFIGURED_ADDRESSES[0]));
 
         let advertise = AdvertiseMessage::new_default(
             SERVER_ID[0],
-            &[preferred_address, std_ip_v6!("::ffff:c00a:2ff")],
+            &CONFIGURED_ADDRESSES[0..2],
             &[],
             &configured_addresses,
         );
@@ -4131,7 +4110,7 @@ mod tests {
         // count.
         let advertise = AdvertiseMessage::new_default(
             SERVER_ID[0],
-            &[preferred_address],
+            &CONFIGURED_ADDRESSES[0..1],
             &[],
             &configured_addresses,
         );
@@ -4141,7 +4120,7 @@ mod tests {
         // address.
         let advertise = AdvertiseMessage::new_default(
             SERVER_ID[0],
-            &[std_ip_v6!("::ffff:c00a:3ff"), std_ip_v6!("::ffff:c00a:4ff")],
+            &REPLY_ADDRESSES[0..2],
             &[],
             &configured_addresses,
         );
@@ -4152,8 +4131,8 @@ mod tests {
         let options_to_request = [v6::OptionCode::DnsServers];
         let advertise = AdvertiseMessage::new_default(
             SERVER_ID[0],
-            &[preferred_address, std_ip_v6!("::ffff:c00a:2ff")],
-            &[std_ip_v6!("::fe80:1:2")],
+            &CONFIGURED_ADDRESSES[0..2],
+            &DNS_SERVERS,
             &configured_addresses,
         );
         assert!(advertise.is_complete(&configured_addresses, &options_to_request));
@@ -4161,19 +4140,19 @@ mod tests {
 
     #[test]
     fn advertise_message_ord() {
-        let preferred_address = std_ip_v6!("::ffff:c00a:1ff");
-        let configured_addresses = testutil::to_configured_addresses(3, vec![preferred_address]);
+        let configured_addresses =
+            testutil::to_configured_addresses(3, std::iter::once(CONFIGURED_ADDRESSES[0]));
 
         // `advertise2` is complete, `advertise1` is not.
         let advertise1 = AdvertiseMessage::new_default(
             SERVER_ID[0],
-            &[preferred_address, std_ip_v6!("::ffff:c00a:2ff")],
+            &CONFIGURED_ADDRESSES[0..2],
             &[],
             &configured_addresses,
         );
         let advertise2 = AdvertiseMessage::new_default(
             SERVER_ID[1],
-            &[preferred_address, std_ip_v6!("::ffff:c00a:3ff"), std_ip_v6!("::ffff:c00a:4ff")],
+            &CONFIGURED_ADDRESSES[0..3],
             &[],
             &configured_addresses,
         );
@@ -4184,13 +4163,13 @@ mod tests {
         // configured preferred address.
         let advertise1 = AdvertiseMessage::new_default(
             SERVER_ID[0],
-            &[preferred_address],
+            &CONFIGURED_ADDRESSES[0..1],
             &[],
             &configured_addresses,
         );
         let advertise2 = AdvertiseMessage::new_default(
             SERVER_ID[1],
-            &[std_ip_v6!("::ffff:c00a:5ff"), std_ip_v6!("::ffff:c00a:6ff")],
+            &REPLY_ADDRESSES[0..2],
             &[],
             &configured_addresses,
         );
@@ -4199,13 +4178,13 @@ mod tests {
         // Both advertise are complete, but `advertise1` was received first.
         let advertise1 = AdvertiseMessage::new_default(
             SERVER_ID[0],
-            &[preferred_address, std_ip_v6!("::ffff:c00a:7ff"), std_ip_v6!("::ffff:c00a:8ff")],
+            &CONFIGURED_ADDRESSES[0..3],
             &[],
             &configured_addresses,
         );
         let advertise2 = AdvertiseMessage::new_default(
             SERVER_ID[1],
-            &[preferred_address, std_ip_v6!("::ffff:c00a:9ff"), std_ip_v6!("::ffff:c00a:aff")],
+            &[CONFIGURED_ADDRESSES[0], REPLY_ADDRESSES[1], REPLY_ADDRESSES[2]],
             &[],
             &configured_addresses,
         );
@@ -4221,7 +4200,7 @@ mod tests {
     fn process_options_duplicates<'a>(opt: v6::DhcpOption<'a>) {
         let client_id = v6::duid_uuid();
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            std_ip_v6!("::ffff:c00a:1ff"),
+            CONFIGURED_ADDRESSES[0],
             60,
             60,
             &[],
@@ -4250,7 +4229,7 @@ mod tests {
     #[test]
     fn process_options_duplicate_ia_na_id() {
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            std_ip_v6!("::ffff:c00a:1ff"),
+            CONFIGURED_ADDRESSES[0],
             60,
             60,
             &[],
@@ -4383,14 +4362,14 @@ mod tests {
         let mut client = testutil::start_and_assert_server_discovery(
             [0, 1, 2],
             CLIENT_ID,
-            testutil::to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
+            testutil::to_configured_addresses(1, std::iter::once(CONFIGURED_ADDRESSES[0])),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
             time,
         );
 
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            std_ip_v6!("::ffff:c00a:1ff"),
+            CONFIGURED_ADDRESSES[0],
             60,
             60,
             &[],
@@ -4414,7 +4393,7 @@ mod tests {
         // advertise with preference less than 255.
         assert!(client.handle_message_receive(msg, time).is_empty());
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            std_ip_v6!("::ffff:c00a:1ff"),
+            CONFIGURED_ADDRESSES[0],
             60,
             60,
             &[],
@@ -4479,7 +4458,7 @@ mod tests {
         let mut client = testutil::start_and_assert_server_discovery(
             transaction_id,
             CLIENT_ID,
-            testutil::to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
+            testutil::to_configured_addresses(1, std::iter::once(CONFIGURED_ADDRESSES[0])),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
             time,
@@ -4488,7 +4467,7 @@ mod tests {
         let preferred_lifetime = 10;
         let valid_lifetime = 20;
         let ia = IdentityAssociation {
-            address: std_ip_v6!("::ffff:c00a:1ff"),
+            address: CONFIGURED_ADDRESSES[0],
             preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
                 v6::NonZeroOrMaxU32::new(preferred_lifetime)
                     .expect("should succeed for non-zero or u32::MAX values"),
@@ -4558,7 +4537,7 @@ mod tests {
         let mut client = testutil::start_and_assert_server_discovery(
             [0, 1, 2],
             CLIENT_ID,
-            testutil::to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
+            testutil::to_configured_addresses(1, std::iter::once(CONFIGURED_ADDRESSES[0])),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
             time,
@@ -4590,7 +4569,7 @@ mod tests {
         );
 
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            std_ip_v6!("::ffff:c00a:5ff"),
+            CONFIGURED_ADDRESSES[0],
             60,
             60,
             &[],
@@ -4639,11 +4618,7 @@ mod tests {
         let (mut _client, _transaction_id) = testutil::request_addresses_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            vec![
-                TestIdentityAssociation::new_default(std_ip_v6!("::ffff:c00a:1ff")),
-                TestIdentityAssociation::new_default(std_ip_v6!("::ffff:c00a:2ff")),
-                TestIdentityAssociation::new_default(std_ip_v6!("::ffff:c00a:3ff")),
-            ],
+            CONFIGURED_ADDRESSES.into_iter().map(TestIdentityAssociation::new_default).collect(),
             &[],
             StepRng::new(std::u64::MAX / 2, 0),
             Instant::now(),
@@ -4654,7 +4629,7 @@ mod tests {
     fn requesting_receive_reply_with_failure_status_code() {
         let options_to_request = vec![];
         let configured_addresses = testutil::to_configured_addresses(1, vec![]);
-        let advertised_addresses = [std_ip_v6!("::ffff:c00a:1ff")];
+        let advertised_addresses = [CONFIGURED_ADDRESSES[0]];
         let selected_advertise = AdvertiseMessage::new_default(
             SERVER_ID[0],
             &advertised_addresses,
@@ -4664,13 +4639,13 @@ mod tests {
         let mut collected_advertise = BinaryHeap::new();
         collected_advertise.push(AdvertiseMessage::new_default(
             SERVER_ID[1],
-            &[std_ip_v6!("::ffff:c00a:2ff")],
+            &CONFIGURED_ADDRESSES[1..=1],
             &[],
             &configured_addresses,
         ));
         collected_advertise.push(AdvertiseMessage::new_default(
             SERVER_ID[2],
-            &[std_ip_v6!("::ffff:c00a:3ff")],
+            &CONFIGURED_ADDRESSES[2..=2],
             &[],
             &configured_addresses,
         ));
@@ -4863,12 +4838,11 @@ mod tests {
     #[test]
     fn requesting_receive_reply_with_ia_not_on_link() {
         let options_to_request = vec![];
-        let address1 = std_ip_v6!("::ffff:c00a:1ff");
-        let address2 = std_ip_v6!("::ffff:c00a:2ff");
-        let configured_addresses = testutil::to_configured_addresses(2, vec![address1]);
+        let configured_addresses =
+            testutil::to_configured_addresses(2, vec![CONFIGURED_ADDRESSES[0]]);
         let selected_advertise = AdvertiseMessage::new_default(
             SERVER_ID[0],
-            &[address1, address2],
+            &CONFIGURED_ADDRESSES[0..2],
             &[],
             &configured_addresses,
         );
@@ -4893,7 +4867,7 @@ mod tests {
         let preferred_lifetime_value = 60;
         let valid_lifetime_value = 90;
         let iana_options2 = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            address2,
+            CONFIGURED_ADDRESSES[1],
             preferred_lifetime_value,
             valid_lifetime_value,
             &[],
@@ -4917,12 +4891,15 @@ mod tests {
         let Transition { state, actions, transaction_id } =
             state.reply_message_received(&options_to_request, &mut rng, msg, time);
         let expected_addresses = HashMap::from([
-            (iaid1, AddressEntry::ToRequest(AddressToRequest::new(None, Some(address1)))),
+            (
+                iaid1,
+                AddressEntry::ToRequest(AddressToRequest::new(None, Some(CONFIGURED_ADDRESSES[0]))),
+            ),
             (
                 iaid2,
                 AddressEntry::Assigned(AssignedIa::new(
                     IdentityAssociation {
-                        address: address2,
+                        address: CONFIGURED_ADDRESSES[1],
                         preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
                             v6::NonZeroOrMaxU32::new(preferred_lifetime_value)
                                 .expect("should succeed for non-zero or u32::MAX values"),
@@ -4968,9 +4945,12 @@ mod tests {
     ) {
         let options_to_request = vec![];
         let configured_addresses = testutil::to_configured_addresses(1, vec![]);
-        let address = std_ip_v6!("::ffff:c00a:5ff");
-        let selected_advertise =
-            AdvertiseMessage::new_default(SERVER_ID[0], &[address], &[], &configured_addresses);
+        let selected_advertise = AdvertiseMessage::new_default(
+            SERVER_ID[0],
+            &CONFIGURED_ADDRESSES[0..1],
+            &[],
+            &configured_addresses,
+        );
         let mut rng = StepRng::new(std::u64::MAX / 2, 0);
 
         let time = Instant::now();
@@ -4987,7 +4967,7 @@ mod tests {
 
         // The client should discard the IAs with invalid lifetimes.
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            address,
+            CONFIGURED_ADDRESSES[0],
             preferred_lifetime,
             valid_lifetime,
             &[],
@@ -5045,10 +5025,10 @@ mod tests {
     #[test]
     fn compute_t1_t2_on_reply_to_request() {
         let configured_addresses =
-            testutil::to_configured_addresses(2, vec![std_ip_v6!("::ffff:c00a:1ff")]);
+            testutil::to_configured_addresses(2, std::iter::once(CONFIGURED_ADDRESSES[0]));
         let selected_advertise = AdvertiseMessage::new_default(
             SERVER_ID[0],
-            &[std_ip_v6!("::ffff:c00a:1ff"), std_ip_v6!("::ffff:c00a:2ff")],
+            &CONFIGURED_ADDRESSES[0..2],
             &[],
             &configured_addresses,
         );
@@ -5109,13 +5089,13 @@ mod tests {
             );
 
             let iana_options1 = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-                std_ip_v6!("::ffff:c00a:1ff"),
+                CONFIGURED_ADDRESSES[0],
                 ia1_preferred_lifetime,
                 ia1_valid_lifetime,
                 &[],
             ))];
             let iana_options2 = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-                std_ip_v6!("::ffff:c00a:2ff"),
+                CONFIGURED_ADDRESSES[1],
                 ia2_preferred_lifetime,
                 ia2_valid_lifetime,
                 &[],
@@ -5182,14 +5162,14 @@ mod tests {
         let mut client = testutil::start_and_assert_server_discovery(
             transaction_id,
             CLIENT_ID,
-            testutil::to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
+            testutil::to_configured_addresses(1, std::iter::once(CONFIGURED_ADDRESSES[0])),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
             time,
         );
 
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            std_ip_v6!("::ffff:c00a:1ff"),
+            CONFIGURED_ADDRESSES[0],
             60,
             60,
             &[],
@@ -5221,7 +5201,7 @@ mod tests {
         );
 
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            std_ip_v6!("::ffff:c00a:2ff"),
+            CONFIGURED_ADDRESSES[1],
             60,
             60,
             &[],
@@ -5393,14 +5373,14 @@ mod tests {
             SERVER_ID[0],
             vec![
                 TestIdentityAssociation::new_nonzero_finite(
-                    std_ip_v6!("::ffff:c00a:1ff"),
+                    CONFIGURED_ADDRESSES[0],
                     v6::NonZeroOrMaxU32::new(100).expect("100 is non-zero or u32::MAX"),
                     v6::NonZeroOrMaxU32::new(120).expect("120 is non-zero or u32::MAX"),
                     t1,
                     t2,
                 ),
                 TestIdentityAssociation::new_nonzero_finite(
-                    std_ip_v6!("::ffff:c00a:2ff"),
+                    CONFIGURED_ADDRESSES[1],
                     v6::NonZeroOrMaxU32::new(150).expect("150 is non-zero or u32::MAX"),
                     v6::NonZeroOrMaxU32::new(180).expect("180 is non-zero or u32::MAX"),
                     t1,
@@ -5435,20 +5415,19 @@ mod tests {
 
     #[test]
     fn address_assigned_get_dns_servers() {
-        let dns_servers = [std_ip_v6!("ff01::0102"), std_ip_v6!("ff01::0304")];
         let t1_secs = 70;
         let t1 = v6::NonZeroOrMaxU32::new(t1_secs).expect("70 is non-zero or u32::MAX");
         let (client, actions) = testutil::assign_addresses_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
             vec![TestIdentityAssociation::new_nonzero_finite(
-                std_ip_v6!("::ffff:c00a:102"),
+                CONFIGURED_ADDRESSES[0],
                 v6::NonZeroOrMaxU32::new(100).expect("100 is non-zero or u32::MAX"),
                 v6::NonZeroOrMaxU32::new(120).expect("120 is non-zero or u32::MAX"),
                 t1,
                 v6::NonZeroOrMaxU32::new(90).expect("90 is non-zero or u32::MAX"),
             )],
-            &dns_servers,
+            &DNS_SERVERS,
             StepRng::new(std::u64::MAX / 2, 0),
             Instant::now(),
         );
@@ -5456,21 +5435,24 @@ mod tests {
             &actions[..],
             [
                 Action::CancelTimer(ClientTimerType::Retransmission),
-                Action::UpdateDnsServers(got_dns_servers),
+                Action::UpdateDnsServers(dns_servers),
                 Action::ScheduleTimer(ClientTimerType::Renew, t1)
-            ] if got_dns_servers[..] == dns_servers &&
+            ] if dns_servers[..] == DNS_SERVERS &&
                  *t1 == Duration::from_secs(t1_secs.into())
         );
-        assert_eq!(client.get_dns_servers()[..], dns_servers);
+        assert_eq!(client.get_dns_servers()[..], DNS_SERVERS);
     }
 
     #[test]
     fn update_sol_max_rt_on_reply_to_request() {
         let options_to_request = vec![];
         let configured_addresses = testutil::to_configured_addresses(1, vec![]);
-        let address = std_ip_v6!("::ffff:c00a:1ff");
-        let selected_advertise =
-            AdvertiseMessage::new_default(SERVER_ID[0], &[address], &[], &configured_addresses);
+        let selected_advertise = AdvertiseMessage::new_default(
+            SERVER_ID[0],
+            &CONFIGURED_ADDRESSES[0..1],
+            &[],
+            &configured_addresses,
+        );
         let mut rng = StepRng::new(std::u64::MAX / 2, 0);
         let time = Instant::now();
         let Transition { state, actions: _, transaction_id } = Requesting::start(
@@ -5499,8 +5481,12 @@ mod tests {
 
         // If the reply does not contain a server ID, the reply should be
         // discarded and the `solicit_max_rt` should not be updated.
-        let iana_options =
-            [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(address, 60, 120, &[]))];
+        let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+            CONFIGURED_ADDRESSES[0],
+            60,
+            120,
+            &[],
+        ))];
         let options = [
             v6::DhcpOption::ClientId(&CLIENT_ID),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 30, 45, &iana_options)),
@@ -5593,22 +5579,18 @@ mod tests {
         let _client = testutil::send_renew_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            vec![
-                TestIdentityAssociation::new_nonzero_finite(
-                    std_ip_v6!("::ffff:c00a:123"),
-                    preferred_lifetime,
-                    valid_lifetime,
-                    t1,
-                    t2,
-                ),
-                TestIdentityAssociation::new_nonzero_finite(
-                    std_ip_v6!("::ffff:c00a:456"),
-                    preferred_lifetime,
-                    valid_lifetime,
-                    t1,
-                    t2,
-                ),
-            ],
+            CONFIGURED_ADDRESSES[0..2]
+                .into_iter()
+                .map(|&addr| {
+                    TestIdentityAssociation::new_nonzero_finite(
+                        addr,
+                        preferred_lifetime,
+                        valid_lifetime,
+                        t1,
+                        t2,
+                    )
+                })
+                .collect(),
             t1,
             StepRng::new(std::u64::MAX / 2, 0),
             Instant::now(),
@@ -5621,7 +5603,7 @@ mod tests {
             CLIENT_ID,
             SERVER_ID[0],
             vec![TestIdentityAssociation {
-                address: std_ip_v6!("::ffff:c00a:1ff"),
+                address: CONFIGURED_ADDRESSES[0],
                 preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
                     v6::NonZeroOrMaxU32::new(100)
                         .expect("should succeed for non-zero or u32::MAX values"),
@@ -5659,22 +5641,18 @@ mod tests {
         let t2 = v6::NonZeroOrMaxU32::new(90).expect("90 is not zero or u32::MAX");
         let preferred_lifetime = v6::NonZeroOrMaxU32::new(90).expect("90 is not zero or u32::MAX");
         let valid_lifetime = v6::NonZeroOrMaxU32::new(120).expect("120 is not zero or u32::MAX");
-        let addresses_to_assign = vec![
-            TestIdentityAssociation::new_nonzero_finite(
-                std_ip_v6!("::ffff:c00a:123"),
-                preferred_lifetime,
-                valid_lifetime,
-                t1,
-                t2,
-            ),
-            TestIdentityAssociation::new_nonzero_finite(
-                std_ip_v6!("::ffff:c00a:456"),
-                preferred_lifetime,
-                valid_lifetime,
-                t1,
-                t2,
-            ),
-        ];
+        let addresses_to_assign = CONFIGURED_ADDRESSES[0..2]
+            .into_iter()
+            .map(|&addr| {
+                TestIdentityAssociation::new_nonzero_finite(
+                    addr,
+                    preferred_lifetime,
+                    valid_lifetime,
+                    t1,
+                    t2,
+                )
+            })
+            .collect::<Vec<_>>();
         let time = Instant::now();
         let mut client = testutil::send_renew_and_assert(
             CLIENT_ID,
@@ -5862,7 +5840,7 @@ mod tests {
         let mut client = testutil::start_and_assert_server_discovery(
             [0, 1, 2],
             v6::duid_uuid(),
-            testutil::to_configured_addresses(1, vec![std_ip_v6!("::ffff:c00a:1ff")]),
+            testutil::to_configured_addresses(1, std::iter::once(CONFIGURED_ADDRESSES[0])),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
             time,
@@ -5879,7 +5857,7 @@ mod tests {
         let (mut client, _transaction_id) = testutil::request_addresses_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            vec![TestIdentityAssociation::new_default(std_ip_v6!("::ffff:c00a:1ff"))],
+            vec![TestIdentityAssociation::new_default(CONFIGURED_ADDRESSES[0])],
             &[],
             StepRng::new(std::u64::MAX / 2, 0),
             time,
@@ -5898,7 +5876,7 @@ mod tests {
             CLIENT_ID,
             SERVER_ID[0],
             vec![TestIdentityAssociation {
-                address: std_ip_v6!("::ffff:c00a:1ff"),
+                address: CONFIGURED_ADDRESSES[0],
                 preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
                     v6::NonZeroOrMaxU32::new(100)
                         .expect("should succeed for non-zero or u32::MAX values"),
@@ -5935,7 +5913,7 @@ mod tests {
             CLIENT_ID,
             SERVER_ID[0],
             vec![TestIdentityAssociation::new_nonzero_finite(
-                std_ip_v6!("::ffff:c00a:111"),
+                CONFIGURED_ADDRESSES[0],
                 v6::NonZeroOrMaxU32::new(50).expect("50 is non-zero or u32::MAX"),
                 v6::NonZeroOrMaxU32::new(80).expect("80 is non-zero or u32::MAX"),
                 t1,
@@ -6182,10 +6160,10 @@ mod tests {
     }
 
     #[test_case(None, None, false)]
-    #[test_case(None, Some(std_ip_v6!("ff01::0102")), true)]
-    #[test_case(Some(std_ip_v6!("ff01::0102")), None, true)]
-    #[test_case(Some(std_ip_v6!("ff01::0102")), Some(std_ip_v6!("ff01::0304")), true)]
-    #[test_case(Some(std_ip_v6!("ff01::0304")), Some(std_ip_v6!("ff01::0304")), false)]
+    #[test_case(None, Some(CONFIGURED_ADDRESSES[0]), true)]
+    #[test_case(Some(REPLY_ADDRESSES[0]), None, true)]
+    #[test_case(Some(REPLY_ADDRESSES[0]), Some(CONFIGURED_ADDRESSES[0]), true)]
+    #[test_case(Some(CONFIGURED_ADDRESSES[0]), Some(CONFIGURED_ADDRESSES[0]), false)]
     fn create_non_configured_address(
         address: Option<Ipv6Addr>,
         configured_address: Option<Ipv6Addr>,
@@ -6197,9 +6175,9 @@ mod tests {
         );
     }
 
-    #[test_case(None, Some(std_ip_v6!("ff01::0102")))]
-    #[test_case(Some(std_ip_v6!("ff01::0102")), None)]
-    #[test_case(Some(std_ip_v6!("ff01::0102")), Some(std_ip_v6!("ff01::0304")))]
+    #[test_case(None, Some(CONFIGURED_ADDRESSES[0]))]
+    #[test_case(Some(REPLY_ADDRESSES[0]), None)]
+    #[test_case(Some(REPLY_ADDRESSES[0]), Some(CONFIGURED_ADDRESSES[0]))]
     fn non_configured_address_get_address(
         address: Option<Ipv6Addr>,
         configured_address: Option<Ipv6Addr>,
@@ -6211,9 +6189,9 @@ mod tests {
         }
     }
 
-    #[test_case(None, Some(std_ip_v6!("ff01::0102")))]
-    #[test_case(Some(std_ip_v6!("ff01::0102")), None)]
-    #[test_case(Some(std_ip_v6!("ff01::0102")), Some(std_ip_v6!("ff01::0304")))]
+    #[test_case(None, Some(CONFIGURED_ADDRESSES[0]))]
+    #[test_case(Some(REPLY_ADDRESSES[0]), None)]
+    #[test_case(Some(REPLY_ADDRESSES[0]), Some(CONFIGURED_ADDRESSES[0]))]
     fn non_configured_address_get_configured_address(
         address: Option<Ipv6Addr>,
         configured_address: Option<Ipv6Addr>,
@@ -6225,9 +6203,9 @@ mod tests {
         }
     }
 
-    #[test_case(std_ip_v6!("ff01::0102"), None, true)]
-    #[test_case(std_ip_v6!("ff01::0102"), Some(std_ip_v6!("ff01::0304")), true)]
-    #[test_case(std_ip_v6!("ff01::0304"), Some(std_ip_v6!("ff01::0304")), false)]
+    #[test_case(REPLY_ADDRESSES[0], None, true)]
+    #[test_case(REPLY_ADDRESSES[0], Some(CONFIGURED_ADDRESSES[0]), true)]
+    #[test_case(CONFIGURED_ADDRESSES[0], Some(CONFIGURED_ADDRESSES[0]), false)]
     fn create_non_configured_ia(
         address: Ipv6Addr,
         configured_address: Option<Ipv6Addr>,
@@ -6254,20 +6232,18 @@ mod tests {
 
     #[test]
     fn create_assigned_ia() {
-        let address1 = std_ip_v6!("ff01::1234");
-        let ia1 = IdentityAssociation::new_default(address1);
-        let assigned_ia = AssignedIa::new(ia1, Some(address1));
+        let ia1 = IdentityAssociation::new_default(CONFIGURED_ADDRESSES[0]);
+        let assigned_ia = AssignedIa::new(ia1, Some(CONFIGURED_ADDRESSES[0]));
         assert_eq!(assigned_ia, AssignedIa::Configured(ia1));
-        assert_eq!(assigned_ia.address(), address1);
+        assert_eq!(assigned_ia.address(), CONFIGURED_ADDRESSES[0]);
 
-        let address2 = std_ip_v6!("ff01::5678");
-        let ia2 = IdentityAssociation::new_default(address2);
-        let assigned_ia = AssignedIa::new(ia2, Some(address1));
+        let ia2 = IdentityAssociation::new_default(REPLY_ADDRESSES[0]);
+        let assigned_ia = AssignedIa::new(ia2, Some(CONFIGURED_ADDRESSES[0]));
         assert_matches!(&assigned_ia, AssignedIa::NonConfigured(_non_conf_ia));
-        assert_eq!(assigned_ia.address(), address2);
+        assert_eq!(assigned_ia.address(), REPLY_ADDRESSES[0]);
 
         let assigned_ia = AssignedIa::new(ia2, None);
         assert_matches!(&assigned_ia, AssignedIa::NonConfigured(_non_conf_ia));
-        assert_eq!(assigned_ia.address(), address2);
+        assert_eq!(assigned_ia.address(), REPLY_ADDRESSES[0]);
     }
 }
