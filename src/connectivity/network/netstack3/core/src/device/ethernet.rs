@@ -45,6 +45,7 @@ use crate::{
         nud::{BufferNudContext, BufferNudHandler, NudContext, NudState, NudTimerId},
         state::{AddrConfig, IpDeviceState},
     },
+    sync::Mutex,
     BufferNonSyncContext, NonSyncContext, SyncCtx,
 };
 
@@ -213,7 +214,7 @@ impl<NonSyncCtx: NonSyncContext> NudContext<Ipv6, EthernetLinkDevice, NonSyncCtx
         device_id: EthernetDeviceId,
         cb: F,
     ) -> O {
-        cb(&mut get_state_mut(self, device_id).link.ipv6_nud)
+        cb(&mut get_state_mut(self, device_id).link.ipv6_nud.lock())
     }
 
     fn send_neighbor_solicitation(
@@ -322,7 +323,7 @@ impl EthernetDeviceStateBuilder {
             mtu: self.mtu,
             hw_mtu: self.mtu,
             link_multicast_groups: RefCountedHashSet::default(),
-            ipv4_arp: ArpState::default(),
+            ipv4_arp: Default::default(),
             promiscuous_mode: false,
             ipv6_nud: Default::default(),
         }
@@ -346,7 +347,7 @@ pub(crate) struct EthernetDeviceState {
     link_multicast_groups: RefCountedHashSet<MulticastAddr<Mac>>,
 
     /// IPv4 ARP state.
-    ipv4_arp: ArpState<EthernetLinkDevice>,
+    ipv4_arp: Mutex<ArpState<EthernetLinkDevice>>,
 
     /// A flag indicating whether the device will accept all ethernet frames
     /// that it receives, regardless of the ethernet frame's destination MAC
@@ -354,7 +355,7 @@ pub(crate) struct EthernetDeviceState {
     promiscuous_mode: bool,
 
     /// IPv6 NUD state.
-    ipv6_nud: NudState<Ipv6, Mac>,
+    ipv6_nud: Mutex<NudState<Ipv6, Mac>>,
 }
 
 impl EthernetDeviceState {
@@ -769,7 +770,7 @@ impl<C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>, SC: EthernetIpLinkDevi
         device_id: SC::DeviceId,
         cb: F,
     ) -> O {
-        cb(&mut get_state_mut(self, device_id).link.ipv4_arp)
+        cb(&mut get_state_mut(self, device_id).link.ipv4_arp.lock())
     }
 }
 
