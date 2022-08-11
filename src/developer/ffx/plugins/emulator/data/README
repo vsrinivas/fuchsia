@@ -1,0 +1,8 @@
+The values in config.json are keys to the FFX config data structure and their
+defaults. Any time this file is modified, you must also update the consts in
+common/src/config.rs. 
+
+FFX macros require string literals for config keys, both in "ffx_plugin" and
+"ffx_config_default", so consts cannot be used in those cases. Otherwise, do
+not use string literals in the code to refer to FFX config keys; import and
+use the consts instead to avoid typos which can lead to unexpected behavior.

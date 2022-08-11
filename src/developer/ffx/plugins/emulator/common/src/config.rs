@@ -30,6 +30,13 @@ pub const FVM_HOST_TOOL: &'static str = "fvm";
 /// The SDK tool "zbi" used to modify the zbi image.
 pub const ZBI_HOST_TOOL: &'static str = "zbi";
 
+/// The experimental flag for the console subcommand. Defaults to false.
+pub const EMU_CONSOLE_FLAG: &'static str = "emu.console.enabled";
+
+/// The default engine to launch from `ffx emu start`. Defaults to
+/// femu, but can be overridden by the user.
+pub const EMU_DEFAULT_ENGINE: &'static str = "emu.engine";
+
 /// The root directory for storing instance specific data. Instances
 /// should create a subdirectory in this directory to store data.
 pub const EMU_INSTANCE_ROOT_DIR: &'static str = "emu.instance_dir";
@@ -38,12 +45,23 @@ pub const EMU_INSTANCE_ROOT_DIR: &'static str = "emu.instance_dir";
 /// running process to utilize KVM for acceleration.
 pub const KVM_PATH: &'static str = "emu.kvm_path";
 
+/// The duration (in seconds) to attempt to establish an RCS connection with
+/// a new emulator before returning to the terminal. Not used in --console or
+/// ---monitor modes. Defaults to 60 seconds.
+pub const EMU_START_TIMEOUT: &'static str = "emu.start.timeout";
+
 /// The full path to the script to run initializing any network interfaces
-/// before starting the emulator. See the --upscript command line option
-/// for details.
+/// before starting the emulator.
 pub const EMU_UPSCRIPT_FILE: &'static str = "emu.upscript";
 
-const ALL_KEYS: &'static [&'static str] = &[EMU_UPSCRIPT_FILE, EMU_INSTANCE_ROOT_DIR, KVM_PATH];
+const ALL_KEYS: &'static [&'static str] = &[
+    EMU_CONSOLE_FLAG,
+    EMU_DEFAULT_ENGINE,
+    EMU_INSTANCE_ROOT_DIR,
+    KVM_PATH,
+    EMU_START_TIMEOUT,
+    EMU_UPSCRIPT_FILE,
+];
 
 macro_rules! missing_key_message {
     ($key_name:expr) => {

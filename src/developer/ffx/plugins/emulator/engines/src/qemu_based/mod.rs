@@ -16,7 +16,7 @@ use errors::ffx_bail;
 use ffx_config::SshKeyFiles;
 use ffx_emulator_common::{
     config,
-    config::FfxConfigWrapper,
+    config::{FfxConfigWrapper, EMU_START_TIMEOUT},
     dump_log_to_out, host_is_mac, process,
     target::{add_target, is_active, remove_target},
     tuntap::{tap_ready, TAP_INTERFACE_NAME},
@@ -433,7 +433,8 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
                             );
                             eprintln!(
                                 "You can also change the timeout if you keep encountering this \
-                                message by executing `ffx config set emu.start.uptime <seconds>`."
+                                message by executing `ffx config set {} <seconds>`.",
+                                EMU_START_TIMEOUT
                             );
                         } else {
                             eprintln!();
