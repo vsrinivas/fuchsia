@@ -67,11 +67,14 @@ class Runner {
 
   // Fuzzing workflows corresponding to methods in `fuchsia.fuzzer.Controller`.
   virtual ZxPromise<> Configure(const OptionsPtr& options) = 0;
-  virtual ZxPromise<FuzzResult> Execute(Input input) = 0;
+  ZxPromise<FuzzResult> Execute(Input input);
   virtual ZxPromise<Input> Minimize(Input input) = 0;
   virtual ZxPromise<Input> Cleanse(Input input) = 0;
   virtual ZxPromise<Artifact> Fuzz() = 0;
   virtual ZxPromise<> Merge() = 0;
+
+  // Like |Execute| above, but takes multiple |inputs| instead of one.
+  virtual ZxPromise<FuzzResult> Execute(std::vector<Input> inputs) = 0;
 
   // Cancels the current workflow.
   virtual ZxPromise<> Stop() = 0;

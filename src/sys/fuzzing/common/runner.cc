@@ -30,6 +30,12 @@ ZxPromise<> Runner::Workflow::Start() {
   });
 }
 
+ZxPromise<FuzzResult> Runner::Execute(Input input) {
+  std::vector<Input> inputs;
+  inputs.emplace_back(std::move(input));
+  return Execute(std::move(inputs));
+}
+
 ZxPromise<> Runner::Workflow::Stop() {
   return consumer_ ? consumer_.promise_or(fpromise::error(ZX_ERR_CANCELED)).box()
                    : fpromise::make_promise([]() -> ZxResult<> { return fpromise::ok(); });

@@ -93,6 +93,17 @@ void WriteInputToFile(const Input& input, const std::string& pathname) {
   }
 }
 
+std::string MakeFilename(const Input& input) {
+  uint8_t digest[SHA_DIGEST_LENGTH];
+  SHA1(input.data(), input.size(), digest);
+  std::ostringstream filename;
+  filename << std::hex;
+  for (size_t i = 0; i < SHA_DIGEST_LENGTH; ++i) {
+    filename << std::setw(2) << std::setfill('0') << size_t(digest[i]);
+  }
+  return filename.str();
+}
+
 }  // namespace
 
 RunnerPtr LibFuzzerRunner::MakePtr(ExecutorPtr executor) {
@@ -115,27 +126,19 @@ void LibFuzzerRunner::AddDefaults(Options* options) {
 // Corpus-related methods.
 
 zx_status_t LibFuzzerRunner::AddToCorpus(CorpusType corpus_type, Input input) {
-  uint8_t digest[SHA_DIGEST_LENGTH];
-  SHA1(input.data(), input.size(), digest);
-  std::ostringstream filename;
-  filename << std::hex;
-  for (size_t i = 0; i < SHA_DIGEST_LENGTH; ++i) {
-    filename << std::setw(2) << std::setfill('0') << size_t(digest[i]);
-  }
-  std::ostringstream pathname;
+  auto filename = MakeFilename(input);
   switch (corpus_type) {
     case CorpusType::SEED:
-      pathname << kSeedCorpusPath << "/" << filename.str();
-      seed_corpus_.push_back(filename.str());
+      WriteInputToFile(std::move(input), files::JoinPath(kSeedCorpusPath, filename));
+      seed_corpus_.push_back(filename);
       break;
     case CorpusType::LIVE:
-      pathname << kLiveCorpusPath << "/" << filename.str();
-      live_corpus_.push_back(filename.str());
+      WriteInputToFile(std::move(input), files::JoinPath(kLiveCorpusPath, filename));
+      live_corpus_.push_back(filename);
       break;
     default:
       return ZX_ERR_INVALID_ARGS;
   }
-  WriteInputToFile(std::move(input), pathname.str());
   return ZX_OK;
 }
 
@@ -197,11 +200,15 @@ ZxPromise<> LibFuzzerRunner::Configure(const OptionsPtr& options) {
       .wrap_with(workflow_);
 }
 
-ZxPromise<FuzzResult> LibFuzzerRunner::Execute(Input input) {
+ZxPromise<FuzzResult> LibFuzzerRunner::Execute(std::vector<Input> inputs) {
   AddArgs();
-  auto test_input = kTestInputPath;
-  WriteInputToFile(input, test_input);
-  process_.AddArg(test_input);
+  std::filesystem::remove_all(kTempCorpusPath);
+  CreateDirectory(kTempCorpusPath);
+  for (auto& input : inputs) {
+    auto test_input = files::JoinPath(kTempCorpusPath, MakeFilename(input));
+    WriteInputToFile(input, test_input);
+    process_.AddArg(test_input);
+  }
   return RunAsync()
       .and_then([](const Artifact& artifact) { return fpromise::ok(artifact.fuzz_result()); })
       .wrap_with(workflow_);

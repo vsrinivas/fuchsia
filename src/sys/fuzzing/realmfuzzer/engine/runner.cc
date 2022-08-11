@@ -135,16 +135,28 @@ Input RealmFuzzerRunner::GetDictionaryAsInput() const { return mutagen_.dictiona
 ///////////////////////////////////////////////////////////////
 // Asynchronous workflows.
 
-ZxPromise<FuzzResult> RealmFuzzerRunner::Execute(Input input) {
-  return TestOneAsync(std::move(input), kNoPostProcessing)
-      .and_then([](const Artifact& artifact) -> ZxResult<FuzzResult> {
-        return fpromise::ok(artifact.fuzz_result());
-      })
-      .or_else([](const zx_status_t& status) -> ZxResult<FuzzResult> {
-        if (status != ZX_ERR_STOP) {
-          return fpromise::error(status);
+ZxPromise<FuzzResult> RealmFuzzerRunner::Execute(std::vector<Input> inputs) {
+  return fpromise::make_promise([this, inputs = std::move(inputs)]() mutable -> ZxResult<> {
+           for (auto& input : inputs) {
+             if (auto status = generated_.Send(std::move(input)); status != ZX_OK) {
+               FX_LOGS(ERROR) << "Input queue closed prematurely: " << zx_status_get_string(status);
+               return fpromise::error(status);
+             }
+           }
+           generated_.Close();
+           return fpromise::ok();
+         })
+      .and_then(TestInputs(kNoPostProcessing))
+      .then([](ZxResult<Artifact>& result) -> ZxResult<FuzzResult> {
+        if (result.is_ok()) {
+          auto artifact = result.take_value();
+          return fpromise::ok(artifact.fuzz_result());
         }
-        return fpromise::ok(FuzzResult::NO_ERRORS);
+        auto status = result.take_error();
+        if (status == ZX_ERR_STOP) {
+          return fpromise::ok(FuzzResult::NO_ERRORS);
+        }
+        return fpromise::error(status);
       })
       .wrap_with(workflow_);
 }

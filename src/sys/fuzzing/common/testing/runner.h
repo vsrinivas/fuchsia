@@ -51,7 +51,7 @@ class FakeRunner final : public Runner {
   Input GetDictionaryAsInput() const override;
 
   ZxPromise<> Configure(const OptionsPtr& options) override;
-  ZxPromise<FuzzResult> Execute(Input input) override;
+  ZxPromise<FuzzResult> Execute(std::vector<Input> inputs) override;
   ZxPromise<Input> Minimize(Input input) override;
   ZxPromise<Input> Cleanse(Input input) override;
   ZxPromise<Artifact> Fuzz() override;

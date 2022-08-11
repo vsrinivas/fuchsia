@@ -78,15 +78,20 @@ ZxPromise<> FakeRunner::Configure(const OptionsPtr& options) {
       .wrap_with(workflow_);
 }
 
-ZxPromise<FuzzResult> FakeRunner::Execute(Input input) {
+ZxPromise<FuzzResult> FakeRunner::Execute(std::vector<Input> inputs) {
   return Run()
-      .and_then([input = std::move(input)](const Artifact& artifact) {
+      .and_then([inputs = std::move(inputs)](const Artifact& artifact) {
         if (artifact.fuzz_result() != FuzzResult::NO_ERRORS) {
           return fpromise::ok(artifact.fuzz_result());
         }
         // If no result was set up, crash if the input contains |kCrash|.
-        auto pos = as_string(input).find(kCrash);
-        return fpromise::ok(pos != std::string::npos ? FuzzResult::CRASH : FuzzResult::NO_ERRORS);
+        for (auto& input : inputs) {
+          auto pos = as_string(input).find(kCrash);
+          if (pos != std::string::npos) {
+            return fpromise::ok(FuzzResult::CRASH);
+          }
+        }
+        return fpromise::ok(FuzzResult::NO_ERRORS);
       })
       .wrap_with(workflow_);
 }
