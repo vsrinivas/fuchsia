@@ -6,6 +6,7 @@ library fuchsia.lightsensor;
 /// `Calibrator` is responsible for calibrating the raw data that comes from the
 /// product-configured light sensor. It is only intended to be used internally.
 @discoverable
+@available(added=7, deprecated=9, removed=HEAD)
 protocol Calibrator {
     /// Calibrates the supplied raw [Rgbc] and returns calibrated [Rgbc].
     Calibrate(struct {

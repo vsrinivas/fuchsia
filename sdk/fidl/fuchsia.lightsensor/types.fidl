@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 library fuchsia.lightsensor;
 
-/// The color intensities that can be returned from a light sensor.
+/// Device-specific intensity values for the color channels in the light sensor.
 type Rgbc = struct {
     /// Intensity of red light measured by the light sensor.
     red_intensity float32;
@@ -19,6 +19,7 @@ type Rgbc = struct {
 };
 
 /// Possible error results from API calls.
+@available(added=7, deprecated=9, removed=HEAD)
 type Error = strict enum {
     /// The input provided to the API was outside of the valid range of input, or required
     /// parameters were missing from a table.
