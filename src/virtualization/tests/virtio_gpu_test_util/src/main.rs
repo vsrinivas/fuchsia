@@ -2,16 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod types;
+mod framebuffer;
 
 #[cfg(target_os = "linux")]
 mod linuxfb;
+#[cfg(target_os = "fuchsia")]
+mod zirconfb;
 
-use {
-    anyhow::{anyhow, Error},
-    argh::FromArgs,
-    serde_json,
-};
+use {crate::framebuffer::Framebuffer, anyhow::Error, argh::FromArgs, serde_json};
 
 /// Detect details about the framebuffer.
 #[derive(FromArgs, Debug)]
@@ -31,12 +29,18 @@ struct Args {
     subcommand: SubCommand,
 }
 
+#[cfg(target_os = "linux")]
+fn create_framebuffer() -> crate::linuxfb::LinuxFramebuffer {
+    crate::linuxfb::LinuxFramebuffer
+}
+
+#[cfg(target_os = "fuchsia")]
+fn create_framebuffer() -> crate::zirconfb::ZirconFramebuffer {
+    crate::zirconfb::ZirconFramebuffer
+}
+
 fn detect_displays() -> Result<(), Error> {
-    let info = if cfg!(target_os = "linux") {
-        crate::linuxfb::read_dev_fb0_info()
-    } else {
-        return Err(anyhow!("Display detection is not implemented"));
-    };
+    let info = create_framebuffer().detect_displays();
     println!("{}", serde_json::to_string_pretty(&info)?);
     Ok(())
 }

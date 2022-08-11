@@ -80,12 +80,11 @@ class VirtioGpuTest : public GuestTest<T> {
     return *screenshot_result;
   }
 
-  DebianEnclosedGuest::DisplayInfo display_info_;
+  EnclosedGuest::DisplayInfo display_info_;
   fuchsia::ui::composition::ScreenshotPtr screenshot_;
 };
 
-// TODO(fxdebug.dev/64348): Re-enable ZirconEnclosedGuest.
-using GuestTypes = ::testing::Types<DebianEnclosedGuest>;
+using GuestTypes = ::testing::Types<DebianEnclosedGuest, ZirconEnclosedGuest>;
 TYPED_TEST_SUITE(VirtioGpuTest, GuestTypes, GuestTestNameGenerator);
 
 // Poll |condition| using exponential backoff until it returns true, or

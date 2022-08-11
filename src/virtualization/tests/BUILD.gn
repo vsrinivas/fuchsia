@@ -536,6 +536,12 @@ fuchsia_component("virtio_block_test_util_cmp") {
   manifest = "virtio_block_test_util/meta/virtio_block_test_util.cml"
 }
 
+fuchsia_component("virtio_gpu_test_util_cmp") {
+  component_name = "virtio_gpu_test_util"
+  deps = [ "virtio_gpu_test_util" ]
+  manifest = "virtio_gpu_test_util/meta/virtio_gpu_test_util.cml"
+}
+
 fuchsia_component("virtio_rng_test_util_cmp") {
   component_name = "virtio_rng_test_util"
   deps = [ "virtio_rng_test_util" ]
@@ -558,6 +564,7 @@ fuchsia_shell_package("virtualization_test_utils_pkg") {
   package_name = "virtualization-test-utils"
   deps = [
     ":virtio_block_test_util_cmp",
+    ":virtio_gpu_test_util_cmp",
     ":virtio_net_test_util_cmp",
     ":virtio_rng_test_util_cmp",
     ":virtio_vsock_test_util_cmp",

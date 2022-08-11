@@ -161,7 +161,6 @@ impl<'a, M: DriverMem> GpuDevice<'a, M> {
         }
     }
 
-    #[cfg(test)]
     pub async fn process_gpu_commands(&mut self) {
         while let Some(command) = self.command_receiver.next().await {
             self.handle_gpu_command(command);

@@ -15,9 +15,8 @@ use {
     fidl::endpoints::{ClientEnd, RequestStream},
     fidl_fuchsia_ui_input3::KeyboardListenerMarker,
     fidl_fuchsia_virtualization_hardware::VirtioGpuRequestStream,
-    fuchsia_async as fasync,
     fuchsia_component::server,
-    futures::{StreamExt, TryFutureExt, TryStreamExt},
+    futures::{select, FutureExt, StreamExt, TryFutureExt, TryStreamExt},
     tracing,
 };
 
@@ -48,23 +47,6 @@ async fn run_virtio_gpu(mut virtio_gpu_fidl: VirtioGpuRequestStream) -> Result<(
     .await
     .context("Failed to initialize device.")?;
 
-    // Create the device and attempt to attach an initial scanout. This may fail, ex if run within
-    // an environment without Flatland or a graphical shell. If this happens then the GPU will
-    // simply not expose any scanouts to the driver.
-    //
-    // We don't await here, but instead we will send a config change interrupt when the scanout is
-    // attached. This allows us to not block any vcpus while the scanout is being created.
-    let mut gpu_device = GpuDevice::new(&guest_mem, control_handle);
-    let command_sender = gpu_device.command_sender();
-    fasync::Task::local(async move {
-        let keyboard_listener =
-            keyboard_listener.map(|k| ClientEnd::<KeyboardListenerMarker>::from(k.into_channel()));
-        if let Err(e) = FlatlandScanout::attach(command_sender, keyboard_listener).await {
-            tracing::warn!("Failed to create scanout: {}", e);
-        }
-    })
-    .detach();
-
     let control_stream = device.take_stream(wire::CONTROLQ).context("Failed to find CONTROLQ")?;
     // Zircon doesn't configure the cursor queue, so we continue if that queue doesn't exist.
     let cursor_stream = device.take_stream(wire::CURSORQ);
@@ -72,6 +54,29 @@ async fn run_virtio_gpu(mut virtio_gpu_fidl: VirtioGpuRequestStream) -> Result<(
         tracing::warn!("Guest did not configure cursor queue; cursor support will be unavailable");
     }
     ready_responder.send()?;
+
+    // Create the device and attempt to attach an initial scanout. This may fail, ex if run within
+    // an environment without Flatland or a graphical shell. If this happens then the GPU will
+    // simply not expose any scanouts to the driver.
+    //
+    // We put this after we reply to the ready_responder but before we process queues so that we
+    // can allow the guest to continue running until it needs to interact with a virtio queue. We
+    // don't process the queues until this operation is completed so that we can send some initial
+    // display info to the device. The linux driver is able to handle hot-plug and display resize
+    // but the zircon driver will only detect display geometry once at initialization and doesn't
+    // handle the config change interrupt on resize.
+    let mut gpu_device = GpuDevice::new(&guest_mem, control_handle);
+    let command_sender = gpu_device.command_sender();
+    let keyboard_listener =
+        keyboard_listener.map(|k| ClientEnd::<KeyboardListenerMarker>::from(k.into_channel()));
+    select! {
+        _ = gpu_device.process_gpu_commands().fuse() => {},
+        result = FlatlandScanout::attach(command_sender, keyboard_listener).fuse() => {
+            if let Err(e) = result {
+                tracing::warn!("Failed to create scanout: {}", e);
+            }
+        },
+    }
 
     futures::try_join!(
         device

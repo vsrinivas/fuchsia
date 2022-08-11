@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::types::{DetectResult, DisplayInfo},
+    crate::framebuffer::{DetectResult, DisplayInfo, Framebuffer},
     anyhow::Error,
     libc,
     serde::Serialize,
@@ -103,9 +103,17 @@ fn linuxfb_info_from_file(file: File) -> Result<DetectResult, Error> {
     })
 }
 
-pub fn read_dev_fb0_info() -> DetectResult {
+fn read_dev_fb0_info() -> DetectResult {
     match File::open("/dev/fb0") {
         Ok(f) => linuxfb_info_from_file(f).unwrap_or_else(DetectResult::from_error),
         Err(e) => DetectResult::from_error(e.into()),
+    }
+}
+
+pub struct LinuxFramebuffer;
+
+impl Framebuffer for LinuxFramebuffer {
+    fn detect_displays(&self) -> DetectResult {
+        read_dev_fb0_info()
     }
 }
