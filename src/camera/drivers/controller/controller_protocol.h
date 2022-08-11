@@ -43,9 +43,9 @@ class ControllerImpl : public fuchsia::camera2::hal::Controller {
   InternalConfigs internal_configs_;
   PipelineManager pipeline_manager_;
   uint32_t pipeline_config_index_ = -1;
-  std::optional<
-      std::queue<std::tuple<uint32_t, uint32_t, fidl::InterfaceRequest<fuchsia::camera2::Stream>>>>
-      requests_;
+  using RequestQueue =
+      std::queue<std::tuple<uint32_t, uint32_t, fidl::InterfaceRequest<fuchsia::camera2::Stream>>>;
+  std::optional<RequestQueue> requests_;
   uint32_t config_count_ = 0;
   std::unique_ptr<ProductConfig> product_config_;
 };

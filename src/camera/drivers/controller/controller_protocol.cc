@@ -81,7 +81,7 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
     // requests received in the interim period and just start tracking requests for the new config.
     if (config_index != pipeline_config_index_) {
       pipeline_config_index_ = config_index;
-      requests_ = {};
+      requests_ = RequestQueue{};
     }
     requests_->emplace(stream_index, image_format_index, std::move(stream));
     return;
@@ -94,7 +94,7 @@ void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
   // config, handling it requires shutting down the current pipeline first.
   if (config_index != pipeline_config_index_) {
     pipeline_config_index_ = config_index;
-    requests_ = {};
+    requests_ = RequestQueue{};
     requests_->emplace(stream_index, image_format_index, std::move(stream));
     pipeline_manager_.Shutdown([this]() mutable {
       TRACE_DURATION("camera", "ControllerImpl::CreateStream.shutdown.callback");
