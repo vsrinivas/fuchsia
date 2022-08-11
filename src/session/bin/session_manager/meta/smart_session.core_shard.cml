@@ -187,9 +187,37 @@
         {
             directory: "dev",
             from: "parent",
+            as: "dev-backlight",
+            to: "#session-manager",
+            subdir: "class/backlight",
+        },
+        {
+            directory: "dev",
+            from: "parent",
             as: "dev-class-radar",
             to: "#session-manager",
             subdir: "class/radar",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-power-sensor",
+            to: "#session-manager",
+            subdir: "class/power-sensor",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-temperature",
+            to: "#session-manager",
+            subdir: "class/temperature",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-thermal",
+            to: "#session-manager",
+            subdir: "class/thermal",
         },
     ],
 }

@@ -415,6 +415,26 @@
             from: "parent",
             to: [ "#session" ],
         },
+        {
+            directory: "dev-backlight",
+            from: "parent",
+            to: "#session",
+        },
+        {
+            directory: "dev-power-sensor",
+            from: "parent",
+            to: "#session",
+        },
+        {
+            directory: "dev-temperature",
+            from: "parent",
+            to: "#session",
+        },
+        {
+            directory: "dev-thermal",
+            from: "parent",
+            to: "#session",
+        },
 
         // Allow components in the session to restart it (the session).
         {
