@@ -130,16 +130,18 @@ int usage(void) {
           " rounding up to slice boundary.\n");
   fprintf(stderr,
           " --minimum-inodes inode_count - number of inodes to reserve\n"
-          "                                Blobfs inode size is %u\n"
-          "                                Minfs inode size is %u\n",
+          "                                Blobfs inode size is %" PRIu64
+          "\n"
+          "                                Minfs inode size is %" PRIu32 "\n",
           blobfs::kBlobfsInodeSize, minfs::kMinfsInodeSize);
 
   fprintf(stderr,
           " --minimum-data-bytes data_bytes - number of bytes to reserve for data\n"
           "                                   in the fs\n"
-          "                                   Blobfs block size is %zu\n"
-          "                                   Minfs block size is %u\n",
-          size_t{blobfs::kBlobfsBlockSize}, minfs::kMinfsBlockSize);
+          "                                   Blobfs block size is %" PRIu64
+          "\n"
+          "                                   Minfs block size is %" PRIu32 "\n",
+          blobfs::kBlobfsBlockSize, minfs::kMinfsBlockSize);
   fprintf(stderr,
           " --maximum-bytes bytes - Places an upper bound of <bytes> on the total\n"
           "                         number of bytes which may be used by the partition.\n"

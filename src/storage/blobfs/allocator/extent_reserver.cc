@@ -60,11 +60,10 @@ const Extent& ReservedExtent::extent() const {
   return extent_;
 }
 
-ReservedExtent ReservedExtent::SplitAt(BlockCountType block_split) {
+ReservedExtent ReservedExtent::SplitAt(uint64_t block_split) {
   ZX_DEBUG_ASSERT_MSG(Reserved(), "Accessing unreserved extent");
-  ZX_DEBUG_ASSERT(block_split < extent_.Length());
-  Extent latter(extent_.Start() + block_split,
-                safemath::checked_cast<BlockCountType>(extent_.Length() - block_split));
+  ZX_ASSERT(block_split < extent_.Length());
+  Extent latter(extent_.Start() + block_split, extent_.Length() - block_split);
 
   extent_.SetLength(block_split);
   return ReservedExtent(reserver_, std::move(latter));

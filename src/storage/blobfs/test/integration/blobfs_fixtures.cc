@@ -31,7 +31,7 @@ fs_test::TestFilesystemOptions BlobfsWithPaddedLayoutTestParam() {
 fs_test::TestFilesystemOptions BlobfsWithFixedDiskSizeTestParam(uint64_t disk_size) {
   auto options = BlobfsDefaultTestParam();
   options.description = "BlobfsWithFixedDiskSize";
-  options.device_block_count = static_cast<int64_t>(disk_size) / options.device_block_size;
+  options.device_block_count = disk_size / options.device_block_size;
   return options;
 }
 

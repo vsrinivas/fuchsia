@@ -79,16 +79,19 @@ constexpr uint64_t kBlobfsMinorVersionHostToolHandlesNullBlobCorrectly = 0x00000
 
 constexpr uint32_t kBlobFlagClean          = 1;
 constexpr uint32_t kBlobFlagFVM            = 4;
+
+// These constants should all be defined as uint64_t to prevent unintended truncation errors
+// when performing arithmetic.
 constexpr uint64_t kBlobfsBlockSize        = 8192;
 constexpr uint64_t kBlobfsBlockBits        = (kBlobfsBlockSize * 8);
-constexpr uint32_t kBlobfsSuperblockBlocks = 1;
-constexpr uint32_t kBlobfsBlockMapStart    = 1;
-constexpr uint32_t kBlobfsInodeSize        = 64;
-constexpr uint32_t kBlobfsInodesPerBlock   = (kBlobfsBlockSize / kBlobfsInodeSize);
+constexpr uint64_t kBlobfsSuperblockBlocks = 1;
+constexpr uint64_t kBlobfsBlockMapStart    = 1;
+constexpr uint64_t kBlobfsInodeSize        = 64;
+constexpr uint64_t kBlobfsInodesPerBlock   = (kBlobfsBlockSize / kBlobfsInodeSize);
 constexpr uint64_t kBlobfsMaxFileSize      = kBlobfsBlockSize * sizeof(uint32_t);
 
 // Known Blobfs metadata locations. Unit of the location is blobfs block.
-constexpr size_t kSuperblockOffset = 0;
+constexpr uint64_t kSuperblockOffset = 0;
 
 // Blobfs has a backup superblock but only with FVM.  The backup superblock only needs to be
 // sufficient to get to the journal, since once there, either the primary superblock is valid or
@@ -107,13 +110,13 @@ constexpr size_t kSuperblockOffset = 0;
 // Note that there's no need to update the superblock when the primary superblock changes since its
 // only purpose is to help locate the journal, so some aspects of the backup superblock are likely
 // to be inconsistent.
-constexpr size_t kFVMBackupSuperblockOffset = 1;
+constexpr uint64_t kFVMBackupSuperblockOffset = 1;
 
 // Blobfs block offset of various filesystem structures, when using the FVM.
-constexpr size_t kFVMBlockMapStart = 0x10000;
-constexpr size_t kFVMNodeMapStart  = 0x20000;
-constexpr size_t kFVMJournalStart  = 0x30000;
-constexpr size_t kFVMDataStart     = 0x40000;
+constexpr uint64_t kFVMBlockMapStart = 0x10000;
+constexpr uint64_t kFVMNodeMapStart  = 0x20000;
+constexpr uint64_t kFVMJournalStart  = 0x30000;
+constexpr uint64_t kFVMDataStart     = 0x40000;
 // clang-format on
 
 // Maximum number of data blocks possible for a single entry:
@@ -122,10 +125,10 @@ constexpr size_t kFVMDataStart     = 0x40000;
 // - Block Bitmap Blocks
 // TODO(fxbug.dev/32911): Calculate the actual upper bound here; this number is not
 // necessarily considering the worst cases of fragmentation.
-constexpr uint32_t kMaxEntryDataBlocks = 64;
+constexpr uint64_t kMaxEntryDataBlocks = 64;
 
 // Minimum possible size for the journal, allowing the maximum size for one entry.
-constexpr size_t kMinimumJournalBlocks =
+constexpr uint64_t kMinimumJournalBlocks =
     fs::kJournalMetadataBlocks + fs::kEntryMetadataBlocks + kMaxEntryDataBlocks;
 
 // This serves as both default inode count when mkfs arguments do not specify
@@ -135,7 +138,7 @@ constexpr size_t kMinimumJournalBlocks =
 // are limited. Mkfs can override this value.
 constexpr uint64_t kBlobfsDefaultInodeCount = 10240;
 
-constexpr size_t kMinimumDataBlocks = 2;
+constexpr uint64_t kMinimumDataBlocks = 2;
 
 struct __PACKED alignas(8) Superblock {
   uint64_t magic0;
@@ -177,6 +180,8 @@ struct __PACKED alignas(8) Superblock {
 };
 
 static_assert(sizeof(Superblock) == kBlobfsBlockSize, "Invalid blobfs superblock size");
+static_assert(kBlobfsBlockSize <= std::numeric_limits<decltype(Superblock::block_size)>::max(),
+              "Defined block size constant exceeds range of block_size field in superblock!");
 
 constexpr uint64_t SuperblockBlocks(const Superblock& info) { return kBlobfsSuperblockBlocks; }
 
@@ -245,37 +250,42 @@ constexpr uint64_t kStartBlockMinimum = 1;  // Smallest 'data' block possible.
 
 using digest::Digest;
 
-using BlockOffsetType = uint64_t;
-constexpr size_t kBlockOffsetBits = 48;
-constexpr BlockOffsetType kBlockOffsetMax = (1LLU << kBlockOffsetBits) - 1;
-constexpr uint64_t kBlockOffsetMask = kBlockOffsetMax;
-
-using BlockCountType = uint16_t;
-constexpr size_t kBlockCountBits = 16;
-constexpr size_t kBlockCountMax = (1LLU << kBlockCountBits) - 1;
-constexpr uint64_t kBlockCountMask = kBlockCountMax << kBlockOffsetBits;
-
-class Extent {
+class __PACKED alignas(8) Extent {
  public:
+  static constexpr size_t kBlockOffsetBits = 48;
+  static constexpr uint64_t kBlockOffsetMax = (1LLU << kBlockOffsetBits) - 1;
+  static constexpr uint64_t kBlockOffsetMask = kBlockOffsetMax;
+
+  static constexpr size_t kBlockCountBits = 16;
+  static constexpr uint64_t kBlockCountMax = (1LLU << kBlockCountBits) - 1;
+  static constexpr uint64_t kBlockCountMask = kBlockCountMax << kBlockOffsetBits;
+
   Extent() = default;
-  Extent(BlockOffsetType start, BlockCountType length) {
-    SetStart(start);
-    SetLength(length);
+
+  // Create an extent starting at |start_block| blocks, spanning |length_blocks|.
+  // |start_block| must be <= kBlockOffsetMax and |length_blocks| must be <= kBlockCountMax.
+  // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
+  Extent(uint64_t start_block, uint64_t length_blocks) {
+    SetStart(start_block);
+    SetLength(length_blocks);
   }
 
-  BlockOffsetType Start() const { return data_ & kBlockOffsetMask; }
+  // Get the start block offset this Extent refers to.
+  uint64_t Start() const { return data_ & kBlockOffsetMask; }
 
-  void SetStart(BlockOffsetType start) {
-    ZX_DEBUG_ASSERT(start <= kBlockOffsetMax);
-    data_ = (data_ & ~kBlockOffsetMask) | (start & kBlockOffsetMask);
+  // Set the start block offset of this Extent. |start_block| must be <= kBlockOffsetMax.
+  void SetStart(uint64_t start_block) {
+    ZX_ASSERT(start_block <= kBlockOffsetMax);
+    data_ = (data_ & ~kBlockOffsetMask) | (start_block & kBlockOffsetMask);
   }
 
-  BlockCountType Length() const {
-    return safemath::checked_cast<BlockCountType>((data_ & kBlockCountMask) >> kBlockOffsetBits);
-  }
+  // Get the length, in blocks, of this Extent.
+  uint64_t Length() const { return (data_ & kBlockCountMask) >> kBlockOffsetBits; }
 
-  void SetLength(BlockCountType length) {
-    data_ = (data_ & ~kBlockCountMask) | ((length & kBlockCountMax) << kBlockOffsetBits);
+  // Set the length, in blocks, of this Extent. |length_blocks| must be <= kBlockCountMask
+  void SetLength(uint64_t length_blocks) {
+    ZX_ASSERT(length_blocks <= kBlockCountMax);
+    data_ = (data_ & ~kBlockCountMask) | ((length_blocks & kBlockCountMax) << kBlockOffsetBits);
   }
 
   bool operator==(const Extent& rhs) const {
@@ -307,12 +317,6 @@ inline std::ostream& operator<<(std::ostream& stream, const Extent (&extents)[N]
 
 static_assert(sizeof(Extent) == sizeof(uint64_t), "Extent class should only contain data");
 
-// The number of extents within a single blob.
-using ExtentCountType = uint16_t;
-
-// The largest number of extents which can compose a blob.
-constexpr size_t kMaxBlobExtents = std::numeric_limits<ExtentCountType>::max();
-
 // The largest node id representable in a node list.
 constexpr uint32_t kMaxNodeId = 0xffffffffu;
 
@@ -340,13 +344,13 @@ constexpr uint16_t kBlobFlagMaskValid =
     kBlobFlagAllocated | kBlobFlagExtentContainer | kBlobFlagMaskAnyCompression;
 
 // The number of extents within a normal inode.
-constexpr uint32_t kInlineMaxExtents = 1;
+constexpr uint64_t kInlineMaxExtents = 1;
 // The number of extents within an extent container node.
-constexpr uint32_t kContainerMaxExtents = 6;
+constexpr uint64_t kContainerMaxExtents = 6;
 
 constexpr uint16_t kBlobNodeVersion = 0;
 
-struct __PACKED NodePrelude {
+struct __PACKED alignas(8) NodePrelude {
   uint16_t flags = 0;
   uint16_t version = kBlobNodeVersion;
   // The next node containing this blob's extents.
@@ -375,12 +379,11 @@ struct __PACKED alignas(8) Inode {
   NodePrelude header;
   uint8_t merkle_root_hash[digest::kSha256Length];
   uint64_t blob_size;
-
   // The total number of Blocks used to represent this blob.
   uint32_t block_count;
   // The total number of Extent objects necessary to represent this blob.
   // Identifies when to stop iterating through the node list.
-  ExtentCountType extent_count;
+  uint16_t extent_count;
   uint16_t reserved;
   Extent extents[kInlineMaxExtents];
 
@@ -388,6 +391,14 @@ struct __PACKED alignas(8) Inode {
 
   bool IsCompressed() const { return header.flags & kBlobFlagMaskAnyCompression; }
 };
+
+// The largest number of extents which can compose a blob.
+constexpr uint64_t kMaxExtentsPerBlob = std::numeric_limits<decltype(Inode::extent_count)>::max();
+
+// The largest amount of blocks a given blob can span.
+constexpr uint64_t kMaxBlocksPerBlob = kMaxExtentsPerBlob * Extent::kBlockCountMax;
+static_assert(kMaxBlocksPerBlob <= std::numeric_limits<decltype(Inode::block_count)>::max(),
+              "Max blocks per blob exceeds maximum block count in Inode!");
 
 // This is inlined because format.cc only compiles on Fuchsia builds (not host).
 inline std::ostream& operator<<(std::ostream& stream, const Inode& inode) {
@@ -400,13 +411,10 @@ inline std::ostream& operator<<(std::ostream& stream, const Inode& inode) {
 
 struct __PACKED alignas(8) ExtentContainer {
   NodePrelude header;
-
   // The map index of the previous node.
   uint32_t previous_node;
-
   // The number of extents within this container.
-  ExtentCountType extent_count;
-
+  uint16_t extent_count;
   uint16_t reserved;
   Extent extents[kContainerMaxExtents];
 };

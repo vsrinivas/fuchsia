@@ -23,7 +23,7 @@ bool BlockIterator::Done() const { return blocks_left_ == 0 && iterator_->Done()
 
 uint64_t BlockIterator::BlockIndex() const { return iterator_->BlockIndex() - blocks_left_; }
 
-zx_status_t BlockIterator::Next(uint32_t length, uint32_t* out_length, uint64_t* out_start) {
+zx_status_t BlockIterator::Next(uint64_t length, uint64_t* out_length, uint64_t* out_start) {
   ZX_DEBUG_ASSERT(!Done());
 
   // If there are no blocks left, refill the extent.
@@ -44,11 +44,11 @@ zx_status_t BlockIterator::Next(uint32_t length, uint32_t* out_length, uint64_t*
   return ZX_OK;
 }
 
-zx_status_t IterateToBlock(BlockIterator* iter, uint32_t block_num) {
+zx_status_t IterateToBlock(BlockIterator* iter, uint64_t block_num) {
   while (!iter->Done() && block_num > iter->BlockIndex()) {
-    uint32_t out_length = 0;
+    uint64_t out_length = 0;
     uint64_t out_start = 0;
-    auto blocks_to_iterate_over = safemath::checked_cast<uint32_t>(block_num - iter->BlockIndex());
+    uint64_t blocks_to_iterate_over = block_num - iter->BlockIndex();
     zx_status_t status = iter->Next(blocks_to_iterate_over, &out_length, &out_start);
     if (status != ZX_OK) {
       return status;
@@ -60,14 +60,14 @@ zx_status_t IterateToBlock(BlockIterator* iter, uint32_t block_num) {
   return ZX_OK;
 }
 
-zx_status_t StreamBlocks(BlockIterator* iterator, uint32_t block_count, StreamFn stream) {
+zx_status_t StreamBlocks(BlockIterator* iterator, uint64_t block_count, StreamFn stream) {
   while (block_count > 0) {
     if (iterator->Done()) {
       FX_LOGS(ERROR) << "Failed to access data (early exit)";
       return ZX_ERR_IO_DATA_INTEGRITY;
     }
     uint64_t local_offset = iterator->BlockIndex();
-    uint32_t actual_length;
+    uint64_t actual_length;
     uint64_t dev_offset;
     zx_status_t status = iterator->Next(block_count, &actual_length, &dev_offset);
     if (status != ZX_OK) {

@@ -87,7 +87,7 @@ zx::status<Superblock> FormatSuperblockFVM(
   // Allocate the minimum number of blocks for a minimal bitmap.
   uint64_t offset = kFVMBlockMapStart / blocks_per_slice;
   uint64_t length = BlocksToSlices(BlocksRequiredForBits(data_blocks));
-  superblock.abm_slices = safemath::checked_cast<uint32_t>(length);
+  superblock.abm_slices = safemath::checked_cast<decltype(superblock.abm_slices)>(length);
   status = device->VolumeExtend(offset, superblock.abm_slices);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "mkfs: Failed to allocate block map";
@@ -97,7 +97,7 @@ zx::status<Superblock> FormatSuperblockFVM(
   // Allocate the requested number of node blocks in FVM.
   offset = kFVMNodeMapStart / blocks_per_slice;
   length = BlocksToSlices(BlocksRequiredForInode(options.num_inodes));
-  superblock.ino_slices = safemath::checked_cast<uint32_t>(length);
+  superblock.ino_slices = safemath::checked_cast<decltype(superblock.ino_slices)>(length);
   status = device->VolumeExtend(offset, superblock.ino_slices);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "mkfs: Failed to allocate node map";
@@ -107,7 +107,7 @@ zx::status<Superblock> FormatSuperblockFVM(
   // Allocate the minimum number of journal blocks in FVM.
   offset = kFVMJournalStart / blocks_per_slice;
   length = BlocksToSlices(kMinimumJournalBlocks);
-  superblock.journal_slices = safemath::checked_cast<uint32_t>(length);
+  superblock.journal_slices = safemath::checked_cast<decltype(superblock.journal_slices)>(length);
   status = device->VolumeExtend(offset, superblock.journal_slices);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "mkfs: Failed to allocate journal blocks";
@@ -117,18 +117,18 @@ zx::status<Superblock> FormatSuperblockFVM(
   // Allocate the minimum number of data blocks in the FVM.
   offset = kFVMDataStart / blocks_per_slice;
   length = BlocksToSlices(kMinimumDataBlocks);
-  superblock.dat_slices = safemath::checked_cast<uint32_t>(length);
+  superblock.dat_slices = safemath::checked_cast<decltype(superblock.dat_slices)>(length);
   status = device->VolumeExtend(offset, superblock.dat_slices);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "mkfs: Failed to allocate data blocks";
     return zx::error(status);
   }
 
-  superblock.inode_count = safemath::checked_cast<uint32_t>(
+  superblock.inode_count = safemath::checked_cast<decltype(superblock.inode_count)>(
       superblock.ino_slices * superblock.slice_size / kBlobfsInodeSize);
-  superblock.data_block_count = safemath::checked_cast<uint32_t>(
+  superblock.data_block_count = safemath::checked_cast<decltype(superblock.data_block_count)>(
       superblock.dat_slices * superblock.slice_size / kBlobfsBlockSize);
-  superblock.journal_block_count = safemath::checked_cast<uint32_t>(
+  superblock.journal_block_count = safemath::checked_cast<decltype(superblock.journal_block_count)>(
       superblock.journal_slices * superblock.slice_size / kBlobfsBlockSize);
 
   // Now that we've allocated some slices, re-query FVM for the number of blocks assigned to the
@@ -139,7 +139,7 @@ zx::status<Superblock> FormatSuperblockFVM(
     FX_LOGS(ERROR) << "Cannot acquire block info: " << status;
     return zx::error(status);
   }
-  uint64_t blocks = block_info.block_count * block_info.block_size / kBlobfsBlockSize;
+  uint64_t blocks = (block_info.block_count * block_info.block_size) / kBlobfsBlockSize;
 
   status = CheckSuperblock(&superblock, blocks);
   if (status != ZX_OK) {
@@ -221,32 +221,38 @@ zx_status_t WriteFilesystemToDisk(BlockDevice* device, const Superblock& superbl
     return status;
   }
 
-  auto FsToDeviceBlocks = [disk_block = block_size](uint64_t block) {
+  auto FsToDeviceBlocks = [disk_block = block_size](uint64_t block) -> uint64_t {
     return block * (kBlobfsBlockSize / disk_block);
   };
 
   block_fifo_request_t requests[5] = {};
+  using RequestLengthType = decltype(block_fifo_request_t::length);
+  static_assert(
+      std::is_same_v<RequestLengthType, uint32_t>,
+      "Type of length field for block FIFO request has changed, validate conversions below.");
+
   requests[0].opcode = BLOCKIO_WRITE;
   requests[0].vmoid = vmoid.get();
-  requests[0].length = safemath::checked_cast<uint32_t>(FsToDeviceBlocks(superblock_blocks));
+  requests[0].length =
+      safemath::checked_cast<RequestLengthType>(FsToDeviceBlocks(superblock_blocks));
   requests[0].vmo_offset = FsToDeviceBlocks(0);
   requests[0].dev_offset = FsToDeviceBlocks(0);
 
   requests[1].opcode = BLOCKIO_WRITE;
   requests[1].vmoid = vmoid.get();
-  requests[1].length = safemath::checked_cast<uint32_t>(FsToDeviceBlocks(blockmap_blocks));
+  requests[1].length = safemath::checked_cast<RequestLengthType>(FsToDeviceBlocks(blockmap_blocks));
   requests[1].vmo_offset = FsToDeviceBlocks(superblock_blocks);
   requests[1].dev_offset = FsToDeviceBlocks(BlockMapStartBlock(superblock));
 
   requests[2].opcode = BLOCKIO_WRITE;
   requests[2].vmoid = vmoid.get();
-  requests[2].length = safemath::checked_cast<uint32_t>(FsToDeviceBlocks(nodemap_blocks));
+  requests[2].length = safemath::checked_cast<RequestLengthType>(FsToDeviceBlocks(nodemap_blocks));
   requests[2].vmo_offset = FsToDeviceBlocks(superblock_blocks + blockmap_blocks);
   requests[2].dev_offset = FsToDeviceBlocks(NodeMapStartBlock(superblock));
 
   requests[3].opcode = BLOCKIO_WRITE;
   requests[3].vmoid = vmoid.get();
-  requests[3].length = safemath::checked_cast<uint32_t>(FsToDeviceBlocks(journal_blocks));
+  requests[3].length = safemath::checked_cast<RequestLengthType>(FsToDeviceBlocks(journal_blocks));
   requests[3].vmo_offset = FsToDeviceBlocks(superblock_blocks + blockmap_blocks + nodemap_blocks);
   requests[3].dev_offset = FsToDeviceBlocks(JournalStartBlock(superblock));
 
@@ -254,7 +260,8 @@ zx_status_t WriteFilesystemToDisk(BlockDevice* device, const Superblock& superbl
   if (superblock.flags & kBlobFlagFVM) {
     requests[4].opcode = BLOCKIO_WRITE;
     requests[4].vmoid = vmoid.get();
-    requests[4].length = safemath::checked_cast<uint32_t>(FsToDeviceBlocks(superblock_blocks));
+    requests[4].length =
+        safemath::checked_cast<RequestLengthType>(FsToDeviceBlocks(superblock_blocks));
     requests[4].vmo_offset = FsToDeviceBlocks(0);
     requests[4].dev_offset = FsToDeviceBlocks(kFVMBackupSuperblockOffset);
     ++count;

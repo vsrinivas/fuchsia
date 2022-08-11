@@ -78,7 +78,7 @@ class ReservedExtent {
   //  and returns [start + block_split, start + length)
   //
   // This function requires that |block_split| < |extent.block_count|.
-  ReservedExtent SplitAt(BlockCountType block_split);
+  ReservedExtent SplitAt(uint64_t block_split);
 
   // Releases the underlying reservation, unreserving the extent and preventing continued access
   // to |extent()|.

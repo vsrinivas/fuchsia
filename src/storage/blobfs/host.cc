@@ -648,9 +648,9 @@ zx::status<> Blobfs::AddBlob(const BlobInfo& blob_info) {
     FX_LOGS(ERROR) << "Failed to reserve enough blocks: " << status;
     return zx::error(status);
   }
-  if (extents.size() > kMaxBlobExtents) {
+  if (extents.size() > kMaxExtentsPerBlob) {
     FX_LOGS(ERROR) << "Block reservation requires too many extents (" << extents.size() << " vs "
-                   << kMaxBlobExtents << " max)";
+                   << kMaxExtentsPerBlob << " max)";
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -670,11 +670,10 @@ zx::status<> Blobfs::AddBlob(const BlobInfo& blob_info) {
   }
 
   // Reserve the inode + extent containers to hold all of the extents.
-  uint32_t node_count =
-      NodePopulator::NodeCountForExtents(safemath::checked_cast<ExtentCountType>(extents.size()));
+  uint64_t node_count = NodePopulator::NodeCountForExtents(extents.size());
   std::vector<ReservedNode> nodes;
   if (zx_status_t status = allocator_->ReserveNodes(node_count, &nodes); status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to reserve enough nodes: " << status;
+    FX_LOGS(ERROR) << "Failed to reserve nodes (node_count = " << node_count << "): " << status;
     return zx::error(status);
   }
   std::vector<uint32_t> node_indices;
@@ -823,8 +822,8 @@ bool Blobfs::CheckBlocksAllocated(uint64_t start_block, uint64_t end_block,
   return allocator_->CheckBlocksAllocated(start_block, end_block, first_unset);
 }
 
-zx::status<> Blobfs::ReadBlocksForInode(uint32_t node_index, uint32_t start_block,
-                                        uint32_t block_count, uint8_t* data) {
+zx::status<> Blobfs::ReadBlocksForInode(uint32_t node_index, uint64_t start_block,
+                                        uint64_t block_count, uint8_t* data) {
   zx::status<AllocatedExtentIterator> extent_iterator_or =
       AllocatedExtentIterator::Create(GetNodeFinder(), node_index);
   if (extent_iterator_or.is_error()) {
@@ -835,9 +834,9 @@ zx::status<> Blobfs::ReadBlocksForInode(uint32_t node_index, uint32_t start_bloc
   if (zx_status_t status = IterateToBlock(&iter, start_block); status != ZX_OK) {
     return zx::error(status);
   }
-  std::vector<std::pair<uint64_t, uint32_t>> ranges;
+  std::vector<std::pair<uint64_t, uint64_t>> ranges;
   zx_status_t status =
-      StreamBlocks(&iter, block_count, [&ranges](int64_t, uint64_t start, uint32_t length) {
+      StreamBlocks(&iter, block_count, [&ranges](int64_t, uint64_t start, uint64_t length) {
         ranges.emplace_back(start, length);
         return ZX_OK;
       });
@@ -864,7 +863,7 @@ fpromise::result<std::vector<uint8_t>, std::string> Blobfs::LoadDataAndVerifyBlo
                            std::to_string(inode_ptr.status_value()));
   }
   Inode inode = *inode_ptr.value();
-  const uint32_t block_size = GetBlockSize();
+  const uint64_t block_size = GetBlockSize();
   zx_status_t status;
   auto make_error = [&](const std::string& error) {
     digest::Digest digest(inode.merkle_root_hash);
@@ -947,13 +946,13 @@ zx_status_t Blobfs::LoadAndVerifyBlob(uint32_t node_index) {
   return ZX_OK;
 }
 
-uint32_t Blobfs::GetBlockSize() const { return Info().block_size; }
+uint64_t Blobfs::GetBlockSize() const { return Info().block_size; }
 
 fpromise::result<void, std::string> Blobfs::VisitBlobs(BlobVisitor visitor) {
   for (uint32_t inode_index = 0, allocated_nodes = 0;
        inode_index < info_.inode_count && allocated_nodes < info_.alloc_inode_count;
        ++inode_index) {
-    auto inode = GetNode(safemath::checked_cast<uint32_t>(inode_index));
+    auto inode = GetNode(inode_index);
     if (inode.is_error()) {
       return fpromise::error("Failed to retrieve inode.");
     }
@@ -962,7 +961,7 @@ fpromise::result<void, std::string> Blobfs::VisitBlobs(BlobVisitor visitor) {
     }
 
     allocated_nodes++;
-    auto load_result = LoadDataAndVerifyBlob(safemath::checked_cast<uint32_t>(inode_index));
+    auto load_result = LoadDataAndVerifyBlob(inode_index);
     if (load_result.is_error()) {
       return load_result.take_error_result();
     }

@@ -57,9 +57,6 @@ using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
 // true, no log messages will be emitted.
 zx_status_t CheckSuperblock(const Superblock* info, uint64_t max, bool quiet = false);
 
-// Returns the total number of vslices needed for the given partition.
-uint32_t CalculateVsliceCount(const Superblock& info);
-
 // Returns number of blocks required for inode_count inodes
 uint64_t BlocksRequiredForInode(uint64_t inode_count);
 

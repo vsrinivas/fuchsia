@@ -207,7 +207,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
   // If successful, allocates Blob Node and Blocks (in-memory)
   // kBlobStateEmpty --> kBlobStateDataWrite
-  zx_status_t SpaceAllocate(uint32_t block_count) __TA_REQUIRES(mutex_);
+  zx_status_t SpaceAllocate(uint64_t block_count) __TA_REQUIRES(mutex_);
 
   // Write blob data into memory (or stream to disk) and update Merkle tree.
   zx_status_t WriteInternal(const void* data, size_t len, size_t* actual) __TA_REQUIRES(mutex_);
@@ -242,10 +242,10 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   zx_status_t Commit() __TA_REQUIRES(mutex_);
 
   // Returns the block size used by blobfs.
-  uint32_t GetBlockSize() const;
+  uint64_t GetBlockSize() const;
 
   // Write |block_count| blocks using the data from |producer| into |streamer|.
-  zx_status_t WriteData(uint32_t block_count, BlobDataProducer& producer,
+  zx_status_t WriteData(uint64_t block_count, BlobDataProducer& producer,
                         fs::DataStreamer& streamer) __TA_REQUIRES(mutex_);
 
   // Sets the name on the paged_vmo() to indicate where this blob came from. The name will vary
@@ -295,7 +295,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   zx::event readable_event_ __TA_GUARDED(mutex_);
 
   uint64_t blob_size_ __TA_GUARDED(mutex_) = 0;
-  uint32_t block_count_ __TA_GUARDED(mutex_) = 0;
+  uint64_t block_count_ __TA_GUARDED(mutex_) = 0;
 
   // Data used exclusively during writeback.
   struct WriteInfo;

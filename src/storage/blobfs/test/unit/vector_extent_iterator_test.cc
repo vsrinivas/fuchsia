@@ -33,8 +33,6 @@ void TestSetup(size_t blocks, size_t nodes, bool fragmented, MockSpaceManager* s
 TEST(VectorExtentIteratorTest, Null) {
   MockSpaceManager space_manager;
   std::unique_ptr<Allocator> allocator;
-  std::vector<Extent> allocated_extents;
-  std::vector<uint32_t> allocated_nodes;
   constexpr size_t kAllocatedExtents = 0;
   constexpr size_t kAllocatedNodes = 1;
 
@@ -54,8 +52,6 @@ TEST(VectorExtentIteratorTest, Null) {
 TEST(VectorExtentIteratorTest, MultiExtent) {
   MockSpaceManager space_manager;
   std::unique_ptr<Allocator> allocator;
-  std::vector<Extent> allocated_extents;
-  std::vector<uint32_t> allocated_nodes;
   constexpr size_t kAllocatedExtents = 10;
   constexpr size_t kAllocatedNodes = 1;
 
@@ -98,10 +94,10 @@ TEST(VectorExtentIteratorTest, BlockIterator) {
   ASSERT_EQ(0ul, iter.BlockIndex());
   ASSERT_FALSE(iter.Done());
 
-  uint32_t blocks_seen = 0;
+  uint64_t blocks_seen = 0;
   for (const ReservedExtent& extent : extents) {
     ASSERT_FALSE(iter.Done());
-    uint32_t actual_length;
+    uint64_t actual_length;
     uint64_t actual_start;
     ASSERT_EQ(iter.Next(1, &actual_length, &actual_start), ZX_OK);
     ASSERT_EQ(1ul, actual_length);
@@ -129,7 +125,7 @@ TEST(VectorExtentIteratorTest, BlockIteratorRandomStart) {
   for (int i = 0; i < 20; i++) {
     BlockIterator iter(std::make_unique<VectorExtentIterator>(extents));
 
-    uint32_t block_index = static_cast<uint32_t>(rand() % kAllocatedExtents);
+    uint64_t block_index = static_cast<uint64_t>(rand() % kAllocatedExtents);
     ASSERT_EQ(IterateToBlock(&iter, block_index), ZX_OK);
     ASSERT_EQ(block_index, iter.BlockIndex());
   }
@@ -138,12 +134,12 @@ TEST(VectorExtentIteratorTest, BlockIteratorRandomStart) {
   ASSERT_EQ(IterateToBlock(&iter, kAllocatedExtents + 10), ZX_ERR_INVALID_ARGS);
 }
 
-void ValidateStreamBlocks(std::vector<ReservedExtent> extents, uint32_t block_count) {
+void ValidateStreamBlocks(std::vector<ReservedExtent> extents, uint64_t block_count) {
   BlockIterator iter(std::make_unique<VectorExtentIterator>(extents));
 
   size_t stream_blocks = 0;
   size_t stream_index = 0;
-  auto stream_callback = [&](uint64_t local_offset, uint64_t dev_offset, uint32_t length) {
+  auto stream_callback = [&](uint64_t local_offset, uint64_t dev_offset, uint64_t length) {
     ZX_DEBUG_ASSERT(stream_blocks == local_offset);
     ZX_DEBUG_ASSERT(extents[stream_index].extent().Start() == dev_offset);
     ZX_DEBUG_ASSERT(extents[stream_index].extent().Length() == length);
@@ -209,7 +205,7 @@ TEST(VectorExtentIteratorTest, StreamBlocksInvalidLength) {
 
   size_t stream_blocks = 0;
   size_t stream_index = 0;
-  auto stream_callback = [&](uint64_t local_offset, uint64_t dev_offset, uint32_t length) {
+  auto stream_callback = [&](uint64_t local_offset, uint64_t dev_offset, uint64_t length) {
     ZX_DEBUG_ASSERT(stream_blocks == local_offset);
     ZX_DEBUG_ASSERT(extents[stream_index].extent().Start() == dev_offset);
     ZX_DEBUG_ASSERT(extents[stream_index].extent().Length() == length);

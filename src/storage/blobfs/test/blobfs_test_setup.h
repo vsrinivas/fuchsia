@@ -36,7 +36,7 @@ class BlobfsTestSetupBase {
   Blobfs* blobfs() { return blobfs_.get(); }
 
   // Creates a fake block device, formats it with the given options, and mounts it.
-  zx_status_t CreateFormatMount(uint64_t block_count, uint32_t block_size,
+  zx_status_t CreateFormatMount(uint64_t block_count, uint64_t block_size,
                                 const FilesystemOptions& fs_options = DefaultFilesystemOptions(),
                                 const MountOptions& mount_options = MountOptions());
 

@@ -26,7 +26,7 @@ namespace blobfs {
 // This struct holds the inspect node for a blob and a map from block index to page-in frequency.
 struct BlobPageInFrequencies {
   inspect::Node blob_root_node;
-  std::map<uint32_t, inspect::UintProperty> offset_map;
+  std::map<uint64_t, inspect::UintProperty> offset_map;
 };
 
 // Encapsulates Blobfs-specific metrics available via Inspect.

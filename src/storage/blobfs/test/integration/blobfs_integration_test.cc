@@ -1235,7 +1235,7 @@ TEST_F(BlobfsWithFvmTest, CorruptAtMount) {
 }
 
 TEST_P(BlobfsIntegrationTest, FailedWrite) {
-  const uint32_t pages_per_block = kBlobfsBlockSize / fs().options().device_block_size;
+  const uint64_t pages_per_block = kBlobfsBlockSize / fs().options().device_block_size;
 
   std::unique_ptr<BlobInfo> info = GenerateRandomBlob(fs().mount_path(), kBlobfsBlockSize);
 

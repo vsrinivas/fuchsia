@@ -333,22 +333,23 @@ TEST(AllocatorTest, FragmentationKeepOddExtents) { RunFragmentationTest(false); 
 TEST(AllocatorTest, MaxExtent) {
   MockSpaceManager space_manager;
   std::unique_ptr<Allocator> allocator;
-  constexpr uint64_t kBlockCount = kBlockCountMax * 2;
+  constexpr uint64_t kBlockCount = Extent::kBlockCountMax * 2;
   InitializeAllocator(kBlockCount, 4, &space_manager, &allocator);
 
   // Allocate a region which may be contained within one extent.
   std::vector<ReservedExtent> extents;
-  ASSERT_EQ(allocator->ReserveBlocks(kBlockCountMax, &extents), ZX_OK);
+  ASSERT_EQ(allocator->ReserveBlocks(Extent::kBlockCountMax, &extents), ZX_OK);
   ASSERT_EQ(1ul, extents.size());
   extents.clear();
 
-  // Allocate a region which may not be contined within one extent.
-  ASSERT_EQ(allocator->ReserveBlocks(kBlockCountMax + 1, &extents), ZX_OK);
+  // Allocate a region which may not be continued within one extent.
+  ASSERT_EQ(allocator->ReserveBlocks(Extent::kBlockCountMax + 1, &extents), ZX_OK);
   ASSERT_EQ(2ul, extents.size());
 
   // Demonstrate that the remaining blocks are still available.
   std::vector<ReservedExtent> remainder;
-  ASSERT_EQ(allocator->ReserveBlocks(kBlockCount - (kBlockCountMax + 1), &remainder), ZX_OK);
+  ASSERT_EQ(allocator->ReserveBlocks(kBlockCount - (Extent::kBlockCountMax + 1), &remainder),
+            ZX_OK);
 
   // But nothing more.
   std::vector<ReservedExtent> failed_extent;

@@ -18,6 +18,7 @@
 #include <vector>
 
 #include <fbl/string_buffer.h>
+#include <safemath/checked_math.h>
 #include <storage/buffer/owned_vmoid.h>
 
 #include "src/lib/digest/digest.h"
@@ -40,7 +41,7 @@ namespace blobfs {
 namespace {
 
 // TODO(jfsulliv): Rationalize this with the size limits for chunk-compression headers.
-constexpr size_t kChunkedHeaderSize = 4 * kBlobfsBlockSize;
+constexpr uint64_t kChunkedHeaderSize = 4 * kBlobfsBlockSize;
 
 }  // namespace
 
@@ -182,8 +183,8 @@ zx_status_t BlobLoader::InitForDecompression(
   // We don't know exactly how long the header is, so we generally overshoot.
   // (The header should never be bigger than the size of the kChunkedHeaderSize.)
   ZX_DEBUG_ASSERT(kChunkedHeaderSize % GetBlockSize() == 0);
-  uint32_t header_block_count = static_cast<uint32_t>(kChunkedHeaderSize) / GetBlockSize();
-  uint32_t blocks_to_read = std::min(header_block_count, blob_layout.DataBlockCount());
+  uint64_t header_block_count = kChunkedHeaderSize / GetBlockSize();
+  uint64_t blocks_to_read = std::min(header_block_count, blob_layout.DataBlockCount());
   if (blocks_to_read == 0) {
     FX_LOGS(ERROR) << "No data blocks; corrupted inode?";
     return ZX_ERR_BAD_STATE;
@@ -215,8 +216,8 @@ zx_status_t BlobLoader::InitForDecompression(
 }
 
 zx::status<cpp20::span<const uint8_t>> BlobLoader::LoadBlocks(uint32_t node_index,
-                                                              uint32_t block_offset,
-                                                              uint32_t block_count) {
+                                                              uint64_t block_offset,
+                                                              uint64_t block_count) {
   TRACE_DURATION("blobfs", "BlobLoader::LoadBlocks", "block_count", block_count);
 
   if (block_count > read_mapper_.capacity()) {
@@ -240,7 +241,7 @@ zx::status<cpp20::span<const uint8_t>> BlobLoader::LoadBlocks(uint32_t node_inde
   std::vector<storage::BufferedOperation> operations;
 
   status = StreamBlocks(&block_iter.value(), block_count,
-                        [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
+                        [&](uint64_t vmo_offset, uint64_t dev_offset, uint64_t length) {
                           operations.push_back({.vmoid = read_mapper_.GetHandle(),
                                                 .op = {
                                                     .type = storage::OperationType::kRead,
@@ -261,11 +262,11 @@ zx::status<cpp20::span<const uint8_t>> BlobLoader::LoadBlocks(uint32_t node_inde
     return zx::error(status);
   }
 
-  return zx::ok(cpp20::span(static_cast<const uint8_t*>(read_mapper_.Data(0)),
-                            uint64_t{block_count} * GetBlockSize()));
+  return zx::ok(
+      cpp20::span(static_cast<const uint8_t*>(read_mapper_.Data(0)), block_count * GetBlockSize()));
 }
 
-uint32_t BlobLoader::GetBlockSize() const { return txn_manager_->Info().block_size; }
+uint64_t BlobLoader::GetBlockSize() const { return txn_manager_->Info().block_size; }
 
 void BlobLoader::Decommit() {
   // Ignore errors.

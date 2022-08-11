@@ -268,8 +268,7 @@ bool BaseAllocator::MunchUnreservedExtents(bitmap::RleBitmap::const_iterator res
         // prefix which is free from overlap.
         //
         // Take the most of the proposed allocation *before* the reservation.
-        Extent extent(start,
-                      safemath::checked_cast<BlockCountType>(reserved_iterator->start() - start));
+        Extent extent(start, reserved_iterator->start() - start);
         ZX_DEBUG_ASSERT(
             block_bitmap_.Scan(extent.Start(), extent.Start() + extent.Length(), false));
         ZX_DEBUG_ASSERT(block_length > extent.Length());
@@ -321,7 +320,7 @@ zx_status_t BaseAllocator::FindBlocks(uint64_t start, uint64_t num_blocks,
       return ZX_ERR_NO_SPACE;
     }
     // Constraint: No contiguous run longer than the maximum permitted extent.
-    uint64_t block_length = std::min(remaining_blocks, uint64_t{kBlockCountMax});
+    uint64_t block_length = std::min(remaining_blocks, Extent::kBlockCountMax);
 
     bool restart_search = FindUnallocatedExtent(start, block_length, &start, &block_length);
     if (restart_search) {
@@ -342,7 +341,7 @@ zx_status_t BaseAllocator::FindBlocks(uint64_t start, uint64_t num_blocks,
     if (block_length != 0) {
       // The remainder of this window exists and does not collide with either the reservation map
       // nor the committed blocks.
-      Extent extent(start, safemath::checked_cast<BlockCountType>(block_length));
+      Extent extent(start, block_length);
       ZX_DEBUG_ASSERT(block_bitmap_.Scan(extent.Start(), extent.Start() + extent.Length(), false));
       start += extent.Length();
       remaining_blocks -= extent.Length();
@@ -360,7 +359,7 @@ zx::status<uint32_t> BaseAllocator::FindNode() {
   if (node_bitmap_->Allocate(&i) != ZX_OK) {
     return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
-  uint32_t node_index = safemath::checked_cast<uint32_t>(i);
+  const uint32_t node_index = safemath::checked_cast<uint32_t>(i);
   auto node = GetNode(node_index);
   ZX_ASSERT_MSG(node.is_ok(), "Found a node that wasn't valid: %d", node.status_value());
   ZX_ASSERT_MSG(!node->header.IsAllocated(), "An unallocated node was marked as allocated");

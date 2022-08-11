@@ -207,7 +207,7 @@ void Blob::SetOldBlob(Blob& blob) {
   write_info_->old_blob = fbl::RefPtr(&blob);
 }
 
-zx_status_t Blob::SpaceAllocate(uint32_t block_count) {
+zx_status_t Blob::SpaceAllocate(uint64_t block_count) {
   TRACE_DURATION("blobfs", "Blobfs::SpaceAllocate", "block_count", block_count);
   ZX_ASSERT_MSG(block_count != 0, "Block count should not be zero.");
 
@@ -231,16 +231,15 @@ zx_status_t Blob::SpaceAllocate(uint32_t block_count) {
   if (status != ZX_OK) {
     return status;
   }
-  if (extents.size() > kMaxBlobExtents) {
+  if (extents.size() > kMaxExtentsPerBlob) {
     FX_LOGS(ERROR) << "Error: Block reservation requires too many extents (" << extents.size()
-                   << " vs " << kMaxBlobExtents << " max)";
+                   << " vs " << kMaxExtentsPerBlob << " max)";
     return ZX_ERR_BAD_STATE;
   }
-  const ExtentCountType extent_count = safemath::checked_cast<ExtentCountType>(extents.size());
 
   // Reserve space for all additional nodes necessary to contain this blob. The inode has already
   // been reserved in Blob::PrepareWrite. Hence, we need to reserve one less node here.
-  size_t node_count = NodePopulator::NodeCountForExtents(extent_count) - 1;
+  size_t node_count = NodePopulator::NodeCountForExtents(extents.size()) - 1;
   status = blobfs_->GetAllocator()->ReserveNodes(node_count, &nodes);
   if (status != ZX_OK) {
     return status;
@@ -289,7 +288,7 @@ zx_status_t Blob::WriteMetadata(BlobTransaction& transaction,
     InodePtr mapped_inode = std::move(mapped_inode_or_error).value();
     *mapped_inode = Inode{
         .blob_size = blob_size_,
-        .block_count = block_count_,
+        .block_count = safemath::checked_cast<uint32_t>(block_count_),
     };
     digest().CopyTo(mapped_inode->merkle_root_hash);
     NodePopulator populator(blobfs_->GetAllocator(), std::move(write_info_->extents),
@@ -393,7 +392,7 @@ zx_status_t Blob::Commit() {
     return blob_layout.status_value();
   }
 
-  const uint32_t total_block_count = blob_layout->TotalBlockCount();
+  const uint64_t total_block_count = blob_layout->TotalBlockCount();
   if (zx_status_t status = SpaceAllocate(total_block_count); status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to allocate " << total_block_count
                    << " blocks for the blob: " << zx_status_get_string(status);
@@ -525,13 +524,13 @@ zx_status_t Blob::Commit() {
   return MarkReadable();
 }
 
-zx_status_t Blob::WriteData(uint32_t block_count, BlobDataProducer& producer,
+zx_status_t Blob::WriteData(uint64_t block_count, BlobDataProducer& producer,
                             fs::DataStreamer& streamer) {
   BlockIterator block_iter(std::make_unique<VectorExtentIterator>(write_info_->extents));
   const uint64_t data_start = DataStartBlock(blobfs_->Info());
   return StreamBlocks(
       &block_iter, block_count,
-      [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t block_count) {
+      [&](uint64_t vmo_offset, uint64_t dev_offset, uint64_t block_count) {
         while (block_count) {
           if (producer.NeedsFlush()) {
             // Queued operations might point at buffers that are about to be invalidated, so we have
@@ -978,6 +977,8 @@ zx_status_t Blob::Truncate(size_t len) {
 zx::status<std::string> Blob::GetDevicePath() const { return blobfs_->Device()->GetDevicePath(); }
 
 zx_status_t Blob::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo) {
+  static_assert(sizeof flags == sizeof(uint32_t),
+                "Underlying type of |flags| has changed, update conversion below.");
   TRACE_DURATION("blobfs", "Blob::GetVmo", "flags", static_cast<uint32_t>(flags));
 
   std::lock_guard lock(mutex_);
@@ -1197,7 +1198,7 @@ zx_status_t Blob::Purge() {
   return ZX_OK;
 }
 
-uint32_t Blob::GetBlockSize() const { return blobfs_->Info().block_size; }
+uint64_t Blob::GetBlockSize() const { return blobfs_->Info().block_size; }
 
 void Blob::SetPagedVmoName(bool active) {
   fbl::StringBuffer<ZX_MAX_NAME_LEN> name;

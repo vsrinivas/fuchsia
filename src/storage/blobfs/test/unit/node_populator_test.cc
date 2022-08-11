@@ -15,16 +15,15 @@ namespace blobfs {
 namespace {
 
 TEST(NodePopulatorTest, NodeCount) {
-  for (ExtentCountType i = 0; i <= kInlineMaxExtents; i++) {
+  for (uint64_t i = 0; i <= kInlineMaxExtents; i++) {
     EXPECT_EQ(1u, NodePopulator::NodeCountForExtents(i));
   }
 
-  for (ExtentCountType i = kInlineMaxExtents + 1; i <= kInlineMaxExtents + kContainerMaxExtents;
-       i++) {
+  for (uint64_t i = kInlineMaxExtents + 1; i <= kInlineMaxExtents + kContainerMaxExtents; i++) {
     EXPECT_EQ(2u, NodePopulator::NodeCountForExtents(i));
   }
 
-  for (ExtentCountType i = kInlineMaxExtents + kContainerMaxExtents + 1;
+  for (uint64_t i = kInlineMaxExtents + kContainerMaxExtents + 1;
        i <= kInlineMaxExtents + kContainerMaxExtents * 2; i++) {
     EXPECT_EQ(3u, NodePopulator::NodeCountForExtents(i));
   }

@@ -82,11 +82,11 @@ class BlobLoader {
   // Reads |block_count| blocks starting at |block_offset| from the blob specified by |node_index|
   // and returns a span pointing to the data read (which will be contained within read_mapper_).
   // The span will remain valid until the next call to LoadBlocks or Decommit is called.
-  zx::status<cpp20::span<const uint8_t>> LoadBlocks(uint32_t node_index, uint32_t block_offset,
-                                                    uint32_t block_count);
+  zx::status<cpp20::span<const uint8_t>> LoadBlocks(uint32_t node_index, uint64_t block_offset,
+                                                    uint64_t block_count);
 
   // Returns the block size used by blobfs.
-  uint32_t GetBlockSize() const;
+  uint64_t GetBlockSize() const;
 
   // Decommit any temporary memory owned by the loader.
   void Decommit();

@@ -65,10 +65,8 @@ zx::status<> StorageBackedTransferBuffer::Populate(uint64_t offset, uint64_t len
     return block_iter.take_error();
   }
 
-  auto start_block =
-      safemath::checked_cast<uint32_t>((info.layout->DataOffset() + offset) / kBlobfsBlockSize);
-  auto block_count =
-      safemath::checked_cast<uint32_t>(fbl::round_up(length, kBlobfsBlockSize) / kBlobfsBlockSize);
+  uint64_t start_block = (info.layout->DataOffset() + offset) / kBlobfsBlockSize;
+  uint64_t block_count = fbl::round_up(length, kBlobfsBlockSize) / kBlobfsBlockSize;
 
   TRACE_DURATION("blobfs", "StorageBackedTransferBuffer::Populate", "offset",
                  start_block * kBlobfsBlockSize, "length", block_count * kBlobfsBlockSize);
@@ -85,7 +83,7 @@ zx::status<> StorageBackedTransferBuffer::Populate(uint64_t offset, uint64_t len
   // Enqueue operations to read in the required blocks to the transfer buffer.
   const uint64_t data_start = DataStartBlock(txn_manager_->Info());
   status = StreamBlocks(&block_iter.value(), block_count,
-                        [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
+                        [&](uint64_t vmo_offset, uint64_t dev_offset, uint64_t length) {
                           operations.push_back({.vmoid = vmoid_.get(),
                                                 .op = {
                                                     .type = storage::OperationType::kRead,

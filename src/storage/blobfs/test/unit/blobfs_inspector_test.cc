@@ -388,6 +388,7 @@ TEST(BlobfsInspector, WriteSuperblock) {
 
 std::vector<Inode> AlternateAddInodesAndExtentContainers(uint64_t inode_count) {
   std::vector<Inode> write_inodes;
+  ZX_ASSERT(inode_count < std::numeric_limits<uint32_t>::max());
   for (uint32_t i = 0; i < inode_count; ++i) {
     Inode inode = {};
     if (i % 2 == 0) {

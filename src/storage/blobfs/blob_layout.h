@@ -49,70 +49,50 @@ bool ShouldUseCompactMerkleTreeFormat(BlobLayoutFormat format);
 // Layout information for where the data and Merkle tree are positioned in a blob.
 class BlobLayout {
  public:
-  // The type used to represent a number of bytes in blobfs.  Must be large enough to hold blobfs's
-  // maximum file size.
-  using ByteCountType = uint64_t;
-  // The type used to represent a number of blocks in blobfs.
-  using BlockCountType = uint32_t;
-  // The type used to represent the block size in blobfs.
-  using BlockSizeType = uint64_t;
-
-  // Ensure that the types used in this class match the types used in the |Inode|.  This class
-  // depends on the exact sizes of these types and should fail to compile if the types used in the
-  // |Inode| change.
-  static_assert(std::is_same<ByteCountType, decltype(Inode::blob_size)>::value);
-  static_assert(std::is_same<BlockCountType, decltype(Inode::block_count)>::value);
-  static_assert(
-      std::is_same<BlockSizeType, std::remove_const<decltype(kBlobfsBlockSize)>::type>::value);
-
-  BlockSizeType blobfs_block_size() const { return blobfs_block_size_; }
+  uint64_t blobfs_block_size() const { return blobfs_block_size_; }
 
   // The uncompressed size of the file.
-  ByteCountType FileSize() const;
+  uint64_t FileSize() const;
   // The uncompressed size of the file rounded up to the next multiple of the block size.
-  ByteCountType FileBlockAlignedSize() const;
+  uint64_t FileBlockAlignedSize() const;
 
   // The number of bytes used to store the blob's data.
   // When reading a compressed blob this may not be the exact size but a safe upper bound.  All
   // bytes between the actual compressed size and |DataSizeUpperBound| will be zeros.  This is
   // because the size of the compressed file is not stored.  See fxbug.dev/44547.
-  ByteCountType DataSizeUpperBound() const;
+  uint64_t DataSizeUpperBound() const;
   // The size of buffer required to hold |DataBlockCount| blocks.
-  ByteCountType DataBlockAlignedSize() const;
+  uint64_t DataBlockAlignedSize() const;
   // The number of blocks that the data spans.
-  BlockCountType DataBlockCount() const;
+  uint64_t DataBlockCount() const;
 
   // The data may not start at the beginning of the blob contents but it will always be on a
   // block-aligned offset. The rest of the blob's data will be in the following |DataBlockCount| - 1
   // blocks.
-  virtual BlockCountType DataBlockOffset() const = 0;
-  ByteCountType DataOffset() const {
-    return safemath::checked_cast<ByteCountType>(DataBlockOffset()) * blobfs_block_size_;
-  }
+  virtual uint64_t DataBlockOffset() const = 0;
+  uint64_t DataOffset() const { return DataBlockOffset() * blobfs_block_size_; }
 
   // The number of bytes required to store the Merkle tree.
-  ByteCountType MerkleTreeSize() const;
+  uint64_t MerkleTreeSize() const;
   // The size of buffer required to hold |MerkleTreeBlockCount| blocks.
-  ByteCountType MerkleTreeBlockAlignedSize() const;
+  uint64_t MerkleTreeBlockAlignedSize() const;
   // The number of blocks that the Merkle tree spans.
-  BlockCountType MerkleTreeBlockCount() const;
+  uint64_t MerkleTreeBlockCount() const;
 
   // Returns the offset within the file for the merkle tree.
-  virtual ByteCountType MerkleTreeOffset() const = 0;
+  virtual uint64_t MerkleTreeOffset() const = 0;
 
   // The first block of the blob containing part of the Merkle tree.  The rest of the Merkle tree
   // will be in the following |MerkleTreeBlockCount| - 1 blocks.
-  BlockCountType MerkleTreeBlockOffset() const {
-    return static_cast<BlockCountType>(MerkleTreeOffset() / blobfs_block_size_);
-  }
+  uint64_t MerkleTreeBlockOffset() const { return MerkleTreeOffset() / blobfs_block_size_; }
 
   // The offset within |MerkleTreeBlockOffset| that the Merkle tree starts at.
-  ByteCountType MerkleTreeOffsetWithinBlockOffset() const {
+  uint64_t MerkleTreeOffsetWithinBlockOffset() const {
     return MerkleTreeOffset() % blobfs_block_size_;
   }
 
   // The total number of blocks that the blob spans.
-  virtual BlockCountType TotalBlockCount() const = 0;
+  virtual uint64_t TotalBlockCount() const = 0;
 
   // True if the data and Merkle tree share a block.
   virtual bool HasMerkleTreeAndDataSharedBlock() const = 0;
@@ -123,36 +103,36 @@ class BlobLayout {
   // Initializes a |BlobLayout| from a blob's inode.
   static zx::status<std::unique_ptr<BlobLayout>> CreateFromInode(BlobLayoutFormat format,
                                                                  const Inode& inode,
-                                                                 BlockSizeType blobfs_block_size);
+                                                                 uint64_t blobfs_block_size);
 
   // Initializes a |BlobLayout| from a blob's file size and data size.
   // For uncompressed blobs |data_size| is the same as |file_size|.
   // For compressed blobs |data_size| is the compressed size of the file.
   static zx::status<std::unique_ptr<BlobLayout>> CreateFromSizes(BlobLayoutFormat format,
-                                                                 ByteCountType file_size,
-                                                                 ByteCountType data_size,
-                                                                 BlockSizeType blobfs_block_size);
+                                                                 uint64_t file_size,
+                                                                 uint64_t data_size,
+                                                                 uint64_t blobfs_block_size);
 
   virtual ~BlobLayout() = default;
 
  protected:
-  BlobLayout(ByteCountType file_size, ByteCountType data_size, ByteCountType merkle_tree_size,
-             BlockSizeType blobfs_block_size);
+  BlobLayout(uint64_t file_size, uint64_t data_size, uint64_t merkle_tree_size,
+             uint64_t blobfs_block_size);
 
  private:
   // The uncompressed size of the file.
-  ByteCountType file_size_;
+  uint64_t file_size_;
 
   // The number of bytes required to store the blob's data.
-  ByteCountType data_size_;
+  uint64_t data_size_;
 
   // The number of bytes required to store the Merkle tree.
   // This field can be derived from |file_size_| but is cached because it's not a constant time
   // calculation and is required in many of the other calculations.
-  ByteCountType merkle_tree_size_;
+  uint64_t merkle_tree_size_;
 
   // The size of a block in blobfs.
-  BlockSizeType blobfs_block_size_;
+  uint64_t blobfs_block_size_;
 };
 
 }  // namespace blobfs

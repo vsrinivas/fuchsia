@@ -20,14 +20,13 @@ namespace blobfs {
 NodePopulator::NodePopulator(BaseAllocator* allocator, std::vector<ReservedExtent> extents,
                              std::vector<ReservedNode> nodes)
     : allocator_(allocator), extents_(std::move(extents)), nodes_(std::move(nodes)) {
-  ZX_DEBUG_ASSERT(extents_.size() <= kMaxBlobExtents);
-  ZX_DEBUG_ASSERT(nodes_.size() >=
-                  NodeCountForExtents(safemath::checked_cast<ExtentCountType>(extents_.size())));
+  ZX_DEBUG_ASSERT(extents_.size() <= kMaxExtentsPerBlob);
+  ZX_DEBUG_ASSERT(nodes_.size() >= NodeCountForExtents(extents_.size()));
 }
 
-uint32_t NodePopulator::NodeCountForExtents(ExtentCountType extent_count) {
+uint64_t NodePopulator::NodeCountForExtents(uint64_t extent_count) {
   bool out_of_line_extents = extent_count > kInlineMaxExtents;
-  uint32_t remaining_extents = out_of_line_extents ? extent_count - kInlineMaxExtents : 0;
+  uint64_t remaining_extents = out_of_line_extents ? extent_count - kInlineMaxExtents : 0;
   return 1 + ((remaining_extents + kContainerMaxExtents - 1) / kContainerMaxExtents);
 }
 
@@ -44,9 +43,8 @@ zx_status_t NodePopulator::Walk(OnNodeCallback on_node, OnExtentCallback on_exte
   on_node(node_index);
 
   ExtentContainer* container = nullptr;
-  uint32_t local_index = 0;
-  ExtentCountType extent_index = 0;
-  for (; extent_index < extents_.size(); extent_index++) {
+  uint64_t local_index = 0;
+  for (uint64_t extent_index = 0; extent_index < extents_.size(); extent_index++) {
     bool next_container = false;
     if (extent_index == kInlineMaxExtents) {
       // At capacity for the extents inside the inode; moving to a container.

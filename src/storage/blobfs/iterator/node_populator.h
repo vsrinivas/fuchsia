@@ -30,7 +30,7 @@ class NodePopulator {
   DISALLOW_COPY_ASSIGN_AND_MOVE(NodePopulator);
 
   // Returns the maximum number of nodes necessary to hold |extent_count| extents.
-  static uint32_t NodeCountForExtents(ExtentCountType extent_count);
+  static uint64_t NodeCountForExtents(uint64_t extent_count);
 
   enum class IterationCommand {
     Continue,

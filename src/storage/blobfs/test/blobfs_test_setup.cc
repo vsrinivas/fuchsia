@@ -12,7 +12,7 @@
 
 namespace blobfs {
 
-zx_status_t BlobfsTestSetupBase::CreateFormatMount(uint64_t block_count, uint32_t block_size,
+zx_status_t BlobfsTestSetupBase::CreateFormatMount(uint64_t block_count, uint64_t block_size,
                                                    const FilesystemOptions& fs_options,
                                                    const MountOptions& mount_options) {
   auto device = std::make_unique<block_client::FakeBlockDevice>(block_count, block_size);

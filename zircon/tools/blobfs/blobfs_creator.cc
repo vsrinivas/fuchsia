@@ -337,10 +337,13 @@ zx_status_t BlobfsCreator::CalculateRequiredSize(off_t* out) {
 
   uint64_t required_node_count = 0;
   for (const auto& [digest, blob_info] : blob_info_list_) {
-    uint32_t block_count = blob_info.GetBlobLayout().TotalBlockCount();
+    uint64_t block_count = blob_info.GetBlobLayout().TotalBlockCount();
     data_blocks_ += block_count;
-    blobfs::ExtentCountType extent_count = static_cast<blobfs::ExtentCountType>(
-        fbl::round_up(block_count, blobfs::kBlockCountMax) / blobfs::kBlockCountMax);
+    uint64_t extent_count =
+        fbl::round_up(block_count, blobfs::Extent::kBlockCountMax) / blobfs::Extent::kBlockCountMax;
+    ZX_ASSERT_MSG(extent_count < blobfs::kMaxExtentsPerBlob,
+                  "Number of extents " PRIu64 "exceeds format limit of " PRIu64
+                  " extents per blob.");
     required_node_count += blobfs::NodePopulator::NodeCountForExtents(extent_count);
   }
 

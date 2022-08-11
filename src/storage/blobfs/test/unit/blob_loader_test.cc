@@ -240,7 +240,7 @@ TEST_P(BlobLoaderTest, NullBlobWithCorruptedMerkleRootFailsToLoad) {
     auto inode = setup_.blobfs()->GetNode(blob->Ino());
     memcpy(inode->merkle_root_hash, corrupt_merkle_root, sizeof(corrupt_merkle_root));
     BlobTransaction transaction;
-    uint64_t block = (blob->Ino() * static_cast<uint64_t>(kBlobfsInodeSize)) / kBlobfsBlockSize;
+    const uint64_t block = (blob->Ino() * kBlobfsInodeSize) / kBlobfsBlockSize;
     transaction.AddOperation(
         {.vmo = zx::unowned_vmo(setup_.blobfs()->GetAllocator()->GetNodeMapVmo().get()),
          .op = {

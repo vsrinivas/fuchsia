@@ -29,7 +29,7 @@ using testing::Eq;
 using testing::Property;
 using testing::SizeIs;
 
-std::unique_ptr<IdAllocator> CreateNodeBitmap(uint32_t node_count) {
+std::unique_ptr<IdAllocator> CreateNodeBitmap(size_t node_count) {
   std::unique_ptr<IdAllocator> node_bitmap;
   ZX_ASSERT(IdAllocator::Create(node_count, &node_bitmap) == ZX_OK);
   return node_bitmap;
@@ -43,7 +43,7 @@ RawBitmap CreateBlockBitmap(uint64_t block_count) {
 
 class AllocatorForTesting : public BaseAllocator {
  public:
-  AllocatorForTesting(uint64_t block_count, uint32_t node_count, bool allow_growing)
+  AllocatorForTesting(uint64_t block_count, size_t node_count, bool allow_growing)
       : BaseAllocator(CreateBlockBitmap(block_count), CreateNodeBitmap(node_count)),
         allow_growing_(allow_growing),
         node_map_(node_count) {}
@@ -83,8 +83,8 @@ class AllocatorForTesting : public BaseAllocator {
   std::vector<Inode> node_map_;
 };
 
-auto IsReservedExtent(uint64_t start, uint16_t length) {
-  return Property("extent", &ReservedExtent::extent, Eq(Extent(start, length)));
+auto IsReservedExtent(uint64_t start_block, uint64_t length_blocks) {
+  return Property("extent", &ReservedExtent::extent, Eq(Extent(start_block, length_blocks)));
 }
 
 TEST(BaseAllocatorTest, CheckBlocksAllocatedIsCorrect) {
@@ -248,11 +248,11 @@ TEST(BaseAllocatorTest, ReserveNodeCanReserveANode) {
 }
 
 TEST(BaseAllocatorTest, ReserveNodeDoesNotReserveAllocatedNodes) {
-  constexpr uint32_t node_count = 3;
-  AllocatorForTesting allocator(/*block_count=*/10, node_count, /*allow_growing=*/false);
+  constexpr size_t kNodeCount = 3;
+  AllocatorForTesting allocator(/*block_count=*/10, kNodeCount, /*allow_growing=*/false);
 
   // Allocate all of the nodes.
-  for (uint32_t i = 0; i < node_count; ++i) {
+  for (size_t i = 0; i < kNodeCount; ++i) {
     auto node = allocator.ReserveNode();
     ASSERT_OK(node.status_value());
     allocator.MarkInodeAllocated(std::move(node).value());

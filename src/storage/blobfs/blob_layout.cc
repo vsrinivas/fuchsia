@@ -20,58 +20,53 @@ namespace blobfs {
 
 namespace {
 
-using ByteCountType = BlobLayout::ByteCountType;
-using BlockCountType = BlobLayout::BlockCountType;
-using BlockSizeType = BlobLayout::BlockSizeType;
-
 // Rounds up |byte_count| to the next multiple of |blobfs_block_size|.
-ByteCountType RoundUpToBlockMultiple(ByteCountType byte_count, BlockSizeType blobfs_block_size) {
+uint64_t RoundUpToBlockMultiple(uint64_t byte_count, uint64_t blobfs_block_size) {
   return fbl::round_up(byte_count, blobfs_block_size);
 }
 
 // Returns the minimum number of blocks required to hold |byte_count| bytes.
-BlockCountType BlocksRequiredForBytes(ByteCountType byte_count, BlockSizeType blobfs_block_size) {
-  return safemath::checked_cast<BlockCountType>(
-      RoundUpToBlockMultiple(byte_count, blobfs_block_size) / blobfs_block_size);
+uint64_t BlocksRequiredForBytes(uint64_t byte_count, uint64_t blobfs_block_size) {
+  return RoundUpToBlockMultiple(byte_count, blobfs_block_size) / blobfs_block_size;
 }
 
 // Returns the maximum number of bytes that can fit in |block_count| blocks.
-ByteCountType BytesThatFitInBlocks(BlockCountType block_count, BlockSizeType blobfs_block_size) {
-  return ByteCountType{block_count} * blobfs_block_size;
+uint64_t BytesThatFitInBlocks(uint64_t block_count, uint64_t blobfs_block_size) {
+  return safemath::CheckMul(block_count, blobfs_block_size).ValueOrDie();
 }
 
-// Returns the maximum number of bytes that can be represented by |BlockCountType| with a block size
+// Returns the maximum number of bytes that can be represented by an inode with a block size
 // of |blobfs_block_size|.
-ByteCountType MaxBytesThatCanFitInBlocks(BlockSizeType blobfs_block_size) {
-  return BytesThatFitInBlocks(std::numeric_limits<BlockCountType>::max(), blobfs_block_size);
+uint64_t MaxBytesThatCanFitInBlocks(uint64_t blobfs_block_size) {
+  return BytesThatFitInBlocks(kMaxBlocksPerBlob, blobfs_block_size);
 }
 
 // Returns the maximum number of bytes that can be safely rounded up to the next block multiple of
 // |blobfs_block_size|.
-ByteCountType MaxBytesThatCanBeAligned(BlockSizeType blobfs_block_size) {
-  return std::numeric_limits<ByteCountType>::max() - blobfs_block_size + 1;
+uint64_t MaxBytesThatCanBeAligned(uint64_t blobfs_block_size) {
+  return std::numeric_limits<uint64_t>::max() - blobfs_block_size + 1;
 }
 
 class CompactMerkleTreeAtEndBlobLayout : public BlobLayout {
  public:
-  CompactMerkleTreeAtEndBlobLayout(ByteCountType file_size, ByteCountType data_size,
-                                   ByteCountType merkle_tree_size, BlockSizeType blobfs_block_size)
+  CompactMerkleTreeAtEndBlobLayout(uint64_t file_size, uint64_t data_size,
+                                   uint64_t merkle_tree_size, uint64_t blobfs_block_size)
       : BlobLayout(file_size, data_size, merkle_tree_size, blobfs_block_size) {}
 
-  BlockCountType DataBlockOffset() const override { return 0; }
+  uint64_t DataBlockOffset() const override { return 0; }
 
-  ByteCountType MerkleTreeOffset() const override {
+  uint64_t MerkleTreeOffset() const override {
     // The Merkle tree is aligned to end at the end of the blob.
     return TotalBlockCount() * blobfs_block_size() - MerkleTreeSize();
   }
 
-  BlockCountType TotalBlockCount() const override {
+  uint64_t TotalBlockCount() const override {
     return BlocksRequiredForBytes(DataSizeUpperBound() + MerkleTreeSize(), blobfs_block_size());
   }
 
   bool HasMerkleTreeAndDataSharedBlock() const override {
-    ByteCountType merkle_tree_block_remainder = MerkleTreeSize() % blobfs_block_size();
-    ByteCountType data_block_remainder = DataSizeUpperBound() % blobfs_block_size();
+    uint64_t merkle_tree_block_remainder = MerkleTreeSize() % blobfs_block_size();
+    uint64_t data_block_remainder = DataSizeUpperBound() % blobfs_block_size();
     // If either the Merkle tree or data are a block multiple then they can't share a block.
     if (merkle_tree_block_remainder == 0 || data_block_remainder == 0) {
       return false;
@@ -82,7 +77,7 @@ class CompactMerkleTreeAtEndBlobLayout : public BlobLayout {
   BlobLayoutFormat Format() const override { return BlobLayoutFormat::kCompactMerkleTreeAtEnd; }
 
   static zx::status<std::unique_ptr<CompactMerkleTreeAtEndBlobLayout>> CreateFromInode(
-      const Inode& inode, BlockSizeType blobfs_block_size) {
+      const Inode& inode, uint64_t blobfs_block_size) {
     if (!inode.IsCompressed()) {
       // If the blob is not compressed then the size of the stored data is the file size.
       auto blob_layout = CreateFromSizes(inode.blob_size, inode.blob_size, blobfs_block_size);
@@ -98,9 +93,9 @@ class CompactMerkleTreeAtEndBlobLayout : public BlobLayout {
     }
     // The exact compressed size of a blob isn't stored.  An upper bound can be determined from the
     // total size of the blob minus the Merkle tree size.  See fxbug.dev/44547.
-    ByteCountType total_size = BytesThatFitInBlocks(inode.block_count, blobfs_block_size);
-    ByteCountType merkle_tree_size = CalculateMerkleTreeSize(inode.blob_size);
-    ByteCountType data_size;
+    uint64_t total_size = BytesThatFitInBlocks(inode.block_count, blobfs_block_size);
+    uint64_t merkle_tree_size = CalculateMerkleTreeSize(inode.blob_size);
+    uint64_t data_size;
     if (!safemath::CheckSub(total_size, merkle_tree_size).AssignIfValid(&data_size)) {
       return zx::error(ZX_ERR_INVALID_ARGS);
     }
@@ -112,8 +107,8 @@ class CompactMerkleTreeAtEndBlobLayout : public BlobLayout {
   }
 
   static zx::status<std::unique_ptr<CompactMerkleTreeAtEndBlobLayout>> CreateFromSizes(
-      ByteCountType file_size, ByteCountType data_size, BlockSizeType blobfs_block_size) {
-    ByteCountType merkle_tree_size = CalculateMerkleTreeSize(file_size);
+      uint64_t file_size, uint64_t data_size, uint64_t blobfs_block_size) {
+    uint64_t merkle_tree_size = CalculateMerkleTreeSize(file_size);
     if (!AreSizesValid(file_size, data_size, merkle_tree_size, blobfs_block_size)) {
       return zx::error(ZX_ERR_INVALID_ARGS);
     }
@@ -122,15 +117,15 @@ class CompactMerkleTreeAtEndBlobLayout : public BlobLayout {
   }
 
  private:
-  static ByteCountType CalculateMerkleTreeSize(ByteCountType file_size) {
+  static uint64_t CalculateMerkleTreeSize(uint64_t file_size) {
     return digest::CalculateMerkleTreeSize(file_size, digest::kDefaultNodeSize,
                                            /*use_compact_format=*/true);
   }
 
-  static bool AreSizesValid(ByteCountType file_size, ByteCountType data_size,
-                            ByteCountType merkle_tree_size, BlockSizeType blobfs_block_size) {
-    ByteCountType max_aligned_bytes = MaxBytesThatCanBeAligned(blobfs_block_size);
-    ByteCountType max_block_bytes = MaxBytesThatCanFitInBlocks(blobfs_block_size);
+  static bool AreSizesValid(uint64_t file_size, uint64_t data_size, uint64_t merkle_tree_size,
+                            uint64_t blobfs_block_size) {
+    uint64_t max_aligned_bytes = MaxBytesThatCanBeAligned(blobfs_block_size);
+    uint64_t max_block_bytes = MaxBytesThatCanFitInBlocks(blobfs_block_size);
     // Make sure that the file size can be rounded up to the next block multiple and the data and
     // Merkle tree can be represented by a number of blocks.  Requiring that the data and Merkle
     // tree can be represented by a number of blocks also ensure that they can be rounded up to the
@@ -150,20 +145,18 @@ class CompactMerkleTreeAtEndBlobLayout : public BlobLayout {
 
 class PaddedMerkleTreeAtStartBlobLayout : public BlobLayout {
  public:
-  PaddedMerkleTreeAtStartBlobLayout(ByteCountType file_size, ByteCountType data_size,
-                                    ByteCountType merkle_tree_size, BlockSizeType blobfs_block_size)
+  PaddedMerkleTreeAtStartBlobLayout(uint64_t file_size, uint64_t data_size,
+                                    uint64_t merkle_tree_size, uint64_t blobfs_block_size)
       : BlobLayout(file_size, data_size, merkle_tree_size, blobfs_block_size) {}
 
-  BlockCountType DataBlockOffset() const override {
+  uint64_t DataBlockOffset() const override {
     // The data starts at the beginning of the block following the Merkle tree.
     return MerkleTreeBlockCount();
   }
 
-  ByteCountType MerkleTreeOffset() const override { return 0; }
+  uint64_t MerkleTreeOffset() const override { return 0; }
 
-  BlockCountType TotalBlockCount() const override {
-    return DataBlockCount() + MerkleTreeBlockCount();
-  }
+  uint64_t TotalBlockCount() const override { return DataBlockCount() + MerkleTreeBlockCount(); }
 
   bool HasMerkleTreeAndDataSharedBlock() const override { return false; }
 
@@ -172,7 +165,7 @@ class PaddedMerkleTreeAtStartBlobLayout : public BlobLayout {
   }
 
   static zx::status<std::unique_ptr<PaddedMerkleTreeAtStartBlobLayout>> CreateFromInode(
-      const Inode& inode, BlockSizeType blobfs_block_size) {
+      const Inode& inode, uint64_t blobfs_block_size) {
     if (!inode.IsCompressed()) {
       // If the blob is not compressed then the size of the stored data is the file size.
       auto blob_layout = CreateFromSizes(inode.blob_size, inode.blob_size, blobfs_block_size);
@@ -189,18 +182,17 @@ class PaddedMerkleTreeAtStartBlobLayout : public BlobLayout {
 
     // The exact compressed size of a blob isn't stored.  An upper bound can be determined from the
     // total number of blocks minus the number of Merkle tree blocks.  See fxbug.dev/44547.
-    ByteCountType merkle_tree_size = CalculateMerkleTreeSize(inode.blob_size);
+    uint64_t merkle_tree_size = CalculateMerkleTreeSize(inode.blob_size);
     if (merkle_tree_size > MaxBytesThatCanFitInBlocks(blobfs_block_size)) {
       return zx::error(ZX_ERR_OUT_OF_RANGE);
     }
-    BlockCountType merkle_tree_block_count =
-        BlocksRequiredForBytes(merkle_tree_size, blobfs_block_size);
-    BlockCountType data_block_count;
+    uint64_t merkle_tree_block_count = BlocksRequiredForBytes(merkle_tree_size, blobfs_block_size);
+    uint64_t data_block_count;
     if (!safemath::CheckSub(inode.block_count, merkle_tree_block_count)
              .AssignIfValid(&data_block_count)) {
       return zx::error(ZX_ERR_INVALID_ARGS);
     }
-    ByteCountType data_size = BytesThatFitInBlocks(data_block_count, blobfs_block_size);
+    uint64_t data_size = BytesThatFitInBlocks(data_block_count, blobfs_block_size);
     if (!AreSizesValid(inode.blob_size, data_size, merkle_tree_size, blobfs_block_size)) {
       return zx::error(ZX_ERR_INVALID_ARGS);
     }
@@ -209,8 +201,8 @@ class PaddedMerkleTreeAtStartBlobLayout : public BlobLayout {
   }
 
   static zx::status<std::unique_ptr<PaddedMerkleTreeAtStartBlobLayout>> CreateFromSizes(
-      ByteCountType file_size, ByteCountType data_size, BlockSizeType blobfs_block_size) {
-    ByteCountType merkle_tree_size = CalculateMerkleTreeSize(file_size);
+      uint64_t file_size, uint64_t data_size, uint64_t blobfs_block_size) {
+    uint64_t merkle_tree_size = CalculateMerkleTreeSize(file_size);
     if (!AreSizesValid(file_size, data_size, merkle_tree_size, blobfs_block_size)) {
       return zx::error(ZX_ERR_INVALID_ARGS);
     }
@@ -219,15 +211,15 @@ class PaddedMerkleTreeAtStartBlobLayout : public BlobLayout {
   }
 
  private:
-  static ByteCountType CalculateMerkleTreeSize(ByteCountType file_size) {
+  static uint64_t CalculateMerkleTreeSize(uint64_t file_size) {
     return digest::CalculateMerkleTreeSize(file_size, digest::kDefaultNodeSize,
                                            /*use_compact_format=*/false);
   }
 
-  static bool AreSizesValid(ByteCountType file_size, ByteCountType data_size,
-                            ByteCountType merkle_tree_size, BlockSizeType blobfs_block_size) {
-    ByteCountType max_aligned_bytes = MaxBytesThatCanBeAligned(blobfs_block_size);
-    ByteCountType max_block_bytes = MaxBytesThatCanFitInBlocks(blobfs_block_size);
+  static bool AreSizesValid(uint64_t file_size, uint64_t data_size, uint64_t merkle_tree_size,
+                            uint64_t blobfs_block_size) {
+    uint64_t max_aligned_bytes = MaxBytesThatCanBeAligned(blobfs_block_size);
+    uint64_t max_block_bytes = MaxBytesThatCanFitInBlocks(blobfs_block_size);
     // Make sure that the file size can be rounded up to the next block multiple and the data and
     // Merkle tree can be represented by a number of blocks.  Requiring that the data and Merkle
     // tree can be represented by a number of blocks also ensure that they can be rounded up to the
@@ -237,9 +229,13 @@ class PaddedMerkleTreeAtStartBlobLayout : public BlobLayout {
         (merkle_tree_size > max_block_bytes)) {
       return false;
     }
-    return safemath::CheckAdd(BlocksRequiredForBytes(data_size, blobfs_block_size),
-                              BlocksRequiredForBytes(merkle_tree_size, blobfs_block_size))
-        .IsValid<BlockCountType>();
+
+    uint64_t total_blocks =
+        safemath::CheckAdd(BlocksRequiredForBytes(data_size, blobfs_block_size),
+                           BlocksRequiredForBytes(merkle_tree_size, blobfs_block_size))
+            .ValueOrDie();
+
+    return total_blocks <= kMaxBlocksPerBlob;
   }
 };
 
@@ -263,41 +259,42 @@ bool ShouldUseCompactMerkleTreeFormat(BlobLayoutFormat format) {
   }
 }
 
-BlobLayout::BlobLayout(ByteCountType file_size, ByteCountType data_size,
-                       ByteCountType merkle_tree_size, BlockSizeType blobfs_block_size)
+BlobLayout::BlobLayout(uint64_t file_size, uint64_t data_size, uint64_t merkle_tree_size,
+                       uint64_t blobfs_block_size)
     : file_size_(file_size),
       data_size_(data_size),
       merkle_tree_size_(merkle_tree_size),
       blobfs_block_size_(blobfs_block_size) {}
 
-BlobLayout::ByteCountType BlobLayout::FileSize() const { return file_size_; }
+uint64_t BlobLayout::FileSize() const { return file_size_; }
 
-BlobLayout::ByteCountType BlobLayout::FileBlockAlignedSize() const {
+uint64_t BlobLayout::FileBlockAlignedSize() const {
   return RoundUpToBlockMultiple(file_size_, blobfs_block_size_);
 }
 
-BlobLayout::ByteCountType BlobLayout::DataSizeUpperBound() const { return data_size_; }
+uint64_t BlobLayout::DataSizeUpperBound() const { return data_size_; }
 
-BlobLayout::ByteCountType BlobLayout::DataBlockAlignedSize() const {
+uint64_t BlobLayout::DataBlockAlignedSize() const {
   return RoundUpToBlockMultiple(data_size_, blobfs_block_size_);
 }
 
-BlobLayout::BlockCountType BlobLayout::DataBlockCount() const {
+uint64_t BlobLayout::DataBlockCount() const {
   return BlocksRequiredForBytes(data_size_, blobfs_block_size_);
 }
 
-BlobLayout::ByteCountType BlobLayout::MerkleTreeSize() const { return merkle_tree_size_; }
+uint64_t BlobLayout::MerkleTreeSize() const { return merkle_tree_size_; }
 
-BlobLayout::ByteCountType BlobLayout::MerkleTreeBlockAlignedSize() const {
+uint64_t BlobLayout::MerkleTreeBlockAlignedSize() const {
   return RoundUpToBlockMultiple(MerkleTreeSize(), blobfs_block_size_);
 }
 
-BlobLayout::BlockCountType BlobLayout::MerkleTreeBlockCount() const {
+uint64_t BlobLayout::MerkleTreeBlockCount() const {
   return BlocksRequiredForBytes(MerkleTreeSize(), blobfs_block_size_);
 }
 
-zx::status<std::unique_ptr<BlobLayout>> BlobLayout::CreateFromInode(
-    BlobLayoutFormat format, const Inode& inode, BlockSizeType blobfs_block_size) {
+zx::status<std::unique_ptr<BlobLayout>> BlobLayout::CreateFromInode(BlobLayoutFormat format,
+                                                                    const Inode& inode,
+                                                                    uint64_t blobfs_block_size) {
   switch (format) {
     case BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart: {
       auto layout = PaddedMerkleTreeAtStartBlobLayout::CreateFromInode(inode, blobfs_block_size);
@@ -316,9 +313,10 @@ zx::status<std::unique_ptr<BlobLayout>> BlobLayout::CreateFromInode(
   }
 }
 
-zx::status<std::unique_ptr<BlobLayout>> BlobLayout::CreateFromSizes(
-    BlobLayoutFormat format, ByteCountType file_size, ByteCountType data_size,
-    BlockSizeType blobfs_block_size) {
+zx::status<std::unique_ptr<BlobLayout>> BlobLayout::CreateFromSizes(BlobLayoutFormat format,
+                                                                    uint64_t file_size,
+                                                                    uint64_t data_size,
+                                                                    uint64_t blobfs_block_size) {
   switch (format) {
     case BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart: {
       auto layout = PaddedMerkleTreeAtStartBlobLayout::CreateFromSizes(file_size, data_size,

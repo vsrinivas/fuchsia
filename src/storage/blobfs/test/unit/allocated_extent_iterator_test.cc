@@ -102,7 +102,7 @@ TEST(AllocatedExtentIteratorTest, InlineNode) {
 
   auto iter = AllocatedExtentIterator::Create(allocator.get(), node_index);
   ASSERT_EQ(0ul, iter->BlockIndex());
-  uint32_t blocks_seen = 0;
+  uint64_t blocks_seen = 0;
 
   for (size_t i = 0; i < allocated_extents.size(); i++) {
     ASSERT_FALSE(iter->Done());
@@ -143,7 +143,7 @@ TEST(AllocatedExtentIteratorTest, MultiNode) {
   auto iter = AllocatedExtentIterator::Create(allocator.get(), node_index);
   ASSERT_EQ(0u, iter->ExtentIndex());
   ASSERT_EQ(0ul, iter->BlockIndex());
-  uint32_t blocks_seen = 0;
+  uint64_t blocks_seen = 0;
 
   for (size_t i = 0; i < allocated_extents.size(); i++) {
     ASSERT_FALSE(iter->Done());
@@ -263,11 +263,11 @@ TEST(AllocatedExtentIteratorTest, BlockIteratorFragmented) {
 
   // Since we are maximally fragmented, we're polling for single block
   // extents. This means that each call to "Next" will return at most one.
-  uint32_t blocks_seen = 0;
+  uint64_t blocks_seen = 0;
 
   for (size_t i = 0; i < allocated_extents.size(); i++) {
     ASSERT_FALSE(iter.Done());
-    uint32_t actual_length;
+    uint64_t actual_length;
     uint64_t actual_start;
     // "i + 1" is arbitrary, but it checks trying a request for "at least
     // one" block, and some additional request sizes. It doesn't matter in
@@ -312,7 +312,7 @@ TEST(AllocatedExtentIteratorTest, BlockIteratorUnfragmented) {
     BlockIterator iter(std::make_unique<AllocatedExtentIterator>(std::move(extent_iter.value())));
     ASSERT_EQ(0ul, iter.BlockIndex());
     ASSERT_FALSE(iter.Done());
-    uint32_t actual_length;
+    uint64_t actual_length;
     uint64_t actual_start;
     ASSERT_EQ(iter.Next(10000, &actual_length, &actual_start), ZX_OK);
     ASSERT_EQ(kAllocatedBlocks, actual_length);
@@ -328,13 +328,12 @@ TEST(AllocatedExtentIteratorTest, BlockIteratorUnfragmented) {
     ASSERT_EQ(0ul, iter.BlockIndex());
     ASSERT_FALSE(iter.Done());
 
-    uint32_t blocks_seen = 0;
-    size_t request_size = 1;
+    uint64_t blocks_seen = 0;
+    uint64_t request_size = 1;
     while (!iter.Done()) {
-      uint32_t actual_length;
+      uint64_t actual_length;
       uint64_t actual_start;
-      ASSERT_EQ(iter.Next(static_cast<uint32_t>(request_size), &actual_length, &actual_start),
-                ZX_OK);
+      ASSERT_EQ(iter.Next(request_size, &actual_length, &actual_start), ZX_OK);
       ASSERT_EQ(std::min(request_size, kAllocatedBlocks - blocks_seen), actual_length);
       ASSERT_EQ(allocated_extents[0].Start() + blocks_seen, actual_start);
       request_size++;

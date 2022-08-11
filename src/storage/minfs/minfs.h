@@ -39,8 +39,6 @@ enum class UpdateBackupSuperblock {
   kUpdate,
 };
 
-uint32_t CalculateVsliceCount(const Superblock& superblock);
-
 // Format the partition backed by |bc| as MinFS.
 zx::status<> Mkfs(const MountOptions& options, Bcache* bc);
 

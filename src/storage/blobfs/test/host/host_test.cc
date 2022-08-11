@@ -115,7 +115,7 @@ void FillFileWithRandomContent(File& file, size_t size, unsigned int* seed) {
     written += write_result;
   }
   ASSERT_EQ(write_result, 0);
-  ASSERT_EQ(written, static_cast<int>(size));
+  ASSERT_EQ(written, static_cast<ssize_t>(size));
 }
 
 std::unique_ptr<File> CreateEmptyFile(uint64_t file_size) {
@@ -536,7 +536,7 @@ TEST(BlobfsHostTest, BlobInfoCreateCompressedWithSlightlyCompressibleFileWillCom
 }
 
 TEST(BlobfsHostTest, WriteBlobThatRequiresMultipleExtentsIsCorrect) {
-  constexpr uint64_t kDataBlockCount{kInlineMaxExtents * kBlockCountMax + 1};
+  constexpr uint64_t kDataBlockCount{kInlineMaxExtents * Extent::kBlockCountMax + 1};
   constexpr uint64_t kExtentCount{kInlineMaxExtents + 1};
   BlobLayoutFormat blob_layout_format = BlobLayoutFormat::kCompactMerkleTreeAtEnd;
 

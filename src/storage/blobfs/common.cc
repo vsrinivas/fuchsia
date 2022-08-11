@@ -198,13 +198,6 @@ zx_status_t CheckSuperblock(const Superblock* info, uint64_t max, bool quiet) {
   return ZX_OK;
 }
 
-uint32_t CalculateVsliceCount(const Superblock& superblock) {
-  return safemath::checked_cast<uint32_t>(1 + static_cast<uint64_t>(superblock.abm_slices) +
-                                          static_cast<uint64_t>(superblock.ino_slices) +
-                                          static_cast<uint64_t>(superblock.dat_slices) +
-                                          static_cast<uint64_t>(superblock.journal_slices));
-}
-
 uint64_t BlocksRequiredForInode(uint64_t inode_count) {
   return fbl::round_up(inode_count, kBlobfsInodesPerBlock) / kBlobfsInodesPerBlock;
 }

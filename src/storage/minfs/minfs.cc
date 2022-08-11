@@ -409,15 +409,6 @@ void UpdateChecksum(Superblock* info) {
   info->checksum = crc32(0, reinterpret_cast<uint8_t*>(info), sizeof(*info));
 }
 
-uint32_t CalculateVsliceCount(const Superblock& superblock) {
-  // Account for an additional slice for the superblock itself.
-  return safemath::checked_cast<uint32_t>(1ull + static_cast<uint64_t>(superblock.ibm_slices) +
-                                          static_cast<uint64_t>(superblock.abm_slices) +
-                                          static_cast<uint64_t>(superblock.ino_slices) +
-                                          static_cast<uint64_t>(superblock.integrity_slices) +
-                                          static_cast<uint64_t>(superblock.dat_slices));
-}
-
 #ifdef __Fuchsia__
 zx::status<> CheckSuperblock(const Superblock& info, block_client::BlockDevice* device,
                              uint32_t max_blocks) {

@@ -23,8 +23,8 @@
 
 namespace blobfs {
 
-constexpr uint32_t kBlockSize = 512;
-constexpr uint32_t kNumBlocks = 8192;
+constexpr uint64_t kBlockSize = 512;
+constexpr uint64_t kNumBlocks = 8192;
 
 void FdioTest::SetUp() {
   loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);

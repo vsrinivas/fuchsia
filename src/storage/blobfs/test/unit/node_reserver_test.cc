@@ -11,6 +11,7 @@
 #include <bitmap/rle-bitmap.h>
 #include <gtest/gtest.h>
 #include <id_allocator/id_allocator.h>
+#include <safemath/checked_math.h>
 
 #include "src/storage/blobfs/allocator/extent_reserver.h"
 
@@ -30,7 +31,7 @@ class FakeNodeReserver : public NodeReserverInterface {
       return zx::error(status);
     }
     ++reserved_node_count_;
-    return zx::ok(ReservedNode(this, static_cast<uint32_t>(index)));
+    return zx::ok(ReservedNode(this, safemath::checked_cast<uint32_t>(index)));
   }
 
   void UnreserveNode(ReservedNode node) override {

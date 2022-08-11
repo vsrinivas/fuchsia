@@ -15,30 +15,30 @@ namespace {
 // Test simple cases of reserving a single extent
 TEST(ExtentReserverTest, Reserve) {
   ExtentReserver reserver;
-  BlockOffsetType start_block = 0;
-  BlockCountType block_count = 1;
-  Extent extent(start_block, block_count);
+  constexpr uint64_t kStartBlock = 0;
+  constexpr uint64_t kBlockCount = 1;
+  Extent extent(kStartBlock, kBlockCount);
 
   // The ReservedExtent constructor should reserve the extent.
   // The destructor should release the extent.
   {
     ReservedExtent reserved_extent = reserver.Reserve(extent);
-    EXPECT_EQ(block_count, reserver.ReservedBlockCount());
+    EXPECT_EQ(kBlockCount, reserver.ReservedBlockCount());
   }
   EXPECT_EQ(0u, reserver.ReservedBlockCount());
 }
 
 TEST(ExtentReserverTest, ReserveReset) {
   ExtentReserver reserver;
-  BlockOffsetType start_block = 0;
-  BlockCountType block_count = 1;
-  Extent extent(start_block, block_count);
+  constexpr uint64_t kStartBlock = 0;
+  constexpr uint64_t kBlockCount = 1;
+  Extent extent(kStartBlock, kBlockCount);
 
   // The ReservedExtent constructor should reserve the extent.
   // Reset should release the extent.
   {
     ReservedExtent reserved_extent = reserver.Reserve(extent);
-    EXPECT_EQ(block_count, reserver.ReservedBlockCount());
+    EXPECT_EQ(kBlockCount, reserver.ReservedBlockCount());
     reserved_extent.Reset();
     EXPECT_EQ(0u, reserver.ReservedBlockCount());
   }
@@ -48,25 +48,25 @@ TEST(ExtentReserverTest, ReserveReset) {
 // Test the constructors of the reserved extent.
 TEST(ExtentReserverTest, Constructor) {
   ExtentReserver reserver;
-  BlockOffsetType start_block = 0;
-  BlockCountType block_count = 1;
-  Extent extent(start_block, block_count);
+  constexpr uint64_t kStartBlock = 0;
+  constexpr uint64_t kBlockCount = 1;
+  Extent extent(kStartBlock, kBlockCount);
 
   // Test reservation via the constructor.
   {
     ReservedExtent reserved_extent = reserver.Reserve(extent);
     EXPECT_EQ(extent.Start(), reserved_extent.extent().Start());
     EXPECT_EQ(extent.Length(), reserved_extent.extent().Length());
-    EXPECT_EQ(block_count, reserver.ReservedBlockCount());
+    EXPECT_EQ(kBlockCount, reserver.ReservedBlockCount());
   }
   EXPECT_EQ(0u, reserver.ReservedBlockCount());
 }
 
 TEST(ExtentReserverTest, MoveConstructor) {
   ExtentReserver reserver;
-  BlockOffsetType start_block = 0;
-  BlockCountType block_count = 1;
-  Extent extent(start_block, block_count);
+  constexpr uint64_t kStartBlock = 0;
+  constexpr uint64_t kBlockCount = 1;
+  Extent extent(kStartBlock, kBlockCount);
 
   // Test reservation via move constructor.
   {
@@ -85,9 +85,9 @@ TEST(ExtentReserverTest, MoveConstructor) {
 
 TEST(ExtentReserverTest, MoveAssignment) {
   ExtentReserver reserver;
-  BlockOffsetType start_block = 0;
-  BlockCountType block_count = 1;
-  Extent extent(start_block, block_count);
+  constexpr uint64_t kStartBlock = 0;
+  constexpr uint64_t kBlockCount = 1;
+  Extent extent(kStartBlock, kBlockCount);
 
   // Test reservation via the move assignment operator.
   {
@@ -106,16 +106,16 @@ TEST(ExtentReserverTest, MoveAssignment) {
 // Test splitting of extents.
 TEST(ExtentReserverTest, Split) {
   ExtentReserver reserver;
-  uint64_t start_block = 0;
-  BlockCountType block_count = 10;
-  Extent extent{start_block, block_count};
+  constexpr uint64_t kStartBlock = 0;
+  constexpr uint64_t kBlockCount = 10;
+  Extent extent{kStartBlock, kBlockCount};
 
   EXPECT_EQ(0u, reserver.ReservedBlockCount());
   ReservedExtent reserved_extent = reserver.Reserve(extent);
   EXPECT_EQ(10u, reserver.ReservedBlockCount());
 
   {
-    const BlockCountType split_point = 5;
+    const uint64_t split_point = 5;
     ReservedExtent latter(reserved_extent.SplitAt(split_point));
     // After splitting, no reservations actually change.
     EXPECT_EQ(10u, reserver.ReservedBlockCount());
@@ -125,7 +125,7 @@ TEST(ExtentReserverTest, Split) {
     EXPECT_EQ(split_point, reserved_extent.extent().Length());
 
     EXPECT_EQ(extent.Start() + split_point, latter.extent().Start());
-    EXPECT_EQ(block_count - split_point, latter.extent().Length());
+    EXPECT_EQ(kBlockCount - split_point, latter.extent().Length());
   }
 
   // When the latter half of the reservation goes out of scope, the reservations

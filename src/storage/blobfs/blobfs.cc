@@ -981,7 +981,7 @@ void Blobfs::ComputeBlobFragmentation(uint32_t node_index, Inode& inode,
     ++out_stats->extents_per_file[inode.extent_count];
   }
 
-  for (ExtentCountType i = 0; i < std::min<uint32_t>(kInlineMaxExtents, inode.extent_count); ++i) {
+  for (size_t i = 0; i < std::min<size_t>(kInlineMaxExtents, inode.extent_count); ++i) {
     fragmentation_metrics.in_use_fragments.Insert(inode.extents[i].Length());
     if (out_stats) {
       ++out_stats->in_use_fragments[inode.extents[i].Length()];
@@ -998,7 +998,7 @@ void Blobfs::ComputeBlobFragmentation(uint32_t node_index, Inode& inode,
       continue;
     }
     auto container = container_or.value();
-    for (ExtentCountType i = 0; i < container->extent_count; ++i) {
+    for (size_t i = 0; i < container->extent_count; ++i) {
       fragmentation_metrics.in_use_fragments.Insert(container->extents[i].Length());
       if (out_stats) {
         ++out_stats->in_use_fragments[container->extents[i].Length()];

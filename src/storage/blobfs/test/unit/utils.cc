@@ -75,7 +75,7 @@ zx_status_t MockTransactionManager::BlockAttachVmo(const zx::vmo& vmo, storage::
     return status;
   }
   attached_vmos_.push_back(std::move(duplicate_vmo));
-  *out = storage::Vmoid(static_cast<uint16_t>(attached_vmos_.size()));
+  *out = storage::Vmoid(safemath::checked_cast<uint16_t>(attached_vmos_.size()));
   if (out->get() == 0) {
     return ZX_ERR_OUT_OF_RANGE;
   }
