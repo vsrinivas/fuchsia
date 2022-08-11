@@ -1057,88 +1057,22 @@ impl<
     }
 }
 
-/// An error when sending using [`send_udp`].
+/// An error when sending using [`send_udp_conn_to`].
 #[derive(Error, Copy, Clone, Debug, Eq, PartialEq)]
 pub enum UdpSendError {
     /// An error was encountered while trying to create a temporary UDP
     /// connection socket.
     #[error("could not create a temporary connection socket: {}", _0)]
-    CreateSock(UdpSockCreationError),
+    CreateSock(IpSockCreationError),
     /// An error was encountered while sending.
-    #[error("{}", _0)]
+    #[error("ip socket error: {}", _0)]
     Send(IpSockSendError),
+    /// There was a problem with the remote address relating to its zone.
+    #[error("zone error: {}", _0)]
+    Zone(ZonedAddressError),
 }
 
-/// Sends a single UDP frame without creating a connection or listener.
-///
-/// `send_udp` is equivalent to creating a UDP connection with [`connect_udp`]
-/// with the same arguments provided to `send_udp`, sending `body` over the
-/// created connection and, finally, destroying the connection.
-///
-/// # Errors
-///
-/// `send_udp` fails if the selected 4-tuple conflicts with any existing socket.
-///
-/// On error, the original `body` is returned unmodified so that it can be
-/// reused by the caller.
-///
-// TODO(brunodalbo): We may need more arguments here to express REUSEADDR and
-// BIND_TO_DEVICE options.
-pub fn send_udp<
-    I: IpExt,
-    B: BufferMut,
-    C: BufferUdpStateNonSyncContext<I, B>,
-    SC: BufferUdpStateContext<I, C, B>,
->(
-    sync_ctx: &mut SC,
-    ctx: &mut C,
-    local_ip: Option<SpecifiedAddr<I::Addr>>,
-    local_port: Option<NonZeroU16>,
-    remote_ip: SpecifiedAddr<I::Addr>,
-    remote_port: NonZeroU16,
-    body: B,
-) -> Result<(), (B, UdpSendError)> {
-    // TODO(brunodalbo) this can be faster if we just perform the checks but
-    // don't actually create a UDP connection.
-    let tmp_conn = match create_udp_conn(
-        sync_ctx,
-        ctx,
-        local_ip,
-        local_port,
-        None,
-        remote_ip,
-        remote_port,
-        PosixSharingOptions::Exclusive,
-        Default::default(),
-    ) {
-        Ok(conn) => conn,
-        Err((err, multicast_memberships)) => {
-            let _: MulticastMemberships<_, _> = multicast_memberships;
-            return Err((body, UdpSendError::CreateSock(err)));
-        }
-    };
-
-    // Not using `?` here since we need to `remove_udp_conn` even in the case of failure.
-    let ret = send_udp_conn(sync_ctx, ctx, tmp_conn, body)
-        .map_err(|(body, err)| (body, UdpSendError::Send(err)));
-    let info = remove_udp_conn(sync_ctx, ctx, tmp_conn);
-    if cfg!(debug_assertions) {
-        assert_matches::assert_matches!(info, UdpConnInfo {
-            local_ip: removed_local_ip,
-            local_port: removed_local_port,
-            remote_ip: removed_remote_ip,
-            remote_port: removed_remote_port,
-        } if local_ip.map(|local_ip| local_ip == removed_local_ip).unwrap_or(true) &&
-            local_port.map(|local_port| local_port == removed_local_port).unwrap_or(true) &&
-            removed_remote_ip == remote_ip && removed_remote_port == remote_port &&
-            removed_remote_port == remote_port && removed_remote_port == remote_port
-        );
-    }
-
-    ret
-}
-
-/// Sends a UDP packet on an existing connection.
+/// Sends a UDP packet on an existing connected socket.
 ///
 /// # Errors
 ///
@@ -1187,6 +1121,62 @@ pub fn send_udp_conn<
         .map_err(|(body, err)| (body.into_inner(), err))
 }
 
+/// Sends a UDP packet using an existing connected socket but overriding the
+/// destination address.
+pub fn send_udp_conn_to<
+    I: IpExt,
+    B: BufferMut,
+    C: BufferUdpStateNonSyncContext<I, B>,
+    SC: BufferUdpStateContext<I, C, B>,
+>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    conn: UdpConnId<I>,
+    remote_ip: ZonedAddr<I::Addr, SC::DeviceId>,
+    remote_port: NonZeroU16,
+    body: B,
+) -> Result<(), (B, UdpSendError)> {
+    let ((local_ip, local_port), device) = sync_ctx.with_sockets(|state| {
+        let UdpSockets(DatagramSockets { bound, unbound: _, lazy_port_alloc: _ }) = state;
+        let (_, _, addr): &(ConnState<_, _, _>, PosixSharingOptions, _) =
+            bound.conns().get_by_id(&conn).expect("no such connection");
+        let ConnAddr { ip: ConnIpAddr { local, remote: _ }, device } = *addr;
+
+        (local, device)
+    });
+
+    let (remote_ip, device) = match resolve_addr_with_device(remote_ip, device) {
+        Ok(addr) => addr,
+        Err(e) => return Err((body, UdpSendError::Zone(e))),
+    };
+
+    let sock = match sync_ctx.new_ip_socket(
+        ctx,
+        device,
+        Some(local_ip),
+        remote_ip,
+        IpProto::Udp.into(),
+        None,
+    ) {
+        Ok(sock) => sock,
+        Err(e) => return Err((body, UdpSendError::CreateSock(e))),
+    };
+
+    sync_ctx
+        .send_ip_packet(
+            ctx,
+            &sock,
+            body.encapsulate(UdpPacketBuilder::new(
+                local_ip.get(),
+                remote_ip.get(),
+                Some(local_port),
+                remote_port,
+            )),
+            None,
+        )
+        .map_err(|(body, err)| (body.into_inner(), UdpSendError::Send(err)))
+}
+
 /// An error encountered while sending a UDP packet on a listener socket.
 #[derive(Error, Copy, Clone, Debug, Eq, PartialEq)]
 pub enum UdpSendListenerError {
@@ -1230,7 +1220,7 @@ pub fn send_udp_listener<
     // whether that check is actually necessary.
     //
     // Also, if the local IP address is a multicast address this function should
-    // probably fail and `send_udp` must be used instead.
+    // probably fail and `send_udp_conn_to` must be used instead.
     let (device, local_ip, local_port) = sync_ctx.with_sockets(|state| {
         let UdpSockets(DatagramSockets { bound, unbound: _, lazy_port_alloc: _ }) = state;
         let (_, _, addr): &(ListenerState<_, _>, PosixSharingOptions, _) =
@@ -2449,18 +2439,6 @@ mod tests {
         }
     }
 
-    impl<I: Ip + IpExt, D: IpDeviceId> UdpSockets<I, D> {
-        fn iter_conn_addrs(
-            &self,
-        ) -> impl Iterator<Item = &ConnAddr<I::Addr, D, NonZeroU16, NonZeroU16>> {
-            let Self(DatagramSockets { bound, unbound: _, lazy_port_alloc: _ }) = self;
-            bound.iter_addrs().filter_map(|a| match a {
-                AddrVec::Conn(c) => Some(c),
-                AddrVec::Listen(_) => None,
-            })
-        }
-    }
-
     /// Helper function to inject an UDP packet with the provided parameters.
     fn receive_udp_packet<I: TestIpExt, D: IpDeviceId + 'static>(
         sync_ctx: &mut DummyDeviceSyncCtx<I, D>,
@@ -3112,130 +3090,77 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_send_udp<I: Ip + TestIpExt + for<'a> IpExtByteSlice<&'a [u8]>>()
+    fn test_send_udp_conn_to<I: Ip + TestIpExt + for<'a> IpExtByteSlice<&'a [u8]>>()
     where
         DummySyncCtx<I>: DummySyncCtxBound<I>,
+        DummyUdpCtx<I, DummyDeviceId>: DummyUdpCtxExt<I>,
     {
         set_logger_for_test();
 
-        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(DummySyncCtx::<I>::default());
         let local_ip = local_ip::<I>();
         let remote_ip = remote_ip::<I>();
+        let other_remote_ip = I::get_other_ip_address(3);
 
-        // UDP connection count should be zero before and after `send_udp` call.
-        assert_empty(sync_ctx.get_ref().sockets.iter_conn_addrs());
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } = DummyCtx::with_sync_ctx(
+            DummySyncCtx::<I>::with_state(DummyUdpCtx::with_local_remote_ip_addrs(
+                vec![local_ip],
+                vec![remote_ip, other_remote_ip],
+            )),
+        );
 
-        let body = [1, 2, 3, 4, 5];
-        // Try to send something with send_udp
-        send_udp(
+        let unbound = create_udp_unbound(&mut sync_ctx);
+        let listener = listen_udp(
             &mut sync_ctx,
             &mut non_sync_ctx,
-            Some(local_ip),
-            NonZeroU16::new(100),
-            remote_ip,
+            unbound,
+            Some(ZonedAddr::Unzoned(local_ip)),
+            Some(LOCAL_PORT),
+        )
+        .expect("listen should succeed");
+        let conn = connect_udp_listener(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            listener,
+            ZonedAddr::Unzoned(remote_ip),
+            REMOTE_PORT,
+        )
+        .expect("connect should succeed");
+
+        let body = [1, 2, 3, 4, 5];
+        // Try to send something with send_udp_conn_to
+        send_udp_conn_to(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            conn,
+            ZonedAddr::Unzoned(other_remote_ip),
             NonZeroU16::new(200).unwrap(),
             Buf::new(body.to_vec(), ..),
         )
-        .expect("send_udp failed");
+        .expect("send_udp_conn_to failed");
 
-        // UDP connection count should be zero before and after `send_udp` call.
-        assert_empty(sync_ctx.get_ref().sockets.iter_conn_addrs());
-        let frames = sync_ctx.frames();
-        assert_eq!(frames.len(), 1);
+        // The socket should not have been affected.
+        let info = get_udp_conn_info(&sync_ctx, &mut non_sync_ctx, conn);
+        assert_eq!(info.local_ip, local_ip);
+        assert_eq!(info.remote_ip, remote_ip);
+        assert_eq!(info.remote_port, REMOTE_PORT);
 
         // Check first frame.
+        let frames = sync_ctx.frames();
         let (
             SendIpPacketMeta { device: _, src_ip, dst_ip, next_hop, proto, ttl: _, mtu: _ },
             frame_body,
         ) = &frames[0];
-        assert_eq!(next_hop, &remote_ip);
+
+        assert_eq!(next_hop, &other_remote_ip);
         assert_eq!(src_ip, &local_ip);
-        assert_eq!(dst_ip, &remote_ip);
+        assert_eq!(dst_ip, &other_remote_ip);
         assert_eq!(proto, &I::Proto::from(IpProto::Udp));
         let mut buf = &frame_body[..];
         let udp_packet = UdpPacket::parse(&mut buf, UdpParseArgs::new(src_ip.get(), dst_ip.get()))
             .expect("Parsed sent UDP packet");
-        assert_eq!(udp_packet.src_port().unwrap().get(), 100);
-        assert_eq!(udp_packet.dst_port().get(), 200);
+        assert_eq!(udp_packet.src_port().unwrap(), LOCAL_PORT);
+        assert_eq!(udp_packet.dst_port(), REMOTE_PORT);
         assert_eq!(udp_packet.body(), &body[..]);
-    }
-
-    /// Tests that `send_udp` propogates errors.
-    #[ip_test]
-    fn test_send_udp_errors<I: Ip + TestIpExt>()
-    where
-        DummySyncCtx<I>: DummySyncCtxBound<I>,
-    {
-        set_logger_for_test();
-
-        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(DummySyncCtx::<I>::default());
-
-        // Use invalid local IP to force a CannotBindToAddress error.
-        let local_ip = remote_ip::<I>();
-        let remote_ip = remote_ip::<I>();
-
-        let body = [1, 2, 3, 4, 5];
-        // Try to send something with send_udp.
-        let (_, send_error) = send_udp(
-            &mut sync_ctx,
-            &mut non_sync_ctx,
-            Some(local_ip),
-            NonZeroU16::new(100),
-            remote_ip,
-            NonZeroU16::new(200).unwrap(),
-            Buf::new(body.to_vec(), ..),
-        )
-        .expect_err("send_udp unexpectedly succeeded");
-
-        assert_eq!(
-            send_error,
-            UdpSendError::CreateSock(UdpSockCreationError::Ip(
-                IpSockRouteError::Unroutable(IpSockUnroutableError::LocalAddrNotAssigned).into()
-            ))
-        );
-    }
-
-    /// Tests that `send_udp` cleans up after errors.
-    #[ip_test]
-    fn test_send_udp_errors_cleanup<I: Ip + TestIpExt>()
-    where
-        DummySyncCtx<I>: DummySyncCtxBound<I>,
-    {
-        set_logger_for_test();
-
-        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(DummySyncCtx::<I>::default());
-
-        let local_ip = local_ip::<I>();
-        let remote_ip = remote_ip::<I>();
-
-        // UDP connection count should be zero before and after `send_udp` call.
-        assert_empty(sync_ctx.get_ref().sockets.iter_conn_addrs());
-
-        // Instruct the dummy frame context to throw errors.
-        let frames: &mut DummyFrameCtx<SendIpPacketMeta<I, _, _>> = sync_ctx.as_mut();
-        frames.set_should_error_for_frame(|_frame_meta| true);
-
-        let body = [1, 2, 3, 4, 5];
-        // Try to send something with send_udp
-        let (_, send_error) = send_udp(
-            &mut sync_ctx,
-            &mut non_sync_ctx,
-            Some(local_ip),
-            NonZeroU16::new(100),
-            remote_ip,
-            NonZeroU16::new(200).unwrap(),
-            Buf::new(body.to_vec(), ..),
-        )
-        .expect_err("send_udp unexpectedly succeeded");
-
-        assert_eq!(send_error, UdpSendError::Send(IpSockSendError::Mtu));
-
-        // UDP connection count should be zero before and after `send_udp` call
-        // (even in the case of errors).
-        assert_empty(sync_ctx.get_ref().sockets.iter_conn_addrs());
     }
 
     /// Tests that UDP send failures are propagated as errors.

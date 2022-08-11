@@ -313,21 +313,12 @@ pub(crate) trait BufferTransportState<I: Ip, B: BufferMut, C, SC: IpDeviceIdCont
     type SendConnError: IntoErrno;
     type SendListenerError: IntoErrno;
 
-    fn send(
-        sync_ctx: &mut SC,
-        ctx: &mut C,
-        local_ip: Option<SpecifiedAddr<I::Addr>>,
-        local_id: Option<Self::LocalIdentifier>,
-        remote_ip: SpecifiedAddr<I::Addr>,
-        remote_id: Self::RemoteIdentifier,
-        body: B,
-    ) -> Result<(), (B, Self::SendError)>;
-
     fn send_conn(
         sync_ctx: &mut SC,
         ctx: &mut C,
         conn: Self::ConnId,
         body: B,
+        remote: Option<(SpecifiedAddr<I::Addr>, Self::RemoteIdentifier)>,
     ) -> Result<(), (B, Self::SendConnError)>;
 
     fn send_listener(
@@ -524,28 +515,28 @@ impl<
     > BufferTransportState<I, B, C, SC> for Udp
 {
     type SendError = UdpSendError;
-    type SendConnError = IpSockSendError;
+    type SendConnError = UdpSendError;
     type SendListenerError = UdpSendListenerError;
-
-    fn send(
-        sync_ctx: &mut SC,
-        ctx: &mut C,
-        local_ip: Option<SpecifiedAddr<I::Addr>>,
-        local_id: Option<Self::LocalIdentifier>,
-        remote_ip: SpecifiedAddr<I::Addr>,
-        remote_id: Self::RemoteIdentifier,
-        body: B,
-    ) -> Result<(), (B, Self::SendError)> {
-        core_udp::send_udp(sync_ctx, ctx, local_ip, local_id, remote_ip, remote_id, body)
-    }
 
     fn send_conn(
         sync_ctx: &mut SC,
         ctx: &mut C,
         conn: Self::ConnId,
         body: B,
+        remote: Option<(SpecifiedAddr<I::Addr>, Self::RemoteIdentifier)>,
     ) -> Result<(), (B, Self::SendConnError)> {
-        core_udp::send_udp_conn(sync_ctx, ctx, conn, body)
+        match remote {
+            None => core_udp::send_udp_conn(sync_ctx, ctx, conn, body)
+                .map_err(|(b, e)| (b, UdpSendError::Send(e))),
+            Some((remote_ip, remote_port)) => core_udp::send_udp_conn_to(
+                sync_ctx,
+                ctx,
+                conn,
+                ZonedAddr::Unzoned(remote_ip),
+                remote_port,
+                body,
+            ),
+        }
     }
 
     fn send_listener(
@@ -988,25 +979,19 @@ where
     type SendConnError = IcmpSendError;
     type SendListenerError = IcmpSendError;
 
-    fn send(
-        _sync_ctx: &mut SyncCtx<NonSyncCtx>,
-        _ctx: &mut NonSyncCtx,
-        _local_ip: Option<SpecifiedAddr<I::Addr>>,
-        _local_id: Option<Self::LocalIdentifier>,
-        _remote_ip: SpecifiedAddr<I::Addr>,
-        _remote_id: Self::RemoteIdentifier,
-        _body: B,
-    ) -> Result<(), (B, Self::SendError)> {
-        todo!("https://fxbug.dev/47321: needs Core implementation")
-    }
-
     fn send_conn(
         sync_ctx: &mut SyncCtx<NonSyncCtx>,
         ctx: &mut NonSyncCtx,
         conn: Self::ConnId,
         body: B,
+        remote: Option<(SpecifiedAddr<I::Addr>, Self::RemoteIdentifier)>,
     ) -> Result<(), (B, Self::SendConnError)> {
-        I::send_conn(sync_ctx, ctx, conn, body)
+        match remote {
+            None => I::send_conn(sync_ctx, ctx, conn, body),
+            Some((_remote_ip, IcmpRemoteIdentifier {})) => {
+                todo!("https://fxbug.dev/47321: needs Core implementation")
+            }
+        }
     }
 
     fn send_listener(
@@ -2582,35 +2567,8 @@ where
                     return Err(fposix::Errno::Epipe);
                 }
                 let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
-                match remote {
-                    Some((addr, port)) => {
-                        // Caller specified a remote socket address; use
-                        // stateless send using the local address and port
-                        // in `conn_id`.
-                        let (local_ip, local_port, _, _): (
-                            _,
-                            _,
-                            SpecifiedAddr<I::Addr>,
-                            T::RemoteIdentifier,
-                        ) = T::get_conn_info(sync_ctx, non_sync_ctx, conn_id);
-                        T::send(
-                            sync_ctx,
-                            non_sync_ctx,
-                            Some(local_ip),
-                            Some(local_port),
-                            addr,
-                            port,
-                            body,
-                        )
-                        .map_err(|(_body, err)| err.into_errno())
-                    }
-                    None => {
-                        // Caller did not specify a remote socket address; just
-                        // use the existing conn.
-                        T::send_conn(sync_ctx, non_sync_ctx, conn_id, body)
-                            .map_err(|(_body, err)| err.into_errno())
-                    }
-                }
+                T::send_conn(sync_ctx, non_sync_ctx, conn_id, body, remote)
+                    .map_err(|(_body, err)| err.into_errno())
             }
             SocketState::BoundListen { listener_id } => match remote {
                 Some((addr, port)) => {

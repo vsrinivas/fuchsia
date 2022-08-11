@@ -449,6 +449,7 @@ impl IntoErrno for UdpSendError {
         match self {
             UdpSendError::CreateSock(err) => err.into_errno(),
             UdpSendError::Send(err) => err.into_errno(),
+            UdpSendError::Zone(err) => err.into_errno(),
         }
     }
 }
