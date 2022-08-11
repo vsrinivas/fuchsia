@@ -375,10 +375,8 @@ concrete engineering proposals from project contributors.
 There is no predetermined number of people on the Eng Council. However, in order
 to provide a coherent technical vision, the council has a small number of
 members. Eng Council members are appointed by the governing authority for the
-project.
-
-For more details about the responsibilities of an API Reviewer and how the API
-Council operates, see the [Fuchsia Eng Council Charter](/docs/contribute/governance/eng_council.md).
+project. For more information, see [Membership](/docs/contribute/governance/eng_council.md#membership)
+in the Fuchsia Eng Council Charter.
 
 ## Revoking Privileges {#revoking-privileges}
 
