@@ -597,10 +597,15 @@ fuchsia_unittest_package("use_aac_decoder_test") {
   ]
 }
 
-# Running this binary, the --http=<url> command-line parameter needs to be
-# passed, and the binary won't verify the MD5.  Instead it'll stream the URL
-# data in, parse it as ivf, decode it, compute MD5, and output the MD5.
-fuchsia_package_with_single_component("vp9_decoder_conformance_http") {
+fuchsia_component("vp9_conformance_http_test_component_v2") {
+  testonly = true
+  manifest = "use_media_decoder/meta/vp9_decoder_conformance_http.cml"
+  deps = [
+    "//src/media/codec/examples/use_media_decoder:vp9_decoder_conformance_test",
+  ]
+}
+
+fuchsia_component("vp9_conformance_http_test_component") {
   testonly = true
   manifest = "use_media_decoder/meta/vp9_decoder_conformance_http.cmx"
   deps = [
@@ -610,11 +615,37 @@ fuchsia_package_with_single_component("vp9_decoder_conformance_http") {
 
 # Running this binary, the --http=<url> command-line parameter needs to be
 # passed, and the binary won't verify the MD5.  Instead it'll stream the URL
-# data in, parse it as h264, decode it, compute MD5, and output the MD5.
-fuchsia_package_with_single_component("h264-decoder-conformance-http") {
+# data in, parse it as ivf, decode it, compute MD5, and output the MD5.
+fuchsia_package("vp9_decoder_conformance_http") {
+  testonly = true
+  deps = [
+    ":vp9_conformance_http_test_component",
+    ":vp9_conformance_http_test_component_v2",
+  ]
+}
+
+fuchsia_component("h264-decoder-conformance-http-v2") {
+  testonly = true
+  manifest = "use_media_decoder/meta/h264_decoder_conformance_http.cml"
+  deps = [ "//src/media/codec/examples/use_media_decoder:h264_decoder_conformance_test" ]
+}
+
+fuchsia_component("h264-decoder-conformance-http") {
   testonly = true
   manifest = "use_media_decoder/meta/h264_decoder_conformance_http.cmx"
   deps = [ "//src/media/codec/examples/use_media_decoder:h264_decoder_conformance_test" ]
+}
+
+# Running this binary, the --http=<url> command-line parameter needs to be
+# passed, and the binary won't verify the MD5.  Instead it'll stream the URL
+# data in, parse it as h264, decode it, compute MD5, and output the MD5.
+fuchsia_package("h264-decoder-conformance-http-pkg") {
+  testonly = true
+  package_name = "h264-decoder-conformance-http"
+  deps = [
+    ":h264-decoder-conformance-http",
+    ":h264-decoder-conformance-http-v2",
+  ]
 }
 
 # Put the below group of vp9 conformance tests last in the file.  Otherwise,
