@@ -93,11 +93,10 @@ From //build/fidl/fidl_library.gni:19
 
 ### appmgr_core_shards
 Core shards that are required for including appmgr in a product.
-TODO(shayba): populate this after tqrev.dev/544025 lands
 
 **Current value (from the default):** `["//src/sys/appmgr:appmgr_core_shard", "//src/sys/core:core_proxy_shard"]`
 
-From //src/sys/appmgr/core_shards.gni:8
+From //src/sys/appmgr/core_shards.gni:7
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -2959,7 +2958,7 @@ From //build/go/go_build.gni:22
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/dartlang/.gocache"`
 
 From //build/go/go_build.gni:18
 
@@ -6204,7 +6203,7 @@ From //build/security.gni:172
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"thinlto-cache"`
+**Current value (from the default):** `"dartlang/thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
