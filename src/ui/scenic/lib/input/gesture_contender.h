@@ -35,6 +35,7 @@ constexpr ContenderId kInvalidContenderId = 0;
 class GestureContender {
  public:
   explicit GestureContender(zx_koid_t view_ref_koid) : view_ref_koid_(view_ref_koid) {}
+  virtual ~GestureContender() = default;
 
   // Called whenever there's a new event for a stream.
   virtual void UpdateStream(StreamId stream_id, const InternalTouchEvent& event,
@@ -44,6 +45,8 @@ class GestureContender {
   // If called before the first call to UpdateStream() for |stream_id|, the win message should
   // be delivered to the client along with the initial UpdateStream() event.
   virtual void EndContest(StreamId stream_id, bool awarded_win) = 0;
+
+  virtual zx_koid_t channel_koid() const { return ZX_KOID_INVALID; }
 
   const zx_koid_t view_ref_koid_;
 };

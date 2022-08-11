@@ -22,7 +22,7 @@ namespace scenic_impl::input {
 // Base class for implementations of fuchsia.ui.pointer.TouchSource and its augmentations.
 class TouchSourceBase : public GestureContender {
  public:
-  virtual ~TouchSourceBase();
+  ~TouchSourceBase() override = default;
 
   // |GestureContender|
   // For |view_bounds| and |event.viewport| new values are only sent to the client when they've
@@ -33,7 +33,7 @@ class TouchSourceBase : public GestureContender {
   // |GestureContender|
   void EndContest(StreamId stream_id, bool awarded_win) override;
 
-  zx_koid_t channel_koid() const { return channel_koid_; }
+  zx_koid_t channel_koid() const override { return channel_koid_; }
 
  protected:
   // Augmentation data for f.u.p.augment.TouchEventWithLocalHit.

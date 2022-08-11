@@ -90,7 +90,8 @@ class TouchSystem : public fuchsia::ui::pointer::augment::LocalHit {
   // stream ended).
   void DestroyArenaIfComplete(StreamId stream_id);
 
-  void EraseTouchContender(zx_koid_t view_ref_koid);
+  // Destroys contender specified by |contender_id| and removes it from all contests.
+  void EraseContender(ContenderId contender_id, zx_koid_t view_ref_koid);
 
   // For a view hierarchy where |top| is an ancestor of |bottom|, returns |bottom|'s ancestor
   // hierarchy starting at |top| and ending at |bottom|.
@@ -117,35 +118,19 @@ class TouchSystem : public fuchsia::ui::pointer::augment::LocalHit {
   // contest. All contenders are tracked in the |contenders_| map for the duration of their
   // lifetime. The |contenders_| map is relied upon by the |gesture_arenas_| to deliver events.
 
-  // Ties each TouchSource instance to its contender id.
-  struct TouchContender {
-    ContenderId contender_id;
-    std::unique_ptr<TouchSourceBase> touch_source;
-  };
-
   // Each gesture arena tracks one touch event stream and a set of contenders.
   std::unordered_map<StreamId, GestureArena> gesture_arenas_;
 
-  // Map of all active contenders. If any contender is deleted, it must be removed from this map or
-  // we risk use-after-free errors.
-  std::unordered_map<ContenderId, GestureContender*> contenders_;
+  // Map of all active contenders.
+  std::unordered_map<ContenderId, std::unique_ptr<GestureContender>> contenders_;
 
-  // Mapping of ViewRef koids to TouchContenders
-  // Invariant: |touch_contenders_| tracks regular GestureContenders.
-  // Note: Legacy GestureContenders are tracked in separate fields.
-  // Upon destruction, each member of |touch_contenders_| calls its |respond| closure, which calls
-  // back into TouchSystem and relies upon the state of |gesture_arenas_| and |contenders_|.
-  // |touch_contenders_| must therefore be destroyed first. To guarantee that, it must be placed
-  // textually after these members.
-  std::unordered_map<zx_koid_t, TouchContender> touch_contenders_;
-
-  // GestureContender for the accessibility client. Valid while accessibility is connected, null
-  // otherwise.
-  std::unique_ptr<A11yLegacyContender> a11y_legacy_contender_;
+  // Map of ViewRef koids to ContenderIds.
+  // Does not include ContenderIds for A11yLegacyContender or GfxLegacyContender, since no View is
+  // uniquely associated with either.
+  std::unordered_map<zx_koid_t, ContenderId> viewrefs_to_contender_ids_;
 
   // Mapping of {device_id, pointer_id} to stream id for gfx legacy injection.
   std::map<std::pair<uint32_t, uint32_t>, StreamId> gfx_legacy_streams_;
-  std::unordered_map<ContenderId, GfxLegacyContender> gfx_legacy_contenders_;
 
   const ContenderId a11y_contender_id_ = 1;
   ContenderId next_contender_id_ = 2;

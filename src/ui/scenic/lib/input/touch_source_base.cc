@@ -145,20 +145,6 @@ TouchSourceBase::TouchSourceBase(
       augment_(std::move(augment)),
       inspector_(inspector) {}
 
-TouchSourceBase::~TouchSourceBase() {
-  // Cancel ongoing streams
-  // Need to copy the ids from |ongoing_streams_|, since calling |respond_| might be re-entrant.
-  std::vector<StreamId> ongoing_contests;
-  for (const auto& [id, data] : ongoing_streams_) {
-    if (!data.was_won) {
-      ongoing_contests.emplace_back(id);
-    }
-  }
-  for (auto id : ongoing_contests) {
-    respond_(id, {GestureResponse::kNo});
-  }
-}
-
 void TouchSourceBase::UpdateStream(StreamId stream_id, const InternalTouchEvent& event,
                                    bool is_end_of_stream, view_tree::BoundingBox view_bounds) {
   const bool is_new_stream = ongoing_streams_.count(stream_id) == 0;

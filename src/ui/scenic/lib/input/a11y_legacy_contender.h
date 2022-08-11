@@ -24,7 +24,7 @@ class A11yLegacyContender final : public GestureContender {
   A11yLegacyContender(fit::function<void(StreamId, GestureResponse)> respond,
                       fit::function<void(const InternalTouchEvent& event)> deliver_to_client,
                       GestureContenderInspector& inspector);
-  ~A11yLegacyContender();
+  ~A11yLegacyContender() override = default;
 
   void UpdateStream(StreamId stream_id, const InternalTouchEvent& event, bool is_end_of_stream,
                     view_tree::BoundingBox unused) override;

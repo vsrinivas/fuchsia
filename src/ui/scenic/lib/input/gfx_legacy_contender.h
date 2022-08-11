@@ -23,7 +23,7 @@ class GfxLegacyContender : public GestureContender {
       zx_koid_t view_ref_koid, fit::function<void(GestureResponse)> respond,
       fit::function<void(const std::vector<InternalTouchEvent>&)> deliver_events_to_client,
       fit::function<void()> self_destruct, GestureContenderInspector& inspector);
-  ~GfxLegacyContender() = default;
+  ~GfxLegacyContender() override = default;
 
   void UpdateStream(StreamId stream_id, const InternalTouchEvent& event, bool is_end_of_stream,
                     view_tree::BoundingBox unused) override;

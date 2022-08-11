@@ -93,10 +93,10 @@ TouchSystem::TouchSystem(sys::ComponentContext* context,
       context,
       /*on_register=*/
       [this] {
-        FX_CHECK(!a11y_legacy_contender_)
+        FX_CHECK(!contenders_.count(a11y_contender_id_))
             << "on_disconnect must be called before registering a new listener";
 
-        a11y_legacy_contender_ = std::make_unique<A11yLegacyContender>(
+        auto a11y_contender = std::make_unique<A11yLegacyContender>(
             /*respond*/
             [this](StreamId stream_id, GestureResponse response) {
               RecordGestureDisambiguationResponse(stream_id, a11y_contender_id_, {response});
@@ -108,26 +108,36 @@ TouchSystem::TouchSystem(sys::ComponentContext* context,
               accessibility_pointer_event_listener()->OnEvent(std::move(a11y_event));
             },
             contender_inspector_);
-        FX_LOGS(INFO) << "A11yLegacyContender created.";
-        contenders_.emplace(a11y_contender_id_, a11y_legacy_contender_.get());
-
         accessibility_pointer_event_listener().events().OnStreamHandled =
-            [this](uint32_t device_id, uint32_t pointer_id,
-                   fuchsia::ui::input::accessibility::EventHandling handled) {
-              FX_DCHECK(a11y_legacy_contender_);
-              a11y_legacy_contender_->OnStreamHandled(pointer_id, handled);
+            [a11y_contender = a11y_contender.get()](
+                uint32_t device_id, uint32_t pointer_id,
+                fuchsia::ui::input::accessibility::EventHandling handled) {
+              a11y_contender->OnStreamHandled(pointer_id, handled);
             };
+
+        const auto [_, success] =
+            contenders_.emplace(a11y_contender_id_, std::move(a11y_contender));
+        FX_DCHECK(success) << "Duplicate A11yLegacyContender";
+        FX_LOGS(INFO) << "A11yLegacyContender created.";
       },
       /*on_disconnect=*/
       [this] {
-        FX_CHECK(a11y_legacy_contender_) << "can not disconnect before registering";
+        FX_CHECK(contenders_.count(a11y_contender_id_)) << "can not disconnect before registering";
         // The listener disconnected. Release held events, delete the buffer.
         accessibility_pointer_event_listener().events().OnStreamHandled = nullptr;
-        contenders_.erase(a11y_contender_id_);
-        a11y_legacy_contender_.reset();
+        EraseContender(a11y_contender_id_, ZX_KOID_INVALID);
         FX_LOGS(INFO) << "A11yLegacyContender destroyed";
       });
   context->outgoing()->AddPublicService(local_hit_upgrade_registry_.GetHandler(this));
+}
+
+zx_koid_t TouchSystem::FindViewRefKoidOfRelatedChannel(
+    const fidl::InterfaceHandle<fuchsia::ui::pointer::TouchSource>& original) const {
+  const zx_koid_t related_koid = utils::ExtractRelatedKoid(original.channel());
+  const auto it = std::find_if(
+      contenders_.begin(), contenders_.end(),
+      [related_koid](const auto& kv) { return kv.second->channel_koid() == related_koid; });
+  return it == contenders_.end() ? ZX_KOID_INVALID : it->second->view_ref_koid_;
 }
 
 void TouchSystem::Upgrade(fidl::InterfaceHandle<fuchsia::ui::pointer::TouchSource> original,
@@ -144,45 +154,50 @@ void TouchSystem::Upgrade(fidl::InterfaceHandle<fuchsia::ui::pointer::TouchSourc
     return;
   }
 
-  // Delete the old channel.
-  EraseTouchContender(view_ref_koid);
+  // Delete the contender for the old channel.
+  EraseContender(viewrefs_to_contender_ids_.at(view_ref_koid), view_ref_koid);
 
-  // Create the new channel.
+  // Create the new channel contender.
   const ContenderId contender_id = next_contender_id_++;
   fidl::InterfaceHandle<fuchsia::ui::pointer::augment::TouchSourceWithLocalHit> handle;
-  auto touch_source = std::make_unique<TouchSourceWithLocalHit>(
-      view_ref_koid, handle.NewRequest(),
-      /*respond*/
-      [this, contender_id](StreamId stream_id, const std::vector<GestureResponse>& responses) {
-        RecordGestureDisambiguationResponse(stream_id, contender_id, responses);
-      },
-      /*error_handler*/
-      [this, view_ref_koid] { EraseTouchContender(view_ref_koid); },
-      /*get_local_hit*/
-      [this](const InternalTouchEvent& event) {
-        // Semantic hit test to find the top view a11y cares about.
-        // TODO(): If we have more than one TouchSourceWithLocalHit client, this hit test will be
-        // done multiple times per injectiom redundantly. We might need to improve this in the
-        // future, but as long as we're only expecting the one client this is fine.
-        const zx_koid_t top_koid = hit_tester_.TopHitTest(event, /*semantic_hit_test*/ true);
-        glm::vec2 local_point = glm::vec2(0.f, 0.f);
-        if (top_koid != ZX_KOID_INVALID) {
-          const std::array<float, 9> top_view_from_viewport_transform =
-              GetDestinationFromViewportTransform(event, top_koid, *view_tree_snapshot_);
-          local_point = utils::TransformPointerCoords(
-              event.position_in_viewport,
-              utils::ColumnMajorMat3VectorToMat4(top_view_from_viewport_transform));
-        }
-        return std::pair<zx_koid_t, std::array<float, 2>>{top_koid, {local_point.x, local_point.y}};
-      },
-      contender_inspector_);
-
-  const auto [it, success1] = touch_contenders_.emplace(
-      view_ref_koid,
-      TouchContender{.contender_id = contender_id, .touch_source = std::move(touch_source)});
-  FX_DCHECK(success1);
-  const auto [_, success2] = contenders_.emplace(contender_id, it->second.touch_source.get());
-  FX_DCHECK(success2);
+  {
+    const auto [_, success] = contenders_.emplace(
+        contender_id,
+        std::make_unique<TouchSourceWithLocalHit>(
+            view_ref_koid, handle.NewRequest(),
+            /*respond*/
+            [this, contender_id](StreamId stream_id,
+                                 const std::vector<GestureResponse>& responses) {
+              RecordGestureDisambiguationResponse(stream_id, contender_id, responses);
+            },
+            /*error_handler*/
+            [this, contender_id, view_ref_koid] { EraseContender(contender_id, view_ref_koid); },
+            /*get_local_hit*/
+            [this](const InternalTouchEvent& event) {
+              // Perform a semantic hit test to find the top view a11y cares about.
+              // TODO(fxbug.dev/106611): If we have more than one TouchSourceWithLocalHit client,
+              // this hit test will be done multiple times per injectiom redundantly. We might need
+              // to improve this in the future, but as long as we're only expecting the one client
+              // this is fine.
+              const zx_koid_t top_koid = hit_tester_.TopHitTest(event, /*semantic_hit_test*/ true);
+              glm::vec2 local_point = glm::vec2(0.f, 0.f);
+              if (top_koid != ZX_KOID_INVALID) {
+                const std::array<float, 9> top_view_from_viewport_transform =
+                    GetDestinationFromViewportTransform(event, top_koid, *view_tree_snapshot_);
+                local_point = utils::TransformPointerCoords(
+                    event.position_in_viewport,
+                    utils::ColumnMajorMat3VectorToMat4(top_view_from_viewport_transform));
+              }
+              return std::pair<zx_koid_t, std::array<float, 2>>{top_koid,
+                                                                {local_point.x, local_point.y}};
+            },
+            contender_inspector_));
+    FX_CHECK(success);
+  }
+  {
+    const auto [_, success] = viewrefs_to_contender_ids_.emplace(view_ref_koid, contender_id);
+    FX_CHECK(success);
+  }
 
   // Return the new channel.
   callback(std::move(handle), nullptr);
@@ -216,39 +231,37 @@ ContenderId TouchSystem::AddGfxLegacyContender(StreamId stream_id, zx_koid_t vie
   FX_DCHECK(view_ref_koid != ZX_KOID_INVALID);
 
   const ContenderId contender_id = next_contender_id_++;
-  auto [contender_it, success] = gfx_legacy_contenders_.try_emplace(
-      contender_id, view_ref_koid,
-      /*respond*/
-      [this, stream_id, contender_id](GestureResponse response) {
-        RecordGestureDisambiguationResponse(stream_id, contender_id, {response});
-      },
-      /*deliver_events_to_client*/
-      [this, view_ref_koid](const std::vector<InternalTouchEvent>& events) {
-        for (const auto& event : events) {
-          ReportPointerEventToGfxLegacyView(event, view_ref_koid,
-                                            fuchsia::ui::input::PointerEventType::TOUCH);
-          // Update focus if necessary.
-          // TODO(fxbug.dev/59858): Figure out how to handle focus with real GD clients.
-          if (event.phase == Phase::kAdd) {
-            if (view_tree_snapshot_->view_tree.count(view_ref_koid) != 0) {
-              if (view_tree_snapshot_->view_tree.at(view_ref_koid).is_focusable) {
-                request_focus_(view_ref_koid);
-              }
-            } else {
-              // Focus root.
-              request_focus_(ZX_KOID_INVALID);
-            }
-          }
-        }
-      },
-      /*self_destruct*/
-      [this, contender_id] {
-        contenders_.erase(contender_id);
-        gfx_legacy_contenders_.erase(contender_id);
-      },
-      contender_inspector_);
+  auto [_, success] = contenders_.emplace(
+      contender_id, std::make_unique<GfxLegacyContender>(
+                        view_ref_koid,
+                        /*respond*/
+                        [this, stream_id, contender_id](GestureResponse response) {
+                          RecordGestureDisambiguationResponse(stream_id, contender_id, {response});
+                        },
+                        /*deliver_events_to_client*/
+                        [this, view_ref_koid](const std::vector<InternalTouchEvent>& events) {
+                          for (const auto& event : events) {
+                            ReportPointerEventToGfxLegacyView(
+                                event, view_ref_koid, fuchsia::ui::input::PointerEventType::TOUCH);
+                            // Update focus if necessary.
+                            // TODO(fxbug.dev/59858): Figure out how to handle focus with real GD
+                            // clients.
+                            if (event.phase == Phase::kAdd) {
+                              if (view_tree_snapshot_->view_tree.count(view_ref_koid) != 0) {
+                                if (view_tree_snapshot_->view_tree.at(view_ref_koid).is_focusable) {
+                                  request_focus_(view_ref_koid);
+                                }
+                              } else {
+                                // Focus root.
+                                request_focus_(ZX_KOID_INVALID);
+                              }
+                            }
+                          }
+                        },
+                        /*self_destruct*/
+                        [this, contender_id] { EraseContender(contender_id, ZX_KOID_INVALID); },
+                        contender_inspector_));
   FX_DCHECK(success);
-  contenders_.emplace(contender_id, &contender_it->second);
   return contender_id;
 }
 
@@ -260,59 +273,55 @@ void TouchSystem::RegisterTouchSource(
 
   // Note: These closure must'nt be called in the constructor, since they depend on the
   // |contenders_| map, which isn't filled until after construction completes.
-  auto touch_source = std::make_unique<TouchSource>(
-      client_view_ref_koid, std::move(touch_source_request),
-      /*respond*/
-      [this, contender_id](StreamId stream_id, const std::vector<GestureResponse>& responses) {
-        RecordGestureDisambiguationResponse(stream_id, contender_id, responses);
-      },
-      /*error_handler*/
-      [this, client_view_ref_koid] { EraseTouchContender(client_view_ref_koid); },
-      contender_inspector_);
-  const auto [it, success1] = touch_contenders_.emplace(
-      client_view_ref_koid,
-      TouchContender{.contender_id = contender_id, .touch_source = std::move(touch_source)});
-  FX_DCHECK(success1);
-  const auto [_, success2] = contenders_.emplace(contender_id, it->second.touch_source.get());
-  FX_DCHECK(success2);
-}
-
-zx_koid_t TouchSystem::FindViewRefKoidOfRelatedChannel(
-    const fidl::InterfaceHandle<fuchsia::ui::pointer::TouchSource>& original) const {
-  const zx_koid_t related_koid = utils::ExtractRelatedKoid(original.channel());
-  const auto it = std::find_if(touch_contenders_.begin(), touch_contenders_.end(),
-                               [related_koid](const auto& kv) {
-                                 return kv.second.touch_source->channel_koid() == related_koid;
-                               });
-  return it == touch_contenders_.end() ? ZX_KOID_INVALID : it->first;
+  {
+    const auto [_, success] = contenders_.emplace(
+        contender_id, std::make_unique<TouchSource>(
+                          client_view_ref_koid, std::move(touch_source_request),
+                          /*respond*/
+                          [this, contender_id](StreamId stream_id,
+                                               const std::vector<GestureResponse>& responses) {
+                            RecordGestureDisambiguationResponse(stream_id, contender_id, responses);
+                          },
+                          /*error_handler*/
+                          [this, contender_id, client_view_ref_koid] {
+                            EraseContender(contender_id, client_view_ref_koid);
+                          },
+                          contender_inspector_));
+    FX_DCHECK(success);
+  }
+  {
+    const auto [_, success] =
+        viewrefs_to_contender_ids_.emplace(client_view_ref_koid, contender_id);
+    FX_DCHECK(success);
+  }
 }
 
 void TouchSystem::InjectTouchEventExclusive(const InternalTouchEvent& event, StreamId stream_id) {
   if (view_tree_snapshot_->view_tree.count(event.target) == 0 &&
       view_tree_snapshot_->unconnected_views.count(event.target) == 0) {
-    FX_DCHECK(touch_contenders_.count(event.target) == 0);
+    FX_DCHECK(contenders_.count(event.target) == 0);
     return;
   }
   FX_DCHECK(event.phase == Phase::kCancel ||
             view_tree_snapshot_->IsDescendant(event.target, event.context))
       << "Should never allow injection of non-cancel events into broken scene graph";
 
-  auto it = touch_contenders_.find(event.target);
-  if (it != touch_contenders_.end()) {
-    auto& touch_source = *it->second.touch_source;
+  auto it = viewrefs_to_contender_ids_.find(event.target);
+  if (it != viewrefs_to_contender_ids_.end()) {
+    auto& contender = *contenders_.at(it->second);
     // Calling EndContest() before the first event causes them to be combined in the first message
     // to the client.
     if (event.phase == Phase::kAdd) {
-      touch_source.EndContest(stream_id, /*awarded_win=*/true);
+      contender.EndContest(stream_id, /*awarded_win=*/true);
     }
 
     // If the target is not in the view tree then this must be a cancel event and we don't need to
     // (and can't) supply correct transforms and bounding boxes.
     if (view_tree_snapshot_->view_tree.count(event.target) == 0) {
       FX_DCHECK(event.phase == Phase::kCancel);
-      touch_source.UpdateStream(stream_id, event, /*is_end_of_stream=*/true, /*bounding_box=*/{});
+      contender.UpdateStream(stream_id, event, /*is_end_of_stream=*/true, /*bounding_box=*/{});
     } else {
-      touch_source.UpdateStream(
+      contender.UpdateStream(
           stream_id,
           EventWithReceiverFromViewportTransform(event, event.target, *view_tree_snapshot_),
           /*is_end_of_stream=*/event.phase == Phase::kRemove || event.phase == Phase::kCancel,
@@ -402,32 +411,34 @@ std::vector<zx_koid_t> TouchSystem::GetAncestorChainTopToBottom(zx_koid_t bottom
 
 std::vector<ContenderId> TouchSystem::CollectContenders(StreamId stream_id,
                                                         const InternalTouchEvent& event) {
-  FX_DCHECK(event.phase == Phase::kAdd);
   std::vector<ContenderId> contenders;
 
   // Add an A11yLegacyContender if the injection context is the root of the ViewTree.
   // TODO(fxbug.dev/50549): Remove when a11y is a native GD client.
-  if (a11y_legacy_contender_ && IsRootOrDirectChildOfRoot(event.context, *view_tree_snapshot_)) {
+  if (contenders_.count(a11y_contender_id_) &&
+      IsRootOrDirectChildOfRoot(event.context, *view_tree_snapshot_)) {
     contenders.push_back(a11y_contender_id_);
   }
 
   const zx_koid_t top_koid = hit_tester_.TopHitTest(event, /*semantic_hit_test*/ false);
   if (top_koid != ZX_KOID_INVALID) {
     // Find TouchSource contenders in priority order from furthest (valid) ancestor to top hit view.
-    std::vector<zx_koid_t> ancestors = GetAncestorChainTopToBottom(top_koid, event.target);
-    for (auto koid : ancestors) {
-      const auto it = touch_contenders_.find(koid);
+    const std::vector<zx_koid_t> ancestors = GetAncestorChainTopToBottom(top_koid, event.target);
+    for (const auto koid : ancestors) {
       // If a touch contender doesn't exist it means the client didn't provide a TouchSource
       // endpoint.
-      if (it != touch_contenders_.end()) {
-        contenders.push_back(it->second.contender_id);
+      const auto it = viewrefs_to_contender_ids_.find(koid);
+      if (it != viewrefs_to_contender_ids_.end()) {
+        const ContenderId contender_id = it->second;
+        FX_DCHECK(contenders_.count(contender_id));
+        contenders.push_back(contender_id);
       }
     }
 
     // Add a GfxLegacyContender if we didn't find a corresponding TouchSource contender for the top
     // hit view.
     // TODO(fxbug.dev/64206): Remove when we no longer have any legacy clients.
-    if (top_koid != ZX_KOID_INVALID && touch_contenders_.count(top_koid) == 0) {
+    if (!viewrefs_to_contender_ids_.count(top_koid)) {
       FX_VLOGS(1) << "View hit: [ViewRefKoid=" << top_koid << "]";
       const ContenderId contender_id = AddGfxLegacyContender(stream_id, top_koid);
       contenders.push_back(contender_id);
@@ -477,20 +488,20 @@ void TouchSystem::UpdateGestureContest(const InternalTouchEvent& event, StreamId
       // deleted anyway?
       continue;
     }
-    GestureContender* const contender_ptr = it->second;
 
-    const zx_koid_t view_ref_koid = contender_ptr->view_ref_koid_;
+    GestureContender& contender = *it->second;
+    const zx_koid_t view_ref_koid = contender.view_ref_koid_;
     if (view_tree_snapshot_->view_tree.count(view_ref_koid) != 0) {
       // Everything is fine. Send as normal.
-      contender_ptr->UpdateStream(stream_id,
-                                  EventWithReceiverFromViewportTransform(
-                                      event, /*destination=*/view_ref_koid, *view_tree_snapshot_),
-                                  is_end_of_stream,
-                                  view_tree_snapshot_->view_tree.at(view_ref_koid).bounding_box);
+      contender.UpdateStream(stream_id,
+                             EventWithReceiverFromViewportTransform(
+                                 event, /*destination=*/view_ref_koid, *view_tree_snapshot_),
+                             is_end_of_stream,
+                             view_tree_snapshot_->view_tree.at(view_ref_koid).bounding_box);
     } else if (contender_id == a11y_contender_id_) {
       // TODO(fxbug.dev/50549): A11yLegacyContender doesn't need correct transforms or view bounds.
       // Remove this branch when legacy a11y api goes away.
-      contender_ptr->UpdateStream(stream_id, event, is_end_of_stream, /*bounding_box=*/{});
+      contender.UpdateStream(stream_id, event, is_end_of_stream, /*bounding_box=*/{});
     } else {
       // Contender not in the view tree -> cancel the rest of the stream for that contender.
       auto& arena = arena_it->second;
@@ -504,8 +515,8 @@ void TouchSystem::UpdateGestureContest(const InternalTouchEvent& event, StreamId
         FX_DCHECK(event.phase != Phase::kAdd);
         InternalTouchEvent event_copy = event;
         event_copy.phase = Phase::kCancel;
-        contender_ptr->UpdateStream(stream_id, event_copy, /*is_end_of_stream=*/true,
-                                    /*bounding_box=*/{});
+        contender.UpdateStream(stream_id, event_copy, /*is_end_of_stream=*/true,
+                               /*bounding_box=*/{});
         // The contest is definitely over, so we can manually destroy the arena here.
         gesture_arenas_.erase(stream_id);
         break;
@@ -567,16 +578,31 @@ void TouchSystem::DestroyArenaIfComplete(StreamId stream_id) {
   }
 }
 
-void TouchSystem::EraseTouchContender(zx_koid_t view_ref_koid) {
-  const auto it = touch_contenders_.find(view_ref_koid);
-  if (it == touch_contenders_.end()) {
-    return;
+void TouchSystem::EraseContender(ContenderId contender_id, zx_koid_t view_ref_koid) {
+  {
+    const size_t success = contenders_.erase(contender_id);
+    FX_DCHECK(success) << "Contender " << contender_id << " did not exist";
+  }
+  // TODO(fxbug.dev/64376): ZX_KOID_INVALID is only passed in by legacy contenders. Remove this
+  // check when they go away.
+  if (view_ref_koid != ZX_KOID_INVALID) {
+    const size_t success = viewrefs_to_contender_ids_.erase(view_ref_koid);
+    FX_DCHECK(success) << "ViewRef " << view_ref_koid << " was not mapped to a ContenderId";
   }
 
-  const ContenderId contender_id = it->second.contender_id;
-  // Erase from |contenders_| first to avoid re-entry in the destructor.
-  contenders_.erase(contender_id);
-  touch_contenders_.erase(view_ref_koid);
+  // Remove from any contests it may still be a part of.
+  // Note: Need to finish walking the arena map before we start calling RecordGDResponse() since
+  // it may invalidate the iterator.
+  std::vector<StreamId> ongoing_streams;
+  for (const auto& [stream_id, arena] : gesture_arenas_) {
+    const auto contenders = arena.contenders();
+    if (std::count(contenders.begin(), contenders.end(), contender_id)) {
+      ongoing_streams.push_back(stream_id);
+    }
+  }
+  for (const auto stream_id : ongoing_streams) {
+    RecordGestureDisambiguationResponse(stream_id, contender_id, {GestureResponse::kNo});
+  }
 }
 
 void TouchSystem::ReportPointerEventToGfxLegacyView(const InternalTouchEvent& event,

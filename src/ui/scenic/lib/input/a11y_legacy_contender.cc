@@ -20,19 +20,6 @@ A11yLegacyContender::A11yLegacyContender(
       deliver_to_client_(std::move(deliver_to_client)),
       inspector_(inspector) {}
 
-A11yLegacyContender::~A11yLegacyContender() {
-  // Reject all ongoing streams.
-  // Need to copy the ids from |ongoing_streams_|, since calling |respond_| might mutate
-  // |ongoing_streams_|.
-  std::vector<StreamId> ongoing_contests;
-  for (const auto& [id, _] : ongoing_streams_) {
-    ongoing_contests.emplace_back(id);
-  }
-  for (auto id : ongoing_contests) {
-    respond_(id, GestureResponse::kNo);
-  }
-}
-
 void A11yLegacyContender::UpdateStream(StreamId stream_id, const InternalTouchEvent& event,
                                        bool is_end_of_stream, view_tree::BoundingBox) {
   inspector_.OnInjectedEvents(view_ref_koid_, 1);
