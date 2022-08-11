@@ -630,6 +630,8 @@ impl RecoveryViewAssistant {
             #[cfg(feature = "http_setup_server")]
             RecoveryMessages::StartingOta => {
                 self.body = Some("Starting OTA update".into());
+                self.render_resources = None;
+                self.app_sender.request_render(self.view_key);
             }
             #[cfg(feature = "http_setup_server")]
             RecoveryMessages::OtaFinished { result } => {
@@ -643,6 +645,8 @@ impl RecoveryViewAssistant {
                 } else {
                     self.body = Some("OTA succeeded".into());
                 }
+                self.render_resources = None;
+                self.app_sender.request_render(self.view_key);
             }
             RecoveryMessages::PolicyResult(check_id, fdr_enabled) => {
                 let state = self

@@ -1,0 +1,9 @@
+{
+    "default_channel": "test",
+    "update_type": {
+        "omaha": [
+            "app_id_here",
+            null
+        ]
+    }
+}

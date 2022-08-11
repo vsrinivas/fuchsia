@@ -20,7 +20,21 @@
             to: "#system_recovery",
         },
         {
-            protocol: [ "fuchsia.paver.Paver" ],
+            protocol: "fuchsia.sys.Environment",
+            from: "self",
+            to: "#system_recovery",
+        },
+        {
+            protocol: [ "fuchsia.sys.Loader" ],
+            from: "self",
+            to: "#system_recovery",
+        },
+        {
+            protocol: [
+                "fuchsia.paver.Paver",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Launcher",
+            ],
             from: "parent",
             to: "#system_recovery",
         },
@@ -57,8 +71,8 @@
             to: "#system_recovery",
         },
         {
-            directory: "tmp",
-            from: "parent",
+            storage: "tmp",
+            from: "self",
             to: "#system_recovery",
         },
         {
