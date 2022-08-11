@@ -26,10 +26,7 @@ use futures::{TryFutureExt as _, TryStreamExt as _};
 use log::{debug, error};
 use net_types::{ethernet::Mac, SpecifiedAddr, UnicastAddr};
 use netstack3_core::{
-    add_ip_addr_subnet, add_route, del_ip_addr, del_route,
-    ip::types::AddableEntryEither,
-    transport::tcp::{buffer::ReceiveBuffer, socket::TcpNonSyncContext},
-    Ctx,
+    add_ip_addr_subnet, add_route, del_ip_addr, del_route, ip::types::AddableEntryEither, Ctx,
 };
 
 pub(crate) struct StackFidlWorker<C> {
@@ -54,9 +51,7 @@ where
         + InterfaceEventProducerFactory
         + InterfaceControlRunner,
     C: Clone,
-    <<C as ethernet_worker::EthernetWorkerContext>::NonSyncCtx as TcpNonSyncContext>::ReceiveBuffer: Send,
-    <<C as ethernet_worker::EthernetWorkerContext>::NonSyncCtx as TcpNonSyncContext>::SendBuffer: Send,
-    <<<C as ethernet_worker::EthernetWorkerContext>::NonSyncCtx as TcpNonSyncContext>::ReceiveBuffer as ReceiveBuffer>::Residual: Send,
+    Ctx<<C as ethernet_worker::EthernetWorkerContext>::NonSyncCtx>: Send,
 {
     pub(crate) async fn serve(ctx: C, stream: StackRequestStream) -> Result<(), fidl::Error> {
         stream
@@ -159,9 +154,7 @@ where
         + InterfaceEventProducerFactory
         + InterfaceControlRunner,
     C: Clone,
-    <<C as ethernet_worker::EthernetWorkerContext>::NonSyncCtx as TcpNonSyncContext>::ReceiveBuffer: Send,
-    <<C as ethernet_worker::EthernetWorkerContext>::NonSyncCtx as TcpNonSyncContext>::SendBuffer: Send,
-    <<<C as ethernet_worker::EthernetWorkerContext>::NonSyncCtx as TcpNonSyncContext>::ReceiveBuffer as ReceiveBuffer>::Residual: Send,
+    Ctx<<C as ethernet_worker::EthernetWorkerContext>::NonSyncCtx>: Send,
 {
     async fn fidl_add_ethernet_interface(
         self,
@@ -195,7 +188,8 @@ where
 
         let id = {
             let Ctx { sync_ctx, non_sync_ctx } = &mut *ctx;
-            let eth_id = netstack3_core::device::add_ethernet_device(sync_ctx, non_sync_ctx, mac_addr, mtu);
+            let eth_id =
+                netstack3_core::device::add_ethernet_device(sync_ctx, non_sync_ctx, mac_addr, mtu);
             let (interface_control_stop_sender, interface_control_stop_receiver) =
                 futures::channel::oneshot::channel();
             let (control_sender, control_receiver) =

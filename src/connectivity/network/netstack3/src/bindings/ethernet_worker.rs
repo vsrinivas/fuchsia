@@ -15,10 +15,7 @@ use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::{TryFutureExt as _, TryStreamExt as _};
 use log::{debug, error, info, trace};
-use netstack3_core::{
-    device::receive_frame, transport::tcp::buffer::ReceiveBuffer,
-    transport::tcp::socket::TcpNonSyncContext, BufferNonSyncContext, Ctx,
-};
+use netstack3_core::{device::receive_frame, BufferNonSyncContext, Ctx};
 use packet::serialize::Buf;
 use std::ops::DerefMut as _;
 
@@ -78,9 +75,8 @@ where
 
 impl<C: EthernetWorkerContext> EthernetWorker<C> {
     pub fn spawn(self, mut events: eth::EventStream)
-        where <<C as EthernetWorkerContext>::NonSyncCtx as TcpNonSyncContext>::ReceiveBuffer: Send,
-        <<C as EthernetWorkerContext>::NonSyncCtx as TcpNonSyncContext>::SendBuffer: Send,
-        <<<C as EthernetWorkerContext>::NonSyncCtx as TcpNonSyncContext>::ReceiveBuffer as ReceiveBuffer>::Residual: Send,
+    where
+        Ctx<<C as EthernetWorkerContext>::NonSyncCtx>: Send,
     {
         fasync::Task::spawn(
             async move {
