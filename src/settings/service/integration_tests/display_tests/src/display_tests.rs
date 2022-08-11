@@ -1,90 +1,12 @@
 // Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.&
+// found in the LICENSE file.
 
-use crate::common::{DisplayTest, Mocks, Request};
-use anyhow::Error;
-use async_trait::async_trait;
+use common::{DisplayTest, Request};
 use fidl_fuchsia_settings::{DisplaySettings, LowLightMode as FidlLowLightMode};
-use fidl_fuchsia_ui_brightness::{ControlRequest, ControlRequestStream};
-use fuchsia_async as fasync;
-use fuchsia_component::server::{ServiceFs, ServiceFsDir};
-use fuchsia_component_test::LocalComponentHandles;
-use futures::channel::mpsc::Sender;
-use futures::lock::Mutex;
-use futures::{SinkExt, StreamExt, TryStreamExt};
-use std::sync::atomic::{AtomicU32, Ordering};
+use futures::StreamExt;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
-mod common;
-
-#[async_trait]
-impl Mocks for DisplayTest {
-    // Mock the brightness dependency and verify the settings service interacts with the brightness
-    // service by checking input value changes through the various requests.
-    async fn brightness_service_impl(
-        handles: LocalComponentHandles,
-        manual_brightness: Arc<Mutex<Option<f32>>>,
-        auto_brightness: Arc<Mutex<Option<bool>>>,
-        num_changes: Arc<AtomicU32>,
-        requests_sender: Sender<Request>,
-    ) -> Result<(), Error> {
-        let mut fs = ServiceFs::new();
-        let _: &mut ServiceFsDir<'_, _> =
-            fs.dir("svc").add_fidl_service(move |mut stream: ControlRequestStream| {
-                let auto_brightness_handle = auto_brightness.clone();
-                let brightness_handle = manual_brightness.clone();
-                let num_changes_handle = num_changes.clone();
-                let mut requests_sender = requests_sender.clone();
-                fasync::Task::spawn(async move {
-                    while let Ok(Some(req)) = stream.try_next().await {
-                        // Support future expansion of FIDL.
-                        #[allow(unreachable_patterns)]
-                        match req {
-                            ControlRequest::WatchCurrentBrightness { responder } => {
-                                responder
-                                    .send(
-                                        brightness_handle
-                                            .lock()
-                                            .await
-                                            .expect("brightness not yet set"),
-                                    )
-                                    .unwrap();
-                            }
-                            ControlRequest::SetAutoBrightness { control_handle: _ } => {
-                                *auto_brightness_handle.lock().await = Some(true);
-                                let current_num = num_changes_handle.load(Ordering::Relaxed);
-                                (*num_changes_handle).store(current_num + 1, Ordering::Relaxed);
-                                requests_sender
-                                    .send(Request::SetAutoBrightness)
-                                    .await
-                                    .expect("Finished processing SetAutoBrightness call");
-                            }
-                            ControlRequest::SetManualBrightness { value, control_handle: _ } => {
-                                *brightness_handle.lock().await = Some(value);
-                                let current_num = num_changes_handle.load(Ordering::Relaxed);
-                                (*num_changes_handle).store(current_num + 1, Ordering::Relaxed);
-                                requests_sender
-                                    .send(Request::SetManualBrightness)
-                                    .await
-                                    .expect("Finished processing SetManualBrightness call");
-                            }
-                            ControlRequest::WatchAutoBrightness { responder } => {
-                                responder
-                                    .send(auto_brightness_handle.lock().await.unwrap_or(false))
-                                    .unwrap();
-                            }
-                            _ => {}
-                        }
-                    }
-                })
-                .detach();
-            });
-        let _: &mut ServiceFs<_> =
-            fs.serve_connection(handles.outgoing_dir.into_channel()).unwrap();
-        fs.collect::<()>().await;
-        Ok(())
-    }
-}
 
 const STARTING_BRIGHTNESS: f32 = 0.5;
 const CHANGED_BRIGHTNESS: f32 = 0.8;
@@ -283,38 +205,7 @@ async fn test_screen_enabled_with_brightness_controller() {
     // On service starts, a set manual brightness call will be made to set the initial value.
     assert_eq!(Some(Request::SetManualBrightness), requests_receiver.next().await);
 
-    // Test that if screen is turned off, it is reflected.
-    let mut display_settings = DisplaySettings::EMPTY;
-    display_settings.auto_brightness = Some(false);
-    proxy.set(display_settings).await.expect("set completed").expect("set successful");
-
-    let mut display_settings = DisplaySettings::EMPTY;
-    display_settings.screen_enabled = Some(false);
-    proxy.set(display_settings).await.expect("set completed").expect("set successful");
-
-    let settings = proxy.watch().await.expect("watch completed");
-
-    assert_eq!(settings.screen_enabled, Some(false));
-
-    // Test that if display is turned back on, the display and manual brightness are on.
-    let mut display_settings = DisplaySettings::EMPTY;
-    display_settings.screen_enabled = Some(true);
-    proxy.set(display_settings).await.expect("set completed").expect("set successful");
-
-    let settings = proxy.watch().await.expect("watch completed");
-
-    assert_eq!(settings.screen_enabled, Some(true));
-    assert_eq!(settings.auto_brightness, Some(false));
-
-    // Test that if auto brightness is turned on, the display and auto brightness are on.
-    let mut display_settings = DisplaySettings::EMPTY;
-    display_settings.auto_brightness = Some(true);
-    proxy.set(display_settings).await.expect("set completed").expect("set successful");
-
-    let settings = proxy.watch().await.expect("watch completed");
-
-    assert_eq!(settings.auto_brightness, Some(true));
-    assert_eq!(settings.screen_enabled, Some(true));
+    DisplayTest::test_screen_enabled(proxy).await;
 
     let _ = instance.destroy().await;
 }
