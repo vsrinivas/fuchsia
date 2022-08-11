@@ -66,6 +66,8 @@ func (decl Decl) Name() fidlgen.Name {
 		return decl.Name
 	case *Bits:
 		return decl.Name
+	case *Struct:
+		return decl.Name
 	default:
 		panic(fmt.Sprintf("unknown declaration type: %s", reflect.TypeOf(decl).Name()))
 	}
@@ -98,6 +100,15 @@ func (decl Decl) AsBits() Bits {
 	return *decl.value.(*Bits)
 }
 
+func (decl Decl) IsStruct() bool {
+	_, ok := decl.value.(*Struct)
+	return ok
+}
+
+func (decl Decl) AsStruct() Struct {
+	return *decl.value.(*Struct)
+}
+
 type declMap map[string]fidlgen.Declaration
 
 // NewSummary creates a Summary from FIDL IR. The resulting list of
@@ -128,6 +139,8 @@ func NewSummary(ir fidlgen.Root, order DeclOrder) (*Summary, error) {
 			summarized, err = newEnum(*decl)
 		case *fidlgen.Bits:
 			summarized, err = newBits(*decl)
+		case *fidlgen.Struct:
+			summarized, err = newStruct(*decl, processed)
 		default:
 			return nil, fmt.Errorf("unsupported declaration type: %s", fidlgen.GetDeclType(decl))
 		}
@@ -164,6 +177,8 @@ const (
 	TypeKindString  TypeKind = "string"
 	TypeKindEnum    TypeKind = "enum"
 	TypeKindBits    TypeKind = "bits"
+	TypeKindArray   TypeKind = "array"
+	TypeKindStruct  TypeKind = "struct"
 )
 
 // Const is a representation of a constant FIDL declaration.
@@ -370,4 +385,117 @@ func log2(n uint64) int {
 		panic(fmt.Sprintf("%d is not a power of two", n))
 	}
 	return bits.TrailingZeros64(n)
+}
+
+// TypeDescriptor gives a straightforward encoding of a type, accounting for
+// any array nesting with a recursive pointer to a descriptor describing the
+// element type.
+type TypeDescriptor struct {
+	// Type gives the full name of the type, except in the case of an array:
+	// in that case, the array's element type is given by `.ElementType` and
+	// its size is given by `.ElementCount`.
+	Type string
+
+	// Kind is the kind of the type.
+	Kind TypeKind
+
+	// ElementType gives the underlying element type in the case of an array.
+	ElementType *TypeDescriptor
+
+	// ElementCount gives the size of the associated array.
+	ElementCount *int
+}
+
+func deriveType(typ fidlgen.Type, decls declMap) (*TypeDescriptor, error) {
+	desc := TypeDescriptor{}
+	switch typ.Kind {
+	case fidlgen.PrimitiveType:
+		if typ.PrimitiveSubtype.IsFloat() {
+			return nil, fmt.Errorf("floats are unsupported")
+		}
+		desc.Type = string(typ.PrimitiveSubtype)
+		if desc.Type == string(fidlgen.Bool) {
+			desc.Kind = TypeKindBool
+		} else {
+			desc.Kind = TypeKindInteger
+		}
+	case fidlgen.StringType:
+		return nil, fmt.Errorf("strings are only supported as constants")
+	case fidlgen.IdentifierType:
+		desc.Type = string(typ.Identifier)
+		switch decls[desc.Type].(type) {
+		case *fidlgen.Enum:
+			desc.Kind = TypeKindEnum
+		case *fidlgen.Bits:
+			desc.Kind = TypeKindBits
+		case *fidlgen.Struct:
+			desc.Kind = TypeKindStruct
+		default:
+			return nil, fmt.Errorf("%s: unsupported declaration type: %s", desc.Type, decls[desc.Type])
+		}
+	case fidlgen.ArrayType:
+		desc.Kind = TypeKindArray
+		desc.ElementCount = typ.ElementCount
+		nested, err := deriveType(*typ.ElementType, decls)
+		if err != nil {
+			return nil, err
+		}
+		desc.ElementType = nested
+	default:
+		return nil, fmt.Errorf("%s: unsupported type kind: %s", desc.Type, typ.Kind)
+	}
+	return &desc, nil
+}
+
+// Struct represents a FIDL struct declaration.
+type Struct struct {
+	// Name is the full name of the associated FIDL declaration.
+	Name fidlgen.Name
+
+	// Members is the list of the members of the layout.
+	Members []StructMember
+
+	// Comments that comprise the original docstring of the FIDL declaration.
+	Comments []string
+}
+
+// StructMember represents a FIDL struct member.
+type StructMember struct {
+	// Name is the name of the member.
+	Name string
+
+	// Type describes the type of the member.
+	Type TypeDescriptor
+
+	// Comments that comprise the original docstring of the FIDL declaration.
+	Comments []string
+}
+
+func newStruct(strct fidlgen.Struct, decls declMap) (*Struct, error) {
+	if strct.IsAnonymous() {
+		return nil, fmt.Errorf("anonymous structs are not allowed: %s", strct.Name)
+	}
+
+	name, err := fidlgen.ReadName(string(strct.Name))
+	if err != nil {
+		return nil, err
+	}
+
+	s := &Struct{
+		Name:     name,
+		Comments: strct.DocComments(),
+	}
+	for _, m := range strct.Members {
+		typ, err := deriveType(m.Type, decls)
+		if err != nil {
+			return nil, fmt.Errorf("%s.%s: failed to derive type: %w", s.Name, m.Name, err)
+		}
+		s.Members = append(s.Members, StructMember{
+			Name:     string(m.Name),
+			Type:     *typ,
+			Comments: m.DocComments(),
+		})
+	}
+	return s, nil
+
 }

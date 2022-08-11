@@ -451,3 +451,200 @@ type Uint64Bits = bits : uint64 {
 		t.Error(diff)
 	}
 }
+
+func TestCanSummarizeStructs(t *testing.T) {
+	ir := fidlgentest.EndToEndTest{T: t}.Single(`
+library example;
+
+/// This is a struct.
+type EmptyStruct = struct {};
+
+type BasicStruct = struct {
+	/// This is a struct member.
+    i64 int64;
+    u64 uint64;
+    i32 int32;
+    u32 uint32;
+    i16 int16;
+    u16 uint16;
+    i8 int8;
+    u8 uint8;
+    b bool;
+	e Enum;
+	bits Bits;
+	empty EmptyStruct;
+};
+
+type Enum = enum : uint16 {
+	ZERO = 0;
+};
+
+type Bits = bits : uint16 {
+	ONE = 1;
+};
+
+type StructWithArrayMembers = struct {
+    u8s array<uint8, 10>;
+    empties array<EmptyStruct, 6>;
+    nested array<array<bool, 2>, 4>;
+};
+`)
+	sum, err := zither.NewSummary(ir, zither.SourceDeclOrder)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Normalize member order by name for a stable comparison.
+	var actual []zither.Struct
+	for _, decl := range sum.Decls {
+		if decl.IsStruct() {
+			actual = append(actual, decl.AsStruct())
+		}
+	}
+
+	// Addressable integers for use as TypeDescriptor.ElementCount below.
+	two, four, six, ten := 2, 4, 6, 10
+
+	expected := []zither.Struct{
+		{
+			Name:     fidlgen.MustReadName("example/EmptyStruct"),
+			Comments: []string{" This is a struct."},
+		},
+		{
+			Name: fidlgen.MustReadName("example/BasicStruct"),
+			Members: []zither.StructMember{
+				{
+					Name: "i64",
+					Type: zither.TypeDescriptor{
+						Type: "int64",
+						Kind: zither.TypeKindInteger,
+					},
+					Comments: []string{" This is a struct member."},
+				},
+				{
+					Name: "u64",
+					Type: zither.TypeDescriptor{
+						Type: "uint64",
+						Kind: zither.TypeKindInteger,
+					},
+				},
+				{
+					Name: "i32",
+					Type: zither.TypeDescriptor{
+						Type: "int32",
+						Kind: zither.TypeKindInteger,
+					},
+				},
+				{
+					Name: "u32",
+					Type: zither.TypeDescriptor{
+						Type: "uint32",
+						Kind: zither.TypeKindInteger,
+					},
+				},
+				{
+					Name: "i16",
+					Type: zither.TypeDescriptor{
+						Type: "int16",
+						Kind: zither.TypeKindInteger,
+					},
+				},
+				{
+					Name: "u16",
+					Type: zither.TypeDescriptor{
+						Type: "uint16",
+						Kind: zither.TypeKindInteger,
+					},
+				},
+				{
+					Name: "i8",
+					Type: zither.TypeDescriptor{
+						Type: "int8",
+						Kind: zither.TypeKindInteger,
+					},
+				},
+				{
+					Name: "u8",
+					Type: zither.TypeDescriptor{
+						Type: "uint8",
+						Kind: zither.TypeKindInteger,
+					},
+				},
+				{
+					Name: "b",
+					Type: zither.TypeDescriptor{
+						Type: "bool",
+						Kind: zither.TypeKindBool,
+					},
+				},
+				{
+					Name: "e",
+					Type: zither.TypeDescriptor{
+						Type: "example/Enum",
+						Kind: zither.TypeKindEnum,
+					},
+				},
+				{
+					Name: "bits",
+					Type: zither.TypeDescriptor{
+						Type: "example/Bits",
+						Kind: zither.TypeKindBits,
+					},
+				},
+				{
+					Name: "empty",
+					Type: zither.TypeDescriptor{
+						Type: "example/EmptyStruct",
+						Kind: zither.TypeKindStruct,
+					},
+				},
+			},
+		},
+		{
+			Name: fidlgen.MustReadName("example/StructWithArrayMembers"),
+			Members: []zither.StructMember{
+				{
+					Name: "u8s",
+					Type: zither.TypeDescriptor{
+						Kind: zither.TypeKindArray,
+						ElementType: &zither.TypeDescriptor{
+							Type: "uint8",
+							Kind: zither.TypeKindInteger,
+						},
+						ElementCount: &ten,
+					},
+				},
+				{
+					Name: "empties",
+					Type: zither.TypeDescriptor{
+						Kind: zither.TypeKindArray,
+						ElementType: &zither.TypeDescriptor{
+							Type: "example/EmptyStruct",
+							Kind: zither.TypeKindStruct,
+						},
+						ElementCount: &six,
+					},
+				},
+				{
+					Name: "nested",
+					Type: zither.TypeDescriptor{
+						Kind: zither.TypeKindArray,
+						ElementType: &zither.TypeDescriptor{
+							Kind: zither.TypeKindArray,
+							ElementType: &zither.TypeDescriptor{
+								Type: "bool",
+								Kind: zither.TypeKindBool,
+							},
+							ElementCount: &two,
+						},
+						ElementCount: &four,
+					},
+				},
+			},
+		},
+	}
+
+	if diff := cmp.Diff(expected, actual, cmpNameOpt); diff != "" {
+		t.Error(diff)
+	}
+}

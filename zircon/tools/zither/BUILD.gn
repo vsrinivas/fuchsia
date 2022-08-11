@@ -20,6 +20,7 @@ group("tests") {
     ":constants",
     ":empty",
     ":enums",
+    ":structs",
   ]
 }
 
@@ -340,6 +341,19 @@ zither_golden_test("bits") {
     {
       backend = "c"
       files = [ "bits.h" ]
+    },
+  ]
+}
+
+# FIDL: testdata/structs/
+# Goldens: testdata/structs/goldens/${backend}/
+zither_golden_test("structs") {
+  sources = [ "structs.test.fidl" ]
+
+  cases = [
+    {
+      backend = "c"
+      files = [ "structs.h" ]
     },
   ]
 }

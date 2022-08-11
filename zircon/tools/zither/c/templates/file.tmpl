@@ -28,6 +28,9 @@ extern "C" {
 {{ else if .IsBits }}
 {{ template "GenerateCBits" .AsBits }}
 
+{{ else if .IsStruct }}
+{{ template "GenerateCStruct" .AsStruct }}
+
 {{ end }}
 {{ end }}
 

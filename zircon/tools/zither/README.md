@@ -26,6 +26,10 @@ Consider a FIDL library by the name of `${id1}.${id2}.....${idn}`:
 type with a name of `LowerSnakeCase(${id1}_${id2}_..._${idn}_${declname}_t)`;
   - a member yields a preprocessor variable of name
   `UpperSnakeCase(${id1}_${id2}_..._${idn}_${parent_name}_${member_name})`
+* A struct declaration yields a typedef of the given struct as
+`LowerSnakeCase(${id1}_${id2}_..._${idn}_${declname})_t`, with an
+obvious mapping of members.
+
 * TODO(fxbug.dev/51002): Document more as we go.
 
 TODO(fxbug.dev/91102): Also C++, Rust, and Go.

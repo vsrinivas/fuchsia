@@ -1,0 +1,56 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library zither.structs;
+
+type Empty = struct {};
+
+type Singleton = struct {
+    value uint8;
+};
+
+type Doubtleton = struct {
+    first Singleton;
+    second Singleton;
+};
+
+type PrimitiveMembers = struct {
+    i64 int64;
+    u64 uint64;
+    i32 int32;
+    u32 uint32;
+    i16 int16;
+    u16 uint16;
+    i8 int8;
+    u8 uint8;
+    b bool;
+};
+
+type ArrayMembers = struct {
+    u8s array<uint8, 10>;
+    singletons array<Singleton, 6>;
+    nested_arrays1 array<array<uint8, 10>, 20>;
+    nested_arrays2 array<array<array<int8, 1>, 2>, 3>;
+};
+
+/// Struct with a one-line comment.
+type StructWithOneLineComment = struct {
+    /// Struct member with one-line comment.
+    member_with_one_line_comment uint32;
+
+    /// Struct member
+    ///     with a
+    ///         many-line
+    ///           comment.
+    member_with_many_line_comment bool;
+};
+
+
+/// Struct
+///     with a
+///         many-line
+///           comment.
+type StructWithManyLineComment = struct {
+    member uint16;
+};

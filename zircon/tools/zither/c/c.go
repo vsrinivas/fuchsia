@@ -26,15 +26,18 @@ type Generator struct {
 
 func NewGenerator(formatter fidlgen.Formatter) *Generator {
 	gen := fidlgen.NewGenerator("CTemplates", templates, formatter, template.FuncMap{
-		"PrimitiveTypeName": PrimitiveTypeName,
-		"ConstName":         ConstName,
-		"ConstValue":        ConstValue,
-		"EnumName":          EnumName,
-		"EnumMemberName":    EnumMemberName,
-		"EnumMemberValue":   EnumMemberValue,
-		"BitsName":          BitsName,
-		"BitsMemberName":    BitsMemberName,
-		"BitsMemberValue":   BitsMemberValue,
+		"Append":               Append,
+		"PrimitiveTypeName":    PrimitiveTypeName,
+		"ConstName":            ConstName,
+		"ConstValue":           ConstValue,
+		"EnumName":             EnumName,
+		"EnumMemberName":       EnumMemberName,
+		"EnumMemberValue":      EnumMemberValue,
+		"BitsName":             BitsName,
+		"BitsMemberName":       BitsMemberName,
+		"BitsMemberValue":      BitsMemberValue,
+		"StructName":           StructName,
+		"StructMemberTypeInfo": StructMemberTypeInfo,
 	})
 	return &Generator{*gen}
 }
@@ -57,6 +60,8 @@ func (gen *Generator) Generate(summary zither.Summary, outputDir string) ([]stri
 //
 // Template functions.
 //
+
+func Append(s, t string) string { return s + t }
 
 // PrimitiveTypeName returns the C type name for a given a primitive FIDL type.
 func PrimitiveTypeName(typ fidlgen.PrimitiveSubtype) string {
@@ -156,4 +161,58 @@ func BitsMemberName(bits zither.Bits, member zither.BitsMember) string {
 // BitsMemberValue returns the value of a generated C bitset member.
 func BitsMemberValue(bits zither.Bits, member zither.BitsMember) string {
 	return fmt.Sprintf("((%s)(1u << %d))", BitsName(bits), member.Index)
+}
+
+// TypeInfo gives a basic description of a type, accounting for array nesting.
+//
+// For example, the type `uint32[4][5][6]` is encoded as
+// `TypeInfo{"uint32", []int{4, 5, 6}}`.
+type TypeInfo struct {
+	// Type is the underlying type, modulo array nesting.
+	Type string
+
+	// ArrayCounts gives the successive element counts within any array
+	// nesting.
+	ArrayCounts []int
+}
+
+// ArraySuffix is the suffix to append to the member name to indicate any array
+// nesting encoded within the type. If the type is not an array, this returns an
+// empty string.
+func (info TypeInfo) ArraySuffix() string {
+	suffix := ""
+	for _, count := range info.ArrayCounts {
+		suffix += fmt.Sprintf("[%d]", count)
+	}
+	return suffix
+}
+
+// StructMemberTypeInfo returns the type info of a given struct member.
+func StructMemberTypeInfo(member zither.StructMember) TypeInfo {
+	return structMemberTypeInfo(member.Type)
+}
+
+func structMemberTypeInfo(desc zither.TypeDescriptor) TypeInfo {
+	switch desc.Kind {
+	case zither.TypeKindBool, zither.TypeKindInteger:
+		return TypeInfo{Type: PrimitiveTypeName(fidlgen.PrimitiveSubtype(desc.Type))}
+	case zither.TypeKindEnum:
+		return TypeInfo{Type: EnumName(zither.Enum{Name: fidlgen.MustReadName(desc.Type)})}
+	case zither.TypeKindBits:
+		return TypeInfo{Type: BitsName(zither.Bits{Name: fidlgen.MustReadName(desc.Type)})}
+	case zither.TypeKindArray:
+		info := structMemberTypeInfo(*desc.ElementType)
+		info.ArrayCounts = append(info.ArrayCounts, *desc.ElementCount)
+		return info
+	case zither.TypeKindStruct:
+		return TypeInfo{Type: StructName(zither.Struct{Name: fidlgen.MustReadName(desc.Type)})}
+	default:
+		panic(fmt.Sprintf("unsupported type kind: %v", desc.Kind))
+	}
+}
+
+// StructName gives the intended, aliased name of the associated C struct.
+func StructName(s zither.Struct) string {
+	parts := nameParts(s.Name)
+	return fidlgen.ToSnakeCase(strings.Join(parts, "_")) + "_t"
 }
