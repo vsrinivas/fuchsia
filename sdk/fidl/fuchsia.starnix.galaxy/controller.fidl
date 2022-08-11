@@ -1,0 +1,15 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.starnix.galaxy;
+
+using zx;
+
+@discoverable
+protocol Controller {
+    /// Connects `bridge_socket` to a vsocket at `port` in the galaxy.
+    VsockConnect(resource struct {
+        port uint32;
+        bridge_socket zx.handle:SOCKET;
+    });
+};

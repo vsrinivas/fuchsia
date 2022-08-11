@@ -59,7 +59,7 @@ async fn main() -> Result<(), Error> {
     }
 
     let mut fs = ServiceFs::new_local();
-    fs.dir("svc").add_fidl_service(move |stream| {
+    fs.dir("svc").add_fidl_service(|stream| {
         let galaxy = galaxy.clone();
         fasync::Task::local(async move {
             execution::serve_component_runner(stream, galaxy)
@@ -68,10 +68,19 @@ async fn main() -> Result<(), Error> {
         })
         .detach();
     });
-    fs.dir("svc").add_fidl_service(move |stream| {
+    fs.dir("svc").add_fidl_service(|stream| {
         let galaxy = serve_galaxy.clone();
         fasync::Task::local(async move {
             execution::serve_starnix_manager(stream, galaxy)
+                .await
+                .expect("failed to start manager.")
+        })
+        .detach();
+    });
+    fs.dir("svc").add_fidl_service(|stream| {
+        let galaxy = serve_galaxy.clone();
+        fasync::Task::local(async move {
+            execution::serve_galaxy_controller(stream, galaxy)
                 .await
                 .expect("failed to start manager.")
         })

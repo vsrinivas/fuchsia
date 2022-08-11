@@ -9,6 +9,7 @@ use fidl_fuchsia_component as fcomponent;
 use fidl_fuchsia_component_runner as fcrunner;
 use fidl_fuchsia_process as fprocess;
 use fidl_fuchsia_starnix_developer as fstardev;
+use fidl_fuchsia_starnix_galaxy as fstargalaxy;
 use fuchsia_async as fasync;
 use fuchsia_runtime::{HandleInfo, HandleType};
 use fuchsia_zircon::HandleBased;
@@ -108,4 +109,11 @@ async fn start_shell(
 
     create_child_component("fuchsia-pkg://fuchsia.com/starnix_android#meta/sh.cm".to_string(), args)
         .await
+}
+
+pub async fn serve_galaxy_controller(
+    mut _request_stream: fstargalaxy::ControllerRequestStream,
+    _galaxy: Arc<Galaxy>,
+) -> Result<(), Error> {
+    Ok(())
 }
