@@ -255,7 +255,7 @@ impl MigrationManager {
             Self::run_single_migration(
                 &self.dir_proxy,
                 new_last_migration.migration_id,
-                &migration,
+                &*migration,
             )
             .await
             .map_err(|e| {
@@ -306,7 +306,7 @@ impl MigrationManager {
     async fn run_single_migration(
         dir_proxy: &DirectoryProxy,
         old_id: u64,
-        migration: &Box<dyn Migration>,
+        migration: &dyn Migration,
     ) -> Result<(), MigrationError> {
         let new_id = migration.id();
         let file_generator = FileGenerator::new(old_id, new_id, Clone::clone(dir_proxy));
@@ -367,7 +367,7 @@ impl MigrationManager {
         };
         let migration = self.migrations.get(&(id, cobalt_id)).unwrap();
         if let Err(migration_error) =
-            Self::run_single_migration(&self.dir_proxy, 0, migration).await
+            Self::run_single_migration(&self.dir_proxy, 0, &**migration).await
         {
             match migration_error {
                 MigrationError::NoData => {
