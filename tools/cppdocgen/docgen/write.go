@@ -9,6 +9,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/cppdocgen/clangdoc"
 	"io"
 	"path/filepath"
+	"strings"
 )
 
 type WriteSettings struct {
@@ -24,6 +25,16 @@ type WriteSettings struct {
 	// links. Should end in a slash.
 	RepoBaseUrl string
 }
+
+// Identifies the heading level in Markdown. Level 0 is not a real heading level but is used to
+// indicate something is happening outside of any heading level.
+const (
+	markdownHeading0 int = 0
+	markdownHeading1 int = 1
+	markdownHeading2 int = 2
+	markdownHeading3 int = 3
+	markdownHeading4 int = 4
+)
 
 // Gets a user-visible include path given the path in the build.
 func (s WriteSettings) GetUserIncludePath(path string) string {
@@ -72,17 +83,45 @@ func stripPathLeftElements(path string, stripElts int) string {
 	return norm
 }
 
-func writeComment(cs []clangdoc.CommentInfo, f io.Writer) {
+// extractCommentHeading1 separates out the first line if it starts with a single "#". If it does
+// not start with a heading, the returned |heading| string will be empty. The remainder of the
+// comment (or the full comment if there was no heading) is returned in |rest|.
+func extractCommentHeading1(c []clangdoc.CommentInfo) (heading string, rest []clangdoc.CommentInfo) {
+	if len(c) == 0 {
+		// No content, fall through to returning nothing.
+	} else if c[0].Kind == "TextComment" {
+		// Note that the comments start with the space following the "///"
+		if strings.HasPrefix(c[0].Text, " # ") {
+			// Found heading.
+			heading = c[0].Text[1:]
+			rest = c[1:]
+		} else {
+			// Got to the end, there is no heading.
+			rest = c
+		}
+	} else {
+		// Need to recurse into the next level.
+		innerHeading, innerRest := extractCommentHeading1(c[0].Children)
+		heading = innerHeading
+		rest = c
+		rest[0].Children = innerRest
+	}
+	return
+}
+
+// writeComment formats the given comments to the output. The heading depth is the number of "#" to
+// add before any headings that appear in this text. It is used to "nest" the text in a new level.
+func writeComment(cs []clangdoc.CommentInfo, headingDepth int, f io.Writer) {
 	for _, c := range cs {
 		switch c.Kind {
 		case "ParagraphComment":
-			writeComment(c.Children, f)
+			writeComment(c.Children, headingDepth, f)
 
 			// Put a blank line after a paragraph.
 			fmt.Fprintf(f, "\n")
 		case "BlockCommandComment", "FullComment":
 			// Just treat command comments as normal ones. The text will be in the children.
-			writeComment(c.Children, f)
+			writeComment(c.Children, headingDepth, f)
 		case "TextComment":
 			// Strip one leading space if there is one.
 			var line string
@@ -92,10 +131,9 @@ func writeComment(cs []clangdoc.CommentInfo, f io.Writer) {
 				line = c.Text
 			}
 
-			// If it's a markdown heading, knock it down into our hierarchy (the
-			// function names are already "##" so we add two octothorpes).
+			// If it's a markdown heading, knock it down into our hierarchy.
 			if len(line) > 0 && line[0] == '#' {
-				fmt.Fprintf(f, "##")
+				fmt.Fprintf(f, "%s", headingMarkerAtLevel(headingDepth))
 			}
 			fmt.Fprintf(f, "%s\n", line)
 		}
@@ -111,11 +149,7 @@ func makeIndent(length int) (out []byte) {
 }
 
 func headingMarkerAtLevel(lv int) string {
-	result := ""
-	for i := 0; i < lv; i++ {
-		result += "#"
-	}
-	return result
+	return strings.Repeat("#", lv)
 }
 
 var htmlEscapes = map[rune]string{

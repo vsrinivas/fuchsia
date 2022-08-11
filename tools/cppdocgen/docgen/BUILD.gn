@@ -11,7 +11,11 @@ go_library("docgen") {
   name = "go.fuchsia.dev/fuchsia/tools/cppdocgen/docgen"
   sources = [
     "index.go",
+    "read_header.go",
+    "read_header_test.go",
     "write.go",
+    "write_define.go",
+    "write_define_test.go",
     "write_function.go",
     "write_function_test.go",
     "write_header.go",
@@ -19,6 +23,7 @@ go_library("docgen") {
     "write_index.go",
     "write_record.go",
     "write_record_test.go",
+    "write_test.go",
   ]
   deps = [ "../clangdoc" ]
 }

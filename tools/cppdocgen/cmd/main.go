@@ -16,6 +16,7 @@ import (
 var flags struct {
 	inDir          string
 	outDir         string
+	buildDir       string
 	stripPathCount int
 	repoBaseUrl    string
 }
@@ -23,6 +24,7 @@ var flags struct {
 func init() {
 	flag.StringVar(&flags.inDir, "indir", "", "Input directory")
 	flag.StringVar(&flags.outDir, "outdir", "", "Output directory")
+	flag.StringVar(&flags.buildDir, "build-dir", "", "Build directory from whence clang-doc paths are relative.")
 	flag.StringVar(&flags.repoBaseUrl, "source-url", "", "URL of code repo for source links.")
 	flag.IntVar(&flags.stripPathCount, "strip-include-elts", 0, "Strip this many path elements before header file names.")
 }
@@ -34,6 +36,9 @@ func main() {
 	}
 	if len(flags.repoBaseUrl) == 0 {
 		log.Fatal("No repo base URL (-u) specified")
+	}
+	if len(flags.buildDir) == 0 {
+		log.Fatal("No build directory (--build-dir) specified")
 	}
 	if !strings.HasSuffix(flags.repoBaseUrl, "/") {
 		// The base URL should always end in a slash for appending file paths.
@@ -47,7 +52,9 @@ func main() {
 	}
 
 	// All other args are the list of headers we want to index.
-	indexSettings := docgen.IndexSettings{Headers: make(map[string]struct{})}
+	indexSettings := docgen.IndexSettings{
+		BuildDir: flags.buildDir,
+		Headers:  make(map[string]struct{})}
 	for _, a := range flag.Args() {
 		indexSettings.Headers[a] = struct{}{}
 	}

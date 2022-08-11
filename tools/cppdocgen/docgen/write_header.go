@@ -17,6 +17,10 @@ type Header struct {
 	Name      string
 	Functions []*clangdoc.FunctionInfo
 	Records   []*clangdoc.RecordInfo
+
+	// These two are extracted from the header source code.
+	Description []clangdoc.CommentInfo // Header-wide docstring.
+	Defines     []Define
 }
 
 // Returns the file name relative to the generated docs root directory containing the reference for
@@ -40,9 +44,25 @@ func (h *Header) ReferenceFileName() string {
 }
 
 func WriteHeaderReference(settings WriteSettings, index *Index, h *Header, f io.Writer) {
-	fmt.Fprintf(f, "# \\<%s\\> in %s\n\n", settings.GetUserIncludePath(h.Name), settings.LibName)
+	// When the header docstring starts with a markdown "heading 1", use that as the title,
+	// otherwise generate our own.
+	headerTitle, headerComment := extractCommentHeading1(h.Description)
+	if len(headerTitle) == 0 {
+		// Default heading.
+		fmt.Fprintf(f, "# \\<%s\\> in %s\n\n", settings.GetUserIncludePath(h.Name), settings.LibName)
+	} else {
+		fmt.Fprintf(f, "%s\n\n", headerTitle)
+	}
 
 	fmt.Fprintf(f, "[Header source code](%s)\n\n", settings.fileSourceLink(h.Name))
+
+	writeComment(headerComment, markdownHeading0, f)
+
+	// Don't sort the defines. Many defines have a sequence of numeric values that
+	// has some reasonable meaning, and alphabetizing the list makes things look weird.
+	for _, d := range h.Defines {
+		writeDefineReference(settings, index, d, f)
+	}
 
 	// TODO other types and enums.
 

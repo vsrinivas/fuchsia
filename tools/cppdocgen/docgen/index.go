@@ -7,10 +7,14 @@ package docgen
 import (
 	"fmt"
 	"go.fuchsia.dev/fuchsia/tools/cppdocgen/clangdoc"
+	"path"
 	"sort"
 )
 
 type IndexSettings struct {
+	// Path to the build directory where the clang-doc paths are relative to.
+	BuildDir string
+
 	// Names of the header files we want to index.
 	Headers map[string]struct{}
 }
@@ -18,6 +22,12 @@ type IndexSettings struct {
 func (s IndexSettings) ShouldIndexInHeader(hdrName string) bool {
 	_, found := s.Headers[hdrName]
 	return found
+}
+
+// HeaderPath returns the path for the given build-dir-relative (what clang-doc generates) header
+// path.
+func (s IndexSettings) HeaderPath(h string) string {
+	return path.Join(s.BuildDir, h)
 }
 
 // Flattened version of everything stored in this library.
@@ -30,10 +40,13 @@ type Index struct {
 
 	// All unique header files in this library indexed by their file name.
 	Headers map[string]*Header
+
+	// All unique preprocessor defines in this library indexed by their name.
+	Defines map[string]Define
 }
 
 // Returns a sorted list of all functions.
-func (index *Index) AllFunctions() []*clangdoc.FunctionInfo {
+func (index Index) AllFunctions() []*clangdoc.FunctionInfo {
 	result := make([]*clangdoc.FunctionInfo, 0, len(index.Functions))
 	for _, fn := range index.Functions {
 		result = append(result, fn)
@@ -43,12 +56,22 @@ func (index *Index) AllFunctions() []*clangdoc.FunctionInfo {
 }
 
 // Returns a sorted list of all records.
-func (index *Index) AllRecords() []*clangdoc.RecordInfo {
+func (index Index) AllRecords() []*clangdoc.RecordInfo {
 	result := make([]*clangdoc.RecordInfo, 0, len(index.Records))
 	for _, r := range index.Records {
 		result = append(result, r)
 	}
 	sort.Sort(recordByName(result))
+	return result
+}
+
+// AllDefines returns a sorted list of all defines.
+func (index Index) AllDefines() []Define {
+	result := make([]Define, 0, len(index.Defines))
+	for _, d := range index.Defines {
+		result = append(result, d)
+	}
+	sort.Sort(defineByName(result))
 	return result
 }
 
@@ -106,6 +129,7 @@ func makeEmptyIndex() Index {
 	index.Functions = make(map[string]*clangdoc.FunctionInfo)
 	index.Records = make(map[string]*clangdoc.RecordInfo)
 	index.Headers = make(map[string]*Header)
+	index.Defines = make(map[string]Define)
 	return index
 }
 
@@ -113,7 +137,17 @@ func MakeIndex(settings IndexSettings, r *clangdoc.NamespaceInfo) Index {
 	index := makeEmptyIndex()
 	indexNamespace(settings, &index, r)
 
-	// TODO sort records
+	// Get the header comments and #defines for all the headers.
+	for name, h := range index.Headers {
+		headerValues := ReadHeader(settings.HeaderPath(name))
+		h.Description = headerValues.Description
+		h.Defines = headerValues.Defines
+
+		// Add the defines to the global index.
+		for _, d := range headerValues.Defines {
+			index.Defines[d.Name] = d
+		}
+	}
 
 	return index
 }

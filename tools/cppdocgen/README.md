@@ -27,7 +27,54 @@ clang-doc --format=yaml -p=out/x64 --executor=all-TUs --filter=<NAME-OF-CC-DOC-F
     directories:
 
 ```
-out/<BUILD-DIR>/host_x64/cppdocgen -i <TEMP-DIR-FROM-ABOVE> -o <OUT-DIR> -s 6
-    -u "https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/"
+out/<BUILD-DIR>/host_x64/cppdocgen --indir=<TEMP-DIR-FROM-ABOVE>
+    --outdir=<OUT-DIR> --strip-include-elts=6
+    --source-url="https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/"
     ../../sdk/lib/fdio/include/lib/fdio/directory.h
     ../../sdk/lib/fdio/include/lib/fdio/fd.h
+```
+
+## Controlling the output
+
+### Per-header documentation
+
+You can supply markdown text to be included at the top of the reference for a
+header file. To count as the documentation for the header (rather than a
+copyright block or the documentation for something else), the comment must
+satisfy all of these requirements:
+
+  * It must be deliniated with "///" comments at the beginning of the line.
+  * It must be followed with a blank line.
+  * It must appear before any non-preprocessor lines (only "#" and //" lines are
+    allowed before it).
+
+It is recommended that this block go immediately before or after the include guard.
+
+### Setting the title
+
+A title will be generated for each reference page based on the header and
+library name. This may not always be appropriate.
+
+If the header file comment starts with a markdown heading 1 ("#"), that line
+will be used as the title of the page instead. For example:
+
+```
+// Copyright 2022 blah blah
+
+#ifndef MY_LIBRARY_MY_HEADER_H_
+#define MY_LIBRARY_MY_HEADER_H_
+
+/// # Deprecated functions in libdoom
+///
+/// The header `<lib/libdoom/deprecated.h>` contains all of the functions
+/// that are currently deprecated butallowed to be used.
+```
+
+For user-friendliness:
+
+  * Include the path and name of the header file as the user will type it in
+    their code (likely relative to the library include directory, not the
+    fuchsia repository root). If this is not included in the title, put it near
+    the top of the header documentation text.
+
+  * Include the name of the library.

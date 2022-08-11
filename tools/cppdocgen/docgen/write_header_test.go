@@ -64,5 +64,65 @@ func TestWriteHeaderReference(t *testing.T) {
 	if headerGot != headerExpected {
 		t.Errorf("Got:\n%s\n\nExpected:\n%s\n", headerGot, headerExpected)
 	}
+}
 
+func TestWriteHeaderComment(t *testing.T) {
+	settings := WriteSettings{LibName: "libtest",
+		StripPathEltCount: 3,
+		RepoBaseUrl:       "http://example.com/main/"}
+
+	index := makeEmptyIndex()
+
+	// With "StripPathEltCount == 3 and this input string, our header name should end
+	// up as "lib/test/myheader.h"
+	headerPath := "../../src/lib/test/myheader.h"
+
+	// This header has a header comment but no custom title.
+	header := &Header{
+		Name: headerPath,
+		Description: []clangdoc.CommentInfo{
+			{Kind: "TextComment",
+				Text: " First line text",
+			},
+			{Kind: "TextComment",
+				Text: "",
+			},
+			{Kind: "TextComment",
+				Text: " Contents text",
+			},
+		},
+		Functions: []*clangdoc.FunctionInfo{},
+		Records:   []*clangdoc.RecordInfo{}}
+	index.Headers[headerPath] = header
+
+	out := bytes.Buffer{}
+	WriteHeaderReference(settings, &index, header, &out)
+
+	headerExpected := `# \<lib/test/myheader.h\> in libtest
+
+[Header source code](https://cs.opensource.google/fuchsia/fuchsia/+/main:src/lib/test/myheader.h)
+
+First line text
+
+Contents text`
+	headerGot := strings.TrimSpace(out.String())
+	if headerGot != headerExpected {
+		t.Errorf("Got:\n%s\n\nExpected:\n%s\n", headerGot, headerExpected)
+	}
+
+	// Set a custom title in the header comment.
+	header.Description[0].Text = " # My custom title"
+	out = bytes.Buffer{}
+	WriteHeaderReference(settings, &index, header, &out)
+
+	headerExpected = `# My custom title
+
+[Header source code](https://cs.opensource.google/fuchsia/fuchsia/+/main:src/lib/test/myheader.h)
+
+
+Contents text`
+	headerGot = strings.TrimSpace(out.String())
+	if headerGot != headerExpected {
+		t.Errorf("Got:\n%s\n\nExpected:\n%s\n", headerGot, headerExpected)
+	}
 }

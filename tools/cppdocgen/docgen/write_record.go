@@ -120,7 +120,7 @@ func writeRecordReference(settings WriteSettings, index *Index, r *clangdoc.Reco
 	}
 
 	writeRecordDeclarationBlock(index, r, dataMembers, f)
-	writeComment(r.Description, f)
+	writeComment(r.Description, markdownHeading2, f)
 
 	// Data member documentation first.
 	for _, d := range dataMembers {
@@ -130,7 +130,7 @@ func writeRecordReference(settings WriteSettings, index *Index, r *clangdoc.Reco
 		if len(d.Description) > 0 {
 			// TODO needs anchor ref.
 			fmt.Fprintf(f, "### %s\n\n", d.Name)
-			writeComment(d.Description, f)
+			writeComment(d.Description, markdownHeading3, f)
 		}
 	}
 

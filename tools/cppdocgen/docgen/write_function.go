@@ -71,7 +71,7 @@ func writeFunctionBody(fn *clangdoc.FunctionInfo, namePrefix string, includeRetu
 	writeFunctionDeclaration(fn, namePrefix, includeReturnType, "", f)
 	writePreFooter(f)
 
-	writeComment(fn.Description, f)
+	writeComment(fn.Description, markdownHeading2, f)
 }
 
 // Writes the reference section for a standalone function.

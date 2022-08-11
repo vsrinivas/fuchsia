@@ -44,4 +44,12 @@ func WriteIndex(settings WriteSettings, index *Index, f io.Writer) {
 		}
 		fmt.Fprintf(f, "\n")
 	}
+
+	if len(index.Defines) > 0 {
+		fmt.Fprintf(f, "## Macros\n\n")
+		for _, d := range index.AllDefines() {
+			fmt.Fprintf(f, "  - [%s](%s)\n", d.Name, defineLink(index, d))
+		}
+		fmt.Fprintf(f, "\n")
+	}
 }
