@@ -4,7 +4,7 @@
   "pkg/fidl_cpp/include/lib/fidl/cpp/event_sender.h": "6dd3aac8b622529daef12330dbb2e361",
   "pkg/fidl_cpp/include/lib/fidl/cpp/interface_ptr.h": "6a9d47bcabd33792dafebe19663feca0",
   "pkg/fidl_cpp/include/lib/fidl/cpp/interface_ptr_set.h": "f58f00673b293acbb674b9ec6f02b2dd",
-  "pkg/fidl_cpp/include/lib/fidl/cpp/internal/header.h": "7827f53c1d7209bb3abd0c34924fc006",
+  "pkg/fidl_cpp/include/lib/fidl/cpp/internal/header.h": "349757e6b2e8b023433f4fed5582873f",
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/implementation.h": "ed2073fa0d165d46d664021897c86167",
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/message_handler.h": "d449dc0c19faca30cabaa3a8ddb3d3aa",
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/message_reader.h": "4921ca040168845c3a965b1d9a217617",
@@ -13,10 +13,10 @@
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/proxy_controller.h": "96c2511f85e19658112e37e4a738e3c6",
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/stub.h": "1b5811d8dbef5222fa46c3d03550a94a",
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/stub_controller.h": "4ce27ccb5448e6f261e9cd6a4137f828",
-  "pkg/fidl_cpp/include/lib/fidl/cpp/internal/transport_err_hlcpp.h": "fa892d6a4da2ba9ba596f4e144eb70e4",
   "pkg/fidl_cpp/include/lib/fidl/cpp/internal/weak_stub_controller.h": "f77d74ade50f9dfa15c1081d434d6109",
   "pkg/fidl_cpp/include/lib/fidl/cpp/member_connector.h": "aec2b102664515af4891e6482d816bf0",
   "pkg/fidl_cpp/include/lib/fidl/cpp/service_connector.h": "921dc36b03d9c1854b05ebed40c00644",
   "pkg/fidl_cpp/include/lib/fidl/cpp/service_handler_base.h": "4a422b98568937fae5340575ac8d4303",
-  "pkg/fidl_cpp/include/lib/fidl/cpp/type_converter.h": "81ea87e9526f104ff4bbebd502c6a7ec"
+  "pkg/fidl_cpp/include/lib/fidl/cpp/type_converter.h": "81ea87e9526f104ff4bbebd502c6a7ec",
+  "pkg/fidl_cpp/include/lib/fidl/cpp/unknown_interactions_hlcpp.h": "93b3925895f69f60eb44d4f42aaca522"
 }

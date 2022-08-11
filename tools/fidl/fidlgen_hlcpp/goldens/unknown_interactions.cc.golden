@@ -1669,7 +1669,7 @@ UnknownInteractionsProtocol_FlexibleTwoWay_Result UnknownInteractionsProtocol_Fl
   result.set_response(std::move(val));
   return result;
 }
-UnknownInteractionsProtocol_FlexibleTwoWay_Result UnknownInteractionsProtocol_FlexibleTwoWay_Result::WithTransportErr(::fidl::internal::TransportErr&& val) {
+UnknownInteractionsProtocol_FlexibleTwoWay_Result UnknownInteractionsProtocol_FlexibleTwoWay_Result::WithTransportErr(::fidl::TransportErr&& val) {
   UnknownInteractionsProtocol_FlexibleTwoWay_Result result;
   result.set_transport_err(std::move(val));
   return result;
@@ -1706,7 +1706,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWay_Result::Encode(::fidl::Encoder* 
       break;
     }
     case ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWay_Result::Tag::kTransportErr: {
-      if (::fidl::EncodingInlineSize<::fidl::internal::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+      if (::fidl::EncodingInlineSize<::fidl::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
         ::fidl::Encode(encoder, &transport_err_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
@@ -1719,7 +1719,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWay_Result::Encode(::fidl::Encoder* 
       ::fidl::Encode(
         encoder,
         &transport_err_,
-        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::internal::TransportErr, ::fidl::Encoder>(encoder)));
+        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::TransportErr, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
@@ -1786,7 +1786,7 @@ UnknownInteractionsProtocol_FlexibleTwoWay_Result& UnknownInteractionsProtocol_F
   return *this;
 }
 
-UnknownInteractionsProtocol_FlexibleTwoWay_Result& UnknownInteractionsProtocol_FlexibleTwoWay_Result::set_transport_err(::fidl::internal::TransportErr value) {
+UnknownInteractionsProtocol_FlexibleTwoWay_Result& UnknownInteractionsProtocol_FlexibleTwoWay_Result::set_transport_err(::fidl::TransportErr value) {
   EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWay_Result::Tag::kTransportErr);
   transport_err_ = std::move(value);
   return *this;
@@ -1818,7 +1818,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWay_Result::EnsureStorageInitialized
         new (&response_) ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWay_Response();
         break;
       case ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWay_Result::Tag::kTransportErr:
-        new (&transport_err_) ::fidl::internal::TransportErr();
+        new (&transport_err_) ::fidl::TransportErr();
         break;
       default:
         break;
@@ -1927,7 +1927,7 @@ UnknownInteractionsProtocol_FlexibleTwoWayFields_Result UnknownInteractionsProto
   result.set_response(std::move(val));
   return result;
 }
-UnknownInteractionsProtocol_FlexibleTwoWayFields_Result UnknownInteractionsProtocol_FlexibleTwoWayFields_Result::WithTransportErr(::fidl::internal::TransportErr&& val) {
+UnknownInteractionsProtocol_FlexibleTwoWayFields_Result UnknownInteractionsProtocol_FlexibleTwoWayFields_Result::WithTransportErr(::fidl::TransportErr&& val) {
   UnknownInteractionsProtocol_FlexibleTwoWayFields_Result result;
   result.set_transport_err(std::move(val));
   return result;
@@ -1964,7 +1964,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayFields_Result::Encode(::fidl::Enc
       break;
     }
     case ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayFields_Result::Tag::kTransportErr: {
-      if (::fidl::EncodingInlineSize<::fidl::internal::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+      if (::fidl::EncodingInlineSize<::fidl::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
         ::fidl::Encode(encoder, &transport_err_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
@@ -1977,7 +1977,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayFields_Result::Encode(::fidl::Enc
       ::fidl::Encode(
         encoder,
         &transport_err_,
-        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::internal::TransportErr, ::fidl::Encoder>(encoder)));
+        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::TransportErr, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
@@ -2044,7 +2044,7 @@ UnknownInteractionsProtocol_FlexibleTwoWayFields_Result& UnknownInteractionsProt
   return *this;
 }
 
-UnknownInteractionsProtocol_FlexibleTwoWayFields_Result& UnknownInteractionsProtocol_FlexibleTwoWayFields_Result::set_transport_err(::fidl::internal::TransportErr value) {
+UnknownInteractionsProtocol_FlexibleTwoWayFields_Result& UnknownInteractionsProtocol_FlexibleTwoWayFields_Result::set_transport_err(::fidl::TransportErr value) {
   EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayFields_Result::Tag::kTransportErr);
   transport_err_ = std::move(value);
   return *this;
@@ -2076,7 +2076,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayFields_Result::EnsureStorageIniti
         new (&response_) ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayFields_Response();
         break;
       case ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayFields_Result::Tag::kTransportErr:
-        new (&transport_err_) ::fidl::internal::TransportErr();
+        new (&transport_err_) ::fidl::TransportErr();
         break;
       default:
         break;
@@ -2334,7 +2334,7 @@ UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result UnknownInteractionsProtoc
   result.set_response(std::move(val));
   return result;
 }
-UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result::WithTransportErr(::fidl::internal::TransportErr&& val) {
+UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result::WithTransportErr(::fidl::TransportErr&& val) {
   UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result result;
   result.set_transport_err(std::move(val));
   return result;
@@ -2371,7 +2371,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result::Encode(::fidl::Enco
       break;
     }
     case ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result::Tag::kTransportErr: {
-      if (::fidl::EncodingInlineSize<::fidl::internal::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+      if (::fidl::EncodingInlineSize<::fidl::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
         ::fidl::Encode(encoder, &transport_err_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
@@ -2384,7 +2384,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result::Encode(::fidl::Enco
       ::fidl::Encode(
         encoder,
         &transport_err_,
-        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::internal::TransportErr, ::fidl::Encoder>(encoder)));
+        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::TransportErr, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
@@ -2451,7 +2451,7 @@ UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result& UnknownInteractionsProto
   return *this;
 }
 
-UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result& UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result::set_transport_err(::fidl::internal::TransportErr value) {
+UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result& UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result::set_transport_err(::fidl::TransportErr value) {
   EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result::Tag::kTransportErr);
   transport_err_ = std::move(value);
   return *this;
@@ -2483,7 +2483,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result::EnsureStorageInitia
         new (&response_) ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayUnion_Response();
         break;
       case ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result::Tag::kTransportErr:
-        new (&transport_err_) ::fidl::internal::TransportErr();
+        new (&transport_err_) ::fidl::TransportErr();
         break;
       default:
         break;
@@ -2679,7 +2679,7 @@ UnknownInteractionsProtocol_FlexibleTwoWayTable_Result UnknownInteractionsProtoc
   result.set_response(std::move(val));
   return result;
 }
-UnknownInteractionsProtocol_FlexibleTwoWayTable_Result UnknownInteractionsProtocol_FlexibleTwoWayTable_Result::WithTransportErr(::fidl::internal::TransportErr&& val) {
+UnknownInteractionsProtocol_FlexibleTwoWayTable_Result UnknownInteractionsProtocol_FlexibleTwoWayTable_Result::WithTransportErr(::fidl::TransportErr&& val) {
   UnknownInteractionsProtocol_FlexibleTwoWayTable_Result result;
   result.set_transport_err(std::move(val));
   return result;
@@ -2716,7 +2716,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayTable_Result::Encode(::fidl::Enco
       break;
     }
     case ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayTable_Result::Tag::kTransportErr: {
-      if (::fidl::EncodingInlineSize<::fidl::internal::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+      if (::fidl::EncodingInlineSize<::fidl::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
         ::fidl::Encode(encoder, &transport_err_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
@@ -2729,7 +2729,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayTable_Result::Encode(::fidl::Enco
       ::fidl::Encode(
         encoder,
         &transport_err_,
-        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::internal::TransportErr, ::fidl::Encoder>(encoder)));
+        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::TransportErr, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
@@ -2796,7 +2796,7 @@ UnknownInteractionsProtocol_FlexibleTwoWayTable_Result& UnknownInteractionsProto
   return *this;
 }
 
-UnknownInteractionsProtocol_FlexibleTwoWayTable_Result& UnknownInteractionsProtocol_FlexibleTwoWayTable_Result::set_transport_err(::fidl::internal::TransportErr value) {
+UnknownInteractionsProtocol_FlexibleTwoWayTable_Result& UnknownInteractionsProtocol_FlexibleTwoWayTable_Result::set_transport_err(::fidl::TransportErr value) {
   EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayTable_Result::Tag::kTransportErr);
   transport_err_ = std::move(value);
   return *this;
@@ -2828,7 +2828,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayTable_Result::EnsureStorageInitia
         new (&response_) ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayTable_Response();
         break;
       case ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayTable_Result::Tag::kTransportErr:
-        new (&transport_err_) ::fidl::internal::TransportErr();
+        new (&transport_err_) ::fidl::TransportErr();
         break;
       default:
         break;
@@ -2948,7 +2948,7 @@ UnknownInteractionsProtocol_FlexibleTwoWayErr_Result UnknownInteractionsProtocol
   result.set_err(std::move(val));
   return result;
 }
-UnknownInteractionsProtocol_FlexibleTwoWayErr_Result UnknownInteractionsProtocol_FlexibleTwoWayErr_Result::WithTransportErr(::fidl::internal::TransportErr&& val) {
+UnknownInteractionsProtocol_FlexibleTwoWayErr_Result UnknownInteractionsProtocol_FlexibleTwoWayErr_Result::WithTransportErr(::fidl::TransportErr&& val) {
   UnknownInteractionsProtocol_FlexibleTwoWayErr_Result result;
   result.set_transport_err(std::move(val));
   return result;
@@ -3008,7 +3008,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayErr_Result::Encode(::fidl::Encode
       break;
     }
     case ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayErr_Result::Tag::kTransportErr: {
-      if (::fidl::EncodingInlineSize<::fidl::internal::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+      if (::fidl::EncodingInlineSize<::fidl::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
         ::fidl::Encode(encoder, &transport_err_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
@@ -3021,7 +3021,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayErr_Result::Encode(::fidl::Encode
       ::fidl::Encode(
         encoder,
         &transport_err_,
-        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::internal::TransportErr, ::fidl::Encoder>(encoder)));
+        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::TransportErr, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
@@ -3100,7 +3100,7 @@ UnknownInteractionsProtocol_FlexibleTwoWayErr_Result& UnknownInteractionsProtoco
   return *this;
 }
 
-UnknownInteractionsProtocol_FlexibleTwoWayErr_Result& UnknownInteractionsProtocol_FlexibleTwoWayErr_Result::set_transport_err(::fidl::internal::TransportErr value) {
+UnknownInteractionsProtocol_FlexibleTwoWayErr_Result& UnknownInteractionsProtocol_FlexibleTwoWayErr_Result::set_transport_err(::fidl::TransportErr value) {
   EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayErr_Result::Tag::kTransportErr);
   transport_err_ = std::move(value);
   return *this;
@@ -3137,7 +3137,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayErr_Result::EnsureStorageInitiali
         new (&err_) int32_t();
         break;
       case ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayErr_Result::Tag::kTransportErr:
-        new (&transport_err_) ::fidl::internal::TransportErr();
+        new (&transport_err_) ::fidl::TransportErr();
         break;
       default:
         break;
@@ -3257,7 +3257,7 @@ UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result UnknownInteractionsPr
   result.set_err(std::move(val));
   return result;
 }
-UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result::WithTransportErr(::fidl::internal::TransportErr&& val) {
+UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result::WithTransportErr(::fidl::TransportErr&& val) {
   UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result result;
   result.set_transport_err(std::move(val));
   return result;
@@ -3317,7 +3317,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result::Encode(::fidl::
       break;
     }
     case ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result::Tag::kTransportErr: {
-      if (::fidl::EncodingInlineSize<::fidl::internal::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+      if (::fidl::EncodingInlineSize<::fidl::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
         ::fidl::Encode(encoder, &transport_err_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
@@ -3330,7 +3330,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result::Encode(::fidl::
       ::fidl::Encode(
         encoder,
         &transport_err_,
-        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::internal::TransportErr, ::fidl::Encoder>(encoder)));
+        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::TransportErr, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
@@ -3409,7 +3409,7 @@ UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result& UnknownInteractionsP
   return *this;
 }
 
-UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result& UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result::set_transport_err(::fidl::internal::TransportErr value) {
+UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result& UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result::set_transport_err(::fidl::TransportErr value) {
   EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result::Tag::kTransportErr);
   transport_err_ = std::move(value);
   return *this;
@@ -3446,7 +3446,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result::EnsureStorageIn
         new (&err_) int32_t();
         break;
       case ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result::Tag::kTransportErr:
-        new (&transport_err_) ::fidl::internal::TransportErr();
+        new (&transport_err_) ::fidl::TransportErr();
         break;
       default:
         break;
@@ -3715,7 +3715,7 @@ UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result UnknownInteractionsPro
   result.set_err(std::move(val));
   return result;
 }
-UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result::WithTransportErr(::fidl::internal::TransportErr&& val) {
+UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result::WithTransportErr(::fidl::TransportErr&& val) {
   UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result result;
   result.set_transport_err(std::move(val));
   return result;
@@ -3775,7 +3775,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result::Encode(::fidl::E
       break;
     }
     case ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result::Tag::kTransportErr: {
-      if (::fidl::EncodingInlineSize<::fidl::internal::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+      if (::fidl::EncodingInlineSize<::fidl::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
         ::fidl::Encode(encoder, &transport_err_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
@@ -3788,7 +3788,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result::Encode(::fidl::E
       ::fidl::Encode(
         encoder,
         &transport_err_,
-        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::internal::TransportErr, ::fidl::Encoder>(encoder)));
+        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::TransportErr, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
@@ -3867,7 +3867,7 @@ UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result& UnknownInteractionsPr
   return *this;
 }
 
-UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result& UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result::set_transport_err(::fidl::internal::TransportErr value) {
+UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result& UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result::set_transport_err(::fidl::TransportErr value) {
   EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result::Tag::kTransportErr);
   transport_err_ = std::move(value);
   return *this;
@@ -3904,7 +3904,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result::EnsureStorageIni
         new (&err_) int32_t();
         break;
       case ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result::Tag::kTransportErr:
-        new (&transport_err_) ::fidl::internal::TransportErr();
+        new (&transport_err_) ::fidl::TransportErr();
         break;
       default:
         break;
@@ -4111,7 +4111,7 @@ UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result UnknownInteractionsPro
   result.set_err(std::move(val));
   return result;
 }
-UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result::WithTransportErr(::fidl::internal::TransportErr&& val) {
+UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result::WithTransportErr(::fidl::TransportErr&& val) {
   UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result result;
   result.set_transport_err(std::move(val));
   return result;
@@ -4171,7 +4171,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result::Encode(::fidl::E
       break;
     }
     case ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result::Tag::kTransportErr: {
-      if (::fidl::EncodingInlineSize<::fidl::internal::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+      if (::fidl::EncodingInlineSize<::fidl::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
         ::fidl::Encode(encoder, &transport_err_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
@@ -4184,7 +4184,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result::Encode(::fidl::E
       ::fidl::Encode(
         encoder,
         &transport_err_,
-        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::internal::TransportErr, ::fidl::Encoder>(encoder)));
+        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::TransportErr, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
@@ -4263,7 +4263,7 @@ UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result& UnknownInteractionsPr
   return *this;
 }
 
-UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result& UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result::set_transport_err(::fidl::internal::TransportErr value) {
+UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result& UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result::set_transport_err(::fidl::TransportErr value) {
   EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result::Tag::kTransportErr);
   transport_err_ = std::move(value);
   return *this;
@@ -4300,7 +4300,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result::EnsureStorageIni
         new (&err_) int32_t();
         break;
       case ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result::Tag::kTransportErr:
-        new (&transport_err_) ::fidl::internal::TransportErr();
+        new (&transport_err_) ::fidl::TransportErr();
         break;
       default:
         break;
@@ -17089,7 +17089,7 @@ UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result UnknownInteractionsDrive
   result.set_response(std::move(val));
   return result;
 }
-UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result::WithTransportErr(::fidl::internal::TransportErr&& val) {
+UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result::WithTransportErr(::fidl::TransportErr&& val) {
   UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result result;
   result.set_transport_err(std::move(val));
   return result;
@@ -17126,7 +17126,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result::Encode(::fidl::Enc
       break;
     }
     case ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result::Tag::kTransportErr: {
-      if (::fidl::EncodingInlineSize<::fidl::internal::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+      if (::fidl::EncodingInlineSize<::fidl::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
         ::fidl::Encode(encoder, &transport_err_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
@@ -17139,7 +17139,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result::Encode(::fidl::Enc
       ::fidl::Encode(
         encoder,
         &transport_err_,
-        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::internal::TransportErr, ::fidl::Encoder>(encoder)));
+        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::TransportErr, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
@@ -17206,7 +17206,7 @@ UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result& UnknownInteractionsDriv
   return *this;
 }
 
-UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result& UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result::set_transport_err(::fidl::internal::TransportErr value) {
+UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result& UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result::set_transport_err(::fidl::TransportErr value) {
   EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result::Tag::kTransportErr);
   transport_err_ = std::move(value);
   return *this;
@@ -17238,7 +17238,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result::EnsureStorageIniti
         new (&response_) ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWay_Response();
         break;
       case ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result::Tag::kTransportErr:
-        new (&transport_err_) ::fidl::internal::TransportErr();
+        new (&transport_err_) ::fidl::TransportErr();
         break;
       default:
         break;
@@ -17347,7 +17347,7 @@ UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result UnknownInteraction
   result.set_response(std::move(val));
   return result;
 }
-UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result::WithTransportErr(::fidl::internal::TransportErr&& val) {
+UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result::WithTransportErr(::fidl::TransportErr&& val) {
   UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result result;
   result.set_transport_err(std::move(val));
   return result;
@@ -17384,7 +17384,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result::Encode(::fid
       break;
     }
     case ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result::Tag::kTransportErr: {
-      if (::fidl::EncodingInlineSize<::fidl::internal::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+      if (::fidl::EncodingInlineSize<::fidl::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
         ::fidl::Encode(encoder, &transport_err_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
@@ -17397,7 +17397,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result::Encode(::fid
       ::fidl::Encode(
         encoder,
         &transport_err_,
-        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::internal::TransportErr, ::fidl::Encoder>(encoder)));
+        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::TransportErr, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
@@ -17464,7 +17464,7 @@ UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result& UnknownInteractio
   return *this;
 }
 
-UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result& UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result::set_transport_err(::fidl::internal::TransportErr value) {
+UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result& UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result::set_transport_err(::fidl::TransportErr value) {
   EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result::Tag::kTransportErr);
   transport_err_ = std::move(value);
   return *this;
@@ -17496,7 +17496,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result::EnsureStorag
         new (&response_) ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Response();
         break;
       case ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result::Tag::kTransportErr:
-        new (&transport_err_) ::fidl::internal::TransportErr();
+        new (&transport_err_) ::fidl::TransportErr();
         break;
       default:
         break;
@@ -17754,7 +17754,7 @@ UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result UnknownInteractions
   result.set_response(std::move(val));
   return result;
 }
-UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result::WithTransportErr(::fidl::internal::TransportErr&& val) {
+UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result::WithTransportErr(::fidl::TransportErr&& val) {
   UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result result;
   result.set_transport_err(std::move(val));
   return result;
@@ -17791,7 +17791,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result::Encode(::fidl
       break;
     }
     case ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result::Tag::kTransportErr: {
-      if (::fidl::EncodingInlineSize<::fidl::internal::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+      if (::fidl::EncodingInlineSize<::fidl::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
         ::fidl::Encode(encoder, &transport_err_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
@@ -17804,7 +17804,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result::Encode(::fidl
       ::fidl::Encode(
         encoder,
         &transport_err_,
-        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::internal::TransportErr, ::fidl::Encoder>(encoder)));
+        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::TransportErr, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
@@ -17871,7 +17871,7 @@ UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result& UnknownInteraction
   return *this;
 }
 
-UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result& UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result::set_transport_err(::fidl::internal::TransportErr value) {
+UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result& UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result::set_transport_err(::fidl::TransportErr value) {
   EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result::Tag::kTransportErr);
   transport_err_ = std::move(value);
   return *this;
@@ -17903,7 +17903,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result::EnsureStorage
         new (&response_) ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Response();
         break;
       case ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result::Tag::kTransportErr:
-        new (&transport_err_) ::fidl::internal::TransportErr();
+        new (&transport_err_) ::fidl::TransportErr();
         break;
       default:
         break;
@@ -18099,7 +18099,7 @@ UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result UnknownInteractions
   result.set_response(std::move(val));
   return result;
 }
-UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result::WithTransportErr(::fidl::internal::TransportErr&& val) {
+UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result::WithTransportErr(::fidl::TransportErr&& val) {
   UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result result;
   result.set_transport_err(std::move(val));
   return result;
@@ -18136,7 +18136,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result::Encode(::fidl
       break;
     }
     case ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result::Tag::kTransportErr: {
-      if (::fidl::EncodingInlineSize<::fidl::internal::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+      if (::fidl::EncodingInlineSize<::fidl::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
         ::fidl::Encode(encoder, &transport_err_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
@@ -18149,7 +18149,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result::Encode(::fidl
       ::fidl::Encode(
         encoder,
         &transport_err_,
-        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::internal::TransportErr, ::fidl::Encoder>(encoder)));
+        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::TransportErr, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
@@ -18216,7 +18216,7 @@ UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result& UnknownInteraction
   return *this;
 }
 
-UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result& UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result::set_transport_err(::fidl::internal::TransportErr value) {
+UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result& UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result::set_transport_err(::fidl::TransportErr value) {
   EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result::Tag::kTransportErr);
   transport_err_ = std::move(value);
   return *this;
@@ -18248,7 +18248,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result::EnsureStorage
         new (&response_) ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Response();
         break;
       case ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result::Tag::kTransportErr:
-        new (&transport_err_) ::fidl::internal::TransportErr();
+        new (&transport_err_) ::fidl::TransportErr();
         break;
       default:
         break;
@@ -18368,7 +18368,7 @@ UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result UnknownInteractionsDr
   result.set_err(std::move(val));
   return result;
 }
-UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result::WithTransportErr(::fidl::internal::TransportErr&& val) {
+UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result::WithTransportErr(::fidl::TransportErr&& val) {
   UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result result;
   result.set_transport_err(std::move(val));
   return result;
@@ -18428,7 +18428,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result::Encode(::fidl::
       break;
     }
     case ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result::Tag::kTransportErr: {
-      if (::fidl::EncodingInlineSize<::fidl::internal::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+      if (::fidl::EncodingInlineSize<::fidl::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
         ::fidl::Encode(encoder, &transport_err_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
@@ -18441,7 +18441,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result::Encode(::fidl::
       ::fidl::Encode(
         encoder,
         &transport_err_,
-        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::internal::TransportErr, ::fidl::Encoder>(encoder)));
+        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::TransportErr, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
@@ -18520,7 +18520,7 @@ UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result& UnknownInteractionsD
   return *this;
 }
 
-UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result& UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result::set_transport_err(::fidl::internal::TransportErr value) {
+UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result& UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result::set_transport_err(::fidl::TransportErr value) {
   EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result::Tag::kTransportErr);
   transport_err_ = std::move(value);
   return *this;
@@ -18557,7 +18557,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result::EnsureStorageIn
         new (&err_) int32_t();
         break;
       case ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result::Tag::kTransportErr:
-        new (&transport_err_) ::fidl::internal::TransportErr();
+        new (&transport_err_) ::fidl::TransportErr();
         break;
       default:
         break;
@@ -18677,7 +18677,7 @@ UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result UnknownInteract
   result.set_err(std::move(val));
   return result;
 }
-UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result::WithTransportErr(::fidl::internal::TransportErr&& val) {
+UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result::WithTransportErr(::fidl::TransportErr&& val) {
   UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result result;
   result.set_transport_err(std::move(val));
   return result;
@@ -18737,7 +18737,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result::Encode(::
       break;
     }
     case ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result::Tag::kTransportErr: {
-      if (::fidl::EncodingInlineSize<::fidl::internal::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+      if (::fidl::EncodingInlineSize<::fidl::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
         ::fidl::Encode(encoder, &transport_err_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
@@ -18750,7 +18750,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result::Encode(::
       ::fidl::Encode(
         encoder,
         &transport_err_,
-        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::internal::TransportErr, ::fidl::Encoder>(encoder)));
+        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::TransportErr, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
@@ -18829,7 +18829,7 @@ UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result& UnknownInterac
   return *this;
 }
 
-UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result& UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result::set_transport_err(::fidl::internal::TransportErr value) {
+UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result& UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result::set_transport_err(::fidl::TransportErr value) {
   EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result::Tag::kTransportErr);
   transport_err_ = std::move(value);
   return *this;
@@ -18866,7 +18866,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result::EnsureSto
         new (&err_) int32_t();
         break;
       case ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result::Tag::kTransportErr:
-        new (&transport_err_) ::fidl::internal::TransportErr();
+        new (&transport_err_) ::fidl::TransportErr();
         break;
       default:
         break;
@@ -19135,7 +19135,7 @@ UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result UnknownInteracti
   result.set_err(std::move(val));
   return result;
 }
-UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result::WithTransportErr(::fidl::internal::TransportErr&& val) {
+UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result::WithTransportErr(::fidl::TransportErr&& val) {
   UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result result;
   result.set_transport_err(std::move(val));
   return result;
@@ -19195,7 +19195,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result::Encode(::f
       break;
     }
     case ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result::Tag::kTransportErr: {
-      if (::fidl::EncodingInlineSize<::fidl::internal::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+      if (::fidl::EncodingInlineSize<::fidl::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
         ::fidl::Encode(encoder, &transport_err_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
@@ -19208,7 +19208,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result::Encode(::f
       ::fidl::Encode(
         encoder,
         &transport_err_,
-        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::internal::TransportErr, ::fidl::Encoder>(encoder)));
+        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::TransportErr, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
@@ -19287,7 +19287,7 @@ UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result& UnknownInteract
   return *this;
 }
 
-UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result& UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result::set_transport_err(::fidl::internal::TransportErr value) {
+UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result& UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result::set_transport_err(::fidl::TransportErr value) {
   EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result::Tag::kTransportErr);
   transport_err_ = std::move(value);
   return *this;
@@ -19324,7 +19324,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result::EnsureStor
         new (&err_) int32_t();
         break;
       case ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result::Tag::kTransportErr:
-        new (&transport_err_) ::fidl::internal::TransportErr();
+        new (&transport_err_) ::fidl::TransportErr();
         break;
       default:
         break;
@@ -19531,7 +19531,7 @@ UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result UnknownInteracti
   result.set_err(std::move(val));
   return result;
 }
-UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result::WithTransportErr(::fidl::internal::TransportErr&& val) {
+UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result::WithTransportErr(::fidl::TransportErr&& val) {
   UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result result;
   result.set_transport_err(std::move(val));
   return result;
@@ -19591,7 +19591,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result::Encode(::f
       break;
     }
     case ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result::Tag::kTransportErr: {
-      if (::fidl::EncodingInlineSize<::fidl::internal::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+      if (::fidl::EncodingInlineSize<::fidl::TransportErr>(encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
         ::fidl::Encode(encoder, &transport_err_, offset + offsetof(fidl_xunion_v2_t, envelope));
 
         fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
@@ -19604,7 +19604,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result::Encode(::f
       ::fidl::Encode(
         encoder,
         &transport_err_,
-        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::internal::TransportErr, ::fidl::Encoder>(encoder)));
+        encoder->Alloc(::fidl::EncodingInlineSize<::fidl::TransportErr, ::fidl::Encoder>(encoder)));
 
       fidl_xunion_v2_t* xunion = encoder->GetPtr<fidl_xunion_v2_t>(offset);
       xunion->tag = tag_;
@@ -19683,7 +19683,7 @@ UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result& UnknownInteract
   return *this;
 }
 
-UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result& UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result::set_transport_err(::fidl::internal::TransportErr value) {
+UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result& UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result::set_transport_err(::fidl::TransportErr value) {
   EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result::Tag::kTransportErr);
   transport_err_ = std::move(value);
   return *this;
@@ -19720,7 +19720,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result::EnsureStor
         new (&err_) int32_t();
         break;
       case ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result::Tag::kTransportErr:
-        new (&transport_err_) ::fidl::internal::TransportErr();
+        new (&transport_err_) ::fidl::TransportErr();
         break;
       default:
         break;

@@ -612,7 +612,13 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 	case fidlgen.InternalType:
 		switch val.InternalSubtype {
 		case fidlgen.TransportErr:
-			r.nameVariants = commonNameVariants(makeName("fidl::internal::TransportErr"))
+			hlcppVariant := makeName("fidl::TransportErr")
+			newcppVariant := makeName("fidl::internal::TransportErr")
+			r.nameVariants = nameVariants{
+				HLCPP:   hlcppVariant,
+				Unified: newcppVariant,
+				Wire:    newcppVariant,
+			}
 			r.Kind = TypeKinds.Enum
 			r.WireFamily = FamilyKinds.TrivialCopy
 			r.NaturalFieldConstraint = "fidl::internal::NaturalCodingConstraintEmpty"

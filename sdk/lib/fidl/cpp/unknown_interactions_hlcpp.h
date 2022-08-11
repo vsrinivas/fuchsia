@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIDL_CPP_INTERNAL_TRANSPORT_ERR_HLCPP_H_
-#define LIB_FIDL_CPP_INTERNAL_TRANSPORT_ERR_HLCPP_H_
+#ifndef LIB_FIDL_CPP_UNKNOWN_INTERACTIONS_HLCPP_H_
+#define LIB_FIDL_CPP_UNKNOWN_INTERACTIONS_HLCPP_H_
 
 #include <zircon/types.h>
 
@@ -11,6 +11,8 @@
 #include "lib/fidl/cpp/transport_err.h"
 
 namespace fidl {
+using TransportErr = ::fidl::internal::TransportErr;
+
 template <>
 struct CodingTraits<::fidl::internal::TransportErr> {
   static constexpr size_t inline_size_v2 = sizeof(::fidl::internal::TransportErr);
@@ -42,4 +44,4 @@ struct Equality<::fidl::internal::TransportErr> {
 };
 }  // namespace fidl
 
-#endif  // LIB_FIDL_CPP_INTERNAL_TRANSPORT_ERR_HLCPP_H_
+#endif  // LIB_FIDL_CPP_UNKNOWN_INTERACTIONS_HLCPP_H_

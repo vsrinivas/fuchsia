@@ -1470,7 +1470,7 @@ class UnknownInteractionsProtocol_FlexibleTwoWay_Result final {
 
   
   static UnknownInteractionsProtocol_FlexibleTwoWay_Result WithResponse(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWay_Response&&);
-  static UnknownInteractionsProtocol_FlexibleTwoWay_Result WithTransportErr(::fidl::internal::TransportErr&&);
+  static UnknownInteractionsProtocol_FlexibleTwoWay_Result WithTransportErr(::fidl::TransportErr&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
@@ -1505,16 +1505,16 @@ class UnknownInteractionsProtocol_FlexibleTwoWay_Result final {
 
   bool is_transport_err() const { return tag_ == ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWay_Result::Tag::kTransportErr; }
   
-  ::fidl::internal::TransportErr& transport_err() {
+  ::fidl::TransportErr& transport_err() {
     EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWay_Result::Tag::kTransportErr);
     return transport_err_;
   }
   
-  const ::fidl::internal::TransportErr& transport_err() const {
+  const ::fidl::TransportErr& transport_err() const {
     ZX_ASSERT(is_transport_err());
     return transport_err_;
   }
-  UnknownInteractionsProtocol_FlexibleTwoWay_Result& set_transport_err(::fidl::internal::TransportErr value);
+  UnknownInteractionsProtocol_FlexibleTwoWay_Result& set_transport_err(::fidl::TransportErr value);
 
   ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWay_Result::Tag Which() const {
     
@@ -1537,7 +1537,7 @@ class UnknownInteractionsProtocol_FlexibleTwoWay_Result final {
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWay_Result::Tag::Invalid);
   union {
     ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWay_Response response_;
-    ::fidl::internal::TransportErr transport_err_;
+    ::fidl::TransportErr transport_err_;
   };
 };
 
@@ -1615,7 +1615,7 @@ class UnknownInteractionsProtocol_FlexibleTwoWayFields_Result final {
 
   
   static UnknownInteractionsProtocol_FlexibleTwoWayFields_Result WithResponse(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayFields_Response&&);
-  static UnknownInteractionsProtocol_FlexibleTwoWayFields_Result WithTransportErr(::fidl::internal::TransportErr&&);
+  static UnknownInteractionsProtocol_FlexibleTwoWayFields_Result WithTransportErr(::fidl::TransportErr&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
@@ -1650,16 +1650,16 @@ class UnknownInteractionsProtocol_FlexibleTwoWayFields_Result final {
 
   bool is_transport_err() const { return tag_ == ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayFields_Result::Tag::kTransportErr; }
   
-  ::fidl::internal::TransportErr& transport_err() {
+  ::fidl::TransportErr& transport_err() {
     EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayFields_Result::Tag::kTransportErr);
     return transport_err_;
   }
   
-  const ::fidl::internal::TransportErr& transport_err() const {
+  const ::fidl::TransportErr& transport_err() const {
     ZX_ASSERT(is_transport_err());
     return transport_err_;
   }
-  UnknownInteractionsProtocol_FlexibleTwoWayFields_Result& set_transport_err(::fidl::internal::TransportErr value);
+  UnknownInteractionsProtocol_FlexibleTwoWayFields_Result& set_transport_err(::fidl::TransportErr value);
 
   ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayFields_Result::Tag Which() const {
     
@@ -1682,7 +1682,7 @@ class UnknownInteractionsProtocol_FlexibleTwoWayFields_Result final {
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayFields_Result::Tag::Invalid);
   union {
     ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayFields_Response response_;
-    ::fidl::internal::TransportErr transport_err_;
+    ::fidl::TransportErr transport_err_;
   };
 };
 
@@ -1818,7 +1818,7 @@ class UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result final {
 
   
   static UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result WithResponse(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayUnion_Response&&);
-  static UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result WithTransportErr(::fidl::internal::TransportErr&&);
+  static UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result WithTransportErr(::fidl::TransportErr&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
@@ -1853,16 +1853,16 @@ class UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result final {
 
   bool is_transport_err() const { return tag_ == ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result::Tag::kTransportErr; }
   
-  ::fidl::internal::TransportErr& transport_err() {
+  ::fidl::TransportErr& transport_err() {
     EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result::Tag::kTransportErr);
     return transport_err_;
   }
   
-  const ::fidl::internal::TransportErr& transport_err() const {
+  const ::fidl::TransportErr& transport_err() const {
     ZX_ASSERT(is_transport_err());
     return transport_err_;
   }
-  UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result& set_transport_err(::fidl::internal::TransportErr value);
+  UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result& set_transport_err(::fidl::TransportErr value);
 
   ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result::Tag Which() const {
     
@@ -1885,7 +1885,7 @@ class UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result final {
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result::Tag::Invalid);
   union {
     ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayUnion_Response response_;
-    ::fidl::internal::TransportErr transport_err_;
+    ::fidl::TransportErr transport_err_;
   };
 };
 
@@ -2017,7 +2017,7 @@ class UnknownInteractionsProtocol_FlexibleTwoWayTable_Result final {
 
   
   static UnknownInteractionsProtocol_FlexibleTwoWayTable_Result WithResponse(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayTable_Response&&);
-  static UnknownInteractionsProtocol_FlexibleTwoWayTable_Result WithTransportErr(::fidl::internal::TransportErr&&);
+  static UnknownInteractionsProtocol_FlexibleTwoWayTable_Result WithTransportErr(::fidl::TransportErr&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
@@ -2052,16 +2052,16 @@ class UnknownInteractionsProtocol_FlexibleTwoWayTable_Result final {
 
   bool is_transport_err() const { return tag_ == ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayTable_Result::Tag::kTransportErr; }
   
-  ::fidl::internal::TransportErr& transport_err() {
+  ::fidl::TransportErr& transport_err() {
     EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayTable_Result::Tag::kTransportErr);
     return transport_err_;
   }
   
-  const ::fidl::internal::TransportErr& transport_err() const {
+  const ::fidl::TransportErr& transport_err() const {
     ZX_ASSERT(is_transport_err());
     return transport_err_;
   }
-  UnknownInteractionsProtocol_FlexibleTwoWayTable_Result& set_transport_err(::fidl::internal::TransportErr value);
+  UnknownInteractionsProtocol_FlexibleTwoWayTable_Result& set_transport_err(::fidl::TransportErr value);
 
   ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayTable_Result::Tag Which() const {
     
@@ -2084,7 +2084,7 @@ class UnknownInteractionsProtocol_FlexibleTwoWayTable_Result final {
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayTable_Result::Tag::Invalid);
   union {
     ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayTable_Response response_;
-    ::fidl::internal::TransportErr transport_err_;
+    ::fidl::TransportErr transport_err_;
   };
 };
 
@@ -2162,7 +2162,7 @@ class UnknownInteractionsProtocol_FlexibleTwoWayErr_Result final {
   
   static UnknownInteractionsProtocol_FlexibleTwoWayErr_Result WithResponse(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayErr_Response&&);
   static UnknownInteractionsProtocol_FlexibleTwoWayErr_Result WithErr(int32_t&&);
-  static UnknownInteractionsProtocol_FlexibleTwoWayErr_Result WithTransportErr(::fidl::internal::TransportErr&&);
+  static UnknownInteractionsProtocol_FlexibleTwoWayErr_Result WithTransportErr(::fidl::TransportErr&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
@@ -2211,16 +2211,16 @@ class UnknownInteractionsProtocol_FlexibleTwoWayErr_Result final {
 
   bool is_transport_err() const { return tag_ == ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayErr_Result::Tag::kTransportErr; }
   
-  ::fidl::internal::TransportErr& transport_err() {
+  ::fidl::TransportErr& transport_err() {
     EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayErr_Result::Tag::kTransportErr);
     return transport_err_;
   }
   
-  const ::fidl::internal::TransportErr& transport_err() const {
+  const ::fidl::TransportErr& transport_err() const {
     ZX_ASSERT(is_transport_err());
     return transport_err_;
   }
-  UnknownInteractionsProtocol_FlexibleTwoWayErr_Result& set_transport_err(::fidl::internal::TransportErr value);
+  UnknownInteractionsProtocol_FlexibleTwoWayErr_Result& set_transport_err(::fidl::TransportErr value);
 
   ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayErr_Result::Tag Which() const {
     
@@ -2263,7 +2263,7 @@ class UnknownInteractionsProtocol_FlexibleTwoWayErr_Result final {
   union {
     ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayErr_Response response_;
     int32_t err_;
-    ::fidl::internal::TransportErr transport_err_;
+    ::fidl::TransportErr transport_err_;
   };
 };
 
@@ -2342,7 +2342,7 @@ class UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result final {
   
   static UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result WithResponse(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Response&&);
   static UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result WithErr(int32_t&&);
-  static UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result WithTransportErr(::fidl::internal::TransportErr&&);
+  static UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result WithTransportErr(::fidl::TransportErr&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
@@ -2391,16 +2391,16 @@ class UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result final {
 
   bool is_transport_err() const { return tag_ == ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result::Tag::kTransportErr; }
   
-  ::fidl::internal::TransportErr& transport_err() {
+  ::fidl::TransportErr& transport_err() {
     EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result::Tag::kTransportErr);
     return transport_err_;
   }
   
-  const ::fidl::internal::TransportErr& transport_err() const {
+  const ::fidl::TransportErr& transport_err() const {
     ZX_ASSERT(is_transport_err());
     return transport_err_;
   }
-  UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result& set_transport_err(::fidl::internal::TransportErr value);
+  UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result& set_transport_err(::fidl::TransportErr value);
 
   ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result::Tag Which() const {
     
@@ -2444,7 +2444,7 @@ class UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result final {
   union {
     ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Response response_;
     int32_t err_;
-    ::fidl::internal::TransportErr transport_err_;
+    ::fidl::TransportErr transport_err_;
   };
 };
 
@@ -2581,7 +2581,7 @@ class UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result final {
   
   static UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result WithResponse(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Response&&);
   static UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result WithErr(int32_t&&);
-  static UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result WithTransportErr(::fidl::internal::TransportErr&&);
+  static UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result WithTransportErr(::fidl::TransportErr&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
@@ -2630,16 +2630,16 @@ class UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result final {
 
   bool is_transport_err() const { return tag_ == ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result::Tag::kTransportErr; }
   
-  ::fidl::internal::TransportErr& transport_err() {
+  ::fidl::TransportErr& transport_err() {
     EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result::Tag::kTransportErr);
     return transport_err_;
   }
   
-  const ::fidl::internal::TransportErr& transport_err() const {
+  const ::fidl::TransportErr& transport_err() const {
     ZX_ASSERT(is_transport_err());
     return transport_err_;
   }
-  UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result& set_transport_err(::fidl::internal::TransportErr value);
+  UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result& set_transport_err(::fidl::TransportErr value);
 
   ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result::Tag Which() const {
     
@@ -2683,7 +2683,7 @@ class UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result final {
   union {
     ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Response response_;
     int32_t err_;
-    ::fidl::internal::TransportErr transport_err_;
+    ::fidl::TransportErr transport_err_;
   };
 };
 
@@ -2816,7 +2816,7 @@ class UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result final {
   
   static UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result WithResponse(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Response&&);
   static UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result WithErr(int32_t&&);
-  static UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result WithTransportErr(::fidl::internal::TransportErr&&);
+  static UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result WithTransportErr(::fidl::TransportErr&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
@@ -2865,16 +2865,16 @@ class UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result final {
 
   bool is_transport_err() const { return tag_ == ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result::Tag::kTransportErr; }
   
-  ::fidl::internal::TransportErr& transport_err() {
+  ::fidl::TransportErr& transport_err() {
     EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result::Tag::kTransportErr);
     return transport_err_;
   }
   
-  const ::fidl::internal::TransportErr& transport_err() const {
+  const ::fidl::TransportErr& transport_err() const {
     ZX_ASSERT(is_transport_err());
     return transport_err_;
   }
-  UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result& set_transport_err(::fidl::internal::TransportErr value);
+  UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result& set_transport_err(::fidl::TransportErr value);
 
   ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result::Tag Which() const {
     
@@ -2918,7 +2918,7 @@ class UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result final {
   union {
     ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Response response_;
     int32_t err_;
-    ::fidl::internal::TransportErr transport_err_;
+    ::fidl::TransportErr transport_err_;
   };
 };
 
@@ -11822,7 +11822,7 @@ class UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result final {
 
   
   static UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result WithResponse(::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWay_Response&&);
-  static UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result WithTransportErr(::fidl::internal::TransportErr&&);
+  static UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result WithTransportErr(::fidl::TransportErr&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
@@ -11857,16 +11857,16 @@ class UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result final {
 
   bool is_transport_err() const { return tag_ == ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result::Tag::kTransportErr; }
   
-  ::fidl::internal::TransportErr& transport_err() {
+  ::fidl::TransportErr& transport_err() {
     EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result::Tag::kTransportErr);
     return transport_err_;
   }
   
-  const ::fidl::internal::TransportErr& transport_err() const {
+  const ::fidl::TransportErr& transport_err() const {
     ZX_ASSERT(is_transport_err());
     return transport_err_;
   }
-  UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result& set_transport_err(::fidl::internal::TransportErr value);
+  UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result& set_transport_err(::fidl::TransportErr value);
 
   ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result::Tag Which() const {
     
@@ -11889,7 +11889,7 @@ class UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result final {
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result::Tag::Invalid);
   union {
     ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWay_Response response_;
-    ::fidl::internal::TransportErr transport_err_;
+    ::fidl::TransportErr transport_err_;
   };
 };
 
@@ -11967,7 +11967,7 @@ class UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result final {
 
   
   static UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result WithResponse(::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Response&&);
-  static UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result WithTransportErr(::fidl::internal::TransportErr&&);
+  static UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result WithTransportErr(::fidl::TransportErr&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
@@ -12002,16 +12002,16 @@ class UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result final {
 
   bool is_transport_err() const { return tag_ == ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result::Tag::kTransportErr; }
   
-  ::fidl::internal::TransportErr& transport_err() {
+  ::fidl::TransportErr& transport_err() {
     EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result::Tag::kTransportErr);
     return transport_err_;
   }
   
-  const ::fidl::internal::TransportErr& transport_err() const {
+  const ::fidl::TransportErr& transport_err() const {
     ZX_ASSERT(is_transport_err());
     return transport_err_;
   }
-  UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result& set_transport_err(::fidl::internal::TransportErr value);
+  UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result& set_transport_err(::fidl::TransportErr value);
 
   ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result::Tag Which() const {
     
@@ -12034,7 +12034,7 @@ class UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result final {
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result::Tag::Invalid);
   union {
     ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Response response_;
-    ::fidl::internal::TransportErr transport_err_;
+    ::fidl::TransportErr transport_err_;
   };
 };
 
@@ -12170,7 +12170,7 @@ class UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result final {
 
   
   static UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result WithResponse(::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Response&&);
-  static UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result WithTransportErr(::fidl::internal::TransportErr&&);
+  static UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result WithTransportErr(::fidl::TransportErr&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
@@ -12205,16 +12205,16 @@ class UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result final {
 
   bool is_transport_err() const { return tag_ == ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result::Tag::kTransportErr; }
   
-  ::fidl::internal::TransportErr& transport_err() {
+  ::fidl::TransportErr& transport_err() {
     EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result::Tag::kTransportErr);
     return transport_err_;
   }
   
-  const ::fidl::internal::TransportErr& transport_err() const {
+  const ::fidl::TransportErr& transport_err() const {
     ZX_ASSERT(is_transport_err());
     return transport_err_;
   }
-  UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result& set_transport_err(::fidl::internal::TransportErr value);
+  UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result& set_transport_err(::fidl::TransportErr value);
 
   ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result::Tag Which() const {
     
@@ -12237,7 +12237,7 @@ class UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result final {
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result::Tag::Invalid);
   union {
     ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Response response_;
-    ::fidl::internal::TransportErr transport_err_;
+    ::fidl::TransportErr transport_err_;
   };
 };
 
@@ -12369,7 +12369,7 @@ class UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result final {
 
   
   static UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result WithResponse(::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Response&&);
-  static UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result WithTransportErr(::fidl::internal::TransportErr&&);
+  static UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result WithTransportErr(::fidl::TransportErr&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
@@ -12404,16 +12404,16 @@ class UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result final {
 
   bool is_transport_err() const { return tag_ == ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result::Tag::kTransportErr; }
   
-  ::fidl::internal::TransportErr& transport_err() {
+  ::fidl::TransportErr& transport_err() {
     EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result::Tag::kTransportErr);
     return transport_err_;
   }
   
-  const ::fidl::internal::TransportErr& transport_err() const {
+  const ::fidl::TransportErr& transport_err() const {
     ZX_ASSERT(is_transport_err());
     return transport_err_;
   }
-  UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result& set_transport_err(::fidl::internal::TransportErr value);
+  UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result& set_transport_err(::fidl::TransportErr value);
 
   ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result::Tag Which() const {
     
@@ -12436,7 +12436,7 @@ class UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result final {
   ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result::Tag::Invalid);
   union {
     ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Response response_;
-    ::fidl::internal::TransportErr transport_err_;
+    ::fidl::TransportErr transport_err_;
   };
 };
 
@@ -12514,7 +12514,7 @@ class UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result final {
   
   static UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result WithResponse(::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response&&);
   static UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result WithErr(int32_t&&);
-  static UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result WithTransportErr(::fidl::internal::TransportErr&&);
+  static UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result WithTransportErr(::fidl::TransportErr&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
@@ -12563,16 +12563,16 @@ class UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result final {
 
   bool is_transport_err() const { return tag_ == ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result::Tag::kTransportErr; }
   
-  ::fidl::internal::TransportErr& transport_err() {
+  ::fidl::TransportErr& transport_err() {
     EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result::Tag::kTransportErr);
     return transport_err_;
   }
   
-  const ::fidl::internal::TransportErr& transport_err() const {
+  const ::fidl::TransportErr& transport_err() const {
     ZX_ASSERT(is_transport_err());
     return transport_err_;
   }
-  UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result& set_transport_err(::fidl::internal::TransportErr value);
+  UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result& set_transport_err(::fidl::TransportErr value);
 
   ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result::Tag Which() const {
     
@@ -12615,7 +12615,7 @@ class UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result final {
   union {
     ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response response_;
     int32_t err_;
-    ::fidl::internal::TransportErr transport_err_;
+    ::fidl::TransportErr transport_err_;
   };
 };
 
@@ -12694,7 +12694,7 @@ class UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result final {
   
   static UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result WithResponse(::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Response&&);
   static UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result WithErr(int32_t&&);
-  static UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result WithTransportErr(::fidl::internal::TransportErr&&);
+  static UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result WithTransportErr(::fidl::TransportErr&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
@@ -12743,16 +12743,16 @@ class UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result final {
 
   bool is_transport_err() const { return tag_ == ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result::Tag::kTransportErr; }
   
-  ::fidl::internal::TransportErr& transport_err() {
+  ::fidl::TransportErr& transport_err() {
     EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result::Tag::kTransportErr);
     return transport_err_;
   }
   
-  const ::fidl::internal::TransportErr& transport_err() const {
+  const ::fidl::TransportErr& transport_err() const {
     ZX_ASSERT(is_transport_err());
     return transport_err_;
   }
-  UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result& set_transport_err(::fidl::internal::TransportErr value);
+  UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result& set_transport_err(::fidl::TransportErr value);
 
   ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result::Tag Which() const {
     
@@ -12796,7 +12796,7 @@ class UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result final {
   union {
     ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Response response_;
     int32_t err_;
-    ::fidl::internal::TransportErr transport_err_;
+    ::fidl::TransportErr transport_err_;
   };
 };
 
@@ -12933,7 +12933,7 @@ class UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result final {
   
   static UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result WithResponse(::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Response&&);
   static UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result WithErr(int32_t&&);
-  static UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result WithTransportErr(::fidl::internal::TransportErr&&);
+  static UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result WithTransportErr(::fidl::TransportErr&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
@@ -12982,16 +12982,16 @@ class UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result final {
 
   bool is_transport_err() const { return tag_ == ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result::Tag::kTransportErr; }
   
-  ::fidl::internal::TransportErr& transport_err() {
+  ::fidl::TransportErr& transport_err() {
     EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result::Tag::kTransportErr);
     return transport_err_;
   }
   
-  const ::fidl::internal::TransportErr& transport_err() const {
+  const ::fidl::TransportErr& transport_err() const {
     ZX_ASSERT(is_transport_err());
     return transport_err_;
   }
-  UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result& set_transport_err(::fidl::internal::TransportErr value);
+  UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result& set_transport_err(::fidl::TransportErr value);
 
   ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result::Tag Which() const {
     
@@ -13035,7 +13035,7 @@ class UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result final {
   union {
     ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Response response_;
     int32_t err_;
-    ::fidl::internal::TransportErr transport_err_;
+    ::fidl::TransportErr transport_err_;
   };
 };
 
@@ -13168,7 +13168,7 @@ class UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result final {
   
   static UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result WithResponse(::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Response&&);
   static UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result WithErr(int32_t&&);
-  static UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result WithTransportErr(::fidl::internal::TransportErr&&);
+  static UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result WithTransportErr(::fidl::TransportErr&&);
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
@@ -13217,16 +13217,16 @@ class UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result final {
 
   bool is_transport_err() const { return tag_ == ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result::Tag::kTransportErr; }
   
-  ::fidl::internal::TransportErr& transport_err() {
+  ::fidl::TransportErr& transport_err() {
     EnsureStorageInitialized(::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result::Tag::kTransportErr);
     return transport_err_;
   }
   
-  const ::fidl::internal::TransportErr& transport_err() const {
+  const ::fidl::TransportErr& transport_err() const {
     ZX_ASSERT(is_transport_err());
     return transport_err_;
   }
-  UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result& set_transport_err(::fidl::internal::TransportErr value);
+  UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result& set_transport_err(::fidl::TransportErr value);
 
   ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result::Tag Which() const {
     
@@ -13270,7 +13270,7 @@ class UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result final {
   union {
     ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Response response_;
     int32_t err_;
-    ::fidl::internal::TransportErr transport_err_;
+    ::fidl::TransportErr transport_err_;
   };
 };
 
