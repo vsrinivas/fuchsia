@@ -3446,8 +3446,8 @@ static bool vmo_zero_pinned_test() {
   zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0, PAGE_SIZE, &vmo);
   ASSERT_EQ(ZX_OK, status);
 
-  // Pin the page.
-  status = vmo->CommitRangePinned(0, PAGE_SIZE, false);
+  // Pin the page for write.
+  status = vmo->CommitRangePinned(0, PAGE_SIZE, true);
   ASSERT_EQ(ZX_OK, status);
 
   // Write non-zero content to the page.
@@ -3471,8 +3471,8 @@ static bool vmo_zero_pinned_test() {
       make_committed_pager_vmo(1, /*trap_dirty=*/false, /*resizable=*/true, &old_page, &pager_vmo);
   ASSERT_EQ(ZX_OK, status);
 
-  // Pin the page.
-  status = pager_vmo->CommitRangePinned(0, PAGE_SIZE, false);
+  // Pin the page for write.
+  status = pager_vmo->CommitRangePinned(0, PAGE_SIZE, true);
   ASSERT_EQ(ZX_OK, status);
 
   // Write non-zero content to the page. Lookup the page again, as pinning might have switched out
@@ -3491,7 +3491,7 @@ static bool vmo_zero_pinned_test() {
   // Resize the VMO up, and pin a page in the newly extended range.
   status = pager_vmo->Resize(2 * PAGE_SIZE);
   ASSERT_EQ(ZX_OK, status);
-  status = pager_vmo->CommitRangePinned(PAGE_SIZE, PAGE_SIZE, false);
+  status = pager_vmo->CommitRangePinned(PAGE_SIZE, PAGE_SIZE, true);
   ASSERT_EQ(ZX_OK, status);
 
   // Write non-zero content to the page.
