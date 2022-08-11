@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_ui_input_config::FeaturesRequestStream as InputConfigFeaturesRequestStream,
     fuchsia_async as fasync,
     fuchsia_fs::open_directory_in_namespace,
-    fuchsia_syslog::{fx_log_err, fx_log_warn},
+    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_vfs_watcher::{WatchEvent, Watcher},
     fuchsia_zircon as zx,
     futures::channel::mpsc::{self, Receiver, Sender, UnboundedReceiver, UnboundedSender},
@@ -386,10 +386,12 @@ impl InputPipeline {
                 let pathbuf = PathBuf::from(filename.clone());
                 match msg.event {
                     WatchEvent::EXISTING | WatchEvent::ADD_FILE => {
+                        fx_log_info!("found input device {}", filename);
                         let device_proxy =
                             input_device::get_device_from_dir_entry_path(&dir_proxy, &pathbuf)?;
                         add_device_bindings(
                             &device_types,
+                            &filename,
                             device_proxy,
                             &input_event_sender,
                             &bindings,
@@ -443,6 +445,7 @@ impl InputPipeline {
 
                     add_device_bindings(
                         device_types,
+                        &format!("input-device-registry-{}", device_id),
                         device_proxy,
                         input_event_sender,
                         bindings,
@@ -529,14 +532,33 @@ impl InputPipeline {
 /// a `fuchsia.input.report.TouchDescriptor`.
 async fn add_device_bindings(
     device_types: &Vec<input_device::InputDeviceType>,
+    filename: &String,
     device_proxy: fidl_fuchsia_input_report::InputDeviceProxy,
     input_event_sender: &Sender<input_device::InputEvent>,
     bindings: &InputDeviceBindingHashMap,
     device_id: u32,
 ) {
-    let mut new_bindings: Vec<BoxedInputDeviceBinding> = vec![];
-
+    let mut matched_device_types = vec![];
     for device_type in device_types {
+        if input_device::is_device_type(&device_proxy, *device_type).await {
+            matched_device_types.push(device_type);
+        }
+    }
+    if matched_device_types.is_empty() {
+        fx_log_info!("device {} did not match any supported device types", filename);
+        return;
+    }
+    fx_log_info!(
+        "binding {} to device types: {}",
+        filename,
+        matched_device_types
+            .iter()
+            .fold(String::new(), |device_types_string, device_type| device_types_string
+                + &format!("{:?}, ", device_type))
+    );
+
+    let mut new_bindings: Vec<BoxedInputDeviceBinding> = vec![];
+    for device_type in matched_device_types {
         // Clone `device_proxy`, so that multiple bindings (e.g. a `MouseBinding` and a
         // `TouchBinding`) can read data from the same `/dev/class/input-report` node.
         //
@@ -558,17 +580,16 @@ async fn add_device_bindings(
         // If we add additional cases where bindings share an underlying `input-report` node,
         // we might consider adding a multiplexing binding, to avoid reading duplicate reports.
         let proxy = device_proxy.clone();
-        if input_device::is_device_type(&proxy, *device_type).await {
-            if let Ok(binding) = input_device::get_device_binding(
-                *device_type,
-                proxy,
-                device_id,
-                input_event_sender.clone(),
-            )
-            .await
-            {
-                new_bindings.push(binding);
-            }
+        match input_device::get_device_binding(
+            *device_type,
+            proxy,
+            device_id,
+            input_event_sender.clone(),
+        )
+        .await
+        {
+            Ok(binding) => new_bindings.push(binding),
+            Err(e) => fx_log_err!("failed to bind {} as {:?}: {}", filename, device_type, e),
         }
     }
 
