@@ -213,7 +213,7 @@ void MFingerNTapRecognizer::OnContestStarted(std::unique_ptr<ContestMember> cont
 }
 
 std::string MFingerNTapRecognizer::DebugName() const {
-  return fxl::StringPrintf("MFingerNTapDragRecognizer(m=%d, n=%d)", number_of_fingers_in_gesture_,
+  return fxl::StringPrintf("MFingerNTapRecognizer(m=%d, n=%d)", number_of_fingers_in_gesture_,
                            number_of_taps_in_gesture_);
 }
 
