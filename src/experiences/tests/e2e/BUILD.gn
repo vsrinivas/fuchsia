@@ -119,7 +119,6 @@ dart_test("experiences_ermine_smoke_e2e_test") {
   ]
 
   environments = [
-    # TODO(fxbug.dev/91950): Reenable on AEMU after Screenshots on Flatland is not flaky.
     {
       dimensions = {
         device_type = "Intel NUC Kit NUC7i5DNHE"

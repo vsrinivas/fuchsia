@@ -28,7 +28,12 @@ dart_test("workstation_chrome_smoke_test") {
   ]
 
   environments = [
-    # TODO(fxbug.dev/91950): Reenable on AEMU after Screenshots on Flatland is not flaky.
+    {
+      dimensions = {
+        device_type = "AEMU"
+      }
+      tags = [ "e2e-fyi" ]
+    },
     {
       dimensions = {
         device_type = "Intel NUC Kit NUC7i5DNHE"
@@ -53,7 +58,7 @@ dart_test("workstation_chrome_advanced_smoke_test") {
   ]
 
   environments = [
-    # TODO(fxbug.dev/91950): Reenable on AEMU after Screenshots on Flatland is not flaky.
+    # TODO(fxbug.dev/106660): Reenable on EMU after finding a stable target rect.
     {
       dimensions = {
         device_type = "Intel NUC Kit NUC7i5DNHE"
