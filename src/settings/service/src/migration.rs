@@ -252,21 +252,22 @@ impl MigrationManager {
             .skip_while(|&((id, _), _)| id != last_migration.migration_id)
             .skip(1)
         {
-            Self::run_single_migration(&self.dir_proxy, new_last_migration.migration_id, migration)
-                .await
-                .map_err(|e| {
-                    let e = match e {
-                        MigrationError::NoData => {
-                            fx_log_err!("Missing data necessary for running migration {id}");
-                            MigrationError::NoData
-                        }
-                        MigrationError::Unrecoverable(e) => MigrationError::Unrecoverable(
-                            e.context(format!("Migration {id} failed")),
-                        ),
-                        _ => e,
-                    };
-                    (Some(new_last_migration), e)
-                })?;
+            Self::run_single_migration(
+                &self.dir_proxy,
+                new_last_migration.migration_id,
+                &migration,
+            )
+            .await
+            .map_err(|e| {
+                let e = match e {
+                    MigrationError::NoData => MigrationError::NoData,
+                    MigrationError::Unrecoverable(e) => {
+                        MigrationError::Unrecoverable(e.context(format!("Migration {id} failed")))
+                    }
+                    _ => e,
+                };
+                (Some(new_last_migration), e)
+            })?;
             new_last_migration = LastMigration { migration_id: id, cobalt_id };
         }
 
@@ -305,7 +306,7 @@ impl MigrationManager {
     async fn run_single_migration(
         dir_proxy: &DirectoryProxy,
         old_id: u64,
-        migration: Box<dyn Migration>,
+        migration: &Box<dyn Migration>,
     ) -> Result<(), MigrationError> {
         let new_id = migration.id();
         let file_generator = FileGenerator::new(old_id, new_id, Clone::clone(dir_proxy));
@@ -322,8 +323,7 @@ impl MigrationManager {
         )
         .await
         .context("unable to create migrations file")?;
-        if let Err(e) = fuchsia_fs::file::write(&tmp_migration_file, dbg!(new_id).to_string()).await
-        {
+        if let Err(e) = fuchsia_fs::file::write(&tmp_migration_file, new_id.to_string()).await {
             return Err(match e {
                 WriteError::WriteError(zx::Status::NO_SPACE) => MigrationError::DiskFull,
                 _ => Error::from(e).context("failed to write tmp migration").into(),
@@ -365,7 +365,7 @@ impl MigrationManager {
         } else {
             return Ok(None);
         };
-        let migration = self.migrations.remove(&(id, cobalt_id)).unwrap();
+        let migration = self.migrations.get(&(id, cobalt_id)).unwrap();
         if let Err(migration_error) =
             Self::run_single_migration(&self.dir_proxy, 0, migration).await
         {
@@ -620,6 +620,62 @@ mod tests {
             open_result,
             Err(OpenError::OpenError(status)) if status == zx::Status::NOT_FOUND
         );
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn if_no_migration_file_but_data_runs_migrations() {
+        let fs = mut_pseudo_directory! {};
+        let (directory, _vmo_map) = serve_vfs_dir(fs);
+        let mut builder = MigrationManagerBuilder::new();
+        let migration_1_ran = Arc::new(AtomicBool::new(false));
+        let migration_2_ran = Arc::new(AtomicBool::new(false));
+
+        builder
+            .register((
+                ID,
+                COBALT_ID,
+                Box::new({
+                    let migration_ran = Arc::clone(&migration_1_ran);
+                    move |_| {
+                        let migration_ran = Arc::clone(&migration_ran);
+                        async move {
+                            migration_ran.store(true, Ordering::SeqCst);
+                            Ok(())
+                        }
+                        .boxed()
+                    }
+                }),
+            ))
+            .expect("can register");
+
+        builder
+            .register((
+                ID2,
+                COBALT_ID2,
+                Box::new({
+                    let migration_ran = Arc::clone(&migration_2_ran);
+                    move |_| {
+                        let migration_ran = Arc::clone(&migration_ran);
+                        async move {
+                            migration_ran.store(true, Ordering::SeqCst);
+                            Ok(())
+                        }
+                        .boxed()
+                    }
+                }),
+            ))
+            .expect("can register");
+        builder.set_migration_dir(Clone::clone(&directory));
+        let migration_manager = builder.build();
+
+        let result = migration_manager.run_migrations().await;
+        assert_matches!(
+            result,
+            Ok(Some(LastMigration { migration_id: id, cobalt_id }))
+                if id == ID2 && cobalt_id == COBALT_ID2
+        );
+        assert!(migration_1_ran.load(Ordering::SeqCst));
+        assert!(migration_2_ran.load(Ordering::SeqCst));
     }
 
     #[fasync::run_until_stalled(test)]

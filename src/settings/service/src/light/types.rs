@@ -46,7 +46,21 @@ impl From<LightGroup> for fidl_fuchsia_settings::LightGroup {
     }
 }
 
-#[derive(PartialEq, Debug, Copy, Clone, Serialize, Deserialize)]
+impl From<fidl_fuchsia_settings::LightGroup> for LightGroup {
+    fn from(src: fidl_fuchsia_settings::LightGroup) -> Self {
+        LightGroup {
+            name: src.name.unwrap(),
+            enabled: src.enabled.unwrap(),
+            light_type: src.type_.unwrap().into(),
+            lights: src.lights.unwrap().into_iter().map(LightState::from).collect(),
+            // These are not used in storage, but will be filled out by the controller.
+            hardware_index: vec![],
+            disable_conditions: vec![],
+        }
+    }
+}
+
+#[derive(PartialEq, Eq, Debug, Copy, Clone, Serialize, Deserialize)]
 pub enum LightType {
     Brightness,
     Rgb,

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![allow(dead_code)]
-
 use crate::UpdateState;
 use anyhow::{bail, format_err, Context, Error};
 use fidl::encoding::{decode_persistent, encode_persistent, Persistable};
@@ -262,11 +260,15 @@ impl FidlStorage {
     }
 
     #[cfg(test)]
+    // TODO(fxbug.dev/91407) Remove allow once all tests have been migrated to fidl storage.
+    #[allow(dead_code)]
     fn set_caching_enabled(&mut self, enabled: bool) {
         self.caching_enabled = enabled;
     }
 
     #[cfg(test)]
+    // TODO(fxbug.dev/91407) Remove allow once all tests have been migrated to fidl storage.
+    #[allow(dead_code)]
     fn set_debounce_writes(&mut self, debounce: bool) {
         self.debounce_writes = debounce;
     }

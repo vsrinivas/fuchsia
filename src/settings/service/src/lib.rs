@@ -18,7 +18,9 @@ use fidl_fuchsia_io::DirectoryProxy;
 use fidl_fuchsia_metrics::{
     MetricEventLoggerFactoryProxy, MetricEventLoggerMarker, MetricEventLoggerProxy, ProjectSpec,
 };
+use fidl_fuchsia_stash::StoreProxy;
 use fuchsia_async as fasync;
+use fuchsia_component::client::connect_to_protocol;
 #[cfg(test)]
 use fuchsia_component::server::NestedEnvironment;
 use fuchsia_component::server::{ServiceFs, ServiceFsDir, ServiceObj};
@@ -78,7 +80,6 @@ use crate::job::source::Seeder;
 use crate::keyboard::keyboard_controller::KeyboardController;
 use crate::light::light_controller::LightController;
 use crate::message::MessageHubUtil;
-use crate::migration::MigrationManagerBuilder;
 use crate::monitor::base as monitor_base;
 use crate::night_mode::night_mode_controller::NightModeController;
 use crate::policy::policy_handler;
@@ -111,6 +112,7 @@ mod policy;
 mod privacy;
 mod service;
 mod setup;
+mod storage_migrations;
 pub mod task;
 
 pub mod agent;
@@ -287,6 +289,7 @@ pub struct EnvironmentBuilder<T: StorageFactory<Storage = DeviceStorage> + Send 
     setting_proxy_inspect_info: Option<&'static fuchsia_inspect::Node>,
     active_listener_inspect_logger: Option<Arc<Mutex<ListenerInspectLogger>>>,
     storage_dir: Option<DirectoryProxy>,
+    store_proxy: Option<StoreProxy>,
     fidl_storage_factory: Option<Arc<FidlStorageFactory>>,
     metric_event_logger_factory_proxy: Option<MetricEventLoggerFactoryProxy>,
 }
@@ -309,6 +312,7 @@ impl<T: StorageFactory<Storage = DeviceStorage> + Send + Sync + 'static> Environ
             setting_proxy_inspect_info: None,
             active_listener_inspect_logger: None,
             storage_dir: None,
+            store_proxy: None,
             fidl_storage_factory: None,
             metric_event_logger_factory_proxy: None,
         }
@@ -429,6 +433,11 @@ impl<T: StorageFactory<Storage = DeviceStorage> + Send + Sync + 'static> Environ
         self
     }
 
+    pub fn store_proxy(mut self, store_proxy: StoreProxy) -> Self {
+        self.store_proxy = Some(store_proxy);
+        self
+    }
+
     pub fn fidl_storage_factory(mut self, fidl_storage_factory: Arc<FidlStorageFactory>) -> Self {
         self.fidl_storage_factory = Some(fidl_storage_factory);
         self
@@ -510,9 +519,22 @@ impl<T: StorageFactory<Storage = DeviceStorage> + Send + Sync + 'static> Environ
                         None
                     };
 
-                let mut builder = MigrationManagerBuilder::new();
-                builder.set_migration_dir(Clone::clone(&storage_dir));
-                let migration_manager = builder.build();
+                let store_proxy = self.store_proxy.unwrap_or_else(|| {
+                    let store_proxy = connect_to_protocol::<fidl_fuchsia_stash::StoreMarker>()
+                        .expect("failed to connect to stash");
+                    store_proxy
+                        .identify("setting_service")
+                        .expect("should be able to identify to stash");
+                    store_proxy
+                });
+
+                let migration_manager = storage_migrations::register_migrations(
+                    &settings,
+                    &policies,
+                    Clone::clone(&storage_dir),
+                    store_proxy,
+                )
+                .context("failed to register migrations")?;
                 let migration_id = migration_manager
                     .run_tracked_migrations(metric_event_logger_proxy)
                     .await
@@ -661,8 +683,7 @@ impl<T: StorageFactory<Storage = DeviceStorage> + Send + Sync + 'static> Environ
     async fn register_setting_handlers<F>(
         components: &HashSet<SettingType>,
         device_storage_factory: Arc<T>,
-        // TODO(fxbug.dev/91407) Use when implementing fidl storage.
-        #[allow(unused_variables)] fidl_storage_factory: Arc<F>,
+        fidl_storage_factory: Arc<F>,
         controller_flags: &HashSet<ControllerFlag>,
         factory_handle: &mut SettingHandlerFactoryImpl,
     ) where
@@ -710,7 +731,7 @@ impl<T: StorageFactory<Storage = DeviceStorage> + Send + Sync + 'static> Environ
 
         // Light
         if components.contains(&SettingType::Light) {
-            device_storage_factory
+            fidl_storage_factory
                 .initialize::<LightController>()
                 .await
                 .expect("storage should still be initializing");

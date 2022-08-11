@@ -26,6 +26,7 @@ rustc_library("lib") {
 
   deps = [
     ":setui_metrics_registry",
+    "storage_fidl:fuchsia.settings.storage_rust",
     "//sdk/fidl/fuchsia.camera3:fuchsia.camera3_rust",
     "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light_rust",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_rust",
@@ -41,6 +42,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.recovery.policy:fuchsia.recovery.policy_rust",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
     "//sdk/fidl/fuchsia.settings.policy:fuchsia.settings.policy_rust",
+    "//sdk/fidl/fuchsia.stash:fuchsia.stash_rust",
     "//sdk/fidl/fuchsia.ui.brightness:fuchsia.ui.brightness_rust",
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_rust",
     "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy_rust",
@@ -223,6 +225,7 @@ rustc_library("lib") {
     "src/setup/setup_fidl_handler.rs",
     "src/setup/types.rs",
     "src/storage.rs",
+    "src/storage_migrations.rs",
     "src/task.rs",
     "src/tests.rs",
     "src/tests/accessibility_tests.rs",

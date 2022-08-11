@@ -6,6 +6,7 @@
 
 use anyhow::{Context, Error};
 use fidl_fuchsia_metrics::MetricEventLoggerFactoryMarker;
+use fidl_fuchsia_stash::StoreMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_protocol;
 use fuchsia_fs::OpenFlags;
@@ -85,12 +86,10 @@ fn main() -> Result<(), Error> {
     let configuration =
         ServiceConfiguration::from(agent_types, enabled_interface_configuration, flags);
 
-    let storage_factory = StashDeviceStorageFactory::new(
-        STASH_IDENTITY,
-        connect_to_protocol::<fidl_fuchsia_stash::StoreMarker>()
-            .expect("failed to connect to stash"),
-        StashInspectLoggerHandle::new().logger,
-    );
+    let store_proxy = connect_to_protocol::<StoreMarker>().expect("failed to connect to stash");
+    store_proxy.identify(STASH_IDENTITY).expect("should identify");
+    let storage_factory =
+        StashDeviceStorageFactory::new(store_proxy.clone(), StashInspectLoggerHandle::new().logger);
 
     let storage_dir = fuchsia_fs::directory::open_in_namespace(
         "/data/storage",
@@ -108,6 +107,7 @@ fn main() -> Result<(), Error> {
             LISTENER_INSPECT_LOGGER.clone(),
         )
         .storage_dir(storage_dir)
+        .store_proxy(store_proxy)
         .metric_event_logger_factory_proxy(
             connect_to_protocol::<MetricEventLoggerFactoryMarker>().ok(),
         )

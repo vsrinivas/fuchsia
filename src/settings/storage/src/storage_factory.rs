@@ -106,11 +106,9 @@ pub struct StashDeviceStorageFactory {
 impl StashDeviceStorageFactory {
     /// Construct a new instance of `StashDeviceStorageFactory`.
     pub fn new(
-        identity: &str,
         store: StoreProxy,
         inspect_handle: Arc<Mutex<StashInspectLogger>>,
     ) -> StashDeviceStorageFactory {
-        store.identify(identity).expect("was not able to identify with stash");
         StashDeviceStorageFactory {
             store,
             device_storage_cache: Mutex::new(InitializationState::new()),

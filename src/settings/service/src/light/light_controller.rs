@@ -4,24 +4,27 @@
 
 use async_trait::async_trait;
 use fidl_fuchsia_hardware_light::{Info, LightMarker, LightProxy};
+use fidl_fuchsia_settings_storage::LightGroups;
+use futures::lock::Mutex;
 
 use crate::base::{SettingInfo, SettingType};
 use crate::config::default_settings::DefaultSetting;
 use crate::handler::base::Request;
 use crate::handler::setting_handler::persist::{controller as data_controller, ClientProxy};
 use crate::handler::setting_handler::{
-    controller, ControllerError, ControllerStateResult, IntoHandlerResult, SettingHandlerResult,
+    controller, ControllerError, ControllerStateResult, SettingHandlerResult,
 };
 use crate::input::MediaButtons;
 use crate::light::light_hardware_configuration::DisableConditions;
 use crate::light::types::{LightGroup, LightInfo, LightState, LightType, LightValue};
 use crate::service_context::ExternalServiceProxy;
 use crate::{call_async, LightHardwareConfiguration};
-use settings_storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
+use settings_storage::fidl_storage::{FidlStorage, FidlStorageConvertible};
 use settings_storage::storage_factory::StorageAccess;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::convert::TryInto;
+use std::sync::Arc;
 
 /// Used as the argument field in a ControllerError::InvalidArgument to signal the FIDL handler to
 /// signal that a LightError::INVALID_NAME should be returned to the client.
@@ -30,12 +33,33 @@ pub(crate) const ARG_NAME: &str = "name";
 /// Hardware path used to connect to light devices.
 pub(crate) const DEVICE_PATH: &str = "/dev/class/light/*";
 
-impl DeviceStorageCompatible for LightInfo {
+impl FidlStorageConvertible for LightInfo {
+    type Storable = LightGroups;
+    const KEY: &'static str = "light_info";
+
     fn default_value() -> Self {
         LightInfo { light_groups: Default::default() }
     }
 
-    const KEY: &'static str = "light_info";
+    fn to_storable(self) -> Self::Storable {
+        LightGroups {
+            groups: self
+                .light_groups
+                .into_iter()
+                .map(|(_, group)| fidl_fuchsia_settings::LightGroup::from(group))
+                .collect(),
+        }
+    }
+
+    fn from_storable(storable: Self::Storable) -> Self {
+        // Unwrap ok since validation would ensure non-None name before writing to storage.
+        let light_groups = storable
+            .groups
+            .into_iter()
+            .map(|group| (group.name.clone().unwrap(), group.into()))
+            .collect();
+        Self { light_groups }
+    }
 }
 
 impl From<LightInfo> for SettingInfo {
@@ -55,10 +79,15 @@ pub struct LightController {
     ///
     /// If present, overrides the lights from the underlying fuchsia.hardware.light API.
     light_hardware_config: Option<LightHardwareConfiguration>,
+
+    /// Cache of data that includes hardware values. The data stored on disk does not persist the
+    /// hardware values, so restoring does not bring the values back into memory. The data needs to
+    /// be cached at this layer so we don't lose track of them.
+    data_cache: Arc<Mutex<Option<LightInfo>>>,
 }
 
 impl StorageAccess for LightController {
-    type Storage = DeviceStorage;
+    type Storage = FidlStorage;
     const STORAGE_KEYS: &'static [&'static str] = &[LightInfo::KEY];
 }
 
@@ -82,7 +111,9 @@ impl data_controller::Create for LightController {
 impl controller::Handle for LightController {
     async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
-            Request::Restore => Some(self.restore().await),
+            Request::Restore => {
+                Some(self.restore().await.map(|light_info| Some(SettingInfo::Light(light_info))))
+            }
             Request::OnButton(MediaButtons { mic_mute: Some(mic_mute), .. }) => {
                 Some(self.on_mic_mute(mic_mute).await)
             }
@@ -103,13 +134,7 @@ impl controller::Handle for LightController {
                 // Read all light values from underlying fuchsia.hardware.light before returning a
                 // value to ensure we have the latest light state.
                 // TODO(fxbug.dev/56319): remove once all clients are migrated.
-                let _ = self.restore().await;
-                Some(
-                    self.client
-                        .read_setting_info::<LightInfo>(fuchsia_trace::Id::new())
-                        .await
-                        .into_handler_result(),
-                )
+                Some(self.restore().await.map(|light_info| Some(SettingInfo::Light(light_info))))
             }
             _ => None,
         }
@@ -134,12 +159,18 @@ impl LightController {
                 )
             })?;
 
-        Ok(LightController { client, light_proxy, light_hardware_config })
+        Ok(LightController {
+            client,
+            light_proxy,
+            light_hardware_config,
+            data_cache: Arc::new(Mutex::new(None)),
+        })
     }
 
     async fn set(&self, name: String, state: Vec<LightState>) -> SettingHandlerResult {
         let id = fuchsia_trace::Id::new();
-        let mut current = self.client.read_setting::<LightInfo>(id).await;
+        let mut light_info = self.data_cache.lock().await;
+        let current = light_info.as_mut().unwrap();
 
         let mut entry = match current.light_groups.entry(name.clone()) {
             Entry::Vacant(_) => {
@@ -184,7 +215,8 @@ impl LightController {
         // After the main validations, write the state to the hardware.
         self.write_light_group_to_hardware(group, &state).await?;
 
-        self.client.write_setting(current.into(), id).await.into_handler_result()
+        let _ = self.client.write_setting(current.clone().into(), id).await?;
+        Ok(Some(current.clone().into()))
     }
 
     /// Writes the given list of light states for a light group to the actual hardware.
@@ -248,7 +280,8 @@ impl LightController {
 
     async fn on_mic_mute(&self, mic_mute: bool) -> SettingHandlerResult {
         let id = fuchsia_trace::Id::new();
-        let mut current = self.client.read_setting::<LightInfo>(id).await;
+        let mut light_info = self.data_cache.lock().await;
+        let current = light_info.as_mut().unwrap();
         for light in current
             .light_groups
             .values_mut()
@@ -259,17 +292,21 @@ impl LightController {
             light.enabled = mic_mute;
         }
 
-        self.client.write_setting(current.into(), id).await.into_handler_result()
+        let _ = self.client.write_setting(current.clone().into(), id).await?;
+        Ok(Some(current.clone().into()))
     }
 
-    async fn restore(&self) -> SettingHandlerResult {
-        if let Some(config) = self.light_hardware_config.clone() {
+    async fn restore(&self) -> Result<LightInfo, ControllerError> {
+        let light_info = if let Some(config) = self.light_hardware_config.clone() {
             // Configuration is specified, restore from the configuration.
             self.restore_from_configuration(config).await
         } else {
             // Read light info from hardware.
             self.restore_from_hardware().await
-        }
+        }?;
+        let mut guard = self.data_cache.lock().await;
+        *guard = Some(light_info.clone());
+        Ok(light_info)
     }
 
     /// Restores the light information from a pre-defined hardware configuration. Individual light
@@ -278,7 +315,7 @@ impl LightController {
     async fn restore_from_configuration(
         &self,
         config: LightHardwareConfiguration,
-    ) -> SettingHandlerResult {
+    ) -> Result<LightInfo, ControllerError> {
         let id = fuchsia_trace::Id::new();
         let current = self.client.read_setting::<LightInfo>(id).await;
         let mut light_groups: HashMap<String, LightGroup> = HashMap::new();
@@ -314,14 +351,14 @@ impl LightController {
             );
         }
 
-        self.client.write_setting(LightInfo { light_groups }.into(), id).await.into_handler_result()
+        Ok(LightInfo { light_groups })
     }
 
     /// Restores the light information when no hardware configuration is specified by reading from
     /// the underlying fuchsia.hardware.Light API and turning each light into a [`LightGroup`].
     ///
     /// [`LightGroup`]: ../../light/types/struct.LightGroup.html
-    async fn restore_from_hardware(&self) -> SettingHandlerResult {
+    async fn restore_from_hardware(&self) -> Result<LightInfo, ControllerError> {
         let num_lights =
             self.light_proxy.call_async(LightProxy::get_num_lights).await.map_err(|e| {
                 ControllerError::ExternalFailure(
@@ -351,7 +388,7 @@ impl LightController {
             let _ = current.light_groups.insert(name, group);
         }
 
-        self.client.write_setting(current.into(), id).await.into_handler_result()
+        Ok(current)
     }
 
     /// Converts an Info object from the fuchsia.hardware.Light API into a LightGroup, the internal

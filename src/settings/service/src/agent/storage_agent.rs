@@ -214,8 +214,6 @@ where
     F: StorageFactory<Storage = FidlStorage>,
 {
     device_storage_factory: Arc<T>,
-    // TODO(fxbug.dev/91407) Use when implementing fidl storage.
-    #[allow(dead_code)]
     fidl_storage_factory: Arc<F>,
 }
 
@@ -270,8 +268,6 @@ where
             .send();
     }
 
-    // TODO(fxbug.dev/91407) Use when implementing fidl storage.
-    #[allow(dead_code)]
     async fn fidl_read<S>(&self, id: ftrace::Id, responder: service::message::MessageClient)
     where
         S: FidlStorageConvertible + Into<StorageInfo>,
@@ -292,8 +288,6 @@ where
         drop(guard);
     }
 
-    // TODO(fxbug.dev/91407) Use when implementing fidl storage.
-    #[allow(dead_code)]
     async fn fidl_write<S>(&self, data: S, responder: service::message::MessageClient)
     where
         S: FidlStorageConvertible,
@@ -334,7 +328,7 @@ where
                     SettingType::Input => self.read::<InputInfoSources>(id, responder).await,
                     SettingType::Intl => self.read::<IntlInfo>(id, responder).await,
                     SettingType::Keyboard => self.read::<KeyboardInfo>(id, responder).await,
-                    SettingType::Light => self.read::<LightInfo>(id, responder).await,
+                    SettingType::Light => self.fidl_read::<LightInfo>(id, responder).await,
                     SettingType::LightSensor => {
                         panic!("SettingType::LightSensor does not support storage")
                     }
@@ -363,7 +357,7 @@ where
                 SettingInfo::Input(info) => self.write(info, responder).await,
                 SettingInfo::Intl(info) => self.write(info, responder).await,
                 SettingInfo::Keyboard(info) => self.write(info, responder).await,
-                SettingInfo::Light(info) => self.write(info, responder).await,
+                SettingInfo::Light(info) => self.fidl_write(info, responder).await,
                 SettingInfo::LightSensor(_) => {
                     panic!("SettingInfo::LightSensor does not support storage")
                 }
