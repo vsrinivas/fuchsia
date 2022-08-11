@@ -31,8 +31,8 @@ use crate::{
         segment::Segment,
         seqnum::WindowSize,
         socket::{
-            isn::generate_isn, Acceptor, Connection, ConnectionId, ListenerId, MaybeListener,
-            SocketAddr, TcpIpTransportContext, TcpNonSyncContext, TcpSockets, TcpSyncContext,
+            Acceptor, Connection, ConnectionId, ListenerId, MaybeListener, SocketAddr,
+            TcpIpTransportContext, TcpNonSyncContext, TcpSockets, TcpSyncContext,
         },
         state::{BufferProvider, Closed, State},
         Control, UserError,
@@ -169,21 +169,14 @@ where
                         }
                     };
 
-                    sync_ctx.with_tcp_sockets_mut(
-                        |TcpSockets { secret, isn_ts, port_alloc: _, inactive: _, socketmap }| {
-                            let isn = generate_isn::<I::Addr>(
-                                ctx.now().duration_since(*isn_ts),
+                    sync_ctx.with_isn_generator_and_tcp_sockets_mut(
+                        |isn, TcpSockets { port_alloc: _, inactive: _, socketmap }| {
+                            let isn = isn.generate(
+                                ctx.now(),
                                 SocketAddr { ip: ip_sock.local_ip().clone(), port: local_port },
                                 SocketAddr { ip: ip_sock.remote_ip().clone(), port: remote_port },
-                                secret,
                             );
 
-                            let isn = generate_isn::<I::Addr>(
-                                now.duration_since(*isn_ts),
-                                SocketAddr { ip: local_ip, port: local_port },
-                                SocketAddr { ip: remote_ip, port: remote_port },
-                                secret,
-                            );
                             // TODO(https://fxbug.dev/102135): Inherit the socket
                             // options from the listener.
                             let conn_id = socketmap

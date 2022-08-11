@@ -19,7 +19,7 @@
 
 pub(crate) mod demux;
 mod icmp;
-mod isn;
+pub(crate) mod isn;
 
 use alloc::{collections::VecDeque, vec::Vec};
 use core::{
@@ -57,7 +57,7 @@ use crate::{
     },
     transport::tcp::{
         buffer::{ReceiveBuffer, SendBuffer},
-        socket::{demux::tcp_serialize_segment, isn::generate_isn},
+        socket::{demux::tcp_serialize_segment, isn::IsnGenerator},
         state::{Closed, Initial, State},
     },
     Instant,
@@ -80,11 +80,23 @@ pub trait TcpNonSyncContext: InstantContext {
 
 /// Sync context for TCP.
 pub trait TcpSyncContext<I: IpExt, C: TcpNonSyncContext>: IpDeviceIdContext<I> {
+    /// Calls the function with an immutable reference to an initial sequence
+    /// number generator and a mutable reference to TCP socket state.
+    fn with_isn_generator_and_tcp_sockets_mut<
+        O,
+        F: FnOnce(&IsnGenerator<C::Instant>, &mut TcpSockets<I, Self::DeviceId, C>) -> O,
+    >(
+        &mut self,
+        cb: F,
+    ) -> O;
+
     /// Calls the function with a mutable reference to TCP socket state.
     fn with_tcp_sockets_mut<O, F: FnOnce(&mut TcpSockets<I, Self::DeviceId, C>) -> O>(
         &mut self,
         cb: F,
-    ) -> O;
+    ) -> O {
+        self.with_isn_generator_and_tcp_sockets_mut(|_isn, sockets| cb(sockets))
+    }
 }
 
 /// Socket address includes the ip address and the port number.
@@ -184,15 +196,6 @@ struct Inactive;
 
 /// Holds all the TCP socket states.
 pub struct TcpSockets<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext> {
-    // Secret used to choose initial sequence numbers. It will be filled by a
-    // CSPRNG upon initialization. RFC suggests an implementation "could"
-    // change the secret key on a regular basis, this is not something we are
-    // considering as Linux doesn't seem to do that either.
-    secret: [u8; 16],
-    // The initial timestamp that will be used to calculate the elapsed time
-    // since the beginning and that information will then be used to generate
-    // ISNs being requested.
-    isn_ts: C::Instant,
     port_alloc: PortAlloc<
         BoundSocketMap<
             IpPortSpec<I, D>,
@@ -245,12 +248,8 @@ impl<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext> TcpSockets<I, D, C> {
         )
     }
 
-    pub(crate) fn new(now: C::Instant, rng: &mut impl RngCore) -> Self {
-        let mut secret = [0; 16];
-        rng.fill_bytes(&mut secret);
+    pub(crate) fn new(rng: &mut impl RngCore) -> Self {
         Self {
-            secret,
-            isn_ts: now,
             port_alloc: PortAlloc::new(rng),
             inactive: IdMap::new(),
             socketmap: Default::default(),
@@ -405,16 +404,16 @@ where
 {
     // TODO(https://fxbug.dev/104300): Check if local_ip is a unicast address.
     let port = match port {
-        None => sync_ctx.with_tcp_sockets_mut(
-            |TcpSockets { secret: _, isn_ts: _, port_alloc, inactive: _, socketmap }| {
+        None => {
+            sync_ctx.with_tcp_sockets_mut(|TcpSockets { port_alloc, inactive: _, socketmap }| {
                 match port_alloc.try_alloc(&local_ip, &socketmap) {
                     Some(port) => {
                         Ok(NonZeroU16::new(port).expect("ephemeral ports must be non-zero"))
                     }
                     None => Err(BindError::NoPort),
                 }
-            },
-        )?,
+            })?
+        }
         Some(port) => port,
     };
     bind_inner(sync_ctx, ctx, id, local_ip, port)
@@ -584,14 +583,13 @@ where
         .map_err(|err| match err {
             IpSockCreationError::Route(_) => ConnectError::NoRoute,
         })?;
-    let local_port = sync_ctx.with_tcp_sockets_mut(
-        |TcpSockets { secret: _, isn_ts: _, port_alloc, inactive: _, socketmap }| match port_alloc
-            .try_alloc(&*ip_sock.local_ip(), &socketmap)
-        {
-            Some(port) => Ok(NonZeroU16::new(port).expect("ephemeral ports must be non-zero")),
-            None => Err(ConnectError::NoPort),
-        },
-    )?;
+    let local_port =
+        sync_ctx.with_tcp_sockets_mut(|TcpSockets { port_alloc, inactive: _, socketmap }| {
+            match port_alloc.try_alloc(&*ip_sock.local_ip(), &socketmap) {
+                Some(port) => Ok(NonZeroU16::new(port).expect("ephemeral ports must be non-zero")),
+                None => Err(ConnectError::NoPort),
+            }
+        })?;
     let conn_id = connect_inner(sync_ctx, ctx, ip_sock, local_port, remote.port)?;
     let _: Option<_> = sync_ctx.with_tcp_sockets_mut(|sockets| sockets.inactive.remove(id.into()));
     Ok(conn_id)
@@ -609,13 +607,12 @@ where
     C: TcpNonSyncContext,
     SC: TcpSyncContext<I, C> + BufferTransportIpContext<I, C, Buf<Vec<u8>>>,
 {
-    let (syn, conn_addr, conn_id) = sync_ctx.with_tcp_sockets_mut(
-        |TcpSockets { secret, isn_ts, port_alloc: _, inactive: _, socketmap }| {
-            let isn = generate_isn::<I::Addr>(
-                ctx.now().duration_since(*isn_ts),
+    let (syn, conn_addr, conn_id) = sync_ctx.with_isn_generator_and_tcp_sockets_mut(
+        |isn, TcpSockets { port_alloc: _, inactive: _, socketmap }| {
+            let isn = isn.generate(
+                ctx.now(),
                 SocketAddr { ip: ip_sock.local_ip().clone(), port: local_port },
                 SocketAddr { ip: ip_sock.remote_ip().clone(), port: remote_port },
-                secret,
             );
             let conn_addr = ConnAddr {
                 ip: ConnIpAddr {
@@ -746,6 +743,7 @@ mod tests {
     }
 
     struct TcpState<I: TcpTestIpExt> {
+        isn_generator: IsnGenerator<DummyInstant>,
         sockets: TcpSockets<I, DummyDeviceId, TcpNonSyncCtx>,
         ip_socket_ctx: DummyIpSocketCtx<I, DummyDeviceId>,
     }
@@ -792,14 +790,18 @@ mod tests {
     }
 
     impl<I: TcpTestIpExt> TcpSyncContext<I, TcpNonSyncCtx> for TcpSyncCtx<I> {
-        fn with_tcp_sockets_mut<
+        fn with_isn_generator_and_tcp_sockets_mut<
             O,
-            F: FnOnce(&mut TcpSockets<I, DummyDeviceId, TcpNonSyncCtx>) -> O,
+            F: FnOnce(
+                &IsnGenerator<DummyInstant>,
+                &mut TcpSockets<I, DummyDeviceId, TcpNonSyncCtx>,
+            ) -> O,
         >(
             &mut self,
             cb: F,
         ) -> O {
-            cb(&mut self.get_mut().sockets)
+            let TcpState { isn_generator, sockets, ip_socket_ctx: _ } = self.get_mut();
+            cb(isn_generator, sockets)
         }
     }
 
@@ -823,11 +825,10 @@ mod tests {
                 alloc::vec![peer],
             )));
             Self {
+                isn_generator: Default::default(),
                 sockets: TcpSockets {
                     inactive: IdMap::new(),
                     socketmap: BoundSocketMap::default(),
-                    secret: [0; 16],
-                    isn_ts: DummyInstant::default(),
                     port_alloc: PortAlloc::new(&mut FakeCryptoRng::new_xorshift(0)),
                 },
                 ip_socket_ctx,

@@ -69,7 +69,10 @@ use crate::{
     device::DeviceId,
     transport::tcp::socket::TcpNonSyncContext,
     transport::{
-        tcp::socket::{TcpSockets, TcpSyncContext},
+        tcp::{
+            socket::{isn::IsnGenerator, TcpSockets, TcpSyncContext},
+            TcpState,
+        },
         udp::{UdpState, UdpStateBuilder},
     },
     NonSyncContext, RngContext, SyncCtx,
@@ -94,8 +97,8 @@ impl TransportStateBuilder {
         TransportLayerState {
             udpv4: self.udp.clone().build(),
             udpv6: self.udp.build(),
-            tcpv4: TcpSockets::new(ctx.now(), ctx.rng_mut()),
-            tcpv6: TcpSockets::new(ctx.now(), ctx.rng_mut()),
+            tcpv4: TcpState::new(ctx.now(), ctx.rng_mut()),
+            tcpv6: TcpState::new(ctx.now(), ctx.rng_mut()),
         }
     }
 }
@@ -104,25 +107,33 @@ impl TransportStateBuilder {
 pub(crate) struct TransportLayerState<C: TcpNonSyncContext> {
     udpv4: UdpState<Ipv4, DeviceId>,
     udpv6: UdpState<Ipv6, DeviceId>,
-    tcpv4: TcpSockets<Ipv4, DeviceId, C>,
-    tcpv6: TcpSockets<Ipv6, DeviceId, C>,
+    tcpv4: TcpState<Ipv4, DeviceId, C>,
+    tcpv6: TcpState<Ipv6, DeviceId, C>,
 }
 
 impl<C: NonSyncContext> TcpSyncContext<Ipv4, C> for SyncCtx<C> {
-    fn with_tcp_sockets_mut<O, F: FnOnce(&mut TcpSockets<Ipv4, Self::DeviceId, C>) -> O>(
+    fn with_isn_generator_and_tcp_sockets_mut<
+        O,
+        F: FnOnce(&IsnGenerator<C::Instant>, &mut TcpSockets<Ipv4, Self::DeviceId, C>) -> O,
+    >(
         &mut self,
         cb: F,
     ) -> O {
-        cb(&mut self.state.transport.tcpv4)
+        let TcpState { isn_generator, sockets } = &mut self.state.transport.tcpv4;
+        cb(isn_generator, sockets)
     }
 }
 
 impl<C: NonSyncContext> TcpSyncContext<Ipv6, C> for SyncCtx<C> {
-    fn with_tcp_sockets_mut<O, F: FnOnce(&mut TcpSockets<Ipv6, Self::DeviceId, C>) -> O>(
+    fn with_isn_generator_and_tcp_sockets_mut<
+        O,
+        F: FnOnce(&IsnGenerator<C::Instant>, &mut TcpSockets<Ipv6, Self::DeviceId, C>) -> O,
+    >(
         &mut self,
         cb: F,
     ) -> O {
-        cb(&mut self.state.transport.tcpv6)
+        let TcpState { isn_generator, sockets } = &mut self.state.transport.tcpv6;
+        cb(isn_generator, sockets)
     }
 }
 

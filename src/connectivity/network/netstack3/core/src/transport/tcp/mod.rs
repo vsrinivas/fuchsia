@@ -11,6 +11,13 @@ mod seqnum;
 pub mod socket;
 mod state;
 
+use rand::RngCore;
+
+use crate::{
+    ip::{IpDeviceId, IpExt},
+    transport::tcp::socket::{isn::IsnGenerator, TcpNonSyncContext, TcpSockets},
+};
+
 /// Control flags that can alter the state of a TCP control block.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Control {
@@ -41,4 +48,15 @@ pub(crate) enum UserError {
     ConnectionReset,
     /// The connection was closed because of a user request.
     ConnectionClosed,
+}
+
+pub(crate) struct TcpState<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext> {
+    pub(crate) isn_generator: IsnGenerator<C::Instant>,
+    pub(crate) sockets: TcpSockets<I, D, C>,
+}
+
+impl<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext> TcpState<I, D, C> {
+    pub(crate) fn new(now: C::Instant, rng: &mut impl RngCore) -> Self {
+        Self { isn_generator: IsnGenerator::new(now, rng), sockets: TcpSockets::new(rng) }
+    }
 }
