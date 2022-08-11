@@ -5,7 +5,7 @@
                 1
             ],
             "metric_id": 2004,
-            "metric_type": "Occurrence",
+            "metric_type": "Integer",
             "selector": "bootstrap/driver_manager:root/ftl:block.read.count"
         },
         {
@@ -13,7 +13,7 @@
                 2
             ],
             "metric_id": 2004,
-            "metric_type": "Occurrence",
+            "metric_type": "Integer",
             "selector": "bootstrap/driver_manager:root/ftl:block.write.count"
         },
         {
@@ -21,7 +21,7 @@
                 3
             ],
             "metric_id": 2004,
-            "metric_type": "Occurrence",
+            "metric_type": "Integer",
             "selector": "bootstrap/driver_manager:root/ftl:block.flush.count"
         },
         {
@@ -29,7 +29,7 @@
                 4
             ],
             "metric_id": 2004,
-            "metric_type": "Occurrence",
+            "metric_type": "Integer",
             "selector": "bootstrap/driver_manager:root/ftl:block.trim.count"
         },
         {
@@ -38,7 +38,7 @@
                 1
             ],
             "metric_id": 2005,
-            "metric_type": "Occurrence",
+            "metric_type": "Integer",
             "selector": "bootstrap/driver_manager:root/ftl:block.read.issued_page_read.count"
         },
         {
@@ -47,7 +47,7 @@
                 1
             ],
             "metric_id": 2005,
-            "metric_type": "Occurrence",
+            "metric_type": "Integer",
             "selector": "bootstrap/driver_manager:root/ftl:block.read.issued_page_write.count"
         },
         {
@@ -56,7 +56,7 @@
                 1
             ],
             "metric_id": 2005,
-            "metric_type": "Occurrence",
+            "metric_type": "Integer",
             "selector": "bootstrap/driver_manager:root/ftl:block.read.issued_block_erase.count"
         },
         {
@@ -65,7 +65,7 @@
                 2
             ],
             "metric_id": 2005,
-            "metric_type": "Occurrence",
+            "metric_type": "Integer",
             "selector": "bootstrap/driver_manager:root/ftl:block.write.issued_page_read.count"
         },
         {
@@ -74,7 +74,7 @@
                 2
             ],
             "metric_id": 2005,
-            "metric_type": "Occurrence",
+            "metric_type": "Integer",
             "selector": "bootstrap/driver_manager:root/ftl:block.write.issued_page_write.count"
         },
         {
@@ -83,7 +83,7 @@
                 2
             ],
             "metric_id": 2005,
-            "metric_type": "Occurrence",
+            "metric_type": "Integer",
             "selector": "bootstrap/driver_manager:root/ftl:block.write.issued_block_erase.count"
         },
         {
@@ -92,7 +92,7 @@
                 3
             ],
             "metric_id": 2005,
-            "metric_type": "Occurrence",
+            "metric_type": "Integer",
             "selector": "bootstrap/driver_manager:root/ftl:block.flush.issued_page_read.count"
         },
         {
@@ -101,7 +101,7 @@
                 3
             ],
             "metric_id": 2005,
-            "metric_type": "Occurrence",
+            "metric_type": "Integer",
             "selector": "bootstrap/driver_manager:root/ftl:block.flush.issued_page_write.count"
         },
         {
@@ -110,7 +110,7 @@
                 3
             ],
             "metric_id": 2005,
-            "metric_type": "Occurrence",
+            "metric_type": "Integer",
             "selector": "bootstrap/driver_manager:root/ftl:block.flush.issued_block_erase.count"
         },
         {
@@ -119,7 +119,7 @@
                 4
             ],
             "metric_id": 2005,
-            "metric_type": "Occurrence",
+            "metric_type": "Integer",
             "selector": "bootstrap/driver_manager:root/ftl:block.trim.issued_page_read.count"
         },
         {
@@ -128,7 +128,7 @@
                 4
             ],
             "metric_id": 2005,
-            "metric_type": "Occurrence",
+            "metric_type": "Integer",
             "selector": "bootstrap/driver_manager:root/ftl:block.trim.issued_page_write.count"
         },
         {
@@ -137,7 +137,7 @@
                 4
             ],
             "metric_id": 2005,
-            "metric_type": "Occurrence",
+            "metric_type": "Integer",
             "selector": "bootstrap/driver_manager:root/ftl:block.trim.issued_block_erase.count"
         },
         {
