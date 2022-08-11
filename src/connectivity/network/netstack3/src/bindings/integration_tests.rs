@@ -187,7 +187,12 @@ impl InstantContext for TestNonSyncCtx {
 impl TcpNonSyncContext for TestNonSyncCtx {
     type ReceiveBuffer = RingBuffer;
     type SendBuffer = RingBuffer;
+    type ClientEndBuffer = ();
+
     fn on_new_connection(&mut self, _listener: ListenerId) {}
+    fn new_buffers() -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ClientEndBuffer) {
+        (RingBuffer::default(), RingBuffer::default(), ())
+    }
 }
 
 // An implementation that keeps track of when timers are scheduled to fire but

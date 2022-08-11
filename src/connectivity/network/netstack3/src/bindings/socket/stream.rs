@@ -77,8 +77,8 @@ impl SocketWorkerDispatcher for crate::bindings::BindingsNonSyncCtxImpl {
 
 impl TcpNonSyncContext for crate::bindings::BindingsNonSyncCtxImpl {
     type ReceiveBuffer = RingBuffer;
-
     type SendBuffer = RingBuffer;
+    type ClientEndBuffer = ();
 
     fn on_new_connection(&mut self, listener: ListenerId) {
         self.tcp_listeners
@@ -86,6 +86,10 @@ impl TcpNonSyncContext for crate::bindings::BindingsNonSyncCtxImpl {
             .expect("invalid listener")
             .signal_peer(zx::Signals::NONE, ZXSIO_SIGNAL_INCOMING)
             .expect("failed to signal that the new connection is available");
+    }
+
+    fn new_buffers() -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ClientEndBuffer) {
+        (RingBuffer::default(), RingBuffer::default(), ())
     }
 }
 

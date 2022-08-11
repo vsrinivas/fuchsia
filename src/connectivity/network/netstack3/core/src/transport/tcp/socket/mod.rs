@@ -24,6 +24,7 @@ mod isn;
 use alloc::{collections::VecDeque, vec::Vec};
 use core::{
     convert::Infallible as Never,
+    fmt::Debug,
     marker::PhantomData,
     num::{NonZeroU16, NonZeroUsize},
     ops::RangeInclusive,
@@ -68,9 +69,13 @@ pub trait TcpNonSyncContext: InstantContext {
     type ReceiveBuffer: ReceiveBuffer;
     /// Send buffer used by TCP.
     type SendBuffer: SendBuffer;
+    /// The object that the application holds onto to read/write data.
+    type ClientEndBuffer: Debug;
 
     /// A new connection is ready to be accepted on the listener.
     fn on_new_connection(&mut self, listener: ListenerId);
+    /// Creates new buffers together with the client end.
+    fn new_buffers() -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ClientEndBuffer);
 }
 
 /// Sync context for TCP.
@@ -765,8 +770,12 @@ mod tests {
     impl TcpNonSyncContext for TcpNonSyncCtx {
         type ReceiveBuffer = RingBuffer;
         type SendBuffer = RingBuffer;
+        type ClientEndBuffer = ();
 
         fn on_new_connection(&mut self, listener: ListenerId) {}
+        fn new_buffers() -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ClientEndBuffer) {
+            (RingBuffer::default(), RingBuffer::default(), ())
+        }
     }
 
     impl<I: TcpTestIpExt> TransportIpContext<I, TcpNonSyncCtx> for TcpSyncCtx<I>

@@ -34,17 +34,25 @@ use crate::{
             isn::generate_isn, Acceptor, Connection, ConnectionId, ListenerId, MaybeListener,
             SocketAddr, TcpIpTransportContext, TcpNonSyncContext, TcpSockets, TcpSyncContext,
         },
-        state::{Closed, State},
+        state::{BufferProvider, Closed, State},
         Control, UserError,
     },
     Instant as _,
 };
 
+impl<C: TcpNonSyncContext> BufferProvider<C::ReceiveBuffer, C::SendBuffer> for C {
+    type ClientEndBuffer = C::ClientEndBuffer;
+
+    fn new_buffers() -> (C::ReceiveBuffer, C::SendBuffer, Self::ClientEndBuffer) {
+        <C as TcpNonSyncContext>::new_buffers()
+    }
+}
+
 impl<I, B, C, SC> BufferIpTransportContext<I, C, SC, B> for TcpIpTransportContext
 where
     I: IpExt,
     B: BufferMut,
-    C: TcpNonSyncContext,
+    C: TcpNonSyncContext + BufferProvider<C::ReceiveBuffer, C::SendBuffer>,
     SC: TcpSyncContext<I, C> + BufferTransportIpContext<I, C, Buf<Vec<u8>>>,
 {
     fn receive_ip_packet(
@@ -238,7 +246,8 @@ where
                     // `ip_sock` (which is inside `state`) is disjoint from the
                     // memory that `send_ip_packet` consults inside `sync_ctx`. If
                     // that is possible we can use the reference directly.
-                    state.on_segment(incoming, now).map(|seg| (seg, ip_sock.clone()))
+                    let (seg, _client_end) = state.on_segment::<_, C>(incoming, now);
+                    seg.map(|seg| (seg, ip_sock.clone()))
                 })
             }
             None => {

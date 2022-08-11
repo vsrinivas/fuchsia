@@ -124,7 +124,13 @@ impl TcpNonSyncContext for DummyNonSyncCtx {
 
     type SendBuffer = RingBuffer;
 
+    type ClientEndBuffer = ();
+
     fn on_new_connection(&mut self, _listener: crate::transport::tcp::socket::ListenerId) {}
+
+    fn new_buffers() -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ClientEndBuffer) {
+        (RingBuffer::default(), RingBuffer::default(), ())
+    }
 }
 
 impl DummyNonSyncCtx {
