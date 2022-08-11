@@ -59,6 +59,7 @@ use std::path::Path;
 // 11 seconds so it can count from 10 down to 0 while displaying each tick for 1 second
 const FACTORY_RESET_TIMER_IN_SECONDS: u8 = 11;
 const LOGO_IMAGE_PATH: &str = "/pkg/data/logo.riv";
+const INSTRUCTIONS_TEXT_PATH: &str = "/pkg/data/instructions.txt";
 const BG_COLOR: Color = Color::white();
 const HEADING_COLOR: Color = Color::new();
 const BODY_COLOR: Color = Color { r: 0x7e, g: 0x86, b: 0x8d, a: 0xff };
@@ -116,7 +117,6 @@ enum WiFiMessages {
 }
 
 const RECOVERY_MODE_HEADLINE: &'static str = "Recovery mode";
-const RECOVERY_MODE_BODY: &'static str = "\nPress and hold both volume keys to factory reset.";
 
 const COUNTDOWN_MODE_HEADLINE: &'static str = "Factory reset device";
 const COUNTDOWN_MODE_BODY: &'static str =
@@ -1084,9 +1084,11 @@ async fn check_fdr_enabled() -> Result<bool, Error> {
 }
 
 /// Return the recovery body based on whether or not factory reset is restricted.
-const fn get_recovery_body(fdr_enabled: bool) -> Option<&'static str> {
+fn get_recovery_body(fdr_enabled: bool) -> Option<String> {
     if fdr_enabled {
-        Some(RECOVERY_MODE_BODY)
+        let instructions = std::fs::read_to_string(INSTRUCTIONS_TEXT_PATH)
+            .unwrap_or(String::from("Press and hold both volume buttons to reset this device."));
+        Some(instructions)
     } else {
         None
     }

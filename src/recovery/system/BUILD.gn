@@ -100,6 +100,11 @@ resource("recovery_logo") {
   outputs = [ "data/logo.riv" ]
 }
 
+resource("instructions") {
+  sources = [ instructions_path ]
+  outputs = [ "data/instructions.txt" ]
+}
+
 resource("roboto_regular") {
   sources = [ "//prebuilt/third_party/fonts/roboto/Roboto-Regular.ttf" ]
   outputs = [ "data/fonts/Roboto-Regular.ttf" ]
@@ -178,6 +183,7 @@ fuchsia_component("component") {
   cm_label = ":manifest"
   deps = [
     ":bin",
+    ":instructions",
     ":recovery_logo",
     ":roboto_regular",
     "//src/storage/bin/blobfs",
@@ -238,6 +244,7 @@ fuchsia_component("component_fdr") {
   cm_label = ":manifest_fdr"
   deps = [
     ":bin_fdr",
+    ":instructions",
     ":recovery_logo",
     ":roboto_regular",
     "//src/storage/bin/blobfs",
@@ -270,6 +277,7 @@ fuchsia_component("system_recovery_bin_test") {
 fuchsia_test_package("system_recovery_tests") {
   test_components = [ ":system_recovery_bin_test" ]
   deps = [
+    ":instructions",
     ":recovery_logo",
     ":roboto_regular",
     "//src/connectivity/network/dns:component-legacy",
@@ -340,6 +348,7 @@ fuchsia_component("component_installer") {
   cm_label = ":manifest_installer"
   deps = [
     ":bin_installer",
+    ":instructions",
     ":recovery_logo",
     ":roboto_regular",
     "//src/storage/bin/blobfs",
@@ -372,6 +381,7 @@ fuchsia_component("system_recovery_installer_bin_test") {
 fuchsia_test_package("system_recovery_installer_tests") {
   test_components = [ ":system_recovery_installer_bin_test" ]
   deps = [
+    ":instructions",
     ":recovery_logo",
     ":roboto_regular",
     "//src/connectivity/network/dns:component-legacy",

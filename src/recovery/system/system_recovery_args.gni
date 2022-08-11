@@ -5,4 +5,5 @@
 declare_args() {
   # Path to file to use for recovery logo
   recovery_logo_path = "//src/recovery/system/res/fuchsia-logo.riv"
+  instructions_path = "//src/recovery/system/res/instructions.txt"
 }
