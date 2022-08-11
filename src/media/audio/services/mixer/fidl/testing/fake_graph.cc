@@ -27,23 +27,23 @@ FakeNode::FakeNode(FakeGraph& graph, NodeId id, bool is_meta, FakeNodePtr parent
            is_meta ? nullptr : CreatePipelineStage(), parent),
       graph_(graph) {}
 
-NodePtr FakeNode::CreateNewChildInput() {
-  if (on_create_new_child_input_) {
-    return (*on_create_new_child_input_)();
+NodePtr FakeNode::CreateNewChildSource() {
+  if (on_create_new_child_source_) {
+    return (*on_create_new_child_source_)();
   }
   return graph_.CreateOrdinaryNode(std::nullopt, shared_from_this());
 }
 
-NodePtr FakeNode::CreateNewChildOutput() {
-  if (on_create_new_child_output_) {
-    return (*on_create_new_child_output_)();
+NodePtr FakeNode::CreateNewChildDest() {
+  if (on_create_new_child_dest_) {
+    return (*on_create_new_child_dest_)();
   }
   return graph_.CreateOrdinaryNode(std::nullopt, shared_from_this());
 }
 
-bool FakeNode::CanAcceptInput(NodePtr src) const {
-  if (on_can_accept_input_) {
-    return (*on_can_accept_input_)(src);
+bool FakeNode::CanAcceptSource(NodePtr src) const {
+  if (on_can_accept_source_) {
+    return (*on_can_accept_source_)(src);
   }
   return true;
 }
@@ -53,11 +53,11 @@ FakeGraph::FakeGraph(Args args) {
   for (auto& [meta_id, meta_args] : args.meta_nodes) {
     auto meta = CreateMetaNode(meta_id);
 
-    for (auto id : meta_args.input_children) {
-      meta->AddChildInput(CreateOrdinaryNode(id, meta));
+    for (auto id : meta_args.source_children) {
+      meta->AddChildSource(CreateOrdinaryNode(id, meta));
     }
-    for (auto id : meta_args.output_children) {
-      meta->AddChildOutput(CreateOrdinaryNode(id, meta));
+    for (auto id : meta_args.dest_children) {
+      meta->AddChildDest(CreateOrdinaryNode(id, meta));
     }
   }
 
@@ -65,23 +65,23 @@ FakeGraph::FakeGraph(Args args) {
   for (auto& edge : args.edges) {
     auto src = CreateOrdinaryNode(edge.src, nullptr);
     auto dest = CreateOrdinaryNode(edge.dest, nullptr);
-    // Ordinary nodes can have at most one output.
-    if (src->output()) {
-      FX_CHECK(src->output() == dest)
-          << src->name() << " has ambiguous output: " << src->output()->name() << " vs "
+    // Ordinary nodes can have at most one destination.
+    if (src->dest()) {
+      FX_CHECK(src->dest() == dest)
+          << src->name() << " has ambiguous destination: " << src->dest()->name() << " vs "
           << dest->name();
     }
-    src->SetOutput(dest);
-    dest->AddInput(src);
+    src->SetDest(dest);
+    dest->AddSource(src);
   }
 }
 
 FakeGraph::~FakeGraph() {
   for (auto [id, node] : nodes_) {
-    node->inputs_.clear();
-    node->output_ = nullptr;
-    node->child_inputs_.clear();
-    node->child_outputs_.clear();
+    node->sources_.clear();
+    node->dest_ = nullptr;
+    node->child_sources_.clear();
+    node->child_dests_.clear();
   }
 }
 

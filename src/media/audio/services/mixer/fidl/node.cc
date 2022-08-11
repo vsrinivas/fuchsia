@@ -23,22 +23,22 @@ bool HasNode(const std::vector<NodePtr>& nodes, const NodePtr& node) {
   return std::find(nodes.cbegin(), nodes.cend(), node) != nodes.cend();
 }
 
-bool HasInputInChildren(const std::vector<NodePtr>& children, const NodePtr& input) {
-  FX_CHECK(input);
-  // Should only be used if `input` is not a meta node (to avoid unnecessary computation).
-  FX_CHECK(!input->is_meta());
-  return std::find_if(children.cbegin(), children.cend(), [&input](const NodePtr& child) {
+bool HasSourceInChildren(const std::vector<NodePtr>& children, const NodePtr& source) {
+  FX_CHECK(source);
+  // Should only be used if `source` is not a meta node (to avoid unnecessary computation).
+  FX_CHECK(!source->is_meta());
+  return std::find_if(children.cbegin(), children.cend(), [&source](const NodePtr& child) {
            FX_CHECK(!child->is_meta());
-           return HasNode(child->inputs(), input);
+           return HasNode(child->sources(), source);
          }) != children.cend();
 }
 
-bool HasOutputInChildren(const std::vector<NodePtr>& children, const NodePtr& output) {
-  FX_CHECK(output);
-  return std::find_if(children.cbegin(), children.cend(), [&output](const NodePtr& child) {
+bool HasDestInChildren(const std::vector<NodePtr>& children, const NodePtr& dest) {
+  FX_CHECK(dest);
+  return std::find_if(children.cbegin(), children.cend(), [&dest](const NodePtr& child) {
            FX_CHECK(!child->is_meta());
-           return output->is_meta() ? HasNode(output->child_inputs(), child->output())
-                                    : output == child->output();
+           return dest->is_meta() ? HasNode(dest->child_sources(), child->dest())
+                                  : dest == child->dest();
          }) != children.cend();
 }
 
@@ -48,48 +48,41 @@ Node::Node(std::string_view name, bool is_meta, PipelineStagePtr pipeline_stage,
     : name_(name),
       is_meta_(is_meta),
       pipeline_stage_(std::move(pipeline_stage)),
-      parent_(parent ? std::optional<std::weak_ptr<Node>>(parent) : std::nullopt) {
-  if (parent) {
-    FX_CHECK(parent->is_meta_);
+      parent_(std::move(parent)) {
+  if (parent_) {
+    FX_CHECK(parent_->is_meta_);
   }
   if (is_meta_) {
-    FX_CHECK(!parent);           // nested meta nodes not allowed
+    FX_CHECK(!parent_);          // nested meta nodes are not allowed
     FX_CHECK(!pipeline_stage_);  // meta nodes cannot own PipelineStages
   } else {
     FX_CHECK(pipeline_stage_);  // each ordinary node own a PipelineStage
   }
 }
 
-const std::vector<NodePtr>& Node::inputs() const {
+const std::vector<NodePtr>& Node::sources() const {
   FX_CHECK(!is_meta_);
-  return inputs_;
+  return sources_;
 }
 
-NodePtr Node::output() const {
+NodePtr Node::dest() const {
   FX_CHECK(!is_meta_);
-  return output_;
+  return dest_;
 }
 
-const std::vector<NodePtr>& Node::child_inputs() const {
+const std::vector<NodePtr>& Node::child_sources() const {
   FX_CHECK(is_meta_);
-  return child_inputs_;
+  return child_sources_;
 }
 
-const std::vector<NodePtr>& Node::child_outputs() const {
+const std::vector<NodePtr>& Node::child_dests() const {
   FX_CHECK(is_meta_);
-  return child_outputs_;
+  return child_dests_;
 }
 
 NodePtr Node::parent() const {
   FX_CHECK(!is_meta_);
-  if (!parent_) {
-    return nullptr;
-  }
-  // Although `parent_` is a weak_ptr to avoid reference counting cycles, if this node has a parent,
-  // then the parent is a meta node which must outlive this child node. Hence, `lock` cannot fail.
-  auto p = parent_->lock();
-  FX_CHECK(p) << "node cannot outlive its parent";
-  return p;
+  return parent_;
 }
 
 PipelineStagePtr Node::pipeline_stage() const {
@@ -102,63 +95,63 @@ ThreadPtr Node::thread() const {
   return thread_;
 }
 
-void Node::AddInput(NodePtr input) {
+void Node::AddSource(NodePtr source) {
   FX_CHECK(!is_meta_);
-  FX_CHECK(input);
-  inputs_.push_back(std::move(input));
+  FX_CHECK(source);
+  sources_.push_back(std::move(source));
 }
 
-void Node::SetOutput(NodePtr output) {
+void Node::SetDest(NodePtr dest) {
   FX_CHECK(!is_meta_);
-  FX_CHECK(output);
-  output_ = std::move(output);
+  FX_CHECK(dest);
+  dest_ = std::move(dest);
 }
 
-void Node::AddChildInput(NodePtr child_input) {
+void Node::AddChildSource(NodePtr child_source) {
   FX_CHECK(is_meta_);
-  FX_CHECK(child_input);
-  child_inputs_.push_back(std::move(child_input));
+  FX_CHECK(child_source);
+  child_sources_.push_back(std::move(child_source));
 }
 
-void Node::AddChildOutput(NodePtr child_output) {
+void Node::AddChildDest(NodePtr child_dest) {
   FX_CHECK(is_meta_);
-  FX_CHECK(child_output);
-  child_outputs_.push_back(std::move(child_output));
+  FX_CHECK(child_dest);
+  child_dests_.push_back(std::move(child_dest));
 }
 
-void Node::RemoveInput(NodePtr input) {
+void Node::RemoveSource(NodePtr source) {
   FX_CHECK(!is_meta_);
-  FX_CHECK(input);
+  FX_CHECK(source);
 
-  const auto it = std::find(inputs_.begin(), inputs_.end(), input);
-  FX_CHECK(it != inputs_.end());
-  inputs_.erase(it);
+  const auto it = std::find(sources_.begin(), sources_.end(), source);
+  FX_CHECK(it != sources_.end());
+  sources_.erase(it);
 }
 
-void Node::RemoveOutput(NodePtr output) {
+void Node::RemoveDest(NodePtr dest) {
   FX_CHECK(!is_meta_);
-  FX_CHECK(output);
-  FX_CHECK(output_ == output);
+  FX_CHECK(dest);
+  FX_CHECK(dest_ == dest);
 
-  output_ = nullptr;
+  dest_ = nullptr;
 }
 
-void Node::RemoveChildInput(NodePtr child_input) {
+void Node::RemoveChildSource(NodePtr child_source) {
   FX_CHECK(is_meta_);
-  FX_CHECK(child_input);
+  FX_CHECK(child_source);
 
-  const auto it = std::find(child_inputs_.begin(), child_inputs_.end(), child_input);
-  FX_CHECK(it != child_inputs_.end());
-  child_inputs_.erase(it);
+  const auto it = std::find(child_sources_.begin(), child_sources_.end(), child_source);
+  FX_CHECK(it != child_sources_.end());
+  child_sources_.erase(it);
 }
 
-void Node::RemoveChildOutput(NodePtr child_output) {
+void Node::RemoveChildDest(NodePtr child_dest) {
   FX_CHECK(is_meta_);
-  FX_CHECK(child_output);
+  FX_CHECK(child_dest);
 
-  const auto it = std::find(child_outputs_.begin(), child_outputs_.end(), child_output);
-  FX_CHECK(it != child_outputs_.end());
-  child_outputs_.erase(it);
+  const auto it = std::find(child_dests_.begin(), child_dests_.end(), child_dest);
+  FX_CHECK(it != child_dests_.end());
+  child_dests_.erase(it);
 }
 
 fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdge(
@@ -168,54 +161,54 @@ fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdge(
 
   // Create a src child if needed.
   if (src->is_meta_) {
-    if (HasOutputInChildren(src->child_outputs(), dest)) {
+    if (HasDestInChildren(src->child_dests(), dest)) {
       return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kAlreadyConnected);
     }
-    NodePtr child = src->CreateNewChildOutput();
+    NodePtr child = src->CreateNewChildDest();
     if (!child) {
       return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kSourceHasTooManyOutputs);
     }
     auto result = CreateEdge(global_queue, dest, child);
     if (!result.is_ok()) {
       // On failure, unlink the child so it will be deleted when dropped.
-      src->RemoveChildOutput(child);
+      src->RemoveChildDest(child);
     }
     return result;
   }
 
   // Create a dest child if needed.
   if (dest->is_meta_) {
-    if (HasInputInChildren(dest->child_inputs(), src)) {
+    if (HasSourceInChildren(dest->child_sources(), src)) {
       return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kAlreadyConnected);
     }
-    NodePtr child = dest->CreateNewChildInput();
+    NodePtr child = dest->CreateNewChildSource();
     if (!child) {
       return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kDestHasTooManyInputs);
     }
     auto result = CreateEdge(global_queue, child, src);
     if (!result) {
       // On failure, unlink the child so it will be deleted when dropped.
-      dest->RemoveChildInput(child);
+      dest->RemoveChildSource(child);
     }
     return result;
   }
 
-  if (src->output() || HasNode(dest->inputs(), src)) {
+  if (src->dest() || HasNode(dest->sources(), src)) {
     return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kAlreadyConnected);
   }
 
-  if (!dest->CanAcceptInput(src)) {
+  if (!dest->CanAcceptSource(src)) {
     return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
   }
 #if 0
   // TODO(fxbug.dev/87651): implement
-  if (ExistsPathThroughInputs(src, dest)) {
+  if (ExistsPathThroughSources(src, dest)) {
       return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kCycle);
   }
 #endif
 
-  dest->AddInput(src);
-  src->SetOutput(dest);
+  dest->AddSource(src);
+  src->SetDest(dest);
 
   // TODO(fxbug.dev/87651): FX_CHECK that src->thread() is the detached thread
   // TODO(fxbug.dev/87651): update src's thread to dest->thread()
@@ -235,10 +228,10 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
   FX_CHECK(src);
 
   if (src->is_meta_) {
-    // Find src's output child that connects to dest or to a child of dest.
+    // Find src's destination child that connects to dest or to a child of dest.
     NodePtr child;
-    for (auto& c : src->child_outputs_) {
-      if (c->output_ == dest || c->output_->parent() == dest) {
+    for (auto& c : src->child_dests_) {
+      if (c->dest_ == dest || c->dest_->parent() == dest) {
         child = c;
         break;
       }
@@ -250,16 +243,16 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
     // If this succeeds, then also remove child from src.
     const auto result = DeleteEdge(global_queue, dest, child);
     if (result.is_ok()) {
-      src->RemoveChildOutput(child);
+      src->RemoveChildDest(child);
     }
     return result;
   }
 
   if (dest->is_meta_) {
-    // Find dest's input child that connects to src (which must be an ordinary node).
+    // Find dest's source child that connects to src (which must be an ordinary node).
     NodePtr child;
-    for (auto& c : dest->child_inputs_) {
-      if (std::find(c->inputs_.begin(), c->inputs_.end(), src) != c->inputs_.end()) {
+    for (auto& c : dest->child_sources_) {
+      if (std::find(c->sources_.begin(), c->sources_.end(), src) != c->sources_.end()) {
         child = c;
         break;
       }
@@ -271,18 +264,18 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
     // If this succeeds, then also remove child from dest.
     auto result = DeleteEdge(global_queue, child, src);
     if (result.is_ok()) {
-      dest->RemoveChildInput(child);
+      dest->RemoveChildSource(child);
     }
     return result;
   }
 
-  if (!HasNode(dest->inputs_, src)) {
+  if (!HasNode(dest->sources_, src)) {
     return fpromise::error(fuchsia_audio_mixer::DeleteEdgeError::kEdgeNotFound);
   }
-  FX_CHECK(src->output_ == dest);
+  FX_CHECK(src->dest_ == dest);
 
-  src->RemoveOutput(dest);
-  dest->RemoveInput(src);
+  src->RemoveDest(dest);
+  dest->RemoveSource(src);
 
   // TODO(fxbug.dev/87651): FX_CHECK that src->thread() is dest->thread()
   // TODO(fxbug.dev/87651): update src's thread to the detached thread

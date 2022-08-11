@@ -10,8 +10,26 @@
 namespace media_audio {
 
 // Reports whether there exists a path from `src` to `dest`. The nodes may be ordinary nodes and/or
-// meta nodes. For any given meta node M, there are implicit paths from M's child input nodes, to M
-// itself, to M's child output nodes.
+// meta nodes. For any given meta node M, there are implicit paths from M's child source nodes, to M
+// itself, to M's child destination nodes. That is, given:
+//
+// ```
+//                A
+//                |
+//     +----------V-----------+
+//     |        +---+       M |
+//     |        | I |         |   // M.child_sources()
+//     |        +---+         |
+//     | +----+ +----+ +----+ |
+//     | | O1 | | O2 | | O3 | |   // M.child_dests()
+//     | +----+ +----+ +----+ |
+//     +---|------|------|----+
+//         |      |      |
+//         V      V      V
+//         B      C      D
+// ```
+//
+// There exists a path `A -> M`, `M -> B`, and `A -> B`.
 bool ExistsPath(const Node& src, const Node& dest);
 
 }  // namespace media_audio

@@ -26,38 +26,38 @@ using FakeNodePtr = std::shared_ptr<FakeNode>;
 // Not safe for concurrent use.
 class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
  public:
-  // Register a handler for `CreateNewChildInput`.
+  // Register a handler for `CreateNewChildSource`.
   // If a handler is not registered, a default handler is used.
-  void SetOnCreateNewChildInput(std::function<NodePtr()> handler) {
-    on_create_new_child_input_ = std::move(handler);
+  void SetOnCreateNewChildSource(std::function<NodePtr()> handler) {
+    on_create_new_child_source_ = std::move(handler);
   }
 
-  // Register a handler for `CreateNewChildOutput`.
+  // Register a handler for `CreateNewChildDest`.
   // If a handler is not registered, a default handler is used.
-  void SetOnCreateNewChildOutput(std::function<NodePtr()> handler) {
-    on_create_new_child_output_ = std::move(handler);
+  void SetOnCreateNewChildDest(std::function<NodePtr()> handler) {
+    on_create_new_child_dest_ = std::move(handler);
   }
 
-  // Register a handler for `CanAcceptInput`.
+  // Register a handler for `CanAcceptSource`.
   // The default handler always returns true.
-  void SetOnCreateNewChildInput(std::function<bool(NodePtr)> handler) {
-    on_can_accept_input_ = std::move(handler);
+  void SetOnCreateNewChildSource(std::function<bool(NodePtr)> handler) {
+    on_can_accept_source_ = std::move(handler);
   }
 
  protected:
-  // Creates an ordinary child node to accept the next input edge.
-  // Returns nullptr if no more child input nodes can be created.
+  // Creates an ordinary child node to accept the next source edge.
+  // Returns nullptr if no more child source nodes can be created.
   // REQUIRED: is_meta()
-  NodePtr CreateNewChildInput() override;
+  NodePtr CreateNewChildSource() override;
 
-  // Creates an ordinary child node to accept the next output edge.
-  // Returns nullptr if no more child output nodes can be created.
+  // Creates an ordinary child node to accept the next destination edge.
+  // Returns nullptr if no more child destination nodes can be created.
   // REQUIRED: is_meta()
-  NodePtr CreateNewChildOutput() override;
+  NodePtr CreateNewChildDest() override;
 
-  // Reports whether this node can accept input from the given src node.
+  // Reports whether this node can accept source from the given src node.
   // REQUIRED: !is_meta()
-  bool CanAcceptInput(NodePtr src) const override;
+  bool CanAcceptSource(NodePtr src) const override;
 
  private:
   // All FakeNodes belong to a FakeGraph. The constructor is private to ensure that it's impossible
@@ -66,19 +66,20 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
   FakeNode(FakeGraph& graph, NodeId id, bool is_meta, FakeNodePtr parent);
 
   FakeGraph& graph_;
-  std::optional<std::function<NodePtr()>> on_create_new_child_input_;
-  std::optional<std::function<NodePtr()>> on_create_new_child_output_;
-  std::optional<std::function<bool(NodePtr)>> on_can_accept_input_;
+  std::optional<std::function<NodePtr()>> on_create_new_child_source_;
+  std::optional<std::function<NodePtr()>> on_create_new_child_dest_;
+  std::optional<std::function<bool(NodePtr)>> on_can_accept_source_;
 };
 
 // This class makes it easy to create graphs of FakeNodes during tests. For example, the following
 // code:
 //
+// ```
 //   auto graph = FakeGraph::Create({
 //       .meta_nodes = {
 //           {1, {
-//               .input_children = {2, 3},
-//               .output_children = {4, 5},
+//               .source_children = {2, 3},
+//               .dest_children = {4, 5},
 //           }},
 //       },
 //       .edges = {
@@ -87,9 +88,11 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
 //           {5, 7},
 //       },
 //    });
+// ```
 //
 // Creates a graph that looks like:
 //
+// ```
 //     0
 //     |
 //   +-V-----+
@@ -99,16 +102,17 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
 //   +-|---|-+
 //     V   V
 //     6   7
+// ```
 //
-// The destructor deletes all edges (to remove circular references) and drops all FakeNodes so the
-// FakeNodes can be destructed once all external references are gone.
+// The destructor deletes all edges (to remove circular references) and drops all references to
+// FakeNodes that were created by this FakeGraph.
 //
 // Not safe for concurrent use.
 class FakeGraph {
  public:
   struct MetaNodeArgs {
-    std::unordered_set<NodeId> input_children;
-    std::unordered_set<NodeId> output_children;
+    std::unordered_set<NodeId> source_children;
+    std::unordered_set<NodeId> dest_children;
   };
 
   struct Edge {

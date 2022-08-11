@@ -24,13 +24,13 @@ bool PushNode(const std::unordered_set<const Node*>& visited, std::vector<const 
   return false;
 }
 
-// Returns `n.parent()` if `n` is a child input node of a meta node.
+// Returns `n.parent()` if `n` is a child source node of a meta node.
 // Otherwise returns nullptr.
-const Node* ParentOfChildInputNode(const Node& n) {
+const Node* ParentOfChildSourceNode(const Node& n) {
   if (const auto parent = n.parent(); parent) {
-    auto& inputs = parent->child_inputs();
-    if (std::find_if(inputs.begin(), inputs.end(), [&n](auto x) { return &n == x.get(); }) !=
-        inputs.end()) {
+    auto& sources = parent->child_sources();
+    if (std::find_if(sources.begin(), sources.end(), [&n](auto x) { return &n == x.get(); }) !=
+        sources.end()) {
       return parent.get();
     }
   }
@@ -48,20 +48,20 @@ bool ExistsPath(const Node& src, const Node& dest) {
 
     // Push each outgoing edge.
     if (n->is_meta()) {
-      // Meta -> Child Outputs
-      for (auto& child : n->child_outputs()) {
+      // Meta -> Child Dests
+      for (auto& child : n->child_dests()) {
         if (PushNode(visited, stack, *child, dest)) {
           return true;
         }
       }
     } else {
-      if (auto output = n->output(); output != nullptr) {
+      if (auto n_dest = n->dest(); n_dest != nullptr) {
         // Ordinary -> Ordinary
-        if (PushNode(visited, stack, *output, dest)) {
+        if (PushNode(visited, stack, *n_dest, dest)) {
           return true;
         }
-      } else if (auto parent = ParentOfChildInputNode(*n); parent != nullptr) {
-        // Child input -> Meta
+      } else if (auto parent = ParentOfChildSourceNode(*n); parent != nullptr) {
+        // Child source -> Meta
         if (PushNode(visited, stack, *parent, dest)) {
           return true;
         }

@@ -60,7 +60,7 @@ TEST(ReachabilityTest, MetaNodeSelfEdge) {
           {
               {
                   1,
-                  {.input_children = {2}, .output_children = {3}},
+                  {.source_children = {2}, .dest_children = {3}},
               },
           },
       .edges = {{3, 2}},
@@ -78,11 +78,11 @@ TEST(ReachabilityTest, MetaNodes) {
           {
               {
                   3,
-                  {.input_children = {1, 2}, .output_children = {4, 5}},
+                  {.source_children = {1, 2}, .dest_children = {4, 5}},
               },
               {
                   8,
-                  {.input_children = {6, 7}, .output_children = {9}},
+                  {.source_children = {6, 7}, .dest_children = {9}},
               },
           },
       .edges = {{5, 7}},
@@ -114,11 +114,11 @@ TEST(ReachabilityTest, MetaAndOrdinaryNodes) {
           {
               {
                   23,
-                  {.input_children = {21, 22}, .output_children = {24, 25}},
+                  {.source_children = {21, 22}, .dest_children = {24, 25}},
               },
               {
                   63,
-                  {.input_children = {61, 62}, .output_children = {64, 65}},
+                  {.source_children = {61, 62}, .dest_children = {64, 65}},
               },
           },
       .edges =
