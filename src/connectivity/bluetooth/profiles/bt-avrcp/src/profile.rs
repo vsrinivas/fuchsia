@@ -72,7 +72,8 @@ fn build_common_service_definition() -> ServiceDefinition {
             },
             ProtocolDescriptor {
                 protocol: ProtocolIdentifier::Avctp,
-                params: vec![DataElement::Uint16(0x0103)], // Indicate v1.3
+                // Indicate AVCTP v1.4.
+                params: vec![DataElement::Uint16(0x0104)],
             },
         ]),
         profile_descriptors: Some(vec![ProfileDescriptor {
@@ -96,9 +97,23 @@ fn make_controller_service_definition() -> ServiceDefinition {
     service.additional_attributes = Some(vec![Attribute {
         id: SDP_SUPPORTED_FEATURES, // SDP Attribute "SUPPORTED FEATURES"
         element: DataElement::Uint16(
-            AvrcpControllerFeatures::CATEGORY1.bits() | AvrcpControllerFeatures::CATEGORY2.bits(),
+            AvrcpControllerFeatures::CATEGORY1.bits()
+                | AvrcpControllerFeatures::CATEGORY2.bits()
+                | AvrcpControllerFeatures::SUPPORTSBROWSING.bits(),
         ),
     }]);
+
+    service.additional_protocol_descriptor_lists = Some(vec![vec![
+        ProtocolDescriptor {
+            protocol: ProtocolIdentifier::L2Cap,
+            params: vec![DataElement::Uint16(PSM_AVCTP_BROWSE as u16)],
+        },
+        ProtocolDescriptor {
+            protocol: ProtocolIdentifier::Avctp,
+            // Indicates AVCTP v1.4.
+            params: vec![DataElement::Uint16(0x0104)],
+        },
+    ]]);
 
     service
 }
@@ -128,7 +143,8 @@ fn make_target_service_definition() -> ServiceDefinition {
         },
         ProtocolDescriptor {
             protocol: ProtocolIdentifier::Avctp,
-            params: vec![DataElement::Uint16(0x0103)],
+            // Indicates AVCTP v1.4.
+            params: vec![DataElement::Uint16(0x0104)],
         },
     ]]);
 
