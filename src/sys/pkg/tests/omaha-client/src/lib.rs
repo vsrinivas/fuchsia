@@ -117,16 +117,6 @@ struct Proxies {
 // Omaha server and returns eager package config as JSON.
 type EagerPackageConfigBuilder = fn(&str) -> serde_json::Value;
 
-fn make_default_private_keys() -> PrivateKeys {
-    PrivateKeys {
-        latest: PrivateKeyAndId {
-            id: 42_i32.try_into().unwrap(),
-            key: make_default_private_key_for_test(),
-        },
-        historical: vec![],
-    }
-}
-
 struct TestEnvBuilder {
     // Set one of responses, responses_and_metadata.
     responses_by_appid: Vec<(String, ResponseAndMetadata)>,
@@ -138,7 +128,7 @@ struct TestEnvBuilder {
     omaha_client_config_bool_overrides: Vec<(String, bool)>,
     omaha_client_config_uint16_overrides: Vec<(String, u16)>,
     cup_info_map: HashMap<UnpinnedAbsolutePackageUrl, (String, String)>,
-    private_keys: PrivateKeys,
+    private_keys: Option<PrivateKeys>,
     etag_override: Option<String>,
 }
 
@@ -157,7 +147,7 @@ impl TestEnvBuilder {
             omaha_client_config_bool_overrides: vec![],
             omaha_client_config_uint16_overrides: vec![],
             cup_info_map: HashMap::new(),
-            private_keys: make_default_private_keys(),
+            private_keys: None,
             etag_override: None,
         }
     }
@@ -223,7 +213,7 @@ impl TestEnvBuilder {
     }
 
     fn private_keys(mut self, private_keys: PrivateKeys) -> Self {
-        self.private_keys = private_keys;
+        self.private_keys = Some(private_keys);
         self
     }
 
@@ -251,18 +241,17 @@ impl TestEnvBuilder {
         fs.dir("config").add_remote("data", config_data);
         fs.dir("config").add_remote("build-info", build_info);
 
-        let server = Arc::new(Mutex::new(
-            OmahaServerBuilder::default()
-                .responses_by_appid(
-                    self.responses_by_appid
-                        .into_iter()
-                        .collect::<HashMap<String, ResponseAndMetadata>>(),
-                )
-                .private_keys(Some(self.private_keys))
-                .etag_override(self.etag_override)
-                .build()
-                .unwrap(),
-        ));
+        let server = Arc::new(Mutex::new({
+            let mut b = OmahaServerBuilder::default().responses_by_appid(
+                self.responses_by_appid
+                    .into_iter()
+                    .collect::<HashMap<String, ResponseAndMetadata>>(),
+            );
+            if let Some(pk) = self.private_keys {
+                b = b.private_keys(pk);
+            }
+            b.etag_override(self.etag_override).build().unwrap()
+        }));
         let url = OmahaServer::start(server.clone()).expect("start server");
         mounts.write_url(&url);
         mounts.write_appid("integration-test-appid");
@@ -931,6 +920,7 @@ async fn test_omaha_client_update() {
 
 #[fasync::run_singlethreaded(test)]
 async fn test_omaha_client_update_multi_app() {
+    use omaha_client::cup_ecdsa::test_support::make_default_public_key_id_for_test;
     let env = TestEnvBuilder::new()
         .responses_and_metadata(vec![
             (
@@ -963,7 +953,7 @@ async fn test_omaha_client_update_multi_app() {
                             "service_url": url,
                             "public_keys": {
                                 "latest": {
-                                    "id": 42,
+                                    "id": make_default_public_key_id_for_test(),
                                     "key": RAW_PUBLIC_KEY_FOR_TEST,
                                 },
                                 "historical": [],

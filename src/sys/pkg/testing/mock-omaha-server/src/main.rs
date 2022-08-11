@@ -145,7 +145,7 @@ async fn main() -> Result<(), anyhow::Error> {
 
     let server = OmahaServerBuilder::default()
         .responses_by_appid(args.responses_by_appid)
-        .private_keys(Some(PrivateKeys {
+        .private_keys(PrivateKeys {
             latest: PrivateKeyAndId {
                 id: args.key_id.try_into().expect("key id parse"),
                 key: std::fs::read_to_string(args.key_path)
@@ -154,7 +154,7 @@ async fn main() -> Result<(), anyhow::Error> {
                     .expect("failed to parse key"),
             },
             historical: vec![],
-        }))
+        })
         .require_cup(args.require_cup)
         .build()
         .expect("omaha server build");

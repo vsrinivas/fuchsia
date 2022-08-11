@@ -7,7 +7,10 @@ use {
     derive_builder::Builder,
     fuchsia_merkle::Hash,
     hyper::{body::Bytes, header, Body, Method, Request, Response, StatusCode},
-    omaha_client::cup_ecdsa::PublicKeyId,
+    omaha_client::cup_ecdsa::{
+        test_support::{make_default_private_key_for_test, make_default_public_key_id_for_test},
+        PublicKeyId,
+    },
     parking_lot::Mutex,
     serde::Deserialize,
     serde_json::json,
@@ -99,6 +102,16 @@ impl PrivateKeys {
     }
 }
 
+pub fn make_default_private_keys_for_test() -> PrivateKeys {
+    PrivateKeys {
+        latest: PrivateKeyAndId {
+            id: make_default_public_key_id_for_test(),
+            key: make_default_private_key_for_test(),
+        },
+        historical: vec![],
+    }
+}
+
 pub type ResponseMap = HashMap<String, ResponseAndMetadata>;
 
 #[derive(Copy, Clone, Debug, Deserialize)]
@@ -113,8 +126,8 @@ pub enum UpdateCheckAssertion {
 pub struct OmahaServer {
     #[builder(default, setter(into))]
     pub responses_by_appid: ResponseMap,
-    #[builder(default = "None")]
-    pub private_keys: Option<PrivateKeys>,
+    #[builder(default = "make_default_private_keys_for_test()")]
+    pub private_keys: PrivateKeys,
     #[builder(default = "None")]
     pub etag_override: Option<String>,
     #[builder(default)]
@@ -422,9 +435,8 @@ pub async fn handle_omaha_request(
 
     // It is only possible to calculate an induced etag if the incoming request
     // had a valid cup2key query argument.
-    let induced_etag: Option<String> = omaha_server
-        .private_keys
-        .and_then(|keys| make_etag(&req_body, &uri_string, &keys, &response_data));
+    let induced_etag: Option<String> =
+        make_etag(&req_body, &uri_string, &omaha_server.private_keys, &response_data);
 
     if omaha_server.require_cup && induced_etag.is_none() {
         panic!(
@@ -446,7 +458,6 @@ mod tests {
         anyhow::Context,
         fuchsia_async as fasync,
         hyper::{Body, StatusCode},
-        omaha_client::cup_ecdsa::test_support::make_default_private_key_for_test,
     };
 
     #[fasync::run_singlethreaded(test)]
@@ -653,10 +664,6 @@ mod tests {
                         ..Default::default()
                     },
                 )])
-                .private_keys(Some(PrivateKeys {
-                    latest: PrivateKeyAndId { id: 42, key: make_default_private_key_for_test() },
-                    historical: vec![],
-                }))
                 .require_cup(true)
                 .build()
                 .unwrap(),
@@ -676,9 +683,13 @@ mod tests {
             }
         });
         // CUP attached.
-        let request = Request::post(format!("{}?cup2key=42:nonce", &server_url))
-            .body(Body::from(body.to_string()))
-            .unwrap();
+        let request = Request::post(format!(
+            "{}?cup2key={}:nonce",
+            &server_url,
+            make_default_public_key_id_for_test()
+        ))
+        .body(Body::from(body.to_string()))
+        .unwrap();
 
         let response = client.request(request).await?;
 
@@ -699,10 +710,6 @@ mod tests {
                         ..Default::default()
                     },
                 )])
-                .private_keys(Some(PrivateKeys {
-                    latest: PrivateKeyAndId { id: 42, key: make_default_private_key_for_test() },
-                    historical: vec![],
-                }))
                 .require_cup(true)
                 .build()
                 .unwrap(),
