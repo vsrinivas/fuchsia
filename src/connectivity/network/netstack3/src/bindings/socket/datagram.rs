@@ -9,7 +9,7 @@ use std::{
     convert::TryInto as _,
     fmt::Debug,
     marker::PhantomData,
-    num::{NonZeroU16, NonZeroU64, ParseIntError, TryFromIntError},
+    num::{NonZeroU16, NonZeroU64, TryFromIntError},
     ops::{Deref as _, DerefMut as _},
 };
 
@@ -1337,7 +1337,7 @@ where
         TransportIpContext<I, <SC as RequestHandlerContext<I, T>>::NonSyncCtx>,
     <SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx> as IpDeviceIdContext<I>>::DeviceId:
         IdMapCollectionKey
-            + TryFromFidlWithContext<u64, Error = DeviceNotFoundError>
+            + TryFromFidlWithContext<NonZeroU64, Error = DeviceNotFoundError>
             + TryIntoFidlWithContext<u64, Error = DeviceNotFoundError>
             + TryFromFidlWithContext<NonZeroU64, Error = DeviceNotFoundError>
             + TryFromFidlWithContext<
@@ -1728,35 +1728,11 @@ where
                             value,
                             responder,
                         } => {
-                            // This is a hack to allow an application to bind a
-                            // socket to a device without proper device name
-                            // support in Netstack3.  Instead of a device name,
-                            // the `value` field in a `SetBindToDevice` call
-                            // must be specified as "ifindex/{index}", where the
-                            // placeholder `{index}` is a base-10 string
-                            // representation of a u64 device index.
-                            //
-                            // TODO(https://fxbug.dev/48969): Support real
-                            // device names once those are available.
-                            fn parse_index(value: &str) -> Option<u64> {
-                                value.split_once("/").and_then(|(prefix, index): (&str, &str)|
-                                    match prefix {
-                                        "ifindex" => index.parse().ok_checked::<ParseIntError>(),
-                                        _ => None,
-                                    })
-                                }
                             responder_send!(
                                 responder,
                                 &mut async {
-                                    let index = if value.is_empty() {
-                                        Ok(None)
-                                    } else {
-                                        parse_index(&value).ok_or(fposix::Errno::Enodev).map(Some)
-                                    };
-                                    match index {
-                                        Ok(index) => self.make_handler().await.bind_to_device(index),
-                                        Err(e) => Err(e)
-                                    }
+                                    let identifier = (!value.is_empty()).then_some(value.as_str());
+                                    self.make_handler().await.bind_to_device(identifier)
                                 }.await);
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::GetBindToDevice { responder } => {
@@ -2564,7 +2540,7 @@ where
         TransportIpContext<I, <SC as RequestHandlerContext<I, T>>::NonSyncCtx>,
     <SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx> as IpDeviceIdContext<I>>::DeviceId:
         IdMapCollectionKey
-            + TryFromFidlWithContext<u64, Error = DeviceNotFoundError>
+            + TryFromFidlWithContext<NonZeroU64, Error = DeviceNotFoundError>
             + TryIntoFidlWithContext<u64, Error = DeviceNotFoundError>
             + TryFromFidlWithContext<<I::SocketAddress as SockAddr>::Zone>,
     <SC as RequestHandlerContext<I, T>>::NonSyncCtx:
@@ -2644,11 +2620,11 @@ where
         .map(|()| len)
     }
 
-    fn bind_to_device(mut self, index: Option<u64>) -> Result<(), fposix::Errno> {
-        let device = index
-            .map(|index| {
-                TryFromFidlWithContext::try_from_fidl_with_ctx(&self.ctx.non_sync_ctx, index)
-                    .map_err(|DeviceNotFoundError {}| fposix::Errno::Enodev)
+    fn bind_to_device(mut self, device: Option<&str>) -> Result<(), fposix::Errno> {
+        let device = device
+            .map(|name| {
+                        self.ctx.non_sync_ctx.as_ref().get_device_by_name(name).map(|d| d.core_id())
+                        .ok_or(fposix::Errno::Enodev)
             })
             .transpose()?;
         let state: &SocketState<_, _> = &self.get_state_mut().info.state;

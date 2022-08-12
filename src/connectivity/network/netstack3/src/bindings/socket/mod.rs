@@ -78,11 +78,8 @@ where
                         let Ctx { sync_ctx: _, non_sync_ctx } = &*ctx;
                         let devices = AsRef::<Devices>::as_ref(&non_sync_ctx);
                         let result = devices
-                            .iter_devices()
-                            .find_map(|device_info| {
-                                (device_info.info().common_info().name == name)
-                                    .then_some(device_info.id())
-                            })
+                            .get_device_by_name(&name)
+                            .map(|d| d.id())
                             .ok_or(zx::Status::NOT_FOUND.into_raw());
                         result
                     };

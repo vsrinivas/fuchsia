@@ -8,7 +8,6 @@ use std::{borrow::Cow, collections::HashMap};
 
 use anyhow::Context as _;
 use assert_matches::assert_matches;
-use async_trait::async_trait;
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
@@ -680,11 +679,7 @@ async fn run_tcp_socket_test(
 // TODO(https://fxbug.dev/104974): This currently only tests for IPv4 addresses,
 // once we can support IPv6 in `join_network`, then we can parametrize this test
 // and exercise IPv6 code paths for TCP as well.
-async fn tcp_socket_accept_cross_ns<
-    Client: TestNetstackExt,
-    Server: TestNetstackExt,
-    E: netemul::Endpoint,
->(
+async fn tcp_socket_accept_cross_ns<Client: Netstack, Server: Netstack, E: netemul::Endpoint>(
     name: &str,
 ) {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
@@ -1347,7 +1342,7 @@ async fn udpv6_loopback<N: Netstack>(name: &str) {
 }
 
 #[variants_test]
-async fn udp_sendto_unroutable_leaves_socket_bound<N: Netstack + TestNetstackExt>(name: &str) {
+async fn udp_sendto_unroutable_leaves_socket_bound<N: Netstack>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let network = sandbox.create_network("net").await.expect("failed to create network");
     let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
@@ -1389,29 +1384,6 @@ async fn udp_sendto_unroutable_leaves_socket_bound<N: Netstack + TestNetstackExt
     assert_ne!(bound_ipv4.port(), 0);
 }
 
-#[async_trait]
-trait TestNetstackExt: Netstack {
-    /// Returns the name for the given interface that can be passed to a
-    /// BindToDevice (SO_BINDTODEVICE) call.
-    async fn bindtodevice_name<'i>(iface: &netemul::TestInterface<'i>) -> String;
-}
-
-#[async_trait]
-impl TestNetstackExt for Netstack2 {
-    async fn bindtodevice_name<'i>(iface: &netemul::TestInterface<'i>) -> String {
-        iface.get_interface_name().await.expect("get_name failed")
-    }
-}
-
-#[async_trait]
-impl TestNetstackExt for Netstack3 {
-    /// TODO(https://fxbug.dev/48969): Use the actual device name once that is
-    /// supported.
-    async fn bindtodevice_name<'i>(iface: &netemul::TestInterface<'i>) -> String {
-        format!("ifindex/{}", iface.id())
-    }
-}
-
 struct MultiNicAndPeerConfig {
     multinic_ip: std::net::Ipv4Addr,
     multinic_socket: UdpSocket,
@@ -1421,7 +1393,7 @@ struct MultiNicAndPeerConfig {
 
 // TODO(https://fxbug.dev/88796): Replace this with TestNetwork::join_network
 // once Netstack3 supports fuchsia.net.interfaces.admin.
-async fn join_network<'a, E: netemul::Endpoint, N: TestNetstackExt, S: Into<Cow<'a, str>>>(
+async fn join_network<'a, E: netemul::Endpoint, N: Netstack, S: Into<Cow<'a, str>>>(
     realm: &netemul::TestRealm<'a>,
     network: &netemul::TestNetwork<'a>,
     ep_name: S,
@@ -1472,7 +1444,7 @@ async fn join_network<'a, E: netemul::Endpoint, N: TestNetstackExt, S: Into<Cow<
 /// arguments. The first argument contains the sockets in the multi-NIC realm,
 /// and the second argument is the socket in the peer realm.
 async fn with_multinic_and_peers<
-    N: Netstack + TestNetstackExt,
+    N: Netstack,
     F: FnOnce(Vec<MultiNicAndPeerConfig>) -> R,
     R: Future<Output = ()>,
 >(
@@ -1548,7 +1520,13 @@ async fn with_multinic_and_peers<
                     .expect("creating UDP datagram socket");
 
                 socket
-                    .bind_device(Some(N::bindtodevice_name(multinic_iface).await.as_bytes()))
+                    .bind_device(Some(
+                        multinic_iface
+                            .get_interface_name()
+                            .await
+                            .expect("get_name failed")
+                            .as_bytes(),
+                    ))
                     .and_then(|()| {
                         socket.as_ref().bind(
                             &std::net::SocketAddr::from((std::net::Ipv4Addr::UNSPECIFIED, port))
@@ -1593,7 +1571,7 @@ async fn with_multinic_and_peers<
 // TODO(https://fxbug.dev/88796): parameterize this test over endpoint types
 // once Netstack3 fully supports admin API surface.
 #[variants_test]
-async fn receive_on_bound_to_devices<N: Netstack + TestNetstackExt>(name: &str) {
+async fn receive_on_bound_to_devices<N: Netstack>(name: &str) {
     const NUM_PEERS: u8 = 3;
     const PORT: u16 = 80;
     const BUFFER_SIZE: usize = 1024;
@@ -1648,7 +1626,7 @@ async fn receive_on_bound_to_devices<N: Netstack + TestNetstackExt>(name: &str) 
 // TODO(https://fxbug.dev/88796): parameterize this test over endpoint types
 // once Netstack3 fully supports admin API surface.
 #[variants_test]
-async fn send_from_bound_to_device<N: Netstack + TestNetstackExt>(name: &str) {
+async fn send_from_bound_to_device<N: Netstack>(name: &str) {
     const NUM_PEERS: u8 = 3;
     const PORT: u16 = 80;
     const BUFFER_SIZE: usize = 1024;
@@ -1700,10 +1678,7 @@ async fn send_from_bound_to_device<N: Netstack + TestNetstackExt>(name: &str) {
 }
 
 #[variants_test]
-async fn get_bound_device_errors_after_device_deleted<
-    N: Netstack + TestNetstackExt,
-    E: netemul::Endpoint,
->(
+async fn get_bound_device_errors_after_device_deleted<N: Netstack, E: netemul::Endpoint>(
     name: &str,
 ) {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
@@ -1726,7 +1701,9 @@ async fn get_bound_device_errors_after_device_deleted<
             .expect("failed to create host socket");
 
     host_sock
-        .bind_device(Some(N::bindtodevice_name(&bound_interface).await.as_bytes()))
+        .bind_device(Some(
+            bound_interface.get_interface_name().await.expect("get_name failed").as_bytes(),
+        ))
         .expect("set SO_BINDTODEVICE");
 
     let id = bound_interface.id();

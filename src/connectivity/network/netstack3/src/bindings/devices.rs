@@ -87,6 +87,7 @@ where
     }
 
     /// Gets an iterator over all tracked devices.
+    #[cfg(test)]
     pub fn iter_devices(&self) -> impl Iterator<Item = &DeviceInfo<C, I>> {
         self.devices.iter()
     }
@@ -121,6 +122,13 @@ where
     /// Retrieve associated `binding_id` for `core_id`.
     pub fn get_binding_id(&self, core_id: C) -> Option<BindingId> {
         self.devices.get(&core_id).map(|d| d.id)
+    }
+}
+
+impl<C: IdMapCollectionKey> Devices<C, DeviceSpecificInfo> {
+    /// Retrieves the device with the given name.
+    pub fn get_device_by_name(&self, name: &str) -> Option<&DeviceInfo<C, DeviceSpecificInfo>> {
+        self.devices.iter().find(|d| d.info.common_info().name == name)
     }
 }
 
