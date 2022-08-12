@@ -325,4 +325,26 @@ mod tests {
         );
         assert_ne!(iid0, iid1);
     }
+
+    #[test]
+    fn test_stable_outputs() {
+        // generate_opaque_interface_identifier guarantees that it provides a stable output across
+        // codebase versions. This test case asserts that, and should not be changed!
+        const SECRET_KEY: [u8; STABLE_IID_SECRET_KEY_BYTES] = [1; STABLE_IID_SECRET_KEY_BYTES];
+        const PREFIX: Subnet<Ipv6Addr> = Ipv6::SITE_LOCAL_UNICAST_SUBNET;
+        const NET_IFACE: &[u8] = &[0, 1, 2];
+        const NET_ID: &[u8] = &[3, 4, 5];
+        const DAD_COUNTER: OpaqueIidNonce = OpaqueIidNonce::DadCounter(0);
+
+        assert_eq!(
+            generate_opaque_interface_identifier(
+                PREFIX,
+                NET_IFACE,
+                NET_ID,
+                DAD_COUNTER,
+                &SECRET_KEY
+            ),
+            255541303695013087662815070945404751656u128
+        );
+    }
 }
