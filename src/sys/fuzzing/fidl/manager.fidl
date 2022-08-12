@@ -50,3 +50,12 @@ protocol Manager {
         result zx.status;
     });
 };
+
+/// Command line flag requesting fuzzing to be performed.
+///
+/// This flag is passed by the fuzz-manager to the test_manager when starting fuzzers. Since the
+/// fuzzers are run as part of the Test Runner Framework, they can be started by normal test
+/// workflows, e.g. `fx test`. The presence of this flag indicates the fuzzer is being started to
+/// performing fuzzing; in its absence the fuzzer should simply execute a bounded number of inputs
+/// as a test.
+const FUZZ_MODE string = "--fuzz";

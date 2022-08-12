@@ -22,28 +22,6 @@ using ::fuchsia::fuzzer::ControllerPtr;
 
 const char* kFakeFuzzerUrl = "fuchsia-pkg://fuchsia.com/fuzzing-common-tests#meta/fake.cm";
 
-// This is just a small helper type to work around the madness of constness and string literals with
-// modifiable command lines.
-class FakeCmdline {
- public:
-  explicit FakeCmdline(std::initializer_list<const char*> literals) : argc_(0) {
-    for (const auto& literal : literals) {
-      chars_.emplace_back(literal, literal + strlen(literal) + 1);
-      ptrs_.push_back(&chars_[argc_++][0]);
-    }
-    argv_ = &ptrs_[0];
-  }
-  ~FakeCmdline() = default;
-  int argc() { return argc_; }
-  char** argv() { return argv_; }
-
- private:
-  int argc_;
-  char** argv_;
-  std::vector<std::vector<char>> chars_;
-  std::vector<char*> ptrs_;
-};
-
 class ControllerProviderTest : public AsyncTest {
  protected:
   void SetUp() override {
@@ -55,12 +33,8 @@ class ControllerProviderTest : public AsyncTest {
   }
 
   ControllerProviderPtr GetProvider() {
-    FakeCmdline cmdline{"some-bin", kFakeFuzzerUrl};
-    int argc = cmdline.argc();
-    char** argv = cmdline.argv();
-    EXPECT_EQ(provider_->Initialize(&argc, &argv), ZX_OK);
     ControllerProviderPtr provider;
-    auto task = provider_->Serve(registrar_->NewBinding().TakeChannel())
+    auto task = provider_->Serve(kFakeFuzzerUrl, registrar_->NewBinding().TakeChannel())
                     .or_else([] { return fpromise::error(ZX_ERR_CANCELED); })
                     .and_then(registrar_->TakeProvider())
                     .and_then([this, &provider](ControllerProviderHandle& handle) -> ZxResult<> {
@@ -82,23 +56,7 @@ class ControllerProviderTest : public AsyncTest {
 
 // Unit tests
 
-TEST_F(ControllerProviderTest, Initialize) {
-  ControllerProviderImpl provider(executor());
-  FakeCmdline cmdline{"some-bin", kFakeFuzzerUrl, "some-args"};
-  int argc = cmdline.argc();
-  char** argv = cmdline.argv();
-  argc = 1;
-  EXPECT_EQ(provider.Initialize(&argc, &argv), ZX_ERR_INVALID_ARGS);
-  EXPECT_EQ(argc, 1);
-  EXPECT_STREQ(argv[0], "some-bin");
-  argc = 3;
-  EXPECT_EQ(provider.Initialize(&argc, &argv), ZX_OK);
-  EXPECT_EQ(argc, 2);
-  EXPECT_STREQ(argv[0], "some-bin");
-  EXPECT_STREQ(argv[1], "some-args");
-}
-
-TEST_F(ControllerProviderTest, PublishAndConnect) {
+TEST_F(ControllerProviderTest, Connect) {
   auto provider = GetProvider();
 
   // Should be able to connect...

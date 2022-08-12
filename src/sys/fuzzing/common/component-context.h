@@ -15,10 +15,16 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
+#include <memory>
+
 #include "src/lib/fxl/macros.h"
 #include "src/sys/fuzzing/common/async-types.h"
 
 namespace fuzzing {
+
+// Aliases to simplify passing around the unique context.
+class ComponentContext;
+using ComponentContextPtr = std::unique_ptr<ComponentContext>;
 
 // This class is a wrapper around |sys::ComponentContext| that provides some additional common
 // behaviors, such as making an |async::Loop| and scheduling a primary task on an |async::Executor|.
@@ -35,16 +41,16 @@ class ComponentContext final {
 
   // Creates a component context. This method consumes startup handles in order to serve FIDL
   // protocols, and can therefore be called at most once per process.
-  static std::unique_ptr<ComponentContext> Create();
+  static ComponentContextPtr Create();
 
   // Creates an "auxiliary" context that does not have an outgoing directory. Such a context can
   // only be used for creating FIDL clients, but does not consume any startup handles and thus does
   // not preclude creating other component contexts.
-  static std::unique_ptr<ComponentContext> CreateAuxillary();
+  static ComponentContextPtr CreateAuxillary();
 
   // Creates a context that does not own its |executor|'s loop. This is useful for tests which
   // provide and executor from a test loop.
-  static std::unique_ptr<ComponentContext> CreateWithExecutor(ExecutorPtr executor);
+  static ComponentContextPtr CreateWithExecutor(ExecutorPtr executor);
 
   const ExecutorPtr& executor() const { return executor_; }
 

@@ -20,6 +20,7 @@ namespace fuzzing {
 namespace {
 
 using fuchsia::fuzzer::ControllerPtr;
+using fuchsia::fuzzer::FUZZ_MODE;
 using fuchsia::fuzzer::Options;
 using fuchsia::fuzzer::Registrar;
 using fuchsia::fuzzer::Registry;
@@ -41,7 +42,7 @@ class RegistryIntegrationTest : public AsyncTest {
   // Launch a fuzzer and give it a channel to register itself with the fuzz-registry.
   void Register() {
     process_->Reset();
-    process_->AddArgs({"bin/fake_fuzzer_for_testing", kFuzzerUrl});
+    process_->AddArgs({"bin/fake_fuzzer_for_testing", kFuzzerUrl, FUZZ_MODE});
 
     // Connect a channel to the fuzz-registry.
     fidl::InterfaceHandle<Registrar> handle;

@@ -34,6 +34,7 @@ source_set("common") {
     "controller.h",
     "corpus-reader-client.cc",
     "corpus-reader-client.h",
+    "engine.cc",
     "engine.h",
     "input.cc",
     "input.h",

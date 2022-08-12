@@ -6,8 +6,11 @@
 
 #include "src/sys/fuzzing/common/artifact.h"
 #include "src/sys/fuzzing/common/async-socket.h"
+#include "src/sys/fuzzing/common/engine.h"
 
 namespace fuzzing {
+
+using ::fuchsia::fuzzer::FUZZ_MODE;
 
 void EngineIntegrationTest::SetUp() {
   AsyncTest::SetUp();
@@ -25,6 +28,7 @@ ZxPromise<ControllerPtr> EngineIntegrationTest::Start() {
            for (const auto& arg : extra_args()) {
              engine_->AddArg(arg);
            }
+           engine_->AddArg(FUZZ_MODE);
            engine_->AddChannel(registrar_handle.TakeChannel());
            engine_->AddChannel(fuzz_coverage());
            engine_->SetStdoutFdAction(FdAction::kClone);

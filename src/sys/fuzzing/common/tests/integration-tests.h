@@ -59,7 +59,7 @@ class EngineIntegrationTest : public AsyncTest {
   void Crash();
 
  private:
-  std::unique_ptr<ComponentContext> context_;
+  ComponentContextPtr context_;
   std::unique_ptr<ChildProcess> engine_;
   ControllerProviderPtr provider_;
   std::unique_ptr<FakeRegistrar> registrar_;

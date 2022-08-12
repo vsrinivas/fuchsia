@@ -97,11 +97,11 @@ impl<T: FidlEndpoint<test_manager::RunBuilderMarker>> Manager<T> {
                 let (suite_proxy, suite_controller) =
                     create_proxy::<test_manager::SuiteControllerMarker>()
                         .context("failed to create fuchsia.test_manager.SuiteController")?;
-                run_builder.add_suite(
-                    url.as_str(),
-                    test_manager::RunOptions::EMPTY,
-                    suite_controller,
-                )?;
+                let run_options = test_manager::RunOptions {
+                    arguments: Some(vec![fuzz::FUZZ_MODE.to_string()]),
+                    ..test_manager::RunOptions::EMPTY
+                };
+                run_builder.add_suite(url.as_str(), run_options, suite_controller)?;
                 run_builder.build(run_controller)?;
                 fuzzer.start(run_proxy, suite_proxy).await;
             }

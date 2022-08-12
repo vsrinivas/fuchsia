@@ -9,7 +9,7 @@
 
 namespace fuzzing {
 
-std::unique_ptr<ComponentContext> ComponentContext::Create() {
+ComponentContextPtr ComponentContext::Create() {
   static bool once = true;
   FX_CHECK(once) << "ComponentContext::Create called more than once.";
   once = false;
@@ -22,7 +22,7 @@ std::unique_ptr<ComponentContext> ComponentContext::Create() {
                                             std::move(outgoing));
 }
 
-std::unique_ptr<ComponentContext> ComponentContext::CreateAuxillary() {
+ComponentContextPtr ComponentContext::CreateAuxillary() {
   auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
   auto executor = MakeExecutor(loop->dispatcher());
   auto svc = sys::ServiceDirectory::CreateFromNamespace();
@@ -31,7 +31,7 @@ std::unique_ptr<ComponentContext> ComponentContext::CreateAuxillary() {
                                             std::move(outgoing));
 }
 
-std::unique_ptr<ComponentContext> ComponentContext::CreateWithExecutor(ExecutorPtr executor) {
+ComponentContextPtr ComponentContext::CreateWithExecutor(ExecutorPtr executor) {
   auto context = sys::ComponentContext::Create();
   std::unique_ptr<async::Loop> loop;
   auto svc = context->svc();

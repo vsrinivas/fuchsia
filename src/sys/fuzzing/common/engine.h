@@ -8,37 +8,54 @@
 #include <string>
 #include <vector>
 
+#include "src/lib/pkg_url/fuchsia_pkg_url.h"
 #include "src/sys/fuzzing/common/component-context.h"
-#include "src/sys/fuzzing/common/controller-provider.h"
 #include "src/sys/fuzzing/common/runner.h"
 
 namespace fuzzing {
+
+// The |Engine| represents a generic fuzzing engine. Specific engines with specific runners should
+// call |RunEngine| with command line arguments and a |Runner| factory method.
+class Engine {
+ public:
+  Engine() = default;
+  ~Engine() = default;
+
+  // Parses the command line and extracts recognized arguments from it.
+  __WARN_UNUSED_RESULT zx_status_t Initialize(int* pargc, char*** pargv);
+
+  // Runs the engine.
+  __WARN_UNUSED_RESULT zx_status_t Run(ComponentContextPtr context, RunnerPtr runner);
+
+ private:
+  // Runs the engine in "fuzzing" mode: the engine will serve `fuchsia.fuzzer.ControllerProvider`
+  // and fulfill `fuchsia.fuzzer.Controller` requests.
+  __WARN_UNUSED_RESULT zx_status_t RunFuzzer(ComponentContextPtr context, RunnerPtr runner);
+
+  // Runs the engine in "test" mode: the engine will execute the fuzzer with the set of inputs
+  // given by seed corpora listed in the fuzzer's command line arguments.
+  __WARN_UNUSED_RESULT zx_status_t RunTest(ComponentContextPtr context, RunnerPtr runner);
+
+  std::unique_ptr<component::FuchsiaPkgUrl> url_;
+  bool fuzzing_ = false;
+  std::vector<Input> inputs_;
+};
 
 // Starts the engine with runner provided by |MakeRunnerPtr|, which should have the signature:
 // `ZxResult<RunnerPtr>(int, char**, ComponentContext&)`. This should be called from `main`, and
 // the first two parameters should be |argc| and |argv|, respectively.
 template <typename RunnerPtrMaker>
 zx_status_t RunEngine(int argc, char** argv, RunnerPtrMaker MakeRunnerPtr) {
-  auto context = ComponentContext::Create();
-  ControllerProviderImpl provider(context->executor());
-
-  // Extract command line arguments for the controller provider.
-  if (auto status = provider.Initialize(&argc, &argv); status != ZX_OK) {
+  Engine engine;
+  if (auto status = engine.Initialize(&argc, &argv); status != ZX_OK) {
     return status;
   }
-
-  // Create the runner.
+  auto context = ComponentContext::Create();
   auto result = MakeRunnerPtr(argc, argv, *context);
   if (result.is_error()) {
     return result.error();
   }
-  provider.SetRunner(result.take_value());
-
-  // Serve |fuchsia.fuzzer.ControllerProvider| to the registry.
-  auto task = provider.Serve(context->TakeChannel(0));
-  context->ScheduleTask(std::move(task));
-
-  return context->Run();
+  return engine.Run(std::move(context), result.take_value());
 }
 
 }  // namespace fuzzing
