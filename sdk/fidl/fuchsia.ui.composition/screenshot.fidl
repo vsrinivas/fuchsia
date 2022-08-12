@@ -33,8 +33,9 @@ protocol Screenshot {
         /// Format of the requested screenshot.
         1: format ScreenshotFormat;
     }) -> (resource table {
-        /// CPU accessible read-only VMO that contains screenshot data. The server owns the VMO and
-        /// may reuse for the next [`Take`].
+        /// CPU mappable read-only VMO that contains screenshot data. The server owns the VMO and
+        /// may reuse for the next [`Take`]. The VMO is guaranteed to be accessible after mapping.
+        /// In some allocations, VMO::read() might not be available, i.e. on emulator.
         ///
         /// Basic usage: After the client receives a VMO handle, to ensure data stability, it should
         /// finish reading the VMO before calling [`Take`] again. When finished reading, the client
