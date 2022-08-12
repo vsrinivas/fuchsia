@@ -276,9 +276,9 @@ impl VmoFileConnection {
             fio::FileRequest::Clone { flags, object, control_handle: _ } => {
                 self.handle_clone(self.flags, flags, object);
             }
-            fio::FileRequest::Reopen { options, object_request, control_handle: _ } => {
+            fio::FileRequest::Reopen { rights_request, object_request, control_handle: _ } => {
                 let _ = object_request;
-                todo!("https://fxbug.dev/77623: options={:?}", options);
+                todo!("https://fxbug.dev/77623: rights_request={:?}", rights_request);
             }
             fio::FileRequest::Close { responder } => {
                 // We are going to close the connection anyways, so there is no way to handle this
@@ -297,9 +297,13 @@ impl VmoFileConnection {
                     responder.control_handle().shutdown_with_epitaph(status);
                 }
             },
-            fio::FileRequest::Describe2 { query, responder } => {
+            fio::FileRequest::Describe2 { responder } => {
                 let _ = responder;
-                todo!("https://fxbug.dev/77623: query={:?}", query);
+                todo!("https://fxbug.dev/77623");
+            }
+            fio::FileRequest::GetConnectionInfo { responder } => {
+                let _ = responder;
+                todo!("https://fxbug.dev/77623");
             }
             fio::FileRequest::Sync { responder } => {
                 // VMOs are always in sync.
@@ -365,6 +369,10 @@ impl VmoFileConnection {
             }
             fio::FileRequest::AdvisoryLock { request: _, responder } => {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
+            }
+            fio::FileRequest::Query { responder } => {
+                let _ = responder;
+                todo!("https://fxbug.dev/77623");
             }
             fio::FileRequest::QueryFilesystem { responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED, None)?;

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 library fuchsia.io;
 
+using fuchsia.unknown;
 using zx;
 
 type MutableNodeAttributes = table {
@@ -13,24 +14,38 @@ type MutableNodeAttributes = table {
     2: modification_time uint64;
 };
 
+// TODO(https://fxbug.dev/105840): Inline this into its only reference when fidlgen_go is fixed.
+type ConnectionInfo = resource table {
+    /// The rights possessed by the current connection. Note: `rights` limits
+    /// the set of operations allowed on the connection, but does not guarantee
+    /// their availability. For example, one may have the [`Rights.EXECUTE`]
+    /// right on a file connection, but the file itself does not have the
+    /// `EXECUTE` ability, and hence cannot be executed. See
+    /// [`ConnectionOptions.rights`].
+    1: rights Rights;
+};
+
 /// Node defines the minimal protocol for entities which can be accessed
 /// in a filesystem.
 protocol Node2 {
+    @available(added=9)
+    compose fuchsia.unknown.Closeable;
+    @available(added=9)
+    compose fuchsia.unknown.Queryable;
+
     /// Creates another connection to the same node.
     ///
-    /// + `options` options applicable to both `Open` and `Reopen`,
-    ///   including negotiating protocol and restricting rights.
-    ///   See [`ConnectionOptions`].
     /// + `object_request` is the server end of a channel created for the new
     ///   connection. The caller may proceed to send messages on the
     ///   corresponding client end right away.
-    ///
-    /// For files, the cloned connection and the original connection have
-    /// independent seek offsets.
     @transitional
     @selector("fuchsia.io/Node.Reopen")
     Reopen(resource struct {
-        options ConnectionOptions;
+        /// Requests rights on the new connection according to the specified rules.
+        ///
+        /// If absent, inherits the rights from the connection where the call
+        /// is made.
+        rights_request box<RightsRequest>;
         object_request zx.handle:CHANNEL;
     });
 
@@ -45,54 +60,63 @@ protocol Node2 {
     /// status.
     ///
     /// This method does not require any rights.
+    @available(removed=9)
     @selector("fuchsia.io/Node.Close")
     Close() -> (struct {}) error zx.status;
 
-    /// Returns extra connection information and auxiliary handles.
-    ///
-    /// + `query` specifies the fields in `ConnectionInfo` that the caller is
-    ///   interested in.
-    /// - `info` see [`ConnectionInfo`] for details on the fields.
-    ///
-    /// When all known bits in `query` are set, the return value matches
-    /// the one from [`OnConnectionInfo`], as if the caller requested that event
-    /// using [`ConnectionFlags.GET_CONNECTION_INFO`].
-    ///
-    /// If the `Describe` operation fails, the connection is closed with the
-    /// associated error.
-    ///
-    /// This method does not require any rights.
-    @selector("fuchsia.io/Node.Describe")
-    Describe2(struct {
-        query @generated_name("ConnectionInfoQuery") strict bits : uint64 {
-            /// Requests [`ConnectionInfo.representation`].
-            REPRESENTATION = 0x1;
-
-            /// Requests [`ConnectionInfo.rights`].
-            RIGHTS = 0x2;
-
-            /// Requests [`ConnectionInfo.available_operations`].
-            AVAILABLE_OPERATIONS = 0x4;
-        };
-    }) -> (ConnectionInfo);
 
     /// An event produced eagerly by the server if requested by
-    /// [`ConnectionFlags.GET_CONNECTION_INFO`]. This event will be the
-    /// first message from the server, and is sent exactly once.
+    /// [`NodeFlags.GET_REPRESENTATION`]. This event will be the first message
+    /// from the server, and is sent exactly once.
     ///
-    /// - `info` See [`ConnectionInfo`] for details on the fields.
-    ///   All members should be present.
+    /// The active variant corresponds to one of the supported protocols of
+    /// the node, and represents the result of the connection-time
+    /// negotiation. Provides auxiliary handles if applicable.
     ///
-    /// Different from [`fuchsia.io/OnOpen`], an error during open/reopen is
-    /// always manifested as an epitaph.
-    @selector("fuchsia.io/Node.OnConnectionInfo")
-    -> OnConnectionInfo(ConnectionInfo);
+    /// If the client specified more than one protocol in `protocols` during
+    /// [`Directory.Open`], the [`Representation`] carries additionally the
+    /// result of the connection-time negotiation via its tag.
+    ///
+    /// The elements have one-to-one correspondence with the members of
+    /// [`NodeProtocolKinds`].
+    ///
+    /// This is a special case of [`fuchsia.unknown/Queryable.Query`] +
+    /// inherent `Describe` methods on the specific protocols. It exists as
+    /// an optimization to avoid an additional round trip.
+    @selector("fuchsia.io/Node.OnRepresentation")
+    -> OnRepresentation(resource struct {
+        // TODO(https://fxbug.dev/105837): Remove the outer struct when fidlgen_go is fixed.
+        payload @generated_name("Representation") flexible resource union {
+            /// Auxiliary data for the connector representation of a node, used
+            /// for protocol discovery and connection.
+            ///
+            /// It supports connecting to arbitrary protocols exported by the
+            /// filesystem server at a path, including ones that do not compose
+            /// [`Node2`].
+            ///
+            /// See [`NodeProtocolKinds.CONNECTOR`].
+            1: connector @generated_name("ConnectorInfo") table {};
+
+            /// Auxiliary data for the directory representation of a node. The
+            /// selection of this variant in [`Representation`] implies that the
+            /// connection speaks the [`Directory`] protocol.
+            ///
+            /// See [`NodeProtocolKinds.DIRECTORY`].
+            2: directory @generated_name("DirectoryInfo") table {};
+
+            /// Auxiliary data for the file representation of a node. The
+            /// selection of this variant in [`Representation`] implies that the
+            /// connection speaks the [`File`] protocol.
+            ///
+            /// See [`NodeProtocolKinds.FILE`].
+            3: file FileInfo;
+        };
+    });
 
     // TODO(https://fxbug.dev/77623): uncomment and implement.
 
-
     // /// Acquires a token which can be used to identify this connection at a later point in
-    // /// time.  The token will remain valid for as long as the connection requesting the token
+    // /// time. The token will remain valid for as long as the connection requesting the token
     // /// remains open.
     // ///
     // /// This method does not require any rights. Note that the token identifies
@@ -101,6 +125,12 @@ protocol Node2 {
     // GetToken2() -> (resource struct {
     //     token Token;
     // }) error zx.status;
+
+    /// Acquires information about the connection.
+    ///
+    /// This method does not require any rights.
+    @selector("fuchsia.io/Node.GetConnectionInfo")
+    GetConnectionInfo() -> (ConnectionInfo);
 
     /// Acquires information about the node.
     ///
@@ -137,14 +167,14 @@ protocol Node2 {
             /// Requests [`NodeAttributes.link_count`].
             LINK_COUNT = 0x10;
 
+            /// Requests [`NodeAttributes.id`].
+            ID = 0x20;
+
             /// Requests [`NodeAttributes.creation_time`].
-            CREATION_TIME = 0x20;
+            CREATION_TIME = 0x40;
 
             /// Requests [`NodeAttributes.modification_time`].
-            MODIFICATION_TIME = 0x40;
-
-            /// Requests [`NodeAttributes.id`].
-            ID = 0x80;
+            MODIFICATION_TIME = 0x80;
         };
     }) -> (@generated_name("NodeAttributes2") struct {
         // TODO(https://fxbug.dev/47480): fostr does not escape C++ keywords.
@@ -154,7 +184,7 @@ protocol Node2 {
             /// Describes the kinds of representations supported by the node.
             /// Note: This is not the result of the connection-time negotiation,
             /// which is conveyed via `representation`.
-            1: protocols NodeProtocols;
+            1: protocols NodeProtocolKinds;
 
             /// Describes the kinds of operations supported by the node.
             /// Note: This is distinct from the rights used at connection time.

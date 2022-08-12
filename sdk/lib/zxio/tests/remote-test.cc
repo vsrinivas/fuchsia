@@ -21,10 +21,15 @@ namespace {
 
 namespace fio = fuchsia_io;
 
-class TestServerBase : public fidl::WireServer<fio::Node> {
+class TestServerBase : public fidl::testing::WireTestBase<fio::Node> {
  public:
   TestServerBase() = default;
   ~TestServerBase() override = default;
+
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) final {
+    ADD_FAILURE("unexpected message received: %s", name.c_str());
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
 
   // Exercised by |zxio_close|.
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
@@ -34,49 +39,10 @@ class TestServerBase : public fidl::WireServer<fio::Node> {
     completer.Close(ZX_OK);
   }
 
-  void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
     fio::wire::FileObject file_object;
     completer.Reply(fio::wire::NodeInfo::WithFile(
         fidl::ObjectView<fio::wire::FileObject>::FromExternal(&file_object)));
-  }
-
-  void Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) override {
-    fio::wire::FileInfo file_info;
-    fio::wire::Representation representation = fio::wire::Representation::WithFile(
-        fidl::ObjectView<decltype(file_info)>::FromExternal(&file_info));
-    fio::wire::ConnectionInfo connection_info;
-    connection_info.set_representation(
-        fidl::ObjectView<decltype(representation)>::FromExternal(&representation));
-    completer.Reply(connection_info);
-  }
-
-  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void QueryFilesystem(QueryFilesystemRequestView request,
-                       QueryFilesystemCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   uint32_t num_close() const { return num_close_.load(); }
@@ -227,46 +193,6 @@ TEST_F(CloneTest, Clone) {
   ASSERT_EQ(ZX_OK, describe_response.status());
 
   EXPECT_TRUE(describe_response.value().info.is_file());
-}
-
-TEST_F(CloneTest, Reopen) {
-  zxio_storage_t node_storage;
-  ASSERT_OK(zxio_create(TakeClientEnd().TakeChannel().release(), &node_storage));
-  zxio_t* node = &node_storage.io;
-
-  zx::channel clone;
-  EXPECT_OK(zxio_reopen(node, ZXIO_REOPEN_DESCRIBE, clone.reset_and_get_address()));
-
-  fidl::ClientEnd<fio::Node> clone_client(std::move(clone));
-
-  class EventHandler : public fidl::testing::WireSyncEventHandlerTestBase<fio::Node> {
-   public:
-    EventHandler(fidl::ClientEnd<fio::Node> client_end, bool& on_open_received)
-        : client_end_(std::move(client_end)), on_open_received_(on_open_received) {}
-
-    const fidl::ClientEnd<fio::Node>& client_end() const { return client_end_; }
-
-    void OnOpen(fidl::WireEvent<fio::Node::OnOpen>* event) final {
-      EXPECT_EQ(event->s, ZX_OK);
-      EXPECT_TRUE(event->info.is_file());
-      on_open_received_ = true;
-    }
-
-    void NotImplemented_(const std::string& name) final {
-      ADD_FAILURE("Unexpected %s", name.c_str());
-    }
-
-   private:
-    fidl::ClientEnd<fio::Node> client_end_;
-    bool& on_open_received_;
-  };
-
-  bool on_open_received = false;
-  EventHandler event_handler(std::move(clone_client), on_open_received);
-  fidl::Status event_handling_status = event_handler.HandleOneEvent(event_handler.client_end());
-  EXPECT_OK(event_handling_status.status(), "%s",
-            event_handling_status.FormatDescription().c_str());
-  EXPECT_TRUE(on_open_received);
 }
 
 }  // namespace

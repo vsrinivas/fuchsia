@@ -25,7 +25,7 @@ __BEGIN_CDECLS
 zx_status_t zxio_default_release(zxio_t* io, zx_handle_t* out_handle);
 zx_status_t zxio_default_borrow(zxio_t* io, zx_handle_t* out_handle);
 zx_status_t zxio_default_close(zxio_t* io);
-zx_status_t zxio_default_reopen(zxio_t* io, zxio_reopen_flags_t flags, zx_handle_t* out_handle);
+zx_status_t zxio_default_clone(zxio_t* io, zx_handle_t* out_handle);
 void zxio_default_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_handle_t* out_handle,
                              zx_signals_t* out_zx_signals);
 void zxio_default_wait_end(zxio_t* io, zx_signals_t zx_signals, zxio_signals_t* out_zxio_signals);
@@ -81,7 +81,7 @@ static __CONSTEXPR const zxio_ops_t zxio_default_ops = {
     .close = zxio_default_close,
     .release = zxio_default_release,
     .borrow = zxio_default_borrow,
-    .reopen = zxio_default_reopen,
+    .clone = zxio_default_clone,
     .wait_begin = zxio_default_wait_begin,
     .wait_end = zxio_default_wait_end,
     .sync = zxio_default_sync,

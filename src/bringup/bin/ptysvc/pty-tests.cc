@@ -77,12 +77,14 @@ class PtyTestCase : public zxtest::Test {
 };
 
 zx::eventpair GetEvent(Connection& conn) {
-  auto result = conn->Describe();
+  auto result = conn->Describe2();
   if (result.status() != ZX_OK) {
     return {};
   }
-  zx::eventpair event = std::move(result->info.tty().event);
-  return event;
+  if (!result.value().has_event()) {
+    return {};
+  }
+  return std::move(result.value().event());
 }
 
 void WriteCtrlC(Connection& conn) {
@@ -97,10 +99,10 @@ void WriteCtrlC(Connection& conn) {
 // Make sure the server connections describe appropriately
 TEST_F(PtyTestCase, ServerDescribe) {
   Connection server{take_server()};
-  auto result = server->Describe();
+  auto result = server->Describe2();
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->info.is_tty());
-  ASSERT_TRUE(result->info.tty().event.is_valid());
+  ASSERT_TRUE(result.value().has_event());
+  ASSERT_TRUE(result.value().event().is_valid());
 }  // namespace
 
 TEST_F(PtyTestCase, ServerSetWindowSize) {
@@ -341,10 +343,10 @@ TEST_F(PtyTestCase, ClientDescribe) {
   zx::status client = OpenClient(server, 0);
   ASSERT_OK(client.status_value());
 
-  auto result = client->Describe();
+  auto result = client->Describe2();
   ASSERT_OK(result.status());
-  ASSERT_TRUE(result->info.is_tty());
-  ASSERT_TRUE(result->info.tty().event.is_valid());
+  ASSERT_TRUE(result.value().has_event());
+  ASSERT_TRUE(result.value().event().is_valid());
 }
 
 TEST_F(PtyTestCase, ClientWindowSize) {

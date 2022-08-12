@@ -31,7 +31,7 @@ typedef struct zxio_ops {
   // TODO(tamird/abarth): clarify the semantics of this operation. fdio currently relies on this to
   // implement POSIX-style dup() which expects the seek pointer to be preserved, but zxio_vmo_clone
   // does not currently produce those semantics.
-  zx_status_t (*reopen)(zxio_t* io, zxio_reopen_flags_t flags, zx_handle_t* out_handle);
+  zx_status_t (*clone)(zxio_t* io, zx_handle_t* out_handle);
   void (*wait_begin)(zxio_t* io, zxio_signals_t zxio_signals, zx_handle_t* out_handle,
                      zx_signals_t* out_zx_signals);
   void (*wait_end)(zxio_t* io, zx_signals_t zx_signals, zxio_signals_t* out_zxio_signals);

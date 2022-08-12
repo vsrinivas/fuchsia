@@ -153,62 +153,28 @@ void ConvertToIoV1NodeInfo(VnodeRepresentation representation,
       callback(fio::wire::NodeInfo::WithDevice({}));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Tty>) {
       callback(fio::wire::NodeInfo::WithTty({.event = std::move(repr.event)}));
-    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::SynchronousDatagramSocket>) {
-      callback(
-          fio::wire::NodeInfo::WithSynchronousDatagramSocket({.event = std::move(repr.event)}));
-    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::DatagramSocket>) {
-      fio::wire::DatagramSocket datagram_socket = {
-          .socket = std::move(repr.socket),
-          .tx_meta_buf_size = repr.tx_meta_buf_size,
-          .rx_meta_buf_size = repr.rx_meta_buf_size,
-      };
-      callback(fio::wire::NodeInfo::WithDatagramSocket(
-          fidl::ObjectView<fio::wire::DatagramSocket>::FromExternal(&datagram_socket)));
-    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::StreamSocket>) {
-      callback(fio::wire::NodeInfo::WithStreamSocket({.socket = std::move(repr.socket)}));
     } else {
       ZX_PANIC("Representation variant is not initialized");
     }
   });
 }
 
-ConnectionInfoConverter::ConnectionInfoConverter(VnodeRepresentation representation) : info(arena) {
-  representation.visit([&](auto&& repr) {
+ConnectionInfoConverter::ConnectionInfoConverter(VnodeRepresentation vnode_representation) {
+  vnode_representation.visit([&](auto&& repr) {
     using T = std::decay_t<decltype(repr)>;
     if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Connector>) {
-      info.set_representation(arena, fio::wire::Representation::WithConnector(arena));
+      representation = fio::wire::Representation::WithConnector(arena);
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::File>) {
       fio::wire::FileInfo file(arena);
       file.set_observer(std::move(repr.observer));
       file.set_stream(std::move(repr.stream));
-      info.set_representation(arena, fio::wire::Representation::WithFile(arena, std::move(file)));
+      representation = fio::wire::Representation::WithFile(arena, file);
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Directory>) {
-      info.set_representation(arena, fio::wire::Representation::WithDirectory(arena));
+      representation = fio::wire::Representation::WithDirectory(arena);
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Device>) {
-      fio::wire::DeviceInfo device(arena);
-      info.set_representation(arena,
-                              fio::wire::Representation::WithDevice(arena, std::move(device)));
+      representation = fio::wire::Representation::WithConnector(arena);
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Tty>) {
-      fio::wire::TtyInfo tty(arena);
-      tty.set_event(std::move(repr.event));
-      info.set_representation(arena, fio::wire::Representation::WithTty(arena, std::move(tty)));
-    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::SynchronousDatagramSocket>) {
-      fio::wire::SynchronousDatagramSocketInfo synchronous_datagram_socket(arena);
-      synchronous_datagram_socket.set_event(std::move(repr.event));
-      info.set_representation(arena, fio::wire::Representation::WithSynchronousDatagramSocket(
-                                         arena, std::move(synchronous_datagram_socket)));
-    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::DatagramSocket>) {
-      fio::wire::DatagramSocketInfo datagram_socket(arena);
-      datagram_socket.set_socket(std::move(repr.socket));
-      datagram_socket.set_tx_meta_buf_size(arena, repr.tx_meta_buf_size);
-      datagram_socket.set_rx_meta_buf_size(arena, repr.rx_meta_buf_size);
-      info.set_representation(
-          arena, fio::wire::Representation::WithDatagramSocket(arena, std::move(datagram_socket)));
-    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::StreamSocket>) {
-      fio::wire::StreamSocketInfo stream_socket(arena);
-      stream_socket.set_socket(std::move(repr.socket));
-      info.set_representation(
-          arena, fio::wire::Representation::WithStreamSocket(arena, std::move(stream_socket)));
+      representation = fio::wire::Representation::WithConnector(arena);
     } else {
       ZX_PANIC("Representation variant is not initialized");
     }

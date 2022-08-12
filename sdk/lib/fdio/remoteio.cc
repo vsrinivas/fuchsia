@@ -180,7 +180,7 @@ zx::status<fdio_ptr> fdio::create_with_on_open(fidl::ClientEnd<fio::Node> node) 
       }
     }
 
-    void OnConnectionInfo(fidl::WireEvent<fio::Node::OnConnectionInfo>* event) override {
+    void OnRepresentation(fidl::WireEvent<fio::Node::OnRepresentation>* event) override {
       result_ = zx::error(ZX_ERR_NOT_SUPPORTED);
     }
 

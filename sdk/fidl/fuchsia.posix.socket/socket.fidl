@@ -7,6 +7,7 @@ using fuchsia.io;
 using fuchsia.net;
 using fuchsia.net.interfaces;
 using fuchsia.posix;
+using fuchsia.unknown;
 using zx;
 
 /// Socket shutdown mode.
@@ -29,6 +30,12 @@ type TimestampOption = strict enum {
 
 /// A socket.
 protocol BaseSocket {
+    compose fuchsia.unknown.Cloneable;
+    compose fuchsia.unknown.Closeable;
+    compose fuchsia.unknown.Queryable;
+
+    // TODO(https://fxbug.dev/105607): Remove this and all comments referencing
+    // fuchsia.io/Node.Describe. When?
     compose fuchsia.io.Node;
 
     /// Set `SOL_SOCKET` -> `SO_REUSEADDR`.
@@ -648,10 +655,20 @@ const FAST_UDP_WAIT_MANY_MAXIMUM_ITEMS uint32 = 63;
 
 /// A datagram socket.
 ///
-/// This type's [`fuchsia.io.Node/Describe`] method returns a zircon socket which can be
+/// This type's [`fuchsia.io/Node.Describe`] method returns a zircon socket which can be
 /// used to perform unacknowledged IO.
 protocol DatagramSocket {
     compose BaseDatagramSocket;
+
+    @selector("Describe")
+    Describe2() -> (resource table {
+        /// `ZX_SOCKET_DATAGRAM` on which data is sent and received.
+        1: socket zx.handle:SOCKET;
+        /// Size of the buffer used to receive Tx metadata.
+        2: tx_meta_buf_size uint64;
+        /// Size of the buffer used to receive Rx metadata.
+        3: rx_meta_buf_size uint64;
+    });
 
     /// Validates that data can be sent.
     ///
@@ -719,7 +736,7 @@ protocol DatagramSocket {
 /// payloads over a channel. All methods are nonblocking; their behavior roughly
 /// matches their Linux counterparts.
 ///
-/// This protocol's [`fuchsia.io.Node/Describe`] method returns an eventpair which
+/// This protocol's [`fuchsia.io/Node.Describe`] method returns an eventpair which
 /// is used to signal additional information about the state of the socket such
 /// as readiness or shutdown-ness.
 ///
@@ -729,6 +746,13 @@ protocol DatagramSocket {
 /// directly to this protocol will make those changes more difficult.
 protocol SynchronousDatagramSocket {
     compose BaseDatagramSocket;
+
+    @selector("Describe")
+    Describe2() -> (resource table {
+        /// Signals additional information about the state of the socket such as
+        /// readiness or shutdown-ness.
+        1: event zx.handle:EVENTPAIR;
+    });
 
     /// Receives a message from the socket.
     ///
@@ -825,7 +849,7 @@ protocol SynchronousDatagramSocket {
 
 /// A stream socket.
 ///
-/// This type's [`fuchsia.io.Node/Describe`] method returns a socket which is
+/// This type's [`fuchsia.io/Node.Describe`] method returns a socket which is
 /// used to transfer data to and from the caller. Signals are used to
 /// communicate additional information about the state of the socket such as
 /// connectedness and the presence of incoming connections in the case of a
@@ -840,6 +864,12 @@ protocol SynchronousDatagramSocket {
 /// directly to this protocol will make those changes more difficult.
 protocol StreamSocket {
     compose BaseNetworkSocket;
+
+    @selector("Describe")
+    Describe2() -> (resource table {
+        /// `ZX_SOCKET_STREAM` on which data is sent and received.
+        1: socket zx.handle:SOCKET;
+    });
 
     /// Begins listening for new incoming connections. At most `backlog`
     /// connections will be buffered.

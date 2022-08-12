@@ -63,11 +63,23 @@ void FileConnection::Describe(DescribeRequestView request, DescribeCompleter::Sy
 void FileConnection::Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) {
   zx::status result = Connection::NodeDescribe();
   if (result.is_error()) {
-    completer.Close(result.status_value());
-    return;
+    return completer.Close(result.status_value());
   }
   ConnectionInfoConverter converter(std::move(result).value());
-  completer.Reply(converter.info);
+  switch (converter.representation.Which()) {
+    case fio::wire::Representation::Tag::kUnknown:
+    case fio::wire::Representation::Tag::kConnector:
+    case fio::wire::Representation::Tag::kDirectory:
+      return completer.Close(ZX_ERR_BAD_STATE);
+    case fio::wire::Representation::Tag::kFile:
+      fio::wire::FileInfo file = converter.representation.file();
+      return completer.Reply(file);
+  }
+}
+
+void FileConnection::GetConnectionInfo(GetConnectionInfoRequestView request,
+                                       GetConnectionInfoCompleter::Sync& completer) {
+  completer.Reply({});
 }
 
 void FileConnection::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {

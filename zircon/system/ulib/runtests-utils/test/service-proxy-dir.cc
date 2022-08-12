@@ -97,8 +97,8 @@ TEST(ServiceProxyDirTest, Simple) {
 
       void OnOpen(fidl::WireEvent<fio::Node::OnOpen>* event) override { status_ = event->s; }
 
-      void OnConnectionInfo(fidl::WireEvent<fio::Node::OnConnectionInfo>* event) override {
-        ADD_FAILURE("OnConnectionInfo is not supported");
+      void OnRepresentation(fidl::WireEvent<fio::Node::OnRepresentation>* event) override {
+        ADD_FAILURE("OnRepresentation is not supported");
       }
 
      private:
@@ -136,8 +136,8 @@ TEST(ServiceProxyDirTest, Simple) {
 
       void OnOpen(fidl::WireEvent<fio::Node::OnOpen>* event) override { status_ = event->s; }
 
-      void OnConnectionInfo(fidl::WireEvent<fio::Node::OnConnectionInfo>* event) override {
-        ADD_FAILURE("OnConnectionInfo is not supported");
+      void OnRepresentation(fidl::WireEvent<fio::Node::OnRepresentation>* event) override {
+        ADD_FAILURE("OnRepresentation is not supported");
       }
 
      private:

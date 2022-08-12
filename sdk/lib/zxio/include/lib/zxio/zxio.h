@@ -150,17 +150,6 @@ zx_status_t zxio_borrow(zxio_t* io, zx_handle_t* out_handle);
 // Does not consume |io|.
 ZXIO_EXPORT zx_status_t zxio_clone(zxio_t* io, zx_handle_t* out_handle);
 
-// Attempt to create a |zx_handle_t| that represents another session with |io| with
-// the given |flags|.
-//
-// The returned |zx_handle_t| is suitable for transfer to another process or for
-// use within this process.
-//
-// Does not block.
-//
-// Does not consume |io|.
-ZXIO_EXPORT zx_status_t zxio_reopen(zxio_t* io, zxio_reopen_flags_t flags, zx_handle_t* out_handle);
-
 // Wait for |signals| to be asserted for |io|.
 //
 // Returns |ZX_ERR_TIMED_OUT| if |deadline| passes before any of the |signals|

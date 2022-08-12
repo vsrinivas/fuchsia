@@ -138,13 +138,6 @@ impl Kind {
             fio::Representation::Connector(_) => Kind::Service,
             fio::Representation::Directory(_) => Kind::Directory,
             fio::Representation::File(_) => Kind::File,
-            fio::Representation::Device(_) => Kind::Device,
-            fio::Representation::Tty(_) => Kind::Tty,
-            fio::Representation::SynchronousDatagramSocket(_) => Kind::SynchronousDatagramSocket,
-            fio::Representation::StreamSocket(_) => Kind::StreamSocket,
-            fio::Representation::RawSocket(_) => Kind::RawSocket,
-            fio::Representation::PacketSocket(_) => Kind::PacketSocket,
-            fio::Representation::DatagramSocket(_) => Kind::DatagramSocket,
             _ => Kind::Unknown,
         }
     }
@@ -223,7 +216,7 @@ pub(crate) async fn verify_node_describe_event(
             let () = zx_status::Status::ok(status).map_err(OpenError::OpenError)?;
             info.ok_or(OpenError::MissingOnOpenInfo)?;
         }
-        fio::NodeEvent::OnConnectionInfo { .. } => (),
+        fio::NodeEvent::OnRepresentation { .. } => (),
     }
 
     Ok(node)
@@ -248,9 +241,8 @@ pub(crate) async fn verify_directory_describe_event(
                 OpenError::UnexpectedNodeKind { expected: Kind::Directory, actual }
             })?;
         }
-        fio::DirectoryEvent::OnConnectionInfo { payload } => {
-            let representation = payload.representation.ok_or(OpenError::MissingOnOpenInfo)?;
-            let () = Kind::expect_directory2(&representation).map_err(|actual| {
+        fio::DirectoryEvent::OnRepresentation { payload } => {
+            let () = Kind::expect_directory2(&payload).map_err(|actual| {
                 OpenError::UnexpectedNodeKind { expected: Kind::Directory, actual }
             })?;
         }
@@ -278,9 +270,8 @@ pub(crate) async fn verify_file_describe_event(
             let () = Kind::expect_file(*info)
                 .map_err(|actual| OpenError::UnexpectedNodeKind { expected: Kind::File, actual })?;
         }
-        fio::FileEvent::OnConnectionInfo { payload } => {
-            let representation = payload.representation.ok_or(OpenError::MissingOnOpenInfo)?;
-            let () = Kind::expect_file2(&representation)
+        fio::FileEvent::OnRepresentation { payload } => {
+            let () = Kind::expect_file2(&payload)
                 .map_err(|actual| OpenError::UnexpectedNodeKind { expected: Kind::File, actual })?;
         }
     }

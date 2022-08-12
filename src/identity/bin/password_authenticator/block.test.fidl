@@ -12,7 +12,8 @@ using fuchsia.io as io;
 /// Composing all of the desired protocols is the easier and safer
 /// way to mock this behavior.
 protocol MockPartition {
-    compose io.File; // For Clone and ReadAt.
+    // Compose from fuchsia.io/File so we can support Read/Write.
+    compose io.File;
     compose partition.Partition;
     compose device.Controller;
 };

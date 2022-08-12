@@ -10,7 +10,6 @@
 /// first Client PTY *must* be 0, and it is the only Client PTY that is allowed
 /// to create additional Client PTYs, receive Events, etc. It is the
 /// Controlling PTY.
-@available(added=7)
 library fuchsia.hardware.pty;
 
 using fuchsia.device;
@@ -43,9 +42,22 @@ const SIGNAL_EVENT fuchsia.device.DeviceSignal = fuchsia.device.DeviceSignal.OOB
 
 @discoverable
 protocol Device {
-    // Compose from fuchsia.io.File so we can support Read/Write and export
-    // a "Tty" type node info
-    compose fuchsia.io.File;
+    // Compose from fuchsia.io/File so we can support Read/Write.
+    //
+    // NB: File2 does not implement inherent Describe, which prevents
+    // conflicting with the inherent Describe below.
+    compose fuchsia.io.File2;
+
+    // TODO(https://fxbug.dev/105607): Remove this. When?
+    compose fuchsia.io.Node1;
+
+    @selector("Describe")
+    Describe2() -> (resource table {
+        /// An optional event which transmits information about a device's state.
+        ///
+        /// The [`DeviceSignal`] values may be observed on this event.
+        1: event zx.handle:EVENTPAIR;
+    });
 
     /// Open a client PTY device with a unique `id`. `client` should be a handle
     /// to one endpoint of a channel that (on success) will become an open

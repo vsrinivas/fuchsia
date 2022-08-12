@@ -134,6 +134,7 @@ sdk://fidl/fuchsia.ui.scenic
 sdk://fidl/fuchsia.ui.types
 sdk://fidl/fuchsia.ui.views
 sdk://fidl/fuchsia.ultrasound
+sdk://fidl/fuchsia.unknown
 sdk://fidl/fuchsia.update
 sdk://fidl/fuchsia.update.channel
 sdk://fidl/fuchsia.update.channelcontrol

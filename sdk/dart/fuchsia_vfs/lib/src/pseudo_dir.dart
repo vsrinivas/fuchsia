@@ -317,10 +317,10 @@ class _DirConnection extends Directory {
     return Stream.fromIterable([d]);
   }
 
-  // TODO(https://fxbug.dev/77623): Switch from onOpen to onConnectionInfo when
+  // TODO(https://fxbug.dev/77623): Switch from onOpen to onRepresentation when
   // clients are ready.
   @override
-  Stream<ConnectionInfo> get onConnectionInfo async* {}
+  Stream<Representation> get onRepresentation async* {}
 
   @override
   Future<void> advisoryLock(AdvisoryLockRequest request) async {
@@ -379,10 +379,8 @@ class _DirConnection extends Directory {
   }
 
   @override
-  Future<ConnectionInfo> describe2(ConnectionInfoQuery query) async {
-    return ConnectionInfo(
-      representation: Representation.withDirectory(DirectoryInfo()),
-    );
+  Future<ConnectionInfo> getConnectionInfo() async {
+    return ConnectionInfo();
   }
 
   @override

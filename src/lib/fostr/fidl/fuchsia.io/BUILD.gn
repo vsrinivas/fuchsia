@@ -6,6 +6,5 @@ import("//src/lib/fostr/build/fostr_fidl.gni")
 
 fostr_fidl("fuchsia.io") {
   fidl_target = "//sdk/fidl/fuchsia.io"
-
-  deps = [ "//src/lib/fostr/fidl/fuchsia.mem" ]
+  deps = [ "//src/lib/fostr/fidl/fuchsia.unknown" ]
 }

@@ -126,15 +126,14 @@ enum class VnodeProtocol : uint32_t {
   kConnector = 1,
   kFile,
   kDirectory,
+  // TODO(https://fxbug.dev/77623): Remove these variants when Node1.Describe is gone and the tight
+  // coupling between io1 and io2 interfaces can be incinerated.
   kDevice,
   kTty,
-  kSynchronousDatagramSocket,
-  kStreamSocket,
-  kDatagramSocket,
   // Note: when appending more members, adjust |kVnodeProtocolCount| accordingly.
 };
 
-constexpr size_t kVnodeProtocolCount = static_cast<uint32_t>(VnodeProtocol::kDatagramSocket) + 1;
+constexpr size_t kVnodeProtocolCount = static_cast<uint32_t>(VnodeProtocol::kTty) + 1;
 
 // A collection of |VnodeProtocol|s, stored internally as a bit-field.
 // The N-th bit corresponds to the N-th element in the |VnodeProtocol| enum, under zero-based index.
@@ -295,13 +294,14 @@ struct VnodeConnectionOptions {
   constexpr VnodeProtocolSet protocols() const {
     if (flags.directory && flags.not_directory) {
       return VnodeProtocolSet::Empty();
-    } else if (flags.directory) {
-      return VnodeProtocol::kDirectory;
-    } else if (flags.not_directory) {
-      return VnodeProtocolSet::All().Except(VnodeProtocol::kDirectory);
-    } else {
-      return VnodeProtocolSet::All();
     }
+    if (flags.directory) {
+      return VnodeProtocol::kDirectory;
+    }
+    if (flags.not_directory) {
+      return VnodeProtocolSet::All().Except(VnodeProtocol::kDirectory);
+    }
+    return VnodeProtocolSet::All();
   }
 
 #ifdef __Fuchsia__
@@ -404,20 +404,6 @@ class VnodeRepresentation {
     zx::eventpair event = {};
   };
 
-  struct SynchronousDatagramSocket {
-    zx::eventpair event = {};
-  };
-
-  struct StreamSocket {
-    zx::socket socket = {};
-  };
-
-  struct DatagramSocket {
-    zx::socket socket = {};
-    uint64_t tx_meta_buf_size = {};
-    uint64_t rx_meta_buf_size = {};
-  };
-
   VnodeRepresentation() = default;
 
   // Forwards the constructor arguments into the underlying |std::variant|. This allows
@@ -456,25 +442,8 @@ class VnodeRepresentation {
 
   bool is_tty() const { return std::holds_alternative<Tty>(variants_); }
 
-  SynchronousDatagramSocket& synchronous_datagram_socket() {
-    return std::get<SynchronousDatagramSocket>(variants_);
-  }
-
-  bool is_synchronous_datagram_socket() const {
-    return std::holds_alternative<SynchronousDatagramSocket>(variants_);
-  }
-
-  DatagramSocket& datagram_socket() { return std::get<DatagramSocket>(variants_); }
-
-  bool is_datagram_socket() const { return std::holds_alternative<DatagramSocket>(variants_); }
-
-  StreamSocket& stream_socket() { return std::get<StreamSocket>(variants_); }
-
-  bool is_stream_socket() const { return std::holds_alternative<StreamSocket>(variants_); }
-
  private:
-  using Variants = std::variant<std::monostate, Connector, File, Directory, Device, Tty,
-                                SynchronousDatagramSocket, StreamSocket, DatagramSocket>;
+  using Variants = std::variant<std::monostate, Connector, File, Directory, Device, Tty>;
 
   Variants variants_ = {};
 };
@@ -489,7 +458,7 @@ struct ConnectionInfoConverter {
   explicit ConnectionInfoConverter(VnodeRepresentation representation);
 
   fidl::Arena<> arena;
-  fuchsia_io::wire::ConnectionInfo info;
+  fuchsia_io::wire::Representation representation;
 };
 
 #endif  // __Fuchsia__

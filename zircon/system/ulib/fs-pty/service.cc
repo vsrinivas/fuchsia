@@ -23,7 +23,7 @@ namespace fs_pty::internal {
 
 void DispatchPtyDeviceMessage(fidl::WireServer<fuchsia_hardware_pty::Device>* interface,
                               fidl::IncomingMessage& msg, fidl::Transaction* txn) {
-  fidl::WireDispatch<fuchsia_hardware_pty::Device>(interface, std::move(msg), txn);
+  fidl::WireDispatch(interface, std::move(msg), txn);
 }
 
 // Return ZX_ERR_NOT_SUPPORTED for all of the PTY things we don't actually support
@@ -64,9 +64,9 @@ void NullPtyDeviceImpl::SetWindowSize(SetWindowSizeRequestView request,
   completer.buffer(buf.view()).Reply(ZX_ERR_NOT_SUPPORTED);
 }
 
-// We need to provide these methods because |fuchsia.hardware.pty.Device| composes |fuchsia.io|.
-// Assert in all of these, since these should be handled by fs::Connection before our
-// HandleFsSpecificMessage() is called.
+// We need to provide these methods because |fuchsia.hardware.pty.Device|
+// composes |fuchsia.io.File2|. Assert in all of these, since these should be
+// handled by fs::Connection before our HandleFsSpecificMessage() is called.
 
 void NullPtyDeviceImpl::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
   ZX_ASSERT(false);
@@ -76,8 +76,7 @@ void NullPtyDeviceImpl::Write(WriteRequestView request, WriteCompleter::Sync& co
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::AdvisoryLock(AdvisoryLockRequestView request,
-                                     AdvisoryLockCompleter::Sync& completer) {
+void NullPtyDeviceImpl::Reopen(ReopenRequestView request, ReopenCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
@@ -89,12 +88,12 @@ void NullPtyDeviceImpl::Close(CloseRequestView request, CloseCompleter::Sync& co
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) {
+void NullPtyDeviceImpl::GetConnectionInfo(GetConnectionInfoRequestView request,
+                                          GetConnectionInfoCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::Describe2(Describe2RequestView request,
-                                  Describe2Completer::Sync& completer) {
+void NullPtyDeviceImpl::Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

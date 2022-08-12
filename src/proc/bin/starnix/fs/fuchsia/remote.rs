@@ -470,8 +470,7 @@ impl FileOps for RemoteFileObject {
     ) -> Result<zx::Vmo, Errno> {
         let has_execute = prot.contains(zx::VmarFlags::PERM_EXECUTE);
         prot -= zx::VmarFlags::PERM_EXECUTE;
-        let (mut vmo, _size) =
-            self.zxio.vmo_get(prot).map_err(|status| from_status_like_fdio!(status))?;
+        let mut vmo = self.zxio.vmo_get(prot).map_err(|status| from_status_like_fdio!(status))?;
         if has_execute {
             vmo = vmo.replace_as_executable(&VMEX_RESOURCE).map_err(impossible_error)?;
         }

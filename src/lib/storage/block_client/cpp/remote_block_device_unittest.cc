@@ -143,7 +143,8 @@ class MockBlockDevice {
     void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
       completer.Reply(fuchsia_io::wire::NodeInfo::WithDevice({}));
     }
-    void Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) override {}
+    void GetConnectionInfo(GetConnectionInfoRequestView request,
+                           GetConnectionInfoCompleter::Sync& completer) override {}
     void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {}
     void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) override {}
     void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) override {}

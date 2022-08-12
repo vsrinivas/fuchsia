@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
+@available(added=7)
 library fuchsia.io;
 
 using zx;
@@ -35,7 +35,7 @@ const MAX_NAME_LENGTH uint64 = 255;
 /// * It cannot be longer than [`MAX_PATH_LENGTH`].
 /// * It cannot have a leading "/".
 /// * It cannot have a trailing "/".
-/// * Each component must be a valid [`Name`].
+/// * It must be exactly "." OR each of its components must be a valid [`Name`].
 ///
 /// Paths should be transformed into their canonical forms at client side.
 /// For example, a client should convert `"foo/bar/.././baz/"` to `"foo/baz"`

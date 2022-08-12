@@ -16,9 +16,7 @@ zx_status_t zxio_default_borrow(zxio_t* io, zx_handle_t* out_handle) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t zxio_default_reopen(zxio_t* io, zxio_reopen_flags_t flags, zx_handle_t* out_handle) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
+zx_status_t zxio_default_clone(zxio_t* io, zx_handle_t* out_handle) { return ZX_ERR_NOT_SUPPORTED; }
 
 void zxio_default_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_handle_t* out_handle,
                              zx_signals_t* out_zx_signals) {

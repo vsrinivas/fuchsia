@@ -226,14 +226,12 @@ impl Zxio {
         Ok(())
     }
 
-    pub fn vmo_get(&self, flags: zx::VmarFlags) -> Result<(zx::Vmo, usize), zx::Status> {
+    pub fn vmo_get(&self, flags: zx::VmarFlags) -> Result<zx::Vmo, zx::Status> {
         let mut vmo = 0;
-        let mut size = 0;
-        let status =
-            unsafe { zxio::zxio_vmo_get(self.as_ptr(), flags.bits(), &mut vmo, &mut size) };
+        let status = unsafe { zxio::zxio_vmo_get(self.as_ptr(), flags.bits(), &mut vmo) };
         zx::ok(status)?;
         let handle = unsafe { zx::Handle::from_raw(vmo) };
-        Ok((zx::Vmo::from(handle), size))
+        Ok(zx::Vmo::from(handle))
     }
 
     pub fn attr_get(&self) -> Result<zxio_node_attributes_t, zx::Status> {
@@ -340,10 +338,9 @@ fn directory_open(
             zx::Status::ok(status)?;
             Ok(DescribedNode { node, kind: NodeKind::from(&*info.ok_or(zx::Status::IO)?) })
         }
-        fio::NodeEvent::OnConnectionInfo { payload } => Ok(DescribedNode {
-            node,
-            kind: NodeKind::from2(&payload.representation.ok_or(zx::Status::IO)?),
-        }),
+        fio::NodeEvent::OnRepresentation { payload } => {
+            Ok(DescribedNode { node, kind: NodeKind::from2(&payload) })
+        }
     }
 }
 

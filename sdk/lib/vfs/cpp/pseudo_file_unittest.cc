@@ -211,7 +211,7 @@ class PseudoFileTest : public gtest::RealLoopFixture {
   }
 
   static void CloseFile(fuchsia::io::FileSyncPtr& file, zx_status_t expected_status = ZX_OK) {
-    fuchsia::io::Node2_Close_Result result;
+    fuchsia::unknown::Closeable_Close_Result result;
     ASSERT_EQ(ZX_OK, file->Close(&result));
     if (expected_status == ZX_OK) {
       ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());

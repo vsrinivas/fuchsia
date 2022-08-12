@@ -164,10 +164,10 @@ where
                 fuchsia_trace::duration!("storage", "Directory::Clone");
                 self.handle_clone(flags, 0, object);
             }
-            fio::DirectoryRequest::Reopen { options, object_request, control_handle: _ } => {
+            fio::DirectoryRequest::Reopen { rights_request, object_request, control_handle: _ } => {
                 fuchsia_trace::duration!("storage", "Directory::Reopen");
                 let _ = object_request;
-                todo!("https://fxbug.dev/77623: options={:?}", options);
+                todo!("https://fxbug.dev/77623: rights_request={:?}", rights_request);
             }
             fio::DirectoryRequest::Close { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::Close");
@@ -179,10 +179,10 @@ where
                 let mut info = fio::NodeInfo::Directory(fio::DirectoryObject);
                 responder.send(&mut info)?;
             }
-            fio::DirectoryRequest::Describe2 { query, responder } => {
-                fuchsia_trace::duration!("storage", "Directory::Describe2");
+            fio::DirectoryRequest::GetConnectionInfo { responder } => {
+                fuchsia_trace::duration!("storage", "Directory::GetConnectionInfo");
                 let _ = responder;
-                todo!("https://fxbug.dev/77623: query={:?}", query);
+                todo!("https://fxbug.dev/77623");
             }
             fio::DirectoryRequest::GetAttr { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::GetAttr");
@@ -224,21 +224,10 @@ where
                 fuchsia_trace::duration!("storage", "Directory::Open");
                 self.handle_open(flags, mode, path, object);
             }
-            fio::DirectoryRequest::Open2 {
-                path,
-                mode,
-                options,
-                object_request,
-                control_handle: _,
-            } => {
+            fio::DirectoryRequest::Open2 { path, protocols, object_request, control_handle: _ } => {
                 fuchsia_trace::duration!("storage", "Directory::Open2");
                 let _ = object_request;
-                todo!(
-                    "https://fxbug.dev/77623: path={} mode={:?} options={:?}",
-                    path,
-                    mode,
-                    options
-                );
+                todo!("https://fxbug.dev/77623: path={} protocols={:?}", path, protocols);
             }
             fio::DirectoryRequest::AddInotifyFilter {
                 path,
@@ -288,6 +277,10 @@ where
                     self.handle_watch(mask, watcher).into()
                 };
                 responder.send(status.into_raw())?;
+            }
+            fio::DirectoryRequest::Query { responder } => {
+                let _ = responder;
+                todo!("https://fxbug.dev/77623");
             }
             fio::DirectoryRequest::QueryFilesystem { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::QueryFilesystem");

@@ -123,7 +123,7 @@ impl DirectoryReadyNotifier {
         match events.next().await {
             Some(Ok(fio::NodeEvent::OnOpen_ { s: status, info: _ })) => zx::Status::ok(status)
                 .map_err(|_| ModelError::open_directory_error(moniker.clone(), path)),
-            Some(Ok(fio::NodeEvent::OnConnectionInfo { .. })) => Ok(()),
+            Some(Ok(fio::NodeEvent::OnRepresentation { .. })) => Ok(()),
             _ => Err(ModelError::open_directory_error(moniker.clone(), path)),
         }
     }
@@ -286,7 +286,7 @@ impl DirectoryReadyNotifier {
                     return Err(TryOpenError::Status(zx_status));
                 }
             }
-            Some(Ok(fio::NodeEvent::OnConnectionInfo { .. })) => {}
+            Some(Ok(fio::NodeEvent::OnRepresentation { .. })) => {}
             _ => {
                 return Err(TryOpenError::Status(zx::Status::PEER_CLOSED));
             }

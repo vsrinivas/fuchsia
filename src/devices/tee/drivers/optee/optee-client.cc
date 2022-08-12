@@ -138,9 +138,9 @@ zx_status_t AwaitIoOnOpenStatus(fidl::UnownedClientEnd<fuchsia_io::Node> node) {
       status_ = event->s;
     }
 
-    void OnConnectionInfo(fidl::WireEvent<fuchsia_io::Node::OnConnectionInfo>* event) override {
+    void OnRepresentation(fidl::WireEvent<fuchsia_io::Node::OnRepresentation>* event) override {
       status_ = ZX_ERR_NOT_SUPPORTED;
-      LOG(ERROR, "OnConnectionInfo is not supported");
+      LOG(ERROR, "OnRepresentation is not supported");
     }
 
     bool call_was_successful_ = false;

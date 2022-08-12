@@ -37,6 +37,7 @@ import (
 	"fidl/fuchsia/posix/socket"
 	packetsocket "fidl/fuchsia/posix/socket/packet"
 	rawsocket "fidl/fuchsia/posix/socket/raw"
+	"fidl/fuchsia/unknown"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
@@ -2181,7 +2182,7 @@ func (s *datagramSocketImpl) loopWrite(ch chan<- struct{}) {
 	}
 }
 
-func (s *datagramSocketImpl) addConnection(_ fidl.Context, object fidlio.NodeWithCtxInterfaceRequest) {
+func (s *datagramSocketImpl) addConnection(_ fidl.Context, channel zx.Channel) {
 	{
 		sCopy := *s
 		s := &sCopy
@@ -2201,7 +2202,7 @@ func (s *datagramSocketImpl) addConnection(_ fidl.Context, object fidlio.NodeWit
 			}()
 
 			stub := socket.DatagramSocketWithCtxStub{Impl: s}
-			component.Serve(ctx, &stub, object.Channel, component.ServeOptions{
+			component.Serve(ctx, &stub, channel, component.ServeOptions{
 				OnError: func(err error) {
 					// NB: this protocol is not discoverable, so the bindings do not include its name.
 					_ = syslog.WarnTf("fuchsia.posix.socket.DatagramSocket", "%s", err)
@@ -2513,18 +2514,26 @@ func (s *datagramSocketImpl) GetIpv6ReceivePacketInfo(fidl.Context) (socket.Base
 }
 
 func (s *datagramSocketImpl) Clone(ctx fidl.Context, flags fidlio.OpenFlags, object fidlio.NodeWithCtxInterfaceRequest) error {
-	s.addConnection(ctx, object)
+	s.addConnection(ctx, object.Channel)
 
 	_ = syslog.DebugTf("Clone", "%p: flags=%b", s.endpointWithSocket, flags)
 
 	return nil
 }
 
-func (s *datagramSocketImpl) Reopen(ctx fidl.Context, options fidlio.ConnectionOptions, channel zx.Channel) error {
+func (s *datagramSocketImpl) Clone2(ctx fidl.Context, object unknown.CloneableWithCtxInterfaceRequest) error {
+	s.addConnection(ctx, object.Channel)
+
+	_ = syslog.DebugTf("Clone", "%p", s.endpointWithSocket)
+
+	return nil
+}
+
+func (s *datagramSocketImpl) Reopen(ctx fidl.Context, rights *fidlio.RightsRequest, channel zx.Channel) error {
 	// TODO(https://fxbug.dev/77623): Implement.
 	_ = channel.Close()
 
-	_ = syslog.DebugTf("Reopen", "%p: options=%#v", s.endpointWithSocket, options)
+	_ = syslog.DebugTf("Reopen", "%p: rights=%#v", s.endpointWithSocket, rights)
 
 	return nil
 }
@@ -2541,38 +2550,45 @@ func (s *datagramSocketImpl) close() {
 	s.cancel()
 }
 
-func (s *datagramSocketImpl) Close(fidl.Context) (fidlio.Node2CloseResult, error) {
+func (s *datagramSocketImpl) Close(fidl.Context) (unknown.CloseableCloseResult, error) {
 	_ = syslog.DebugTf("Close", "%p", s)
 	s.close()
-	return fidlio.Node2CloseResultWithResponse(fidlio.Node2CloseResponse{}), nil
+	return unknown.CloseableCloseResultWithResponse(unknown.CloseableCloseResponse{}), nil
 }
 
 func (s *datagramSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo, error) {
-	socket, err := s.describe()
+	handle, err := s.describe()
 	if err != nil {
 		return fidlio.NodeInfo{}, err
 	}
-	return fidlio.NodeInfoWithDatagramSocket(fidlio.DatagramSocket{Socket: zx.Socket(socket), TxMetaBufSize: uint64(udpTxPreludeSize), RxMetaBufSize: uint64(udpRxPreludeSize)}), nil
+	return fidlio.NodeInfoWithDatagramSocket(fidlio.DatagramSocket{
+		Socket:        zx.Socket(handle),
+		TxMetaBufSize: uint64(udpTxPreludeSize),
+		RxMetaBufSize: uint64(udpRxPreludeSize),
+	}), nil
 }
 
-func (s *datagramSocketImpl) Describe2(_ fidl.Context, query fidlio.ConnectionInfoQuery) (fidlio.ConnectionInfo, error) {
-	var connectionInfo fidlio.ConnectionInfo
-	if query&fidlio.ConnectionInfoQueryRepresentation != 0 {
-		socket, err := s.describe()
-		if err != nil {
-			return connectionInfo, err
-		}
-		connectionInfo.SetRepresentation(fidlio.RepresentationWithDatagramSocket(fidlio.DatagramSocketInfo{Socket: zx.Socket(socket), TxMetaBufSize: uint64(udpTxPreludeSize), RxMetaBufSize: uint64(udpRxPreludeSize)}))
+func (*datagramSocketImpl) Query(fidl.Context) (uint64, error) {
+	panic("TODO(https://fxbug.dev/105608): implement Query")
+}
+
+func (s *datagramSocketImpl) Describe2(fidl.Context) (socket.DatagramSocketDescribe2Response, error) {
+	var response socket.DatagramSocketDescribe2Response
+	handle, err := s.describe()
+	if err != nil {
+		return response, err
 	}
+	response.SetSocket(zx.Socket(handle))
+	response.SetTxMetaBufSize(uint64(udpTxPreludeSize))
+	response.SetRxMetaBufSize(uint64(udpRxPreludeSize))
+	return response, nil
+}
+
+func (s *datagramSocketImpl) GetConnectionInfo(fidl.Context) (fidlio.ConnectionInfo, error) {
+	var connectionInfo fidlio.ConnectionInfo
 	// TODO(https://fxbug.dev/77623): Populate the rights requested by the client at connection.
 	rights := fidlio.RStarDir
-	if query&fidlio.ConnectionInfoQueryRights != 0 {
-		connectionInfo.SetRights(rights)
-	}
-	if query&fidlio.ConnectionInfoQueryAvailableOperations != 0 {
-		abilities := fidlio.OperationsReadBytes | fidlio.OperationsWriteBytes | fidlio.OperationsGetAttributes
-		connectionInfo.SetAvailableOperations(abilities & rights)
-	}
+	connectionInfo.SetRights(rights)
 	return connectionInfo, nil
 }
 
@@ -2732,29 +2748,30 @@ func (s *synchronousDatagramSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo,
 	if err != nil {
 		return fidlio.NodeInfo{}, err
 	}
-	return fidlio.NodeInfoWithSynchronousDatagramSocket(fidlio.SynchronousDatagramSocket{Event: event}), nil
+	return fidlio.NodeInfoWithSynchronousDatagramSocket(fidlio.SynchronousDatagramSocket{
+		Event: event,
+	}), nil
 }
 
-func (s *synchronousDatagramSocketImpl) Describe2(_ fidl.Context, query fidlio.ConnectionInfoQuery) (fidlio.ConnectionInfo, error) {
-	var connectionInfo fidlio.ConnectionInfo
-	if query&fidlio.ConnectionInfoQueryRepresentation != 0 {
-		event, err := s.describe()
-		if err != nil {
-			return connectionInfo, err
-		}
-		var synchronousDatagramSocket fidlio.SynchronousDatagramSocketInfo
-		synchronousDatagramSocket.SetEvent(event)
-		connectionInfo.SetRepresentation(fidlio.RepresentationWithSynchronousDatagramSocket(synchronousDatagramSocket))
+func (*synchronousDatagramSocketImpl) Query(fidl.Context) (uint64, error) {
+	panic("TODO(https://fxbug.dev/105608): implement Query")
+}
+
+func (s *synchronousDatagramSocketImpl) Describe2(fidl.Context) (socket.SynchronousDatagramSocketDescribe2Response, error) {
+	var response socket.SynchronousDatagramSocketDescribe2Response
+	event, err := s.describe()
+	if err != nil {
+		return response, err
 	}
+	response.SetEvent(event)
+	return response, nil
+}
+
+func (s *synchronousDatagramSocketImpl) GetConnectionInfo(fidl.Context) (fidlio.ConnectionInfo, error) {
+	var connectionInfo fidlio.ConnectionInfo
 	// TODO(https://fxbug.dev/77623): Populate the rights requested by the client at connection.
 	rights := fidlio.RStarDir
-	if query&fidlio.ConnectionInfoQueryRights != 0 {
-		connectionInfo.SetRights(rights)
-	}
-	if query&fidlio.ConnectionInfoQueryAvailableOperations != 0 {
-		abilities := fidlio.OperationsReadBytes | fidlio.OperationsWriteBytes | fidlio.OperationsGetAttributes
-		connectionInfo.SetAvailableOperations(abilities & rights)
-	}
+	connectionInfo.SetRights(rights)
 	return connectionInfo, nil
 }
 
@@ -2900,23 +2917,23 @@ func (s *synchronousDatagramSocket) close() {
 	s.cancel()
 }
 
-func (s *synchronousDatagramSocket) Close(fidl.Context) (fidlio.Node2CloseResult, error) {
+func (s *synchronousDatagramSocket) Close(fidl.Context) (unknown.CloseableCloseResult, error) {
 	_ = syslog.DebugTf("Close", "%p", s.endpointWithEvent)
 	s.close()
-	return fidlio.Node2CloseResultWithResponse(fidlio.Node2CloseResponse{}), nil
+	return unknown.CloseableCloseResultWithResponse(unknown.CloseableCloseResponse{}), nil
 }
 
-func (s *synchronousDatagramSocketImpl) addConnection(_ fidl.Context, object fidlio.NodeWithCtxInterfaceRequest) {
+func (s *synchronousDatagramSocketImpl) addConnection(_ fidl.Context, channel zx.Channel) {
 	{
 		sCopy := *s
 		s := &sCopy
 
 		// NB: this protocol is not discoverable, so the bindings do not include its name.
-		s.synchronousDatagramSocket.addConnection("fuchsia.posix.socket.SynchronousDatagramSocket", object, &socket.SynchronousDatagramSocketWithCtxStub{Impl: s})
+		s.synchronousDatagramSocket.addConnection("fuchsia.posix.socket.SynchronousDatagramSocket", channel, &socket.SynchronousDatagramSocketWithCtxStub{Impl: s})
 	}
 }
 
-func (s *synchronousDatagramSocket) addConnection(prefix string, object fidlio.NodeWithCtxInterfaceRequest, stub fidl.Stub) {
+func (s *synchronousDatagramSocket) addConnection(prefix string, channel zx.Channel, stub fidl.Stub) {
 	s.ns.stats.SocketCount.Increment()
 	s.endpoint.incRef()
 	go func() {
@@ -2931,7 +2948,7 @@ func (s *synchronousDatagramSocket) addConnection(prefix string, object fidlio.N
 			}
 		}()
 
-		component.Serve(ctx, stub, object.Channel, component.ServeOptions{
+		component.Serve(ctx, stub, channel, component.ServeOptions{
 			OnError: func(err error) {
 				// NB: this protocol is not discoverable, so the bindings do not include its name.
 				_ = syslog.WarnTf(prefix, "%s", err)
@@ -2941,18 +2958,26 @@ func (s *synchronousDatagramSocket) addConnection(prefix string, object fidlio.N
 }
 
 func (s *synchronousDatagramSocketImpl) Clone(ctx fidl.Context, flags fidlio.OpenFlags, object fidlio.NodeWithCtxInterfaceRequest) error {
-	s.addConnection(ctx, object)
+	s.addConnection(ctx, object.Channel)
 
 	_ = syslog.DebugTf("Clone", "%p: flags=%b", s.endpointWithEvent, flags)
 
 	return nil
 }
 
-func (s *synchronousDatagramSocketImpl) Reopen(ctx fidl.Context, options fidlio.ConnectionOptions, channel zx.Channel) error {
+func (s *synchronousDatagramSocketImpl) Clone2(ctx fidl.Context, object unknown.CloneableWithCtxInterfaceRequest) error {
+	s.addConnection(ctx, object.Channel)
+
+	_ = syslog.DebugTf("Clone", "%p", s.endpointWithEvent)
+
+	return nil
+}
+
+func (s *synchronousDatagramSocketImpl) Reopen(ctx fidl.Context, rights *fidlio.RightsRequest, channel zx.Channel) error {
 	// TODO(https://fxbug.dev/77623): Implement.
 	_ = channel.Close()
 
-	_ = syslog.DebugTf("Reopen", "%p: options=%#v", s.endpointWithEvent, options)
+	_ = syslog.DebugTf("Reopen", "%p: rights=%#v", s.endpointWithEvent, rights)
 
 	return nil
 }
@@ -3169,7 +3194,7 @@ func newStreamSocket(s streamSocketImpl) (socket.StreamSocketWithCtxInterface, e
 	if err != nil {
 		return socket.StreamSocketWithCtxInterface{}, err
 	}
-	s.addConnection(context.Background(), fidlio.NodeWithCtxInterfaceRequest{Channel: localC})
+	s.addConnection(context.Background(), localC)
 	_ = syslog.DebugTf("NewStream", "%p", s)
 	return socket.StreamSocketWithCtxInterface{Channel: peerC}, nil
 }
@@ -3239,13 +3264,13 @@ func (s *streamSocketImpl) close() {
 	}
 }
 
-func (s *streamSocketImpl) Close(fidl.Context) (fidlio.Node2CloseResult, error) {
+func (s *streamSocketImpl) Close(fidl.Context) (unknown.CloseableCloseResult, error) {
 	_ = syslog.DebugTf("Close", "%p", s)
 	s.close()
-	return fidlio.Node2CloseResultWithResponse(fidlio.Node2CloseResponse{}), nil
+	return unknown.CloseableCloseResultWithResponse(unknown.CloseableCloseResponse{}), nil
 }
 
-func (s *streamSocketImpl) addConnection(_ fidl.Context, object fidlio.NodeWithCtxInterfaceRequest) {
+func (s *streamSocketImpl) addConnection(_ fidl.Context, channel zx.Channel) {
 	{
 		sCopy := *s
 		s := &sCopy
@@ -3265,7 +3290,7 @@ func (s *streamSocketImpl) addConnection(_ fidl.Context, object fidlio.NodeWithC
 			}()
 
 			stub := socket.StreamSocketWithCtxStub{Impl: s}
-			component.Serve(ctx, &stub, object.Channel, component.ServeOptions{
+			component.Serve(ctx, &stub, channel, component.ServeOptions{
 				OnError: func(err error) {
 					// NB: this protocol is not discoverable, so the bindings do not include its name.
 					_ = syslog.WarnTf("fuchsia.posix.socket.StreamSocket", "%s", err)
@@ -3276,50 +3301,59 @@ func (s *streamSocketImpl) addConnection(_ fidl.Context, object fidlio.NodeWithC
 }
 
 func (s *streamSocketImpl) Clone(ctx fidl.Context, flags fidlio.OpenFlags, object fidlio.NodeWithCtxInterfaceRequest) error {
-	s.addConnection(ctx, object)
+	s.addConnection(ctx, object.Channel)
 
 	_ = syslog.DebugTf("Clone", "%p: flags=%b", s.endpointWithSocket, flags)
 
 	return nil
 }
 
-func (s *streamSocketImpl) Reopen(ctx fidl.Context, options fidlio.ConnectionOptions, channel zx.Channel) error {
+func (s *streamSocketImpl) Clone2(ctx fidl.Context, object unknown.CloneableWithCtxInterfaceRequest) error {
+	s.addConnection(ctx, object.Channel)
+
+	_ = syslog.DebugTf("Clone", "%p", s.endpointWithSocket)
+
+	return nil
+}
+
+func (s *streamSocketImpl) Reopen(ctx fidl.Context, rights *fidlio.RightsRequest, channel zx.Channel) error {
 	// TODO(https://fxbug.dev/77623): Implement.
 	_ = channel.Close()
 
-	_ = syslog.DebugTf("Reopen", "%p: options=%#v", s.endpointWithSocket, options)
+	_ = syslog.DebugTf("Reopen", "%p: rights=%#v", s.endpointWithSocket, rights)
 
 	return nil
 }
 
 func (s *streamSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo, error) {
-	socket, err := s.describe()
+	handle, err := s.describe()
 	if err != nil {
 		return fidlio.NodeInfo{}, err
 	}
-	return fidlio.NodeInfoWithStreamSocket(fidlio.StreamSocket{Socket: zx.Socket(socket)}), nil
+	return fidlio.NodeInfoWithStreamSocket(fidlio.StreamSocket{
+		Socket: zx.Socket(handle),
+	}), nil
 }
 
-func (s *streamSocketImpl) Describe2(_ fidl.Context, query fidlio.ConnectionInfoQuery) (fidlio.ConnectionInfo, error) {
-	var connectionInfo fidlio.ConnectionInfo
-	if query&fidlio.ConnectionInfoQueryRepresentation != 0 {
-		socket, err := s.describe()
-		if err != nil {
-			return connectionInfo, err
-		}
-		var streamSocket fidlio.StreamSocketInfo
-		streamSocket.SetSocket(zx.Socket(socket))
-		connectionInfo.SetRepresentation(fidlio.RepresentationWithStreamSocket(streamSocket))
+func (*streamSocketImpl) Query(fidl.Context) (uint64, error) {
+	panic("TODO(https://fxbug.dev/105608): implement Query")
+}
+
+func (s *streamSocketImpl) Describe2(fidl.Context) (socket.StreamSocketDescribe2Response, error) {
+	var response socket.StreamSocketDescribe2Response
+	handle, err := s.describe()
+	if err != nil {
+		return response, err
 	}
+	response.SetSocket(zx.Socket(handle))
+	return response, nil
+}
+
+func (s *streamSocketImpl) GetConnectionInfo(fidl.Context) (fidlio.ConnectionInfo, error) {
+	var connectionInfo fidlio.ConnectionInfo
 	// TODO(https://fxbug.dev/77623): Populate the rights requested by the client at connection.
 	rights := fidlio.RStarDir
-	if query&fidlio.ConnectionInfoQueryRights != 0 {
-		connectionInfo.SetRights(rights)
-	}
-	if query&fidlio.ConnectionInfoQueryAvailableOperations != 0 {
-		abilities := fidlio.OperationsReadBytes | fidlio.OperationsWriteBytes | fidlio.OperationsGetAttributes
-		connectionInfo.SetAvailableOperations(abilities & rights)
-	}
+	connectionInfo.SetRights(rights)
 	return connectionInfo, nil
 }
 
@@ -3817,7 +3851,7 @@ func (sp *providerImpl) DatagramSocketDeprecated(ctx fidl.Context, domain socket
 		return socket.ProviderDatagramSocketDeprecatedResult{}, err
 	}
 
-	s.addConnection(ctx, fidlio.NodeWithCtxInterfaceRequest{Channel: localC})
+	s.addConnection(ctx, localC)
 	_ = syslog.DebugTf("NewSynchronousDatagram", "%p", s.endpointWithEvent)
 	sp.ns.onAddEndpoint(&s.endpoint)
 
@@ -3867,7 +3901,7 @@ func (sp *providerImpl) DatagramSocket(ctx fidl.Context, domain socket.Domain, p
 			return socket.ProviderDatagramSocketResult{}, err
 		}
 
-		s.addConnection(ctx, fidlio.NodeWithCtxInterfaceRequest{Channel: localC})
+		s.addConnection(ctx, localC)
 		_ = syslog.DebugTf("NewSynchronousDatagram", "%p", s.endpointWithEvent)
 		sp.ns.onAddEndpoint(&s.endpoint)
 
@@ -3888,7 +3922,7 @@ func (sp *providerImpl) DatagramSocket(ctx fidl.Context, domain socket.Domain, p
 		return socket.ProviderDatagramSocketResult{}, err
 	}
 
-	s.addConnection(context.Background(), fidlio.NodeWithCtxInterfaceRequest{Channel: localC})
+	s.addConnection(context.Background(), localC)
 	_ = syslog.DebugTf("NewDatagram", "%p", s)
 	return socket.ProviderDatagramSocketResultWithResponse(socket.ProviderDatagramSocketResponseWithDatagramSocket(socket.DatagramSocketWithCtxInterface{Channel: peerC})), nil
 }
@@ -4000,7 +4034,7 @@ func (sp *rawProviderImpl) Socket(ctx fidl.Context, domain socket.Domain, proto 
 		return rawsocket.ProviderSocketResult{}, err
 	}
 
-	s.addConnection(ctx, fidlio.NodeWithCtxInterfaceRequest{Channel: localC})
+	s.addConnection(ctx, localC)
 	_ = syslog.DebugTf("NewRawSocket", "%p", s.endpointWithEvent)
 	sp.ns.onAddEndpoint(&s.endpoint)
 
@@ -4026,55 +4060,64 @@ func (s *rawSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo, error) {
 	if err != nil {
 		return fidlio.NodeInfo{}, err
 	}
-	return fidlio.NodeInfoWithRawSocket(fidlio.RawSocket{Event: event}), nil
+	return fidlio.NodeInfoWithRawSocket(fidlio.RawSocket{
+		Event: event,
+	}), nil
 }
 
-func (s *rawSocketImpl) Describe2(_ fidl.Context, query fidlio.ConnectionInfoQuery) (fidlio.ConnectionInfo, error) {
-	var connectionInfo fidlio.ConnectionInfo
-	if query&fidlio.ConnectionInfoQueryRepresentation != 0 {
-		event, err := s.describe()
-		if err != nil {
-			return connectionInfo, err
-		}
-		var rawSocket fidlio.RawSocketInfo
-		rawSocket.SetEvent(event)
-		connectionInfo.SetRepresentation(fidlio.RepresentationWithRawSocket(rawSocket))
+func (*rawSocketImpl) Query(fidl.Context) (uint64, error) {
+	panic("TODO(https://fxbug.dev/105608): implement Query")
+}
+
+func (s *rawSocketImpl) Describe2(fidl.Context) (rawsocket.SocketDescribe2Response, error) {
+	var response rawsocket.SocketDescribe2Response
+	event, err := s.describe()
+	if err != nil {
+		return response, err
 	}
+	response.SetEvent(event)
+	return response, nil
+}
+
+func (s *rawSocketImpl) GetConnectionInfo(fidl.Context) (fidlio.ConnectionInfo, error) {
+	var connectionInfo fidlio.ConnectionInfo
 	// TODO(https://fxbug.dev/77623): Populate the rights requested by the client at connection.
 	rights := fidlio.RStarDir
-	if query&fidlio.ConnectionInfoQueryRights != 0 {
-		connectionInfo.SetRights(rights)
-	}
-	if query&fidlio.ConnectionInfoQueryAvailableOperations != 0 {
-		abilities := fidlio.OperationsReadBytes | fidlio.OperationsWriteBytes | fidlio.OperationsGetAttributes
-		connectionInfo.SetAvailableOperations(abilities & rights)
-	}
+	connectionInfo.SetRights(rights)
 	return connectionInfo, nil
 }
 
-func (s *rawSocketImpl) addConnection(_ fidl.Context, object fidlio.NodeWithCtxInterfaceRequest) {
+func (s *rawSocketImpl) addConnection(_ fidl.Context, channel zx.Channel) {
 	{
 		sCopy := *s
 		s := &sCopy
 
 		// NB: this protocol is not discoverable, so the bindings do not include its name.
-		s.synchronousDatagramSocket.addConnection("fuchsia.posix.socket.raw.Socket", object, &rawsocket.SocketWithCtxStub{Impl: s})
+		s.synchronousDatagramSocket.addConnection("fuchsia.posix.socket.raw.Socket", channel, &rawsocket.SocketWithCtxStub{Impl: s})
 	}
 }
 
 func (s *rawSocketImpl) Clone(ctx fidl.Context, flags fidlio.OpenFlags, object fidlio.NodeWithCtxInterfaceRequest) error {
-	s.addConnection(ctx, object)
+	s.addConnection(ctx, object.Channel)
 
 	_ = syslog.DebugTf("Clone", "%p: flags=%b", s.endpointWithEvent, flags)
 
 	return nil
 }
 
-func (s *rawSocketImpl) Reopen(ctx fidl.Context, options fidlio.ConnectionOptions, channel zx.Channel) error {
+func (s *rawSocketImpl) Clone2(ctx fidl.Context, object unknown.CloneableWithCtxInterfaceRequest) error {
+	s.addConnection(ctx, object.Channel)
+
+	_ = syslog.DebugTf("Clone", "%p", s.endpointWithEvent)
+
+	return nil
+}
+
+func (s *rawSocketImpl) Reopen(ctx fidl.Context, rights *fidlio.RightsRequest, channel zx.Channel) error {
 	// TODO(https://fxbug.dev/77623): Implement.
 	_ = channel.Close()
 
-	_ = syslog.DebugTf("Reopen", "%p: options=%#v", s.endpointWithEvent, options)
+	_ = syslog.DebugTf("Reopen", "%p: rights=%#v", s.endpointWithEvent, rights)
 
 	return nil
 }
@@ -4375,56 +4418,65 @@ func (s *packetSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo, error) {
 	if err != nil {
 		return fidlio.NodeInfo{}, err
 	}
-	return fidlio.NodeInfoWithPacketSocket(fidlio.PacketSocket{Event: event}), nil
+	return fidlio.NodeInfoWithPacketSocket(fidlio.PacketSocket{
+		Event: event,
+	}), nil
 }
 
-func (s *packetSocketImpl) Describe2(_ fidl.Context, query fidlio.ConnectionInfoQuery) (fidlio.ConnectionInfo, error) {
-	var connectionInfo fidlio.ConnectionInfo
-	if query&fidlio.ConnectionInfoQueryRepresentation != 0 {
-		event, err := s.describe()
-		if err != nil {
-			return connectionInfo, err
-		}
-		var packetSocket fidlio.PacketSocketInfo
-		packetSocket.SetEvent(event)
-		connectionInfo.SetRepresentation(fidlio.RepresentationWithPacketSocket(packetSocket))
+func (*packetSocketImpl) Query(fidl.Context) (uint64, error) {
+	panic("TODO(https://fxbug.dev/105608): implement Query")
+}
+
+func (s *packetSocketImpl) Describe2(fidl.Context) (packetsocket.SocketDescribe2Response, error) {
+	var response packetsocket.SocketDescribe2Response
+	event, err := s.describe()
+	if err != nil {
+		return response, err
 	}
+	response.SetEvent(event)
+	return response, nil
+}
+
+func (s *packetSocketImpl) GetConnectionInfo(fidl.Context) (fidlio.ConnectionInfo, error) {
+	var connectionInfo fidlio.ConnectionInfo
 	// TODO(https://fxbug.dev/77623): Populate the rights requested by the client at connection.
 	rights := fidlio.RStarDir
-	if query&fidlio.ConnectionInfoQueryRights != 0 {
-		connectionInfo.SetRights(rights)
-	}
-	if query&fidlio.ConnectionInfoQueryAvailableOperations != 0 {
-		abilities := fidlio.OperationsReadBytes | fidlio.OperationsWriteBytes | fidlio.OperationsGetAttributes
-		connectionInfo.SetAvailableOperations(abilities & rights)
-	}
+	connectionInfo.SetRights(rights)
 	return connectionInfo, nil
 }
 
 func (s *packetSocketImpl) Clone(ctx fidl.Context, flags fidlio.OpenFlags, object fidlio.NodeWithCtxInterfaceRequest) error {
-	s.addConnection(ctx, object)
+	s.addConnection(ctx, object.Channel)
 
 	_ = syslog.DebugTf("Clone", "%p: flags=%b", s.endpointWithEvent, flags)
 
 	return nil
 }
 
-func (s *packetSocketImpl) Reopen(ctx fidl.Context, options fidlio.ConnectionOptions, channel zx.Channel) error {
-	// TODO(https://fxbug.dev/77623): Implement.
-	_ = channel.Close()
+func (s *packetSocketImpl) Clone2(ctx fidl.Context, object unknown.CloneableWithCtxInterfaceRequest) error {
+	s.addConnection(ctx, object.Channel)
 
-	_ = syslog.DebugTf("Reopen", "%p: options=%#v", s.endpointWithEvent, options)
+	_ = syslog.DebugTf("Clone", "%p", s.endpointWithEvent)
 
 	return nil
 }
 
-func (s *packetSocketImpl) addConnection(_ fidl.Context, object fidlio.NodeWithCtxInterfaceRequest) {
+func (s *packetSocketImpl) Reopen(ctx fidl.Context, rights *fidlio.RightsRequest, channel zx.Channel) error {
+	// TODO(https://fxbug.dev/77623): Implement.
+	_ = channel.Close()
+
+	_ = syslog.DebugTf("Reopen", "%p: rights=%#v", s.endpointWithEvent, rights)
+
+	return nil
+}
+
+func (s *packetSocketImpl) addConnection(_ fidl.Context, channel zx.Channel) {
 	{
 		sCopy := *s
 		s := &sCopy
 
 		// NB: this protocol is not discoverable, so the bindings do not include its name.
-		s.synchronousDatagramSocket.addConnection("fuchsia.posix.socket.packet.Socket", object, &packetsocket.SocketWithCtxStub{Impl: s})
+		s.synchronousDatagramSocket.addConnection("fuchsia.posix.socket.packet.Socket", channel, &packetsocket.SocketWithCtxStub{Impl: s})
 	}
 }
 
@@ -4660,7 +4712,7 @@ func (sp *packetProviderImpl) Socket(ctx fidl.Context, kind packetsocket.Kind) (
 		return packetsocket.ProviderSocketResult{}, err
 	}
 
-	s.addConnection(ctx, fidlio.NodeWithCtxInterfaceRequest{Channel: localC})
+	s.addConnection(ctx, localC)
 	_ = syslog.DebugTf("NewPacketSocket", "%p", s.endpointWithEvent)
 	sp.ns.onAddEndpoint(&s.endpoint)
 

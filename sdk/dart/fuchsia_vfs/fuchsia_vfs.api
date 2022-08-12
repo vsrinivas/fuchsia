@@ -735,29 +735,13 @@
               "type": "MethodDeclarationImpl"
             },
             "describe2": {
-              "SimpleFormalParameterImpl": {
-                "query": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "query",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "ConnectionInfoQuery"
-                }
-              },
               "isAbstract": false,
               "isGetter": false,
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
               "name": "describe2",
-              "returnType": "ConnectionInfo",
+              "returnType": "FileInfo",
               "type": "MethodDeclarationImpl"
             },
             "getBackingMemory": {
@@ -784,6 +768,16 @@
               "isStatic": false,
               "name": "getBackingMemory",
               "returnType": "Vmo",
+              "type": "MethodDeclarationImpl"
+            },
+            "getConnectionInfo": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "getConnectionInfo",
+              "returnType": "ConnectionInfo",
               "type": "MethodDeclarationImpl"
             },
             "inodeNumber": {
@@ -844,32 +838,6 @@
               "returnType": "NodeInfo",
               "type": "MethodDeclarationImpl"
             },
-            "describe2": {
-              "SimpleFormalParameterImpl": {
-                "query": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "query",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "ConnectionInfoQuery"
-                }
-              },
-              "isAbstract": false,
-              "isGetter": false,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "describe2",
-              "returnType": "ConnectionInfo",
-              "type": "MethodDeclarationImpl"
-            },
             "getBackingMemory": {
               "SimpleFormalParameterImpl": {
                 "flags": {
@@ -894,6 +862,16 @@
               "isStatic": false,
               "name": "getBackingMemory",
               "returnType": "Vmo",
+              "type": "MethodDeclarationImpl"
+            },
+            "getConnectionInfo": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "getConnectionInfo",
+              "returnType": "ConnectionInfo",
               "type": "MethodDeclarationImpl"
             }
           },
@@ -1344,32 +1322,6 @@
               "returnType": "NodeInfo",
               "type": "MethodDeclarationImpl"
             },
-            "describe2": {
-              "SimpleFormalParameterImpl": {
-                "query": {
-                  "isConst": false,
-                  "isFinal": false,
-                  "isOptional": false,
-                  "isOptionalNamed": false,
-                  "isOptionalPositional": false,
-                  "isPositional": true,
-                  "isRequired": true,
-                  "isRequiredNamed": false,
-                  "isRequiredPositional": true,
-                  "name": "query",
-                  "type": "SimpleFormalParameterImpl",
-                  "varType": "ConnectionInfoQuery"
-                }
-              },
-              "isAbstract": false,
-              "isGetter": false,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "describe2",
-              "returnType": "ConnectionInfo",
-              "type": "MethodDeclarationImpl"
-            },
             "getBackingMemory": {
               "SimpleFormalParameterImpl": {
                 "flags": {
@@ -1394,6 +1346,16 @@
               "isStatic": false,
               "name": "getBackingMemory",
               "returnType": "Vmo",
+              "type": "MethodDeclarationImpl"
+            },
+            "getConnectionInfo": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "getConnectionInfo",
+              "returnType": "ConnectionInfo",
               "type": "MethodDeclarationImpl"
             }
           },

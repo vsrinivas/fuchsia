@@ -24,6 +24,7 @@ sdk://fidl/fuchsia.ldsvc
 sdk://fidl/fuchsia.logger
 sdk://fidl/fuchsia.mem
 sdk://fidl/fuchsia.process
+sdk://fidl/fuchsia.unknown
 sdk://fidl/fuchsia.url
 sdk://fidl/fuchsia.wlan.common
 sdk://fidl/fuchsia.wlan.ieee80211

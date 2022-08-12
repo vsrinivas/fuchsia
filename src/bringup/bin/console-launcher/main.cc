@@ -43,21 +43,21 @@
 
 namespace {
 
-template <typename FOnOpen, typename FOnConnectionInfo>
+template <typename FOnOpen, typename FOnRepresentation>
 class EventHandler : public fidl::WireSyncEventHandler<fuchsia_io::Directory> {
  public:
-  explicit EventHandler(FOnOpen on_open, FOnConnectionInfo on_connection_info)
-      : on_open_(std::move(on_open)), on_connection_info_(std::move(on_connection_info)) {}
+  explicit EventHandler(FOnOpen on_open, FOnRepresentation on_representation)
+      : on_open_(std::move(on_open)), on_representation_(std::move(on_representation)) {}
 
   void OnOpen(fidl::WireEvent<fuchsia_io::Directory::OnOpen>* event) override { on_open_(event); }
 
-  void OnConnectionInfo(fidl::WireEvent<fuchsia_io::Directory::OnConnectionInfo>* event) override {
-    on_connection_info_(event);
+  void OnRepresentation(fidl::WireEvent<fuchsia_io::Directory::OnRepresentation>* event) override {
+    on_representation_(event);
   }
 
  private:
   FOnOpen on_open_;
-  FOnConnectionInfo on_connection_info_;
+  FOnRepresentation on_representation_;
 };
 
 std::ostream& operator<<(std::ostream& os, const std::vector<std::string>& args) {
@@ -341,8 +341,8 @@ int main(int argv, char** argc) {
             });
             mounted.wait();
           },
-          [&](fidl::WireEvent<fuchsia_io::Directory::OnConnectionInfo>* event) {
-            FX_PLOGS(FATAL, ZX_ERR_NOT_SUPPORTED) << "unexpected OnConnectionInfo";
+          [&](fidl::WireEvent<fuchsia_io::Directory::OnRepresentation>* event) {
+            FX_PLOGS(FATAL, ZX_ERR_NOT_SUPPORTED) << "unexpected OnRepresentation";
           });
       if (fidl::Status status = handler.HandleOneEvent(client_end); !status.ok()) {
         FX_PLOGS(ERROR, status.status()) << "failed to receive OnOpen event for '" << path << "'";

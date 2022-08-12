@@ -6,6 +6,18 @@
 
 #include "pty-client.h"
 
+void PtyClientDevice::Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) {
+  zx::eventpair event;
+  if (zx_status_t status = client_->GetEvent(&event); status != ZX_OK) {
+    completer.Close(status);
+  } else {
+    fidl::Arena alloc;
+    completer.Reply(fuchsia_hardware_pty::wire::DeviceDescribe2Response::Builder(alloc)
+                        .event(std::move(event))
+                        .Build());
+  }
+}
+
 void PtyClientDevice::SetWindowSize(SetWindowSizeRequestView request,
                                     SetWindowSizeCompleter::Sync& completer) {
   fidl::ServerBuffer<fuchsia_hardware_pty::Device::SetWindowSize> buf;
@@ -94,8 +106,7 @@ void PtyClientDevice::Write(WriteRequestView request, WriteCompleter::Sync& comp
   ZX_ASSERT(false);
 }
 
-void PtyClientDevice::AdvisoryLock(AdvisoryLockRequestView request,
-                                   AdvisoryLockCompleter::Sync& completer) {
+void PtyClientDevice::Reopen(ReopenRequestView request, ReopenCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
@@ -107,11 +118,12 @@ void PtyClientDevice::Close(CloseRequestView request, CloseCompleter::Sync& comp
   ZX_ASSERT(false);
 }
 
-void PtyClientDevice::Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) {
+void PtyClientDevice::GetConnectionInfo(GetConnectionInfoRequestView request,
+                                        GetConnectionInfoCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void PtyClientDevice::Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) {
+void PtyClientDevice::Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

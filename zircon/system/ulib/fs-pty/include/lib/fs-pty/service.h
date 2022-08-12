@@ -114,7 +114,8 @@ struct SimpleConsoleOps {
 // An alias for a service that just wants to return ZX_ERR_NOT_SUPPORTED for all
 // of the PTY requests.
 template <typename ConsoleOps, typename Console>
-using TtyService = Service<::fs_pty::internal::NullPtyDevice<Console>, ConsoleOps, Console>;
+using TtyService =
+    Service<::fs_pty::internal::NullPtyDevice<ConsoleOps, Console>, ConsoleOps, Console>;
 
 }  // namespace fs_pty
 

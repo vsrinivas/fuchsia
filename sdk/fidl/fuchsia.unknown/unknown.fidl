@@ -1,0 +1,44 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+@available(added=9)
+library fuchsia.unknown;
+
+using zx;
+
+/// Provides a means of duplicating a connection.
+///
+/// See the composing protocol's documentation for a description of
+/// connection-scoped state, if any.
+protocol Cloneable {
+    @selector("Clone")
+    Clone2(resource struct {
+        request server_end:Cloneable;
+    });
+};
+
+/// Provides a means of synchrnously closing a connection.
+protocol Closeable {
+    /// Terminates the connection.
+    ///
+    /// After calling `Close`, the client must not send any other requests.
+    ///
+    /// Servers, after sending the status response, should close the connection
+    /// regardless of status and without sending an epitaph.
+    ///
+    /// Closing the client end of the channel should be semantically equivalent
+    /// to calling `Close` without knowing when the close has completed or its
+    /// status.
+    @selector("fuchsia.io/Node.Close")
+    Close() -> (struct {}) error zx.status;
+};
+
+/// Provides a means of identifying a type-erased protocol.
+protocol Queryable {
+    // TODO(https://fxbug.dev/105608): Mark non-transitional and implement.
+    @transitional
+    Query() -> (struct {
+        /// Identifies the underlying protocol.
+        protocol uint64;
+    });
+};

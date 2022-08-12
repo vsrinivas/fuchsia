@@ -22,10 +22,7 @@ static constexpr zxio_ops_t zxio_pipe_ops = []() {
     return ZX_OK;
   };
 
-  ops.reopen = [](zxio_t* io, zxio_reopen_flags_t flags, zx_handle_t* out_handle) {
-    if (flags != zxio_reopen_flags_t{0}) {
-      return ZX_ERR_INVALID_ARGS;
-    }
+  ops.clone = [](zxio_t* io, zx_handle_t* out_handle) {
     zx::socket out_socket;
     zx_status_t status = zxio_get_pipe(io).socket.duplicate(ZX_RIGHT_SAME_RIGHTS, &out_socket);
     if (status != ZX_OK) {

@@ -378,30 +378,29 @@ zx_status_t fdio_namespace::Bind(std::string_view path, fidl::ClientEnd<fio::Dir
         return ZX_ERR_ALREADY_EXISTS;
       }
       vn = LocalVnode::Create(vn, std::move(remote), fbl::String(next_path_segment));
-      break;
-    } else {
-      // Not the final segment.
-      fbl::RefPtr<LocalVnode> child = vn->Lookup(next_path_segment);
-      if (child == nullptr) {
-        // Create a new intermediate node.
-        vn = LocalVnode::Create(vn, {}, fbl::String(next_path_segment));
 
-        // Keep track of the first node we create. If any subsequent
-        // operation fails during bind, we will need to delete all nodes
-        // in this subtree.
-        if (first_new_node == nullptr) {
-          first_new_node = vn;
-        }
-      } else {
-        // Re-use an existing intermediate node.
-        vn = child;
-      }
-      path.remove_prefix(next_path_segment.length() + 1);
+      cleanup.cancel();
+      return ZX_OK;
     }
-  }
 
-  cleanup.cancel();
-  return ZX_OK;
+    // Not the final segment.
+    fbl::RefPtr<LocalVnode> child = vn->Lookup(next_path_segment);
+    if (child == nullptr) {
+      // Create a new intermediate node.
+      vn = LocalVnode::Create(vn, {}, fbl::String(next_path_segment));
+
+      // Keep track of the first node we create. If any subsequent
+      // operation fails during bind, we will need to delete all nodes
+      // in this subtree.
+      if (first_new_node == nullptr) {
+        first_new_node = vn;
+      }
+    } else {
+      // Re-use an existing intermediate node.
+      vn = child;
+    }
+    path.remove_prefix(next_path_segment.length() + 1);
+  }
 }
 
 zx::status<fdio_ptr> fdio_namespace::OpenRoot() const {
@@ -420,14 +419,13 @@ zx::status<fdio_ptr> fdio_namespace::OpenRoot() const {
   }
 
   zx::channel clone;
-  zx_status_t status =
-      zxio_reopen(vn->Remote(), ZXIO_REOPEN_DESCRIBE, clone.reset_and_get_address());
+  zx_status_t status = zxio_clone(vn->Remote(), clone.reset_and_get_address());
 
   if (status != ZX_OK) {
     return zx::error(status);
   }
 
-  return fdio::create_with_on_open(fidl::ClientEnd<fio::Node>(std::move(clone)));
+  return fdio::create_with_describe(fidl::ClientEnd<fio::Node>(std::move(clone)));
 }
 
 zx_status_t fdio_namespace::SetRoot(fdio_t* io) {

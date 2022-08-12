@@ -15,6 +15,7 @@ sdk://fidl/fuchsia.mem
 sdk://fidl/fuchsia.process
 sdk://fidl/fuchsia.sys
 sdk://fidl/fuchsia.test
+sdk://fidl/fuchsia.unknown
 sdk://fidl/fuchsia.url
 sdk://fidl/zx
 sdk://pkg/async

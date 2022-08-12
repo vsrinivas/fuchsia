@@ -75,7 +75,7 @@ class DummyTestNode : public vfs::internal::Node {
   }
 
   void Describe(fuchsia::io::NodeInfo* out_info) override {}
-  void Describe2(fuchsia::io::ConnectionInfo* out_info) override {}
+  void GetConnectionInfo(fuchsia::io::ConnectionInfo* out_info) override {}
 
   vfs::NodeKind::Type GetKind() const override { return vfs::NodeKind::kFile; }
 
@@ -91,7 +91,7 @@ TEST(ConenctionTest, ConnectionPassedErrorInClose) {
   loop.StartThread("vfs test thread");
   fuchsia::io::NodeSyncPtr ptr;
   ASSERT_EQ(ZX_OK, node.Serve({}, ptr.NewRequest().TakeChannel(), loop.dispatcher()));
-  fuchsia::io::Node2_Close_Result result;
+  fuchsia::unknown::Closeable_Close_Result result;
   ASSERT_EQ(ZX_OK, ptr->Close(&result));
   ASSERT_TRUE(result.is_err());
   ASSERT_EQ(ZX_ERR_UNAVAILABLE, result.err());

@@ -98,13 +98,13 @@ TEST_F(DirV2, Enumerate) {
           switch (count_) {
             case 0:
               entry.set_name(allocator, fidl::StringView("zero"));
-              entry.set_protocols(allocator, fio::wire::NodeProtocols::kDirectory);
+              entry.set_protocols(allocator, fio::wire::NodeProtocolKinds::kDirectory);
               entry.set_abilities(allocator, fio::wire::Operations::kEnumerate);
               entry.set_id(allocator, 0);
               break;
             case 1:
               entry.set_name(allocator, fidl::StringView("one"));
-              entry.set_protocols(allocator, fio::wire::NodeProtocols::kFile);
+              entry.set_protocols(allocator, fio::wire::NodeProtocolKinds::kFile);
               entry.set_abilities(allocator, fio::wire::Operations::kReadBytes);
               entry.set_id(allocator, 1);
               break;

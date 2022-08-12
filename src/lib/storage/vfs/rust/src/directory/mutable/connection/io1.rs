@@ -149,7 +149,7 @@ impl MutableConnection {
             | fio::DirectoryRequest::Clone { .. }
             | fio::DirectoryRequest::Close { .. }
             | fio::DirectoryRequest::Describe { .. }
-            | fio::DirectoryRequest::Describe2 { .. }
+            | fio::DirectoryRequest::GetConnectionInfo { .. }
             | fio::DirectoryRequest::Enumerate { .. }
             | fio::DirectoryRequest::GetAttr { .. }
             | fio::DirectoryRequest::GetAttributes { .. }
@@ -157,6 +157,7 @@ impl MutableConnection {
             | fio::DirectoryRequest::Link { .. }
             | fio::DirectoryRequest::Open { .. }
             | fio::DirectoryRequest::Open2 { .. }
+            | fio::DirectoryRequest::Query { .. }
             | fio::DirectoryRequest::QueryFilesystem { .. }
             | fio::DirectoryRequest::ReadDirents { .. }
             | fio::DirectoryRequest::Reopen { .. }

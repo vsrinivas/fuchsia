@@ -9,6 +9,7 @@
 #include <lib/fs-pty/service.h>
 #include <lib/fs-pty/tty-connection-internal.h>
 #include <lib/sync/completion.h>
+#include <zircon/rights.h>
 
 #include <zxtest/zxtest.h>
 
@@ -39,18 +40,18 @@ struct TestConsoleOps {
   }
 };
 
-class TestService : public fs_pty::Service<fs_pty::internal::NullPtyDevice<TestConsoleState*>,
-                                           TestConsoleOps, TestConsoleState*> {
+class TestService : public fs_pty::TtyService<TestConsoleOps, TestConsoleState*> {
  public:
-  TestService(TestConsoleState* state) : Service(state), state_(state) {}
+  explicit TestService(TestConsoleState* state) : Service(state), state_(state) {}
 
   ~TestService() override = default;
 
-  // From fs_pty::Service
+  // From fs_pty::Service.
   void HandleFsSpecificMessage(fidl::IncomingMessage& msg, fidl::Transaction* txn) override {
     auto* hdr = msg.header();
     state_->last_seen_ordinal.store(hdr->ordinal);
-    txn->Close(ZX_ERR_NOT_SUPPORTED);
+
+    fs_pty::TtyService<TestConsoleOps, TestConsoleState*>::HandleFsSpecificMessage(msg, txn);
   }
 
  private:
@@ -99,28 +100,48 @@ class PtyTestCase : public zxtest::Test {
 TEST_F(PtyTestCase, Describe) {
   zx::eventpair local, remote;
   ASSERT_OK(zx::eventpair::create(0, &local, &remote));
-  state()->get_event = [ev = std::move(remote)](zx::eventpair* event) mutable {
-    *event = std::move(ev);
-    return ZX_OK;
+  state()->get_event = [&remote](zx::eventpair* event) mutable {
+    return remote.duplicate(ZX_RIGHT_SAME_RIGHTS, event);
   };
 
   fidl::WireSyncClient<fuchsia_hardware_pty::Device> client;
   ASSERT_NO_FATAL_FAILURE(Connect(&client));
-  auto result = client->Describe();
-  ASSERT_OK(result.status());
-  ASSERT_TRUE(result.value().info.is_tty());
 
-  // Check that we got back the handle we expected.
-  zx_info_handle_basic_t local_info = {};
-  zx_info_handle_basic_t remote_info = {};
-  ASSERT_OK(
-      local.get_info(ZX_INFO_HANDLE_BASIC, &local_info, sizeof(local_info), nullptr, nullptr));
-  ASSERT_OK(result.value().info.tty().event.get_info(ZX_INFO_HANDLE_BASIC, &remote_info,
-                                                     sizeof(remote_info), nullptr, nullptr));
-  ASSERT_EQ(local_info.related_koid, remote_info.koid);
+  {
+    auto result = client->Describe();
+    ASSERT_OK(result.status());
+    ASSERT_TRUE(result.value().info.is_tty());
 
-  // We should not have seen an ordinal dispatch
-  ASSERT_EQ(state()->last_seen_ordinal.load(), 0);
+    // Check that we got back the handle we expected.
+    zx_info_handle_basic_t local_info = {};
+    zx_info_handle_basic_t remote_info = {};
+    ASSERT_OK(
+        local.get_info(ZX_INFO_HANDLE_BASIC, &local_info, sizeof(local_info), nullptr, nullptr));
+    ASSERT_OK(result.value().info.tty().event.get_info(ZX_INFO_HANDLE_BASIC, &remote_info,
+                                                       sizeof(remote_info), nullptr, nullptr));
+    ASSERT_EQ(local_info.related_koid, remote_info.koid);
+
+    // We should not have seen an ordinal dispatch
+    ASSERT_EQ(state()->last_seen_ordinal.load(), 0);
+  }
+
+  {
+    auto result = client->Describe2();
+    ASSERT_OK(result.status());
+    ASSERT_TRUE(result.value().has_event());
+
+    // Check that we got back the handle we expected.
+    zx_info_handle_basic_t local_info = {};
+    zx_info_handle_basic_t remote_info = {};
+    ASSERT_OK(
+        local.get_info(ZX_INFO_HANDLE_BASIC, &local_info, sizeof(local_info), nullptr, nullptr));
+    ASSERT_OK(result.value().event().get_info(ZX_INFO_HANDLE_BASIC, &remote_info,
+                                              sizeof(remote_info), nullptr, nullptr));
+    ASSERT_EQ(local_info.related_koid, remote_info.koid);
+
+    // We should have seen an ordinal dispatch
+    ASSERT_NE(state()->last_seen_ordinal.load(), 0);
+  }
 }
 
 // Verify that the Read plumbing works fine
@@ -180,8 +201,7 @@ TEST_F(PtyTestCase, TtyOp) {
   fidl::WireSyncClient<fuchsia_hardware_pty::Device> client;
   ASSERT_NO_FATAL_FAILURE(Connect(&client));
   auto result = client->GetWindowSize();
-  // Get peer closed, since our HandleFsSpecificMessage returned an error.
-  ASSERT_STATUS(result.status(), ZX_ERR_PEER_CLOSED);
+  ASSERT_OK(result.status());
   // We should have seen an ordinal dispatch
   ASSERT_NE(state()->last_seen_ordinal.load(), 0);
 }

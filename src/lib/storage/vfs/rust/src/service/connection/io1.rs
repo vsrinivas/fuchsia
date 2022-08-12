@@ -129,9 +129,9 @@ impl Connection {
             fio::NodeRequest::Clone { flags, object, control_handle: _ } => {
                 self.handle_clone(flags, object);
             }
-            fio::NodeRequest::Reopen { options, object_request, control_handle: _ } => {
+            fio::NodeRequest::Reopen { rights_request, object_request, control_handle: _ } => {
                 let _ = object_request;
-                todo!("https://fxbug.dev/77623: options={:?}", options);
+                todo!("https://fxbug.dev/77623: rights_request={:?}", rights_request);
             }
             fio::NodeRequest::Close { responder } => {
                 responder.send(&mut Ok(()))?;
@@ -141,11 +141,9 @@ impl Connection {
                 let mut info = fio::NodeInfo::Service(fio::Service);
                 responder.send(&mut info)?;
             }
-            fio::NodeRequest::Describe2 { query: _, responder } => {
-                let info = fio::ConnectionInfo {
-                    representation: Some(fio::Representation::Connector(fio::ConnectorInfo::EMPTY)),
-                    ..fio::ConnectionInfo::EMPTY
-                };
+            fio::NodeRequest::GetConnectionInfo { responder } => {
+                // TODO(https://fxbug.dev/77623): Fill in rights and available operations.
+                let info = fio::ConnectionInfo { ..fio::ConnectionInfo::EMPTY };
                 responder.send(info)?;
             }
             fio::NodeRequest::Sync { responder } => {
@@ -179,6 +177,10 @@ impl Connection {
             }
             fio::NodeRequest::SetFlags { flags: _, responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
+            }
+            fio::NodeRequest::Query { responder } => {
+                let _ = responder;
+                todo!("https://fxbug.dev/77623");
             }
             fio::NodeRequest::QueryFilesystem { responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED, None)?;

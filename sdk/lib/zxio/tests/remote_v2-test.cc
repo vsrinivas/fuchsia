@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.device/cpp/wire.h>
-#include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
@@ -21,12 +21,13 @@ namespace {
 namespace fdevice = fuchsia_device;
 namespace fio = fuchsia_io;
 
-class TestServerBase : public fidl::WireServer<fio::Node2> {
+class TestServerBase : public fidl::testing::WireTestBase<fio::Node2> {
  public:
   TestServerBase() = default;
   ~TestServerBase() override = default;
 
-  void Reopen(ReopenRequestView request, ReopenCompleter::Sync& completer) override {
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) final {
+    ADD_FAILURE("unexpected message received: %s", name.c_str());
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
@@ -35,24 +36,6 @@ class TestServerBase : public fidl::WireServer<fio::Node2> {
     num_close_.fetch_add(1);
     completer.ReplySuccess();
     completer.Close(ZX_OK);
-  }
-
-  void Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void GetAttributes(GetAttributesRequestView request,
-                     GetAttributesCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void UpdateAttributes(UpdateAttributesRequestView request,
-                        UpdateAttributesCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   uint32_t num_close() const { return num_close_.load(); }
@@ -118,7 +101,7 @@ TEST_F(RemoteV2, GetAttributes) {
       fio::wire::MutableNodeAttributes mutable_attributes(allocator);
       fio::wire::ImmutableNodeAttributes immutable_attributes(allocator);
       immutable_attributes.set_content_size(allocator, content_size)
-          .set_protocols(allocator, fio::wire::NodeProtocols::kFile)
+          .set_protocols(allocator, fio::wire::NodeProtocolKinds::kFile)
           .set_id(allocator, id);
       completer.ReplySuccess(mutable_attributes, immutable_attributes);
     }

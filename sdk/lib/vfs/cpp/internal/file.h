@@ -48,7 +48,7 @@ class File : public Node {
 
   // Override that describes this object as a file.
   void Describe(fuchsia::io::NodeInfo* out_info) override;
-  void Describe2(fuchsia::io::ConnectionInfo* out_info) override;
+  void GetConnectionInfo(fuchsia::io::ConnectionInfo* out_info) override;
 
   // Returns current file length.
   //

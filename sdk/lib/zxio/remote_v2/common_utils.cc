@@ -6,42 +6,36 @@
 
 namespace fio = fuchsia_io;
 
-using fio::wire::NodeProtocols;
+using fio::wire::NodeProtocolKinds;
 using fio::wire::Operations;
 
-zxio_node_protocols_t ToZxioNodeProtocols(NodeProtocols protocols) {
+zxio_node_protocols_t ToZxioNodeProtocolKinds(NodeProtocolKinds protocols) {
   zxio_node_protocols_t zxio_protocols = ZXIO_NODE_PROTOCOL_NONE;
-  if (protocols & NodeProtocols::kConnector) {
+  if (protocols & NodeProtocolKinds::kConnector) {
     zxio_protocols |= ZXIO_NODE_PROTOCOL_CONNECTOR;
   }
-  if (protocols & NodeProtocols::kDirectory) {
+  if (protocols & NodeProtocolKinds::kDirectory) {
     zxio_protocols |= ZXIO_NODE_PROTOCOL_DIRECTORY;
   }
-  if (protocols & NodeProtocols::kFile) {
+  if (protocols & NodeProtocolKinds::kFile) {
     zxio_protocols |= ZXIO_NODE_PROTOCOL_FILE;
   }
 
-  if (protocols & NodeProtocols::kDevice) {
-    zxio_protocols |= ZXIO_NODE_PROTOCOL_DEVICE;
-  }
   return zxio_protocols;
 }
 
-NodeProtocols ToIo2NodeProtocols(zxio_node_protocols_t zxio_protocols) {
-  NodeProtocols protocols = NodeProtocols();
+NodeProtocolKinds ToIo2NodeProtocolKinds(zxio_node_protocols_t zxio_protocols) {
+  NodeProtocolKinds protocols = NodeProtocolKinds();
   if (zxio_protocols & ZXIO_NODE_PROTOCOL_CONNECTOR) {
-    protocols |= NodeProtocols::kConnector;
+    protocols |= NodeProtocolKinds::kConnector;
   }
   if (zxio_protocols & ZXIO_NODE_PROTOCOL_DIRECTORY) {
-    protocols |= NodeProtocols::kDirectory;
+    protocols |= NodeProtocolKinds::kDirectory;
   }
   if (zxio_protocols & ZXIO_NODE_PROTOCOL_FILE) {
-    protocols |= NodeProtocols::kFile;
+    protocols |= NodeProtocolKinds::kFile;
   }
 
-  if (zxio_protocols & ZXIO_NODE_PROTOCOL_DEVICE) {
-    protocols |= NodeProtocols::kDevice;
-  }
   return protocols;
 }
 

@@ -6,6 +6,7 @@ library fuchsia.posix.socket.raw;
 using fuchsia.net;
 using fuchsia.posix;
 using fuchsia.posix.socket;
+using zx;
 
 type Empty = struct {};
 
@@ -83,6 +84,13 @@ type Ipv6ChecksumConfiguration = strict union {
 /// directly to this protocol will make those changes more difficult.
 protocol Socket {
     compose fuchsia.posix.socket.BaseNetworkSocket;
+
+    @selector("Describe")
+    Describe2() -> (resource table {
+        /// Signals additional information about the state of the socket such as
+        /// readiness or shutdown-ness.
+        1: event zx.handle:EVENTPAIR;
+    });
 
     /// Receives a message from the socket.
     ///

@@ -58,7 +58,7 @@ class VmoFile extends PseudoFile {
   }
 
   @override
-  ConnectionInfo describe2(ConnectionInfoQuery query) {
-    return ConnectionInfo(representation: Representation.withFile(FileInfo()));
+  ConnectionInfo getConnectionInfo() {
+    return ConnectionInfo();
   }
 }

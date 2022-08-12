@@ -266,6 +266,20 @@ where
                             &mut fio::NodeInfo::StreamSocket(fio::StreamSocket { socket })
                         );
                     }
+                    fposix_socket::StreamSocketRequest::Describe2 { responder } => {
+                        let socket = self
+                            .peer
+                            .duplicate_handle(zx::Rights::SAME_RIGHTS)
+                            .expect("failed to duplicate the socket handle");
+                        log::info!("describing: {:?}, zx::socket: {:?}", self.id, socket);
+                        responder_send!(
+                            responder,
+                            fposix_socket::StreamSocketDescribe2Response {
+                                socket: Some(socket),
+                                ..fposix_socket::StreamSocketDescribe2Response::EMPTY
+                            }
+                        );
+                    }
                     fposix_socket::StreamSocketRequest::Listen { backlog, responder } => {
                         let mut result = (|| match self.id {
                             SocketId::Bound(bound) => {
@@ -325,11 +339,11 @@ where
                         responder_send!(responder, &mut result);
                     }
                     fposix_socket::StreamSocketRequest::Reopen {
-                        options,
+                        rights_request,
                         object_request: _,
                         control_handle: _,
                     } => {
-                        todo!("https://fxbug.dev/77623: options={:?}", options);
+                        todo!("https://fxbug.dev/77623: rights_request={:?}", rights_request);
                     }
                     fposix_socket::StreamSocketRequest::Close { responder } => {
                         // TODO(https://fxbug.dev/103979): Remove socket from core.
@@ -337,8 +351,8 @@ where
                         responder_send!(responder, &mut Ok(()));
                         break;
                     }
-                    fposix_socket::StreamSocketRequest::Describe2 { query, responder: _ } => {
-                        todo!("https://fxbug.dev/77623: query={:?}", query);
+                    fposix_socket::StreamSocketRequest::GetConnectionInfo { responder: _ } => {
+                        todo!("https://fxbug.dev/77623");
                     }
                     fposix_socket::StreamSocketRequest::GetAttributes { query, responder: _ } => {
                         todo!("https://fxbug.dev/77623: query={:?}", query);
@@ -355,6 +369,12 @@ where
                     fposix_socket::StreamSocketRequest::Clone {
                         flags: _,
                         object: _,
+                        control_handle: _,
+                    } => {
+                        todo!()
+                    }
+                    fposix_socket::StreamSocketRequest::Clone2 {
+                        request: _,
                         control_handle: _,
                     } => {
                         todo!()
@@ -390,6 +410,9 @@ where
                     }
                     fposix_socket::StreamSocketRequest::SetFlags { flags: _, responder } => {
                         responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw());
+                    }
+                    fposix_socket::StreamSocketRequest::Query { responder: _ } => {
+                        todo!("https://fxbug.dev/105608: implement Query");
                     }
                     fposix_socket::StreamSocketRequest::QueryFilesystem { responder } => {
                         responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw(), None);

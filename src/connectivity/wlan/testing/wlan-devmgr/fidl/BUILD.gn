@@ -9,4 +9,8 @@ fidl("devmgr") {
   sources = [ "devmgr.fidl" ]
 
   public_deps = [ "//sdk/fidl/fuchsia.io" ]
+
+  # TODO(https://fxbug.dev/88443): Remove this dependency since this target does
+  # not directly depend on these libraries.
+  public_deps += [ "//sdk/fidl/fuchsia.unknown" ]
 }

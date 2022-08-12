@@ -62,7 +62,7 @@ impl RepositoryProvider<Json> for LocalMirrorRepositoryProvider {
             };
             let status = match event {
                 Ok(fio::FileEvent::OnOpen_ { s, .. }) => Status::ok(s),
-                Ok(fio::FileEvent::OnConnectionInfo { .. }) => Ok(()),
+                Ok(fio::FileEvent::OnRepresentation { .. }) => Ok(()),
                 Err(e) => return Err(make_opaque_error(anyhow!(e).context("waiting for OnOpen"))),
             };
 

@@ -42,10 +42,9 @@ class BaseSocket {
     const auto& response = result.value();
     if (response.is_error()) {
       return response.error_value();
-    } else {
-      return client_.client_end().channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(),
-                                                     nullptr);
     }
+    return client_.client_end().channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(),
+                                                   nullptr);
   }
 
   zx_status_t CloneSocket(zx_handle_t* out_handle) {
@@ -97,10 +96,7 @@ static constexpr zxio_ops_t zxio_synchronous_datagram_socket_ops = []() {
         zxio_synchronous_datagram_socket(io).client.client_end().borrow().channel()->get();
     return ZX_OK;
   };
-  ops.reopen = [](zxio_t* io, zxio_reopen_flags_t flags, zx_handle_t* out_handle) {
-    if (flags != zxio_reopen_flags_t{0}) {
-      return ZX_ERR_INVALID_ARGS;
-    }
+  ops.clone = [](zxio_t* io, zx_handle_t* out_handle) {
     zxio_synchronous_datagram_socket_t& zs = zxio_synchronous_datagram_socket(io);
     zx_status_t status = BaseSocket(zs.client).CloneSocket(out_handle);
     return status;
@@ -146,10 +142,7 @@ static constexpr zxio_ops_t zxio_datagram_socket_ops = []() {
     *out_handle = zxio_datagram_socket(io).client.client_end().borrow().channel()->get();
     return ZX_OK;
   };
-  ops.reopen = [](zxio_t* io, zxio_reopen_flags_t flags, zx_handle_t* out_handle) {
-    if (flags != zxio_reopen_flags_t{0}) {
-      return ZX_ERR_INVALID_ARGS;
-    }
+  ops.clone = [](zxio_t* io, zx_handle_t* out_handle) {
     return BaseSocket(zxio_datagram_socket(io).client).CloneSocket(out_handle);
   };
   ops.wait_begin = [](zxio_t* io, zxio_signals_t zxio_signals, zx_handle_t* out_handle,
@@ -211,10 +204,7 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
     *out_handle = zxio_stream_socket(io).client.client_end().borrow().channel()->get();
     return ZX_OK;
   };
-  ops.reopen = [](zxio_t* io, zxio_reopen_flags_t flags, zx_handle_t* out_handle) {
-    if (flags != zxio_reopen_flags_t{0}) {
-      return ZX_ERR_INVALID_ARGS;
-    }
+  ops.clone = [](zxio_t* io, zx_handle_t* out_handle) {
     return BaseSocket(zxio_stream_socket(io).client).CloneSocket(out_handle);
   };
   ops.wait_begin = [](zxio_t* io, zxio_signals_t zxio_signals, zx_handle_t* out_handle,
@@ -321,10 +311,7 @@ static constexpr zxio_ops_t zxio_raw_socket_ops = []() {
     *out_handle = zxio_raw_socket(io).client.client_end().borrow().channel()->get();
     return ZX_OK;
   };
-  ops.reopen = [](zxio_t* io, zxio_reopen_flags_t flags, zx_handle_t* out_handle) {
-    if (flags != zxio_reopen_flags_t{0}) {
-      return ZX_ERR_INVALID_ARGS;
-    }
+  ops.clone = [](zxio_t* io, zx_handle_t* out_handle) {
     zxio_raw_socket_t& zs = zxio_raw_socket(io);
     zx_status_t status = BaseSocket(zs.client).CloneSocket(out_handle);
     return status;
@@ -369,10 +356,7 @@ static constexpr zxio_ops_t zxio_packet_socket_ops = []() {
     *out_handle = zxio_packet_socket(io).client.client_end().borrow().channel()->get();
     return ZX_OK;
   };
-  ops.reopen = [](zxio_t* io, zxio_reopen_flags_t flags, zx_handle_t* out_handle) {
-    if (flags != zxio_reopen_flags_t{0}) {
-      return ZX_ERR_INVALID_ARGS;
-    }
+  ops.clone = [](zxio_t* io, zx_handle_t* out_handle) {
     zxio_packet_socket_t& zs = zxio_packet_socket(io);
     zx_status_t status = BaseSocket(zs.client).CloneSocket(out_handle);
     return status;

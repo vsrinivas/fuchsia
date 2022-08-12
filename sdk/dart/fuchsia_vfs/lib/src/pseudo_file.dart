@@ -142,8 +142,12 @@ class PseudoFile extends Vnode {
     return NodeInfo.withFile(FileObject(event: null));
   }
 
-  ConnectionInfo describe2(ConnectionInfoQuery query) {
-    return ConnectionInfo(representation: Representation.withFile(FileInfo()));
+  FileInfo describe2() {
+    return FileInfo();
+  }
+
+  ConnectionInfo getConnectionInfo() {
+    return ConnectionInfo();
   }
 
   Vmo getBackingMemory(VmoFlags flags) {
@@ -298,10 +302,10 @@ class _FileConnection extends File {
     return Stream.fromIterable([d]);
   }
 
-  // TODO(https://fxbug.dev/77623): Switch from onOpen to onConnectionInfo when
+  // TODO(https://fxbug.dev/77623): Switch from onOpen to onRepresentation when
   // clients are ready.
   @override
-  Stream<ConnectionInfo> get onConnectionInfo async* {}
+  Stream<Representation> get onRepresentation async* {}
 
   @override
   Future<void> advisoryLock(AdvisoryLockRequest request) async {
@@ -364,8 +368,10 @@ class _FileConnection extends File {
   Future<NodeInfo> describe() async => file.describe();
 
   @override
-  Future<ConnectionInfo> describe2(ConnectionInfoQuery query) async =>
-      file.describe2(query);
+  Future<FileInfo> describe2() async => file.describe2();
+
+  @override
+  Future<ConnectionInfo> getConnectionInfo() async => file.getConnectionInfo();
 
   @override
   Future<File$GetAttr$Response> getAttr() async {

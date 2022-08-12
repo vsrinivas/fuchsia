@@ -57,8 +57,8 @@ zx_status_t zxio_node_release(zxio_t* io, zx_handle_t* out_handle) {
   return ZX_OK;
 }
 
-zx_status_t zxio_node_reopen(zxio_t* io, zxio_reopen_flags_t flags, zx_handle_t* out_handle) {
-  return zxio_raw_remote_reopen(zx::unowned_channel(to_internal(io)->control), flags, out_handle);
+zx_status_t zxio_node_clone(zxio_t* io, zx_handle_t* out_handle) {
+  return zxio_raw_remote_clone(zx::unowned_channel(to_internal(io)->control), out_handle);
 }
 
 zx_status_t zxio_node_attr_get(zxio_t* io, zxio_node_attributes_t* out_attr) {
@@ -93,7 +93,7 @@ static constexpr zxio_ops_t zxio_node_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.close = zxio_node_close;
   ops.release = zxio_node_release;
-  ops.reopen = zxio_node_reopen;
+  ops.clone = zxio_node_clone;
   ops.attr_get = zxio_node_attr_get;
   ops.attr_set = zxio_node_attr_set;
   ops.readv = zxio_node_readv;

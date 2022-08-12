@@ -9,6 +9,18 @@
 // The pty server half only supports OpenClient and SetWindowSize. Return ZX_ERR_NOT_SUPPORTED for
 // all of the others
 
+void PtyServerDevice::Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) {
+  zx::eventpair event;
+  if (zx_status_t status = server_->GetEvent(&event); status != ZX_OK) {
+    completer.Close(status);
+  } else {
+    fidl::Arena alloc;
+    completer.Reply(fuchsia_hardware_pty::wire::DeviceDescribe2Response::Builder(alloc)
+                        .event(std::move(event))
+                        .Build());
+  }
+}
+
 void PtyServerDevice::SetWindowSize(SetWindowSizeRequestView request,
                                     SetWindowSizeCompleter::Sync& completer) {
   fidl::ServerBuffer<fuchsia_hardware_pty::Device::SetWindowSize> buf;
@@ -58,8 +70,7 @@ void PtyServerDevice::Write(WriteRequestView request, WriteCompleter::Sync& comp
   ZX_ASSERT(false);
 }
 
-void PtyServerDevice::AdvisoryLock(AdvisoryLockRequestView request,
-                                   AdvisoryLockCompleter::Sync& completer) {
+void PtyServerDevice::Reopen(ReopenRequestView request, ReopenCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
@@ -71,11 +82,12 @@ void PtyServerDevice::Close(CloseRequestView request, CloseCompleter::Sync& comp
   ZX_ASSERT(false);
 }
 
-void PtyServerDevice::Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) {
+void PtyServerDevice::GetConnectionInfo(GetConnectionInfoRequestView request,
+                                        GetConnectionInfoCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 
-void PtyServerDevice::Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) {
+void PtyServerDevice::Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
 

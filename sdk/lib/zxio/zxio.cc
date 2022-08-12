@@ -20,9 +20,8 @@
 // library are forbidden from relying upon the structure of |zxio_t| objects.
 // To avoid temptation, the details of the structure are defined only in this
 // implementation file and are not visible in the header.
-typedef struct zxio_internal {
-  explicit zxio_internal(const zxio_ops_t* ops)
-      : ops(ops), extensions(nullptr), extension_init_func(0) {}
+using zxio_internal_t = struct zxio_internal {
+  explicit zxio_internal(const zxio_ops_t* ops) : ops(ops) {}
 
   const zxio_ops_t* ops;
 
@@ -31,14 +30,14 @@ typedef struct zxio_internal {
   // Clients may specify |extensions| when creating a |zxio_t| from a channel.
   // When a new |zxio_t| is created from an existing |zxio_t| through
   // opening/cloning, it will inherit the same |extensions| options.
-  const zxio_extensions_t* extensions;
+  const zxio_extensions_t* extensions = nullptr;
 
   // If applicable, records which function in |extensions| was used to
   // initialize this |zxio_t|.
-  uintptr_t extension_init_func;
+  uintptr_t extension_init_func = 0;
 
   uint8_t reserved[7];
-} zxio_internal_t;
+};
 
 static_assert(sizeof(zxio_t) == sizeof(zxio_internal_t), "zxio_t should match zxio_internal_t");
 
@@ -106,19 +105,11 @@ zx_status_t zxio_borrow(zxio_t* io, zx_handle_t* out_handle) {
 }
 
 zx_status_t zxio_clone(zxio_t* io, zx_handle_t* out_handle) {
-  return zxio_reopen(io, zxio_reopen_flags_t{0}, out_handle);
-}
-
-zx_status_t zxio_reopen(zxio_t* io, zxio_reopen_flags_t flags, zx_handle_t* out_handle) {
   if (!zxio_is_valid(io)) {
     return ZX_ERR_BAD_HANDLE;
   }
-  constexpr zxio_reopen_flags_t kAllFlags = ZXIO_REOPEN_DESCRIBE;
-  if ((flags & ~kAllFlags) != 0 || out_handle == nullptr) {
-    return ZX_ERR_INVALID_ARGS;
-  }
   zxio_internal_t* zio = to_internal(io);
-  return zio->ops->reopen(io, flags, out_handle);
+  return zio->ops->clone(io, out_handle);
 }
 
 zx_status_t zxio_wait_one(zxio_t* io, zxio_signals_t signals, zx_time_t deadline,

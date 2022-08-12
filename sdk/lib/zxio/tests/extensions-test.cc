@@ -37,7 +37,8 @@ class TestServerBase : public fidl::WireServer<fuchsia_io::Node> {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) override {
+  void GetConnectionInfo(GetConnectionInfoRequestView request,
+                         GetConnectionInfoCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 

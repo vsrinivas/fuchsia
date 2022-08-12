@@ -21,12 +21,6 @@ typedef uint32_t zxio_flags_t;
 
 #define ZXIO_PEEK ((zxio_flags_t)1u << 0)
 
-// Flags for reopen operations -------------------------------------------------
-typedef uint32_t zxio_reopen_flags_t;
-
-// Request that the object provide a description of itself on the new object.
-#define ZXIO_REOPEN_DESCRIBE ((zxio_reopen_flags_t)1u << 0)
-
 // Flags for VMO retrieval operations ------------------------------------------
 typedef uint32_t zxio_vmo_flags_t;
 
@@ -156,7 +150,6 @@ typedef uint64_t zxio_node_protocols_t;
 #define ZXIO_NODE_PROTOCOL_CONNECTOR ((zxio_node_protocols_t)1ul << 0)
 #define ZXIO_NODE_PROTOCOL_DIRECTORY ((zxio_node_protocols_t)1ul << 1)
 #define ZXIO_NODE_PROTOCOL_FILE ((zxio_node_protocols_t)1ul << 2)
-#define ZXIO_NODE_PROTOCOL_DEVICE ((zxio_node_protocols_t)0x10000000ul)
 
 #define ZXIO_NODE_PROTOCOL_ALL                                                             \
   (ZXIO_NODE_PROTOCOL_CONNECTOR | ZXIO_NODE_PROTOCOL_DIRECTORY | ZXIO_NODE_PROTOCOL_FILE | \

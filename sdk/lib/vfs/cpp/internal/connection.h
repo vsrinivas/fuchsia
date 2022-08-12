@@ -92,8 +92,7 @@ class Connection {
              async_dispatcher_t* dispatcher);
   void Close(Node* vn, fuchsia::io::Node::CloseCallback callback);
   void Describe(Node* vn, fuchsia::io::Node::DescribeCallback callback);
-  void Describe2(Node* vn, fuchsia::io::ConnectionInfoQuery query,
-                 fuchsia::io::Node::Describe2Callback callback);
+  void GetConnectionInfo(Node* vn, fuchsia::io::Node::GetConnectionInfoCallback callback);
   void Sync(Node* vn, fuchsia::io::Node::SyncCallback callback);
   void GetAttr(Node* vn, fuchsia::io::Node::GetAttrCallback callback);
   void SetAttr(Node* vn, fuchsia::io::NodeAttributeFlags flags,

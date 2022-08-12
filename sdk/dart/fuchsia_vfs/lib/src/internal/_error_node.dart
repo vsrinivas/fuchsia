@@ -33,10 +33,10 @@ class ErrorNodeForSendingEvent extends Node {
     _bindings.close();
   }
 
-  // TODO(https://fxbug.dev/77623): Switch from onOpen to onConnectionInfo when
-  // clients are ready.
+  // TODO(https://fxbug.dev/77623): Switch from onOpen to onRepresentation when
+  // clients are ready and delete this class.
   @override
-  Stream<ConnectionInfo> get onConnectionInfo async* {}
+  Stream<Representation> get onRepresentation async* {}
 
   @override
   Future<void> clone(OpenFlags flags, InterfaceRequest<Node> object) async {
@@ -54,9 +54,9 @@ class ErrorNodeForSendingEvent extends Node {
   }
 
   @override
-  Future<ConnectionInfo> describe2(ConnectionInfoQuery query) async {
+  Future<ConnectionInfo> getConnectionInfo() async {
     throw UnsupportedError(
-        'ErrorNodeForSendingEvent.describe2 is unreachable.');
+        'ErrorNodeForSendingEvent.getConnectionInfo is unreachable.');
   }
 
   @override

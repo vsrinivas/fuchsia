@@ -7,9 +7,13 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.hardware.pty") {
   sdk_category = "internal"
   api = "fuchsia.hardware.pty.api"
+  sources = [ "pty.fidl" ]
   public_deps = [
     "//sdk/fidl/fuchsia.device",
     "//sdk/fidl/fuchsia.io",
   ]
-  sources = [ "pty.fidl" ]
+
+  # TODO(https://fxbug.dev/88443): Remove this dependency since this target does
+  # not directly depend on these libraries.
+  public_deps += [ "//sdk/fidl/fuchsia.unknown" ]
 }

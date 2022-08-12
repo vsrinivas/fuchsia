@@ -45,8 +45,20 @@ void FileConnection::Describe(DescribeCallback callback) {
   Connection::Describe(vn_, std::move(callback));
 }
 
-void FileConnection::Describe2(fuchsia::io::ConnectionInfoQuery query, Describe2Callback callback) {
-  Connection::Describe2(vn_, query, std::move(callback));
+void FileConnection::Describe2(Describe2Callback callback) {
+  Describe([callback = std::move(callback)](fuchsia::io::NodeInfo node) {
+    ZX_ASSERT_MSG(node.is_file(), "FileConnection::Describe returned %lu, expected %lu",
+                  node.Which(), fuchsia::io::NodeInfo::Tag::kFile);
+    fuchsia::io::FileObject& object = node.file();
+    fuchsia::io::FileInfo info;
+    info.set_observer(std::move(object.event));
+    info.set_stream(std::move(object.stream));
+    callback(std::move(info));
+  });
+}
+
+void FileConnection::GetConnectionInfo(GetConnectionInfoCallback callback) {
+  Connection::GetConnectionInfo(vn_, std::move(callback));
 }
 
 void FileConnection::Sync(SyncCallback callback) { Connection::Sync(vn_, std::move(callback)); }

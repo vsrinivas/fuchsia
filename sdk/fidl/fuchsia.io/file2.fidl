@@ -14,16 +14,56 @@ const MAX_TRANSFER_SIZE uint64 = 8192;
 /// The byte vector type used for read/write operations.
 alias Transfer = vector<uint8>:MAX_TRANSFER_SIZE;
 
+/// Auxiliary data for the file representation of a node.
+type FileInfo = resource table {
+    /// True if the file is opened in append mode.
+    /// In append mode, the seek offset is moved to the end before every
+    /// write, the two steps performed in an atomic manner.
+    1: is_append bool;
+
+    /// An optional event which transmits information about an object's
+    /// readability or writability. This event relays information about the
+    /// underlying object, not the capability granted to client: this event
+    /// may be signalled "readable" on a connection that does not have
+    /// the capability to read.
+    ///
+    /// This event will be present if the following conditions are met:
+    ///
+    /// - The `available_operations` on the file connection is not empty.
+    /// - The filesystem supports signalling readability/writability events.
+    ///
+    /// The [`FileSignal`] values may be observed on this event.
+    2: observer zx.handle:EVENT;
+
+    /// An optional stream object, which can be used to read to and write from
+    /// the file.
+    ///
+    /// Reading and writing the file using the stream object can be up to 20x
+    /// faster than reading and writing the file using the Read and Write
+    /// operations in the [`File`] protocol.
+    3: stream zx.handle:STREAM;
+};
+
+/// A [`File`] that provides [`FileInfo`].
 protocol File {
+    compose AdvisoryLocking;
+
+    compose Node1;
+
     compose File2;
+
+    @selector("fuchsia.io/File.Describe")
+    Describe2() -> (FileInfo);
 };
 
 /// A [`Node2`] which contains a sequence of bytes of definite
 /// length.
+///
+/// NOTE: cloned connections do not share their seek offset with their source
+/// connection.
 protocol File2 {
     compose Node1;
     compose Node2;
-    compose AdvisoryLocking;
 
     /// Moves the offset at which the next invocation of [`Read`] or [`Write`]
     /// will occur. The seek offset is specific to each file connection.

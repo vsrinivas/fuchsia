@@ -10,9 +10,9 @@
 
 // Conversion adaptors between zxio and FIDL types.
 
-zxio_node_protocols_t ToZxioNodeProtocols(fuchsia_io::wire::NodeProtocols protocols);
+zxio_node_protocols_t ToZxioNodeProtocolKinds(fuchsia_io::wire::NodeProtocolKinds protocols);
 
-fuchsia_io::wire::NodeProtocols ToIo2NodeProtocols(zxio_node_protocols_t zxio_protocols);
+fuchsia_io::wire::NodeProtocolKinds ToIo2NodeProtocolKinds(zxio_node_protocols_t zxio_protocols);
 
 zxio_abilities_t ToZxioAbilities(fuchsia_io::wire::Operations abilities);
 

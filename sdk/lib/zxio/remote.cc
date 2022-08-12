@@ -122,12 +122,12 @@ class DirentIteratorImpl {
 
   static zxio_node_protocols_t DTypeToProtocols(uint8_t type) {
     switch (type) {
-      case DT_BLK:
-        return ZXIO_NODE_PROTOCOL_DEVICE;
       case DT_DIR:
         return ZXIO_NODE_PROTOCOL_DIRECTORY;
       case DT_REG:
         return ZXIO_NODE_PROTOCOL_FILE;
+      case DT_BLK:
+        // Not supported.
       case DT_CHR:
         // Not supported.
       case DT_FIFO:
@@ -189,7 +189,7 @@ class Remote {
     }
   }
 
-  zx::status<bool> IsATty() {
+  zx::status<bool> IsATty() const {
     const fidl::WireResult result =
         fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(control()))->Describe();
     if (!result.ok()) {
@@ -206,14 +206,14 @@ zxio_node_protocols_t ToZxioNodeProtocols(uint32_t mode) {
   switch (mode & (S_IFMT | fuchsia_io::wire::kModeTypeService)) {
     case S_IFDIR:
       return ZXIO_NODE_PROTOCOL_DIRECTORY;
-    case S_IFBLK:
-      return ZXIO_NODE_PROTOCOL_DEVICE;
     case S_IFREG:
       return ZXIO_NODE_PROTOCOL_FILE;
     case fuchsia_io::wire::kModeTypeService:
       // fuchsia::io has mode type service which breaks stat.
       // TODO(fxbug.dev/52930): return ZXIO_NODE_PROTOCOL_CONNECTOR instead.
       return ZXIO_NODE_PROTOCOL_FILE;
+    case S_IFBLK:
+      // Block-oriented devices are not supported on Fuchsia.
     case S_IFCHR:
       // Character-oriented devices are not supported on Fuchsia.
     case S_IFIFO:
@@ -238,9 +238,6 @@ uint32_t ToIo1ModeFileType(zxio_node_protocols_t protocols) {
   }
   if (protocols & ZXIO_NODE_PROTOCOL_FILE) {
     return S_IFREG;
-  }
-  if (protocols & ZXIO_NODE_PROTOCOL_DEVICE) {
-    return S_IFBLK;
   }
   if (protocols & ZXIO_NODE_PROTOCOL_CONNECTOR) {
     // There is no good analogue for FIDL services in POSIX land...
@@ -390,9 +387,9 @@ zx_status_t zxio_remote_borrow(zxio_t* io, zx_handle_t* out_handle) {
   return ZX_OK;
 }
 
-zx_status_t zxio_remote_reopen(zxio_t* io, zxio_reopen_flags_t flags, zx_handle_t* out_handle) {
+zx_status_t zxio_remote_clone(zxio_t* io, zx_handle_t* out_handle) {
   Remote rio(io);
-  return zxio_raw_remote_reopen(rio.control(), flags, out_handle);
+  return zxio_raw_remote_clone(rio.control(), out_handle);
 }
 
 void zxio_remote_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_handle_t* out_handle,
@@ -466,7 +463,7 @@ zx_status_t zxio_remote_sync(zxio_t* io) {
 }
 
 template <typename ToZxioAbilities>
-zx_status_t zxio_common_attr_get(zx::unowned_channel control, ToZxioAbilities to_zxio,
+zx_status_t zxio_common_attr_get(const zx::unowned_channel& control, ToZxioAbilities to_zxio,
                                  zxio_node_attributes_t* out_attr) {
   const fidl::WireResult result =
       fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(control))->GetAttr();
@@ -482,7 +479,7 @@ zx_status_t zxio_common_attr_get(zx::unowned_channel control, ToZxioAbilities to
 }
 
 template <typename ToIo1ModePermissions>
-zx_status_t zxio_common_attr_set(zx::unowned_channel control, ToIo1ModePermissions to_io1,
+zx_status_t zxio_common_attr_set(const zx::unowned_channel& control, ToIo1ModePermissions to_io1,
                                  const zxio_node_attributes_t* attr) {
   fio::wire::NodeAttributeFlags flags;
   zxio_node_attributes_t::zxio_node_attr_has_t remaining = attr->has;
@@ -517,7 +514,7 @@ zx_status_t zxio_remote_attr_set(zxio_t* io, const zxio_node_attributes_t* attr)
   return zxio_common_attr_set(rio.control(), ToIo1ModePermissionsForFile(), attr);
 }
 
-zx_status_t zxio_common_advisory_lock(zx::unowned_channel control, advisory_lock_req* req) {
+zx_status_t zxio_common_advisory_lock(const zx::unowned_channel& control, advisory_lock_req* req) {
   fuchsia_io::wire::AdvisoryLockType lock_type;
   switch (req->type) {
     case ADVISORY_LOCK_SHARED:
@@ -549,9 +546,8 @@ zx_status_t zxio_common_advisory_lock(zx::unowned_channel control, advisory_lock
 }
 
 template <typename F>
-static zx_status_t zxio_remote_do_vector(const Remote& rio, const zx_iovec_t* vector,
-                                         size_t vector_count, zxio_flags_t flags,
-                                         size_t* out_actual, F fn) {
+zx_status_t zxio_remote_do_vector(const Remote& rio, const zx_iovec_t* vector, size_t vector_count,
+                                  zxio_flags_t flags, size_t* out_actual, F fn) {
   return zxio_do_vector(vector, vector_count, out_actual,
                         [&](void* data, size_t capacity, size_t* out_actual) {
                           auto buffer = static_cast<uint8_t*>(data);
@@ -591,7 +587,7 @@ zx_status_t zxio_remote_readv(zxio_t* io, const zx_iovec_t* vector, size_t vecto
 
   return zxio_remote_do_vector(
       rio, vector, vector_count, flags, out_actual,
-      [](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
+      [](const zx::unowned_channel& control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
         // Explicitly allocating message buffers to avoid heap allocation.
         fidl::SyncClientBuffer<fio::File::Read> fidl_buffer;
         const fidl::WireUnownedResult result =
@@ -627,31 +623,31 @@ zx_status_t zxio_remote_readv_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* 
     return map_status(rio.stream()->readv_at(0, offset, vector, vector_count, out_actual));
   }
 
-  return zxio_remote_do_vector(
-      rio, vector, vector_count, flags, out_actual,
-      [&offset](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
-        fidl::SyncClientBuffer<fio::File::ReadAt> fidl_buffer;
-        const fidl::WireUnownedResult result =
-            fidl::WireCall(fidl::UnownedClientEnd<fio::File>(control))
-                .buffer(fidl_buffer.view())
-                ->ReadAt(capacity, offset);
-        if (!result.ok()) {
-          return result.status();
-        }
-        const auto& response = result.value();
-        if (response.is_error()) {
-          return response.error_value();
-        }
-        const fidl::VectorView data = response.value()->data;
-        size_t actual = data.count();
-        if (actual > capacity) {
-          return ZX_ERR_IO;
-        }
-        offset += actual;
-        memcpy(buffer, data.begin(), actual);
-        *out_actual = actual;
-        return ZX_OK;
-      });
+  return zxio_remote_do_vector(rio, vector, vector_count, flags, out_actual,
+                               [&offset](const zx::unowned_channel& control, uint8_t* buffer,
+                                         size_t capacity, size_t* out_actual) {
+                                 fidl::SyncClientBuffer<fio::File::ReadAt> fidl_buffer;
+                                 const fidl::WireUnownedResult result =
+                                     fidl::WireCall(fidl::UnownedClientEnd<fio::File>(control))
+                                         .buffer(fidl_buffer.view())
+                                         ->ReadAt(capacity, offset);
+                                 if (!result.ok()) {
+                                   return result.status();
+                                 }
+                                 const auto& response = result.value();
+                                 if (response.is_error()) {
+                                   return response.error_value();
+                                 }
+                                 const fidl::VectorView data = response.value()->data;
+                                 size_t actual = data.count();
+                                 if (actual > capacity) {
+                                   return ZX_ERR_IO;
+                                 }
+                                 offset += actual;
+                                 memcpy(buffer, data.begin(), actual);
+                                 *out_actual = actual;
+                                 return ZX_OK;
+                               });
 }
 
 zx_status_t zxio_remote_writev(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
@@ -667,7 +663,7 @@ zx_status_t zxio_remote_writev(zxio_t* io, const zx_iovec_t* vector, size_t vect
 
   return zxio_remote_do_vector(
       rio, vector, vector_count, flags, out_actual,
-      [](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
+      [](const zx::unowned_channel& control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
         // Explicitly allocating message buffers to avoid heap allocation.
         fidl::SyncClientBuffer<fio::File::Write> fidl_buffer;
         const fidl::WireUnownedResult result =
@@ -703,7 +699,8 @@ zx_status_t zxio_remote_writev_at(zxio_t* io, zx_off_t offset, const zx_iovec_t*
 
   return zxio_remote_do_vector(
       rio, vector, vector_count, flags, out_actual,
-      [&offset](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
+      [&offset](const zx::unowned_channel& control, uint8_t* buffer, size_t capacity,
+                size_t* out_actual) {
         // Explicitly allocating message buffers to avoid heap allocation.
         fidl::SyncClientBuffer<fio::File::WriteAt> fidl_buffer;
         const fidl::WireUnownedResult result =
@@ -1018,7 +1015,7 @@ static constexpr zxio_ops_t zxio_remote_ops = []() {
   ops.close = zxio_remote_close;
   ops.release = zxio_remote_release;
   ops.borrow = zxio_remote_borrow;
-  ops.reopen = zxio_remote_reopen;
+  ops.clone = zxio_remote_clone;
   ops.wait_begin = zxio_remote_wait_begin;
   ops.wait_end = zxio_remote_wait_end;
   ops.sync = zxio_remote_sync;
@@ -1187,7 +1184,7 @@ static constexpr zxio_ops_t zxio_dir_ops = []() {
   ops.close = zxio_remote_close;
   ops.release = zxio_remote_release;
   ops.borrow = zxio_remote_borrow;
-  ops.reopen = zxio_remote_reopen;
+  ops.clone = zxio_remote_clone;
   ops.sync = zxio_remote_sync;
   ops.attr_get = zxio_dir_attr_get;
   ops.attr_set = zxio_dir_attr_set;
@@ -1265,7 +1262,7 @@ static constexpr zxio_ops_t zxio_file_ops = []() {
   ops.close = zxio_remote_close;
   ops.release = zxio_remote_release;
   ops.borrow = zxio_remote_borrow;
-  ops.reopen = zxio_remote_reopen;
+  ops.clone = zxio_remote_clone;
   ops.wait_begin = zxio_file_wait_begin;
   ops.wait_end = zxio_file_wait_end;
   ops.sync = zxio_remote_sync;
@@ -1309,7 +1306,7 @@ uint32_t zxio_get_posix_mode(zxio_node_protocols_t protocols, zxio_abilities_t a
   return mode;
 }
 
-zx_status_t zxio_raw_remote_close(zx::unowned_channel control) {
+zx_status_t zxio_raw_remote_close(const zx::unowned_channel& control) {
   const fidl::WireResult result =
       fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(control))->Close();
   if (!result.ok()) {
@@ -1322,18 +1319,14 @@ zx_status_t zxio_raw_remote_close(zx::unowned_channel control) {
   return ZX_OK;
 }
 
-zx_status_t zxio_raw_remote_reopen(zx::unowned_channel source, zxio_reopen_flags_t zxio_flags,
-                                   zx_handle_t* out_handle) {
+zx_status_t zxio_raw_remote_clone(const zx::unowned_channel& source, zx_handle_t* out_handle) {
   zx::status ends = fidl::CreateEndpoints<fio::Node>();
   if (ends.is_error()) {
     return ends.status_value();
   }
-  fio::wire::OpenFlags flags = fio::wire::OpenFlags::kCloneSameRights;
-  if (zxio_flags & ZXIO_REOPEN_DESCRIBE) {
-    flags |= fio::wire::OpenFlags::kDescribe;
-  }
-  const fidl::WireResult result = fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(source))
-                                      ->Clone(flags, std::move(ends->server));
+  const fidl::WireResult result =
+      fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(source))
+          ->Clone(fio::wire::OpenFlags::kCloneSameRights, std::move(ends->server));
   if (!result.ok()) {
     return result.status();
   }
@@ -1341,12 +1334,12 @@ zx_status_t zxio_raw_remote_reopen(zx::unowned_channel source, zxio_reopen_flags
   return ZX_OK;
 }
 
-zx_status_t zxio_raw_remote_attr_get(zx::unowned_channel control,
+zx_status_t zxio_raw_remote_attr_get(const zx::unowned_channel& control,
                                      zxio_node_attributes_t* out_attr) {
-  return zxio_common_attr_get(std::move(control), ToZxioAbilitiesForFile(), out_attr);
+  return zxio_common_attr_get(control, ToZxioAbilitiesForFile(), out_attr);
 }
 
-zx_status_t zxio_raw_remote_attr_set(zx::unowned_channel control,
+zx_status_t zxio_raw_remote_attr_set(const zx::unowned_channel& control,
                                      const zxio_node_attributes_t* attr) {
-  return zxio_common_attr_set(std::move(control), ToIo1ModePermissionsForFile(), attr);
+  return zxio_common_attr_set(control, ToIo1ModePermissionsForFile(), attr);
 }

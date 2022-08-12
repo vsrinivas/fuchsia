@@ -295,8 +295,8 @@ async fn read_file(dir: &fio::DirectoryProxy, path: &str) -> Result<Vec<u8>, Ver
                     }
                 }
             }
-            fio::FileEvent::OnConnectionInfo { payload } => match payload.representation {
-                Some(fio::Representation::File(fio::FileInfo { observer, .. })) => observer,
+            fio::FileEvent::OnRepresentation { payload } => match payload {
+                fio::Representation::File(fio::FileInfo { observer, .. }) => observer,
                 other => {
                     panic!("ConnectionInfo from fio::FileEventStream to be File variant with event: {:?}", other)
                 }

@@ -224,32 +224,34 @@ impl Client {
         let mut events = file.take_event_stream();
 
         let event = match events.next().await {
-            Some(Ok(fio::FileEvent::OnOpen_ { s, info })) => {
-                if Status::from_raw(s) != Status::OK {
-                    return false;
-                }
+            None => return false,
+            Some(event) => match event {
+                Err(_) => return false,
+                Ok(event) => match event {
+                    fio::FileEvent::OnOpen_ { s, info } => {
+                        if Status::from_raw(s) != Status::OK {
+                            return false;
+                        }
 
-                match info {
-                    Some(info) => match *info {
-                        fio::NodeInfo::File(fio::FileObject {
-                            event: Some(event),
-                            stream: None,
+                        match info {
+                            Some(info) => match *info {
+                                fio::NodeInfo::File(fio::FileObject {
+                                    event: Some(event),
+                                    stream: None,
+                                }) => event,
+                                _ => return false,
+                            },
+                            _ => return false,
+                        }
+                    }
+                    fio::FileEvent::OnRepresentation { payload } => match payload {
+                        fio::Representation::File(fio::FileInfo {
+                            observer: Some(event), ..
                         }) => event,
                         _ => return false,
                     },
-                    _ => return false,
-                }
-            }
-            Some(Ok(fio::FileEvent::OnConnectionInfo { payload })) => {
-                match payload.representation {
-                    Some(fio::Representation::File(fio::FileInfo {
-                        observer: Some(event),
-                        ..
-                    })) => event,
-                    _ => return false,
-                }
-            }
-            _ => return false,
+                },
+            },
         };
 
         // Check that the USER_0 signal has been asserted on the file's event to make sure we

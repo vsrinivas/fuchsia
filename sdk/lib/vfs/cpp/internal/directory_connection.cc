@@ -46,9 +46,8 @@ void DirectoryConnection::Describe(DescribeCallback callback) {
   Connection::Describe(vn_, std::move(callback));
 }
 
-void DirectoryConnection::Describe2(fuchsia::io::ConnectionInfoQuery query,
-                                    Describe2Callback callback) {
-  Connection::Describe2(vn_, query, std::move(callback));
+void DirectoryConnection::GetConnectionInfo(GetConnectionInfoCallback callback) {
+  Connection::GetConnectionInfo(vn_, std::move(callback));
 }
 
 void DirectoryConnection::Sync(SyncCallback callback) {

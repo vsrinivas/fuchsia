@@ -9,9 +9,7 @@
 
 namespace fs_pty::internal {
 
-// We would like to construct a |NullPtyDevice| with some arbitrary arguments.
-// This class exists so that we don't need to templatize all of the implementation,
-// just the ctor.  The extra argument to the ctor in |NullPtyDevice| is discarded.
+// This is the monomorphic part of |NullPtyDevice|.
 class NullPtyDeviceImpl : public fidl::WireServer<fuchsia_hardware_pty::Device> {
  public:
   NullPtyDeviceImpl() = default;
@@ -40,11 +38,12 @@ class NullPtyDeviceImpl : public fidl::WireServer<fuchsia_hardware_pty::Device> 
   void GetBackingMemory(GetBackingMemoryRequestView request,
                         GetBackingMemoryCompleter::Sync& completer) final;
 
-  void AdvisoryLock(AdvisoryLockRequestView request, AdvisoryLockCompleter::Sync& completer) final;
+  void Reopen(ReopenRequestView request, ReopenCompleter::Sync& completer) final;
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) final;
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) final;
+  void GetConnectionInfo(GetConnectionInfoRequestView request,
+                         GetConnectionInfoCompleter::Sync& completer) final;
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) final;
-  void Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) final;
   void Sync(SyncRequestView request, SyncCompleter::Sync& completer) final;
   void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) final;
   void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) final;
@@ -54,11 +53,27 @@ class NullPtyDeviceImpl : public fidl::WireServer<fuchsia_hardware_pty::Device> 
                        QueryFilesystemCompleter::Sync& completer) final;
 };
 
-template <typename Console>
+template <typename ConsoleOps, typename ConsoleState>
 class NullPtyDevice : public NullPtyDeviceImpl {
  public:
-  NullPtyDevice(Console console) : NullPtyDeviceImpl() {}
+  explicit NullPtyDevice(ConsoleState console) : NullPtyDeviceImpl(), console_(console) {}
   ~NullPtyDevice() override = default;
+
+  // fuchsia.hardware.pty.Device methods
+  void Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) final {
+    zx::eventpair event;
+    if (zx_status_t status = ConsoleOps::GetEvent(console_, &event); status != ZX_OK) {
+      completer.Close(status);
+    } else {
+      fidl::Arena alloc;
+      completer.Reply(fuchsia_hardware_pty::wire::DeviceDescribe2Response::Builder(alloc)
+                          .event(std::move(event))
+                          .Build());
+    }
+  }
+
+ private:
+  ConsoleState console_;
 };
 
 }  // namespace fs_pty::internal

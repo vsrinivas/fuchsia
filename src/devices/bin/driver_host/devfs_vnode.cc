@@ -13,12 +13,6 @@
 #include "driver_host.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 
-namespace {
-
-namespace statecontrol_fidl = fuchsia_hardware_power_statecontrol;
-
-}  // namespace
-
 zx_status_t DevfsVnode::OpenNode(fs::Vnode::ValidatedOptions options,
                                  fbl::RefPtr<Vnode>* out_redirect) {
   if (dev_->Unbound()) {
@@ -178,7 +172,7 @@ void DevfsVnode::GetTopologicalPath(GetTopologicalPathRequestView request,
     actual--;
   }
   auto path = ::fidl::StringView(buf, actual);
-  completer.ReplySuccess(std::move(path));
+  completer.ReplySuccess(path);
 }
 
 void DevfsVnode::GetMinDriverLogSeverity(GetMinDriverLogSeverityRequestView request,

@@ -106,8 +106,8 @@ async fn validate_open_with_node_reference_and_describe(path: &str) -> Result<()
             let () = zx_status::Status::ok(status).map_err(OpenError::OpenError)?;
             info.ok_or(OpenError::MissingOnOpenInfo)?;
         }
-        event @ fio::NodeEvent::OnConnectionInfo { .. } => {
-            panic!("Compliance test did not expect an OnConnectionInfo event: {:?}", event)
+        event @ fio::NodeEvent::OnRepresentation { payload: _ } => {
+            panic!("Compliance test got unexpected event: {:?}", event)
         }
     }
 

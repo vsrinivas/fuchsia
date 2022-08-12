@@ -35,7 +35,7 @@ async fn get_open_status(node_proxy: &fio::NodeProxy) -> zx::Status {
     if let Some(result) = events.next().await {
         match result.expect("FIDL error") {
             fio::NodeEvent::OnOpen_ { s, info: _ } => zx::Status::from_raw(s),
-            fio::NodeEvent::OnConnectionInfo { .. } => zx::Status::OK,
+            fio::NodeEvent::OnRepresentation { .. } => zx::Status::OK,
         }
     } else {
         zx::Status::PEER_CLOSED

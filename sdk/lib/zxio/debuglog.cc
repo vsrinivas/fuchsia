@@ -26,7 +26,7 @@ class Debuglog : public HasIo {
 
  private:
   zx_status_t Close();
-  zx_status_t Reopen(zxio_reopen_flags_t flags, zx_handle_t* out_handle);
+  zx_status_t Clone(zx_handle_t* out_handle);
   zx_status_t Writev(const zx_iovec_t* vector, size_t vector_count, zxio_flags_t flags,
                      size_t* out_actual);
   zx_status_t IsATty(bool* tty);
@@ -47,7 +47,7 @@ constexpr zxio_ops_t Debuglog::kOps = ([]() {
   using Adaptor = Adaptor<Debuglog>;
   zxio_ops_t ops = zxio_default_ops;
   ops.close = Adaptor::From<&Debuglog::Close>;
-  ops.reopen = Adaptor::From<&Debuglog::Reopen>;
+  ops.clone = Adaptor::From<&Debuglog::Clone>;
   ops.writev = Adaptor::From<&Debuglog::Writev>;
   ops.isatty = Adaptor::From<&Debuglog::IsATty>;
   return ops;
@@ -58,10 +58,7 @@ zx_status_t Debuglog::Close() {
   return ZX_OK;
 }
 
-zx_status_t Debuglog::Reopen(zxio_reopen_flags_t flags, zx_handle_t* out_handle) {
-  if (flags != zxio_reopen_flags_t{0}) {
-    return ZX_ERR_INVALID_ARGS;
-  }
+zx_status_t Debuglog::Clone(zx_handle_t* out_handle) {
   zx::debuglog handle;
   zx_status_t status = handle_.duplicate(ZX_RIGHT_SAME_RIGHTS, &handle);
   *out_handle = handle.release();

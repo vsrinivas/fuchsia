@@ -109,17 +109,17 @@ class ConsoleIn {
       auto io = fdio_unsafe_fd_to_io(STDIN_FILENO);
       auto result =
           fidl::WireCall<fpty::Device>(zx::unowned_channel(fdio_unsafe_borrow_channel(io)))
-              ->Describe();
+              ->Describe2();
       fdio_unsafe_release(io);
 
       if (!result.ok()) {
         std::cerr << "Unable to get stdin channel description: " << result << std::endl;
         return false;
       }
-      auto& info = result.value().info;
-      FX_DCHECK(info.is_tty()) << "stdin expected to be a tty";
+      auto& info = result.value();
+      FX_DCHECK(info.has_event()) << "stdin expected to have event";
 
-      events_ = std::move(info.tty().event);
+      events_ = std::move(info.event());
       pty_event_waiter_.set_object(events_.get());
       pty_event_waiter_.set_trigger(static_cast<zx_signals_t>(fpty::wire::kSignalEvent));
       auto status = pty_event_waiter_.Begin(loop_->dispatcher());

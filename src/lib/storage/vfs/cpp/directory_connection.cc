@@ -122,15 +122,9 @@ void DirectoryConnection::Describe(DescribeRequestView request,
                         [&](fio::wire::NodeInfo&& info) { completer.Reply(std::move(info)); });
 }
 
-void DirectoryConnection::Describe2(Describe2RequestView request,
-                                    Describe2Completer::Sync& completer) {
-  zx::status result = Connection::NodeDescribe();
-  if (result.is_error()) {
-    completer.Close(result.status_value());
-    return;
-  }
-  ConnectionInfoConverter converter(std::move(result).value());
-  completer.Reply(std::move(converter.info));
+void DirectoryConnection::GetConnectionInfo(GetConnectionInfoRequestView request,
+                                            GetConnectionInfoCompleter::Sync& completer) {
+  completer.Reply({});
 }
 
 void DirectoryConnection::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {

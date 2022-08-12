@@ -13,7 +13,7 @@
 
 #include "private.h"
 
-typedef struct zxio_vmo {
+using zxio_vmo_t = struct zxio_vmo {
   // The |zxio_t| control structure for this object.
   zxio_t io;
 
@@ -22,7 +22,7 @@ typedef struct zxio_vmo {
 
   // The stream through which we will read and write the VMO.
   zx::stream stream;
-} zxio_vmo_t;
+};
 
 static_assert(sizeof(zxio_vmo_t) <= sizeof(zxio_storage_t),
               "zxio_vmo_t must fit inside zxio_storage_t.");
@@ -39,10 +39,7 @@ static zx_status_t zxio_vmo_release(zxio_t* io, zx_handle_t* out_handle) {
   return ZX_OK;
 }
 
-static zx_status_t zxio_vmo_reopen(zxio_t* io, zxio_reopen_flags_t flags, zx_handle_t* out_handle) {
-  if (flags != zxio_reopen_flags_t{0}) {
-    return ZX_ERR_INVALID_ARGS;
-  }
+static zx_status_t zxio_vmo_clone(zxio_t* io, zx_handle_t* out_handle) {
   auto file = reinterpret_cast<zxio_vmo_t*>(io);
   zx::vmo vmo;
   zx_status_t status = file->vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo);
@@ -137,7 +134,7 @@ static constexpr zxio_ops_t zxio_vmo_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.close = zxio_vmo_close;
   ops.release = zxio_vmo_release;
-  ops.reopen = zxio_vmo_reopen;
+  ops.clone = zxio_vmo_clone;
   ops.attr_get = zxio_vmo_attr_get;
   ops.readv = zxio_vmo_readv;
   ops.readv_at = zxio_vmo_readv_at;

@@ -26,7 +26,8 @@ zxio_node_attributes_t ToZxioNodeAttributes(const fio::wire::NodeAttributes2& at
 
   zxio_node_attributes_t zxio_attr = {};
   if (immutable_attributes.has_protocols()) {
-    ZXIO_NODE_ATTR_SET(zxio_attr, protocols, ToZxioNodeProtocols(immutable_attributes.protocols()));
+    ZXIO_NODE_ATTR_SET(zxio_attr, protocols,
+                       ToZxioNodeProtocolKinds(immutable_attributes.protocols()));
   }
   if (immutable_attributes.has_abilities()) {
     ZXIO_NODE_ATTR_SET(zxio_attr, protocols, ToZxioAbilities(immutable_attributes.abilities()));
@@ -57,7 +58,7 @@ fio::wire::NodeAttributes2 ToIo2NodeAttributes(fidl::AnyArena& allocator,
   fio::wire::MutableNodeAttributes mutable_attributes(allocator);
   fio::wire::ImmutableNodeAttributes immutable_attributes(allocator);
   if (attr.has.protocols) {
-    immutable_attributes.set_protocols(allocator, ToIo2NodeProtocols(attr.protocols));
+    immutable_attributes.set_protocols(allocator, ToIo2NodeProtocolKinds(attr.protocols));
   }
   if (attr.has.abilities) {
     immutable_attributes.set_abilities(allocator, ToIo2Abilities(attr.abilities));
@@ -100,7 +101,8 @@ zx_status_t zxio_remote_v2_close(zxio_t* io) {
     const auto* res = result.Unwrap();
     if (res->is_error()) {
       return res->error_value();
-    } else if (res->is_ok()) {
+    }
+    if (res->is_ok()) {
       return ZX_OK;
     }
     return rio.control()->wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr);
@@ -115,18 +117,14 @@ zx_status_t zxio_remote_v2_release(zxio_t* io, zx_handle_t* out_handle) {
   return ZX_OK;
 }
 
-zx_status_t zxio_remote_v2_reopen(zxio_t* io, zxio_reopen_flags_t flags, zx_handle_t* out_handle) {
+zx_status_t zxio_remote_v2_clone(zxio_t* io, zx_handle_t* out_handle) {
   RemoteV2 rio(io);
   zx::status ends = fidl::CreateEndpoints<fio::Node2>();
   if (ends.is_error()) {
     return ends.status_value();
   }
-  fio::wire::ConnectionOptions options;
-  if (flags & ZXIO_REOPEN_DESCRIBE) {
-    options.flags() |= fio::wire::ConnectionFlags::kGetConnectionInfo;
-  }
   const fidl::WireResult result = fidl::WireCall(fidl::UnownedClientEnd<fio::Node2>(rio.control()))
-                                      ->Reopen(options, ends->server.TakeChannel());
+                                      ->Reopen({}, ends->server.TakeChannel());
   if (!result.ok()) {
     return result.status();
   }
@@ -263,7 +261,7 @@ static constexpr zxio_ops_t zxio_remote_v2_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.close = zxio_remote_v2_close;
   ops.release = zxio_remote_v2_release;
-  ops.reopen = zxio_remote_v2_reopen;
+  ops.clone = zxio_remote_v2_clone;
   ops.wait_begin = zxio_remote_v2_wait_begin;
   ops.wait_end = zxio_remote_v2_wait_end;
   ops.sync = zxio_remote_sync;
@@ -286,7 +284,7 @@ static constexpr zxio_ops_t zxio_dir_v2_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.close = zxio_remote_v2_close;
   ops.release = zxio_remote_v2_release;
-  ops.reopen = zxio_remote_v2_reopen;
+  ops.clone = zxio_remote_v2_clone;
   ops.sync = zxio_remote_sync;
   ops.attr_get = zxio_remote_v2_attr_get;
   ops.attr_set = zxio_remote_v2_attr_set;
@@ -337,9 +335,9 @@ void zxio_file_v2_wait_end(zxio_t* io, zx_signals_t zx_signals, zxio_signals_t* 
 }
 
 template <typename F>
-static zx_status_t zxio_remote_do_vector(const RemoteV2& rio, const zx_iovec_t* vector,
-                                         size_t vector_count, zxio_flags_t flags,
-                                         size_t* out_actual, F fn) {
+zx_status_t zxio_remote_do_vector(const RemoteV2& rio, const zx_iovec_t* vector,
+                                  size_t vector_count, zxio_flags_t flags, size_t* out_actual,
+                                  F fn) {
   return zxio_do_vector(vector, vector_count, out_actual,
                         [&](void* data, size_t capacity, size_t* out_actual) {
                           auto buffer = static_cast<uint8_t*>(data);
@@ -376,7 +374,7 @@ zx_status_t zxio_remote_v2_readv(zxio_t* io, const zx_iovec_t* vector, size_t ve
 
   return zxio_remote_do_vector(
       rio, vector, vector_count, flags, out_actual,
-      [](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
+      [](const zx::unowned_channel& control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
         // Explicitly allocating message buffers to avoid heap allocation.
         fidl::SyncClientBuffer<fio::File2::Read> fidl_buffer;
         const fidl::WireUnownedResult result =
@@ -412,31 +410,31 @@ zx_status_t zxio_remote_v2_readv_at(zxio_t* io, zx_off_t offset, const zx_iovec_
     return rio.stream()->readv_at(0, offset, vector, vector_count, out_actual);
   }
 
-  return zxio_remote_do_vector(
-      rio, vector, vector_count, flags, out_actual,
-      [&offset](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
-        fidl::SyncClientBuffer<fio::File2::ReadAt> fidl_buffer;
-        const fidl::WireUnownedResult result =
-            fidl::WireCall(fidl::UnownedClientEnd<fio::File2>(control))
-                .buffer(fidl_buffer.view())
-                ->ReadAt(capacity, offset);
-        if (!result.ok()) {
-          return result.status();
-        }
-        const auto* res = result.Unwrap();
-        if (res->is_error()) {
-          return res->error_value();
-        }
-        const fidl::VectorView data = res->value()->data;
-        const size_t actual = data.count();
-        if (actual > capacity) {
-          return ZX_ERR_IO;
-        }
-        offset += actual;
-        memcpy(buffer, data.begin(), actual);
-        *out_actual = actual;
-        return ZX_OK;
-      });
+  return zxio_remote_do_vector(rio, vector, vector_count, flags, out_actual,
+                               [&offset](const zx::unowned_channel& control, uint8_t* buffer,
+                                         size_t capacity, size_t* out_actual) {
+                                 fidl::SyncClientBuffer<fio::File2::ReadAt> fidl_buffer;
+                                 const fidl::WireUnownedResult result =
+                                     fidl::WireCall(fidl::UnownedClientEnd<fio::File2>(control))
+                                         .buffer(fidl_buffer.view())
+                                         ->ReadAt(capacity, offset);
+                                 if (!result.ok()) {
+                                   return result.status();
+                                 }
+                                 const auto* res = result.Unwrap();
+                                 if (res->is_error()) {
+                                   return res->error_value();
+                                 }
+                                 const fidl::VectorView data = res->value()->data;
+                                 const size_t actual = data.count();
+                                 if (actual > capacity) {
+                                   return ZX_ERR_IO;
+                                 }
+                                 offset += actual;
+                                 memcpy(buffer, data.begin(), actual);
+                                 *out_actual = actual;
+                                 return ZX_OK;
+                               });
 }
 
 zx_status_t zxio_remote_v2_writev(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
@@ -452,7 +450,7 @@ zx_status_t zxio_remote_v2_writev(zxio_t* io, const zx_iovec_t* vector, size_t v
 
   return zxio_remote_do_vector(
       rio, vector, vector_count, flags, out_actual,
-      [](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
+      [](const zx::unowned_channel& control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
         // Explicitly allocating message buffers to avoid heap allocation.
         fidl::SyncClientBuffer<fio::File2::Write> fidl_buffer;
         const fidl::WireUnownedResult result =
@@ -488,7 +486,8 @@ zx_status_t zxio_remote_v2_writev_at(zxio_t* io, zx_off_t offset, const zx_iovec
 
   return zxio_remote_do_vector(
       rio, vector, vector_count, flags, out_actual,
-      [&offset](zx::unowned_channel control, uint8_t* buffer, size_t capacity, size_t* out_actual) {
+      [&offset](const zx::unowned_channel& control, uint8_t* buffer, size_t capacity,
+                size_t* out_actual) {
         // Explicitly allocating message buffers to avoid heap allocation.
         fidl::SyncClientBuffer<fio::File2::WriteAt> fidl_buffer;
         const fidl::WireUnownedResult result =
@@ -538,7 +537,7 @@ static constexpr zxio_ops_t zxio_file_v2_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.close = zxio_remote_v2_close;
   ops.release = zxio_remote_v2_release;
-  ops.reopen = zxio_remote_v2_reopen;
+  ops.clone = zxio_remote_v2_clone;
   ops.wait_begin = zxio_file_v2_wait_begin;
   ops.wait_end = zxio_file_v2_wait_end;
   ops.sync = zxio_remote_sync;

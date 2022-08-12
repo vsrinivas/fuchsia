@@ -34,7 +34,7 @@ class DirectoryConnection final : public Connection, public fuchsia::io::Directo
              fidl::InterfaceRequest<fuchsia::io::Node> object) override;
   void Close(CloseCallback callback) override;
   void Describe(DescribeCallback callback) override;
-  void Describe2(fuchsia::io::ConnectionInfoQuery query, Describe2Callback callback) override;
+  void GetConnectionInfo(GetConnectionInfoCallback callback) override;
   void Sync(SyncCallback callback) override;
   void GetAttr(GetAttrCallback callback) override;
   void SetAttr(fuchsia::io::NodeAttributeFlags flags, fuchsia::io::NodeAttributes attributes,

@@ -217,10 +217,10 @@ impl<T: 'static + File> FileConnection<T> {
                 fuchsia_trace::duration!("storage", "File::Clone");
                 self.handle_clone(self.flags, flags, object);
             }
-            fio::FileRequest::Reopen { options, object_request, control_handle: _ } => {
+            fio::FileRequest::Reopen { rights_request, object_request, control_handle: _ } => {
                 fuchsia_trace::duration!("storage", "File::Reopen");
                 let _ = object_request;
-                todo!("https://fxbug.dev/77623: options={:?}", options);
+                todo!("https://fxbug.dev/77623: rights_request={:?}", rights_request);
             }
             fio::FileRequest::Close { responder } => {
                 fuchsia_trace::duration!("storage", "File::Close");
@@ -231,10 +231,15 @@ impl<T: 'static + File> FileConnection<T> {
                 fuchsia_trace::duration!("storage", "File::Describe");
                 responder.send(&mut self.file.describe(self.flags)?)?;
             }
-            fio::FileRequest::Describe2 { query, responder } => {
+            fio::FileRequest::Describe2 { responder } => {
                 fuchsia_trace::duration!("storage", "File::Describe2");
                 let _ = responder;
-                todo!("https://fxbug.dev/77623: query={:?}", query);
+                todo!("https://fxbug.dev/77623");
+            }
+            fio::FileRequest::GetConnectionInfo { responder } => {
+                fuchsia_trace::duration!("storage", "File::GetConnectionInfo");
+                let _ = responder;
+                todo!("https://fxbug.dev/77623");
             }
             fio::FileRequest::Sync { responder } => {
                 fuchsia_trace::duration!("storage", "File::Sync");
@@ -324,6 +329,10 @@ impl<T: 'static + File> FileConnection<T> {
             fio::FileRequest::AdvisoryLock { request: _, responder } => {
                 fuchsia_trace::duration!("storage", "File::AdvisoryLock");
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
+            }
+            fio::FileRequest::Query { responder } => {
+                let _ = responder;
+                todo!("https://fxbug.dev/77623");
             }
             fio::FileRequest::QueryFilesystem { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::QueryFilesystem");
@@ -914,11 +923,8 @@ mod tests {
                     fio::NodeInfo::File(fio::FileObject { event: None, stream: None })
                 );
             }
-            Some(fio::FileEvent::OnConnectionInfo { payload }) => {
-                assert_eq!(
-                    payload.representation,
-                    Some(fio::Representation::File(fio::FileInfo::EMPTY))
-                );
+            Some(fio::FileEvent::OnRepresentation { payload }) => {
+                assert_eq!(payload, fio::Representation::File(fio::FileInfo::EMPTY));
             }
             e => panic!("Expected OnOpen event with fio::NodeInfo::File, got {:?}", e),
         }

@@ -1415,7 +1415,7 @@ where
     fn clone_spawn(
         &self,
         flags: fio::OpenFlags,
-        object: ServerEnd<fio::NodeMarker>,
+        object: ServerEnd<impl super::CanClone>,
         mut worker: Self,
     ) {
         fasync::Task::spawn(
@@ -1458,7 +1458,11 @@ where
                 }
 
                 if flags.intersects(fio::OpenFlags::DESCRIBE) {
-                    let mut info = worker.make_handler().await.describe();
+                    let mut info = worker
+                        .make_handler()
+                        .await
+                        .describe()
+                        .map(fio::NodeInfo::SynchronousDatagramSocket);
                     send_on_open(zx::sys::ZX_OK, info.as_mut());
                 }
                 worker.handle_stream(events).await
@@ -1489,13 +1493,24 @@ where
                             // If the call to duplicate_handle fails, we have no
                             // choice but to drop the responder and close the
                             // channel, since Describe must be infallible.
-                            if let Some(mut info) = self.make_handler().await.describe() {
+                            if let Some(mut info)= self.make_handler().await.describe().map(fio::NodeInfo::SynchronousDatagramSocket) {
                                 responder_send!(responder, &mut info);
                             }
                         }
-                        fposix_socket::SynchronousDatagramSocketRequest::Describe2 { query, responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::Describe2 { responder } => {
+                            // If the call to duplicate_handle fails, we have no
+                            // choice but to drop the responder and close the
+                            // channel, since Describe must be infallible.
+                            if let Some(fio::SynchronousDatagramSocket { event }) = self.make_handler().await.describe() {
+                                responder_send!(responder, fposix_socket::SynchronousDatagramSocketDescribe2Response{
+                                    event: Some(event),
+                                    ..fposix_socket::SynchronousDatagramSocketDescribe2Response::EMPTY
+                                });
+                            }
+                        }
+                        fposix_socket::SynchronousDatagramSocketRequest::GetConnectionInfo { responder } => {
                             let _ = responder;
-                            todo!("https://fxbug.dev/77623: query={:?}", query);
+                            todo!("https://fxbug.dev/77623");
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::Connect { addr, responder } => {
                             responder_send!(
@@ -1513,13 +1528,17 @@ where
                             let cloned_worker = self.clone().await;
                             self.clone_spawn(flags, object, cloned_worker);
                         }
+                        fposix_socket::SynchronousDatagramSocketRequest::Clone2 { request, control_handle: _ } => {
+                            let cloned_worker = self.clone().await;
+                            self.clone_spawn(fio::OpenFlags::CLONE_SAME_RIGHTS, request, cloned_worker);
+                        }
                         fposix_socket::SynchronousDatagramSocketRequest::Reopen {
-                            options,
+                            rights_request,
                             object_request,
                             control_handle: _,
                         } => {
                             let _ = object_request;
-                            todo!("https://fxbug.dev/77623: options={:?}", options);
+                            todo!("https://fxbug.dev/77623: rights_request={:?}", rights_request);
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::Close { responder } => {
                             let () = self.make_handler().await.close();
@@ -1570,6 +1589,10 @@ where
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::Bind { addr, responder } => {
                             responder_send!(responder, &mut self.make_handler().await.bind(addr));
+                        }
+                        fposix_socket::SynchronousDatagramSocketRequest::Query { responder } => {
+                            let _ = responder;
+                            todo!("https://fxbug.dev/105608: implement Query");
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::QueryFilesystem { responder } => {
                             responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw(), None);
@@ -2075,15 +2098,11 @@ where
     T: Transport<I>,
     C: RequestHandlerContext<I, T>,
 {
-    fn describe(&self) -> Option<fio::NodeInfo> {
+    fn describe(&self) -> Option<fio::SynchronousDatagramSocket> {
         self.get_state()
             .peer_event
             .duplicate_handle(zx::Rights::BASIC)
-            .map(|peer| {
-                fio::NodeInfo::SynchronousDatagramSocket(fio::SynchronousDatagramSocket {
-                    event: peer,
-                })
-            })
+            .map(|peer| fio::SynchronousDatagramSocket { event: peer })
             .ok()
     }
 
@@ -3372,15 +3391,9 @@ mod tests {
                     ),
                 }
             }
-            fposix_socket::SynchronousDatagramSocketEvent::OnConnectionInfo { payload } => {
-                match payload.representation.expect("missing representation") {
-                    fio::Representation::SynchronousDatagramSocket(_) => (),
-                    representation => panic!(
-                        "Socket Describe call did not return Node of type Socket, got {:?} instead",
-                        representation
-                    ),
-                }
-            }
+            event @ fposix_socket::SynchronousDatagramSocketEvent::OnRepresentation {
+                payload: _,
+            } => panic!("Socket Clone produced unexpected event {:?}", event),
         }
         // describe() explicitly.
         let info = alice_cloned.describe().await.expect("Describe call succeeds");
@@ -3720,7 +3733,7 @@ mod tests {
                     fposix_socket::SynchronousDatagramSocketEvent::OnOpen_ { s, .. } => {
                         assert_eq!(s, zx::sys::ZX_ERR_INVALID_ARGS);
                     }
-                    fposix_socket::SynchronousDatagramSocketEvent::OnConnectionInfo { .. } => {
+                    fposix_socket::SynchronousDatagramSocketEvent::OnRepresentation { .. } => {
                         assert!(false);
                     }
                 }

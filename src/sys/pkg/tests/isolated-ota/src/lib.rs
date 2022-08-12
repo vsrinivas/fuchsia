@@ -532,9 +532,9 @@ async fn serve_failing_blobfs(
             fio::DirectoryRequest::Clone { flags, object, control_handle: _ } => {
                 launch_cloned_blobfs(object, flags, open_flags)
             }
-            fio::DirectoryRequest::Reopen { options, object_request, control_handle: _ } => {
+            fio::DirectoryRequest::Reopen { rights_request, object_request, control_handle: _ } => {
                 let _ = object_request;
-                todo!("https://fxbug.dev/77623: options={:?}", options);
+                todo!("https://fxbug.dev/77623: rights_request={:?}", rights_request);
             }
             fio::DirectoryRequest::Close { responder } => {
                 responder.send(&mut Err(zx::Status::IO.into_raw())).context("failing close")?
@@ -542,9 +542,9 @@ async fn serve_failing_blobfs(
             fio::DirectoryRequest::Describe { responder } => responder
                 .send(&mut fio::NodeInfo::Directory(fio::DirectoryObject))
                 .context("describing")?,
-            fio::DirectoryRequest::Describe2 { query, responder } => {
+            fio::DirectoryRequest::GetConnectionInfo { responder } => {
                 let _ = responder;
-                todo!("https://fxbug.dev/77623: query={:?}", query);
+                todo!("https://fxbug.dev/77623");
             }
             fio::DirectoryRequest::Sync { responder } => {
                 responder.send(&mut Err(zx::Status::IO.into_raw())).context("failing sync")?
@@ -590,20 +590,9 @@ async fn serve_failing_blobfs(
                     object.close_with_epitaph(zx::Status::IO).context("failing open")?;
                 }
             }
-            fio::DirectoryRequest::Open2 {
-                path,
-                mode,
-                options,
-                object_request,
-                control_handle: _,
-            } => {
+            fio::DirectoryRequest::Open2 { path, protocols, object_request, control_handle: _ } => {
                 let _ = object_request;
-                todo!(
-                    "https://fxbug.dev/77623: path={} mode={:?} options={:?}",
-                    path,
-                    mode,
-                    options
-                );
+                todo!("https://fxbug.dev/77623: path={} protocols={:?}", path, protocols);
             }
             fio::DirectoryRequest::AddInotifyFilter {
                 path,
@@ -643,6 +632,10 @@ async fn serve_failing_blobfs(
             }
             fio::DirectoryRequest::Watch { mask: _, options: _, watcher: _, responder } => {
                 responder.send(zx::Status::IO.into_raw()).context("failing watch")?
+            }
+            fio::DirectoryRequest::Query { responder } => {
+                let _ = responder;
+                todo!("https://fxbug.dev/77623");
             }
             fio::DirectoryRequest::QueryFilesystem { responder } => responder
                 .send(zx::Status::IO.into_raw(), None)

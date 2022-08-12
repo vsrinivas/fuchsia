@@ -11,9 +11,6 @@
 #include <fbl/ref_ptr.h>
 
 #include "pty-server.h"
-#include "src/lib/storage/vfs/cpp/vfs.h"
-#include "src/lib/storage/vfs/cpp/vfs_types.h"
-#include "src/lib/storage/vfs/cpp/vnode.h"
 
 class PtyServerDevice : public fidl::WireServer<fuchsia_hardware_pty::Device> {
  public:
@@ -22,6 +19,7 @@ class PtyServerDevice : public fidl::WireServer<fuchsia_hardware_pty::Device> {
   ~PtyServerDevice() override = default;
 
   // fuchsia.hardware.pty.Device methods
+  void Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) final;
   void OpenClient(OpenClientRequestView request, OpenClientCompleter::Sync& completer) final;
   void ClrSetFeature(ClrSetFeatureRequestView request,
                      ClrSetFeatureCompleter::Sync& completer) final;
@@ -44,11 +42,12 @@ class PtyServerDevice : public fidl::WireServer<fuchsia_hardware_pty::Device> {
   void GetBackingMemory(GetBackingMemoryRequestView request,
                         GetBackingMemoryCompleter::Sync& completer) final;
 
-  void AdvisoryLock(AdvisoryLockRequestView request, AdvisoryLockCompleter::Sync& completer) final;
+  void Reopen(ReopenRequestView request, ReopenCompleter::Sync& completer) final;
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) final;
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) final;
+  void GetConnectionInfo(GetConnectionInfoRequestView request,
+                         GetConnectionInfoCompleter::Sync& completer) final;
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) final;
-  void Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) final;
   void Sync(SyncRequestView request, SyncCompleter::Sync& completer) final;
   void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) final;
   void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) final;

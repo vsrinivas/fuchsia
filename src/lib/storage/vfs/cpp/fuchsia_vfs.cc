@@ -403,15 +403,6 @@ zx_status_t FuchsiaVfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel server_end,
         connection =
             std::make_unique<internal::NodeConnection>(this, std::move(vnode), protocol, *options);
         return ZX_OK;
-      case VnodeProtocol::kSynchronousDatagramSocket:
-        // The posix socket protocol is served by netstack.
-        ZX_PANIC("fuchsia.posix.socket/SynchronousDatagramSocket is not implemented");
-      case VnodeProtocol::kStreamSocket:
-        // The posix socket protocol is served by netstack.
-        ZX_PANIC("fuchsia.posix.socket/StreamSocket is not implemented");
-      case VnodeProtocol::kDatagramSocket:
-        // The posix socket protocol is served by netstack.
-        ZX_PANIC("fuchsia.posix.socket/DatagramSocket is not implemented");
     }
 #ifdef __GNUC__
     // GCC does not infer that the above switch statement will always return by handling all defined

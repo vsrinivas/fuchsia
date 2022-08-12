@@ -42,7 +42,8 @@ class FileConnection : public Connection, public fidl::WireServer<fuchsia_io::Fi
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) final;
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) final;
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) final;
-  void Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) final;
+  void GetConnectionInfo(GetConnectionInfoRequestView request,
+                         GetConnectionInfoCompleter::Sync& completer) final;
   void Sync(SyncRequestView request, SyncCompleter::Sync& completer) final;
   void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) final;
   void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) final;
@@ -51,6 +52,7 @@ class FileConnection : public Connection, public fidl::WireServer<fuchsia_io::Fi
   // |fuchsia.io/File| operations.
   //
 
+  void Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) final;
   void Resize(ResizeRequestView request, ResizeCompleter::Sync& completer) final;
   void GetBackingMemory(GetBackingMemoryRequestView request,
                         GetBackingMemoryCompleter::Sync& completer) final;

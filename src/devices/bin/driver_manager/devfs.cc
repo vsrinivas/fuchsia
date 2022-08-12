@@ -108,7 +108,8 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override;
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) override;
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override;
-  void Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) override;
+  void GetConnectionInfo(GetConnectionInfoRequestView request,
+                         GetConnectionInfoCompleter::Sync& completer) override;
   void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
@@ -757,13 +758,9 @@ void DcIostate::Describe(DescribeRequestView request, DescribeCompleter::Sync& c
   completer.Reply(fio::wire::NodeInfo::WithDirectory(directory));
 }
 
-void DcIostate::Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) {
-  fio::wire::DirectoryInfo directory_info;
-  fio::wire::Representation representation = fio::wire::Representation::WithDirectory(
-      fidl::ObjectView<decltype(directory_info)>::FromExternal(&directory_info));
+void DcIostate::GetConnectionInfo(GetConnectionInfoRequestView request,
+                                  GetConnectionInfoCompleter::Sync& completer) {
   fio::wire::ConnectionInfo connection_info;
-  connection_info.set_representation(
-      fidl::ObjectView<decltype(representation)>::FromExternal(&representation));
   completer.Reply(connection_info);
 }
 

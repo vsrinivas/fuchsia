@@ -23,7 +23,7 @@ namespace {
 
 namespace fio = fuchsia_io;
 
-class TestServerBase : public fidl::testing::WireTestBase<fio::File2> {
+class TestServerBase : public fidl::testing::WireTestBase<fio::File> {
  public:
   TestServerBase() = default;
 
@@ -40,14 +40,7 @@ class TestServerBase : public fidl::testing::WireTestBase<fio::File2> {
   }
 
   void Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) override {
-    if (request->query == fio::wire::ConnectionInfoQuery::kRepresentation) {
-      fidl::Arena allocator;
-      fio::wire::ConnectionInfo info(allocator);
-      info.set_representation(allocator, fio::wire::Representation::WithFile(allocator, allocator));
-      completer.Reply(info);
-      return;
-    }
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
+    completer.Reply({});
   }
 
   uint32_t num_close() const { return num_close_.load(); }
@@ -72,7 +65,7 @@ class FileV2 : public zxtest::Test {
   }
 
   zx_status_t OpenFile() {
-    zx::status ends = fidl::CreateEndpoints<fio::File2>();
+    zx::status ends = fidl::CreateEndpoints<fio::File>();
     if (ends.is_error()) {
       return ends.status_value();
     }
@@ -83,24 +76,19 @@ class FileV2 : public zxtest::Test {
       return status;
     }
 
-    fidl::WireResult result =
-        fidl::WireCall(ends->client)->Describe2(fio::wire::ConnectionInfoQuery::kRepresentation);
+    fidl::WireResult result = fidl::WireCall(ends->client)->Describe2();
     if (!result.ok()) {
       return result.status();
     }
-    fio::wire::ConnectionInfo& info = result.value();
+    fio::wire::FileInfo& file = result.value();
 
     zx::event observer;
     zx::stream stream;
-    if (info.has_representation()) {
-      EXPECT_TRUE(info.representation().is_file());
-      fio::wire::FileInfo& file = info.representation().file();
-      if (file.has_observer()) {
-        observer = std::move(file.observer());
-      }
-      if (file.has_stream()) {
-        stream = std::move(file.stream());
-      }
+    if (file.has_observer()) {
+      observer = std::move(file.observer());
+    }
+    if (file.has_stream()) {
+      stream = std::move(file.stream());
     }
 
     return zxio_file_v2_init(&file_, ends->client.TakeChannel().release(), observer.release(),
@@ -126,21 +114,16 @@ class TestServerEvent final : public TestServerBase {
   const zx::event& observer() const { return observer_; }
 
   void Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) override {
-    if (request->query == fio::wire::ConnectionInfoQuery::kRepresentation) {
-      zx::event client_observer;
-      zx_status_t status = observer_.duplicate(ZX_RIGHTS_BASIC, &client_observer);
-      if (status != ZX_OK) {
-        completer.Close(ZX_ERR_INTERNAL);
-        return;
-      }
-      fidl::Arena allocator;
-      fio::wire::ConnectionInfo info(allocator);
-      info.set_representation(allocator, fio::wire::Representation::WithFile(allocator, allocator));
-      info.representation().file().set_observer(std::move(client_observer));
-      completer.Reply(info);
+    zx::event client_observer;
+    zx_status_t status = observer_.duplicate(ZX_RIGHTS_BASIC, &client_observer);
+    if (status != ZX_OK) {
+      completer.Close(ZX_ERR_INTERNAL);
       return;
     }
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
+    fidl::Arena allocator;
+    fio::wire::FileInfo file(allocator);
+    file.set_observer(std::move(client_observer));
+    completer.Reply(file);
   }
 
  private:
@@ -295,21 +278,16 @@ class TestServerStream final : public TestServerBase {
   }
 
   void Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) override {
-    if (request->query == fio::wire::ConnectionInfoQuery::kRepresentation) {
-      zx::stream client_stream;
-      zx_status_t status = stream_.duplicate(ZX_RIGHT_SAME_RIGHTS, &client_stream);
-      if (status != ZX_OK) {
-        completer.Close(ZX_ERR_INTERNAL);
-        return;
-      }
-      fidl::Arena allocator;
-      fio::wire::ConnectionInfo info(allocator);
-      info.set_representation(allocator, fio::wire::Representation::WithFile(allocator, allocator));
-      info.representation().file().set_stream(std::move(client_stream));
-      completer.Reply(info);
+    zx::stream client_stream;
+    zx_status_t status = stream_.duplicate(ZX_RIGHT_SAME_RIGHTS, &client_stream);
+    if (status != ZX_OK) {
+      completer.Close(ZX_ERR_INTERNAL);
       return;
     }
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
+    fidl::Arena allocator;
+    fio::wire::FileInfo file(allocator);
+    file.set_stream(std::move(client_stream));
+    completer.Reply(file);
   }
 
  private:

@@ -79,11 +79,9 @@ pub async fn spawn_pty_forwarder(
 
     zx::Status::ok(status_window_size).map_err(|_| LauncherError::Pty)?;
 
-    let node_info = server.describe().await.map_err(|_| LauncherError::Pty)?;
-    let epair = match node_info {
-        fio::NodeInfo::Tty(fio::Tty { event: Some(epair) }) => epair,
-        _ => return Err(LauncherError::Pty),
-    };
+    let pty::DeviceDescribe2Response { event, .. } =
+        server.describe2().await.map_err(|_| LauncherError::Pty)?;
+    let epair = event.ok_or(LauncherError::Pty)?;
 
     let socket = fasync::Socket::from_socket(socket).unwrap();
     let (read_from_client, write_to_client) = socket.split();
@@ -137,11 +135,8 @@ mod tests {
         stdio.read_exact(&mut buf).await.unwrap();
         assert_eq!(buf, "$ ".as_bytes());
 
-        let node_info = pty.describe().await.unwrap();
-        let epair = match node_info {
-            fio::NodeInfo::Tty(fio::Tty { event: Some(epair) }) => epair,
-            _ => panic!("unexpected node info"),
-        };
+        let pty::DeviceDescribe2Response { event, .. } = pty.describe2().await.unwrap();
+        let epair = event.unwrap();
         let readable =
             zx::Signals::from_bits(fidl_fuchsia_device::DeviceSignal::READABLE.bits()).unwrap();
 

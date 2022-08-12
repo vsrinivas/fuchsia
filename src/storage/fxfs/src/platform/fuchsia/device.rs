@@ -470,7 +470,11 @@ impl BlockServer {
                 self.handle_clone_request(object);
             }
             // TODO(fxbug.dev/89873)
-            VolumeAndNodeRequest::Reopen { options: _, object_request: _, control_handle: _ } => {}
+            VolumeAndNodeRequest::Reopen {
+                rights_request: _,
+                object_request: _,
+                control_handle: _,
+            } => {}
             // TODO(fxbug.dev/89873)
             VolumeAndNodeRequest::Close { responder } => {
                 responder.send(&mut Ok(()))?;
@@ -481,11 +485,9 @@ impl BlockServer {
                 responder.send(&mut info)?;
             }
             // TODO(fxbug.dev/89873)
-            VolumeAndNodeRequest::Describe2 { query: _, responder } => {
-                let info = fio::ConnectionInfo {
-                    representation: Some(fio::Representation::Connector(fio::ConnectorInfo::EMPTY)),
-                    ..fio::ConnectionInfo::EMPTY
-                };
+            VolumeAndNodeRequest::GetConnectionInfo { responder } => {
+                // TODO(https://fxbug.dev/77623): Fill in rights and available operations.
+                let info = fio::ConnectionInfo { ..fio::ConnectionInfo::EMPTY };
                 responder.send(info)?;
             }
             // TODO(fxbug.dev/89873)
@@ -531,6 +533,10 @@ impl BlockServer {
             // TODO(fxbug.dev/89873)
             VolumeAndNodeRequest::SetFlags { flags: _, responder } => {
                 responder.send(zx::sys::ZX_ERR_NOT_SUPPORTED)?;
+            }
+            // TODO(fxbug.dev/105608)
+            VolumeAndNodeRequest::Query { responder } => {
+                responder.send(0)?;
             }
             VolumeAndNodeRequest::QueryFilesystem { responder } => {
                 match self.file.query_filesystem() {

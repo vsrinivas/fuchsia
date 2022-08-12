@@ -64,7 +64,7 @@ class DirentIteratorImpl {
     }
 
     if (fidl_entry.has_protocols()) {
-      ZXIO_DIRENT_SET(*inout_entry, protocols, ToZxioNodeProtocols(fidl_entry.protocols()));
+      ZXIO_DIRENT_SET(*inout_entry, protocols, ToZxioNodeProtocolKinds(fidl_entry.protocols()));
     }
     if (fidl_entry.has_abilities()) {
       ZXIO_DIRENT_SET(*inout_entry, abilities, ToZxioAbilities(fidl_entry.abilities()));

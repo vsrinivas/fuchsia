@@ -107,9 +107,9 @@ bool zxio_is_valid(const zxio_t* io);
 
 void zxio_node_init(zxio_node_t* node, zx_handle_t control, const zxio_extension_ops_t* ops);
 
-zx_status_t zxio_dir_init(zxio_storage_t* remote, zx_handle_t control);
+zx_status_t zxio_dir_init(zxio_storage_t* storage, zx_handle_t control);
 
-zx_status_t zxio_file_init(zxio_storage_t* remote, zx_handle_t control, zx_handle_t event,
+zx_status_t zxio_file_init(zxio_storage_t* storage, zx_handle_t control, zx_handle_t event,
                            zx_handle_t stream);
 
 zx_status_t zxio_pipe_init(zxio_storage_t* pipe, zx::socket socket, zx_info_socket_t info);
@@ -190,12 +190,12 @@ using zxio_remote_v2_t = struct zxio_remote_v2 {
 static_assert(sizeof(zxio_remote_v2_t) <= sizeof(zxio_storage_t),
               "zxio_remote_v2_t must fit inside zxio_storage_t.");
 
-zx_status_t zxio_remote_v2_init(zxio_storage_t* remote, zx_handle_t control, zx_handle_t observer);
-zx_status_t zxio_dir_v2_init(zxio_storage_t* remote, zx_handle_t control);
-zx_status_t zxio_file_v2_init(zxio_storage_t* remote, zx_handle_t control, zx_handle_t observer,
+zx_status_t zxio_remote_v2_init(zxio_storage_t* storage, zx_handle_t control, zx_handle_t observer);
+zx_status_t zxio_dir_v2_init(zxio_storage_t* storage, zx_handle_t control);
+zx_status_t zxio_file_v2_init(zxio_storage_t* storage, zx_handle_t control, zx_handle_t observer,
                               zx_handle_t stream);
 
-zx_status_t zxio_remote_init(zxio_storage_t* remote, zx_handle_t control, zx_handle_t event);
+zx_status_t zxio_remote_init(zxio_storage_t* storage, zx_handle_t control, zx_handle_t event);
 
 // vmo -------------------------------------------------------------------------
 
@@ -225,14 +225,14 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fuchsia_io::Node> node,
 // have different object layouts.
 
 // Send a |fuchsia.io/Node.Close| message on |control|. Note: does not close the channel.
-zx_status_t zxio_raw_remote_close(zx::unowned_channel control);
+zx_status_t zxio_raw_remote_close(const zx::unowned_channel& control);
 
-zx_status_t zxio_raw_remote_reopen(zx::unowned_channel source, zxio_reopen_flags_t flags,
-                                   zx_handle_t* out_handle);
+zx_status_t zxio_raw_remote_clone(const zx::unowned_channel& source, zx_handle_t* out_handle);
 
-zx_status_t zxio_raw_remote_attr_get(zx::unowned_channel control, zxio_node_attributes_t* out_attr);
+zx_status_t zxio_raw_remote_attr_get(const zx::unowned_channel& control,
+                                     zxio_node_attributes_t* out_attr);
 
-zx_status_t zxio_raw_remote_attr_set(zx::unowned_channel control,
+zx_status_t zxio_raw_remote_attr_set(const zx::unowned_channel& control,
                                      const zxio_node_attributes_t* attr);
 
 #endif  // LIB_ZXIO_PRIVATE_H_

@@ -24,6 +24,7 @@ import (
 	"unsafe"
 
 	"fidl/fuchsia/io"
+	"fidl/fuchsia/unknown"
 )
 
 func respond(ctx fidl.Context, flags io.OpenFlags, req io.NodeWithCtxInterfaceRequest, err error, node io.NodeWithCtx) error {
@@ -89,14 +90,14 @@ func (s *Service) Clone(ctx fidl.Context, flags io.OpenFlags, req io.NodeWithCtx
 	return s.addConnection(ctx, flags, 0, req)
 }
 
-func (s *Service) Reopen(ctx fidl.Context, options io.ConnectionOptions, channel zx.Channel) error {
+func (s *Service) Reopen(ctx fidl.Context, rights *io.RightsRequest, channel zx.Channel) error {
 	// TODO(https://fxbug.dev/77623): implement.
 	_ = channel.Close()
 	return nil
 }
 
-func (*Service) Close(fidl.Context) (io.Node2CloseResult, error) {
-	return io.Node2CloseResultWithResponse(io.Node2CloseResponse{}), nil
+func (*Service) Close(fidl.Context) (unknown.CloseableCloseResult, error) {
+	return unknown.CloseableCloseResultWithResponse(unknown.CloseableCloseResponse{}), nil
 }
 
 func (*Service) Describe(fidl.Context) (io.NodeInfo, error) {
@@ -105,20 +106,12 @@ func (*Service) Describe(fidl.Context) (io.NodeInfo, error) {
 	return nodeInfo, nil
 }
 
-func (*Service) Describe2(_ fidl.Context, query io.ConnectionInfoQuery) (io.ConnectionInfo, error) {
+func (*Service) GetConnectionInfo(fidl.Context) (io.ConnectionInfo, error) {
 	var connectionInfo io.ConnectionInfo
-	if query&io.ConnectionInfoQueryRepresentation != 0 {
-		connectionInfo.SetRepresentation(io.RepresentationWithConnector(io.ConnectorInfo{}))
-	}
-	if query&io.ConnectionInfoQueryRights != 0 {
-		// TODO(https://fxbug.dev/77623): Populate the rights requested by the client at connection.
-		// This might require separating Service from the VFS implementation so that the latter can
-		// hold these rights.
-		connectionInfo.SetRights(io.OperationsConnect)
-	}
-	if query&io.ConnectionInfoQueryAvailableOperations != 0 {
-		connectionInfo.SetAvailableOperations(io.OperationsConnect)
-	}
+	// TODO(https://fxbug.dev/77623): Populate the rights requested by the client at connection.
+	// This might require separating Service from the VFS implementation so that the latter can
+	// hold these rights.
+	connectionInfo.SetRights(io.OperationsConnect)
 	return connectionInfo, nil
 }
 
@@ -158,6 +151,10 @@ func (*Service) SetFlags(fidl.Context, io.OpenFlags) (int32, error) {
 
 func (*Service) QueryFilesystem(fidl.Context) (int32, *io.FilesystemInfo, error) {
 	return int32(zx.ErrNotSupported), nil, nil
+}
+
+func (*Service) Query(fidl.Context) (uint64, error) {
+	panic("TODO(https://fxbug.dev/105608): implement Query")
 }
 
 type Directory interface {
@@ -241,14 +238,14 @@ func (dirState *directoryState) Clone(ctx fidl.Context, flags io.OpenFlags, req 
 	return dirState.addConnection(ctx, flags, 0, req)
 }
 
-func (dirState *directoryState) Reopen(ctx fidl.Context, options io.ConnectionOptions, channel zx.Channel) error {
+func (dirState *directoryState) Reopen(ctx fidl.Context, rights *io.RightsRequest, channel zx.Channel) error {
 	// TODO(https://fxbug.dev/77623): implement.
 	_ = channel.Close()
 	return nil
 }
 
-func (*directoryState) Close(fidl.Context) (io.Node2CloseResult, error) {
-	return io.Node2CloseResultWithResponse(io.Node2CloseResponse{}), nil
+func (*directoryState) Close(fidl.Context) (unknown.CloseableCloseResult, error) {
+	return unknown.CloseableCloseResultWithResponse(unknown.CloseableCloseResponse{}), nil
 }
 
 func (*directoryState) Describe(fidl.Context) (io.NodeInfo, error) {
@@ -257,20 +254,11 @@ func (*directoryState) Describe(fidl.Context) (io.NodeInfo, error) {
 	return nodeInfo, nil
 }
 
-func (*directoryState) Describe2(_ fidl.Context, query io.ConnectionInfoQuery) (io.ConnectionInfo, error) {
+func (*directoryState) GetConnectionInfo(fidl.Context) (io.ConnectionInfo, error) {
 	var connectionInfo io.ConnectionInfo
-	if query&io.ConnectionInfoQueryRepresentation != 0 {
-		connectionInfo.SetRepresentation(io.RepresentationWithDirectory(io.DirectoryInfo{}))
-	}
 	// TODO(https://fxbug.dev/77623): Populate the rights requested by the client at connection.
 	rights := io.RStarDir
-	if query&io.ConnectionInfoQueryRights != 0 {
-		connectionInfo.SetRights(rights)
-	}
-	if query&io.ConnectionInfoQueryAvailableOperations != 0 {
-		abilities := io.OperationsGetAttributes | io.OperationsEnumerate | io.OperationsTraverse
-		connectionInfo.SetAvailableOperations(abilities & rights)
-	}
+	connectionInfo.SetRights(rights)
 	return connectionInfo, nil
 }
 
@@ -327,7 +315,7 @@ func (dirState *directoryState) Open(ctx fidl.Context, flags io.OpenFlags, mode 
 	return respond(ctx, flags, req, &zx.Error{Status: zx.ErrNotFound}, dirState)
 }
 
-func (dirState *directoryState) Open2(ctx fidl.Context, path string, mode io.OpenMode, options io.ConnectionOptions, channel zx.Channel) error {
+func (dirState *directoryState) Open2(ctx fidl.Context, path string, protocols io.ConnectionProtocols, channel zx.Channel) error {
 	// TODO(https://fxbug.dev/77623): implement.
 	_ = channel.Close()
 	return nil
@@ -438,6 +426,10 @@ func (*directoryState) QueryFilesystem(fidl.Context) (int32, *io.FilesystemInfo,
 	return int32(zx.ErrNotSupported), nil, nil
 }
 
+func (*directoryState) Query(fidl.Context) (uint64, error) {
+	panic("TODO(https://fxbug.dev/105608): implement Query")
+}
+
 type File interface {
 	GetReader() (Reader, uint64)
 	GetVMO() zx.VMO
@@ -528,14 +520,14 @@ func (fState *fileState) Clone(ctx fidl.Context, flags io.OpenFlags, req io.Node
 	return fState.addConnection(ctx, flags, 0, req)
 }
 
-func (fState *fileState) Reopen(ctx fidl.Context, options io.ConnectionOptions, channel zx.Channel) error {
+func (fState *fileState) Reopen(ctx fidl.Context, rights *io.RightsRequest, channel zx.Channel) error {
 	// TODO(https://fxbug.dev/77623): implement.
 	_ = channel.Close()
 	return nil
 }
 
-func (fState *fileState) Close(fidl.Context) (io.Node2CloseResult, error) {
-	return io.Node2CloseResultWithResponse(io.Node2CloseResponse{}), nil
+func (fState *fileState) Close(fidl.Context) (unknown.CloseableCloseResult, error) {
+	return unknown.CloseableCloseResultWithResponse(unknown.CloseableCloseResponse{}), nil
 }
 
 func (fState *fileState) Describe(fidl.Context) (io.NodeInfo, error) {
@@ -544,22 +536,16 @@ func (fState *fileState) Describe(fidl.Context) (io.NodeInfo, error) {
 	return nodeInfo, nil
 }
 
-func (fState *fileState) Describe2(_ fidl.Context, query io.ConnectionInfoQuery) (io.ConnectionInfo, error) {
+func (fState *fileState) Describe2(fidl.Context) (io.FileInfo, error) {
+	var fileInfo io.FileInfo
+	return fileInfo, nil
+}
+
+func (fState *fileState) GetConnectionInfo(fidl.Context) (io.ConnectionInfo, error) {
 	var connectionInfo io.ConnectionInfo
-	if query&io.ConnectionInfoQueryRepresentation != 0 {
-		var representation io.Representation
-		representation.SetFile(io.FileInfo{})
-		connectionInfo.SetRepresentation(representation)
-	}
 	// TODO(https://fxbug.dev/77623): Populate the rights requested by the client at connection.
 	rights := io.RStarDir
-	if query&io.ConnectionInfoQueryRights != 0 {
-		connectionInfo.SetRights(rights)
-	}
-	if query&io.ConnectionInfoQueryAvailableOperations != 0 {
-		abilities := io.OperationsReadBytes | io.OperationsGetAttributes
-		connectionInfo.SetAvailableOperations(abilities & rights)
-	}
+	connectionInfo.SetRights(rights)
 	return connectionInfo, nil
 }
 
@@ -650,6 +636,10 @@ func (*fileState) SetFlags(fidl.Context, io.OpenFlags) (int32, error) {
 
 func (*fileState) QueryFilesystem(fidl.Context) (int32, *io.FilesystemInfo, error) {
 	return int32(zx.ErrNotSupported), nil, nil
+}
+
+func (*fileState) Query(fidl.Context) (uint64, error) {
+	panic("TODO(https://fxbug.dev/105608): implement Query")
 }
 
 func (fState *fileState) AdvisoryLock(fidl.Context, io.AdvisoryLockRequest) (io.AdvisoryLockingAdvisoryLockResult, error) {

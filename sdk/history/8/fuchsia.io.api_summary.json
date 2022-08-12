@@ -93,42 +93,6 @@
         "value": "24"
     },
     {
-        "kind": "bits/member",
-        "name": "fuchsia.io/ConnectionFlags.APPEND",
-        "value": "4"
-    },
-    {
-        "kind": "bits/member",
-        "name": "fuchsia.io/ConnectionFlags.CONNECT",
-        "value": "2"
-    },
-    {
-        "kind": "bits/member",
-        "name": "fuchsia.io/ConnectionFlags.GET_CONNECTION_INFO",
-        "value": "1"
-    },
-    {
-        "kind": "bits/member",
-        "name": "fuchsia.io/ConnectionFlags.TRUNCATE",
-        "value": "8"
-    },
-    {
-        "declaration": "uint64",
-        "kind": "bits",
-        "name": "fuchsia.io/ConnectionFlags",
-        "strictness": "strict"
-    },
-    {
-        "declaration": "fuchsia.io/Operations",
-        "kind": "table/member",
-        "name": "fuchsia.io/ConnectionInfo.available_operations"
-    },
-    {
-        "declaration": "fuchsia.io/Representation",
-        "kind": "table/member",
-        "name": "fuchsia.io/ConnectionInfo.representation"
-    },
-    {
         "declaration": "fuchsia.io/Operations",
         "kind": "table/member",
         "name": "fuchsia.io/ConnectionInfo.rights"
@@ -139,44 +103,25 @@
         "resourceness": "resource"
     },
     {
-        "kind": "bits/member",
-        "name": "fuchsia.io/ConnectionInfoQuery.AVAILABLE_OPERATIONS",
-        "value": "4"
+        "declaration": "fuchsia.io/ConnectorFlags",
+        "kind": "union/member",
+        "name": "fuchsia.io/ConnectionProtocols.connector"
     },
     {
-        "kind": "bits/member",
-        "name": "fuchsia.io/ConnectionInfoQuery.REPRESENTATION",
-        "value": "1"
+        "declaration": "fuchsia.io/NodeOptions",
+        "kind": "union/member",
+        "name": "fuchsia.io/ConnectionProtocols.node"
     },
     {
-        "kind": "bits/member",
-        "name": "fuchsia.io/ConnectionInfoQuery.RIGHTS",
-        "value": "2"
+        "kind": "union",
+        "name": "fuchsia.io/ConnectionProtocols",
+        "strictness": "flexible"
     },
     {
         "declaration": "uint64",
         "kind": "bits",
-        "name": "fuchsia.io/ConnectionInfoQuery",
-        "strictness": "strict"
-    },
-    {
-        "declaration": "fuchsia.io/ConnectionFlags",
-        "kind": "table/member",
-        "name": "fuchsia.io/ConnectionOptions.flags"
-    },
-    {
-        "declaration": "fuchsia.io/NodeProtocols",
-        "kind": "table/member",
-        "name": "fuchsia.io/ConnectionOptions.protocols"
-    },
-    {
-        "declaration": "fuchsia.io/RightsRequest",
-        "kind": "table/member",
-        "name": "fuchsia.io/ConnectionOptions.rights_request"
-    },
-    {
-        "kind": "table",
-        "name": "fuchsia.io/ConnectionOptions"
+        "name": "fuchsia.io/ConnectorFlags",
+        "strictness": "flexible"
     },
     {
         "kind": "table",
@@ -203,26 +148,6 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "uint64",
-        "kind": "table/member",
-        "name": "fuchsia.io/DatagramSocketInfo.rx_meta_buf_size"
-    },
-    {
-        "declaration": "zx/handle:SOCKET",
-        "kind": "table/member",
-        "name": "fuchsia.io/DatagramSocketInfo.socket"
-    },
-    {
-        "declaration": "uint64",
-        "kind": "table/member",
-        "name": "fuchsia.io/DatagramSocketInfo.tx_meta_buf_size"
-    },
-    {
-        "kind": "table",
-        "name": "fuchsia.io/DatagramSocketInfo",
-        "resourceness": "resource"
-    },
-    {
         "declaration": "zx/handle:<EVENTPAIR,optional>",
         "kind": "struct/member",
         "name": "fuchsia.io/Device.unused"
@@ -230,16 +155,6 @@
     {
         "kind": "struct",
         "name": "fuchsia.io/Device",
-        "resourceness": "resource"
-    },
-    {
-        "declaration": "zx/handle:EVENTPAIR",
-        "kind": "table/member",
-        "name": "fuchsia.io/DeviceInfo.unused"
-    },
-    {
-        "kind": "table",
-        "name": "fuchsia.io/DeviceInfo",
         "resourceness": "resource"
     },
     {
@@ -268,11 +183,6 @@
         "name": "fuchsia.io/Directory.Describe"
     },
     {
-        "declaration": "(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo payload)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/Directory.Describe2"
-    },
-    {
         "declaration": "(fuchsia.io/DirectoryEnumerateOptions options,server_end:fuchsia.io/DirectoryIterator iterator)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory.Enumerate"
@@ -286,6 +196,11 @@
         "declaration": "(fuchsia.io/NodeAttributesQuery query) -> (fuchsia.io/Node2_GetAttributes_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory.GetAttributes"
+    },
+    {
+        "declaration": "() -> (fuchsia.io/ConnectionInfo payload)",
+        "kind": "protocol/member",
+        "name": "fuchsia.io/Directory.GetConnectionInfo"
     },
     {
         "declaration": "() -> (int32 s,fuchsia.io/OpenFlags flags)",
@@ -303,14 +218,14 @@
         "name": "fuchsia.io/Directory.Link"
     },
     {
-        "declaration": " -> (fuchsia.io/ConnectionInfo payload)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/Directory.OnConnectionInfo"
-    },
-    {
         "declaration": " -> (int32 s,fuchsia.io/NodeInfo:optional info)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory.OnOpen"
+    },
+    {
+        "declaration": " -> (fuchsia.io/Representation payload)",
+        "kind": "protocol/member",
+        "name": "fuchsia.io/Directory.OnRepresentation"
     },
     {
         "declaration": "(fuchsia.io/OpenFlags flags,uint32 mode,string:4096 path,server_end:fuchsia.io/Node object)",
@@ -318,7 +233,7 @@
         "name": "fuchsia.io/Directory.Open"
     },
     {
-        "declaration": "(string:4095 path,fuchsia.io/OpenMode mode,fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)",
+        "declaration": "(string:4095 path,fuchsia.io/ConnectionProtocols protocols,zx/handle:CHANNEL object_request)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory.Open2"
     },
@@ -338,7 +253,7 @@
         "name": "fuchsia.io/Directory.Rename"
     },
     {
-        "declaration": "(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)",
+        "declaration": "(box<fuchsia.io/RightsRequest> rights_request,zx/handle:CHANNEL object_request)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory.Reopen"
     },
@@ -397,11 +312,6 @@
         "name": "fuchsia.io/Directory1.Describe"
     },
     {
-        "declaration": "(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo payload)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/Directory1.Describe2"
-    },
-    {
         "declaration": "() -> (int32 s,fuchsia.io/NodeAttributes attributes)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory1.GetAttr"
@@ -410,6 +320,11 @@
         "declaration": "(fuchsia.io/NodeAttributesQuery query) -> (fuchsia.io/Node2_GetAttributes_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory1.GetAttributes"
+    },
+    {
+        "declaration": "() -> (fuchsia.io/ConnectionInfo payload)",
+        "kind": "protocol/member",
+        "name": "fuchsia.io/Directory1.GetConnectionInfo"
     },
     {
         "declaration": "() -> (int32 s,fuchsia.io/OpenFlags flags)",
@@ -427,14 +342,14 @@
         "name": "fuchsia.io/Directory1.Link"
     },
     {
-        "declaration": " -> (fuchsia.io/ConnectionInfo payload)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/Directory1.OnConnectionInfo"
-    },
-    {
         "declaration": " -> (int32 s,fuchsia.io/NodeInfo:optional info)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory1.OnOpen"
+    },
+    {
+        "declaration": " -> (fuchsia.io/Representation payload)",
+        "kind": "protocol/member",
+        "name": "fuchsia.io/Directory1.OnRepresentation"
     },
     {
         "declaration": "(fuchsia.io/OpenFlags flags,uint32 mode,string:4096 path,server_end:fuchsia.io/Node object)",
@@ -452,7 +367,7 @@
         "name": "fuchsia.io/Directory1.ReadDirents"
     },
     {
-        "declaration": "(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)",
+        "declaration": "(box<fuchsia.io/RightsRequest> rights_request,zx/handle:CHANNEL object_request)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory1.Reopen"
     },
@@ -506,11 +421,6 @@
         "name": "fuchsia.io/Directory2.Close"
     },
     {
-        "declaration": "(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo payload)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/Directory2.Describe2"
-    },
-    {
         "declaration": "(fuchsia.io/DirectoryEnumerateOptions options,server_end:fuchsia.io/DirectoryIterator iterator)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory2.Enumerate"
@@ -521,12 +431,17 @@
         "name": "fuchsia.io/Directory2.GetAttributes"
     },
     {
-        "declaration": " -> (fuchsia.io/ConnectionInfo payload)",
+        "declaration": "() -> (fuchsia.io/ConnectionInfo payload)",
         "kind": "protocol/member",
-        "name": "fuchsia.io/Directory2.OnConnectionInfo"
+        "name": "fuchsia.io/Directory2.GetConnectionInfo"
     },
     {
-        "declaration": "(string:4095 path,fuchsia.io/OpenMode mode,fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)",
+        "declaration": " -> (fuchsia.io/Representation payload)",
+        "kind": "protocol/member",
+        "name": "fuchsia.io/Directory2.OnRepresentation"
+    },
+    {
+        "declaration": "(string:4095 path,fuchsia.io/ConnectionProtocols protocols,zx/handle:CHANNEL object_request)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory2.Open2"
     },
@@ -536,7 +451,7 @@
         "name": "fuchsia.io/Directory2.Rename"
     },
     {
-        "declaration": "(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)",
+        "declaration": "(box<fuchsia.io/RightsRequest> rights_request,zx/handle:CHANNEL object_request)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory2.Reopen"
     },
@@ -613,7 +528,7 @@
         "name": "fuchsia.io/DirectoryEntry.name"
     },
     {
-        "declaration": "fuchsia.io/NodeProtocols",
+        "declaration": "fuchsia.io/NodeProtocolKinds",
         "kind": "table/member",
         "name": "fuchsia.io/DirectoryEntry.protocols"
     },
@@ -665,6 +580,10 @@
     {
         "kind": "struct",
         "name": "fuchsia.io/DirectoryObject"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.io/DirectoryProtocol"
     },
     {
         "kind": "protocol",
@@ -722,7 +641,7 @@
         "name": "fuchsia.io/File.Describe"
     },
     {
-        "declaration": "(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo payload)",
+        "declaration": "() -> (fuchsia.io/FileInfo payload)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File.Describe2"
     },
@@ -742,19 +661,24 @@
         "name": "fuchsia.io/File.GetBackingMemory"
     },
     {
+        "declaration": "() -> (fuchsia.io/ConnectionInfo payload)",
+        "kind": "protocol/member",
+        "name": "fuchsia.io/File.GetConnectionInfo"
+    },
+    {
         "declaration": "() -> (int32 s,fuchsia.io/OpenFlags flags)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File.GetFlags"
     },
     {
-        "declaration": " -> (fuchsia.io/ConnectionInfo payload)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File.OnConnectionInfo"
-    },
-    {
         "declaration": " -> (int32 s,fuchsia.io/NodeInfo:optional info)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File.OnOpen"
+    },
+    {
+        "declaration": " -> (fuchsia.io/Representation payload)",
+        "kind": "protocol/member",
+        "name": "fuchsia.io/File.OnRepresentation"
     },
     {
         "declaration": "() -> (int32 s,box<fuchsia.io/FilesystemInfo> info)",
@@ -772,7 +696,7 @@
         "name": "fuchsia.io/File.ReadAt"
     },
     {
-        "declaration": "(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)",
+        "declaration": "(box<fuchsia.io/RightsRequest> rights_request,zx/handle:CHANNEL object_request)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File.Reopen"
     },
@@ -821,11 +745,6 @@
         "name": "fuchsia.io/File"
     },
     {
-        "declaration": "(fuchsia.io/AdvisoryLockRequest request) -> (fuchsia.io/AdvisoryLocking_AdvisoryLock_Result result)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File2.AdvisoryLock"
-    },
-    {
         "declaration": "(fuchsia.io/OpenFlags flags,server_end:fuchsia.io/Node object)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File2.Clone"
@@ -839,11 +758,6 @@
         "declaration": "() -> (fuchsia.io/NodeInfo info)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File2.Describe"
-    },
-    {
-        "declaration": "(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo payload)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File2.Describe2"
     },
     {
         "declaration": "() -> (int32 s,fuchsia.io/NodeAttributes attributes)",
@@ -861,19 +775,24 @@
         "name": "fuchsia.io/File2.GetBackingMemory"
     },
     {
+        "declaration": "() -> (fuchsia.io/ConnectionInfo payload)",
+        "kind": "protocol/member",
+        "name": "fuchsia.io/File2.GetConnectionInfo"
+    },
+    {
         "declaration": "() -> (int32 s,fuchsia.io/OpenFlags flags)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File2.GetFlags"
     },
     {
-        "declaration": " -> (fuchsia.io/ConnectionInfo payload)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File2.OnConnectionInfo"
-    },
-    {
         "declaration": " -> (int32 s,fuchsia.io/NodeInfo:optional info)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File2.OnOpen"
+    },
+    {
+        "declaration": " -> (fuchsia.io/Representation payload)",
+        "kind": "protocol/member",
+        "name": "fuchsia.io/File2.OnRepresentation"
     },
     {
         "declaration": "() -> (int32 s,box<fuchsia.io/FilesystemInfo> info)",
@@ -891,7 +810,7 @@
         "name": "fuchsia.io/File2.ReadAt"
     },
     {
-        "declaration": "(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)",
+        "declaration": "(box<fuchsia.io/RightsRequest> rights_request,zx/handle:CHANNEL object_request)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File2.Reopen"
     },
@@ -1141,6 +1060,22 @@
     },
     {
         "kind": "bits/member",
+        "name": "fuchsia.io/FileProtocolFlags.APPEND",
+        "value": "1"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.io/FileProtocolFlags.TRUNCATE",
+        "value": "2"
+    },
+    {
+        "declaration": "uint64",
+        "kind": "bits",
+        "name": "fuchsia.io/FileProtocolFlags",
+        "strictness": "flexible"
+    },
+    {
+        "kind": "bits/member",
         "name": "fuchsia.io/FileSignal.READABLE",
         "value": "16777216"
     },
@@ -1241,7 +1176,7 @@
         "name": "fuchsia.io/ImmutableNodeAttributes.link_count"
     },
     {
-        "declaration": "fuchsia.io/NodeProtocols",
+        "declaration": "fuchsia.io/NodeProtocolKinds",
         "kind": "table/member",
         "name": "fuchsia.io/ImmutableNodeAttributes.protocols"
     },
@@ -1517,11 +1452,6 @@
         "name": "fuchsia.io/Node.Describe"
     },
     {
-        "declaration": "(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo payload)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/Node.Describe2"
-    },
-    {
         "declaration": "() -> (int32 s,fuchsia.io/NodeAttributes attributes)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Node.GetAttr"
@@ -1532,14 +1462,14 @@
         "name": "fuchsia.io/Node.GetAttributes"
     },
     {
+        "declaration": "() -> (fuchsia.io/ConnectionInfo payload)",
+        "kind": "protocol/member",
+        "name": "fuchsia.io/Node.GetConnectionInfo"
+    },
+    {
         "declaration": "() -> (int32 s,fuchsia.io/OpenFlags flags)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Node.GetFlags"
-    },
-    {
-        "declaration": " -> (fuchsia.io/ConnectionInfo payload)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/Node.OnConnectionInfo"
     },
     {
         "declaration": " -> (int32 s,fuchsia.io/NodeInfo:optional info)",
@@ -1547,12 +1477,17 @@
         "name": "fuchsia.io/Node.OnOpen"
     },
     {
+        "declaration": " -> (fuchsia.io/Representation payload)",
+        "kind": "protocol/member",
+        "name": "fuchsia.io/Node.OnRepresentation"
+    },
+    {
         "declaration": "() -> (int32 s,box<fuchsia.io/FilesystemInfo> info)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Node.QueryFilesystem"
     },
     {
-        "declaration": "(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)",
+        "declaration": "(box<fuchsia.io/RightsRequest> rights_request,zx/handle:CHANNEL object_request)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Node.Reopen"
     },
@@ -1596,11 +1531,6 @@
         "name": "fuchsia.io/Node1.Describe"
     },
     {
-        "declaration": "(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo payload)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/Node1.Describe2"
-    },
-    {
         "declaration": "() -> (int32 s,fuchsia.io/NodeAttributes attributes)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Node1.GetAttr"
@@ -1611,14 +1541,14 @@
         "name": "fuchsia.io/Node1.GetAttributes"
     },
     {
+        "declaration": "() -> (fuchsia.io/ConnectionInfo payload)",
+        "kind": "protocol/member",
+        "name": "fuchsia.io/Node1.GetConnectionInfo"
+    },
+    {
         "declaration": "() -> (int32 s,fuchsia.io/OpenFlags flags)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Node1.GetFlags"
-    },
-    {
-        "declaration": " -> (fuchsia.io/ConnectionInfo payload)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/Node1.OnConnectionInfo"
     },
     {
         "declaration": " -> (int32 s,fuchsia.io/NodeInfo:optional info)",
@@ -1626,12 +1556,17 @@
         "name": "fuchsia.io/Node1.OnOpen"
     },
     {
+        "declaration": " -> (fuchsia.io/Representation payload)",
+        "kind": "protocol/member",
+        "name": "fuchsia.io/Node1.OnRepresentation"
+    },
+    {
         "declaration": "() -> (int32 s,box<fuchsia.io/FilesystemInfo> info)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Node1.QueryFilesystem"
     },
     {
-        "declaration": "(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)",
+        "declaration": "(box<fuchsia.io/RightsRequest> rights_request,zx/handle:CHANNEL object_request)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Node1.Reopen"
     },
@@ -1665,22 +1600,22 @@
         "name": "fuchsia.io/Node2.Close"
     },
     {
-        "declaration": "(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo payload)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/Node2.Describe2"
-    },
-    {
         "declaration": "(fuchsia.io/NodeAttributesQuery query) -> (fuchsia.io/Node2_GetAttributes_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Node2.GetAttributes"
     },
     {
-        "declaration": " -> (fuchsia.io/ConnectionInfo payload)",
+        "declaration": "() -> (fuchsia.io/ConnectionInfo payload)",
         "kind": "protocol/member",
-        "name": "fuchsia.io/Node2.OnConnectionInfo"
+        "name": "fuchsia.io/Node2.GetConnectionInfo"
     },
     {
-        "declaration": "(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)",
+        "declaration": " -> (fuchsia.io/Representation payload)",
+        "kind": "protocol/member",
+        "name": "fuchsia.io/Node2.OnRepresentation"
+    },
+    {
+        "declaration": "(box<fuchsia.io/RightsRequest> rights_request,zx/handle:CHANNEL object_request)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Node2.Reopen"
     },
@@ -1852,12 +1787,12 @@
     {
         "kind": "bits/member",
         "name": "fuchsia.io/NodeAttributesQuery.CREATION_TIME",
-        "value": "32"
+        "value": "64"
     },
     {
         "kind": "bits/member",
         "name": "fuchsia.io/NodeAttributesQuery.ID",
-        "value": "128"
+        "value": "32"
     },
     {
         "kind": "bits/member",
@@ -1867,7 +1802,7 @@
     {
         "kind": "bits/member",
         "name": "fuchsia.io/NodeAttributesQuery.MODIFICATION_TIME",
-        "value": "64"
+        "value": "128"
     },
     {
         "kind": "bits/member",
@@ -1884,6 +1819,17 @@
         "kind": "bits",
         "name": "fuchsia.io/NodeAttributesQuery",
         "strictness": "strict"
+    },
+    {
+        "kind": "bits/member",
+        "name": "fuchsia.io/NodeFlags.GET_REPRESENTATION",
+        "value": "1"
+    },
+    {
+        "declaration": "uint64",
+        "kind": "bits",
+        "name": "fuchsia.io/NodeFlags",
+        "strictness": "flexible"
     },
     {
         "declaration": "fuchsia.io/DatagramSocket",
@@ -1947,30 +1893,63 @@
         "strictness": "strict"
     },
     {
+        "declaration": "fuchsia.io/NodeFlags",
+        "kind": "table/member",
+        "name": "fuchsia.io/NodeOptions.flags"
+    },
+    {
+        "declaration": "fuchsia.io/OpenMode",
+        "kind": "table/member",
+        "name": "fuchsia.io/NodeOptions.mode"
+    },
+    {
+        "declaration": "fuchsia.io/NodeProtocols",
+        "kind": "table/member",
+        "name": "fuchsia.io/NodeOptions.protocols"
+    },
+    {
+        "declaration": "fuchsia.io/RightsRequest",
+        "kind": "table/member",
+        "name": "fuchsia.io/NodeOptions.rights_request"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.io/NodeOptions"
+    },
+    {
         "kind": "bits/member",
-        "name": "fuchsia.io/NodeProtocols.CONNECTOR",
+        "name": "fuchsia.io/NodeProtocolKinds.CONNECTOR",
         "value": "1"
     },
     {
         "kind": "bits/member",
-        "name": "fuchsia.io/NodeProtocols.DEVICE",
-        "value": "268435456"
-    },
-    {
-        "kind": "bits/member",
-        "name": "fuchsia.io/NodeProtocols.DIRECTORY",
+        "name": "fuchsia.io/NodeProtocolKinds.DIRECTORY",
         "value": "2"
     },
     {
         "kind": "bits/member",
-        "name": "fuchsia.io/NodeProtocols.FILE",
+        "name": "fuchsia.io/NodeProtocolKinds.FILE",
         "value": "4"
     },
     {
         "declaration": "uint64",
         "kind": "bits",
-        "name": "fuchsia.io/NodeProtocols",
-        "strictness": "strict"
+        "name": "fuchsia.io/NodeProtocolKinds",
+        "strictness": "flexible"
+    },
+    {
+        "declaration": "fuchsia.io/DirectoryProtocol",
+        "kind": "table/member",
+        "name": "fuchsia.io/NodeProtocols.directory"
+    },
+    {
+        "declaration": "fuchsia.io/FileProtocolFlags",
+        "kind": "table/member",
+        "name": "fuchsia.io/NodeProtocols.file"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.io/NodeProtocols"
     },
     {
         "declaration": "fuchsia.io/OpenFlags",
@@ -2148,16 +2127,6 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "zx/handle:EVENTPAIR",
-        "kind": "table/member",
-        "name": "fuchsia.io/PacketSocketInfo.event"
-    },
-    {
-        "kind": "table",
-        "name": "fuchsia.io/PacketSocketInfo",
-        "resourceness": "resource"
-    },
-    {
         "declaration": "fuchsia.io/Operations",
         "kind": "const",
         "name": "fuchsia.io/RW_STAR_DIR",
@@ -2186,29 +2155,9 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "zx/handle:EVENTPAIR",
-        "kind": "table/member",
-        "name": "fuchsia.io/RawSocketInfo.event"
-    },
-    {
-        "kind": "table",
-        "name": "fuchsia.io/RawSocketInfo",
-        "resourceness": "resource"
-    },
-    {
         "declaration": "fuchsia.io/ConnectorInfo",
         "kind": "union/member",
         "name": "fuchsia.io/Representation.connector"
-    },
-    {
-        "declaration": "fuchsia.io/DatagramSocketInfo",
-        "kind": "union/member",
-        "name": "fuchsia.io/Representation.datagram_socket"
-    },
-    {
-        "declaration": "fuchsia.io/DeviceInfo",
-        "kind": "union/member",
-        "name": "fuchsia.io/Representation.device"
     },
     {
         "declaration": "fuchsia.io/DirectoryInfo",
@@ -2219,31 +2168,6 @@
         "declaration": "fuchsia.io/FileInfo",
         "kind": "union/member",
         "name": "fuchsia.io/Representation.file"
-    },
-    {
-        "declaration": "fuchsia.io/PacketSocketInfo",
-        "kind": "union/member",
-        "name": "fuchsia.io/Representation.packet_socket"
-    },
-    {
-        "declaration": "fuchsia.io/RawSocketInfo",
-        "kind": "union/member",
-        "name": "fuchsia.io/Representation.raw_socket"
-    },
-    {
-        "declaration": "fuchsia.io/StreamSocketInfo",
-        "kind": "union/member",
-        "name": "fuchsia.io/Representation.stream_socket"
-    },
-    {
-        "declaration": "fuchsia.io/SynchronousDatagramSocketInfo",
-        "kind": "union/member",
-        "name": "fuchsia.io/Representation.synchronous_datagram_socket"
-    },
-    {
-        "declaration": "fuchsia.io/TtyInfo",
-        "kind": "union/member",
-        "name": "fuchsia.io/Representation.tty"
     },
     {
         "kind": "union",
@@ -2322,16 +2246,6 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "zx/handle:SOCKET",
-        "kind": "table/member",
-        "name": "fuchsia.io/StreamSocketInfo.socket"
-    },
-    {
-        "kind": "table",
-        "name": "fuchsia.io/StreamSocketInfo",
-        "resourceness": "resource"
-    },
-    {
         "declaration": "zx/handle:<EVENTPAIR,zx.TRANSFER,zx.WAIT>",
         "kind": "struct/member",
         "name": "fuchsia.io/SynchronousDatagramSocket.event"
@@ -2342,16 +2256,6 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "zx/handle:EVENTPAIR",
-        "kind": "table/member",
-        "name": "fuchsia.io/SynchronousDatagramSocketInfo.event"
-    },
-    {
-        "kind": "table",
-        "name": "fuchsia.io/SynchronousDatagramSocketInfo",
-        "resourceness": "resource"
-    },
-    {
         "declaration": "zx/handle:<EVENTPAIR,optional>",
         "kind": "struct/member",
         "name": "fuchsia.io/Tty.event"
@@ -2359,16 +2263,6 @@
     {
         "kind": "struct",
         "name": "fuchsia.io/Tty",
-        "resourceness": "resource"
-    },
-    {
-        "declaration": "zx/handle:EVENTPAIR",
-        "kind": "table/member",
-        "name": "fuchsia.io/TtyInfo.event"
-    },
-    {
-        "kind": "table",
-        "name": "fuchsia.io/TtyInfo",
         "resourceness": "resource"
     },
     {

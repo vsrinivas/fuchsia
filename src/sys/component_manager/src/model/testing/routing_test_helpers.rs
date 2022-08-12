@@ -1541,11 +1541,8 @@ pub mod capability_util {
                     fio::NodeInfo::File(fio::FileObject { .. })
                 ));
             }
-            fio::FileEvent::OnConnectionInfo { payload } => {
-                assert!(matches!(
-                    payload.representation.expect("failed to receive node info"),
-                    fio::Representation::File(fio::FileInfo { .. })
-                ));
+            fio::FileEvent::OnRepresentation { payload } => {
+                assert!(matches!(payload, fio::Representation::File(fio::FileInfo { .. })));
             }
         }
     }

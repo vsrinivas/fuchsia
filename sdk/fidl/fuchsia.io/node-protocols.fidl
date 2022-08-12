@@ -7,37 +7,32 @@ library fuchsia.io;
 /// it may have a fixed underlying identity.
 ///
 /// Today, a file is accessed via the [`File`] protocol, and sends a
-/// [`Representation.FileInfo`] when opened with `GET_CONNECTION_INFO`. However,
+/// [`Representation.FileInfo`] when opened with `GET_REPRESENTATION`. However,
 /// in the future we might introduce a more sophisticated `FileV2` protocol, or
-/// a more efficient `SuperFastFile` backed by a specialized kernel object.
-/// New clients can request the more advanced representations by specifying
-/// the corresponding bits in [`NodeProtocols`], whereas existing clients
-/// would continue to talk to the node via the old representation.
+/// a more efficient `SuperFastFile` backed by a specialized kernel object. New
+/// clients can request the more advanced representations by specifying the
+/// corresponding bits in [`NodeProtocolKinds`], whereas existing clients would
+/// continue to talk to the node via the old representation.
 ///
-/// [`NodeProtocols`] enables forward-compatibility through a form of protocol
+/// [`NodeProtocolKinds`] enables forward-compatibility through a form of protocol
 /// negotiation.
 ///
 /// The elements have one-to-one correspondence with the members of
 /// [`Representation`].
-type NodeProtocols = strict bits : uint64 {
+type NodeProtocolKinds = flexible bits : uint64 {
     /// The connector representation of a node.
-    /// The connection will speak either [`Node`], or some custom
-    /// protocol, depending on the flags used during opening and reopening.
+    ///
+    /// The connection will speak either [`Node`] or the target protocol,
+    /// depending on the flags used during opening.
     CONNECTOR = 0x1;
 
     /// The directory representation of a node.
+    ///
     /// The connection will speak the [`Directory`] protocol.
     DIRECTORY = 0x2;
 
     /// The file representation of a node.
+    ///
     /// The connection will speak the [`File`] protocol.
     FILE = 0x4;
-
-    /// The device representation of a node.
-    ///
-    /// The connection will speak [`fuchsia.hardware.block.BlockAndNode`] OR
-    /// [`fuchsia.hardware.block.volume.VolumeAndNode`].
-    ///
-    /// TODO(https://fxbug.dev/103827): Document why this is needed or remove it.
-    DEVICE = 0x10000000;
 };

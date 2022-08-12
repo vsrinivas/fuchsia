@@ -6,6 +6,7 @@ library fuchsia.posix.socket.packet;
 using fuchsia.net;
 using fuchsia.posix;
 using fuchsia.posix.socket;
+using zx;
 
 type Empty = struct {};
 
@@ -130,6 +131,13 @@ type PacketInfo = struct {
 // TODO(https://fxbug.dev/85597): Implement RFC-0109 for packet sockets.
 protocol Socket {
     compose fuchsia.posix.socket.BaseSocket;
+
+    @selector("Describe")
+    Describe2() -> (resource table {
+        /// Signals additional information about the state of the socket such as
+        /// readiness or shutdown-ness.
+        1: event zx.handle:EVENTPAIR;
+    });
 
     /// Bind the socket to a protocol and/or interface.
     ///

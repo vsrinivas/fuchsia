@@ -27,6 +27,7 @@ import (
 	"fidl/fuchsia/net/interfaces"
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
+	"fidl/fuchsia/unknown"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
@@ -358,7 +359,7 @@ func TestEndpoint_Close(t *testing.T) {
 	// Close the original referent.
 	if result, err := s.Close(context.Background()); err != nil {
 		t.Fatalf("s.Close() = %s", err)
-	} else if result.Which() != io.Node2CloseResultResponse {
+	} else if result.Which() != unknown.CloseableCloseResultResponse {
 		t.Fatalf("s.Close() = %s", zx.Status(result.Err))
 	}
 
