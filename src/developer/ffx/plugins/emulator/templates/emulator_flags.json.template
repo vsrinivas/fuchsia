@@ -83,7 +83,11 @@
                 {{/if}}
             {{else}}
                 {{#if (eq host.os "macos")}}
-                    "-enable-hvf",
+                    {{#if (eq host.architecture "arm64")}}
+                        "-enable-hvf,highmem=off",
+                    {{else}}
+                        "-enable-hvf",
+                    {{/if}}
                     "-cpu",
                     "Haswell",
                 {{/if}}
