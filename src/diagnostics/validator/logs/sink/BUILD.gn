@@ -9,17 +9,20 @@ rustc_binary("bin") {
   output_name = "sink_validator"
   edition = "2021"
   with_unit_tests = true
+  testonly = true
   deps = [
-    "fidl:sink-puppet_rust",
-    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_rust",
-    "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream_rust",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys_rust",
+    "fidl:sink-puppet-rustc",
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
+    "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream-rustc",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/diagnostics/log/encoding/rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",
@@ -44,7 +47,6 @@ rustc_binary("bin-e2e-test") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:tracing",
   ]
@@ -69,7 +71,8 @@ fuchsia_unittest_package("sink-validator-tests") {
 ### SDK ###
 
 fuchsia_component("sink-validator-for-sdk") {
-  manifest = "meta/validator-sdk.cmx"
+  testonly = true
+  manifest = "meta/validator-sdk.cml"
   deps = [ ":bin" ]
 }
 
@@ -81,7 +84,8 @@ fuchsia_test_package("log-sink-validator-sdk") {
 ### C++ ###
 
 fuchsia_component("sink-validator-for-cpp") {
-  manifest = "meta/validator-cpp.cmx"
+  testonly = true
+  manifest = "meta/validator-cpp.cml"
   deps = [ ":bin" ]
 }
 
@@ -93,7 +97,8 @@ fuchsia_test_package("log-sink-validator-cpp") {
 ### E2E C++ ###
 
 fuchsia_component("sink-validator-for-cpp-e2e") {
-  manifest = "meta/validator-cpp-e2e.cmx"
+  testonly = true
+  manifest = "meta/validator-cpp-e2e.cml"
   deps = [ ":bin-e2e-test" ]
 }
 
@@ -105,7 +110,8 @@ fuchsia_test_package("log-sink-validator-cpp-e2e") {
 ### Rust ###
 
 fuchsia_component("sink-validator-for-rust") {
-  manifest = "meta/validator-rust.cmx"
+  testonly = true
+  manifest = "meta/validator-rust.cml"
   deps = [ ":bin" ]
 }
 

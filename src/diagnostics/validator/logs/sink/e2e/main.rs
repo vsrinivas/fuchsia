@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use anyhow::Error;
-use argh::FromArgs;
 use diagnostics_reader::{ArchiveReader, Logs};
 use fidl_fuchsia_diagnostics::Severity;
 use fidl_fuchsia_diagnostics_stream::Record;
@@ -11,42 +10,29 @@ use fidl_fuchsia_validate_logs::{
     LogSinkPuppetMarker, LogSinkPuppetProxy, PrintfRecordSpec, PrintfValue, PuppetInfo, RecordSpec,
 };
 use fuchsia_async::Task;
-use fuchsia_component::client::{launch, launcher, App};
+use fuchsia_component::client::connect_to_protocol;
 use futures::prelude::*;
 use tracing::*;
 
-/// Validate Log VMO formats written by 'puppet' programs controlled by
-/// this Validator program.
-#[derive(Debug, FromArgs)]
-struct Opt {
-    /// required arg: The URL of the puppet
-    #[argh(option, long = "url")]
-    puppet_url: String,
-}
-
 #[fuchsia::main]
 async fn main() -> Result<(), Error> {
-    let Opt { puppet_url } = argh::from_env();
-    Puppet::launch(&puppet_url).await?.test().await
+    Puppet::launch().await?.test().await
 }
 
 struct Puppet {
     _info: PuppetInfo,
     _proxy: LogSinkPuppetProxy,
-    _env: App,
 }
 
 impl Puppet {
-    async fn launch(puppet_url: &str) -> Result<Self, Error> {
-        let local_launcher = launcher()?;
-        let app = launch(&local_launcher, puppet_url.to_string(), None)?;
-        info!("Connecting to puppet and spawning watchdog.");
-        let proxy = app.connect_to_protocol::<LogSinkPuppetMarker>()?;
+    async fn launch() -> Result<Self, Error> {
+        info!("Connecting to puppet");
+        let proxy = connect_to_protocol::<LogSinkPuppetMarker>()?;
 
         info!("Requesting info from the puppet.");
         let info = proxy.get_info().await?;
 
-        Ok(Self { _proxy: proxy, _info: info, _env: app })
+        Ok(Self { _proxy: proxy, _info: info })
     }
 
     async fn test(&self) -> Result<(), Error> {

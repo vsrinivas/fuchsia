@@ -26,8 +26,8 @@ rustc_binary("rust-puppet") {
 }
 
 fuchsia_component("component") {
-  component_name = "sink-validator-rust-puppet"
+  component_name = "puppet"
   testonly = true
-  manifest = "meta/puppet.cmx"
+  manifest = "meta/puppet.cml"
   deps = [ ":rust-puppet" ]
 }

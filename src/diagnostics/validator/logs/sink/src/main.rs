@@ -4,20 +4,25 @@
 
 use anyhow::Error;
 use argh::FromArgs;
+use component_events::{events::*, matcher::*};
 use diagnostics_log_encoding::{parse::parse_record, Argument, Record, Severity, Value};
 use fidl_fuchsia_diagnostics::Interest;
 use fidl_fuchsia_diagnostics_stream::{MAX_ARGS, MAX_ARG_NAME_LENGTH};
 use fidl_fuchsia_logger::LogSinkWaitForInterestChangeResponder;
-use fidl_fuchsia_logger::{LogSinkRequest, LogSinkRequestStream, MAX_DATAGRAM_LEN_BYTES};
-use fidl_fuchsia_sys::EnvironmentControllerProxy;
+use fidl_fuchsia_logger::{
+    LogSinkMarker, LogSinkRequest, LogSinkRequestStream, MAX_DATAGRAM_LEN_BYTES,
+};
+use fidl_fuchsia_sys2::EventSourceMarker;
 use fidl_fuchsia_validate_logs::{
     LogSinkPuppetMarker, LogSinkPuppetProxy, PrintfRecordSpec, PrintfValue, PuppetInfo, RecordSpec,
 };
 use fuchsia_async::{Socket, Task};
-use fuchsia_component::server::ServiceFs;
-use fuchsia_component::server::ServiceObj;
+use fuchsia_component::{client, server::ServiceFs};
+use fuchsia_component_test::{
+    Capability, ChildOptions, LocalComponentHandles, RealmBuilder, RealmInstance, Ref, Route,
+};
 use fuchsia_zircon as zx;
-use futures::prelude::*;
+use futures::{channel::mpsc, prelude::*};
 use proptest::{
     collection::vec,
     prelude::{any, Arbitrary, Just, ProptestConfig, Strategy, TestCaseError},
@@ -32,9 +37,6 @@ use tracing::*;
 /// this Validator program.
 #[derive(Debug, FromArgs)]
 struct Opt {
-    /// required arg: The URL of the puppet
-    #[argh(option, long = "url")]
-    puppet_url: String,
     /// set to true if you want to use the new file/line rules (where file and line numbers are always included)
     #[argh(switch)]
     new_file_line_rules: bool,
@@ -55,7 +57,6 @@ struct Opt {
 #[fuchsia::main]
 async fn main() -> Result<(), Error> {
     let Opt {
-        puppet_url,
         new_file_line_rules,
         test_printf,
         test_stop_listener,
@@ -63,7 +64,6 @@ async fn main() -> Result<(), Error> {
         test_invalid_unicode,
     } = argh::from_env();
     Puppet::launch(
-        &puppet_url,
         new_file_line_rules,
         test_printf,
         test_stop_listener,
@@ -80,10 +80,10 @@ struct Puppet {
     socket: Socket,
     info: PuppetInfo,
     proxy: LogSinkPuppetProxy,
-    _app_watchdog: Task<()>,
-    _env: EnvironmentControllerProxy,
+    _puppet_stopped_watchdog: Task<()>,
     new_file_line_rules: bool,
     ignored_tags: Vec<Value>,
+    _instance: RealmInstance,
 }
 
 async fn demux_fidl(
@@ -128,53 +128,95 @@ async fn wait_for_severity(
 
 impl Puppet {
     async fn launch(
-        puppet_url: &str,
         new_file_line_rules: bool,
         has_structured_printf: bool,
         supports_stopping_listener: bool,
         test_invalid_unicode: bool,
         ignored_tags: Vec<String>,
     ) -> Result<Self, Error> {
-        let mut fs = ServiceFs::new();
-        fs.add_fidl_service(|s: LogSinkRequestStream| s);
-
-        let start_time = zx::Time::get_monotonic();
-        info!(%puppet_url, ?ignored_tags, "launching");
-        let (_env, mut app) = fs
-            .launch_component_in_nested_environment(
-                puppet_url.to_owned(),
-                None,
-                "log_validator_puppet",
+        let builder = RealmBuilder::new().await?;
+        let puppet = builder.add_child("puppet", "#meta/puppet.cm", ChildOptions::new()).await?;
+        let (incoming_log_sink_requests_snd, mut incoming_log_sink_requests) = mpsc::unbounded();
+        let mocks_server = builder
+            .add_local_child(
+                "mocks-server",
+                move |handles: LocalComponentHandles| {
+                    let snd = incoming_log_sink_requests_snd.clone();
+                    Box::pin(async move {
+                        let mut fs = ServiceFs::new();
+                        fs.dir("svc").add_fidl_service(|s: LogSinkRequestStream| {
+                            snd.unbounded_send(s).expect("sent log sink request stream");
+                        });
+                        fs.serve_connection(handles.outgoing_dir.into_channel())?;
+                        fs.collect::<()>().await;
+                        Ok(())
+                    })
+                },
+                ChildOptions::new(),
             )
+            .await?;
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol::<LogSinkPuppetMarker>())
+                    .from(&puppet)
+                    .to(Ref::parent()),
+            )
+            .await?;
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol::<LogSinkMarker>())
+                    .from(&mocks_server)
+                    .to(&puppet),
+            )
+            .await?;
+
+        let event_source =
+            EventSource::from_proxy(client::connect_to_protocol::<EventSourceMarker>().unwrap());
+        let mut event_stream = event_source
+            .subscribe(vec![EventSubscription::new(vec![Stopped::NAME])])
+            .await
             .unwrap();
 
-        fs.take_and_serve_directory_handle()?;
-
-        info!("Connecting to puppet and spawning watchdog.");
-        let proxy = app.connect_to_protocol::<LogSinkPuppetMarker>()?;
-        let _app_watchdog = Task::spawn(async move {
-            let status = app.wait().await;
+        let instance = builder.build().await.expect("create instance");
+        let instance_child_name = instance.root.child_name().to_string();
+        let _puppet_stopped_watchdog = Task::spawn(async move {
+            EventMatcher::ok()
+                .moniker(format!("./realm_builder:{}/puppet", instance_child_name))
+                .wait::<Stopped>(&mut event_stream)
+                .await
+                .unwrap();
+            let status = event_stream.next().await;
             panic!("puppet should not exit! status: {:?}", status);
         });
 
-        info!("Waiting for LogSink connection.");
-        let mut stream = fs.next().await.unwrap();
+        let start_time = zx::Time::get_monotonic();
+        let proxy =
+            instance.root.connect_to_protocol_at_exposed_dir::<LogSinkPuppetMarker>().unwrap();
+
+        info!("Waiting for first LogSink connection (from Component Manager) (to be ignored).");
+        let _ = incoming_log_sink_requests.next().await.unwrap();
+        info!("Waiting for second LogSink connection.");
+        let mut stream = incoming_log_sink_requests.next().await.unwrap();
         info!("Requesting info from the puppet.");
         let info = proxy.get_info().await?;
         info!("Waiting for LogSink.Connect call.");
         let (socket, interest_listener) = demux_fidl(&mut stream).await?;
         info!("Ensuring we received the init message.");
+        assert!(!socket.is_closed());
         let mut puppet = Self {
             socket,
             proxy,
             info,
             start_time,
-            _app_watchdog,
-            _env,
+            _puppet_stopped_watchdog,
             new_file_line_rules,
             ignored_tags: ignored_tags.into_iter().map(Value::Text).collect(),
+            _instance: instance,
         };
         if test_invalid_unicode {
+            info!("Testing invalid unicode.");
             assert_eq!(
                     puppet.read_record(new_file_line_rules).await?.unwrap(),
                     RecordAssertion::new(&puppet.info, Severity::Info, new_file_line_rules)
@@ -182,6 +224,7 @@ impl Puppet {
                         .build(puppet.start_time..zx::Time::get_monotonic())
                 );
         } else {
+            info!("Reading regular record.");
             assert_eq!(
                 puppet.read_record(new_file_line_rules).await?.unwrap(),
                 RecordAssertion::new(&puppet.info, Severity::Info, new_file_line_rules)
@@ -190,13 +233,15 @@ impl Puppet {
             );
         }
         if has_structured_printf {
+            info!("Asserting printf record.");
             assert_printf_record(&mut puppet, new_file_line_rules).await?;
         }
+        info!("Asserting interest listener");
         assert_interest_listener(
             &mut puppet,
             new_file_line_rules,
             &mut stream,
-            &mut fs,
+            &mut incoming_log_sink_requests,
             supports_stopping_listener,
             interest_listener,
         )
@@ -336,14 +381,17 @@ async fn assert_logged_severities(
     Ok(())
 }
 
-async fn assert_interest_listener(
+async fn assert_interest_listener<S>(
     puppet: &mut Puppet,
     new_file_line_rules: bool,
     stream: &mut LogSinkRequestStream,
-    fs: &mut ServiceFs<ServiceObj<'_, LogSinkRequestStream>>,
+    incoming_log_sink_requests: &mut S,
     supports_stopping_listener: bool,
     listener: LogSinkWaitForInterestChangeResponder,
-) -> Result<(), Error> {
+) -> Result<(), Error>
+where
+    S: Stream<Item = LogSinkRequestStream> + std::marker::Unpin,
+{
     macro_rules! send_log_with_severity {
         ($severity:ident) => {
             let mut record = RecordSpec {
@@ -431,7 +479,7 @@ async fn assert_interest_listener(
     if supports_stopping_listener {
         puppet.proxy.stop_interest_listener().await.unwrap();
         // We're restarting the logging system in the child process so we should expect a re-connection.
-        *stream = fs.next().await.unwrap();
+        *stream = incoming_log_sink_requests.next().await.unwrap();
         if let LogSinkRequest::ConnectStructured { socket, control_handle: _ } =
             stream.next().await.unwrap()?
         {
