@@ -2,25 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/services/mixer/fidl/fidl_graph_creator.h"
+#include "src/media/audio/services/mixer/fidl/graph_creator_server.h"
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
-#include "src/media/audio/services/mixer/fidl/fidl_graph.h"
-#include "src/media/audio/services/mixer/fidl/fidl_synthetic_clock.h"
+#include "src/media/audio/services/mixer/fidl/graph_server.h"
 #include "src/media/audio/services/mixer/fidl/real_clock_factory.h"
+#include "src/media/audio/services/mixer/fidl/synthetic_clock_server.h"
 
 namespace media_audio {
 
 // static
-std::shared_ptr<FidlGraphCreator> FidlGraphCreator::Create(
+std::shared_ptr<GraphCreatorServer> GraphCreatorServer::Create(
     std::shared_ptr<const FidlThread> thread,
     fidl::ServerEnd<fuchsia_audio_mixer::GraphCreator> server_end) {
   return BaseFidlServer::Create(std::move(thread), std::move(server_end));
 }
 
-void FidlGraphCreator::Create(CreateRequestView request, CreateCompleter::Sync& completer) {
+void GraphCreatorServer::Create(CreateRequestView request, CreateCompleter::Sync& completer) {
   TRACE_DURATION("audio", "GraphCreator::Create");
   ScopedThreadChecker checker(thread().checker());
 
@@ -29,7 +29,7 @@ void FidlGraphCreator::Create(CreateRequestView request, CreateCompleter::Sync& 
     return;
   }
 
-  FidlGraph::Args args;
+  GraphServer::Args args;
 
   if (request->has_name()) {
     args.name = std::string(request->name().get());
@@ -41,8 +41,8 @@ void FidlGraphCreator::Create(CreateRequestView request, CreateCompleter::Sync& 
   }
 
   if (request->has_synthetic_clock_realm()) {
-    auto realm =
-        FidlSyntheticClockRealm::Create(thread_ptr(), std::move(request->synthetic_clock_realm()));
+    auto realm = SyntheticClockRealmServer::Create(thread_ptr(),
+                                                   std::move(request->synthetic_clock_realm()));
     args.clock_registry = realm->registry();
   } else {
     args.clock_registry = std::make_shared<ClockRegistry>(std::make_shared<RealClockFactory>());
@@ -50,7 +50,7 @@ void FidlGraphCreator::Create(CreateRequestView request, CreateCompleter::Sync& 
 
   // Create a server to control this graph.
   // The created object will live until `args.sever_end` is closed.
-  AddChildServer(FidlGraph::Create(thread_ptr(), std::move(request->graph()), std::move(args)));
+  AddChildServer(GraphServer::Create(thread_ptr(), std::move(request->graph()), std::move(args)));
 
   fidl::Arena arena;
   completer.ReplySuccess(

@@ -40,9 +40,9 @@ class BaseFidlServerUntyped {
 // Base class for FIDL servers. Example of use:
 //
 // ```cpp
-// class FidlServer : public BaseFidlServer<FidlServer, Protocol> {
+// class ProtocolServer : public BaseFidlServer<ProtocolServer, Protocol> {
 //  public:
-//    static std::shared_ptr<FidlServer> Create(std::shared_ptr<const FidlThread> thread,
+//    static std::shared_ptr<ProtocolServer> Create(std::shared_ptr<const FidlThread> thread,
 //                                              fidl::ServerEnd<Protocol> server_end,
 //                                              int arg) {
 //      return BaseFidlServer::Create(std::move(thread), std::move(server_end), arg);
@@ -52,11 +52,11 @@ class BaseFidlServerUntyped {
 //    // ...
 //
 //  private:
-//    static inline const std::string_view kName = "FidlServer";
+//    static inline const std::string_view kName = "ProtocolServer";
 //    template<class ServerT, class ProtocolT>
 //    friend class BaseFidlServer;
 //
-//    FidlServer(int arg);
+//    ProtocolServer(int arg);
 // };
 // ```
 //

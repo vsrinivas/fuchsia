@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/services/mixer/fidl_realtime/fidl_stream_sink.h"
+#include "src/media/audio/services/mixer/fidl_realtime/stream_sink_server.h"
 
 #include <lib/sync/cpp/completion.h>
 #include <lib/syslog/cpp/macros.h>
@@ -60,7 +60,7 @@ MATCHER_P(PushPacketCommandEq, want_packet, "") {
 
 }  // namespace
 
-class FidlStreamSinkTest : public ::testing::Test {
+class StreamSinkServerTest : public ::testing::Test {
  public:
   void SetUp() {
     zx::vmo vmo;
@@ -71,8 +71,8 @@ class FidlStreamSinkTest : public ::testing::Test {
 
     buffer_ = *buffer_result;
     thread_ = FidlThread::CreateFromNewThread("test_fidl_thread");
-    stream_sink_wrapper_ = std::make_unique<TestServerAndClient<FidlStreamSink>>(
-        thread_, FidlStreamSink::Args{
+    stream_sink_wrapper_ = std::make_unique<TestServerAndClient<StreamSinkServer>>(
+        thread_, StreamSinkServer::Args{
                      .format = kFormat,
                      .media_ticks_per_ns = kMediaTicksPerNs,
                      .payload_buffers = {{{kBufferId, buffer_}}},
@@ -90,7 +90,7 @@ class FidlStreamSinkTest : public ::testing::Test {
     stream_sink_wrapper_.reset();
   }
 
-  FidlStreamSink& stream_sink_server() { return stream_sink_wrapper_->server(); }
+  StreamSinkServer& stream_sink_server() { return stream_sink_wrapper_->server(); }
   fidl::WireSyncClient<fuchsia_media2::StreamSink>& stream_sink_client() {
     return stream_sink_wrapper_->client();
   }
@@ -148,7 +148,7 @@ class FidlStreamSinkTest : public ::testing::Test {
  private:
   std::shared_ptr<MemoryMappedBuffer> buffer_;
   std::shared_ptr<FidlThread> thread_;
-  std::unique_ptr<TestServerAndClient<FidlStreamSink>> stream_sink_wrapper_;
+  std::unique_ptr<TestServerAndClient<StreamSinkServer>> stream_sink_wrapper_;
 
   // The following fields are guarded by mutex_.
   // We can't check this statically because thread-safety analysis doesn't support std::unique_lock.
@@ -158,7 +158,7 @@ class FidlStreamSinkTest : public ::testing::Test {
   int64_t calls_delivered_{0};
 };
 
-TEST_F(FidlStreamSinkTest, ExplicitTimestamp) {
+TEST_F(StreamSinkServerTest, ExplicitTimestamp) {
   auto queue = std::make_shared<CommandQueue>();
   AddProducerQueue(queue);
 
@@ -221,7 +221,7 @@ TEST_F(FidlStreamSinkTest, ExplicitTimestamp) {
   ASSERT_TRUE(packet1_fence.Wait(zx::sec(5)));
 }
 
-TEST_F(FidlStreamSinkTest, ContinuousTimestamps) {
+TEST_F(StreamSinkServerTest, ContinuousTimestamps) {
   auto queue = std::make_shared<CommandQueue>();
   AddProducerQueue(queue);
 
@@ -280,7 +280,7 @@ TEST_F(FidlStreamSinkTest, ContinuousTimestamps) {
   ASSERT_TRUE(packet1_fence.Wait(zx::sec(5)));
 }
 
-TEST_F(FidlStreamSinkTest, PayloadZeroOffset) {
+TEST_F(StreamSinkServerTest, PayloadZeroOffset) {
   auto queue = std::make_shared<CommandQueue>();
   AddProducerQueue(queue);
 
@@ -303,7 +303,7 @@ TEST_F(FidlStreamSinkTest, PayloadZeroOffset) {
   ASSERT_EQ(std::get<PushPacketCommand>(*cmd0).packet.payload(), BufferOffset(0));
 }
 
-TEST_F(FidlStreamSinkTest, PayloadNonzeroOffset) {
+TEST_F(StreamSinkServerTest, PayloadNonzeroOffset) {
   auto queue = std::make_shared<CommandQueue>();
   AddProducerQueue(queue);
 
@@ -328,7 +328,7 @@ TEST_F(FidlStreamSinkTest, PayloadNonzeroOffset) {
   ASSERT_EQ(std::get<PushPacketCommand>(*cmd0).packet.payload(), BufferOffset(kOffset));
 }
 
-TEST_F(FidlStreamSinkTest, MultipleQueues) {
+TEST_F(StreamSinkServerTest, MultipleQueues) {
   auto queue0 = std::make_shared<CommandQueue>();
   auto queue1 = std::make_shared<CommandQueue>();
   AddProducerQueue(queue0);
@@ -394,7 +394,7 @@ TEST_F(FidlStreamSinkTest, MultipleQueues) {
   ASSERT_TRUE(packet1_fence.Wait(zx::sec(5)));
 }
 
-TEST_F(FidlStreamSinkTest, Clear) {
+TEST_F(StreamSinkServerTest, Clear) {
   auto queue = std::make_shared<CommandQueue>();
   AddProducerQueue(queue);
 
@@ -416,7 +416,7 @@ TEST_F(FidlStreamSinkTest, Clear) {
   ASSERT_TRUE(fence.Wait(zx::sec(5)));
 }
 
-TEST_F(FidlStreamSinkTest, InvalidInputNoPayloadBuffer) {
+TEST_F(StreamSinkServerTest, InvalidInputNoPayloadBuffer) {
   auto queue = std::make_shared<CommandQueue>();
   AddProducerQueue(queue);
 
@@ -434,7 +434,7 @@ TEST_F(FidlStreamSinkTest, InvalidInputNoPayloadBuffer) {
   ASSERT_EQ(queue->pop(), std::nullopt);
 }
 
-TEST_F(FidlStreamSinkTest, InvalidInputUnknownPayloadBufferId) {
+TEST_F(StreamSinkServerTest, InvalidInputUnknownPayloadBufferId) {
   auto queue = std::make_shared<CommandQueue>();
   AddProducerQueue(queue);
 
@@ -450,7 +450,7 @@ TEST_F(FidlStreamSinkTest, InvalidInputUnknownPayloadBufferId) {
   ASSERT_EQ(queue->pop(), std::nullopt);
 }
 
-TEST_F(FidlStreamSinkTest, InvalidInputPayloadBelowRange) {
+TEST_F(StreamSinkServerTest, InvalidInputPayloadBelowRange) {
   auto queue = std::make_shared<CommandQueue>();
   AddProducerQueue(queue);
 
@@ -466,7 +466,7 @@ TEST_F(FidlStreamSinkTest, InvalidInputPayloadBelowRange) {
   ASSERT_EQ(queue->pop(), std::nullopt);
 }
 
-TEST_F(FidlStreamSinkTest, InvalidInputPayloadAboveRange) {
+TEST_F(StreamSinkServerTest, InvalidInputPayloadAboveRange) {
   auto queue = std::make_shared<CommandQueue>();
   AddProducerQueue(queue);
 
@@ -482,7 +482,7 @@ TEST_F(FidlStreamSinkTest, InvalidInputPayloadAboveRange) {
   ASSERT_EQ(queue->pop(), std::nullopt);
 }
 
-TEST_F(FidlStreamSinkTest, InvalidInputPayloadNonIntegralFrames) {
+TEST_F(StreamSinkServerTest, InvalidInputPayloadNonIntegralFrames) {
   auto queue = std::make_shared<CommandQueue>();
   AddProducerQueue(queue);
 

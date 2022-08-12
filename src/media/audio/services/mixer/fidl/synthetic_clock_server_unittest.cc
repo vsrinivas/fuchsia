@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/services/mixer/fidl/fidl_synthetic_clock.h"
+#include "src/media/audio/services/mixer/fidl/synthetic_clock_server.h"
 
 #include <lib/syslog/cpp/macros.h>
 
@@ -22,11 +22,11 @@ zx::clock CreateArbitraryZxClock() {
   return zx_clock;
 }
 
-class FidlSyntheticClockTest : public ::testing::Test {
+class SyntheticClockServerTest : public ::testing::Test {
  public:
   void SetUp() {
     thread_ = FidlThread::CreateFromNewThread("test_fidl_thread");
-    realm_wrapper_ = std::make_unique<TestServerAndClient<FidlSyntheticClockRealm>>(thread_);
+    realm_wrapper_ = std::make_unique<TestServerAndClient<SyntheticClockRealmServer>>(thread_);
   }
 
   void TearDown() {
@@ -34,7 +34,7 @@ class FidlSyntheticClockTest : public ::testing::Test {
     realm_wrapper_.reset();
   }
 
-  FidlSyntheticClockRealm& realm_server() { return realm_wrapper_->server(); }
+  SyntheticClockRealmServer& realm_server() { return realm_wrapper_->server(); }
   fidl::WireSyncClient<fuchsia_audio_mixer::SyntheticClockRealm>& realm_client() {
     return realm_wrapper_->client();
   }
@@ -51,10 +51,10 @@ class FidlSyntheticClockTest : public ::testing::Test {
 
  private:
   std::shared_ptr<FidlThread> thread_;
-  std::unique_ptr<TestServerAndClient<FidlSyntheticClockRealm>> realm_wrapper_;
+  std::unique_ptr<TestServerAndClient<SyntheticClockRealmServer>> realm_wrapper_;
 };
 
-TEST_F(FidlSyntheticClockTest, CreateClockZxClockIsNotReadable) {
+TEST_F(SyntheticClockServerTest, CreateClockZxClockIsNotReadable) {
   auto result = realm_client()->CreateClock(
       fuchsia_audio_mixer::wire::SyntheticClockRealmCreateClockRequest::Builder(arena_)
           .name(fidl::StringView::FromExternal("clock"))
@@ -74,7 +74,7 @@ TEST_F(FidlSyntheticClockTest, CreateClockZxClockIsNotReadable) {
   EXPECT_EQ(info.rights, ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER);
 }
 
-TEST_F(FidlSyntheticClockTest, CreateClockWithControl) {
+TEST_F(SyntheticClockServerTest, CreateClockWithControl) {
   auto [clock_client, clock_server] = CreateClientOrDie<fuchsia_audio_mixer::SyntheticClock>();
   zx::clock zx_clock;
 
@@ -158,7 +158,7 @@ TEST_F(FidlSyntheticClockTest, CreateClockWithControl) {
   EXPECT_EQ(observe_t1, clock_t1);
 }
 
-TEST_F(FidlSyntheticClockTest, CreateClockWithoutControl) {
+TEST_F(SyntheticClockServerTest, CreateClockWithoutControl) {
   zx::clock zx_clock;
 
   {
@@ -224,7 +224,7 @@ TEST_F(FidlSyntheticClockTest, CreateClockWithoutControl) {
   EXPECT_EQ(realm_t1, realm_t0 + zx::msec(100));
 }
 
-TEST_F(FidlSyntheticClockTest, SetRateFailsOnUnadjustableClock) {
+TEST_F(SyntheticClockServerTest, SetRateFailsOnUnadjustableClock) {
   auto [clock_client, clock_server] = CreateClientOrDie<fuchsia_audio_mixer::SyntheticClock>();
 
   {
@@ -253,7 +253,7 @@ TEST_F(FidlSyntheticClockTest, SetRateFailsOnUnadjustableClock) {
   }
 }
 
-TEST_F(FidlSyntheticClockTest, SetRateFailsOnAdjustableClock) {
+TEST_F(SyntheticClockServerTest, SetRateFailsOnAdjustableClock) {
   auto [clock_client, clock_server] = CreateClientOrDie<fuchsia_audio_mixer::SyntheticClock>();
 
   {
@@ -304,7 +304,7 @@ TEST_F(FidlSyntheticClockTest, SetRateFailsOnAdjustableClock) {
   }
 }
 
-TEST_F(FidlSyntheticClockTest, CreateClockFails) {
+TEST_F(SyntheticClockServerTest, CreateClockFails) {
   using fuchsia_audio_mixer::CreateClockError;
 
   // Fail because `domain` is missing.
@@ -348,7 +348,7 @@ TEST_F(FidlSyntheticClockTest, CreateClockFails) {
   }
 }
 
-TEST_F(FidlSyntheticClockTest, ForgetClockFails) {
+TEST_F(SyntheticClockServerTest, ForgetClockFails) {
   // Fail because `handle` is missing.
   {
     auto result = realm_client()->ForgetClock(
@@ -372,7 +372,7 @@ TEST_F(FidlSyntheticClockTest, ForgetClockFails) {
   }
 }
 
-TEST_F(FidlSyntheticClockTest, ObserveClockFails) {
+TEST_F(SyntheticClockServerTest, ObserveClockFails) {
   // Fail because `handle` is missing.
   {
     auto [observe_client, observe_server] =
@@ -417,7 +417,7 @@ TEST_F(FidlSyntheticClockTest, ObserveClockFails) {
   }
 }
 
-TEST_F(FidlSyntheticClockTest, AdvanceByFails) {
+TEST_F(SyntheticClockServerTest, AdvanceByFails) {
   // Fails because the duration is negative.
   {
     auto result = realm_client()->AdvanceBy(

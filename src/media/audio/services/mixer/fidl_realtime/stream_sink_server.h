@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_REALTIME_FIDL_STREAM_SINK_H_
-#define SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_REALTIME_FIDL_STREAM_SINK_H_
+#ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_REALTIME_STREAM_SINK_SERVER_H_
+#define SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_REALTIME_STREAM_SINK_SERVER_H_
 
 #include <fidl/fuchsia.media2/cpp/wire.h>
 #include <zircon/errors.h>
@@ -18,7 +18,7 @@
 
 namespace media_audio {
 
-class FidlStreamSink : public BaseFidlServer<FidlStreamSink, fuchsia_media2::StreamSink> {
+class StreamSinkServer : public BaseFidlServer<StreamSinkServer, fuchsia_media2::StreamSink> {
  public:
   using CommandQueue = PacketQueueProducerStage::CommandQueue;
 
@@ -34,7 +34,7 @@ class FidlStreamSink : public BaseFidlServer<FidlStreamSink, fuchsia_media2::Str
   };
 
   // The returned server will live until the `server_end` channel is closed.
-  static std::shared_ptr<FidlStreamSink> Create(
+  static std::shared_ptr<StreamSinkServer> Create(
       std::shared_ptr<const FidlThread> thread,
       fidl::ServerEnd<fuchsia_media2::StreamSink> server_end, Args args);
 
@@ -51,11 +51,11 @@ class FidlStreamSink : public BaseFidlServer<FidlStreamSink, fuchsia_media2::Str
   void Clear(ClearRequestView request, ClearCompleter::Sync& completer) override;
 
  private:
-  static inline constexpr std::string_view kName = "FidlStreamSink";
+  static inline constexpr std::string_view kName = "StreamSinkServer";
   template <class ServerT, class ProtocolT>
   friend class BaseFidlServer;
 
-  explicit FidlStreamSink(Args args);
+  explicit StreamSinkServer(Args args);
 
   // For each queue, call `fn` and pass a duplicate of `fence`.
   void ForEachQueueWithDuplicateFence(zx::eventpair fence,
@@ -76,10 +76,10 @@ class FidlStreamSink : public BaseFidlServer<FidlStreamSink, fuchsia_media2::Str
   // If set, called after each FIDL method call completes. This is exclusively for tests: since
   // StreamSink uses one-way protocols, tests cannot wait for FIDL call completion without a
   // backdoor like this.
-  friend class FidlStreamSinkTest;
+  friend class StreamSinkServerTest;
   std::function<void()> on_method_complete_;
 };
 
 }  // namespace media_audio
 
-#endif  // SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_REALTIME_FIDL_STREAM_SINK_H_
+#endif  // SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_REALTIME_STREAM_SINK_SERVER_H_

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/services/mixer/fidl/fidl_synthetic_clock.h"
+#include "src/media/audio/services/mixer/fidl/synthetic_clock_server.h"
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
@@ -12,20 +12,20 @@
 namespace media_audio {
 
 // static
-std::shared_ptr<FidlSyntheticClock> FidlSyntheticClock::Create(
+std::shared_ptr<SyntheticClockServer> SyntheticClockServer::Create(
     std::shared_ptr<const FidlThread> thread,
     fidl::ServerEnd<fuchsia_audio_mixer::SyntheticClock> server_end, std::shared_ptr<Clock> clock) {
   return BaseFidlServer::Create(std::move(thread), std::move(server_end), std::move(clock));
 }
 
-void FidlSyntheticClock::Now(NowRequestView request, NowCompleter::Sync& completer) {
+void SyntheticClockServer::Now(NowRequestView request, NowCompleter::Sync& completer) {
   fidl::Arena arena;
   completer.Reply(fuchsia_audio_mixer::wire::SyntheticClockNowResponse::Builder(arena)
                       .now(clock_->now().get())
                       .Build());
 }
 
-void FidlSyntheticClock::SetRate(SetRateRequestView request, SetRateCompleter::Sync& completer) {
+void SyntheticClockServer::SetRate(SetRateRequestView request, SetRateCompleter::Sync& completer) {
   if (!clock_->adjustable()) {
     completer.ReplyError(ZX_ERR_ACCESS_DENIED);
     return;
@@ -50,14 +50,14 @@ void FidlSyntheticClock::SetRate(SetRateRequestView request, SetRateCompleter::S
 }
 
 // static
-std::shared_ptr<FidlSyntheticClockRealm> FidlSyntheticClockRealm::Create(
+std::shared_ptr<SyntheticClockRealmServer> SyntheticClockRealmServer::Create(
     std::shared_ptr<const FidlThread> thread,
     fidl::ServerEnd<fuchsia_audio_mixer::SyntheticClockRealm> server_end) {
   return BaseFidlServer::Create(std::move(thread), std::move(server_end));
 }
 
-void FidlSyntheticClockRealm::CreateClock(CreateClockRequestView request,
-                                          CreateClockCompleter::Sync& completer) {
+void SyntheticClockRealmServer::CreateClock(CreateClockRequestView request,
+                                            CreateClockCompleter::Sync& completer) {
   std::string_view name;
   if (request->has_name()) {
     name = request->name().get();
@@ -82,12 +82,13 @@ void FidlSyntheticClockRealm::CreateClock(CreateClockRequestView request,
 
   // If the user wants explicit control, create a server.
   if (request->has_control()) {
-    AddChildServer(FidlSyntheticClock::Create(thread_ptr(), std::move(request->control()), clock));
+    AddChildServer(
+        SyntheticClockServer::Create(thread_ptr(), std::move(request->control()), clock));
   }
 
   // Since the underlying zx::clock does not represent the SyntheticClock's actual value, send the
   // client a zx::clock handle that is unreadable. The client should read the clock via their handle
-  // to the FidlSyntheticClock server.
+  // to the SyntheticClockServer server.
   fidl::Arena arena;
   completer.ReplySuccess(
       fuchsia_audio_mixer::wire::SyntheticClockRealmCreateClockResponse::Builder(arena)
@@ -95,8 +96,8 @@ void FidlSyntheticClockRealm::CreateClock(CreateClockRequestView request,
           .Build());
 }
 
-void FidlSyntheticClockRealm::ForgetClock(ForgetClockRequestView request,
-                                          ForgetClockCompleter::Sync& completer) {
+void SyntheticClockRealmServer::ForgetClock(ForgetClockRequestView request,
+                                            ForgetClockCompleter::Sync& completer) {
   if (!request->has_handle()) {
     completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;
@@ -112,8 +113,8 @@ void FidlSyntheticClockRealm::ForgetClock(ForgetClockRequestView request,
       fuchsia_audio_mixer::wire::SyntheticClockRealmForgetClockResponse::Builder(arena).Build());
 }
 
-void FidlSyntheticClockRealm::ObserveClock(ObserveClockRequestView request,
-                                           ObserveClockCompleter::Sync& completer) {
+void SyntheticClockRealmServer::ObserveClock(ObserveClockRequestView request,
+                                             ObserveClockCompleter::Sync& completer) {
   if (!request->has_handle() || !request->has_observe()) {
     completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;
@@ -127,22 +128,22 @@ void FidlSyntheticClockRealm::ObserveClock(ObserveClockRequestView request,
 
   // ObserveClock does not give permission to adjust.
   auto clock = std::make_shared<::media_audio::UnadjustableClockWrapper>(clock_result.value());
-  AddChildServer(FidlSyntheticClock::Create(thread_ptr(), std::move(request->observe()), clock));
+  AddChildServer(SyntheticClockServer::Create(thread_ptr(), std::move(request->observe()), clock));
 
   fidl::Arena arena;
   completer.ReplySuccess(
       fuchsia_audio_mixer::wire::SyntheticClockRealmObserveClockResponse::Builder(arena).Build());
 }
 
-void FidlSyntheticClockRealm::Now(NowRequestView request, NowCompleter::Sync& completer) {
+void SyntheticClockRealmServer::Now(NowRequestView request, NowCompleter::Sync& completer) {
   fidl::Arena arena;
   completer.Reply(fuchsia_audio_mixer::wire::SyntheticClockRealmNowResponse::Builder(arena)
                       .now(realm_->now().get())
                       .Build());
 }
 
-void FidlSyntheticClockRealm::AdvanceBy(AdvanceByRequestView request,
-                                        AdvanceByCompleter::Sync& completer) {
+void SyntheticClockRealmServer::AdvanceBy(AdvanceByRequestView request,
+                                          AdvanceByCompleter::Sync& completer) {
   if (!request->has_duration() || request->duration() <= 0) {
     completer.ReplyError(ZX_ERR_INVALID_ARGS);
     return;

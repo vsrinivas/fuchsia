@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_FIDL_SYNTHETIC_CLOCK_H_
-#define SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_FIDL_SYNTHETIC_CLOCK_H_
+#ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_SYNTHETIC_CLOCK_SERVER_H_
+#define SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_SYNTHETIC_CLOCK_SERVER_H_
 
 #include <fidl/fuchsia.audio.mixer/cpp/wire.h>
 #include <zircon/errors.h>
@@ -21,11 +21,11 @@
 
 namespace media_audio {
 
-class FidlSyntheticClock
-    : public BaseFidlServer<FidlSyntheticClock, fuchsia_audio_mixer::SyntheticClock> {
+class SyntheticClockServer
+    : public BaseFidlServer<SyntheticClockServer, fuchsia_audio_mixer::SyntheticClock> {
  public:
   // The returned server will live until the `server_end` channel is closed.
-  static std::shared_ptr<FidlSyntheticClock> Create(
+  static std::shared_ptr<SyntheticClockServer> Create(
       std::shared_ptr<const FidlThread> thread,
       fidl::ServerEnd<fuchsia_audio_mixer::SyntheticClock> server_end,
       std::shared_ptr<Clock> clock);
@@ -38,20 +38,20 @@ class FidlSyntheticClock
   template <class ServerT, class ProtocolT>
   friend class BaseFidlServer;
 
-  static inline const std::string_view kName = "FidlSyntheticClockRealm";
+  static inline const std::string_view kName = "SyntheticClockRealmServer";
 
-  explicit FidlSyntheticClock(std::shared_ptr<Clock> clock) : clock_(std::move(clock)) {}
+  explicit SyntheticClockServer(std::shared_ptr<Clock> clock) : clock_(std::move(clock)) {}
 
   // In practice, this should be either a SyntheticClock or an UnadjustableClockWrapper around a
   // SyntheticClock.
   const std::shared_ptr<Clock> clock_;
 };
 
-class FidlSyntheticClockRealm
-    : public BaseFidlServer<FidlSyntheticClockRealm, fuchsia_audio_mixer::SyntheticClockRealm> {
+class SyntheticClockRealmServer
+    : public BaseFidlServer<SyntheticClockRealmServer, fuchsia_audio_mixer::SyntheticClockRealm> {
  public:
   // The returned server will live until the `server_end` channel is closed.
-  static std::shared_ptr<FidlSyntheticClockRealm> Create(
+  static std::shared_ptr<SyntheticClockRealmServer> Create(
       std::shared_ptr<const FidlThread> thread,
       fidl::ServerEnd<fuchsia_audio_mixer::SyntheticClockRealm> server_end);
 
@@ -70,9 +70,9 @@ class FidlSyntheticClockRealm
   template <class ServerT, class ProtocolT>
   friend class BaseFidlServer;
 
-  static inline const std::string_view kName = "FidlSyntheticClockRealm";
+  static inline const std::string_view kName = "SyntheticClockRealmServer";
 
-  FidlSyntheticClockRealm() = default;
+  SyntheticClockRealmServer() = default;
 
   std::shared_ptr<SyntheticClockRealm> realm_ = SyntheticClockRealm::Create();
   std::shared_ptr<ClockRegistry> registry_ =
@@ -81,4 +81,4 @@ class FidlSyntheticClockRealm
 
 }  // namespace media_audio
 
-#endif  // SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_FIDL_SYNTHETIC_CLOCK_H_
+#endif  // SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_SYNTHETIC_CLOCK_SERVER_H_

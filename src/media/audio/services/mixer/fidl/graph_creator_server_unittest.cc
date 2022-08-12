@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/services/mixer/fidl/fidl_graph_creator.h"
+#include "src/media/audio/services/mixer/fidl/graph_creator_server.h"
 
 #include <lib/syslog/cpp/macros.h>
 
@@ -10,16 +10,16 @@
 
 #include "src/media/audio/lib/clock/testing/clock_test.h"
 #include "src/media/audio/services/common/testing/test_server_and_client.h"
-#include "src/media/audio/services/mixer/fidl/fidl_synthetic_clock.h"
+#include "src/media/audio/services/mixer/fidl/synthetic_clock_server.h"
 
 namespace media_audio {
 namespace {
 
-class FidlGraphCreatorTest : public ::testing::Test {
+class GraphCreatorServerTest : public ::testing::Test {
  public:
   void SetUp() {
     thread_ = FidlThread::CreateFromNewThread("test_fidl_thread");
-    creator_wrapper_ = std::make_unique<TestServerAndClient<FidlGraphCreator>>(thread_);
+    creator_wrapper_ = std::make_unique<TestServerAndClient<GraphCreatorServer>>(thread_);
   }
 
   void TearDown() {
@@ -27,7 +27,7 @@ class FidlGraphCreatorTest : public ::testing::Test {
     creator_wrapper_.reset();
   }
 
-  FidlGraphCreator& creator_server() { return creator_wrapper_->server(); }
+  GraphCreatorServer& creator_server() { return creator_wrapper_->server(); }
   fidl::WireSyncClient<fuchsia_audio_mixer::GraphCreator>& creator_client() {
     return creator_wrapper_->client();
   }
@@ -37,10 +37,10 @@ class FidlGraphCreatorTest : public ::testing::Test {
 
  private:
   std::shared_ptr<FidlThread> thread_;
-  std::unique_ptr<TestServerAndClient<FidlGraphCreator>> creator_wrapper_;
+  std::unique_ptr<TestServerAndClient<GraphCreatorServer>> creator_wrapper_;
 };
 
-TEST_F(FidlGraphCreatorTest, CreateGraphMissingServerEnd) {
+TEST_F(GraphCreatorServerTest, CreateGraphMissingServerEnd) {
   auto result =
       creator_client()->Create(fuchsia_audio_mixer::wire::GraphCreatorCreateRequest::Builder(arena_)
                                    .name(fidl::StringView::FromExternal("graph"))
@@ -51,7 +51,7 @@ TEST_F(FidlGraphCreatorTest, CreateGraphMissingServerEnd) {
   EXPECT_EQ(result->error_value(), fuchsia_audio_mixer::CreateGraphError::kInvalidGraphChannel);
 }
 
-TEST_F(FidlGraphCreatorTest, CreateGraphWithRealClocks) {
+TEST_F(GraphCreatorServerTest, CreateGraphWithRealClocks) {
   auto [graph_client, graph_server] = CreateClientOrDie<fuchsia_audio_mixer::Graph>();
 
   {
@@ -77,7 +77,7 @@ TEST_F(FidlGraphCreatorTest, CreateGraphWithRealClocks) {
   }
 }
 
-TEST_F(FidlGraphCreatorTest, CreateGraphWithSyntheticClocks) {
+TEST_F(GraphCreatorServerTest, CreateGraphWithSyntheticClocks) {
   auto [graph_client, graph_server] = CreateClientOrDie<fuchsia_audio_mixer::Graph>();
   auto [realm_client, realm_server] = CreateClientOrDie<fuchsia_audio_mixer::SyntheticClockRealm>();
 

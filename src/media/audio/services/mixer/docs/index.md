@@ -29,8 +29,8 @@ threads.
 
 Class names use the following patterns:
 
-*   Fidl*Foo* is a server that implements FIDL protocol Foo. For example,
-    FidlGraph.
+*   *Foo*Server is a server that implements FIDL protocol Foo. For example,
+    GraphServer.
 
 *   *Foo*Node is a DAG node of type Foo. All classes with this name are
     subclasses of [Node](../fidl/node.h).

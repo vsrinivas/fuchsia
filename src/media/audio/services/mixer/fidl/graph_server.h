@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_FIDL_GRAPH_H_
-#define SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_FIDL_GRAPH_H_
+#ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_GRAPH_SERVER_H_
+#define SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_GRAPH_SERVER_H_
 
 #include <fidl/fuchsia.audio.mixer/cpp/wire.h>
 #include <lib/zx/profile.h>
@@ -18,7 +18,7 @@
 
 namespace media_audio {
 
-class FidlGraph : public BaseFidlServer<FidlGraph, fuchsia_audio_mixer::Graph> {
+class GraphServer : public BaseFidlServer<GraphServer, fuchsia_audio_mixer::Graph> {
  public:
   struct Args {
     // Name of this graph.
@@ -33,9 +33,9 @@ class FidlGraph : public BaseFidlServer<FidlGraph, fuchsia_audio_mixer::Graph> {
   };
 
   // The returned server will live until the `server_end` channel is closed.
-  static std::shared_ptr<FidlGraph> Create(std::shared_ptr<const FidlThread> main_fidl_thread,
-                                           fidl::ServerEnd<fuchsia_audio_mixer::Graph> server_end,
-                                           Args args);
+  static std::shared_ptr<GraphServer> Create(std::shared_ptr<const FidlThread> main_fidl_thread,
+                                             fidl::ServerEnd<fuchsia_audio_mixer::Graph> server_end,
+                                             Args args);
 
   // Implementation of fidl::WireServer<fuchsia_audio_mixer::Graph>.
   void CreateProducer(CreateProducerRequestView request,
@@ -70,12 +70,12 @@ class FidlGraph : public BaseFidlServer<FidlGraph, fuchsia_audio_mixer::Graph> {
   std::string_view name() const { return name_; }
 
  private:
-  static inline constexpr std::string_view kName = "FidlGraph";
+  static inline constexpr std::string_view kName = "GraphServer";
   template <class ServerT, class ProtocolT>
   friend class BaseFidlServer;
 
   // Note: args.server_end is consumed by BaseFidlServer.
-  FidlGraph(Args args)
+  GraphServer(Args args)
       : name_(std::move(args.name)), clock_registry_(std::move(args.clock_registry)) {}
 
   const std::string name_;
@@ -85,4 +85,4 @@ class FidlGraph : public BaseFidlServer<FidlGraph, fuchsia_audio_mixer::Graph> {
 
 }  // namespace media_audio
 
-#endif  // SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_FIDL_GRAPH_H_
+#endif  // SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_GRAPH_SERVER_H_

@@ -16,8 +16,8 @@ source_set("fidl_realtime") {
   ]
 
   sources = [
-    "fidl_stream_sink.cc",
-    "fidl_stream_sink.h",
+    "stream_sink_server.cc",
+    "stream_sink_server.h",
   ]
 
   public_deps = [
@@ -39,7 +39,7 @@ executable("fidl_realtime_unittests") {
   output_name = "audio_services_mixer_fidl_realtime_unittests"
   testonly = true
 
-  sources = [ "fidl_stream_sink_unittest.cc" ]
+  sources = [ "stream_sink_server_unittest.cc" ]
 
   deps = [
     ":fidl_realtime",

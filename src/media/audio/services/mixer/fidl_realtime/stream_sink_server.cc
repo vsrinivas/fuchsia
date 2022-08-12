@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/services/mixer/fidl_realtime/fidl_stream_sink.h"
+#include "src/media/audio/services/mixer/fidl_realtime/stream_sink_server.h"
 
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
@@ -11,27 +11,28 @@
 namespace media_audio {
 
 // static
-std::shared_ptr<FidlStreamSink> FidlStreamSink::Create(
+std::shared_ptr<StreamSinkServer> StreamSinkServer::Create(
     std::shared_ptr<const FidlThread> thread,
     fidl::ServerEnd<fuchsia_media2::StreamSink> server_end, Args args) {
   return BaseFidlServer::Create(std::move(thread), std::move(server_end), std::move(args));
 }
 
-FidlStreamSink::FidlStreamSink(Args args)
+StreamSinkServer::StreamSinkServer(Args args)
     : format_(args.format),
       frac_frames_per_media_ticks_(
           TimelineRate::Product(format_.frac_frames_per_ns(), args.media_ticks_per_ns.Inverse())),
       payload_buffers_(std::move(args.payload_buffers)) {}
 
-void FidlStreamSink::AddProducerQueue(std::shared_ptr<CommandQueue> q) {
+void StreamSinkServer::AddProducerQueue(std::shared_ptr<CommandQueue> q) {
   queues_.emplace(q.get(), q);
 }
 
-void FidlStreamSink::RemoveProducerQueue(std::shared_ptr<CommandQueue> q) {
+void StreamSinkServer::RemoveProducerQueue(std::shared_ptr<CommandQueue> q) {
   queues_.erase(q.get());
 }
 
-void FidlStreamSink::PutPacket(PutPacketRequestView request, PutPacketCompleter::Sync& completer) {
+void StreamSinkServer::PutPacket(PutPacketRequestView request,
+                                 PutPacketCompleter::Sync& completer) {
   TRACE_DURATION("audio", "StreamSink::PutPacket");
   ScopedThreadChecker checker(thread().checker());
 
@@ -117,7 +118,7 @@ void FidlStreamSink::PutPacket(PutPacketRequestView request, PutPacketCompleter:
   });
 }
 
-void FidlStreamSink::End(EndRequestView request, EndCompleter::Sync& completer) {
+void StreamSinkServer::End(EndRequestView request, EndCompleter::Sync& completer) {
   // This is a no-op. We don't need to tell the mix threads when a stream has "ended".
   // It's sufficient to let the queue stay empty.
   if (on_method_complete_) {
@@ -125,7 +126,7 @@ void FidlStreamSink::End(EndRequestView request, EndCompleter::Sync& completer) 
   }
 }
 
-void FidlStreamSink::Clear(ClearRequestView request, ClearCompleter::Sync& completer) {
+void StreamSinkServer::Clear(ClearRequestView request, ClearCompleter::Sync& completer) {
   TRACE_DURATION("audio", "StreamSink::Clear");
   ScopedThreadChecker checker(thread().checker());
 
@@ -140,7 +141,7 @@ void FidlStreamSink::Clear(ClearRequestView request, ClearCompleter::Sync& compl
   });
 }
 
-void FidlStreamSink::ForEachQueueWithDuplicateFence(
+void StreamSinkServer::ForEachQueueWithDuplicateFence(
     zx::eventpair fence, std::function<void(CommandQueue&, zx::eventpair)> fn) {
   auto num_left = queues_.size();
   bool warned = false;
