@@ -1103,8 +1103,10 @@ mod tests {
         let remove_all_local_addrs =
             |sync_ctx: &mut crate::testutil::DummySyncCtx,
              ctx: &mut crate::testutil::DummyNonSyncCtx| {
-                let devices = crate::ip::device::IpDeviceContext::<Ipv4, _>::iter_devices(sync_ctx)
-                    .collect::<Vec<_>>();
+                let devices = crate::ip::device::IpDeviceContext::<Ipv4, _>::with_devices(
+                    sync_ctx,
+                    |devices| devices.collect::<Vec<_>>(),
+                );
                 for device in devices {
                     let subnets = crate::ip::device::with_assigned_ipv4_addr_subnets(
                         sync_ctx,
@@ -1122,8 +1124,10 @@ mod tests {
         let remove_all_local_addrs =
             |sync_ctx: &mut crate::testutil::DummySyncCtx,
              ctx: &mut crate::testutil::DummyNonSyncCtx| {
-                let devices = crate::ip::device::IpDeviceContext::<Ipv6, _>::iter_devices(sync_ctx)
-                    .collect::<Vec<_>>();
+                let devices = crate::ip::device::IpDeviceContext::<Ipv6, _>::with_devices(
+                    sync_ctx,
+                    |devices| devices.collect::<Vec<_>>(),
+                );
                 for device in devices {
                     let subnets = crate::ip::device::with_assigned_ipv6_addr_subnets(
                         sync_ctx,

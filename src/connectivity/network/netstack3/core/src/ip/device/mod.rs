@@ -294,8 +294,12 @@ pub(crate) trait IpDeviceContext<
         cb: F,
     ) -> O;
 
-    /// Returns an [`Iterator`] of IDs for all initialized devices.
-    fn iter_devices(&self) -> Box<dyn Iterator<Item = Self::DeviceId> + '_>;
+    /// Calls the function with an [`Iterator`] of IDs for all initialized
+    /// devices.
+    fn with_devices<O, F: FnOnce(Box<dyn Iterator<Item = Self::DeviceId> + '_>) -> O>(
+        &self,
+        cb: F,
+    ) -> O;
 
     /// Gets the MTU for a device.
     ///

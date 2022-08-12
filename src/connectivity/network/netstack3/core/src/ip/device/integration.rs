@@ -4,7 +4,7 @@
 
 //! The integrations for protocols built on top of an IP device.
 
-use alloc::boxed::Box;
+use alloc::{boxed::Box, vec::Vec};
 use core::{marker::PhantomData, num::NonZeroU8, time::Duration};
 
 use net_types::{
@@ -462,7 +462,9 @@ impl<C: IpDeviceNonSyncContext<Ipv4, SC::DeviceId>, SC: device::IpDeviceContext<
         &self,
         dst_ip: SpecifiedAddr<Ipv4Addr>,
     ) -> AddressStatus<(SC::DeviceId, Ipv4PresentAddressStatus)> {
-        self.iter_devices()
+        let devices = self.with_devices(|devices| devices.collect::<Vec<_>>());
+        devices
+            .into_iter()
             .find_map(|device_id| match self.address_status_for_device(dst_ip, device_id) {
                 AddressStatus::Present(a) => Some(AddressStatus::Present((device_id, a))),
                 AddressStatus::Unassigned => None,
@@ -544,7 +546,9 @@ impl<C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>, SC: device::IpDeviceContext<
         &self,
         addr: SpecifiedAddr<Ipv6Addr>,
     ) -> AddressStatus<(SC::DeviceId, Ipv6PresentAddressStatus)> {
-        self.iter_devices()
+        let devices = self.with_devices(|devices| devices.collect::<Vec<_>>());
+        devices
+            .into_iter()
             .find_map(|device_id| match self.address_status_for_device(addr, device_id) {
                 AddressStatus::Present(a) => Some(AddressStatus::Present((device_id, a))),
                 AddressStatus::Unassigned => None,

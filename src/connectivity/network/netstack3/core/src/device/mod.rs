@@ -114,39 +114,56 @@ impl<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>
     }
 }
 
-fn get_ip_device_state<NonSyncCtx: NonSyncContext>(
+fn with_ip_device_state<
+    NonSyncCtx: NonSyncContext,
+    O,
+    F: FnOnce(&DualStackIpDeviceState<NonSyncCtx::Instant>) -> O,
+>(
     ctx: &SyncCtx<NonSyncCtx>,
     device: DeviceId,
-) -> &DualStackIpDeviceState<NonSyncCtx::Instant> {
-    match device.inner() {
+    cb: F,
+) -> O {
+    cb(match device.inner() {
         DeviceIdInner::Ethernet(EthernetDeviceId(id)) => {
             &ctx.state.device.devices.ethernet.get(id).unwrap().ip
         }
         DeviceIdInner::Loopback => &ctx.state.device.devices.loopback.as_ref().unwrap().ip,
-    }
+    })
 }
 
-fn get_ip_device_state_mut<NonSyncCtx: NonSyncContext>(
+fn with_ip_device_state_mut<
+    NonSyncCtx: NonSyncContext,
+    O,
+    F: FnOnce(&mut DualStackIpDeviceState<NonSyncCtx::Instant>) -> O,
+>(
     ctx: &mut SyncCtx<NonSyncCtx>,
     device: DeviceId,
-) -> &mut DualStackIpDeviceState<NonSyncCtx::Instant> {
-    match device.inner() {
+    cb: F,
+) -> O {
+    cb(match device.inner() {
         DeviceIdInner::Ethernet(EthernetDeviceId(id)) => {
             &mut ctx.state.device.devices.ethernet.get_mut(id).unwrap().ip
         }
         DeviceIdInner::Loopback => &mut ctx.state.device.devices.loopback.as_mut().unwrap().ip,
-    }
+    })
 }
 
-fn iter_devices<NonSyncCtx: NonSyncContext>(
+fn with_devices<
+    NonSyncCtx: NonSyncContext,
+    O,
+    F: FnOnce(Box<dyn Iterator<Item = DeviceId> + '_>) -> O,
+>(
     ctx: &SyncCtx<NonSyncCtx>,
-) -> impl Iterator<Item = DeviceId> + '_ {
+    cb: F,
+) -> O {
     let Devices { ethernet, loopback } = &ctx.state.device.devices;
 
-    ethernet
-        .iter()
-        .map(|(id, _state)| DeviceId::new_ethernet(id))
-        .chain(loopback.iter().map(|_state| DeviceIdInner::Loopback.into()))
+    cb(Box::new(
+        ethernet
+            .iter()
+            .map(|(id, _state)| DeviceId::new_ethernet(id))
+            .chain(loopback.iter().map(|_state| DeviceIdInner::Loopback.into())),
+    ))
 }
 
 fn get_mtu<NonSyncCtx: NonSyncContext>(ctx: &SyncCtx<NonSyncCtx>, device: DeviceId) -> u32 {
@@ -196,7 +213,7 @@ impl<NonSyncCtx: NonSyncContext> IpDeviceContext<Ipv4, NonSyncCtx> for SyncCtx<N
         device: Self::DeviceId,
         cb: F,
     ) -> O {
-        cb(&get_ip_device_state(self, device).ipv4)
+        with_ip_device_state(self, device, |state| cb(&state.ipv4))
     }
 
     fn with_ip_device_state_mut<O, F: FnOnce(&mut Ipv4DeviceState<NonSyncCtx::Instant>) -> O>(
@@ -204,11 +221,11 @@ impl<NonSyncCtx: NonSyncContext> IpDeviceContext<Ipv4, NonSyncCtx> for SyncCtx<N
         device: Self::DeviceId,
         cb: F,
     ) -> O {
-        cb(&mut get_ip_device_state_mut(self, device).ipv4)
+        with_ip_device_state_mut(self, device, |state| cb(&mut state.ipv4))
     }
 
-    fn iter_devices(&self) -> Box<dyn Iterator<Item = DeviceId> + '_> {
-        Box::new(iter_devices(self))
+    fn with_devices<O, F: FnOnce(Box<dyn Iterator<Item = DeviceId> + '_>) -> O>(&self, cb: F) -> O {
+        with_devices(self, cb)
     }
 
     fn get_mtu(&self, device_id: Self::DeviceId) -> u32 {
@@ -347,7 +364,7 @@ impl<NonSyncCtx: NonSyncContext> IpDeviceContext<Ipv6, NonSyncCtx> for SyncCtx<N
         device: Self::DeviceId,
         cb: F,
     ) -> O {
-        cb(&get_ip_device_state(self, device).ipv6)
+        with_ip_device_state(self, device, |state| cb(&state.ipv6))
     }
 
     fn with_ip_device_state_mut<O, F: FnOnce(&mut Ipv6DeviceState<NonSyncCtx::Instant>) -> O>(
@@ -355,11 +372,11 @@ impl<NonSyncCtx: NonSyncContext> IpDeviceContext<Ipv6, NonSyncCtx> for SyncCtx<N
         device: Self::DeviceId,
         cb: F,
     ) -> O {
-        cb(&mut get_ip_device_state_mut(self, device).ipv6)
+        with_ip_device_state_mut(self, device, |state| cb(&mut state.ipv6))
     }
 
-    fn iter_devices(&self) -> Box<dyn Iterator<Item = DeviceId> + '_> {
-        Box::new(iter_devices(self))
+    fn with_devices<O, F: FnOnce(Box<dyn Iterator<Item = DeviceId> + '_>) -> O>(&self, cb: F) -> O {
+        with_devices(self, cb)
     }
 
     fn get_mtu(&self, device_id: Self::DeviceId) -> u32 {
@@ -1040,11 +1057,13 @@ mod tests {
 
         fn check(sync_ctx: &DummySyncCtx, expected: &[DeviceId]) {
             assert_eq!(
-                IpDeviceContext::<Ipv4, _>::iter_devices(sync_ctx).collect::<Vec<_>>(),
+                IpDeviceContext::<Ipv4, _>::with_devices(sync_ctx, |devices| devices
+                    .collect::<Vec<_>>()),
                 expected
             );
             assert_eq!(
-                IpDeviceContext::<Ipv6, _>::iter_devices(sync_ctx).collect::<Vec<_>>(),
+                IpDeviceContext::<Ipv6, _>::with_devices(sync_ctx, |devices| devices
+                    .collect::<Vec<_>>()),
                 expected
             );
         }
