@@ -36,14 +36,13 @@ use crate::{
             ArpContext, ArpFrameMetadata, ArpPacketHandler, ArpState, ArpTimerId, BufferArpContext,
         },
         link::LinkDevice,
-        ndp::NdpContext,
         BufferIpLinkDeviceContext, DeviceIdContext, EthernetDeviceId, FrameDestination,
         IpLinkDeviceContext, IpLinkDeviceNonSyncContext, IpLinkDeviceState, RecvIpFrameMeta,
     },
     error::ExistsError,
     ip::device::{
         nud::{BufferNudContext, BufferNudHandler, NudContext, NudState, NudTimerId},
-        state::{AddrConfig, IpDeviceState},
+        state::AddrConfig,
     },
     sync::Mutex,
     BufferNonSyncContext, NonSyncContext, SyncCtx,
@@ -819,14 +818,6 @@ pub(super) fn set_mtu<
 
     trace!("ethernet::ndp_device::set_mtu: setting link MTU to {:?}", mtu);
     dev_state.mtu = mtu;
-}
-
-impl<C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>, SC: EthernetIpLinkDeviceContext<C>>
-    NdpContext<EthernetLinkDevice, C> for SC
-{
-    fn get_ip_device_state(&self, device_id: Self::DeviceId) -> &IpDeviceState<C::Instant, Ipv6> {
-        &self.get_state_with(device_id).ip.ipv6.ip_state
-    }
 }
 
 /// An implementation of the [`LinkDevice`] trait for Ethernet devices.

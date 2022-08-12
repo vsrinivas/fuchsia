@@ -18,61 +18,13 @@
 //!
 //! [RFC 4861]: https://tools.ietf.org/html/rfc4861
 
-use core::num::NonZeroU8;
-
-use net_types::ip::Ipv6;
-use nonzero_ext::nonzero;
-
-use crate::{
-    context::InstantContext,
-    device::{link::LinkDevice, DeviceIdContext},
-    ip::device::state::IpDeviceState,
-};
-
-// Node Constants
-
-/// The default value for the default hop limit to be used when sending IP
-/// packets.
-pub(crate) const HOP_LIMIT_DEFAULT: NonZeroU8 = nonzero!(64u8);
-
-// NOTE(joshlf): The `LinkDevice` parameter may seem unnecessary. We only ever
-// use the associated `Address` type, so why not just take that directly? By the
-// same token, why have it as a parameter on `NdpState` and `NdpTimerId`? The
-// answer is that, if we did, there would be no way to distinguish between
-// different link device protocols that all happened to use the same hardware
-// addressing scheme.
-//
-// Consider that the way that we implement context traits is via blanket impls.
-// Even though each module's code _feels_ isolated from the rest of the system,
-// in reality, all context impls end up on the same context type. In particular,
-// all impls are of the form `impl<C: SomeContextTrait> SomeOtherContextTrait
-// for C`. The `C` is the same throughout the whole stack.
-//
-// Thus, for two different link device protocols with the same hardware address
-// type, if we used an `LinkAddress` parameter rather than a `LinkDevice`
-// parameter, the `NdpContext` impls would conflict (in fact, the `StateContext`
-// and `TimerContext` impls would conflict for similar reasons).
-
-/// The non-synchronized execution context for NDP.
-pub(crate) trait NdpNonSyncContext<D: LinkDevice, DeviceId>: InstantContext {}
-impl<DeviceId, D: LinkDevice, C: InstantContext> NdpNonSyncContext<D, DeviceId> for C {}
-
-/// The execution context for an NDP device.
-pub(crate) trait NdpContext<D: LinkDevice, C: NdpNonSyncContext<D, Self::DeviceId>>:
-    Sized + DeviceIdContext<D>
-{
-    /// Gets the IP state for this device.
-    fn get_ip_device_state(&self, device_id: Self::DeviceId) -> &IpDeviceState<C::Instant, Ipv6>;
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     use alloc::{collections::HashSet, vec, vec::Vec};
     use core::{
         convert::{TryFrom, TryInto as _},
         fmt::Debug,
+        num::NonZeroU8,
         time::Duration,
     };
 
@@ -81,9 +33,10 @@ mod tests {
     use net_declare::net::{mac, subnet_v6};
     use net_types::{
         ethernet::Mac,
-        ip::{AddrSubnet, Ip as _, Ipv6Addr, Ipv6Scope, Subnet},
-        ScopeableAddress as _, UnicastAddr, Witness as _,
+        ip::{AddrSubnet, Ip as _, Ipv6, Ipv6Addr, Subnet},
+        UnicastAddr, Witness as _,
     };
+    use nonzero_ext::nonzero;
     use packet::{Buf, EmptyBuf, InnerPacketBuilder as _, Serializer as _};
     use packet_formats::{
         icmp::{
@@ -108,12 +61,11 @@ mod tests {
         },
         context::{
             testutil::{DummyInstant, DummyTimerCtxExt as _, StepResult},
-            RngContext as _, TimerContext,
+            InstantContext as _, RngContext as _, TimerContext,
         },
         device::{
-            add_ip_addr_subnet, del_ip_addr, ethernet::EthernetLinkDevice, link::LinkAddress,
-            testutil::receive_frame_or_panic, DeviceId, DeviceIdInner, EthernetDeviceId,
-            FrameDestination,
+            add_ip_addr_subnet, del_ip_addr, link::LinkAddress, testutil::receive_frame_or_panic,
+            DeviceId, DeviceIdInner, EthernetDeviceId, FrameDestination,
         },
         ip::{
             device::{
@@ -125,6 +77,7 @@ mod tests {
                     AddrConfig, AddressState, Ipv6AddressEntry, Ipv6DeviceConfiguration, Lifetime,
                     SlaacConfig, TemporarySlaacConfig,
                 },
+                testutil::get_global_ipv6_addrs,
                 with_assigned_ipv6_addr_subnets, Ipv6DeviceHandler, Ipv6DeviceTimerId,
             },
             receive_ipv6_packet,
@@ -438,14 +391,14 @@ mod tests {
             );
         });
 
-        assert!(NdpContext::<EthernetLinkDevice, _>::get_ip_device_state(
-            net.sync_ctx("local"),
-            device_id.try_into().expect("expected ethernet ID")
-        )
-        .find_addr(&local_ip())
-        .unwrap()
-        .state
-        .is_assigned());
+        assert_eq!(
+            get_address_state(
+                net.sync_ctx("local"),
+                device_id.try_into().expect("expected ethernet ID"),
+                local_ip()
+            ),
+            Some(AddressState::Assigned)
+        );
 
         net.with_context("remote", |Ctx { sync_ctx, non_sync_ctx }| {
             add_ip_addr_subnet(sync_ctx, non_sync_ctx, device_id, addr).unwrap();
@@ -463,14 +416,14 @@ mod tests {
         );
 
         // Let's make sure that our local node still can use that address.
-        assert!(NdpContext::<EthernetLinkDevice, _>::get_ip_device_state(
-            net.sync_ctx("local"),
-            device_id.try_into().expect("expected ethernet ID")
-        )
-        .find_addr(&local_ip())
-        .unwrap()
-        .state
-        .is_assigned());
+        assert_eq!(
+            get_address_state(
+                net.sync_ctx("local"),
+                device_id.try_into().expect("expected ethernet ID"),
+                local_ip()
+            ),
+            Some(AddressState::Assigned)
+        );
 
         // Only local should be in the solicited node multicast group.
         assert!(is_in_ip_multicast(net.sync_ctx("local"), device_id, multicast_addr));
@@ -507,23 +460,14 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            NdpContext::<EthernetLinkDevice, _>::get_ip_device_state(
-                &sync_ctx,
-                dev_id.try_into().expect("expected ethernet ID")
-            )
-            .find_addr(&addr)
-            .unwrap()
-            .state,
-            AddressState::Tentative { dad_transmits_remaining: None },
+            get_address_state(&sync_ctx, dev_id.try_into().expect("expected ethernet ID"), addr,),
+            Some(AddressState::Tentative { dad_transmits_remaining: None })
         );
+
         let addr = remote_ip();
         assert_eq!(
-            NdpContext::<EthernetLinkDevice, _>::get_ip_device_state(
-                &sync_ctx,
-                dev_id.try_into().expect("expected ethernet ID")
-            )
-            .find_addr(&addr),
-            None
+            get_address_state(&sync_ctx, dev_id.try_into().expect("expected ethernet ID"), addr,),
+            None,
         );
         add_ip_addr_subnet(
             &mut sync_ctx,
@@ -533,14 +477,8 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            NdpContext::<EthernetLinkDevice, _>::get_ip_device_state(
-                &sync_ctx,
-                dev_id.try_into().expect("expected ethernet ID")
-            )
-            .find_addr(&addr)
-            .unwrap()
-            .state,
-            AddressState::Tentative { dad_transmits_remaining: None },
+            get_address_state(&sync_ctx, dev_id.try_into().expect("expected ethernet ID"), addr,),
+            Some(AddressState::Tentative { dad_transmits_remaining: None })
         );
     }
 
@@ -578,14 +516,14 @@ mod tests {
                 dad_timer_id(dev_id.try_into().expect("expected ethernet ID"), local_ip())
             );
         }
-        assert!(NdpContext::<EthernetLinkDevice, _>::get_ip_device_state(
-            &sync_ctx,
-            dev_id.try_into().expect("expected ethernet ID")
-        )
-        .find_addr(&local_ip())
-        .unwrap()
-        .state
-        .is_assigned());
+        assert_eq!(
+            get_address_state(
+                &sync_ctx,
+                dev_id.try_into().expect("expected ethernet ID"),
+                local_ip(),
+            ),
+            Some(AddressState::Assigned)
+        );
     }
 
     #[test]
@@ -1485,11 +1423,8 @@ mod tests {
         .unwrap();
         let device_id = device.try_into().unwrap();
         assert_eq!(
-            NdpContext::<EthernetLinkDevice, _>::get_ip_device_state(&sync_ctx, device_id)
-                .find_addr(&dummy_config.local_ip.try_into().unwrap())
-                .unwrap()
-                .state,
-            AddressState::Assigned
+            get_address_state(&sync_ctx, device, dummy_config.local_ip.try_into().unwrap()),
+            Some(AddressState::Assigned)
         );
         assert_empty(non_sync_ctx.frames_sent());
         assert_empty(non_sync_ctx.timer_ctx().timers());
@@ -1515,20 +1450,14 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            NdpContext::<EthernetLinkDevice, _>::get_ip_device_state(&sync_ctx, device_id)
-                .find_addr(&dummy_config.local_ip.try_into().unwrap())
-                .unwrap()
-                .state,
-            AddressState::Assigned
+            get_address_state(&sync_ctx, device, dummy_config.local_ip.try_into().unwrap()),
+            Some(AddressState::Assigned)
         );
         assert_eq!(
-            NdpContext::<EthernetLinkDevice, _>::get_ip_device_state(&sync_ctx, device_id)
-                .find_addr(&dummy_config.remote_ip.try_into().unwrap())
-                .unwrap()
-                .state,
-            AddressState::Tentative {
+            get_address_state(&sync_ctx, device, dummy_config.remote_ip.try_into().unwrap()),
+            Some(AddressState::Tentative {
                 dad_transmits_remaining: NonZeroU8::new(DUP_ADDR_DETECT_TRANSMITS - 1)
-            }
+            })
         );
         assert_eq!(non_sync_ctx.frames_sent().len(), 1);
         assert_eq!(non_sync_ctx.timer_ctx().timers().len(), 1);
@@ -1560,11 +1489,8 @@ mod tests {
         );
         assert_eq!(non_sync_ctx.frames_sent().len(), 3);
         assert_eq!(
-            NdpContext::<EthernetLinkDevice, _>::get_ip_device_state(&sync_ctx, device_id)
-                .find_addr(&dummy_config.remote_ip.try_into().unwrap())
-                .unwrap()
-                .state,
-            AddressState::Assigned
+            get_address_state(&sync_ctx, device, dummy_config.remote_ip.try_into().unwrap()),
+            Some(AddressState::Assigned)
         );
 
         // Updating the IP should resolve immediately since DAD has just been
@@ -1578,25 +1504,16 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            NdpContext::<EthernetLinkDevice, _>::get_ip_device_state(&sync_ctx, device_id)
-                .find_addr(&dummy_config.local_ip.try_into().unwrap())
-                .unwrap()
-                .state,
-            AddressState::Assigned
+            get_address_state(&sync_ctx, device, dummy_config.local_ip.try_into().unwrap()),
+            Some(AddressState::Assigned)
         );
         assert_eq!(
-            NdpContext::<EthernetLinkDevice, _>::get_ip_device_state(&sync_ctx, device_id)
-                .find_addr(&dummy_config.remote_ip.try_into().unwrap())
-                .unwrap()
-                .state,
-            AddressState::Assigned
+            get_address_state(&sync_ctx, device, dummy_config.remote_ip.try_into().unwrap()),
+            Some(AddressState::Assigned)
         );
         assert_eq!(
-            NdpContext::<EthernetLinkDevice, _>::get_ip_device_state(&sync_ctx, device_id)
-                .find_addr(&new_ip.try_into().unwrap())
-                .unwrap()
-                .state,
-            AddressState::Assigned
+            get_address_state(&sync_ctx, device, new_ip.try_into().unwrap()),
+            Some(AddressState::Assigned)
         );
     }
 
@@ -1636,29 +1553,6 @@ mod tests {
             .serialize_vec_outer()
             .unwrap()
             .unwrap_b()
-    }
-
-    fn iter_global_ipv6_addrs<
-        'a,
-        D: LinkDevice,
-        C: NdpNonSyncContext<D, SC::DeviceId>,
-        SC: NdpContext<D, C>,
-    >(
-        sync_ctx: &'a SC,
-        device_id: SC::DeviceId,
-    ) -> impl Iterator<Item = &'a Ipv6AddressEntry<C::Instant>> {
-        sync_ctx.get_ip_device_state(device_id).iter_addrs().filter(|entry| {
-            match entry.addr_sub.addr().scope() {
-                Ipv6Scope::Global => true,
-                Ipv6Scope::InterfaceLocal
-                | Ipv6Scope::LinkLocal
-                | Ipv6Scope::AdminLocal
-                | Ipv6Scope::SiteLocal
-                | Ipv6Scope::OrganizationLocal
-                | Ipv6Scope::Reserved(_)
-                | Ipv6Scope::Unassigned(_) => false,
-            }
-        })
     }
 
     #[test]
@@ -1706,7 +1600,7 @@ mod tests {
             icmpv6_packet_buf,
         );
 
-        assert_empty(iter_global_ipv6_addrs(&sync_ctx, device.try_into().unwrap()));
+        assert_empty(get_global_ipv6_addrs(&sync_ctx, device.try_into().unwrap()));
 
         // No timers.
         assert_eq!(non_sync_ctx.trigger_next_timer(&mut sync_ctx, crate::handle_timer), None);
@@ -1743,7 +1637,7 @@ mod tests {
     }
 
     fn slaac_address<I: Instant>(
-        entry: &Ipv6AddressEntry<I>,
+        entry: Ipv6AddressEntry<I>,
     ) -> Option<(UnicastAddr<Ipv6Addr>, SlaacConfig<I>)> {
         match entry.config {
             AddrConfig::Manual => None,
@@ -1866,7 +1760,8 @@ mod tests {
         prefix1.send_prefix_update(&mut sync_ctx, &mut non_sync_ctx, device, src_ip);
 
         let (prefix_1_static, prefix_1_temporary) = {
-            let slaac_configs = iter_global_ipv6_addrs(&sync_ctx, device.try_into().unwrap())
+            let slaac_configs = get_global_ipv6_addrs(&sync_ctx, device.try_into().unwrap())
+                .into_iter()
                 .filter_map(slaac_address)
                 .filter(|(a, _)| prefix1.prefix.contains(a));
 
@@ -1896,7 +1791,8 @@ mod tests {
 
         {
             // Check prefix 1 addresses again.
-            let slaac_configs = iter_global_ipv6_addrs(&sync_ctx, device.try_into().unwrap())
+            let slaac_configs = get_global_ipv6_addrs(&sync_ctx, device.try_into().unwrap())
+                .into_iter()
                 .filter_map(slaac_address)
                 .filter(|(a, _)| prefix1.prefix.contains(a));
             let (static_address, temporary_address) = single_static_and_temporary(slaac_configs);
@@ -1916,7 +1812,8 @@ mod tests {
         }
         {
             // Check prefix 2 addresses.
-            let slaac_configs = iter_global_ipv6_addrs(&sync_ctx, device.try_into().unwrap())
+            let slaac_configs = get_global_ipv6_addrs(&sync_ctx, device.try_into().unwrap())
+                .into_iter()
                 .filter_map(slaac_address)
                 .filter(|(a, _)| prefix2.prefix.contains(a));
             let (static_address, temporary_address) = single_static_and_temporary(slaac_configs);
@@ -1980,19 +1877,19 @@ mod tests {
         );
 
         // Should have gotten a new temporary IP.
-        let temporary_slaac_addresses =
-            iter_global_ipv6_addrs(sync_ctx, device.try_into().unwrap())
-                .filter_map(|entry| match entry.config {
-                    AddrConfig::Slaac(SlaacConfig::Static { .. }) => None,
-                    AddrConfig::Slaac(SlaacConfig::Temporary(TemporarySlaacConfig {
-                        creation_time: _,
-                        desync_factor: _,
-                        valid_until,
-                        dad_counter: _,
-                    })) => Some((entry.addr_sub(), entry.state, valid_until)),
-                    AddrConfig::Manual => None,
-                })
-                .collect::<Vec<_>>();
+        let temporary_slaac_addresses = get_global_ipv6_addrs(sync_ctx, device.try_into().unwrap())
+            .into_iter()
+            .filter_map(|entry| match entry.config {
+                AddrConfig::Slaac(SlaacConfig::Static { .. }) => None,
+                AddrConfig::Slaac(SlaacConfig::Temporary(TemporarySlaacConfig {
+                    creation_time: _,
+                    desync_factor: _,
+                    valid_until,
+                    dad_counter: _,
+                })) => Some((*entry.addr_sub(), entry.state, valid_until)),
+                AddrConfig::Manual => None,
+            })
+            .collect::<Vec<_>>();
         assert_eq!(temporary_slaac_addresses.len(), 1);
         let (addr_sub, state, valid_until) = temporary_slaac_addresses.into_iter().next().unwrap();
         assert_eq!(addr_sub.subnet(), subnet);
@@ -2061,7 +1958,8 @@ mod tests {
 
         // Sanity check: `conflicted_addr` is already assigned on the device.
         assert_matches!(
-            iter_global_ipv6_addrs(&sync_ctx, device_id)
+            get_global_ipv6_addrs(&sync_ctx, device_id)
+                .into_iter()
                 .find(|entry| entry.addr_sub() == &conflicted_addr),
             Some(_)
         );
@@ -2094,11 +1992,11 @@ mod tests {
                 AddrConfig::Slaac(SlaacConfig::Temporary(_)) => true,
                 AddrConfig::Manual => false,
             })
-            .map(|entry| entry.addr_sub())
+            .map(|entry| *entry.addr_sub())
             .collect::<Vec<_>>();
-        assert_matches!(&temporary_slaac_addresses[..], [&temporary_addr] => {
+        assert_matches!(&temporary_slaac_addresses[..], [temporary_addr] => {
             assert_eq!(temporary_addr.subnet(), conflicted_addr.subnet());
-            assert_ne!(temporary_addr, conflicted_addr);
+            assert_ne!(temporary_addr, &conflicted_addr);
         });
     }
 
@@ -2120,7 +2018,7 @@ mod tests {
         let prefix_length = 64;
 
         let device_id = device.try_into().unwrap();
-        assert_empty(iter_global_ipv6_addrs(&sync_ctx, device_id));
+        assert_empty(get_global_ipv6_addrs(&sync_ctx, device_id));
 
         // Receive a new RA with new prefix (autonomous), but preferred lifetime
         // is greater than valid.
@@ -2144,7 +2042,7 @@ mod tests {
             FrameDestination::Multicast,
             icmpv6_packet_buf,
         );
-        assert_empty(iter_global_ipv6_addrs(&sync_ctx, device_id));
+        assert_empty(get_global_ipv6_addrs(&sync_ctx, device_id));
 
         // Address invalidation timers were added.
         assert_empty(non_sync_ctx.timer_ctx().timers());
@@ -2172,7 +2070,7 @@ mod tests {
 
         // Have no addresses yet.
         let device_id = device.try_into().unwrap();
-        assert_empty(iter_global_ipv6_addrs(&sync_ctx, device_id));
+        assert_empty(get_global_ipv6_addrs(&sync_ctx, device_id));
 
         crate::device::update_ipv6_configuration(
             &mut sync_ctx,
@@ -2224,10 +2122,7 @@ mod tests {
             }),
             deprecated: false,
         };
-        assert_eq!(
-            iter_global_ipv6_addrs(&sync_ctx, device_id).collect::<Vec<_>>(),
-            [&expected_address_entry]
-        );
+        assert_eq!(get_global_ipv6_addrs(&sync_ctx, device_id), [expected_address_entry]);
 
         // Make sure deprecate and invalidation timers are set.
         non_sync_ctx.timer_ctx().assert_some_timers_installed([
@@ -2244,8 +2139,8 @@ mod tests {
             SlaacTimerId::new_deprecate_slaac_address(device, expected_addr).into()
         );
         assert_eq!(
-            iter_global_ipv6_addrs(&sync_ctx, device_id).collect::<Vec<_>>(),
-            [&Ipv6AddressEntry { deprecated: true, ..expected_address_entry }]
+            get_global_ipv6_addrs(&sync_ctx, device_id),
+            [Ipv6AddressEntry { deprecated: true, ..expected_address_entry }]
         );
     }
 
@@ -2274,19 +2169,19 @@ mod tests {
         receive_ipv6_packet(sync_ctx, ctx, device, FrameDestination::Multicast, icmpv6_packet_buf);
     }
 
-    fn get_matching_slaac_address_entries<F: FnMut(&&Ipv6AddressEntry<DummyInstant>) -> bool>(
+    fn get_matching_slaac_address_entries<F: FnMut(&Ipv6AddressEntry<DummyInstant>) -> bool>(
         sync_ctx: &crate::testutil::DummySyncCtx,
         device: DeviceId,
         filter: F,
-    ) -> impl Iterator<Item = &Ipv6AddressEntry<DummyInstant>> {
-        iter_global_ipv6_addrs(sync_ctx, device.try_into().unwrap()).filter(filter)
+    ) -> impl Iterator<Item = Ipv6AddressEntry<DummyInstant>> {
+        get_global_ipv6_addrs(sync_ctx, device.try_into().unwrap()).into_iter().filter(filter)
     }
 
-    fn get_matching_slaac_address_entry<F: FnMut(&&Ipv6AddressEntry<DummyInstant>) -> bool>(
+    fn get_matching_slaac_address_entry<F: FnMut(&Ipv6AddressEntry<DummyInstant>) -> bool>(
         sync_ctx: &crate::testutil::DummySyncCtx,
         device: DeviceId,
         filter: F,
-    ) -> Option<&Ipv6AddressEntry<DummyInstant>> {
+    ) -> Option<Ipv6AddressEntry<DummyInstant>> {
         let mut matching_addrs = get_matching_slaac_address_entries(sync_ctx, device, filter);
         let entry = matching_addrs.next();
         assert_eq!(matching_addrs.next(), None);
@@ -2297,8 +2192,9 @@ mod tests {
         sync_ctx: &crate::testutil::DummySyncCtx,
         device: DeviceId,
         addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
-    ) -> Option<&Ipv6AddressEntry<DummyInstant>> {
-        let mut matching_addrs = iter_global_ipv6_addrs(sync_ctx, device.try_into().unwrap())
+    ) -> Option<Ipv6AddressEntry<DummyInstant>> {
+        let mut matching_addrs = get_global_ipv6_addrs(sync_ctx, device.try_into().unwrap())
+            .into_iter()
             .filter(|entry| *entry.addr_sub() == addr_sub);
         let entry = matching_addrs.next();
         assert_eq!(matching_addrs.next(), None);
@@ -2308,7 +2204,7 @@ mod tests {
     fn assert_slaac_lifetimes_enforced(
         non_sync_ctx: &crate::testutil::DummyNonSyncCtx,
         device: DeviceId,
-        entry: &Ipv6AddressEntry<DummyInstant>,
+        entry: Ipv6AddressEntry<DummyInstant>,
         valid_until: DummyInstant,
         preferred_until: DummyInstant,
     ) {
@@ -2404,7 +2300,7 @@ mod tests {
         let expected_addr_sub = AddrSubnet::from_witness(expected_addr, prefix_length).unwrap();
 
         // Have no addresses yet.
-        assert_empty(iter_global_ipv6_addrs(&sync_ctx, device.try_into().unwrap()));
+        assert_empty(get_global_ipv6_addrs(&sync_ctx, device.try_into().unwrap()));
 
         // Receive a new RA with new prefix (autonomous).
         //
@@ -2649,7 +2545,7 @@ mod tests {
             valid_lifetime,
         );
 
-        let first_addr_entry = *get_matching_slaac_address_entry(&sync_ctx, device, |entry| {
+        let first_addr_entry = get_matching_slaac_address_entry(&sync_ctx, device, |entry| {
             entry.addr_sub().subnet() == subnet
                 && match entry.config {
                     AddrConfig::Slaac(SlaacConfig::Temporary(_)) => true,
@@ -2672,7 +2568,7 @@ mod tests {
 
         // In response to the advertisement with the duplicate address, a
         // different address should be selected.
-        let second_addr_entry = *get_matching_slaac_address_entry(&sync_ctx, device, |entry| {
+        let second_addr_entry = get_matching_slaac_address_entry(&sync_ctx, device, |entry| {
             entry.addr_sub().subnet() == subnet
                 && match entry.config {
                     AddrConfig::Slaac(SlaacConfig::Temporary(_)) => true,
@@ -2798,7 +2694,7 @@ mod tests {
             MAX_VALID_LIFETIME.as_secs() as u32,
         );
 
-        let match_temporary_address = |entry: &&Ipv6AddressEntry<DummyInstant>| {
+        let match_temporary_address = |entry: &Ipv6AddressEntry<DummyInstant>| {
             entry.addr_sub().subnet() == subnet
                 && match entry.config {
                     AddrConfig::Slaac(SlaacConfig::Temporary(_)) => true,
@@ -2816,7 +2712,7 @@ mod tests {
                 // An address should be selected. This must be checked using DAD
                 // against other hosts on the network.
                 let addr_entry =
-                    *get_matching_slaac_address_entry(&sync_ctx, device, match_temporary_address)
+                    get_matching_slaac_address_entry(&sync_ctx, device, match_temporary_address)
                         .unwrap();
                 assert_eq!(
                     addr_entry.state,
@@ -2926,7 +2822,7 @@ mod tests {
             MAX_VALID_LIFETIME.as_secs().try_into().unwrap(),
         );
 
-        let first_addr_entry = *get_matching_slaac_address_entry(&sync_ctx, device, |entry| {
+        let first_addr_entry = get_matching_slaac_address_entry(&sync_ctx, device, |entry| {
             entry.addr_sub().subnet() == subnet
                 && match entry.config {
                     AddrConfig::Slaac(SlaacConfig::Temporary(_)) => true,
@@ -3126,7 +3022,7 @@ mod tests {
             MAX_VALID_LIFETIME.as_secs().try_into().unwrap(),
         );
 
-        let first_addr_entry = *get_matching_slaac_address_entry(&sync_ctx, device, |entry| {
+        let first_addr_entry = get_matching_slaac_address_entry(&sync_ctx, device, |entry| {
             entry.addr_sub().subnet() == subnet
                 && match entry.config {
                     AddrConfig::Slaac(SlaacConfig::Temporary(_)) => true,
@@ -3473,10 +3369,7 @@ mod tests {
             deprecated: false,
         };
         let device_id = device.try_into().unwrap();
-        assert_eq!(
-            iter_global_ipv6_addrs(&sync_ctx, device_id).collect::<Vec<_>>(),
-            [&expected_address_entry]
-        );
+        assert_eq!(get_global_ipv6_addrs(&sync_ctx, device_id), [expected_address_entry]);
         // Make sure deprecate and invalidation timers are set.
         non_sync_ctx.timer_ctx().assert_some_timers_installed([
             (
@@ -3489,7 +3382,7 @@ mod tests {
         // Deleting the address should cancel its SLAAC timers.
         del_ip_addr(&mut sync_ctx, &mut non_sync_ctx, device, &expected_addr.into_specified())
             .unwrap();
-        assert_empty(iter_global_ipv6_addrs(&sync_ctx, device_id));
+        assert_empty(get_global_ipv6_addrs(&sync_ctx, device_id));
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 
@@ -3504,13 +3397,15 @@ mod tests {
         // Deleting the address should cancel its SLAAC timers.
         del_ip_addr(&mut sync_ctx, &mut non_sync_ctx, device, &expected_addr.into_specified())
             .unwrap();
-        assert_empty(iter_global_ipv6_addrs(&sync_ctx, device.try_into().unwrap()).filter(|e| {
-            match e.config {
-                AddrConfig::Slaac(SlaacConfig::Temporary(_)) => true,
-                AddrConfig::Slaac(SlaacConfig::Static { valid_until: _ }) => false,
-                AddrConfig::Manual => false,
-            }
-        }));
+        assert_empty(
+            get_global_ipv6_addrs(&sync_ctx, device.try_into().unwrap()).into_iter().filter(|e| {
+                match e.config {
+                    AddrConfig::Slaac(SlaacConfig::Temporary(_)) => true,
+                    AddrConfig::Slaac(SlaacConfig::Static { valid_until: _ }) => false,
+                    AddrConfig::Manual => false,
+                }
+            }),
+        );
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
     }
 }

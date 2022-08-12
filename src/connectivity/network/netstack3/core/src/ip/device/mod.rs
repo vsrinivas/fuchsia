@@ -1175,6 +1175,39 @@ pub(crate) fn update_ipv6_configuration<
 }
 
 #[cfg(test)]
+pub(crate) mod testutil {
+    use super::*;
+
+    use net_types::{ip::Ipv6Scope, ScopeableAddress as _};
+
+    pub(crate) fn get_global_ipv6_addrs<
+        C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>,
+        SC: IpDeviceContext<Ipv6, C>,
+    >(
+        sync_ctx: &SC,
+        device_id: SC::DeviceId,
+    ) -> Vec<Ipv6AddressEntry<C::Instant>> {
+        sync_ctx.with_ip_device_state(device_id, |state| {
+            state
+                .ip_state
+                .iter_addrs()
+                .filter(|entry| match entry.addr_sub.addr().scope() {
+                    Ipv6Scope::Global => true,
+                    Ipv6Scope::InterfaceLocal
+                    | Ipv6Scope::LinkLocal
+                    | Ipv6Scope::AdminLocal
+                    | Ipv6Scope::SiteLocal
+                    | Ipv6Scope::OrganizationLocal
+                    | Ipv6Scope::Reserved(_)
+                    | Ipv6Scope::Unassigned(_) => false,
+                })
+                .cloned()
+                .collect()
+        })
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 

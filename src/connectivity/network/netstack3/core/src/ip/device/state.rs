@@ -27,6 +27,10 @@ use crate::{
 /// [RFC 4861 section 10]: https://tools.ietf.org/html/rfc4861#section-10
 const RETRANS_TIMER_DEFAULT: NonZeroDuration = NonZeroDuration::from_nonzero_secs(nonzero!(1u64));
 
+/// The default value for the default hop limit to be used when sending IP
+/// packets.
+const DEFAULT_HOP_LIMIT: NonZeroU8 = nonzero!(64u8);
+
 pub(crate) enum DelIpv6AddrReason {
     ManualAction,
     DadFailed,
@@ -45,22 +49,16 @@ pub(crate) trait IpDeviceStateIpExt<Instant>: Ip {
     /// device (because there are no remote hosts) or in the context of an IPsec
     /// device (because multicast is not supported).
     type GmpState;
-
-    /// The default TTL (IPv4) or hop limit (IPv6) to configure for new IP
-    /// devices.
-    const DEFAULT_HOP_LIMIT: NonZeroU8;
 }
 
 impl<I: Instant> IpDeviceStateIpExt<I> for Ipv4 {
     type AssignedAddress = AddrSubnet<Ipv4Addr>;
     type GmpState = IgmpGroupState<I>;
-    const DEFAULT_HOP_LIMIT: NonZeroU8 = nonzero!(64u8);
 }
 
 impl<I: Instant> IpDeviceStateIpExt<I> for Ipv6 {
     type AssignedAddress = Ipv6AddressEntry<I>;
     type GmpState = MldGroupState<I>;
-    const DEFAULT_HOP_LIMIT: NonZeroU8 = crate::device::ndp::HOP_LIMIT_DEFAULT;
 }
 
 /// The state associated with an IP address assigned to an IP device.
@@ -123,7 +121,7 @@ impl<Instant, I: IpDeviceStateIpExt<Instant>> Default for IpDeviceState<Instant,
         IpDeviceState {
             addrs: Vec::default(),
             multicast_groups: MulticastGroupSet::default(),
-            default_hop_limit: I::DEFAULT_HOP_LIMIT,
+            default_hop_limit: DEFAULT_HOP_LIMIT,
             routing_enabled: false,
         }
     }
