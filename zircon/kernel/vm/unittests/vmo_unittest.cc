@@ -3571,6 +3571,57 @@ static bool vmo_pinned_wrapper_test() {
   END_TEST;
 }
 
+// Tests that dirty pages cannot be deduped.
+static bool vmo_dedup_dirty_test() {
+  BEGIN_TEST;
+
+  AutoVmScannerDisable scanner_disable;
+
+  fbl::RefPtr<VmObjectPaged> vmo;
+  vm_page_t* page;
+  zx_status_t status =
+      make_committed_pager_vmo(1, /*trap_dirty=*/false, /*resizable=*/false, &page, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+
+  // Our page should now be in a pager backed page queue.
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page));
+
+  // The page is clean. We should be able to dedup the page.
+  EXPECT_TRUE(vmo->DebugGetCowPages()->DedupZeroPage(page, 0));
+
+  // No committed pages remaining.
+  EXPECT_EQ(0u, vmo->AttributedPages());
+
+  // Commit the page again.
+  vmo->CommitRange(0, PAGE_SIZE);
+  page = vmo->DebugGetPage(0);
+
+  // The page is still clean.
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page));
+
+  // Zero scan should be able to dedup a clean page.
+  EXPECT_TRUE(vmo->ScanForZeroPages(true));
+
+  // No committed pages remaining.
+  EXPECT_EQ(0u, vmo->AttributedPages());
+
+  // Write to the page making it dirty.
+  uint8_t data = 0xff;
+  status = vmo->Write(&data, 0, sizeof(data));
+  ASSERT_EQ(ZX_OK, status);
+
+  // The page should now be dirty.
+  page = vmo->DebugGetPage(0);
+  EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
+
+  // We should not be able to dedup the page.
+  EXPECT_FALSE(vmo->DebugGetCowPages()->DedupZeroPage(page, 0));
+  EXPECT_FALSE(vmo->ScanForZeroPages(true));
+  EXPECT_EQ(1u, vmo->AttributedPages());
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(vmo_tests)
 VM_UNITTEST(vmo_create_test)
 VM_UNITTEST(vmo_create_maximum_size)
@@ -3626,6 +3677,7 @@ VM_UNITTEST(vmo_pinning_backlink_test)
 VM_UNITTEST(vmo_supply_zero_offset_test)
 VM_UNITTEST(vmo_zero_pinned_test)
 VM_UNITTEST(vmo_pinned_wrapper_test)
+VM_UNITTEST(vmo_dedup_dirty_test)
 UNITTEST_END_TESTCASE(vmo_tests, "vmo", "VmObject tests")
 
 }  // namespace vm_unittest

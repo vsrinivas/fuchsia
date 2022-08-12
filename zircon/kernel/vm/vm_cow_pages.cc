@@ -388,7 +388,7 @@ bool VmCowPages::DedupZeroPage(vm_page_t* page, uint64_t offset) {
   // harm in looking up a random slot as we'll then notice it's the wrong page.
   const VmPageOrMarker* page_or_marker = page_list_.Lookup(offset);
   if (!page_or_marker || !page_or_marker->IsPage() || page_or_marker->Page() != page ||
-      page->object.pin_count > 0) {
+      page->object.pin_count > 0 || (is_page_dirty_tracked(page) && !is_page_clean(page))) {
     return false;
   }
 
@@ -402,6 +402,9 @@ bool VmCowPages::DedupZeroPage(vm_page_t* page, uint64_t offset) {
   RangeChangeUpdateLocked(offset, PAGE_SIZE, RangeChangeOp::RemoveWrite);
 
   if (IsZeroPage(page_or_marker->Page())) {
+    // We stack-own loaned pages from when they're removed until they're freed.
+    __UNINITIALIZED StackOwnedLoanedPagesInterval raii_interval;
+
     // Replace the slot with a marker.
     VmPageOrMarker new_marker = VmPageOrMarker::Marker();
     ktl::optional<vm_page_t*> old_page = ktl::nullopt;
@@ -451,6 +454,9 @@ uint32_t VmCowPages::ScanForZeroPagesLocked(bool reclaim) {
     }
   }
 
+  // We stack-own loaned pages from when they're removed until they're freed.
+  __UNINITIALIZED StackOwnedLoanedPagesInterval raii_interval;
+
   list_node_t freed_list;
   list_initialize(&freed_list);
 
@@ -458,7 +464,10 @@ uint32_t VmCowPages::ScanForZeroPagesLocked(bool reclaim) {
   page_list_.RemovePages(
       [&count, &freed_list, reclaim, this](VmPageOrMarker* p, uint64_t off) {
         // Pinned pages cannot be decommitted so do not consider them.
-        if (p->IsPage() && p->Page()->object.pin_count == 0 && IsZeroPage(p->Page())) {
+        // If the page supports dirty tracking, it should be Clean.
+        if (p->IsPage() && p->Page()->object.pin_count == 0 &&
+            (!is_page_dirty_tracked(p->Page()) || is_page_clean(p->Page())) &&
+            IsZeroPage(p->Page())) {
           count++;
           if (reclaim) {
             // Need to remove all mappings (include read) ones to this range before we remove the
