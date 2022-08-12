@@ -56,7 +56,7 @@ func (w *World) AddLicenseUrls() error {
 				continue
 			}
 
-			path := l.Path
+			path := l.AbsPath
 			if strings.Contains(path, Config.FuchsiaDir) {
 				path, _ = filepath.Rel(Config.FuchsiaDir, path)
 			}

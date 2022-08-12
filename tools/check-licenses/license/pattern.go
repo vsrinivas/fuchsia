@@ -17,6 +17,12 @@ import (
 // Pattern contains a searchable regex pattern for finding license text
 // in source files and LICENSE files across the repository.
 type Pattern struct {
+	// Absolute path to this license pattern file.
+	AbsPath string
+
+	// Relative path from the root Fuchsia directory to this license pattern file.
+	RelPath string
+
 	// Name is the name of the license pattern file.
 	Name string
 
@@ -101,8 +107,22 @@ func NewPattern(path string) (*Pattern, error) {
 		}
 	}
 
+	relPath := path
+	if filepath.IsAbs(path) {
+		relPath, err = filepath.Rel(Config.FuchsiaDir, path)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
 	return &Pattern{
 		Name:               name,
+		AbsPath:            absPath,
+		RelPath:            relPath,
 		Type:               licType,
 		Category:           licCategory,
 		AllowList:          allowlist,

@@ -48,7 +48,7 @@ func AnalyzeLicenses() error {
 		}
 	}
 
-	// Keep track of all license patterns that went unused.
-	license.RecordUnusedPatterns()
+	// Perform any cleanup steps in the license package.
+	license.Finalize()
 	return nil
 }

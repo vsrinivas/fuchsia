@@ -17,7 +17,8 @@ import (
 
 // Project struct follows the format of README.fuchsia files.
 // For more info, see the following article:
-//   https://fuchsia.dev/fuchsia-src/development/source_code/third-party-metadata
+//
+//	https://fuchsia.dev/fuchsia-src/development/source_code/third-party-metadata
 type Project struct {
 	Root               string
 	ReadmePath         string
@@ -269,7 +270,7 @@ func (p *Project) processCustomFields() error {
 func (p *Project) AddFiles(filepaths []string) error {
 	licenseFileMap := make(map[string]bool, 0)
 	for _, lpath := range p.LicenseFile {
-		licenseFileMap[lpath.Path] = true
+		licenseFileMap[lpath.AbsPath] = true
 	}
 
 	for _, path := range filepaths {

@@ -115,7 +115,7 @@ func (w *World) GetCSVEntries() *CSVData {
 				numLicenses += 1
 				e := &CSVEntry{
 					Project:            p.Name,
-					Path:               l.Path,
+					Path:               l.AbsPath,
 					Package:            d.LibraryName,
 					LicenseType:        d.LicenseType,
 					BeingSurfaced:      "Yes",

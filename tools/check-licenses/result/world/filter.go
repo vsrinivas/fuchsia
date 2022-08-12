@@ -64,8 +64,8 @@ func (w *World) FilterProjects() error {
 func (w *World) FilterProjectsUsingDirectoryPrefix(filepaths []string) []string {
 	for _, p := range w.Projects {
 		for _, f := range p.Files {
-			if strings.HasPrefix(f.Path, Config.Target) {
-				filepaths = append(filepaths, f.Path)
+			if strings.HasPrefix(f.AbsPath, Config.Target) {
+				filepaths = append(filepaths, f.AbsPath)
 			}
 		}
 	}
@@ -109,10 +109,10 @@ func (w *World) getFileMap() (map[string]*project.Project, error) {
 		allFiles = append(allFiles, p.Files...)
 		allFiles = append(allFiles, p.LicenseFile...)
 		for _, f := range allFiles {
-			path := f.Path
-			if strings.Contains(f.Path, Config.FuchsiaDir) {
+			path := f.AbsPath
+			if strings.Contains(f.AbsPath, Config.FuchsiaDir) {
 				var err error
-				path, err = filepath.Rel(Config.FuchsiaDir, f.Path)
+				path, err = filepath.Rel(Config.FuchsiaDir, f.AbsPath)
 				if err != nil {
 					return nil, err
 				}

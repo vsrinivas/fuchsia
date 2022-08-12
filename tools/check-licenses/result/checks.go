@@ -61,7 +61,7 @@ func AllFuchsiaAuthorSourceFilesMustHaveCopyrightHeaders() error {
 	count := 0
 	for _, f := range fuchsia.SearchableFiles {
 		if len(f.Data) == 0 {
-			return fmt.Errorf("Found a file that hasn't been parsed yet?? %v\n", f.Path)
+			return fmt.Errorf("Found a file that hasn't been parsed yet?? %v\n", f.AbsPath)
 		}
 	OUTER:
 		for _, fd := range f.Data {

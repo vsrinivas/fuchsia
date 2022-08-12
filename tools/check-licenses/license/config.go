@@ -5,6 +5,7 @@
 package license
 
 type LicenseConfig struct {
+	FuchsiaDir   string         `json:"fuchsiaDir"`
 	PatternRoots []*PatternRoot `json:"patternRoot"`
 	AllowLists   []*AllowList   `json:"allowlists"`
 }
@@ -34,6 +35,9 @@ func NewConfig() *LicenseConfig {
 }
 
 func (c *LicenseConfig) Merge(other *LicenseConfig) {
+	if c.FuchsiaDir == "" {
+		c.FuchsiaDir = other.FuchsiaDir
+	}
 	if c.PatternRoots == nil {
 		c.PatternRoots = make([]*PatternRoot, 0)
 	}

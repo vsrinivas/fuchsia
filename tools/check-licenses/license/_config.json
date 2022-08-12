@@ -33,6 +33,7 @@
         }
     ],
     "license": {
+        "fuchsiaDir": "{FUCHSIA_DIR}",
         "patternRoot": [
             {
                 "paths": [

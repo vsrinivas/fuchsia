@@ -12,19 +12,20 @@ import (
 // File is a data struct used to hold the path and text content
 // of a file in the fuchsia tree.
 type File struct {
-	Name string
-	Path string `json:"path"`
-	Url  string `json:"url"`
-	Data []*FileData
-	Text []byte
+	Name    string
+	AbsPath string `json:"absPath"`
+	RelPath string `json:"relPath"`
+	Url     string `json:"url"`
+	Data    []*FileData
+	Text    []byte
 }
 
-// Order implements sort.Interface for []*File based on the Path field.
+// Order implements sort.Interface for []*File based on the AbsPath field.
 type Order []*File
 
 func (a Order) Len() int           { return len(a) }
 func (a Order) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a Order) Less(i, j int) bool { return a[i].Path < a[j].Path }
+func (a Order) Less(i, j int) bool { return a[i].AbsPath < a[j].AbsPath }
 
 // NewFile returns a new File struct, with the file content loaded
 // in.
@@ -70,11 +71,26 @@ func NewFile(path string, ft FileType) (*File, error) {
 	if Config.Extensions[filepath.Ext(path)] {
 		plusVal(NumPotentialLicenseFiles, path)
 	}
+
+	relPath := path
+	if filepath.IsAbs(path) {
+		relPath, err = filepath.Rel(Config.FuchsiaDir, path)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
+
 	f := &File{
-		Name: filepath.Base(path),
-		Path: path,
-		Data: data,
-		Text: content,
+		Name:    filepath.Base(path),
+		AbsPath: absPath,
+		RelPath: relPath,
+		Data:    data,
+		Text:    content,
 	}
 
 	AllFiles[path] = f

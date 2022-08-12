@@ -1,5 +1,6 @@
 {
     "file": {
+        "fuchsiaDir": "{FUCHSIA_DIR}",
         "copyrightSize": 6124,
         "replacements": [
             {

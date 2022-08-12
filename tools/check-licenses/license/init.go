@@ -63,6 +63,7 @@ func Initialize(c *LicenseConfig) error {
 	}
 	Empty = &Pattern{
 		Name:               "_empty",
+		RelPath:            "_empty",
 		Matches:            make([]*file.FileData, 0),
 		AllowList:          []string{".*"},
 		PreviousMatches:    make(map[string]bool),
@@ -81,6 +82,7 @@ func Initialize(c *LicenseConfig) error {
 	}
 	Unrecognized = &Pattern{
 		Name:               "_unrecognized",
+		RelPath:            "_unrecognized",
 		Category:           "Unrecognized",
 		Type:               "Unrecognized",
 		Matches:            make([]*file.FileData, 0),
@@ -89,10 +91,13 @@ func Initialize(c *LicenseConfig) error {
 		PreviousMismatches: make(map[string]bool),
 		Re:                 re,
 	}
-
-	// TODO(jcecil): Remove this pattern from AllPatterns if/when
-	// we re-enable searching with all available patterns.
 	AllPatterns = append(AllPatterns, Unrecognized)
+
+	for _, p := range AllPatterns {
+		base := filepath.Base(p.RelPath)
+		path := filepath.Join(filepath.Join("patterns", p.RelPath), base)
+		plusFile(path, []byte(p.Re.String()))
+	}
 
 	return nil
 }

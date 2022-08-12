@@ -12,7 +12,7 @@ import (
 )
 
 func TestFileCreatedSuccessfully(t *testing.T) {
-	setup()
+	setup(t)
 	filename := filepath.Join(t.TempDir(), "success.txt")
 	if err := ioutil.WriteFile(filename, []byte("Example Text"), 0600); err != nil {
 		t.Fatal(err)
@@ -24,7 +24,7 @@ func TestFileCreatedSuccessfully(t *testing.T) {
 }
 
 func TestFileCreationFails(t *testing.T) {
-	setup()
+	setup(t)
 	filename := filepath.Join(t.TempDir(), "failure.txt")
 
 	if _, err := NewFile(filename, SingleLicense); err == nil {
@@ -33,7 +33,7 @@ func TestFileCreationFails(t *testing.T) {
 }
 
 func TestReplacements(t *testing.T) {
-	setup()
+	setup(t)
 	r := []*Replacement{
 		{
 			Replace: "“",
@@ -43,6 +43,7 @@ func TestReplacements(t *testing.T) {
 			With:    "\"",
 		},
 	}
+	Config.FuchsiaDir = "/"
 	Config.Replacements = r
 	expected := []byte("left quote: \" right quote: \"")
 
@@ -63,6 +64,8 @@ func TestReplacements(t *testing.T) {
 	}
 }
 
-func setup() {
-	Config = &FileConfig{}
+func setup(t *testing.T) {
+	Config = &FileConfig{
+		FuchsiaDir: t.TempDir(),
+	}
 }

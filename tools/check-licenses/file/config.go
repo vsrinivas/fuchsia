@@ -7,6 +7,9 @@ package file
 var Config *FileConfig
 
 type FileConfig struct {
+	// Path to the root of the fuchsia repository.
+	FuchsiaDir string `json:"fuchsiaDir"`
+
 	// Number of bytes to read in to capture copyright information
 	// in regular source files.
 	CopyrightSize int
@@ -36,6 +39,9 @@ func NewConfig() *FileConfig {
 }
 
 func (c *FileConfig) Merge(other *FileConfig) {
+	if c.FuchsiaDir == "" {
+		c.FuchsiaDir = other.FuchsiaDir
+	}
 	if c.CopyrightSize == 0 {
 		c.CopyrightSize = other.CopyrightSize
 	}

@@ -129,10 +129,10 @@ func (w *World) getFilePathToProjectMap() map[string]string {
 	fileMap := make(map[string]string, 0)
 	for _, p := range w.FilteredProjects {
 		for _, f := range p.Files {
-			fileMap[f.Path] = p.Name
+			fileMap[f.AbsPath] = p.Name
 		}
 		for _, f := range p.LicenseFile {
-			fileMap[f.Path] = p.Name
+			fileMap[f.AbsPath] = p.Name
 		}
 	}
 	return fileMap

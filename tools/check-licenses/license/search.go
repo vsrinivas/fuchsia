@@ -6,6 +6,9 @@ package license
 
 import (
 	"fmt"
+	"path/filepath"
+	"strconv"
+	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/file"
 )
@@ -50,23 +53,49 @@ func search(f *file.File, patterns []*Pattern) ([]*SearchResult, error) {
 				// If it is the only license that matched the text, that's bad.
 				// Record these instances in the metrics, so we can investigate later.
 				if p.Name == Unrecognized.Name {
-					plusVal(UnrecognizedLicenses, fmt.Sprintf("%v - %v", f.Path, d.LibraryName))
+					plusVal(UnrecognizedLicenses, fmt.Sprintf("%v - %v", f.RelPath, d.LibraryName))
 				}
 
 				break
 			}
 		}
 	}
+	if len(searchResults) > 0 {
+		base := filepath.Base(f.RelPath)
+		path := filepath.Join("matches", f.RelPath, base)
+		plusFile(path, f.Text)
+		for iter, r := range searchResults {
+			dir := filepath.Dir(path)
+			segPath := filepath.Join(dir, "segments", strconv.Itoa(iter))
+			plusFile(segPath, r.LicenseData.Data)
+		}
+	}
 	return searchResults, nil
 }
 
-// If a license pattern goes unused, it means that license pattern is no longer needed.
-// We should try to consolidate the license patterns down to the smallest necessary set.
-// Record these patterns here, so we can improve the tool.
-func RecordUnusedPatterns() {
+// Perform any cleanup steps after the license search has completed.
+func Finalize() {
+
+	// If a license pattern goes unused, it means that license pattern is no longer needed.
+	// We should try to consolidate the license patterns down to the smallest necessary set.
+	// Record these patterns here, so we can improve the tool.
 	for _, p := range AllPatterns {
 		if len(p.Matches) == 0 {
 			plusVal(NumUnusedPatterns, fmt.Sprintf("%v-%v-%v", p.Category, p.Type, p.Name))
 		}
+	}
+
+	// Record matches in the metrics directory.
+	for _, p := range AllPatterns {
+		if len(p.Matches) == 0 {
+			continue
+		}
+
+		var m strings.Builder
+		for _, match := range p.Matches {
+			m.WriteString(match.FilePath)
+			m.WriteString("\n")
+		}
+		plusFile(filepath.Join("patterns", p.RelPath, "matches"), []byte(m.String()))
 	}
 }
