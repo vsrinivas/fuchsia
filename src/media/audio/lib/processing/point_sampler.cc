@@ -49,8 +49,8 @@ class PointSamplerImpl : public PointSampler {
     PositionManager::CheckPositions(dest.frame_count, dest.frame_offset_ptr, source.frame_count,
                                     source.frame_offset_ptr->raw_value(),
                                     pos_filter_length().raw_value(),
-                                    state().step_size().raw_value(), state().rate_modulo(),
-                                    state().denominator(), state().source_pos_modulo());
+                                    state().step_size().raw_value(), state().step_size_modulo(),
+                                    state().step_size_denominator(), state().source_pos_modulo());
 
     switch (gain.type) {
       case GainType::kSilent:

@@ -30,7 +30,7 @@ class PositionManager {
   static void CheckPositions(int64_t dest_frame_count, int64_t* dest_offset_ptr,
                              int64_t source_frame_count, int64_t source_offset,
                              int64_t frac_pos_filter_length, int64_t frac_step_size,
-                             uint64_t rate_modulo, uint64_t denominator,
+                             uint64_t step_size_modulo, uint64_t step_size_denominator,
                              uint64_t source_pos_modulo);
 
   // Used for debugging purposes only.
@@ -43,7 +43,7 @@ class PositionManager {
   void SetDestValues(float* dest_ptr, int64_t dest_frame_count, int64_t* dest_offset_ptr);
 
   // Specifies the rate parameters. If not called, a unity rate (1:1) is assumed.
-  void SetRateValues(int64_t step_size, uint64_t rate_modulo, uint64_t denominator,
+  void SetRateValues(int64_t step_size, uint64_t step_size_modulo, uint64_t step_size_denominator,
                      uint64_t source_pos_modulo);
 
   // Retrieves the pointer to the current source frame (based on source offset).
@@ -73,10 +73,10 @@ class PositionManager {
     ++dest_offset_;
     frac_source_offset_ += frac_step_size_;
 
-    source_pos_modulo_ += rate_modulo_;
-    if (source_pos_modulo_ >= denominator_) {
+    source_pos_modulo_ += step_size_modulo_;
+    if (source_pos_modulo_ >= step_size_denominator_) {
       ++frac_source_offset_;
-      source_pos_modulo_ -= denominator_;
+      source_pos_modulo_ -= step_size_denominator_;
     }
     return frac_source_offset_;
   }
@@ -102,8 +102,8 @@ class PositionManager {
   static void CheckDestPositions(int64_t dest_frame_count, int64_t dest_offset);
   static void CheckSourcePositions(int64_t source_frame_count, int64_t frac_source_offset,
                                    int64_t frac_pos_filter_length);
-  static void CheckRateValues(int64_t frac_step_size, uint64_t rate_modulo, uint64_t denominator,
-                              uint64_t source_pos_modulo);
+  static void CheckRateValues(int64_t frac_step_size, uint64_t step_size_modulo,
+                              uint64_t step_size_denominator, uint64_t source_pos_modulo);
 
   int32_t source_channel_count_ = 1;
   int32_t dest_channel_count_ = 1;
@@ -123,9 +123,10 @@ class PositionManager {
 
   // If `SetRateValues` is never called, we successfully operate at 1:1 (without rate change).
   int64_t frac_step_size_ = kFracOneFrame;
-  uint64_t rate_modulo_ = 0;
-  uint64_t denominator_ = 1;
-  uint64_t source_pos_modulo_ = 0;  // This should always be less than `rate_modulo_` (or both 0).
+  uint64_t step_size_modulo_ = 0;
+  uint64_t step_size_denominator_ = 1;
+  // This should always be less than `step_size_modulo_` (or both 0).
+  uint64_t source_pos_modulo_ = 0;
 };
 
 }  // namespace media_audio

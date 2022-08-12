@@ -129,8 +129,8 @@ TEST(SamplerTest, MixSampleUnity) {
 TEST(SamplerStateTest, Defaults) {
   Sampler::State state;
   EXPECT_EQ(state.step_size(), kOneFrame);
-  EXPECT_EQ(state.rate_modulo(), 0ull);
-  EXPECT_EQ(state.denominator(), 1ull);
+  EXPECT_EQ(state.step_size_modulo(), 0ull);
+  EXPECT_EQ(state.step_size_denominator(), 1ull);
   EXPECT_EQ(state.source_pos_modulo(), 0ull);
   EXPECT_EQ(state.next_dest_frame(), 0);
   EXPECT_EQ(state.next_source_frame(), 0);
@@ -155,19 +155,19 @@ TEST(SamplerStateTest, ResetPositions) {
 TEST(SamplerStateTest, ResetSourceStrideScale) {
   Sampler::State state;
   EXPECT_EQ(state.source_pos_modulo(), 0ull);
-  EXPECT_EQ(state.denominator(), 1ull);
+  EXPECT_EQ(state.step_size_denominator(), 1ull);
 
   // Zero stays zero: `source_pos_modulo` remains 0.
   state.ResetSourceStride(TimelineRate(Fixed(10).raw_value() + 3, 10));
   EXPECT_EQ(state.source_pos_modulo(), 0ull);
-  EXPECT_EQ(state.denominator(), 10ull);
+  EXPECT_EQ(state.step_size_denominator(), 10ull);
   EXPECT_EQ(state.next_source_frame(), Fixed(0));
 
   // Integer scale: `5/10 => 10/20`
   state.set_source_pos_modulo(5);
   state.ResetSourceStride(TimelineRate(Fixed(20).raw_value() + 7, 20));
   EXPECT_EQ(state.source_pos_modulo(), 10ull);
-  EXPECT_EQ(state.denominator(), 20ull);
+  EXPECT_EQ(state.step_size_denominator(), 20ull);
   EXPECT_EQ(state.next_source_frame(), Fixed(0));
 }
 
@@ -181,14 +181,14 @@ TEST(SamplerStateTest, ResetSourceStrideRound) {
   state.ResetSourceStride(TimelineRate(Fixed(17).raw_value() + 2, 17));
   EXPECT_EQ(state.next_source_frame(), Fixed(0));
   EXPECT_EQ(state.source_pos_modulo(), 9ull);
-  EXPECT_EQ(state.denominator(), 17ull);
+  EXPECT_EQ(state.step_size_denominator(), 17ull);
 
   // Round-down: `9/17 == 16'000'000'000.41/30'222'222'223 => 16'000'000'000/30'222'222'223`
   state.ResetSourceStride(
       TimelineRate(Fixed(30'222'222'223).raw_value() + 1'234'567'890, 30'222'222'223));
   EXPECT_EQ(state.next_source_frame(), Fixed(0));
   EXPECT_EQ(state.source_pos_modulo(), 16'000'000'000ull);
-  EXPECT_EQ(state.denominator(), 30'222'222'223ull);
+  EXPECT_EQ(state.step_size_denominator(), 30'222'222'223ull);
 }
 
 TEST(SamplerStateTest, ResetSourceStrideZeroRate) {
@@ -197,11 +197,11 @@ TEST(SamplerStateTest, ResetSourceStrideZeroRate) {
   EXPECT_EQ(state.next_source_frame(), Fixed(0));
   state.set_source_pos_modulo(10);
 
-  // No change (to `source_pos_modulo` OR `denominator`): `10/20 => 10/20`.
+  // No change (to `source_pos_modulo` OR `step_size_denominator`): `10/20 => 10/20`.
   state.ResetSourceStride(TimelineRate(Fixed(1).raw_value(), 1));
   EXPECT_EQ(state.next_source_frame(), Fixed(0));
   EXPECT_EQ(state.source_pos_modulo(), 10ull);
-  EXPECT_EQ(state.denominator(), 20ull);
+  EXPECT_EQ(state.step_size_denominator(), 20ull);
 }
 
 TEST(SamplerStateTest, ResetSourceStrideModuloRollover) {
@@ -214,7 +214,7 @@ TEST(SamplerStateTest, ResetSourceStrideModuloRollover) {
   state.ResetSourceStride(TimelineRate(Fixed(5).raw_value() + 3, 5));
   EXPECT_EQ(state.next_source_frame(), Fixed::FromRaw(1));
   EXPECT_EQ(state.source_pos_modulo(), 0ull);
-  EXPECT_EQ(state.denominator(), 5ull);
+  EXPECT_EQ(state.step_size_denominator(), 5ull);
 }
 
 TEST(SamplerStateTest, DestFromSourceLength) {
@@ -402,16 +402,16 @@ class SamplerStatePositionTest : public testing::Test {
     // These should be updated.
     EXPECT_EQ(state.next_dest_frame(), 11u);
     if (advance_source_pos_modulo) {
-      // rate_mod/denom is 2/5, so `source_pos_modulo` should increase by (9 * 2), from 2 to 20.
-      // source_pos_modulo / denominator (20 / 5) is 4, so source_pos adds 4 subframes.
-      // The remaining source_pos_modulo (20 % 5) is 0.
-      // Thus new source_pos should be 12 frames (3+9), 4 subframes, modulo 0/5.
+      // `step_size_modulo / step_size_denominator` is 2/5, so `source_pos_modulo` should increase
+      // by (9 * 2), from 2 to 20. `source_pos_modulo / step_size_denominator` is `(20 / 5) = 4`, so
+      // source position adds 4 subframes. The remaining `source_pos_modulo` is `(20 % 5) = 0`. Thus
+      // new source position should be 12 frames (3+9), 4 subframes, modulo 0/5.
       EXPECT_EQ(state.source_pos_modulo(), 0ull);
     } else {
-      // rate_mod/denom is 2/5, so `source_pos_modulo` increased by (9 * 2) and ended up as 2 (22).
-      // source_pos_modulo / denominator (22 / 5) is 4, so source_pos adds 4 subframes.
-      // The remaining source_pos_modulo (22 % 5) is 2.
-      // Thus new source_pos should be 12 frames (3+9), 4 subframes, modulo 2/5.
+      // `step_size_modulo / step_size_denominator` is 2/5, so `source_pos_modulo` increased by (9 *
+      // 2) and ended up as 2 (22). `source_pos_modulo / step_size_denominator` is `(22 / 5) = 4`,
+      // so source position adds 4 subframes. The remaining `source_pos_modulo` is `(22 % 5) = 2`.
+      // Thus new source position should be 12 frames (3+9), 4 subframes, modulo 2/5.
       EXPECT_EQ(state.source_pos_modulo(), 2ull);
     }
     EXPECT_EQ(state.next_source_frame(), Fixed(Fixed(12) + Fixed::FromRaw(4)))

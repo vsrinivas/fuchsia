@@ -846,14 +846,17 @@ TEST_F(MixStageTest, PositionResetAndAdvance) {
     EXPECT_EQ(dest_frames_per_mix, buffer->length());
     source_pos_for_read_lock += Fixed(dest_frames_per_mix);
 
-    // At a 48k nominal rate, we expect rate_modulo to be 47999 and denom to be 48000.
+    // At a 48k nominal rate, we expect step size modulo to be 47999 and denominator to be 48000.
     EXPECT_EQ(state.step_size(), Fixed(kOneFrame - Fixed::FromRaw(1)))
         << ffl::String::DecRational << state.step_size();
-    EXPECT_EQ(state.rate_modulo(), static_cast<uint64_t>(kDefaultFormat.frames_per_second()) - 1);
-    EXPECT_EQ(state.denominator(), static_cast<uint64_t>(kDefaultFormat.frames_per_second()));
+    EXPECT_EQ(state.step_size_modulo(),
+              static_cast<uint64_t>(kDefaultFormat.frames_per_second()) - 1);
+    EXPECT_EQ(state.step_size_denominator(),
+              static_cast<uint64_t>(kDefaultFormat.frames_per_second()));
 
-    // source_pos_modulo should show that we lose 1 source_pos_modulo per dest frame.
-    EXPECT_EQ(state.source_pos_modulo(), state.denominator() - source_pos_for_read_lock.Floor());
+    // `source_pos_modulo` should show that we lose 1 `source_pos_modulo` per destination frame.
+    EXPECT_EQ(state.source_pos_modulo(),
+              state.step_size_denominator() - source_pos_for_read_lock.Floor());
     // ... which also means we'll be one frac-frame behind.
     EXPECT_EQ(state.next_source_frame(), Fixed(Fixed(state.next_dest_frame()) - Fixed::FromRaw(1)))
         << ffl::String::DecRational << state.next_source_frame();
@@ -870,10 +873,13 @@ TEST_F(MixStageTest, PositionResetAndAdvance) {
 
     EXPECT_EQ(state.step_size(), Fixed(kOneFrame - Fixed::FromRaw(1)))
         << ffl::String::DecRational << state.step_size();
-    EXPECT_EQ(state.rate_modulo(), static_cast<uint64_t>(kDefaultFormat.frames_per_second()) - 1);
-    EXPECT_EQ(state.denominator(), static_cast<uint64_t>(kDefaultFormat.frames_per_second()));
+    EXPECT_EQ(state.step_size_modulo(),
+              static_cast<uint64_t>(kDefaultFormat.frames_per_second()) - 1);
+    EXPECT_EQ(state.step_size_denominator(),
+              static_cast<uint64_t>(kDefaultFormat.frames_per_second()));
 
-    EXPECT_EQ(state.source_pos_modulo(), state.denominator() - source_pos_for_read_lock.Floor());
+    EXPECT_EQ(state.source_pos_modulo(),
+              state.step_size_denominator() - source_pos_for_read_lock.Floor());
     EXPECT_EQ(state.next_source_frame(), Fixed(Fixed(state.next_dest_frame()) - Fixed::FromRaw(1)))
         << ffl::String::DecRational << state.next_source_frame();
   }
@@ -891,12 +897,14 @@ TEST_F(MixStageTest, PositionResetAndAdvance) {
 
     EXPECT_EQ(state.step_size(), Fixed(kOneFrame - Fixed::FromRaw(1)))
         << ffl::String::DecRational << state.step_size();
-    EXPECT_EQ(state.rate_modulo(), static_cast<uint64_t>(kDefaultFormat.frames_per_second()) - 1);
-    EXPECT_EQ(state.denominator(), static_cast<uint64_t>(kDefaultFormat.frames_per_second()));
+    EXPECT_EQ(state.step_size_modulo(),
+              static_cast<uint64_t>(kDefaultFormat.frames_per_second()) - 1);
+    EXPECT_EQ(state.step_size_denominator(),
+              static_cast<uint64_t>(kDefaultFormat.frames_per_second()));
 
     // source_pos_modulo shows the offset, and still losing 1 source_pos_modulo per dest frame
     EXPECT_EQ(state.source_pos_modulo(),
-              state.denominator() - source_pos_for_read_lock.Floor() + 17);
+              state.step_size_denominator() - source_pos_for_read_lock.Floor() + 17);
     EXPECT_EQ(state.next_source_frame(), Fixed(Fixed(state.next_dest_frame()) - Fixed::FromRaw(1)))
         << ffl::String::DecRational << state.next_source_frame();
   }
@@ -976,20 +984,22 @@ TEST_F(MixStageTest, PositionSkip) {
     EXPECT_EQ(dest_frames_per_mix, buffer->length());
     source_pos_for_read_lock += Fixed(dest_frames_per_mix);
 
-    // At a 48k nominal rate, we expect rate_modulo to be 47999 and denom to be 48000.
-    // source_pos_modulo should show that we lose 1 source_pos_modulo per dest frame.
+    // At a 48k nominal rate, we expect step size modulo to be 47999 and denominator to be 48000.
+    // `source_pos_modulo` should show that we lose 1 source_pos_modulo per destination frame.
     // ... which also means our running source position will be 1 frac-frame behind.
     auto& state = mixer->state();
     EXPECT_EQ(state.step_size(), Fixed(kOneFrame - Fixed::FromRaw(1)))
         << ffl::String::DecRational << state.step_size();
-    EXPECT_EQ(state.rate_modulo(), static_cast<uint64_t>(kDefaultFormat.frames_per_second()) - 1);
-    EXPECT_EQ(state.denominator(), static_cast<uint64_t>(kDefaultFormat.frames_per_second()));
+    EXPECT_EQ(state.step_size_modulo(),
+              static_cast<uint64_t>(kDefaultFormat.frames_per_second()) - 1);
+    EXPECT_EQ(state.step_size_denominator(),
+              static_cast<uint64_t>(kDefaultFormat.frames_per_second()));
 
     EXPECT_EQ(state.next_dest_frame(), source_pos_for_read_lock.Floor());
     EXPECT_EQ(state.next_source_frame(), Fixed(Fixed(state.next_dest_frame()) - Fixed::FromRaw(1)))
         << ffl::String::DecRational << state.next_source_frame();
 
-    EXPECT_EQ(state.source_pos_modulo(), state.denominator() - dest_frames_per_mix);
+    EXPECT_EQ(state.source_pos_modulo(), state.step_size_denominator() - dest_frames_per_mix);
   }
 
   packet_queue->Flush();
@@ -1015,7 +1025,7 @@ class MixStagePositionTest : public MixStageTest {
 
   zx::duration GetDurationErrorForFracFrameError(Fixed frac_source_error,
                                                  uint64_t source_pos_modulo = 0,
-                                                 uint64_t denominator = 1) {
+                                                 uint64_t step_size_denominator = 1) {
     auto clock = context().clock_factory()->CreateClientAdjustable(
         clock::testing::CreateCustomClock({.synthetic_offset_from_mono = zx::duration(0)})
             .take_value());
@@ -1051,10 +1061,11 @@ class MixStagePositionTest : public MixStageTest {
     // Inject error, mix
     state.set_next_source_frame(frac_source_error + state.next_source_frame());
 
-    FX_CHECK(source_pos_modulo < denominator);
-    if (denominator > 1) {
-      state.ResetSourceStride(TimelineRate(Fixed(denominator).raw_value() + 1, denominator));
-      state.set_source_pos_modulo(std::min(source_pos_modulo, state.denominator() - 1));
+    FX_CHECK(source_pos_modulo < step_size_denominator);
+    if (step_size_denominator > 1) {
+      state.ResetSourceStride(
+          TimelineRate(Fixed(step_size_denominator).raw_value() + 1, step_size_denominator));
+      state.set_source_pos_modulo(std::min(source_pos_modulo, state.step_size_denominator() - 1));
     }
     mix_stage_->ReadLock(rlctx, Fixed(kDestFramesPerMix), kDestFramesPerMix);
     RunLoopUntilIdle();
@@ -1144,9 +1155,9 @@ TEST_F(MixStagePositionTest, PosError_IgnoreOneFracFrame) {
   }
 }
 
-// Verify that SourceInfo.source_pos_error correctly rounds to a ns-based equivalent.
+// Verify that `source_pos_error` correctly rounds to a ns-based equivalent.
 TEST_F(MixStagePositionTest, PosError_RoundToNs) {
-  // Validate floor behavior without pos_modulo/denominator present
+  // Validate floor behavior without step size modulo/denominator present.
   {
     // Source position error 3 frac frames is 7.6 ns, rounds out to 8ns.
     SCOPED_TRACE("position_error 3 frac frames");
@@ -1169,9 +1180,9 @@ TEST_F(MixStagePositionTest, PosError_RoundToNs) {
   }
 }
 
-// Verify that SourceInfo.source_pos_error correctly incorporates source_pos_modulo.
+// Verify that `source_pos_error` correctly incorporates `source_pos_modulo`.
 TEST_F(MixStagePositionTest, PosError_IncludePosModulo) {
-  // Validate floor behavior plus pos_modulo / denominator contribution
+  // Validate floor behavior plus `source_pos_modulo/step_size_denominator` contribution
   {
     // Source position error 2 +56/100 frac frames is 6.51ns, rounds out to 7ns.
     SCOPED_TRACE("position_error 2 frac frames plus 56/100");

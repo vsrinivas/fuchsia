@@ -89,10 +89,10 @@ TEST(PositionManagerTest, UpdateOffsets) {
   pos_mgr.SetDestValues(dest, dest_frame_count, &dest_offset);
 
   auto step_size = kFracOneFrame;
-  auto rate_modulo = 0ul;
-  auto denominator = 2ul;
+  auto step_size_modulo = 0ul;
+  auto step_size_denominator = 2ul;
   auto source_position_modulo = 1ul;
-  pos_mgr.SetRateValues(step_size, rate_modulo, denominator, source_position_modulo);
+  pos_mgr.SetRateValues(step_size, step_size_modulo, step_size_denominator, source_position_modulo);
 
   source_offset = Fixed::FromRaw(27);
   dest_offset = 42;
@@ -103,12 +103,12 @@ TEST(PositionManagerTest, UpdateOffsets) {
   EXPECT_EQ(dest_offset, 0);
   EXPECT_EQ(pos_mgr.source_pos_modulo(), 0ul);
 
-  // Now that `rate_modulo` and `denominator` are non-zero, `source_position_modulo` should be
-  // updated.
-  rate_modulo = 1ul;
-  denominator = 2ul;
+  // Now that `step_size_modulo` and `step_size_denominator` are non-zero, `source_position_modulo`
+  // should be updated.
+  step_size_modulo = 1ul;
+  step_size_denominator = 2ul;
   source_position_modulo = 1ul;
-  pos_mgr.SetRateValues(step_size, rate_modulo, denominator, source_position_modulo);
+  pos_mgr.SetRateValues(step_size, step_size_modulo, step_size_denominator, source_position_modulo);
 
   source_offset = Fixed::FromRaw(27);
   dest_offset = 42;
@@ -193,12 +193,12 @@ TEST(PositionManagerTest, AdvanceFrame_SourceModuloReachesEnd) {
   int64_t dest_offset = 1;
   pos_mgr.SetDestValues(dest, 3, &dest_offset);
 
-  // Source modulo starts just one shy of incrementing `source_offset`, and `rate_modulo` increments
-  // it. This is the boundary case, exactly where source modulo affects `source_offset`.
+  // Source modulo starts just one shy of incrementing `source_offset`, and `step_size_modulo`
+  // increments it. This is the boundary case, exactly where source modulo affects `source_offset`.
   constexpr auto step_size = kFracOneFrame;
-  auto rate_modulo = 1ul;
-  auto denominator = 243ul;
-  pos_mgr.SetRateValues(step_size, rate_modulo, denominator, 242ul);
+  auto step_size_modulo = 1ul;
+  auto step_size_denominator = 243ul;
+  pos_mgr.SetRateValues(step_size, step_size_modulo, step_size_denominator, 242ul);
 
   Fixed expected_source_offset = Fixed(2) - Fixed::FromRaw(1);
   EXPECT_TRUE(pos_mgr.CanFrameBeMixed());
@@ -228,12 +228,12 @@ TEST(PositionManagerTest, AdvanceFrameSourceModuloAlmostReachesEnd) {
   pos_mgr.SetDestValues(dest, 3, &dest_offset);
 
   constexpr auto step_size = kFracOneFrame;
-  auto rate_modulo = 1ul;
-  auto denominator = 243ul;
-  pos_mgr.SetRateValues(step_size, rate_modulo, denominator, 241ul);
+  auto step_size_modulo = 1ul;
+  auto step_size_denominator = 243ul;
+  pos_mgr.SetRateValues(step_size, step_size_modulo, step_size_denominator, 241ul);
 
-  // Source modulo starts just two shy of incrementing `source_offset`, and `rate_modulo` increments
-  // it by one. This is the boundary case, one less than where source modulo would affect
+  // Source modulo starts just two shy of incrementing `source_offset`, and `step_size_modulo`
+  // increments it by one. This is the boundary case, one less than where source modulo would affect
   // `source_offset`.
   Fixed expected_source_offset = Fixed(2) - Fixed::FromRaw(1);
   EXPECT_TRUE(pos_mgr.CanFrameBeMixed());
@@ -290,7 +290,7 @@ TEST(PositionManagerTest, AdvanceFrameNoRateValues) {
   int64_t dest_offset = 1;
   pos_mgr.SetDestValues(dest, 3, &dest_offset);
 
-  // Unity `step_size` (no rate_modulo) should be the default if `SetRateValues` is never called.
+  // Unity `step_size` (no modulo) should be the default if `SetRateValues` is never called.
   Fixed expected_source_offset = Fixed(2) - Fixed::FromRaw(1);
   EXPECT_TRUE(pos_mgr.CanFrameBeMixed());
   EXPECT_FALSE(pos_mgr.IsSourceConsumed());
@@ -320,8 +320,8 @@ TEST(PositionManagerTest, AdvanceToEndDest) {
   pos_mgr.SetDestValues(dest, std::size(dest), &dest_offset);
 
   constexpr auto step_size = kFracOneFrame * 2 - 1;
-  auto denominator = 2ul;
-  pos_mgr.SetRateValues(step_size, 0, denominator, 1ul);
+  auto step_size_denominator = 2ul;
+  pos_mgr.SetRateValues(step_size, 0, step_size_denominator, 1ul);
 
   // `AdvanceToEnd` should be limited by `dest`.
   auto num_source_frame_count_skipped = pos_mgr.AdvanceToEnd();
@@ -375,9 +375,9 @@ TEST(PositionManagerTest, AdvanceToEndSourceExactModulo) {
   pos_mgr.SetDestValues(dest, std::size(dest), &dest_offset);
 
   constexpr auto step_size = 2 * kFracOneFrame;
-  auto rate_modulo = 1ul;
-  auto denominator = 25ul;
-  pos_mgr.SetRateValues(step_size, rate_modulo, denominator, 20ul);
+  auto step_size_modulo = 1ul;
+  auto step_size_denominator = 25ul;
+  pos_mgr.SetRateValues(step_size, step_size_modulo, step_size_denominator, 20ul);
 
   // `AdvanceToEnd` should be limited by `source`, where `rate_module` contributes EXACTLY what
   // consumes `source`.
@@ -406,9 +406,9 @@ TEST(PositionManagerTest, AdvanceToEndSourceExtraModulo) {
   pos_mgr.SetDestValues(dest, std::size(dest), &dest_offset);
 
   constexpr auto step_size = kFracOneFrame * 2;
-  auto rate_modulo = 1ul;
-  auto denominator = 25ul;
-  pos_mgr.SetRateValues(step_size, rate_modulo, denominator, 24ul);
+  auto step_size_modulo = 1ul;
+  auto step_size_denominator = 25ul;
+  pos_mgr.SetRateValues(step_size, step_size_modulo, step_size_denominator, 24ul);
 
   // `AdvanceToEnd` should be limited by `source`, where `source_position_modulo` flows beyond
   // `source` by <1 frame.
@@ -433,9 +433,9 @@ TEST(PositionManagerTest, AdvanceToEndExtremeRatesAndWidths) {
   pos_mgr.SetDestValues(dest, std::size(dest), &dest_offset);
 
   auto step_size = (24 << Fixed::Format::FractionalBits);
-  auto rate_modulo = 0ul;
-  auto denominator = 1ul;
-  pos_mgr.SetRateValues(step_size, rate_modulo, denominator, 0ul);
+  auto step_size_modulo = 0ul;
+  auto step_size_denominator = 1ul;
+  pos_mgr.SetRateValues(step_size, step_size_modulo, step_size_denominator, 0ul);
 
   int16_t source[360];
   auto source_offset = Fixed::FromRaw(-1);

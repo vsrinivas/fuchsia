@@ -55,13 +55,13 @@ class Sampler {
  public:
   // Class that wraps all the state that is needed by the `Process` function.
   //
-  // The primary state is the "stride", which describes how many fractional source frames we should
-  // advance for each destination frame. Specifically, each destination frame is equivalent to
-  // `step_size + rate_modulo / denominator` source frames, where `rate_modulo / denominator` is a
-  // fractional subframe.
+  // The primary state is the source "stride", which describes how many fractional source frames we
+  // should advance for each destination frame. Specifically, each destination frame is equivalent
+  // to `step_size + step_size_modulo / step_size_denominator` source frames, where
+  // `step_size_modulo / step_size_denominator` is a fractional subframe.
   //
-  // If `rate_modulo == 0`, the source stride divides evenly into a destination frame and
-  // `rate_modulo / denominator` can be ignored.
+  // If `step_size_modulo == 0`, the source stride divides evenly into a destination frame and
+  // `step_size_modulo / step_size_denominator` can be ignored.
   //
   // By using the source stride, all the position related information that are needed between the
   // `Process` calls are maintained as part of this state, which include the long-running source and
@@ -89,8 +89,8 @@ class Sampler {
     // Resets source stride with a given `source_frac_frame_per_dest_frame` rate.
     void ResetSourceStride(const media::TimelineRate& source_frac_frame_per_dest_frame);
 
-    // Translates a running source position (Fixed plus `source position modulo` | `denominator`)
-    // into monotonic nsecs, using the nsec-to-Fixed `clock_mono_to_frac_source_frames` transform.
+    // Translates the long-running source position into monotonic nsecs, using the nsec-to-Fixed
+    // `clock_mono_to_frac_source_frames` transform.
     //
     // To scale from reference units to subject units, `TimelineFunction::Apply` does this:
     //
@@ -98,16 +98,19 @@ class Sampler {
     //
     // `clock_mono_to_frac_source_frames` contains the correspondence we need (but inversed; subject
     // is `frac_source`, reference is monotonic nsecs). To more accurately calculate monotonic nsecs
-    // from `frac_source` (including modulo), we scale the function by `denominator`, then we can
-    // include `source_pos_modulo` at full resolution and round when reducing to nsecs. So in the
-    // `TimelineFunction::Apply` equation above, we will use:
+    // from `frac_source` (including modulo), we scale the function by `step_size_denominator`, then
+    // we can include `source_pos_modulo` at full resolution and round when reducing to nsecs. So in
+    // the `TimelineFunction::Apply` equation above, we will use:
     //
     //    ```
-    //    in_param:         next_source_frame().raw_value() * denominator() + source_pos_modulo()
-    //    reference_offset: clock_mono_to_frac_source_frames.subject_time() * denominator()
-    //    subject_delta and reference_delta: used as-is (factor denominator out of both)
-    //                                       while remembering that the rate is inverted
-    //    subject_offset:   clock_mono_to_frac_source_frames.reference_time() * denominator()
+    //    in_param:
+    //        next_source_frame().raw_value() * step_size_denominator() + source_pos_modulo()
+    //    reference_offset:
+    //        clock_mono_to_frac_source_frames.subject_time() * step_size_denominator()
+    //    subject_delta and reference_delta:
+    //        used as-is while remembering that the step size is inverted
+    //    subject_offset:
+    //        clock_mono_to_frac_source_frames.reference_time() * step_size_denominator()
     //    ```
     //
     // Because all the initial factors are 64-bit, our denominator-scaled version must use 128-bit.
@@ -129,19 +132,19 @@ class Sampler {
     // sampling position in the source stream, for each destination frame produced.
     Fixed step_size() const { return step_size_; }
 
-    // Expresses (along with `denominator`) leftover rate precision that `step_size` cannot express,
-    // which is a fractional value of the `step_size` unit that source position should advance, for
-    // each destination frame.
-    uint64_t rate_modulo() const { return rate_modulo_; }
+    // Expresses (along with `step_size_denominator`) leftover rate precision that `step_size`
+    // cannot express, which is a fractional value of the `step_size` unit that source position
+    // should advance, for each destination frame.
+    uint64_t step_size_modulo() const { return step_size_modulo_; }
 
-    // Expresses (along with `rate_modulo` and `source_pos_modulo`) leftover rate and position
+    // Expresses (along with `step_size_modulo` and `source_pos_modulo`) leftover rate and position
     // precision that `step_size` and `Source::frame_offset_ptr` (respectively) cannot express.
-    uint64_t denominator() const { return denominator_; }
+    uint64_t step_size_denominator() const { return step_size_denominator_; }
 
-    // Expresses (along with `denominator`) leftover position precision that `Source` and `Dest`
-    // parameters cannot express. When present, `source_pos_modulo` and `denominator` express a
-    // fractional value of the `Source::frame_offset_ptr` unit, for additional precision on current
-    // position.
+    // Expresses (along with `step_size_denominator`) leftover position precision that `Source` and
+    // `Dest` parameters cannot express. When present, `source_pos_modulo` and
+    // `step_size_denominator` express a fractional value of the `Source::frame_offset_ptr` unit,
+    // for additional precision on current position.
     uint64_t source_pos_modulo() const { return source_pos_modulo_; }
     void set_source_pos_modulo(uint64_t source_pos_modulo) {
       source_pos_modulo_ = source_pos_modulo;
@@ -169,9 +172,9 @@ class Sampler {
     // Advances long-running positions by non-negative `dest_frames`.
     void AdvancePositionsBy(int64_t dest_frames, bool advance_source_pos_modulo);
 
-    uint64_t rate_modulo_ = 0;
-    uint64_t denominator_ = 1;
     Fixed step_size_ = kOneFrame;
+    uint64_t step_size_modulo_ = 0;
+    uint64_t step_size_denominator_ = 1;
     uint64_t source_pos_modulo_ = 0;
 
     // These fields track our position in the destination and source streams. It may seem
@@ -185,11 +188,11 @@ class Sampler {
     //      be updated with more precision than supported by a `Fixed` alone. So, the full-precision
     //      `next_source_frame_` is actually:
     //
-    //          `next_source_frame_ + source_pos_modulo_ / denominator_`
+    //          `next_source_frame_ + source_pos_modulo_ / step_size_denominator_`
     //
     //      Where the full-precision step size is:
     //
-    //          `step_size_ + rate_modulo_ / denominator`
+    //          `step_size_ + step_size_modulo_ / step_size_denominator`
     //
     //   2. When reconciling clocks using micro SRC, `next_source_frame_` may deviate from the ideal
     //      position (as determined by `dest_frames_to_frac_source_frames`) until the clocks are

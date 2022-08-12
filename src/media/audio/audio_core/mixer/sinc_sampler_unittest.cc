@@ -583,7 +583,7 @@ void SincSamplerPositionTest::TestRateModulo(bool mute) {
 
   auto& state = mixer->state();
   state.ResetSourceStride(TimelineRate(Fixed(2).raw_value(), 3));
-  ASSERT_EQ(state.rate_modulo(),
+  ASSERT_EQ(state.step_size_modulo(),
             static_cast<uint64_t>(Fixed(Fixed(2) - (state.step_size() * 3)).raw_value()));
   mixer->gain.SetSourceMute(mute);
   mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
@@ -616,8 +616,8 @@ void SincSamplerPositionTest::TestPositionModuloFromZeroNoRollover(bool mute) {
   auto& state = mixer->state();
   state.ResetSourceStride(TimelineRate(Fixed(10000).raw_value() + 3333, 10000));
   EXPECT_EQ(state.step_size(), kOneFrame);
-  EXPECT_EQ(state.rate_modulo(), 3333ul);
-  EXPECT_EQ(state.denominator(), 10000ul);
+  EXPECT_EQ(state.step_size_modulo(), 3333ul);
+  EXPECT_EQ(state.step_size_denominator(), 10000ul);
 
   mixer->gain.SetSourceGain(mute ? media_audio::kMinGainDb : media_audio::kUnityGainDb);
   mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
@@ -649,8 +649,8 @@ void SincSamplerPositionTest::TestPositionModuloFromNonZeroNoRollover(bool mute)
   auto& state = mixer->state();
   state.ResetSourceStride(TimelineRate(Fixed(10000).raw_value() + 3331, 10000));
   EXPECT_EQ(state.step_size(), kOneFrame);
-  EXPECT_EQ(state.rate_modulo(), 3331ul);
-  EXPECT_EQ(state.denominator(), 10000ul);
+  EXPECT_EQ(state.step_size_modulo(), 3331ul);
+  EXPECT_EQ(state.step_size_denominator(), 10000ul);
   state.set_source_pos_modulo(6);
 
   mixer->gain.SetSourceMute(mute);
@@ -685,8 +685,8 @@ void SincSamplerPositionTest::TestPositionModuloFromZeroRollover(bool mute) {
   auto& state = mixer->state();
   state.ResetSourceStride(TimelineRate(Fixed(10000).raw_value() + 5000, 10000));
   EXPECT_EQ(state.step_size(), kOneFrame);
-  EXPECT_EQ(state.rate_modulo(), 1ul);
-  EXPECT_EQ(state.denominator(), 2ul);
+  EXPECT_EQ(state.step_size_modulo(), 1ul);
+  EXPECT_EQ(state.step_size_denominator(), 2ul);
 
   mixer->gain.SetSourceGain(mute ? media_audio::kMinGainDb : media_audio::kUnityGainDb);
   mixer->Mix(accum.data(), dest_frames, &dest_offset, source.data(), source_frames, &source_offset,
@@ -718,8 +718,8 @@ void SincSamplerPositionTest::TestPositionModuloFromNonZeroRollover(bool mute) {
   auto& state = mixer->state();
   state.ResetSourceStride(TimelineRate(Fixed(10000).raw_value() + 3331, 10000));
   EXPECT_EQ(state.step_size(), kOneFrame);
-  EXPECT_EQ(state.rate_modulo(), 3331ul);
-  EXPECT_EQ(state.denominator(), 10000ul);
+  EXPECT_EQ(state.step_size_modulo(), 3331ul);
+  EXPECT_EQ(state.step_size_denominator(), 10000ul);
   state.set_source_pos_modulo(3338);
 
   mixer->gain.SetSourceMute(mute);
@@ -756,8 +756,8 @@ void SincSamplerPositionTest::TestSourcePosModuloExactRolloverForCompletion(bool
   auto& state = mixer->state();
   state.ResetSourceStride(TimelineRate(Fixed(3).raw_value() - 1, 3));
   EXPECT_EQ(state.step_size(), kOneFrame - Fixed::FromRaw(1));
-  EXPECT_EQ(state.rate_modulo(), 2ul);
-  EXPECT_EQ(state.denominator(), 3ul);
+  EXPECT_EQ(state.step_size_modulo(), 2ul);
+  EXPECT_EQ(state.step_size_denominator(), 3ul);
   state.set_source_pos_modulo(2);
 
   mixer->gain.SetSourceGain(mute ? media_audio::kMinGainDb : media_audio::kUnityGainDb);

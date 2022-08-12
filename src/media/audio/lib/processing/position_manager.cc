@@ -29,11 +29,11 @@ PositionManager::PositionManager(int32_t source_channel_count, int32_t dest_chan
 void PositionManager::CheckPositions(int64_t dest_frame_count, int64_t* dest_offset_ptr,
                                      int64_t source_frame_count, int64_t frac_source_offset,
                                      int64_t frac_pos_filter_length, int64_t frac_step_size,
-                                     uint64_t rate_modulo, uint64_t denominator,
+                                     uint64_t step_size_modulo, uint64_t step_size_denominator,
                                      uint64_t source_pos_modulo) {
   CheckDestPositions(dest_frame_count, *dest_offset_ptr);
   CheckSourcePositions(source_frame_count, frac_source_offset, frac_pos_filter_length);
-  CheckRateValues(frac_step_size, rate_modulo, denominator, source_pos_modulo);
+  CheckRateValues(frac_step_size, step_size_modulo, step_size_denominator, source_pos_modulo);
 }
 
 void PositionManager::CheckDestPositions(int64_t dest_frame_count, int64_t dest_offset) {
@@ -64,18 +64,19 @@ void PositionManager::CheckSourcePositions(int64_t source_frame_count, int64_t f
       << ", source_frame_count: " << source_frame_count;
 }
 
-void PositionManager::CheckRateValues(int64_t frac_step_size, uint64_t rate_modulo,
-                                      uint64_t denominator, uint64_t source_pos_modulo) {
+void PositionManager::CheckRateValues(int64_t frac_step_size, uint64_t step_size_modulo,
+                                      uint64_t step_size_denominator, uint64_t source_pos_modulo) {
   FX_CHECK(frac_step_size > 0) << "step_size must be positive; cannot be zero";
 
-  FX_CHECK(denominator > 0) << "denominator cannot be zero";
+  FX_CHECK(step_size_denominator > 0) << "step_size_denominator cannot be zero";
 
-  FX_CHECK(rate_modulo < denominator) << "rate_modulo (" << rate_modulo
-                                      << ") must be less than denominator (" << denominator << ")";
+  FX_CHECK(step_size_modulo < step_size_denominator)
+      << "step_size_modulo (" << step_size_modulo << ") must be less than step_size_denominator ("
+      << step_size_denominator << ")";
 
-  FX_CHECK(source_pos_modulo < denominator)
-      << "source_position_modulo (" << source_pos_modulo << ") must be less than denominator ("
-      << denominator << ")";
+  FX_CHECK(source_pos_modulo < step_size_denominator)
+      << "source_position_modulo (" << source_pos_modulo
+      << ") must be less than step_size_denominator (" << step_size_denominator << ")";
 }
 
 void PositionManager::Display() const {
@@ -88,7 +89,7 @@ void PositionManager::Display() const {
                 << Fixed::FromRaw(frac_source_end_) << ". Dest: len " << dest_frame_count_;
 
   FX_LOGS(INFO) << "Rate:     frac_step_size " << ffl::String::DecRational << Fixed(frac_step_size_)
-                << ", rate_mod " << rate_modulo_ << ", denom " << denominator_;
+                << ", rate_mod " << step_size_modulo_ << ", denom " << step_size_denominator_;
 
   DisplayUpdate();
 }
@@ -130,21 +131,21 @@ void PositionManager::SetSourceValues(const void* source_void_ptr, int64_t sourc
       (source_frame_count << Fixed::Format::FractionalBits) - frac_positive_length_ + 1;
 }
 
-void PositionManager::SetRateValues(int64_t frac_step_size, uint64_t rate_modulo,
-                                    uint64_t denominator, uint64_t source_pos_modulo) {
+void PositionManager::SetRateValues(int64_t frac_step_size, uint64_t step_size_modulo,
+                                    uint64_t step_size_denominator, uint64_t source_pos_modulo) {
   if constexpr (kTracePositionEvents) {
     TRACE_DURATION("audio", __func__, "step_size",
                    Fixed::FromRaw(frac_step_size).Integral().Floor(), "step_size.frac",
-                   Fixed::FromRaw(frac_step_size).Fraction().raw_value(), "rate_modulo",
-                   rate_modulo, "denominator", denominator);
+                   Fixed::FromRaw(frac_step_size).Fraction().raw_value(), "step_size_modulo",
+                   step_size_modulo, "step_size_denominator", step_size_denominator);
   }
-  CheckRateValues(frac_step_size, rate_modulo, denominator, source_pos_modulo);
+  CheckRateValues(frac_step_size, step_size_modulo, step_size_denominator, source_pos_modulo);
 
   frac_step_size_ = frac_step_size;
-  rate_modulo_ = rate_modulo;
+  step_size_modulo_ = step_size_modulo;
 
-  if (rate_modulo_ > 0) {
-    denominator_ = denominator;
+  if (step_size_modulo_ > 0) {
+    step_size_denominator_ = step_size_denominator;
     source_pos_modulo_ = source_pos_modulo;
   }
 }
@@ -167,15 +168,15 @@ int64_t PositionManager::AdvanceToEnd() {
   frac_source_offset_ += (avail * frac_step_size_);
   dest_offset_ += avail;
 
-  if (rate_modulo_) {
+  if (step_size_modulo_ > 0) {
     // Compute the modulo after advancing, and increment `frac_source_offset_` accordingly.
-    const uint64_t total_mod = source_pos_modulo_ + (avail * rate_modulo_);
-    frac_source_offset_ += total_mod / denominator_;
-    source_pos_modulo_ = total_mod % denominator_;
+    const uint64_t total_mod = source_pos_modulo_ + (avail * step_size_modulo_);
+    frac_source_offset_ += total_mod / step_size_denominator_;
+    source_pos_modulo_ = total_mod % step_size_denominator_;
 
     // Maintain an offset of previous source, for the last destination frame we would produce.
     int64_t prev_source_offset = frac_source_offset_ - frac_step_size_;
-    if (source_pos_modulo_ < rate_modulo_) {
+    if (source_pos_modulo_ < step_size_modulo_) {
       --prev_source_offset;
     }
 
@@ -183,16 +184,16 @@ int64_t PositionManager::AdvanceToEnd() {
     // For the final destination frame we produce, `prev_source_offset` must be less than
     // `frac_source_end_`.
     while (prev_source_offset >= frac_source_end_) {
-      if (source_pos_modulo_ < rate_modulo_) {
-        source_pos_modulo_ += denominator_;
+      if (source_pos_modulo_ < step_size_modulo_) {
+        source_pos_modulo_ += step_size_denominator_;
       }
-      source_pos_modulo_ -= rate_modulo_;
+      source_pos_modulo_ -= step_size_modulo_;
 
       --dest_offset_;
       frac_source_offset_ = prev_source_offset;
 
       prev_source_offset = frac_source_offset_ - frac_step_size_;
-      if (source_pos_modulo_ < rate_modulo_) {
+      if (source_pos_modulo_ < step_size_modulo_) {
         --prev_source_offset;
       }
     }

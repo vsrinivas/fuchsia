@@ -106,7 +106,7 @@ class Mixer {
   //  * dest_offset             cannot exceed dest_frames
   //
   //  * step_size               must exceed zero
-  //  * rate_modulo             must be either zero or less than denominator
+  //  * step_size_modulo        must be either zero or less than denominator
   //  * source_position_modulo  must be either zero or less than denominator
   //
   virtual void Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,

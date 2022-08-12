@@ -62,10 +62,10 @@ class SincSamplerImpl : public SincSampler {
     PositionManager::CheckPositions(dest.frame_count, dest.frame_offset_ptr, source.frame_count,
                                     source.frame_offset_ptr->raw_value(),
                                     pos_filter_length().raw_value(),
-                                    state().step_size().raw_value(), state().rate_modulo(),
-                                    state().denominator(), state().source_pos_modulo());
-    position_.SetRateValues(state().step_size().raw_value(), state().rate_modulo(),
-                            state().denominator(), state().source_pos_modulo());
+                                    state().step_size().raw_value(), state().step_size_modulo(),
+                                    state().step_size_denominator(), state().source_pos_modulo());
+    position_.SetRateValues(state().step_size().raw_value(), state().step_size_modulo(),
+                            state().step_size_denominator(), state().source_pos_modulo());
     position_.SetSourceValues(source.samples, source.frame_count, source.frame_offset_ptr);
     position_.SetDestValues(dest.samples, dest.frame_count, dest.frame_offset_ptr);
 
@@ -102,7 +102,7 @@ class SincSamplerImpl : public SincSampler {
         break;
     }
 
-    if (state().rate_modulo() > 0) {
+    if (state().step_size_modulo() > 0) {
       state().set_source_pos_modulo(position_.source_pos_modulo());
     }
   }

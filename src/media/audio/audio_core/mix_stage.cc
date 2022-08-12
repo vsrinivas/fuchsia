@@ -387,15 +387,16 @@ void MixStage::MixStream(Mixer& mixer, ReadableStream& stream) {
           << "source_offset (" << ffl::String::DecRational << source_offset << ") + pos_width ("
           << Fixed(-mixer.pos_filter_width()) << ") should >= 0 -- source running position was "
           << initial_source_running_position << " (+ " << initial_source_pos_modulo << "/"
-          << state.denominator() << " modulo), is now " << state.next_source_frame() << " (+ "
-          << state.source_pos_modulo() << "/" << state.denominator()
+          << state.step_size_denominator() << " modulo), is now " << state.next_source_frame()
+          << " (+ " << state.source_pos_modulo() << "/" << state.step_size_denominator()
           << " modulo); advanced dest by " << initial_dest_advance;
 
       FX_CHECK(dest_offset <= dest_frames)
           << ffl::String::DecRational << "dest_offset " << dest_offset << " advanced by "
           << initial_dest_advance << " to " << dest_frames << ", exceeding " << dest_frames << ";"
           << " mix_to_packet_gap=" << mix_to_packet_gap << " step_size=" << state.step_size()
-          << " rate_modulo=" << state.rate_modulo() << " denominator=" << state.denominator()
+          << " step_size_modulo=" << state.step_size_modulo()
+          << " step_size_denominator=" << state.step_size_denominator()
           << " source_pos_modulo=" << state.source_pos_modulo() << " (was "
           << initial_source_pos_modulo << ")";
     }
