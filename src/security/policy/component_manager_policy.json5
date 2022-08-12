@@ -230,6 +230,7 @@
                     "/core",
                     "/core/zircon-guest-manager/vmm",
                     "/core/debian-guest-manager/vmm",
+                    "/core/session-manager/session:session/workstation_session/login_shell/ermine_shell/chrome",
                     "/core/termina-guest-manager/vmm",
                     "/core/starnix_manager/starmium",
                     "/core/starnix_manager/stardroid",

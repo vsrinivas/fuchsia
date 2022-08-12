@@ -16,6 +16,8 @@ fuchsia-pkg://fuchsia.com/dart_jit_product_runner#meta/dart_jit_product_runner.c
 fuchsia-pkg://fuchsia.com/flutter_jit_runner#meta/flutter_jit_runner.cmx
 fuchsia-pkg://fuchsia.com/flutter_jit_product_runner#meta/flutter_jit_product_runner.cmx
 #   V8/Chromium JITs
+fuchsia-pkg://fuchsia.com/chrome#meta/chrome_v1.cmx
+fuchsia-pkg://fuchsia.com/web_engine#meta/web_instance.cmx
 # Too many to list
 
 # Tests that involve virtualization, which transitively involve spawning an

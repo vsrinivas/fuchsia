@@ -62,6 +62,7 @@
                 "fuchsia.hwinfo.Board",
                 "fuchsia.hwinfo.Device",
                 "fuchsia.hwinfo.Product",
+                "fuchsia.kernel.VmexResource",
                 "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
                 "fuchsia.location.namedplace.RegulatoryRegionWatcher",
                 "fuchsia.lowpan.bootstrap.Thread",

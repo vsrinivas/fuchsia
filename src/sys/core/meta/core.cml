@@ -471,7 +471,10 @@
         {
             protocol: [ "fuchsia.kernel.VmexResource" ],
             from: "parent",
-            to: [ "#starnix_manager" ],
+            to: [
+                "#session-manager",
+                "#starnix_manager",
+            ],
         },
         {
             protocol: [ "fuchsia.sysmem.Allocator" ],
