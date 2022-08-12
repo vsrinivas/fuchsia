@@ -158,53 +158,37 @@ ScreenReaderMessageGenerator::DescribeNode(const Node* node,
     return description;
   }
 
-  {
-    const std::string label = node->has_attributes() && node->attributes().has_label() &&
-                                      !node->attributes().label().empty()
-                                  ? node->attributes().label()
-                                  : "";
-
-    if (node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::TOGGLE_SWITCH) {
-      if (!label.empty()) {
-        Utterance utterance;
-        utterance.set_message(label);
-        description.emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});
-      }
-      DescribeToggleSwitch(node, description);
-    } else if (NodeIsSlider(node)) {
-      Utterance utterance;
-      utterance.set_message(GetSliderLabelAndRangeMessage(node));
-      description.emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});
-    } else if (node->has_role() &&
-               (node->role() == Role::ROW_HEADER || node->role() == Role::COLUMN_HEADER)) {
-      DescribeRowOrColumnHeader(node, description);
-    } else if (node->has_role() && node->role() == Role::CELL) {
-      DescribeTableCell(node, std::move(message_context), description);
-    } else if (!label.empty()) {
-      Utterance utterance;
-      utterance.set_message(label);
-      description.emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});
-    }
+  if (node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::TOGGLE_SWITCH) {
+    MaybeAddLabelDescriptor(node, description);
+    DescribeToggleSwitch(node, description);
+  } else if (NodeIsSlider(node)) {
+    Utterance utterance;
+    utterance.set_message(GetSliderLabelAndRangeMessage(node));
+    description.emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});
+  } else if (node->has_role() &&
+              (node->role() == Role::ROW_HEADER || node->role() == Role::COLUMN_HEADER)) {
+    DescribeRowOrColumnHeader(node, description);
+  } else if (node->has_role() && node->role() == Role::CELL) {
+    DescribeTableCell(node, std::move(message_context), description);
+  } else {
+    MaybeAddLabelDescriptor(node, description);
   }
 
-  {
-    Utterance utterance;
-    if (node->has_role()) {
-      if (node->role() == Role::HEADER) {
-        description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_HEADER));
-      } else if (node->role() == Role::IMAGE) {
-        description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_IMAGE));
-      } else if (node->role() == Role::LINK) {
-        description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_LINK));
-      } else if (node->role() == Role::TEXT_FIELD) {
-        description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_TEXT_FIELD));
-      } else if (node->role() == Role::SEARCH_BOX) {
-        description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_SEARCH_BOX));
-      } else if (node->role() == Role::CHECK_BOX) {
-        DescribeCheckBox(node, description);
-      } else if (node->role() == Role::SLIDER) {
-        description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_SLIDER));
-      }
+  if (node->has_role()) {
+    if (node->role() == Role::HEADER) {
+      description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_HEADER));
+    } else if (node->role() == Role::IMAGE) {
+      description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_IMAGE));
+    } else if (node->role() == Role::LINK) {
+      description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_LINK));
+    } else if (node->role() == Role::TEXT_FIELD) {
+      description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_TEXT_FIELD));
+    } else if (node->role() == Role::SEARCH_BOX) {
+      description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_SEARCH_BOX));
+    } else if (node->role() == Role::CHECK_BOX) {
+      DescribeCheckBox(node, description);
+    } else if (node->role() == Role::SLIDER) {
+      description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_SLIDER));
     }
   }
 
