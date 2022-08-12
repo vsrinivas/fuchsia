@@ -90,7 +90,7 @@ class JobScheduler {
   // of the same priority.
   uint64_t job_tick_duration_ms_ = 100;
 
-  uint64_t timeout_duration_ms_ = 2000;
+  uint64_t timeout_duration_ms_ = 5000;
   // Semaphore timeout is longer because one semaphore may need to wait for a
   // lot of atoms to complete.
   uint64_t semaphore_timeout_duration_ms_ = 5000;

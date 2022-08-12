@@ -279,7 +279,7 @@ class TestJobScheduler {
     DASSERT(scheduler.GetCurrentTimeoutDuration() == JobScheduler::Clock::duration::max());
 
     scheduler.TryToSchedule();
-    DASSERT(scheduler.GetCurrentTimeoutDuration() <= std::chrono::milliseconds(2000));
+    EXPECT_LE(scheduler.GetCurrentTimeoutDuration(), std::chrono::milliseconds(5000));
     EXPECT_EQ(0u, owner.hang_message_output_count());
     while (scheduler.GetCurrentTimeoutDuration() > JobScheduler::Clock::duration::zero()) {
       current_time +=
