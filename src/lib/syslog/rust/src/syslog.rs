@@ -19,7 +19,6 @@ pub type fx_log_severity_t = i8;
 #[repr(C)]
 pub struct fx_logger_config {
     pub min_severity: fx_log_severity_t,
-    pub console_fd: ::std::os::raw::c_int,
     pub log_sink_channel: zx_handle_t,
     pub log_sink_socket: zx_handle_t,
     pub tags: *const *const ::std::os::raw::c_char,

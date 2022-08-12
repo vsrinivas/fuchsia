@@ -400,7 +400,6 @@ fn with_default_config_with_tags_and_handle<R>(
     let c_tags: Vec<*const c_char> = cstr_vec.iter().map(|x| x.as_ptr()).collect();
     let config = syslog::fx_logger_config_t {
         min_severity: syslog::FX_LOG_SEVERITY_DEFAULT,
-        console_fd: -1,
         log_sink_channel: zx::sys::ZX_HANDLE_INVALID,
         log_sink_socket: handle,
         tags: c_tags.as_ptr(),
@@ -513,7 +512,6 @@ mod test {
             .expect("Datagram socket could not be made");
         let config = syslog::fx_logger_config_t {
             min_severity: levels::INFO,
-            console_fd: -1,
             log_sink_channel: zx::sys::ZX_HANDLE_INVALID,
             log_sink_socket: tx.into_raw(),
             tags: ptr::null(),

@@ -58,9 +58,6 @@ typedef struct fx_logger_config {
   // Log messages with lower severity will be discarded.
   fx_log_severity_t min_severity;
 
-  // Unused.
-  int console_fd;
-
   // A handle to the channel for a fuchsia.logger/LogSink instance to receive
   // logs. |ZX_HANDLE_INVALID| if logs should not go to the LogSink or
   // |log_sink_socket| should be used.
