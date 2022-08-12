@@ -607,7 +607,7 @@ fuchsia_component("vp9_conformance_http_test_component_v2") {
 
 fuchsia_component("vp9_conformance_http_test_component") {
   testonly = true
-  manifest = "use_media_decoder/meta/vp9_decoder_conformance_http.cmx"
+  manifest = "use_media_decoder/meta/vp9_decoder_conformance_http.cml"
   deps = [
     "//src/media/codec/examples/use_media_decoder:vp9_decoder_conformance_test",
   ]
@@ -624,15 +624,9 @@ fuchsia_package("vp9_decoder_conformance_http") {
   ]
 }
 
-fuchsia_component("h264-decoder-conformance-http-v2") {
-  testonly = true
-  manifest = "use_media_decoder/meta/h264_decoder_conformance_http.cml"
-  deps = [ "//src/media/codec/examples/use_media_decoder:h264_decoder_conformance_test" ]
-}
-
 fuchsia_component("h264-decoder-conformance-http") {
   testonly = true
-  manifest = "use_media_decoder/meta/h264_decoder_conformance_http.cmx"
+  manifest = "use_media_decoder/meta/h264_decoder_conformance_http.cml"
   deps = [ "//src/media/codec/examples/use_media_decoder:h264_decoder_conformance_test" ]
 }
 
@@ -642,10 +636,7 @@ fuchsia_component("h264-decoder-conformance-http") {
 fuchsia_package("h264-decoder-conformance-http-pkg") {
   testonly = true
   package_name = "h264-decoder-conformance-http"
-  deps = [
-    ":h264-decoder-conformance-http",
-    ":h264-decoder-conformance-http-v2",
-  ]
+  deps = [ ":h264-decoder-conformance-http" ]
 }
 
 # Put the below group of vp9 conformance tests last in the file.  Otherwise,
