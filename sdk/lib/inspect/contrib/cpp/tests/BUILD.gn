@@ -30,28 +30,28 @@ executable("test") {
 
   deps = [
     "//sdk/lib/inspect/contrib/cpp:archive_reader",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock",
+    "//src/lib/testing/loop_fixture:gtest",
     "//third_party/re2",
   ]
 }
 
 fuchsia_component("archive_reader_test_app") {
   testonly = true
-  manifest = "meta/archive_reader_test_app.cmx"
+  manifest = "meta/archive_reader_test_app.cml"
   deps = [ ":bin" ]
 }
 
 fuchsia_component("archive_reader_test_app_2") {
   testonly = true
-  manifest = "meta/archive_reader_test_app_2.cmx"
+  manifest = "meta/archive_reader_test_app.cml"
   deps = [ ":bin" ]
 }
 
 fuchsia_test_component("archive_reader_tests") {
-  manifest = "meta/archive_reader_integration_tests.cmx"
+  manifest = "meta/archive_reader_integration_tests.cml"
   deps = [ ":test" ]
 }
 
