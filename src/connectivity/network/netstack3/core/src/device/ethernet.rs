@@ -146,7 +146,7 @@ impl<NonSyncCtx: NonSyncContext> EthernetIpLinkDeviceContext<NonSyncCtx> for Syn
         EthernetDeviceId(id): EthernetDeviceId,
         cb: F,
     ) -> O {
-        let state = &self.state.device.ethernet.get(id).unwrap().link;
+        let state = &self.state.device.devices.ethernet.get(id).unwrap().link;
         cb(&state.static_state)
     }
 
@@ -158,7 +158,7 @@ impl<NonSyncCtx: NonSyncContext> EthernetIpLinkDeviceContext<NonSyncCtx> for Syn
         EthernetDeviceId(id): EthernetDeviceId,
         cb: F,
     ) -> O {
-        let state = &self.state.device.ethernet.get(id).unwrap().link;
+        let state = &self.state.device.devices.ethernet.get(id).unwrap().link;
         cb(&state.static_state, &state.dynamic_state.read())
     }
 
@@ -170,7 +170,7 @@ impl<NonSyncCtx: NonSyncContext> EthernetIpLinkDeviceContext<NonSyncCtx> for Syn
         EthernetDeviceId(id): EthernetDeviceId,
         cb: F,
     ) -> O {
-        let state = &mut self.state.device.ethernet.get_mut(id).unwrap().link;
+        let state = &mut self.state.device.devices.ethernet.get_mut(id).unwrap().link;
         cb(&state.static_state, &mut state.dynamic_state.write())
     }
 
@@ -241,7 +241,7 @@ impl<NonSyncCtx: NonSyncContext> NudContext<Ipv6, EthernetLinkDevice, NonSyncCtx
     for SyncCtx<NonSyncCtx>
 {
     fn retrans_timer(&self, EthernetDeviceId(id): EthernetDeviceId) -> NonZeroDuration {
-        self.state.device.ethernet.get(id).unwrap().ip.ipv6.retrans_timer
+        self.state.device.devices.ethernet.get(id).unwrap().ip.ipv6.retrans_timer
     }
 
     fn with_nud_state_mut<O, F: FnOnce(&mut NudState<Ipv6, Mac>) -> O>(
@@ -249,7 +249,7 @@ impl<NonSyncCtx: NonSyncContext> NudContext<Ipv6, EthernetLinkDevice, NonSyncCtx
         EthernetDeviceId(id): EthernetDeviceId,
         cb: F,
     ) -> O {
-        cb(&mut self.state.device.ethernet.get(id).unwrap().link.ipv6_nud.lock())
+        cb(&mut self.state.device.devices.ethernet.get(id).unwrap().link.ipv6_nud.lock())
     }
 
     fn send_neighbor_solicitation(
@@ -802,6 +802,7 @@ impl<C: NonSyncContext> ArpContext<EthernetLinkDevice, C> for SyncCtx<C> {
     ) -> Option<Ipv4Addr> {
         self.state
             .device
+            .devices
             .ethernet
             .get(id)
             .unwrap()
@@ -823,7 +824,7 @@ impl<C: NonSyncContext> ArpContext<EthernetLinkDevice, C> for SyncCtx<C> {
         EthernetDeviceId(id): EthernetDeviceId,
         cb: F,
     ) -> O {
-        cb(&mut self.state.device.ethernet.get(id).unwrap().link.ipv4_arp.lock())
+        cb(&mut self.state.device.devices.ethernet.get(id).unwrap().link.ipv4_arp.lock())
     }
 }
 
@@ -1994,6 +1995,7 @@ mod tests {
             sync_ctx
                 .state
                 .device
+                .devices
                 .ethernet
                 .get(0)
                 .unwrap()
@@ -2016,6 +2018,7 @@ mod tests {
         let addr_subs: Vec<_> = sync_ctx
             .state
             .device
+            .devices
             .ethernet
             .get(0)
             .unwrap()

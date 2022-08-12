@@ -120,9 +120,9 @@ fn get_ip_device_state<NonSyncCtx: NonSyncContext>(
 ) -> &DualStackIpDeviceState<NonSyncCtx::Instant> {
     match device.inner() {
         DeviceIdInner::Ethernet(EthernetDeviceId(id)) => {
-            &ctx.state.device.ethernet.get(id).unwrap().ip
+            &ctx.state.device.devices.ethernet.get(id).unwrap().ip
         }
-        DeviceIdInner::Loopback => &ctx.state.device.loopback.as_ref().unwrap().ip,
+        DeviceIdInner::Loopback => &ctx.state.device.devices.loopback.as_ref().unwrap().ip,
     }
 }
 
@@ -132,16 +132,16 @@ fn get_ip_device_state_mut<NonSyncCtx: NonSyncContext>(
 ) -> &mut DualStackIpDeviceState<NonSyncCtx::Instant> {
     match device.inner() {
         DeviceIdInner::Ethernet(EthernetDeviceId(id)) => {
-            &mut ctx.state.device.ethernet.get_mut(id).unwrap().ip
+            &mut ctx.state.device.devices.ethernet.get_mut(id).unwrap().ip
         }
-        DeviceIdInner::Loopback => &mut ctx.state.device.loopback.as_mut().unwrap().ip,
+        DeviceIdInner::Loopback => &mut ctx.state.device.devices.loopback.as_mut().unwrap().ip,
     }
 }
 
 fn iter_devices<NonSyncCtx: NonSyncContext>(
     ctx: &SyncCtx<NonSyncCtx>,
 ) -> impl Iterator<Item = DeviceId> + '_ {
-    let DeviceLayerState { ethernet, loopback } = &ctx.state.device;
+    let Devices { ethernet, loopback } = &ctx.state.device.devices;
 
     ethernet
         .iter()
@@ -634,12 +634,18 @@ impl FrameDestination {
     }
 }
 
+#[derive(Derivative)]
+#[derivative(Default(bound = ""))]
+struct Devices<I: Instant> {
+    ethernet: IdMap<IpLinkDeviceState<I, EthernetDeviceState>>,
+    loopback: Option<IpLinkDeviceState<I, LoopbackDeviceState>>,
+}
+
 /// The state associated with the device layer.
 #[derive(Derivative)]
 #[derivative(Default(bound = ""))]
 pub(crate) struct DeviceLayerState<I: Instant> {
-    ethernet: IdMap<IpLinkDeviceState<I, EthernetDeviceState>>,
-    loopback: Option<IpLinkDeviceState<I, LoopbackDeviceState>>,
+    devices: Devices<I>,
 }
 
 impl<I: Instant> DeviceLayerState<I> {
@@ -649,7 +655,7 @@ impl<I: Instant> DeviceLayerState<I> {
     /// MTU. The MTU will be taken as a limit on the size of Ethernet payloads -
     /// the Ethernet header is not counted towards the MTU.
     pub(crate) fn add_ethernet_device(&mut self, mac: UnicastAddr<Mac>, mtu: u32) -> DeviceId {
-        let Self { ethernet, loopback: _ } = self;
+        let Devices { ethernet, loopback: _ } = &mut self.devices;
 
         let id = ethernet
             .push(IpLinkDeviceState::new(EthernetDeviceStateBuilder::new(mac, mtu).build()));
@@ -659,7 +665,7 @@ impl<I: Instant> DeviceLayerState<I> {
 
     /// Adds a new loopback device to the device layer.
     pub(crate) fn add_loopback_device(&mut self, mtu: u32) -> Result<DeviceId, ExistsError> {
-        let Self { ethernet: _, loopback } = self;
+        let Devices { ethernet: _, loopback } = &mut self.devices;
 
         if let Some(IpLinkDeviceState { .. }) = loopback {
             return Err(ExistsError);
@@ -709,14 +715,20 @@ pub fn remove_device<NonSyncCtx: NonSyncContext>(
             let _: IpLinkDeviceState<_, _> = sync_ctx
                 .state
                 .device
+                .devices
                 .ethernet
                 .remove(id)
                 .unwrap_or_else(|| panic!("no such Ethernet device: {}", id));
             debug!("removing Ethernet device with ID {}", id);
         }
         DeviceIdInner::Loopback => {
-            let _: IpLinkDeviceState<_, _> =
-                sync_ctx.state.device.loopback.take().expect("loopback device does not exist");
+            let _: IpLinkDeviceState<_, _> = sync_ctx
+                .state
+                .device
+                .devices
+                .loopback
+                .take()
+                .expect("loopback device does not exist");
             debug!("removing Loopback device");
         }
     }
@@ -878,7 +890,7 @@ impl<NonSyncCtx: NonSyncContext, I: Ip> IpDeviceIdContext<I> for SyncCtx<NonSync
     type DeviceId = DeviceId;
 
     fn loopback_id(&self) -> Option<DeviceId> {
-        self.state.device.loopback.as_ref().map(|_state| DeviceIdInner::Loopback.into())
+        self.state.device.devices.loopback.as_ref().map(|_state| DeviceIdInner::Loopback.into())
     }
 }
 
