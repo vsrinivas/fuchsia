@@ -9,12 +9,12 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.boot/cpp/wire.h>
 #include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
+#include <lib/netboot/netboot.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/zx/vmo.h>
 #include <stdio.h>
 #include <string.h>
 #include <threads.h>
-#include <zircon/boot/netboot.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>

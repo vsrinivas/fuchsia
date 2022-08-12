@@ -6,9 +6,9 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <lib/netboot/netboot.h>
 #include <lib/service/llcpp/service.h>
 #include <stdio.h>
-#include <zircon/boot/netboot.h>
 
 #include "board-info.h"
 #include "netboot.h"

@@ -6,6 +6,7 @@ import("//build/host.gni")
 
 executable("loglistener") {
   sources = [ "loglistener.c" ]
+  deps = [ "//src/bringup/lib/netboot" ]
 }
 
 install_host_tools("host") {

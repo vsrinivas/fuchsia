@@ -11,7 +11,10 @@ executable("bootserver") {
     "netboot.c",
     "tftp.c",
   ]
-  deps = [ "//zircon/system/ulib/tftp" ]
+  deps = [
+    "//src/bringup/lib/netboot",
+    "//zircon/system/ulib/tftp",
+  ]
   configs += [
     # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     "//build/config:Wno-conversion",

@@ -105,6 +105,7 @@ source_set("netsvc_common") {
     ":inet6",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_cpp_wire",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_cpp_wire",
+    "//src/bringup/lib/netboot",
     "//src/storage/testing:fake-paver",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",

@@ -5,8 +5,8 @@
 #include "src/bringup/bin/netsvc/board-info.h"
 
 #include <dirent.h>
+#include <lib/netboot/netboot.h>
 #include <string.h>
-#include <zircon/boot/netboot.h>
 #include <zircon/types.h>
 
 #include <algorithm>

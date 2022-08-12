@@ -6,7 +6,7 @@ import("//build/host.gni")
 
 source_set("common") {
   sources = [ "netprotocol.c" ]
-  deps = [ "//zircon/system/public" ]
+  public_deps = [ "//src/bringup/lib/netboot" ]
   configs += [
     # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     "//build/config:Wno-conversion",

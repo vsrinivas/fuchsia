@@ -5,7 +5,7 @@
 #ifndef SRC_BRINGUP_BIN_NETSVC_NETBOOT_H_
 #define SRC_BRINGUP_BIN_NETSVC_NETBOOT_H_
 
-#include <zircon/boot/netboot.h>
+#include <lib/netboot/netboot.h>
 
 #include "src/bringup/bin/netsvc/inet6.h"
 

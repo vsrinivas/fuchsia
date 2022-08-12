@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <lib/netboot/netboot.h>
 #include <netinet/in.h>
 #include <poll.h>
 #include <stdio.h>
@@ -16,7 +17,6 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <zircon/boot/netboot.h>
 
 #include <tftp/tftp.h>
 

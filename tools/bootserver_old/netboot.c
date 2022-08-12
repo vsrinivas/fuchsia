@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <lib/netboot/netboot.h>
 #include <netinet/in.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -17,7 +18,6 @@
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
-#include <zircon/boot/netboot.h>
 
 #include "bootserver.h"
 

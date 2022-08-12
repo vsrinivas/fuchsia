@@ -7,12 +7,12 @@
 
 #include <fidl/fuchsia.paver/cpp/wire.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
+#include <lib/netboot/netboot.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <limits.h>
 #include <threads.h>
-#include <zircon/boot/netboot.h>
 #include <zircon/types.h>
 
 #include <atomic>

@@ -10,10 +10,10 @@
 #include <lib/async-loop/loop.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fit/defer.h>
+#include <lib/netboot/netboot.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/zx/clock.h>
 #include <stdio.h>
-#include <zircon/boot/netboot.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/types.h>

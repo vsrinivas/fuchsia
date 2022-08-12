@@ -7,9 +7,9 @@
 
 #include <arpa/inet.h>
 #include <getopt.h>
+#include <lib/netboot/netboot.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <zircon/boot/netboot.h>
 
 #define MAXSIZE 1024
 

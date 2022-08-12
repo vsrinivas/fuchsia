@@ -5,7 +5,7 @@
 #include "src/bringup/bin/netsvc/tftp.h"
 
 #include <lib/async/cpp/task.h>
-#include <zircon/boot/netboot.h>
+#include <lib/netboot/netboot.h>
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
 

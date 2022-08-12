@@ -11,12 +11,12 @@
 #include <lib/async/dispatcher.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/netboot/netboot.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <threads.h>
-#include <zircon/boot/netboot.h>
 #include <zircon/errors.h>
 #include <zircon/time.h>
 

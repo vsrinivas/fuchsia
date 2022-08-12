@@ -6,7 +6,7 @@
 #define SRC_BRINGUP_BIN_NETSVC_FILE_API_H_
 
 #include <fidl/fuchsia.sysinfo/cpp/wire.h>
-#include <zircon/boot/netboot.h>
+#include <lib/netboot/netboot.h>
 
 #include <tftp/tftp.h>
 

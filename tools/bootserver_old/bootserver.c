@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
+#include <lib/netboot/netboot.h>
 #include <libgen.h>
 #include <limits.h>
 #include <net/if.h>
@@ -26,7 +27,6 @@
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
-#include <zircon/boot/netboot.h>
 
 #define ANSI_RED "\x1b[31m"
 #define ANSI_GREEN "\x1b[32m"

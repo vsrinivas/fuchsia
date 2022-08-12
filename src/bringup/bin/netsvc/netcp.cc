@@ -6,13 +6,13 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <lib/netboot/netboot.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <zircon/boot/netboot.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 

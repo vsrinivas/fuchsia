@@ -6,11 +6,11 @@
 
 #include <device_id.h>
 #include <inet6.h>
+#include <lib/netboot/netboot.h>
 #include <netifc.h>
 #include <stdio.h>
 #include <string.h>
 #include <xefi.h>
-#include <zircon/boot/netboot.h>
 
 #include <tftp/tftp.h>
 

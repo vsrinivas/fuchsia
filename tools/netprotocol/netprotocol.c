@@ -13,6 +13,7 @@
 #include <fcntl.h>
 #include <getopt.h>
 #include <ifaddrs.h>
+#include <lib/netboot/netboot.h>
 #include <netinet/in.h>
 #include <poll.h>
 #include <stdint.h>
@@ -22,7 +23,6 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 #include <unistd.h>
-#include <zircon/boot/netboot.h>
 
 uint16_t tftp_block_size = TFTP_DEFAULT_BLOCK_SZ;
 uint16_t tftp_window_size = TFTP_DEFAULT_WINDOW_SZ;

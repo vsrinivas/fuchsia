@@ -4,10 +4,10 @@
 
 #include <fastboot.h>
 #include <inet6.h>
+#include <lib/netboot/netboot.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <zircon/boot/netboot.h>
 
 // Enable at your own risk. Some of these packet errors can be fairly
 // common when the buffers start to overflow.

@@ -10,6 +10,7 @@
 #include <framebuffer.h>
 #include <inet6.h>
 #include <inttypes.h>
+#include <lib/netboot/netboot.h>
 #include <limits.h>
 #include <log.h>
 #include <netifc.h>
@@ -17,7 +18,6 @@
 #include <string.h>
 #include <utf_conversion.h>
 #include <xefi.h>
-#include <zircon/boot/netboot.h>
 #include <zircon/compiler.h>
 #include <zircon/hw/gpt.h>
 

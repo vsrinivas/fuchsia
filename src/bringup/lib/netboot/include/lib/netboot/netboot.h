@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SYSROOT_ZIRCON_BOOT_NETBOOT_H_
-#define SYSROOT_ZIRCON_BOOT_NETBOOT_H_
+#ifndef SRC_BRINGUP_LIB_NETBOOT_INCLUDE_LIB_NETBOOT_NETBOOT_H_
+#define SRC_BRINGUP_LIB_NETBOOT_INCLUDE_LIB_NETBOOT_NETBOOT_H_
 
 #include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <zircon/types.h>
 
 // clang-format off
 
@@ -106,8 +105,11 @@
 // buffer to hold the type use (NB_FIRMWARE_TYPE_MAX_LENGTH  + 1).
 #define NB_FIRMWARE_TYPE_MAX_LENGTH 256
 
+// Historically equal to ZX_MAX_NAME_LEN.
+#define NB_MAX_BOARD_NAME_LEN ((size_t)32u)
+
 typedef struct board_info {
-  char board_name[ZX_MAX_NAME_LEN];
+  char board_name[NB_MAX_BOARD_NAME_LEN];
   uint32_t board_revision;
   uint8_t mac_address[6];
   uint8_t _padding[2];
@@ -147,4 +149,4 @@ typedef struct logpacket {
     char data[MAX_LOG_DATA];
 } logpacket_t;
 
-#endif  // SYSROOT_ZIRCON_BOOT_NETBOOT_H_
+#endif  // SRC_BRINGUP_LIB_NETBOOT_INCLUDE_LIB_NETBOOT_NETBOOT_H_

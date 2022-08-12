@@ -8,9 +8,9 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/netboot/netboot.h>
 #include <lib/zx/clock.h>
 #include <unistd.h>
-#include <zircon/boot/netboot.h>
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
 

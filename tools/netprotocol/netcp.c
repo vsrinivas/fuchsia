@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <ifaddrs.h>
+#include <lib/netboot/netboot.h>
 #include <libgen.h>
 #include <netinet/in.h>
 #include <poll.h>
@@ -22,7 +23,6 @@
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <unistd.h>
-#include <zircon/boot/netboot.h>
 
 #include <tftp/tftp.h>
 

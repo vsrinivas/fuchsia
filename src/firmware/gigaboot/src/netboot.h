@@ -5,8 +5,8 @@
 #ifndef SRC_FIRMWARE_GIGABOOT_SRC_NETBOOT_H_
 #define SRC_FIRMWARE_GIGABOOT_SRC_NETBOOT_H_
 
+#include <lib/netboot/netboot.h>
 #include <stdint.h>
-#include <zircon/boot/netboot.h>
 #include <zircon/compiler.h>
 
 __BEGIN_CDECLS

@@ -8,7 +8,7 @@
 #include <fidl/fuchsia.logger/cpp/wire.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
-#include <zircon/boot/netboot.h>
+#include <lib/netboot/netboot.h>
 #include <zircon/types.h>
 
 #include <queue>
