@@ -31,13 +31,20 @@ pub struct DeviceGroupManager {
 
     // Contains all the topological path of all device groups that have been added. This
     // list is to ensure that we don't add multiple device groups with the same topological
-    // path.
-    pub device_group_list: HashSet<String>,
+    // path. The value stores:
+    // The transformation for the device group.
+    // The matched composite info of a composite driver that matched
+    // to the device group at the topological path (or None if it did not match any).
+    // We store this info here rather than the device_group_nodes items since these have a 1:1
+    // mapping to the device group, putting them with the device_group_nodes would lead
+    // to a lot of duplicates leading to wasted space.
+    pub device_group_list:
+        HashMap<String, (Vec<fdf::TransformNode>, Option<fdi::MatchedCompositeInfo>)>,
 }
 
 impl DeviceGroupManager {
     pub fn new() -> Self {
-        DeviceGroupManager { device_group_nodes: HashMap::new(), device_group_list: HashSet::new() }
+        DeviceGroupManager { device_group_nodes: HashMap::new(), device_group_list: HashMap::new() }
     }
 
     pub fn add_device_group(
@@ -52,7 +59,7 @@ impl DeviceGroupManager {
         // the unit tests, we don't want to validate that the transformation exists.
         let transformation = group.transformation.unwrap_or(vec![]);
 
-        if self.device_group_list.contains(&topological_path) {
+        if self.device_group_list.contains_key(&topological_path) {
             return Err(Status::ALREADY_EXISTS.into_raw());
         }
 
@@ -76,9 +83,6 @@ impl DeviceGroupManager {
             device_group_nodes.push((properties, device_group_info));
         }
 
-        // Add to the device group list.
-        self.device_group_list.insert(topological_path.clone());
-
         // Add each node and its device group to the node map.
         for (properties, group_info) in device_group_nodes {
             self.device_group_nodes
@@ -91,10 +95,16 @@ impl DeviceGroupManager {
             let matched_composite =
                 match_composite_transformation(composite_driver, &transformation)?;
             if let Some(matched_composite) = matched_composite {
+                // Found a match so we can set this in our map.
+                self.device_group_list.insert(
+                    topological_path.clone(),
+                    (transformation.clone(), Some(matched_composite.clone())),
+                );
                 return Ok(matched_composite);
             }
         }
 
+        self.device_group_list.insert(topological_path.clone(), (transformation.clone(), None));
         Err(Status::NOT_FOUND.into_raw())
     }
 
@@ -115,10 +125,42 @@ impl DeviceGroupManager {
             return None;
         }
 
+        // Put in the matched composite info for this device group
+        // that we have stored in our device_group_list.
+        for result_dev_group in &mut device_groups {
+            if let Some(topological_path) = &result_dev_group.topological_path {
+                let list_value = self.device_group_list.get(topological_path);
+                match list_value {
+                    None => {
+                        log::warn!(
+                            "Could not find the corresponding entry in device_group_list for {}",
+                            topological_path
+                        );
+                    }
+                    Some((_, matched_composite)) => {
+                        result_dev_group.composite = matched_composite.clone();
+                    }
+                }
+            }
+        }
+
         Some(fdi::MatchedDriver::DeviceGroupNode(fdi::MatchedDeviceGroupNodeInfo {
             device_groups: Some(device_groups.to_vec()),
             ..fdi::MatchedDeviceGroupNodeInfo::EMPTY
         }))
+    }
+
+    pub fn new_driver_available(&mut self, resolved_driver: ResolvedDriver) {
+        for dev_group in self.device_group_list.values_mut() {
+            if dev_group.1.is_some() {
+                continue;
+            }
+            let matched_composite_result =
+                match_composite_transformation(&resolved_driver, &dev_group.0);
+            if let Ok(matched_composite) = matched_composite_result {
+                dev_group.1 = matched_composite;
+            }
+        }
     }
 }
 

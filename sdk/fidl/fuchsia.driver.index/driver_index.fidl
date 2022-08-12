@@ -66,6 +66,9 @@ type MatchedDeviceGroupInfo = table {
 
     /// The node's index in its device group.
     2: node_index uint32;
+
+    /// The composite info of the driver that matches to the transform of this device group.
+    3: composite MatchedCompositeInfo;
 };
 
 /// Information for a device group node that's matched by the driver index.

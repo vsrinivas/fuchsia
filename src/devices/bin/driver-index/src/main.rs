@@ -368,6 +368,9 @@ impl Indexer {
 
         let resolved_driver = resolve.unwrap();
 
+        let mut device_group_manager = self.device_group_manager.borrow_mut();
+        device_group_manager.new_driver_available(resolved_driver.clone());
+
         let mut ephemeral_drivers = self.ephemeral_drivers.borrow_mut();
         let existing = ephemeral_drivers.insert(pkg_url.clone(), resolved_driver);
 
@@ -561,6 +564,9 @@ async fn load_base_drivers(
         if eager_drivers.contains(&resolved_driver.component_url) {
             resolved_driver.fallback = false;
         }
+
+        let mut device_group_manager = indexer.device_group_manager.borrow_mut();
+        device_group_manager.new_driver_available(resolved_driver.clone());
         resolved_drivers.push(resolved_driver);
     }
     indexer.load_base_repo(BaseRepo::Resolved(resolved_drivers));
@@ -2453,7 +2459,6 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_add_device_group_matched_composite() {
-        fuchsia_syslog::init().unwrap();
         // Create the Composite Bind rules.
         let primary_node_inst = vec![SymbolicInstructionInfo {
             location: None,
@@ -2591,6 +2596,180 @@ mod tests {
                 .await
                 .unwrap();
             assert_eq!(Err(Status::NOT_FOUND.into_raw()), result);
+        }
+        .fuse();
+
+        futures::pin_mut!(index_task, test_task);
+        futures::select! {
+            result = index_task => {
+                panic!("Index task finished: {:?}", result);
+            },
+            () = test_task => {},
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_add_device_group_then_driver() {
+        // Create the Composite Bind rules.
+        let primary_node_inst = vec![SymbolicInstructionInfo {
+            location: None,
+            instruction: SymbolicInstruction::AbortIfNotEqual {
+                lhs: Symbol::Key("trembler".to_string(), ValueType::Str),
+                rhs: Symbol::StringValue("thrasher".to_string()),
+            },
+        }];
+
+        let additional_node_inst = vec![
+            SymbolicInstructionInfo {
+                location: None,
+                instruction: SymbolicInstruction::AbortIfNotEqual {
+                    lhs: Symbol::Key("thrasher".to_string(), ValueType::Str),
+                    rhs: Symbol::StringValue("catbird".to_string()),
+                },
+            },
+            SymbolicInstructionInfo {
+                location: None,
+                instruction: SymbolicInstruction::AbortIfNotEqual {
+                    lhs: Symbol::Key("catbird".to_string(), ValueType::Number),
+                    rhs: Symbol::NumberValue(1),
+                },
+            },
+        ];
+
+        let bind_rules = CompositeBindRules {
+            device_name: "mimid".to_string(),
+            symbol_table: HashMap::new(),
+            primary_node: CompositeNode {
+                name: "catbird".to_string(),
+                instructions: primary_node_inst,
+            },
+            additional_nodes: vec![CompositeNode {
+                name: "mockingbird".to_string(),
+                instructions: additional_node_inst,
+            }],
+            enable_debug: false,
+        };
+
+        let bytecode = CompiledBindRules::CompositeBind(bind_rules).encode_to_bytecode().unwrap();
+        let rules = DecodedRules::new(bytecode).unwrap();
+
+        // Make the composite driver.
+        let url =
+            url::Url::parse("fuchsia-pkg://fuchsia.com/package#driver/dg_matched_composite.cm")
+                .unwrap();
+
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fdi::DriverIndexMarker>().unwrap();
+
+        // Start our index out without any drivers.
+        let index = Rc::new(Indexer::new(std::vec![], BaseRepo::NotResolved(vec![]), false));
+
+        let index_task = run_index_server(index.clone(), stream).fuse();
+        let test_task = async move {
+            let node_properties = vec![
+                fdf::DeviceGroupProperty {
+                    key: fdf::NodePropertyKey::IntValue(1),
+                    condition: fdf::Condition::Accept,
+                    values: vec![
+                        fdf::NodePropertyValue::IntValue(200),
+                        fdf::NodePropertyValue::IntValue(150),
+                    ],
+                },
+                fdf::DeviceGroupProperty {
+                    key: fdf::NodePropertyKey::StringValue("lapwing".to_string()),
+                    condition: fdf::Condition::Accept,
+                    values: vec![fdf::NodePropertyValue::StringValue("plover".to_string())],
+                },
+            ];
+
+            let device_properties_match = vec![
+                fdf::NodeProperty {
+                    key: Some(fdf::NodePropertyKey::IntValue(1)),
+                    value: Some(fdf::NodePropertyValue::IntValue(200)),
+                    ..fdf::NodeProperty::EMPTY
+                },
+                fdf::NodeProperty {
+                    key: Some(fdf::NodePropertyKey::StringValue("lapwing".to_string())),
+                    value: Some(fdf::NodePropertyValue::StringValue("plover".to_string())),
+                    ..fdf::NodeProperty::EMPTY
+                },
+            ];
+            let match_args = fdf::NodeAddArgs {
+                properties: Some(device_properties_match),
+                ..fdf::NodeAddArgs::EMPTY
+            };
+
+            let matching_transform = create_transform_vector(
+                vec![(
+                    fdf::NodePropertyKey::StringValue("trembler".to_string()),
+                    fdf::NodePropertyValue::StringValue("thrasher".to_string()),
+                )],
+                vec![vec![
+                    (
+                        fdf::NodePropertyKey::StringValue("catbird".to_string()),
+                        fdf::NodePropertyValue::IntValue(1),
+                    ),
+                    (
+                        fdf::NodePropertyKey::StringValue("thrasher".to_string()),
+                        fdf::NodePropertyValue::StringValue("catbird".to_string()),
+                    ),
+                ]],
+            );
+
+            // When we add the device group it should get not found since there's no drivers.
+            let result = proxy
+                .add_device_group(fdf::DeviceGroup {
+                    topological_path: Some("test/path".to_string()),
+                    nodes: Some(vec![fdf::DeviceGroupNode {
+                        name: "whimbrel".to_string(),
+                        properties: node_properties,
+                    }]),
+                    transformation: Some(matching_transform),
+                    ..fdf::DeviceGroup::EMPTY
+                })
+                .await
+                .unwrap();
+            assert_eq!(Err(Status::NOT_FOUND.into_raw()), result);
+
+            // We can see the device group comes back without a matched composite.
+            let match_result = proxy.match_driver(match_args.clone()).await.unwrap().unwrap();
+            if let fdi::MatchedDriver::DeviceGroupNode(info) = match_result {
+                assert_eq!(None, info.device_groups.unwrap()[0].composite);
+            } else {
+                assert!(false, "Did not get back a device group.");
+            }
+
+            // Notify the device group manager of a new composite driver.
+            {
+                let mut device_group_manager = index.device_group_manager.borrow_mut();
+                device_group_manager.new_driver_available(ResolvedDriver {
+                    component_url: url.clone(),
+                    v1_driver_path: None,
+                    bind_rules: rules,
+                    bind_bytecode: vec![],
+                    colocate: false,
+                    fallback: false,
+                    package_type: DriverPackageType::Base,
+                    package_hash: None,
+                });
+            }
+
+            // Now when we get it back, it has the matching composite driver on it.
+            let match_result = proxy.match_driver(match_args.clone()).await.unwrap().unwrap();
+            if let fdi::MatchedDriver::DeviceGroupNode(info) = match_result {
+                assert_eq!(
+                    &"mimid".to_string(),
+                    info.device_groups.unwrap()[0]
+                        .composite
+                        .as_ref()
+                        .unwrap()
+                        .composite_name
+                        .as_ref()
+                        .unwrap()
+                );
+            } else {
+                assert!(false, "Did not get back a device group.");
+            }
         }
         .fuse();
 
