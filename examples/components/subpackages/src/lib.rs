@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    component_events::events::Event,
     component_events::{events::*, matcher::*},
     fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, Ref, Route},
     tracing::*,
@@ -60,9 +59,7 @@ async fn routes_from_echo() {
         .unwrap();
 
     // Subscribe to stopped events for child components
-    let event_source = EventSource::new().unwrap();
-    let mut event_stream =
-        event_source.subscribe(vec![EventSubscription::new(vec![Stopped::NAME])]).await.unwrap();
+    let mut event_stream = EventStream::open_at_path("/events/event_stream").unwrap();
 
     let realm = builder.build().await.unwrap();
 

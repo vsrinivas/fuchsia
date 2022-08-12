@@ -24,10 +24,10 @@
         binary: "bin/parent_realm",
     },
     use: [
-        { protocol: "fuchsia.sys2.EventSource" },
         {
-            event: "stopped",
-            from: "framework",
+            event_stream: "stopped_v2",
+            from: "parent",
+            path: "/events/event_stream",
         },
     ],
 }
