@@ -32,7 +32,6 @@ class FuzzerTest : public AsyncTest {
     auto context = ComponentContext::CreateWithExecutor(executor());
     auto client = std::make_unique<TargetAdapterClient>(context->executor());
     client->set_handler(context->MakeRequestHandler<TargetAdapter>());
-    TargetAdapterClient::AddDefaults(options_.get());
     client->Configure(options_);
     return client;
   }
@@ -60,9 +59,7 @@ TEST_F(FuzzerTest, SeedCorpus) {
 
   auto seed_corpus_dirs = client->GetSeedCorpusDirectories(parameters);
   Corpus seed_corpus;
-  auto options = this->options();
-  Corpus::AddDefaults(options.get());
-  seed_corpus.Configure(options);
+  seed_corpus.Configure(options());
   EXPECT_EQ(seed_corpus.Load(seed_corpus_dirs), ZX_OK);
 
   // Ensure only one call to |TestOneInput| is active at a time.

@@ -62,7 +62,7 @@ class ProcessTest : public AsyncTest {
       options->set_malloc_limit(0);
       options->set_purge_interval(0);
     }
-    Process::AddDefaults(options.get());
+    AddDefaults(options.get());
     return options;
   }
 
@@ -179,19 +179,6 @@ class ProcessTest : public AsyncTest {
 };
 
 // Unit tests.
-
-TEST_F(ProcessTest, AddDefaults) {
-  Options options;
-  Process::AddDefaults(&options);
-  EXPECT_EQ(options.detect_leaks(), kDefaultDetectLeaks);
-  EXPECT_EQ(options.malloc_limit(), kDefaultMallocLimit);
-  EXPECT_EQ(options.oom_limit(), kDefaultOomLimit);
-  EXPECT_EQ(options.purge_interval(), kDefaultPurgeInterval);
-  EXPECT_EQ(options.malloc_exitcode(), kDefaultMallocExitcode);
-  EXPECT_EQ(options.death_exitcode(), kDefaultDeathExitcode);
-  EXPECT_EQ(options.leak_exitcode(), kDefaultLeakExitcode);
-  EXPECT_EQ(options.oom_exitcode(), kDefaultOomExitcode);
-}
 
 TEST_F(ProcessTest, ConnectProcess) {
   Process process(executor());

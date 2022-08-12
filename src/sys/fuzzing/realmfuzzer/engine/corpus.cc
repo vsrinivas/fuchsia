@@ -30,15 +30,6 @@ Corpus& Corpus::operator=(Corpus&& other) noexcept {
   return *this;
 }
 
-void Corpus::AddDefaults(Options* options) {
-  if (!options->has_seed()) {
-    options->set_seed(kDefaultSeed);
-  }
-  if (!options->has_max_input_size()) {
-    options->set_max_input_size(kDefaultMaxInputSize);
-  }
-}
-
 void Corpus::Configure(const OptionsPtr& options) {
   options_ = options;
   prng_.seed(options_->seed());

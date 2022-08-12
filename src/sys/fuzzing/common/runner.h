@@ -46,8 +46,8 @@ class Runner {
   // Accessors.
   const ExecutorPtr& executor() const { return executor_; }
 
-  // Adds default values to unspecified options that are needed by objects of this class.
-  virtual void AddDefaults(Options* options) = 0;
+  // Hook to allow runners to override default option values with runner-specific default values.
+  virtual void OverrideDefaults(Options* options) {}
 
   // Add an input to the specified corpus. Returns ZX_ERR_INVALID_ARGS if |corpus_type| is
   // unrecognized.

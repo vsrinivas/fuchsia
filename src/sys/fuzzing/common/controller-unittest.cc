@@ -56,12 +56,10 @@ TEST_F(ControllerTest, ConfigureAndGetOptions) {
   controller->GetOptions(bridge1.completer.bind());
   FUZZING_EXPECT_OK(bridge1.consumer.promise_or(fpromise::error()), &options1);
   RunUntilIdle();
-  EXPECT_NE(options1.seed(), 0U);
 
   // Configure.
   uint32_t runs = 1000;
   zx::duration max_total_time = zx::sec(300);
-  uint32_t seed = 42;
   uint32_t max_input_size = 1ULL << 10;
   uint16_t mutation_depth = 8;
   bool detect_exits = true;
@@ -69,7 +67,6 @@ TEST_F(ControllerTest, ConfigureAndGetOptions) {
   zx::duration run_limit = zx::sec(20);
   options1.set_runs(runs);
   options1.set_max_total_time(max_total_time.get());
-  options1.set_seed(seed);
   options1.set_max_input_size(max_input_size);
   options1.set_mutation_depth(mutation_depth);
   options1.set_detect_exits(detect_exits);
@@ -81,7 +78,14 @@ TEST_F(ControllerTest, ConfigureAndGetOptions) {
   FUZZING_EXPECT_OK(bridge2.consumer.promise_or(fpromise::ok(ZX_ERR_CANCELED)), ZX_OK);
   RunUntilIdle();
 
+  Bridge<Options> bridge3;
+  controller->GetOptions(bridge3.completer.bind());
+  FUZZING_EXPECT_OK(bridge3.consumer.promise_or(fpromise::error()), &options1);
+  RunUntilIdle();
+  EXPECT_NE(options1.seed(), 0U);
+
   // Can Configure again.
+  uint32_t seed = 42;
   uint64_t malloc_limit = 64ULL << 10;
   uint64_t oom_limit = 1ULL << 20;
   zx::duration purge_interval = zx::sec(10);
@@ -90,6 +94,7 @@ TEST_F(ControllerTest, ConfigureAndGetOptions) {
   int32_t leak_exitcode = 1002;
   int32_t oom_exitcode = 1003;
   zx::duration pulse_interval = zx::sec(3);
+  options2.set_seed(seed);
   options2.set_malloc_limit(malloc_limit);
   options2.set_oom_limit(oom_limit);
   options2.set_purge_interval(purge_interval.get());
@@ -98,16 +103,16 @@ TEST_F(ControllerTest, ConfigureAndGetOptions) {
   options2.set_leak_exitcode(leak_exitcode);
   options2.set_oom_exitcode(oom_exitcode);
   options2.set_pulse_interval(pulse_interval.get());
-  Bridge<zx_status_t> bridge3;
-  controller->Configure(std::move(options2), bridge3.completer.bind());
-  FUZZING_EXPECT_OK(bridge3.consumer.promise_or(fpromise::ok(ZX_ERR_CANCELED)), ZX_OK);
+  Bridge<zx_status_t> bridge4;
+  controller->Configure(std::move(options2), bridge4.completer.bind());
+  FUZZING_EXPECT_OK(bridge4.consumer.promise_or(fpromise::ok(ZX_ERR_CANCELED)), ZX_OK);
   RunUntilIdle();
 
   // Changes are reflected.
   Options options3;
-  Bridge<Options> bridge4;
-  controller->GetOptions(bridge4.completer.bind());
-  FUZZING_EXPECT_OK(bridge4.consumer.promise_or(fpromise::error()), &options3);
+  Bridge<Options> bridge5;
+  controller->GetOptions(bridge5.completer.bind());
+  FUZZING_EXPECT_OK(bridge5.consumer.promise_or(fpromise::error()), &options3);
   RunUntilIdle();
   EXPECT_EQ(options3.runs(), runs);
   EXPECT_EQ(options3.max_total_time(), max_total_time.get());

@@ -14,7 +14,23 @@ Options CopyOptions(const Options& options) {
   }
 #include "src/sys/fuzzing/common/options.inc"
 #undef FUCHSIA_FUZZER_OPTION
+  AddDefaults(&copy);
   return copy;
+}
+
+OptionsPtr MakeOptions() {
+  auto options = std::make_shared<Options>();
+  AddDefaults(options.get());
+  return options;
+}
+
+void AddDefaults(Options* options) {
+#define FUCHSIA_FUZZER_OPTION(type, option, Option, default_value) \
+  if (!options->has_##option()) {                                  \
+    options->set_##option(default_value);                          \
+  }
+#include "src/sys/fuzzing/common/options.inc"
+#undef FUCHSIA_FUZZER_OPTION
 }
 
 }  // namespace fuzzing

@@ -116,7 +116,7 @@ LibFuzzerRunner::LibFuzzerRunner(ExecutorPtr executor)
   CreateDirectory(kLiveCorpusPath);
 }
 
-void LibFuzzerRunner::AddDefaults(Options* options) {
+void LibFuzzerRunner::OverrideDefaults(Options* options) {
   if (!options->has_detect_exits()) {
     options->set_detect_exits(true);
   }
@@ -305,70 +305,65 @@ void LibFuzzerRunner::AddArgs() {
   while (cmdline_iter != cmdline_.end() && *cmdline_iter != "--") {
     process_.AddArg(*cmdline_iter++);
   }
-  if (options_->has_runs()) {
+  if (auto runs = options_->runs(); runs != kDefaultRuns) {
     process_.AddArg(MakeArg("runs", options_->runs()));
   }
-  if (options_->has_max_total_time()) {
-    auto max_total_time = options_->max_total_time();
+  if (auto max_total_time = options_->max_total_time(); max_total_time != kDefaultMaxTotalTime) {
     max_total_time = Clamp(max_total_time, kOneSecond, "duration", "second", "max_total_time");
     options_->set_max_total_time(max_total_time);
     process_.AddArg(MakeArg("max_total_time", max_total_time / kOneSecond));
   }
-  if (options_->has_seed()) {
-    process_.AddArg(MakeArg("seed", options_->seed()));
+  if (auto seed = options_->seed(); seed != kDefaultSeed) {
+    process_.AddArg(MakeArg("seed", seed));
   }
-  if (options_->has_max_input_size()) {
-    process_.AddArg(MakeArg("max_len", options_->max_input_size()));
+  if (auto max_input_size = options_->max_input_size(); max_input_size != kDefaultMaxInputSize) {
+    process_.AddArg(MakeArg("max_len", max_input_size));
   }
-  if (options_->has_mutation_depth()) {
-    process_.AddArg(MakeArg("mutate_depth", options_->mutation_depth()));
+  if (auto mutation_depth = options_->mutation_depth(); mutation_depth != kDefaultMutationDepth) {
+    process_.AddArg(MakeArg("mutate_depth", mutation_depth));
   }
-  if (options_->has_dictionary_level()) {
+  if (options_->dictionary_level() != kDefaultDictionaryLevel) {
     FX_LOGS(WARNING) << "libFuzzer does not support setting the dictionary level.";
   }
-  if (options_->has_detect_exits() && !options_->detect_exits()) {
+  if (!options_->detect_exits()) {
     FX_LOGS(WARNING) << "libFuzzer does not support ignoring process exits.";
   }
-  if (options_->has_detect_leaks()) {
-    process_.AddArg(MakeArg("detect_leaks", options_->detect_leaks() ? "1" : "0"));
+  if (options_->detect_leaks()) {
+    process_.AddArg(MakeArg("detect_leaks", "1"));
   }
-  if (options_->has_run_limit()) {
-    auto run_limit = options_->run_limit();
+  if (auto run_limit = options_->run_limit(); run_limit != kDefaultRunLimit) {
     run_limit = Clamp(run_limit, kOneSecond, "duration", "second", "run_limit");
     options_->set_run_limit(run_limit);
     process_.AddArg(MakeArg("timeout", run_limit / kOneSecond));
   }
-  if (options_->has_malloc_limit()) {
-    auto malloc_limit = options_->malloc_limit();
+  if (auto malloc_limit = options_->malloc_limit(); malloc_limit != kDefaultMallocLimit) {
     malloc_limit = Clamp(malloc_limit, kOneMb, "memory amount", "MB", "malloc_limit");
     options_->set_malloc_limit(malloc_limit);
     process_.AddArg(MakeArg("malloc_limit_mb", malloc_limit / kOneMb));
   }
-  if (options_->has_oom_limit()) {
-    auto oom_limit = options_->oom_limit();
+  if (auto oom_limit = options_->oom_limit(); oom_limit != kDefaultOomLimit) {
     oom_limit = Clamp(oom_limit, kOneMb, "memory amount", "MB", "oom_limit");
     options_->set_oom_limit(oom_limit);
     process_.AddArg(MakeArg("rss_limit_mb", oom_limit / kOneMb));
   }
-  if (options_->has_purge_interval()) {
-    auto purge_interval = options_->purge_interval();
+  if (auto purge_interval = options_->purge_interval(); purge_interval != kDefaultPurgeInterval) {
     purge_interval = Clamp(purge_interval, kOneSecond, "duration", "second", "purge_interval");
     options_->set_purge_interval(purge_interval);
     process_.AddArg(MakeArg("purge_allocator_interval", purge_interval / kOneSecond));
   }
-  if (options_->has_malloc_exitcode()) {
+  if (options_->malloc_exitcode() != kDefaultMallocExitcode) {
     FX_LOGS(WARNING) << "libFuzzer does not support setting the 'malloc_exitcode'.";
   }
-  if (options_->has_death_exitcode()) {
+  if (options_->death_exitcode() != kDefaultDeathExitcode) {
     FX_LOGS(WARNING) << "libFuzzer does not support setting the 'death_exitcode'.";
   }
-  if (options_->has_leak_exitcode()) {
+  if (options_->leak_exitcode() != kDefaultLeakExitcode) {
     FX_LOGS(WARNING) << "libFuzzer does not support setting the 'leak_exitcode'.";
   }
-  if (options_->has_oom_exitcode()) {
+  if (options_->oom_exitcode() != kDefaultOomExitcode) {
     FX_LOGS(WARNING) << "libFuzzer does not support setting the 'oom_exitcode'.";
   }
-  if (options_->has_pulse_interval()) {
+  if (options_->pulse_interval() != kDefaultPulseInterval) {
     FX_LOGS(WARNING) << "libFuzzer does not support setting the 'pulse_interval'.";
   }
   if (has_dictionary_) {

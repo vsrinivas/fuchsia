@@ -60,9 +60,6 @@ class ControllerImpl : public Controller {
   void Stop();
 
  private:
-  // Adds defaults for unset options.
-  void AddDefaults();
-
   // Returns a promise to configure the runner if needed.
   ZxPromise<> Initialize();
 

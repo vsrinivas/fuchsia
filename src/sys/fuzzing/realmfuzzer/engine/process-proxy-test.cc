@@ -16,14 +16,8 @@ void ProcessProxyTest::SetUp() {
   pool_ = std::make_shared<ModulePool>();
 }
 
-OptionsPtr ProcessProxyTest::DefaultOptions() {
-  auto options = MakeOptions();
-  ProcessProxy::AddDefaults(options.get());
-  return options;
-}
-
 std::unique_ptr<ProcessProxy> ProcessProxyTest::CreateAndConnectProxy(zx::process process) {
-  return CreateAndConnectProxy(std::move(process), ProcessProxyTest::DefaultOptions());
+  return CreateAndConnectProxy(std::move(process), MakeOptions());
 }
 
 std::unique_ptr<ProcessProxy> ProcessProxyTest::CreateAndConnectProxy(zx::process process,
@@ -34,8 +28,7 @@ std::unique_ptr<ProcessProxy> ProcessProxyTest::CreateAndConnectProxy(zx::proces
 
 std::unique_ptr<ProcessProxy> ProcessProxyTest::CreateAndConnectProxy(zx::process process,
                                                                       zx::eventpair eventpair) {
-  return CreateAndConnectProxy(std::move(process), ProcessProxyTest::DefaultOptions(),
-                               std::move(eventpair));
+  return CreateAndConnectProxy(std::move(process), MakeOptions(), std::move(eventpair));
 }
 
 std::unique_ptr<ProcessProxy> ProcessProxyTest::CreateAndConnectProxy(zx::process process,

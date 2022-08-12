@@ -42,9 +42,6 @@ class ProcessProxy final {
 
   uint64_t target_id() const { return target_id_; }
 
-  // Adds default values to unspecified options that are needed by objects of this class.
-  static void AddDefaults(Options* options);
-
   // Sets options for this object.
   void Configure(const OptionsPtr& options);
 

@@ -30,9 +30,6 @@ class TargetAdapterClient final {
   explicit TargetAdapterClient(ExecutorPtr executor);
   ~TargetAdapterClient() = default;
 
-  // Adds default values to unspecified options that are needed by objects of this class.
-  static void AddDefaults(Options* options);
-
   // Sets options. The max input size may be increased by |LoadSeedCorpus|.
   void Configure(const OptionsPtr& options);
 

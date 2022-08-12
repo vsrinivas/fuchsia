@@ -31,15 +31,9 @@ void ControllerImpl::Bind(fidl::InterfaceRequest<Controller> request) {
 
 void ControllerImpl::SetRunner(RunnerPtr runner) {
   runner_ = std::move(runner);
-  AddDefaults();
-  initialized_ = false;
-}
 
-void ControllerImpl::AddDefaults() {
-  if (!options_->has_seed()) {
-    options_->set_seed(static_cast<uint32_t>(zx::ticks::now().get()));
-  }
-  runner_->AddDefaults(options_.get());
+  runner_->OverrideDefaults(options_.get());
+  initialized_ = false;
 }
 
 ZxPromise<> ControllerImpl::Initialize() {
@@ -73,7 +67,11 @@ void ControllerImpl::Finish() {
 
 void ControllerImpl::Configure(Options options, ConfigureCallback callback) {
   *options_ = std::move(options);
-  AddDefaults();
+  runner_->OverrideDefaults(options_.get());
+  AddDefaults(options_.get());
+  if (options_->seed() == kDefaultSeed) {
+    options_->set_seed(static_cast<uint32_t>(zx::ticks::now().get()));
+  }
   auto task = runner_->Configure(options_)
                   .then([this, callback = std::move(callback)](const ZxResult<>& result) {
                     callback(result.is_ok() ? ZX_OK : result.error());

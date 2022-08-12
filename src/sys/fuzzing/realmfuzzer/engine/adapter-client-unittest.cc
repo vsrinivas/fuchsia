@@ -22,12 +22,6 @@ namespace fuzzing {
 
 class TargetAdapterClientTest : public AsyncTest {
  protected:
-  OptionsPtr DefaultOptions() {
-    auto options = MakeOptions();
-    TargetAdapterClient::AddDefaults(options.get());
-    return options;
-  }
-
   std::unique_ptr<FakeTargetAdapter> Bind(TargetAdapterClient* client) {
     auto adapter = std::make_unique<FakeTargetAdapter>(executor());
     client->set_handler(adapter->GetHandler());
@@ -37,15 +31,9 @@ class TargetAdapterClientTest : public AsyncTest {
 
 // Unit tests
 
-TEST_F(TargetAdapterClientTest, AddDefaults) {
-  Options options;
-  TargetAdapterClient::AddDefaults(&options);
-  EXPECT_EQ(options.max_input_size(), kDefaultMaxInputSize);
-}
-
 TEST_F(TargetAdapterClientTest, GetParameters) {
   TargetAdapterClient client(executor());
-  client.Configure(DefaultOptions());
+  client.Configure(MakeOptions());
   auto adapter = Bind(&client);
 
   std::vector<std::string> params{"-s", "--long", "positional", "--", "ignored"};
@@ -85,7 +73,7 @@ TEST_F(TargetAdapterClientTest, GetSeedCorpusDirectories) {
 
 TEST_F(TargetAdapterClientTest, TestOneInput) {
   TargetAdapterClient client(executor());
-  client.Configure(DefaultOptions());
+  client.Configure(MakeOptions());
   auto adapter = Bind(&client);
   Input sent("foo");
   FUZZING_EXPECT_OK(adapter->TestOneInput(), sent.Duplicate());
@@ -95,7 +83,7 @@ TEST_F(TargetAdapterClientTest, TestOneInput) {
 
 TEST_F(TargetAdapterClientTest, Disconnect) {
   TargetAdapterClient client(executor());
-  client.Configure(DefaultOptions());
+  client.Configure(MakeOptions());
   auto adapter = Bind(&client);
 
   // Make sure the client is connected.

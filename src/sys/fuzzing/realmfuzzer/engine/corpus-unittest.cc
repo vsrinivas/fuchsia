@@ -23,12 +23,6 @@ Input input2() { return Input({0x21, 0x22}); }
 Input input3() { return Input({0x31, 0x32, 0x33, 0x34, 0x35, 0x36}); }
 Input input4() { return Input({0x41, 0x42, 0x43, 0x44}); }
 
-OptionsPtr DefaultOptions() {
-  auto options = MakeOptions();
-  Corpus::AddDefaults(options.get());
-  return options;
-}
-
 void AddAllToCorpus(Corpus *corpus) {
   ASSERT_EQ(corpus->Add(input1()), ZX_OK);
   ASSERT_EQ(corpus->Add(input2()), ZX_OK);
@@ -38,16 +32,9 @@ void AddAllToCorpus(Corpus *corpus) {
 
 // Unit tests.
 
-TEST(CorpusTest, AddDefaults) {
-  Options options;
-  Corpus::AddDefaults(&options);
-  EXPECT_EQ(options.seed(), kDefaultSeed);
-  EXPECT_EQ(options.max_input_size(), kDefaultMaxInputSize);
-}
-
 TEST(CorpusTest, Load) {
   Corpus corpus;
-  corpus.Configure(DefaultOptions());
+  corpus.Configure(MakeOptions());
 
   // Double check that the unit test component manifest includes the tmp-storage shard...
   ASSERT_TRUE(files::IsDirectory("/tmp"));
@@ -95,7 +82,7 @@ TEST(CorpusTest, Load) {
 
 TEST(CorpusTest, AddInputs) {
   Corpus corpus;
-  auto options = DefaultOptions();
+  auto options = MakeOptions();
   options->set_max_input_size(8);
   corpus.Configure(options);
 
@@ -131,7 +118,7 @@ TEST(CorpusTest, AddInputs) {
 
 TEST(CorpusTest, AddCorpus) {
   auto corpus1 = Corpus::MakePtr();
-  auto options = DefaultOptions();
+  auto options = MakeOptions();
   options->set_max_input_size(4);
   corpus1->Configure(options);
   EXPECT_EQ(corpus1->Add(Input("foo")), ZX_OK);
@@ -143,13 +130,13 @@ TEST(CorpusTest, AddCorpus) {
 
   // Long input.
   corpus2 = Corpus::MakePtr();
-  corpus2->Configure(DefaultOptions());
+  corpus2->Configure(MakeOptions());
   EXPECT_EQ(corpus2->Add(Input("foobarbaz")), ZX_OK);
   EXPECT_EQ(corpus1->Add(corpus2), ZX_ERR_BUFFER_TOO_SMALL);
 
   // Valid
   corpus2 = Corpus::MakePtr();
-  corpus2->Configure(DefaultOptions());
+  corpus2->Configure(MakeOptions());
   EXPECT_EQ(corpus2->Add(Input("bar")), ZX_OK);
   EXPECT_EQ(corpus2->Add(Input("baz")), ZX_OK);
   EXPECT_EQ(corpus1->Add(corpus2), ZX_OK);
@@ -167,7 +154,7 @@ TEST(CorpusTest, AddCorpus) {
 
 TEST(CorpusTest, At) {
   Corpus corpus;
-  corpus.Configure(DefaultOptions());
+  corpus.Configure(MakeOptions());
 
   // Empty input is always present.
   Input input;
@@ -203,7 +190,7 @@ TEST(CorpusTest, Pick) {
 
   // Set the seed explicitly. In the real system, omitting the seed option will cause the engine to
   // derive one from the current time.
-  auto options = DefaultOptions();
+  auto options = MakeOptions();
   options->set_seed(100);
   corpus.Configure(options);
 
@@ -240,7 +227,7 @@ TEST(CorpusTest, PickIsDeterministic) {
 
   // Set the seed explicitly. In the real system, omitting the seed option will cause the engine to
   // derive one from the current time.
-  auto options = DefaultOptions();
+  auto options = MakeOptions();
   options->set_seed(100);
   corpus1.Configure(options);
   corpus2.Configure(options);

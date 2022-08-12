@@ -20,12 +20,6 @@ class MutagenTest : public ::testing::Test {
  protected:
   void SetUp() override { out_.Reserve(kBufSize); }
 
-  OptionsPtr DefaultOptions() {
-    auto options = MakeOptions();
-    Mutagen::AddDefaults(options.get());
-    return options;
-  }
-
   void AddPattern(const char* str) {
     const auto* data = reinterpret_cast<const uint8_t*>(str);
     auto size = strlen(str);
@@ -68,17 +62,9 @@ class MutagenTest : public ::testing::Test {
 
 // Unit tests.
 
-TEST_F(MutagenTest, AddDefaults) {
-  Options options;
-  Mutagen::AddDefaults(&options);
-  EXPECT_EQ(options.seed(), kDefaultSeed);
-  EXPECT_EQ(options.max_input_size(), kDefaultMaxInputSize);
-  EXPECT_EQ(options.dictionary_level(), kDefaultDictionaryLevel);
-}
-
 TEST_F(MutagenTest, Mutate) {
   Mutagen mutagen1;
-  auto options = MutagenTest::DefaultOptions();
+  auto options = MakeOptions();
   options->set_seed(1);
   mutagen1.Configure(options);
 
@@ -136,7 +122,7 @@ TEST_F(MutagenTest, Mutate) {
 
 TEST_F(MutagenTest, SkipSome) {
   Mutagen mutagen;
-  mutagen.Configure(MutagenTest::DefaultOptions());
+  mutagen.Configure(MakeOptions());
 
   std::vector<uint8_t> v = {0, 1, 2, 3, 4, 5};
 
@@ -170,7 +156,7 @@ TEST_F(MutagenTest, SkipSome) {
 
 TEST_F(MutagenTest, Shuffle) {
   Mutagen mutagen;
-  mutagen.Configure(MutagenTest::DefaultOptions());
+  mutagen.Configure(MakeOptions());
 
   std::vector<uint8_t> v = {0, 1, 2, 3};
 
@@ -206,7 +192,7 @@ TEST_F(MutagenTest, Shuffle) {
 
 TEST_F(MutagenTest, Flip) {
   Mutagen mutagen;
-  mutagen.Configure(MutagenTest::DefaultOptions());
+  mutagen.Configure(MakeOptions());
 
   std::vector<uint8_t> v = {0, 1, 2, 3};
 
@@ -232,7 +218,7 @@ TEST_F(MutagenTest, Flip) {
 
 TEST_F(MutagenTest, ReplaceOne) {
   Mutagen mutagen;
-  mutagen.Configure(MutagenTest::DefaultOptions());
+  mutagen.Configure(MakeOptions());
 
   std::vector<uint8_t> v = {0, 1, 2, 3};
 
@@ -246,7 +232,7 @@ TEST_F(MutagenTest, ReplaceOne) {
 
 TEST_F(MutagenTest, ReplaceUnsigned) {
   Mutagen mutagen;
-  mutagen.Configure(MutagenTest::DefaultOptions());
+  mutagen.Configure(MakeOptions());
 
   std::vector<uint8_t> v = {1, 0, 0, 0, 0, 0, 0, 0};
 
@@ -278,7 +264,7 @@ TEST_F(MutagenTest, ReplaceUnsigned) {
 
 TEST_F(MutagenTest, ReplaceNum) {
   Mutagen mutagen;
-  mutagen.Configure(MutagenTest::DefaultOptions());
+  mutagen.Configure(MakeOptions());
 
   std::string s = "a123b";
   const auto* data = reinterpret_cast<const uint8_t*>(s.c_str());
@@ -293,7 +279,7 @@ TEST_F(MutagenTest, ReplaceNum) {
 
 TEST_F(MutagenTest, ReplaceSome) {
   Mutagen mutagen;
-  mutagen.Configure(MutagenTest::DefaultOptions());
+  mutagen.Configure(MakeOptions());
 
   std::vector<uint8_t> v = {0, 1, 2, 3};
 
@@ -315,7 +301,7 @@ TEST_F(MutagenTest, ReplaceSome) {
 
 TEST_F(MutagenTest, MergeReplace) {
   Mutagen mutagen;
-  mutagen.Configure(MutagenTest::DefaultOptions());
+  mutagen.Configure(MakeOptions());
 
   std::vector<uint8_t> u = {0, 1, 2, 3};
   std::vector<uint8_t> v = {4, 5, 6, 7};
@@ -336,7 +322,7 @@ TEST_F(MutagenTest, MergeReplace) {
 
 TEST_F(MutagenTest, InsertSome) {
   Mutagen mutagen;
-  mutagen.Configure(MutagenTest::DefaultOptions());
+  mutagen.Configure(MakeOptions());
 
   std::vector<uint8_t> v = {0, 1, 2, 3};
 
@@ -355,7 +341,7 @@ TEST_F(MutagenTest, InsertSome) {
 
 TEST_F(MutagenTest, MergeInsert) {
   Mutagen mutagen;
-  mutagen.Configure(MutagenTest::DefaultOptions());
+  mutagen.Configure(MakeOptions());
 
   std::vector<uint8_t> u = {0, 1, 2, 3};
   std::vector<uint8_t> v = {4, 5, 6, 7};
@@ -373,7 +359,7 @@ TEST_F(MutagenTest, MergeInsert) {
 
 TEST_F(MutagenTest, InsertOne) {
   Mutagen mutagen;
-  mutagen.Configure(MutagenTest::DefaultOptions());
+  mutagen.Configure(MakeOptions());
 
   std::vector<uint8_t> v = {0, 1, 2, 3};
 
@@ -388,7 +374,7 @@ TEST_F(MutagenTest, InsertOne) {
 
 TEST_F(MutagenTest, InsertRepeated) {
   Mutagen mutagen;
-  mutagen.Configure(MutagenTest::DefaultOptions());
+  mutagen.Configure(MakeOptions());
 
   std::vector<uint8_t> v = {0, 1, 2, 3};
 

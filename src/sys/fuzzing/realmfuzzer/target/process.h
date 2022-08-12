@@ -69,9 +69,6 @@ class Process final {
   explicit Process(ExecutorPtr executor);
   ~Process();
 
-  // Adds defaults to unspecified options.
-  static void AddDefaults(Options* options);
-
   // Installs the hook functions above in the process' overall global, static context. The methods
   // used, e.g. |__sanitizer_set_death_callback|, do not have corresponding methods to unset the
   // hooks, so there is no corresponding "UninstallHooks". As a result, this method can only be

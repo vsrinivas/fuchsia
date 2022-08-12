@@ -32,21 +32,6 @@ ProcessProxy::~ProcessProxy() {
 ///////////////////////////////////////////////////////////////
 // Configuration methods
 
-void ProcessProxy::AddDefaults(Options* options) {
-  if (!options->has_malloc_exitcode()) {
-    options->set_malloc_exitcode(kDefaultMallocExitcode);
-  }
-  if (!options->has_death_exitcode()) {
-    options->set_death_exitcode(kDefaultDeathExitcode);
-  }
-  if (!options->has_leak_exitcode()) {
-    options->set_leak_exitcode(kDefaultLeakExitcode);
-  }
-  if (!options->has_oom_exitcode()) {
-    options->set_oom_exitcode(kDefaultOomExitcode);
-  }
-}
-
 void ProcessProxy::Configure(const OptionsPtr& options) { options_ = options; }
 
 zx_status_t ProcessProxy::Connect(InstrumentedProcess& instrumented) {

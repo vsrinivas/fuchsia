@@ -45,8 +45,6 @@ class RunnerTest : public AsyncTest {
 
   const OptionsPtr& options() { return options_; }
 
-  OptionsPtr DefaultOptions();
-
   // Adds test-related |options| (e.g. PRNG seed) and configures the |runner|.
   virtual void Configure(const OptionsPtr& options);
 

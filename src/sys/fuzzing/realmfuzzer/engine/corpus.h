@@ -39,9 +39,6 @@ class Corpus final {
 
   static CorpusPtr MakePtr() { return std::make_shared<Corpus>(); }
 
-  // Adds default values to unspecified options that are needed by objects of this class.
-  static void AddDefaults(Options* options);
-
   // Sets options. This will reset the PRNG.
   void Configure(const OptionsPtr& options);
 

@@ -88,22 +88,84 @@ TEST(OptionsTest, Copy) {
 
   auto options2 = CopyOptions(options1);
   EXPECT_EQ(options2.runs(), runs);
-  EXPECT_FALSE(options2.has_max_total_time());
+  EXPECT_EQ(options2.max_total_time(), kDefaultMaxTotalTime);
   EXPECT_EQ(options2.seed(), seed);
-  EXPECT_FALSE(options2.has_max_input_size());
+  EXPECT_EQ(options2.max_input_size(), kDefaultMaxInputSize);
   EXPECT_EQ(options2.mutation_depth(), mutation_depth);
-  EXPECT_FALSE(options2.has_dictionary_level());
-  EXPECT_FALSE(options2.has_detect_exits());
+  EXPECT_EQ(options2.dictionary_level(), kDefaultDictionaryLevel);
+  EXPECT_EQ(options2.detect_exits(), kDefaultDetectExits);
   EXPECT_EQ(options2.detect_leaks(), detect_leaks);
-  EXPECT_FALSE(options2.has_run_limit());
+  EXPECT_EQ(options2.run_limit(), kDefaultRunLimit);
   EXPECT_EQ(options2.malloc_limit(), malloc_limit);
-  EXPECT_FALSE(options2.has_oom_limit());
+  EXPECT_EQ(options2.oom_limit(), kDefaultOomLimit);
   EXPECT_EQ(options2.purge_interval(), purge_interval);
-  EXPECT_FALSE(options2.has_malloc_exitcode());
+  EXPECT_EQ(options2.malloc_exitcode(), kDefaultMallocExitcode);
   EXPECT_EQ(options2.death_exitcode(), death_exitcode);
-  EXPECT_FALSE(options2.has_leak_exitcode());
+  EXPECT_EQ(options2.leak_exitcode(), kDefaultLeakExitcode);
   EXPECT_EQ(options2.oom_exitcode(), oom_exitcode);
-  EXPECT_FALSE(options2.has_pulse_interval());
+  EXPECT_EQ(options2.pulse_interval(), kDefaultPulseInterval);
+}
+
+TEST(OptionsTest, AddDefaults) {
+  // |AddDefaults| should add anything that is missing...
+  Options options1;
+  AddDefaults(&options1);
+  EXPECT_EQ(options1.runs(), kDefaultRuns);
+  EXPECT_EQ(options1.max_total_time(), kDefaultMaxTotalTime);
+  EXPECT_EQ(options1.seed(), kDefaultSeed);
+  EXPECT_EQ(options1.max_input_size(), kDefaultMaxInputSize);
+  EXPECT_EQ(options1.mutation_depth(), kDefaultMutationDepth);
+  EXPECT_EQ(options1.dictionary_level(), kDefaultDictionaryLevel);
+  EXPECT_EQ(options1.detect_exits(), kDefaultDetectExits);
+  EXPECT_EQ(options1.detect_leaks(), kDefaultDetectLeaks);
+  EXPECT_EQ(options1.run_limit(), kDefaultRunLimit);
+  EXPECT_EQ(options1.malloc_limit(), kDefaultMallocLimit);
+  EXPECT_EQ(options1.oom_limit(), kDefaultOomLimit);
+  EXPECT_EQ(options1.purge_interval(), kDefaultPurgeInterval);
+  EXPECT_EQ(options1.malloc_exitcode(), kDefaultMallocExitcode);
+  EXPECT_EQ(options1.death_exitcode(), kDefaultDeathExitcode);
+  EXPECT_EQ(options1.leak_exitcode(), kDefaultLeakExitcode);
+  EXPECT_EQ(options1.oom_exitcode(), kDefaultOomExitcode);
+  EXPECT_EQ(options1.pulse_interval(), kDefaultPulseInterval);
+
+  // ...but it should not overwrite anything already there.
+  Options options2;
+  options2.set_runs(2);
+  options2.set_max_total_time(zx::sec(2).get());
+  options2.set_seed(2);
+  options2.set_max_input_size(2);
+  options2.set_mutation_depth(2);
+  options2.set_dictionary_level(2);
+  options2.set_detect_exits(true);
+  options2.set_detect_leaks(true);
+  options2.set_run_limit(zx::sec(2).get());
+  options2.set_malloc_limit(2);
+  options2.set_oom_limit(2);
+  options2.set_purge_interval(zx::sec(2).get());
+  options2.set_malloc_exitcode(2);
+  options2.set_death_exitcode(2);
+  options2.set_leak_exitcode(2);
+  options2.set_oom_exitcode(2);
+  options2.set_pulse_interval(zx::sec(2).get());
+
+  AddDefaults(&options2);
+  EXPECT_NE(options2.runs(), kDefaultRuns);
+  EXPECT_NE(options2.max_total_time(), kDefaultMaxTotalTime);
+  EXPECT_NE(options2.seed(), kDefaultSeed);
+  EXPECT_NE(options2.max_input_size(), kDefaultMaxInputSize);
+  EXPECT_NE(options2.mutation_depth(), kDefaultMutationDepth);
+  EXPECT_NE(options2.dictionary_level(), kDefaultDictionaryLevel);
+  EXPECT_NE(options2.detect_exits(), kDefaultDetectExits);
+  EXPECT_NE(options2.detect_leaks(), kDefaultDetectLeaks);
+  EXPECT_NE(options2.run_limit(), kDefaultRunLimit);
+  EXPECT_NE(options2.malloc_limit(), kDefaultMallocLimit);
+  EXPECT_NE(options2.oom_limit(), kDefaultOomLimit);
+  EXPECT_NE(options2.purge_interval(), kDefaultPurgeInterval);
+  EXPECT_NE(options2.malloc_exitcode(), kDefaultMallocExitcode);
+  EXPECT_NE(options2.death_exitcode(), kDefaultDeathExitcode);
+  EXPECT_NE(options2.leak_exitcode(), kDefaultLeakExitcode);
+  EXPECT_NE(options2.oom_exitcode(), kDefaultOomExitcode);
+  EXPECT_NE(options2.pulse_interval(), kDefaultPulseInterval);
 }
 
 }  // namespace

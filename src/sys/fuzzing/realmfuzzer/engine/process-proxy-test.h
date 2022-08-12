@@ -32,8 +32,6 @@ class ProcessProxyTest : public AsyncTest {
 
   ModulePoolPtr pool() const { return pool_; }
 
-  static OptionsPtr DefaultOptions();
-
   // Creates a proxy. Configures the proxy with default options, connects it to the given |process|,
   // and waits for the proxy to acknowledge the connection.
   std::unique_ptr<ProcessProxy> CreateAndConnectProxy(zx::process process);

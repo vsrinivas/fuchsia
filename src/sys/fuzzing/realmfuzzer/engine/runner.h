@@ -44,7 +44,6 @@ class RealmFuzzerRunner final : public Runner {
   __WARN_UNUSED_RESULT zx_status_t BindCoverageDataProvider(zx::channel provider);
 
   // |Runner| method implementations.
-  void AddDefaults(Options* options) override;
   __WARN_UNUSED_RESULT zx_status_t AddToCorpus(CorpusType corpus_type, Input input) override;
   Input ReadFromCorpus(CorpusType corpus_type, size_t offset) override;
   __WARN_UNUSED_RESULT zx_status_t ParseDictionary(const Input& input) override;

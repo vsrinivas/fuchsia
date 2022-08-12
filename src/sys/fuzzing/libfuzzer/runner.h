@@ -37,7 +37,7 @@ class LibFuzzerRunner : public Runner {
   void set_verbose(bool verbose) { verbose_ = verbose; }
 
   // |Runner| methods.
-  void AddDefaults(Options* options) override;
+  void OverrideDefaults(Options* options) override;
   __WARN_UNUSED_RESULT zx_status_t AddToCorpus(CorpusType corpus_type, Input input) override;
   Input ReadFromCorpus(CorpusType corpus_type, size_t offset) override;
   __WARN_UNUSED_RESULT zx_status_t ParseDictionary(const Input& input) override;

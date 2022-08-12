@@ -47,16 +47,6 @@ void WriteAfter(size_t offset, const uint8_t* data, size_t size, Input* out) {
 
 }  // namespace
 
-void Mutagen::AddDefaults(Options* options) {
-  Dictionary::AddDefaults(options);
-  if (!options->has_seed()) {
-    options->set_seed(kDefaultSeed);
-  }
-  if (!options->has_max_input_size()) {
-    options->set_max_input_size(kDefaultMaxInputSize);
-  }
-}
-
 void Mutagen::Configure(const OptionsPtr& options) {
   options_ = options;
   prng_.seed(options_->seed());

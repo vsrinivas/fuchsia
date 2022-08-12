@@ -43,12 +43,6 @@ FakeRunner::FakeRunner(ExecutorPtr executor) : Runner(executor), workflow_(this)
   live_corpus_.emplace_back(Input());
 }
 
-void FakeRunner::AddDefaults(Options* options) {
-  if (!options->has_runs()) {
-    options->set_runs(0);
-  }
-}
-
 zx_status_t FakeRunner::AddToCorpus(CorpusType corpus_type, Input input) {
   auto* corpus = corpus_type == CorpusType::SEED ? &seed_corpus_ : &live_corpus_;
   corpus->emplace_back(std::move(input));

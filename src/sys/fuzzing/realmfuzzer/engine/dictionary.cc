@@ -30,12 +30,6 @@ Dictionary& Dictionary::operator=(Dictionary&& other) noexcept {
   return *this;
 }
 
-void Dictionary::AddDefaults(Options* options) {
-  if (!options->has_dictionary_level()) {
-    options->set_dictionary_level(kDefaultDictionaryLevel);
-  }
-}
-
 void Dictionary::Configure(const OptionsPtr& options) { options_ = options; }
 
 void Dictionary::Add(const void* data, size_t size, uint16_t level) {

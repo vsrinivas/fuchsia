@@ -21,15 +21,6 @@ namespace {
 
 // Unit tests.
 
-TEST_F(ProcessProxyTest, AddDefaults) {
-  Options options;
-  ProcessProxy::AddDefaults(&options);
-  EXPECT_EQ(options.malloc_exitcode(), kDefaultMallocExitcode);
-  EXPECT_EQ(options.death_exitcode(), kDefaultDeathExitcode);
-  EXPECT_EQ(options.leak_exitcode(), kDefaultLeakExitcode);
-  EXPECT_EQ(options.oom_exitcode(), kDefaultOomExitcode);
-}
-
 TEST_F(ProcessProxyTest, Connect) {
   TestTarget target(executor());
   auto process = target.Launch();
@@ -137,7 +128,7 @@ TEST_F(ProcessProxyTest, DefaultBadMalloc) {
 
 TEST_F(ProcessProxyTest, CustomBadMalloc) {
   int32_t exitcode = 1234;
-  auto options = ProcessProxyTest::DefaultOptions();
+  auto options = MakeOptions();
   options->set_malloc_exitcode(exitcode);
   TestTarget target(executor());
   auto process_proxy = CreateAndConnectProxy(target.Launch(), options);
@@ -156,7 +147,7 @@ TEST_F(ProcessProxyTest, DefaultDeath) {
 
 TEST_F(ProcessProxyTest, CustomDeath) {
   int32_t exitcode = 4321;
-  auto options = ProcessProxyTest::DefaultOptions();
+  auto options = MakeOptions();
   options->set_death_exitcode(exitcode);
   TestTarget target(executor());
   auto process_proxy = CreateAndConnectProxy(target.Launch(), options);
@@ -183,7 +174,7 @@ TEST_F(ProcessProxyTest, DefaultLeak) {
 
 TEST_F(ProcessProxyTest, CustomLeak) {
   int32_t exitcode = 5678309;
-  auto options = ProcessProxyTest::DefaultOptions();
+  auto options = MakeOptions();
   options->set_leak_exitcode(exitcode);
   TestTarget target(executor());
   auto process_proxy = CreateAndConnectProxy(target.Launch(), options);
@@ -202,7 +193,7 @@ TEST_F(ProcessProxyTest, DefaultOom) {
 
 TEST_F(ProcessProxyTest, CustomOom) {
   int32_t exitcode = 24601;
-  auto options = ProcessProxyTest::DefaultOptions();
+  auto options = MakeOptions();
   options->set_oom_exitcode(exitcode);
   TestTarget target(executor());
   auto process_proxy = CreateAndConnectProxy(target.Launch(), options);

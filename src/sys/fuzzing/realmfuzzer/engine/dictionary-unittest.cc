@@ -13,12 +13,6 @@ namespace {
 
 // Test fixtures.
 
-OptionsPtr DefaultOptions() {
-  auto options = MakeOptions();
-  Dictionary::AddDefaults(options.get());
-  return options;
-}
-
 std::vector<std::string> Sort(const std::vector<std::string>& words) {
   std::vector<std::string> copy(words);
   std::sort(copy.begin(), copy.end());
@@ -40,22 +34,16 @@ std::vector<uint8_t> AsBytes(const std::string& str) {
 
 // Unit tests.
 
-TEST(DictionaryTest, AddDefaults) {
-  Options options;
-  Dictionary::AddDefaults(&options);
-  EXPECT_EQ(options.dictionary_level(), kDefaultDictionaryLevel);
-}
-
 TEST(DictionaryTest, DefaultConstructor) {
   Dictionary dict;
-  dict.Configure(DefaultOptions());
+  dict.Configure(MakeOptions());
   dict.ForEachWord([&](const uint8_t* data, size_t size) { FAIL(); });
 }
 
 TEST(DictionaryTest, Add) {
   // Data is chosen to have stricter constraints at lower levels.
   Dictionary dict;
-  auto options = DefaultOptions();
+  auto options = MakeOptions();
   dict.Configure(options);
 
   std::vector<std::string> level0 = {
@@ -101,7 +89,7 @@ TEST(DictionaryTest, Add) {
 
 TEST(DictionaryTest, ParseEmpty) {
   Dictionary dict;
-  dict.Configure(DefaultOptions());
+  dict.Configure(MakeOptions());
 
   EXPECT_TRUE(dict.Parse(Input()));
   EXPECT_EQ(GetWords(dict).size(), 0U);
@@ -112,7 +100,7 @@ TEST(DictionaryTest, ParseBlank) {
   oss << std::endl;
 
   Dictionary dict;
-  dict.Configure(DefaultOptions());
+  dict.Configure(MakeOptions());
 
   EXPECT_TRUE(dict.Parse(Input(oss.str())));
   EXPECT_EQ(GetWords(dict).size(), 0U);
@@ -123,7 +111,7 @@ TEST(DictionaryTest, ParseBareWords) {
   oss << "bare_word";
 
   Dictionary dict;
-  dict.Configure(DefaultOptions());
+  dict.Configure(MakeOptions());
 
   EXPECT_FALSE(dict.Parse(Input(oss.str())));
 }
@@ -133,7 +121,7 @@ TEST(DictionaryTest, ParseComment) {
   oss << "# comment";
 
   Dictionary dict;
-  dict.Configure(DefaultOptions());
+  dict.Configure(MakeOptions());
 
   EXPECT_TRUE(dict.Parse(Input(oss.str())));
   EXPECT_EQ(GetWords(dict).size(), 0U);
@@ -144,7 +132,7 @@ TEST(DictionaryTest, ParseCommentWithSpaces) {
   oss << "    # comment with spaces";
 
   Dictionary dict;
-  dict.Configure(DefaultOptions());
+  dict.Configure(MakeOptions());
 
   EXPECT_TRUE(dict.Parse(Input(oss.str())));
   EXPECT_EQ(GetWords(dict).size(), 0U);
@@ -157,7 +145,7 @@ TEST(DictionaryTest, ParseValidKeys) {
   oss << "\"#valid\"" << std::endl;
 
   Dictionary dict;
-  dict.Configure(DefaultOptions());
+  dict.Configure(MakeOptions());
 
   EXPECT_TRUE(dict.Parse(Input(oss.str())));
   EXPECT_EQ(GetWords(dict), Sort({"valid", "also valid", "#valid"}));
@@ -168,7 +156,7 @@ TEST(DictionaryTest, ParseNoEquals) {
   oss << "missing \"=\"";
 
   Dictionary dict;
-  dict.Configure(DefaultOptions());
+  dict.Configure(MakeOptions());
 
   EXPECT_FALSE(dict.Parse(Input(oss.str())));
 }
@@ -180,7 +168,7 @@ TEST(DictionaryTest, ParseInvalidKey) {
   oss << "\"\\\"#\"invalid";
 
   Dictionary dict;
-  dict.Configure(DefaultOptions());
+  dict.Configure(MakeOptions());
 
   EXPECT_FALSE(dict.Parse(Input(oss.str())));
 }
@@ -190,7 +178,7 @@ TEST(DictionaryTest, ParseUnquoted) {
   oss << "unquoted_val=val";
 
   Dictionary dict;
-  dict.Configure(DefaultOptions());
+  dict.Configure(MakeOptions());
 
   EXPECT_FALSE(dict.Parse(Input(oss.str())));
 }
@@ -201,7 +189,7 @@ TEST(DictionaryTest, ParseHalfQuoted) {
   oss << "halfquoted_val2=val\"" << std::endl;
 
   Dictionary dict;
-  dict.Configure(DefaultOptions());
+  dict.Configure(MakeOptions());
 
   EXPECT_FALSE(dict.Parse(Input(oss.str())));
 }
@@ -211,7 +199,7 @@ TEST(DictionaryTest, ParseMissingValue) {
   oss << "missing_val=\"\"";
 
   Dictionary dict;
-  dict.Configure(DefaultOptions());
+  dict.Configure(MakeOptions());
 
   EXPECT_FALSE(dict.Parse(Input(oss.str())));
 }
@@ -221,7 +209,7 @@ TEST(DictionaryTest, ParseMissingLevel) {
   oss << "missing_level@=\"val\"";
 
   Dictionary dict;
-  dict.Configure(DefaultOptions());
+  dict.Configure(MakeOptions());
 
   EXPECT_FALSE(dict.Parse(Input(oss.str())));
 }
@@ -231,7 +219,7 @@ TEST(DictionaryTest, ParseInvalidLevel) {
   oss << "invalid_level@X=\"val\"";
 
   Dictionary dict;
-  dict.Configure(DefaultOptions());
+  dict.Configure(MakeOptions());
 
   EXPECT_FALSE(dict.Parse(Input(oss.str())));
 }
@@ -242,7 +230,7 @@ TEST(DictionaryTest, ParseValidLevel) {
   oss << "valid_key=\"val2\"" << std::endl;
 
   Dictionary dict;
-  auto options = DefaultOptions();
+  auto options = MakeOptions();
   dict.Configure(options);
 
   EXPECT_TRUE(dict.Parse(Input(oss.str())));
@@ -258,7 +246,7 @@ TEST(DictionaryTest, ParseSpaces) {
   oss << "valid_key=\"val\"" << std::endl;
 
   Dictionary dict;
-  dict.Configure(DefaultOptions());
+  dict.Configure(MakeOptions());
 
   EXPECT_TRUE(dict.Parse(Input(oss.str())));
   EXPECT_EQ(GetWords(dict), Sort({"val", "  v  a  l  "}));
@@ -272,7 +260,7 @@ TEST(DictionaryTest, ParseNonASCII) {
   input.Write("\"\n", 2);
 
   Dictionary dict;
-  dict.Configure(DefaultOptions());
+  dict.Configure(MakeOptions());
 
   EXPECT_FALSE(dict.Parse(input));
 }
@@ -302,7 +290,7 @@ TEST(DictionaryTest, Parse) {
   oss << "  key_1c@1 = \"val 1c\" # 1c" << std::endl;
 
   Dictionary dict;
-  auto options = DefaultOptions();
+  auto options = MakeOptions();
   dict.Configure(options);
 
   EXPECT_TRUE(dict.Parse(Input(oss.str())));
@@ -316,7 +304,7 @@ TEST(DictionaryTest, Parse) {
 
 TEST(DictionaryTest, AsInput) {
   Dictionary dict;
-  auto options = DefaultOptions();
+  auto options = MakeOptions();
   dict.Configure(options);
 
   dict.Add("foo", 3);

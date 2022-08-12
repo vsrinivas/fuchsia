@@ -41,37 +41,6 @@ zx_status_t RealmFuzzerRunner::BindCoverageDataProvider(zx::channel provider) {
   return provider_.Bind(std::move(provider));
 }
 
-void RealmFuzzerRunner::AddDefaults(Options* options) {
-  Corpus::AddDefaults(options);
-  Mutagen::AddDefaults(options);
-  ProcessProxy::AddDefaults(options);
-  TargetAdapterClient::AddDefaults(options);
-  if (!options->has_runs()) {
-    options->set_runs(kDefaultRuns);
-  }
-  if (!options->has_max_total_time()) {
-    options->set_max_total_time(kDefaultMaxTotalTime);
-  }
-  if (!options->has_max_input_size()) {
-    options->set_max_input_size(kDefaultMaxInputSize);
-  }
-  if (!options->has_mutation_depth()) {
-    options->set_mutation_depth(kDefaultMutationDepth);
-  }
-  if (!options->has_detect_exits()) {
-    options->set_detect_exits(kDefaultDetectExits);
-  }
-  if (!options->has_detect_leaks()) {
-    options->set_detect_leaks(kDefaultDetectLeaks);
-  }
-  if (!options->has_run_limit()) {
-    options->set_run_limit(kDefaultRunLimit);
-  }
-  if (!options->has_pulse_interval()) {
-    options->set_pulse_interval(kDefaultPulseInterval);
-  }
-}
-
 ZxPromise<> RealmFuzzerRunner::Configure(const OptionsPtr& options) {
   return fpromise::make_promise([this, options]() -> ZxResult<> {
            options_ = options;

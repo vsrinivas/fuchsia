@@ -22,12 +22,6 @@ void RunnerTest::SetUp() {
   handler_ = [](const Input& input) { return FuzzResult::NO_ERRORS; };
 }
 
-OptionsPtr RunnerTest::DefaultOptions() {
-  auto options = MakeOptions();
-  runner()->AddDefaults(options.get());
-  return options;
-}
-
 void RunnerTest::Configure(const OptionsPtr& options) {
   options_ = options;
   if (!options_->has_seed()) {
@@ -126,7 +120,7 @@ void RunnerTest::RunUntil(Promise<> promise, RunCallback run, Input input) {
 // Unit tests.
 
 void RunnerTest::ExecuteNoError() {
-  Configure(DefaultOptions());
+  Configure(MakeOptions());
   Input input({0x01});
   FUZZING_EXPECT_OK(runner()->Execute(input.Duplicate()), FuzzResult::NO_ERRORS);
   FUZZING_EXPECT_OK(RunOne(), std::move(input));
@@ -134,7 +128,7 @@ void RunnerTest::ExecuteNoError() {
 }
 
 void RunnerTest::ExecuteWithError() {
-  Configure(DefaultOptions());
+  Configure(MakeOptions());
   Input input({0x02});
   FUZZING_EXPECT_OK(runner()->Execute(input.Duplicate()), FuzzResult::BAD_MALLOC);
   FUZZING_EXPECT_OK(RunOne(FuzzResult::BAD_MALLOC), std::move(input));
@@ -142,7 +136,7 @@ void RunnerTest::ExecuteWithError() {
 }
 
 void RunnerTest::ExecuteWithLeak() {
-  auto options = DefaultOptions();
+  auto options = MakeOptions();
   options->set_detect_leaks(true);
   Configure(options);
   Input input({0x03});
@@ -157,7 +151,7 @@ void RunnerTest::ExecuteWithLeak() {
 
 // Simulate no error on the original input.
 void RunnerTest::MinimizeNoError() {
-  Configure(DefaultOptions());
+  Configure(MakeOptions());
   Input input({0x04});
   FUZZING_EXPECT_ERROR(runner()->Minimize(input.Duplicate()), ZX_ERR_INVALID_ARGS);
   FUZZING_EXPECT_OK(RunOne(), std::move(input));
@@ -166,7 +160,7 @@ void RunnerTest::MinimizeNoError() {
 
 // Empty input should exit immediately.
 void RunnerTest::MinimizeEmpty() {
-  Configure(DefaultOptions());
+  Configure(MakeOptions());
   Input input;
   FUZZING_EXPECT_OK(runner()->Minimize(input.Duplicate()), input.Duplicate());
   FUZZING_EXPECT_OK(RunOne(FuzzResult::CRASH), std::move(input));
@@ -175,7 +169,7 @@ void RunnerTest::MinimizeEmpty() {
 
 // 1-byte input should exit immediately.
 void RunnerTest::MinimizeOneByte() {
-  Configure(DefaultOptions());
+  Configure(MakeOptions());
   Input input({0x44});
   FUZZING_EXPECT_OK(runner()->Minimize(input.Duplicate()), input.Duplicate());
   FUZZING_EXPECT_OK(RunOne(FuzzResult::CRASH), std::move(input));
@@ -183,7 +177,7 @@ void RunnerTest::MinimizeOneByte() {
 }
 
 void RunnerTest::MinimizeReduceByTwo() {
-  auto options = DefaultOptions();
+  auto options = MakeOptions();
   constexpr size_t kRuns = 0x40;
   options->set_runs(kRuns);
   Configure(options);
@@ -211,7 +205,7 @@ void RunnerTest::MinimizeReduceByTwo() {
 }
 
 void RunnerTest::MinimizeNewError() {
-  auto options = DefaultOptions();
+  auto options = MakeOptions();
   options->set_run_limit(zx::msec(500).get());
   Configure(options);
   Input input({0x05, 0x15, 0x25, 0x35});
@@ -235,7 +229,7 @@ void RunnerTest::MinimizeNewError() {
 }
 
 void RunnerTest::CleanseNoReplacement() {
-  Configure(DefaultOptions());
+  Configure(MakeOptions());
   Input input({0x07, 0x17, 0x27});
   Input cleansed;
   FUZZING_EXPECT_OK(runner()->Cleanse(input.Duplicate()), &cleansed);
@@ -252,7 +246,7 @@ void RunnerTest::CleanseNoReplacement() {
 }
 
 void RunnerTest::CleanseAlreadyClean() {
-  Configure(DefaultOptions());
+  Configure(MakeOptions());
   Input input({' ', 0xff});
   Input cleansed;
   FUZZING_EXPECT_OK(runner()->Cleanse(input.Duplicate()), &cleansed);
@@ -263,7 +257,7 @@ void RunnerTest::CleanseAlreadyClean() {
 }
 
 void RunnerTest::CleanseTwoBytes() {
-  Configure(DefaultOptions());
+  Configure(MakeOptions());
 
   Input input({0x08, 0x18, 0x28});
   Input inputs[] = {
@@ -297,7 +291,7 @@ void RunnerTest::CleanseTwoBytes() {
 
 void RunnerTest::FuzzUntilError() {
   auto runner = this->runner();
-  auto options = DefaultOptions();
+  auto options = MakeOptions();
   options->set_detect_exits(true);
   options->set_mutation_depth(1);
   Configure(options);
@@ -374,7 +368,7 @@ void RunnerTest::FuzzUntilError() {
 
 void RunnerTest::FuzzUntilRuns() {
   auto runner = this->runner();
-  auto options = DefaultOptions();
+  auto options = MakeOptions();
   const size_t kNumRuns = 10;
   options->set_runs(kNumRuns);
   Configure(options);
@@ -450,7 +444,7 @@ void RunnerTest::FuzzUntilTime() {
   // Time is always tricky to test. As a result, this test verifies the bare minimum, namely that
   // the runner exits at least 100 ms after it started. All other verification is performed in more
   // controllable tests, such as |FuzzUntilRuns| above.
-  auto options = DefaultOptions();
+  auto options = MakeOptions();
   options->set_max_total_time(zx::msec(100).get());
   Configure(options);
   auto start = zx::clock::get_monotonic();
@@ -473,7 +467,7 @@ void RunnerTest::FuzzUntilTime() {
 
 void RunnerTest::MergeSeedError(zx_status_t expected, uint64_t oom_limit) {
   auto runner = this->runner();
-  auto options = DefaultOptions();
+  auto options = MakeOptions();
   options->set_oom_limit(oom_limit);
   Configure(options);
   runner->AddToCorpus(CorpusType::SEED, Input({0x09}));
@@ -488,7 +482,7 @@ void RunnerTest::MergeSeedError(zx_status_t expected, uint64_t oom_limit) {
 
 void RunnerTest::Merge(bool keeps_errors, uint64_t oom_limit) {
   auto runner = this->runner();
-  auto options = DefaultOptions();
+  auto options = MakeOptions();
   options->set_oom_limit(oom_limit);
   Configure(options);
   std::vector<std::string> expected_seed;
@@ -564,7 +558,7 @@ void RunnerTest::Merge(bool keeps_errors, uint64_t oom_limit) {
 
 void RunnerTest::Stop() {
   auto runner = this->runner();
-  Configure(DefaultOptions());
+  Configure(MakeOptions());
   Artifact artifact;
   Barrier barrier;
   auto task = runner->Fuzz()

@@ -27,7 +27,10 @@ Options CopyOptions(const Options& options);
 
 // Aliases to simplify passing around the shared options.
 using OptionsPtr = std::shared_ptr<Options>;
-inline OptionsPtr MakeOptions() { return std::make_shared<Options>(); }
+OptionsPtr MakeOptions();
+
+// Sets any missing options to their default values.
+void AddDefaults(Options* options);
 
 }  // namespace fuzzing
 

@@ -12,12 +12,6 @@ namespace fuzzing {
 TargetAdapterClient::TargetAdapterClient(ExecutorPtr executor)
     : executor_(executor), eventpair_(executor) {}
 
-void TargetAdapterClient::AddDefaults(Options* options) {
-  if (!options->has_max_input_size()) {
-    options->set_max_input_size(kDefaultMaxInputSize);
-  }
-}
-
 void TargetAdapterClient::Configure(const OptionsPtr& options) {
   FX_CHECK(options);
   if (auto status = test_input_.Reserve(options->max_input_size()); status != ZX_OK) {

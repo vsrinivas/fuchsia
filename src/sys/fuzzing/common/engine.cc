@@ -118,7 +118,7 @@ zx_status_t Engine::RunTest(ComponentContextPtr context, RunnerPtr runner) {
   FX_LOGS(INFO) << "Testing with " << inputs_.size() << " inputs.";
 
   auto options = MakeOptions();
-  runner->AddDefaults(options.get());
+  runner->OverrideDefaults(options.get());
   auto task = runner->Configure(options)
                   .and_then([runner, inputs = std::move(inputs), execute = ZxFuture<FuzzResult>()](
                                 Context& context) mutable -> ZxResult<FuzzResult> {
