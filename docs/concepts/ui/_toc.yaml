@@ -29,6 +29,8 @@ toc:
     path: /docs/concepts/ui/scenic/hit_testing.md
   - title: "Display"
     path: /docs/concepts/ui/scenic/display.md
+  - title: "Screen Capture"
+    path: /docs/concepts/ui/scenic/screen_capture/index.md
 - title: "Input"
   section:
   - title: "Overview"
