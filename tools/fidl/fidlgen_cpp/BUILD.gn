@@ -101,8 +101,8 @@ if (is_host) {
     foreach(info, fidl_testdata_info) {
       if (info.denylist + [ "fidlgen_cpp" ] - [ "fidlgen_cpp" ] ==
           info.denylist) {
-        deps += [ "${info.target}_llcpp_generate($fidl_toolchain)" ]
-        gen_dir = "${info.fidl_gen_dir}/${info.target_name}/llcpp"
+        deps += [ "${info.target}_cpp_generate($fidl_toolchain)" ]
+        gen_dir = "${info.fidl_gen_dir}/${info.target_name}/cpp"
         include_path = "fidl/${info.library}/cpp"
         entries += [
           {

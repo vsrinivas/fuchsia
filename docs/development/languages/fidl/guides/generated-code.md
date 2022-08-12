@@ -38,13 +38,34 @@ to this as the root directory. It is structured as follows:
        │           ├── fidl.h
        │           ├── fidl.client.c
        │           └── fidl.server.c
-       ├── llcpp
-       │  └── fuchsia
-       │     └── io
-       │        └── llcpp
+       ├── cpp
+       │  └── fidl
+       │     └── fuchsia.io
+       │        └── cpp
+       │           ├── common_types.cc
+       │           ├── common_types.h
+       │           ├── driver
+       │           │  ├── fidl.h
+       │           │  ├── natural_messaging.cc
+       │           │  ├── natural_messaging.h
+       │           │  ├── wire.h
+       │           │  ├── wire_messaging.cc
+       │           │  └── wire_messaging.h
        │           ├── fidl.h
-       │           ├── fidl.cc
-       │           └── fidl_test_base.h
+       │           ├── hlcpp_conversion.h
+       │           ├── markers.h
+       │           ├── natural_messaging.cc
+       │           ├── natural_messaging.h
+       │           ├── natural_types.cc
+       │           ├── natural_types.h
+       │           ├── type_conversions.cc
+       │           ├── type_conversions.h
+       │           ├── wire.h
+       │           ├── wire_messaging.cc
+       │           ├── wire_messaging.h
+       │           ├── wire_test_base.h
+       │           ├── wire_types.cc
+       │           └── wire_types.h
        └── hlcpp
           └── fuchsia
              └── io
@@ -107,19 +128,23 @@ From there C++ outputs `wire_types.h`, `wire_types.cc`, `wire_messaging.h`,
 For example, using `fuchsia.io` with the C++ bindings creates the following
 files:
 
-    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fidl/fuchsia.io/cpp/markers.h
-    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fidl/fuchsia.io/cpp/common_types.h
-    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fidl/fuchsia.io/cpp/wire_types.cc
-    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fidl/fuchsia.io/cpp/wire_types.h
-    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fidl/fuchsia.io/cpp/wire_messaging.cc
-    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fidl/fuchsia.io/cpp/wire_messaging.h
-    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fidl/fuchsia.io/cpp/wire.h
-    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fidl/fuchsia.io/cpp/wire_test_base.h
-    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fidl/fuchsia.io/cpp/natural_types.cc
-    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fidl/fuchsia.io/cpp/natural_types.h
-    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fidl/fuchsia.io/cpp/natural_messaging.cc
-    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fidl/fuchsia.io/cpp/natural_messaging.h
-    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/llcpp/fidl/fuchsia.io/cpp/fidl.h
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/cpp/fidl/fuchsia.io/cpp/markers.h
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/cpp/fidl/fuchsia.io/cpp/common_types.h
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/cpp/fidl/fuchsia.io/cpp/common_types.cc
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/cpp/fidl/fuchsia.io/cpp/wire_types.h
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/cpp/fidl/fuchsia.io/cpp/wire_types.cc
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/cpp/fidl/fuchsia.io/cpp/wire_messaging.h
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/cpp/fidl/fuchsia.io/cpp/wire_messaging.cc
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/cpp/fidl/fuchsia.io/cpp/wire.h
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/cpp/fidl/fuchsia.io/cpp/wire_test_base.h
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/cpp/fidl/fuchsia.io/cpp/natural_types.h
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/cpp/fidl/fuchsia.io/cpp/natural_types.cc
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/cpp/fidl/fuchsia.io/cpp/natural_messaging.h
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/cpp/fidl/fuchsia.io/cpp/natural_messaging.cc
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/cpp/fidl/fuchsia.io/cpp/type_conversions.h
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/cpp/fidl/fuchsia.io/cpp/type_conversions.cc
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/cpp/fidl/fuchsia.io/cpp/hlcpp_conversion.h
+    out/default/fidling/gen/sdk/fidl/fuchsia.io/fuchsia.io/cpp/fidl/fuchsia.io/cpp/fidl.h
 
 As the new C++ bindings take shape more bindings will follow this pattern.
 See below for how the not-yet unified bindings are generated.

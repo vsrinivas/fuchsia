@@ -28,7 +28,7 @@ template("_llcpp_compat") {
   executable(target_name) {
     output_dir = target_out_dir
     sources = [ invoker.source ]
-    deps = [ ":${invoker.fidl}_llcpp" ]
+    deps = [ ":${invoker.fidl}_cpp_wire" ]
   }
 }
 
@@ -189,14 +189,14 @@ template("source_compatibility_test") {
 
     # LLCPP
     if (defined(transitions.llcpp)) {
-      _source_compat_steps("${target_name}_llcpp") {
+      _source_compat_steps("${target_name}_cpp_wire") {
         tmp = transitions.llcpp
         starting_fidl = tmp.starting_fidl
         starting_src = tmp.starting_src
         steps = tmp.steps
         template_name = "_llcpp_compat"
       }
-      test_targets += [ ":${target_name}_llcpp" ]
+      test_targets += [ ":${target_name}_cpp_wire" ]
     }
 
     # Go

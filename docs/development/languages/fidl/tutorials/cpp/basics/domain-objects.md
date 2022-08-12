@@ -63,7 +63,7 @@ Note the line which adds the dependency on the C++ bindings by referencing that
 
 1. Build using `fx build`.
 2. Change to the generated files directory:
-   `out/default/fidling/gen/examples/fidl/fuchsia.examples/fuchsia.examples/llcpp/fidl/fuchsia.examples/cpp`,
+   `out/default/fidling/gen/examples/fidl/fuchsia.examples/fuchsia.examples/cpp/fidl/fuchsia.examples/cpp`,
    where the generated files are located. You may need to change `out/default`
    if you have set a different build output directory. You can check your build
    output directory with `cat .fx-build-dir`.

@@ -147,7 +147,7 @@ template("gidl_llcpp_conformance") {
   _gidl_cc_source_set(target_name) {
     type = "conformance"
     language = "llcpp"
-    bindings_suffix = "_llcpp"
+    bindings_suffix = "_cpp_wire"
     forward_variables_from(invoker, "*")
 
     # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
@@ -160,7 +160,7 @@ template("gidl_c_conformance") {
   _gidl_cc_source_set(target_name) {
     type = "conformance"
     language = "c"
-    bindings_suffix = "_llcpp"
+    bindings_suffix = "_cpp_wire"
     forward_variables_from(invoker, "*")
   }
 }
@@ -169,7 +169,7 @@ template("gidl_transformer_conformance") {
   _gidl_cc_source_set(target_name) {
     type = "conformance"
     language = "transformer"
-    bindings_suffix = "_llcpp"
+    bindings_suffix = "_cpp_wire"
     forward_variables_from(invoker, "*")
 
     # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
@@ -199,7 +199,7 @@ template("gidl_llcpp_benchmarks") {
   _gidl_cc_source_set(target_name) {
     type = "benchmark"
     language = "llcpp"
-    bindings_suffix = "_llcpp"
+    bindings_suffix = "_cpp_wire"
     forward_variables_from(invoker, "*")
 
     # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
@@ -212,7 +212,7 @@ template("gidl_walker_benchmarks") {
   _gidl_cc_source_set(target_name) {
     type = "benchmark"
     language = "walker"
-    bindings_suffix = "_llcpp"
+    bindings_suffix = "_cpp_wire"
     forward_variables_from(invoker, "*")
 
     # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
@@ -225,7 +225,7 @@ template("gidl_reference_benchmarks") {
   _gidl_cc_source_set(target_name) {
     type = "benchmark"
     language = "reference"
-    bindings_suffix = "_llcpp"
+    bindings_suffix = "_cpp_wire"
     forward_variables_from(invoker, "*")
 
     # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
