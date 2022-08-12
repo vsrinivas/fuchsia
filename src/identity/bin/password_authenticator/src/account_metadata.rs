@@ -496,7 +496,7 @@ pub mod test {
     #[fuchsia::test]
     async fn test_account_metadata_store_save() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = fuchsia_fs::directory::open_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -546,7 +546,7 @@ pub mod test {
     #[fuchsia::test]
     async fn test_account_metadata_store_load() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = fuchsia_fs::directory::open_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -584,7 +584,7 @@ pub mod test {
     #[fuchsia::test]
     async fn test_account_metadata_store_remove() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = fuchsia_fs::directory::open_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -628,7 +628,7 @@ pub mod test {
     #[fuchsia::test]
     async fn test_account_metadata_store_account_ids() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = fuchsia_fs::directory::open_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -654,7 +654,7 @@ pub mod test {
     #[fuchsia::test]
     async fn test_cleanup_stale_files() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = fuchsia_fs::directory::open_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )

@@ -193,7 +193,7 @@ mod test {
     #[fuchsia::test]
     async fn test_normal_flow() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = fuchsia_fs::directory::open_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -217,7 +217,7 @@ mod test {
     #[fuchsia::test]
     async fn test_empty_tempfile_prefix() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = fuchsia_fs::directory::open_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -254,7 +254,7 @@ mod test {
     #[fuchsia::test]
     async fn test_cleanup_stale_files() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = fuchsia_fs::directory::open_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )

@@ -54,7 +54,7 @@ async fn main() -> Result<(), Error> {
         appmgr_out_dir_server_end.into_channel().into_handle(),
     ));
 
-    let pkg_dir = fuchsia_fs::open_directory_in_namespace(
+    let pkg_dir = fuchsia_fs::directory::open_in_namespace(
         "/pkg",
         fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_EXECUTABLE,
     )
@@ -65,7 +65,7 @@ async fn main() -> Result<(), Error> {
         pkg_dir.into_channel().unwrap().into_zx_channel().into_handle(),
     ));
 
-    let svc_dir = fuchsia_fs::open_directory_in_namespace(
+    let svc_dir = fuchsia_fs::directory::open_in_namespace(
         "/svc",
         fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_WRITABLE,
     )
@@ -78,7 +78,7 @@ async fn main() -> Result<(), Error> {
 
     let (pkgfs_client_end, pkgfs_server_end) = create_endpoints::<fio::NodeMarker>()?;
     fasync::Task::spawn(async move {
-        let pkg_dir = fuchsia_fs::open_directory_in_namespace(
+        let pkg_dir = fuchsia_fs::directory::open_in_namespace(
             "/pkg",
             fio::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_EXECUTABLE,
         )

@@ -170,7 +170,7 @@ mod tests {
         // package layout (like whether sanitizers are in use) once Rust vfs supports
         // OPEN_RIGHT_EXECUTABLE
         let rights = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE;
-        let mut pkg_lib = fuchsia_fs::open_directory_in_namespace("/pkg/lib", rights)?;
+        let mut pkg_lib = fuchsia_fs::directory::open_in_namespace("/pkg/lib", rights)?;
         let entries = list_directory(&pkg_lib).await;
         if entries.iter().any(|f| &f as &str == "asan-ubsan") {
             pkg_lib = fuchsia_fs::open_directory(&pkg_lib, &Path::new("asan-ubsan"), rights)?;
@@ -257,7 +257,7 @@ mod tests {
         // contains 'rule'.
         // TODO(fxbug.dev/37534): Use a synthetic /pkg/lib in this test so it doesn't depend on the
         // package layout once Rust vfs supports OPEN_RIGHT_EXECUTABLE
-        let pkg_lib = fuchsia_fs::open_directory_in_namespace(
+        let pkg_lib = fuchsia_fs::directory::open_in_namespace(
             "/pkg/lib/config_test/",
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )?;

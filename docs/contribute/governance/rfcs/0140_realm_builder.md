@@ -952,7 +952,7 @@ let realm_instance = builder.build().await?;
 
 ```rust
 let rb_factory_proxy = connect_to_service::<RealmBuilderFactoryMarker>().await?;
-let pkg_dir_proxy = fuchsia_fs::open_directory_in_namespace(
+let pkg_dir_proxy = fuchsia_fs::directory::open_in_namespace(
     "/pkg",
     fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_EXECUTABLE,
 )?;

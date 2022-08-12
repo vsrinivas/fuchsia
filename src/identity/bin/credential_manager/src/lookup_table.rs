@@ -296,7 +296,7 @@ mod test {
     #[fuchsia::test]
     async fn test_read_before_write() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = fuchsia_fs::directory::open_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -309,7 +309,7 @@ mod test {
     #[fuchsia::test]
     async fn test_read_fails_if_label_directory_is_empty() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = fuchsia_fs::directory::open_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -323,7 +323,7 @@ mod test {
         assert_eq!(read_res.version, 1);
 
         // Manually delete files in the label directory.
-        let dir_2 = fuchsia_fs::open_directory_in_namespace(
+        let dir_2 = fuchsia_fs::directory::open_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -348,7 +348,7 @@ mod test {
     #[fuchsia::test]
     async fn test_multi_versioned_writes() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = fuchsia_fs::directory::open_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -371,7 +371,7 @@ mod test {
     #[fuchsia::test]
     async fn test_write_delete() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = fuchsia_fs::directory::open_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -391,7 +391,7 @@ mod test {
     #[fuchsia::test]
     async fn test_delete_before_write() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = fuchsia_fs::directory::open_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -413,7 +413,7 @@ mod test {
     #[fuchsia::test]
     async fn test_ignores_bad_dir_entry() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = fuchsia_fs::directory::open_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -479,7 +479,7 @@ mod test {
     #[fuchsia::test]
     async fn test_stale_files_cleaned_up() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = fuchsia_fs::directory::open_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -530,7 +530,7 @@ mod test {
     #[fuchsia::test]
     async fn test_reset() {
         let tmp_dir = TempDir::new().unwrap();
-        let dir = fuchsia_fs::open_directory_in_namespace(
+        let dir = fuchsia_fs::directory::open_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )

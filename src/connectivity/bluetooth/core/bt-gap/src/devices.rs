@@ -8,7 +8,7 @@
 
 use {
     fuchsia_bluetooth::constants::HOST_DEVICE_DIR,
-    fuchsia_fs::{open_directory_in_namespace, OpenFlags},
+    fuchsia_fs::OpenFlags,
     fuchsia_vfs_watcher::{self as vfs_watcher, WatchEvent, WatchMessage},
     futures::{future, FutureExt, Stream, TryStreamExt},
     log::{info, warn},
@@ -28,7 +28,8 @@ pub enum HostEvent {
 pub fn watch_hosts() -> impl Stream<Item = Result<HostEvent, io::Error>> {
     async {
         let directory =
-            open_directory_in_namespace(HOST_DEVICE_DIR, OpenFlags::RIGHT_READABLE).unwrap();
+            fuchsia_fs::directory::open_in_namespace(HOST_DEVICE_DIR, OpenFlags::RIGHT_READABLE)
+                .unwrap();
         let watcher = vfs_watcher::Watcher::new(directory)
             .await
             .expect("Cannot open vfs watcher for bt-host device path");

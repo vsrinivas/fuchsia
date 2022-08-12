@@ -11,7 +11,6 @@ use {
     fidl_fuchsia_input_injection, fidl_fuchsia_io as fio,
     fidl_fuchsia_ui_input_config::FeaturesRequestStream as InputConfigFeaturesRequestStream,
     fuchsia_async as fasync,
-    fuchsia_fs::open_directory_in_namespace,
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_vfs_watcher::{WatchEvent, Watcher},
     fuchsia_zircon as zx,
@@ -299,9 +298,11 @@ impl InputPipeline {
                 fx_log_err!("Input pipeline is unable to watch the input report directory. New input devices will not be supported.");
                 return;
             }
-            let dir_proxy =
-                open_directory_in_namespace(input_device::INPUT_REPORT_PATH, fio::OpenFlags::RIGHT_READABLE)
-                    .expect("Unable to open input report directory.");
+            let dir_proxy = fuchsia_fs::directory::open_in_namespace(
+                    input_device::INPUT_REPORT_PATH,
+                    fio::OpenFlags::RIGHT_READABLE,
+                )
+                .expect("Unable to open input report directory.");
             let _ = Self::watch_for_devices(
                 device_watcher.unwrap(),
                 dir_proxy,
@@ -349,7 +350,7 @@ impl InputPipeline {
     /// # Errors
     /// If the input report directory cannot be read.
     async fn get_device_watcher() -> Result<Watcher, Error> {
-        let input_report_dir_proxy = open_directory_in_namespace(
+        let input_report_dir_proxy = fuchsia_fs::directory::open_in_namespace(
             input_device::INPUT_REPORT_PATH,
             fuchsia_fs::OpenFlags::RIGHT_READABLE,
         )?;

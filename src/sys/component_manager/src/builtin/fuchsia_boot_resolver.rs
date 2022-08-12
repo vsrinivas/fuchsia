@@ -70,7 +70,7 @@ impl FuchsiaBootResolver {
             return Ok(None);
         }
 
-        let boot_proxy = fuchsia_fs::open_directory_in_namespace(
+        let boot_proxy = fuchsia_fs::directory::open_in_namespace(
             bootfs_dir.to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )?;

@@ -333,7 +333,7 @@ mod test {
     #[fuchsia::test]
     async fn no_inspect_files_do_not_give_an_error_response() {
         let directory =
-            fuchsia_fs::open_directory_in_namespace("/tmp", fuchsia_fs::OpenFlags::RIGHT_READABLE)
+            fuchsia_fs::directory::open_in_namespace("/tmp", fuchsia_fs::OpenFlags::RIGHT_READABLE)
                 .unwrap();
         let container = UnpopulatedInspectDataContainer {
             identity: Arc::new(EMPTY_IDENTITY.clone()),

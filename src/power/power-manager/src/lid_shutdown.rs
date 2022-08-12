@@ -11,7 +11,7 @@ use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fidl_fuchsia_hardware_input::{DeviceMarker as LidMarker, DeviceProxy as LidProxy};
 use fuchsia_async as fasync;
-use fuchsia_fs::{open_directory_in_namespace, OpenFlags};
+use fuchsia_fs::OpenFlags;
 use fuchsia_inspect::{self as inspect, NumericProperty, Property};
 use fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode};
 use fuchsia_vfs_watcher as vfs;
@@ -289,8 +289,10 @@ impl Node for LidShutdown {
 async fn find_lid_sensor() -> Result<LidProxy, Error> {
     info!("Trying to find lid device");
 
-    let dir_proxy =
-        open_directory_in_namespace(INPUT_DEVICES_DIRECTORY, OpenFlags::RIGHT_READABLE)?;
+    let dir_proxy = fuchsia_fs::directory::open_in_namespace(
+        INPUT_DEVICES_DIRECTORY,
+        OpenFlags::RIGHT_READABLE,
+    )?;
 
     let mut watcher = vfs::Watcher::new(dir_proxy).await?;
 

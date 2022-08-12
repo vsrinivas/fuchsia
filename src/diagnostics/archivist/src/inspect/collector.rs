@@ -152,12 +152,11 @@ pub async fn populate_data_map(inspect_proxy: &fio::DirectoryProxy) -> DataMap {
 }
 
 /// Convert a fully-qualified path to a directory-proxy in the executing namespace.
-/// NOTE: Currently does a synchronous directory-open, since there are no available
-///       async apis.
 #[cfg(test)]
-pub async fn find_directory_proxy(path: &Path) -> Result<fio::DirectoryProxy, anyhow::Error> {
-    // TODO(fxbug.dev/36762): When available, use the async directory-open api.
-    fuchsia_fs::open_directory_in_namespace(
+pub async fn find_directory_proxy(
+    path: &Path,
+) -> Result<fio::DirectoryProxy, fuchsia_fs::node::OpenError> {
+    fuchsia_fs::directory::open_in_namespace(
         &path.to_string_lossy(),
         fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_WRITABLE,
     )

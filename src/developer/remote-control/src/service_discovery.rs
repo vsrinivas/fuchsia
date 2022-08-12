@@ -156,7 +156,7 @@ pub(crate) async fn connect_and_read_dir(
     hub_path: &PathBuf,
 ) -> Result<Vec<fuchsia_fs::directory::DirEntry>, Error> {
     let path_str = hub_path.to_string_lossy();
-    let proxy = fuchsia_fs::open_directory_in_namespace(&path_str, io::OpenFlags::RIGHT_READABLE)?;
+    let proxy = fuchsia_fs::directory::open_in_namespace(&path_str, io::OpenFlags::RIGHT_READABLE)?;
     fuchsia_fs::directory::readdir(&proxy).await.map_err(Into::into)
 }
 

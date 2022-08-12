@@ -4,7 +4,7 @@
 
 use anyhow::Error;
 use fidl_fuchsia_io as fio;
-use fuchsia_fs::{open_directory_in_namespace, OpenFlags};
+use fuchsia_fs::OpenFlags;
 use std::path::Path;
 
 use crate::DigitalAudioInterface;
@@ -14,7 +14,8 @@ const DAI_DEVICE_DIR: &str = "/dev/class/dai";
 /// Finds any DAI devices, connects to any that are available and provides
 pub async fn find_devices() -> Result<Vec<DigitalAudioInterface>, Error> {
     // Connect to the component's environment.
-    let directory_proxy = open_directory_in_namespace(DAI_DEVICE_DIR, OpenFlags::RIGHT_READABLE)?;
+    let directory_proxy =
+        fuchsia_fs::directory::open_in_namespace(DAI_DEVICE_DIR, OpenFlags::RIGHT_READABLE)?;
     find_devices_internal(directory_proxy).await
 }
 

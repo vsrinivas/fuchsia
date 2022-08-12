@@ -9,7 +9,6 @@ use {
     fidl::{endpoints::Proxy, HandleBased},
     fidl_fuchsia_io as fio,
     fuchsia_async::{DurationExt, TimeoutExt},
-    fuchsia_fs::{self, open_directory_in_namespace},
     fuchsia_vfs_watcher::{WatchEvent, Watcher as VfsWatcher},
     fuchsia_zircon as zx,
     futures::{Future, TryStreamExt},
@@ -92,7 +91,8 @@ impl DeviceWatcher {
         dir: &str,
         timeout: zx::Duration,
     ) -> Result<DeviceWatcher, Error> {
-        let open_dir = open_directory_in_namespace(dir, fio::OpenFlags::RIGHT_READABLE)?;
+        let open_dir =
+            fuchsia_fs::directory::open_in_namespace(dir, fio::OpenFlags::RIGHT_READABLE)?;
         Self::new(dir, open_dir, timeout).await
     }
 

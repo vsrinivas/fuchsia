@@ -272,7 +272,7 @@ mod test {
     /// be kept in scope for the duration that DirectoryProxy is used.
     fn create_temp_directory() -> (TempDir, fio::DirectoryProxy) {
         let temp_dir = TempDir::new().unwrap();
-        let dir_proxy = fuchsia_fs::open_directory_in_namespace(
+        let dir_proxy = fuchsia_fs::directory::open_in_namespace(
             temp_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -372,7 +372,7 @@ mod test {
             std::mem::drop(manager);
 
             // Create a new manager with the same directory.
-            let new_dir_proxy = fuchsia_fs::open_directory_in_namespace(
+            let new_dir_proxy = fuchsia_fs::directory::open_in_namespace(
                 dir.path().to_str().unwrap(),
                 fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
             )

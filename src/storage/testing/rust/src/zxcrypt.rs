@@ -26,7 +26,7 @@ pub async fn bind_zxcrypt_driver(controller: &ControllerProxy) -> Result<()> {
 /// device.
 pub async fn wait_for_zxcrypt_driver(block_device: &Path) -> Result<PathBuf> {
     const ZXCRYPT_DEVICE_NAME: &str = "zxcrypt";
-    let device = fuchsia_fs::open_directory_in_namespace(
+    let device = fuchsia_fs::directory::open_in_namespace(
         block_device.to_str().unwrap(),
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
     )?;
@@ -48,7 +48,7 @@ pub async fn set_up_insecure_zxcrypt(block_device: &Path) -> Result<PathBuf> {
     zx::ok(zxcrypt.format(&[0u8; 32], 0).await?)?;
     zx::ok(zxcrypt.unseal(&[0u8; 32], 0).await?)?;
 
-    let zxcrypt_dir = fuchsia_fs::open_directory_in_namespace(
+    let zxcrypt_dir = fuchsia_fs::directory::open_in_namespace(
         zxcrypt_path.to_str().unwrap(),
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
     )?;

@@ -111,7 +111,7 @@ pub fn generate_content(seed: u64) -> Vec<u8> {
 /// Find the device in /dev/class/block that represents a given topological path. Returns the full
 /// path of the device in /dev/class/block.
 pub async fn find_dev(dev: &str) -> Result<String> {
-    let dev_class_block = fuchsia_fs::open_directory_in_namespace(
+    let dev_class_block = fuchsia_fs::directory::open_in_namespace(
         "/dev/class/block",
         fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_WRITABLE,
     )?;

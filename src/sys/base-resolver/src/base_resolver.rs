@@ -61,7 +61,7 @@ async fn serve(mut stream: ResolverRequestStream, config: &Config) -> anyhow::Re
     let base_package_index = BasePackageIndex::from_proxy(&pkg_cache)
         .await
         .context("failed to load base package index")?;
-    let packages_dir = fuchsia_fs::open_directory_in_namespace(
+    let packages_dir = fuchsia_fs::directory::open_in_namespace(
         "/pkgfs/packages",
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
     )

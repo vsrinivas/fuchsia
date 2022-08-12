@@ -192,15 +192,15 @@ async fn load_package_firmware_test() -> Result<(), Error> {
             },
         },
     };
-    let driver_dir = vfs::remote::remote_dir(fuchsia_fs::open_directory_in_namespace(
+    let driver_dir = vfs::remote::remote_dir(fuchsia_fs::directory::open_in_namespace(
         "/pkg/driver",
         fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_EXECUTABLE,
     )?);
-    let meta_dir = vfs::remote::remote_dir(fuchsia_fs::open_directory_in_namespace(
+    let meta_dir = vfs::remote::remote_dir(fuchsia_fs::directory::open_in_namespace(
         "/pkg/meta",
         fuchsia_fs::OpenFlags::RIGHT_READABLE,
     )?);
-    let bind_dir = vfs::remote::remote_dir(fuchsia_fs::open_directory_in_namespace(
+    let bind_dir = vfs::remote::remote_dir(fuchsia_fs::directory::open_in_namespace(
         "/pkg/bind",
         fuchsia_fs::OpenFlags::RIGHT_READABLE,
     )?);
@@ -328,7 +328,7 @@ async fn load_package_firmware_test_dfv2() -> Result<(), Error> {
 #[fuchsia::test]
 async fn load_system_firmware_test() -> Result<(), Error> {
     let firmware_file = vfs::file::vmo::asynchronous::read_only_static(b"this is some firmware\n");
-    let driver_dir = vfs::remote::remote_dir(fuchsia_fs::open_directory_in_namespace(
+    let driver_dir = vfs::remote::remote_dir(fuchsia_fs::directory::open_in_namespace(
         "/pkg/driver",
         fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_EXECUTABLE,
     )?);

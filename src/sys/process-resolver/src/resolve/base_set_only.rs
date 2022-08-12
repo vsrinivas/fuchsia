@@ -13,7 +13,7 @@ use tracing::warn;
 /// Use /pkgfs/packages to resolve packages from the base set only
 pub async fn serve(mut stream: ResolverRequestStream) {
     // Open /pkgfs/packages. This must succeed.
-    let packages_dir = fuchsia_fs::open_directory_in_namespace(
+    let packages_dir = fuchsia_fs::directory::open_in_namespace(
         "/pkgfs/packages",
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
     )
@@ -90,7 +90,7 @@ mod tests {
     };
 
     pub fn serve_packages_dir() -> fio::DirectoryProxy {
-        let real_pkg_dir = fuchsia_fs::open_directory_in_namespace(
+        let real_pkg_dir = fuchsia_fs::directory::open_in_namespace(
             "/pkg",
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )

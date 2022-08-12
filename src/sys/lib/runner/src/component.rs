@@ -693,7 +693,7 @@ mod tests {
             let mut ns = Vec::<fcrunner::ComponentNamespaceEntry>::new();
             if include_pkg {
                 let pkg_path = "/pkg".to_string();
-                let pkg_chan = fuchsia_fs::open_directory_in_namespace(
+                let pkg_chan = fuchsia_fs::directory::open_in_namespace(
                     "/pkg",
                     fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
                 )

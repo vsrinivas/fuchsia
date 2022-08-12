@@ -111,7 +111,7 @@ impl Into<zx::Status> for CreateRealmError {
                     let _: fidl::Error = e;
                     zx::Status::INTERNAL
                 }
-                fcomponent::error::Error::FailedToOpenPkgDir(anyhow::Error { .. })
+                fcomponent::error::Error::FailedToOpenPkgDir(_)
                 | fcomponent::error::Error::ConnectToServer(anyhow::Error { .. })
                 | fcomponent::error::Error::FailedToCreateChild(anyhow::Error { .. })
                 | fcomponent::error::Error::FailedToDestroyChild(anyhow::Error { .. })

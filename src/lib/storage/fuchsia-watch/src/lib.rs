@@ -105,7 +105,7 @@ async fn inner_watch(path: PathBuf) -> Result<BoxStream<'static, PathEvent>, Err
  non-blocking directory apis require utf8 paths: {:?}.",
         path
     ))?;
-    let dir_proxy = fuchsia_fs::open_directory_in_namespace(
+    let dir_proxy = fuchsia_fs::directory::open_in_namespace(
         path_as_str,
         fuchsia_fs::OpenFlags::RIGHT_READABLE,
     )?;

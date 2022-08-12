@@ -36,7 +36,7 @@ pub async fn all_locations(root: impl AsRef<str>) -> Result<Vec<InspectLocation>
     let mut path = std::env::current_dir()?;
     let root = root.as_ref();
     path.push(&root);
-    let dir_proxy = fuchsia_fs::open_directory_in_namespace(
+    let dir_proxy = fuchsia_fs::directory::open_in_namespace(
         &path.to_string_lossy().to_string(),
         fuchsia_fs::OpenFlags::RIGHT_READABLE,
     )?;

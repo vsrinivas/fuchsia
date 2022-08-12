@@ -58,7 +58,7 @@ async fn is_cr50(dir: &fio::DirectoryProxy, name: &str) -> Result<Option<TpmDevi
 
 async fn find_cr50() -> Result<TpmDeviceProxy, Error> {
     let tpm_path = "/dev/class/tpm";
-    let proxy = fuchsia_fs::open_directory_in_namespace(
+    let proxy = fuchsia_fs::directory::open_in_namespace(
         tpm_path,
         OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
     )

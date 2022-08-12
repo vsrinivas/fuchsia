@@ -80,7 +80,7 @@ impl LegacyComponent {
             }
         }
 
-        let runner_svc_dir_proxy = fuchsia_fs::open_directory_in_namespace(
+        let runner_svc_dir_proxy = fuchsia_fs::directory::open_in_namespace(
             "/svc",
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )?;

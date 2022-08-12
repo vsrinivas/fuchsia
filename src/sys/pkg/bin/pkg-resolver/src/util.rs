@@ -51,7 +51,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_do_with_atomic_file() {
         let dir = tempfile::tempdir().unwrap();
-        let dir_proxy = fuchsia_fs::open_directory_in_namespace(
+        let dir_proxy = fuchsia_fs::directory::open_in_namespace(
             dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_WRITABLE,
         )

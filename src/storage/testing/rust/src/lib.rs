@@ -30,7 +30,7 @@ pub async fn bind_fvm(proxy: &ControllerProxy) -> Result<()> {
 
 /// Waits for the ramctl device to be ready.
 pub async fn wait_for_ramctl() -> Result<()> {
-    let dev = fuchsia_fs::open_directory_in_namespace(
+    let dev = fuchsia_fs::directory::open_in_namespace(
         "/dev",
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
     )?;
@@ -86,7 +86,7 @@ impl BlockDeviceMatcher<'_> {
 pub async fn wait_for_block_device(matchers: &[BlockDeviceMatcher<'_>]) -> Result<PathBuf> {
     const DEV_CLASS_BLOCK: &str = "/dev/class/block";
     assert!(!matchers.is_empty());
-    let block_dev_dir = fuchsia_fs::open_directory_in_namespace(
+    let block_dev_dir = fuchsia_fs::directory::open_in_namespace(
         DEV_CLASS_BLOCK,
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
     )?;

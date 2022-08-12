@@ -39,7 +39,7 @@ async fn open_and_write_file(dir: &fio::DirectoryProxy) -> Result<(), Error> {
 async fn run_trigger_service(mut stream: ftest::TriggerRequestStream) -> Result<(), Error> {
     while let Some(event) = stream.try_next().await? {
         let ftest::TriggerRequest::Run { responder } = event;
-        let data_proxy = fuchsia_fs::open_directory_in_namespace(
+        let data_proxy = fuchsia_fs::directory::open_in_namespace(
             "/data",
             OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
         )?;

@@ -752,7 +752,7 @@ impl FrameBuffer {
             // If the caller did not supply a display index, we watch the
             // display-controller directory and use the first controller
             // that appears.
-            let dir = fuchsia_fs::open_directory_in_namespace(
+            let dir = fuchsia_fs::directory::open_in_namespace(
                 "/dev/class/display-controller",
                 fuchsia_fs::OpenFlags::RIGHT_READABLE,
             )?;

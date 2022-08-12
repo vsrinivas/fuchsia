@@ -20,7 +20,7 @@ pub async fn serve_iterator(
     mut iterator: ftest_manager::DebugDataIteratorRequestStream,
 ) -> Result<(), Error> {
     let directory =
-        fuchsia_fs::open_directory_in_namespace(dir_path, fuchsia_fs::OpenFlags::RIGHT_READABLE)?;
+        fuchsia_fs::directory::open_in_namespace(dir_path, fuchsia_fs::OpenFlags::RIGHT_READABLE)?;
     let mut file_stream = fuchsia_fs::directory::readdir_recursive(&directory, None)
         .filter_map(|entry_result| {
             let result = match entry_result {

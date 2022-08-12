@@ -688,7 +688,7 @@ mod tests {
     ) -> fcrunner::ComponentStartInfo {
         // Get a handle to /pkg
         let pkg_path = "/pkg".to_string();
-        let pkg_chan = fuchsia_fs::open_directory_in_namespace(
+        let pkg_chan = fuchsia_fs::directory::open_in_namespace(
             "/pkg",
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )
@@ -741,7 +741,7 @@ mod tests {
     ) -> fcrunner::ComponentStartInfo {
         // Get a handle to /pkg
         let pkg_path = "/pkg".to_string();
-        let pkg_chan = fuchsia_fs::open_directory_in_namespace(
+        let pkg_chan = fuchsia_fs::directory::open_in_namespace(
             "/pkg",
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )
@@ -1431,7 +1431,7 @@ mod tests {
         mut ns: Vec<fcrunner::ComponentNamespaceEntry>,
     ) -> fcrunner::ComponentStartInfo {
         let pkg_path = "/pkg".to_string();
-        let pkg_chan = fuchsia_fs::open_directory_in_namespace(
+        let pkg_chan = fuchsia_fs::directory::open_in_namespace(
             "/pkg",
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )

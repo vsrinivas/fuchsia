@@ -20,7 +20,7 @@ pub async fn process_debug_data_vmos<S: Stream<Item = VmoMessage> + std::marker:
     processor_proxy: ftest_debug::DebugDataProcessorProxy,
     event_receiver: S,
 ) -> Result<(), Error> {
-    let directory_proxy = fuchsia_fs::open_directory_in_namespace(
+    let directory_proxy = fuchsia_fs::directory::open_in_namespace(
         dir_path,
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
     )?;

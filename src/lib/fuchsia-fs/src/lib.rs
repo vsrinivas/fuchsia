@@ -103,17 +103,6 @@ pub fn create_sub_directories(
     Ok(dir.unwrap())
 }
 
-/// open_directory_in_namespace will open a NodeProxy to the given path and convert it into a
-/// DirectoryProxy. The path argument must be an absolute path.
-#[cfg(target_os = "fuchsia")]
-pub fn open_directory_in_namespace(
-    path: &str,
-    flags: fio::OpenFlags,
-) -> Result<fio::DirectoryProxy, Error> {
-    let node = directory::open_in_namespace(path, flags)?;
-    Ok(node)
-}
-
 pub async fn read_file_bytes(file: &fio::FileProxy) -> Result<Vec<u8>, Error> {
     let bytes = file::read(file).await?;
     Ok(bytes)
@@ -234,10 +223,10 @@ fn check_path(path: &Path) -> Result<&str, Error> {
 mod tests {
     use {
         super::*,
-        fidl::endpoints::{Proxy, ServerEnd},
+        fidl::endpoints::ServerEnd,
         fuchsia_async as fasync, fuchsia_zircon_status as zx_status,
         std::fs,
-        tempfile::{NamedTempFile, TempDir},
+        tempfile::TempDir,
         vfs::{
             directory::entry::DirectoryEntry,
             execution_scope::ExecutionScope,
@@ -252,7 +241,7 @@ mod tests {
         let data = "abc".repeat(10000);
         fs::write(tempdir.path().join("myfile"), &data).expect("failed writing file");
 
-        let dir = open_directory_in_namespace(
+        let dir = crate::directory::open_in_namespace(
             tempdir.path().to_str().unwrap(),
             OpenFlags::RIGHT_READABLE,
         )
@@ -267,7 +256,7 @@ mod tests {
     async fn open_and_write_file_test() {
         // Create temp dir for test.
         let tempdir = TempDir::new().expect("failed to create tmp dir");
-        let dir = open_directory_in_namespace(
+        let dir = crate::directory::open_in_namespace(
             tempdir.path().to_str().unwrap(),
             OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
         )
@@ -287,7 +276,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn open_checks_path_validity() {
-        let dir = open_directory_in_namespace("/pkg", OpenFlags::RIGHT_READABLE)
+        let dir = crate::directory::open_in_namespace("/pkg", OpenFlags::RIGHT_READABLE)
             .expect("could not open /pkg");
 
         assert!(open_file(&dir, Path::new(""), OpenFlags::RIGHT_READABLE).is_err());
@@ -364,19 +353,6 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn open_directory_in_namespace_rejects_files() {
-        let tempfile = NamedTempFile::new().expect("failed to create tmp file");
-        let dir = open_directory_in_namespace(
-            tempfile.path().to_str().unwrap(),
-            OpenFlags::RIGHT_READABLE,
-        )
-        .expect("could not send open request");
-
-        // We should see a PEER_CLOSED because we tried to open a file as a directory
-        dir.on_closed().await.expect("Error waiting for peer closed");
-    }
-
-    #[fasync::run_singlethreaded(test)]
     async fn create_sub_directories_test() -> Result<(), Error> {
         let tempdir = TempDir::new()?;
 
@@ -384,7 +360,7 @@ mod tests {
         let file_name = Path::new("example_file_name");
         let data = "file contents";
 
-        let root_dir = open_directory_in_namespace(
+        let root_dir = crate::directory::open_in_namespace(
             tempdir.path().to_str().unwrap(),
             OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
         )?;
@@ -408,7 +384,7 @@ mod tests {
     async fn write_path_bytes_create_test() {
         // Create temp dir for test, and bind it to our namespace.
         let tempdir = TempDir::new().expect("failed to create tmp dir");
-        let _dir = open_directory_in_namespace(
+        let _dir = crate::directory::open_in_namespace(
             tempdir.path().to_str().unwrap(),
             OpenFlags::RIGHT_READABLE,
         )
@@ -429,7 +405,7 @@ mod tests {
     async fn write_path_bytes_replace_test() {
         // Create temp dir for test, and bind it to our namespace.
         let tempdir = TempDir::new().expect("failed to create tmp dir");
-        let _dir = open_directory_in_namespace(
+        let _dir = crate::directory::open_in_namespace(
             tempdir.path().to_str().unwrap(),
             OpenFlags::RIGHT_READABLE,
         )

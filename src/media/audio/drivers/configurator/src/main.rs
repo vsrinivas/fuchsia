@@ -4,7 +4,7 @@
 
 use {
     anyhow::anyhow,
-    fuchsia_fs::{open_directory_in_namespace, OpenFlags},
+    fuchsia_fs::OpenFlags,
     fuchsia_inspect::{component, health::Reporter},
     futures::lock::Mutex,
     std::sync::Arc,
@@ -26,8 +26,10 @@ use crate::{config::Config, configurator::Configurator, default::DefaultConfigur
 async fn main() -> Result<(), anyhow::Error> {
     component::health().set_ok();
     tracing::trace!("Initialized.");
-    let codec_proxy = open_directory_in_namespace("/dev/class/codec", OpenFlags::RIGHT_READABLE)?;
-    let dai_proxy = open_directory_in_namespace("/dev/class/dai", OpenFlags::RIGHT_READABLE)?;
+    let codec_proxy =
+        fuchsia_fs::directory::open_in_namespace("/dev/class/codec", OpenFlags::RIGHT_READABLE)?;
+    let dai_proxy =
+        fuchsia_fs::directory::open_in_namespace("/dev/class/dai", OpenFlags::RIGHT_READABLE)?;
     let mut config = Config::new()?;
     config.load()?;
     let configurator = Arc::new(Mutex::new(DefaultConfigurator::new(config)?));

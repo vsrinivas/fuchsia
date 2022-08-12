@@ -247,7 +247,7 @@ mod tests {
 
         // We can't fake all the arguments, as there is actual IO happening. Pass in the bare
         // minimum that a process needs, and use this test's process handle for real values.
-        let pkg = fuchsia_fs::open_directory_in_namespace(
+        let pkg = fuchsia_fs::directory::open_in_namespace(
             "/pkg",
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )

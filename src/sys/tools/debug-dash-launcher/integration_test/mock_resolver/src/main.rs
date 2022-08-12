@@ -26,7 +26,7 @@ async fn main() {
     let file_path = temp_dir_path.join("foo");
     std::fs::write(&file_path, "hippos").unwrap();
     let temp_dir_path = temp_dir_path.display().to_string();
-    let temp_dir = fuchsia_fs::open_directory_in_namespace(
+    let temp_dir = fuchsia_fs::directory::open_in_namespace(
         &temp_dir_path,
         fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_WRITABLE,
     )

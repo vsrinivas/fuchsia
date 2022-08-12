@@ -44,7 +44,7 @@ async fn get_class_path_from_topological(
     // don't find the block device we're looking for. There's a slim possibility
     // a partition may not yet be available when this tool is executed in a
     // test.
-    let block_dir = fuchsia_fs::open_directory_in_namespace(
+    let block_dir = fuchsia_fs::directory::open_in_namespace(
         BLOCK_CLASS_PATH,
         fuchsia_fs::OpenFlags::RIGHT_READABLE,
     )?;

@@ -190,7 +190,7 @@ impl<'a> VfsWatchMsg<'a> {
 mod tests {
     use super::*;
     use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
-    use fuchsia_fs::{open_directory_in_namespace, OpenFlags};
+    use fuchsia_fs::OpenFlags;
     use fuchsia_zircon::prelude::*;
     use futures::prelude::*;
     use std::fmt::Debug;
@@ -216,7 +216,7 @@ mod tests {
         let tmp_dir = tempdir().unwrap();
         let _ = File::create(tmp_dir.path().join("file1")).unwrap();
 
-        let dir = open_directory_in_namespace(
+        let dir = fuchsia_fs::directory::open_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             OpenFlags::RIGHT_READABLE,
         )
@@ -241,7 +241,7 @@ mod tests {
     async fn test_add() {
         let tmp_dir = tempdir().unwrap();
 
-        let dir = open_directory_in_namespace(
+        let dir = fuchsia_fs::directory::open_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             OpenFlags::RIGHT_READABLE,
         )
@@ -271,7 +271,7 @@ mod tests {
         let filepath = tmp_dir.path().join(filename);
         let _ = File::create(&filepath).unwrap();
 
-        let dir = open_directory_in_namespace(
+        let dir = fuchsia_fs::directory::open_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             OpenFlags::RIGHT_READABLE,
         )
@@ -298,7 +298,7 @@ mod tests {
     async fn test_timeout() {
         let tmp_dir = tempdir().unwrap();
 
-        let dir = open_directory_in_namespace(
+        let dir = fuchsia_fs::directory::open_in_namespace(
             tmp_dir.path().to_str().unwrap(),
             OpenFlags::RIGHT_READABLE,
         )

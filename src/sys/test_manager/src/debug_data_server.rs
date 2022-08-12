@@ -37,7 +37,7 @@ fn serve_debug_data(
         let (file_sender, mut file_recv) = mpsc::channel(0);
 
         let copy_to_tmp_task = fasync::Task::spawn(async move {
-            let tmp_dir_root = fuchsia_fs::open_directory_in_namespace(
+            let tmp_dir_root = fuchsia_fs::directory::open_in_namespace(
                 serve_root_dir.to_str().unwrap(),
                 read_write_flags,
             )?;
@@ -134,7 +134,7 @@ pub async fn send_kernel_debug_data(mut event_sender: mpsc::Sender<RunEvent>) {
     let directories = prefixes
         .iter()
         .filter_map(|path| {
-            match fuchsia_fs::open_directory_in_namespace(
+            match fuchsia_fs::directory::open_in_namespace(
                 path,
                 fuchsia_fs::OpenFlags::RIGHT_READABLE,
             ) {

@@ -112,7 +112,7 @@ impl Test for BlobfsCheckerboard {
 
         // let root_proxy = blobfs.open(fuchsia_fs::OpenFlags::RIGHT_READABLE)?;
         let root_proxy =
-            fuchsia_fs::open_directory_in_namespace(&root, fuchsia_fs::OpenFlags::RIGHT_READABLE)?;
+            fuchsia_fs::directory::open_in_namespace(&root, fuchsia_fs::OpenFlags::RIGHT_READABLE)?;
         // first we figure out what blobs are there.
         for entry in readdir(&root_proxy).await? {
             let path = format!("{}/{}", root, entry.name);

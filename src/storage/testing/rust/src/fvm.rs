@@ -45,7 +45,7 @@ pub async fn bind_fvm_driver(controller: &ControllerProxy) -> Result<()> {
 /// Waits for an FVM device to appear under `block_device`. Returns a path to the FVM device.
 pub async fn wait_for_fvm_driver(block_device: &Path) -> Result<PathBuf> {
     const FVM_DEVICE_NAME: &str = "fvm";
-    let device = fuchsia_fs::open_directory_in_namespace(
+    let device = fuchsia_fs::directory::open_in_namespace(
         block_device.to_str().unwrap(),
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
     )?;

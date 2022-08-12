@@ -30,7 +30,7 @@ enum IncomingRequest {
 async fn find_nvram_device() -> Result<fnvram::DeviceProxy, anyhow::Error> {
     // The RTC houses the nvram where nvdata is stored.
     let nvram_path = "/dev/class/rtc";
-    let proxy = fuchsia_fs::open_directory_in_namespace(
+    let proxy = fuchsia_fs::directory::open_in_namespace(
         nvram_path,
         OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
     )
@@ -54,7 +54,7 @@ async fn find_nvram_device() -> Result<fnvram::DeviceProxy, anyhow::Error> {
 async fn find_flashmap_device() -> Result<FlashmapProxy, anyhow::Error> {
     // Look for the first flash device.
     let nand_path = "/dev/class/nand";
-    let proxy = fuchsia_fs::open_directory_in_namespace(
+    let proxy = fuchsia_fs::directory::open_in_namespace(
         nand_path,
         OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
     )

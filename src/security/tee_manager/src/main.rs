@@ -17,7 +17,7 @@ use {
     fidl_fuchsia_tee::{self as fuchsia_tee, DeviceInfoMarker},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_fs::{open_directory_in_namespace, OpenFlags},
+    fuchsia_fs::OpenFlags,
     fuchsia_syslog as syslog,
     fuchsia_syslog::macros::*,
     fuchsia_vfs_watcher as vfs, fuchsia_zircon as zx,
@@ -123,7 +123,7 @@ async fn enumerate_tee_devices() -> Result<Vec<PathBuf>, Error> {
 }
 
 async fn create_watcher(path: &str) -> Result<vfs::Watcher, Error> {
-    let dir = open_directory_in_namespace(path, OpenFlags::RIGHT_READABLE)?;
+    let dir = fuchsia_fs::directory::open_in_namespace(path, OpenFlags::RIGHT_READABLE)?;
     let watcher = vfs::Watcher::new(dir).await?;
     Ok(watcher)
 }

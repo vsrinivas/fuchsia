@@ -10,7 +10,6 @@ use {
         Blobfs,
     },
     fuchsia_component::client::connect_to_protocol_at_path,
-    fuchsia_fs::open_directory_in_namespace,
     fuchsia_zircon::{AsHandleRef, Rights, Vmo},
     ramdevice_client::{wait_for_device, RamdiskClient, VmoRamdiskClientBuilder},
     std::{convert::TryInto, fs::OpenOptions, path::PathBuf, time::Duration},
@@ -90,7 +89,7 @@ impl BlobfsInstance {
 
     /// Open the blobfs root directory.
     pub fn open_root_dir(&self) -> fio::DirectoryProxy {
-        open_directory_in_namespace(
+        fuchsia_fs::directory::open_in_namespace(
             self.serving_blobfs
                 .as_ref()
                 .and_then(ServingSingleVolumeFilesystem::bound_path)

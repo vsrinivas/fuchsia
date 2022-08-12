@@ -397,7 +397,7 @@ impl RoutingTest {
 
         // Create a directory for the components, starting with a single static file
         // "foo/hippo" in it.
-        let test_dir_proxy = fuchsia_fs::open_directory_in_namespace(
+        let test_dir_proxy = fuchsia_fs::directory::open_in_namespace(
             test_dir.path().to_str().unwrap(),
             fuchsia_fs::OpenFlags::RIGHT_READABLE | fuchsia_fs::OpenFlags::RIGHT_WRITABLE,
         )
@@ -881,7 +881,7 @@ impl RoutingTestModel for RoutingTest {
                 if let Some(relative_moniker) = storage_relation {
                     if from_cm_namespace {
                         // Check for the file in the /tmp in the test's namespace
-                        let tmp_proxy = fuchsia_fs::open_directory_in_namespace(
+                        let tmp_proxy = fuchsia_fs::directory::open_in_namespace(
                             "/tmp",
                             fuchsia_fs::OpenFlags::RIGHT_READABLE,
                         )
@@ -959,7 +959,7 @@ impl RoutingTestModel for RoutingTest {
                 .await;
                 if expected_res == ExpectedResult::Ok {
                     let storage_dir = if from_cm_namespace {
-                        fuchsia_fs::open_directory_in_namespace(
+                        fuchsia_fs::directory::open_in_namespace(
                             "/tmp",
                             fuchsia_fs::OpenFlags::RIGHT_READABLE,
                         )
@@ -1095,7 +1095,7 @@ impl RoutingTestModel for RoutingTest {
 
     async fn check_namespace_subdir_contents(&self, path: &str, expected: Vec<String>) {
         let dir_proxy =
-            fuchsia_fs::open_directory_in_namespace(path, fuchsia_fs::OpenFlags::RIGHT_READABLE)
+            fuchsia_fs::directory::open_in_namespace(path, fuchsia_fs::OpenFlags::RIGHT_READABLE)
                 .expect("failed to open directory");
         assert_eq!(list_directory(&dir_proxy).await, expected)
     }

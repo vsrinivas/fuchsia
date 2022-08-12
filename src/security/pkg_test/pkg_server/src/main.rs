@@ -10,7 +10,7 @@ use {
     fidl_test_security_pkg::{PackageServer_Request, PackageServer_RequestStream},
     fuchsia_async::{net::TcpListener, Task},
     fuchsia_component::server::ServiceFs,
-    fuchsia_fs::{open_directory_in_namespace, open_file, read_file_bytes},
+    fuchsia_fs::{open_file, read_file_bytes},
     fuchsia_hyper::{Executor, TcpStream},
     fuchsia_syslog::{fx_log_info, fx_log_warn, init},
     futures::{
@@ -194,8 +194,11 @@ async fn main() {
         .boxed();
 
     let make_service = make_service_fn(|_| {
-        let repository_dir =
-            open_directory_in_namespace(repository_path, fio::OpenFlags::RIGHT_READABLE).unwrap();
+        let repository_dir = fuchsia_fs::directory::open_in_namespace(
+            repository_path,
+            fio::OpenFlags::RIGHT_READABLE,
+        )
+        .unwrap();
         async move {
             Ok::<_, Error>(service_fn(move |req: Request<Body>| {
                 let handler = RequestHandler::new(&repository_dir);

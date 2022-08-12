@@ -882,7 +882,7 @@ mod tests {
             .write()
             .add_inspect_artifacts(
                 identity,
-                fuchsia_fs::open_directory_in_namespace(
+                fuchsia_fs::directory::open_in_namespace(
                     "/tmp",
                     fuchsia_fs::OpenFlags::RIGHT_READABLE,
                 )
@@ -908,7 +908,7 @@ mod tests {
             .write()
             .add_inspect_artifacts(
                 identity2,
-                fuchsia_fs::open_directory_in_namespace(
+                fuchsia_fs::directory::open_in_namespace(
                     "/tmp",
                     fuchsia_fs::OpenFlags::RIGHT_READABLE,
                 )

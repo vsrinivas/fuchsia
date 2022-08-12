@@ -127,7 +127,7 @@ async fn main() -> Result<(), Error> {
         ChrootMode::Out => ("/out", "/"),
     };
 
-    let local_dir = fuchsia_fs::open_directory_in_namespace(
+    let local_dir = fuchsia_fs::directory::open_in_namespace(
         local_path,
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
     )

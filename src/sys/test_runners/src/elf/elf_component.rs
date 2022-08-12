@@ -590,7 +590,7 @@ mod tests {
     ) -> Result<ComponentNamespace, ComponentNamespaceError> {
         let mut ns = vec![];
         for (path, permission) in dir_paths {
-            let chan = fuchsia_fs::open_directory_in_namespace(path, permission)
+            let chan = fuchsia_fs::directory::open_in_namespace(path, permission)
                 .unwrap()
                 .into_channel()
                 .unwrap()

@@ -2067,7 +2067,7 @@ mod tests {
         fn new() -> Self {
             let (realm_proxy, realm_stream) =
                 create_proxy_and_stream::<ftest::RealmMarker>().unwrap();
-            let pkg_dir = fuchsia_fs::open_directory_in_namespace(
+            let pkg_dir = fuchsia_fs::directory::open_in_namespace(
                 "/pkg",
                 fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
             )

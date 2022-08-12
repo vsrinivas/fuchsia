@@ -6,7 +6,7 @@ use anyhow::{Context as _, Error};
 use fdio::{self, clone_channel};
 use fidl_fuchsia_hardware_power as hpower;
 use fuchsia_async as fasync;
-use fuchsia_fs::{open_directory_in_namespace, OpenFlags};
+use fuchsia_fs::OpenFlags;
 use fuchsia_syslog::{fx_log_debug, fx_log_err, fx_log_info, fx_log_warn};
 use fuchsia_vfs_watcher as vfs_watcher;
 use fuchsia_zircon::{self as zx, Signals};
@@ -191,7 +191,8 @@ async fn process_watch_event(
 }
 
 pub async fn watch_power_device(battery_manager: Arc<BatteryManager>) -> Result<(), Error> {
-    let dir_proxy = open_directory_in_namespace(POWER_DEVICE, OpenFlags::RIGHT_READABLE)?;
+    let dir_proxy =
+        fuchsia_fs::directory::open_in_namespace(POWER_DEVICE, OpenFlags::RIGHT_READABLE)?;
     let mut watcher = vfs_watcher::Watcher::new(dir_proxy).await?;
     let mut adapter_device_found = false;
     let mut battery_device_found = false;

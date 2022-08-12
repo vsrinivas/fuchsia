@@ -106,7 +106,7 @@ mod tests {
         // Set up a new library loader and provide it to the loader service
         let (ll_client_chan, ll_service_chan) = zx::Channel::create()?;
         library_loader::start(
-            Arc::new(fuchsia_fs::open_directory_in_namespace(
+            Arc::new(fuchsia_fs::directory::open_in_namespace(
                 "/pkg/lib",
                 fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
             )?),

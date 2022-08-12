@@ -79,7 +79,8 @@ async fn get_driver_topological_path(path: &str) -> Result<String> {
 }
 
 async fn list_drivers(path: &str) -> Result<Vec<String>> {
-    let dir = fuchsia_fs::open_directory_in_namespace(path, fuchsia_fs::OpenFlags::RIGHT_READABLE)?;
+    let dir =
+        fuchsia_fs::directory::open_in_namespace(path, fuchsia_fs::OpenFlags::RIGHT_READABLE)?;
     Ok(fuchsia_fs::directory::readdir(&dir)
         .await?
         .iter()

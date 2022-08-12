@@ -418,7 +418,7 @@ mod tests {
         let file_path = temp_dir_path.join(file_name);
         std::fs::write(&file_path, "Hippos Rule!").unwrap();
         let temp_dir_path = temp_dir_path.display().to_string();
-        fuchsia_fs::open_directory_in_namespace(&temp_dir_path, fio::OpenFlags::RIGHT_READABLE)
+        fuchsia_fs::directory::open_in_namespace(&temp_dir_path, fio::OpenFlags::RIGHT_READABLE)
             .unwrap()
     }
 

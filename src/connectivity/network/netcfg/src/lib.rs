@@ -43,7 +43,7 @@ use anyhow::{anyhow, Context as _};
 use async_trait::async_trait;
 use async_utils::stream::TryFlattenUnorderedExt as _;
 use dns_server_watcher::{DnsServers, DnsServersUpdateSource, DEFAULT_DNS_PORT};
-use fuchsia_fs::{open_directory_in_namespace, OpenFlags};
+use fuchsia_fs::OpenFlags;
 use futures::{StreamExt as _, TryFutureExt as _, TryStreamExt as _};
 use net_declare::fidl_ip_v4;
 use serde::Deserialize;
@@ -1211,7 +1211,7 @@ impl<'a> NetCfg<'a> {
     {
         let installer = self.installer.clone();
         let stream_of_streams = fvfs_watcher::Watcher::new(
-            open_directory_in_namespace(D::PATH, OpenFlags::RIGHT_READABLE)
+            fuchsia_fs::directory::open_in_namespace(D::PATH, OpenFlags::RIGHT_READABLE)
                 .with_context(|| format!("error opening {} directory", D::NAME))?,
         )
         .await

@@ -635,7 +635,7 @@ async fn main() -> Result<(), anyhow::Error> {
         log::info!("Marking driver {} as eager", driver);
     }
 
-    let boot = fuchsia_fs::open_directory_in_namespace("/boot", fio::OpenFlags::RIGHT_READABLE)
+    let boot = fuchsia_fs::directory::open_in_namespace("/boot", fio::OpenFlags::RIGHT_READABLE)
         .context("Failed to open /boot")?;
     let drivers = load_boot_drivers(boot, &eager_drivers, &disabled_drivers)
         .await
@@ -1695,7 +1695,7 @@ mod tests {
     async fn test_load_fallback_driver() {
         const DRIVER_URL: &str = "fuchsia-boot:///#meta/test-fallback-component.cm";
         let driver_url = url::Url::parse(&DRIVER_URL).unwrap();
-        let pkg = fuchsia_fs::open_directory_in_namespace("/pkg", fio::OpenFlags::RIGHT_READABLE)
+        let pkg = fuchsia_fs::directory::open_in_namespace("/pkg", fio::OpenFlags::RIGHT_READABLE)
             .context("Failed to open /pkg")
             .unwrap();
         let fallback_driver = load_driver(&pkg, driver_url, DriverPackageType::Boot, None)
@@ -1710,7 +1710,7 @@ mod tests {
         let eager_driver_component_url =
             url::Url::parse("fuchsia-boot:///#meta/test-fallback-component.cm").unwrap();
 
-        let boot = fuchsia_fs::open_directory_in_namespace("/pkg", fio::OpenFlags::RIGHT_READABLE)
+        let boot = fuchsia_fs::directory::open_in_namespace("/pkg", fio::OpenFlags::RIGHT_READABLE)
             .unwrap();
         let drivers = load_boot_drivers(
             boot,
@@ -1781,7 +1781,7 @@ mod tests {
         let disabled_driver_component_url =
             url::Url::parse("fuchsia-boot:///#meta/test-fallback-component.cm").unwrap();
 
-        let boot = fuchsia_fs::open_directory_in_namespace("/pkg", fio::OpenFlags::RIGHT_READABLE)
+        let boot = fuchsia_fs::directory::open_in_namespace("/pkg", fio::OpenFlags::RIGHT_READABLE)
             .unwrap();
         let drivers = load_boot_drivers(
             boot,
@@ -1994,7 +1994,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_boot_drivers() {
         fuchsia_syslog::init().unwrap();
-        let boot = fuchsia_fs::open_directory_in_namespace("/pkg", fio::OpenFlags::RIGHT_READABLE)
+        let boot = fuchsia_fs::directory::open_in_namespace("/pkg", fio::OpenFlags::RIGHT_READABLE)
             .unwrap();
         let drivers = load_boot_drivers(boot, &HashSet::new(), &HashSet::new()).await.unwrap();
 

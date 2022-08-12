@@ -858,13 +858,15 @@ mod tests {
         // Verify the generated package's merkle root is the same as this test package's merkle root.
         assert_eq!(pkg.meta_far_merkle, fs::read_to_string("/pkg/meta")?.parse()?);
 
-        let this_pkg_dir =
-            fuchsia_fs::open_directory_in_namespace("/pkg", fuchsia_fs::OpenFlags::RIGHT_READABLE)?;
+        let this_pkg_dir = fuchsia_fs::directory::open_in_namespace(
+            "/pkg",
+            fuchsia_fs::OpenFlags::RIGHT_READABLE,
+        )?;
         pkg.verify_contents(&this_pkg_dir).await.expect("contents to be equivalent");
 
         let pkg_dir = make_this_package_dir()?;
 
-        let this_pkg_dir = fuchsia_fs::open_directory_in_namespace(
+        let this_pkg_dir = fuchsia_fs::directory::open_in_namespace(
             pkg_dir.path().to_str().unwrap(),
             fuchsia_fs::OpenFlags::RIGHT_READABLE,
         )?;
@@ -881,7 +883,7 @@ mod tests {
 
         fs::write(pkg_dir.path().join("unexpected"), "unexpected file".as_bytes())?;
 
-        let pkg_dir_proxy = fuchsia_fs::open_directory_in_namespace(
+        let pkg_dir_proxy = fuchsia_fs::directory::open_in_namespace(
             pkg_dir.path().to_str().unwrap(),
             fuchsia_fs::OpenFlags::RIGHT_READABLE,
         )?;
@@ -900,7 +902,7 @@ mod tests {
 
         fs::write(pkg_dir.path().join("meta/unexpected"), "unexpected file".as_bytes())?;
 
-        let pkg_dir_proxy = fuchsia_fs::open_directory_in_namespace(
+        let pkg_dir_proxy = fuchsia_fs::directory::open_in_namespace(
             pkg_dir.path().to_str().unwrap(),
             fuchsia_fs::OpenFlags::RIGHT_READABLE,
         )?;
@@ -919,7 +921,7 @@ mod tests {
 
         fs::remove_file(pkg_dir.path().join("bin/fuchsia_pkg_testing_lib_test"))?;
 
-        let pkg_dir_proxy = fuchsia_fs::open_directory_in_namespace(
+        let pkg_dir_proxy = fuchsia_fs::directory::open_in_namespace(
             pkg_dir.path().to_str().unwrap(),
             fuchsia_fs::OpenFlags::RIGHT_READABLE,
         )?;
@@ -938,7 +940,7 @@ mod tests {
 
         fs::write(pkg_dir.path().join("bin/fuchsia_pkg_testing_lib_test"), "broken".as_bytes())?;
 
-        let pkg_dir_proxy = fuchsia_fs::open_directory_in_namespace(
+        let pkg_dir_proxy = fuchsia_fs::directory::open_in_namespace(
             pkg_dir.path().to_str().unwrap(),
             fuchsia_fs::OpenFlags::RIGHT_READABLE,
         )?;

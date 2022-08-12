@@ -695,7 +695,7 @@ mod tests {
     fn get_test_package_resolver_with_hash(hash: &str) -> (MockResolver, tempfile::TempDir) {
         let dir = tempfile::tempdir().unwrap();
         std::fs::write(dir.path().join("meta"), hash).unwrap();
-        let proxy = fuchsia_fs::open_directory_in_namespace(
+        let proxy = fuchsia_fs::directory::open_in_namespace(
             dir.path().to_str().unwrap(),
             fuchsia_fs::OpenFlags::RIGHT_READABLE,
         )
@@ -966,7 +966,7 @@ mod tests {
         let (cobalt_sender, mut cobalt_receiver) = get_mock_cobalt_sender();
 
         let data_dir = tempfile::tempdir().unwrap();
-        let data_proxy = fuchsia_fs::open_directory_in_namespace(
+        let data_proxy = fuchsia_fs::directory::open_in_namespace(
             data_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -1036,7 +1036,7 @@ mod tests {
         let (pkg_cache, pkg_cache_stream) = get_mock_pkg_cache();
 
         let data_dir = tempfile::tempdir().unwrap();
-        let data_proxy = fuchsia_fs::open_directory_in_namespace(
+        let data_proxy = fuchsia_fs::directory::open_in_namespace(
             data_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -1084,7 +1084,7 @@ mod tests {
         let (cobalt_sender, mut cobalt_receiver) = get_mock_cobalt_sender();
 
         let data_dir = tempfile::tempdir().unwrap();
-        let data_proxy = fuchsia_fs::open_directory_in_namespace(
+        let data_proxy = fuchsia_fs::directory::open_in_namespace(
             data_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -1120,7 +1120,7 @@ mod tests {
         let (cobalt_sender, mut cobalt_receiver) = get_mock_cobalt_sender();
 
         let data_dir = tempfile::tempdir().unwrap();
-        let data_proxy = fuchsia_fs::open_directory_in_namespace(
+        let data_proxy = fuchsia_fs::directory::open_in_namespace(
             data_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -1187,7 +1187,7 @@ mod tests {
         let (cobalt_sender, mut cobalt_receiver) = get_mock_cobalt_sender();
 
         let data_dir = tempfile::tempdir().unwrap();
-        let data_proxy = fuchsia_fs::open_directory_in_namespace(
+        let data_proxy = fuchsia_fs::directory::open_in_namespace(
             data_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -1221,7 +1221,7 @@ mod tests {
         let (pkg_cache, pkg_cache_stream) = get_mock_pkg_cache();
 
         let data_dir = tempfile::tempdir().unwrap();
-        let data_proxy = fuchsia_fs::open_directory_in_namespace(
+        let data_proxy = fuchsia_fs::directory::open_in_namespace(
             data_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -1298,7 +1298,7 @@ mod tests {
         let (package_resolver, _test_dir) = get_test_package_resolver_with_hash(TEST_HASH);
 
         let data_dir = tempfile::tempdir().unwrap();
-        let data_proxy = fuchsia_fs::open_directory_in_namespace(
+        let data_proxy = fuchsia_fs::directory::open_in_namespace(
             data_dir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )

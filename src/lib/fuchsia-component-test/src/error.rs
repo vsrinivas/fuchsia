@@ -20,7 +20,7 @@ pub enum Error {
     FidlError(#[from] fidl::Error),
 
     #[error("failed to open \"/pkg\": {0:?}")]
-    FailedToOpenPkgDir(anyhow::Error),
+    FailedToOpenPkgDir(fuchsia_fs::node::OpenError),
 
     #[error("failed to connect to realm builder server: {0:?}")]
     ConnectToServer(anyhow::Error),
