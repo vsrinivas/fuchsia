@@ -2124,8 +2124,7 @@ func (s *datagramSocketImpl) loopWrite(ch chan<- struct{}) {
 			Atomic: true,
 		}
 
-		addr, err := udp_serde.DeserializeSendMsgAddress(v[:udpTxPreludeSize])
-
+		addr, cmsgs, err := udp_serde.DeserializeSendMsgMeta(v[:udpTxPreludeSize])
 		if err != nil {
 			// Ideally, we'd like to close the socket so as to inform the client
 			// that they're mishandling the ABI. This is complicated by the fact
@@ -2133,6 +2132,13 @@ func (s *datagramSocketImpl) loopWrite(ch chan<- struct{}) {
 			// can't tell which client sent the bad payload. Instead, we just
 			// log the error and drop the payload on the floor.
 			_ = syslog.Errorf("error deserializing payload from socket: %s", err)
+			continue
+		}
+
+		if errno := validateSendableControlMessages(&cmsgs); errno != 0 {
+			// As above, we'd prefer to close the socket but instead just drop
+			// the payload on the floor.
+			_ = syslog.Errorf("error validating control messages (%#v): %s", cmsgs, err)
 			continue
 		}
 
@@ -2830,14 +2836,18 @@ func (s *synchronousDatagramSocketImpl) controlMessagesToFIDL(cmsg tcpip.Receiva
 	return controlData
 }
 
-func fidlNetworkControlDataToControlMessages(in socket.NetworkSocketSendControlData, out *tcpip.SendableControlMessages) posix.Errno {
+func validateSendableControlMessages(cmsgs *tcpip.SendableControlMessages) posix.Errno {
+	if cmsgs.HasTTL && cmsgs.TTL == 0 {
+		return posix.ErrnoEinval
+	}
+	return 0
+}
+
+func fidlNetworkControlDataToControlMessages(in socket.NetworkSocketSendControlData, out *tcpip.SendableControlMessages) {
 	if in.HasIp() {
 		inIp := in.GetIp()
 		if inIp.HasTtl() {
 			ttl := inIp.GetTtl()
-			if ttl == 0 {
-				return posix.ErrnoEinval
-			}
 			out.TTL = ttl
 			out.HasTTL = true
 		}
@@ -2859,15 +2869,12 @@ func fidlNetworkControlDataToControlMessages(in socket.NetworkSocketSendControlD
 			out.HasIPv6PacketInfo = true
 		}
 	}
-
-	return 0
 }
 
-func fidlDatagramControlDataToControlMessages(in socket.DatagramSocketSendControlData, out *tcpip.SendableControlMessages) posix.Errno {
+func fidlDatagramControlDataToControlMessages(in socket.DatagramSocketSendControlData, out *tcpip.SendableControlMessages) {
 	if in.HasNetwork() {
-		return fidlNetworkControlDataToControlMessages(in.GetNetwork(), out)
+		fidlNetworkControlDataToControlMessages(in.GetNetwork(), out)
 	}
-	return 0
 }
 
 func (s *synchronousDatagramSocket) close() {
@@ -3069,7 +3076,8 @@ func (s *synchronousDatagramSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.So
 	trace.AsyncBegin("net", "fuchsia_posix_socket.synchronousDatagramSocket.SendMsg", trace.AsyncID(uintptr(unsafe.Pointer(s))))
 	defer trace.AsyncEnd("net", "fuchsia_posix_socket.synchronousDatagramSocket.SendMsg", trace.AsyncID(uintptr(unsafe.Pointer(s))))
 	var cmsg tcpip.SendableControlMessages
-	if err := fidlDatagramControlDataToControlMessages(controlData, &cmsg); err != 0 {
+	fidlDatagramControlDataToControlMessages(controlData, &cmsg)
+	if err := validateSendableControlMessages(&cmsg); err != 0 {
 		return socket.SynchronousDatagramSocketSendMsgResultWithErr(err), nil
 	}
 	n, err := s.sendMsg(addr, data, cmsg)
@@ -4096,7 +4104,8 @@ func (s *rawSocketImpl) RecvMsg(_ fidl.Context, wantAddr bool, dataLen uint32, w
 
 func (s *rawSocketImpl) SendMsg(_ fidl.Context, addr *fidlnet.SocketAddress, data []uint8, controlData socket.NetworkSocketSendControlData, _ socket.SendMsgFlags) (rawsocket.SocketSendMsgResult, error) {
 	var cmsg tcpip.SendableControlMessages
-	if err := fidlNetworkControlDataToControlMessages(controlData, &cmsg); err != 0 {
+	fidlNetworkControlDataToControlMessages(controlData, &cmsg)
+	if err := validateSendableControlMessages(&cmsg); err != 0 {
 		return rawsocket.SocketSendMsgResultWithErr(err), nil
 	}
 	n, err := s.sendMsg(addr, data, cmsg)

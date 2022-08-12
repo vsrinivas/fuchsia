@@ -16,63 +16,145 @@ import (
 
 const preludeOffset = 8
 
-type DeserializeSendMsgAddressErrorCondition int
-
 const (
-	DeserializeSendMsgAddressErrInputBufferNil DeserializeSendMsgAddressErrorCondition = iota
-	DeserializeSendMsgAddressErrInputBufferTooSmall
-	DeserializeSendMsgAddressErrNonZeroPrelude
-	DeserializeSendMsgAddressErrFailedToDecode
+	ipv4Loopback     tcpip.Address = "\x7f\x00\x00\x01"
+	ipv6Loopback     tcpip.Address = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
+	testPort         uint16        = 42
+	testIpTtl        uint8         = 43
+	testIpv6Hoplimit uint8         = 44
+	testNICID        tcpip.NICID   = 45
+	invalidIpTtl     uint8         = 0
 )
 
-func TestDeserializeSendMsgAddressFailures(t *testing.T) {
+func TestSerializeThenDeserializeSendMsgMeta(t *testing.T) {
+	for _, netProto := range []tcpip.NetworkProtocolNumber{
+		header.IPv4ProtocolNumber,
+		header.IPv6ProtocolNumber,
+	} {
+		t.Run(fmt.Sprintf("%d", netProto), func(t *testing.T) {
+			buf := make([]byte, TxUdpPreludeSize())
+			addr := tcpip.FullAddress{
+				Port: testPort,
+			}
+			var cmsgSet tcpip.SendableControlMessages
+
+			switch netProto {
+			case header.IPv4ProtocolNumber:
+				addr.Addr = ipv4Loopback
+				cmsgSet.HasTTL = true
+				cmsgSet.TTL = testIpTtl
+			case header.IPv6ProtocolNumber:
+				addr.Addr = ipv6Loopback
+				cmsgSet.HasHopLimit = true
+				cmsgSet.HopLimit = testIpv6Hoplimit
+				cmsgSet.HasIPv6PacketInfo = true
+				cmsgSet.IPv6PacketInfo = tcpip.IPv6PacketInfo{
+					NIC:  testNICID,
+					Addr: ipv6Loopback,
+				}
+			}
+
+			if err := SerializeSendMsgMeta(tcpip.NetworkProtocolNumber(netProto), addr, cmsgSet, buf); err != nil {
+				t.Fatalf("got SerializeSendMsgMeta(%d, %#v, %#v, _) = (%#v), want (%#v)", netProto, cmsgSet, addr, err, nil)
+			}
+
+			deserializedAddr, deserializedCmsgSet, err := DeserializeSendMsgMeta(buf)
+
+			if err != nil {
+				t.Fatalf("expect DeserializeSendMsgMeta(_) succeeds, got: %s", err)
+			}
+
+			if got, want := *deserializedAddr, addr; got != want {
+				t.Errorf("got address after serde = (%#v), want (%#v)", got, want)
+			}
+
+			if got, want := deserializedCmsgSet, cmsgSet; got != want {
+				t.Errorf("got cmsg set after serde = (%#v), want (%#v)", got, want)
+			}
+		})
+	}
+}
+
+func TestSerializeSendMsgMetaFailures(t *testing.T) {
+	for _, testCase := range []struct {
+		name        string
+		getBuffer   func([]byte) []byte
+		expectedErr error
+	}{
+		{"nil buffer", func(buf []byte) []byte { return nil }, &InputBufferNullErr{}},
+		{"buffer too small", func(buf []byte) []byte { return buf[:preludeOffset-1] }, &InputBufferTooSmallErr{}},
+	} {
+
+		t.Run(fmt.Sprintf("%s", testCase.name), func(t *testing.T) {
+			storage := make([]byte, TxUdpPreludeSize())
+			buf := testCase.getBuffer(storage)
+
+			addr := tcpip.FullAddress{
+				Port: testPort,
+				Addr: ipv4Loopback,
+			}
+			cmsgSet := tcpip.SendableControlMessages{}
+
+			err := SerializeSendMsgMeta(header.IPv4ProtocolNumber, addr, cmsgSet, buf)
+
+			if got, want := err, testCase.expectedErr; !errors.Is(err, testCase.expectedErr) {
+				t.Errorf("got SerializeSendMsgMeta(%d, %#v, _) = (%#v), want (%#v)", header.IPv4ProtocolNumber, addr, got, want)
+			}
+		})
+	}
+}
+
+func TestDeserializeSendMsgMetaFailures(t *testing.T) {
+	type DeserializeSendMsgMetaErrorCondition int
+
+	const (
+		DeserializeSendMsgMetaErrInputBufferNil DeserializeSendMsgMetaErrorCondition = iota
+		DeserializeSendMsgMetaErrInputBufferTooSmall
+		DeserializeSendMsgMetaErrNonZeroPrelude
+		DeserializeSendMsgMetaErrFailedToDecode
+	)
 	for _, testCase := range []struct {
 		name         string
-		errCondition DeserializeSendMsgAddressErrorCondition
+		errCondition DeserializeSendMsgMetaErrorCondition
 		expectedErr  error
 	}{
-		{"nil buffer", DeserializeSendMsgAddressErrInputBufferNil, &InputBufferNullErr{}},
-		{"buffer too small", DeserializeSendMsgAddressErrInputBufferTooSmall, &InputBufferTooSmallErr{}},
-		{"nonzero prelude", DeserializeSendMsgAddressErrNonZeroPrelude, &NonZeroPreludeErr{}},
-		{"failed to decode", DeserializeSendMsgAddressErrFailedToDecode, &FailedToDecodeErr{}},
+		{"nil buffer", DeserializeSendMsgMetaErrInputBufferNil, &InputBufferNullErr{}},
+		{"buffer too small", DeserializeSendMsgMetaErrInputBufferTooSmall, &InputBufferTooSmallErr{}},
+		{"nonzero prelude", DeserializeSendMsgMetaErrNonZeroPrelude, &NonZeroPreludeErr{}},
+		{"failed to decode", DeserializeSendMsgMetaErrFailedToDecode, &FailedToDecodeErr{}},
 	} {
 
 		t.Run(fmt.Sprintf("%s", testCase.name), func(t *testing.T) {
 			buf := make([]byte, TxUdpPreludeSize())
 
-			switch DeserializeSendMsgAddressErrorCondition(testCase.errCondition) {
-			case DeserializeSendMsgAddressErrInputBufferNil:
+			switch DeserializeSendMsgMetaErrorCondition(testCase.errCondition) {
+			case DeserializeSendMsgMetaErrInputBufferNil:
 				buf = nil
-			case DeserializeSendMsgAddressErrInputBufferTooSmall:
+			case DeserializeSendMsgMetaErrInputBufferTooSmall:
 				buf = buf[:preludeOffset-1]
-			case DeserializeSendMsgAddressErrNonZeroPrelude:
+			case DeserializeSendMsgMetaErrNonZeroPrelude:
 				buf[preludeOffset] = 1
-			case DeserializeSendMsgAddressErrFailedToDecode:
+			case DeserializeSendMsgMetaErrFailedToDecode:
 			}
 
-			_, err := DeserializeSendMsgAddress(buf)
+			_, _, err := DeserializeSendMsgMeta(buf)
 
-			if err == nil {
-				t.Errorf("expect DeserializeSendMsgAddress(_) fails")
+			if got, want := err, testCase.expectedErr; !errors.Is(err, testCase.expectedErr) {
+				t.Errorf("got DeserializeSendMsgMeta(_) = (_, _, %#v), want (_, _, %#v)", got, want)
 			}
-
-			if !errors.Is(err, testCase.expectedErr) {
-				t.Errorf("DeserializeSendMsgAddress(_) failed with error: %#v, expected: %#v", err, testCase.expectedErr)
-			}
-
 		})
 	}
 }
 
-type SerializeRecvMsgMetaErrorCondition int
-
-const (
-	SerializeRecvMsgMetaErrOutputBufferNil SerializeRecvMsgMetaErrorCondition = iota
-	SerializeRecvMsgMetaErrOutputBufferTooSmall
-	SerializeRecvMsgMetaErrPayloadTooLarge
-)
-
 func TestSerializeRecvMsgMetaFailures(t *testing.T) {
+	type SerializeRecvMsgMetaErrorCondition int
+
+	const (
+		SerializeRecvMsgMetaErrOutputBufferNil SerializeRecvMsgMetaErrorCondition = iota
+		SerializeRecvMsgMetaErrOutputBufferTooSmall
+		SerializeRecvMsgMetaErrPayloadTooLarge
+	)
+
 	const maxPayloadSize = int(math.MaxUint16)
 	const tooBigPayloadSize = maxPayloadSize + 1
 
@@ -104,12 +186,8 @@ func TestSerializeRecvMsgMetaFailures(t *testing.T) {
 
 				err := SerializeRecvMsgMeta(tcpip.NetworkProtocolNumber(netProto), res, buf)
 
-				if err == nil {
-					t.Errorf("expect SerializeRecvMsgMeta(%d, %#v, _) fails", netProto, res)
-				}
-
-				if !errors.Is(err, testCase.expectedErr) {
-					t.Errorf("SerializeRecvMsgMeta(%d, %#v, _) failed with error: %#v, expected: %#v", netProto, res, err, testCase.expectedErr)
+				if got, want := err, testCase.expectedErr; !errors.Is(err, testCase.expectedErr) {
+					t.Errorf("got SerializeRecvMsgMeta(%d, %#v, _) = (%#v), want (%#v)", netProto, res, got, want)
 				}
 			})
 		}
@@ -126,78 +204,7 @@ func TestSerializeRecvMsgMetaSuccess(t *testing.T) {
 			buf := make([]byte, RxUdpPreludeSize())
 
 			if err := SerializeRecvMsgMeta(tcpip.NetworkProtocolNumber(netProto), res, buf); err != nil {
-				t.Errorf("expect SerializeRecvMsgMeta(%d, %#v, _) succeeds, got: %s", netProto, res, err)
-			}
-		})
-	}
-}
-
-const (
-	ipv4Loopback tcpip.Address = "\x7f\x00\x00\x01"
-	ipv6Loopback tcpip.Address = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
-)
-
-func TestSerializeSendFromAddrThenDeserialize(t *testing.T) {
-	for _, netProto := range []tcpip.NetworkProtocolNumber{
-		header.IPv4ProtocolNumber,
-		header.IPv6ProtocolNumber,
-	} {
-		t.Run(fmt.Sprintf("%d", netProto), func(t *testing.T) {
-			buf := make([]byte, TxUdpPreludeSize())
-			addr := tcpip.FullAddress{
-				Port: 42,
-			}
-			switch netProto {
-			case header.IPv4ProtocolNumber:
-				addr.Addr = ipv4Loopback
-			case header.IPv6ProtocolNumber:
-				addr.Addr = ipv6Loopback
-			}
-
-			if err := SerializeSendMsgAddress(tcpip.NetworkProtocolNumber(netProto), addr, buf); err != nil {
-				t.Fatalf("expect SerializeSendMsgAddress(%d, %#v, _) succeeds, got: %s", netProto, addr, err)
-			}
-
-			deserializedAddr, err := DeserializeSendMsgAddress(buf)
-
-			if err != nil {
-				t.Fatalf("expect DeserializeSendMsgAddress(_) succeeds, got: %s", err)
-			}
-
-			if addr != *deserializedAddr {
-				t.Errorf("address after serde (%#v) != address before serde (%#v)", *deserializedAddr, addr)
-			}
-		})
-	}
-}
-
-func TestSerializeSendFromAddrFailures(t *testing.T) {
-	for _, testCase := range []struct {
-		name        string
-		setupBuffer func(*[]byte)
-		expectedErr error
-	}{
-		{"nil buffer", func(buf *[]byte) { *buf = nil }, &InputBufferNullErr{}},
-		{"buffer too small", func(buf *[]byte) { *buf = (*buf)[:preludeOffset-1] }, &InputBufferTooSmallErr{}},
-	} {
-
-		t.Run(fmt.Sprintf("%s", testCase.name), func(t *testing.T) {
-			buf := make([]byte, TxUdpPreludeSize())
-			testCase.setupBuffer(&buf)
-
-			addr := tcpip.FullAddress{
-				Port: 42,
-				Addr: ipv4Loopback,
-			}
-
-			err := SerializeSendMsgAddress(header.IPv4ProtocolNumber, addr, buf)
-
-			if err == nil {
-				t.Errorf("expect SerializeSendMsgAddress(%d, %#v, _) fails", header.IPv4ProtocolNumber, addr)
-			}
-
-			if !errors.Is(err, testCase.expectedErr) {
-				t.Errorf("SerializeSendMsgAddress(%d, %#v, _) failed with error: %#v, expected: %#v", header.IPv4ProtocolNumber, addr, err, testCase.expectedErr)
+				t.Errorf("got SerializeRecvMsgMeta(%d, %#v, _) = (%#v), want (%#v)", netProto, res, err, nil)
 			}
 		})
 	}

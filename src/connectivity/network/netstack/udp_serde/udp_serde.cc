@@ -118,7 +118,7 @@ const uint32_t kRxUdpPreludeSize =
     kSumOfSegmentSizes;
 
 DeserializeSendMsgMetaResult deserialize_send_msg_meta(Buffer buf) {
-  DeserializeSendMsgMetaResult res;
+  DeserializeSendMsgMetaResult res = {};
   if (buf.buf == nullptr) {
     res.err = DeserializeSendMsgMetaErrorInputBufferNull;
     return res;
@@ -166,8 +166,35 @@ DeserializeSendMsgMetaResult deserialize_send_msg_meta(Buffer buf) {
         break;
       }
     }
-  } else {
-    res.has_addr = false;
+  }
+
+  if (meta.has_control()) {
+    fsocket::wire::DatagramSocketSendControlData& control = meta.control();
+    if (control.has_network()) {
+      fsocket::wire::NetworkSocketSendControlData& network = control.network();
+      if (network.has_ip()) {
+        fsocket::wire::IpSendControlData& ip = network.ip();
+        if (ip.has_ttl()) {
+          res.cmsg_set.has_ip_ttl = true;
+          res.cmsg_set.ip_ttl = ip.ttl();
+        }
+      }
+      if (network.has_ipv6()) {
+        fsocket::wire::Ipv6SendControlData& ipv6 = network.ipv6();
+        if (ipv6.has_hoplimit()) {
+          res.cmsg_set.has_ipv6_hoplimit = true;
+          res.cmsg_set.ipv6_hoplimit = ipv6.hoplimit();
+        }
+        if (ipv6.has_pktinfo()) {
+          res.cmsg_set.has_ipv6_pktinfo = true;
+          fsocket::wire::Ipv6PktInfoSendControlData& pktinfo = ipv6.pktinfo();
+          res.cmsg_set.ipv6_pktinfo.if_index = pktinfo.iface;
+          static_assert(sizeof(res.cmsg_set.ipv6_pktinfo.addr) == sizeof(pktinfo.local_addr.addr));
+          memcpy(res.cmsg_set.ipv6_pktinfo.addr, pktinfo.local_addr.addr.data(),
+                 sizeof(pktinfo.local_addr.addr));
+        }
+      }
+    }
   }
 
   res.err = DeserializeSendMsgMetaErrorNone;
@@ -192,8 +219,8 @@ SerializeSendMsgMetaError serialize_send_msg_meta(fsocket::wire::SendMsgMeta& me
   return SerializeSendMsgMetaErrorNone;
 }
 
-SerializeSendMsgMetaError serialize_send_msg_meta_from_addr(IpAddress addr, uint16_t port,
-                                                            Buffer out_buf) {
+SerializeSendMsgMetaError serialize_send_msg_meta(const SendMsgMeta* meta_, ConstBuffer addr,
+                                                  Buffer out_buf) {
   fidl::Arena<
       fidl::MaxSizeInChannel<fsocket::wire::SendMsgMeta, fidl::MessageDirection::kSending>()>
       alloc;
@@ -203,30 +230,95 @@ SerializeSendMsgMetaError serialize_send_msg_meta_from_addr(IpAddress addr, uint
   fnet::wire::SocketAddress socket_addr;
   fnet::wire::Ipv4SocketAddress ipv4_socket_addr;
   fnet::wire::Ipv6SocketAddress ipv6_socket_addr;
-  switch (addr.addr_type) {
+  const SendMsgMeta& meta = *meta_;
+  switch (meta.addr_type) {
     case IpAddrType::Ipv4: {
-      cpp20::span<const uint8_t> from_addr_span(addr.addr, sizeof(ipv4_socket_addr.address.addr));
+      if (addr.buf == nullptr) {
+        return SerializeSendMsgMetaErrorAddrBufferNull;
+      }
+      cpp20::span<const uint8_t> from_addr_span(addr.buf, addr.buf_size);
       cpp20::span<uint8_t> to_addr(ipv4_socket_addr.address.addr.data(),
                                    sizeof(ipv4_socket_addr.address.addr));
+      if (from_addr_span.size() != to_addr.size()) {
+        return SerializeSendMsgMetaErrorAddrBufferSizeMismatch;
+      }
       copy_into(to_addr, from_addr_span);
-      ipv4_socket_addr.port = port;
+      ipv4_socket_addr.port = meta.port;
       socket_addr = fnet::wire::SocketAddress::WithIpv4(alloc, ipv4_socket_addr);
     } break;
     case IpAddrType::Ipv6: {
-      cpp20::span<const uint8_t> from_addr_span(addr.addr, sizeof(ipv6_socket_addr.address.addr));
+      if (addr.buf == nullptr) {
+        return SerializeSendMsgMetaErrorAddrBufferNull;
+      }
+      cpp20::span<const uint8_t> from_addr_span(addr.buf, addr.buf_size);
       cpp20::span<uint8_t> to_addr(ipv6_socket_addr.address.addr.data(),
                                    sizeof(ipv6_socket_addr.address.addr));
+      if (from_addr_span.size() != to_addr.size()) {
+        return SerializeSendMsgMetaErrorAddrBufferSizeMismatch;
+      }
       copy_into(to_addr, from_addr_span);
-      ipv6_socket_addr.port = port;
+      ipv6_socket_addr.port = meta.port;
       socket_addr = fnet::wire::SocketAddress::WithIpv6(alloc, ipv6_socket_addr);
     } break;
   }
   meta_builder.to(socket_addr);
-  fsocket::wire::SendMsgMeta meta = meta_builder.Build();
+
+  const SendAndRecvCmsgSet& cmsg_set = meta.cmsg_set;
+  fidl::WireTableBuilder<fsocket::wire::NetworkSocketSendControlData> net_control_builder =
+      fsocket::wire::NetworkSocketSendControlData::Builder(alloc);
+  bool net_control_set = false;
+
+  {
+    fidl::WireTableBuilder<fsocket::wire::IpSendControlData> ip_control_builder =
+        fsocket::wire::IpSendControlData::Builder(alloc);
+    bool ip_control_set = false;
+    if (cmsg_set.has_ip_ttl) {
+      ip_control_set = true;
+      ip_control_builder.ttl(cmsg_set.ip_ttl);
+    }
+    if (ip_control_set) {
+      net_control_set = true;
+      net_control_builder.ip(ip_control_builder.Build());
+    }
+  }
+
+  {
+    fidl::WireTableBuilder<fsocket::wire::Ipv6SendControlData> ipv6_control_builder =
+        fsocket::wire::Ipv6SendControlData::Builder(alloc);
+    bool ipv6_control_set = false;
+    if (cmsg_set.has_ipv6_pktinfo) {
+      const Ipv6PktInfo& pktinfo = cmsg_set.ipv6_pktinfo;
+      fuchsia_posix_socket::wire::Ipv6PktInfoSendControlData fidl_pktinfo = {
+          .iface = pktinfo.if_index,
+      };
+      static_assert(sizeof(pktinfo.addr) == sizeof(fidl_pktinfo.local_addr.addr));
+      memcpy(fidl_pktinfo.local_addr.addr.data(), pktinfo.addr,
+             sizeof(fidl_pktinfo.local_addr.addr));
+      ipv6_control_set = true;
+      ipv6_control_builder.pktinfo(fidl_pktinfo);
+    }
+    if (cmsg_set.has_ipv6_hoplimit) {
+      ipv6_control_set = true;
+      ipv6_control_builder.hoplimit(cmsg_set.ipv6_hoplimit);
+    }
+    if (ipv6_control_set) {
+      net_control_set = true;
+      net_control_builder.ipv6(ipv6_control_builder.Build());
+    }
+  }
+
+  if (net_control_set) {
+    fidl::WireTableBuilder<fsocket::wire::DatagramSocketSendControlData> datagram_control_builder =
+        fsocket::wire::DatagramSocketSendControlData::Builder(alloc);
+    datagram_control_builder.network(net_control_builder.Build());
+    meta_builder.control(datagram_control_builder.Build());
+  }
+
+  fsocket::wire::SendMsgMeta fidl_meta = meta_builder.Build();
   if (out_buf.buf == nullptr) {
     return SerializeSendMsgMetaErrorOutputBufferNull;
   }
-  return serialize_send_msg_meta(meta, cpp20::span<uint8_t>(out_buf.buf, out_buf.buf_size));
+  return serialize_send_msg_meta(fidl_meta, cpp20::span<uint8_t>(out_buf.buf, out_buf.buf_size));
 }
 
 fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta> deserialize_recv_msg_meta(
@@ -303,9 +395,9 @@ SerializeRecvMsgMetaError serialize_recv_msg_meta(const RecvMsgMeta* meta_, Cons
       ip_control_set = true;
       ip_control_builder.tos(meta.cmsg_set.ip_tos);
     }
-    if (meta.cmsg_set.has_ip_ttl) {
+    if (meta.cmsg_set.send_and_recv.has_ip_ttl) {
       ip_control_set = true;
-      ip_control_builder.ttl(meta.cmsg_set.ip_ttl);
+      ip_control_builder.ttl(meta.cmsg_set.send_and_recv.ip_ttl);
     }
     if (ip_control_set) {
       net_control_set = true;
@@ -317,8 +409,8 @@ SerializeRecvMsgMetaError serialize_recv_msg_meta(const RecvMsgMeta* meta_, Cons
     fidl::WireTableBuilder<fsocket::wire::Ipv6RecvControlData> ipv6_control_builder =
         fsocket::wire::Ipv6RecvControlData::Builder(alloc);
     bool ipv6_control_set = false;
-    if (meta.cmsg_set.has_ipv6_pktinfo) {
-      const Ipv6PktInfo& pktinfo = meta.cmsg_set.ipv6_pktinfo;
+    if (meta.cmsg_set.send_and_recv.has_ipv6_pktinfo) {
+      const Ipv6PktInfo& pktinfo = meta.cmsg_set.send_and_recv.ipv6_pktinfo;
       fuchsia_posix_socket::wire::Ipv6PktInfoRecvControlData fidl_pktinfo = {
           .iface = pktinfo.if_index,
       };
@@ -329,9 +421,9 @@ SerializeRecvMsgMetaError serialize_recv_msg_meta(const RecvMsgMeta* meta_, Cons
       ipv6_control_set = true;
       ipv6_control_builder.pktinfo(fidl_pktinfo);
     }
-    if (meta.cmsg_set.has_ipv6_hoplimit) {
+    if (meta.cmsg_set.send_and_recv.has_ipv6_hoplimit) {
       ipv6_control_set = true;
-      ipv6_control_builder.hoplimit(meta.cmsg_set.ipv6_hoplimit);
+      ipv6_control_builder.hoplimit(meta.cmsg_set.send_and_recv.ipv6_hoplimit);
     }
     if (meta.cmsg_set.has_ipv6_tclass) {
       ipv6_control_set = true;

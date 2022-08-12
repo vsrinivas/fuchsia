@@ -60,12 +60,12 @@ func getFidlAddrTypeAndSlice(protocol tcpip.NetworkProtocolNumber, addr tcpip.Fu
 	}
 }
 
-// DeserializeSendMsgAddress deserializes metadata contained within `buf`
+// DeserializeSendMsgMeta deserializes metadata contained within `buf`
 // as a SendMsgMeta FIDL message using the LLCPP bindings.
 //
-// If the deserialized metadata contains an address, returns that address.
-// Else, returns nil.
-func DeserializeSendMsgAddress(buf []byte) (*tcpip.FullAddress, error) {
+// If the deserialized metadata contains an address, returns that address (else returns nil).
+// Returns any found control messages present within a `tcpip.SendableControlMessages` struct.
+func DeserializeSendMsgMeta(buf []byte) (*tcpip.FullAddress, tcpip.SendableControlMessages, error) {
 	bufIn := C.Buffer{
 		buf:      (*C.uchar)(unsafe.Pointer(((*reflect.SliceHeader)(unsafe.Pointer(&buf))).Data)),
 		buf_size: C.ulong(len(buf)),
@@ -73,26 +73,46 @@ func DeserializeSendMsgAddress(buf []byte) (*tcpip.FullAddress, error) {
 
 	res := C.deserialize_send_msg_meta(bufIn)
 	if res.err != C.DeserializeSendMsgMetaErrorNone {
-		return nil, convertDeserializeSendMsgMetaErr(res.err)
+		return nil, tcpip.SendableControlMessages{}, convertDeserializeSendMsgMetaErr(res.err)
 	}
 
-	if res.has_addr {
-		var addr tcpip.Address
-		switch res.to_addr.addr_type {
-		case C.Ipv4:
-			foundAddr := (*[header.IPv4AddressSize]uint8)(unsafe.Pointer(&res.to_addr.addr))
-			addr = tcpip.Address(foundAddr[:])
-		case C.Ipv6:
-			foundAddr := (*[header.IPv6AddressSize]uint8)(unsafe.Pointer(&res.to_addr.addr))
-			addr = tcpip.Address(foundAddr[:])
+	addr := func() *tcpip.FullAddress {
+		if res.has_addr {
+			var addr tcpip.Address
+			switch res.to_addr.addr_type {
+			case C.Ipv4:
+				src := res.to_addr.addr[:header.IPv4AddressSize]
+				addr = tcpip.Address(*(*[]byte)(unsafe.Pointer(&src)))
+			case C.Ipv6:
+				src := res.to_addr.addr[:]
+				addr = tcpip.Address(*(*[]byte)(unsafe.Pointer(&src)))
+			}
+			return &tcpip.FullAddress{
+				Addr: addr,
+				Port: uint16(res.port),
+			}
 		}
-		return &tcpip.FullAddress{
-			Addr: addr,
-			Port: uint16(res.port),
-		}, nil
-	}
+		return nil
+	}()
 
-	return nil, nil
+	var cmsgSet tcpip.SendableControlMessages
+	if res.cmsg_set.has_ip_ttl {
+		cmsgSet.HasTTL = true
+		cmsgSet.TTL = uint8(res.cmsg_set.ip_ttl)
+	}
+	if res.cmsg_set.has_ipv6_hoplimit {
+		cmsgSet.HasHopLimit = true
+		cmsgSet.HopLimit = uint8(res.cmsg_set.ipv6_hoplimit)
+	}
+	if res.cmsg_set.has_ipv6_pktinfo {
+		cmsgSet.HasIPv6PacketInfo = true
+		src := res.cmsg_set.ipv6_pktinfo.addr[:]
+		cmsgSet.IPv6PacketInfo = tcpip.IPv6PacketInfo{
+			NIC:  tcpip.NICID(res.cmsg_set.ipv6_pktinfo.if_index),
+			Addr: tcpip.Address(*(*[]byte)(unsafe.Pointer(&src))),
+		}
+	}
+	return addr, cmsgSet, nil
 }
 
 func convertSerializeRecvMsgMetaErr(err C.SerializeRecvMsgMetaError) error {
@@ -133,21 +153,23 @@ func SerializeRecvMsgMeta(protocol tcpip.NetworkProtocolNumber, res tcpip.ReadRe
 	}
 
 	recv_meta := C.RecvMsgMeta{
-		cmsg_set: C.CmsgSet{
-			has_ip_tos:          C.bool(res.ControlMessages.HasTOS),
-			ip_tos:              C.uchar(res.ControlMessages.TOS),
-			has_ip_ttl:          C.bool(res.ControlMessages.HasTTL),
-			ip_ttl:              C.uchar(res.ControlMessages.TTL),
-			has_ipv6_tclass:     C.bool(res.ControlMessages.HasTClass),
-			ipv6_tclass:         C.uchar(res.ControlMessages.TClass),
-			has_ipv6_hoplimit:   C.bool(res.ControlMessages.HasHopLimit),
-			ipv6_hoplimit:       C.uchar(res.ControlMessages.HopLimit),
+		cmsg_set: C.RecvCmsgSet{
+			send_and_recv: C.SendAndRecvCmsgSet{
+				has_ip_ttl:        C.bool(res.ControlMessages.HasTTL),
+				ip_ttl:            C.uchar(res.ControlMessages.TTL),
+				has_ipv6_hoplimit: C.bool(res.ControlMessages.HasHopLimit),
+				ipv6_hoplimit:     C.uchar(res.ControlMessages.HopLimit),
+				has_ipv6_pktinfo:  C.bool(res.ControlMessages.HasIPv6PacketInfo),
+				ipv6_pktinfo: C.Ipv6PktInfo{
+					if_index: C.ulong(res.ControlMessages.IPv6PacketInfo.NIC),
+				},
+			},
 			has_timestamp_nanos: C.bool(res.ControlMessages.HasTimestamp),
 			timestamp_nanos:     C.long(res.ControlMessages.Timestamp.UnixNano()),
-			has_ipv6_pktinfo:    C.bool(res.ControlMessages.HasIPv6PacketInfo),
-			ipv6_pktinfo: C.Ipv6PktInfo{
-				if_index: C.ulong(res.ControlMessages.IPv6PacketInfo.NIC),
-			},
+			has_ip_tos:          C.bool(res.ControlMessages.HasTOS),
+			ip_tos:              C.uchar(res.ControlMessages.TOS),
+			has_ipv6_tclass:     C.bool(res.ControlMessages.HasTClass),
+			ipv6_tclass:         C.uchar(res.ControlMessages.TClass),
 		},
 		from_addr_type: fromAddrType,
 		payload_size:   C.ushort(res.Count),
@@ -155,7 +177,7 @@ func SerializeRecvMsgMeta(protocol tcpip.NetworkProtocolNumber, res tcpip.ReadRe
 	}
 
 	if res.ControlMessages.HasIPv6PacketInfo {
-		dst := recv_meta.cmsg_set.ipv6_pktinfo.addr[:]
+		dst := recv_meta.cmsg_set.send_and_recv.ipv6_pktinfo.addr[:]
 		copy(*(*[]byte)(unsafe.Pointer(&dst)), res.ControlMessages.IPv6PacketInfo.Addr)
 	}
 
@@ -172,25 +194,47 @@ func convertSerializeSendMsgMetaErr(err C.SerializeSendMsgMetaError) error {
 		return &InputBufferTooSmallErr{}
 	case C.SerializeSendMsgMetaErrorFailedToEncode:
 		return &FailedToEncodeErr{}
+	case C.SerializeSendMsgMetaErrorAddrBufferNull:
+		panic(fmt.Sprintf("got unexpected C.SerializeSendMsgMetaErrorAddrBufferNull error"))
+	case C.SerializeSendMsgMetaErrorAddrBufferSizeMismatch:
+		panic(fmt.Sprintf("got unexpected C.SerializeSendMsgMetaErrorAddrBufferSizeMismatch error"))
 	default:
 		panic(fmt.Sprintf("unknown serialization result %#v", err))
 	}
 }
 
-// SerializeSendMsgAddress serializes `addr` into `buf` as a SendMsgMeta FIDL message using
-// the LLCPP bindings.
-func SerializeSendMsgAddress(protocol tcpip.NetworkProtocolNumber, addr tcpip.FullAddress, buf []byte) error {
+// SerializeSendMsgMeta serializes `addr` and `cmsg_set` into `buf` as a SendMsgMeta FIDL message
+// using the LLCPP bindings.
+func SerializeSendMsgMeta(protocol tcpip.NetworkProtocolNumber, addr tcpip.FullAddress, cmsgSet tcpip.SendableControlMessages, buf []byte) error {
 	fromAddrType, addrSlice := getFidlAddrTypeAndSlice(protocol, addr)
-	ip_addr := C.IpAddress{
+	meta := C.SendMsgMeta{
 		addr_type: fromAddrType,
+		port:      C.ushort(addr.Port),
+		cmsg_set: C.SendAndRecvCmsgSet{
+			has_ip_ttl:        C.bool(cmsgSet.HasTTL),
+			ip_ttl:            C.uchar(cmsgSet.TTL),
+			has_ipv6_hoplimit: C.bool(cmsgSet.HasHopLimit),
+			ipv6_hoplimit:     C.uchar(cmsgSet.HopLimit),
+			has_ipv6_pktinfo:  C.bool(cmsgSet.HasIPv6PacketInfo),
+			ipv6_pktinfo: C.Ipv6PktInfo{
+				if_index: C.ulong(cmsgSet.IPv6PacketInfo.NIC),
+			},
+		},
 	}
-	dst := ip_addr.addr[:]
-	copy(*(*[]byte)(unsafe.Pointer(&dst)), addrSlice)
+	addrBuf := C.ConstBuffer{
+		buf:      (*C.uchar)(unsafe.Pointer(((*reflect.SliceHeader)(unsafe.Pointer(&addrSlice))).Data)),
+		buf_size: C.ulong(len(addrSlice)),
+	}
+
+	if cmsgSet.HasIPv6PacketInfo {
+		dst := meta.cmsg_set.ipv6_pktinfo.addr[:]
+		copy(*(*[]byte)(unsafe.Pointer(&dst)), cmsgSet.IPv6PacketInfo.Addr[:])
+	}
 
 	bufOut := C.Buffer{
 		buf:      (*C.uchar)(unsafe.Pointer(((*reflect.SliceHeader)(unsafe.Pointer(&buf))).Data)),
 		buf_size: C.ulong(len(buf)),
 	}
 
-	return convertSerializeSendMsgMetaErr(C.serialize_send_msg_meta_from_addr(ip_addr, C.ushort(addr.Port), bufOut))
+	return convertSerializeSendMsgMetaErr(C.serialize_send_msg_meta(&meta, addrBuf, bufOut))
 }

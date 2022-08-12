@@ -24,7 +24,7 @@ bool SendMsgMeta(perftest::RepeatState* const state, AddrKind::Kind addr_kind, b
                  OpSequence op_sequence) {
   TestSendMsgMeta meta(addr_kind);
   fidl::Arena alloc;
-  fsocket::wire::SendMsgMeta fidl = meta.Get(alloc, with_data);
+  fsocket::wire::SendMsgMeta fidl = meta.GetFidl(alloc, with_data);
 
   uint8_t data[kTxUdpPreludeSize];
   const Buffer buf = {

@@ -54,11 +54,41 @@ typedef struct IpAddress {
   uint8_t addr[kMaxIpAddrSize];
 } IpAddress;
 
+typedef struct Ipv6PktInfo {
+  uint64_t if_index;
+  uint8_t addr[kMaxIpAddrSize];
+} Ipv6PktInfo;
+
+typedef struct SendAndRecvCmsgSet {
+  bool has_ip_ttl;
+  uint8_t ip_ttl;
+
+  bool has_ipv6_hoplimit;
+  uint8_t ipv6_hoplimit;
+
+  bool has_ipv6_pktinfo;
+  Ipv6PktInfo ipv6_pktinfo;
+} SendAndRecvCmsgSet;
+
+typedef struct RecvCmsgSet {
+  bool has_timestamp_nanos;
+  int64_t timestamp_nanos;
+
+  bool has_ip_tos;
+  uint8_t ip_tos;
+
+  bool has_ipv6_tclass;
+  uint8_t ipv6_tclass;
+
+  SendAndRecvCmsgSet send_and_recv;
+} RecvCmsgSet;
+
 typedef struct DeserializeSendMsgMetaResult {
   DeserializeSendMsgMetaError err;
   bool has_addr;
   IpAddress to_addr;
   uint16_t port;
+  SendAndRecvCmsgSet cmsg_set;
 } DeserializeSendMsgMetaResult;
 
 // Utility for deserializing a SendMsgMeta from a provided buffer of bytes
@@ -70,33 +100,8 @@ typedef struct DeserializeSendMsgMetaResult {
 // describing the reason for the failure.
 UDP_SERDE_EXPORT DeserializeSendMsgMetaResult deserialize_send_msg_meta(Buffer buf);
 
-typedef struct Ipv6PktInfo {
-  uint64_t if_index;
-  uint8_t addr[kMaxIpAddrSize];
-} Ipv6PktInfo;
-
-typedef struct CmsgSet {
-  bool has_ip_tos;
-  uint8_t ip_tos;
-
-  bool has_ip_ttl;
-  uint8_t ip_ttl;
-
-  bool has_ipv6_tclass;
-  uint8_t ipv6_tclass;
-
-  bool has_ipv6_hoplimit;
-  uint8_t ipv6_hoplimit;
-
-  bool has_timestamp_nanos;
-  int64_t timestamp_nanos;
-
-  bool has_ipv6_pktinfo;
-  Ipv6PktInfo ipv6_pktinfo;
-} CmsgSet;
-
 typedef struct RecvMsgMeta {
-  CmsgSet cmsg_set;
+  RecvCmsgSet cmsg_set;
   IpAddrType from_addr_type;
   uint16_t payload_size;
   uint16_t port;
@@ -120,21 +125,29 @@ UDP_SERDE_EXPORT SerializeRecvMsgMetaError serialize_recv_msg_meta(const RecvMsg
                                                                    ConstBuffer from_addr,
                                                                    Buffer out_buf);
 
+typedef struct SendMsgMeta {
+  SendAndRecvCmsgSet cmsg_set;
+  IpAddrType addr_type;
+  uint16_t port;
+} SendMsgMeta;
+
 typedef enum SerializeSendMsgMetaError {
   SerializeSendMsgMetaErrorNone,
   SerializeSendMsgMetaErrorFailedToEncode,
   SerializeSendMsgMetaErrorOutputBufferNull,
   SerializeSendMsgMetaErrorOutputBufferTooSmall,
+  SerializeSendMsgMetaErrorAddrBufferNull,
+  SerializeSendMsgMetaErrorAddrBufferSizeMismatch,
 } SerializeSendMsgMetaError;
 
-// Utility for serializing the provided `addr` and `port` into the provided buffer
+// Utility for serializing a SendMsgMeta into the provided buffer
 // using the LLCPP bindings.
 //
-// On success, returns SerializeSendMsgMetaErrNone. On failure, returns an error
+// On success, returns SerializeSendMsgMetaErrorNone. On failure, returns an error
 // describing the reason for the failure.
-UDP_SERDE_EXPORT SerializeSendMsgMetaError serialize_send_msg_meta_from_addr(IpAddress addr,
-                                                                             uint16_t port,
-                                                                             Buffer out_buf);
+UDP_SERDE_EXPORT SerializeSendMsgMetaError serialize_send_msg_meta(const SendMsgMeta* meta_,
+                                                                   ConstBuffer addr,
+                                                                   Buffer out_buf);
 
 // The length of the prelude bytes in a Tx message.
 UDP_SERDE_EXPORT extern const uint32_t kTxUdpPreludeSize;
@@ -150,10 +163,10 @@ UDP_SERDE_EXPORT extern const uint32_t kRxUdpPreludeSize;
 
 namespace fsocket = fuchsia_posix_socket;
 
-// Utility for serializing a SendMsgMeta into the provided buffer using the LLCPP
-// bindings.
+// Utility for serializing a fsocket::wire::SendMsgMeta into the provided buffer
+// using the LLCPP bindings.
 //
-// On success, returns SerializeSendMsgMetaErrNone. On failure, returns an error
+// On success, returns SerializeSendMsgMetaErrorNone. On failure, returns an error
 // describing the reason for the failure.
 UDP_SERDE_EXPORT SerializeSendMsgMetaError serialize_send_msg_meta(fsocket::wire::SendMsgMeta& meta,
                                                                    cpp20::span<uint8_t> out_buf);

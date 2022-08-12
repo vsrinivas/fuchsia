@@ -16,58 +16,152 @@
 
 namespace fnet = fuchsia_net;
 
-class UdpSerdeTest : public ::testing::TestWithParam<AddrKind> {};
+enum class SerializeInput {
+  FidlTable,
+  CStruct,
+};
 
-TEST_P(UdpSerdeTest, SendSerializeThenDeserialize) {
-  TestSendMsgMeta meta(GetParam().GetKind());
-  uint8_t kBuf[kTxUdpPreludeSize];
-  fidl::Arena alloc;
-  fsocket::wire::SendMsgMeta fidl = meta.Get(alloc);
-  ASSERT_EQ(serialize_send_msg_meta(fidl, cpp20::span<uint8_t>(kBuf, kTxUdpPreludeSize)),
-            SerializeSendMsgMetaErrorNone);
+using AddrKindAndSerializeInput = std::tuple<AddrKind, SerializeInput>;
 
-  const Buffer in_buf = {
-      .buf = kBuf,
-      .buf_size = kTxUdpPreludeSize,
-  };
-
-  const DeserializeSendMsgMetaResult res = deserialize_send_msg_meta(in_buf);
-
-  ASSERT_EQ(res.err, DeserializeSendMsgMetaErrorNone);
-  EXPECT_EQ(res.port, meta.Port());
-  EXPECT_EQ(res.to_addr.addr_type, meta.AddrType());
-  const span found_addr(res.to_addr.addr, meta.AddrLen());
-  const span expected(meta.Addr(), meta.AddrLen());
-  EXPECT_EQ(found_addr, expected);
+std::string AddrKindAndSerializeTypeToString(
+    const testing::TestParamInfo<AddrKindAndSerializeInput>& info) {
+  auto const& [addr_kind, serialize_input] = info.param;
+  std::ostringstream oss;
+  oss << addr_kind.ToString() << '_';
+  switch (serialize_input) {
+    case SerializeInput::FidlTable:
+      oss << "FidlTable";
+      break;
+    case SerializeInput::CStruct:
+      oss << "CStruct";
+      break;
+  }
+  return oss.str();
 }
 
-TEST_P(UdpSerdeTest, SendSerializeFromAddrThenDeserialize) {
-  TestSendMsgMeta meta(GetParam().GetKind());
-  IpAddress addr{
-      .addr_type = meta.AddrType(),
-  };
-  memcpy(addr.addr, meta.Addr(), meta.AddrLen());
+class UdpSerdeSerializeSendTest : public ::testing::TestWithParam<AddrKindAndSerializeInput> {};
+
+TEST_P(UdpSerdeSerializeSendTest, SerializeThenDeserializeSucceeds) {
+  auto const& [addr_kind, serialize_input] = GetParam();
+  TestSendMsgMeta test_meta(addr_kind.GetKind());
   uint8_t kBuf[kTxUdpPreludeSize];
-  Buffer buf = {
+
+  const Buffer buf = {
       .buf = kBuf,
       .buf_size = kTxUdpPreludeSize,
   };
-  ASSERT_EQ(serialize_send_msg_meta_from_addr(addr, meta.Port(), buf),
-            SerializeSendMsgMetaErrorNone);
+
+  switch (serialize_input) {
+    case SerializeInput::FidlTable: {
+      fidl::Arena alloc;
+      fsocket::wire::SendMsgMeta fidl = test_meta.GetFidl(alloc);
+      ASSERT_EQ(serialize_send_msg_meta(fidl, cpp20::span<uint8_t>(kBuf, kTxUdpPreludeSize)),
+                SerializeSendMsgMetaErrorNone);
+    } break;
+    case SerializeInput::CStruct: {
+      SendMsgMeta meta = test_meta.GetCStruct();
+      ASSERT_EQ(serialize_send_msg_meta(
+                    &meta, {.buf = test_meta.Addr(), .buf_size = test_meta.AddrLen()}, buf),
+                SerializeSendMsgMetaErrorNone);
+    } break;
+  }
 
   const DeserializeSendMsgMetaResult res = deserialize_send_msg_meta(buf);
 
   ASSERT_EQ(res.err, DeserializeSendMsgMetaErrorNone);
-  EXPECT_EQ(res.port, meta.Port());
-  EXPECT_EQ(res.to_addr.addr_type, meta.AddrType());
-  const span found_addr(res.to_addr.addr, meta.AddrLen());
-  const span expected(meta.Addr(), meta.AddrLen());
-  EXPECT_EQ(found_addr, expected);
+  EXPECT_EQ(res.port, test_meta.Port());
+  EXPECT_EQ(res.to_addr.addr_type, test_meta.AddrType());
+  const span found_addr(res.to_addr.addr, test_meta.AddrLen());
+  const span expected_addr(test_meta.Addr(), test_meta.AddrLen());
+  EXPECT_EQ(found_addr, expected_addr);
+
+  SendAndRecvCmsgSet expected_cmsg_set = test_meta.CmsgSet();
+  const SendAndRecvCmsgSet& found_cmsg_set = res.cmsg_set;
+  EXPECT_EQ(expected_cmsg_set.has_ip_ttl, found_cmsg_set.has_ip_ttl);
+  if (expected_cmsg_set.has_ip_ttl) {
+    EXPECT_EQ(expected_cmsg_set.ip_ttl, found_cmsg_set.ip_ttl);
+  }
+  EXPECT_EQ(expected_cmsg_set.has_ipv6_hoplimit, found_cmsg_set.has_ipv6_hoplimit);
+  if (expected_cmsg_set.has_ipv6_hoplimit) {
+    EXPECT_EQ(expected_cmsg_set.ipv6_hoplimit, found_cmsg_set.ipv6_hoplimit);
+  }
+  EXPECT_EQ(expected_cmsg_set.has_ipv6_pktinfo, found_cmsg_set.has_ipv6_pktinfo);
+  if (expected_cmsg_set.has_ipv6_pktinfo) {
+    EXPECT_EQ(expected_cmsg_set.ipv6_pktinfo.if_index, found_cmsg_set.ipv6_pktinfo.if_index);
+    const span expected_ipv6_addr(expected_cmsg_set.ipv6_pktinfo.addr, test_meta.AddrLen());
+    const span found_ipv6_addr(found_cmsg_set.ipv6_pktinfo.addr, test_meta.AddrLen());
+    EXPECT_EQ(found_addr, expected_addr);
+  }
 }
+
+TEST_P(UdpSerdeSerializeSendTest, SerializeSendErrors) {
+  auto const& [addr_kind, serialize_input] = GetParam();
+  uint8_t kBuf[kTxUdpPreludeSize];
+  switch (serialize_input) {
+    case SerializeInput::FidlTable: {
+      fsocket::wire::SendMsgMeta meta;
+      EXPECT_EQ(serialize_send_msg_meta(meta, cpp20::span<uint8_t>(kBuf, 0)),
+                SerializeSendMsgMetaErrorOutputBufferTooSmall);
+    } break;
+    case SerializeInput::CStruct: {
+      TestSendMsgMeta test_meta(addr_kind.GetKind());
+      SendMsgMeta meta = test_meta.GetCStruct();
+      ConstBuffer addr_buf = {
+          .buf = test_meta.Addr(),
+          .buf_size = test_meta.AddrLen(),
+      };
+      Buffer output_buf = {
+          .buf = kBuf,
+          .buf_size = kTxUdpPreludeSize,
+      };
+      // Output buffer null.
+      EXPECT_EQ(serialize_send_msg_meta(&meta, addr_buf,
+                                        {
+                                            .buf = nullptr,
+                                            .buf_size = 0,
+                                        }),
+                SerializeSendMsgMetaErrorOutputBufferNull);
+
+      // Output buffer too short.
+      EXPECT_EQ(serialize_send_msg_meta(&meta, addr_buf,
+                                        {
+                                            .buf = kBuf,
+                                            .buf_size = 0,
+                                        }),
+                SerializeSendMsgMetaErrorOutputBufferTooSmall);
+
+      // Addr buffer null.
+      EXPECT_EQ(serialize_send_msg_meta(&meta,
+                                        {
+                                            .buf = nullptr,
+                                            .buf_size = 0,
+                                        },
+                                        output_buf),
+                SerializeSendMsgMetaErrorAddrBufferNull);
+
+      // Addr buffer too short.
+      EXPECT_EQ(serialize_send_msg_meta(&meta,
+                                        {
+                                            .buf = test_meta.Addr(),
+                                            .buf_size = 0,
+                                        },
+                                        output_buf),
+                SerializeSendMsgMetaErrorAddrBufferSizeMismatch);
+    } break;
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(UdpSerdeSerializeSendTests, UdpSerdeSerializeSendTest,
+                         testing::Combine(testing::Values(AddrKind::Kind::V4, AddrKind::Kind::V6),
+                                          testing::Values(SerializeInput::FidlTable,
+                                                          SerializeInput::CStruct)),
+                         AddrKindAndSerializeTypeToString);
+
+class UdpSerdeTest : public ::testing::TestWithParam<AddrKind> {};
 
 TEST_P(UdpSerdeTest, RecvSerializeThenDeserialize) {
   const auto& [test_recv_meta, addr_buf] = GetTestRecvMsgMeta(GetParam().GetKind());
-  const CmsgSet& cmsg_set = test_recv_meta.cmsg_set;
+  const RecvCmsgSet& cmsg_set = test_recv_meta.cmsg_set;
 
   uint8_t kBuf[kRxUdpPreludeSize];
 
@@ -113,7 +207,7 @@ TEST_P(UdpSerdeTest, RecvSerializeThenDeserialize) {
       EXPECT_EQ(ip_control.tos(), cmsg_set.ip_tos);
 
       ASSERT_TRUE(ip_control.has_ttl());
-      EXPECT_EQ(ip_control.ttl(), cmsg_set.ip_ttl);
+      EXPECT_EQ(ip_control.ttl(), cmsg_set.send_and_recv.ip_ttl);
 
       EXPECT_FALSE(network_control.has_ipv6());
     } break;
@@ -131,13 +225,13 @@ TEST_P(UdpSerdeTest, RecvSerializeThenDeserialize) {
       EXPECT_EQ(ipv6_control.tclass(), cmsg_set.ipv6_tclass);
 
       ASSERT_TRUE(ipv6_control.has_hoplimit());
-      EXPECT_EQ(ipv6_control.hoplimit(), cmsg_set.ipv6_hoplimit);
+      EXPECT_EQ(ipv6_control.hoplimit(), cmsg_set.send_and_recv.ipv6_hoplimit);
 
       ASSERT_TRUE(ipv6_control.has_pktinfo());
-      EXPECT_EQ(ipv6_control.pktinfo().iface, cmsg_set.ipv6_pktinfo.if_index);
+      EXPECT_EQ(ipv6_control.pktinfo().iface, cmsg_set.send_and_recv.ipv6_pktinfo.if_index);
       span found_pktinfo_addr(ipv6_control.pktinfo().header_destination_addr.addr.data(),
                               ipv6_control.pktinfo().header_destination_addr.addr.size());
-      span expected_pktinfo_addr(cmsg_set.ipv6_pktinfo.addr);
+      span expected_pktinfo_addr(cmsg_set.send_and_recv.ipv6_pktinfo.addr);
       EXPECT_EQ(found_pktinfo_addr, expected_pktinfo_addr);
       EXPECT_FALSE(network_control.has_ip());
     }
@@ -218,38 +312,6 @@ TEST_P(UdpSerdeTest, DeserializeSendErrors) {
       .buf_size = kTxUdpPreludeSize,
   });
   EXPECT_EQ(failed_to_decode.err, DeserializeSendMsgMetaErrorFailedToDecode);
-}
-
-TEST_P(UdpSerdeTest, SerializeSendErrors) {
-  fsocket::wire::SendMsgMeta meta;
-  uint8_t kBuf[kTxUdpPreludeSize];
-  EXPECT_EQ(serialize_send_msg_meta(meta, cpp20::span<uint8_t>(kBuf, 0)),
-            SerializeSendMsgMetaErrorOutputBufferTooSmall);
-}
-
-TEST_P(UdpSerdeTest, SerializeSendFromAddrErrors) {
-  TestSendMsgMeta meta(GetParam().GetKind());
-  IpAddress addr{
-      .addr_type = meta.AddrType(),
-  };
-  memcpy(addr.addr, meta.Addr(), meta.AddrLen());
-  uint8_t kBuf[kTxUdpPreludeSize];
-
-  // Output buffer null.
-  EXPECT_EQ(serialize_send_msg_meta_from_addr(addr, meta.Port(),
-                                              {
-                                                  .buf = nullptr,
-                                                  .buf_size = 0,
-                                              }),
-            SerializeSendMsgMetaErrorOutputBufferNull);
-
-  // Output buffer too short.
-  EXPECT_EQ(serialize_send_msg_meta_from_addr(addr, meta.Port(),
-                                              {
-                                                  .buf = kBuf,
-                                                  .buf_size = 0,
-                                              }),
-            SerializeSendMsgMetaErrorOutputBufferTooSmall);
 }
 
 TEST_P(UdpSerdeTest, SerializeRecvErrors) {

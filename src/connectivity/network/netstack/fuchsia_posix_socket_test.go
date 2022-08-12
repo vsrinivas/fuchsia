@@ -84,9 +84,10 @@ func TestDatagramSocketWithBlockingEndpoint(t *testing.T) {
 				Addr: addr.AddressWithPrefix.Address,
 				Port: 42,
 			}
-			if err := udp_serde.SerializeSendMsgAddress(
+			if err := udp_serde.SerializeSendMsgMeta(
 				ipv4.ProtocolNumber,
 				*toAddr,
+				tcpip.SendableControlMessages{},
 				buf[:preludeSize],
 			); err != nil {
 				t.Fatalf("SerializeSendMsgAddress(%d, %#v, _): %s", ipv4.ProtocolNumber, toAddr, err)
