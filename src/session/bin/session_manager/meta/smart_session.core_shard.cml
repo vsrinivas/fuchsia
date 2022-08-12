@@ -18,8 +18,6 @@
             // Protocols from v1 components.
             // See also //src/sys/appmgr/meta/appmgr.core_shard.cml
             protocol: [
-                "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
-                "fuchsia.location.namedplace.RegulatoryRegionWatcher",
                 "fuchsia.lowpan.bootstrap.Thread",
                 "fuchsia.media.ActivityReporter",
                 "fuchsia.media.audio.EffectsController",
@@ -40,8 +38,6 @@
         {
             // Routed from v1 components.
             protocol: [
-                "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
-                "fuchsia.location.namedplace.RegulatoryRegionWatcher",
                 "fuchsia.lowpan.bootstrap.Thread",
                 "fuchsia.media.SessionAudioConsumerFactory",
                 "fuchsia.nn.ModelExecutor",
@@ -154,8 +150,11 @@
             to: "#session-manager",
         },
         {
-            protocol: [ "fuchsia.media.sounds.Player" ],
-            from: "#soundplayer",
+            protocol: [
+                "fuchsia.net.mdns.Publisher",
+                "fuchsia.net.mdns.Subscriber",
+            ],
+            from: "#mdns",
             to: "#session-manager",
         },
         {
@@ -170,10 +169,15 @@
         },
         {
             protocol: [
-                "fuchsia.net.mdns.Publisher",
-                "fuchsia.net.mdns.Subscriber",
+                "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
+                "fuchsia.location.namedplace.RegulatoryRegionWatcher",
             ],
-            from: "#mdns",
+            from: "#regulatory_region",
+            to: "#session-manager",
+        },
+        {
+            protocol: [ "fuchsia.media.sounds.Player" ],
+            from: "#soundplayer",
             to: "#session-manager",
         },
         {
