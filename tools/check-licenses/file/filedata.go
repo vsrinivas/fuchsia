@@ -24,6 +24,7 @@ type FileData struct {
 	LineNumber  int
 	Data        []byte
 	LicenseType string
+	URL         string
 
 	hash string
 }

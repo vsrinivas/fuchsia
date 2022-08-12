@@ -35,29 +35,6 @@ func SaveResults() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	for _, p := range license.AllPatterns {
-		filename := fmt.Sprintf("%v-%v-%v", p.Category, p.Type, p.Name)
-		if err := writeFile(filepath.Join("license", "patterns", filename), []byte(p.Re.String())); err != nil {
-			return "", err
-		}
-		if len(p.Matches) == 0 {
-			continue
-		}
-		var m strings.Builder
-		for _, match := range p.Matches {
-			m.WriteString(match.FilePath)
-			m.WriteString("\n")
-		}
-		if err := writeFile(filepath.Join("license", "matches", filename), []byte(m.String())); err != nil {
-			return "", err
-		}
-	}
-	for _, d := range license.Unrecognized.Matches {
-		filename := fmt.Sprintf("%v.lic", d.LibraryName)
-		if err := writeFile(filepath.Join("license", "unrecognized", filename), []byte(d.Data)); err != nil {
-			return "", err
-		}
-	}
 	b.WriteString(s)
 
 	s, err = savePackageInfo("project", project.Config, project.Metrics)
@@ -144,13 +121,10 @@ func savePackageInfo(pkgName string, c interface{}, m MetricsInterface) (string,
 		if _, err := os.Stat(Config.OutDir); os.IsNotExist(err) {
 			err := os.Mkdir(Config.OutDir, 0755)
 			if err != nil {
-				return "", err
+				return "", fmt.Errorf("Failed to make directory %v: %v", Config.OutDir, err)
 			}
 		}
 
-		if err := saveConfig(pkgName, c); err != nil {
-			return "", err
-		}
 		if err := saveMetrics(pkgName, m); err != nil {
 			return "", err
 		}
@@ -158,25 +132,30 @@ func savePackageInfo(pkgName string, c interface{}, m MetricsInterface) (string,
 	return b.String(), nil
 }
 
-// Save the config files so we can recreate this run in the future.
-func saveConfig(pkg string, c interface{}) error {
-	if bytes, err := json.MarshalIndent(c, "", "  "); err != nil {
-		return err
-	} else {
-		return writeFile(filepath.Join(pkg, "_config.json"), bytes)
-	}
-}
-
-// Save the "Values" metrics: freeform data stored in a map with string keys.
+// Save the "Files" and "Values" metrics: freeform data stored in a map with string keys.
 func saveMetrics(pkg string, m MetricsInterface) error {
+	for k, bytes := range m.Files() {
+
+		// Spaces and commas are not allowed in file or folder names.
+		// Replace spaces and commas with underscores.
+		k = strings.Replace(k, " ", "_", -1)
+		k = strings.Replace(k, ",", "_", -1)
+
+		path := filepath.Join(pkg, k)
+		if err := writeFile(path, bytes); err != nil {
+			return fmt.Errorf("Failed to write Files file %v: %v", path, err)
+		}
+	}
+
 	for k, v := range m.Values() {
 		sort.Strings(v)
 		if bytes, err := json.MarshalIndent(v, "", "  "); err != nil {
-			return err
+			return fmt.Errorf("Failed to marshal indent for key %v: %v", k, err)
 		} else {
 			k = strings.Replace(k, " ", "_", -1)
-			if err := writeFile(filepath.Join(pkg, k), bytes); err != nil {
-				return err
+			path := filepath.Join(pkg, k)
+			if err := writeFile(path, bytes); err != nil {
+				return fmt.Errorf("Failed to write Values file %v: %v", path, err)
 			}
 		}
 	}
