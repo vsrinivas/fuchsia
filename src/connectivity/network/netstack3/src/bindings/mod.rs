@@ -16,6 +16,7 @@ mod context;
 mod debug_fidl_worker;
 mod devices;
 mod ethernet_worker;
+mod filter_worker;
 mod interfaces_admin;
 mod interfaces_watcher;
 mod netdevice_worker;
@@ -701,6 +702,7 @@ enum Service {
     Interfaces(fidl_fuchsia_net_interfaces::StateRequestStream),
     InterfacesAdmin(fidl_fuchsia_net_interfaces_admin::InstallerRequestStream),
     Debug(fidl_fuchsia_net_debug::InterfacesRequestStream),
+    Filter(fidl_fuchsia_net_filter::FilterRequestStream),
 }
 
 enum WorkItem {
@@ -842,7 +844,8 @@ impl NetstackSeed {
             .add_fidl_service(Service::Stack)
             .add_fidl_service(Service::Socket)
             .add_fidl_service(Service::Interfaces)
-            .add_fidl_service(Service::InterfacesAdmin);
+            .add_fidl_service(Service::InterfacesAdmin)
+            .add_fidl_service(Service::Filter);
 
         let services = fs.take_and_serve_directory_handle().context("directory handle")?;
 
@@ -892,6 +895,9 @@ impl NetstackSeed {
                 }
                 WorkItem::Incoming(Service::Debug(debug)) => {
                     debug.serve_with(|rs| debug_fidl_worker::serve(netstack.clone(), rs)).await
+                }
+                WorkItem::Incoming(Service::Filter(filter)) => {
+                    filter.serve_with(|rs| filter_worker::serve(rs)).await
                 }
                 WorkItem::Task(task) => task.await,
             }
