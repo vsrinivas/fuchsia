@@ -10,7 +10,8 @@
 #include <stdio.h>
 #include <zircon/boot/netboot.h>
 
-#include "src/bringup/bin/netsvc/board-info.h"
+#include "board-info.h"
+#include "netboot.h"
 
 namespace netsvc {
 namespace {

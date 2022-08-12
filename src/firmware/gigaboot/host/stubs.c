@@ -33,10 +33,6 @@ void draw_version(const char* version) {}
 void draw_nodename(const char* text) {}
 
 int zbi_boot(efi_handle img, efi_system_table* sys, void* image, size_t sz) { return -1; }
-int netboot_init(const char* nodename, uint32_t namegen) { return -1; }
-const char* netboot_nodename(void) { return NULL; }
-int netboot_poll(void) { return -1; }
-void netboot_close(void) {}
 
 // netifc.c stubs.
 void netifc_poll(void) {}

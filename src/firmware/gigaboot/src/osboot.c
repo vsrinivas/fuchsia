@@ -32,6 +32,7 @@
 #include "bootbyte.h"
 #include "diskio.h"
 #include "mdns.h"
+#include "netboot.h"
 #include "variable.h"
 
 #define DEFAULT_TIMEOUT 10

@@ -134,15 +134,6 @@ typedef struct nbfile_t {
     size_t offset; // write pointer
 } nbfile;
 
-int netboot_init(const char* nodename, uint32_t namegen);
-const char* netboot_nodename(void);
-int netboot_poll(void);
-void netboot_close(void);
-
-// Ask for a buffer suitable to put the file /name/ in
-// Return NULL to indicate /name/ is not wanted.
-nbfile* netboot_get_buffer(const char* name, size_t size);
-
 #define DEBUGLOG_PORT         33337
 #define DEBUGLOG_ACK_PORT     33338
 

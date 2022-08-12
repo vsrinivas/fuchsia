@@ -186,7 +186,7 @@
   "include/zircon/boot/crash-reason.h": "bc3e234ad14b75ec8e479e94147509f8",
   "include/zircon/boot/driver-config.h": "a6eb5091391d6ebc597090bc22536452",
   "include/zircon/boot/image.h": "aa5db4b7c7dbbd7d597a31fc27be8bc7",
-  "include/zircon/boot/netboot.h": "e226f8e10be309db8273546862108f11",
+  "include/zircon/boot/netboot.h": "7823d3f0b578c0e03a04f82e807d880c",
   "include/zircon/compiler.h": "283b0856f86b26d15e39345bd4da2281",
   "include/zircon/device/audio.h": "7e2afee52e24ad839a479e4cba9247a5",
   "include/zircon/dlfcn.h": "28285c191e9a046125a2065cb482d6ec",
