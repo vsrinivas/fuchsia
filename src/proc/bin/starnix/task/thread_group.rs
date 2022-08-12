@@ -245,36 +245,54 @@ impl ThreadGroup {
         if state.tasks.is_empty() {
             state.terminating = true;
 
-            // Because of lock ordering, one cannot get a lock to the state of the children of this
-            // thread group while having a lock of the thread group itself. Instead, the set of
-            // children will be computed here, the lock will be dropped and the children will be
-            // passed to the reaper that will capture the state in the correct order.
-            let children = state.children().collect::<Vec<_>>();
-            let parent = state.parent.clone();
-            std::mem::drop(state);
-            let children_state = children.iter().map(|c| c.write()).collect::<Vec<_>>();
-            let mut state = self.write();
             // Unregister this object.
             pids.remove_thread_group(state.leader());
             state.leave_process_group(&mut pids);
 
-            if let Some(parent) = state.parent.clone() {
-                let mut parent_writer = parent.write();
-                // Reparent the children.
-                parent_writer.adopt_children(&mut state, children_state, &pids);
+            // I have no idea if dropping the lock here is correct, and I don't want to think about
+            // it. If problems do turn up with another thread observing an intermediate state of
+            // this exit operation, the solution is to unify locks. It should be sensible and
+            // possible for there to be a single lock that protects all (or nearly all) of the
+            // data accessed by both exit and wait. In gvisor and linux this is the lock on the
+            // equivalent of the PidTable. This is made more difficult by rust locks being
+            // containers that only lock the data they contain, but see
+            // https://docs.google.com/document/d/1YHrhBqNhU1WcrsYgGAu3JwwlVmFXPlwWHTJLAbwRebY/edit
+            // for an idea.
+            std::mem::drop(state);
 
+            // We will need the immediate parent and the reaper. Once we have them, we can make
+            // sure to take the locks in the right order: parent before child.
+            let parent = self.read().parent.clone();
+            let reaper = self.find_reaper();
+
+            // Reparent the children.
+            if let Some(reaper) = reaper {
+                let mut reaper = reaper.write();
+                let mut state = self.write();
+                for (_pid, child) in std::mem::take(&mut state.children) {
+                    if let Some(child) = child.upgrade() {
+                        child.write().parent = Some(Arc::clone(reaper.base()));
+                        reaper.children.insert(child.leader, Arc::downgrade(&child));
+                    }
+                }
+                reaper.zombie_children.append(&mut state.zombie_children);
+            }
+
+            if let Some(ref parent) = parent {
+                let mut parent = parent.write();
+                let mut state = self.write();
                 let zombie = state.zombie_leader.take().expect("Failed to capture zombie leader.");
 
                 let signal_info = zombie.as_signal_info();
-                parent_writer.children.remove(&state.leader());
-                parent_writer.zombie_children.push(zombie);
+                parent.children.remove(&state.leader());
+                parent.zombie_children.push(zombie);
 
                 // Send signals
-                // TODO: Should this be zombie_leader.exit_signal?
-                if let Some(signal_target) = parent_writer.get_signal_target(&SIGCHLD.into()) {
+                // TODO: This should be the designated exit_signal of the leader
+                if let Some(signal_target) = parent.get_signal_target(&SIGCHLD.into()) {
                     send_signal(&signal_target, signal_info);
                 }
-                parent_writer.interrupt(InterruptionType::ChildChange);
+                parent.interrupt(InterruptionType::ChildChange);
             }
 
             // TODO: Set the error_code on the Zircon process object. Currently missing a way
@@ -282,9 +300,28 @@ impl ThreadGroup {
 
             // Once the last zircon thread stops, the zircon process will also stop executing.
 
-            std::mem::drop(state);
-            parent.map(|parent| parent.check_orphans());
+            if let Some(parent) = parent {
+                parent.check_orphans();
+            }
         }
+    }
+
+    /// Find the task which will adopt our children after we die.
+    fn find_reaper(self: &Arc<Self>) -> Option<Arc<Self>> {
+        let mut parent = Arc::clone(self.read().parent.as_ref()?);
+        loop {
+            parent = {
+                let parent_state = parent.read();
+                if parent_state.is_child_subreaper {
+                    break;
+                }
+                match parent_state.parent {
+                    Some(ref next_parent) => Arc::clone(next_parent),
+                    None => break,
+                }
+            }
+        }
+        Some(parent)
     }
 
     pub fn setsid(self: &Arc<Self>) -> Result<(), Errno> {
@@ -306,6 +343,8 @@ impl ThreadGroup {
         {
             let mut pids = self.kernel.pids.write();
 
+            let current_process_group = Arc::clone(&self.read().process_group);
+
             // The target process must be either the current process of a child of the current process
             let mut target_thread_group = target.thread_group.write();
             let is_target_current_process_child =
@@ -322,11 +361,6 @@ impl ThreadGroup {
 
             let new_process_group;
             {
-                let current_process_group = if is_target_current_process_child {
-                    Arc::clone(&self.read().process_group)
-                } else {
-                    Arc::clone(&target_thread_group.process_group)
-                };
                 let target_process_group = &target_thread_group.process_group;
 
                 // The target process must not be a session leader and must be in the same session as the current process.
@@ -386,26 +420,12 @@ impl ThreadGroup {
             if !stopped {
                 state.interrupt(InterruptionType::Continue);
             }
-            if let Some(parent) = state.parent.as_ref() {
+            if let Some(parent) = state.parent.clone() {
+                // OK to drop state here since we don't access it anymore.
+                std::mem::drop(state);
                 parent.read().interrupt(InterruptionType::ChildChange);
             }
         }
-    }
-
-    /// Returns any waitable child matching the given `selector` and `options`.
-    ///
-    ///Will remove the waitable status from the child depending on `options`.
-    pub fn get_waitable_child(
-        self: &Arc<Self>,
-        selector: ProcessSelector,
-        options: &WaitingOptions,
-    ) -> Result<Option<ZombieProcess>, Errno> {
-        let pids = self.kernel.pids.read();
-        // Built a list of mutable child state before acquire a write lock to the state of this
-        // object because lock ordering imposes the child lock is acquired before the parent.
-        let children = self.read().children().collect::<Vec<_>>();
-        let children_state = children.iter().map(|c| c.write()).collect::<Vec<_>>();
-        self.write().get_waitable_child(children_state, selector, options, &pids)
     }
 
     /// Ensures |session| is the controlling session inside of |controlling_session|, and returns a
@@ -638,7 +658,6 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
     /// Will remove the waitable status from the child depending on `options`.
     pub fn get_waitable_child(
         &mut self,
-        children: Vec<ThreadGroupWriteGuard<'_>>,
         selector: ProcessSelector,
         options: &WaitingOptions,
         pids: &PidTable,
@@ -671,19 +690,21 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
         }
 
         // The vector of potential matches.
-        let children_filter = |child: &ThreadGroupWriteGuard<'_>| match selector {
+        let children_filter = |child: &Arc<ThreadGroup>| match selector {
             ProcessSelector::Any => true,
-            ProcessSelector::Pid(pid) => child.leader() == pid,
+            ProcessSelector::Pid(pid) => child.leader == pid,
             ProcessSelector::Pgid(pgid) => {
-                pids.get_process_group(pgid).as_ref() == Some(&child.process_group)
+                pids.get_process_group(pgid).as_ref() == Some(&child.read().process_group)
             }
         };
 
-        let mut selected_children = children.into_iter().filter(children_filter).peekable();
+        let mut selected_children =
+            self.children.values().map(|t| t.upgrade().unwrap()).filter(children_filter).peekable();
         if selected_children.peek().is_none() {
             return error!(ECHILD);
         }
-        for mut child in selected_children {
+        for child in selected_children {
+            let mut child = child.write();
             if child.waitable.is_some() {
                 if !child.stopped && options.wait_for_continued {
                     let siginfo = if options.keep_waitable_state {
@@ -715,33 +736,8 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
         Ok(None)
     }
 
-    fn adopt_children(
-        &mut self,
-        other: &mut ThreadGroupMutableState,
-        children: Vec<ThreadGroupWriteGuard<'_>>,
-        pids: &PidTable,
-    ) {
-        // If parent != None and the process has not the PR_SET_CHILD_SUBREAPER, forward the call
-        // to the parent.
-        if !self.is_child_subreaper {
-            if let Some(parent) = self.parent.as_ref() {
-                parent.write().adopt_children(other, children, pids);
-                return;
-            }
-        }
-
-        // Else, act like init.
-        for mut child in children.into_iter() {
-            child.parent = Some(Arc::clone(self.base()));
-            self.children.insert(child.leader(), Arc::downgrade(child.base()));
-        }
-
-        other.children.clear();
-        self.zombie_children.append(&mut other.zombie_children);
-    }
-
     /// Returns a task in the current thread group.
-    pub fn get_task(&self) -> Result<Arc<Task>, Errno> {
+    fn get_task(&self) -> Result<Arc<Task>, Errno> {
         self.tasks
             .get(&self.leader())
             .map(|t| {

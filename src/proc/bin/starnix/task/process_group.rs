@@ -92,7 +92,8 @@ impl ProcessGroup {
             state.thread_groups().collect::<Vec<_>>()
         };
         for tg in thread_groups {
-            match &tg.read().parent {
+            let parent = tg.read().parent.clone();
+            match parent {
                 None => return,
                 Some(parent) => {
                     let parent_state = parent.read();

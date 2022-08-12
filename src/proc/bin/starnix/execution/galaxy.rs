@@ -52,8 +52,8 @@ impl Galaxy {
         )?;
         let init_task = self.kernel.pids.read().get_task(1);
         if let Some(init_task) = init_task {
-            let mut new_process_writer = task.thread_group.write();
             let mut init_writer = init_task.thread_group.write();
+            let mut new_process_writer = task.thread_group.write();
             new_process_writer.parent = Some(init_task.thread_group.clone());
             init_writer.children.insert(task.id, Arc::downgrade(&task.thread_group));
         }

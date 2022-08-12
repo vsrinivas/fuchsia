@@ -518,18 +518,23 @@ impl WaitingOptions {
 /// - `pid`: The id of the task to wait on.
 /// - `options`: The options passed to the wait syscall.
 fn wait_on_pid(
-    task: &Task,
+    current_task: &CurrentTask,
     selector: ProcessSelector,
     options: &WaitingOptions,
 ) -> Result<Option<ZombieProcess>, Errno> {
     let waiter = Waiter::new_for_wait_on_child_thread();
-    let (mut _guard, mut wait_result) = match waiter.register_waiter(task) {
+    let (mut _guard, mut wait_result) = match waiter.register_waiter(current_task) {
         Ok(guard) => (Some(guard), Ok(())),
         Err(err) => (None, Err(err)),
     };
     loop {
-        if let Some(child) = task.thread_group.get_waitable_child(selector, options)? {
-            return Ok(Some(child));
+        {
+            let pids = current_task.kernel().pids.read();
+            if let Some(child) =
+                current_task.thread_group.write().get_waitable_child(selector, options, &pids)?
+            {
+                return Ok(Some(child));
+            }
         }
 
         if !options.block {
@@ -1379,9 +1384,9 @@ mod tests {
         let thread = std::thread::spawn(move || {
             // Block until child is terminated.
             let waited_child = wait_on_pid(
-                &task_clone,
+                &task,
                 ProcessSelector::Any,
-                &WaitingOptions::new_for_wait4(&task_clone, 0).expect("WaitingOptions"),
+                &WaitingOptions::new_for_wait4(&task, 0).expect("WaitingOptions"),
             )
             .expect("wait_on_pid")
             .unwrap();
@@ -1389,7 +1394,7 @@ mod tests {
         });
 
         // Wait for the thread to be blocked on waiting for a child.
-        while task.read().signals.waiter.is_none() {
+        while task_clone.read().signals.waiter.is_none() {
             std::thread::sleep(std::time::Duration::from_millis(10));
         }
         child.thread_group.exit(ExitStatus::Exit(0));
