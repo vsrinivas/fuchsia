@@ -124,7 +124,7 @@ impl TopProxyInterface for TopProxy {
         ) -> Result<(fidl_test_bottom::Foo), fidl::Error> {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x245770d9d719c667,
             fidl::encoding::DynamicFlags::empty(),

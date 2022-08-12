@@ -306,7 +306,7 @@ impl {{ $protocol.Name}}ProxyInterface for {{ $protocol.Name}}Proxy {
             result.map(|_value| {{ template "ResponseValue" $method }})
             {{- end -}}
         }
-        let send_result = self.client.call_send_raw_query(&mut (
+        let send_result = self.client.call_send_raw_query::<_, {{ $method.Overflowing.OnRequestEncode }}>(&mut (
         {{- range $index, $request := $method.Request -}}
             {{- if (ne $index 0) -}}, {{ end -}}
             {{- template "WrappedName" $request -}}
@@ -315,7 +315,7 @@ impl {{ $protocol.Name}}ProxyInterface for {{ $protocol.Name}}Proxy {
         QueryResponseFut(match send_result {
             Ok(res_fut) => {
                 future::maybe_done(res_fut
-                    .and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)))
+                    .and_then(|buf| decode_transaction_body_fut::<_, _, {{ $method.Overflowing.OnResponseDecode }}>(buf, transform)))
             }
             Err(e) => MaybeDone::Done(Err(e)),
         })

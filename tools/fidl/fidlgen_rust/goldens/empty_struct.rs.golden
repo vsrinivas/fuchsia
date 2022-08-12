@@ -145,7 +145,7 @@ impl EmptyProtocolProxyInterface for EmptyProtocolProxy {
         fn transform(result: Result<(Empty,), fidl::Error>) -> Result<(Empty), fidl::Error> {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (e),
             0x76a931254962cea,
             fidl::encoding::DynamicFlags::empty(),

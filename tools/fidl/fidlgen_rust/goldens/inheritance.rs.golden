@@ -121,7 +121,7 @@ impl SubProxyInterface for SubProxy {
         fn transform(result: Result<(i64,), fidl::Error>) -> Result<(i64), fidl::Error> {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (s),
             0x68a61c2a230db8b8,
             fidl::encoding::DynamicFlags::empty(),
@@ -496,7 +496,7 @@ impl Super_ProxyInterface for Super_Proxy {
         fn transform(result: Result<(i64,), fidl::Error>) -> Result<(i64), fidl::Error> {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (s),
             0x68a61c2a230db8b8,
             fidl::encoding::DynamicFlags::empty(),

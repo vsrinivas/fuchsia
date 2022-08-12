@@ -423,7 +423,7 @@ impl MainProtocolProxyInterface for MainProtocolProxy {
         fn transform(result: Result<(i32,), fidl::Error>) -> Result<(i32), fidl::Error> {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (a),
             0x2348a1331ca4cfb0,
             fidl::encoding::DynamicFlags::empty(),
@@ -450,7 +450,7 @@ impl MainProtocolProxyInterface for MainProtocolProxy {
         > {
             result.map(|_value| _value.map(|_value| _value.0))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (a),
             0x6a9be48b574d1557,
             fidl::encoding::DynamicFlags::empty(),
@@ -474,7 +474,7 @@ impl MainProtocolProxyInterface for MainProtocolProxy {
         fn transform(result: Result<(u32, u32), fidl::Error>) -> Result<(u32, u32), fidl::Error> {
             result.map(|_value| (_value.0, _value.1))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (a, b),
             0x743776548de3af0f,
             fidl::encoding::DynamicFlags::empty(),
@@ -498,7 +498,7 @@ impl MainProtocolProxyInterface for MainProtocolProxy {
         ) -> Result<(MainProtocolTwoWayLocalWithErrorResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| (_value.0, _value.1)))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (a, b),
             0x2839c029915cb8fc,
             fidl::encoding::DynamicFlags::empty(),
@@ -521,7 +521,7 @@ impl MainProtocolProxyInterface for MainProtocolProxy {
         fn transform(result: Result<(i32,), fidl::Error>) -> Result<(i32), fidl::Error> {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (a),
             0x20f4a8f65ff69473,
             fidl::encoding::DynamicFlags::empty(),
@@ -541,7 +541,7 @@ impl MainProtocolProxyInterface for MainProtocolProxy {
         ) -> Result<(MainProtocolTwoWayImportWithErrorResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| _value.0))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (a),
             0x3b7b706d42eb9bbd,
             fidl::encoding::DynamicFlags::empty(),
@@ -564,7 +564,7 @@ impl MainProtocolProxyInterface for MainProtocolProxy {
         fn transform(result: Result<(u32, u32), fidl::Error>) -> Result<(u32, u32), fidl::Error> {
             result.map(|_value| (_value.0, _value.1))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (a, b),
             0x8bdc969ff7dd759,
             fidl::encoding::DynamicFlags::empty(),
@@ -588,7 +588,7 @@ impl MainProtocolProxyInterface for MainProtocolProxy {
         ) -> Result<(MainProtocolTwoWayAnonWithErrorResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| (_value.0, _value.1)))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (a, b),
             0x5862bf8170c87a36,
             fidl::encoding::DynamicFlags::empty(),
