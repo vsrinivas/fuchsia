@@ -33,11 +33,14 @@ async fn main() -> Result<()> {
         })?;
 
     let (shutdown_tx, shutdown_rx) = mpsc::channel::<service::FshostShutdownResponder>(1);
+    let (watcher, device_stream) = watcher::Watcher::new().await?;
 
     let mut env = FshostEnvironment::new();
     let export = vfs::pseudo_directory! {
         "svc" => vfs::pseudo_directory! {
             fshost::AdminMarker::PROTOCOL_NAME => service::fshost_admin(shutdown_tx),
+            fshost::BlockWatcherMarker::PROTOCOL_NAME =>
+                service::fshost_block_watcher(watcher),
         },
         "blobfs" => remote_dir(env.blobfs_root()?),
     };
@@ -55,7 +58,7 @@ async fn main() -> Result<()> {
     // policy.
     let mut fs_manager =
         manager::Manager::new(shutdown_rx, fshost_config::Config::take_from_startup_handle(), env);
-    let shutdown_responder = fs_manager.device_handler().await?;
+    let shutdown_responder = fs_manager.device_handler(device_stream).await?;
 
     log::info!("shutdown signal received");
 

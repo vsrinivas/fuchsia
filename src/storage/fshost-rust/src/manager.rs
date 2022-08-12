@@ -6,7 +6,7 @@ use {
     crate::{
         device::{BlockDevice, Device},
         environment::Environment,
-        matcher, service, watcher,
+        matcher, service,
     },
     anyhow::{format_err, Error},
     futures::{channel::mpsc, StreamExt},
@@ -29,8 +29,11 @@ impl<E: Environment> Manager<E> {
 
     /// The main loop of fshost. Watch for new devices, match them against filesystems we expect,
     /// and then launch them appropriately.
-    pub async fn device_handler(&mut self) -> Result<service::FshostShutdownResponder, Error> {
-        let mut block_watcher = Box::pin(watcher::block_watcher().await?).fuse();
+    pub async fn device_handler(
+        &mut self,
+        device_stream: impl futures::Stream<Item = String>,
+    ) -> Result<service::FshostShutdownResponder, Error> {
+        let mut device_stream = Box::pin(device_stream).fuse();
         loop {
             // Wait for the next device to come in, or the shutdown signal to arrive.
             let device_path = futures::select! {
@@ -39,7 +42,7 @@ impl<E: Environment> Manager<E> {
                         .ok_or_else(|| format_err!("shutdown signal stream ended unexpectedly"))?;
                     return Ok(responder);
                 },
-                maybe_device = block_watcher.next() => {
+                maybe_device = device_stream.next() => {
                     if let Some(device_path) = maybe_device {
                         device_path
                     } else {
@@ -81,7 +84,7 @@ mod tests {
         super::Manager,
         crate::{
             config::default_config, device::constants::BLOBFS_TYPE_GUID,
-            environment::FshostEnvironment, service,
+            environment::FshostEnvironment, service, watcher,
         },
         device_watcher::recursive_wait_and_open_node,
         fidl::endpoints::Proxy,
@@ -109,10 +112,13 @@ mod tests {
         RamdiskClient::create(512, 1 << 16).unwrap()
     }
 
+    #[ignore]
     #[fasync::run_singlethreaded(test)]
     async fn test_mount_blobfs() {
+        println!("making the ramdisk");
         let ramdisk = ramdisk().await;
         let ramdisk_path = ramdisk.get_path();
+        println!("formatting the disk with fvm");
         {
             let volume_manager_proxy = set_up_fvm(Path::new(ramdisk_path), 32 * 1024)
                 .await
@@ -128,12 +134,15 @@ mod tests {
             .await
             .expect("create_fvm_volume failed");
             let blobfs_path = format!("{}/fvm/blobfs-p-1/block", ramdisk_path);
+            println!("and blobfs");
             recursive_wait_and_open_node(&dev(), blobfs_path.strip_prefix("/dev/").unwrap())
                 .await
                 .expect("recursive_wait_and_open_node failed");
             let blobfs = Blobfs::new(&blobfs_path).expect("new failed");
+            println!("formatting blobfs");
             blobfs.format().await.expect("format failed");
 
+            println!("and reseting back to normal");
             let device_proxy = ControllerProxy::new(volume_manager_proxy.into_channel().unwrap());
             device_proxy
                 .schedule_unbind()
@@ -141,12 +150,17 @@ mod tests {
                 .expect("schedule unbind fidl failed")
                 .expect("schedule_unbind failed");
         }
+        println!("setting up the things needed for the manager");
         let (_shutdown_tx, shutdown_rx) = mpsc::channel::<service::FshostShutdownResponder>(1);
         let mut env = FshostEnvironment::new();
         let blobfs_root = env.blobfs_root().expect("blobfs_root failed");
         let mut manager = Manager::new(shutdown_rx, default_config(), env);
+        println!("creating the watcher");
+        let (_watcher, device_stream) =
+            watcher::Watcher::new().await.expect("starting watcher failed");
+        println!("running the device handler and waiting for blobfs");
         select! {
-            _ = manager.device_handler().fuse() => unreachable!(),
+            _ = manager.device_handler(device_stream).fuse() => unreachable!(),
             result = blobfs_root.describe().fuse() => { result.expect("describe failed"); }
         }
     }

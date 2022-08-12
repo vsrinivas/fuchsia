@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::watcher,
     fidl_fuchsia_fshost as fshost, fuchsia_zircon as zx,
     futures::{channel::mpsc, StreamExt},
     std::sync::Arc,
@@ -67,7 +68,47 @@ pub fn fshost_admin(shutdown_tx: mpsc::Sender<FshostShutdownResponder>) -> Arc<s
                     }
                 }
             }
-            log::error!("admin server exited unexpectedly");
+        }
+    })
+}
+
+/// Create a new service node which implements the fuchsia.fshost.BlockWatcher protocol.
+pub fn fshost_block_watcher(pauser: watcher::Watcher) -> Arc<service::Service> {
+    service::host(move |mut stream: fshost::BlockWatcherRequestStream| {
+        let mut pauser = pauser.clone();
+        async move {
+            while let Some(request) = stream.next().await {
+                match request {
+                    Ok(fshost::BlockWatcherRequest::Pause { responder }) => {
+                        let res = match pauser.pause().await {
+                            Ok(()) => zx::Status::OK.into_raw(),
+                            Err(e) => {
+                                log::error!("block watcher service: failed to pause: {:?}", e);
+                                zx::Status::UNAVAILABLE.into_raw()
+                            }
+                        };
+                        responder.send(res).unwrap_or_else(|e| {
+                            log::error!("failed to send Pause response. error: {:?}", e);
+                        });
+                    }
+                    Ok(fshost::BlockWatcherRequest::Resume { responder }) => {
+                        let res = match pauser.resume().await {
+                            Ok(()) => zx::Status::OK.into_raw(),
+                            Err(e) => {
+                                log::error!("block watcher service: failed to resume: {:?}", e);
+                                zx::Status::BAD_STATE.into_raw()
+                            }
+                        };
+                        responder.send(res).unwrap_or_else(|e| {
+                            log::error!("failed to send Resume response. error: {:?}", e);
+                        });
+                    }
+                    Err(e) => {
+                        log::error!("block watcher server failed: {:?}", e);
+                        return;
+                    }
+                }
+            }
         }
     })
 }
