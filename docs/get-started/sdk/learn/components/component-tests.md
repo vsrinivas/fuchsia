@@ -89,14 +89,32 @@ fuchsia_test_package(
 In this exercise, you'll add unit tests to the `echo` component with the
 Test Runner Framework and run those tests in a FEMU environment.
 
+After you complete this section, the project should have the following directory
+structure:
+
+```none {:.devsite-disable-click-to-copy}
+//fuchsia-codelab/echo
+                  |- BUILD.bazel
+                  |- meta
+                  |   |- echo.cml
+                  |
+                  |- echo_component.cc
+                  |- echo_component.h
+{{ '<strong>' }}                  |- echo_unittest.cc {{ '</strong>' }}
+                  |- main.cc
+```
+
+* `echo_unittest.cc`: Source code for the C++ unit tests.
+
 ### Implement unit tests
 
 Unit tests verify that the internal functions of the component behave as
 expected. For the `echo` component, you'll validate that the `greeting()`
 function used in the previous exercise returns the expected values.
 
-Add the following unit test functions to validate the behavior of the
-`greeting()` function when supplied with one, two, or three arguments:
+Create `echo/echo_unittest.cc` and add the following unit test functions to
+validate the behavior of the `greeting()` function when supplied with one, two,
+or three arguments:
 
 `echo/echo_unittest.cc`:
 
@@ -110,19 +128,18 @@ Add the following unit test functions to validate the behavior of the
 
 ### Run the unit tests
 
-Update the imports section of your `BUILD.bazel` file to include the additional
-test rules:
+Update the imports section of your `echo/BUILD.bazel` file to include the
+additional test rules:
 
-`BUILD.bazel`:
+`echo/BUILD.bazel`:
 
 ```bazel
 {% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/echo/BUILD.bazel" region_tag="imports" adjust_indentation="auto" %}
 ```
 
-Add the following to your `BUILD.bazel` file to include your tests in the build
-configuration:
+Add the following build rules to include your tests in the build configuration:
 
-`BUILD.bazel`:
+`echo/BUILD.bazel`:
 
 ```bazel
 {% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/echo/BUILD.bazel" region_tag="unittest" adjust_indentation="auto" %}

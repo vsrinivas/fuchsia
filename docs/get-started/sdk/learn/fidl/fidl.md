@@ -78,10 +78,21 @@ In this section, you'll define a new FIDL library with a protocol called
 `Echo` containing a single method that returns string values back to the
 caller.
 
+### Create the FIDL library
+
 Start by creating a new directory for the FIDL library target:
 
 ```posix-terminal
 mkdir -p fuchsia-codelab/echo-fidl
+```
+
+After you complete this section, the project should have the following directory
+structure:
+
+```none {:.devsite-disable-click-to-copy}
+//fuchsia-codelab/echo-fidl
+                  |- BUILD.bazel
+                  |- echo.fidl.cc
 ```
 
 Add a new FIDL interface file called `echo.fidl` with the following contents:
@@ -101,7 +112,9 @@ target:
 `echo-fidl/BUILD.bazel`:
 
 ```bazel
-{% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/routing/fidl/BUILD.bazel" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/routing/fidl/BUILD.bazel" region_tag="imports" adjust_indentation="auto" %}
+
+{% includecode gerrit_repo="fuchsia/sdk-samples/getting-started" gerrit_path="src/routing/fidl/BUILD.bazel" region_tag="fidl_library" adjust_indentation="auto" %}
 ```
 
 Run `bazel build` and verify that the build completes successfully:
