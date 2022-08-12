@@ -5,8 +5,6 @@
 // TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
 // @dart=2.9
 
-// TODO(fxbug.dev/98455) remove deprecated members after roll
-
 import 'dart:collection';
 
 import 'package:analyzer/dart/ast/ast.dart';
@@ -43,14 +41,14 @@ class DetectChangesVisitor<R> extends RecursiveAstVisitor<R> {
 
   @override
   R visitClassDeclaration(ClassDeclaration node) {
-    return visit(node, '${node.name.name}', SplayTreeMap<String, dynamic>());
+    return visit(node, '${node.name2.lexeme}', SplayTreeMap<String, dynamic>());
   }
 
   @override
   R visitConstructorDeclaration(ConstructorDeclaration node) {
     String name = stack.first['name'];
-    if (node.name != null) {
-      name = '$name.${node.name}';
+    if (node.name2 != null) {
+      name = '$name.${node.name2}';
     }
     return visit(node, name, SplayTreeMap<String, dynamic>());
   }
@@ -59,7 +57,7 @@ class DetectChangesVisitor<R> extends RecursiveAstVisitor<R> {
   R visitMethodDeclaration(MethodDeclaration node) {
     SplayTreeMap<String, dynamic> map = SplayTreeMap();
 
-    String name = '${node.name}';
+    String name = '${node.name2}';
     map['returnType'] = '${node.returnType}';
     map['isAbstract'] = node.isAbstract;
     map['isOperator'] = node.isOperator;
@@ -75,7 +73,7 @@ class DetectChangesVisitor<R> extends RecursiveAstVisitor<R> {
     if (stack.first['type'] == 'file') {
       SplayTreeMap<String, dynamic> map = SplayTreeMap();
 
-      String name = '${node.name}';
+      String name = '${node.name2}';
       map['returnType'] = '${node.returnType}';
       map['isGetter'] = node.isGetter;
       map['isSetter'] = node.isSetter;
@@ -97,7 +95,7 @@ class DetectChangesVisitor<R> extends RecursiveAstVisitor<R> {
 
   @override
   R visitEnumConstantDeclaration(EnumConstantDeclaration node) {
-    return visit(node, '${node.name}', SplayTreeMap<String, dynamic>());
+    return visit(node, '${node.name2}', SplayTreeMap<String, dynamic>());
   }
 
   @override
@@ -153,7 +151,7 @@ class DetectChangesVisitor<R> extends RecursiveAstVisitor<R> {
     if (stack.first['type'] == 'FunctionDeclarationImpl' ||
         stack.first['type'] == 'MethodDeclarationImpl' ||
         stack.first['type'] == 'ConstructorDeclarationImpl') {
-      String name = node.identifier.name;
+      String name = '${node.name}';
       SplayTreeMap<String, dynamic> map = SplayTreeMap();
       map['isOptional'] = node.isOptional;
       map['isOptionalNamed'] = node.isOptionalNamed;
@@ -199,7 +197,7 @@ class DetectChangesVisitor<R> extends RecursiveAstVisitor<R> {
       map['isFinal'] = node.isFinal;
       map['isLate'] = node.isLate;
 
-      return visit(node, '${node.name.name}', map);
+      return visit(node, '${node.name2.lexeme}', map);
     } else {
       return super.visitVariableDeclaration(node);
     }
