@@ -277,7 +277,7 @@ void ScreenReaderMessageGenerator::MaybeAddGenericSelectedDescriptor(
 
   if (node->has_states() && node->states().has_selected() && node->states().selected()) {
     description->emplace_back(
-        GenerateUtteranceByMessageId(MessageIds::ELEMENT_SELECTED, zx::duration(zx::msec(0))));
+        GenerateUtteranceByMessageId(MessageIds::ELEMENT_SELECTED));
   }
 }
 
@@ -326,7 +326,7 @@ ScreenReaderMessageGenerator::DescribeButton(const fuchsia::accessibility::seman
         node->states().toggled_state() == fuchsia::accessibility::semantics::ToggledState::ON
             ? MessageIds::ELEMENT_TOGGLED_ON
             : MessageIds::ELEMENT_TOGGLED_OFF;
-    description.emplace_back(GenerateUtteranceByMessageId(message_id, zx::duration(zx::msec(0))));
+    description.emplace_back(GenerateUtteranceByMessageId(message_id));
   }
 
   MaybeAddDoubleTapHint(node, description);
@@ -345,7 +345,7 @@ ScreenReaderMessageGenerator::UtteranceAndContext ScreenReaderMessageGenerator::
   const auto name_value =
       node->has_attributes() && node->attributes().has_label() ? node->attributes().label() : "";
   if (!name_value.empty()) {
-    return GenerateUtteranceByMessageId(message_id, zx::duration(zx::msec(0)), {"name"},
+    return GenerateUtteranceByMessageId(message_id, zx::msec(0), {"name"},
                                         {name_value});
   }
 
@@ -391,7 +391,7 @@ ScreenReaderMessageGenerator::DescribeToggleSwitch(
               node->states().toggled_state() == fuchsia::accessibility::semantics::ToggledState::ON
           ? MessageIds::ELEMENT_TOGGLED_ON
           : MessageIds::ELEMENT_TOGGLED_OFF;
-  return GenerateUtteranceByMessageId(message_id, zx::duration(zx::msec(0)));
+  return GenerateUtteranceByMessageId(message_id);
 }
 
 ScreenReaderMessageGenerator::UtteranceAndContext
@@ -442,7 +442,7 @@ ScreenReaderMessageGenerator::DescribeTable(const fuchsia::accessibility::semant
         auto num_rows = std::to_string(table_attributes.number_of_rows());
         auto num_columns = std::to_string(table_attributes.number_of_columns());
         description.emplace_back(
-            GenerateUtteranceByMessageId(MessageIds::TABLE_DIMENSIONS, zx::duration(zx::msec(0)),
+            GenerateUtteranceByMessageId(MessageIds::TABLE_DIMENSIONS, zx::msec(0),
                                          {"num_rows", "num_columns"}, {num_rows, num_columns}));
       }
     }
@@ -493,14 +493,14 @@ ScreenReaderMessageGenerator::DescribeTableCell(const fuchsia::accessibility::se
       if (table_cell_attributes.has_row_span() && table_cell_attributes.row_span() > 1) {
         auto row_span = std::to_string(table_cell_attributes.row_span());
         description.emplace_back(GenerateUtteranceByMessageId(
-            MessageIds::ROW_SPAN, zx::duration(zx::msec(0)), {"row_span"}, {row_span}));
+            MessageIds::ROW_SPAN, zx::msec(0), {"row_span"}, {row_span}));
       }
 
       // We only want to speak the column span if it's > 1.
       if (table_cell_attributes.has_column_span() && table_cell_attributes.column_span() > 1) {
         auto column_span = std::to_string(table_cell_attributes.column_span());
         description.emplace_back(GenerateUtteranceByMessageId(
-            MessageIds::COLUMN_SPAN, zx::duration(zx::msec(0)), {"column_span"}, {column_span}));
+            MessageIds::COLUMN_SPAN, zx::msec(0), {"column_span"}, {column_span}));
       }
 
       if (table_cell_attributes.has_row_index() && table_cell_attributes.has_column_index()) {
@@ -508,7 +508,7 @@ ScreenReaderMessageGenerator::DescribeTableCell(const fuchsia::accessibility::se
         auto row_index = std::to_string(table_cell_attributes.row_index() + 1);
         auto column_index = std::to_string(table_cell_attributes.column_index() + 1);
         description.emplace_back(
-            GenerateUtteranceByMessageId(MessageIds::CELL_SUMMARY, zx::duration(zx::msec(0)),
+            GenerateUtteranceByMessageId(MessageIds::CELL_SUMMARY, zx::msec(0),
                                          {"row_index", "column_index"}, {row_index, column_index}));
       }
     }
@@ -551,7 +551,7 @@ ScreenReaderMessageGenerator::DescribeRowOrColumnHeader(
         // We want to announce it as 1-indexed.
         auto row_index = std::to_string(table_cell_attributes.row_index() + 1);
         description.emplace_back(GenerateUtteranceByMessageId(
-            MessageIds::ROW_SUMMARY, zx::duration(zx::msec(0)), {"row_index"}, {row_index}));
+            MessageIds::ROW_SUMMARY, zx::msec(0), {"row_index"}, {row_index}));
       }
 
       if (table_cell_attributes.has_column_index()) {
@@ -560,7 +560,7 @@ ScreenReaderMessageGenerator::DescribeRowOrColumnHeader(
         // We want to announce it as 1-indexed.
         auto column_index = std::to_string(table_cell_attributes.column_index() + 1);
         description.emplace_back(GenerateUtteranceByMessageId(MessageIds::COLUMN_SUMMARY,
-                                                              zx::duration(zx::msec(0)),
+                                                              zx::msec(0),
                                                               {"column_index"}, {column_index}));
       }
 
@@ -568,13 +568,13 @@ ScreenReaderMessageGenerator::DescribeRowOrColumnHeader(
       if (table_cell_attributes.has_row_span() && table_cell_attributes.row_span() > 1) {
         auto row_span = std::to_string(table_cell_attributes.row_span());
         description.emplace_back(GenerateUtteranceByMessageId(
-            MessageIds::ROW_SPAN, zx::duration(zx::msec(0)), {"row_span"}, {row_span}));
+            MessageIds::ROW_SPAN, zx::msec(0), {"row_span"}, {row_span}));
       }
 
       if (table_cell_attributes.has_column_span() && table_cell_attributes.column_span() > 1) {
         auto column_span = std::to_string(table_cell_attributes.column_span());
         description.emplace_back(GenerateUtteranceByMessageId(
-            MessageIds::COLUMN_SPAN, zx::duration(zx::msec(0)), {"column_span"}, {column_span}));
+            MessageIds::COLUMN_SPAN, zx::msec(0), {"column_span"}, {column_span}));
       }
     }
   }
@@ -598,7 +598,7 @@ ScreenReaderMessageGenerator::DescribeEnteredList(
   if (node->has_attributes() && node->attributes().has_list_attributes() &&
       node->attributes().list_attributes().has_size()) {
     description.emplace_back(
-        GenerateUtteranceByMessageId(MessageIds::ENTERED_LIST_DETAIL, zx::duration(zx::msec(0)),
+        GenerateUtteranceByMessageId(MessageIds::ENTERED_LIST_DETAIL, zx::msec(0),
                                      {"num_items"}, {node->attributes().list_attributes().size()}));
   } else {
     description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ENTERED_LIST));
