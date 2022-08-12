@@ -92,7 +92,7 @@ pub fn sys_rt_sigprocmask(
     }
 
     let signal_mask = match how {
-        SIG_BLOCK => (signal_mask | new_mask),
+        SIG_BLOCK => signal_mask | new_mask,
         SIG_UNBLOCK => signal_mask & !new_mask,
         SIG_SETMASK => new_mask,
         // Arguments have already been verified, this should never match.

@@ -151,7 +151,7 @@ impl Packet {
     /// Returns true iff this is an intitializaion packet with the specified command.
     pub fn is_command(&self, command: Command) -> bool {
         match self {
-            Packet::Initialization { command: actual, .. } => (actual == &command),
+            Packet::Initialization { command: actual, .. } => actual == &command,
             Packet::Continuation { .. } => false,
         }
     }

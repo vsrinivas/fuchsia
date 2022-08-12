@@ -78,7 +78,7 @@ impl Server {
     fn set_profile(&mut self, new_profile: Profile) -> bool {
         let mut p = self.0.profile.write().unwrap();
         let changed = match p.as_ref() {
-            Some(stored_profile) => (stored_profile != &new_profile),
+            Some(stored_profile) => stored_profile != &new_profile,
             None => true,
         };
         *p = Some(new_profile);

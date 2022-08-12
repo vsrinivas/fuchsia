@@ -96,7 +96,7 @@ impl ExitStatus {
 
     pub fn signal_info_status(&self) -> i32 {
         match self {
-            ExitStatus::Exit(status) => (*status as i32),
+            ExitStatus::Exit(status) => *status as i32,
             ExitStatus::Kill(siginfo)
             | ExitStatus::CoreDump(siginfo)
             | ExitStatus::Continue(siginfo)
