@@ -31,13 +31,11 @@ class MockAnnotationView : public a11y::AnnotationViewInterface {
   // |AnnotationViewInterface|
   void DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding_box,
                      const std::array<float, 3>& scale_vector,
-                     const std::array<float, 3>& translation_vector,
-                     bool is_magnification_highlight) override;
+                     const std::array<float, 3>& translation_vector) override;
 
   // |AnnotationViewInterface|
   void ClearAllAnnotations() override;
   void ClearFocusHighlights() override;
-  void ClearMagnificationHighlights() override;
 
   void SimulateViewPropertyChange();
   void SimulateViewAttachment();
@@ -47,9 +45,6 @@ class MockAnnotationView : public a11y::AnnotationViewInterface {
   const std::optional<fuchsia::ui::gfx::BoundingBox>& GetCurrentFocusHighlight();
   const std::optional<std::array<float, 3>> GetFocusHighlightScaleVector();
   const std::optional<std::array<float, 3>> GetFocusHighlightTranslationVector();
-  const std::optional<fuchsia::ui::gfx::BoundingBox>& GetCurrentMagnificationHighlight();
-  const std::optional<std::array<float, 3>> GetMagnificationHighlightScaleVector();
-  const std::optional<std::array<float, 3>> GetMagnificationHighlightTranslationVector();
 
  private:
   ViewPropertiesChangedCallback view_properties_changed_callback_;
@@ -60,10 +55,6 @@ class MockAnnotationView : public a11y::AnnotationViewInterface {
   std::optional<fuchsia::ui::gfx::BoundingBox> current_focus_highlight_;
   std::optional<std::array<float, 3>> current_focus_highlight_scale_;
   std::optional<std::array<float, 3>> current_focus_highlight_translation_;
-
-  std::optional<fuchsia::ui::gfx::BoundingBox> current_magnification_highlight_;
-  std::optional<std::array<float, 3>> current_magnification_highlight_scale_;
-  std::optional<std::array<float, 3>> current_magnification_highlight_translation_;
 };
 
 class MockAnnotationViewFactory : public a11y::AnnotationViewFactoryInterface {

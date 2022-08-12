@@ -233,35 +233,7 @@ std::optional<zx_koid_t> ViewManager::GetViewWithVisibleVirtualkeyboard() {
   return std::nullopt;
 }
 
-void ViewManager::ClearAllHighlights() {
-  ClearFocusHighlights();
-  ClearMagnificationHighlights();
-}
-
-void ViewManager::ClearMagnificationHighlights() {
-  if (!annotations_enabled_) {
-    return;
-  }
-
-  if (!magnified_view_koid_.has_value()) {
-    return;
-  }
-
-  auto it = view_wrapper_map_.find(magnified_view_koid_.value());
-  if (it == view_wrapper_map_.end()) {
-    FX_LOGS(WARNING)
-        << "ViewManager::ClearMagnificationHighlights: Invalid previously highlighted view koid: "
-        << magnified_view_koid_.value();
-    return;
-  }
-
-  FX_DCHECK(it->second);
-  it->second->ClearMagnificationHighlights();
-  magnified_view_koid_ = std::nullopt;
-  magnification_scale_ = std::nullopt;
-  magnification_translation_x_ = std::nullopt;
-  magnification_translation_y_ = std::nullopt;
-}
+void ViewManager::ClearAllHighlights() { ClearFocusHighlights(); }
 
 void ViewManager::ClearFocusHighlights() {
   if (!annotations_enabled_) {
@@ -298,30 +270,6 @@ void ViewManager::UpdateHighlight(SemanticNodeIdentifier newly_highlighted_node)
   }
 }
 
-void ViewManager::HighlightMagnificationViewport(zx_koid_t koid, float magnification_scale,
-                                                 float magnification_translation_x,
-                                                 float magnification_translation_y) {
-  if (!annotations_enabled_) {
-    return;
-  }
-
-  ClearMagnificationHighlights();
-
-  auto it = view_wrapper_map_.find(koid);
-  if (it == view_wrapper_map_.end()) {
-    FX_LOGS(WARNING) << "ViewManager::HighlightMagnificationViewport: Invalid koid:" << koid;
-    return;
-  }
-
-  FX_DCHECK(it->second);
-  it->second->HighlightMagnificationViewport(magnification_scale, magnification_translation_x,
-                                             magnification_translation_y);
-  magnified_view_koid_ = std::make_optional<zx_koid_t>(koid);
-  magnification_scale_ = magnification_scale;
-  magnification_translation_x_ = magnification_translation_x;
-  magnification_translation_y_ = magnification_translation_y;
-}
-
 bool ViewManager::DrawHighlight(SemanticNodeIdentifier newly_highlighted_node) {
   auto it = view_wrapper_map_.find(newly_highlighted_node.koid);
   if (it == view_wrapper_map_.end()) {
@@ -334,31 +282,6 @@ bool ViewManager::DrawHighlight(SemanticNodeIdentifier newly_highlighted_node) {
   it->second->HighlightNode(newly_highlighted_node.node_id);
 
   return true;
-}
-
-void ViewManager::UpdateMagnificationHighlights(zx_koid_t koid) {
-  if (!annotations_enabled_) {
-    return;
-  }
-
-  ClearMagnificationHighlights();
-
-  auto it = view_wrapper_map_.find(koid);
-  if (it == view_wrapper_map_.end()) {
-    FX_LOGS(WARNING)
-        << "ViewManager::UpdateMagnificationHighlights: Invalid newly highlighted view koid: "
-        << koid;
-    return;
-  }
-
-  if (!magnification_scale_.has_value() || !magnification_translation_x_.has_value() ||
-      !magnification_translation_y_.has_value()) {
-    return;
-  }
-
-  HighlightMagnificationViewport(koid, magnification_scale_.value(),
-                                 magnification_translation_x_.value(),
-                                 magnification_translation_y_.value());
 }
 
 void ViewManager::ExecuteHitTesting(

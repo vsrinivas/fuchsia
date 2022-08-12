@@ -21,37 +21,19 @@ void MockAnnotationView::InitializeView(fuchsia::ui::views::ViewRef client_view_
 
 void MockAnnotationView::DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding_box,
                                        const std::array<float, 3>& scale_vector,
-                                       const std::array<float, 3>& translation_vector,
-                                       bool is_magnification_highlight) {
-  if (is_magnification_highlight) {
-    current_magnification_highlight_ =
-        std::make_optional<fuchsia::ui::gfx::BoundingBox>(bounding_box);
-    current_magnification_highlight_scale_ = std::make_optional<std::array<float, 3>>(scale_vector);
-    current_magnification_highlight_translation_ =
-        std::make_optional<std::array<float, 3>>(translation_vector);
-  } else {
-    current_focus_highlight_ = std::make_optional<fuchsia::ui::gfx::BoundingBox>(bounding_box);
-    current_focus_highlight_scale_ = std::make_optional<std::array<float, 3>>(scale_vector);
-    current_focus_highlight_translation_ =
-        std::make_optional<std::array<float, 3>>(translation_vector);
-  }
+                                       const std::array<float, 3>& translation_vector) {
+  current_focus_highlight_ = std::make_optional<fuchsia::ui::gfx::BoundingBox>(bounding_box);
+  current_focus_highlight_scale_ = std::make_optional<std::array<float, 3>>(scale_vector);
+  current_focus_highlight_translation_ =
+      std::make_optional<std::array<float, 3>>(translation_vector);
 }
 
-void MockAnnotationView::ClearAllAnnotations() {
-  ClearFocusHighlights();
-  ClearMagnificationHighlights();
-}
+void MockAnnotationView::ClearAllAnnotations() { ClearFocusHighlights(); }
 
 void MockAnnotationView::ClearFocusHighlights() {
   current_focus_highlight_ = std::nullopt;
   current_focus_highlight_scale_ = std::nullopt;
   current_focus_highlight_translation_ = std::nullopt;
-}
-
-void MockAnnotationView::ClearMagnificationHighlights() {
-  current_magnification_highlight_ = std::nullopt;
-  current_magnification_highlight_scale_ = std::nullopt;
-  current_magnification_highlight_translation_ = std::nullopt;
 }
 
 void MockAnnotationView::SimulateViewPropertyChange() { view_properties_changed_callback_(); }
@@ -72,21 +54,6 @@ const std::optional<std::array<float, 3>> MockAnnotationView::GetFocusHighlightS
 
 const std::optional<std::array<float, 3>> MockAnnotationView::GetFocusHighlightTranslationVector() {
   return current_focus_highlight_translation_;
-}
-
-const std::optional<fuchsia::ui::gfx::BoundingBox>&
-MockAnnotationView::GetCurrentMagnificationHighlight() {
-  return current_magnification_highlight_;
-}
-
-const std::optional<std::array<float, 3>>
-MockAnnotationView::GetMagnificationHighlightScaleVector() {
-  return current_magnification_highlight_scale_;
-}
-
-const std::optional<std::array<float, 3>>
-MockAnnotationView::GetMagnificationHighlightTranslationVector() {
-  return current_magnification_highlight_translation_;
 }
 
 std::unique_ptr<a11y::AnnotationViewInterface>

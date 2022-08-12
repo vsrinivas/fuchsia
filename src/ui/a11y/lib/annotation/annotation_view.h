@@ -32,17 +32,13 @@ class AnnotationViewInterface {
   // coordinate space to the space the bounding box is in.
   virtual void DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding_box,
                              const std::array<float, 3>& scale_vector,
-                             const std::array<float, 3>& translation_vector,
-                             bool is_magnification_highlight) = 0;
+                             const std::array<float, 3>& translation_vector) = 0;
 
   // Clears all annotations in the client view.
   virtual void ClearAllAnnotations() = 0;
 
   // Clears only focus highlights.
   virtual void ClearFocusHighlights() = 0;
-
-  // Clears only magnification viewport highlights.
-  virtual void ClearMagnificationHighlights() = 0;
 };
 
 // The AnnotationView class enables the fuchsia accessibility manager to draw annotations over
@@ -59,10 +55,6 @@ class AnnotationView : public fuchsia::ui::scenic::SessionListener, public Annot
 
     // True if annotations are currently attached to client view, and false otherwise.
     bool view_content_attached = false;
-
-    // True if magnification highlights are currently attached to client view,
-    // and false otherwise.
-    bool magnification_content_attached = false;
   };
 
   explicit AnnotationView(sys::ComponentContext* component_context,
@@ -78,17 +70,13 @@ class AnnotationView : public fuchsia::ui::scenic::SessionListener, public Annot
   // |AnnotationViewInterface|
   void DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding_box,
                      const std::array<float, 3>& scale_vector,
-                     const std::array<float, 3>& translation_vector,
-                     bool is_magnification_highlight) override;
+                     const std::array<float, 3>& translation_vector) override;
 
   // |AnnotationViewInterface|
   void ClearAllAnnotations() override;
 
   // |AnnotationViewInterface|
   void ClearFocusHighlights() override;
-
-  // |AnnotationViewInterface|
-  void ClearMagnificationHighlights() override;
 
   zx_koid_t koid() { return client_view_koid_; }
 
@@ -104,14 +92,6 @@ class AnnotationView : public fuchsia::ui::scenic::SessionListener, public Annot
   static constexpr uint32_t kFocusHighlightTopEdgeNodeId = 6;
   static constexpr uint32_t kFocusHighlightBottomEdgeNodeId = 7;
 
-  // IDs for resources common to all magnification annotations.
-  static constexpr uint32_t kMagnificationHighlightContentNodeId = 8;
-  static constexpr uint32_t kMagnificationHighlightMaterialId = 9;
-  static constexpr uint32_t kMagnificationHighlightLeftEdgeNodeId = 10;
-  static constexpr uint32_t kMagnificationHighlightRightEdgeNodeId = 11;
-  static constexpr uint32_t kMagnificationHighlightTopEdgeNodeId = 12;
-  static constexpr uint32_t kMagnificationHighlightBottomEdgeNodeId = 13;
-
  private:
   // Draws a rectangle to represent one edge of a highlight bounding box.
   void DrawHighlightEdge(std::vector<fuchsia::ui::scenic::Command>* cmds, int parent_node_id,
@@ -120,10 +100,6 @@ class AnnotationView : public fuchsia::ui::scenic::SessionListener, public Annot
 
   // Creates a node to hold one of the four highlight rectangle edges.
   void CreateHighlightEdgeNode(std::vector<fuchsia::ui::scenic::Command>* cmds, int edge_node_id);
-
-  // Creates a node to hold one of the four edges of a magnification highlight.
-  void CreateMagnificationEdgeNode(std::vector<fuchsia::ui::scenic::Command>* cmds,
-                                   int edge_node_id);
 
   // Helper function to build a list of commands to enqueue.
   static void PushCommand(std::vector<fuchsia::ui::scenic::Command>* cmds,

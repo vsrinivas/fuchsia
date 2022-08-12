@@ -390,47 +390,6 @@ TEST_F(ViewWrapperTest, HighlightWithSelfReferentOffsetContainer) {
   EXPECT_EQ((*highlight_scale)[1], 16.0f);
 }
 
-TEST_F(ViewWrapperTest, MagnificationHighlight) {
-  std::vector<a11y::SemanticTree::TreeUpdate> node_updates;
-
-  // Create test nodes.
-  {
-    fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 0.0f, .y = 0.0f, .z = 1.0f},
-                                                  .max = {.x = 1024.0f, .y = 600.0f, .z = 1.0f}};
-    auto node = CreateTestNode(0u, "test_label_0", {});
-    node.set_transform({10, 0, 0, 0, 0, 10, 0, 0, 0, 0, 10, 0, 50, 60, 70, 1});
-    node.set_location(std::move(bounding_box));
-    node_updates.emplace_back(std::move(node));
-  }
-
-  auto tree_ptr = tree_service_->Get();
-  ASSERT_TRUE(tree_ptr);
-
-  ASSERT_TRUE(tree_ptr->Update(std::move(node_updates)));
-  RunLoopUntilIdle();
-
-  view_wrapper_->HighlightMagnificationViewport(2.0f, -.2f, .4f);
-
-  const auto& highlight_bounding_box = annotation_view_->GetCurrentMagnificationHighlight();
-  EXPECT_TRUE(highlight_bounding_box.has_value());
-  EXPECT_EQ(highlight_bounding_box->min.x, 358.4f);
-  EXPECT_EQ(highlight_bounding_box->min.y, 180.0f);
-  EXPECT_EQ(highlight_bounding_box->max.x, 870.4f);
-  EXPECT_EQ(highlight_bounding_box->max.y, 480.0f);
-
-  const auto& highlight_translation =
-      annotation_view_->GetMagnificationHighlightTranslationVector();
-  EXPECT_TRUE(highlight_translation.has_value());
-  EXPECT_EQ((*highlight_translation)[0], 50.0f);
-  EXPECT_EQ((*highlight_translation)[1], 60.0f);
-  EXPECT_EQ((*highlight_translation)[2], 70.0f);
-
-  const auto& highlight_scale = annotation_view_->GetMagnificationHighlightScaleVector();
-  EXPECT_TRUE(highlight_scale.has_value());
-  EXPECT_EQ((*highlight_scale)[0], 10.0f);
-  EXPECT_EQ((*highlight_scale)[1], 10.0f);
-}
-
 TEST_F(ViewWrapperTest, GetNodeToRootTransformWithV2TransformAndContainers) {
   std::vector<a11y::SemanticTree::TreeUpdate> node_updates;
 

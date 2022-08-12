@@ -56,7 +56,6 @@ void AnnotationView::InitializeView(fuchsia::ui::views::ViewRef client_view_ref)
   // annotation content as children of this node enables us to clear the contents of the view by
   // detaching only this node from the view.
   PushCommand(&cmds, scenic::NewCreateEntityNodeCmd(kFocusHighlightContentNodeId));
-  PushCommand(&cmds, scenic::NewCreateEntityNodeCmd(kMagnificationHighlightContentNodeId));
 
   // Create material (fill color) for highlights.
   // TODO: Update color.
@@ -64,23 +63,11 @@ void AnnotationView::InitializeView(fuchsia::ui::views::ViewRef client_view_ref)
   PushCommand(&cmds, scenic::NewSetColorCmd(kFocusHighlightMaterialId, 0xf5, 0x00, 0x57,
                                             0xff));  // Pink A400
 
-  // Create material (fill color) for magnification viewport highlight.
-  // TODO: Update color.
-  PushCommand(&cmds, scenic::NewCreateMaterialCmd(kMagnificationHighlightMaterialId));
-  PushCommand(&cmds, scenic::NewSetColorCmd(kMagnificationHighlightMaterialId, 0xff, 0x9a, 0x00,
-                                            0xd0));  // Orange
-
   // Create shape nodes to hold each of the edges of the highlight.
   CreateHighlightEdgeNode(&cmds, kFocusHighlightLeftEdgeNodeId);
   CreateHighlightEdgeNode(&cmds, kFocusHighlightRightEdgeNodeId);
   CreateHighlightEdgeNode(&cmds, kFocusHighlightTopEdgeNodeId);
   CreateHighlightEdgeNode(&cmds, kFocusHighlightBottomEdgeNodeId);
-
-  // Create shape nodes to hold each of the edges of the magnification viewport.
-  CreateMagnificationEdgeNode(&cmds, kMagnificationHighlightLeftEdgeNodeId);
-  CreateMagnificationEdgeNode(&cmds, kMagnificationHighlightRightEdgeNodeId);
-  CreateMagnificationEdgeNode(&cmds, kMagnificationHighlightTopEdgeNodeId);
-  CreateMagnificationEdgeNode(&cmds, kMagnificationHighlightBottomEdgeNodeId);
 
   // Enque commands to create view.
   session_->Enqueue(std::move(cmds));
@@ -93,8 +80,7 @@ void AnnotationView::InitializeView(fuchsia::ui::views::ViewRef client_view_ref)
 
 void AnnotationView::DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding_box,
                                    const std::array<float, 3>& scale_vector,
-                                   const std::array<float, 3>& translation_vector,
-                                   bool is_magnification_highlight) {
+                                   const std::array<float, 3>& translation_vector) {
   if (!state_.tree_initialized) {
     FX_LOGS(INFO) << "Annotation view tree is not initialized.";
     return;
@@ -130,14 +116,10 @@ void AnnotationView::DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding
 
   std::vector<fuchsia::ui::scenic::Command> cmds;
 
-  uint32_t left_edge_id = is_magnification_highlight ? kMagnificationHighlightLeftEdgeNodeId
-                                                     : kFocusHighlightLeftEdgeNodeId;
-  uint32_t right_edge_id = is_magnification_highlight ? kMagnificationHighlightRightEdgeNodeId
-                                                      : kFocusHighlightRightEdgeNodeId;
-  uint32_t top_edge_id = is_magnification_highlight ? kMagnificationHighlightTopEdgeNodeId
-                                                    : kFocusHighlightTopEdgeNodeId;
-  uint32_t bottom_edge_id = is_magnification_highlight ? kMagnificationHighlightBottomEdgeNodeId
-                                                       : kFocusHighlightBottomEdgeNodeId;
+  uint32_t left_edge_id = kFocusHighlightLeftEdgeNodeId;
+  uint32_t right_edge_id = kFocusHighlightRightEdgeNodeId;
+  uint32_t top_edge_id = kFocusHighlightTopEdgeNodeId;
+  uint32_t bottom_edge_id = kFocusHighlightBottomEdgeNodeId;
 
   // Create edges of highlight rectangle.
   DrawHighlightEdge(&cmds, left_edge_id, kHighlightEdgeThickness,
@@ -155,21 +137,12 @@ void AnnotationView::DrawHighlight(const fuchsia::ui::gfx::BoundingBox& bounding
 
   // Attach the correct content node (if necessary) to the annotation view node
   // to render the annotation.
-  if (!state_.view_content_attached && !is_magnification_highlight) {
+  if (!state_.view_content_attached) {
     PushCommand(&cmds,
                 scenic::NewSetTranslationCmd(kFocusHighlightContentNodeId, translation_vector));
     PushCommand(&cmds, scenic::NewSetScaleCmd(kFocusHighlightContentNodeId, scale_vector));
     PushCommand(&cmds, scenic::NewAddChildCmd(kAnnotationViewId, kFocusHighlightContentNodeId));
     state_.view_content_attached = true;
-  }
-
-  if (!state_.magnification_content_attached && is_magnification_highlight) {
-    PushCommand(&cmds, scenic::NewSetTranslationCmd(kMagnificationHighlightContentNodeId,
-                                                    translation_vector));
-    PushCommand(&cmds, scenic::NewSetScaleCmd(kMagnificationHighlightContentNodeId, scale_vector));
-    PushCommand(&cmds,
-                scenic::NewAddChildCmd(kAnnotationViewId, kMagnificationHighlightContentNodeId));
-    state_.magnification_content_attached = true;
   }
 
   session_->Enqueue(std::move(cmds));
@@ -185,19 +158,11 @@ void AnnotationView::DetachViewContents(uint32_t node_to_detach) {
   session_->Present(0, {}, {}, [](fuchsia::images::PresentationInfo info) {});
 }
 
-void AnnotationView::ClearAllAnnotations() {
-  ClearFocusHighlights();
-  ClearMagnificationHighlights();
-}
+void AnnotationView::ClearAllAnnotations() { ClearFocusHighlights(); }
 
 void AnnotationView::ClearFocusHighlights() {
   DetachViewContents(kFocusHighlightContentNodeId);
   state_.view_content_attached = false;
-}
-
-void AnnotationView::ClearMagnificationHighlights() {
-  DetachViewContents(kMagnificationHighlightContentNodeId);
-  state_.magnification_content_attached = false;
 }
 
 void AnnotationView::DrawHighlightEdge(std::vector<fuchsia::ui::scenic::Command>* cmds,
@@ -227,13 +192,6 @@ void AnnotationView::CreateHighlightEdgeNode(std::vector<fuchsia::ui::scenic::Co
   PushCommand(cmds, scenic::NewCreateShapeNodeCmd(edge_node_id));
   PushCommand(cmds, scenic::NewSetMaterialCmd(edge_node_id, kFocusHighlightMaterialId));
   PushCommand(cmds, scenic::NewAddChildCmd(kFocusHighlightContentNodeId, edge_node_id));
-}
-
-void AnnotationView::CreateMagnificationEdgeNode(std::vector<fuchsia::ui::scenic::Command>* cmds,
-                                                 int edge_node_id) {
-  PushCommand(cmds, scenic::NewCreateShapeNodeCmd(edge_node_id));
-  PushCommand(cmds, scenic::NewSetMaterialCmd(edge_node_id, kMagnificationHighlightMaterialId));
-  PushCommand(cmds, scenic::NewAddChildCmd(kMagnificationHighlightContentNodeId, edge_node_id));
 }
 
 void AnnotationView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {

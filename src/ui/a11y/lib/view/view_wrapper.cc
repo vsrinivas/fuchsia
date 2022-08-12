@@ -52,76 +52,6 @@ fxl::WeakPtr<::a11y::SemanticTree> ViewWrapper::GetTree() const {
 
 fuchsia::ui::views::ViewRef ViewWrapper::ViewRefClone() const { return Clone(view_ref_); }
 
-void ViewWrapper::HighlightMagnificationViewport(float magnification_scale,
-                                                 float magnification_translation_x,
-                                                 float magnification_translation_y) {
-  auto tree_weak_ptr = GetTree();
-
-  if (!tree_weak_ptr) {
-    FX_LOGS(ERROR) << "ViewWrapper::DrawHighlight: Invalid tree pointer";
-    return;
-  }
-
-  // We need to get the bounds of the view's root node, so retrieve the root
-  // node.
-  auto root_node = tree_weak_ptr->GetNode(0u);
-
-  FX_DCHECK(root_node);
-
-  auto root_node_bounding_box = root_node->location();
-
-  // Get the dimensions of the root node's bounding box. We will use these to
-  // compute the dimensions of the magnification viewport later.
-  auto width = root_node_bounding_box.max.x - root_node_bounding_box.min.x;
-  auto height = root_node_bounding_box.max.y - root_node_bounding_box.min.y;
-
-  // Get the "top left" or "minimum" in NDC for the magnification viewport.
-  // Note that the local coordinate space for this view is rotated 90 degrees
-  // clockwise from NDC, so the "top left" corner of the screen is actually the
-  // "bottom left" corenr in NDC. So, the "top left" corner of the screen is
-  // at point (-1, 1) in NDC.
-  // We want to determine which NDC point in unmagnified space will be located
-  // at (-1, 1) in NDC (this point will be the "min" of the bounding box for
-  // the magnifier viewport in NDC. Here, we are essentially applying the
-  // inverse of the magnification transform to the point (-1, 1).
-  auto x_top_left_ndc = (-1 - magnification_translation_x) / magnification_scale;
-  auto y_top_left_ndc = (1 - magnification_translation_y) / magnification_scale;
-
-  // Now, convert the NDC location of the upper left corner of the magnification
-  // viewport to local coordinates. NDC point (0, 0) will be in the center of
-  // the view -- (root_node_bounding_box.min.x + (width / 2),
-  // root_node_bounding_box.min.y + (height / 2)). Furthermore, since NDC
-  // coordinates fall between -1 and 1, the conversion factor for NDC to local
-  // is just (width or height) / 2.
-  // NOTE: Since the local space is rotated relative to NDC, we need to switch
-  // the x- and y- coordinates (i.e. use the y NDC coordinate to compute the local
-  // x and vice versa). We also need to use the opposite of the y coordinate to
-  // account for the rotation of the screen.
-  auto x_translation = root_node_bounding_box.min.x + (width / 2) + (width / 2) * -y_top_left_ndc;
-  auto y_translation = root_node_bounding_box.min.y + (height / 2) + (height / 2) * x_top_left_ndc;
-
-  // Finally, compute the bounds of the magnification viewport in local
-  // coordinates.
-  fuchsia::ui::gfx::BoundingBox magnification_viewport_bounding_box;
-  magnification_viewport_bounding_box.min.x = x_translation;
-  magnification_viewport_bounding_box.min.y = y_translation;
-  magnification_viewport_bounding_box.max.x =
-      magnification_viewport_bounding_box.min.x + (width / magnification_scale);
-  magnification_viewport_bounding_box.max.y =
-      magnification_viewport_bounding_box.min.y + (height / magnification_scale);
-
-  // Compute the local->global coordinate transform, which will just be the
-  // root node's transform since the root node doesn't have a parent.
-  SemanticTransform transform;
-  if (root_node->has_transform()) {
-    transform.ChainLocalTransform(root_node->transform());
-  }
-
-  annotation_view_->DrawHighlight(magnification_viewport_bounding_box, transform.scale_vector(),
-                                  transform.translation_vector(),
-                                  true /* is_magnification_highlight */);
-}
-
 std::optional<SemanticTransform> ViewWrapper::GetNodeToRootTransform(uint32_t node_id) const {
   auto tree_weak_ptr = GetTree();
 
@@ -288,15 +218,11 @@ void ViewWrapper::HighlightNode(uint32_t node_id) {
 
   auto bounding_box = annotated_node->location();
   annotation_view_->DrawHighlight(bounding_box, transform->scale_vector(),
-                                  transform->translation_vector(),
-                                  false /* is_magnification_highlight */);
+                                  transform->translation_vector());
 }
 
 void ViewWrapper::ClearAllHighlights() { annotation_view_->ClearAllAnnotations(); }
 void ViewWrapper::ClearFocusHighlights() { annotation_view_->ClearFocusHighlights(); }
-void ViewWrapper::ClearMagnificationHighlights() {
-  annotation_view_->ClearMagnificationHighlights();
-}
 
 std::shared_ptr<input::Injector> ViewWrapper::take_view_injector() {
   auto tmp = view_injector_;

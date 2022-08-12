@@ -26,21 +26,9 @@ class FocusHighlightManager {
   // Clears existing highlights.
   virtual void ClearAllHighlights() = 0;
   virtual void ClearFocusHighlights() = 0;
-  virtual void ClearMagnificationHighlights() = 0;
-
-  // Draws a highlight around the boundary of the magnified viewport.
-  // |scale|, |translation_x|, and |translation_y| specify the clip space
-  // transform, which is a transfom applied to the NDC space
-  // (scale-then-translate).
-  virtual void HighlightMagnificationViewport(zx_koid_t koid, float magnification_scale,
-                                              float magnification_translation_x,
-                                              float magnification_translation_y) = 0;
 
   // Clears existing highlight (if any) and draws a highlight around |newly_highlighted_node.|
   virtual void UpdateHighlight(SemanticNodeIdentifier newly_highlighted_node) = 0;
-
-  // Clears existing magnification highlight and draws a new one (if any).
-  virtual void UpdateMagnificationHighlights(zx_koid_t koid) = 0;
 };
 
 }  // namespace a11y
