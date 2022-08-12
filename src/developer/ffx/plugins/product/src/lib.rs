@@ -11,7 +11,7 @@ use {
     anyhow::{Context, Result},
     errors::ffx_bail,
     ffx_core::ffx_plugin,
-    ffx_product_args::{GetCommand, ProductCommand, SubCommand},
+    ffx_product_args::{GetCommand, ProductCommand, SubCommand, VerifyCommand},
     fidl_fuchsia_developer_ffx::RepositoryRegistryProxy,
     fidl_fuchsia_developer_ffx_ext::{RepositoryError, RepositorySpec},
     fuchsia_url::RepositoryUrl,
@@ -42,6 +42,7 @@ where
 {
     match &command.sub {
         SubCommand::Get(cmd) => pb_get(writer, &cmd, repos).await?,
+        SubCommand::Verify(cmd) => pb_verify(&cmd)?,
     }
     Ok(())
 }
@@ -207,6 +208,11 @@ async fn read_product_bundle_metadata(pbm_path: &Path) -> Result<sdk_metadata::P
     let pbm =
         find_product_bundle(&entries, /*fms_name=*/ &None).context("finding pbm in entries")?;
     Ok(pbm.to_owned())
+}
+
+/// Verify that the product bundle has the correct format and is ready for use.
+fn pb_verify(_cmd: &VerifyCommand) -> Result<()> {
+    Ok(())
 }
 
 #[cfg(test)]

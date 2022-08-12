@@ -17,6 +17,7 @@ pub struct ProductCommand {
 #[argh(subcommand)]
 pub enum SubCommand {
     Get(GetCommand),
+    Verify(VerifyCommand),
 }
 
 /// Retrieve image data.
@@ -38,4 +39,13 @@ pub struct GetCommand {
     /// local directory to download the product bundle into.
     #[argh(positional, default = "PathBuf::from(\"local_pb\")")]
     pub out_dir: PathBuf,
+}
+
+/// Verify that the contents of the product bundle are valid and ready for use.
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "verify")]
+pub struct VerifyCommand {
+    /// local directory containing the product bundle.
+    #[argh(positional)]
+    pub product_bundle: PathBuf,
 }
