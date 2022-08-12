@@ -64,11 +64,12 @@ void main() {
     }, timeout: timeout);
   }
 
-  // Gets the contents of terminal buffer. This assumes only one terminal
-  // instance is running.
+  // Gets the contents of terminal buffer. This assumes only element instance
+  // is running, and that element is a terminal.
   Future<String> waitForBuffer() {
     return ermine.waitFor(() async {
-      final snapshot = await ermine.inspectSnapshot('terminal.cm');
+      final snapshot = await Inspect(sl4f).snapshotRoot(
+          'core/session-manager/session\\:session/workstation_session/login_shell/ermine_shell/elements*');
       return snapshot['grid'];
     });
   }
