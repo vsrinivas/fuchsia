@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fidl/cpp/wire/channel.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/stdcompat/span.h>
 #include <lib/sync/completion.h>
@@ -13,7 +14,6 @@
 
 #include <gmock/gmock.h>
 
-#include "lib/fidl/llcpp/channel.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/lib/testing/predicates/status.h"
 #include "tun_ctl.h"

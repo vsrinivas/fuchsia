@@ -10,11 +10,11 @@
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
+#include <lib/fidl/cpp/wire/transaction.h>
 #include <zircon/errors.h>
 
 #include <list>
 
-#include "lib/fidl/llcpp/transaction.h"
 #include "src/lib/fsl/io/device_watcher.h"
 
 class DeviceWatcher : public fidl::WireServer<fuchsia_device_manager::DeviceWatcher> {

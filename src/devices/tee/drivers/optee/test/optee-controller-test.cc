@@ -13,6 +13,7 @@
 #include <lib/fake-object/object.h>
 #include <lib/fake-resource/resource.h>
 #include <lib/fidl/cpp/wire/client.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/bti.h>
 #include <stdlib.h>
@@ -26,7 +27,6 @@
 
 #include "../optee-smc.h"
 #include "../tee-smc.h"
-#include "lib/fidl/llcpp/connect_service.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
 struct SharedMemoryInfo {

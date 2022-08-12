@@ -7,6 +7,8 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdf/dispatcher.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/fidl/cpp/wire/arena.h>
+#include <lib/fidl/cpp/wire/vector_view.h>
 #include <lib/fit/defer.h>
 #include <zircon/errors.h>
 
@@ -17,8 +19,6 @@
 #include <safemath/safe_math.h>
 
 #include "lib/async/cpp/task.h"
-#include "lib/fidl/llcpp/arena.h"
-#include "lib/fidl/llcpp/vector_view.h"
 #include "log.h"
 
 namespace {

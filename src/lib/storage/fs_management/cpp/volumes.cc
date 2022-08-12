@@ -12,11 +12,9 @@
 #include <fidl/fuchsia.io/cpp/wire_types.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
+#include <lib/fidl/cpp/wire/channel.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/fidl/cpp/wire/string_view.h>
-#include <lib/fidl/llcpp/channel.h>
-#include <lib/fidl/llcpp/connect_service.h>
-#include <lib/fidl/llcpp/internal/transport_channel.h>
-#include <lib/fidl/llcpp/string_view.h>
 #include <lib/fit/defer.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/zx/status.h>

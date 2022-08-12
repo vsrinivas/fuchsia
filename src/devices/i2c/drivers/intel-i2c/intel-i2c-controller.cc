@@ -18,6 +18,7 @@
 #include <lib/ddk/driver.h>
 #include <lib/ddk/metadata.h>
 #include <lib/device-protocol/pci.h>
+#include <lib/fidl/cpp/wire/object_view.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
@@ -36,7 +37,6 @@
 #include <fbl/auto_lock.h>
 
 #include "binding.h"
-#include "lib/fidl/llcpp/object_view.h"
 
 namespace intel_i2c {
 

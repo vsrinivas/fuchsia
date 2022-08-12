@@ -7,6 +7,7 @@
 #include <fuchsia/nand/c/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fidl/cpp/wire/channel.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
 #include <stdio.h>
@@ -22,7 +23,6 @@
 #include <sdk/lib/device-watcher/cpp/device-watcher.h>
 #include <zxtest/zxtest.h>
 
-#include "lib/fidl/llcpp/channel.h"
 #include "parent.h"
 
 namespace {

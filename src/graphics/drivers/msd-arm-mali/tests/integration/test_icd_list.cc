@@ -5,6 +5,7 @@
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.gpu.magma/cpp/wire.h>
 #include <lib/fdio/directory.h>
+#include <lib/fidl/cpp/wire/channel.h>
 #include <lib/zx/channel.h>
 
 #include <shared_mutex>
@@ -14,7 +15,6 @@
 #include <gtest/gtest.h>
 
 #include "helper/test_device_helper.h"
-#include "lib/fidl/llcpp/channel.h"
 #include "magma.h"
 #include "magma_util/macros.h"
 #include "src/graphics/drivers/msd-arm-mali/include/magma_vendor_queries.h"

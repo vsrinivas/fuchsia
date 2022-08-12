@@ -7,8 +7,7 @@
 
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
-
-#include "lib/fidl/llcpp/connect_service.h"
+#include <lib/fidl/cpp/wire/connect_service.h>
 
 namespace compat {
 

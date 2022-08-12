@@ -11,6 +11,9 @@
 #include <lib/driver2/logger.h>
 #include <lib/driver2/namespace.h>
 #include <lib/driver2/record_cpp.h>
+#include <lib/fidl/cpp/wire/arena.h>
+#include <lib/fidl/cpp/wire/string_view.h>
+#include <lib/fidl/cpp/wire/vector_view.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/scope.h>
 #include <lib/inspect/component/cpp/component.h>
@@ -24,9 +27,6 @@
 #include <vector>
 
 #include "fidl/test.structuredconfig.receiver.shim/cpp/wire_messaging.h"
-#include "lib/fidl/llcpp/arena.h"
-#include "lib/fidl/llcpp/string_view.h"
-#include "lib/fidl/llcpp/vector_view.h"
 #include "src/sys/component_manager/tests/structured_config/client_integration/cpp_driver/receiver_config.h"
 
 namespace fdf {

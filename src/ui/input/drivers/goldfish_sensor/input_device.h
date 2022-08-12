@@ -6,13 +6,13 @@
 #define SRC_UI_INPUT_DRIVERS_GOLDFISH_SENSOR_INPUT_DEVICE_H_
 #include <fidl/fuchsia.input.report/cpp/wire.h>
 #include <lib/async/dispatcher.h>
+#include <lib/fidl/cpp/wire/arena.h>
 #include <lib/fpromise/result.h>
 #include <lib/input_report_reader/reader.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 
-#include "lib/fidl/llcpp/arena.h"
 #include "src/ui/input/drivers/goldfish_sensor/parser.h"
 
 namespace goldfish::sensor {

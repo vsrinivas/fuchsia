@@ -8,6 +8,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/fidl/cpp/wire/channel.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/syslog/cpp/macros.h>
 #include <sys/statfs.h>
@@ -15,7 +16,6 @@
 
 #include <gtest/gtest.h>
 
-#include "lib/fidl/llcpp/channel.h"
 #include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/lib/storage/fs_management/cpp/admin.h"
 #include "src/storage/fshost/constants.h"

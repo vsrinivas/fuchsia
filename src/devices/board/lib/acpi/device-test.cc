@@ -5,6 +5,7 @@
 #include "src/devices/board/lib/acpi/device.h"
 
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
+#include <lib/fidl/cpp/wire/channel.h>
 #include <lib/fidl/cpp/wire/connect_service.h>
 #include <zircon/errors.h>
 
@@ -17,7 +18,6 @@
 
 #include "fidl/fuchsia.hardware.acpi/cpp/markers.h"
 #include "lib/ddk/device.h"
-#include "lib/fidl/llcpp/channel.h"
 #include "src/devices/board/lib/acpi/manager-fuchsia.h"
 #include "src/devices/board/lib/acpi/manager.h"
 #include "src/devices/board/lib/acpi/test/device.h"

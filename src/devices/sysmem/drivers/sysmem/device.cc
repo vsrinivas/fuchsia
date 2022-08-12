@@ -14,6 +14,7 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/fidl-utils/bind.h>
+#include <lib/fidl/cpp/wire/arena.h>
 #include <lib/sync/completion.h>
 #include <lib/sysmem-version/sysmem-version.h>
 #include <lib/zx/channel.h>
@@ -36,7 +37,6 @@
 #include "fidl/fuchsia.sysmem/cpp/wire_types.h"
 #include "lib/ddk/debug.h"
 #include "lib/ddk/driver.h"
-#include "lib/fidl/llcpp/arena.h"
 #include "macros.h"
 #include "src/devices/sysmem/metrics/metrics.cb.h"
 

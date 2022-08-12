@@ -7,6 +7,7 @@
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fidl/cpp/wire/channel.h>
 #include <lib/inspect/cpp/reader.h>
 #include <zircon/errors.h>
 
@@ -20,7 +21,6 @@
 #include "fbl/unique_fd.h"
 #include "fuchsia/io/cpp/fidl.h"
 #include "lib/fdio/directory.h"
-#include "lib/fidl/llcpp/channel.h"
 #include "src/security/zxcrypt/client.h"
 #include "src/security/zxcrypt/volume.h"
 

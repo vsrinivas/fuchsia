@@ -4,12 +4,12 @@
 
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.gpu.magma/cpp/wire.h>
+#include <lib/fidl/cpp/wire/channel.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "helper/test_device_helper.h"
-#include "lib/fidl/llcpp/channel.h"
 #include "magma.h"
 #include "magma_util/macros.h"
 #include "magma_vendor_queries.h"

@@ -6,6 +6,7 @@
 
 #include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <lib/ddk/trace/event.h>
+#include <lib/fidl/cpp/wire/arena.h>
 #include <lib/fit/defer.h>
 #include <lib/zx/clock.h>
 #include <stdlib.h>
@@ -19,7 +20,6 @@
 #include <fbl/string_printf.h>
 
 #include "fbl/algorithm.h"
-#include "lib/fidl/llcpp/arena.h"
 #include "macros.h"
 #include "protected_ranges.h"
 #include "region-alloc/region-alloc.h"

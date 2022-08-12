@@ -4,8 +4,8 @@
 
 #include "src/ui/scenic/lib/utils/metrics_impl.h"
 
-#include "lib/fidl/llcpp/channel.h"
-#include "lib/fidl/llcpp/internal/transport_channel.h"
+#include <lib/fidl/cpp/wire/channel.h>
+
 #include "zircon/system/ulib/service/include/lib/service/llcpp/service.h"
 
 namespace metrics {

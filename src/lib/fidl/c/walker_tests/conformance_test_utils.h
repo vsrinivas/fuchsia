@@ -23,8 +23,7 @@
 #include <lib/fidl/cpp/wire/internal/transport_channel.h>
 #else
 #include <lib/fidl/cpp/wire/internal/transport_channel_host.h>
-
-#include "lib/fidl/llcpp/traits.h"
+#include <lib/fidl/cpp/wire/traits.h>
 // The current build rules for zircon/system/ulib/zircon don't allow linking
 // zx_status_get_string on host. Consider changing in the future.
 #define zx_status_get_string(status) ((status))

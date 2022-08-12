@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fidl/cpp/wire/connect_service.h>
 #include <zircon/types.h>
 
 #include <sdk/lib/inspect/testing/cpp/zxtest/inspect.h>
@@ -10,7 +11,6 @@
 #include "fidl/fuchsia.hardware.acpi/cpp/markers.h"
 #include "fidl/fuchsia.hardware.power/cpp/wire_types.h"
 #include "lib/async-loop/cpp/loop.h"
-#include "lib/fidl/llcpp/connect_service.h"
 #include "lib/inspect/cpp/hierarchy.h"
 #include "src/devices/acpi/drivers/acpi-battery/acpi_battery.h"
 #include "src/devices/lib/acpi/mock/mock-acpi.h"

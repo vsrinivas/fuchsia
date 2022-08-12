@@ -6,6 +6,7 @@
 
 #include <fidl/fuchsia.kernel/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/zx/process.h>
 #include <lib/zx/resource.h>
@@ -15,7 +16,6 @@
 
 #include <zxtest/zxtest.h>
 
-#include "lib/fidl/llcpp/connect_service.h"
 #include "src/devices/bin/driver_manager/coordinator.h"
 #include "src/devices/bin/driver_manager/driver_host.h"
 #include "src/devices/bin/driver_manager/tests/coordinator_test_utils.h"

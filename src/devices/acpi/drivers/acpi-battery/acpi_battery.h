@@ -10,7 +10,6 @@
 
 #include <ddktl/device.h>
 
-#include "lib/fidl/llcpp/internal/transport.h"
 #include "src/devices/lib/acpi/client.h"
 
 namespace acpi_battery {

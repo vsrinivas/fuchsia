@@ -23,6 +23,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fidl-async/bind.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/fidl/cpp/wire/vector_view.h>
 #include <lib/stdcompat/string_view.h>
 #include <lib/svc/dir.h>
 #include <lib/svc/outgoing.h>
@@ -45,7 +46,6 @@
 #include <fbl/string_printf.h>
 #include <mock-boot-arguments/server.h>
 
-#include "lib/fidl/llcpp/vector_view.h"
 #include "lib/vfs/cpp/pseudo_dir.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"

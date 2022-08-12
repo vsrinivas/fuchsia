@@ -7,6 +7,7 @@
 #include <lib/ddk/binding_priv.h>
 #include <lib/ddk/driver.h>
 #include <lib/fidl/cpp/wire/connect_service.h>
+#include <lib/fidl/cpp/wire/wire_messaging.h>
 #include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 
@@ -15,7 +16,6 @@
 #include <ddktl/device.h>
 #include <zxtest/zxtest.h>
 
-#include "lib/fidl/llcpp/wire_messaging.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 #include "zircon/system/ulib/async-loop/include/lib/async-loop/cpp/loop.h"
 #include "zircon/system/ulib/async-loop/include/lib/async-loop/loop.h"

@@ -9,6 +9,7 @@
 #include <fuchsia/wlan/common/cpp/fidl.h>
 #include <fuchsia/wlan/internal/cpp/fidl.h>
 #include <lib/ddk/device.h>
+#include <lib/fidl/cpp/wire/arena.h>
 #include <net/ethernet.h>
 #include <zircon/status.h>
 
@@ -22,7 +23,6 @@
 #include "ddktl/fidl.h"
 #include "debug.h"
 #include "driver.h"
-#include "lib/fidl/llcpp/arena.h"
 
 namespace wlanphy {
 

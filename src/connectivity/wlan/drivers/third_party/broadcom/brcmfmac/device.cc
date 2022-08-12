@@ -13,6 +13,7 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
 
+#include <lib/fidl/cpp/wire/arena.h>
 #include <lib/sync/cpp/completion.h>
 #include <zircon/status.h>
 
@@ -21,7 +22,6 @@
 #include <wlan/common/ieee80211.h>
 
 #include "fidl/fuchsia.wlan.wlanphyimpl/cpp/wire_types.h"
-#include "lib/fidl/llcpp/arena.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"

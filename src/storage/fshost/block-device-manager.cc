@@ -11,6 +11,7 @@
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <inttypes.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/fidl/cpp/wire/channel.h>
 #include <lib/syslog/cpp/macros.h>
 #include <sys/stat.h>
 #include <zircon/device/block.h>
@@ -23,7 +24,6 @@
 
 #include "fidl/fuchsia.hardware.block.volume/cpp/markers.h"
 #include "lib/fdio/directory.h"
-#include "lib/fidl/llcpp/channel.h"
 #include "lib/service/llcpp/service.h"
 #include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/fs_management/cpp/fvm.h"

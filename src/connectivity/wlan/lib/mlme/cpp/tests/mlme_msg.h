@@ -9,6 +9,7 @@
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <lib/fidl/cpp/decoder.h>
 #include <lib/fidl/cpp/message.h>
+#include <lib/fidl/cpp/wire/traits.h>
 #include <zircon/fidl.h>
 
 #include <wlan/common/buffer_reader.h>
@@ -17,8 +18,6 @@
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
-
-#include "lib/fidl/llcpp/traits.h"
 
 namespace wlan {
 template <typename M>

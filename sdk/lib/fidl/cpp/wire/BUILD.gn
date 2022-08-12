@@ -17,13 +17,6 @@ wavl_tree_headers = [
   "include/lib/fidl/cpp/wire/internal/intrusive_container/wavl_tree.h",
   "include/lib/fidl/cpp/wire/internal/intrusive_container/wavl_tree_internal.h",
   "include/lib/fidl/cpp/wire/internal/intrusive_container/helper_macros.h",
-
-  "include/lib/fidl/llcpp/internal/intrusive_container/node_utils.h",
-  "include/lib/fidl/llcpp/internal/intrusive_container/container_utils.h",
-  "include/lib/fidl/llcpp/internal/intrusive_container/pointer_traits.h",
-  "include/lib/fidl/llcpp/internal/intrusive_container/wavl_tree.h",
-  "include/lib/fidl/llcpp/internal/intrusive_container/wavl_tree_internal.h",
-  "include/lib/fidl/llcpp/internal/intrusive_container/helper_macros.h",
 ]
 
 sdk_source_set("wire") {
@@ -54,22 +47,6 @@ sdk_source_set("wire") {
     "include/lib/fidl/cpp/wire/wire_decoder.h",
     "include/lib/fidl/cpp/wire/wire_encoder.h",
     "include/lib/fidl/cpp/wire/wire_types.h",
-    "include/lib/fidl/llcpp/arena.h",
-    "include/lib/fidl/llcpp/array.h",
-    "include/lib/fidl/llcpp/coding_errors.h",
-    "include/lib/fidl/llcpp/envelope.h",
-    "include/lib/fidl/llcpp/internal/display_error.h",
-    "include/lib/fidl/llcpp/internal/transport.h",
-    "include/lib/fidl/llcpp/message_storage.h",
-    "include/lib/fidl/llcpp/object_view.h",
-    "include/lib/fidl/llcpp/soft_migration.h",
-    "include/lib/fidl/llcpp/string_view.h",
-    "include/lib/fidl/llcpp/traits.h",
-    "include/lib/fidl/llcpp/vector_view.h",
-    "include/lib/fidl/llcpp/wire_coding_traits.h",
-    "include/lib/fidl/llcpp/wire_decoder.h",
-    "include/lib/fidl/llcpp/wire_encoder.h",
-    "include/lib/fidl/llcpp/wire_types.h",
   ]
   if (is_fuchsia) {
     public += [
@@ -102,45 +79,16 @@ sdk_source_set("wire") {
       "include/lib/fidl/cpp/wire/wire_coding_common.h",
       "include/lib/fidl/cpp/wire/wire_messaging.h",
       "include/lib/fidl/cpp/wire/wire_messaging_declarations.h",
-      "include/lib/fidl/llcpp/async_binding.h",
-      "include/lib/fidl/llcpp/async_transaction.h",
-      "include/lib/fidl/llcpp/channel.h",
-      "include/lib/fidl/llcpp/client.h",
-      "include/lib/fidl/llcpp/client_base.h",
-      "include/lib/fidl/llcpp/connect_service.h",
-      "include/lib/fidl/llcpp/extract_resource_on_destruction.h",
-      "include/lib/fidl/llcpp/internal/arrow.h",
-      "include/lib/fidl/llcpp/internal/client_continuation.h",
-      "include/lib/fidl/llcpp/internal/client_details.h",
-      "include/lib/fidl/llcpp/internal/debug_thread_checker.h",
-      "include/lib/fidl/llcpp/internal/endpoints.h",
-      "include/lib/fidl/llcpp/internal/make_response_context.h",
-      "include/lib/fidl/llcpp/internal/server_details.h",
-      "include/lib/fidl/llcpp/internal/thenable.h",
-      "include/lib/fidl/llcpp/internal/thread_checker.h",
-      "include/lib/fidl/llcpp/message.h",
-      "include/lib/fidl/llcpp/server.h",
-      "include/lib/fidl/llcpp/service_handler_interface.h",
-      "include/lib/fidl/llcpp/status.h",
-      "include/lib/fidl/llcpp/sync_call.h",
-      "include/lib/fidl/llcpp/transaction.h",
-      "include/lib/fidl/llcpp/unknown_interactions.h",
-      "include/lib/fidl/llcpp/wire_coding_common.h",
-      "include/lib/fidl/llcpp/wire_messaging.h",
-      "include/lib/fidl/llcpp/wire_messaging_declarations.h",
     ]
   }
   if (is_fuchsia) {
     public += [ "include/lib/fidl/cpp/wire/internal/transport_channel.h" ]
-    public += [ "include/lib/fidl/llcpp/internal/transport_channel.h" ]
   } else {
     public += [ "include/lib/fidl/cpp/wire/internal/transport_channel_host.h" ]
-    public += [ "include/lib/fidl/llcpp/internal/transport_channel_host.h" ]
   }
   public += wavl_tree_headers
 
   private_headers = [ "include/lib/fidl/cpp/wire/internal/transport.h" ]
-  private_headers += [ "include/lib/fidl/llcpp/internal/transport.h" ]
   if (is_fuchsia) {
     private_headers += [
       "include/lib/fidl/cpp/wire/internal/arrow.h",
@@ -152,27 +100,14 @@ sdk_source_set("wire") {
       "include/lib/fidl/cpp/wire/internal/server_details.h",
       "include/lib/fidl/cpp/wire/internal/thenable.h",
       "include/lib/fidl/cpp/wire/internal/thread_checker.h",
-
-      "include/lib/fidl/llcpp/internal/arrow.h",
-      "include/lib/fidl/llcpp/internal/client_continuation.h",
-      "include/lib/fidl/llcpp/internal/client_details.h",
-      "include/lib/fidl/llcpp/internal/debug_thread_checker.h",
-      "include/lib/fidl/llcpp/internal/endpoints.h",
-      "include/lib/fidl/llcpp/internal/make_response_context.h",
-      "include/lib/fidl/llcpp/internal/server_details.h",
-      "include/lib/fidl/llcpp/internal/thenable.h",
-      "include/lib/fidl/llcpp/internal/thread_checker.h",
     ]
   }
   if (is_fuchsia) {
     private_headers +=
         [ "include/lib/fidl/cpp/wire/internal/transport_channel.h" ]
-    private_headers += [ "include/lib/fidl/llcpp/internal/transport_channel.h" ]
   } else {
     private_headers +=
         [ "include/lib/fidl/cpp/wire/internal/transport_channel_host.h" ]
-    private_headers +=
-        [ "include/lib/fidl/llcpp/internal/transport_channel_host.h" ]
   }
   private_headers += wavl_tree_headers
 

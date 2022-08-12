@@ -5,6 +5,7 @@
 #include "src/lib/fidl/cpp/contrib/connection/service_hub_connector.h"
 
 #include <fidl/test.protocol.connector/cpp/fidl.h>
+#include <lib/fidl/cpp/wire/channel.h>
 #include <lib/service/llcpp/service.h>
 
 #include <functional>
@@ -15,7 +16,6 @@
 #include <sdk/lib/sys/component/cpp/outgoing_directory.h>
 
 #include "lib/async/cpp/task.h"
-#include "lib/fidl/llcpp/channel.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/service.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"

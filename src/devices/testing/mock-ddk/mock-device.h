@@ -8,6 +8,7 @@
 #include <lib/ddk/binding_priv.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/fidl/cpp/wire/wire_messaging.h>
 #include <lib/fit/function.h>
 #include <lib/stdcompat/span.h>
 #include <lib/sync/completion.h>
@@ -22,7 +23,6 @@
 #include <vector>
 
 #include "lib/async/dispatcher.h"
-#include "lib/fidl/llcpp/wire_messaging.h"
 
 // Allow redefining the zx_device_t struct. MockDevice cannot be in the mock_ddk namespace.
 #define MockDevice zx_device

@@ -7,13 +7,13 @@
 #include <fidl/fuchsia.input.report/cpp/wire.h>
 #include <lib/async/dispatcher.h>
 #include <lib/ddk/debug.h>
+#include <lib/fidl/cpp/wire/arena.h>
 #include <lib/fit/function.h>
 #include <lib/zx/clock.h>
 
 #include <cmath>
 #include <cstdint>
 
-#include "lib/fidl/llcpp/arena.h"
 #include "src/ui/input/drivers/goldfish_sensor/parser.h"
 #include "src/ui/input/drivers/goldfish_sensor/root_device.h"
 
