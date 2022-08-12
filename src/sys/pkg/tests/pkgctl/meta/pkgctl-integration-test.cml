@@ -40,15 +40,7 @@
             ],
             from: "#netstack",
         },
-
-        // TODO(https://fxbug.dev/102175) remove these v1 protocols once pkgctl itself is migrated
-        {
-            protocol: [
-                "fuchsia.sys.Environment",
-                "fuchsia.sys.Launcher",
-                "fuchsia.sys.Loader",
-            ],
-        },
+        { protocol: "fuchsia.process.Launcher" },
         {
             storage: "tmp",
             path: "/tmp",

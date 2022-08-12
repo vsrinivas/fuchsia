@@ -5,6 +5,7 @@
 #![cfg(test)]
 use {
     anyhow::Error,
+    fidl::endpoints::Proxy,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_pkg::{
@@ -21,19 +22,16 @@ use {
         RuleIteratorRequest,
     },
     fidl_fuchsia_pkg_rewrite_ext::Rule,
-    fidl_fuchsia_space as fidl_space,
-    fidl_fuchsia_sys::{LauncherProxy, TerminationReason},
-    fuchsia_async as fasync,
-    fuchsia_component::{
-        client::{AppBuilder, Output},
-        server::{NestedEnvironment, ServiceFs},
-    },
+    fidl_fuchsia_space as fidl_space, fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs,
     fuchsia_hyper_test_support::{handler::StaticResponse, TestServer},
     fuchsia_url::RepositoryUrl,
+    fuchsia_zircon as zx,
     fuchsia_zircon::Status,
     futures::prelude::*,
     http::Uri,
     parking_lot::Mutex,
+    shell_process::ProcessOutput,
     std::{
         convert::TryFrom,
         fs::{create_dir, File},
@@ -46,8 +44,9 @@ use {
     vfs::directory::entry::DirectoryEntry,
 };
 
+const BINARY_PATH: &str = "/pkg/bin/pkgctl";
+
 struct TestEnv {
-    env: NestedEnvironment,
     engine: Arc<MockEngineService>,
     repository_manager: Arc<MockRepositoryManagerService>,
     package_cache: Arc<MockPackageCacheService>,
@@ -55,13 +54,10 @@ struct TestEnv {
     space_manager: Arc<MockSpaceManagerService>,
     _test_dir: TempDir,
     repo_config_arg_path: PathBuf,
+    svc_proxy: fidl_fuchsia_io::DirectoryProxy,
 }
 
 impl TestEnv {
-    fn launcher(&self) -> &LauncherProxy {
-        self.env.launcher()
-    }
-
     fn new() -> Self {
         let mut fs = ServiceFs::new();
         fs.add_proxy_service::<fidl_fuchsia_net_http::LoaderMarker, _>();
@@ -131,13 +127,16 @@ impl TestEnv {
         let repo_config_arg_path = _test_dir.path().join("repo_config");
         create_dir(&repo_config_arg_path).expect("create repo_config_arg dir");
 
-        let env = fs
-            .create_salted_nested_environment("pkgctl_env")
-            .expect("nested environment to create successfully");
+        let (svc_client_end, svc_server_end) = zx::Channel::create().expect("create channel");
+        let svc_proxy = fio::DirectoryProxy::from_channel(
+            fuchsia_async::Channel::from_channel(svc_client_end).unwrap(),
+        );
+
+        let _env = fs.serve_connection(svc_server_end).expect("serve connection");
+
         fasync::Task::spawn(fs.collect()).detach();
 
         Self {
-            env,
             engine,
             repository_manager,
             package_cache,
@@ -145,27 +144,23 @@ impl TestEnv {
             space_manager,
             _test_dir,
             repo_config_arg_path,
+            svc_proxy,
         }
     }
 
-    async fn run_pkgctl<'a>(&'a self, args: Vec<&'a str>) -> Output {
-        let launcher = self.launcher();
-        let repo_config_arg_dir =
-            File::open(&self.repo_config_arg_path).expect("open repo_config_arg dir");
+    async fn run_pkgctl<'a>(&'a self, args: Vec<&'a str>) -> ProcessOutput {
+        let repo_config_arg_dir = fuchsia_fs::directory::open_in_namespace(
+            &self.repo_config_arg_path.display().to_string(),
+            fio::OpenFlags::RIGHT_READABLE,
+        )
+        .unwrap();
 
-        let pkgctl =
-            AppBuilder::new("fuchsia-pkg://fuchsia.com/pkgctl-integration-tests#meta/pkgctl.cmx")
-                .args(args)
-                .add_dir_to_namespace("/repo-configs".to_string(), repo_config_arg_dir)
-                .expect("pkgctl app");
-
-        let output = pkgctl
-            .output(launcher)
-            .expect("pkgctl to launch")
-            .await
-            .expect("no errors while waiting for exit");
-        assert_eq!(output.exit_status.reason(), TerminationReason::Exited);
-        output
+        shell_process::run_process(
+            BINARY_PATH,
+            args,
+            [("/svc", &self.svc_proxy), ("/repo-configs", &repo_config_arg_dir)],
+        )
+        .await
     }
 
     fn add_repository(&self, repo_config: RepositoryConfig) {
@@ -498,24 +493,22 @@ impl MockSpaceManagerService {
     }
 }
 
-fn assert_no_errors(output: &Output) {
-    let stdout = std::str::from_utf8(&output.stdout).expect("stdout valid utf8");
-    assert_eq!(std::str::from_utf8(output.stderr.as_slice()).expect("stderr valid utf8"), "");
-    assert!(output.exit_status.success(), "status: {:?}\nstdout: {}", output.exit_status, stdout);
+fn assert_no_errors(output: &ProcessOutput) {
+    assert!(output.is_ok(), "status: {:?}\nstdout: {}", output.return_code(), output.stdout_str());
 }
 
-fn assert_stdout(output: &Output, expected: &str) {
+fn assert_stdout(output: &ProcessOutput, expected: &str) {
     assert_no_errors(output);
     assert_stdout_disregard_errors(output, expected);
 }
 
-fn assert_stdout_disregard_errors(output: &Output, expected: &str) {
-    assert_eq!(std::str::from_utf8(output.stdout.as_slice()).expect("stdout utf8"), expected);
+fn assert_stdout_disregard_errors(output: &ProcessOutput, expected: &str) {
+    assert_eq!(output.stdout_str(), expected);
 }
 
-fn assert_stderr(output: &Output, expected: &str) {
-    assert!(!output.exit_status.success());
-    assert_eq!(std::str::from_utf8(output.stderr.as_slice()).expect("stderr valid utf8"), expected);
+fn assert_stderr(output: &ProcessOutput, expected: &str) {
+    assert!(!output.is_ok());
+    assert_eq!(output.stderr_str(), expected);
 }
 
 fn make_test_repo_config() -> RepositoryConfig {
@@ -780,7 +773,7 @@ async fn test_gc_success() {
     let env = TestEnv::new();
     *env.space_manager.gc_err.lock() = None;
     let output = env.run_pkgctl(vec!["gc"]).await;
-    assert!(output.exit_status.success());
+    assert!(output.is_ok());
     env.assert_only_space_manager_called();
 }
 
@@ -789,7 +782,7 @@ async fn test_gc_error() {
     let env = TestEnv::new();
     *env.space_manager.gc_err.lock() = Some(fidl_space::ErrorCode::Internal);
     let output = env.run_pkgctl(vec!["gc"]).await;
-    assert!(!output.exit_status.success());
+    assert!(!output.is_ok());
     env.assert_only_space_manager_called();
 }
 
@@ -797,18 +790,18 @@ async fn test_gc_error() {
 async fn test_experiment_enable_no_admin_service() {
     let env = TestEnv::new();
     let output = env.run_pkgctl(vec!["experiment", "enable", "lightbulb"]).await;
-    assert_eq!(output.exit_status.code(), 1);
+    assert_eq!(output.return_code(), 1);
 
     // Call another pkgctl command to confirm the tool still works.
     let output = env.run_pkgctl(vec!["gc"]).await;
-    assert!(output.exit_status.success());
+    assert!(output.is_ok());
 }
 
 #[fasync::run_singlethreaded(test)]
 async fn test_experiment_disable_no_admin_service() {
     let env = TestEnv::new();
     let output = env.run_pkgctl(vec!["experiment", "enable", "lightbulb"]).await;
-    assert_eq!(output.exit_status.code(), 1);
+    assert_eq!(output.return_code(), 1);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -878,7 +871,7 @@ async fn test_pkg_status_fail_pkg_in_tuf_repo_but_not_on_disk() {
     assert_stdout_disregard_errors(&output,
       "Package in registered TUF repo: yes (merkle=0000000000000000000000000000000000000000000000000000000000000000)\n\
       Package on disk: no\n");
-    assert_eq!(output.exit_status.code(), 2);
+    assert_eq!(output.return_code(), 2);
     env.assert_only_package_resolver_and_package_cache_called_with(
         vec![CapturedPackageResolverRequest::GetHash { package_url: "the-url".into() }],
         vec![CapturedPackageCacheRequest::Open { meta_far_blob_id: hash }],
@@ -897,7 +890,7 @@ async fn test_pkg_status_fail_pkg_not_in_tuf_repo() {
         "Package in registered TUF repo: no\n\
         Package on disk: unknown (did not check since not in tuf repo)\n",
     );
-    assert_eq!(output.exit_status.code(), 3);
+    assert_eq!(output.return_code(), 3);
     env.assert_only_package_resolver_called_with(vec![CapturedPackageResolverRequest::GetHash {
         package_url: "the-url".into(),
     }]);

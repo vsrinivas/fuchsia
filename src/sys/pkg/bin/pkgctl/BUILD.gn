@@ -61,9 +61,8 @@ renamed_binary("pkgctl-binary") {
   fuchsia_shell_package_name = "pkgctl"
 }
 
-fuchsia_package_with_single_component("pkgctl-bin") {
+fuchsia_package("pkgctl-bin") {
   package_name = "pkgctl"
-  manifest = "meta/pkgctl.cmx"
   deps = [ ":pkgctl-binary" ]
 }
 
