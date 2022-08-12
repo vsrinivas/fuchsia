@@ -11,76 +11,55 @@
 #include <lib/fdio/fdio.h>
 #include <lib/inspect/service/cpp/reader.h>
 #include <lib/inspect/testing/cpp/inspect.h>
-#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
 
-#include <gmock/gmock.h>
 #include <src/lib/fxl/strings/substitute.h>
 
-#include "src/lib/files/glob.h"
+#include "lib/sys/component/cpp/testing/realm_builder_types.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace {
 
-using ::fxl::Substitute;
-using sys::testing::EnclosingEnvironment;
+using namespace component_testing;
 using ::testing::_;
 using ::testing::Contains;
 using ::testing::UnorderedElementsAre;
 using namespace inspect::testing;
 
-constexpr char kTestComponent[] =
-    "fuchsia-pkg://fuchsia.com/sys_inspect_cpp_tests#meta/"
-    "sys_inspect_cpp.cmx";
-constexpr char kTestProcessName[] = "sys_inspect_cpp.cmx";
-
-class SysInspectTest : public gtest::TestWithEnvironmentFixture {
+class SysInspectTest : public gtest::RealLoopFixture {
  protected:
-  SysInspectTest() : executor_(dispatcher()) {
-    fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = kTestComponent;
+  SysInspectTest() : executor_(dispatcher()) {}
 
-    environment_ = CreateNewEnclosingEnvironment("test", CreateServices());
-    environment_->CreateComponent(std::move(launch_info), controller_.NewRequest());
-    bool ready = false;
-    controller_.events().OnDirectoryReady = [&ready] { ready = true; };
-    RunLoopUntil([&ready] { return ready; });
-    if (!ready) {
-      printf("The output directory is not ready\n");
-    }
-  }
-  ~SysInspectTest() { CheckShutdown(); }
+  void SetUp() override {
+    auto builder = RealmBuilder::Create();
 
-  void CheckShutdown() {
-    controller_->Kill();
-    bool done = false;
-    controller_.events().OnTerminated = [&done](int64_t code,
-                                                fuchsia::sys::TerminationReason reason) {
-      ASSERT_EQ(fuchsia::sys::TerminationReason::EXITED, reason);
-      done = true;
-    };
-    RunLoopUntil([&done] { return done; });
+    builder.AddChild("test_component", "#meta/sys_inspect_cpp.cm",
+                     ChildOptions{.startup_mode = StartupMode::EAGER});
+
+    builder.AddRoute(Route{.capabilities = {Protocol{"fuchsia.logger.LogSink"}},
+                           .source = ParentRef(),
+                           .targets = {ChildRef{"test_component"}}});
+
+    builder.AddRoute(Route{.capabilities = {Directory{"parent-diagnostics"}},
+                           .source = ChildRef{"test_component"},
+                           .targets = {ParentRef()}});
+
+    realm_ = std::make_unique<RealmRoot>(builder.Build(dispatcher()));
   }
 
-  // Open the root of the tree service.
-  // Returns ZX_OK on success.
+  void TearDown() override { realm_.reset(); }
+
+  async::Executor& executor() { return executor_; }
+
   zx_status_t GetInspectTree(fuchsia::inspect::TreePtr* ptr) {
-    files::Glob glob(Substitute("/hub/r/test/*/c/$0/*/out/diagnostics/$1", kTestProcessName,
-                                std::string(fuchsia::inspect::Tree::Name_))
-                         .c_str());
-    if (glob.size() == 0) {
-      return ZX_ERR_NOT_FOUND;
-    }
-
-    zx_status_t status;
-    status = fdio_service_connect(std::string(*glob.begin()).c_str(),
-                                  ptr->NewRequest().TakeChannel().release());
-    return status;
+    return realm_->Connect("parent-diagnostics/fuchsia.inspect.Tree",
+                           ptr->NewRequest(dispatcher()).TakeChannel());
   }
-
-  async::Executor executor_;
 
  private:
-  std::unique_ptr<EnclosingEnvironment> environment_;
-  fuchsia::sys::ComponentControllerPtr controller_;
+  std::unique_ptr<RealmRoot> realm_;
+  async::Executor executor_;
+  std::unique_ptr<sys::ComponentContext> component_context_;
 };
 
 TEST_F(SysInspectTest, ReadHierarchy) {
@@ -88,7 +67,7 @@ TEST_F(SysInspectTest, ReadHierarchy) {
   fpromise::result<inspect::Hierarchy> result;
   fuchsia::inspect::TreePtr ptr;
   ASSERT_EQ(ZX_OK, GetInspectTree(&ptr));
-  executor_.schedule_task(
+  executor().schedule_task(
       inspect::ReadFromTree(std::move(ptr)).then([&](fpromise::result<inspect::Hierarchy>& res) {
         result = std::move(res);
         done = true;
@@ -110,7 +89,7 @@ TEST_F(SysInspectTest, ReadHealth) {
   fpromise::result<inspect::Hierarchy> result;
   fuchsia::inspect::TreePtr ptr;
   ASSERT_EQ(ZX_OK, GetInspectTree(&ptr));
-  executor_.schedule_task(
+  executor().schedule_task(
       inspect::ReadFromTree(std::move(ptr)).then([&](fpromise::result<inspect::Hierarchy>& res) {
         result = std::move(res);
         done = true;

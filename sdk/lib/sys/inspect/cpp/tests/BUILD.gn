@@ -17,7 +17,7 @@ executable("sys_inspect_cpp_bin") {
 
 fuchsia_component("sys_inspect_cpp") {
   deps = [ ":sys_inspect_cpp_bin" ]
-  manifest = "meta/sys_inspect_cpp_bin.cmx"
+  manifest = "meta/sys_inspect_cpp_bin.cml"
 }
 
 executable("sys_inspect_cpp_tests_bin") {
@@ -27,12 +27,12 @@ executable("sys_inspect_cpp_tests_bin") {
     "//sdk/fidl/fuchsia.inspect",
     "//sdk/lib/inspect/service/cpp",
     "//sdk/lib/inspect/testing/cpp",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture:gtest",
     "//src/zircon/lib/zircon",
-    "//third_party/googletest:gmock",
     "//zircon/system/ulib/inspect",
   ]
   public_deps = [
@@ -43,7 +43,7 @@ executable("sys_inspect_cpp_tests_bin") {
 
 fuchsia_unittest_component("sys_inspect_cpp_tests_component") {
   deps = [ ":sys_inspect_cpp_tests_bin" ]
-  manifest = "meta/sys_inspect_cpp_tests.cmx"
+  manifest = "meta/sys_inspect_cpp_tests.cml"
 }
 
 fuchsia_test_package("sys_inspect_cpp_tests") {
