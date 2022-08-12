@@ -90,47 +90,40 @@ class ScreenReaderMessageGenerator {
  private:
   // Gives any appropriate entered/exited container hints. Also describes the
   // current container, if it's changed.
-  void DescribeContainerChanges(
-      const ScreenReaderMessageContext& message_context,
-      std::vector<UtteranceAndContext>& description);
+  void DescribeContainerChanges(const ScreenReaderMessageContext& message_context,
+                                std::vector<UtteranceAndContext>& description);
 
   // Helper method to describe a node that has role == UNKNOWN.
-  void DescribeUnknown(
-      const fuchsia::accessibility::semantics::Node* node,
-      std::vector<UtteranceAndContext>& description);
+  void DescribeUnknown(const fuchsia::accessibility::semantics::Node* node,
+                       std::vector<UtteranceAndContext>& description);
 
   // Helper method to describe button nodes. The description will be:
   // <seleccted*> <label> button <toggled*> <actionable>
   //
   // * = if applicable
-  void DescribeButton(
-      const fuchsia::accessibility::semantics::Node* node,
-      std::vector<UtteranceAndContext>& description);
+  void DescribeButton(const fuchsia::accessibility::semantics::Node* node,
+                      std::vector<UtteranceAndContext>& description);
 
   // Helper method to describe a node that is a radio button.
-  void DescribeRadioButton(
-      const fuchsia::accessibility::semantics::Node* node,
-      std::vector<UtteranceAndContext>& description);
+  void DescribeRadioButton(const fuchsia::accessibility::semantics::Node* node,
+                           std::vector<UtteranceAndContext>& description);
 
   // Helper method to describe a node that is a check box. The resulting description can be one or
   // more utterances, depending on the ammount of semantic data available about the state of the
   // node (checked / not checked for example).
-  void DescribeCheckBox(
-      const fuchsia::accessibility::semantics::Node* node,
-      std::vector<UtteranceAndContext>& description);
+  void DescribeCheckBox(const fuchsia::accessibility::semantics::Node* node,
+                        std::vector<UtteranceAndContext>& description);
 
   // Helper method to describe a node that is a toggle switch.
-  void DescribeToggleSwitch(
-      const fuchsia::accessibility::semantics::Node* node,
-      std::vector<UtteranceAndContext>& description);
+  void DescribeToggleSwitch(const fuchsia::accessibility::semantics::Node* node,
+                            std::vector<UtteranceAndContext>& description);
 
   // Helper method to describe a node that represents a table.
   // The message will be:
   //
   // <label>, <row count> rows, <column count> columns, table
-  void DescribeTable(
-      const fuchsia::accessibility::semantics::Node* node,
-      std::vector<UtteranceAndContext>& description);
+  void DescribeTable(const fuchsia::accessibility::semantics::Node* node,
+                     std::vector<UtteranceAndContext>& description);
 
   // Helper method to describe a node that represents a table cell.
   // The message will be:
@@ -140,33 +133,29 @@ class ScreenReaderMessageGenerator {
   //
   // *If different from the previous cell read.
   // ^If greater than 1.
-  void DescribeTableCell(
-      const fuchsia::accessibility::semantics::Node* node,
-      ScreenReaderMessageContext message_context,
-      std::vector<UtteranceAndContext>& description);
+  void DescribeTableCell(const fuchsia::accessibility::semantics::Node* node,
+                         ScreenReaderMessageContext message_context,
+                         std::vector<UtteranceAndContext>& description);
 
   // Helper method to describe a node that represents a table row/column header.
   // The message will be:
   //
   // <label>, row <row span>, spans <row/column span> rows/columns, row/column
   // header
-  void DescribeRowOrColumnHeader(
-      const fuchsia::accessibility::semantics::Node* node,
-      std::vector<UtteranceAndContext>& description);
+  void DescribeRowOrColumnHeader(const fuchsia::accessibility::semantics::Node* node,
+                                 std::vector<UtteranceAndContext>& description);
 
   // Helper method to describe entering a node that represents a list.
   // The message will be:
   //
   // Entered list with [0 items / 1 item / n items], <label>.
   // *If present.
-  void DescribeEnteredList(
-      const fuchsia::accessibility::semantics::Node* node,
-      std::vector<UtteranceAndContext>& description);
+  void DescribeEnteredList(const fuchsia::accessibility::semantics::Node* node,
+                           std::vector<UtteranceAndContext>& description);
 
   // Add the node's label to its description, if present.
-  void MaybeAddLabelDescriptor(
-      const fuchsia::accessibility::semantics::Node* node,
-      std::vector<UtteranceAndContext>& description);
+  void MaybeAddLabelDescriptor(const fuchsia::accessibility::semantics::Node* node,
+                               std::vector<UtteranceAndContext>& description);
 
   // Describe the node as "selected", if the node is selected.
   //

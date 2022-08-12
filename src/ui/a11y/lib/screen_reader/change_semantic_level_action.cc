@@ -5,6 +5,7 @@
 #include "src/ui/a11y/lib/screen_reader/change_semantic_level_action.h"
 
 #include <lib/syslog/cpp/macros.h>
+
 #include "src/ui/a11y/lib/screen_reader/util/util.h"
 
 namespace a11y {
@@ -70,8 +71,7 @@ void ChangeSemanticLevelAction::Run(GestureContext gesture_context) {
     FX_DCHECK(action_context_->semantics_source);
     auto* node = action_context_->semantics_source->GetSemanticNode(a11y_focus->view_ref_koid,
                                                                     a11y_focus->node_id);
-    if (node && node->has_node_id() &&
-        NodeIsSlider(node)) {
+    if (node && node->has_node_id() && NodeIsSlider(node)) {
       is_slider_focused = true;
     }
   }
