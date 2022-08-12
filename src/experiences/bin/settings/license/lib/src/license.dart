@@ -3,31 +3,27 @@
 // found in the LICENSE file.
 
 import 'package:flutter/material.dart';
-import 'package:webview_flutter/webview_flutter.dart';
+import 'package:flutter/services.dart';
+import 'package:internationalization/strings.dart';
 
-class License extends StatelessWidget {
-  final String url;
-
-  const License(this.url);
-
+class License extends StatefulWidget {
   @override
-  Widget build(BuildContext context) => MaterialApp(home: LicensePage(url));
+  _LicenseText createState() => _LicenseText();
 }
 
-class LicensePage extends StatefulWidget {
-  final String url;
-
-  const LicensePage(this.url);
+class _LicenseText extends State<License> {
+  // Localized strings.
+  static String get _loading => Strings.loading;
 
   @override
-  _LicensePageState createState() => _LicensePageState();
-}
-
-class _LicensePageState extends State<LicensePage> {
-  @override
-  Widget build(BuildContext context) => Scaffold(
-        body: WebView(
-          initialUrl: widget.url,
-        ),
+  Widget build(BuildContext context) => FutureBuilder(
+        future: fetchText(),
+        builder: (context, snapshot) =>
+            snapshot.hasData ? Text('${snapshot.data}') : Text(_loading),
       );
+
+  Future<String> fetchText() async {
+    String licenseBody = await rootBundle.loadString('assets/license.html');
+    return licenseBody;
+  }
 }
