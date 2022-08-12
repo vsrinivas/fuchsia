@@ -85,7 +85,7 @@ func writeBaseClassFunctions(index *Index, r *clangdoc.RecordInfo, headingLevel 
 func writeRecordReference(settings WriteSettings, index *Index, r *clangdoc.RecordInfo, f io.Writer) {
 	fullName := recordFullName(r)
 	// Devsite uses {:#htmlId} to give the title a custom ID.
-	fmt.Fprintf(f, "## %s %s {:#%s}\n\n", r.TagType, fullName, recordHtmlId(index, r))
+	fmt.Fprintf(f, "## %s %s {:#%s}\n\n", fullName, r.TagType, recordHtmlId(index, r))
 
 	// This prefix is used for function names. Don't include the full scope (like namespaces)
 	// because this will be printed as a declaration where namespaces are not used. This will
@@ -97,14 +97,16 @@ func writeRecordReference(settings WriteSettings, index *Index, r *clangdoc.Reco
 	// Split out the member functions.
 	var funcs []*clangdoc.FunctionInfo
 	var ctors []*clangdoc.FunctionInfo
-	//var dtor clangdoc.FunctionInfo
 	for _, fn := range r.ChildFunctions {
 		if !fn.IsPublic() {
 			continue
 		} else if r.IsConstructor(fn) {
 			ctors = append(ctors, fn)
 		} else if r.IsDestructor(fn) {
-			//dtor = fn;
+			// Ignore destructors. It's not currently clear how to present this as
+			// there's almost never any documentation for these. The main relevant part
+			// is whether the destructor might be private in some cases like internally
+			// reference counted classes.
 		} else {
 			funcs = append(funcs, fn)
 		}
@@ -174,9 +176,16 @@ func writeRecordReference(settings WriteSettings, index *Index, r *clangdoc.Reco
 }
 
 func recordFullName(r *clangdoc.RecordInfo) string {
-	result := ""
+	if len(r.Namespace) == 1 && r.Namespace[0].Name == "GlobalNamespace" {
+		// Clang-doc generates "GlobalNamespace" annotations for records in the
+		// global namespace. See clangdoc.RecordInfo.Namespace.
+		//
+		// Ignore these annotations.
+		return r.Name
+	}
 
 	// The order is in reverse of C++.
+	result := ""
 	for i := len(r.Namespace) - 1; i >= 0; i-- {
 		result += r.Namespace[i].Name + "::"
 	}
@@ -241,10 +250,8 @@ func writeRecordDeclarationBlock(index *Index, r *clangdoc.RecordInfo, data []cl
 	for i := len(r.Namespace) - 1; i >= 0; i-- {
 		ns := r.Namespace[i]
 		if ns.Type == "Namespace" {
+			// Omit "GlobalNamespace". See docs on clangdoc.RecordInfo.Namespace.
 			if ns.Name != "GlobalNamespace" {
-				// TODO clang-doc seems to output "GlobalNamespace" namespace
-				// qualifications for structs in the global namespace. I think this
-				// is incorrect and these should just be omitted.
 				nsBegin += fmt.Sprintf("<span class=\"kwd\">namespace</span> %s {\n", ns.Name)
 				nsEnd = fmt.Sprintf("}  <span class=\"com\">// namespace %s</span>\n", ns.Name) + nsEnd
 			}

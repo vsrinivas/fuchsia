@@ -45,8 +45,8 @@ satisfy all of these requirements:
 
   * It must be deliniated with "///" comments at the beginning of the line.
   * It must be followed with a blank line.
-  * It must appear before any non-preprocessor lines (only "#" and //" lines are
-    allowed before it).
+  * It must appear before any non-preprocessor lines (only "#" and "//" lines
+    are allowed before it).
 
 It is recommended that this block go immediately before or after the include guard.
 
@@ -67,7 +67,7 @@ will be used as the title of the page instead. For example:
 /// # Deprecated functions in libdoom
 ///
 /// The header `<lib/libdoom/deprecated.h>` contains all of the functions
-/// that are currently deprecated butallowed to be used.
+/// that are currently deprecated but allowed to be used.
 ```
 
 For user-friendliness:

@@ -47,7 +47,7 @@ func TestWriteHeaderReference(t *testing.T) {
 
 [Header source code](https://cs.opensource.google/fuchsia/fuchsia/+/main:src/lib/test/myheader.h)
 
-## Class MyClass {:#}
+## MyClass Class {:#}
 
 [Declaration source code](https://cs.opensource.google/fuchsia/fuchsia/+/main:src/lib/test/myheader.h#99)
 

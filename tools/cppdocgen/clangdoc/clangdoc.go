@@ -170,14 +170,19 @@ type RecordInfo struct {
 	Path string `yaml:"Path"`
 
 	// This will be an array of the path to the struct definition. It will include child
-	// structs and not just namespaces. For example if you have namespace "ns" and nested
-	// structs "Outer" and "Inner", the "Inner" struct will have this member be:
+	// structs and not just namespaces.
 	//
 	// The order is going from the namespace closest to the record and moving outward, so to
 	// reconstruct the C++ name you would iterate in reverse.
 	//
 	//   [ { Type: "Record",    Name: "Outer" },
 	//     { Type: "Namespace", Name: "ns" } ]
+	//
+	// Clang-doc generates "GlobalNamespace"-named namespaces for records in the global
+	// namespace. This seems incorrect but was added for the way some other backends work:
+	//   https://reviews.llvm.org/D66298
+	//
+	// If using this to generate a name, "GlobalNamespace" will need to be removed manually.
 	Namespace []Reference `yaml:"Namespace"`
 
 	DefLocation Location      `yaml:"DefLocation"`

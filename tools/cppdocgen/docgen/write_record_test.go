@@ -21,6 +21,9 @@ func TestWriteRecordDeclarationBlock(t *testing.T) {
 			{Type: "Record", Name: "Saucemaster"},
 			{Type: "Namespace", Name: "ns"},
 			{Type: "Namespace", Name: "outer"},
+			// Clang-doc generates "GlobalNamespace" references in some cases and these
+			// should be skipped.
+			{Type: "Namespace", Name: "GlobalNamespace"},
 		},
 	}
 
