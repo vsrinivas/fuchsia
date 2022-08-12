@@ -133,6 +133,7 @@
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.composition.ScreenCapture",
+                "fuchsia.ui.composition.internal.ScreenCapture",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
                 "fuchsia.ui.input.ImeService",
                 "fuchsia.ui.input3.Keyboard",
