@@ -597,14 +597,6 @@ fuchsia_unittest_package("use_aac_decoder_test") {
   ]
 }
 
-fuchsia_component("vp9_conformance_http_test_component_v2") {
-  testonly = true
-  manifest = "use_media_decoder/meta/vp9_decoder_conformance_http.cml"
-  deps = [
-    "//src/media/codec/examples/use_media_decoder:vp9_decoder_conformance_test",
-  ]
-}
-
 fuchsia_component("vp9_conformance_http_test_component") {
   testonly = true
   manifest = "use_media_decoder/meta/vp9_decoder_conformance_http.cml"
@@ -618,10 +610,7 @@ fuchsia_component("vp9_conformance_http_test_component") {
 # data in, parse it as ivf, decode it, compute MD5, and output the MD5.
 fuchsia_package("vp9_decoder_conformance_http") {
   testonly = true
-  deps = [
-    ":vp9_conformance_http_test_component",
-    ":vp9_conformance_http_test_component_v2",
-  ]
+  deps = [ ":vp9_conformance_http_test_component" ]
 }
 
 fuchsia_component("h264-decoder-conformance-http") {
