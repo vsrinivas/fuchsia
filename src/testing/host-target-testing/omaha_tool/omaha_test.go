@@ -17,11 +17,11 @@ import (
 
 func argsForTest() OmahaToolArgs {
 	return OmahaToolArgs{
-		ToolPath:       filepath.Join(filepath.Join(filepath.Dir(os.Args[0]), "test_data", "system-tests"), "mock-omaha-server"),
-		PrivateKeyId:   "42",
-		PrivateKeyPath: filepath.Join(filepath.Join(filepath.Dir(os.Args[0]), "test_data", "system-tests"), "test_private_key.pem"),
+		toolPath:       filepath.Join(filepath.Join(filepath.Dir(os.Args[0]), "test_data", "system-tests"), "mock-omaha-server"),
+		privateKeyId:   "42",
+		privateKeyPath: filepath.Join(filepath.Join(filepath.Dir(os.Args[0]), "test_data", "system-tests"), "test_private_key.pem"),
 		AppId:          "some-app-id",
-		LocalHostname:  "localhost",
+		localHostname:  "localhost",
 	}
 }
 
@@ -46,7 +46,6 @@ func getTestOmahaRequest(t *testing.T) []byte {
 			UpdateCheck: requestUpdateCheck{
 				UpdateDisabled: false,
 			},
-			Cohort:  "1:1:",
 			Version: "0.1.2.3",
 		}}}})
 	if err != nil {
@@ -108,9 +107,9 @@ func TestSingleRequest(t *testing.T) {
 		t.Fatalf("Status should be 'ok', is %s", updateCheck.Status)
 	}
 
-	if updateCheck.Urls.Url[0].Codebase != "fuchsia-pkg://fuchsia.com/" {
+	if updateCheck.Urls.Url[0].Codebase != "fuchsia-pkg://fuchsia.com" {
 		t.Fatalf(
-			"Update package host should be 'fuchsia-pkg://fuchsia.com/', is %s",
+			"Update package host should be 'fuchsia-pkg://fuchsia.com', is %s",
 			updateCheck.Urls.Url[0].Codebase)
 	}
 
@@ -153,25 +152,6 @@ func TestSingleRequest(t *testing.T) {
 	}
 }
 
-func QueryWithTestOmahaRequest(t *testing.T, o *OmahaTool, stdout bytes.Buffer, stderr bytes.Buffer, expectedRunValue string) {
-	req := getTestOmahaRequest(t)
-	resp, err := http.Post(o.URL(), "application/json", bytes.NewBuffer(req))
-	if err != nil {
-		t.Fatalf("Get request shouldn't fail. err: %s\nstdout: %s\nstderr: %s\n", err, stdout.String(), stderr.String())
-	}
-
-	dec := json.NewDecoder(resp.Body)
-	var data response
-	if err = dec.Decode(&data); err != nil {
-		t.Fatalf("Could not decode")
-	}
-
-	action := data.Response.App[0].UpdateCheck.Manifest.Actions.Action[0]
-	if action.Run != expectedRunValue {
-		t.Fatalf("Manifest action should have '%s', is %s", expectedRunValue, action.Run)
-	}
-}
-
 func TestSetPkgUrlOnServer(t *testing.T) {
 	ctx := context.Background()
 	var stdout bytes.Buffer
@@ -187,13 +167,14 @@ func TestSetPkgUrlOnServer(t *testing.T) {
 		t.Fatalf("SetPkgURL should not fail with the given input. %s", err)
 	}
 
-	QueryWithTestOmahaRequest(t, o, stdout, stderr, "update/0?hash=deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
-
-	if err := o.SetPkgURL(ctx, "fuchsia-pkg://other-domain.com/foo/1?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead"); err != nil {
-		t.Fatalf("Setting Pkg URL on a running server shouldn't fail. err: %s\nstdout: %s\n stderr: %s\n", err, stdout.String(), stderr.String())
+	req := getTestOmahaRequest(t)
+	if _, err := http.Post(o.URL(), "application/json", bytes.NewBuffer(req)); err != nil {
+		t.Fatalf("Get request shouldn't fail. err: %s", err)
 	}
 
-	QueryWithTestOmahaRequest(t, o, stdout, stderr, "foo/1?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead")
+	if err := o.SetPkgURL(ctx, "fuchsia-pkg://other-domain.com/update/0?hash=beefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead"); err != nil {
+		t.Fatalf("Setting Pkg URL on a running server shouldn't fail. err: %s\nstdout: %s\n stderr: %s\n", err, stdout.String(), stderr.String())
+	}
 }
 
 func TestSingleRequestBeforeMerkleSet(t *testing.T) {
@@ -202,8 +183,8 @@ func TestSingleRequestBeforeMerkleSet(t *testing.T) {
 	var stderr bytes.Buffer
 
 	args := argsForTest()
-	if args.Merkle != "" {
-		t.Fatalf("This test is supposed to invoke NewOmahaServer on args with merkle empty, but it is not: %s", args.Merkle)
+	if args.merkle != "" {
+		t.Fatalf("This test is supposed to invoke NewOmahaServer on args with merkle empty, but it is not: %s", args.merkle)
 	}
 
 	o, err := NewOmahaServer(ctx, args, &stdout, &stderr)

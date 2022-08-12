@@ -18,7 +18,6 @@ import (
 
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/avb"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/flasher"
-	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/omaha_tool"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/packages"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/paver"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/zbi"
@@ -437,14 +436,14 @@ func (b *FuchsiaDirBuild) GetVbmetaPath(ctx context.Context) (string, error) {
 }
 
 type OmahaBuild struct {
-	build     Build
-	omahatool *omaha_tool.OmahaTool
-	avbtool   *avb.AVBTool
-	zbitool   *zbi.ZBITool
+	build    Build
+	omahaUrl string
+	avbtool  *avb.AVBTool
+	zbitool  *zbi.ZBITool
 }
 
-func NewOmahaBuild(build Build, omahatool *omaha_tool.OmahaTool, avbtool *avb.AVBTool, zbitool *zbi.ZBITool) *OmahaBuild {
-	return &OmahaBuild{build: build, omahatool: omahatool, avbtool: avbtool, zbitool: zbitool}
+func NewOmahaBuild(build Build, omahaUrl string, avbtool *avb.AVBTool, zbitool *zbi.ZBITool) *OmahaBuild {
+	return &OmahaBuild{build: build, omahaUrl: omahaUrl, avbtool: avbtool, zbitool: zbitool}
 }
 
 func (b *OmahaBuild) GetBootserver(ctx context.Context) (string, error) {
@@ -489,7 +488,7 @@ func (b *OmahaBuild) GetPaver(ctx context.Context) (paver.Paver, error) {
 	// Create a ZBI with the omaha_url argument.
 	destZbiPath := path.Join(tempDir, "omaha_argument.zbi")
 	imageArguments := map[string]string{
-		"omaha_url": b.omahatool.URL(),
+		"omaha_url": b.omahaUrl,
 	}
 
 	if err := b.zbitool.MakeImageArgsZbi(ctx, destZbiPath, imageArguments); err != nil {
@@ -537,7 +536,7 @@ func (b *OmahaBuild) GetFlasher(ctx context.Context) (flasher.Flasher, error) {
 	// Create a ZBI with the omaha_url argument.
 	destZbiPath := path.Join(tempDir, "omaha_argument.zbi")
 	imageArguments := map[string]string{
-		"omaha_url": b.omahatool.URL(),
+		"omaha_url": b.omahaUrl,
 	}
 
 	if err := b.zbitool.MakeImageArgsZbi(ctx, destZbiPath, imageArguments); err != nil {

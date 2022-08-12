@@ -25,18 +25,17 @@ import (
 )
 
 type OmahaToolArgs struct {
-	ToolPath       string
-	PrivateKeyId   string
-	PrivateKeyPath string
+	toolPath       string
+	privateKeyId   string
+	privateKeyPath string
 	AppId          string
-	LocalHostname  string
-	Merkle         string
-	PackagePath    string
+	localHostname  string
+	merkle         string
+	packagePath    string
 }
 
+// Matches ResponseAndMetadata within mock-omaha-server/src/lib.rs.
 type responseAndMetadata struct {
-	// Note: Keep this struct up-to-date with ResponseAndMetadata within
-	// mock-omaha-server/src/lib.rs
 	Response        string `json:"response,omitempty"`
 	Merkle          string `json:"merkle,omitempty"`
 	CheckAssertion  string `json:"check_assertion,omitempty"`
@@ -61,8 +60,8 @@ func (a *OmahaToolArgs) SetUpdatePkgURL(ctx context.Context, updatePkgURL string
 	}
 	// The merkle field is the URL query param 'hash'.
 	q := u.Query()
-	a.Merkle = q.Get("hash")
-	a.PackagePath = strings.TrimPrefix(u.Path, "/")
+	a.merkle = q.Get("hash")
+	a.packagePath = strings.TrimPrefix(u.Path, "/")
 	return nil
 }
 
@@ -70,10 +69,9 @@ type OmahaTool struct {
 	Args      OmahaToolArgs
 	serverURL string
 	cmd       *exec.Cmd
-	stdoutBuf *bytes.Buffer
 }
 
-func NewOmahaServer(ctx context.Context, args OmahaToolArgs, providedStdout io.Writer, providedStderr io.Writer) (*OmahaTool, error) {
+func NewOmahaServer(ctx context.Context, args OmahaToolArgs, stdout io.Writer, stderr io.Writer) (*OmahaTool, error) {
 	l := logger.NewLogger(
 		logger.DebugLevel,
 		color.NewColor(color.ColorAuto),
@@ -83,34 +81,28 @@ func NewOmahaServer(ctx context.Context, args OmahaToolArgs, providedStdout io.W
 	l.SetFlags(logger.Ldate | logger.Ltime | logger.LUTC | logger.Lshortfile)
 	ctx = logger.WithLogger(ctx, l)
 
-	privateKeyPath, err := exec.LookPath(args.PrivateKeyPath)
+	privateKeyPath, err := exec.LookPath(args.privateKeyPath)
 	if err != nil {
 		return nil, err
 	}
 
-	toolPath, err := exec.LookPath(args.ToolPath)
+	toolPath, err := exec.LookPath(args.toolPath)
 	if err != nil {
 		return nil, err
 	}
 
 	toolArgs := []string{
-		"--key-id", args.PrivateKeyId,
+		"--key-id", args.privateKeyId,
 		"--key-path", privateKeyPath,
+		"--listen-on", "::1",
 	}
 	logger.Infof(ctx, "running: %s %q", toolPath, toolArgs)
 	cmd := exec.CommandContext(ctx, toolPath, toolArgs...)
 
-	if providedStderr != nil {
-		cmd.Stderr = providedStderr
+	if stderr != nil {
+		cmd.Stderr = stderr
 	} else {
 		cmd.Stderr = os.Stderr
-	}
-
-	var serverStdout io.Writer
-	if providedStdout == nil {
-		serverStdout = os.Stdout
-	} else {
-		serverStdout = providedStdout
 	}
 
 	var port string
@@ -133,14 +125,14 @@ func NewOmahaServer(ctx context.Context, args OmahaToolArgs, providedStdout io.W
 		}
 		line := scanner.Text()
 		lineCh <- line
-		_, err := io.WriteString(serverStdout, line)
+		_, err := io.WriteString(stdout, line)
 		if err != nil {
 			logger.Errorf(ctx, "error: %s", err)
 			return
 		}
 
 		for scanner.Scan() {
-			_, err := io.WriteString(serverStdout, scanner.Text())
+			_, err := io.WriteString(stdout, scanner.Text())
 			if err != nil {
 				logger.Errorf(ctx, "error: %s", err)
 				return
@@ -168,7 +160,7 @@ func NewOmahaServer(ctx context.Context, args OmahaToolArgs, providedStdout io.W
 	}
 
 	logger.Infof(ctx, "Serving Omaha from %s", port)
-	hostname := strings.ReplaceAll(args.LocalHostname, "%", "%25")
+	hostname := strings.ReplaceAll(args.localHostname, "%", "%25")
 
 	var serverURL string
 	if strings.Contains(hostname, ":") {
@@ -227,10 +219,11 @@ func (o *OmahaTool) SetPkgURL(ctx context.Context, updatePkgURL string) error {
 	responsesByAppID := map[string]responseAndMetadata{
 		o.Args.AppId: {
 			Response:       "Update",
-			Merkle:         o.Args.Merkle,
+			Merkle:         o.Args.merkle,
 			CheckAssertion: "UpdatesEnabled",
-			Codebase:       "fuchsia-pkg://fuchsia.com/",
-			PackagePath:    o.Args.PackagePath,
+			Version:        "0.1.2.3",
+			Codebase:       "fuchsia-pkg://fuchsia.com",
+			PackagePath:    o.Args.packagePath,
 		},
 	}
 	req, err := json.Marshal(responsesByAppID)
