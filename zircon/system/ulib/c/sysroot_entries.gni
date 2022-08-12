@@ -55,7 +55,6 @@ sysroot_uninstrumented_libc_entries = [
         "zircon/boot/image.h",
         "zircon/boot/multiboot.h",
         "zircon/boot/netboot.h",
-        "zircon/boot/sysconfig.h",
         "zircon/compiler.h",
         "zircon/errors.h",
         "zircon/features.h",

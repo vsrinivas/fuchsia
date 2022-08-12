@@ -188,7 +188,6 @@
   "include/zircon/boot/image.h": "aa5db4b7c7dbbd7d597a31fc27be8bc7",
   "include/zircon/boot/multiboot.h": "75c4ffa342d5ca0da1d261796e91a990",
   "include/zircon/boot/netboot.h": "e226f8e10be309db8273546862108f11",
-  "include/zircon/boot/sysconfig.h": "b81d51a7e75a7117566005f41766f192",
   "include/zircon/compiler.h": "283b0856f86b26d15e39345bd4da2281",
   "include/zircon/device/audio.h": "7e2afee52e24ad839a479e4cba9247a5",
   "include/zircon/dlfcn.h": "28285c191e9a046125a2065cb482d6ec",

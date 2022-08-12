@@ -218,7 +218,6 @@ arch/x64/sysroot/include/zircon/boot/driver-config.h
 arch/x64/sysroot/include/zircon/boot/image.h
 arch/x64/sysroot/include/zircon/boot/multiboot.h
 arch/x64/sysroot/include/zircon/boot/netboot.h
-arch/x64/sysroot/include/zircon/boot/sysconfig.h
 arch/x64/sysroot/include/zircon/compiler.h
 arch/x64/sysroot/include/zircon/device/audio.h
 arch/x64/sysroot/include/zircon/dlfcn.h
