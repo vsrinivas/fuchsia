@@ -3263,6 +3263,12 @@ From [//third_party/openweave-core/config.gni:14](https://fuchsia.googlesource.c
 
 From [//third_party/openweave-core/config.gni:13](https://fuchsia.googlesource.com/third_party/openweave-core/+/aa2a61cb8d9d7a89e33564de13d110c8b88e66be/config.gni#13)
 
+### instructions_path
+
+**Current value (from the default):** `"//src/recovery/system/res/instructions.txt"`
+
+From //src/recovery/system/system_recovery_args.gni:8
+
 ### is_analysis
 If set, the build will produce compilation analysis dumps, used for code
 cross-referencing in code search.  The extra work done during analysis
@@ -5702,7 +5708,7 @@ From //build/config/rust/BUILD.gn:28
 ### rust_virtio_balloon
 Enable to the the rust virtio balloon
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
 From //src/virtualization/bin/args.gni:13
 
