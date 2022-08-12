@@ -14,7 +14,7 @@ import subprocess
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--stamp', help='Path to the victory file', required=True)
+        '--result-file', help='Path to the victory file', required=True)
     parser.add_argument(
         '--diff-on-failure',
         help='Run diff on the files if they differ',
@@ -40,8 +40,8 @@ def main():
                 ['diff', '-u', args.first, args.second], stderr=sys.stdout)
         return 1
 
-    with open(args.stamp, 'w') as stamp_file:
-        stamp_file.write('Match!\n')
+    with open(args.result_file, 'w') as result_file:
+        result_file.write('Match!\n')
 
     return 0
 

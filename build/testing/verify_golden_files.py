@@ -24,7 +24,7 @@ def main():
         required=True,
     )
     parser.add_argument(
-        '--stamp', help='Path to the victory file', required=True)
+        '--result-file', help='Path to the victory file', required=True)
     parser.add_argument(
         '--bless',
         help="Overwrites current with golden if they don't match.",
@@ -68,8 +68,8 @@ def main():
     if diffs and not args.bless and not args.warn:
         return 1
 
-    with open(args.stamp, 'w') as stamp_file:
-        stamp_file.write('Golden!\n')
+    with open(args.result_file, 'w') as result_file:
+        result_file.write('Golden!\n')
 
     return 0
 

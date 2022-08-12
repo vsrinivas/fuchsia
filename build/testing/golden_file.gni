@@ -51,15 +51,15 @@ template("golden_files") {
 
     script = "//build/testing/verify_golden_files.py"
 
-    stamp_file = "$target_gen_dir/$target_name.verified"
+    result_file = "$target_gen_dir/$target_name.verified"
 
     inputs = []
 
-    outputs = [ stamp_file ]
+    outputs = [ result_file ]
 
     args = [
-      "--stamp",
-      rebase_path(stamp_file, root_build_dir),
+      "--result-file",
+      rebase_path(result_file, root_build_dir),
       "--label",
       get_label_info(":${target_name}", "label_no_toolchain"),
       "--comparisons",

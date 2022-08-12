@@ -46,14 +46,14 @@ template("verify_files_match") {
 
     script = "//build/testing/verify_files_match.py"
 
-    stamp_file = "$target_gen_dir/$target_name.verified"
+    result_file = "$target_gen_dir/$target_name.verified"
 
     inputs = [
       invoker.first,
       invoker.second,
     ]
 
-    outputs = [ stamp_file ]
+    outputs = [ result_file ]
 
     args = []
     if (display_text_diff_on_failure) {
@@ -66,8 +66,8 @@ template("verify_files_match") {
     }
 
     args += [
-      "--stamp",
-      rebase_path(stamp_file, root_build_dir),
+      "--result-file",
+      rebase_path(result_file, root_build_dir),
       rebase_path(invoker.first, root_build_dir),
       rebase_path(invoker.second, root_build_dir),
     ]
