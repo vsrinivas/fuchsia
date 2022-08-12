@@ -46,7 +46,7 @@ use crate::{
         nud::{BufferNudContext, BufferNudHandler, NudContext, NudState, NudTimerId},
         state::AddrConfig,
     },
-    sync::Mutex,
+    sync::{Mutex, RwLock},
     BufferNonSyncContext, NonSyncContext, SyncCtx,
 };
 
@@ -159,7 +159,7 @@ impl<NonSyncCtx: NonSyncContext> EthernetIpLinkDeviceContext<NonSyncCtx> for Syn
         cb: F,
     ) -> O {
         let state = &self.state.device.ethernet.get(id).unwrap().link;
-        cb(&state.static_state, &state.dynamic_state)
+        cb(&state.static_state, &state.dynamic_state.read())
     }
 
     fn with_ethernet_device_state_mut<
@@ -171,7 +171,7 @@ impl<NonSyncCtx: NonSyncContext> EthernetIpLinkDeviceContext<NonSyncCtx> for Syn
         cb: F,
     ) -> O {
         let state = &mut self.state.device.ethernet.get_mut(id).unwrap().link;
-        cb(&state.static_state, &mut state.dynamic_state)
+        cb(&state.static_state, &mut state.dynamic_state.write())
     }
 
     fn add_ipv6_addr_subnet(
@@ -359,7 +359,7 @@ impl EthernetDeviceStateBuilder {
             ipv4_arp: Default::default(),
             ipv6_nud: Default::default(),
             static_state: StaticEthernetDeviceState { mac, hw_mtu: mtu },
-            dynamic_state: DynamicEthernetDeviceState::new(mtu),
+            dynamic_state: RwLock::new(DynamicEthernetDeviceState::new(mtu)),
         }
     }
 }
@@ -401,7 +401,7 @@ pub(crate) struct EthernetDeviceState {
 
     static_state: StaticEthernetDeviceState,
 
-    dynamic_state: DynamicEthernetDeviceState,
+    dynamic_state: RwLock<DynamicEthernetDeviceState>,
 }
 
 /// Should a packet with destination MAC address, `dst`, be accepted by this
