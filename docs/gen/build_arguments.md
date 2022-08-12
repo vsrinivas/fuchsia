@@ -2958,7 +2958,7 @@ From //build/go/go_build.gni:22
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/dartlang/.gocache"`
 
 From //build/go/go_build.gni:18
 
@@ -4783,7 +4783,7 @@ Note: Don't confuse pw_assert_BACKEND and pw_assert_basic_HANDLER_BACKEND:
    implementation of the handler which is invoked (i.e.
    pw_assert_basic_HandleFailure).
 
-**Current value for `target_cpu = "arm64"`:** `"//third_party/pigweed/backends:pw_assert_basic_handler_backend"`
+**Current value for `target_cpu = "arm64"`:** `"//third_party/pigweed/backends/pw_assert_basic"`
 
 From //.gn:62
 
@@ -4791,7 +4791,7 @@ From //.gn:62
 
 From [//third_party/pigweed/src/pw_assert_basic/backend.gni:28](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_assert_basic/backend.gni#28)
 
-**Current value for `target_cpu = "x64"`:** `"//third_party/pigweed/backends:pw_assert_basic_handler_backend"`
+**Current value for `target_cpu = "x64"`:** `"//third_party/pigweed/backends/pw_assert_basic"`
 
 From //.gn:62
 
@@ -4904,17 +4904,17 @@ $dir_pw_build:link_deps target pulls in these libraries.
 pw_build_LINK_DEPS can be used to break circular dependencies for low-level
 libraries such as pw_assert.
 
-**Current value for `target_cpu = "arm64"`:** `["//third_party/pigweed/src/pw_assert:impl"]`
+**Current value for `target_cpu = "arm64"`:** `["//third_party/pigweed/src/pw_assert:impl", "//third_party/pigweed/src/pw_log:impl"]`
 
-From //.gn:65
+From //.gn:66
 
 **Overridden from the default:** `[]`
 
 From [//third_party/pigweed/src/pw_build/cc_library.gni:31](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_build/cc_library.gni#31)
 
-**Current value for `target_cpu = "x64"`:** `["//third_party/pigweed/src/pw_assert:impl"]`
+**Current value for `target_cpu = "x64"`:** `["//third_party/pigweed/src/pw_assert:impl", "//third_party/pigweed/src/pw_log:impl"]`
 
-From //.gn:65
+From //.gn:66
 
 **Overridden from the default:** `[]`
 
@@ -5017,7 +5017,19 @@ From [//third_party/pigweed/src/pw_function/BUILD.gn:27](https://pigweed.googles
 ### pw_log_BACKEND
 Backend for the pw_log module.
 
-**Current value (from the default):** `""`
+**Current value for `target_cpu = "arm64"`:** `"//third_party/pigweed/backends/pw_log/dfv1"`
+
+From //.gn:63
+
+**Overridden from the default:** `""`
+
+From [//third_party/pigweed/src/pw_log/backend.gni:17](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_log/backend.gni#17)
+
+**Current value for `target_cpu = "x64"`:** `"//third_party/pigweed/backends/pw_log/dfv1"`
+
+From //.gn:63
+
+**Overridden from the default:** `""`
 
 From [//third_party/pigweed/src/pw_log/backend.gni:17](https://pigweed.googlesource.com/pigweed/pigweed/+/7e9a8db46b93aaa787c664ac750fbd57247430ec/src/pw_log/backend.gni#17)
 
@@ -6209,7 +6221,7 @@ From //build/security.gni:172
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"thinlto-cache"`
+**Current value (from the default):** `"dartlang/thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
