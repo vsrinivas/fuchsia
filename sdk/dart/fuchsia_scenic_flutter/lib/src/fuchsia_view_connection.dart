@@ -90,7 +90,7 @@ class FuchsiaViewConnection extends FuchsiaViewController {
     FuchsiaViewConnectionStateCallback? onViewStateChanged,
     this.usePointerInjection2 = false,
     this.useFlatland = true,
-  })  : this.usePointerInjection = false,
+  })  : usePointerInjection = false,
         assert(viewportCreationToken!.value != null &&
             viewportCreationToken.value.isValid),
         viewHolderToken = null,

@@ -138,7 +138,7 @@ class FuchsiaViewsService {
                 ? EventPhase.change
                 : EventPhase.cancel;
 
-    final args = _MakeInjectArgs(
+    final args = _makeInjectArgs(
         viewId: viewId,
         x: x,
         y: y,
@@ -155,7 +155,7 @@ class FuchsiaViewsService {
         'View.pointerinjector.inject', args);
   }
 
-  Map<String, dynamic> _MakeInjectArgs(
+  Map<String, dynamic> _makeInjectArgs(
       {required int viewId,
       required double x,
       required double y,
@@ -187,7 +187,7 @@ class FuchsiaViewsService {
   }
 
   // Check if [PointerEvent] is one of supported events.
-  bool _hasFuchsiaEventPhase(PointerEvent pointer) {
+  bool _hasFuchsiaEventPhase(PointerEvent? pointer) {
     // TODO(fxbug.dev/84030) - Implement stream consistency checking: inject
     // only valid streams, and reject broken streams.
     return pointer != null &&
