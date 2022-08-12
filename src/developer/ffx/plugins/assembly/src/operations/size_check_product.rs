@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 use crate::operations::size_check::PackageSizeInfo;
+use crate::operations::size_check::PackageSizeInfos;
 use crate::util::read_config;
 use anyhow::{format_err, Result};
 use assembly_images_manifest::{BlobfsContents, Image, ImagesManifest};
 use ffx_assembly_args::ProductSizeCheckArgs;
 use fuchsia_hash::Hash;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::str::FromStr;
 
 use super::size_check::PackageBlobSizeInfo;
@@ -43,7 +44,7 @@ pub fn verify_product_budgets(args: ProductSizeCheckArgs) -> Result<()> {
         let other_package_sizes = calculate_package_sizes(&other_blobfs_contents)?;
         print_size_diff(&package_sizes, &other_package_sizes);
     } else if args.verbose || !contents_fit {
-        print_verbose_output(&package_sizes);
+        print!("{}", PackageSizeInfos(package_sizes))
     }
 
     if contents_fit {
@@ -80,11 +81,26 @@ fn calculate_package_sizes(blobfs_contents: &BlobfsContents) -> Result<Vec<Packa
         .chain(blobfs_contents.packages.cache.0.iter())
         .map(|p| PackageSizeInfo {
             name: p.name.clone(),
-            used_space_in_blobfs: p.blobs.iter().map(|b| b.used_space_in_blobfs).sum::<u64>(),
+            used_space_in_blobfs: p
+                .blobs
+                .iter()
+                .map(|b| (b.merkle.to_string(), b.used_space_in_blobfs))
+                .collect::<HashMap<String, u64>>()
+                .values()
+                .into_iter()
+                .sum::<u64>(),
             proportional_size: p
                 .blobs
                 .iter()
-                .map(|b| b.used_space_in_blobfs / blob_share_count_map.get(&b.merkle).unwrap())
+                .map(|b| {
+                    (
+                        b.merkle.to_string(),
+                        b.used_space_in_blobfs / blob_share_count_map.get(&b.merkle).unwrap(),
+                    )
+                })
+                .collect::<HashMap<String, u64>>()
+                .values()
+                .into_iter()
                 .sum::<u64>(),
             blobs: p
                 .blobs
@@ -104,16 +120,17 @@ fn calculate_package_sizes(blobfs_contents: &BlobfsContents) -> Result<Vec<Packa
 
 fn build_blob_share_counts(blobfs_contents: &BlobfsContents) -> HashMap<String, u64> {
     let mut blob_share_count_map = HashMap::new();
+
     blobfs_contents
         .packages
         .base
         .0
         .iter()
         .chain(blobfs_contents.packages.cache.0.iter())
-        .flat_map(|p| p.blobs.iter())
-        .for_each(|b| {
+        .flat_map(|p| (&p.blobs).iter().map(|b| b.merkle.to_string()).collect::<HashSet<String>>())
+        .for_each(|merkle| {
             blob_share_count_map
-                .entry(b.merkle.to_string())
+                .entry(merkle.to_string())
                 .and_modify(|counter| *counter += 1)
                 .or_insert(1);
         });
@@ -135,10 +152,6 @@ fn calculate_total_blobfs_size(blobfs_contents: &BlobfsContents) -> Result<u64> 
     Ok(merkle_size_map.values().into_iter().sum::<u64>())
 }
 
-/// Generates verbose output with the size of the contents of the blobfs image broken down by package and blob
-/// sorted by package sizes.
-fn print_verbose_output(_package_sizes: &Vec<PackageSizeInfo>) {}
-
 /// Prints the difference between the contents of two blobfs images broken down by package
 /// and blob sorted by the amount of change in size.
 fn print_size_diff(
@@ -150,6 +163,7 @@ fn print_size_diff(
 
 #[cfg(test)]
 mod tests {
+    use crate::operations::size_check_product::PackageSizeInfos;
     use crate::operations::size_check_product::{
         build_blob_share_counts, calculate_package_sizes, calculate_total_blobfs_size,
         extract_blobfs_contents, PackageBlobSizeInfo, PackageSizeInfo,
@@ -259,8 +273,8 @@ mod tests {
             },
             PackageSizeInfo {
                 name: "test_base_package".to_string(),
-                used_space_in_blobfs: 60,
-                proportional_size: 50,
+                used_space_in_blobfs: 65,
+                proportional_size: 55,
                 blobs: vec![
                     PackageBlobSizeInfo {
                         merkle: Hash::from_str(
@@ -286,6 +300,30 @@ mod tests {
                         used_space_in_blobfs: 10,
                         share_count: 1,
                     },
+                    PackageBlobSizeInfo {
+                        merkle: Hash::from_str(
+                            "fffff84d26416c1821fd8972e0d835eedaf7468e5a9ebe01e594446241112345",
+                        )?,
+                        path_in_package: "abc/dupe_file1".to_string(),
+                        used_space_in_blobfs: 5,
+                        share_count: 1,
+                    },
+                    PackageBlobSizeInfo {
+                        merkle: Hash::from_str(
+                            "fffff84d26416c1821fd8972e0d835eedaf7468e5a9ebe01e594446241112345",
+                        )?,
+                        path_in_package: "abc/dupe_file2".to_string(),
+                        used_space_in_blobfs: 5,
+                        share_count: 1,
+                    },
+                    PackageBlobSizeInfo {
+                        merkle: Hash::from_str(
+                            "fffff84d26416c1821fd8972e0d835eedaf7468e5a9ebe01e594446241112345",
+                        )?,
+                        path_in_package: "abc/dupe_file3".to_string(),
+                        used_space_in_blobfs: 5,
+                        share_count: 1,
+                    },
                 ],
             },
         ];
@@ -295,6 +333,32 @@ mod tests {
 
         assert_eq!(package_sizes_expected, package_sizes);
 
+        Ok(())
+    }
+
+    #[test]
+    fn verify_product_budgets_verbose_output_test() -> Result<()> {
+        let blobfs_contents = create_blobfs_contents();
+        let package_sizes = calculate_package_sizes(&blobfs_contents)?;
+        let expected_output = r#"Package                                                   Size     Proportional Size  Share
+test_cache_package                                         120                   110       
+   bin/defg                                                 20                    10      2
+   lib/ghij                                                 60                    60      1
+   abcd/                                                    40                    40      1
+test_base_package                                           65                    55       
+   bin/def                                                  20                    10      2
+   lib/ghi                                                  30                    30      1
+   abc/                                                     10                    10      1
+   abc/dupe_file1                                            5                     5      1
+   abc/dupe_file2*                                           5                     5      1
+   abc/dupe_file3*                                           5                     5      1
+
+* indicates that this blob is a duplicate within this package and it therefore does not contribute to the overall package size
+"#;
+        assert_eq!(
+            expected_output.to_string(),
+            format!("{}", PackageSizeInfos { 0: package_sizes })
+        );
         Ok(())
     }
 
@@ -309,6 +373,7 @@ mod tests {
             ("8cb3466c6e66592c8decaeaa3e399652fbe71dad5c3df1a5e919743a33815567".to_string(), 1u64),
             ("eabdb84d26416c1821fd8972e0d835eedaf7468e5a9ebe01e5944462411aec71".to_string(), 1u64),
             ("8cb3466c6e66592c8decaeaa3e399652fbe71dad5c3df1a5e919743a33815568".to_string(), 1u64),
+            ("fffff84d26416c1821fd8972e0d835eedaf7468e5a9ebe01e594446241112345".to_string(), 1u64),
         ]);
         assert_eq!(expected_blob_share_count_map, actual_blob_share_count_map);
 
@@ -320,7 +385,7 @@ mod tests {
         let blobfs_contents = create_blobfs_contents();
 
         let actual_blobfs_size = calculate_total_blobfs_size(&blobfs_contents)?;
-        let expected_blobfs_size = 160u64;
+        let expected_blobfs_size = 165u64;
         assert_eq!(expected_blobfs_size, actual_blobfs_size);
         Ok(())
     }
@@ -546,6 +611,7 @@ mod tests {
             ("eabdb84d26416c1821fd8972e0d835eedaf7468e5a9ebe01e5944462411aec71".to_string(), 40),
             ("7ddff816740d5803358dd4478d8437585e8d5c984b4361817d891807a16ff582".to_string(), 50),
             ("8cb3466c6e66592c8decaeaa3e399652fbe71dad5c3df1a5e919743a33815568".to_string(), 60),
+            ("fffff84d26416c1821fd8972e0d835eedaf7468e5a9ebe01e594446241112345".to_string(), 5),
         ]);
         blobfs_contents
             .add_base_package(dir.path().join(base_package_manifest_file_name), &merkle_size_map)
@@ -574,6 +640,24 @@ mod tests {
                 "version": "0"
             },
             "blobs": [
+                {
+                    "path": "abc/dupe_file1",
+                    "merkle": "fffff84d26416c1821fd8972e0d835eedaf7468e5a9ebe01e594446241112345",
+                    "size": 8192,
+                    "source_path": "../../blobs/fffff84d26416c1821fd8972e0d835eedaf7468e5a9ebe01e594446241112345"
+                },
+                {
+                    "path": "abc/dupe_file2",
+                    "merkle": "fffff84d26416c1821fd8972e0d835eedaf7468e5a9ebe01e594446241112345",
+                    "size": 8192,
+                    "source_path": "../../blobs/fffff84d26416c1821fd8972e0d835eedaf7468e5a9ebe01e594446241112345"
+                },
+                {
+                    "path": "abc/dupe_file3",
+                    "merkle": "fffff84d26416c1821fd8972e0d835eedaf7468e5a9ebe01e594446241112345",
+                    "size": 8192,
+                    "source_path": "../../blobs/fffff84d26416c1821fd8972e0d835eedaf7468e5a9ebe01e594446241112345"
+                },
                 {
                     "path": "abc/",
                     "merkle": "eabdb84d26416c1821fd8972e0d835eedaf7468e5a9ebe01e5944462411aec70",
