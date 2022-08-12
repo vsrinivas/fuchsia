@@ -240,9 +240,9 @@ void GpuDevice::DisplayControllerImplApplyConfiguration(const display_config_t**
 }
 
 zx_status_t GpuDevice::DisplayControllerImplGetSysmemConnection(zx::channel sysmem_handle) {
-  auto result = sysmem_->ConnectServer(std::move(sysmem_handle));
-  if (!result.ok()) {
-    return result.status();
+  zx_status_t status = sysmem_connect(&sysmem_, sysmem_handle.release());
+  if (status != ZX_OK) {
+    return status;
   }
 
   return ZX_OK;
@@ -600,19 +600,12 @@ zx_status_t GpuDevice::virtio_gpu_start() {
 zx_status_t GpuDevice::Init() {
   LTRACE_ENTRY;
 
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_sysmem::Sysmem>();
-  if (endpoints.is_error()) {
-    zxlogf(ERROR, "%s: Failed to create SYSMEM endpoints", tag());
-    return endpoints.status_value();
-  }
-
-  zx_status_t status = DdkConnectFragmentFidlProtocol("sysmem-fidl", std::move(endpoints->server));
+  zx_status_t status =
+      device_get_fragment_protocol(bus_device(), "sysmem", ZX_PROTOCOL_SYSMEM, &sysmem_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Could not get Display SYSMEM protocol", tag());
     return status;
   }
-
-  sysmem_ = fidl::BindSyncClient(std::move(endpoints->client));
 
   DeviceReset();
 
