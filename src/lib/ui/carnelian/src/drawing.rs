@@ -772,14 +772,16 @@ mod tests {
 
         let expected_origin = euclid::point2(0.5371094, 4.765625);
         let expected_size = vec2(132.33594, 19.501953);
+        let epsilon_point = euclid::point2(1.0, 1.0);
+        let epsilon_vec = euclid::vec2(1.0, 1.0);
         assert!(
-            text.bounding_box.origin.approx_eq(&expected_origin),
+            text.bounding_box.origin.approx_eq_eps(&expected_origin, &epsilon_point),
             "Expected bounding box origin to be close to {:?} but found {:?}",
             expected_origin,
             text.bounding_box.origin
         );
         assert!(
-            text.bounding_box.size.to_vector().approx_eq(&expected_size),
+            text.bounding_box.size.to_vector().approx_eq_eps(&expected_size, &epsilon_vec),
             "Expected bounding box origin to be close to {:?} but found {:?}",
             expected_size,
             text.bounding_box.size
