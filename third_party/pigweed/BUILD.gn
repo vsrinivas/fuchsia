@@ -10,3 +10,8 @@ source_set("pw_string") {
   public_deps = [ "src/pw_string" ]
   visibility = [ "//src/connectivity/bluetooth/core/bt-host/*" ]
 }
+
+source_set("pw_log") {
+  public_deps = [ "src/pw_log" ]
+  visibility = [ "//src/connectivity/bluetooth/core/bt-host/*" ]
+}

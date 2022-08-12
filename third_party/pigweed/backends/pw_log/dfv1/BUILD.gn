@@ -1,0 +1,27 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build_overrides/pigweed.gni")
+
+config("backend_config") {
+  include_dirs = [ "public_overrides" ]
+}
+
+source_set("dfv1") {
+  public = [ "public_overrides/pw_log_backend/log_backend.h" ]
+  sources = [ "log_dfv1.cc" ]
+  public_configs = [ ":backend_config" ]
+  public_deps = [ dir_pw_preprocessor ]
+  deps = [
+    "$dir_pw_log:facade",
+    "//src/lib/ddk",
+  ]
+}
+
+# pw_log backends must provide their own "impl" target that collects their
+# actual dependencies. The backend "impl" group may be empty if everything can
+# go directly in the backend target without causing circular dependencies.
+source_set("dfv1.impl") {
+}

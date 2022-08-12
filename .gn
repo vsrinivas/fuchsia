@@ -59,8 +59,12 @@ default_args = {
   # Specify Pigweed backends for Fuchsia.
   pw_assert_BACKEND = "//third_party/pigweed/src/pw_assert_basic"
   pw_assert_basic_HANDLER_BACKEND =
-      "//third_party/pigweed/backends:pw_assert_basic_handler_backend"
+      "//third_party/pigweed/backends/pw_assert_basic"
+  pw_log_BACKEND = "//third_party/pigweed/backends/pw_log/dfv1"
 
   # Some Pigweed module implementations need to be link dependencies to avoid circular dependencies.
-  pw_build_LINK_DEPS = [ "//third_party/pigweed/src/pw_assert:impl" ]
+  pw_build_LINK_DEPS = [
+    "//third_party/pigweed/src/pw_assert:impl",
+    "//third_party/pigweed/src/pw_log:impl",
+  ]
 }

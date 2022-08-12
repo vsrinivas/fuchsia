@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# This file contains Pigweed backends for Fuchsia.
+import("//build_overrides/pigweed.gni")
 
-source_set("pw_assert_basic_handler_backend") {
-  sources = [ "pw_assert_basic_handler_backend.cc" ]
+source_set("pw_assert_basic") {
+  sources = [ "basic_handler.cc" ]
 }
