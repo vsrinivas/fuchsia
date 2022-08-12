@@ -105,6 +105,7 @@
                 "fuchsia.fonts.Provider",
                 "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.intl.PropertyProvider",
+                "fuchsia.kernel.VmexResource",
                 "fuchsia.logger.LogSink",
                 "fuchsia.media.Audio",
                 "fuchsia.media.AudioCore",

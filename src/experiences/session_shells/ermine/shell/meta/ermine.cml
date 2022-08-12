@@ -211,6 +211,7 @@
                 "fuchsia.camera3.DeviceWatcher",
                 "fuchsia.fonts.Provider",
                 "fuchsia.intl.PropertyProvider",
+                "fuchsia.kernel.VmexResource",
                 "fuchsia.logger.LogSink",
                 "fuchsia.media.Audio",
                 "fuchsia.media.AudioDeviceEnumerator",

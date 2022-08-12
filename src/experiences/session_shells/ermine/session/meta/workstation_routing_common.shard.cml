@@ -22,6 +22,7 @@
                 "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.identity.account.AccountManager",
                 "fuchsia.intl.PropertyProvider",
+                "fuchsia.kernel.VmexResource",
                 "fuchsia.logger.LogSink",
                 "fuchsia.media.AudioCore",
                 "fuchsia.media.AudioDeviceEnumerator",
