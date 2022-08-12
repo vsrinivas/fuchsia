@@ -479,8 +479,17 @@ async fn dispatch_control_request(
             responder.send(&mut Ok(remove_address(ctx, id, address).await))
         }
         fnet_interfaces_admin::ControlRequest::GetId { responder } => responder.send(id),
-        fnet_interfaces_admin::ControlRequest::SetConfiguration { config: _, responder: _ } => {
-            todo!("https://fxbug.dev/76987 support enable/disable forwarding")
+        fnet_interfaces_admin::ControlRequest::SetConfiguration { config, responder } => {
+            // Lie in the response if forwarding is disabled to allow testing
+            // with netstack3.
+            if config.ipv4.map_or(false, |c| c.forwarding == Some(false))
+                && config.ipv6.map_or(false, |c| c.forwarding == Some(false))
+            {
+                log::error!("https://fxbug.dev/76987 support enable/disable forwarding");
+                responder.send(&mut Ok(fnet_interfaces_admin::Configuration::EMPTY))
+            } else {
+                todo!("https://fxbug.dev/76987 support enable/disable forwarding")
+            }
         }
         fnet_interfaces_admin::ControlRequest::GetConfiguration { responder: _ } => {
             todo!("https://fxbug.dev/76987 support enable/disable forwarding")
