@@ -9,7 +9,6 @@
 #include <lib/zircon-internal/e820.h>
 #include <stdio.h>
 #include <zircon/assert.h>
-#include <zircon/boot/multiboot.h>
 
 #include <ktl/atomic.h>
 #include <ktl/span.h>
@@ -18,6 +17,7 @@
 #include <phys/symbolize.h>
 
 #include "legacy-boot.h"
+#include "multiboot.h"
 
 #include <ktl/enforce.h>
 

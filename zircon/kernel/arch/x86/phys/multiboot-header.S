@@ -5,7 +5,8 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/arch/asm.h>
-#include <zircon/boot/multiboot.h>
+
+#include "multiboot.h"
 
 // The linker script places this first in the image.  Multiboot only
 // requires that it appear word-aligned anywhere in the first 8192 bytes.

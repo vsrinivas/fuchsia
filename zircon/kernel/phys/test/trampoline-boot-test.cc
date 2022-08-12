@@ -18,7 +18,6 @@
 #include <string-file.h>
 #include <zircon/assert.h>
 #include <zircon/boot/image.h>
-#include <zircon/boot/multiboot.h>
 
 #include <fbl/alloc_checker.h>
 #include <ktl/algorithm.h>

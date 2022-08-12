@@ -4,8 +4,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SYSROOT_ZIRCON_MULTIBOOT_H_
-#define SYSROOT_ZIRCON_MULTIBOOT_H_
+#ifndef ZIRCON_KERNEL_ARCH_X86_PHYS_MULTIBOOT_H_
+#define ZIRCON_KERNEL_ARCH_X86_PHYS_MULTIBOOT_H_
 
 /* magic number for multiboot header */
 #define MULTIBOOT_HEADER_MAGIC 0x1BADB002
@@ -111,4 +111,4 @@ typedef struct memory_map {
 
 #endif
 
-#endif  // SYSROOT_ZIRCON_BOOT_MULTIBOOT_
+#endif  // ZIRCON_KERNEL_ARCH_X86_PHYS_MULTIBOOT_H_

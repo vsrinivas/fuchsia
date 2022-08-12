@@ -5,7 +5,8 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/arch/asm.h>
-#include <zircon/boot/multiboot.h>
+
+#include "multiboot.h"
 
 // This is the Multiboot entry point.  The boot loader passes arguments
 // in %eax and %ebx.  A Multiboot-compliant boot loader provides a
