@@ -34,9 +34,10 @@ class AppTheme {
         // Used by ElevatedButton in QuickSettings.
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            primary: Colors.black,
-            onPrimary: Colors.white,
-            onSurface: Colors.white,
+            backgroundColor: Colors.black,
+            foregroundColor: Colors.white,
+            disabledForegroundColor: Colors.white,
+            disabledBackgroundColor: Colors.white,
             shadowColor: Colors.transparent,
             elevation: 0,
             padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -47,8 +48,9 @@ class AppTheme {
         // Used by OutlinedButton in QuickSettings.
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
-            primary: Colors.black,
-            onSurface: FuchsiaColors.grey03,
+            foregroundColor: Colors.black,
+            disabledForegroundColor: FuchsiaColors.grey03,
+            disabledBackgroundColor: FuchsiaColors.grey03,
             side: BorderSide(color: Colors.black),
             padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             shape:
@@ -58,8 +60,9 @@ class AppTheme {
         // Used by TextButton in [AlertDialog].
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(
-            primary: Colors.black,
-            onSurface: FuchsiaColors.grey01,
+            foregroundColor: Colors.black,
+            disabledForegroundColor: FuchsiaColors.grey01,
+            disabledBackgroundColor: FuchsiaColors.grey01,
             padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           ),
         ),
@@ -123,9 +126,10 @@ class AppTheme {
         // Used by ElevatedButton in QuickSettings.
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            primary: Colors.white,
-            onPrimary: Colors.black,
-            onSurface: Colors.black,
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.black,
+            disabledForegroundColor: Colors.black,
+            disabledBackgroundColor: Colors.black,
             shadowColor: Colors.transparent,
             elevation: 0,
             padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -136,8 +140,9 @@ class AppTheme {
         // Used by OutlinedButton in QuickSettings.
         outlinedButtonTheme: OutlinedButtonThemeData(
           style: OutlinedButton.styleFrom(
-            primary: Colors.white,
-            onSurface: FuchsiaColors.grey03,
+            foregroundColor: Colors.white,
+            disabledForegroundColor: FuchsiaColors.grey03,
+            disabledBackgroundColor: FuchsiaColors.grey03,
             side: BorderSide(color: Colors.white),
             padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             shape:
@@ -147,8 +152,9 @@ class AppTheme {
         // Used by TextButton in [AlertDialog].
         textButtonTheme: TextButtonThemeData(
           style: TextButton.styleFrom(
-            primary: Colors.white,
-            onSurface: FuchsiaColors.grey02,
+            foregroundColor: Colors.white,
+            disabledForegroundColor: FuchsiaColors.grey02,
+            disabledBackgroundColor: FuchsiaColors.grey02,
             padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           ),
         ),
