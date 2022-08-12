@@ -111,10 +111,9 @@ ScreenReaderMessageGenerator::ScreenReaderMessageGenerator(
   character_to_message_id_.insert({"¿", MessageIds::INVERTED_QUESTION_MARK_SYMBOL_NAME});
 }
 
-std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
-ScreenReaderMessageGenerator::DescribeContainerChanges(
-    const ScreenReaderMessageContext& message_context) {
-  std::vector<UtteranceAndContext> description;
+void ScreenReaderMessageGenerator::DescribeContainerChanges(
+    const ScreenReaderMessageContext& message_context,
+    std::vector<UtteranceAndContext>& description) {
 
   // Give hints for exited containers.
   for (auto container : message_context.exited_containers) {
@@ -129,19 +128,11 @@ ScreenReaderMessageGenerator::DescribeContainerChanges(
   for (auto container : message_context.entered_containers) {
     if (container->has_role() && container->role() == Role::TABLE) {
       description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ENTERED_TABLE));
-      auto container_description = DescribeTable(container);
-      std::copy(std::make_move_iterator(container_description.begin()),
-                std::make_move_iterator(container_description.end()),
-                std::back_inserter(description));
+      DescribeTable(container, description);
     } else if (container->has_role() && container->role() == Role::LIST) {
-      auto container_description = DescribeEnteredList(container);
-      std::copy(std::make_move_iterator(container_description.begin()),
-                std::make_move_iterator(container_description.end()),
-                std::back_inserter(description));
+      DescribeEnteredList(container, description);
     }
   }
-
-  return description;
 }
 
 std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
@@ -149,14 +140,12 @@ ScreenReaderMessageGenerator::DescribeNode(const Node* node,
                                            ScreenReaderMessageContext message_context) {
   // TODO(fxbug.dev/81707): Clean up the logic in this method.
   std::vector<UtteranceAndContext> description;
-  description = DescribeContainerChanges(message_context);
+  DescribeContainerChanges(message_context, description);
 
   // If the node is a button, describe it as a button.
   // TODO(fxbug.dev/81707): Create separate Describe* methods for each role.
   if (node->has_role() && node->role() == Role::BUTTON) {
-    auto button_description = DescribeButton(node);
-    std::copy(std::make_move_iterator(button_description.begin()),
-              std::make_move_iterator(button_description.end()), std::back_inserter(description));
+    DescribeButton(node, description);
     return description;
   } else if (node->has_role() && node->role() == Role::UNKNOWN) {
     // In order to be focusable, and UNKNOWN node must have a non-empty label.
@@ -166,9 +155,7 @@ ScreenReaderMessageGenerator::DescribeNode(const Node* node,
     FX_DCHECK(node->attributes().has_label());
     FX_DCHECK(!node->attributes().label().empty());
 
-    auto unknown_description = DescribeUnknown(node);
-    std::copy(std::make_move_iterator(unknown_description.begin()),
-              std::make_move_iterator(unknown_description.end()), std::back_inserter(description));
+    DescribeUnknown(node, description);
     return description;
   }
 
@@ -189,20 +176,16 @@ ScreenReaderMessageGenerator::DescribeNode(const Node* node,
         utterance.set_message(label);
         description.emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});
       }
-      description.emplace_back(DescribeToggleSwitch(node));
+      DescribeToggleSwitch(node, description);
     } else if (NodeIsSlider(node)) {
       Utterance utterance;
       utterance.set_message(GetSliderLabelAndRangeMessage(node));
       description.emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});
     } else if (node->has_role() &&
                (node->role() == Role::ROW_HEADER || node->role() == Role::COLUMN_HEADER)) {
-      auto header_description = DescribeRowOrColumnHeader(node);
-      std::copy(std::make_move_iterator(header_description.begin()),
-                std::make_move_iterator(header_description.end()), std::back_inserter(description));
+      DescribeRowOrColumnHeader(node, description);
     } else if (node->has_role() && node->role() == Role::CELL) {
-      auto cell_description = DescribeTableCell(node, std::move(message_context));
-      std::copy(std::make_move_iterator(cell_description.begin()),
-                std::make_move_iterator(cell_description.end()), std::back_inserter(description));
+      DescribeTableCell(node, std::move(message_context), description);
     } else if (!label.empty()) {
       Utterance utterance;
       utterance.set_message(label);
@@ -224,10 +207,7 @@ ScreenReaderMessageGenerator::DescribeNode(const Node* node,
       } else if (node->role() == Role::SEARCH_BOX) {
         description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_SEARCH_BOX));
       } else if (node->role() == Role::CHECK_BOX) {
-        auto check_box_description = DescribeCheckBox(node);
-        std::copy(std::make_move_iterator(check_box_description.begin()),
-                  std::make_move_iterator(check_box_description.end()),
-                  std::back_inserter(description));
+        DescribeCheckBox(node, description);
       } else if (node->role() == Role::SLIDER) {
         description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_SLIDER));
       }
@@ -255,21 +235,20 @@ ScreenReaderMessageGenerator::GenerateUtteranceByMessageId(
 
 void ScreenReaderMessageGenerator::MaybeAddLabelDescriptor(
     const fuchsia::accessibility::semantics::Node* node,
-    std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>* description) {
+    std::vector<UtteranceAndContext>& description) {
   FX_DCHECK(node);
-  FX_DCHECK(description);
 
   if (node->has_attributes() && node->attributes().has_label() &&
       !node->attributes().label().empty()) {
     Utterance utterance;
     utterance.set_message(node->attributes().label());
-    description->emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});
+    description.emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});
   }
 }
 
 void ScreenReaderMessageGenerator::MaybeAddGenericSelectedDescriptor(
     const fuchsia::accessibility::semantics::Node* node,
-    std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>* description) {
+    std::vector<UtteranceAndContext>* description) {
   FX_DCHECK(node);
   FX_DCHECK(description);
 
@@ -281,7 +260,7 @@ void ScreenReaderMessageGenerator::MaybeAddGenericSelectedDescriptor(
 
 void ScreenReaderMessageGenerator::MaybeAddDoubleTapHint(
     const fuchsia::accessibility::semantics::Node* node,
-    std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>& description) {
+    std::vector<UtteranceAndContext>& description) {
   FX_DCHECK(node);
 
   if (NodeIsClickable(node)) {
@@ -291,27 +270,21 @@ void ScreenReaderMessageGenerator::MaybeAddDoubleTapHint(
   }
 }
 
-std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
-ScreenReaderMessageGenerator::DescribeUnknown(const fuchsia::accessibility::semantics::Node* node) {
+void ScreenReaderMessageGenerator::DescribeUnknown(const fuchsia::accessibility::semantics::Node* node,
+    std::vector<UtteranceAndContext>& description) {
   FX_DCHECK(node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::UNKNOWN);
 
-  std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> description;
-
   MaybeAddGenericSelectedDescriptor(node, &description);
-  MaybeAddLabelDescriptor(node, &description);
+  MaybeAddLabelDescriptor(node, description);
   MaybeAddDoubleTapHint(node, description);
-
-  return description;
 }
 
-std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
-ScreenReaderMessageGenerator::DescribeButton(const fuchsia::accessibility::semantics::Node* node) {
+void ScreenReaderMessageGenerator::DescribeButton(const fuchsia::accessibility::semantics::Node* node,
+    std::vector<UtteranceAndContext>& description) {
   FX_DCHECK(node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::BUTTON);
 
-  std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> description;
-
   MaybeAddGenericSelectedDescriptor(node, &description);
-  MaybeAddLabelDescriptor(node, &description);
+  MaybeAddLabelDescriptor(node, description);
 
   // Announce that the element is a button.
   description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_BUTTON));
@@ -328,8 +301,6 @@ ScreenReaderMessageGenerator::DescribeButton(const fuchsia::accessibility::seman
   }
 
   MaybeAddDoubleTapHint(node, description);
-
-  return description;
 }
 
 ScreenReaderMessageGenerator::UtteranceAndContext ScreenReaderMessageGenerator::DescribeRadioButton(
@@ -350,13 +321,11 @@ ScreenReaderMessageGenerator::UtteranceAndContext ScreenReaderMessageGenerator::
   return GenerateUtteranceByMessageId(message_id);
 }
 
-std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
-ScreenReaderMessageGenerator::DescribeCheckBox(
-    const fuchsia::accessibility::semantics::Node* node) {
+void ScreenReaderMessageGenerator::DescribeCheckBox(
+    const fuchsia::accessibility::semantics::Node* node,
+    std::vector<UtteranceAndContext>& description) {
   FX_DCHECK(node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::CHECK_BOX);
-  std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> description;
-  description.emplace_back(
-      GenerateUtteranceByMessageId(MessageIds::ROLE_CHECKBOX, kDefaultDelay));
+  description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_CHECKBOX, kDefaultDelay));
   if (node->has_states() && node->states().has_checked_state() &&
       node->states().checked_state() != fuchsia::accessibility::semantics::CheckedState::NONE) {
     MessageIds message_id = MessageIds::ELEMENT_NOT_CHECKED;
@@ -372,24 +341,25 @@ ScreenReaderMessageGenerator::DescribeCheckBox(
         break;
       case fuchsia::accessibility::semantics::CheckedState::NONE:
         // When none is present, return without a description of the state.
-        return description;
+        return;
     }
     description.emplace_back(GenerateUtteranceByMessageId(message_id));
   }
-  return description;
 }
 
-ScreenReaderMessageGenerator::UtteranceAndContext
-ScreenReaderMessageGenerator::DescribeToggleSwitch(
-    const fuchsia::accessibility::semantics::Node* node) {
+void ScreenReaderMessageGenerator::DescribeToggleSwitch(
+    const fuchsia::accessibility::semantics::Node* node,
+    std::vector<UtteranceAndContext>& description) {
   FX_DCHECK(node->has_role() &&
             node->role() == fuchsia::accessibility::semantics::Role::TOGGLE_SWITCH);
+
   const auto message_id =
       node->has_states() && node->states().has_toggled_state() &&
               node->states().toggled_state() == fuchsia::accessibility::semantics::ToggledState::ON
           ? MessageIds::ELEMENT_TOGGLED_ON
           : MessageIds::ELEMENT_TOGGLED_OFF;
-  return GenerateUtteranceByMessageId(message_id);
+
+  description.emplace_back(GenerateUtteranceByMessageId(message_id));
 }
 
 ScreenReaderMessageGenerator::UtteranceAndContext
@@ -412,11 +382,9 @@ ScreenReaderMessageGenerator::FormatCharacterForSpelling(const std::string& char
   return utterance;
 }
 
-std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
-ScreenReaderMessageGenerator::DescribeTable(const fuchsia::accessibility::semantics::Node* node) {
+void ScreenReaderMessageGenerator::DescribeTable(const fuchsia::accessibility::semantics::Node* node,
+    std::vector<UtteranceAndContext>& description) {
   FX_DCHECK(node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::TABLE);
-
-  std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> description;
 
   if (node->has_attributes()) {
     const auto& attributes = node->attributes();
@@ -445,16 +413,13 @@ ScreenReaderMessageGenerator::DescribeTable(const fuchsia::accessibility::semant
       }
     }
   }
-
-  return description;
 }
 
-std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
-ScreenReaderMessageGenerator::DescribeTableCell(const fuchsia::accessibility::semantics::Node* node,
-                                                ScreenReaderMessageContext message_context) {
+void ScreenReaderMessageGenerator::DescribeTableCell(
+    const fuchsia::accessibility::semantics::Node* node,
+    ScreenReaderMessageContext message_context,
+    std::vector<UtteranceAndContext>& description) {
   FX_DCHECK(node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::CELL);
-
-  std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> description;
 
   if (node->has_attributes()) {
     const auto& attributes = node->attributes();
@@ -513,18 +478,14 @@ ScreenReaderMessageGenerator::DescribeTableCell(const fuchsia::accessibility::se
   }
 
   description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_TABLE_CELL));
-
-  return description;
 }
 
-std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
-ScreenReaderMessageGenerator::DescribeRowOrColumnHeader(
-    const fuchsia::accessibility::semantics::Node* node) {
+void ScreenReaderMessageGenerator::DescribeRowOrColumnHeader(
+    const fuchsia::accessibility::semantics::Node* node,
+    std::vector<UtteranceAndContext>& description) {
   FX_DCHECK(node->has_role() &&
             (node->role() == fuchsia::accessibility::semantics::Role::ROW_HEADER ||
              node->role() == fuchsia::accessibility::semantics::Role::COLUMN_HEADER));
-
-  std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> description;
 
   if (node->has_attributes()) {
     const auto& attributes = node->attributes();
@@ -582,16 +543,12 @@ ScreenReaderMessageGenerator::DescribeRowOrColumnHeader(
   } else {
     description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_TABLE_COLUMN_HEADER));
   }
-
-  return description;
 }
 
-std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
-ScreenReaderMessageGenerator::DescribeEnteredList(
-    const fuchsia::accessibility::semantics::Node* node) {
+void ScreenReaderMessageGenerator::DescribeEnteredList(
+    const fuchsia::accessibility::semantics::Node* node,
+    std::vector<UtteranceAndContext>& description) {
   FX_DCHECK(node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::LIST);
-
-  std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> description;
 
   if (node->has_attributes() && node->attributes().has_list_attributes() &&
       node->attributes().list_attributes().has_size()) {
@@ -609,8 +566,6 @@ ScreenReaderMessageGenerator::DescribeEnteredList(
     utterance.set_message(node->attributes().label());
     description.emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});
   }
-
-  return description;
 }
 
 }  // namespace a11y
