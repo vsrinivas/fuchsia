@@ -12,7 +12,7 @@ use {
     fidl_fuchsia_virtualization_hardware::VirtioBalloonRequestStream,
     fuchsia_component::server,
     futures::channel::mpsc,
-    futures::{StreamExt, TryFutureExt, TryStreamExt},
+    futures::{future, StreamExt, TryFutureExt, TryStreamExt},
     machina_virtio_device::GuestBellTrap,
     tracing,
     virtio_device::chain::ReadableChain,
@@ -69,30 +69,18 @@ async fn run_virtio_balloon(
             receiver,
         ),
         bell,
-        inflate_stream.map(|chain| Ok(chain)).try_for_each_concurrent(None, {
-            let guest_mem = &guest_mem;
-            let balloon_device = &balloon_device;
-            move |chain| async move {
-                if let Err(e) =
-                    balloon_device.process_inflate_chain(ReadableChain::new(chain, guest_mem))
-                {
-                    tracing::warn!("Failed to inflate chain {}", e);
-                }
-                Ok(())
+        inflate_stream.map(|chain| Ok(chain)).try_for_each(|chain| future::ready({
+            if let Err(e) =
+                balloon_device.process_inflate_chain(ReadableChain::new(chain, &guest_mem))
+            {
+                tracing::warn!("Failed to inflate chain {}", e);
             }
-        }),
-        deflate_stream.map(|chain| Ok(chain)).try_for_each_concurrent(None, {
-            let guest_mem = &guest_mem;
-            let balloon_device = &balloon_device;
-            move |chain| async move {
-                if let Err(e) =
-                    balloon_device.process_deflate_chain(ReadableChain::new(chain, guest_mem))
-                {
-                    tracing::warn!("Failed to deflate chain {}", e);
-                }
-                Ok(())
-            }
-        }),
+            Ok(())
+        })),
+        deflate_stream.map(|chain| Ok(chain)).try_for_each(|chain| future::ready({
+            balloon_device.process_deflate_chain(ReadableChain::new(chain, &guest_mem));
+            Ok(())
+        })),
     )?;
     Ok(())
 }

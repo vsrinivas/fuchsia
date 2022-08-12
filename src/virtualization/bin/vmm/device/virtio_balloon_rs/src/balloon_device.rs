@@ -55,11 +55,10 @@ impl BalloonDevice {
     pub fn process_deflate_chain<'a, 'b, N: DriverNotify, M: DriverMem>(
         &self,
         mut chain: ReadableChain<'a, 'b, N, M>,
-    ) -> Result<(), Error> {
+    ) {
         while let Some(pfn) = read_pfn(&mut chain) {
             tracing::trace!("deflate pfn {}", pfn);
         }
-        Ok(())
     }
 
     pub fn process_inflate_chain<'a, 'b, N: DriverNotify, M: DriverMem>(
@@ -198,9 +197,7 @@ mod tests {
         let device = BalloonDevice::new(vmo);
 
         // Process the request.
-        device
-            .process_deflate_chain(ReadableChain::new(state.queue.next_chain().unwrap(), &mem))
-            .expect("Failed to process display info command");
+        device.process_deflate_chain(ReadableChain::new(state.queue.next_chain().unwrap(), &mem));
     }
 
     #[fuchsia::test]
@@ -225,7 +222,7 @@ mod tests {
         // Process the request.
         device
             .process_inflate_chain(ReadableChain::new(state.queue.next_chain().unwrap(), &mem))
-            .expect("Failed to process display info command");
+            .expect("Failed to process inflate chain");
 
         let cur_commited_bytes = device.vmo.info().unwrap().committed_bytes;
         assert_eq!(
