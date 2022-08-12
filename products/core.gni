@@ -7,8 +7,6 @@ import("//products/minimal.gni")
 include_shell_commands_package = true
 
 product_system_image_deps = [
-  "//src/connectivity/bluetooth:core-system",
-
   # Test drivers will only be loaded as tests require. They should be removed from production
   # products that have limited storage.
   # TODO(fxbug.dev/3150): Move to a regular package.
@@ -89,6 +87,8 @@ legacy_base_package_labels += [ "//src/sys/pkg:tools" ]
 # cargo-gnaw is currently part of all build graphs, but it should only
 # built by fx tooling
 legacy_base_package_labels += [ "//tools/cargo-gnaw:install-cargo-gnaw" ]
+
+base_driver_package_labels += [ "//src/connectivity/bluetooth:core-drivers" ]
 
 legacy_cache_package_labels += [ "//src/developer/ffx:runtime" ]
 

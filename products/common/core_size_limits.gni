@@ -39,7 +39,6 @@ size_checker_input = {
     {
       component = "/system (drivers and early boot)"
       src = [
-        "packages/system/bt-host",
         "packages/system/emulator",
         "packages/system/passthrough",
         "packages/system/atheros",
@@ -58,7 +57,7 @@ size_checker_input = {
         "packages/system/pkgfs_non_static_pkgs_allowlist_eng",
         "packages/system/disable-executability-restrictions",
       ]
-      limit = 8976731  # 8.561 MiB
+      limit = 8599899  # 8.202 MiB
       creep_limit = 40960  # 40.0 KiB
     },
     {
@@ -99,11 +98,12 @@ size_checker_input = {
       component = "Connectivity/Bluetooth"
       src = [
         "packages/base/bt-gap",
+        "packages/base/bt-host",
         "packages/base/bt-init",
         "packages/base/bt-rfcomm",
         "packages/base/bt-snoop",
       ]
-      limit = 2314207  # 2.207 MiB
+      limit = 2691039  # 2.566 MiB
       creep_limit = 81920  # 80.0 KiB
     },
     {

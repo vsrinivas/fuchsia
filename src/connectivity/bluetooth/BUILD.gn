@@ -36,8 +36,8 @@ group("drivers") {
 }
 
 # Core is the group that is required for any Bluetooth functionality
-# This group includes all of the non-system components.
-# System package components are defined in "core-system"
+# This group includes all of the non-driver components.
+# Driver packages are defined in "core-drivers"
 group("core") {
   deps = [
     "core/bt-gap",
@@ -49,7 +49,7 @@ group("core") {
 
 # Core is the group that is required for any Bluetooth functionality. This group is used for
 # testing scenarios in which testonly capabilities are exposed to the system.
-# This group includes all of the non-system components.
+# This group includes all of the non-driver components.
 group("core-testonly") {
   deps = [
     "core/bt-gap",
@@ -59,6 +59,12 @@ group("core-testonly") {
   ]
 }
 
+# This is the part of core group that are drivers packages.
+group("core-drivers") {
+  deps = [ "core/bt-host" ]
+}
+
+# TODO(fxbug.dev/69738): Remove core-system once it is not longer referenced.
 # This is the part of core group which must go into the system package.
 group("core-system") {
   deps = [ "core/bt-host" ]
