@@ -361,6 +361,7 @@ mod tests {
             testing::fake_object::{FakeObject, FakeObjectHandle},
         },
         fuchsia_async as fasync,
+        rand::{seq::SliceRandom, thread_rng},
         std::{ops::Bound, sync::Arc},
     };
 
@@ -509,5 +510,42 @@ mod tests {
         assert_eq!(iter.get(), Some(items[3].as_item_ref()));
         iter.advance().await.expect("advance failed");
         assert!(iter.get().is_none());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_insert_order_agnostic() {
+        let items = [
+            Item::new(TestKey(1..1), 1),
+            Item::new(TestKey(2..2), 2),
+            Item::new(TestKey(3..3), 3),
+            Item::new(TestKey(4..4), 4),
+            Item::new(TestKey(5..5), 5),
+            Item::new(TestKey(6..6), 6),
+        ];
+        let a = LSMTree::new(emit_left_merge_fn);
+        for item in &items {
+            a.insert(item.clone()).await;
+        }
+        let b = LSMTree::new(emit_left_merge_fn);
+        let mut shuffled = items.clone();
+        shuffled.shuffle(&mut thread_rng());
+        for item in &shuffled {
+            b.insert(item.clone()).await;
+        }
+        let layers = a.layer_set();
+        let mut merger = layers.merger();
+        let mut iter_a = merger.seek(Bound::Unbounded).await.expect("seek failed");
+        let layers = b.layer_set();
+        let mut merger = layers.merger();
+        let mut iter_b = merger.seek(Bound::Unbounded).await.expect("seek failed");
+
+        for item in items {
+            assert_eq!(Some(item.as_item_ref()), iter_a.get());
+            assert_eq!(Some(item.as_item_ref()), iter_b.get());
+            iter_a.advance().await.expect("advance failed");
+            iter_b.advance().await.expect("advance failed");
+        }
+        assert!(iter_a.get().is_none());
+        assert!(iter_b.get().is_none());
     }
 }
