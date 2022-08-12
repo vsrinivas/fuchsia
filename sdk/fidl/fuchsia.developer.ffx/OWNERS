@@ -1,5 +1,4 @@
-awdavies@google.com
-boetger@google.com
+file: /src/developer/ffx/OWNERS
 
 per-file repo.fidl = file: /src/sys/pkg/OWNERS
 # per-file-COMPONENT repo.fidl = Packages
