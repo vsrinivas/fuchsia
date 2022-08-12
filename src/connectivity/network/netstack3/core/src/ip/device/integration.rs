@@ -385,6 +385,8 @@ impl<
 impl<C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>, SC: device::Ipv6DeviceContext<C>>
     Ipv6DeviceRsContext<C> for SC
 {
+    type LinkLayerAddr = SC::LinkLayerAddr;
+
     fn with_rs_remaining_mut_and_max<
         O,
         F: FnOnce(&mut Option<NonZeroU8>, Option<NonZeroU8>) -> O,
@@ -398,7 +400,7 @@ impl<C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>, SC: device::Ipv6DeviceContex
         })
     }
 
-    fn get_link_layer_addr_bytes(&self, device_id: SC::DeviceId) -> Option<&[u8]> {
+    fn get_link_layer_addr_bytes(&self, device_id: SC::DeviceId) -> Option<SC::LinkLayerAddr> {
         device::Ipv6DeviceContext::get_link_layer_addr_bytes(self, device_id)
     }
 }

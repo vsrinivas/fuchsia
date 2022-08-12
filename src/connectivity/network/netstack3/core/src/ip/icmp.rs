@@ -1154,7 +1154,7 @@ fn send_neighbor_advertisement<
     // carry that information, but it is not necessary. So it is perfectly valid
     // that trying to send this advertisement will end up triggering a neighbor
     // solicitation to be sent.
-    let src_ll = sync_ctx.get_link_layer_addr_bytes(device_id).map(|a| a.to_vec());
+    let src_ll = sync_ctx.get_link_layer_addr_bytes(device_id);
 
     // Nothing reasonable to do with the error.
     let _: Result<(), _> = send_ndp_packet(
@@ -4137,7 +4137,9 @@ mod tests {
     }
 
     impl Ipv6DeviceHandler<Dummyv6NonSyncCtx> for Dummyv6SyncCtx {
-        fn get_link_layer_addr_bytes(&self, _device_id: Self::DeviceId) -> Option<&[u8]> {
+        type LinkLayerAddr = [u8; 0];
+
+        fn get_link_layer_addr_bytes(&self, _device_id: Self::DeviceId) -> Option<[u8; 0]> {
             unimplemented!()
         }
 

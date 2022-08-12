@@ -11,7 +11,7 @@ pub(crate) mod loopback;
 pub(crate) mod ndp;
 mod state;
 
-use alloc::{boxed::Box, vec::Vec};
+use alloc::boxed::Box;
 use core::{
     fmt::{self, Debug, Display, Formatter},
     marker::PhantomData,
@@ -25,15 +25,12 @@ use net_types::{
     ip::{
         AddrSubnet, AddrSubnetEither, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet,
     },
-    MulticastAddr, SpecifiedAddr, UnicastAddr,
+    MulticastAddr, SpecifiedAddr, UnicastAddr, Witness as _,
 };
-use packet::{Buf, BufferMut, EmptyBuf, Serializer};
+use packet::{BufferMut, Serializer};
 
 use crate::{
-    context::{
-        CounterContext, FrameContext, NonTestCtxMarker, RecvFrameContext, StateContext,
-        TimerContext,
-    },
+    context::{FrameContext, RecvFrameContext},
     data_structures::{id_map::IdMap, id_map_collection::IdMapCollectionKey},
     device::{
         ethernet::{
@@ -77,68 +74,6 @@ impl<D, I: Ip> RecvIpFrameMeta<D, I> {
     }
 }
 
-/// The non-synchronized execution context for an IP device.
-pub(crate) trait IpLinkDeviceNonSyncContext<TimerId>:
-    TimerContext<TimerId> + CounterContext
-{
-}
-impl<TimerId, C: TimerContext<TimerId> + CounterContext> IpLinkDeviceNonSyncContext<TimerId> for C {}
-
-/// The context provided by the device layer to a particular IP device
-/// implementation.
-///
-/// A blanket implementation is provided for all types that implement
-/// the inherited traits.
-pub(crate) trait IpLinkDeviceContext<D: LinkDevice, C: IpLinkDeviceNonSyncContext<TimerId>, TimerId>:
-    DeviceIdContext<D>
-    + StateContext<C, IpLinkDeviceState<C::Instant, D::State>, Self::DeviceId>
-    + FrameContext<C, EmptyBuf, Self::DeviceId>
-    + FrameContext<C, Buf<Vec<u8>>, Self::DeviceId>
-{
-}
-
-impl<
-        D: LinkDevice,
-        C: IpLinkDeviceNonSyncContext<TimerId>,
-        TimerId,
-        SC: NonTestCtxMarker
-            + DeviceIdContext<D>
-            + StateContext<C, IpLinkDeviceState<C::Instant, D::State>, Self::DeviceId>
-            + FrameContext<C, EmptyBuf, Self::DeviceId>
-            + FrameContext<C, Buf<Vec<u8>>, Self::DeviceId>,
-    > IpLinkDeviceContext<D, C, TimerId> for SC
-{
-}
-
-/// `IpLinkDeviceContext` with an extra `B: BufferMut` parameter.
-///
-/// `BufferIpLinkDeviceContext` is used when sending a frame is required.
-trait BufferIpLinkDeviceContext<
-    D: LinkDevice,
-    C: IpLinkDeviceNonSyncContext<TimerId>,
-    TimerId,
-    B: BufferMut,
->:
-    IpLinkDeviceContext<D, C, TimerId>
-    + FrameContext<C, B, <Self as DeviceIdContext<D>>::DeviceId>
-    + RecvFrameContext<C, B, RecvIpFrameMeta<<Self as DeviceIdContext<D>>::DeviceId, Ipv4>>
-    + RecvFrameContext<C, B, RecvIpFrameMeta<<Self as DeviceIdContext<D>>::DeviceId, Ipv6>>
-{
-}
-
-impl<
-        D: LinkDevice,
-        C: IpLinkDeviceNonSyncContext<TimerId>,
-        TimerId,
-        B: BufferMut,
-        SC: IpLinkDeviceContext<D, C, TimerId>
-            + FrameContext<C, B, <Self as DeviceIdContext<D>>::DeviceId>
-            + RecvFrameContext<C, B, RecvIpFrameMeta<<Self as DeviceIdContext<D>>::DeviceId, Ipv4>>
-            + RecvFrameContext<C, B, RecvIpFrameMeta<<Self as DeviceIdContext<D>>::DeviceId, Ipv6>>,
-    > BufferIpLinkDeviceContext<D, C, TimerId, B> for SC
-{
-}
-
 impl<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>
     RecvFrameContext<NonSyncCtx, B, RecvIpFrameMeta<EthernetDeviceId, Ipv4>>
     for SyncCtx<NonSyncCtx>
@@ -176,28 +111,6 @@ impl<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>
             metadata.frame_dst,
             frame,
         );
-    }
-}
-
-impl<NonSyncCtx: NonSyncContext>
-    StateContext<
-        NonSyncCtx,
-        IpLinkDeviceState<NonSyncCtx::Instant, EthernetDeviceState>,
-        EthernetDeviceId,
-    > for SyncCtx<NonSyncCtx>
-{
-    fn get_state_with(
-        &self,
-        id0: EthernetDeviceId,
-    ) -> &IpLinkDeviceState<NonSyncCtx::Instant, EthernetDeviceState> {
-        &self.state.device.ethernet.get(id0.0).unwrap()
-    }
-
-    fn get_state_mut_with(
-        &mut self,
-        id0: EthernetDeviceId,
-    ) -> &mut IpLinkDeviceState<NonSyncCtx::Instant, EthernetDeviceState> {
-        self.state.device.ethernet.get_mut(id0.0).unwrap()
     }
 }
 
@@ -472,10 +385,30 @@ impl<NonSyncCtx: NonSyncContext> IpDeviceContext<Ipv6, NonSyncCtx> for SyncCtx<N
     }
 }
 
+pub(crate) enum Ipv6DeviceLinkLayerAddr {
+    Mac(Mac),
+    // Add other link-layer address types as needed.
+}
+
+impl AsRef<[u8]> for Ipv6DeviceLinkLayerAddr {
+    fn as_ref(&self) -> &[u8] {
+        match self {
+            Ipv6DeviceLinkLayerAddr::Mac(a) => a.as_ref(),
+        }
+    }
+}
+
 impl<NonSyncCtx: NonSyncContext> Ipv6DeviceContext<NonSyncCtx> for SyncCtx<NonSyncCtx> {
-    fn get_link_layer_addr_bytes(&self, device_id: Self::DeviceId) -> Option<&[u8]> {
+    type LinkLayerAddr = Ipv6DeviceLinkLayerAddr;
+
+    fn get_link_layer_addr_bytes(
+        &self,
+        device_id: Self::DeviceId,
+    ) -> Option<Ipv6DeviceLinkLayerAddr> {
         match device_id.inner() {
-            DeviceIdInner::Ethernet(id) => Some(ethernet::get_mac(self, id).as_ref().as_ref()),
+            DeviceIdInner::Ethernet(id) => {
+                Some(Ipv6DeviceLinkLayerAddr::Mac(ethernet::get_mac(self, id).get()))
+            }
             DeviceIdInner::Loopback => None,
         }
     }
@@ -1076,7 +1009,8 @@ pub(crate) mod testutil {
 
 #[cfg(test)]
 mod tests {
-    use alloc::collections::HashMap;
+    use alloc::{collections::HashMap, vec::Vec};
+
     use net_declare::{net_mac, net_subnet_v4, net_subnet_v6};
     use net_types::ip::SubnetEither;
 

@@ -325,9 +325,12 @@ pub(crate) trait IpDeviceContext<
 pub(crate) trait Ipv6DeviceContext<C: IpDeviceNonSyncContext<Ipv6, Self::DeviceId>>:
     IpDeviceContext<Ipv6, C>
 {
+    /// A link-layer address.
+    type LinkLayerAddr: AsRef<[u8]>;
+
     /// Gets the device's link-layer address bytes, if the device supports
     /// link-layer addressing.
-    fn get_link_layer_addr_bytes(&self, device_id: Self::DeviceId) -> Option<&[u8]>;
+    fn get_link_layer_addr_bytes(&self, device_id: Self::DeviceId) -> Option<Self::LinkLayerAddr>;
 
     /// Gets the device's EUI-64 based interface identifier.
     ///
@@ -365,9 +368,12 @@ impl<
 
 /// An implementation of an IPv6 device.
 pub(crate) trait Ipv6DeviceHandler<C>: IpDeviceHandler<Ipv6, C> {
+    /// A link-layer address.
+    type LinkLayerAddr: AsRef<[u8]>;
+
     /// Gets the device's link-layer address bytes, if the device supports
     /// link-layer addressing.
-    fn get_link_layer_addr_bytes(&self, device_id: Self::DeviceId) -> Option<&[u8]>;
+    fn get_link_layer_addr_bytes(&self, device_id: Self::DeviceId) -> Option<Self::LinkLayerAddr>;
 
     /// Sets the discovered retransmit timer for the device.
     fn set_discovered_retrans_timer(
@@ -398,7 +404,9 @@ impl<
         SC: Ipv6DeviceContext<C> + GmpHandler<Ipv6, C> + DadHandler<C> + SlaacHandler<C>,
     > Ipv6DeviceHandler<C> for SC
 {
-    fn get_link_layer_addr_bytes(&self, device_id: Self::DeviceId) -> Option<&[u8]> {
+    type LinkLayerAddr = SC::LinkLayerAddr;
+
+    fn get_link_layer_addr_bytes(&self, device_id: Self::DeviceId) -> Option<SC::LinkLayerAddr> {
         Ipv6DeviceContext::get_link_layer_addr_bytes(self, device_id)
     }
 

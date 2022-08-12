@@ -52,6 +52,9 @@ pub(crate) struct RsTimerId<DeviceId> {
 
 /// The IP device context provided to RS.
 pub(super) trait Ipv6DeviceRsContext<C>: IpDeviceIdContext<Ipv6> {
+    /// A link-layer address.
+    type LinkLayerAddr: AsRef<[u8]>;
+
     /// Calls the callback with a mutable reference to the remaining number of
     /// router soliciations to send and the maximum number of router solications
     /// to send.
@@ -73,7 +76,7 @@ pub(super) trait Ipv6DeviceRsContext<C>: IpDeviceIdContext<Ipv6> {
 
     /// Gets the device's link-layer address bytes, if the device supports
     /// link-layer addressing.
-    fn get_link_layer_addr_bytes(&self, device_id: Self::DeviceId) -> Option<&[u8]>;
+    fn get_link_layer_addr_bytes(&self, device_id: Self::DeviceId) -> Option<Self::LinkLayerAddr>;
 }
 
 /// The IP layer context provided to RS.
@@ -163,7 +166,7 @@ fn do_router_solicitation<C: RsNonSyncContext<SC::DeviceId>, SC: RsContext<C>>(
     ctx: &mut C,
     device_id: SC::DeviceId,
 ) {
-    let src_ll = sync_ctx.get_link_layer_addr_bytes(device_id).map(|a| a.to_vec());
+    let src_ll = sync_ctx.get_link_layer_addr_bytes(device_id);
 
     // TODO(https://fxbug.dev/85055): Either panic or guarantee that this error
     // can't happen statically.
@@ -214,6 +217,8 @@ fn do_router_solicitation<C: RsNonSyncContext<SC::DeviceId>, SC: RsContext<C>>(
 
 #[cfg(test)]
 mod tests {
+    use alloc::{vec, vec::Vec};
+
     use net_declare::net_ip_v6;
     use packet_formats::icmp::ndp::{options::NdpOption, Options};
     use test_case::test_case;
@@ -227,11 +232,11 @@ mod tests {
         ip::DummyDeviceId,
     };
 
-    struct MockRsContext<'a> {
+    struct MockRsContext {
         max_router_solicitations: Option<NonZeroU8>,
         router_soliciations_remaining: Option<NonZeroU8>,
         source_address: Option<UnicastAddr<Ipv6Addr>>,
-        link_layer_bytes: Option<&'a [u8]>,
+        link_layer_bytes: Option<Vec<u8>>,
     }
 
     #[derive(Debug, PartialEq)]
@@ -239,10 +244,12 @@ mod tests {
         message: RouterSolicitation,
     }
 
-    type MockCtx<'a> = DummySyncCtx<MockRsContext<'a>, RsMessageMeta, DummyDeviceId>;
+    type MockCtx = DummySyncCtx<MockRsContext, RsMessageMeta, DummyDeviceId>;
     type MockNonSyncCtx = DummyNonSyncCtx<RsTimerId<DummyDeviceId>, (), ()>;
 
-    impl<'a> Ipv6DeviceRsContext<MockNonSyncCtx> for MockCtx<'a> {
+    impl Ipv6DeviceRsContext<MockNonSyncCtx> for MockCtx {
+        type LinkLayerAddr = Vec<u8>;
+
         fn with_rs_remaining_mut_and_max<
             O,
             F: FnOnce(&mut Option<NonZeroU8>, Option<NonZeroU8>) -> O,
@@ -260,18 +267,18 @@ mod tests {
             cb(router_soliciations_remaining, *max_router_solicitations)
         }
 
-        fn get_link_layer_addr_bytes(&self, DummyDeviceId: DummyDeviceId) -> Option<&[u8]> {
+        fn get_link_layer_addr_bytes(&self, DummyDeviceId: DummyDeviceId) -> Option<Vec<u8>> {
             let MockRsContext {
                 max_router_solicitations: _,
                 router_soliciations_remaining: _,
                 source_address: _,
                 link_layer_bytes,
             } = self.get_ref();
-            *link_layer_bytes
+            link_layer_bytes.clone()
         }
     }
 
-    impl<'a> Ipv6LayerRsContext<MockNonSyncCtx> for MockCtx<'a> {
+    impl Ipv6LayerRsContext<MockNonSyncCtx> for MockCtx {
         fn send_rs_packet<
             S: Serializer<Buffer = EmptyBuf>,
             F: FnOnce(Option<UnicastAddr<Ipv6Addr>>) -> S,
@@ -329,22 +336,22 @@ mod tests {
     #[test_case(
         1,
         None,
-        Some(&[1, 2, 3, 4, 5, 6]),
+        Some(vec![1, 2, 3, 4, 5, 6]),
         None; "once_without_source_address_and_with_mac_address_source_link_layer_option")]
     #[test_case(
         1,
         Some(SOURCE_ADDRESS),
-        Some(&[1, 2, 3, 4, 5, 6]),
+        Some(vec![1, 2, 3, 4, 5, 6]),
         Some(&[1, 2, 3, 4, 5, 6]); "once_with_source_address_and_mac_address_source_link_layer_option")]
     #[test_case(
         1,
         Some(SOURCE_ADDRESS),
-        Some(&[1, 2, 3, 4, 5]),
+        Some(vec![1, 2, 3, 4, 5]),
         Some(&[1, 2, 3, 4, 5, 0]); "once_with_source_address_and_short_address_source_link_layer_option")]
     #[test_case(
         1,
         Some(SOURCE_ADDRESS),
-        Some(&[1, 2, 3, 4, 5, 6, 7]),
+        Some(vec![1, 2, 3, 4, 5, 6, 7]),
         Some(&[
             1, 2, 3, 4, 5, 6, 7,
             0, 0, 0, 0, 0, 0, 0,
@@ -352,7 +359,7 @@ mod tests {
     fn perform_router_solicitation(
         max_router_solicitations: u8,
         source_address: Option<UnicastAddr<Ipv6Addr>>,
-        link_layer_bytes: Option<&[u8]>,
+        link_layer_bytes: Option<Vec<u8>>,
         expected_sll_bytes: Option<&[u8]>,
     ) {
         let DummyCtx { mut sync_ctx, mut non_sync_ctx } =

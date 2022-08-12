@@ -222,55 +222,6 @@ pub trait RngContext {
     fn rng_mut(&mut self) -> &mut Self::Rng;
 }
 
-/// A context that provides access to state.
-///
-/// `StateContext` stores instances of `State` keyed by `Id`, and provides
-/// getters for this state. If `Id` is `()`, then `StateContext` represents a
-/// single instance of `State`.
-pub trait StateContext<C, State, Id = ()> {
-    /// Get the state immutably.
-    ///
-    /// # Panics
-    ///
-    /// `get_state_with` panics if `id` is not a valid identifier. (e.g., an
-    /// out-of-bounds index, a reference to an object that has been removed from
-    /// a map, etc).
-    fn get_state_with(&self, id: Id) -> &State;
-
-    /// Get the state mutably.
-    ///
-    /// # Panics
-    ///
-    /// `get_state_mut_with` panics if `id` is not a valid identifier. (e.g., an
-    /// out-of-bounds index, a reference to an object that has been removed from
-    /// a map, etc).
-    fn get_state_mut_with(&mut self, id: Id) -> &mut State;
-
-    // TODO(joshlf): Once equality `where` bounds are supported, use those
-    // instead of these `where Self: StateContext<...>` bounds
-    // (https://github.com/rust-lang/rust/issues/20041).
-
-    /// Get the state immutably when the `Id` type is `()`.
-    ///
-    /// `x.get_state()` is shorthand for `x.get_state_with(())`.
-    fn get_state(&self) -> &State
-    where
-        Self: StateContext<C, State>,
-    {
-        self.get_state_with(())
-    }
-
-    /// Get the state mutably when the `Id` type is `()`.
-    ///
-    /// `x.get_state_mut()` is shorthand for `x.get_state_mut_with(())`.
-    fn get_state_mut(&mut self) -> &mut State
-    where
-        Self: StateContext<C, State>,
-    {
-        self.get_state_mut_with(())
-    }
-}
-
 /// A context for receiving frames.
 pub trait RecvFrameContext<C, B: BufferMut, Meta> {
     /// Receive a frame.
