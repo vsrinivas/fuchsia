@@ -507,6 +507,11 @@
             to: "#remote-control",
         },
         {
+            protocol: "fuchsia.hwinfo.Device",
+            from: "#hwinfo",
+            to: "#remote-control",
+        },
+        {
             protocol: [
                 "fuchsia.process.Launcher",
                 "fuchsia.sys2.CrashIntrospect",

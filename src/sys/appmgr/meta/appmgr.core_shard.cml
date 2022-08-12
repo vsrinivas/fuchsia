@@ -24,7 +24,6 @@
         {
             protocol: [
                 "fuchsia.bluetooth.snoop.Snoop",
-                "fuchsia.hwinfo.Device",
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.lowpan.device.Lookup",
                 "fuchsia.media.SessionAudioConsumerFactory",
@@ -331,10 +330,7 @@
             to: "#device_settings",
         },
         {
-            protocol: [
-                "fuchsia.hwinfo.Device",
-                "fuchsia.sys.Launcher",
-            ],
+            protocol: "fuchsia.sys.Launcher",
             from: "self",
             to: "#remote-control",
             dependency: "weak_for_migration",
@@ -373,7 +369,6 @@
         // Non-zircon services for svchost
         {
             protocol: [
-                "fuchsia.hwinfo.Device",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Launcher",
                 "fuchsia.sys.Loader",
