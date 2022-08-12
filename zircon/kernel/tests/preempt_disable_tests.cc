@@ -567,7 +567,7 @@ static bool test_evaluate_timeslice_extension() {
   }
   ASSERT_TRUE(preemption_state.PreemptIsEnabled());
 
-  static constexpr zx_duration_t kEpsilon = 1;
+  static constexpr zx_duration_t kEpsilon = ZX_MSEC(1);
 
   // See that the timeslice extension expires.
   {
