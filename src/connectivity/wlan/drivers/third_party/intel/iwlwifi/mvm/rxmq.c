@@ -222,7 +222,16 @@ static void iwl_mvm_pass_packet_to_mac80211(struct iwl_mvm* mvm,
       .info = rx_status->rx_info,
   };
   iwl_stats_analyze_rx(&rx_packet);
-  wlan_softmac_ifc_recv(&mvm->mvmvif[0]->ifc, &rx_packet);
+
+  // This function may be running concurrently while the device is being created or destroyed.
+  // We need to synchronize with the creation/deletion thread and validate that mvmvif is in
+  // a valid state before we try to use it.
+  iwl_rcu_read_lock(mvm->dev);
+  struct iwl_mvm_vif* mvmvif = mvm->mvmvif[0];
+  if (mvmvif && mvmvif->ifc.ctx && mvmvif->ifc.ops) {
+    wlan_softmac_ifc_recv(&mvmvif->ifc, &rx_packet);
+  }
+  iwl_rcu_read_unlock(mvm->dev);
 }
 
 static int iwl_mvm_get_signal_strength(struct iwl_mvm* mvm, int energy_a, int energy_b) {

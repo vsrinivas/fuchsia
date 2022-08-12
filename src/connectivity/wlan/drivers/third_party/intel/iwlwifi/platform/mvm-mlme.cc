@@ -230,7 +230,8 @@ zx_status_t mac_start(void* ctx, const wlan_softmac_ifc_protocol_t* ifc,
   *out_mlme_channel = mvmvif->mlme_channel;
   mvmvif->mlme_channel = ZX_HANDLE_INVALID;
 
-  mvmvif->ifc = *ifc;
+  iwl_rcu_store(mvmvif->ifc.ctx, ifc->ctx);
+  iwl_rcu_store(mvmvif->ifc.ops, ifc->ops);
 
   zx_status_t ret = iwl_mvm_mac_add_interface(mvmvif);
   if (ret != ZX_OK) {
@@ -606,7 +607,7 @@ void mac_release(void* ctx) {
 
   mvmvif->mvm->if_delete_in_progress = false;
   sync_completion_signal(&mvmvif->mvm->wait_for_delete);
-  free(mvmvif);
+  iwl_rcu_free_sync(mvmvif->mvm->dev, mvmvif);
 }
 
 /////////////////////////////////////       PHY       //////////////////////////////////////////////

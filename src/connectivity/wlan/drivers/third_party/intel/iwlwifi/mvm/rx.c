@@ -39,6 +39,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/fw-api.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/rcu.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/stats.h"
 /*
  * iwl_mvm_rx_rx_phy_cmd - REPLY_RX_PHY_CMD handler
@@ -525,7 +526,13 @@ void iwl_mvm_rx_rx_mpdu(struct iwl_mvm* mvm, struct napi_struct* napi,
       .info = rx_info,
   };
   iwl_stats_analyze_rx(&rx_packet);
-  wlan_softmac_ifc_recv(&mvm->mvmvif[0]->ifc, &rx_packet);
+
+  iwl_rcu_read_lock(mvm->dev);
+  struct iwl_mvm_vif* mvmvif = mvm->mvmvif[0];
+  if (mvmvif && mvmvif->ifc.ops && mvmvif->ifc.ctx) {
+    wlan_softmac_ifc_recv(&mvm->mvmvif[0]->ifc, &rx_packet);
+  }
+  iwl_rcu_read_unlock(mvm->dev);
 
 #if 0   // NEEDS_PORTING
   if (take_ref) {

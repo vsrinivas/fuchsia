@@ -1280,13 +1280,16 @@ zx_status_t iwl_mvm_bind_mvmvif(struct iwl_mvm* mvm, int idx, struct iwl_mvm_vif
     return ZX_ERR_ALREADY_EXISTS;
   }
 
-  mvm->mvmvif[idx] = mvmvif;
+  iwl_rcu_store(mvm->mvmvif[idx], mvmvif);
   return ZX_OK;
 }
 
 void iwl_mvm_unbind_mvmvif(struct iwl_mvm* mvm, int idx) {
   iwl_assert_lock_held(&mvm->mutex);
-  mvm->mvmvif[idx] = NULL;
+
+  // We just store NULL here, but WlanSoftmacDevice has a reference to mvm->mvmvif[idx]
+  // that will be freed when unbinding.
+  iwl_rcu_store(mvm->mvmvif[idx], NULL);
 }
 
 zx_status_t iwl_mvm_mac_add_interface(struct iwl_mvm_vif* mvmvif) {
