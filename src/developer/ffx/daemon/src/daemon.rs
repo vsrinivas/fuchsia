@@ -29,7 +29,7 @@ use {
     fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream},
     fidl_fuchsia_overnet_protocol::NodeId,
     fuchsia_async::{Task, TimeoutExt, Timer},
-    futures::prelude::*,
+    futures::{channel::mpsc::Sender, prelude::*},
     hoist::{hoist, OvernetInstance},
     protocols::{DaemonProtocolProvider, ProtocolError, ProtocolRegister},
     rcs::RcsConnection,
@@ -453,12 +453,16 @@ impl Daemon {
             .await
     }
 
-    async fn handle_requests_from_stream(&self, stream: DaemonRequestStream) -> Result<()> {
+    async fn handle_requests_from_stream(
+        &self,
+        quit_tx: &Sender<()>,
+        stream: DaemonRequestStream,
+    ) -> Result<()> {
         stream
             .map_err(|e| anyhow!("reading FIDL stream: {:#}", e))
             .try_for_each_concurrent_while_connected(None, |r| async {
                 let debug_req_string = format!("{:?}", r);
-                if let Err(e) = self.handle_request(r).await {
+                if let Err(e) = self.handle_request(quit_tx, r).await {
                     tracing::error!("error while handling request `{}`: {}", debug_req_string, e);
                 }
                 Ok(())
@@ -543,7 +547,7 @@ impl Daemon {
         new_peers
     }
 
-    async fn handle_request(&self, req: DaemonRequest) -> Result<()> {
+    async fn handle_request(&self, quit_tx: &Sender<()>, req: DaemonRequest) -> Result<()> {
         tracing::debug!("daemon received request: {:?}", req);
 
         match req {
@@ -568,8 +572,6 @@ impl Daemon {
 
                 add_daemon_metrics_event("quit").await;
 
-                ffx_config::logging::disable_stdio_logging();
-
                 // It is desirable for the client to receive an ACK for the quit
                 // request. As Overnet has a potentially complicated routing
                 // path, it is tricky to implement some notion of a bounded
@@ -582,9 +584,11 @@ impl Daemon {
                 // local reactor observes this disconnection before the timer
                 // expires, an in-line timer wait would never fire, and the
                 // daemon would never exit.
-                Task::local(
-                    Timer::new(std::time::Duration::from_millis(20)).map(|_| std::process::exit(0)),
-                )
+                let mut quit_tx = quit_tx.clone();
+                Task::local(async move {
+                    Timer::new(std::time::Duration::from_millis(20)).await;
+                    quit_tx.send(()).await.expect("failed to send graceful quit message");
+                })
                 .detach();
 
                 responder.send(true).context("error sending response")?;
@@ -640,29 +644,49 @@ impl Daemon {
         let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
         let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;
         let mut stream = ServiceProviderRequestStream::from_channel(chan);
+        let (quit_tx, mut quit_rx) = futures::channel::mpsc::channel(1);
 
         tracing::info!("Starting daemon overnet server");
         hoist::hoist().publish_service(DaemonMarker::PROTOCOL_NAME, ClientEnd::new(p))?;
 
         tracing::info!("Starting daemon serve loop");
-        while let Some(ServiceProviderRequest::ConnectToService {
-            chan,
-            info: _,
-            control_handle: _control_handle,
-        }) = stream.try_next().await.context("error running protocol provider server")?
-        {
-            tracing::trace!("Received protocol request for protocol");
-            let chan =
-                fidl::AsyncChannel::from_channel(chan).context("failed to make async channel")?;
-            let daemon_clone = self.clone();
-            Task::local(async move {
-                daemon_clone
-                    .handle_requests_from_stream(DaemonRequestStream::from_channel(chan))
-                    .await
-                    .unwrap_or_else(|err| panic!("fatal error handling request: {:?}", err));
-            })
-            .detach();
+
+        loop {
+            futures::select! {
+                req = stream.try_next() => match req.context("error running protocol provider server")? {
+                    Some(ServiceProviderRequest::ConnectToService {
+                        chan,
+                        info: _,
+                        control_handle: _control_handle,
+                    }) =>
+                    {
+                        tracing::trace!("Received protocol request for protocol");
+                        let chan =
+                            fidl::AsyncChannel::from_channel(chan).context("failed to make async channel")?;
+                        let daemon_clone = self.clone();
+                        let mut quit_tx = quit_tx.clone();
+                        Task::local(async move {
+                            if let Err(err) = daemon_clone.handle_requests_from_stream(&quit_tx, DaemonRequestStream::from_channel(chan)).await {
+                                tracing::error!("error handling request: {:?}", err);
+                                quit_tx.send(()).await.expect("Failed to gracefully send quit message, aborting.");
+                            }
+                        })
+                        .detach();
+                    },
+                    o => {
+                        tracing::warn!("Received unknown message or no message on provider server: {o:?}");
+                        break;
+                    }
+                },
+                _ = quit_rx.next() => {
+                    tracing::info!("Ending daemon serve loop due to quit message");
+                    break;
+                }
+
+            }
         }
+        tracing::info!("Graceful shutdown of daemon loop completed");
+        ffx_config::logging::disable_stdio_logging();
         Ok(())
     }
 }
@@ -706,9 +730,11 @@ mod test {
         let d = Daemon::new();
 
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
+        let (quit_tx, _quit_rx) = futures::channel::mpsc::channel(1);
 
         let d2 = d.clone();
-        let task = Task::local(async move { d2.handle_requests_from_stream(stream).await });
+        let task =
+            Task::local(async move { d2.handle_requests_from_stream(&quit_tx, stream).await });
 
         (proxy, d, task)
     }
