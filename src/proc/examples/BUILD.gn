@@ -6,6 +6,7 @@ group("examples") {
   if (target_cpu == "x64") {
     deps = [
       "android",
+      "chromiumos",
       "hello_starnix:hello-starnix",
       "wayland:starnix_wayland",
     ]

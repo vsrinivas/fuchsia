@@ -1,0 +1,19 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+group("chromiumos") {
+  if (target_cpu == "x64") {
+    deps = [ ":starnix_chromiumos" ]
+  }
+}
+
+fuchsia_component("sh") {
+  manifest = "meta/sh.cml"
+}
+
+fuchsia_package("starnix_chromiumos") {
+  deps = [ ":sh" ]
+}
