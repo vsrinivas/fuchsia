@@ -4,6 +4,10 @@
 
 package file
 
+import (
+	"encoding/json"
+)
+
 var AllFiles map[string]*File
 
 func init() {
@@ -11,6 +15,13 @@ func init() {
 }
 
 func Initialize(c *FileConfig) error {
+	// Save the config file to the out directory (if defined).
+	if b, err := json.MarshalIndent(c, "", "  "); err != nil {
+		return err
+	} else {
+		plusFile("_config.json", b)
+	}
+
 	Config = c
 	return nil
 }

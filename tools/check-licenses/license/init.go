@@ -5,6 +5,7 @@
 package license
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -32,6 +33,13 @@ func init() {
 
 func Initialize(c *LicenseConfig) error {
 	Config = c
+
+	// Save the config file to the out directory (if defined).
+	if b, err := json.MarshalIndent(c, "", "  "); err != nil {
+		return err
+	} else {
+		plusFile("_config.json", b)
+	}
 
 	for _, al := range Config.AllowLists {
 		for _, p := range al.Patterns {

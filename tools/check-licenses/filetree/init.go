@@ -5,6 +5,7 @@
 package filetree
 
 import (
+	"encoding/json"
 	"path/filepath"
 
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/license"
@@ -47,6 +48,13 @@ func Initialize(c *FileTreeConfig) error {
 				skip.Paths[i] = filepath.Join(c.FuchsiaDir, path)
 			}
 		}
+	}
+
+	// Save the config file to the out directory (if defined).
+	if b, err := json.MarshalIndent(c, "", "  "); err != nil {
+		return err
+	} else {
+		plusFile("_config.json", b)
 	}
 
 	Config = c

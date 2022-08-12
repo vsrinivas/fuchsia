@@ -7,6 +7,7 @@ package file
 type FileMetrics struct {
 	counts map[string]int      `json:"counts"`
 	values map[string][]string `json:"values"`
+	files  map[string][]byte   `json:"files"`
 }
 
 const (
@@ -21,7 +22,9 @@ func init() {
 	Metrics = &FileMetrics{
 		counts: make(map[string]int),
 		values: make(map[string][]string),
+		files:  make(map[string][]byte),
 	}
+
 }
 
 func plus1(key string) {
@@ -33,10 +36,18 @@ func plusVal(key string, val string) {
 	Metrics.values[key] = append(Metrics.values[key], val)
 }
 
+func plusFile(key string, content []byte) {
+	Metrics.files[key] = content
+}
+
 func (m *FileMetrics) Counts() map[string]int {
 	return m.counts
 }
 
 func (m *FileMetrics) Values() map[string][]string {
 	return m.values
+}
+
+func (m *FileMetrics) Files() map[string][]byte {
+	return m.files
 }

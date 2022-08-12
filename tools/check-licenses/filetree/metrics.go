@@ -7,6 +7,7 @@ package filetree
 type FileTreeMetrics struct {
 	counts map[string]int      `json:"counts"`
 	values map[string][]string `json:"values"`
+	files  map[string][]byte   `json:"files"`
 }
 
 const (
@@ -26,6 +27,7 @@ func init() {
 	Metrics = &FileTreeMetrics{
 		counts: make(map[string]int),
 		values: make(map[string][]string),
+		files:  make(map[string][]byte),
 	}
 }
 
@@ -38,10 +40,18 @@ func plusVal(key string, val string) {
 	Metrics.values[key] = append(Metrics.values[key], val)
 }
 
+func plusFile(key string, content []byte) {
+	Metrics.files[key] = content
+}
+
 func (m *FileTreeMetrics) Counts() map[string]int {
 	return m.counts
 }
 
 func (m *FileTreeMetrics) Values() map[string][]string {
 	return m.values
+}
+
+func (m *FileTreeMetrics) Files() map[string][]byte {
+	return m.files
 }

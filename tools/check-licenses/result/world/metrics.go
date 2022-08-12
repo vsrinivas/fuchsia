@@ -7,11 +7,13 @@ package world
 type MetricsInterface interface {
 	Counts() map[string]int
 	Values() map[string][]string
+	Files() map[string][]byte
 }
 
 type ResultMetrics struct {
 	counts map[string]int      `json:"counts"`
 	values map[string][]string `json:"values"`
+	files  map[string][]byte   `json:"files"`
 }
 
 const (
@@ -26,6 +28,7 @@ func init() {
 	Metrics = &ResultMetrics{
 		counts: make(map[string]int),
 		values: make(map[string][]string),
+		files:  make(map[string][]byte),
 	}
 }
 
@@ -38,10 +41,18 @@ func plusVal(key string, val string) {
 	Metrics.values[key] = append(Metrics.values[key], val)
 }
 
+func plusFile(key string, val []byte) {
+	Metrics.files[key] = val
+}
+
 func (m *ResultMetrics) Counts() map[string]int {
 	return m.counts
 }
 
 func (m *ResultMetrics) Values() map[string][]string {
 	return m.values
+}
+
+func (m *ResultMetrics) Files() map[string][]byte {
+	return m.files
 }

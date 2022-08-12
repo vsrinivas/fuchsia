@@ -5,6 +5,7 @@
 package result
 
 import (
+	"encoding/json"
 	"io/fs"
 	"path/filepath"
 	"text/template"
@@ -19,6 +20,13 @@ func init() {
 }
 
 func Initialize(c *ResultConfig) error {
+	// Save the config file to the out directory (if defined).
+	if b, err := json.MarshalIndent(c, "", "  "); err != nil {
+		return err
+	} else {
+		plusFile("_config.json", b)
+	}
+
 	Config = c
 	return initializeTemplates()
 }
