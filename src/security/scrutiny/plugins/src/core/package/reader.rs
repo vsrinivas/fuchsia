@@ -4,7 +4,7 @@
 
 use {
     crate::core::{
-        package::{is_cf_v1_manifest, is_cf_v2_manifest},
+        package::{is_cf_v1_manifest, is_cf_v2_config_values, is_cf_v2_manifest},
         util::{
             jsons::{CmxJson, ServicePackageDefinition},
             types::{ComponentManifest, PackageDefinition, PartialPackageDefinition},
@@ -146,6 +146,7 @@ pub fn read_partial_package_definition(data: Vec<u8>) -> Result<PartialPackageDe
     // issues while iterating through the list.
     let mut cf_v1_files = Vec::<String>::new();
     let mut cf_v2_files = Vec::<String>::new();
+    let mut cf_v2_config_files = Vec::<String>::new();
     let mut contains_meta_contents = false;
     for item in far_reader.list().map(|e| e.path()) {
         if item == META_CONTENTS_PATH {
@@ -156,6 +157,8 @@ pub fn read_partial_package_definition(data: Vec<u8>) -> Result<PartialPackageDe
                 cf_v1_files.push(item.to_string());
             } else if is_cf_v2_manifest(&path_buf) {
                 cf_v2_files.push(item.to_string());
+            } else if is_cf_v2_config_values(&path_buf) {
+                cf_v2_config_files.push(item.to_string());
             }
         }
     }
@@ -212,6 +215,14 @@ pub fn read_partial_package_definition(data: Vec<u8>) -> Result<PartialPackageDe
         })?;
         pkg_def.cms.insert(cm_file.into(), ComponentManifest::from(decl_bytes));
     }
+
+    for cvf_file in &cf_v2_config_files {
+        let values_bytes = far_reader.read_file(cvf_file).with_context(|| {
+            format!("Failed to read file {} from meta.far for package", cvf_file)
+        })?;
+        pkg_def.cvfs.insert(cvf_file.into(), values_bytes);
+    }
+
     Ok(pkg_def)
 }
 

@@ -325,7 +325,7 @@ impl EventStreamCapability {
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq, Eq)]
 pub enum ManifestData {
     Version1(String),
-    Version2 { cm_base64: String },
+    Version2 { cm_base64: String, cvf_bytes: Option<Vec<u8>> },
 }
 
 /// Defines a component manifest. The `component_id` maps 1:1 to

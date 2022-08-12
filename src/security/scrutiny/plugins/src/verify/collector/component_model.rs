@@ -15,7 +15,8 @@ use {
     cm_rust::{ComponentDecl, FidlIntoNative, RegistrationSource, RunnerRegistration},
     config_encoder::ConfigFields,
     fidl::encoding::decode_persistent,
-    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_internal as component_internal,
+    fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
+    fidl_fuchsia_component_internal as component_internal,
     fuchsia_url::{boot_url::BootUrl, AbsoluteComponentUrl},
     log::{error, info, warn},
     once_cell::sync::Lazy,
@@ -83,7 +84,7 @@ impl V2ComponentModelDataCollector {
             .entries
             .iter()
         {
-            if let ManifestData::Version2 { cm_base64 } = &manifest.manifest {
+            if let ManifestData::Version2 { cm_base64, cvf_bytes } = &manifest.manifest {
                 match urls.remove(&manifest.component_id) {
                     Some(url) => {
                         let result: Result<fdecl::Component, fidl::Error> = decode_persistent(
@@ -92,7 +93,23 @@ impl V2ComponentModelDataCollector {
                         );
                         match result {
                             Ok(decl) => {
-                                decls.insert(url, (decl.fidl_into_native(), None));
+                                let decl = decl.fidl_into_native();
+                                let config = if let Some(schema) = &decl.config {
+                                    let cvf_bytes = cvf_bytes
+                                        .as_ref()
+                                        .context("getting config values to match schema")?;
+                                    let values_data =
+                                        decode_persistent::<fconfig::ValuesData>(cvf_bytes)
+                                            .context("decoding config values")?
+                                            .fidl_into_native();
+                                    let resolved = ConfigFields::resolve(schema, values_data)
+                                        .context("resolving configuration")?;
+                                    Some(resolved)
+                                } else {
+                                    None
+                                };
+
+                                decls.insert(url, (decl, config));
                             }
                             Err(err) => {
                                 error!(

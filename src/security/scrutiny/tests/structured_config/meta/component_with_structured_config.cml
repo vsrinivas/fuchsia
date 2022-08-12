@@ -1,0 +1,15 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    // verifying config in product assembly checks that a supported runner is specified
+    program: {
+        runner: "elf",
+    },
+    config: {
+        asserted_by_scrutiny_test: {
+            type: "string",
+            max_size: 100,
+        },
+    },
+}

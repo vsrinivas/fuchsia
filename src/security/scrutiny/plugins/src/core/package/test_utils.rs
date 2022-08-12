@@ -131,7 +131,12 @@ pub fn create_test_cm_map(entries: Vec<(PathBuf, Vec<u8>)>) -> HashMap<PathBuf, 
 pub fn create_test_partial_package_with_cms(
     cms: HashMap<PathBuf, ComponentManifest>,
 ) -> PartialPackageDefinition {
-    PartialPackageDefinition { meta: HashMap::new(), contents: HashMap::new(), cms }
+    PartialPackageDefinition {
+        meta: HashMap::new(),
+        contents: HashMap::new(),
+        cms,
+        cvfs: HashMap::new(),
+    }
 }
 
 pub fn create_test_package_with_cms(
@@ -149,13 +154,19 @@ pub fn create_test_package_with_cms(
         meta: HashMap::new(),
         contents: HashMap::new(),
         cms,
+        cvfs: Default::default(),
     }
 }
 
 pub fn create_test_partial_package_with_contents(
     contents: HashMap<PathBuf, Hash>,
 ) -> PartialPackageDefinition {
-    PartialPackageDefinition { meta: HashMap::new(), contents: contents, cms: HashMap::new() }
+    PartialPackageDefinition {
+        meta: HashMap::new(),
+        contents: contents,
+        cms: HashMap::new(),
+        cvfs: HashMap::new(),
+    }
 }
 
 pub fn create_test_package_with_contents(
@@ -173,6 +184,7 @@ pub fn create_test_package_with_contents(
         meta: HashMap::new(),
         contents: contents,
         cms: HashMap::new(),
+        cvfs: HashMap::new(),
     }
 }
 
@@ -191,6 +203,7 @@ pub fn create_test_package_with_meta(
         meta,
         contents: HashMap::new(),
         cms: HashMap::new(),
+        cvfs: HashMap::new(),
     }
 }
 

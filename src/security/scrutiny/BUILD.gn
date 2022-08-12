@@ -23,11 +23,19 @@ group("lib") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    "//src/security/scrutiny/config:tests($host_toolchain)",
-    "//src/security/scrutiny/framework:tests($host_toolchain)",
-    "//src/security/scrutiny/frontend:tests($host_toolchain)",
-    "//src/security/scrutiny/plugins:tests($host_toolchain)",
-    "//src/security/scrutiny/utils:tests($host_toolchain)",
-  ]
+  public_deps = [ "tests($target_toolchain)" ]
+}
+
+if (is_host) {
+  group("host_tests") {
+    testonly = true
+    deps = [
+      "config:tests",
+      "framework:tests",
+      "frontend:tests",
+      "plugins:tests",
+      "tests:host_tests",
+      "utils:tests",
+    ]
+  }
 }

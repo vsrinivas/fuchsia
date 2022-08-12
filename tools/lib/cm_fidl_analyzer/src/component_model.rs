@@ -43,7 +43,7 @@ use {
     },
     serde::{Deserialize, Serialize},
     std::{
-        collections::{HashMap, HashSet},
+        collections::{BTreeMap, HashMap, HashSet},
         sync::Arc,
     },
     thiserror::Error,
@@ -1089,6 +1089,16 @@ impl ComponentModelForAnalyzer {
         route_storage_and_backing_directory(use_decl, target)
             .now_or_never()
             .expect("future was not ready immediately")
+    }
+
+    pub fn collect_config_by_url(&self) -> anyhow::Result<BTreeMap<String, ConfigFields>> {
+        let mut configs = BTreeMap::new();
+        for instance in self.instances.values() {
+            if let Some(fields) = instance.config_fields() {
+                configs.insert(instance.url().to_string(), fields.clone());
+            }
+        }
+        Ok(configs)
     }
 }
 

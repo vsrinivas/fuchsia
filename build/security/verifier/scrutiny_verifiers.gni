@@ -13,6 +13,7 @@ import("//build/security/verifier/verify_kernel_cmdline.gni")
 import("//build/security/verifier/verify_route_sources.gni")
 import("//build/security/verifier/verify_routes.gni")
 import("//build/security/verifier/verify_static_pkgs.gni")
+import("//build/security/verifier/verify_structured_config.gni")
 
 # Instantiate scrutiny verifiers for an assembled system.
 #
@@ -254,6 +255,18 @@ template("scrutiny_verifiers") {
       }
       verifiers += [ ":${invoker.assembly_image_name}_verify_static_pkgs" ]
     }
+
+    extract_assembled_structured_config(
+        "${invoker.assembly_image_name}_extract_assembled_structured_config") {
+      testonly = invoker.testonly
+      update_package_target = invoker.update_package_target
+      image_assembler_target = ":${invoker.assembly_image_name}.image_assembler"
+      assembly_image_name = invoker.assembly_image_name
+      output = "$target_out_dir/structured_config.json"
+    }
+    verifiers += [
+      ":${invoker.assembly_image_name}_extract_assembled_structured_config",
+    ]
   } else {
     not_needed(invoker,
                [

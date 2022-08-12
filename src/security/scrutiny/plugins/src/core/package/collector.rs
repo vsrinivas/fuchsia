@@ -449,11 +449,32 @@ impl PackageDataCollector {
                     if let ComponentManifest::Version2(decl_bytes) = &cm {
                         let mut cap_uses = Vec::new();
                         let cm_base64 = base64::encode(&decl_bytes);
+                        let mut cvf_bytes = None;
 
                         if let Ok(cm_decl) = decode_persistent::<fdecl::Component>(&decl_bytes) {
                             if let Err(err) = cm_fidl_validator::validate(&cm_decl) {
                                 warn!("Invalid cm {} {}", url, err);
                             } else {
+                                if let Some(schema) = cm_decl.config {
+                                    match schema
+                                        .value_source
+                                        .as_ref()
+                                        .context("getting value source from config schema")?
+                                    {
+                                        fdecl::ConfigValueSource::PackagePath(pkg_path) => {
+                                            cvf_bytes = Some(
+                                                pkg.cvfs
+                                                    .get(pkg_path)
+                                                    .context("getting config values from package")?
+                                                    .clone(),
+                                            );
+                                        }
+                                        other => {
+                                            warn!("unsupported config value source {:?}", other)
+                                        }
+                                    }
+                                }
+
                                 if let Some(uses) = cm_decl.uses {
                                     for use_ in uses {
                                         match &use_ {
@@ -495,13 +516,16 @@ impl PackageDataCollector {
                         }
                         Manifest {
                             component_id: *component_id,
-                            manifest: ManifestData::Version2 { cm_base64 },
+                            manifest: ManifestData::Version2 { cm_base64, cvf_bytes },
                             uses: cap_uses,
                         }
                     } else {
                         Manifest {
                             component_id: *component_id,
-                            manifest: ManifestData::Version2 { cm_base64: String::from("") },
+                            manifest: ManifestData::Version2 {
+                                cm_base64: String::from(""),
+                                cvf_bytes: None,
+                            },
                             uses: Vec::new(),
                         }
                     }
@@ -572,7 +596,7 @@ impl PackageDataCollector {
         manifests: &mut Vec<Manifest>,
         zbi: &Zbi,
     ) -> Result<()> {
-        for (file_name, file_data) in zbi.bootfs.iter() {
+        for (file_name, file_data) in &zbi.bootfs {
             if file_name.ends_with(".cm") {
                 info!("Extracting bootfs manifest: {}", file_name);
                 let url = BootUrl::new_resource("/".to_string(), file_name.to_string())?;
@@ -584,6 +608,24 @@ impl PackageDataCollector {
                     if let Err(err) = cm_fidl_validator::validate(&cm_decl) {
                         warn!("Invalid cm {} {}", file_name, err);
                     } else {
+                        // Retrieve this component's config values, if any.
+                        let cvf_bytes = if let Some(schema) = cm_decl.config {
+                            match schema
+                                .value_source
+                                .as_ref()
+                                .context("getting value source from config schema")?
+                            {
+                                fdecl::ConfigValueSource::PackagePath(pkg_path) => {
+                                    zbi.bootfs.get(pkg_path).cloned()
+                                }
+                                other => {
+                                    anyhow::bail!("Unsupported config value source {:?}.", other);
+                                }
+                            }
+                        } else {
+                            None
+                        };
+
                         let mut cap_uses = Vec::new();
                         if let Some(uses) = cm_decl.uses {
                             for use_ in uses {
@@ -651,7 +693,7 @@ impl PackageDataCollector {
                         );
                         manifests.push(Manifest {
                             component_id: *component_id,
-                            manifest: ManifestData::Version2 { cm_base64 },
+                            manifest: ManifestData::Version2 { cm_base64, cvf_bytes },
                             uses: cap_uses,
                         });
                     }
@@ -1068,6 +1110,7 @@ pub mod tests {
             meta: HashMap::new(),
             contents: HashMap::new(),
             cms: HashMap::new(),
+            cvfs: HashMap::new(),
         }
     }
 
@@ -1076,6 +1119,7 @@ pub mod tests {
             meta: HashMap::new(),
             contents: HashMap::new(),
             cms: HashMap::new(),
+            cvfs: HashMap::new(),
         }
     }
 
@@ -1709,12 +1753,14 @@ pub mod tests {
             meta: hashmap! {},
             contents: hashmap! {},
             cms: hashmap! {},
+            cvfs: hashmap! {},
         });
         mock_pkg_reader.append_pkg_def(PackageDefinition {
             url: pkg_url_two.clone(),
             meta: hashmap! {},
             contents: hashmap! {},
             cms: hashmap! {},
+            cvfs: hashmap! {},
         });
 
         let pkg_urls = vec![pkg_url_one, pkg_url_two];

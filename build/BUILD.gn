@@ -74,6 +74,7 @@ group("non_hermetic_deps") {
     "//build/images/*",
     "//src/security/ffx_test/*",
     "//src/security/pkg_test/tests/*",
+    "//src/security/scrutiny/tests/*",
     "//src/sys/component_manager/tests/fuchsia_boot_resolver:*",
     "//src/tests/assembly/*",
     "//third_party/network-conformance/images/*",

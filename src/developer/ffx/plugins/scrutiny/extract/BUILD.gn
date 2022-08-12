@@ -12,6 +12,7 @@ ffx_plugin("ffx_scrutiny_extract") {
     "blobfs:ffx_scrutiny_blobfs",
     "fvm:ffx_scrutiny_fvm",
     "package:ffx_scrutiny_package",
+    "structured_config:ffx_scrutiny_structured_config",
     "zbi:ffx_scrutiny_zbi",
   ]
   deps = [

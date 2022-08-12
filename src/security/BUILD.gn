@@ -22,3 +22,10 @@ group("tests") {
     "zxcrypt:tests",
   ]
 }
+
+if (is_host) {
+  group("host_tests") {
+    testonly = true
+    deps = [ "scrutiny:host_tests" ]
+  }
+}

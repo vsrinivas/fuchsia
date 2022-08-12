@@ -15,6 +15,7 @@ if (is_host) {
 
       # TODO(fxbug.dev/93569): Shared types should be exposed on a public
       # interface instead of making this visibility exception.
+      "//src/developer/ffx/plugins/scrutiny/extract/*",
       "//src/developer/ffx/plugins/scrutiny/verify/*",
     ]
 
@@ -24,6 +25,7 @@ if (is_host) {
     ]
 
     deps = [
+      "//sdk/fidl/fuchsia.component.config:fuchsia.component.config_rust",
       "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
       "//sdk/fidl/fuchsia.component.internal:fuchsia.component.internal_rust",
       "//src/lib/fidl/rust/fidl",
@@ -127,6 +129,7 @@ if (is_host) {
       "src/verify/controller/component_resolvers.rs",
       "src/verify/controller/mod.rs",
       "src/verify/controller/route_sources.rs",
+      "src/verify/controller/structured_config.rs",
       "src/verify/mod.rs",
     ]
   }

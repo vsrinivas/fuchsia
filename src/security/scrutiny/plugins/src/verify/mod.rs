@@ -14,6 +14,7 @@ use {
             capability_routing::{CapabilityRouteController, V2ComponentModelMappingController},
             component_resolvers::ComponentResolversController,
             route_sources::RouteSourcesController,
+            structured_config::ExtractStructuredConfigController,
         },
     },
     cm_fidl_analyzer::{
@@ -27,8 +28,11 @@ use {
     std::{collections::HashSet, path::PathBuf, sync::Arc},
 };
 
-pub use controller::route_sources::{
-    RouteSourceError, Source, VerifyRouteSourcesResult, VerifyRouteSourcesResults,
+pub use controller::{
+    route_sources::{
+        RouteSourceError, Source, VerifyRouteSourcesResult, VerifyRouteSourcesResults,
+    },
+    structured_config::ExtractStructuredConfigResponse,
 };
 
 plugin!(
@@ -43,6 +47,10 @@ plugin!(
             "/verify/capability_routes" => CapabilityRouteController::default(),
             "/verify/route_sources" => RouteSourcesController::default(),
             "/verify/component_resolvers" => ComponentResolversController::default(),
+
+            // This doesn't actually verify anything, but we need the verify model to get
+            // V2ComponentModel, and depending on this plugin in `toolkit` doesn't work.
+            "/verify/structured_config/extract" => ExtractStructuredConfigController::default(),
         }
     ),
     vec![PluginDescriptor::new("CorePlugin")]
@@ -268,7 +276,11 @@ mod tests {
             &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V2 },
             &mut decl_fidl,
         )?);
-        Ok(Manifest { component_id, manifest: ManifestData::Version2 { cm_base64 }, uses: vec![] })
+        Ok(Manifest {
+            component_id,
+            manifest: ManifestData::Version2 { cm_base64, cvf_bytes: None },
+            uses: vec![],
+        })
     }
 
     // Creates a data model with a ZBI containing one component manifest and the provided component

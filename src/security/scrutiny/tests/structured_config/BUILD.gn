@@ -1,0 +1,158 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/assembly/assembled_system.gni")
+import("//build/assembly/generated_partitions_config.gni")
+import("//build/assembly/update_package.gni")
+import("//build/components.gni")
+import("//build/product.gni")
+import("//build/python/python_binary.gni")
+import("//build/security/verifier/verify_structured_config.gni")
+import("//build/testing/host_test.gni")
+import("//src/sys/core/build/core.gni")
+import("//src/sys/core/build/core_shard.gni")
+
+component_name = "component_with_structured_config"
+package_name = "package_with_structured_config_for_scrutiny_testing"
+expected_value = "check this string!"
+
+if (is_fuchsia) {
+  group("tests") {
+    testonly = true
+    deps = []
+  }
+
+  fuchsia_component(component_name) {
+    testonly = true
+    manifest = "meta/component_with_structured_config.cml"
+
+    # We don't intend to run this component, just make its config visible to scrutiny.
+    check_references = false
+  }
+
+  fuchsia_structured_config_values("values") {
+    testonly = true
+    cm_label = ":${component_name}_manifest_compile"
+    values = {
+      asserted_by_scrutiny_test = expected_value
+    }
+  }
+
+  fuchsia_package("package") {
+    testonly = true
+    package_name = package_name
+    deps = [
+      ":$component_name",
+      ":values",
+    ]
+  }
+
+  core_shard("core_shard") {
+    shard_file = "meta/core_shard.cml"
+  }
+
+  core_realm("core_realm") {
+    package_name = core_realm_package_name
+    deps = [ ":core_shard" ]
+  }
+
+  files = {
+    images_config = "$target_out_dir/fuchsia.images_config.json"
+    partitions_config = "$target_out_dir/partitions_config.json"
+
+    outdir = target_out_dir + "/assembly"
+    packages_json = "${outdir}/packages.json"
+    images_json = "${outdir}/images.json"
+  }
+
+  assembled_system("assembly") {
+    testonly = true
+
+    # Needed for scrutiny to find root.cm and other component config.
+    bootfs_labels = [ "//build/input:bootfs" ]
+    base_packages = [
+      ":core_realm",
+      ":package",
+    ]
+
+    # Needed for scrutiny to find things for the component model.
+    include_component_id_index = true
+  }
+
+  generated_partitions_config("partitions_config") {
+    testonly = true
+    output_path = files.partitions_config
+    hw_revision = board_name
+  }
+
+  update_package("update") {
+    testonly = true
+    deps = [
+      ":assembly",
+      ":partitions_config",
+      "//build/info:latest-commit-date",
+    ]
+    partitions = files.partitions_config
+    packages = files.packages_json
+    system_a = files.images_json
+    version_file = build_info_files.version
+    epoch = "1"
+  }
+
+  extract_assembled_structured_config("extractor") {
+    testonly = true
+    update_package_target = ":update"
+    image_assembler_target = ":assembly.image_assembler"
+    assembly_image_name = "assembly"
+    output = "$target_out_dir/structured_config.json"
+    deps = [ ":assembly" ]
+  }
+}
+
+if (is_host) {
+  group("host_tests") {
+    testonly = true
+    deps = [ ":check_extracted_config" ]
+  }
+
+  python_binary("check_extracted_config_bin") {
+    main_source = "check_extracted_structured_config.py"
+  }
+
+  host_test_data("test_bin") {
+    sources = get_target_outputs(":check_extracted_config_bin")
+    deps = [ ":check_extracted_config_bin" ]
+  }
+
+  extractor_label = ":extractor($target_toolchain)"
+  extracted_config_target_dir =
+      get_label_info(extractor_label, "target_out_dir")
+  extracted_config_path = "$extracted_config_target_dir/structured_config.json"
+  host_test_data("extracted_config") {
+    sources = [ extracted_config_path ]
+    deps = [ extractor_label ]
+  }
+  python_binary = get_target_outputs(":check_extracted_config_bin")
+  python_binary = python_binary[0]
+
+  host_test("check_extracted_config") {
+    binary_path = python_exe_src
+    args = [
+      rebase_path(python_binary, root_build_dir),
+      "--extracted-config",
+      rebase_path(extracted_config_path, root_build_dir),
+      "--expected-url",
+      "fuchsia-pkg://fuchsia.com/${package_name}#meta/${component_name}.cm",
+      "--expected-key",
+      "asserted_by_scrutiny_test",
+      "--expected-value",
+      expected_value,
+    ]
+    deps = [
+      ":extracted_config",
+      ":test_bin",
+      "//build/python:interpreter",
+    ]
+  }
+}

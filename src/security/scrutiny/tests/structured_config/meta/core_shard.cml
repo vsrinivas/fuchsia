@@ -1,0 +1,11 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "component_for_scrutiny_testing",
+            url: "fuchsia-pkg://fuchsia.com/package_with_structured_config_for_scrutiny_testing#meta/component_with_structured_config.cm",
+        },
+    ],
+}

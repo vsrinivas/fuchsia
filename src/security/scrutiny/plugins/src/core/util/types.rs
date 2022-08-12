@@ -44,11 +44,19 @@ pub struct PackageDefinition {
     pub meta: HashMap<PathBuf, Vec<u8>>,
     /// A mapping from internal package paths to component manifest data.
     pub cms: HashMap<PathBuf, ComponentManifest>,
+    /// A mapping from internal package paths to config value files.
+    pub cvfs: HashMap<String, Vec<u8>>,
 }
 
 impl PackageDefinition {
     pub fn new(url: AbsolutePackageUrl, partial: PartialPackageDefinition) -> Self {
-        Self { url, contents: partial.contents, meta: partial.meta, cms: partial.cms }
+        Self {
+            url,
+            contents: partial.contents,
+            meta: partial.meta,
+            cms: partial.cms,
+            cvfs: partial.cvfs,
+        }
     }
 
     pub fn matches_url(&self, url: &AbsolutePackageUrl) -> bool {
@@ -74,6 +82,8 @@ pub struct PartialPackageDefinition {
     pub meta: HashMap<PathBuf, Vec<u8>>,
     /// A mapping from internal package paths to component manifest data.
     pub cms: HashMap<PathBuf, ComponentManifest>,
+    /// A mapping from internal package paths to config value files.
+    pub cvfs: HashMap<String, Vec<u8>>,
 }
 
 #[allow(dead_code)]
