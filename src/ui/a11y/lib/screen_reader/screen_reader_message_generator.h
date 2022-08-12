@@ -108,7 +108,9 @@ class ScreenReaderMessageGenerator {
       std::vector<UtteranceAndContext>& description);
 
   // Helper method to describe a node that is a radio button.
-  UtteranceAndContext DescribeRadioButton(const fuchsia::accessibility::semantics::Node* node);
+  void DescribeRadioButton(
+      const fuchsia::accessibility::semantics::Node* node,
+      std::vector<UtteranceAndContext>& description);
 
   // Helper method to describe a node that is a check box. The resulting description can be one or
   // more utterances, depending on the ammount of semantic data available about the state of the

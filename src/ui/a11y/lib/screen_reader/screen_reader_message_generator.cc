@@ -148,14 +148,13 @@ ScreenReaderMessageGenerator::DescribeNode(const Node* node,
     DescribeButton(node, description);
     return description;
   } else if (node->has_role() && node->role() == Role::UNKNOWN) {
-    // In order to be focusable, and UNKNOWN node must have a non-empty label.
-    // See a11y::NodeIsDescribable() in
-    // src/ui/a11y/lib/screen_reader/util/util.h.
-    FX_DCHECK(node->has_attributes());
-    FX_DCHECK(node->attributes().has_label());
-    FX_DCHECK(!node->attributes().label().empty());
-
+    FX_DCHECK(NodeIsDescribable(node));
     DescribeUnknown(node, description);
+    return description;
+  } else if (node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::RADIO_BUTTON) {
+    // If this node is a radio button, slider-like object, or toggle switch, the label is part of
+    // the whole message that describes it.
+    DescribeRadioButton(node, description);
     return description;
   }
 
@@ -165,12 +164,7 @@ ScreenReaderMessageGenerator::DescribeNode(const Node* node,
                                   ? node->attributes().label()
                                   : "";
 
-    // If this node is a radio button, slider-like object, or toggle switch, the label is part of
-    // the whole message that describes it.
-    if (node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::RADIO_BUTTON) {
-      description.emplace_back(DescribeRadioButton(node));
-    } else if (node->has_role() &&
-               node->role() == fuchsia::accessibility::semantics::Role::TOGGLE_SWITCH) {
+    if (node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::TOGGLE_SWITCH) {
       if (!label.empty()) {
         Utterance utterance;
         utterance.set_message(label);
@@ -303,22 +297,22 @@ void ScreenReaderMessageGenerator::DescribeButton(const fuchsia::accessibility::
   MaybeAddDoubleTapHint(node, description);
 }
 
-ScreenReaderMessageGenerator::UtteranceAndContext ScreenReaderMessageGenerator::DescribeRadioButton(
-    const fuchsia::accessibility::semantics::Node* node) {
+void ScreenReaderMessageGenerator::DescribeRadioButton(
+    const fuchsia::accessibility::semantics::Node* node,
+    std::vector<UtteranceAndContext>& description) {
   FX_DCHECK(node->has_role() &&
             node->role() == fuchsia::accessibility::semantics::Role::RADIO_BUTTON);
+
   const auto message_id =
       node->has_states() && node->states().has_selected() && node->states().selected()
           ? MessageIds::RADIO_BUTTON_SELECTED
           : MessageIds::RADIO_BUTTON_UNSELECTED;
-  const auto name_value =
+  const auto label =
       node->has_attributes() && node->attributes().has_label() ? node->attributes().label() : "";
-  if (!name_value.empty()) {
-    return GenerateUtteranceByMessageId(message_id, zx::msec(0), {"name"},
-                                        {name_value});
-  }
 
-  return GenerateUtteranceByMessageId(message_id);
+  description.emplace_back(GenerateUtteranceByMessageId(message_id, zx::msec(0), {"name"}, {label}));
+
+  MaybeAddDoubleTapHint(node, description);
 }
 
 void ScreenReaderMessageGenerator::DescribeCheckBox(

@@ -46,6 +46,16 @@ TEST_F(MessageFormatterTest, FormatsMessageWithNamedArgument) {
   EXPECT_EQ(result.value(), "Hello Goku!");
 }
 
+TEST_F(MessageFormatterTest, FormatsMessageWithEmptyStringArgument) {
+  auto lookup_or_error = intl::Lookup::NewForTest({"foo-Bar"});
+  ASSERT_FALSE(lookup_or_error.is_error());
+  auto formatter = std::make_unique<a11y::i18n::MessageFormatter>(icu::Locale("pt"),
+                                                                  lookup_or_error.take_value());
+  auto result = formatter->FormatStringById(1, {"person"}, {""});
+  ASSERT_TRUE(result);
+  EXPECT_EQ(result.value(), "Hello !");
+}
+
 TEST_F(MessageFormatterTest, InvalidArgumentName) {
   auto lookup_or_error = intl::Lookup::NewForTest({"foo-Bar"});
   ASSERT_FALSE(lookup_or_error.is_error());
