@@ -27,9 +27,13 @@ zx_koid_t FocusKoidOf(const std::vector<zx_koid_t>& chain) {
 
 FocusManager::FocusManager(inspect::Node inspect_node, LegacyFocusListener legacy_focus_listener)
     : legacy_focus_listener_(std::move(legacy_focus_listener)),
-      view_focuser_registry_(/*request_focus*/ [this](zx_koid_t requestor, zx_koid_t request) {
-        return RequestFocus(requestor, request) == FocusChangeStatus::kAccept;
-      }),
+      view_focuser_registry_(
+          /*request_focus*/
+          [this](zx_koid_t requestor, zx_koid_t request) {
+            return RequestFocus(requestor, request) == FocusChangeStatus::kAccept;
+          },
+          /*set_auto_focus*/ [this](zx_koid_t requestor,
+                                    zx_koid_t request) { SetAutoFocus(requestor, request); }),
       inspect_node_(std::move(inspect_node)) {
   // Track the focus chain in inspect.
   lazy_ = inspect_node_.CreateLazyValues("values", [this] {
@@ -135,6 +139,41 @@ void FocusManager::DispatchFocusEvents(zx_koid_t old_focus, zx_koid_t new_focus)
   view_ref_focused_registry_.UpdateFocus(old_focus, new_focus);
 }
 
+void FocusManager::SetAutoFocus(zx_koid_t requestor, zx_koid_t target) {
+  if (target != ZX_KOID_INVALID) {
+    auto_focus_targets_[requestor] = target;
+  } else {
+    auto_focus_targets_.erase(requestor);
+  }
+
+  // Move focus to the currently focused View to see if auto focus causes any changes.
+  if (!focus_chain_.empty()) {
+    SetFocus(focus_chain_.back());
+  }
+}
+
+zx_koid_t FocusManager::FindNextAutoFocusTarget(zx_koid_t koid) const {
+  const auto it = auto_focus_targets_.find(koid);
+  if (it != auto_focus_targets_.end() && snapshot_->view_tree.count(it->second)) {
+    koid = it->second;
+    while (koid != snapshot_->root && !snapshot_->view_tree.at(koid).is_focusable) {
+      koid = snapshot_->view_tree.at(koid).parent;
+    }
+  }
+  return koid;
+}
+
+zx_koid_t FocusManager::ResolveAutoFocus(zx_koid_t koid) const {
+  // Iterate through auto focus targets until we find a stable point (i.e. where
+  // FindNextAutoFocusTarget(koid) == koid).
+  zx_koid_t auto_focus_result = FindNextAutoFocusTarget(koid);
+  while (auto_focus_result != koid && auto_focus_result != snapshot_->root) {
+    koid = auto_focus_result;
+    auto_focus_result = FindNextAutoFocusTarget(koid);
+  }
+  return auto_focus_result;
+}
+
 fuchsia::ui::views::ViewRef FocusManager::CloneViewRefOf(zx_koid_t koid) const {
   FX_DCHECK(snapshot_->view_tree.count(koid) != 0)
       << "all views in the focus chain must exist in the view tree";
@@ -158,21 +197,27 @@ void FocusManager::RepairFocus() {
     return;
   }
 
-  std::vector<zx_koid_t> new_focus_chain = focus_chain_;
+  // Even if the focus chain isn't invalid we still want to call SetFocus() on the currently focused
+  // View since it may have a newly valid auto focus target.
+  zx_koid_t focus_target = focus_chain_.back();
 
   // See if there's any place where the old focus chain breaks a parent-child relationship, and
   // truncate from there.
   // Note: Start at i = 1 so we can compare with i - 1.
-  for (size_t child_index = 1; child_index < new_focus_chain.size(); ++child_index) {
-    const zx_koid_t child = new_focus_chain.at(child_index);
-    const zx_koid_t parent = new_focus_chain.at(child_index - 1);
+  for (size_t child_index = 1; child_index < focus_chain_.size(); ++child_index) {
+    const zx_koid_t child = focus_chain_.at(child_index);
+    const zx_koid_t parent = focus_chain_.at(child_index - 1);
     if (snapshot_->view_tree.count(child) == 0 || snapshot_->view_tree.at(child).parent != parent) {
-      new_focus_chain.erase(new_focus_chain.begin() + child_index, new_focus_chain.end());
+      focus_target = parent;
       break;
     }
   }
 
-  SetFocusChain(std::move(new_focus_chain));
+  // Find first focusable parent ancestor starting from |focus_target|.
+  while (focus_target != snapshot_->root && !snapshot_->view_tree.at(focus_target).is_focusable) {
+    focus_target = snapshot_->view_tree.at(focus_target).parent;
+  }
+  SetFocus(focus_target);
 }
 
 void FocusManager::SetFocus(zx_koid_t koid) {
@@ -181,6 +226,8 @@ void FocusManager::SetFocus(zx_koid_t koid) {
     FX_DCHECK(snapshot_->view_tree.count(koid) != 0);
     FX_DCHECK(snapshot_->view_tree.at(koid).is_focusable);
   }
+
+  koid = ResolveAutoFocus(koid);
 
   std::vector<zx_koid_t> new_focus_chain;
 

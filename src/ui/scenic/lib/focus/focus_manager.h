@@ -53,6 +53,10 @@ class FocusManager final : public fuchsia::ui::focus::FocusChainListenerRegistry
   // - If the |request| is otherwise valid, but violates the focus transfer policy, return error.
   FocusChangeStatus RequestFocus(zx_koid_t requestor, zx_koid_t request);
 
+  // Sets the auto focus target |requestor| to |target|.
+  // If |target| is ZX_KOID_INVALID the |requestor| entry is removed.
+  void SetAutoFocus(zx_koid_t requestor, zx_koid_t target);
+
   // Saves the new snapshot and updates the focus chain accordingly.
   void OnNewViewTreeSnapshot(std::shared_ptr<const view_tree::Snapshot> snapshot);
 
@@ -97,6 +101,13 @@ class FocusManager final : public fuchsia::ui::focus::FocusChainListenerRegistry
   // Dispatches focus events to view clients.
   void DispatchFocusEvents(zx_koid_t old_focus, zx_koid_t new_focus);
 
+  // Resolves auto focus when |koid| has focus and returns the resulting koid.
+  zx_koid_t ResolveAutoFocus(zx_koid_t koid) const;
+
+  // Get the auto focus target of |koid| or, if it's unfocusable, the first focusable ancestor of
+  // the auto focus target. If there is no viable auto focus target of |koid| it returns |koid|.
+  zx_koid_t FindNextAutoFocusTarget(zx_koid_t koid) const;
+
   fuchsia::ui::views::ViewRef CloneViewRefOf(zx_koid_t koid) const;
   fuchsia::ui::focus::FocusChain CloneFocusChain() const;
 
@@ -108,6 +119,9 @@ class FocusManager final : public fuchsia::ui::focus::FocusChainListenerRegistry
   fidl::BindingSet<fuchsia::ui::focus::FocusChainListenerRegistry> focus_chain_listener_registry_;
   uint64_t next_focus_chain_listener_id_ = 0;
   std::unordered_map<uint64_t, fuchsia::ui::focus::FocusChainListenerPtr> focus_chain_listeners_;
+
+  // Map of ViewRef koid to that View's auto focus target (if it has one).
+  std::unordered_map<zx_koid_t, zx_koid_t> auto_focus_targets_;
 
   // TODO(fxbug.dev/64376): Remove when we remove GFX input.
   const LegacyFocusListener legacy_focus_listener_;

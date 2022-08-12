@@ -323,6 +323,135 @@ TEST(FocusManagerTest, ViewRemoval_ShouldShortenFocusChain) {
   EXPECT_TRUE(focus_manager.focus_chain().empty());
 }
 
+// Tree topology:
+//  [] -> A (AutoFocus to B)
+//        |
+//        B
+TEST(FocusManagerTest, AutoFocus_BeforeSnapshot) {
+  FocusManager focus_manager;
+  focus_manager.SetAutoFocus(kNodeA, kNodeB);
+  EXPECT_TRUE(focus_manager.focus_chain().empty());
+
+  focus_manager.OnNewViewTreeSnapshot(TwoNodeSnapshot());
+  EXPECT_THAT(focus_manager.focus_chain(), testing::ElementsAre(kNodeA, kNodeB));
+}
+
+// Tree topology:
+//  A  (AutoFocus to B)     A
+//                      ->  |
+//                          B
+// Adding the child after setting it as auto focus should cause focus to move.
+TEST(FocusManagerTest, AutoFocus_OnNewValidAutoFocusChild) {
+  FocusManager focus_manager;
+  focus_manager.OnNewViewTreeSnapshot(OneNodeSnapshot());
+  focus_manager.SetAutoFocus(kNodeA, kNodeB);
+  EXPECT_THAT(focus_manager.focus_chain(), testing::ElementsAre(kNodeA));
+
+  focus_manager.OnNewViewTreeSnapshot(TwoNodeSnapshot());
+  EXPECT_THAT(focus_manager.focus_chain(), testing::ElementsAre(kNodeA, kNodeB));
+}
+
+// Tree topology:
+//  A      A (AutoFocus to B)
+//  |  ->  |
+//  B      B
+// Setting auto focus after adding the child should cause focus to move.
+TEST(FocusManagerTest, AutoFocus_WithValidTarget) {
+  FocusManager focus_manager;
+  focus_manager.OnNewViewTreeSnapshot(TwoNodeSnapshot());
+  EXPECT_THAT(focus_manager.focus_chain(), testing::ElementsAre(kNodeA));
+
+  focus_manager.SetAutoFocus(kNodeA, kNodeB);
+  EXPECT_THAT(focus_manager.focus_chain(), testing::ElementsAre(kNodeA, kNodeB));
+}
+
+// Tree topology:
+//  A
+//  |
+//  B (AutoFocus to C)
+//  |
+//  C
+// Focus moved due to RequestFocus() should trigger auto focus deferment.
+TEST(FocusManagerTest, AutoFocus_OnRequestFocus) {
+  FocusManager focus_manager;
+  focus_manager.SetAutoFocus(kNodeB, kNodeC);
+  focus_manager.OnNewViewTreeSnapshot(ThreeNodeSnapshot());
+  EXPECT_THAT(focus_manager.focus_chain(), testing::ElementsAre(kNodeA));
+
+  focus_manager.RequestFocus(kNodeA, kNodeB);
+  EXPECT_THAT(focus_manager.focus_chain(), testing::ElementsAre(kNodeA, kNodeB, kNodeC));
+}
+
+// Tree topology:
+//  A                      A
+//  |                      |
+//  B (AutoFocus to C) ->  B (no AutoFocus)
+//  |                      |
+//  C                      C
+// Same as AutoFocus_OnRequestFocus above, except we unset the auto focus target
+// before requesting focus and observe no auto focus deferment happening.
+TEST(FocusManagerTest, UnsetAutoFocus) {
+  FocusManager focus_manager;
+  focus_manager.SetAutoFocus(kNodeB, kNodeC);
+  focus_manager.OnNewViewTreeSnapshot(ThreeNodeSnapshot());
+  EXPECT_THAT(focus_manager.focus_chain(), testing::ElementsAre(kNodeA));
+
+  focus_manager.SetAutoFocus(kNodeB, ZX_KOID_INVALID);  // Unset.
+  focus_manager.RequestFocus(kNodeA, kNodeB);
+  EXPECT_THAT(focus_manager.focus_chain(), testing::ElementsAre(kNodeA, kNodeB));
+}
+
+// Tree topology:
+//      A (AutoFocus to B)    A
+//    /   \                   |
+//   B     C        ->        B
+//   |
+//   D
+// Focus moved to ViewTree changes should trigger auto focus deferment.
+TEST(FocusManagerTest, AutoFocus_FocusMovedDueToViewTreeChange) {
+  // Transfer focus from A to C, then set auto focus from A to B.
+  FocusManager focus_manager;
+  focus_manager.OnNewViewTreeSnapshot(FourNodeSnapshot());
+  focus_manager.RequestFocus(kNodeA, kNodeC);
+  focus_manager.SetAutoFocus(kNodeA, kNodeB);
+  EXPECT_THAT(focus_manager.focus_chain(), testing::ElementsAre(kNodeA, kNodeC));
+
+  // When C disappears the focus should transfer to B.
+  focus_manager.OnNewViewTreeSnapshot(TwoNodeSnapshot());
+  EXPECT_THAT(focus_manager.focus_chain(), testing::ElementsAre(kNodeA, kNodeB));
+}
+
+// Tree topology:
+//   A (AutoFocus to D)
+//   |
+//   B (AutoFocus to D)
+//   |
+//   C (unfocusable)
+//   |
+//   D (unfocusable)
+// Focus loops should resolve themselves to the highest node in the loop:
+// A should auto transfer focus to D, which is unfocusable so focus goes to C which is unfocusable
+// so focus goes to B which tries to transfer focus back to D, which would create a loop. The
+// highest node in the loop is B so focus should remain there.
+TEST(FocusManagerTest, AutoFocus_LoopShouldLandOnTopMostNode) {
+  FocusManager focus_manager;
+  auto snapshot = std::make_shared<view_tree::Snapshot>();
+  {
+    snapshot->root = kNodeA;
+    auto& view_tree = snapshot->view_tree;
+    view_tree[kNodeA] = ViewNode{.parent = ZX_KOID_INVALID, .children = {kNodeB}};
+    view_tree[kNodeB] = ViewNode{.parent = kNodeA, .children = {kNodeC}};
+    view_tree[kNodeC] = ViewNode{.parent = kNodeB, .children = {kNodeD}, .is_focusable = false};
+    view_tree[kNodeD] = ViewNode{.parent = kNodeC, .is_focusable = false};
+  }
+  focus_manager.OnNewViewTreeSnapshot(snapshot);
+  EXPECT_THAT(focus_manager.focus_chain(), testing::ElementsAre(kNodeA));
+
+  focus_manager.SetAutoFocus(kNodeA, kNodeD);
+  focus_manager.SetAutoFocus(kNodeB, kNodeD);
+  EXPECT_THAT(focus_manager.focus_chain(), testing::ElementsAre(kNodeA, kNodeB));
+}
+
 class FocusChainTest : public gtest::TestLoopFixture,
                        public fuchsia::ui::focus::FocusChainListener {
  public:
@@ -414,7 +543,6 @@ TEST_F(FocusChainTest, SameSnapshotTopologyTwice_ShouldNotSendNewFocusChain) {
   RunLoopUntilIdle();
   EXPECT_EQ(num_focus_chains_received_, 1u);
 
-  //
   focus_manager.OnNewViewTreeSnapshot(FourNodeSnapshotWithViewRefs());
   RunLoopUntilIdle();
   EXPECT_EQ(num_focus_chains_received_, 1u);

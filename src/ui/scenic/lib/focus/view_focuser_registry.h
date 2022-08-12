@@ -15,12 +15,13 @@
 namespace focus {
 
 using RequestFocusFunc = fit::function<bool(/*requestor*/ zx_koid_t, /*request*/ zx_koid_t)>;
+using SetAutoFocusFunc = fit::function<void(/*requestor*/ zx_koid_t, /*request*/ zx_koid_t)>;
 
 // An object for managing fuchsia.ui.views.Focuser lifecycle, starting with FIDL requests and
 // ending with cleanup when the client-side channel closes.
 class ViewFocuserRegistry {
  public:
-  explicit ViewFocuserRegistry(RequestFocusFunc request_focus);
+  explicit ViewFocuserRegistry(RequestFocusFunc request_focus, SetAutoFocusFunc set_auto_focus);
 
   // Because this object captures its "this" pointer in internal closures, it is unsafe to copy or
   // move it. Disable all copy and move operations.
@@ -47,20 +48,26 @@ class ViewFocuserRegistry {
     ViewFocuserEndpoint(
         fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser,
         fit::function<void(zx_status_t)> error_handler,
-        fit::function<void(fuchsia::ui::views::ViewRef, RequestFocusCallback)> request_focus);
+        fit::function<void(fuchsia::ui::views::ViewRef, RequestFocusCallback)> request_focus,
+        fit::function<void(zx_koid_t)> set_auto_focus);
 
     // |fuchsia.ui.views.Focuser|
     void RequestFocus(fuchsia::ui::views::ViewRef view_ref, RequestFocusCallback response) override;
 
+    // |fuchsia.ui.views.Focuser|
+    void SetAutoFocus(fuchsia::ui::views::FocuserSetAutoFocusRequest request,
+                      SetAutoFocusCallback response) override;
+
    private:
-    const fit::function<void(fuchsia::ui::views::ViewRef, RequestFocusCallback)>
-        request_focus_handler_;
+    const fit::function<void(fuchsia::ui::views::ViewRef, RequestFocusCallback)> request_focus_;
+    const fit::function<void(zx_koid_t)> set_auto_focus_;
     fidl::Binding<fuchsia::ui::views::Focuser> endpoint_;
   };
 
   std::unordered_map<zx_koid_t, ViewFocuserEndpoint> endpoints_;
 
   const RequestFocusFunc request_focus_;
+  const SetAutoFocusFunc set_auto_focus_;
 };
 
 }  // namespace focus

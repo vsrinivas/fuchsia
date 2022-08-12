@@ -138,6 +138,19 @@ class FlatlandFocusIntegrationTest : public zxtest::Test,
     return request_honored;
   }
 
+  void SetAutoFocus(fuchsia::ui::views::FocuserPtr& view_focuser_ptr, const ViewRef& target) {
+    bool request_processed = false;
+    fuchsia::ui::views::FocuserSetAutoFocusRequest request{};
+    request.set_view_ref(fidl::Clone(target));
+    view_focuser_ptr->SetAutoFocus(std::move(request), [&request_processed](auto result) {
+      request_processed = true;
+      if (result.is_err()) {
+        FAIL();
+      }
+    });
+    RunLoopUntil([&request_processed] { return request_processed; });
+  }
+
   void AttachToRoot(ViewportCreationToken&& token) {
     fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
     ViewportProperties properties;
@@ -258,6 +271,120 @@ TEST_F(FlatlandFocusIntegrationTest, RequestValidity_SelfRequest_ShouldSucceed) 
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 2u);
   EXPECT_VIEW_REF_MATCH(LastFocusChain()->focus_chain()[0], root_view_ref_);
   EXPECT_VIEW_REF_MATCH(LastFocusChain()->focus_chain()[1], child_view_ref);
+}
+
+// Scene:
+//   parent
+//     |
+//   child
+//     |
+// grandchild
+//
+// 1. Move focus to child.
+// 2. Set auto focus from parent to grandchild.
+// 3. Attempt to move focus back to parent.
+// 4. Observe focus moving directly to grandchild.
+TEST_F(FlatlandFocusIntegrationTest, AutoFocus_RequestFocus_Interaction) {
+  // Set up the granchild view.
+  auto [grandchild_token, middleparent_token] = scenic::ViewCreationTokenPair::New();
+  fuchsia::ui::composition::FlatlandPtr grandchild_session;
+  fuchsia::ui::views::ViewRef grandchild_view_ref;
+  {
+    grandchild_session = realm_->Connect<fuchsia::ui::composition::Flatland>();
+    auto identity = scenic::NewViewIdentityOnCreation();
+    grandchild_view_ref = fidl::Clone(identity.view_ref);
+    grandchild_session->CreateView2(std::move(grandchild_token), std::move(identity), {},
+                                    fidl::InterfacePtr<ParentViewportWatcher>().NewRequest());
+    BlockingPresent(grandchild_session);
+  }
+
+  // Set up the child view.
+  auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
+  fuchsia::ui::composition::FlatlandPtr child_session;
+  fuchsia::ui::views::ViewRef child_view_ref;
+  {
+    child_session = realm_->Connect<fuchsia::ui::composition::Flatland>();
+    auto identity = scenic::NewViewIdentityOnCreation();
+    child_view_ref = fidl::Clone(identity.view_ref);
+    child_session->CreateView2(std::move(child_token), std::move(identity), {},
+                               fidl::InterfacePtr<ParentViewportWatcher>().NewRequest());
+
+    // Attach grandchild to child.
+    ViewportProperties properties;
+    properties.set_logical_size({kDefaultLogicalPixelSize, kDefaultLogicalPixelSize});
+    const TransformId kTransform{.value = 1};
+    const ContentId kContent{.value = 1};
+    child_session->CreateTransform(kTransform);
+    child_session->CreateViewport(kContent, std::move(middleparent_token), std::move(properties),
+                                  fidl::InterfacePtr<ChildViewWatcher>().NewRequest());
+    child_session->SetRootTransform(kTransform);
+    child_session->SetContent(kTransform, kContent);
+    BlockingPresent(child_session);
+  }
+
+  // Attach to root.
+  AttachToRoot(std::move(parent_token));
+
+  // Move focus from the root to the child view.
+  EXPECT_TRUE(RequestFocusChange(root_focuser_, child_view_ref));
+  RunLoopUntil([this] { return CountReceivedFocusChains() == 1; });
+  EXPECT_VIEW_REF_MATCH(LastFocusChain()->focus_chain().back(), child_view_ref);
+
+  // FocusChain should contain root view + child view.
+  SetAutoFocus(root_focuser_, grandchild_view_ref);
+  EXPECT_TRUE(RequestFocusChange(root_focuser_, root_view_ref_));
+  RunLoopUntil([this] { return CountReceivedFocusChains() == 2; });
+
+  EXPECT_EQ(LastFocusChain()->focus_chain().size(), 3u);
+  EXPECT_VIEW_REF_MATCH(LastFocusChain()->focus_chain()[0], root_view_ref_);
+  EXPECT_VIEW_REF_MATCH(LastFocusChain()->focus_chain()[1], child_view_ref);
+  EXPECT_VIEW_REF_MATCH(LastFocusChain()->focus_chain()[2], grandchild_view_ref);
+}
+
+// Scene:
+//   parent       parent        parent
+//           ->     |      ->
+//   child        child         child
+//
+// 1. Set parent's auto focus target to child.
+// 2. Connect child to scene. Observe focus moving to child.
+// 3. Disconnect child from scene. Observe focus return to parent.
+TEST_F(FlatlandFocusIntegrationTest, AutoFocus_SceneUpdate_Interaction) {
+  // Set up the child view.
+  auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
+  fuchsia::ui::composition::FlatlandPtr child_session;
+  fuchsia::ui::views::ViewRef child_view_ref;
+  {
+    child_session = realm_->Connect<fuchsia::ui::composition::Flatland>();
+    auto identity = scenic::NewViewIdentityOnCreation();
+    child_view_ref = fidl::Clone(identity.view_ref);
+    child_session->CreateView2(std::move(child_token), std::move(identity), {},
+                               fidl::InterfacePtr<ParentViewportWatcher>().NewRequest());
+    BlockingPresent(child_session);
+  }
+
+  SetAutoFocus(root_focuser_, child_view_ref);
+
+  // Nothing should happen.
+  RunLoopWithTimeout(zx::msec(1));
+  EXPECT_EQ(CountReceivedFocusChains(), 0);
+
+  // Attach to root.
+  AttachToRoot(std::move(parent_token));
+
+  // Auto focus should kick in.
+  RunLoopUntil([this] { return CountReceivedFocusChains() == 1; });
+  ASSERT_EQ(LastFocusChain()->focus_chain().size(), 2u);
+  EXPECT_VIEW_REF_MATCH(LastFocusChain()->focus_chain().back(), child_view_ref);
+
+  // Disconnect from root.
+  root_session_->SetRootTransform(TransformId{0});
+  BlockingPresent(root_session_);
+
+  // Observe focus returning to root.
+  RunLoopUntil([this] { return CountReceivedFocusChains() == 2; });
+  EXPECT_EQ(LastFocusChain()->focus_chain().size(), 1u);
+  EXPECT_VIEW_REF_MATCH(LastFocusChain()->focus_chain().back(), root_view_ref_);
 }
 
 TEST_F(FlatlandFocusIntegrationTest, ChildView_CreatedBeforeAttachingToRoot_ShouldNotKillFocuser) {

@@ -9,31 +9,68 @@ type Error = strict enum {
     DENIED = 1;
 };
 
-/// A method of programmatically transferring view focus.
+@available(added=9)
+type AutoFocusError = flexible enum {};
+
+/// A method of programmatically transferring View focus.
 ///
 /// The protocol client has implicit access to a requestor ViewRef, which is
 /// used as the basis for request authority.
 protocol Focuser {
-    /// Asks the server to transfer focus to the view specified by `view_ref`,
+    /// Asks the server to transfer focus to the View specified by `view_ref`,
     /// with the authority of the requestor ViewRef. Such a request may be
     /// honored or denied.
     ///
     /// If the request was honored, and it triggers a focus change, a FocusEvent
-    /// (with focused=true) is issued to the newly-focused view, and a
-    /// FocusEvent (with focused=false) is issued to the previous view.
+    /// (with focused=true) is issued to the newly-focused View, and a
+    /// FocusEvent (with focused=false) is issued to the previous View.
     ///
     /// The result callback indicates that the request was received and honored.
-    /// It does not guarantee that the requested view actually received a
+    /// It does not guarantee that the requested View actually received a
     /// FocusEvent in time.
     ///
     /// The request may be denied for many reasons, for example:
     /// - if `view_ref` is invalid
-    /// - if there is no view backed by `view_ref`
+    /// - if there is no View backed by `view_ref`
     /// - if there is no requestor ViewRef accessible to Focuser
-    /// - if the requestor ViewRef lacks authority over `view_ref`'s view
-    /// - if `view_ref`'s view is not hittable or may not receive focus
+    /// - if the requestor ViewRef lacks authority over `view_ref`'s View
+    /// - if `view_ref`'s View is not hittable or may not receive focus
     /// etc. A denied request is indicated with a Error.
     RequestFocus(resource struct {
         view_ref ViewRef;
     }) -> (struct {}) error Error;
+
+    // Sets the auto focus target to the View specified by `view_ref`.
+    // To unset the target, pass in an empty table.
+    //
+    // If a target has been set, then whenever the caller's View would receive
+    // focus, an attempt is made to transfer focus directly to the target
+    // instead. In all other cases, setting an auto focus target has no effect.
+    // Setting an auto focus target places no limitations on simultaneous use
+    // of RequestFocus().
+    //
+    // An auto focus target is "valid" only while it is a descendant of the
+    // caller's View in the ViewTree. Specifying an invalid auto focus target is
+    // allowed, since it may become valid later.
+    // It is the client's responsibility to ensure the target is a valid
+    // receiver of auto focus.
+    //
+    // If the target is invalid when the auto focus behavior would trigger, then
+    // the attempt to move focus will silently fail and focus will remain with
+    // the caller's View.
+    // A target may become invalid and then become valid again any number of
+    // times; auto focus will continue to function whenever the target is
+    // in a valid state, and will continue to ignore the target while it's in an
+    // invalid state.
+    //
+    // If the focus would by some further automatic mechanism return to the
+    // caller's View (e.g. if the target is unfocusable), then focus will
+    // remain with the caller's View.
+    //
+    // AutoFocusError is currently never returned, and is reserved for possible
+    // future use.
+    @available(added=9)
+    SetAutoFocus(resource table {
+        1: view_ref ViewRef;
+    }) -> (struct {}) error AutoFocusError;
 };

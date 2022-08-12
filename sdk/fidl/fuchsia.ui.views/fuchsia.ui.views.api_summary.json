@@ -1,5 +1,11 @@
 [
     {
+        "declaration": "uint32",
+        "kind": "enum",
+        "name": "fuchsia.ui.views/AutoFocusError",
+        "strictness": "flexible"
+    },
+    {
         "declaration": "int32",
         "kind": "union/member",
         "name": "fuchsia.ui.views/Command.empty"
@@ -35,8 +41,23 @@
         "name": "fuchsia.ui.views/Focuser.RequestFocus"
     },
     {
+        "declaration": "(fuchsia.ui.views/FocuserSetAutoFocusRequest payload) -> (fuchsia.ui.views/Focuser_SetAutoFocus_Result result)",
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.views/Focuser.SetAutoFocus"
+    },
+    {
         "kind": "protocol",
         "name": "fuchsia.ui.views/Focuser"
+    },
+    {
+        "declaration": "fuchsia.ui.views/ViewRef",
+        "kind": "table/member",
+        "name": "fuchsia.ui.views/FocuserSetAutoFocusRequest.view_ref"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.views/FocuserSetAutoFocusRequest",
+        "resourceness": "resource"
     },
     {
         "kind": "struct",
@@ -55,6 +76,25 @@
     {
         "kind": "union",
         "name": "fuchsia.ui.views/Focuser_RequestFocus_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.ui.views/Focuser_SetAutoFocus_Response"
+    },
+    {
+        "declaration": "fuchsia.ui.views/AutoFocusError",
+        "kind": "union/member",
+        "name": "fuchsia.ui.views/Focuser_SetAutoFocus_Result.err"
+    },
+    {
+        "declaration": "fuchsia.ui.views/Focuser_SetAutoFocus_Response",
+        "kind": "union/member",
+        "name": "fuchsia.ui.views/Focuser_SetAutoFocus_Result.response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.ui.views/Focuser_SetAutoFocus_Result",
         "strictness": "strict"
     },
     {

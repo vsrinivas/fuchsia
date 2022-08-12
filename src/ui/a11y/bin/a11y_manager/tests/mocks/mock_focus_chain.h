@@ -8,6 +8,7 @@
 #include <fuchsia/ui/focus/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include "fuchsia/ui/views/cpp/fidl.h"
 #include "src/lib/fxl/macros.h"
@@ -39,6 +40,12 @@ class MockFocusChain : public fuchsia::ui::focus::FocusChainListenerRegistry,
 
   // |fuchsia.ui.views.Focuser|
   void RequestFocus(fuchsia::ui::views::ViewRef view_ref, RequestFocusCallback callback) override;
+
+  // |fuchsia.ui.views.Focuser|
+  void SetAutoFocus(fuchsia::ui::views::FocuserSetAutoFocusRequest request,
+                    SetAutoFocusCallback callback) override {
+    FX_NOTIMPLEMENTED();
+  }
 
   fidl::BindingSet<fuchsia::ui::focus::FocusChainListenerRegistry> listener_registry_bindings_;
 
