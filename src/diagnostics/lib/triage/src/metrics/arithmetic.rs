@@ -25,7 +25,7 @@ pub fn calculate(function: &MathFunction, operands: &Vec<MetricValue>) -> Metric
         _ => return super::internal_bug("Internal bug. Function needs 2 arguments."),
     }
     let operands = match promote_type(operands) {
-        Ok(operands) => (operands),
+        Ok(operands) => operands,
         Err(value) => return value,
     };
     match operands {
