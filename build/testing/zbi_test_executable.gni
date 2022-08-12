@@ -20,6 +20,9 @@ import("//build/zbi/kernel_cmdline.gni")
 #     executable will be launched by userboot as a test program or as boot
 #     program.
 #
+#   prefix (optional, defaults to "zbi-test")
+#     [string] Same behavior as zbi_input() prefix.
+#
 # Note that defaults for `configs` exclude the implicit fdio dependency, and
 # defaults for `disable_syslog_backend` and `assert_no_deps` are injected to
 # avoid other implicit deps inappropriate for standalone test executables and
@@ -31,8 +34,13 @@ template("zbi_test_executable") {
   } else {
     output_name = target_name
   }
-  install_path = "test/$output_name"
+  userboot_prefix = "zbi-test"
+  if (defined(invoker.prefix)) {
+    userboot_prefix = invoker.prefix
+  }
 
+  # Defined by 'test' template.
+  install_path = "test/${output_name}"
   if (defined(invoker.userboot_entry_type)) {
     userboot_entry_type = invoker.userboot_entry_type
   } else {
@@ -40,12 +48,25 @@ template("zbi_test_executable") {
   }
 
   main_target = target_name
+  zbi_input_target = "$target_name.zbi_input"
+  test_target = "$target_name.bin"
   cmdline_target = "$target_name.cmdline"
 
-  test(main_target) {
+  group(main_target) {
+    testonly = true
+    deps = [ ":$zbi_input_target" ]
+  }
+
+  test(test_target) {
     data_deps = []
     forward_variables_from(invoker, "*")
     data_deps += [ ":$cmdline_target" ]
+  }
+
+  zbi_input(zbi_input_target) {
+    testonly = true
+    prefix = userboot_prefix
+    deps = [ ":$test_target" ]
   }
 
   kernel_cmdline(cmdline_target) {
@@ -57,12 +78,12 @@ template("zbi_test_executable") {
 
     if (userboot_entry_type == "test") {
       args = [
-        "userboot.test.root=",
+        "userboot.test.root=$userboot_prefix",
         "userboot.test.next=$install_path",
       ]
     } else {
       args = [
-        "userboot.root=",
+        "userboot.root=$userboot_prefix",
         "userboot.next=$install_path",
       ]
     }
