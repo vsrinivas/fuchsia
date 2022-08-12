@@ -24,8 +24,7 @@ import("//build/product.gni")
 #     See //build/sdk/meta/flash_manifest-835e8f26.json
 #
 #   output(optional)
-#     Location to copy the output product bundle file (optionally copied from
-#     the generated file location at "$target_gen_dir/product_bundle.json")
+#     Location to write the output product bundle file
 #
 #   deps (optional)
 #   public_deps (optional)
@@ -96,7 +95,11 @@ template("product_metadata") {
     }
   }
 
-  file = "$target_gen_dir/product_bundle.json"
+  if (defined(invoker.output)) {
+    file = invoker.output
+  } else {
+    file = "$target_gen_dir/product_bundle.json"
+  }
   generator_target = "${target_name}_json_generator"
   generated_file(generator_target) {
     visibility = [ ":*" ]
@@ -113,21 +116,6 @@ template("product_metadata") {
           type = "manifest"
         },
       ]
-    }
-  }
-
-  if (defined(invoker.output)) {
-    copy_target = "${target_name}_json_copy"
-    copy_file = invoker.output
-    copy(copy_target) {
-      forward_variables_from(invoker,
-                             [
-                               "testonly",
-                               "visibility",
-                             ])
-      sources = [ file ]
-      outputs = [ copy_file ]
-      deps = [ ":${generator_target}" ]
     }
   }
 
@@ -159,10 +147,6 @@ template("product_metadata") {
       ":${generator_target}",
       ":${validator_target}",
     ]
-
-    if (defined(copy_target)) {
-      deps += [ ":${copy_target}" ]
-    }
 
     if (defined(invoker.deps)) {
       deps += invoker.deps
