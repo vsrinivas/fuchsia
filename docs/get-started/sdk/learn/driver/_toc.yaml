@@ -21,6 +21,9 @@ toc:
   - title: Expose the driver capabilities
     path: /docs/get-started/sdk/learn/driver/driver-service.md
     step_group: sdkdrivercodelab
+  - title: Interact with the driver
+    path: /docs/get-started/sdk/learn/driver/driver-tools.md
+    step_group: sdkdrivercodelab
   - title: Test and debug the driver
     path: /docs/get-started/sdk/learn/driver/test-debug.md
     step_group: sdkdrivercodelab

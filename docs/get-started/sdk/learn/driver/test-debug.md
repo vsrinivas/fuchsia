@@ -1,28 +1,30 @@
 # Test and debug the driver
 
-Fuchsia supports step-through debugging of components using the Fuchsia debugger (`zxdb`).
-The debugger attaches to the host process where a component is running, and allows the developer
-to set breakpoints and step through code execution. The Test Runner Framework enables developers
-to write tests that exercise driver components.
+Fuchsia supports step-through debugging of components using the Fuchsia debugger
+(`zxdb`). The debugger attaches to the host process where a component is running,
+and allows the developer to set breakpoints and step through code execution.
+The Test Runner Framework enables developers to write tests that exercise driver
+components.
 
-In this section, you'll use the Fuchsia debugger (`zxdb`) to inspect a running driver and build a
-test component to exercise the driver's functionality.
+In this section, you'll use the Fuchsia debugger (`zxdb`) to inspect a running
+driver and build a test component to exercise the driver's functionality.
 
 Note: For complete details on `zxdb` and the Test Runner Framework, see
-[The Fuchsia Debugger][fuchsia-debugger] and [Testing with Components][component-testing].
+[The Fuchsia Debugger][fuchsia-debugger] and
+[Testing with Components][component-testing].
 
 ## Connect the debugger
 
-To connect the Fuchsia debugger to the driver component, you'll need to determine the PID of the
-host process. Use the `ffx driver list-hosts` command to discover the PID of the host process where
-the driver is loaded:
+To connect the Fuchsia debugger to the driver component, you'll need to
+determine the PID of the host process. Use the `ffx driver list-hosts` command
+to discover the PID of the host process where the driver is loaded:
 
 ```posix-terminal
 ffx driver list-hosts
 ```
 
-The command outputs a list similar to the following. Locate the driver host where the `qemu_edu`
-driver is listed:
+The command outputs a list similar to the following. Locate the driver host
+where the `qemu_edu` driver is listed:
 
 ```none {:.devsite-disable-click-to-copy}
 Driver Host: 5053
@@ -48,10 +50,11 @@ Driver Host: 7855
     fuchsia-boot:///#meta/pc-ps2.cm
 
 {{ '<strong>' }}Driver Host: 44887 {{ '</strong>' }}
-{{ '<strong>' }}    fuchsia-pkg://fuchsiasamples.com/qemu_edu#meta/qemu_edu.cm {{ '</strong>' }}
+{{ '<strong>' }}    fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm {{ '</strong>' }}
 ```
 
-Make a note of the PID for the `qemu_edu` driver host. In the above example, the PID is 44887.
+Make a note of the PID for the `qemu_edu` driver host.
+In the above example, the PID is 44887.
 
 Start the Fuchsia debugger with `ffx debug connect`:
 
@@ -59,14 +62,15 @@ Start the Fuchsia debugger with `ffx debug connect`:
 ffx debug connect
 ```
 
-Once the debugger connects to the target device, attach to the `qemu_edu` driver host from the
-`zxdb` prompt:
+Once the debugger connects to the target device, attach to the `qemu_edu` driver
+host from the `zxdb` prompt:
 
-```none {:.devsite-disable-click-to-copy}
-[zxdb] attach <Host PID>
-```
+<pre class="devsite-click-to-copy">
+<span class="no-select">[zxdb] </span>attach <var label="driver host">HOST_PID</var>
+</pre>
 
-Replace "Host PID" with the PID of the driver host identified in the previous step. For example:
+Replace `HOST_PID` with the PID of the driver host identified in the previous
+step. For example:
 
 ```none {:.devsite-disable-click-to-copy}
 [zxdb] attach 44887
@@ -74,11 +78,12 @@ Replace "Host PID" with the PID of the driver host identified in the previous st
 
 Set a breakpoint in the driver's `ComputeFactorial` function:
 
-```none {:.devsite-disable-click-to-copy}
-[zxdb] break QemuEduDriver::ComputeFactorial
-```
+<pre class="devsite-click-to-copy">
+<span class="no-select">[zxdb] </span>break QemuEduDriver::ComputeFactorial
+</pre>
 
-The command prints output similar to the following to indicate where the breakpoint is set:
+The command prints output similar to the following to indicate where the
+breakpoint is set:
 
 ```none {:.devsite-disable-click-to-copy}
 [zxdb] break QemuEduDriver::ComputeFactorial
@@ -93,7 +98,7 @@ Created Breakpoint 1 @ QemuEduDriver::ComputeFactorial
 In a separate terminal, run the `eductl` tools component again:
 
 ```posix-terminal
-bazel run --config=fuchsia_x64 //fuchsia-codelab/qemu_edu:eductl_pkg.eductl_component
+bazel run --config=fuchsia_x64 //fuchsia-codelab/qemu_edu/tools:pkg.component
 ```
 
 In the `zxdb` terminal, verify that the debugger has hit the breakpoint in the driver's
@@ -108,10 +113,16 @@ In the `zxdb` terminal, verify that the debugger has hit the breakpoint in the d
    218   uint32_t input = request->input;
 ```
 
-Use the `list` command at the `zxdb` prompt to show where execution is currently paused:
+Use the `list` command at the `zxdb` prompt to show where execution is currently
+paused:
+
+<pre class="devsite-click-to-copy">
+<span class="no-select">[zxdb] </span>list
+</pre>
+
+The command prints output similar to the following:
 
 ```none {:.devsite-disable-click-to-copy}
-[zxdb] list
    211   return zx::ok();
    212 }
    213
@@ -132,182 +143,104 @@ Use the `list` command at the `zxdb` prompt to show where execution is currently
 
 Step into the `ComputeFactorial` function using the `next` command:
 
-```none {:.devsite-disable-click-to-copy}
-[zxdb] next
-```
+<pre class="devsite-click-to-copy">
+<span class="no-select">[zxdb] </span>next
+</pre>
 
-Print the contents of the request passed into the function, containing the factorial input value:
+Print the contents of the request passed into the function:
+
+<pre class="devsite-click-to-copy">
+<span class="no-select">[zxdb] </span>print request
+</pre>
+
+The command prints output containing the factorial input value:
 
 ```none {:.devsite-disable-click-to-copy}
-[zxdb] print request
 {request_ = (*)0x24302c4be78 ➔ {fuchsia_hardware_qemuedu:… = {input = 12}}}
 ```
 
 Exit the debugger session and disconnect:
 
-```none {:.devsite-disable-click-to-copy}
-[zxdb] exit
-```
+<pre class="devsite-click-to-copy">
+<span class="no-select">[zxdb] </span>exit
+</pre>
 
 ## Create a new system test component
 
-In this section, you'll create a new test component that exercises the exposed functions of the
-`qemu_edu` driver.
+In this section, you'll create a new test component that exercises the exposed
+functions of the `qemu_edu` driver.
 
-After this section is complete, the project should have the following directory structure:
+Create a new project directory in your Bazel workspace for a new test component:
+
+```posix-terminal
+mkdir -p fuchsia-codelab/qemu_edu/tests
+```
+
+After you complete this section, the project should have the following directory
+structure:
 
 ```none {:.devsite-disable-click-to-copy}
-//fuchsia-codelab/qemu_edu
+//fuchsia-codelab/qemu_edu/tests
                   |- BUILD.bazel
                   |- meta
-                  |   |- eductl.cml
-{{ '<strong>' }}                  |   |- qemu_edu_system_test.cml {{ '</strong>' }}
-                  |   |- qemu_edu.cml
-                  |- eductl.cc
-{{ '<strong>' }}                  |- qemu_edu_system_test.cc {{ '</strong>' }}
-                  |- qemu_edu.bind
-                  |- qemu_edu.cc
-                  |- qemu_edu.fidl
-                  |- qemu_edu.h
-                  |- registers.h
+                  |   |- qemu_edu_system_test.cml
+                  |- qemu_edu_system_test.cc
 ```
 
-Create a new `qemu_edu/meta/qemu_edu_system_test.cml` component manifest file to the project
-with the following contents:
+Create the `qemu_edu/tests/BUILD.bazel` file and add the following statement to
+include the necessary build rules from the Fuchsia SDK:
 
-`qemu_edu/meta/qemu_edu_system_test.cml`:
-
-```json5
-{
-    include: [
-        "syslog/client.shard.cml",
-        "sys/testing/elf_test_runner.shard.cml",
-    ],
-    program: {
-        binary: 'bin/qemu_edu_system_test',
-    },
-    use: [
-        {
-            directory: "dev",
-            rights: [ "rw*" ],
-            path: "/dev",
-        },
-    ],
-    // Required to enable access to devfs
-    facets: {
-        "fuchsia.test": { type: "devices" },
-    },
-}
-
-```
-
-Similar to `eductl`, the test component discovers and accesses the driver using the `dev`
-directory capability. This component also includes the `elf_test_runner.shard.cml`, which enables
-it to run using the Test Runner Framework.
-
-Create a new `qemu_edu/qemu_edu_system_test.cc` file with the following contents to implement the
-tests:
-
-`qemu_edu/qemu_edu_system_test.cc`:
-
-```cpp
-#include <dirent.h>
-#include <fcntl.h>
-#include <lib/fdio/directory.h>
-#include <sys/types.h>
-#include <gtest/gtest.h>
-
-#include <fidl/fuchsia.hardware.qemuedu/cpp/wire.h>
-
-namespace {
-
-constexpr char kEduDevicePath[] =
-    "/dev/sys/platform/platform-passthrough/PCI0/bus/00:06.0_/qemu-edu";
-
-class QemuEduSystemTest : public testing::Test {
- public:
-  void SetUp() {
-    int device = open(kEduDevicePath, O_RDWR);
-    ASSERT_GE(device, 0);
-
-    fidl::ClientEnd<fuchsia_hardware_qemuedu::Device> client_end;
-    ASSERT_EQ(fdio_get_service_handle(device, client_end.channel().reset_and_get_address()), ZX_OK);
-    device_ = fidl::BindSyncClient(std::move(client_end));
-  }
-
-  fidl::WireSyncClient<fuchsia_hardware_qemuedu::Device>& device() { return device_; }
-
- private:
-  fidl::WireSyncClient<fuchsia_hardware_qemuedu::Device> device_;
-};
-
-TEST_F(QemuEduSystemTest, LivenessCheck) {
-  fidl::WireResult result = device()->LivenessCheck();
-  ASSERT_EQ(result.status(), ZX_OK);
-  ASSERT_TRUE(result->result);
-}
-
-TEST_F(QemuEduSystemTest, ComputeFactorial) {
-  std::array<uint32_t, 11> kExpected = {
-      1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880, 3628800,
-  };
-  for (int i = 0; i < kExpected.size(); i++) {
-    fidl::WireResult result = device()->ComputeFactorial(i);
-    ASSERT_EQ(result.status(), ZX_OK);
-    EXPECT_EQ(result->output, kExpected[i]);
-  }
-}
-
-}  // namespace
-
-```
-
-Each test case opens the device driver and exercises one of its exposed functions.
-
-Add the following new rules to the project's build configuration to build the test component into
-a Fuchsia test package:
-
-`qemu_edu/BUILD.bazel`:
+`qemu_edu/tests/BUILD.bazel`:
 
 ```bazel
-fuchsia_cc_test(
-    name = "qemu_edu_system_test",
-    size = "small",
-    srcs = [
-        "qemu_edu_system_test.cc",
-    ],
-    deps = ["@com_google_googletest//:gtest_main"] + if_fuchsia([
-        ":fuchsia.hardware.qemuedu_cc",
-        "@fuchsia_sdk//pkg/fdio",
-    ]),
-)
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/tests/BUILD.bazel" region_tag="imports" adjust_indentation="auto" %}
+```
 
-fuchsia_component_manifest(
-    name = "system_test_manifest",
-    src = "meta/qemu_edu_system_test.cml",
-    includes = [
-        "@fuchsia_sdk//pkg/sys/testing:elf_test_runner",
-        "@fuchsia_sdk//pkg/syslog:client",
-    ],
-)
+Create a new `qemu_edu/tests/meta/qemu_edu_system_test.cml` component manifest
+file to the project with the following contents:
 
-fuchsia_component(
-    name = "system_test_component",
-    testonly = True,
-    manifest = "system_test_manifest",
-    deps = [
-        ":qemu_edu_system_test",
-    ],
-)
+`qemu_edu/tests/meta/qemu_edu_system_test.cml`:
 
-fuchsia_test_package(
-    name = "test_pkg",
-    package_name = "qemu_edu_system_test",
-    visibility = ["//visibility:public"],
-    deps = [
-        ":system_test_component",
-    ],
-)
+```json5
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/tests/meta/qemu_edu_system_test.cml" region_tag="example_snippet" adjust_indentation="auto" %}
+
+```
+
+Similar to `eductl`, the test component discovers and accesses the driver using
+the `dev` directory capability. This component also includes the
+`elf_test_runner.shard.cml`, which enables it to run using the Test Runner
+Framework.
+
+Create a new `qemu_edu/tests/qemu_edu_system_test.cc` file with the following
+contents to implement the tests:
+
+`qemu_edu/tests/qemu_edu_system_test.cc`:
+
+```cpp
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/tests/qemu_edu_system_test.cc" region_tag="imports" adjust_indentation="auto" %}
+
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/tests/qemu_edu_system_test.cc" region_tag="main_body" adjust_indentation="auto" %}
+
+```
+
+Each test case opens the device driver and exercises one of its exposed
+functions.
+
+Add the following new rules to the project's build configuration to build the
+test component into a Fuchsia test package:
+
+`qemu_edu/tests/BUILD.bazel`:
+
+{% set build_bazel_snippet %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/tests/BUILD.bazel" region_tag="binary" adjust_indentation="auto" %}
+
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/tests/BUILD.bazel" region_tag="component" adjust_indentation="auto" %}
+
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/tests/BUILD.bazel" region_tag="package" adjust_indentation="auto" %}
+{% endset %}
+
+```bazel
+{{ build_bazel_snippet|replace("//src/qemu_edu","//fuchsia-codelab/qemu_edu")|trim() }}
 ```
 
 ## Run the system test
@@ -315,15 +248,15 @@ fuchsia_test_package(
 Use the `bazel run` command to build and execute the test component target:
 
 ```posix-terminal
-bazel run --config=fuchsia_x64 //fuchsia-codelab/qemu_edu:test_pkg.system_test_component
+bazel run --config=fuchsia_x64 //fuchsia-codelab/qemu_edu/tests:pkg.component
 ```
 
 The `bazel run` command performs the following steps:
 
-1.  Build the component and package
-1.  Publish the package to a local package repository
-1.  Register the package repository with the target device
-1.  Use `ffx test run` to execute the component's test suite
+1.  Build the component and package.
+1.  Publish the package to a local package repository.
+1.  Register the package repository with the target device.
+1.  Use `ffx test run` to execute the component's test suite.
 
 Verify that all the tests pass successfully:
 
@@ -349,10 +282,11 @@ Running main() from gmock_main.cc
 
 ## What's Next?
 
-Congratulations! You've successfully debugged and added tests to your Fuchsia driver.
+Congratulations! You've successfully debugged and added tests to your Fuchsia
+driver.
 
-Now that you have experienced the basics of developing drivers on Fuchsia, take your knowledge to
-the next level and dive deeper with the:
+Now that you have experienced the basics of developing drivers on Fuchsia, take
+your knowledge to the next level and dive deeper with the:
 
 <a class="button button-primary"
     href="/docs/concepts/drivers">Driver concepts</a>
