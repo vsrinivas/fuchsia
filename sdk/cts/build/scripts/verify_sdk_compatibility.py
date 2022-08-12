@@ -1,6 +1,7 @@
 # Copyright 2022 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 """
 Test to prevent integrators from having future breakages caused
 by instability of the Fuchsia SDK package directory.
@@ -207,17 +208,37 @@ def generate_sdk_layout_golden_file(current_archive):
         os.sep) + "\w{14}\.debug"
     ignored_path = re.compile(path_regex, re.IGNORECASE)
 
+    # If directories in the list below exist, they're added to the set of golden paths.
+    # Files in such directories will not be compatibility tested.
+    dirs_exist = [
+        os.path.join('tools', 'x64', 'aemu_internal', ''),
+        os.path.join('tools', 'x64', 'qemu_internal', ''),
+    ]
+
     golden_set = set()
     for path in layout:
-        if not ignored_path.match(path.name):
-            gold_dir = path.name
-            if path.isdir() and not path.name.endswith(os.sep):
-                # Ensure directory type paths end in a "/".
-                gold_dir += os.sep
-            elif not (path.isfile() or path.isdir()):
-                raise GoldenFileGenerationError(
-                    tarfile=current_archive, invalid=path)
-            golden_set.add(gold_dir)
+        if ignored_path.match(path.name):
+            continue
+        # Set to True if the file in question is not going to be compatibility tested.
+        ignoring_file = False
+        
+        # Add the directory into the golden set if it exists.
+        for dir in dirs_exist:
+            if path.name.startswith(dir):
+                golden_set.add(dir)
+                ignoring_file = True
+                break
+        if ignoring_file:
+            continue
+
+        gold_dir = path.name
+        if path.isdir() and not path.name.endswith(os.sep):
+        # Ensure directory type paths end in a "/".
+            gold_dir += os.sep
+        elif not (path.isfile() or path.isdir()):
+            raise GoldenFileGenerationError(
+                tarfile=current_archive, invalid=path)
+        golden_set.add(gold_dir)
     return golden_set
 
 
