@@ -238,6 +238,7 @@
                     "/core/test_manager/starnix_test_runners/starnix_unit_test_runner",
                     "/core/test_manager/starnix-tests:**",
                     "/core/test_manager/system-tests:**",
+                    "/core/test_manager/chromium-tests:**",
                 ],
             },
             {

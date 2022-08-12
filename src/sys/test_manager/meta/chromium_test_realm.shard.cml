@@ -31,6 +31,9 @@
             protocol: [
                 "fuchsia.fonts.Provider",
                 "fuchsia.hwinfo.Product",
+
+                // TODO: add any other required capabilities
+                "fuchsia.kernel.VmexResource",
                 "fuchsia.media.Audio",
                 "fuchsia.media.AudioDeviceEnumerator",
                 "fuchsia.media.ProfileProvider",
@@ -48,8 +51,6 @@
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.vulkan.loader.Loader",
-
-                // TODO: add any other required capabilities
             ],
             from: "parent",
             to: "#chromium-tests",
