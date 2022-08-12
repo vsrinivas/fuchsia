@@ -59,6 +59,7 @@
                 "fuchsia.feedback.DataProvider",
                 "fuchsia.feedback.LastRebootInfoProvider",
                 "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
+                "fuchsia.hardware.radar.RadarBurstReaderProvider",
                 "fuchsia.hwinfo.Board",
                 "fuchsia.hwinfo.Device",
                 "fuchsia.hwinfo.Product",

@@ -177,6 +177,12 @@
             to: "#session-manager",
         },
         {
+            protocol: "fuchsia.hardware.radar.RadarBurstReaderProvider",
+            from: "#radar-proxy",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
+        {
             directory: [
                 "tzdata",
                 "tzdata-icu-44-le",
