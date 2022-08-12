@@ -5,15 +5,17 @@
 package testsharder
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"go.fuchsia.dev/fuchsia/tools/build"
 )
 
-func mockImages(t *testing.T) []build.Image {
+func mockImages(t *testing.T) ([]build.Image, string) {
 	t.Helper()
-	return []build.Image{
+	imgs := []build.Image{
 		{
 			PaveArgs: []string{"--boot", "--zircona"},
 			Name:     "zircon-a",
@@ -59,10 +61,24 @@ func mockImages(t *testing.T) []build.Image {
 			Type:  "kernel",
 		},
 	}
+	imgDir := t.TempDir()
+	for _, img := range imgs {
+		path := filepath.Join(imgDir, img.Path)
+		dir := filepath.Dir(path)
+		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+			t.Fatalf("MkdirAll(%s) failed: %s", dir, err)
+		}
+		f, err := os.Create(path)
+		if err != nil {
+			t.Fatalf("Create(%s) failed: %s", path, err)
+		}
+		defer f.Close()
+	}
+	return imgs, imgDir
 }
 
 func TestAddImageDeps(t *testing.T) {
-	imgs := mockImages(t)
+	imgs, imgDir := mockImages(t)
 	testCases := []struct {
 		name           string
 		pave           bool
@@ -111,7 +127,7 @@ func TestAddImageDeps(t *testing.T) {
 					ImageOverrides: tc.imageOverrides,
 				},
 			}
-			AddImageDeps(s, imgs, tc.pave)
+			AddImageDeps(s, imgDir, imgs, tc.pave)
 			if diff := cmp.Diff(tc.want, s.Deps); diff != "" {
 				t.Errorf("AddImageDeps(%v, %v, %t) failed: (-want +got): \n%s", s, imgs, tc.pave, diff)
 			}

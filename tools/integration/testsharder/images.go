@@ -5,19 +5,30 @@
 package testsharder
 
 import (
+	"errors"
+	"os"
+	"path/filepath"
+
 	"go.fuchsia.dev/fuchsia/tools/build"
 )
 
 // AddImageDeps selects and adds the subset of images needed by a shard to
 // that shard's list of dependencies.
-func AddImageDeps(s *Shard, images []build.Image, pave bool) {
+func AddImageDeps(s *Shard, buildDir string, images []build.Image, pave bool) error {
 	imageDeps := []string{"images.json"}
 	for _, image := range images {
 		if isUsedForTesting(s, image, pave) {
-			imageDeps = append(imageDeps, image.Path)
+			if _, err := os.Stat(filepath.Join(buildDir, image.Path)); err != nil {
+				if !errors.Is(err, os.ErrNotExist) {
+					return err
+				}
+			} else {
+				imageDeps = append(imageDeps, image.Path)
+			}
 		}
 	}
 	s.AddDeps(imageDeps)
+	return nil
 }
 
 func isUsedForTesting(s *Shard, image build.Image, pave bool) bool {

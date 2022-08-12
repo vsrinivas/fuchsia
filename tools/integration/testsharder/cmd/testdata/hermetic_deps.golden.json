@@ -58,8 +58,7 @@
             "is_emu": true
         },
         "deps": [
-            "images.json",
-            "multiboot.bin"
+            "images.json"
         ],
         "timeout_secs": 0,
         "summary": {
