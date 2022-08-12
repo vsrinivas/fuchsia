@@ -40,7 +40,9 @@ std::string GetSliderLabelAndRangeMessage(const fuchsia::accessibility::semantic
   return message;
 }
 
-// Returns true if the node is clickable in any way (normal click, long click).
+// Currently, this just checks if the node has a DEFAULT action.
+//
+// todo(fxbug.dev/106566): implement better handling for secondary actions.
 bool NodeIsClickable(const Node* node) {
   if (!node->has_actions()) {
     return false;
@@ -234,7 +236,7 @@ ScreenReaderMessageGenerator::DescribeNode(const Node* node,
     }
   }
 
-  MaybeAddDoubleTapHint(node, &description);
+  MaybeAddDoubleTapHint(node, description);
 
   return description;
 }
@@ -281,13 +283,13 @@ void ScreenReaderMessageGenerator::MaybeAddGenericSelectedDescriptor(
 
 void ScreenReaderMessageGenerator::MaybeAddDoubleTapHint(
     const fuchsia::accessibility::semantics::Node* node,
-    std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>* description) {
+    std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>& description) {
   FX_DCHECK(node);
-  FX_DCHECK(description);
 
   if (NodeIsClickable(node)) {
-    description->emplace_back(
-        GenerateUtteranceByMessageId(MessageIds::DOUBLE_TAP_HINT, kLongDelay));
+    auto delay = description.empty() ? zx::msec(0) : kLongDelay;
+
+    description.emplace_back(GenerateUtteranceByMessageId(MessageIds::DOUBLE_TAP_HINT, delay));
   }
 }
 
@@ -299,7 +301,7 @@ ScreenReaderMessageGenerator::DescribeUnknown(const fuchsia::accessibility::sema
 
   MaybeAddGenericSelectedDescriptor(node, &description);
   MaybeAddLabelDescriptor(node, &description);
-  MaybeAddDoubleTapHint(node, &description);
+  MaybeAddDoubleTapHint(node, description);
 
   return description;
 }
@@ -327,7 +329,7 @@ ScreenReaderMessageGenerator::DescribeButton(const fuchsia::accessibility::seman
     description.emplace_back(GenerateUtteranceByMessageId(message_id, zx::duration(zx::msec(0))));
   }
 
-  MaybeAddDoubleTapHint(node, &description);
+  MaybeAddDoubleTapHint(node, description);
 
   return description;
 }
@@ -355,7 +357,8 @@ ScreenReaderMessageGenerator::DescribeCheckBox(
     const fuchsia::accessibility::semantics::Node* node) {
   FX_DCHECK(node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::CHECK_BOX);
   std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> description;
-  description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_CHECKBOX, kDefaultDelay));
+  description.emplace_back(
+      GenerateUtteranceByMessageId(MessageIds::ROLE_CHECKBOX, kDefaultDelay));
   if (node->has_states() && node->states().has_checked_state() &&
       node->states().checked_state() != fuchsia::accessibility::semantics::CheckedState::NONE) {
     MessageIds message_id = MessageIds::ELEMENT_NOT_CHECKED;

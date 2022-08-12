@@ -171,7 +171,7 @@ class ScreenReaderMessageGenerator {
   // DEFAULT action.
   void MaybeAddDoubleTapHint(
       const fuchsia::accessibility::semantics::Node* node,
-      std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>* description);
+      std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>& description);
 
   std::unique_ptr<i18n::MessageFormatter> message_formatter_;
 
