@@ -6,8 +6,6 @@ group("examples") {
   testonly = true
   public_deps = [
     ":vkcube-on-fb",
-
-    # TODO(fxbug.dev/72562): Reenable after swapchain update.
     ":vkcube-on-scenic",
     ":vkcube-skip-present",
     ":vkproto",

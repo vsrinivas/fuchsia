@@ -78,9 +78,7 @@ group("l1") {
   deps = [
     ":l0",
     "//src/graphics/examples:vkcube-on-fb",
-
-    # TODO(fxbug.dev/72562): Reenable after swapchain update.
-    #"//src/graphics/examples:vkcube-on-scenic",
+    "//src/graphics/examples:vkcube-on-scenic",
     "//src/graphics/lib/magma/src/tools",
     "//src/lib/vulkan/tests:image-pipe-swapchain-tests",
     "//src/ui:ui_packages",
