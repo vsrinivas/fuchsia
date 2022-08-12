@@ -27,7 +27,7 @@
         {
             event_stream: "stopped_v2",
             from: "parent",
-            path: "/events/event_stream",
+            path: "/events/stopped",
         },
     ],
 }
