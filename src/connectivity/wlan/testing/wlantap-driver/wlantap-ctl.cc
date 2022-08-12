@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.wlan.device/cpp/wire.h>
-#include <fidl/fuchsia.wlan.tap/cpp/wire.h>
+#include <fidl/fuchsia.wlan.tap/cpp/fidl.h>
+#include <fidl/fuchsia.wlan.tap/cpp/hlcpp_conversion.h>
+#include <fuchsia/wlan/tap/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
@@ -59,35 +61,10 @@ struct WlantapCtl : fidl::WireServer<wlantap::WlantapCtl> {
       return;
     }
 
-    // Convert to HLCPP by transiting through fidl bytes.
-    auto phy_config = std::make_unique<::fuchsia::wlan::tap::WlantapPhyConfig>();
-    {
-      // TODO(fxbug.dev/74878): The conversion code here is fragile. We should
-      // replace it with the officially supported API once that is implemented.
-      // TODO(fxbug.dev/45252): Use FIDL at rest.
-      fidl::unstable::OwnedEncodedMessage<wlantap::wire::WlantapPhyConfig> encoded(
-          fidl::internal::WireFormatVersion::kV2, &request->config);
-      if (!encoded.ok()) {
-        completer.Reply(encoded.status());
-        return;
-      }
-      auto converted = fidl::OutgoingToIncomingMessage(encoded.GetOutgoingMessage());
-      ZX_ASSERT(converted.ok());
-      auto& incoming = converted.incoming_message();
-      uint32_t byte_actual = incoming.byte_actual();
-      // TODO(fxbug.dev/45252): Use FIDL at rest.
-      fidl::unstable::DecodedMessage<wlantap::wire::WlantapPhyConfig> decoded{
-          fidl::internal::WireFormatVersion::kV2, std::move(incoming)};
-      if (!decoded.ok()) {
-        completer.Reply(status);
-        return;
-      }
-      fidl::Decoder dec(fidl::HLCPPIncomingMessage(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(decoded.PrimaryObject()), byte_actual,
-                           byte_actual),
-          fidl::HandleInfoPart()));
-      ::fuchsia::wlan::tap::WlantapPhyConfig::Decode(&dec, phy_config.get(), /* offset = */ 0);
-    }
+    // Convert to HLCPP through natural domain object.
+    auto phy_config_natural = fidl::ToNatural(request->config);
+    auto phy_config = std::make_unique<::fuchsia::wlan::tap::WlantapPhyConfig>(
+        fidl::NaturalToHLCPP(std::move(phy_config_natural)));
 
     if ((status = wlan::CreatePhy(device_, request->proxy.TakeChannel(), std::move(phy_config),
                                   loop)) != ZX_OK) {
