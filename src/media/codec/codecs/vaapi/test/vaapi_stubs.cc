@@ -107,6 +107,12 @@ VAStatus vaRenderPicture(VADisplay dpy, VAContextID context, VABufferID *buffers
 }
 VAStatus vaEndPicture(VADisplay dpy, VAContextID context) { return VA_STATUS_SUCCESS; }
 VAStatus vaSyncSurface(VADisplay dpy, VASurfaceID render_target) { return VA_STATUS_SUCCESS; }
+// If the vaSyncSurface stub ever returns VA_STATUS_ERROR_DECODING_ERROR, this stub should be
+// updated since the client will query why vaSyncSurface failed
+VAStatus vaQuerySurfaceError(VADisplay dpy, VASurfaceID surface, VAStatus error_status,
+                             void **error_info) {
+  return VA_STATUS_SUCCESS;
+}
 VAStatus vaGetImage(VADisplay dpy, VASurfaceID surface, int x, int y, unsigned int width,
                     unsigned int height, VAImageID image) {
   return VA_STATUS_SUCCESS;

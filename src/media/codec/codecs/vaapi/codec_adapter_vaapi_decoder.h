@@ -10,6 +10,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
 #include <lib/media/codec_impl/codec_adapter.h>
 #include <lib/media/codec_impl/codec_buffer.h>
 #include <lib/media/codec_impl/codec_diagnostics.h>
@@ -24,6 +25,7 @@
 #include <mutex>
 #include <optional>
 #include <queue>
+#include <string>
 
 #include <fbl/algorithm.h>
 #include <va/va.h>
@@ -49,6 +51,8 @@ class Vp9VaapiTestFixture;
 // surfaces are handled differently.
 class SurfaceBufferManager {
  public:
+  using CodecFailureCallback = fit::function<void(const std::string)>;
+
   virtual ~SurfaceBufferManager() = default;
 
   // Adds a output CodecBuffer under the management of the class
@@ -91,7 +95,11 @@ class SurfaceBufferManager {
   }
 
  protected:
-  explicit SurfaceBufferManager(std::mutex& codec_lock) : codec_lock_(codec_lock) {}
+  explicit SurfaceBufferManager(std::mutex& codec_lock, CodecFailureCallback failure_callback)
+      : codec_lock_(codec_lock), failure_callback_(std::move(failure_callback)) {}
+
+  // Used to set any codec failures that happen during the management of the buffers
+  void SetCodecFailure(const std::string& codec_failure) { failure_callback_(codec_failure); }
 
   // Event method subclass must implement. Called when the surface generation has been incremented
   // and a new surface size is available. This function is guaranteed to be called with the
@@ -115,6 +123,9 @@ class SurfaceBufferManager {
   // destruction of in_use_by_client_ happens first, because those destructing
   // will return buffers to output_buffer_pool_.
   BufferPool output_buffer_pool_{};
+
+ private:
+  CodecFailureCallback failure_callback_;
 };
 
 class CodecAdapterVaApiDecoder : public CodecAdapter {
@@ -255,6 +266,7 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
     // surface_buffer_manager_ will not be configured yet. If this is the case then by default our
     // surface buffer manager is not configured and no action is needed
     if (surface_buffer_manager_) {
+      // If we do have a surface_buffer_manager then deconfigure all buffers under its management
       surface_buffer_manager_->DeconfigureBuffers();
       surface_buffer_manager_->Reset();
     }
@@ -355,91 +367,98 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
       // TODO(fxbug.dev/94140): Add RAM domain support.
       constraints.buffer_memory_constraints.cpu_domain_supported = true;
 
-      // Two image format constraints
-      // 1) Linear format
-      // 2) Y-Tiled format
-      constraints.image_format_constraints_count = 2;
+      // Lamdba that will set the common constraint values regardless of what format modifier value
+      using CommonConstraintsFunction =
+          fit::inline_function<void(fuchsia::sysmem::ImageFormatConstraints & constraints)>;
+      auto set_common_constraints =
+          CommonConstraintsFunction([this](fuchsia::sysmem::ImageFormatConstraints& constraints) {
+            // Currently only support outputting to NV12
+            constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
+
+            // TODO(fix)
+            constraints.color_spaces_count = 1;
+            constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::REC709;
+
+            // The non-"required_" fields indicate the decoder's ability to potentially
+            // output frames at various dimensions as coded in the stream.  Aside from
+            // the current stream being somewhere in these bounds, these have nothing to
+            // do with the current stream in particular.
+            constraints.min_coded_width = is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
+            constraints.max_coded_width = max_picture_width_;
+            constraints.min_coded_height = is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
+            constraints.max_coded_height = max_picture_height_;
+
+            // This intentionally isn't the height of a 4k frame.  See
+            // max_coded_width_times_coded_height.  We intentionally constrain the max
+            // dimension in width or height to the width of a 4k frame.  While the HW
+            // might be able to go bigger than that as long as the other dimension is
+            // smaller to compensate, we don't really need to enable any larger than
+            // 4k's width in either dimension, so we don't.
+            constraints.min_bytes_per_row = is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
+
+            // no hard-coded max stride, at least for now
+            constraints.max_bytes_per_row = 0xFFFFFFFF;
+            constraints.max_coded_width_times_coded_height =
+                (max_picture_width_ * max_picture_height_);
+            constraints.layers = 1;
+            constraints.coded_width_divisor = is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
+            constraints.coded_height_divisor = is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
+            constraints.start_offset_divisor = 1;
+
+            // Odd display dimensions are permitted, but these don't imply odd YV12
+            // dimensions - those are constrained by coded_width_divisor and
+            // coded_height_divisor which are both 16.
+            constraints.display_width_divisor = 1;
+            constraints.display_height_divisor = 1;
+
+            // The decoder is producing frames and the decoder has no choice but to
+            // produce frames at their coded size.  The decoder wants to potentially be
+            // able to support a stream with dynamic resolution, potentially including
+            // dimensions both less than and greater than the dimensions that led to the
+            // current need to allocate a BufferCollection.  For this reason, the
+            // required_ fields are set to the exact current dimensions, and the
+            // permitted (non-required_) fields is set to the full potential range that
+            // the decoder could potentially output.  If an initiator wants to require a
+            // larger range of dimensions that includes the required range indicated
+            // here (via a-priori knowledge of the potential stream dimensions), an
+            // initiator is free to do so.
+            gfx::Size pic_size = media_decoder_->GetPicSize();
+            constraints.required_min_coded_width = pic_size.width();
+            constraints.required_max_coded_width = pic_size.width();
+            constraints.required_min_coded_height = pic_size.height();
+            constraints.required_max_coded_height = pic_size.height();
+          });
+
+      constraints.image_format_constraints_count = 0;
 
       // Linear Format
-      auto& linear_constraints = constraints.image_format_constraints[0];
-      linear_constraints.pixel_format.has_format_modifier = false;
-      linear_constraints.bytes_per_row_divisor = is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
+      if (!output_buffer_format_modifier_ ||
+          (output_buffer_format_modifier_.value() == fuchsia::sysmem::FORMAT_MODIFIER_LINEAR)) {
+        auto& linear_constraints =
+            constraints.image_format_constraints[constraints.image_format_constraints_count];
+        linear_constraints.pixel_format.has_format_modifier = false;
+        linear_constraints.bytes_per_row_divisor = is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
+
+        set_common_constraints(linear_constraints);
+
+        constraints.image_format_constraints_count += 1;
+      }
 
       // Y-Tiled format
-      auto& tiled_constraints = constraints.image_format_constraints[1];
-      tiled_constraints.pixel_format.has_format_modifier = true;
-      tiled_constraints.pixel_format.format_modifier.value =
-          fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED;
-      tiled_constraints.bytes_per_row_divisor = 0;
+      if (!output_buffer_format_modifier_ ||
+          (output_buffer_format_modifier_.value() ==
+           fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED)) {
+        auto& tiled_constraints =
+            constraints.image_format_constraints[constraints.image_format_constraints_count];
+        tiled_constraints.pixel_format.has_format_modifier = true;
+        tiled_constraints.pixel_format.format_modifier.value =
+            fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED;
+        tiled_constraints.bytes_per_row_divisor = 0;
 
-      // Common Settings
-      linear_constraints.pixel_format.type = tiled_constraints.pixel_format.type =
-          fuchsia::sysmem::PixelFormatType::NV12;
+        set_common_constraints(tiled_constraints);
 
-      // TODO(fix)
-      linear_constraints.color_spaces_count = tiled_constraints.color_spaces_count = 1;
-      linear_constraints.color_space[0].type = tiled_constraints.color_space[0].type =
-          fuchsia::sysmem::ColorSpaceType::REC709;
-
-      // The non-"required_" fields indicate the decoder's ability to potentially
-      // output frames at various dimensions as coded in the stream.  Aside from
-      // the current stream being somewhere in these bounds, these have nothing to
-      // do with the current stream in particular.
-      linear_constraints.min_coded_width = tiled_constraints.min_coded_width =
-          is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
-      linear_constraints.max_coded_width = tiled_constraints.max_coded_width = max_picture_width_;
-      linear_constraints.min_coded_height = tiled_constraints.min_coded_height =
-          is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
-      linear_constraints.max_coded_height = tiled_constraints.max_coded_height =
-          max_picture_height_;
-
-      // This intentionally isn't the height of a 4k frame.  See
-      // max_coded_width_times_coded_height.  We intentionally constrain the max
-      // dimension in width or height to the width of a 4k frame.  While the HW
-      // might be able to go bigger than that as long as the other dimension is
-      // smaller to compensate, we don't really need to enable any larger than
-      // 4k's width in either dimension, so we don't.
-      linear_constraints.min_bytes_per_row = tiled_constraints.min_bytes_per_row =
-          is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
-
-      // no hard-coded max stride, at least for now
-      linear_constraints.max_bytes_per_row = tiled_constraints.max_bytes_per_row = 0xFFFFFFFF;
-      linear_constraints.max_coded_width_times_coded_height =
-          tiled_constraints.max_coded_width_times_coded_height =
-              (max_picture_width_ * max_picture_height_);
-      linear_constraints.layers = tiled_constraints.layers = 1;
-      linear_constraints.coded_width_divisor = tiled_constraints.coded_width_divisor =
-          is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
-      linear_constraints.coded_height_divisor = tiled_constraints.coded_height_divisor =
-          is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
-      linear_constraints.start_offset_divisor = tiled_constraints.start_offset_divisor = 1;
-
-      // Odd display dimensions are permitted, but these don't imply odd YV12
-      // dimensions - those are constrainted by coded_width_divisor and
-      // coded_height_divisor which are both 16.
-      linear_constraints.display_width_divisor = tiled_constraints.display_width_divisor = 1;
-      linear_constraints.display_height_divisor = tiled_constraints.display_height_divisor = 1;
-
-      // The decoder is producing frames and the decoder has no choice but to
-      // produce frames at their coded size.  The decoder wants to potentially be
-      // able to support a stream with dynamic resolution, potentially including
-      // dimensions both less than and greater than the dimensions that led to the
-      // current need to allocate a BufferCollection.  For this reason, the
-      // required_ fields are set to the exact current dimensions, and the
-      // permitted (non-required_) fields is set to the full potential range that
-      // the decoder could potentially output.  If an initiator wants to require a
-      // larger range of dimensions that includes the required range indicated
-      // here (via a-priori knowledge of the potential stream dimensions), an
-      // initiator is free to do so.
-      gfx::Size pic_size = media_decoder_->GetPicSize();
-      linear_constraints.required_min_coded_width = tiled_constraints.required_min_coded_width =
-          pic_size.width();
-      linear_constraints.required_max_coded_width = tiled_constraints.required_max_coded_width =
-          pic_size.width();
-      linear_constraints.required_min_coded_height = tiled_constraints.required_min_coded_height =
-          pic_size.height();
-      linear_constraints.required_max_coded_height = tiled_constraints.required_max_coded_height =
-          pic_size.height();
+        constraints.image_format_constraints_count += 1;
+      }
 
       return constraints;
     }
@@ -451,6 +470,24 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
       CodecPort port,
       const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) override {
     buffer_settings_[port] = buffer_collection_info.settings;
+
+    if (port == CodecPort::kOutputPort) {
+      ZX_ASSERT(buffer_collection_info.settings.has_image_format_constraints);
+
+      // If the format doesn't have a format modifier, then it is linear
+      const auto& pixel_format =
+          buffer_collection_info.settings.image_format_constraints.pixel_format;
+      uint64_t pixel_format_modifier = pixel_format.has_format_modifier
+                                           ? pixel_format.format_modifier.value
+                                           : fuchsia::sysmem::FORMAT_MODIFIER_LINEAR;
+
+      // Should never happen but ensure we do not overwrite a format modifier that has been
+      // initialized with another value
+      ZX_ASSERT(!output_buffer_format_modifier_ ||
+                (output_buffer_format_modifier_.value() == pixel_format_modifier));
+
+      output_buffer_format_modifier_ = pixel_format_modifier;
+    }
   }
 
   bool ProcessOutput(scoped_refptr<VASurface> surface, int bitstream_id);
@@ -639,6 +676,15 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
   AvccProcessor avcc_processor_;
 
   std::optional<fuchsia::sysmem::SingleBufferSettings> buffer_settings_[kPortCount];
+
+  // Initially this value is std::nullopt meaning that there has been no format modifier set by the
+  // client. When no format modifier has been set, this codec will advertise all available format
+  // modifiers for the given codec via CoreCodecGetBufferCollectionConstraints(). Once the client
+  // sets a format modifier, it can not be changed. Any future calls to
+  // CoreCodecGetBufferCollectionConstraints() will only advertise the format modifier selected by
+  // the client since the format modifier can not be changed during a mid stream output buffer
+  // reconfiguration or at any other part in the codec's lifecycle.
+  std::optional<uint64_t> output_buffer_format_modifier_{};
 
   // Since CoreCodecInit() is called after SetDriverDiagnostics() we need to save a pointer to the
   // codec diagnostics object so that we can create the codec diagnotcis when we construct the

@@ -44,8 +44,8 @@ VP9Accelerator::Status VP9Accelerator::SubmitDecode(
   auto checked_width = safemath::MakeCheckedNum(frame_hdr->frame_width).Cast<uint16_t>();
   auto checked_height = safemath::MakeCheckedNum(frame_hdr->frame_height).Cast<uint16_t>();
   if (!checked_width.IsValid() || !checked_height.IsValid()) {
-    FX_LOGS(WARNING) << "Invalid frame dimensions " << frame_hdr->frame_width << "x"
-                     << frame_hdr->frame_height;
+    FX_SLOG(ERROR, "Invalid frame dimensions", KV("frame_width", frame_hdr->frame_width),
+            KV("frame_height", frame_hdr->frame_height));
     return Status::kFail;
   }
   pic_param.frame_width = checked_width.ValueOrDie();
@@ -143,7 +143,7 @@ VP9Accelerator::Status VP9Accelerator::SubmitDecode(
                           &pic_params_buffer_id);
 
   if (status != VA_STATUS_SUCCESS) {
-    FX_LOGS(WARNING) << "vaCreateBuffer for pic_param failed: " << vaErrorStr(status);
+    FX_SLOG(ERROR, "vaCreateBuffer for pic_param failed", KV("error_str", vaErrorStr(status)));
     return Status::kFail;
   }
 
@@ -155,7 +155,7 @@ VP9Accelerator::Status VP9Accelerator::SubmitDecode(
                           &slice_params_buffer_id);
 
   if (status != VA_STATUS_SUCCESS) {
-    FX_LOGS(WARNING) << "vaCreateBuffer for slice_params failed: " << vaErrorStr(status);
+    FX_SLOG(ERROR, "vaCreateBuffer for slice_params failed", KV("error_str", vaErrorStr(status)));
     return Status::kFail;
   }
 
@@ -170,7 +170,7 @@ VP9Accelerator::Status VP9Accelerator::SubmitDecode(
                           1, const_cast<uint8_t*>(frame_hdr->data), &encoded_data_buffer_id);
 
   if (status != VA_STATUS_SUCCESS) {
-    FX_LOGS(WARNING) << "vaCreateBuffer for encoded_data failed: " << vaErrorStr(status);
+    FX_SLOG(ERROR, "vaCreateBuffer for encoded_data failed", KV("error_str", vaErrorStr(status)));
     return Status::kFail;
   }
 
@@ -181,7 +181,7 @@ VP9Accelerator::Status VP9Accelerator::SubmitDecode(
   status = vaBeginPicture(VADisplayWrapper::GetSingleton()->display(), adapter_->context_id(),
                           va_surface_id);
   if (status != VA_STATUS_SUCCESS) {
-    FX_LOGS(WARNING) << "BeginPicture failed: " << vaErrorStr(status);
+    FX_SLOG(ERROR, "BeginPicture failed", KV("error_str", vaErrorStr(status)));
     return Status::kFail;
   }
   std::vector<VABufferID> buffers{picture_params.id(), slice_params.id(), encoded_data.id()};
@@ -189,13 +189,13 @@ VP9Accelerator::Status VP9Accelerator::SubmitDecode(
   status = vaRenderPicture(VADisplayWrapper::GetSingleton()->display(), adapter_->context_id(),
                            buffers.data(), static_cast<int>(buffers.size()));
   if (status != VA_STATUS_SUCCESS) {
-    FX_LOGS(WARNING) << "RenderPicture failed: " << vaErrorStr(status);
+    FX_SLOG(ERROR, "RenderPicture failed", KV("error_str", vaErrorStr(status)));
     return Status::kFail;
   }
 
   status = vaEndPicture(VADisplayWrapper::GetSingleton()->display(), adapter_->context_id());
   if (status != VA_STATUS_SUCCESS) {
-    FX_LOGS(WARNING) << "EndPicture failed: " << vaErrorStr(status);
+    FX_SLOG(ERROR, "EndPicture failed", KV("error_str", vaErrorStr(status)));
     return Status::kFail;
   }
 
@@ -206,8 +206,48 @@ bool VP9Accelerator::OutputPicture(scoped_refptr<media::VP9Picture> pic) {
   scoped_refptr<VASurface> va_surface = static_cast<VaapiVP9Picture*>(pic.get())->va_surface();
   VASurfaceID va_surface_id = static_cast<VaapiVP9Picture*>(pic.get())->GetVASurfaceID();
   VAStatus status = vaSyncSurface(VADisplayWrapper::GetSingleton()->display(), va_surface_id);
+
   if (status != VA_STATUS_SUCCESS) {
-    FX_LOGS(WARNING) << "SyncSurface failed: " << vaErrorStr(status);
+    // Get more information of the error, if possible. vaQuerySurfaceError can only be called iff
+    // vaSyncSurface returns VA_STATUS_ERROR_DECODING_ERROR. If that is the case then we call
+    // vaQuerySurfaceError which will return an array of macroblock error structures which tells us
+    // what offending macroblocks caused the error and what type of error was encountered.
+    bool detailed_query = false;
+    if (status == VA_STATUS_ERROR_DECODING_ERROR) {
+      VASurfaceDecodeMBErrors* decode_mb_errors;
+      VAStatus query_status = vaQuerySurfaceError(VADisplayWrapper::GetSingleton()->display(),
+                                                  va_surface_id, VA_STATUS_ERROR_DECODING_ERROR,
+                                                  reinterpret_cast<void**>(&decode_mb_errors));
+
+      if (query_status == VA_STATUS_SUCCESS) {
+        detailed_query = true;
+        FX_SLOG(ERROR, "SyncSurface failed due to the following macroblock errors ...");
+
+        // Limit the amount of errors we can display, just to ensure we don't enter an infinite loop
+        // or spam the log with messages
+        static constexpr uint32_t kMaxMBErrors = 10u;
+        uint32_t mb_error_count = 0u;
+
+        while ((decode_mb_errors != nullptr) && (decode_mb_errors->status != -1) &&
+               (mb_error_count < kMaxMBErrors)) {
+          FX_SLOG(ERROR, "SyncSurface a macroblock error",
+                  KV("decode_error", (decode_mb_errors->decode_error_type == VADecodeSliceMissing)
+                                         ? "VADecodeSliceMissing"
+                                         : "VADecodeMBError"),
+                  KV("start_mb", decode_mb_errors->start_mb),
+                  KV("end_mb", decode_mb_errors->end_mb), KV("num_mb", decode_mb_errors->num_mb));
+          decode_mb_errors++;
+          mb_error_count++;
+        }
+      }
+    }
+
+    // If the error was not VA_STATUS_ERROR_DECODING_ERROR or vaQuerySurfaceError returned an error,
+    // just log a generic error message.
+    if (!detailed_query) {
+      FX_SLOG(ERROR, "SyncSurface failed", KV("error_str", vaErrorStr(status)));
+    }
+
     return false;
   }
 

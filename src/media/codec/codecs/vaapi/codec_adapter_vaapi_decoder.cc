@@ -13,6 +13,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <optional>
+#include <sstream>
 #include <unordered_map>
 
 #include <fbl/algorithm.h>
@@ -35,7 +36,8 @@
 // the output from the DBPs to the CodecBuffers the client provides us.
 class LinearBufferManager : public SurfaceBufferManager {
  public:
-  LinearBufferManager(std::mutex& codec_lock) : SurfaceBufferManager(codec_lock) {}
+  LinearBufferManager(std::mutex& codec_lock, CodecFailureCallback failure_callback)
+      : SurfaceBufferManager(codec_lock, std::move(failure_callback)) {}
   ~LinearBufferManager() override = default;
 
   void AddBuffer(const CodecBuffer* buffer) override { output_buffer_pool_.AddBuffer(buffer); }
@@ -52,6 +54,8 @@ class LinearBufferManager : public SurfaceBufferManager {
   }
 
   void DeconfigureBuffers() override {
+    // First drop all the buffers that are currently in use by the client, this will return them
+    // back to the ouput_buffer_pool_.
     {
       std::map<const CodecBuffer*, LinearOutput> to_drop;
       {
@@ -62,6 +66,9 @@ class LinearBufferManager : public SurfaceBufferManager {
     // ~to_drop
 
     ZX_DEBUG_ASSERT(!output_buffer_pool_.has_buffers_in_use());
+
+    // Once all the buffers have been returned to the bool, deallocate them
+    output_buffer_pool_.Reset(false);
   }
 
   scoped_refptr<VASurface> GetDPBSurface() override {
@@ -80,6 +87,10 @@ class LinearBufferManager : public SurfaceBufferManager {
       pic_size = surface_size_;
     }
 
+    // Called once the reference count of the surface hits 0, meaning that it is no longer in use by
+    // the decoder. If the surface_generation_ is the same as when the surface was created, then we
+    // transfer ownership back to the surfaces_ data structure. If however the surface generation
+    // parameters have changed then we destroy the surface by calling vaDestroySurfaces().
     VASurface::ReleaseCB release_cb = [this, surface_generation](VASurfaceID surface_id) {
       std::lock_guard lock(surface_lock_);
       if (surface_generation_ == surface_generation) {
@@ -89,7 +100,7 @@ class LinearBufferManager : public SurfaceBufferManager {
             vaDestroySurfaces(VADisplayWrapper::GetSingleton()->display(), &surface_id, 1);
 
         if (status != VA_STATUS_SUCCESS) {
-          FX_LOGS(WARNING) << "vaDestroySurfaces failed: " << vaErrorStr(status);
+          FX_SLOG(WARNING, "vaDestroySurfaces failed", KV("error_str", vaErrorStr(status)));
         }
       }
     };
@@ -116,7 +127,7 @@ class LinearBufferManager : public SurfaceBufferManager {
     const auto pic_size_checked = (y_plane_checked + uv_plane_checked).Cast<uint32_t>();
 
     if (!pic_size_checked.IsValid()) {
-      FX_LOGS(WARNING) << "Output picture size overflowed";
+      FX_SLOG(WARNING, "Output picture size overflowed");
       return std::nullopt;
     }
 
@@ -128,7 +139,7 @@ class LinearBufferManager : public SurfaceBufferManager {
     zx::vmo vmo_dup;
     zx_status_t zx_status = buffer->vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_dup);
     if (zx_status != ZX_OK) {
-      FX_LOGS(WARNING) << "Failed to duplicate vmo " << zx_status_get_string(zx_status);
+      FX_SLOG(WARNING, "Failed to duplicate vmo", KV("error_str", zx_status_get_string(zx_status)));
       return std::nullopt;
     }
 
@@ -175,7 +186,7 @@ class LinearBufferManager : public SurfaceBufferManager {
                                        VA_RT_FORMAT_YUV420, surface_size.width(),
                                        surface_size.height(), &processed_surface_id, 1, attrib, 2);
     if (status != VA_STATUS_SUCCESS) {
-      FX_LOGS(WARNING) << "CreateSurface failed: " << vaErrorStr(status);
+      FX_SLOG(WARNING, "vaCreateSurfaces failed", KV("error_str", vaErrorStr(status)));
       return std::nullopt;
     }
 
@@ -186,7 +197,7 @@ class LinearBufferManager : public SurfaceBufferManager {
     status =
         vaDeriveImage(VADisplayWrapper::GetSingleton()->display(), processed_surface.id(), &image);
     if (status != VA_STATUS_SUCCESS) {
-      FX_LOGS(WARNING) << "DeriveImage failed: " << vaErrorStr(status);
+      FX_SLOG(WARNING, "vaDeriveImage failed", KV("error_str", vaErrorStr(status)));
       return std::nullopt;
     }
 
@@ -199,7 +210,7 @@ class LinearBufferManager : public SurfaceBufferManager {
       status = vaGetImage(VADisplayWrapper::GetSingleton()->display(), va_surface->id(), 0, 0,
                           surface_size.width(), surface_size.height(), scoped_image.id());
       if (status != VA_STATUS_SUCCESS) {
-        FX_LOGS(WARNING) << "GetImage failed: " << vaErrorStr(status);
+        FX_SLOG(WARNING, "vaGetImage failed", KV("error_str", vaErrorStr(status)));
         return std::nullopt;
       }
     }
@@ -237,10 +248,9 @@ class LinearBufferManager : public SurfaceBufferManager {
                          static_cast<uint32_t>(va_surfaces.size()), nullptr, 0);
 
     if (va_res != VA_STATUS_SUCCESS) {
-      // TODO(stefanbossbaly): Fix this
-#if 0
-      SetCodecFailure("vaCreateSurfaces failed: %s", vaErrorStr(va_res));
-#endif
+      std::ostringstream ss;
+      ss << "vaCreateSurfaces failed: " << vaErrorStr(va_res);
+      SetCodecFailure(ss.str());
       return;
     }
 
@@ -318,7 +328,9 @@ class LinearBufferManager : public SurfaceBufferManager {
   BufferPool output_buffer_pool_;
   std::map<const CodecBuffer*, LinearOutput> in_use_by_client_ FXL_GUARDED_BY(codec_lock_);
 
-  // Holds the DPB surfaces
+  // Holds the DPB surfaces that are allocated but not currently in use by the decoder. Once
+  // GetDPBSurface() is called, the surface is then transferred from the ScopedSurfaceID RAII
+  // wrapper to the a scoped_refptr<VASurface> wrapper.
   std::vector<ScopedSurfaceID> surfaces_ FXL_GUARDED_BY(surface_lock_) = {};
 
   // Output stride
@@ -332,7 +344,8 @@ class LinearBufferManager : public SurfaceBufferManager {
 // configuration change is required.
 class TiledBufferManager : public SurfaceBufferManager {
  public:
-  TiledBufferManager(std::mutex& codec_lock) : SurfaceBufferManager(codec_lock) {}
+  TiledBufferManager(std::mutex& codec_lock, CodecFailureCallback failure_callback)
+      : SurfaceBufferManager(codec_lock, std::move(failure_callback)) {}
   ~TiledBufferManager() override = default;
 
   void AddBuffer(const CodecBuffer* buffer) override { output_buffer_pool_.AddBuffer(buffer); }
@@ -390,7 +403,8 @@ class TiledBufferManager : public SurfaceBufferManager {
       zx::vmo vmo_dup;
       zx_status_t zx_status = buffer->vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_dup);
       if (zx_status != ZX_OK) {
-        FX_LOGS(WARNING) << "Failed to duplicate vmo " << zx_status_get_string(zx_status);
+        FX_SLOG(WARNING, "Failed to duplicate vmo",
+                KV("error_str", zx_status_get_string(zx_status)));
         return {};
       }
 
@@ -399,12 +413,12 @@ class TiledBufferManager : public SurfaceBufferManager {
       const auto pic_size_checked = (y_plane_checked + uv_plane_checked).Cast<uint32_t>();
 
       if (!aligned_stride_checked.IsValid()) {
-        FX_LOGS(WARNING) << "Aligned stride overflowed";
+        FX_SLOG(WARNING, "Aligned stride overflowed");
         return {};
       }
 
       if (!pic_size_checked.IsValid()) {
-        FX_LOGS(WARNING) << "Output picture size overflowed";
+        FX_SLOG(WARNING, "Output picture size overflowed");
         return {};
       }
 
@@ -456,7 +470,7 @@ class TiledBufferManager : public SurfaceBufferManager {
                                          VA_RT_FORMAT_YUV420, surface_size_.width(),
                                          surface_size_.height(), &vmo_surface_id, 1, attrib, 2);
       if (status != VA_STATUS_SUCCESS) {
-        FX_LOGS(WARNING) << "CreateSurface failed: " << vaErrorStr(status);
+        FX_SLOG(WARNING, "vaCreateSurfaces failed", KV("error_str", vaErrorStr(status)));
         return {};
       }
     }
@@ -481,7 +495,7 @@ class TiledBufferManager : public SurfaceBufferManager {
               vaDestroySurfaces(VADisplayWrapper::GetSingleton()->display(), &surface_id, 1);
 
           if (status != VA_STATUS_SUCCESS) {
-            FX_LOGS(ERROR) << "vaDestroySurfaces failed: " << vaErrorStr(status);
+            FX_SLOG(WARNING, "vaDestroySurfaces failed", KV("error_str", vaErrorStr(status)));
           }
         }
       }
@@ -515,7 +529,7 @@ class TiledBufferManager : public SurfaceBufferManager {
     const auto& [y_plane_checked, uv_plane_checked] = GetSurfacePlaneSizes(va_surface->size());
     const auto pic_size_checked = (y_plane_checked + uv_plane_checked).Cast<uint32_t>();
     if (!pic_size_checked.IsValid()) {
-      FX_LOGS(WARNING) << "Output picture size overflowed";
+      FX_SLOG(WARNING, "Output picture size overflowed");
       return {};
     }
 
@@ -674,14 +688,13 @@ void CodecAdapterVaApiDecoder::CoreCodecInit(
   }
 
   if (!max_height) {
-    FX_LOGS(WARNING)
-        << "Could not query hardware for max picture height supported. Setting default";
+    FX_SLOG(WARNING, "Could not query hardware for max picture height supported. Setting default.");
   } else {
     max_picture_height_ = max_height.value();
   }
 
   if (!max_width) {
-    FX_LOGS(WARNING) << "Could not query hardware for max picture width supported. Setting default";
+    FX_SLOG(WARNING, "Could not query hardware for max picture width supported. Setting default.");
   } else {
     max_picture_width_ = max_width.value();
   }
@@ -770,6 +783,9 @@ void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(media::DecoderBuffer buffer) {
       }
       context_id_.emplace(context_id);
 
+      TRACE_INSTANT("codec_runner", "Configuration Change", TRACE_SCOPE_PROCESS, "width",
+                    TA_INT32(pic_size.width()), "height", TA_INT32(pic_size.height()));
+
       // Only wait if an output reconfiguration was required. Otherwise the buffers will be kept and
       // only the new output constraints will be sent.
       if (output_re_config_required) {
@@ -786,8 +802,8 @@ void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(media::DecoderBuffer buffer) {
         }
       }
 
-      // Increment surface generation so all existing surfaces will be freed
-      // when they're released instead of being returned to the pool.
+      // Increment surface generation so all existing surfaces will be freed when they're released
+      // instead of being returned to the pool.
       surface_buffer_manager_->IncrementSurfaceGeneration(
           pic_size, media_decoder_->GetRequiredNumOfPictures(), GetOutputStride());
 
@@ -875,7 +891,7 @@ void CodecAdapterVaApiDecoder::ProcessInputLoop() {
 
       bool res = media_decoder_->Flush();
       if (!res) {
-        FX_LOGS(WARNING) << "media decoder flush failed";
+        FX_SLOG(WARNING, "media decoder flush failed");
       }
       events_->onCoreCodecOutputEndOfStream(/*error_detected_before=*/!res);
     } else if (input_item.is_packet()) {
@@ -954,17 +970,25 @@ void CodecAdapterVaApiDecoder::CleanUpAfterStream() {
 
   bool res = media_decoder_->Flush();
   if (!res) {
-    FX_LOGS(WARNING) << "media decoder flush failed";
+    FX_SLOG(WARNING, "media decoder flush failed");
   }
 }
 
 void CodecAdapterVaApiDecoder::CoreCodecMidStreamOutputBufferReConfigFinish() {
-  surface_buffer_manager_.reset();
+  // Currently once the surface_buffer_manager_ has been constructed, it can not be destructed until
+  // the end of the stream. This means once the client have chosen a format modifier, it can not be
+  // changed
+  if (!surface_buffer_manager_) {
+    auto failure_callback = SurfaceBufferManager::CodecFailureCallback(
+        [this](const std::string& failure_message) { SetCodecFailure(failure_message.c_str()); });
 
-  if (IsOutputTiled()) {
-    surface_buffer_manager_ = std::make_unique<TiledBufferManager>(lock_);
-  } else {
-    surface_buffer_manager_ = std::make_unique<LinearBufferManager>(lock_);
+    if (IsOutputTiled()) {
+      surface_buffer_manager_ =
+          std::make_unique<TiledBufferManager>(lock_, std::move(failure_callback));
+    } else {
+      surface_buffer_manager_ =
+          std::make_unique<LinearBufferManager>(lock_, std::move(failure_callback));
+    }
   }
 
   LoadStagedOutputBuffers();
@@ -973,8 +997,8 @@ void CodecAdapterVaApiDecoder::CoreCodecMidStreamOutputBufferReConfigFinish() {
   {
     std::lock_guard<std::mutex> guard(lock_);
     mid_stream_output_buffer_reconfig_finish_ = true;
+    surface_buffer_manager_cv_.notify_all();
   }
-  surface_buffer_manager_cv_.notify_all();
 }
 
 bool CodecAdapterVaApiDecoder::ProcessOutput(scoped_refptr<VASurface> va_surface,
