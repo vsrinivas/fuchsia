@@ -231,6 +231,7 @@ group("host-tests_no_e2e") {
     "//build/assembly:host_tests($host_toolchain)",
     "//build/python:host_tests($host_toolchain)",
     "//src/lib/assembly:host_tests($host_toolchain)",
+    "//src/security:host_tests($host_toolchain)",
     "//src/tests/assembly:host_tests($host_toolchain)",
   ]
 }
@@ -238,13 +239,7 @@ group("host-tests_no_e2e") {
 # TODO(https://fxbug.dev/93763) use an underscore to match source code layout guidelines
 group("host-tests") {
   testonly = true
-  deps = [
-    ":host-tests_no_e2e",
-
-    # This can't go in the no_e2e group because e2e_test_libs (which is assert_no_deps above)
-    # can get included in the system images we build for scrutiny's tests.
-    "//src/security:host_tests($host_toolchain)",
-  ]
+  deps = [ ":host-tests_no_e2e" ]
 
   if (is_linux) {
     deps += [
