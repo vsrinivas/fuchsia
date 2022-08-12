@@ -74,4 +74,10 @@ type Options = table {
     /// If non-zero, the engine will periodically update any added monitors after this duration.
     /// Defaults to 20.
    17: pulse_interval zx.duration;
+
+    /// If true, allow a debugger like `zxdb` to be attached to an instrumented process. This may
+    /// interfere with the engine's ability to detect exceptions and is not recommended when
+    /// fuzzing. It can be useful when reproducing an error with a known error-causing input.
+    /// Defaults to false.
+   18: debug bool;
 };

@@ -31,6 +31,8 @@ class RealmFuzzerTest : public EngineIntegrationTest {
   }
 
   bool verbose() const override { return false; }
+
+  void set_options(Options& options) const override {}
 };
 
 // Integration tests.

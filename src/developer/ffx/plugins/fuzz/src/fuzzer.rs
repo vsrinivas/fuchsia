@@ -782,7 +782,8 @@ mod tests {
         test.output_matches("  \"death_exitcode\":   2001,");
         test.output_matches("  \"leak_exitcode\":    2002,");
         test.output_matches("  \"oom_exitcode\":     2003,");
-        test.output_matches("  \"pulse_interval\":   \"20s\"");
+        test.output_matches("  \"pulse_interval\":   \"20s\",");
+        test.output_matches("  \"debug\":            false");
         test.output_matches("}");
         test.verify_output()
     }

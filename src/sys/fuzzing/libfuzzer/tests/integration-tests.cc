@@ -26,11 +26,7 @@ class LibFuzzerTest : public EngineIntegrationTest {
 
   std::vector<std::string> extra_args() const override {
     return {
-      "bin/libfuzzer_test_fuzzer",
-// See notes on LIBFUZZER_ALLOW_DEBUG above.
-#if LIBFUZZER_ALLOW_DEBUG
-          "-handle_segv=0", "-handle_bus=0", "-handle_ill=0", "-handle_fpe=0", "-handle_abrt=0",
-#endif  // LIBFUZZER_ALLOW_DEBUG
+        "bin/libfuzzer_test_fuzzer",
     };
   }
 
@@ -44,12 +40,13 @@ class LibFuzzerTest : public EngineIntegrationTest {
   }
 
   bool verbose() const override {
-// See notes on LIBFUZZER_SHOW_OUTPUT above.
-#if LIBFUZZER_SHOW_OUTPUT
-    return true;
-#else
-    return false;
-#endif  // LIBFUZZER_SHOW_OUTPUT
+    // See notes on LIBFUZZER_SHOW_OUTPUT above.
+    return LIBFUZZER_SHOW_OUTPUT;
+  }
+
+  void set_options(Options& options) const override {
+    // See notes on LIBFUZZER_ALLOW_DEBUG above.
+    options.set_debug(LIBFUZZER_ALLOW_DEBUG);
   }
 
  private:

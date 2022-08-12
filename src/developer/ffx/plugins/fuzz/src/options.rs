@@ -29,6 +29,7 @@ pub const NAMES: &[&str] = &[
     "leak_exitcode",
     "oom_exitcode",
     "pulse_interval",
+    "debug",
 ];
 
 /// Add defaults values to an `Options` struct.
@@ -50,6 +51,7 @@ pub fn add_defaults(options: &mut fuzz::Options) {
     options.leak_exitcode = options.leak_exitcode.or(Some(2002));
     options.oom_exitcode = options.oom_exitcode.or(Some(2003));
     options.pulse_interval = options.pulse_interval.or(Some(20 * NANOS_PER_SECOND));
+    options.debug = options.debug.or(Some(false));
 }
 
 /// Returns a field of `options` based on its name.
@@ -72,6 +74,7 @@ pub fn get(options: &fuzz::Options, name: &str) -> Result<String> {
         "leak_exitcode" => Ok(options.leak_exitcode.unwrap().to_string()),
         "oom_exitcode" => Ok(options.oom_exitcode.unwrap().to_string()),
         "pulse_interval" => Ok(format_duration(options.pulse_interval)),
+        "debug" => Ok(options.debug.unwrap().to_string()),
         _ => Err(anyhow!("unrecognized option: {}", name)),
     }
 }
@@ -193,6 +196,13 @@ pub fn set(options: &mut fuzz::Options, name: &str, value: &str) -> Result<()> {
         "pulse_interval" => parse_duration(value)
             .and_then(|pulse_interval| {
                 options.pulse_interval = Some(pulse_interval);
+                Ok(())
+            })
+            .map_err(Error::msg),
+        "debug" => value
+            .parse::<bool>()
+            .and_then(|debug| {
+                options.debug = Some(debug);
                 Ok(())
             })
             .map_err(Error::msg),
@@ -642,6 +652,20 @@ mod tests {
     }
 
     #[test]
+    fn test_debug() -> Result<()> {
+        let mut fuzz_options = fuzz::Options::EMPTY;
+        assert!(set(&mut fuzz_options, "debug", "false").is_ok());
+        assert_eq!(fuzz_options.debug, Some(false));
+        assert_eq!(get(&fuzz_options, "debug").unwrap(), "false");
+        assert!(set(&mut fuzz_options, "debug", "true").is_ok());
+        assert_eq!(fuzz_options.debug, Some(true));
+        assert_eq!(get(&fuzz_options, "debug").unwrap(), "true");
+        assert!(set(&mut fuzz_options, "debug", "-1").is_err());
+        assert!(set(&mut fuzz_options, "debug", "maybe").is_err());
+        Ok(())
+    }
+
+    #[test]
     fn test_get_all() -> Result<()> {
         let mut fuzz_options = fuzz::Options::EMPTY;
         add_defaults(&mut fuzz_options);
@@ -668,6 +692,7 @@ mod tests {
         assert_next(all.next(), "leak_exitcode", "2002");
         assert_next(all.next(), "oom_exitcode", "2003");
         assert_next(all.next(), "pulse_interval", "\"20s\"");
+        assert_next(all.next(), "debug", "false");
         assert!(all.next().is_none());
         Ok(())
     }

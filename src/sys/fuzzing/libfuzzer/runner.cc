@@ -366,6 +366,13 @@ void LibFuzzerRunner::AddArgs() {
   if (options_->pulse_interval() != kDefaultPulseInterval) {
     FX_LOGS(WARNING) << "libFuzzer does not support setting the 'pulse_interval'.";
   }
+  if (options_->debug()) {
+    process_.AddArg(MakeArg("handle_segv", 0));
+    process_.AddArg(MakeArg("handle_bus", 0));
+    process_.AddArg(MakeArg("handle_ill", 0));
+    process_.AddArg(MakeArg("handle_fpe", 0));
+    process_.AddArg(MakeArg("handle_abrt", 0));
+  }
   if (has_dictionary_) {
     process_.AddArg(MakeArg("dict", kDictionaryPath));
   }

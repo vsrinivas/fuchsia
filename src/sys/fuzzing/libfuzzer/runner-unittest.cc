@@ -60,30 +60,18 @@ class LibFuzzerRunnerTest : public RunnerTest {
   }
 
   void Configure(const OptionsPtr& options) override {
+    // See notes on LIBFUZZER_ALLOW_DEBUG above.
+    runner_->OverrideDefaults(options.get());
+    options->set_debug(LIBFUZZER_ALLOW_DEBUG);
     RunnerTest::Configure(options);
+
+    // See notes on LIBFUZZER_SHOW_OUTPUT above.
     auto libfuzzer_runner = std::static_pointer_cast<LibFuzzerRunner>(runner_);
-    std::vector<std::string> cmdline{"bin/libfuzzer_unittest_fuzzer"};
-
-// See notes on LIBFUZZER_SHOW_OUTPUT above.
-#if LIBFUZZER_SHOW_OUTPUT
-    libfuzzer_runner->set_verbose(true);
-#else
-    libfuzzer_runner->set_verbose(false);
-#endif  // LIBFUZZER_SHOW_OUTPUT
-
-// See notes on LIBFUZZER_ALLOW_DEBUG above.
-#if LIBFUZZER_ALLOW_DEBUG
-    cmdline.push_back("-handle_segv=0");
-    cmdline.push_back("-handle_bus=0");
-    cmdline.push_back("-handle_ill=0");
-    cmdline.push_back("-handle_fpe=0");
-    cmdline.push_back("-handle_abrt=0");
-#endif  // LIBFUZZER_ALLOW_DEBUG
+    libfuzzer_runner->set_verbose(LIBFUZZER_SHOW_OUTPUT);
 
     // LibFuzzer's "entropic energy" feature allows it to focus on inputs that provide more useful
     // coverage; but is tricky to fake in unit testing.
-    cmdline.push_back("-entropic=0");
-
+    std::vector<std::string> cmdline{"bin/libfuzzer_unittest_fuzzer", "-entropic=0"};
     libfuzzer_runner->set_cmdline(std::move(cmdline));
   }
 

@@ -49,6 +49,9 @@ class EngineIntegrationTest : public AsyncTest {
   // Echoes engine output when true.
   virtual bool verbose() const = 0;
 
+  // Set the options to configure the controller with.
+  virtual void set_options(Options& options) const = 0;
+
   // Creates fake registry and coverage components, and spawns the engine.
   ZxPromise<ControllerPtr> Start();
 

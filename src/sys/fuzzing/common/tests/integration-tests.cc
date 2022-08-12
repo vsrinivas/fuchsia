@@ -54,6 +54,27 @@ ZxPromise<ControllerPtr> EngineIntegrationTest::Start() {
         }
         return fpromise::ok(std::move(controller));
       })
+      .and_then(
+          [this, consumer_fut = Future<zx_status_t>()](
+              Context& context, ControllerPtr& controller) mutable -> ZxResult<ControllerPtr> {
+            if (!consumer_fut) {
+              Bridge<zx_status_t> bridge;
+              Options options;
+              set_options(options);
+              controller->Configure(std::move(options), bridge.completer.bind());
+              consumer_fut = bridge.consumer.promise();
+            }
+            if (!consumer_fut(context)) {
+              return fpromise::pending();
+            }
+            if (consumer_fut.is_error()) {
+              return fpromise::error(ZX_ERR_CANCELED);
+            }
+            if (auto status = consumer_fut.take_value(); status != ZX_OK) {
+              return fpromise::error(status);
+            }
+            return fpromise::ok(std::move(controller));
+          })
       .wrap_with(scope_);
 }
 

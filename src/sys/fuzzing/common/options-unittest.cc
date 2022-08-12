@@ -28,6 +28,7 @@ TEST(OptionsTest, Set) {
   int32_t leak_exitcode = 1002;
   int32_t oom_exitcode = 1003;
   zx::duration pulse_interval = zx::sec(3);
+  bool debug = true;
 
   options.set_runs(runs);
   options.set_max_total_time(max_total_time.get());
@@ -46,6 +47,7 @@ TEST(OptionsTest, Set) {
   options.set_leak_exitcode(leak_exitcode);
   options.set_oom_exitcode(oom_exitcode);
   options.set_pulse_interval(pulse_interval.get());
+  options.set_debug(debug);
 
   EXPECT_EQ(options.runs(), runs);
   EXPECT_EQ(options.max_total_time(), max_total_time.get());
@@ -64,6 +66,7 @@ TEST(OptionsTest, Set) {
   EXPECT_EQ(options.leak_exitcode(), leak_exitcode);
   EXPECT_EQ(options.oom_exitcode(), oom_exitcode);
   EXPECT_EQ(options.pulse_interval(), pulse_interval.get());
+  EXPECT_EQ(options.debug(), debug);
 }
 
 TEST(OptionsTest, Copy) {
@@ -76,6 +79,7 @@ TEST(OptionsTest, Copy) {
   uint32_t purge_interval = 10;
   int32_t death_exitcode = 1001;
   int32_t oom_exitcode = 1003;
+  bool debug = true;
 
   options1.set_runs(runs);
   options1.set_seed(seed);
@@ -85,6 +89,7 @@ TEST(OptionsTest, Copy) {
   options1.set_purge_interval(purge_interval);
   options1.set_death_exitcode(death_exitcode);
   options1.set_oom_exitcode(oom_exitcode);
+  options1.set_debug(debug);
 
   auto options2 = CopyOptions(options1);
   EXPECT_EQ(options2.runs(), runs);
@@ -104,6 +109,7 @@ TEST(OptionsTest, Copy) {
   EXPECT_EQ(options2.leak_exitcode(), kDefaultLeakExitcode);
   EXPECT_EQ(options2.oom_exitcode(), oom_exitcode);
   EXPECT_EQ(options2.pulse_interval(), kDefaultPulseInterval);
+  EXPECT_EQ(options2.debug(), debug);
 }
 
 TEST(OptionsTest, AddDefaults) {
@@ -127,6 +133,7 @@ TEST(OptionsTest, AddDefaults) {
   EXPECT_EQ(options1.leak_exitcode(), kDefaultLeakExitcode);
   EXPECT_EQ(options1.oom_exitcode(), kDefaultOomExitcode);
   EXPECT_EQ(options1.pulse_interval(), kDefaultPulseInterval);
+  EXPECT_EQ(options1.debug(), kDefaultDebug);
 
   // ...but it should not overwrite anything already there.
   Options options2;
@@ -147,6 +154,7 @@ TEST(OptionsTest, AddDefaults) {
   options2.set_leak_exitcode(2);
   options2.set_oom_exitcode(2);
   options2.set_pulse_interval(zx::sec(2).get());
+  options2.set_debug(true);
 
   AddDefaults(&options2);
   EXPECT_NE(options2.runs(), kDefaultRuns);
@@ -166,6 +174,7 @@ TEST(OptionsTest, AddDefaults) {
   EXPECT_NE(options2.leak_exitcode(), kDefaultLeakExitcode);
   EXPECT_NE(options2.oom_exitcode(), kDefaultOomExitcode);
   EXPECT_NE(options2.pulse_interval(), kDefaultPulseInterval);
+  EXPECT_NE(options2.debug(), kDefaultDebug);
 }
 
 }  // namespace

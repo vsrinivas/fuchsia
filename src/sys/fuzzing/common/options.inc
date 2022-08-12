@@ -32,3 +32,4 @@ FUCHSIA_FUZZER_OPTION(int32_t,  death_exitcode,   DeathExitcode,   2001);
 FUCHSIA_FUZZER_OPTION(int32_t,  leak_exitcode,    LeakExitcode,    2002);
 FUCHSIA_FUZZER_OPTION(int32_t,  oom_exitcode,     OomExitcode,     2003);
 FUCHSIA_FUZZER_OPTION(int64_t,  pulse_interval,   PulseInterval,   zx::sec(20).get());
+FUCHSIA_FUZZER_OPTION(bool,     debug,            Debug,           false);

@@ -24,7 +24,7 @@ void RunnerTest::SetUp() {
 
 void RunnerTest::Configure(const OptionsPtr& options) {
   options_ = options;
-  if (!options_->has_seed()) {
+  if (options_->seed() == kDefaultSeed) {
     options_->set_seed(1);
   }
   FUZZING_EXPECT_OK(runner()->Configure(options_));
