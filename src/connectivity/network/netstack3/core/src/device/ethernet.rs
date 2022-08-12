@@ -241,7 +241,8 @@ impl<NonSyncCtx: NonSyncContext> NudContext<Ipv6, EthernetLinkDevice, NonSyncCtx
     for SyncCtx<NonSyncCtx>
 {
     fn retrans_timer(&self, EthernetDeviceId(id): EthernetDeviceId) -> NonZeroDuration {
-        self.state.device.devices.ethernet.get(id).unwrap().ip.ipv6.retrans_timer
+        let ipv6 = self.state.device.devices.ethernet.get(id).unwrap().ip.ipv6.read();
+        ipv6.retrans_timer
     }
 
     fn with_nud_state_mut<O, F: FnOnce(&mut NudState<Ipv6, Mac>) -> O>(
@@ -800,19 +801,10 @@ impl<C: NonSyncContext> ArpContext<EthernetLinkDevice, C> for SyncCtx<C> {
         _ctx: &mut C,
         EthernetDeviceId(id): EthernetDeviceId,
     ) -> Option<Ipv4Addr> {
-        self.state
-            .device
-            .devices
-            .ethernet
-            .get(id)
-            .unwrap()
-            .ip
-            .ipv4
-            .ip_state
-            .iter_addrs()
-            .next()
-            .cloned()
-            .map(|addr| addr.addr().get())
+        let ipv4 = self.state.device.devices.ethernet.get(id).unwrap().ip.ipv4.read();
+
+        let ret = ipv4.ip_state.iter_addrs().next().cloned().map(|addr| addr.addr().get());
+        ret
     }
 
     fn get_hardware_addr(&self, _ctx: &mut C, device_id: EthernetDeviceId) -> UnicastAddr<Mac> {
@@ -2001,6 +1993,7 @@ mod tests {
                 .unwrap()
                 .ip
                 .ipv6
+                .read()
                 .ip_state
                 .iter_addrs()
                 .map(|entry| entry.addr_sub().addr())
@@ -2024,6 +2017,7 @@ mod tests {
             .unwrap()
             .ip
             .ipv6
+            .read()
             .ip_state
             .iter_addrs()
             .map(|entry| entry.addr_sub().addr().get())

@@ -131,23 +131,6 @@ fn with_ip_device_state<
     })
 }
 
-fn with_ip_device_state_mut<
-    NonSyncCtx: NonSyncContext,
-    O,
-    F: FnOnce(&mut DualStackIpDeviceState<NonSyncCtx::Instant>) -> O,
->(
-    ctx: &mut SyncCtx<NonSyncCtx>,
-    device: DeviceId,
-    cb: F,
-) -> O {
-    cb(match device.inner() {
-        DeviceIdInner::Ethernet(EthernetDeviceId(id)) => {
-            &mut ctx.state.device.devices.ethernet.get_mut(id).unwrap().ip
-        }
-        DeviceIdInner::Loopback => &mut ctx.state.device.devices.loopback.as_mut().unwrap().ip,
-    })
-}
-
 fn with_devices<
     NonSyncCtx: NonSyncContext,
     O,
@@ -213,7 +196,7 @@ impl<NonSyncCtx: NonSyncContext> IpDeviceContext<Ipv4, NonSyncCtx> for SyncCtx<N
         device: Self::DeviceId,
         cb: F,
     ) -> O {
-        with_ip_device_state(self, device, |state| cb(&state.ipv4))
+        with_ip_device_state(self, device, |state| cb(&state.ipv4.read()))
     }
 
     fn with_ip_device_state_mut<O, F: FnOnce(&mut Ipv4DeviceState<NonSyncCtx::Instant>) -> O>(
@@ -221,7 +204,7 @@ impl<NonSyncCtx: NonSyncContext> IpDeviceContext<Ipv4, NonSyncCtx> for SyncCtx<N
         device: Self::DeviceId,
         cb: F,
     ) -> O {
-        with_ip_device_state_mut(self, device, |state| cb(&mut state.ipv4))
+        with_ip_device_state(self, device, |state| cb(&mut state.ipv4.write()))
     }
 
     fn with_devices<O, F: FnOnce(Box<dyn Iterator<Item = DeviceId> + '_>) -> O>(&self, cb: F) -> O {
@@ -364,7 +347,7 @@ impl<NonSyncCtx: NonSyncContext> IpDeviceContext<Ipv6, NonSyncCtx> for SyncCtx<N
         device: Self::DeviceId,
         cb: F,
     ) -> O {
-        with_ip_device_state(self, device, |state| cb(&state.ipv6))
+        with_ip_device_state(self, device, |state| cb(&state.ipv6.read()))
     }
 
     fn with_ip_device_state_mut<O, F: FnOnce(&mut Ipv6DeviceState<NonSyncCtx::Instant>) -> O>(
@@ -372,7 +355,7 @@ impl<NonSyncCtx: NonSyncContext> IpDeviceContext<Ipv6, NonSyncCtx> for SyncCtx<N
         device: Self::DeviceId,
         cb: F,
     ) -> O {
-        with_ip_device_state_mut(self, device, |state| cb(&mut state.ipv6))
+        with_ip_device_state(self, device, |state| cb(&mut state.ipv6.write()))
     }
 
     fn with_devices<O, F: FnOnce(Box<dyn Iterator<Item = DeviceId> + '_>) -> O>(&self, cb: F) -> O {

@@ -7,6 +7,7 @@
 use alloc::vec::Vec;
 use core::{fmt::Debug, num::NonZeroU8, time::Duration};
 
+use derivative::Derivative;
 use net_types::{
     ip::{AddrSubnet, Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
     SpecifiedAddr, UnicastAddr, Witness,
@@ -19,6 +20,7 @@ use crate::{
         device::{route_discovery::Ipv6RouteDiscoveryState, slaac::SlaacConfiguration},
         gmp::{igmp::IgmpGroupState, mld::MldGroupState, MulticastGroupSet},
     },
+    sync::RwLock,
     Instant,
 };
 
@@ -312,21 +314,14 @@ impl<I: Instant> AsRef<IpDeviceConfiguration> for Ipv6DeviceState<I> {
 }
 
 /// IPv4 and IPv6 state combined.
+#[derive(Derivative)]
+#[derivative(Default(bound = ""))]
 pub(crate) struct DualStackIpDeviceState<I: Instant> {
     /// IPv4 state.
-    pub ipv4: Ipv4DeviceState<I>,
+    pub ipv4: RwLock<Ipv4DeviceState<I>>,
 
     /// IPv6 state.
-    pub ipv6: Ipv6DeviceState<I>,
-}
-
-impl<I: Instant> Default for DualStackIpDeviceState<I> {
-    fn default() -> DualStackIpDeviceState<I> {
-        DualStackIpDeviceState {
-            ipv4: Ipv4DeviceState::default(),
-            ipv6: Ipv6DeviceState::default(),
-        }
-    }
+    pub ipv6: RwLock<Ipv6DeviceState<I>>,
 }
 
 /// The various states an IP address can be on an interface.
