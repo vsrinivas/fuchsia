@@ -69,7 +69,6 @@ group("tools") {
 group("tests") {
   testonly = true
   deps = [
-    ":audio_mixer_death_unittests",
     ":audio_mixer_unittests",
     "test",
   ]
@@ -86,7 +85,6 @@ executable("mixer_unittest_bin") {
     "output_producer_unittest.cc",
     "point_sampler_unittest.cc",
     "sinc_sampler_unittest.cc",
-    "source_info_unittest.cc",
   ]
 
   deps = [
@@ -104,32 +102,4 @@ executable("mixer_unittest_bin") {
 
 fuchsia_unittest_package("audio_mixer_unittests") {
   deps = [ ":mixer_unittest_bin" ]
-}
-
-executable("mixer_death_unittest_bin") {
-  testonly = true
-  output_name = "audio_mixer_death_unittests"
-
-  sources = [ "sampler_death_unittest.cc" ]
-
-  deps = [
-    ":mixer",
-    "//sdk/lib/syslog/cpp",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
-    "//src/media/audio/lib/format2",
-    "//src/media/audio/lib/processing",
-    "//src/media/audio/lib/processing:prebuilt_coefficient_tables",
-    "//third_party/googletest:gmock",
-  ]
-}
-
-fuchsia_unittest_package("audio_mixer_death_unittests") {
-  deps = [ ":mixer_death_unittest_bin" ]
-  manifest = "meta/audio_mixer_death_unittests.cml"
-  test_specs = {
-    log_settings = {
-      max_severity = "FATAL"
-    }
-  }
 }
