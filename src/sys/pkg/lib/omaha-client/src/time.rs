@@ -116,9 +116,9 @@ impl ComplexTime {
     /// given PartialComplexTime.
     pub fn is_after_or_eq_any(&self, other: impl Into<PartialComplexTime>) -> bool {
         match other.into() {
-            PartialComplexTime::Wall(w) => (self.wall >= w),
-            PartialComplexTime::Monotonic(m) => (self.mono >= m),
-            PartialComplexTime::Complex(c) => (self.wall >= c.wall || self.mono >= c.mono),
+            PartialComplexTime::Wall(w) => self.wall >= w,
+            PartialComplexTime::Monotonic(m) => self.mono >= m,
+            PartialComplexTime::Complex(c) => self.wall >= c.wall || self.mono >= c.mono,
         }
     }
 }
