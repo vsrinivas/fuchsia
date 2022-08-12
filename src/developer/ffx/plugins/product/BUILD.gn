@@ -13,10 +13,23 @@ ffx_plugin("ffx_product") {
   args_sources = [ "src/args.rs" ]
 
   deps = [
+    "//build/sdk/meta:rust",
     "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx_rust",
+    "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/fidl-fuchsia-developer-ffx-ext",
+    "//src/developer/ffx/lib/fms:lib",
     "//src/developer/ffx/lib/pbms:lib",
+    "//src/lib/fuchsia-url",
     "//src/lib/gcs:lib",
+    "//third_party/rust_crates:tracing",
+    "//third_party/rust_crates:url",
+  ]
+
+  test_deps = [
+    "//build/sdk/meta:rust",
+    "//src/lib/fuchsia-async",
+    "//src/lib/gcs:lib",
+    "//third_party/rust_crates:tempfile",
   ]
 
   sources = [ "src/lib.rs" ]

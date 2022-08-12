@@ -36,7 +36,7 @@ use {
     std::path::{Path, PathBuf},
 };
 
-pub use crate::pbms::{get_product_dir, get_storage_dir};
+pub use crate::pbms::{fetch_data_for_product_bundle_v1, get_product_dir, get_storage_dir};
 
 mod gcs;
 mod pbms;

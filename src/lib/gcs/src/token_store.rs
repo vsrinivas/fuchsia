@@ -319,7 +319,7 @@ impl TokenStore {
 
     /// Use the refresh token to get a new access token.
     async fn refresh_access_token(&self, https_client: &HttpsClient) -> Result<(), GcsError> {
-        tracing::debug!("refresh_access_token");
+        tracing::trace!("refresh_access_token");
         match &self.refresh_token {
             Some(refresh_token) => {
                 let req_body = RefreshTokenRequest {
@@ -362,18 +362,23 @@ impl TokenStore {
         bucket: &str,
         object: &str,
     ) -> Result<Response<Body>> {
-        tracing::debug!("download {:?}, {:?}", bucket, object);
+        tracing::trace!("download {:?}, {:?}", bucket, object);
         // If the bucket and object are from a gs:// URL, the object may have a
         // undesirable leading slash. Trim it if present.
         let object = if object.starts_with('/') { &object[1..] } else { object };
 
-        let res = self.attempt_download(https_client, bucket, object).await?;
+        let res = self
+            .attempt_download(https_client, bucket, object)
+            .await
+            .context("attempt_download")?;
         Ok(match res.status() {
             StatusCode::FORBIDDEN | StatusCode::UNAUTHORIZED => {
                 match &self.refresh_token {
                     Some(_) => {
                         // Refresh the access token and make one extra try.
-                        self.refresh_access_token(&https_client).await?;
+                        self.refresh_access_token(&https_client)
+                            .await
+                            .context("refresh_access_token")?;
                         self.attempt_download(https_client, bucket, object).await?
                     }
                     None => {
@@ -406,6 +411,7 @@ impl TokenStore {
     /// Callers are expected to handle errors and call attempt_download() again
     /// as desired (e.g. follow redirects).
     async fn send_request(&self, https_client: &HttpsClient, url: Url) -> Result<Response<Body>> {
+        tracing::trace!("https_client.request {:?}", url);
         let req = Request::builder().method(Method::GET).uri(url.into_string());
         let req = self.authorize(req).await?;
         let req = req.body(Body::from(""))?;
@@ -425,6 +431,7 @@ impl TokenStore {
         bucket: &str,
         prefix: &str,
     ) -> Result<bool> {
+        tracing::debug!("testing existence of gs://{}/{}", bucket, prefix);
         // Note: gs 'stat' will not match a directory.  So, gs 'list' is used to
         // determine existence. The number of items in a directory may be
         // enormous, so the results are limited to one item.
@@ -450,7 +457,7 @@ impl TokenStore {
         prefix: &str,
         limit: Option<u32>,
     ) -> Result<Vec<String>> {
-        tracing::debug!("list");
+        tracing::debug!("list objects at gs://{}/{}", bucket, prefix);
         Ok(match self.attempt_list(https_client, bucket, prefix, limit).await {
             Err(e) => {
                 match e.downcast_ref::<GcsError>() {
@@ -458,8 +465,12 @@ impl TokenStore {
                         match &self.refresh_token {
                             Some(_) => {
                                 // Refresh the access token and make one extra try.
-                                self.refresh_access_token(&https_client).await?;
-                                self.attempt_list(https_client, bucket, prefix, limit).await?
+                                self.refresh_access_token(&https_client)
+                                    .await
+                                    .context("refreshing access token")?;
+                                self.attempt_list(https_client, bucket, prefix, limit)
+                                    .await
+                                    .context("attempting list")?
                             }
                             None => {
                                 // With no refresh token, there's no option to retry.
@@ -491,6 +502,7 @@ impl TokenStore {
         prefix: &str,
         limit: Option<u32>,
     ) -> Result<Vec<String>> {
+        tracing::trace!("attempt_list of gs://{}/{}", bucket, prefix);
         // If the bucket and prefix are from a gs:// URL, the prefix may have a
         // undesirable leading slash. Trim it if present.
         let prefix = if prefix.starts_with('/') { &prefix[1..] } else { prefix };
@@ -513,14 +525,17 @@ impl TokenStore {
             if let Some(t) = page_token {
                 url.query_pairs_mut().append_pair("pageToken", t.as_str());
             }
-            let res = self.send_request(https_client, url).await?;
+            let res = self.send_request(https_client, url).await.context("sending request")?;
             match res.status() {
                 StatusCode::FORBIDDEN | StatusCode::UNAUTHORIZED => {
                     bail!(GcsError::NeedNewAccessToken);
                 }
                 StatusCode::OK => {
-                    let bytes = hyper::body::to_bytes(res.into_body()).await?;
-                    let info: ListResponse = serde_json::from_slice(&bytes)?;
+                    let bytes = hyper::body::to_bytes(res.into_body())
+                        .await
+                        .context("hyper::body::to_bytes")?;
+                    let info: ListResponse =
+                        serde_json::from_slice(&bytes).context("serde_json::from_slice")?;
                     results.extend(info.items.into_iter().map(|i| i.name));
                     if info.next_page_token.is_none() {
                         break;
@@ -568,7 +583,7 @@ pub fn auth_code_url() -> String {
 
 /// Convert an authorization code to a refresh token.
 pub async fn auth_code_to_refresh(auth_code: &str) -> Result<String> {
-    tracing::debug!("auth_code_to_refresh");
+    tracing::trace!("auth_code_to_refresh");
     use fuchsia_hyper::new_https_client;
     let token_store = TokenStore::new_with_code(&new_https_client(), auth_code).await?;
     match token_store.refresh_token() {
@@ -641,7 +656,7 @@ pub fn read_boto_refresh_token<P: AsRef<Path>>(boto_path: P) -> Result<Option<St
     static GS_REFRESH_TOKEN_RE: OnceCell<Regex> = OnceCell::new();
     let re = GS_REFRESH_TOKEN_RE
         .get_or_init(|| Regex::new(r#"\n\s*gs_oauth2_refresh_token\s*=\s*(\S+)"#).expect("regex"));
-    let data = fs::read_to_string(boto_path.as_ref())?;
+    let data = fs::read_to_string(boto_path.as_ref()).context("read_to_string boto_path")?;
     let refresh_token = match re.captures(&data) {
         Some(found) => Some(found.get(1).expect("found at least one").as_str().to_string()),
         None => None,

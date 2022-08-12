@@ -54,16 +54,9 @@ where
     let mut info = RepoInfo::default();
     info.metadata_url = repo.to_string();
     info.save(&output_dir.join("info"))?;
+    tracing::debug!("Wrote info to {:?}", output_dir);
 
-    let temp_dir = tempfile::tempdir_in(&output_dir).context("create temp dir")?;
-    fetch_bundle_uri(&repo, &temp_dir.path(), progress)
-        .await
-        .context("fetch product bundle by URL")?;
-    let the_file = temp_dir.path().join("product_bundles.json");
-    if the_file.is_file() {
-        let local_path = output_dir.join("product_bundles.json");
-        async_fs::rename(&the_file, &local_path).await.context("move temp file")?;
-    }
+    fetch_bundle_uri(&repo, output_dir, progress).await.context("fetch product bundle by URL")?;
     Ok(())
 }
 
@@ -220,37 +213,72 @@ where
     entries.add_from_path(&file_path).context("adding entries from gcs")?;
     let product_bundle = find_product_bundle(&entries, &Some(product_name.to_string()))
         .context("finding product bundle")?;
+    fetch_data_for_product_bundle_v1(&product_bundle, &url, local_repo_dir, progress).await
+}
 
-    let start = std::time::Instant::now();
-    tracing::info!("Getting product data for {:?} to {:?}", product_bundle.name, local_repo_dir);
-    let local_dir = local_repo_dir.join(&product_bundle.name).join("images");
-    async_fs::create_dir_all(&local_dir).await.context("creating directory")?;
+/// Helper for `get_product_data()`, see docs there.
+pub async fn fetch_data_for_product_bundle_v1<F>(
+    product_bundle: &sdk_metadata::ProductBundleV1,
+    product_url: &url::Url,
+    local_repo_dir: &std::path::Path,
+    progress: &mut F,
+) -> Result<()>
+where
+    F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
+{
+    // Handy debugging switch to disable images download.
+    if true {
+        let start = std::time::Instant::now();
+        tracing::info!(
+            "Getting product data for {:?} to {:?}",
+            product_bundle.name,
+            local_repo_dir
+        );
+        let local_dir = local_repo_dir.join(&product_bundle.name).join("images");
+        async_fs::create_dir_all(&local_dir).await.context("creating directory")?;
 
-    for image in &product_bundle.images {
-        tracing::debug!("    image: {:?}", image);
-        let base_url = url::Url::parse(&image.base_uri)
-            .with_context(|| format!("parsing image.base_uri {:?}", image.base_uri))?;
-        if !exists_in_gcs(&image.base_uri).await? {
-            tracing::warn!("The base_uri does not exist: {}", image.base_uri);
+        for image in &product_bundle.images {
+            tracing::debug!("image {:?}", image);
+
+            let base_url =
+                make_remote_url(product_url, &image.base_uri).context("image.base_uri")?;
+            if !exists_in_gcs(&base_url.as_str()).await? {
+                tracing::warn!("The base_uri does not exist: {}", base_url);
+            }
+            fetch_by_format(&image.format, &base_url, &local_dir, progress)
+                .await
+                .with_context(|| format!("fetching images for {}.", product_bundle.name))?;
         }
-        fetch_by_format(&image.format, &base_url, &local_dir, progress)
-            .await
-            .with_context(|| format!("fetching images for {}.", product_bundle.name))?;
+        tracing::debug!("Total fetch images runtime {} seconds.", start.elapsed().as_secs_f32());
     }
-    tracing::debug!("Total fetch images runtime {} seconds.", start.elapsed().as_secs_f32());
 
-    let start = std::time::Instant::now();
-    let local_dir = local_repo_dir.join(&product_bundle.name).join("packages");
-    async_fs::create_dir_all(&local_dir).await.context("creating directory")?;
-    tracing::info!("Getting package data for {:?}, local_dir {:?}", product_bundle.name, local_dir);
+    // Handy debugging switch to disable packages download.
+    if true {
+        let start = std::time::Instant::now();
+        let local_dir = local_repo_dir.join(&product_bundle.name).join("packages");
+        async_fs::create_dir_all(&local_dir).await.context("creating directory")?;
+        tracing::info!(
+            "Getting package data for {:?}, local_dir {:?}",
+            product_bundle.name,
+            local_dir
+        );
 
-    fetch_package_repository_from_mirrors(&local_dir, &product_bundle.packages, progress)
+        fetch_package_repository_from_mirrors(
+            product_url,
+            &local_dir,
+            &product_bundle.packages,
+            progress,
+        )
         .await
         .with_context(|| {
-            format!("fetch_package_repository_from_mirrors local_dir {:?}", local_dir)
+            format!(
+                "fetch_package_repository_from_mirrors {:?}, local_dir {:?}",
+                product_url, local_dir
+            )
         })?;
 
-    tracing::debug!("Total fetch packages runtime {} seconds.", start.elapsed().as_secs_f32());
+        tracing::debug!("Total fetch packages runtime {} seconds.", start.elapsed().as_secs_f32());
+    }
 
     tracing::info!("Download of product data for {:?} is complete.", product_bundle.name);
     tracing::info!("Data written to \"{}\".", local_repo_dir.display());
@@ -279,6 +307,7 @@ pub(crate) fn pb_dir_name(gcs_url: &url::Url) -> String {
 /// This will try to download a package repository from each mirror in the list, stopping on the
 /// first success. Otherwise it will return the last error encountered.
 async fn fetch_package_repository_from_mirrors<F>(
+    product_url: &url::Url,
     local_dir: &Path,
     packages: &[PackageBundle],
     progress: &mut F,
@@ -289,7 +318,7 @@ where
     // The packages list is a set of mirrors. Try downloading the packages from each one. Only error
     // out if we can't download the packages from any mirror.
     for (i, package) in packages.iter().enumerate() {
-        let res = fetch_package_repository(&local_dir, package, progress).await;
+        let res = fetch_package_repository(product_url, local_dir, package, progress).await;
 
         match res {
             Ok(()) => {
@@ -309,6 +338,7 @@ where
 
 /// Fetch packages from this package bundle and write them to `local_dir`.
 async fn fetch_package_repository<F>(
+    product_url: &url::Url,
     local_dir: &Path,
     package: &PackageBundle,
     progress: &mut F,
@@ -316,9 +346,14 @@ async fn fetch_package_repository<F>(
 where
     F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
 {
-    tracing::debug!("local_dir {:?}, package {:?}", local_dir, package);
-    let mut repo_metadata_uri = url::Url::parse(&package.repo_uri)
-        .with_context(|| format!("parsing package.repo_uri {:?}", package.repo_uri))?;
+    tracing::debug!(
+        "product_url {:?}, local_dir {:?}, package {:?}",
+        product_url,
+        local_dir,
+        package
+    );
+    let mut repo_metadata_uri =
+        make_remote_url(product_url, &package.repo_uri).context("package.repo_uri")?;
     tracing::debug!(
         "package repository: repo_metadata_uri {:?}, repo_uri {}, blob_uri {:?}",
         repo_metadata_uri,
@@ -341,8 +376,7 @@ where
                 repo_metadata_uri.join("repository/").context("joining repository dir")?;
 
             let repo_blobs_uri = if let Some(blob_repo_uri) = &package.blob_uri {
-                url::Url::parse(blob_repo_uri)
-                    .with_context(|| format!("parsing package.repo_uri {:?}", blob_repo_uri))?
+                make_remote_url(product_url, &blob_repo_uri).context("package.repo_uri")?
             } else {
                 // If the blob uri is unspecified, then use `$METADATA_URI/blobs/`.
                 repo_metadata_uri.join("blobs/").context("joining blobs dir")?
@@ -489,8 +523,16 @@ async fn fetch_package_repository_from_backend<F>(
 where
     F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
 {
+    tracing::debug!(
+        "creating package repository, repo_metadata_uri {}, repo_blobs_uri {}",
+        repo_metadata_uri,
+        repo_blobs_uri
+    );
     let repo = Repository::new("repo", backend).await.with_context(|| {
-        format!("creating package repository {} {}", repo_metadata_uri, repo_blobs_uri)
+        format!(
+            "creating package repository, repo_metadata_uri {}, repo_blobs_uri {}",
+            repo_metadata_uri, repo_blobs_uri
+        )
     })?;
 
     let local_dir =
@@ -553,7 +595,7 @@ where
                     _ => (),
                 }
             }
-            tracing::debug!("    package: {}", package_name.as_str());
+            tracing::debug!("package: {}", package_name.as_str());
 
             futures.push(fetcher.fetch_package(merkle));
         }
@@ -661,6 +703,28 @@ where
     unimplemented!();
 }
 
+/// If internal_url is a file scheme, join `product_url` and `internal_url`.
+/// Otherwise, return `internal_url`.
+fn make_remote_url(product_url: &url::Url, internal_url: &str) -> Result<url::Url> {
+    // TODO(fxbug.dev/106117): only strip the "file:/". The extra "../"
+    // is a workaround for the bug.
+    let result = if internal_url.starts_with("file:/../") {
+        product_url.join(&internal_url[9..])?
+    } else if internal_url.starts_with("file:/..") {
+        // TODO(fxbug.dev/106117): This should be current dir.
+        product_url.join(".")?
+    } else {
+        url::Url::parse(&internal_url).with_context(|| format!("parsing url {:?}", internal_url))?
+    };
+    tracing::debug!(
+        "make_remote_url product_url {:?}, internal_url {:?}, result  {:?}",
+        product_url,
+        internal_url,
+        result
+    );
+    Ok(result)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -757,5 +821,37 @@ mod tests {
         assert!(url.as_str() != hash);
         assert!(!hash.contains("/"));
         assert!(!hash.contains(" "));
+    }
+
+    #[test]
+    fn test_make_remote_url() {
+        let base = url::Url::parse("gs://foo/bar/blah.txt").expect("url");
+        assert_eq!(
+            make_remote_url(&base, &"gs://a/b").expect("make_remote_url").as_str(),
+            "gs://a/b"
+        );
+        // TODO(fxbug.dev/106117): only strip the "file:/". The extra "../"
+        // is a workaround for the bug, so these tests currently have the
+        // workaround. Later a "../" should be removed from many of these tests.
+        assert_eq!(
+            make_remote_url(&base, &"file:/../../c").expect("make_remote_url").as_str(),
+            "gs://foo/c"
+        );
+        assert_eq!(
+            make_remote_url(&base, &"file:/../c").expect("make_remote_url").as_str(),
+            "gs://foo/bar/c"
+        );
+        assert_eq!(
+            make_remote_url(&base, &"file:/../../c/").expect("make_remote_url").as_str(),
+            "gs://foo/c/"
+        );
+        assert_eq!(
+            make_remote_url(&base, &"file:/../c/").expect("make_remote_url").as_str(),
+            "gs://foo/bar/c/"
+        );
+        assert_eq!(
+            make_remote_url(&base, &"file:/..").expect("make_remote_url").as_str(),
+            "gs://foo/bar/"
+        );
     }
 }

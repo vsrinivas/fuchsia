@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {argh::FromArgs, ffx_core::ffx_command};
+use {argh::FromArgs, ffx_core::ffx_command, std::path::PathBuf};
 
 /// Discover and access product bundle metadata and image data.
 #[ffx_command()]
@@ -23,15 +23,19 @@ pub enum SubCommand {
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "get")]
 pub struct GetCommand {
-    /// do no network IO, use the locally cached version or fail.
+    /// get the data again, even if it's already present locally.
     #[argh(switch)]
-    pub cached: bool,
+    pub force: bool,
 
-    /// get (and cache) data for specific product bundle.
+    /// repositories will be named `NAME`. Defaults to the product bundle name.
+    #[argh(option)]
+    pub repository: Option<String>,
+
+    /// url to the product bundle to download.
     #[argh(positional)]
-    pub product_bundle_name: Option<String>,
+    pub product_bundle_url: String,
 
-    /// display list of downloaded files and other details.
-    #[argh(switch)]
-    pub verbose: bool,
+    /// local directory to download the product bundle into.
+    #[argh(positional, default = "PathBuf::from(\"local_pb\")")]
+    pub out_dir: PathBuf,
 }
