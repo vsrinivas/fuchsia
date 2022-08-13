@@ -8,4 +8,5 @@
 toc:
 - title: "Address spaces"
   path: /docs/concepts/memory/address_spaces.md
-  status: beta
+- title: "Memory reclamation"
+  path: /docs/concepts/memory/memory_reclamation.md
