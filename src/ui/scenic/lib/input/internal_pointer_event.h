@@ -124,6 +124,13 @@ struct InternalMouseEvent {
   // Vertical and horizontal scroll descriptors and values.
   std::optional<ScrollInfo> scroll_v;
   std::optional<ScrollInfo> scroll_h;
+
+  // Vertical and horizontal scroll in physical pixel.
+  std::optional<double> scroll_v_physical_pixel;
+  std::optional<double> scroll_h_physical_pixel;
+
+  std::optional<bool> is_precision_scroll;
+
   // The movement, independent of the viewport's coordinate system.
   glm::vec2 relative_motion = glm::vec2(0, 0);
 };

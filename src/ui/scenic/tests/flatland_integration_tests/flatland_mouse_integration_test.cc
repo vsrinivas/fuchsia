@@ -142,7 +142,10 @@ class FlatlandMouseIntegrationTest : public zxtest::Test, public loop_fixture::R
 
   void Inject(float x, float y, fupi_EventPhase phase, std::vector<uint8_t> pressed_buttons = {},
               std::optional<int64_t> scroll_v = std::nullopt,
-              std::optional<int64_t> scroll_h = std::nullopt) {
+              std::optional<int64_t> scroll_h = std::nullopt,
+              std::optional<double> scroll_v_physical_pixel = std::nullopt,
+              std::optional<double> scroll_h_physical_pixel = std::nullopt,
+              std::optional<bool> is_precision_scroll = std::nullopt) {
     FX_DCHECK(injector_);
     fupi_Event event;
     event.set_timestamp(0);
@@ -157,6 +160,16 @@ class FlatlandMouseIntegrationTest : public zxtest::Test, public loop_fixture::R
       if (scroll_h.has_value()) {
         pointer_sample.set_scroll_h(scroll_h.value());
       }
+      if (scroll_v_physical_pixel.has_value()) {
+        pointer_sample.set_scroll_v_physical_pixel(scroll_v_physical_pixel.value());
+      }
+      if (scroll_h_physical_pixel.has_value()) {
+        pointer_sample.set_scroll_h_physical_pixel(scroll_h_physical_pixel.value());
+      }
+      if (is_precision_scroll.has_value()) {
+        pointer_sample.set_is_precision_scroll(is_precision_scroll.value());
+      }
+
       if (!pressed_buttons.empty()) {
         pointer_sample.set_pressed_buttons(pressed_buttons);
       }
@@ -426,12 +439,18 @@ TEST_F(FlatlandMouseIntegrationTest, Wheel) {
   ASSERT_TRUE(child_events[0].has_pointer_sample());
   EXPECT_FALSE(child_events[0].pointer_sample().has_scroll_v());
   EXPECT_FALSE(child_events[0].pointer_sample().has_scroll_h());
+  ASSERT_FALSE(child_events[0].pointer_sample().has_scroll_v_physical_pixel());
+  ASSERT_FALSE(child_events[0].pointer_sample().has_scroll_h_physical_pixel());
+  ASSERT_FALSE(child_events[0].pointer_sample().has_is_precision_scroll());
 
   ASSERT_TRUE(child_events[1].has_pointer_sample());
   ASSERT_TRUE(child_events[1].pointer_sample().has_scroll_v());
   EXPECT_EQ(child_events[1].pointer_sample().scroll_v(), 1);
   ASSERT_TRUE(child_events[1].pointer_sample().has_scroll_h());
   EXPECT_EQ(child_events[1].pointer_sample().scroll_h(), -1);
+  ASSERT_FALSE(child_events[1].pointer_sample().has_scroll_v_physical_pixel());
+  ASSERT_FALSE(child_events[1].pointer_sample().has_scroll_h_physical_pixel());
+  ASSERT_FALSE(child_events[1].pointer_sample().has_is_precision_scroll());
 }
 
 // Send wheel events in button pressing sequence to scenic ensure client receives correct wheel
@@ -477,6 +496,9 @@ TEST_F(FlatlandMouseIntegrationTest, DownWheelUpWheel) {
   ASSERT_TRUE(child_events[0].has_pointer_sample());
   EXPECT_FALSE(child_events[0].pointer_sample().has_scroll_v());
   EXPECT_FALSE(child_events[0].pointer_sample().has_scroll_h());
+  ASSERT_FALSE(child_events[0].pointer_sample().has_scroll_v_physical_pixel());
+  ASSERT_FALSE(child_events[0].pointer_sample().has_scroll_h_physical_pixel());
+  ASSERT_FALSE(child_events[0].pointer_sample().has_is_precision_scroll());
 
   ASSERT_TRUE(child_events[1].has_pointer_sample());
   EXPECT_EQ(child_events[1].pointer_sample().pressed_buttons(), button_vec);
@@ -486,16 +508,27 @@ TEST_F(FlatlandMouseIntegrationTest, DownWheelUpWheel) {
   EXPECT_EQ(child_events[2].pointer_sample().scroll_v(), 1);
   EXPECT_FALSE(child_events[2].pointer_sample().has_scroll_h());
   EXPECT_EQ(child_events[2].pointer_sample().pressed_buttons(), button_vec);
+  EXPECT_FALSE(child_events[2].pointer_sample().has_is_precision_scroll());
+  ASSERT_FALSE(child_events[2].pointer_sample().has_scroll_v_physical_pixel());
+  ASSERT_FALSE(child_events[2].pointer_sample().has_scroll_h_physical_pixel());
+  ASSERT_FALSE(child_events[2].pointer_sample().has_is_precision_scroll());
 
   ASSERT_TRUE(child_events[3].has_pointer_sample());
   EXPECT_FALSE(child_events[3].pointer_sample().has_pressed_buttons());
   EXPECT_FALSE(child_events[3].pointer_sample().has_scroll_v());
+  EXPECT_FALSE(child_events[3].pointer_sample().has_is_precision_scroll());
+  ASSERT_FALSE(child_events[3].pointer_sample().has_scroll_v_physical_pixel());
+  ASSERT_FALSE(child_events[3].pointer_sample().has_scroll_h_physical_pixel());
+  ASSERT_FALSE(child_events[3].pointer_sample().has_is_precision_scroll());
 
   ASSERT_TRUE(child_events[4].has_pointer_sample());
   ASSERT_TRUE(child_events[4].pointer_sample().has_scroll_v());
   EXPECT_EQ(child_events[4].pointer_sample().scroll_v(), 1);
   EXPECT_FALSE(child_events[4].pointer_sample().has_scroll_h());
   EXPECT_FALSE(child_events[4].pointer_sample().has_pressed_buttons());
+  ASSERT_FALSE(child_events[4].pointer_sample().has_scroll_v_physical_pixel());
+  ASSERT_FALSE(child_events[4].pointer_sample().has_scroll_h_physical_pixel());
+  ASSERT_FALSE(child_events[4].pointer_sample().has_is_precision_scroll());
 }
 
 // Send wheel events bundled with button changess to scenic ensure client receives correct wheel
@@ -543,26 +576,257 @@ TEST_F(FlatlandMouseIntegrationTest, DownWheelUpWheelBundled) {
   ASSERT_TRUE(child_events[0].has_pointer_sample());
   EXPECT_FALSE(child_events[0].pointer_sample().has_scroll_v());
   EXPECT_FALSE(child_events[0].pointer_sample().has_scroll_h());
+  ASSERT_FALSE(child_events[0].pointer_sample().has_scroll_v_physical_pixel());
+  ASSERT_FALSE(child_events[0].pointer_sample().has_scroll_h_physical_pixel());
+  ASSERT_FALSE(child_events[0].pointer_sample().has_is_precision_scroll());
 
   ASSERT_TRUE(child_events[1].has_pointer_sample());
   ASSERT_TRUE(child_events[1].pointer_sample().has_scroll_v());
   EXPECT_EQ(child_events[1].pointer_sample().scroll_v(), 1);
   EXPECT_EQ(child_events[1].pointer_sample().pressed_buttons(), button_vec);
+  ASSERT_FALSE(child_events[1].pointer_sample().has_scroll_v_physical_pixel());
+  ASSERT_FALSE(child_events[1].pointer_sample().has_scroll_h_physical_pixel());
+  ASSERT_FALSE(child_events[1].pointer_sample().has_is_precision_scroll());
 
   ASSERT_TRUE(child_events[2].has_pointer_sample());
   ASSERT_TRUE(child_events[2].pointer_sample().has_scroll_v());
   EXPECT_EQ(child_events[2].pointer_sample().scroll_v(), 1);
   EXPECT_EQ(child_events[2].pointer_sample().pressed_buttons(), button_vec);
+  ASSERT_FALSE(child_events[2].pointer_sample().has_scroll_v_physical_pixel());
+  ASSERT_FALSE(child_events[2].pointer_sample().has_scroll_h_physical_pixel());
+  ASSERT_FALSE(child_events[2].pointer_sample().has_is_precision_scroll());
 
   ASSERT_TRUE(child_events[3].has_pointer_sample());
   ASSERT_TRUE(child_events[3].pointer_sample().has_scroll_v());
   EXPECT_EQ(child_events[3].pointer_sample().scroll_v(), 1);
   EXPECT_FALSE(child_events[3].pointer_sample().has_pressed_buttons());
+  ASSERT_FALSE(child_events[3].pointer_sample().has_scroll_v_physical_pixel());
+  ASSERT_FALSE(child_events[3].pointer_sample().has_scroll_h_physical_pixel());
+  ASSERT_FALSE(child_events[3].pointer_sample().has_is_precision_scroll());
 
   ASSERT_TRUE(child_events[4].has_pointer_sample());
   ASSERT_TRUE(child_events[4].pointer_sample().has_scroll_v());
   EXPECT_EQ(child_events[4].pointer_sample().scroll_v(), 1);
   EXPECT_FALSE(child_events[4].pointer_sample().has_pressed_buttons());
+  ASSERT_FALSE(child_events[4].pointer_sample().has_scroll_v_physical_pixel());
+  ASSERT_FALSE(child_events[4].pointer_sample().has_scroll_h_physical_pixel());
+  ASSERT_FALSE(child_events[4].pointer_sample().has_is_precision_scroll());
+}
+
+// Send wheel events with physical pixel fields to scenic ensure client receives wheel events.
+TEST_F(FlatlandMouseIntegrationTest, WheelWithPhysicalPixel) {
+  fuc_FlatlandPtr child_session;
+  fup_MouseSourcePtr child_mouse_source;
+  fuv_ViewRefFocusedPtr child_focused_ptr;
+
+  child_session.set_error_handler([](zx_status_t status) {
+    FAIL("Lost connection to Scenic: %s", zx_status_get_string(status));
+  });
+  child_mouse_source.set_error_handler([](zx_status_t status) {
+    FAIL("Mouse source closed with status: %s", zx_status_get_string(status));
+  });
+  child_focused_ptr.set_error_handler([](zx_status_t status) {
+    FAIL("ViewRefFocused closed with status: %s", zx_status_get_string(status));
+  });
+
+  auto child_view_ref = CreateChildView(child_session, child_mouse_source.NewRequest(),
+                                        child_focused_ptr.NewRequest());
+
+  // Listen for input events.
+  std::vector<fup_MouseEvent> child_events;
+  StartWatchLoop(child_mouse_source, child_events);
+
+  // Inject an input event at (0,0) which is the point of overlap between the parent and the
+  // child.
+  const std::vector<uint8_t> button_vec = {1};
+  RegisterInjector(fidl::Clone(root_view_ref_), fidl::Clone(child_view_ref),
+                   fupi_DispatchPolicy::MOUSE_HOVER_AND_LATCH_IN_TARGET, button_vec,
+                   kIdentityMatrix);
+  Inject(0, 0, fupi_EventPhase::ADD, button_vec);
+
+  RunLoopUntil([&child_events] { return child_events.size() == 1u; });
+  ASSERT_TRUE(child_events[0].has_pointer_sample());
+  EXPECT_FALSE(child_events[0].pointer_sample().has_scroll_v());
+  EXPECT_FALSE(child_events[0].pointer_sample().has_scroll_h());
+  ASSERT_FALSE(child_events[0].pointer_sample().has_scroll_v_physical_pixel());
+  ASSERT_FALSE(child_events[0].pointer_sample().has_scroll_h_physical_pixel());
+  ASSERT_FALSE(child_events[0].pointer_sample().has_is_precision_scroll());
+  child_events.clear();
+
+  // with v physical pixel, not precision scroll
+  Inject(0, 0, fupi_EventPhase::CHANGE, /* pressed_buttons= */ {},
+         /* scroll_v= */ std::optional<int64_t>(1),
+         /* scroll_h= */ std::nullopt,
+         /* scroll_v_physical_pixel= */ std::optional<double>(120.0),
+         /* scroll_h_physical_pixel= */ std::nullopt,
+         /* is_precision_scroll= */ std::optional<bool>(false));
+
+  // with h physical pixel, not precision scroll
+  Inject(0, 0, fupi_EventPhase::CHANGE, /* pressed_buttons= */ {},
+         /* scroll_v= */ std::nullopt,
+         /* scroll_h= */ std::optional<int64_t>(-1),
+         /* scroll_v_physical_pixel= */ std::nullopt,
+         /* scroll_h_physical_pixel= */ std::optional<double>(-120.0),
+         /* is_precision_scroll= */ std::optional<bool>(false));
+
+  // with v,h physical pixel, not precision scroll
+  Inject(0, 0, fupi_EventPhase::CHANGE, /* pressed_buttons= */ {},
+         /* scroll_v= */ std::optional<int64_t>(1),
+         /* scroll_h= */ std::optional<int64_t>(-1),
+         /* scroll_v_physical_pixel= */ std::optional<double>(120.0),
+         /* scroll_h_physical_pixel= */ std::optional<double>(-120.0),
+         /* is_precision_scroll= */ std::optional<bool>(false));
+
+  RunLoopUntil([&child_events] { return child_events.size() == 3u; });
+
+  ASSERT_TRUE(child_events[0].has_pointer_sample());
+  ASSERT_TRUE(child_events[0].pointer_sample().has_scroll_v());
+  EXPECT_EQ(child_events[0].pointer_sample().scroll_v(), 1);
+  ASSERT_FALSE(child_events[0].pointer_sample().has_scroll_h());
+  ASSERT_TRUE(child_events[0].pointer_sample().has_scroll_v_physical_pixel());
+  EXPECT_EQ(child_events[0].pointer_sample().scroll_v_physical_pixel(), 120.0);
+  ASSERT_FALSE(child_events[0].pointer_sample().has_scroll_h_physical_pixel());
+  ASSERT_TRUE(child_events[0].pointer_sample().has_is_precision_scroll());
+  EXPECT_FALSE(child_events[0].pointer_sample().is_precision_scroll());
+
+  ASSERT_TRUE(child_events[1].has_pointer_sample());
+  ASSERT_FALSE(child_events[1].pointer_sample().has_scroll_v());
+  ASSERT_TRUE(child_events[1].pointer_sample().has_scroll_h());
+  EXPECT_EQ(child_events[1].pointer_sample().scroll_h(), -1);
+  ASSERT_FALSE(child_events[1].pointer_sample().has_scroll_v_physical_pixel());
+  ASSERT_TRUE(child_events[1].pointer_sample().has_scroll_h_physical_pixel());
+  EXPECT_EQ(child_events[1].pointer_sample().scroll_h_physical_pixel(), -120.0);
+  ASSERT_TRUE(child_events[1].pointer_sample().has_is_precision_scroll());
+  EXPECT_FALSE(child_events[1].pointer_sample().is_precision_scroll());
+
+  ASSERT_TRUE(child_events[2].has_pointer_sample());
+  ASSERT_TRUE(child_events[2].pointer_sample().has_scroll_v());
+  EXPECT_EQ(child_events[2].pointer_sample().scroll_v(), 1);
+  ASSERT_TRUE(child_events[2].pointer_sample().has_scroll_h());
+  EXPECT_EQ(child_events[2].pointer_sample().scroll_h(), -1);
+  ASSERT_TRUE(child_events[2].pointer_sample().has_scroll_v_physical_pixel());
+  EXPECT_EQ(child_events[2].pointer_sample().scroll_v_physical_pixel(), 120.0);
+  ASSERT_TRUE(child_events[2].pointer_sample().has_scroll_h_physical_pixel());
+  EXPECT_EQ(child_events[2].pointer_sample().scroll_h_physical_pixel(), -120.0);
+  ASSERT_TRUE(child_events[2].pointer_sample().has_is_precision_scroll());
+  EXPECT_FALSE(child_events[2].pointer_sample().is_precision_scroll());
+
+  child_events.clear();
+
+  // with v physical pixel, is precision scroll
+  Inject(0, 0, fupi_EventPhase::CHANGE, /* pressed_buttons= */ {},
+         /* scroll_v= */ std::optional<int64_t>(1),
+         /* scroll_h= */ std::nullopt,
+         /* scroll_v_physical_pixel= */ std::optional<double>(120.0),
+         /* scroll_h_physical_pixel= */ std::nullopt,
+         /* is_precision_scroll= */ std::optional<bool>(true));
+
+  // with h physical pixel, is precision scroll
+  Inject(0, 0, fupi_EventPhase::CHANGE, /* pressed_buttons= */ {},
+         /* scroll_v= */ std::nullopt,
+         /* scroll_h= */ std::optional<int64_t>(-1),
+         /* scroll_v_physical_pixel= */ std::nullopt,
+         /* scroll_h_physical_pixel= */ std::optional<double>(-120.0),
+         /* is_precision_scroll= */ std::optional<bool>(true));
+
+  // with v,h physical pixel, is precision scroll
+  Inject(0, 0, fupi_EventPhase::CHANGE, /* pressed_buttons= */ {},
+         /* scroll_v= */ std::optional<int64_t>(1),
+         /* scroll_h= */ std::optional<int64_t>(-1),
+         /* scroll_v_physical_pixel= */ std::optional<double>(120.0),
+         /* scroll_h_physical_pixel= */ std::optional<double>(-120.0),
+         /* is_precision_scroll= */ std::optional<bool>(true));
+
+  RunLoopUntil([&child_events] { return child_events.size() == 3u; });
+
+  ASSERT_TRUE(child_events[0].has_pointer_sample());
+  ASSERT_TRUE(child_events[0].pointer_sample().has_scroll_v());
+  EXPECT_EQ(child_events[0].pointer_sample().scroll_v(), 1);
+  ASSERT_FALSE(child_events[0].pointer_sample().has_scroll_h());
+  ASSERT_TRUE(child_events[0].pointer_sample().has_scroll_v_physical_pixel());
+  EXPECT_EQ(child_events[0].pointer_sample().scroll_v_physical_pixel(), 120.0);
+  ASSERT_FALSE(child_events[0].pointer_sample().has_scroll_h_physical_pixel());
+  ASSERT_TRUE(child_events[0].pointer_sample().has_is_precision_scroll());
+  EXPECT_TRUE(child_events[0].pointer_sample().is_precision_scroll());
+
+  ASSERT_TRUE(child_events[1].has_pointer_sample());
+  ASSERT_FALSE(child_events[1].pointer_sample().has_scroll_v());
+  ASSERT_TRUE(child_events[1].pointer_sample().has_scroll_h());
+  EXPECT_EQ(child_events[1].pointer_sample().scroll_h(), -1);
+  ASSERT_FALSE(child_events[1].pointer_sample().has_scroll_v_physical_pixel());
+  ASSERT_TRUE(child_events[1].pointer_sample().has_scroll_h_physical_pixel());
+  EXPECT_EQ(child_events[1].pointer_sample().scroll_h_physical_pixel(), -120.0);
+  ASSERT_TRUE(child_events[1].pointer_sample().has_is_precision_scroll());
+  EXPECT_TRUE(child_events[1].pointer_sample().is_precision_scroll());
+
+  ASSERT_TRUE(child_events[2].has_pointer_sample());
+  ASSERT_TRUE(child_events[2].pointer_sample().has_scroll_v());
+  EXPECT_EQ(child_events[2].pointer_sample().scroll_v(), 1);
+  ASSERT_TRUE(child_events[2].pointer_sample().has_scroll_h());
+  EXPECT_EQ(child_events[2].pointer_sample().scroll_h(), -1);
+  ASSERT_TRUE(child_events[2].pointer_sample().has_scroll_v_physical_pixel());
+  EXPECT_EQ(child_events[2].pointer_sample().scroll_v_physical_pixel(), 120.0);
+  ASSERT_TRUE(child_events[2].pointer_sample().has_scroll_h_physical_pixel());
+  EXPECT_EQ(child_events[2].pointer_sample().scroll_h_physical_pixel(), -120.0);
+  ASSERT_TRUE(child_events[2].pointer_sample().has_is_precision_scroll());
+  EXPECT_TRUE(child_events[2].pointer_sample().is_precision_scroll());
+
+  child_events.clear();
+
+  // without tick, with v physical pixel, is precision scroll
+  Inject(0, 0, fupi_EventPhase::CHANGE, /* pressed_buttons= */ {},
+         /* scroll_v= */ std::nullopt,
+         /* scroll_h= */ std::nullopt,
+         /* scroll_v_physical_pixel= */ std::optional<double>(120.0),
+         /* scroll_h_physical_pixel= */ std::nullopt,
+
+         /* is_precision_scroll= */ std::optional<bool>(true));
+
+  // without tick, with h physical pixel, is precision scroll
+  Inject(0, 0, fupi_EventPhase::CHANGE, /* pressed_buttons= */ {},
+         /* scroll_v= */ std::nullopt,
+         /* scroll_h= */ std::nullopt,
+         /* scroll_v_physical_pixel= */ std::nullopt,
+         /* scroll_h_physical_pixel= */ std::optional<double>(-120.0),
+         /* is_precision_scroll= */ std::optional<bool>(true));
+
+  // without tick, with v,h physical pixel, is precision scroll
+  Inject(0, 0, fupi_EventPhase::CHANGE, /* pressed_buttons= */ {},
+         /* scroll_v= */ std::nullopt,
+         /* scroll_h= */ std::nullopt,
+         /* scroll_v_physical_pixel= */ std::optional<double>(120.0),
+         /* scroll_h_physical_pixel= */ std::optional<double>(-120.0),
+         /* is_precision_scroll= */ std::optional<bool>(true));
+
+  RunLoopUntil([&child_events] { return child_events.size() == 3u; });
+
+  ASSERT_TRUE(child_events[0].has_pointer_sample());
+  ASSERT_FALSE(child_events[0].pointer_sample().has_scroll_v());
+  ASSERT_FALSE(child_events[0].pointer_sample().has_scroll_h());
+  ASSERT_TRUE(child_events[0].pointer_sample().has_scroll_v_physical_pixel());
+  EXPECT_EQ(child_events[0].pointer_sample().scroll_v_physical_pixel(), 120.0);
+  ASSERT_FALSE(child_events[0].pointer_sample().has_scroll_h_physical_pixel());
+  ASSERT_TRUE(child_events[0].pointer_sample().has_is_precision_scroll());
+  EXPECT_TRUE(child_events[0].pointer_sample().is_precision_scroll());
+
+  ASSERT_TRUE(child_events[1].has_pointer_sample());
+  ASSERT_FALSE(child_events[1].pointer_sample().has_scroll_v());
+  ASSERT_FALSE(child_events[1].pointer_sample().has_scroll_h());
+  ASSERT_FALSE(child_events[1].pointer_sample().has_scroll_v_physical_pixel());
+  ASSERT_TRUE(child_events[1].pointer_sample().has_scroll_h_physical_pixel());
+  EXPECT_EQ(child_events[1].pointer_sample().scroll_h_physical_pixel(), -120.0);
+  ASSERT_TRUE(child_events[1].pointer_sample().has_is_precision_scroll());
+  EXPECT_TRUE(child_events[1].pointer_sample().is_precision_scroll());
+
+  ASSERT_TRUE(child_events[2].has_pointer_sample());
+  ASSERT_FALSE(child_events[2].pointer_sample().has_scroll_v());
+  ASSERT_FALSE(child_events[2].pointer_sample().has_scroll_h());
+  ASSERT_TRUE(child_events[2].pointer_sample().has_scroll_v_physical_pixel());
+  EXPECT_EQ(child_events[2].pointer_sample().scroll_v_physical_pixel(), 120.0);
+  ASSERT_TRUE(child_events[2].pointer_sample().has_scroll_h_physical_pixel());
+  EXPECT_EQ(child_events[2].pointer_sample().scroll_h_physical_pixel(), -120.0);
+  ASSERT_TRUE(child_events[2].pointer_sample().has_is_precision_scroll());
+  EXPECT_TRUE(child_events[2].pointer_sample().is_precision_scroll());
 }
 
 // Hit tests follow the same basic view topology:

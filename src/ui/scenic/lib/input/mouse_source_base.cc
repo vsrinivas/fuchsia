@@ -102,6 +102,15 @@ fuchsia::ui::pointer::MousePointerSample MouseSourceBase::NewPointerSample(
   if (event.scroll_h.has_value() && event.scroll_h->scroll_value.has_value()) {
     pointer.set_scroll_h(event.scroll_h->scroll_value.value());
   }
+  if (event.scroll_v_physical_pixel.has_value()) {
+    pointer.set_scroll_v_physical_pixel(event.scroll_v_physical_pixel.value());
+  }
+  if (event.scroll_h_physical_pixel.has_value()) {
+    pointer.set_scroll_h_physical_pixel(event.scroll_h_physical_pixel.value());
+  }
+  if (event.is_precision_scroll.has_value()) {
+    pointer.set_is_precision_scroll(event.is_precision_scroll.value());
+  }
 
   FX_DCHECK(event.buttons.pressed.size() <= fuchsia::input::report::MOUSE_MAX_NUM_BUTTONS);
   if (!event.buttons.pressed.empty()) {

@@ -107,6 +107,18 @@ InternalMouseEvent MouseInjector::PointerInjectorEventToInternalMouseEvent(
     internal_event.scroll_h = CreateScrollInfo(settings.scroll_h_range.value(), scroll_value);
   }
 
+  if (pointer_sample.has_scroll_v_physical_pixel()) {
+    internal_event.scroll_v_physical_pixel = pointer_sample.scroll_v_physical_pixel();
+  }
+
+  if (pointer_sample.has_scroll_h_physical_pixel()) {
+    internal_event.scroll_h_physical_pixel = pointer_sample.scroll_h_physical_pixel();
+  }
+
+  if (pointer_sample.has_is_precision_scroll()) {
+    internal_event.is_precision_scroll = pointer_sample.is_precision_scroll();
+  }
+
   // Relative Motion
   if (pointer_sample.has_relative_motion()) {
     internal_event.relative_motion = {pointer_sample.relative_motion()[0],
