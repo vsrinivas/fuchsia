@@ -17,7 +17,6 @@
 #include <unistd.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
-#include <zircon/hw/i2c.h>
 #include <zircon/types.h>
 
 #include <vector>

@@ -24,7 +24,6 @@
 #include <threads.h>
 #include <unistd.h>
 #include <zircon/assert.h>
-#include <zircon/hw/i2c.h>
 #include <zircon/listnode.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>

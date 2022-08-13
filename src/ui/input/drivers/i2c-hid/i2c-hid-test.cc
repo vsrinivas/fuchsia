@@ -26,7 +26,6 @@
 #include <threads.h>
 #include <unistd.h>
 #include <zircon/assert.h>
-#include <zircon/hw/i2c.h>
 #include <zircon/rights.h>
 #include <zircon/types.h>
 

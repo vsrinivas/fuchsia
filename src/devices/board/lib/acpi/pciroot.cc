@@ -10,7 +10,6 @@
 #include <lib/pci/pciroot.h>
 #include <lib/pci/pio.h>
 #include <zircon/compiler.h>
-#include <zircon/hw/i2c.h>
 #include <zircon/syscalls/resource.h>
 #include <zircon/types.h>
 
