@@ -1,0 +1,25 @@
+{
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/a11y_manager"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.accessibility.tts.EngineRegistry",
+            "fuchsia.feedback.LastRebootInfoProvider",
+            "fuchsia.intl.PropertyProvider",
+            "fuchsia.logger.LogSink",
+            "fuchsia.settings.Accessibility",
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.ui.accessibility.view.Registry",
+            "fuchsia.ui.annotation.Registry",
+            "fuchsia.ui.focus.FocusChainListenerRegistry",
+            "fuchsia.ui.input.accessibility.PointerEventRegistry",
+            "fuchsia.ui.pointerinjector.Registry",
+            "fuchsia.ui.policy.DisplayBacklight",
+            "fuchsia.ui.scenic.Scenic"
+        ]
+    }
+}
