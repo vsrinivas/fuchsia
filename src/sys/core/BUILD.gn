@@ -54,10 +54,6 @@ executable("core_proxy") {
   ]
 }
 
-core_shard("core_proxy_shard") {
-  shard_file = "meta/core_proxy.shard.cml"
-}
-
 fuchsia_component("fake_core") {
   testonly = true
   manifest = "meta/fake_core.cml"

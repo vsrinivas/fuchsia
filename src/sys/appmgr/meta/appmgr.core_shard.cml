@@ -4,6 +4,10 @@
 
 // Add appmgr to core
 {
+    include: [
+        // Add core_proxy to bridge v1-v2
+        "//src/sys/core/meta/core_proxy.core_shard.cml",
+    ],
     children: [
         {
             name: "appmgr",
@@ -292,6 +296,11 @@
         },
     ],
     offer: [
+        {
+            directory: "svc_for_sys",
+            from: "self",
+            to: "#appmgr",
+        },
         {
             protocol: [
                 "fuchsia.boot.WriteOnlyLog",

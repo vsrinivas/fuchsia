@@ -4,8 +4,5 @@
 
 declare_args() {
   # Core shards that are required for including appmgr in a product.
-  appmgr_core_shards = [
-    "//src/sys/appmgr:appmgr_core_shard",
-    "//src/sys/core:core_proxy_shard",
-  ]
+  appmgr_core_shards = [ "//src/sys/appmgr:appmgr_core_shard" ]
 }

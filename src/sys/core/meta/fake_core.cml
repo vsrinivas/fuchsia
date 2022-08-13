@@ -9,7 +9,7 @@
 // `appmgr` waits for a response from the protocol served by `echo_server` before serving its
 // protocol.
 {
-    include: [ "//src/sys/core/meta/core_proxy.shard.cml" ],
+    include: [ "//src/sys/core/meta/core_proxy.core_shard.cml" ],
     children: [
         {
             name: "appmgr",
@@ -30,6 +30,11 @@
         },
     ],
     offer: [
+        {
+            directory: "svc_for_sys",
+            from: "self",
+            to: "#appmgr",
+        },
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
