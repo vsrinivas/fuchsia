@@ -159,8 +159,8 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
 
   auto conversion = ::fidl::OutgoingToIncomingMessage(encoded.GetOutgoingMessage());
 
-  if (!encoded.ok()) {
-    status.status = encoded.GetOutgoingMessage();
+  if (!conversion.ok()) {
+    status.status = conversion.error();
     return status;
   }
   status.progress = DecoderEncoderProgress::FirstEncodeVerified;

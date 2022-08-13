@@ -997,6 +997,10 @@ class OutgoingToIncomingMessage {
     return incoming_message_;
   }
 
+  [[nodiscard]] fidl::Error error() const {
+    ZX_DEBUG_ASSERT(!ok());
+    return incoming_message_;
+  }
   [[nodiscard]] zx_status_t status() const { return incoming_message_.status(); }
   [[nodiscard]] bool ok() const { return incoming_message_.ok(); }
   [[nodiscard]] std::string FormatDescription() const;

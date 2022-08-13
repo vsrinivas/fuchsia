@@ -110,6 +110,7 @@ TEST(OutgoingToIncomingMessage, HandlesWrongType) {
   auto msg = fidl::OutgoingMessage::FromEncodedCValue(&c_msg);
   auto result = fidl::OutgoingToIncomingMessage(msg);
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, result.status());
+  ASSERT_EQ(fidl::Reason::kEncodeError, result.error().reason());
 }
 
 // Test that |OutgoingToIncomingMessage| rejects handles with too few rights.
@@ -140,5 +141,6 @@ TEST(OutgoingToIncomingMessage, HandlesWrongRights) {
   auto msg = fidl::OutgoingMessage::FromEncodedCValue(&c_msg);
   auto result = fidl::OutgoingToIncomingMessage(msg);
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, result.status());
+  ASSERT_EQ(fidl::Reason::kEncodeError, result.error().reason());
 }
 #endif
