@@ -142,22 +142,25 @@ zx_status_t LibFuzzerRunner::AddToCorpus(CorpusType corpus_type, Input input) {
   return ZX_OK;
 }
 
-Input LibFuzzerRunner::ReadFromCorpus(CorpusType corpus_type, size_t offset) {
+std::vector<Input> LibFuzzerRunner::GetCorpus(CorpusType corpus_type) {
+  std::vector<Input> inputs;
   switch (corpus_type) {
     case CorpusType::SEED:
-      if (offset < seed_corpus_.size()) {
-        return ReadInputFromFile(files::JoinPath(kSeedCorpusPath, seed_corpus_[offset]));
+      inputs.reserve(seed_corpus_.size());
+      for (const auto& filename : seed_corpus_) {
+        inputs.emplace_back(ReadInputFromFile(files::JoinPath(kSeedCorpusPath, filename)));
       }
       break;
     case CorpusType::LIVE:
-      if (offset < live_corpus_.size()) {
-        return ReadInputFromFile(files::JoinPath(kLiveCorpusPath, live_corpus_[offset]));
+      inputs.reserve(live_corpus_.size());
+      for (const auto& filename : live_corpus_) {
+        inputs.emplace_back(ReadInputFromFile(files::JoinPath(kLiveCorpusPath, filename)));
       }
       break;
     default:
       FX_NOTIMPLEMENTED();
   }
-  return Input();
+  return inputs;
 }
 
 void LibFuzzerRunner::ReloadLiveCorpus() {

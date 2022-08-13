@@ -19,8 +19,10 @@ TEST_F(RealmFuzzerRunnerTest, LoadCorpus) {
   SetAdapterParameters(std::vector<std::string>({"data/corpus", "--ignored"}));
   Configure(MakeOptions());
   // Results are sorted.
-  EXPECT_EQ(runner()->ReadFromCorpus(CorpusType::SEED, 1), Input("bar"));
-  EXPECT_EQ(runner()->ReadFromCorpus(CorpusType::SEED, 2), Input("foo"));
+  auto seed_corpus = runner()->GetCorpus(CorpusType::SEED);
+  ASSERT_EQ(seed_corpus.size(), 2U);
+  EXPECT_EQ(seed_corpus[0], Input("bar"));
+  EXPECT_EQ(seed_corpus[1], Input("foo"));
 }
 
 #define RUNNER_TYPE RealmFuzzerRunner

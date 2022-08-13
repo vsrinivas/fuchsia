@@ -488,11 +488,6 @@ void RunnerTest::Merge(bool keeps_errors, uint64_t oom_limit) {
   std::vector<std::string> expected_seed;
   std::vector<std::string> expected_live;
 
-  // Empty input, implicitly included in all corpora.
-  Input input0;
-  expected_seed.push_back(input0.ToHex());
-  expected_live.push_back(input0.ToHex());
-
   // Seed input => kept.
   Input input1({0x0a});
   SetCoverage(input1, {{0, 1}, {1, 2}, {2, 3}});
@@ -540,18 +535,23 @@ void RunnerTest::Merge(bool keeps_errors, uint64_t oom_limit) {
   FUZZING_EXPECT_OK(runner->Merge().wrap_with(barrier));
   RunUntil(barrier.sync());
 
+  auto seed_corpus = runner->GetCorpus(CorpusType::SEED);
   std::vector<std::string> actual_seed;
-  for (size_t i = 0; i < expected_seed.size(); ++i) {
-    actual_seed.push_back(runner->ReadFromCorpus(CorpusType::SEED, i).ToHex());
+  actual_seed.reserve(seed_corpus.size());
+  for (const auto& input : seed_corpus) {
+    actual_seed.emplace_back(input.ToHex());
   }
   std::sort(expected_seed.begin(), expected_seed.end());
   std::sort(actual_seed.begin(), actual_seed.end());
   EXPECT_EQ(expected_seed, actual_seed);
 
+  auto live_corpus = runner->GetCorpus(CorpusType::LIVE);
   std::vector<std::string> actual_live;
-  for (size_t i = 0; i < expected_live.size(); ++i) {
-    actual_live.push_back(runner->ReadFromCorpus(CorpusType::LIVE, i).ToHex());
+  actual_live.reserve(live_corpus.size());
+  for (const auto& input : live_corpus) {
+    actual_live.emplace_back(input.ToHex());
   }
+  std::sort(expected_live.begin(), expected_live.end());
   std::sort(actual_live.begin(), actual_live.end());
   EXPECT_EQ(expected_live, actual_live);
 }

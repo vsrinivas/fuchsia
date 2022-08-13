@@ -61,7 +61,7 @@ class LibFuzzerRunnerTest : public RunnerTest {
 
   void Configure(const OptionsPtr& options) override {
     // See notes on LIBFUZZER_ALLOW_DEBUG above.
-    runner_->OverrideDefaults(options.get());
+    options->set_detect_exits(true);
     options->set_debug(LIBFUZZER_ALLOW_DEBUG);
     RunnerTest::Configure(options);
 

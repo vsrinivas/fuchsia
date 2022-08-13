@@ -109,14 +109,7 @@ void ControllerImpl::ReadCorpus(CorpusType corpus_type, fidl::InterfaceHandle<Co
                              inputs = std::vector<Input>(), callback = std::move(callback),
                              sending = ZxFuture<>()](Context& context) mutable -> ZxResult<> {
                     if (!sending) {
-                      for (size_t offset = 1;; ++offset) {
-                        auto input = runner_->ReadFromCorpus(corpus_type, offset);
-                        if (input.size() == 0) {
-                          break;
-                        }
-                        inputs.emplace_back(std::move(input));
-                      }
-                      sending = client->Send(std::move(inputs));
+                      sending = client->Send(runner_->GetCorpus(corpus_type));
                     }
                     if (!sending(context)) {
                       return fpromise::pending();

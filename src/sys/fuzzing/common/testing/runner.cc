@@ -49,9 +49,14 @@ zx_status_t FakeRunner::AddToCorpus(CorpusType corpus_type, Input input) {
   return ZX_OK;
 }
 
-Input FakeRunner::ReadFromCorpus(CorpusType corpus_type, size_t offset) {
-  auto* corpus = corpus_type == CorpusType::SEED ? &seed_corpus_ : &live_corpus_;
-  return offset < corpus->size() ? (*corpus)[offset].Duplicate() : Input();
+std::vector<Input> FakeRunner::GetCorpus(CorpusType corpus_type) {
+  const auto* corpus = corpus_type == CorpusType::SEED ? &seed_corpus_ : &live_corpus_;
+  std::vector<Input> inputs;
+  inputs.reserve(corpus->size());
+  for (const auto& input : *corpus) {
+    inputs.emplace_back(input.Duplicate());
+  }
+  return inputs;
 }
 
 zx_status_t FakeRunner::ParseDictionary(const Input& input) {

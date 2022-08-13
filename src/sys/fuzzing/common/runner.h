@@ -10,6 +10,7 @@
 #include <lib/fit/function.h>
 
 #include <memory>
+#include <vector>
 
 #include "src/lib/fxl/macros.h"
 #include "src/sys/fuzzing/common/artifact.h"
@@ -53,9 +54,8 @@ class Runner {
   // unrecognized.
   virtual zx_status_t AddToCorpus(CorpusType corpus_type, Input input) = 0;
 
-  // Returns a copy of the input at the given |offset| in the corpus of the given |corpus_type|,
-  // or an emtpy input if |offset| is invalid.
-  virtual Input ReadFromCorpus(CorpusType corpus_type, size_t offset) = 0;
+  // Returns a copy of all non-empty inputs in the corpus of the given |corpus_type|.
+  virtual std::vector<Input> GetCorpus(CorpusType corpus_type) = 0;
 
   // Parses the given |input| as an AFL-style dictionary. For format details, see
   // https://lcamtuf.coredump.cx/afl/technical_details.txt. Returns ZX_ERR_INVALID_ARGS if parsing

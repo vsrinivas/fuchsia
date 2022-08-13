@@ -157,15 +157,18 @@ TEST_F(ControllerTest, AddToCorpus) {
   FUZZING_EXPECT_OK(bridge4.consumer.promise_or(fpromise::error()));
   RunUntilIdle();
 
-  EXPECT_EQ(runner()->ReadFromCorpus(CorpusType::SEED, 0).ToHex(), input0.ToHex());
-  EXPECT_EQ(runner()->ReadFromCorpus(CorpusType::SEED, 1).ToHex(), seed_input1.ToHex());
-  EXPECT_EQ(runner()->ReadFromCorpus(CorpusType::SEED, 2).ToHex(), seed_input2.ToHex());
-  EXPECT_EQ(runner()->ReadFromCorpus(CorpusType::SEED, 3).ToHex(), input0.ToHex());
+  auto seed_corpus = runner()->GetCorpus(CorpusType::SEED);
+  auto live_corpus = runner()->GetCorpus(CorpusType::LIVE);
 
-  EXPECT_EQ(runner()->ReadFromCorpus(CorpusType::LIVE, 0).ToHex(), input0.ToHex());
-  EXPECT_EQ(runner()->ReadFromCorpus(CorpusType::LIVE, 1).ToHex(), live_input3.ToHex());
-  EXPECT_EQ(runner()->ReadFromCorpus(CorpusType::LIVE, 2).ToHex(), live_input4.ToHex());
-  EXPECT_EQ(runner()->ReadFromCorpus(CorpusType::LIVE, 3).ToHex(), input0.ToHex());
+  ASSERT_EQ(seed_corpus.size(), 3U);
+  EXPECT_EQ(seed_corpus[0].ToHex(), input0.ToHex());
+  EXPECT_EQ(seed_corpus[1].ToHex(), seed_input1.ToHex());
+  EXPECT_EQ(seed_corpus[2].ToHex(), seed_input2.ToHex());
+
+  ASSERT_EQ(live_corpus.size(), 3U);
+  EXPECT_EQ(live_corpus[0].ToHex(), input0.ToHex());
+  EXPECT_EQ(live_corpus[1].ToHex(), live_input3.ToHex());
+  EXPECT_EQ(live_corpus[2].ToHex(), live_input4.ToHex());
 }
 
 TEST_F(ControllerTest, ReadCorpus) {

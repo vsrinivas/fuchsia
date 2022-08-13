@@ -74,19 +74,25 @@ zx_status_t RealmFuzzerRunner::AddToCorpus(CorpusType corpus_type, Input input) 
   }
 }
 
-Input RealmFuzzerRunner::ReadFromCorpus(CorpusType corpus_type, size_t offset) {
-  Input input;
+std::vector<Input> RealmFuzzerRunner::GetCorpus(CorpusType corpus_type) {
+  CorpusPtr corpus;
   switch (corpus_type) {
     case CorpusType::SEED:
-      seed_corpus_->At(offset, &input);
+      corpus = seed_corpus_;
       break;
     case CorpusType::LIVE:
-      live_corpus_->At(offset, &input);
+      corpus = live_corpus_;
       break;
     default:
       FX_NOTREACHED();
   }
-  return input;
+  // The first input is always the implicit empty input; skip it.
+  auto num_inputs = corpus->num_inputs();
+  std::vector<Input> inputs(num_inputs - 1);
+  for (size_t i = 0; i < inputs.size(); ++i) {
+    corpus->At(i + 1, &inputs[i]);
+  }
+  return inputs;
 }
 
 zx_status_t RealmFuzzerRunner::ParseDictionary(const Input& input) {

@@ -13,6 +13,7 @@
 
 #include <memory>
 #include <string_view>
+#include <vector>
 
 #include <re2/re2.h>
 
@@ -39,7 +40,7 @@ class LibFuzzerRunner : public Runner {
   // |Runner| methods.
   void OverrideDefaults(Options* options) override;
   __WARN_UNUSED_RESULT zx_status_t AddToCorpus(CorpusType corpus_type, Input input) override;
-  Input ReadFromCorpus(CorpusType corpus_type, size_t offset) override;
+  std::vector<Input> GetCorpus(CorpusType corpus_type) override;
   __WARN_UNUSED_RESULT zx_status_t ParseDictionary(const Input& input) override;
   Input GetDictionaryAsInput() const override;
 
