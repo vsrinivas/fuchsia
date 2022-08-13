@@ -63,12 +63,19 @@ if (is_linux) {
     gopackages = [ "go.fuchsia.dev/fuchsia/tools/fuzz" ]
     deps = [ ":lib" ]
   }
+}
 
-  group("tests") {
-    testonly = true
-
+group("host_tests") {
+  visibility = [ ":*" ]
+  testonly = true
+  if (is_linux) {
     deps = [ ":undercoat_tests" ]
   }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":host_tests($host_toolchain)" ]
 }
 
 install_host_tools("fuzz") {
