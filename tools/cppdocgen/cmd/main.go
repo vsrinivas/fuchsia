@@ -5,9 +5,11 @@
 package main
 
 import (
+	"archive/zip"
 	"flag"
 	"go.fuchsia.dev/fuchsia/tools/cppdocgen/clangdoc"
 	"go.fuchsia.dev/fuchsia/tools/cppdocgen/docgen"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -16,14 +18,16 @@ import (
 var flags struct {
 	inDir          string
 	outDir         string
+	outZip         string
 	buildDir       string
 	stripPathCount int
 	repoBaseUrl    string
 }
 
 func init() {
-	flag.StringVar(&flags.inDir, "indir", "", "Input directory")
-	flag.StringVar(&flags.outDir, "outdir", "", "Output directory")
+	flag.StringVar(&flags.inDir, "in-dir", "", "Input directory")
+	flag.StringVar(&flags.outDir, "out-dir", "", "Output directory")
+	flag.StringVar(&flags.outZip, "out-zip", "", "Output zip file")
 	flag.StringVar(&flags.buildDir, "build-dir", "", "Build directory from whence clang-doc paths are relative.")
 	flag.StringVar(&flags.repoBaseUrl, "source-url", "", "URL of code repo for source links.")
 	flag.IntVar(&flags.stripPathCount, "strip-include-elts", 0, "Strip this many path elements before header file names.")
@@ -59,31 +63,59 @@ func main() {
 		indexSettings.Headers[a] = struct{}{}
 	}
 
-	if len(flags.outDir) == 0 {
-		log.Fatal("No output directory (-o) specified")
+	// Validate output flags.
+	if flags.outZip != "" && flags.outDir != "" {
+		log.Fatal("Can't specify both --out-dir and --out-zip")
+	} else if flags.outZip == "" && flags.outDir == "" {
+		log.Fatal("Must specify either --out-dir=<dir> or --out-zip=<filename>.zip")
 	}
-	err := os.MkdirAll(flags.outDir, 0o755)
-	if err != nil {
-		log.Fatal("Can't create output directory '%s':\n%v", flags.outDir, err)
+
+	// Set up output. The addFile() lambda will create the given file in the output format
+	// requested.
+	var addFile func(string) io.Writer
+	if len(flags.outZip) != 0 {
+		// Create a zip file.
+		zipFile, err := os.Create(flags.outZip)
+		if err != nil {
+			log.Fatal("Can't create output file '%s':\n%v", flags.outZip, err)
+		}
+		defer zipFile.Close()
+
+		zipWriter := zip.NewWriter(zipFile)
+		defer zipWriter.Close()
+
+		addFile = func(path string) io.Writer {
+			file, err := zipWriter.Create(path)
+			if err != nil {
+				log.Fatal("Can't add '%s' to zip file\n%v", path, err)
+			}
+			return file
+		}
+	} else {
+		// Create a directory.
+		err := os.MkdirAll(flags.outDir, 0o755)
+		if err != nil {
+			log.Fatal("Can't create output directory '%s':\n%v", flags.outDir, err)
+		}
+		addFile = func(name string) io.Writer {
+			file, err := os.Create(name)
+			if err != nil {
+				log.Fatal(err)
+			}
+			return file
+		}
 	}
 
 	root := clangdoc.Load(flags.inDir)
 
 	index := docgen.MakeIndex(indexSettings, root)
-
-	indexFile, err := os.OpenFile(flags.outDir+"/index.md", os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
-	if err != nil {
-		log.Fatal(err)
-	}
+	indexFile := addFile("index.md")
 	docgen.WriteIndex(writeSettings, &index, indexFile)
 
 	// Header references.
 	for _, h := range index.Headers {
 		n := h.ReferenceFileName()
-		headerFile, err := os.OpenFile(flags.outDir+"/"+n, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
-		if err != nil {
-			log.Fatal(err)
-		}
+		headerFile := addFile(n)
 		docgen.WriteHeaderReference(writeSettings, &index, h, headerFile)
 	}
 }
