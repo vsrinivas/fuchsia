@@ -273,9 +273,8 @@ void DefaultFrameScheduler::ScheduleUpdateForSession(zx::time requested_presenta
   HandleNextFrameRequest();
 }
 
-void DefaultFrameScheduler::GetFuturePresentationInfos(
-    zx::duration requested_prediction_span,
-    FrameScheduler::GetFuturePresentationInfosCallback presentation_infos_callback) {
+std::vector<FuturePresentationInfo> DefaultFrameScheduler::GetFuturePresentationInfos(
+    zx::duration requested_prediction_span) {
   std::vector<FuturePresentationInfo> infos;
 
   PredictionRequest request;
@@ -323,7 +322,7 @@ void DefaultFrameScheduler::GetFuturePresentationInfos(
   }
 
   ZX_DEBUG_ASSERT(infos.size() >= 1);
-  presentation_infos_callback(std::move(infos));
+  return infos;
 }
 
 void DefaultFrameScheduler::OnFramePresented(uint64_t frame_number, zx::time render_start_time,

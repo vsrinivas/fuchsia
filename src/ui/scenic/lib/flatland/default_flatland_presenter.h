@@ -40,8 +40,7 @@ class DefaultFlatlandPresenter final
                                 std::vector<zx::event> release_fences) override;
 
   // |FlatlandPresenter|.
-  void GetFuturePresentationInfos(scheduling::FrameScheduler::GetFuturePresentationInfosCallback
-                                      presentation_infos_callback) override;
+  std::vector<scheduling::FuturePresentationInfo> GetFuturePresentationInfos() override;
 
   // |FlatlandPresenter|
   void RemoveSession(scheduling::SessionId session_id) override;

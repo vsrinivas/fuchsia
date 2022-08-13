@@ -497,10 +497,8 @@ TEST_F(FrameSchedulerTest, SinglePredictedPresentation_ShouldBeReasonable) {
   zx::time next_vsync = vsync_timing_->last_vsync_time() + vsync_timing_->vsync_interval();
 
   // Ask for a prediction for one frame into the future.
-  std::vector<scheduling::FuturePresentationInfo> predicted_presents;
-  scheduler->GetFuturePresentationInfos(zx::duration(0), [&](auto future_presents) {
-    predicted_presents = std::move(future_presents);
-  });
+  std::vector<scheduling::FuturePresentationInfo> predicted_presents =
+      scheduler->GetFuturePresentationInfos(zx::duration(0));
 
   EXPECT_GE(predicted_presents.size(), 1u);
   EXPECT_EQ(predicted_presents[0].presentation_time, next_vsync);
@@ -530,10 +528,8 @@ TEST_F(FrameSchedulerTest, ArbitraryPredictedPresentation_ShouldBeReasonable) {
   RunLoopUntil(vsync1);
 
   // Ask for a prediction.
-  std::vector<scheduling::FuturePresentationInfo> predicted_presents;
-  scheduler->GetFuturePresentationInfos(zx::duration(0), [&](auto future_presents) {
-    predicted_presents = std::move(future_presents);
-  });
+  std::vector<scheduling::FuturePresentationInfo> predicted_presents =
+      scheduler->GetFuturePresentationInfos(zx::duration(0));
 
   EXPECT_GE(predicted_presents.size(), 1u);
   EXPECT_EQ(predicted_presents[0].presentation_time, vsync);
@@ -558,10 +554,8 @@ TEST_F(FrameSchedulerTest, MultiplePredictedPresentations_ShouldBeReasonable) {
   EXPECT_GT(vsync_timing_->vsync_interval(), zx::duration(0));
 
   // Ask for a prediction a few frames into the future.
-  std::vector<scheduling::FuturePresentationInfo> predicted_presents;
-  scheduler->GetFuturePresentationInfos(
-      zx::duration((vsync4 - vsync0).get()),
-      [&](auto future_presents) { predicted_presents = std::move(future_presents); });
+  std::vector<scheduling::FuturePresentationInfo> predicted_presents =
+      scheduler->GetFuturePresentationInfos(zx::duration((vsync4 - vsync0).get()));
 
   // Expect at least one frame of prediction.
   EXPECT_GE(predicted_presents.size(), 1u);
@@ -586,10 +580,8 @@ TEST_F(FrameSchedulerTest, InfinitelyLargePredictionRequest_ShouldBeTruncated) {
   zx::time next_vsync = vsync_timing_->last_vsync_time() + vsync_timing_->vsync_interval();
 
   // Ask for an extremely large prediction duration.
-  std::vector<scheduling::FuturePresentationInfo> predicted_presents;
-  scheduler->GetFuturePresentationInfos(zx::duration(INTMAX_MAX), [&](auto future_presents) {
-    predicted_presents = std::move(future_presents);
-  });
+  std::vector<scheduling::FuturePresentationInfo> predicted_presents =
+      scheduler->GetFuturePresentationInfos(zx::duration(INTMAX_MAX));
 
   constexpr static const uint64_t kOverlyLargeRequestCount = 100u;
 

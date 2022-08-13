@@ -49,9 +49,8 @@ class DefaultFrameScheduler final : public FrameScheduler {
                                 bool squashable) override;
 
   // |FrameScheduler|
-  void GetFuturePresentationInfos(
-      zx::duration requested_prediction_span,
-      FrameScheduler::GetFuturePresentationInfosCallback presentation_infos_callback) override;
+  std::vector<FuturePresentationInfo> GetFuturePresentationInfos(
+      zx::duration requested_prediction_span) override;
 
   // |FrameScheduler|
   void RemoveSession(SessionId session_id) override;

@@ -235,41 +235,40 @@ void FlatlandManager::OnCpuWorkDone() {
   // frame.
   //
   // `this` is safe to capture, as the callback is guaranteed to run on the calling thread.
-  flatland_presenter_->GetFuturePresentationInfos(
-      [this](std::vector<scheduling::FuturePresentationInfo> presentation_infos) {
-        for (const auto& [session_id, present_credits_returned] : flatland_instances_updated_) {
-          auto instance_kv = flatland_instances_.find(session_id);
+  const std::vector<scheduling::FuturePresentationInfo> presentation_infos =
+      flatland_presenter_->GetFuturePresentationInfos();
+  for (const auto& [session_id, present_credits_returned] : flatland_instances_updated_) {
+    auto instance_kv = flatland_instances_.find(session_id);
 
-          // Skip sessions that have exited since their frame was rendered.
-          if (instance_kv == flatland_instances_.end()) {
-            continue;
-          }
+    // Skip sessions that have exited since their frame was rendered.
+    if (instance_kv == flatland_instances_.end()) {
+      continue;
+    }
 
-          // Make a copy of the vector manually.
-          Flatland::FuturePresentationInfos presentation_infos_copy(presentation_infos.size());
-          for (size_t i = 0; i < presentation_infos.size(); ++i) {
-            auto& info = presentation_infos[i];
-            fuchsia::scenic::scheduling::PresentationInfo info_copy;
-            info_copy.set_latch_point(info.latch_point.get());
-            info_copy.set_presentation_time(info.presentation_time.get());
-            presentation_infos_copy[i] = std::move(info_copy);
-          }
+    // Make a copy of the vector manually.
+    Flatland::FuturePresentationInfos presentation_infos_copy(presentation_infos.size());
+    for (size_t i = 0; i < presentation_infos.size(); ++i) {
+      auto& info = presentation_infos[i];
+      fuchsia::scenic::scheduling::PresentationInfo info_copy;
+      info_copy.set_latch_point(info.latch_point.get());
+      info_copy.set_presentation_time(info.presentation_time.get());
+      presentation_infos_copy[i] = std::move(info_copy);
+    }
 
-          // The first time we send credits we should send the maximum amount for the client to get
-          // started.
-          uint32_t credits_returned = present_credits_returned;
-          if (!instance_kv->second->initial_credits_returned) {
-            credits_returned = scheduling::FrameScheduler::kMaxPresentsInFlight;
-            instance_kv->second->initial_credits_returned = true;
-          }
+    // The first time we send credits we should send the maximum amount for the client to get
+    // started.
+    uint32_t credits_returned = present_credits_returned;
+    if (!instance_kv->second->initial_credits_returned) {
+      credits_returned = scheduling::FrameScheduler::kMaxPresentsInFlight;
+      instance_kv->second->initial_credits_returned = true;
+    }
 
-          SendPresentCredits(instance_kv->second.get(), credits_returned,
-                             std::move(presentation_infos_copy));
-        }
+    SendPresentCredits(instance_kv->second.get(), credits_returned,
+                       std::move(presentation_infos_copy));
+  }
 
-        // Prepare map for the next frame.
-        flatland_instances_updated_.clear();
-      });
+  // Prepare map for the next frame.
+  flatland_instances_updated_.clear();
 }
 
 void FlatlandManager::OnFramePresented(

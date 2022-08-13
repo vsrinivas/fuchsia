@@ -45,13 +45,12 @@ void MockFrameScheduler::ScheduleUpdateForSession(zx::time presentation_time,
   }
 }
 
-void MockFrameScheduler::GetFuturePresentationInfos(
-    zx::duration requested_prediction_span,
-    FrameScheduler::GetFuturePresentationInfosCallback presentation_infos_callback) {
+std::vector<scheduling::FuturePresentationInfo> MockFrameScheduler::GetFuturePresentationInfos(
+    zx::duration requested_prediction_span) {
   if (get_future_presentation_infos_callback_) {
-    presentation_infos_callback(get_future_presentation_infos_callback_(requested_prediction_span));
+    return get_future_presentation_infos_callback_(requested_prediction_span);
   } else {
-    presentation_infos_callback({});
+    return {};
   }
 }
 

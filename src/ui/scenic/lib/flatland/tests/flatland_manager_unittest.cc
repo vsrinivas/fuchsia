@@ -91,19 +91,18 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
               queue.push(id_pair.present_id);
             }));
 
-    ON_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos(_))
-        .WillByDefault(::testing::Invoke(
-            [&](scheduling::FrameScheduler::GetFuturePresentationInfosCallback callback) {
-              // The requested_prediction_span should be at least one frame.
+    ON_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos())
+        .WillByDefault(::testing::Invoke([&]() {
+          // The requested_prediction_span should be at least one frame.
 
-              // Give back at least one info.
-              std::vector<scheduling::FuturePresentationInfo> presentation_infos;
-              auto& info = presentation_infos.emplace_back();
-              info.latch_point = zx::time(5);
-              info.presentation_time = zx::time(10);
+          // Give back at least one info.
+          std::vector<scheduling::FuturePresentationInfo> presentation_infos;
+          auto& info = presentation_infos.emplace_back();
+          info.latch_point = zx::time(5);
+          info.presentation_time = zx::time(10);
 
-              callback(std::move(presentation_infos));
-            }));
+          return presentation_infos;
+        }));
 
     ON_CALL(*mock_flatland_presenter_, RemoveSession(_))
         .WillByDefault(::testing::Invoke(
@@ -313,7 +312,7 @@ TEST_F(FlatlandManagerTest, FirstPresentReturnsMaxPresentCredits) {
   const auto next_present_id = PopPendingPresent(id);
   manager_->UpdateSessions({{id, next_present_id}}, /*trace_id=*/0);
 
-  EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos(_));
+  EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos());
   manager_->OnCpuWorkDone();
 
   snapshot = uber_struct_system_->Snapshot();
@@ -353,7 +352,7 @@ TEST_F(FlatlandManagerTest, UpdateSessionsReturnsPresentCredits) {
     const auto next_present_id1 = PopPendingPresent(id1);
     const auto next_present_id2 = PopPendingPresent(id2);
     manager_->UpdateSessions({{id1, next_present_id1}, {id2, next_present_id2}}, /*trace_id=*/0);
-    EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos(_));
+    EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos());
     manager_->OnCpuWorkDone();
     RunLoopUntil([&] {
       return returned_tokens1 == scheduling::FrameScheduler::kMaxPresentsInFlight &&
@@ -381,7 +380,7 @@ TEST_F(FlatlandManagerTest, UpdateSessionsReturnsPresentCredits) {
   auto next_present_id1 = PopPendingPresent(id1);
   manager_->UpdateSessions({{id1, next_present_id1}}, /*trace_id=*/0);
 
-  EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos(_));
+  EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos());
   manager_->OnCpuWorkDone();
 
   RunLoopUntil([&returned_tokens1] { return returned_tokens1 != 0; });
@@ -401,7 +400,7 @@ TEST_F(FlatlandManagerTest, UpdateSessionsReturnsPresentCredits) {
 
   manager_->UpdateSessions({{id2, next_present_id2}}, /*trace_id=*/0);
 
-  EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos(_));
+  EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos());
   manager_->OnCpuWorkDone();
 
   const auto snapshot = uber_struct_system_->Snapshot();
@@ -436,7 +435,7 @@ TEST_F(FlatlandManagerTest, ConsecutiveUpdateSessions_ReturnsCorrectPresentCredi
     PRESENT(flatland, id, true);
     const auto next_present_id = PopPendingPresent(id);
     manager_->UpdateSessions({{id, next_present_id}}, /*trace_id=*/0);
-    EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos(_));
+    EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos());
     manager_->OnCpuWorkDone();
     RunLoopUntil(
         [&] { return returned_tokens == scheduling::FrameScheduler::kMaxPresentsInFlight; });
@@ -459,7 +458,7 @@ TEST_F(FlatlandManagerTest, ConsecutiveUpdateSessions_ReturnsCorrectPresentCredi
   manager_->UpdateSessions({{id, next_present_id}}, /*trace_id=*/0);
 
   // Finally, the work is done according to the frame scheduler.
-  EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos(_));
+  EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos());
   manager_->OnCpuWorkDone();
 
   const auto snapshot = uber_struct_system_->Snapshot();
@@ -533,7 +532,7 @@ TEST_F(FlatlandManagerTest, TokensAreReplenishedAfterRunningOut) {
     PRESENT(flatland, id, true);
     const auto next_present_id = PopPendingPresent(id);
     manager_->UpdateSessions({{id, next_present_id}}, /*trace_id=*/0);
-    EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos(_));
+    EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos());
     manager_->OnCpuWorkDone();
     RunLoopUntil(
         [&] { return tokens_remaining == scheduling::FrameScheduler::kMaxPresentsInFlight; });
@@ -550,7 +549,7 @@ TEST_F(FlatlandManagerTest, TokensAreReplenishedAfterRunningOut) {
   manager_->UpdateSessions({{id, next_present_id}}, /*trace_id=*/0);
 
   // Signal that the work is done, which should return present credits to the client.
-  EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos(_));
+  EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos());
   manager_->OnCpuWorkDone();
 
   RunLoopUntil([&tokens_remaining] { return tokens_remaining != 0; });
@@ -590,7 +589,7 @@ TEST_F(FlatlandManagerTest, OnFramePresentedEvent) {
     const auto next_present_id1 = PopPendingPresent(id1);
     const auto next_present_id2 = PopPendingPresent(id2);
     manager_->UpdateSessions({{id1, next_present_id1}, {id2, next_present_id2}}, /*trace_id=*/0);
-    EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos(_));
+    EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos());
     manager_->OnCpuWorkDone();
     RunLoopUntil([&] {
       return returned_tokens1 == scheduling::FrameScheduler::kMaxPresentsInFlight &&

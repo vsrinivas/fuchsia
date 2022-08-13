@@ -182,9 +182,8 @@ TEST_F(DefaultFlatlandPresenterTest, GetFuturePresentationInfosForwardsToFrameSc
   auto presenter = CreateDefaultFlatlandPresenter();
   presenter->SetFrameScheduler(frame_scheduler);
 
-  std::vector<scheduling::FuturePresentationInfo> presentation_infos;
-  presenter->GetFuturePresentationInfos(
-      [&presentation_infos](auto infos) { presentation_infos = std::move(infos); });
+  std::vector<scheduling::FuturePresentationInfo> presentation_infos =
+      presenter->GetFuturePresentationInfos();
   RunLoopUntilIdle();
 
   // The requested prediction span should be reasonable - greater than 1 frame's worth of data.
@@ -371,19 +370,15 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
           std::this_thread::yield();
         }
 
-        // GetFuturePresentationInfos() is the second function being tested.
-        presenter->GetFuturePresentationInfos(
-            [&presentation_info_count, &loop, &loop_quits, &checker](auto) {
-              presentation_info_count++;
+        presentation_info_count++;
 
-              EXPECT_TRUE(checker.is_thread_valid());
+        EXPECT_TRUE(checker.is_thread_valid());
 
-              // When all kNumPresents tasks are posted back, this thread can safely return.
-              if (presentation_info_count == kNumPresents) {
-                loop_quits++;
-                loop.Quit();
-              }
-            });
+        // When all kNumPresents tasks are posted back, this thread can safely return.
+        if (presentation_info_count == kNumPresents) {
+          loop_quits++;
+          loop.Quit();
+        }
       }
 
       // Acquire the test mutex and insert all IDs for later evaluation.
@@ -420,9 +415,6 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
     // ScheduleUpdateForSession() is the second function being tested.
     frame_scheduler->ScheduleUpdateForSession(zx::time(0), {kGfxSessionId, present_id},
                                               /*squashable=*/true);
-
-    // GetFuturePresentationInfos() is the third function being tested.
-    frame_scheduler->GetFuturePresentationInfos(zx::duration(0), [](auto) {});
   }
 
   {
@@ -458,7 +450,7 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
   EXPECT_EQ(scheduled_updates.size(), kTotalNumPresents);
 
   // Verify that the correct total number of function calls were made.
-  EXPECT_EQ(function_count, kTotalNumPresents * 3ul);
+  EXPECT_EQ(function_count, kTotalNumPresents * 2ul);
 
   // Verify that the sets from both mock functions are identical.
   EXPECT_THAT(registered_presents, ::testing::ElementsAreArray(scheduled_updates));

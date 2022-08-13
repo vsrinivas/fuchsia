@@ -206,21 +206,16 @@ void Session::InvokeFuturePresentationTimesCallback(zx_duration_t requested_pred
     return;
   // TODO(fxbug.dev/56290): Handle the missing frame scheduler case.
   if (auto locked_frame_scheduler = frame_scheduler_.lock()) {
-    locked_frame_scheduler->GetFuturePresentationInfos(
-        zx::duration(requested_prediction_span),
-        [weak = weak_factory_.GetWeakPtr(), callback = std::move(callback)](
-            std::vector<scheduling::FuturePresentationInfo> presentation_infos) {
-          if (weak) {
-            std::vector<fuchsia::scenic::scheduling::PresentationInfo> infos;
-            for (auto& presentation_info : presentation_infos) {
-              auto& info = infos.emplace_back();
-              info.set_latch_point(presentation_info.latch_point.get());
-              info.set_presentation_time(presentation_info.presentation_time.get());
-            }
+    std::vector<scheduling::FuturePresentationInfo> presentation_infos =
+        locked_frame_scheduler->GetFuturePresentationInfos(zx::duration(requested_prediction_span));
+    std::vector<fuchsia::scenic::scheduling::PresentationInfo> infos;
+    for (auto& presentation_info : presentation_infos) {
+      auto& info = infos.emplace_back();
+      info.set_latch_point(presentation_info.latch_point.get());
+      info.set_presentation_time(presentation_info.presentation_time.get());
+    }
 
-            callback({std::move(infos), weak->num_presents_allowed_});
-          }
-        });
+    callback({std::move(infos), num_presents_allowed_});
   }
 }
 

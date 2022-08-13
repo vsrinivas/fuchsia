@@ -124,10 +124,8 @@ class FrameScheduler {
 
   // Gets the predicted latch points and presentation times for the frames at or before the next
   // |requested_prediction_span| time span. Uses the FramePredictor to do so.
-  using GetFuturePresentationInfosCallback =
-      fit::function<void(std::vector<FuturePresentationInfo>)>;
-  virtual void GetFuturePresentationInfos(zx::duration requested_prediction_span,
-                                          GetFuturePresentationInfosCallback callback) = 0;
+  virtual std::vector<FuturePresentationInfo> GetFuturePresentationInfos(
+      zx::duration requested_prediction_span) = 0;
 
   // Removes all references to |session_id|.
   virtual void RemoveSession(SessionId session_id) = 0;

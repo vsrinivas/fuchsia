@@ -36,8 +36,7 @@ class FlatlandPresenter {
   // |requested_prediction_span| time span. Uses the FramePredictor to do so.
   //
   // The callback is guaranteed to run on the calling thread.
-  virtual void GetFuturePresentationInfos(
-      scheduling::FrameScheduler::GetFuturePresentationInfosCallback callback) = 0;
+  virtual std::vector<scheduling::FuturePresentationInfo> GetFuturePresentationInfos() = 0;
 
   // From scheduling::FrameScheduler::RemoveSession():
   //
