@@ -94,7 +94,7 @@ From //build/fidl/fidl_library.gni:19
 ### appmgr_core_shards
 Core shards that are required for including appmgr in a product.
 
-**Current value (from the default):** `["//src/sys/appmgr:appmgr_core_shard", "//src/sys/core:core_proxy_shard"]`
+**Current value (from the default):** `["//src/sys/appmgr:appmgr_core_shard"]`
 
 From //src/sys/appmgr/core_shards.gni:7
 
@@ -6221,7 +6221,7 @@ From //build/security.gni:172
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"linux_arm64/thinlto-cache"`
+**Current value (from the default):** `"thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
