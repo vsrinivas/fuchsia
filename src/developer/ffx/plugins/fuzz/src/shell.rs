@@ -10,6 +10,7 @@ use {
     crate::util::{get_fuzzer_urls, to_out_dir},
     crate::writer::{OutputSink, Writer},
     anyhow::{Context as _, Result},
+    errors::ffx_bail,
     ffx_fuzz_args::*,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_fuzzer as fuzz, fuchsia_async as fasync,
@@ -74,17 +75,25 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
     }
 
     /// Runs a blocking loop executing commands from the `reader`.
-    pub async fn run(&mut self) {
+    pub async fn run(&mut self) -> Result<()> {
+        let is_interactive = self.reader.borrow().is_interactive();
         loop {
             if let Some(command) = self.prompt().await {
                 match self.execute(command).await {
                     Ok(NextAction::Prompt) => {}
-                    Ok(NextAction::Exit) => return,
-                    Err(e) => self.writer.error(format!("Failed to execute command: {:?}", e)),
+                    Ok(NextAction::Exit) => break,
+                    Err(e) => {
+                        if is_interactive {
+                            self.writer.error(format!("Failed to execute command: {:?}", e));
+                        } else {
+                            ffx_bail!("Failed to execute command: {:?}", e);
+                        }
+                    }
                     _ => unreachable!(),
                 };
             };
         }
+        Ok(())
     }
 
     async fn prompt(&self) -> Option<FuzzShellCommand> {
@@ -191,7 +200,9 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
                 self.writer.println("No fuzzer attached.");
             }
             FuzzShellSubcommand::Exit(ExitShellSubcommand {}) => {
-                self.writer.println("Exiting...");
+                if self.reader.borrow().is_interactive() {
+                    self.writer.println("Exiting...");
+                }
                 return Ok(NextAction::Exit);
             }
             _ => self.writer.error("Invalid command: No fuzzer attached."),
@@ -290,10 +301,13 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
         let workflow_fut = workflow_fut.fuse();
         pin_mut!(workflow_fut);
 
+        let is_interactive = self.reader.borrow().is_interactive();
         let mut next_action = NextAction::Prompt;
         self.set_state(FuzzerState::Running);
         loop {
-            self.writer.println("Press <ENTER> to interrupt output from fuzzer.");
+            if is_interactive {
+                self.writer.println("Press <ENTER> to interrupt output from fuzzer.");
+            }
             let interrupt_fut = self.until_interrupt().fuse();
             pin_mut!(interrupt_fut);
             select! {
@@ -306,7 +320,9 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
                     // Ugh. The `rustyline` editor is sitting in a blocking, uncancellable read of
                     // stdin at this point. The simplest solution seems to be just to have the user
                     // press <ENTER> again.
-                    self.writer.println("Workflow complete! Press <ENTER> to return to prompt.");
+                    if is_interactive {
+                        self.writer.println("Workflow complete! Press <ENTER> to return to prompt.");
+                    }
                 }
             };
             if next_action != NextAction::Prompt || self.get_state() != FuzzerState::Running {
@@ -534,7 +550,7 @@ mod test_fixtures {
             let mut script = Self::try_new(test).context("failed to create shell script")?;
             let fuzzer = script.attach(test);
             fuzzer.set_result(FuzzResult::NoErrors);
-            script.add_workflow(test, "run");
+            script.add(test, "run");
             test.output_matches("Configuring fuzzer...");
             test.output_matches("Running fuzzer...");
             script.interrupt(test).await;
@@ -552,7 +568,7 @@ mod test_fixtures {
         /// Adds input commands and output expectations for attaching to a fuzzer.
         pub fn attach(&mut self, test: &mut Test) -> FakeFuzzer {
             let cmdline = format!("attach {} -o {}", self.url, self.artifact_dir.to_string_lossy());
-            self.add(cmdline);
+            self.add(test, cmdline);
             test.output_matches(format!("Attaching to '{}'...", self.url));
             test.output_matches("Attached.");
             self.state = FuzzerState::Idle;
@@ -560,27 +576,35 @@ mod test_fixtures {
         }
 
         /// Adds an input command to run as part of a test.
-        pub fn add<S: AsRef<str> + Display>(&mut self, command: S) {
+        pub fn add<S: AsRef<str> + Display>(&mut self, test: &mut Test, command: S) {
             // Handle special cases that don't complete interrupted workflows.
-            if command.to_string() == "detach" || command.to_string() == "stop" {
-                self.state = FuzzerState::Detached;
-            }
-            if command.to_string() == "exit" && self.state == FuzzerState::Running {
-                self.state = FuzzerState::Idle;
-            }
+            let cmd = match command.as_ref().split_once(' ') {
+                Some((cmd, _)) => cmd,
+                None => command.as_ref(),
+            };
+            match cmd {
+                "detach" | "stop" => {
+                    self.state = FuzzerState::Detached;
+                }
+                "exit" => {
+                    if self.state == FuzzerState::Running {
+                        self.state = FuzzerState::Idle;
+                    }
+                }
+                "try" | "run" | "minimize" | "cleanse" | "merge" => {
+                    if self.state == FuzzerState::Idle {
+                        test.output_matches("Press <ENTER> to interrupt output from fuzzer.");
+                        self.state = FuzzerState::Running;
+                    }
+                }
+                _ => {}
+            };
             let mut reader = self.shell.reader.borrow_mut();
             reader.add(command);
         }
 
-        /// Adds an input command for a long-running workflow to run as part of a test.
-        pub fn add_workflow<S: AsRef<str> + Display>(&mut self, test: &mut Test, command: S) {
-            self.add(command);
-            test.output_matches("Press <ENTER> to interrupt output from fuzzer.");
-            self.state = FuzzerState::Running;
-        }
-
         /// Processes the previously `add`ed commands using the underlying `Shell`.
-        pub async fn run(&mut self, test: &mut Test) {
+        pub async fn run(&mut self, test: &mut Test) -> Result<()> {
             // Check if this test uses an interrupted workflow.
             if self.state == FuzzerState::Running {
                 test.output_matches("Workflow complete! Press <ENTER> to return to prompt.");
@@ -593,7 +617,7 @@ mod test_fixtures {
                 test.output_matches(format!("To reconnect later, use 'attach {}'", self.url));
             }
 
-            self.shell.run().await;
+            self.shell.run().await
         }
 
         /// Simulates completing a interruption and running to completion.
@@ -601,7 +625,7 @@ mod test_fixtures {
             test.output_matches("Resuming fuzzer output...");
             test.output_matches("Press <ENTER> to interrupt output from fuzzer.");
             self.interrupt(test).await;
-            self.add("detach");
+            self.add(test, "detach");
             self.state = FuzzerState::Detached;
             test.output_matches(format!("Detached from '{}'.", self.url));
             test.output_matches("Note: fuzzer is still running!");
@@ -634,11 +658,11 @@ mod tests {
     async fn test_empty() -> Result<()> {
         let mut test = Test::try_new()?;
         let mut script = ShellScript::try_new(&test)?;
-        script.add("");
-        script.add("   ");
-        script.add("# a comment");
-        script.add("   # another comment");
-        script.run(&mut test).await;
+        script.add(&mut test, "");
+        script.add(&mut test, "   ");
+        script.add(&mut test, "# a comment");
+        script.add(&mut test, "   # another comment");
+        script.run(&mut test).await?;
         test.verify_output()
     }
 
@@ -646,12 +670,12 @@ mod tests {
     async fn test_invalid() -> Result<()> {
         let mut test = Test::try_new()?;
         let mut script = ShellScript::try_new(&test)?;
-        script.add("foobar");
+        script.add(&mut test, "foobar");
         test.output_includes("Unrecognized argument: foobar");
         test.output_matches("Command is unrecognized or invalid for the current state.");
         test.output_matches("Try 'help' to list recognized.");
         test.output_matches("Try 'status' to check the current state.");
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         test.verify_output()
     }
 
@@ -663,9 +687,9 @@ mod tests {
         // Can 'list' when detached. Try both empty and non-empty lists of URLs.
         let mut urls = vec![];
         test.create_tests_json(urls.iter())?;
-        script.add("list");
+        script.add(&mut test, "list");
         test.output_matches("No fuzzers available.");
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         test.verify_output()?;
 
         script = ShellScript::try_new(&test)?;
@@ -675,35 +699,35 @@ mod tests {
             "fuchsia-pkg://fuchsia.com/test-fuzzers#meta/baz-fuzzer.cm",
         ];
         test.create_tests_json(urls.iter())?;
-        script.add("list");
+        script.add(&mut test, "list");
         test.output_matches("Available fuzzers:");
         test.output_matches(urls[0]);
         test.output_matches(urls[1]);
         test.output_matches(urls[2]);
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         test.verify_output()?;
 
         // Can 'list' when idle. Include a pattern.
         script = ShellScript::try_new(&test)?;
         test.create_tests_json(urls.iter())?;
         let _fuzzer = script.attach(&mut test);
-        script.add("list -p *ba?-fuzzer.cm");
+        script.add(&mut test, "list -p *ba?-fuzzer.cm");
         test.output_matches("Available fuzzers:");
         test.output_matches(urls[1]);
         test.output_matches(urls[2]);
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         test.verify_output()?;
 
         // Can 'list' when running.
         let (mut script, _fuzzer) = ShellScript::create_running(&mut test).await?;
         test.create_tests_json(urls.iter())?;
-        script.add("list");
+        script.add(&mut test, "list");
         test.output_matches("Available fuzzers:");
         test.output_matches(urls[0]);
         test.output_matches(urls[1]);
         test.output_matches(urls[2]);
         script.resume_and_detach(&mut test).await;
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         test.verify_output()
     }
 
@@ -719,22 +743,24 @@ mod tests {
         test.create_test_files(&output_dir, test_files.iter())?;
 
         // Parameters are checked on attaching.
-        script.add("attach invalid-url");
+        script.add(&mut test, "attach invalid-url");
         test.output_includes("failed to attach: invalid fuzzer URL");
 
-        script.add(format!("attach -o invalid {}", script.url()));
+        script.add(&mut test, format!("attach -o invalid {}", script.url()));
         test.output_includes("failed to attach: invalid output directory");
 
-        script.add(format!("attach -o {}/test1 {}", output_dir.to_string_lossy(), script.url()));
+        let cmdline = format!("attach -o {}/test1 {}", output_dir.to_string_lossy(), script.url());
+        script.add(&mut test, cmdline);
         test.output_includes("failed to attach: invalid output directory");
 
         // Can 'attach' when detached.
         script.attach(&mut test);
 
         // Cannot 'attach' when attached.
-        script.add(format!("attach -o {} {}", output_dir.to_string_lossy(), script.url()));
+        let cmdline = format!("attach -o {} {}", output_dir.to_string_lossy(), script.url());
+        script.add(&mut test, cmdline);
         test.output_includes("Invalid command: A fuzzer is already attached.");
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         test.verify_output()
     }
 
@@ -744,23 +770,23 @@ mod tests {
         let mut script = ShellScript::try_new(&test)?;
 
         // Cannot 'get' when detached.
-        script.add("get runs");
+        script.add(&mut test, "get runs");
         test.output_includes("Invalid command: No fuzzer attached.");
 
         // Can 'get' when idle.
         let _fuzzer = script.attach(&mut test);
-        script.add("get runs");
+        script.add(&mut test, "get runs");
         test.output_matches("runs: 0");
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         test.verify_output()?;
 
         // Can 'get' when running.
         let (mut script, _fuzzer) = ShellScript::create_running(&mut test).await?;
-        script.add("get runs");
+        script.add(&mut test, "get runs");
         test.output_matches("runs: 0");
         script.resume_and_detach(&mut test).await;
 
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         test.verify_output()
     }
 
@@ -770,22 +796,22 @@ mod tests {
         let mut script = ShellScript::try_new(&test)?;
 
         // Cannot 'set' when detached.
-        script.add("set runs 10");
+        script.add(&mut test, "set runs 10");
         test.output_includes("Invalid command: No fuzzer attached.");
 
         // Can 'set' when idle.
         let _fuzzer = script.attach(&mut test);
-        script.add("set runs 10");
+        script.add(&mut test, "set runs 10");
         test.output_matches("Option 'runs' set to 10");
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         test.verify_output()?;
 
         // Cannot 'set' when running.
         let (mut script, _fuzzer) = ShellScript::create_running(&mut test).await?;
-        script.add("set runs 20");
+        script.add(&mut test, "set runs 20");
         test.output_includes("Invalid command: A long-running workflow is in progress.");
         script.resume_and_detach(&mut test).await;
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         test.verify_output()
     }
 
@@ -800,24 +826,24 @@ mod tests {
         test.create_test_files(&corpus_dir, test_files.iter())?;
 
         // Cannot 'add' when detached.
-        script.add(format!("add {}", corpus_dir.to_string_lossy()));
+        script.add(&mut test, format!("add {}", corpus_dir.to_string_lossy()));
         test.output_includes("Invalid command: No fuzzer attached.");
 
         // Can 'add' when idle
         let _fuzzer = script.attach(&mut test);
-        script.add(format!("add {}", corpus_dir.to_string_lossy()));
+        script.add(&mut test, format!("add {}", corpus_dir.to_string_lossy()));
         test.output_matches("Adding inputs to fuzzer corpus...");
         test.output_matches("Added 2 inputs totaling 10 bytes to the live corpus.");
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         test.verify_output()?;
 
         // Can 'add' when running.
         let (mut script, _fuzzer) = ShellScript::create_running(&mut test).await?;
-        script.add(format!("add {}", corpus_dir.to_string_lossy()));
+        script.add(&mut test, format!("add {}", corpus_dir.to_string_lossy()));
         test.output_matches("Adding inputs to fuzzer corpus...");
         test.output_matches("Added 2 inputs totaling 10 bytes to the live corpus.");
         script.resume_and_detach(&mut test).await;
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         test.verify_output()
     }
 
@@ -827,24 +853,24 @@ mod tests {
         let mut script = ShellScript::try_new(&test)?;
 
         // Cannot 'try' when detached. 'try' can take a hex value as an argument.
-        script.add("try deadbeef");
+        script.add(&mut test, "try deadbeef");
         test.output_includes("Invalid command: No fuzzer attached.");
 
         // Can 'try' when idle.
         let fuzzer = script.attach(&mut test);
-        script.add_workflow(&mut test, "try deadbeef");
+        script.add(&mut test, "try deadbeef");
         test.output_matches("Trying an input of 4 bytes...");
         fuzzer.set_result(FuzzResult::Crash);
         test.output_matches("The input caused a process to crash.");
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         test.verify_output()?;
 
         // Cannot 'try' when running.
         let (mut script, _fuzzer) = ShellScript::create_running(&mut test).await?;
-        script.add("try feedface");
+        script.add(&mut test, "try feedface");
         test.output_includes("Invalid command: A long-running workflow is in progress.");
         script.resume_and_detach(&mut test).await;
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         test.verify_output()
     }
 
@@ -854,12 +880,12 @@ mod tests {
         let mut script = ShellScript::try_new(&test)?;
 
         // Cannot 'run' when detached. 'run' can take flags as arguments.
-        script.add("run -r 20");
+        script.add(&mut test, "run -r 20");
         test.output_includes("Invalid command: No fuzzer attached.");
 
         // Can 'run' when idle.
         let fuzzer = script.attach(&mut test);
-        script.add_workflow(&mut test, "run -r 20");
+        script.add(&mut test, "run -r 20");
         test.output_matches("Configuring fuzzer...");
         test.output_matches("Running fuzzer...");
         fuzzer.set_result(FuzzResult::Death);
@@ -867,7 +893,7 @@ mod tests {
         test.output_matches("An input to the fuzzer triggered a sanitizer violation.");
         let artifact = digest_path(script.artifact_dir(), Some("death"), b"hello");
         test.output_matches(format!("Input saved to '{}'", artifact.to_string_lossy()));
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         let options = fuzzer.get_options();
         assert_eq!(options.runs, Some(20));
         verify_saved(&artifact, b"hello")?;
@@ -875,10 +901,10 @@ mod tests {
 
         // Cannot 'run' when running.
         let (mut script, _fuzzer) = ShellScript::create_running(&mut test).await?;
-        script.add("run -t 20");
+        script.add(&mut test, "run -t 20");
         test.output_includes("Invalid command: A long-running workflow is in progress.");
         script.resume_and_detach(&mut test).await;
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         test.verify_output()
     }
 
@@ -888,26 +914,26 @@ mod tests {
         let mut script = ShellScript::try_new(&test)?;
 
         // Cannot 'cleanse' when detached. 'cleanse' can take a hex value as an argument.
-        script.add(format!("cleanse {}", hex::encode("hello")));
+        script.add(&mut test, format!("cleanse {}", hex::encode("hello")));
         test.output_includes("Invalid command: No fuzzer attached.");
 
         // Can 'cleanse' when idle.
         let fuzzer = script.attach(&mut test);
-        script.add_workflow(&mut test, format!("cleanse {}", hex::encode("hello")));
+        script.add(&mut test, format!("cleanse {}", hex::encode("hello")));
         test.output_matches("Attempting to cleanse an input of 5 bytes...");
         fuzzer.set_input_to_send(b"world");
         let artifact = digest_path(script.artifact_dir(), Some("cleansed"), b"world");
         test.output_matches(format!("Cleansed input written to '{}'", artifact.to_string_lossy()));
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         verify_saved(&artifact, b"world")?;
         test.verify_output()?;
 
         // Cannot 'cleanse' when running.
         let (mut script, _fuzzer) = ShellScript::create_running(&mut test).await?;
-        script.add(format!("cleanse {}", hex::encode("world")));
+        script.add(&mut test, format!("cleanse {}", hex::encode("world")));
         test.output_includes("Invalid command: A long-running workflow is in progress.");
         script.resume_and_detach(&mut test).await;
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         test.verify_output()
     }
 
@@ -917,27 +943,27 @@ mod tests {
         let mut script = ShellScript::try_new(&test)?;
 
         // Cannot 'minimize' when detached. 'minimize' can take a hex value as an argument.
-        script.add(format!("minimize {}", hex::encode("hello")));
+        script.add(&mut test, format!("minimize {}", hex::encode("hello")));
         test.output_includes("Invalid command: No fuzzer attached.");
 
         // Can 'minimize' when idle.
         let fuzzer = script.attach(&mut test);
-        script.add_workflow(&mut test, format!("minimize {} -t 10s", hex::encode("hello")));
+        script.add(&mut test, format!("minimize {} -t 10s", hex::encode("hello")));
         test.output_matches("Configuring fuzzer...");
         test.output_matches("Attempting to minimize an input of 5 bytes...");
         fuzzer.set_input_to_send(b"world");
         let artifact = digest_path(script.artifact_dir(), Some("minimized"), b"world");
         test.output_matches(format!("Minimized input written to '{}'", artifact.to_string_lossy()));
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         verify_saved(&artifact, b"world")?;
         test.verify_output()?;
 
         // Cannot 'minimize' when running.
         let (mut script, _fuzzer) = ShellScript::create_running(&mut test).await?;
-        script.add(format!("cleanse {}", hex::encode("world")));
+        script.add(&mut test, format!("cleanse {}", hex::encode("world")));
         test.output_includes("Invalid command: A long-running workflow is in progress.");
         script.resume_and_detach(&mut test).await;
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         test.verify_output()
     }
 
@@ -948,27 +974,27 @@ mod tests {
         let corpus_dir = test.create_dir("corpus")?;
 
         // Cannot 'merge' when detached.
-        script.add(format!("merge -c {}", corpus_dir.to_string_lossy()));
+        script.add(&mut test, format!("merge -c {}", corpus_dir.to_string_lossy()));
         test.output_includes("Invalid command: No fuzzer attached.");
 
         // Can 'merge' when idle.
         let fuzzer = script.attach(&mut test);
-        script.add_workflow(&mut test, format!("merge -c {}", corpus_dir.to_string_lossy()));
+        script.add(&mut test, format!("merge -c {}", corpus_dir.to_string_lossy()));
         fuzzer.set_input_to_send(b"foo");
         test.output_matches("Compacting fuzzer corpus...");
         test.output_matches("Retrieving fuzzer corpus...");
         test.output_matches("Retrieved 1 input totaling 3 bytes from the live corpus.");
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         let input = digest_path(&corpus_dir, None, b"foo");
         verify_saved(&input, b"foo")?;
         test.verify_output()?;
 
         // Cannot 'merge' when running.
         let (mut script, _fuzzer) = ShellScript::create_running(&mut test).await?;
-        script.add(format!("merge"));
+        script.add(&mut test, format!("merge"));
         test.output_includes("Invalid command: A long-running workflow is in progress.");
         script.resume_and_detach(&mut test).await;
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         test.verify_output()
     }
 
@@ -978,14 +1004,14 @@ mod tests {
         let mut script = ShellScript::try_new(&test)?;
 
         // Can get 'status' when detached.
-        script.add("status");
+        script.add(&mut test, "status");
         test.output_matches("No fuzzer attached.");
 
         // Can get 'status' when idle.
         let _fuzzer = script.attach(&mut test);
-        script.add("status");
+        script.add(&mut test, "status");
         test.output_matches(format!("{} is idle.", script.url()));
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         test.verify_output()?;
 
         // Can get 'status' when running.
@@ -1001,14 +1027,14 @@ mod tests {
             ..fuzz::Status::EMPTY
         };
         fuzzer.set_status(status);
-        script.add("status");
+        script.add(&mut test, "status");
         test.output_matches(format!("{} is running.", script.url()));
         test.output_matches("Runs performed: 1");
         test.output_matches("Time elapsed: 2 seconds");
         test.output_matches("Coverage: 3 PCs, 4 features");
         test.output_matches("Corpus size: 5 inputs, 6 total bytes");
         script.resume_and_detach(&mut test).await;
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         test.verify_output()
     }
 
@@ -1019,28 +1045,28 @@ mod tests {
         let corpus_dir = test.create_dir("corpus")?;
 
         // Cannot 'fetch' when detached.
-        script.add(format!("fetch -s -c {}", corpus_dir.to_string_lossy()));
+        script.add(&mut test, format!("fetch -s -c {}", corpus_dir.to_string_lossy()));
         test.output_includes("Invalid command: No fuzzer attached.");
 
         // Can 'fetch' when idle.
         let fuzzer = script.attach(&mut test);
-        script.add(format!("fetch -s -c {}", corpus_dir.to_string_lossy()));
+        script.add(&mut test, format!("fetch -s -c {}", corpus_dir.to_string_lossy()));
         fuzzer.set_input_to_send(b"bar");
         test.output_matches("Retrieving fuzzer corpus...");
         test.output_matches("Retrieved 1 input totaling 3 bytes from the seed corpus.");
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         let input = digest_path(&corpus_dir, None, b"bar");
         verify_saved(&input, b"bar")?;
         test.verify_output()?;
 
         // Can 'fetch' when running.
         let (mut script, fuzzer) = ShellScript::create_running(&mut test).await?;
-        script.add(format!("fetch -s -c {}", corpus_dir.to_string_lossy()));
+        script.add(&mut test, format!("fetch -s -c {}", corpus_dir.to_string_lossy()));
         fuzzer.set_input_to_send(b"bar");
         test.output_matches("Retrieving fuzzer corpus...");
         test.output_matches("Retrieved 1 input totaling 3 bytes from the seed corpus.");
         script.resume_and_detach(&mut test).await;
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         test.verify_output()
     }
 
@@ -1050,25 +1076,25 @@ mod tests {
         let mut script = ShellScript::try_new(&test)?;
 
         // Cannot 'detach' when detached.
-        script.add("detach");
+        script.add(&mut test, "detach");
         test.output_includes("Invalid command: No fuzzer attached.");
 
         // Can 'detach' when idle.
         script.attach(&mut test);
-        script.add("detach");
+        script.add(&mut test, "detach");
         test.output_matches(format!("Detached from '{}'.", script.url()));
         test.output_matches("Note: fuzzer is still running!");
         test.output_matches(format!("To reconnect later, use 'attach {}'", script.url()));
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         test.verify_output()?;
 
         // Can 'detach' when running.
         let (mut script, _fuzzer) = ShellScript::create_running(&mut test).await?;
-        script.add("detach");
+        script.add(&mut test, "detach");
         test.output_matches(format!("Detached from '{}'.", script.url()));
         test.output_matches("Note: fuzzer is still running!");
         test.output_matches(format!("To reconnect later, use 'attach {}'", script.url()));
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         test.verify_output()
     }
 
@@ -1078,23 +1104,23 @@ mod tests {
         let mut script = ShellScript::try_new(&test)?;
 
         // Cannot 'detach' when detached.
-        script.add("stop");
+        script.add(&mut test, "stop");
         test.output_includes("Invalid command: No fuzzer attached.");
 
         // Can 'stop' when idle.
         script.attach(&mut test);
-        script.add("stop");
+        script.add(&mut test, "stop");
         test.output_matches(format!("Stopping '{}'...", script.url()));
         test.output_matches("Stopped.");
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         test.verify_output()?;
 
         // Can 'stop' when running.
         let (mut script, _fuzzer) = ShellScript::create_running(&mut test).await?;
-        script.add("stop");
+        script.add(&mut test, "stop");
         test.output_matches(format!("Stopping '{}'...", script.url()));
         test.output_matches("Stopped.");
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         test.verify_output()
     }
 
@@ -1105,24 +1131,24 @@ mod tests {
 
         // Can 'exit' when detached. The "Exiting..." messages are expected automatically by
         // `script::run`.
-        script.add("exit");
-        script.add("not executed");
-        script.run(&mut test).await;
+        script.add(&mut test, "exit");
+        script.add(&mut test, "not executed");
+        script.run(&mut test).await?;
         test.verify_output()?;
 
         // Can 'exit' when idle.
         script = ShellScript::try_new(&test)?;
         script.attach(&mut test);
-        script.add("exit");
-        script.add("not executed");
-        script.run(&mut test).await;
+        script.add(&mut test, "exit");
+        script.add(&mut test, "not executed");
+        script.run(&mut test).await?;
         test.verify_output()?;
 
         // Can 'exit' when running.
         let (mut script, _fuzzer) = ShellScript::create_running(&mut test).await?;
-        script.add("exit");
-        script.add("not executed");
-        script.run(&mut test).await;
+        script.add(&mut test, "exit");
+        script.add(&mut test, "not executed");
+        script.run(&mut test).await?;
         test.verify_output()
     }
 
@@ -1132,9 +1158,9 @@ mod tests {
         let mut script = ShellScript::try_new(&test)?;
 
         // Just make sure this doesn't crash.
-        script.add("clear");
+        script.add(&mut test, "clear");
 
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         Ok(())
     }
 
@@ -1144,9 +1170,9 @@ mod tests {
         let mut script = ShellScript::try_new(&test)?;
 
         // Just make sure this doesn't crash.
-        script.add("history");
+        script.add(&mut test, "history");
 
-        script.run(&mut test).await;
+        script.run(&mut test).await?;
         Ok(())
     }
 }

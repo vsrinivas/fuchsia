@@ -24,6 +24,11 @@ use {
 /// `Reader` provides a way to abstract the source of user input to the `ffx fuzz` plugin.
 #[async_trait(?Send)]
 pub trait Reader {
+    /// Returns whether this reader interactively prompts a user.
+    fn is_interactive(&self) -> bool {
+        false
+    }
+
     /// Begin reading. Must be called at most once. Does nothing by default.
     fn start<P: AsRef<Path>>(&mut self, _fuchsia_dir: P, _state: Arc<Mutex<FuzzerState>>) {}
 
@@ -119,6 +124,10 @@ impl ShellReader {
 
 #[async_trait(?Send)]
 impl Reader for ShellReader {
+    fn is_interactive(&self) -> bool {
+        true
+    }
+
     fn start<P: AsRef<Path>>(&mut self, fuchsia_dir: P, state: Arc<Mutex<FuzzerState>>) {
         let fuchsia_dir = PathBuf::from(fuchsia_dir.as_ref());
         let prompt_receiver =
@@ -236,6 +245,11 @@ pub mod test_fixtures {
 
     #[async_trait(?Send)]
     impl Reader for ScriptReader {
+        /// Claims to be interactive (although it is not) to get all potential output.
+        fn is_interactive(&self) -> bool {
+            true
+        }
+
         async fn prompt(&mut self) -> Option<ParsedCommand> {
             self.commands.pop_front().and_then(|command| Some(parse(&command)))
         }

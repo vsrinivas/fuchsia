@@ -90,8 +90,7 @@ async fn run_session<R: Reader, O: OutputSink>(
     if let Err(e) = result {
         ffx_bail!("Failed to connect to fuzz-manager: {:?}", e);
     }
-    shell.run().await;
-    Ok(())
+    shell.run().await
 }
 
 fn fidl_name(method: &str) -> String {
