@@ -2146,6 +2146,7 @@ func (s *datagramSocketImpl) loopWrite(ch chan<- struct{}) {
 		if addr != nil {
 			opts.To = addr
 		}
+		opts.ControlMessages = cmsgs
 
 		v = v[udpTxPreludeSize:]
 

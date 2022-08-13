@@ -437,6 +437,13 @@ int16_t ParseIpLevelControlMessage(fsocket::wire::IpSendControlData& fidl_ip, in
       if (ttl < 0 || ttl > std::numeric_limits<uint8_t>::max()) {
         return EINVAL;
       }
+      // N.B. This extra validation is performed here in the client since the payload
+      // might be processed by the Netstack asynchronously.
+      //
+      // See: https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0109_socket_datagram_socket
+      if (ttl == 0) {
+        return EINVAL;
+      }
       fidl_ip.set_ttl(static_cast<uint8_t>(ttl));
       return 0;
     }
