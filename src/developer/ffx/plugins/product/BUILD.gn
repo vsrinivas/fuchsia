@@ -21,6 +21,7 @@ ffx_plugin("ffx_product") {
     "//src/developer/ffx/lib/pbms:lib",
     "//src/lib/fuchsia-url",
     "//src/lib/gcs:lib",
+    "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tracing",
     "//third_party/rust_crates:url",
   ]
