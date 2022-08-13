@@ -978,9 +978,13 @@ class OutgoingToIncomingMessage {
  public:
   // Converts an outgoing message to an incoming message.
   //
-  // In doing so, it will make syscalls to fetch rights and type information
-  // of any provided handles. The caller is responsible for ensuring that
-  // returned handle rights and object types are checked appropriately.
+  // The provided |OutgoingMessage| must use the Zircon channel transport.
+  // It also must be a non-transactional outgoing message (i.e. from standalone
+  // encoding and not from writing a request/response).
+  //
+  // In doing so, this function will make syscalls to fetch rights and type
+  // information of any provided handles. The caller is responsible for ensuring
+  // that returned handle rights and object types are checked appropriately.
   //
   // The constructed |OutgoingToIncomingMessage| will take ownership over
   // handles from the input |OutgoingMessage|.

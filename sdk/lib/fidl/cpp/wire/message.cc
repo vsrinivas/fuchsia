@@ -408,6 +408,8 @@ IncomingMessage OutgoingToIncomingMessage::ConversionImpl(
     std::unique_ptr<zx_handle_t[]>& buf_handles,
     // TODO(fxbug.dev/85734) Remove channel-specific logic.
     std::unique_ptr<fidl_channel_handle_metadata_t[]>& buf_handle_metadata) {
+  ZX_ASSERT(!input.is_transactional());
+
   zx_handle_t* handles = input.handles();
   fidl_channel_handle_metadata_t* handle_metadata =
       input.handle_metadata<fidl::internal::ChannelTransport>();

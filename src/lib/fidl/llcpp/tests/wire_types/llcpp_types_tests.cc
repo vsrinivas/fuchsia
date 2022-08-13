@@ -69,7 +69,8 @@ TEST(LlcppTypesTests, RoundTripTest) {
       storage, sizeof(storage), &msg);
   EXPECT_EQ(encoded->status(), ZX_OK);
   encoded->GetOutgoingMessage().set_txid(10);
-  auto encoded_bytes = encoded->GetOutgoingMessage().CopyBytes();
+  fidl::OutgoingMessage& outgoing = encoded->GetOutgoingMessage();
+  auto encoded_bytes = outgoing.CopyBytes();
   EXPECT_EQ(encoded_bytes.size(), sizeof(NonNullableChannelTransactionalRequest));
 
   uint8_t golden_encoded[] = {0x0a, 0x00, 0x00, 0x00,   // txid
@@ -85,9 +86,11 @@ TEST(LlcppTypesTests, RoundTripTest) {
   HelperExpectPeerValid(channel_1);
 
   // Decode
-  auto converted = fidl::OutgoingToIncomingMessage(encoded->GetOutgoingMessage());
-  auto& incoming = converted.incoming_message();
+  auto incoming = fidl::IncomingMessage::Create(
+      encoded_bytes.data(), encoded_bytes.size(), outgoing.handles(),
+      outgoing.handle_metadata<fidl::internal::ChannelTransport>(), outgoing.handle_actual());
   ASSERT_EQ(ZX_OK, incoming.status());
+  outgoing.ReleaseHandles();
   auto decoded =
       fidl::unstable::DecodedMessage<NonNullableChannelTransactionalRequest>(std::move(incoming));
   EXPECT_TRUE(decoded.ok());
