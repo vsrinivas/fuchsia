@@ -95,7 +95,7 @@ zx_status_t VmoManager::UnlockVmo(const pgoff_t index, const bool evict) {
       return status;
     }
     if (evict && !vmo_node_or.value()->GetActivePages()) {
-      __UNUSED auto evicted = vmo_tree_.erase(*vmo_node_or.value());
+      [[maybe_unused]] auto evicted = vmo_tree_.erase(*vmo_node_or.value());
     }
   }
   return vmo_node_or.status_value();
@@ -115,7 +115,7 @@ void VmoManager::Reset(bool shutdown) {
   pgoff_t prev_key = std::numeric_limits<pgoff_t>::max();
   while (!vmo_tree_.is_empty()) {
     if (shutdown) {
-      __UNUSED auto evicted = vmo_tree_.pop_front();
+      [[maybe_unused]] auto evicted = vmo_tree_.pop_front();
     } else {
       auto key = (prev_key < std::numeric_limits<pgoff_t>::max()) ? prev_key : 0;
       auto current = vmo_tree_.lower_bound(key);
@@ -132,7 +132,7 @@ void VmoManager::Reset(bool shutdown) {
 
       prev_key = current->GetKey();
       if (!current->GetActivePages()) {
-        __UNUSED auto evicted = vmo_tree_.erase(*current);
+        [[maybe_unused]] auto evicted = vmo_tree_.erase(*current);
       }
     }
   }

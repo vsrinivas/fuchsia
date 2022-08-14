@@ -39,7 +39,11 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/string_buffer.h>
 
+#include <atomic>
 #include <condition_variable>
+#include <memory>
+#include <mutex>
+#include <semaphore>
 
 #ifdef __Fuchsia__
 #include "src/lib/storage/vfs/cpp/paged_vfs.h"
@@ -148,9 +152,9 @@ class F2fs : public fs::Vfs {
 #endif  // __Fuchsia__
 
   VnodeCache &GetVCache() { return vnode_cache_; }
-  inline zx_status_t InsertVnode(VnodeF2fs *vn) { return vnode_cache_.Add(vn); }
-  inline void EvictVnode(VnodeF2fs *vn) { __UNUSED zx_status_t status = vnode_cache_.Evict(vn); }
-  inline zx_status_t LookupVnode(ino_t ino, fbl::RefPtr<VnodeF2fs> *out) {
+  zx_status_t InsertVnode(VnodeF2fs *vn) { return vnode_cache_.Add(vn); }
+  void EvictVnode(VnodeF2fs *vn) { vnode_cache_.Evict(vn); }
+  zx_status_t LookupVnode(ino_t ino, fbl::RefPtr<VnodeF2fs> *out) {
     return vnode_cache_.Lookup(ino, out);
   }
 
@@ -236,6 +240,7 @@ class F2fs : public fs::Vfs {
   zx_status_t GetMetaPage(pgoff_t index, LockedPage *out);
   zx_status_t F2fsWriteMetaPage(LockedPage &page, bool is_reclaim = false);
 
+  bool CanReclaim() const;
   zx_status_t CheckOrphanSpace();
   void AddOrphanInode(VnodeF2fs *vnode);
   void RecoverOrphanInode(nid_t ino);
@@ -320,15 +325,21 @@ class F2fs : public fs::Vfs {
     writer_->ScheduleSubmitPages(completion, type);
   }
   void ScheduleWriteback();
-  void StopWriteback() {
-    while (writeback_flag_.test_and_set(std::memory_order_acquire)) {
-      writeback_flag_.wait(true, std::memory_order_relaxed);
+  zx::status<> WaitForWriteback() {
+    if (!writeback_flag_.try_acquire_for(kWriteTimeOut)) {
+      return zx::error(ZX_ERR_TIMED_OUT);
     }
+    writeback_flag_.release();
+    return zx::ok();
   }
+  std::atomic_flag &GetStopReclaimFlag() { return stop_reclaim_flag_; }
 
  private:
   zx_status_t MakeReadOperation(LockedPage &page, block_t blk_addr, bool is_sync = true);
   zx_status_t MakeWriteOperation(LockedPage &page, block_t blk_addr, PageType type);
+  std::mutex checkpoint_mutex_;
+  std::atomic_flag stop_reclaim_flag_ = ATOMIC_FLAG_INIT;
+  std::binary_semaphore writeback_flag_{1};
 
   std::unique_ptr<f2fs::Bcache> bc_;
 
@@ -346,7 +357,6 @@ class F2fs : public fs::Vfs {
 
   VnodeCache vnode_cache_;
   std::unique_ptr<Writer> writer_;
-  std::atomic_flag writeback_flag_ = ATOMIC_FLAG_INIT;
 
 #ifdef __Fuchsia__
   DirEntryCache dir_entry_cache_;

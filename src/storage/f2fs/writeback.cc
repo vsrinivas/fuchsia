@@ -75,7 +75,7 @@ void Writer::ScheduleTask(fpromise::promise<> task) {
 #ifdef __Fuchsia__
   executor_.schedule_task(sequencer_.wrap(std::move(task)));
 #else   // __Fuchsia__
-  __UNUSED auto result = fpromise::run_single_threaded(std::move(task));
+  [[maybe_unused]] auto result = fpromise::run_single_threaded(std::move(task));
   assert(result.is_ok());
 #endif  // __Fuchsia__
 }
@@ -84,7 +84,7 @@ void Writer::ScheduleWriteback(fpromise::promise<> task) {
 #ifdef __Fuchsia__
   writeback_executor_.schedule_task(std::move(task));
 #else   // __Fuchsia__
-  __UNUSED auto result = fpromise::run_single_threaded(std::move(task));
+  [[maybe_unused]] auto result = fpromise::run_single_threaded(std::move(task));
 #endif  // __Fuchsia__
 }
 

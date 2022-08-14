@@ -91,6 +91,53 @@ enum class InoType {
   kNrInoType,
 };
 
+// A utility class, trying to set an atomic flag.
+// If it succeeds to newly set the flag, it clears the flag in ~FlagAcquireGuard()
+// where it also wakes threads waiting for the flag if |wake_waiters_| is set.
+// If not, it does nothing when it is deleted.
+class FlagAcquireGuard {
+ public:
+  FlagAcquireGuard() = delete;
+  FlagAcquireGuard(const FlagAcquireGuard &) = delete;
+  FlagAcquireGuard &operator=(const FlagAcquireGuard &) = delete;
+  FlagAcquireGuard(FlagAcquireGuard &&flag) {
+    flag_ = flag.flag_;
+    acquired_ = flag.acquired_;
+    wake_waiters_ = flag.wake_waiters_;
+    flag.acquired_ = false;
+  }
+  FlagAcquireGuard &operator=(FlagAcquireGuard &&flag) {
+    flag_ = flag.flag_;
+    acquired_ = flag.acquired_;
+    wake_waiters_ = flag.wake_waiters_;
+    flag.acquired_ = false;
+    return *this;
+  }
+  FlagAcquireGuard(std::atomic_flag *flag, bool wake_waiters = false)
+      : flag_(flag), wake_waiters_(wake_waiters) {
+    // Release-acquire ordering between the writeback (loader) and others such as checkpoint and gc.
+    acquired_ = !flag_->test_and_set(std::memory_order_acquire);
+  }
+  ~FlagAcquireGuard() {
+    if (acquired_) {
+      ZX_ASSERT(IsSet());
+      // Release-acquire ordering between the writeback (loader) and others such as checkpoint and
+      // gc.
+      flag_->clear(std::memory_order_release);
+      if (wake_waiters_) {
+        flag_->notify_all();
+      }
+    }
+  }
+  bool IsSet() { return flag_->test(std::memory_order_acquire); }
+  bool IsAcquired() { return acquired_; }
+
+ private:
+  std::atomic_flag *flag_ = nullptr;
+  bool acquired_ = false;
+  bool wake_waiters_ = false;
+};
+
 // The VnodeSet stores and manages vnode number that should be specially managed, such as
 // orphan vnodes.
 class VnodeSet {
@@ -188,8 +235,6 @@ class SuperblockInfo {
   void SetCheckpointTrailer(std::vector<FsBlock> checkpoint_trailer) {
     checkpoint_trailer_ = std::move(checkpoint_trailer);
   }
-
-  std::mutex &GetCheckpointMutex() { return checkpoint_mutex_; }
 
   fs::SharedMutex &GetFsLock(LockType type) { return fs_lock_[static_cast<int>(type)]; }
 
@@ -407,7 +452,6 @@ class SuperblockInfo {
   std::vector<FsBlock> checkpoint_trailer_;
 
   fs::SharedMutex mutex_;                                             // for checkpoint data
-  std::mutex checkpoint_mutex_;                                       // for checkpoint procedure
   fs::SharedMutex fs_lock_[static_cast<int>(LockType::kNrLockType)];  // for blocking FS operations
 
 #if 0  // porting needed

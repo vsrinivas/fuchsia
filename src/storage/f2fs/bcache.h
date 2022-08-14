@@ -23,12 +23,6 @@
 #include "src/lib/storage/vfs/cpp/transaction/transaction_handler.h"
 #endif  // __Fuchsia__
 
-#include <errno.h>
-#include <inttypes.h>
-
-#include <atomic>
-#include <shared_mutex>
-
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
 #include <fbl/macros.h>
@@ -89,7 +83,7 @@ class Bcache : public fs::TransactionHandler {
 
   void DestroyVmoBuffer() __TA_EXCLUDES(buffer_mutex_) {
     std::lock_guard lock(buffer_mutex_);
-    __UNUSED auto unused = std::move(buffer_);
+    [[maybe_unused]] auto unused = std::move(buffer_);
   }
 
   uint64_t BlockNumberToDevice(uint64_t block_num) const final {

@@ -5,10 +5,6 @@
 #ifndef SRC_STORAGE_F2FS_VMO_MANAGER_H_
 #define SRC_STORAGE_F2FS_VMO_MANAGER_H_
 
-#include <bitset>
-
-#include <safemath/checked_math.h>
-
 namespace f2fs {
 
 // It manages the lifecycle of |vmo_| that Pages use in each vnode.

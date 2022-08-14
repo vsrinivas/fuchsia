@@ -83,7 +83,7 @@ StorageBuffer::~StorageBuffer() {
   {
     std::lock_guard lock(mutex_);
     ZX_DEBUG_ASSERT(pages_.size() == 0);
-    __UNUSED size_t num_keys = 0;
+    [[maybe_unused]] size_t num_keys = 0;
     while (!free_list_.is_empty()) {
       ++num_keys;
       free_list_.pop_front();

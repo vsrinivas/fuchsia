@@ -159,24 +159,41 @@ zx::status<uint32_t> GcManager::F2fsGc() {
     return zx::ok(0);
   }
 
+  if (fs_->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
+    return zx::error(ZX_ERR_BAD_STATE);
+  }
+
   std::lock_guard gc_lock(gc_mutex_);
 
   // TODO: Default gc_type should be kBgGc when background gc is implemented.
   GcType gc_type = GcType::kFgGc;
   uint32_t sec_freed = 0;
+  auto &segment_manager = fs_->GetSegmentManager();
 
-  while (true) {
+  // FG_GC must run when there is no space (e.g., HasNotEnoughFreeSecs() == true).
+  // If not, gc can compete with others (e.g., writeback) for victim Pages and space.
+  while (segment_manager.HasNotEnoughFreeSecs()) {
+    // Stop writeback before gc. The writeback won't be invoked until gc acquires enough sections.
+    FlagAcquireGuard flag(&fs_->GetStopReclaimFlag());
+    if (flag.IsAcquired()) {
+      ZX_ASSERT(fs_->WaitForWriteback().is_ok());
+    }
+
     if (fs_->GetSuperblockInfo().TestCpFlags(CpFlag::kCpErrorFlag)) {
       return zx::error(ZX_ERR_BAD_STATE);
     }
-
     // For example, if there are many prefree_segments below given threshold, we can make them
     // free by checkpoint. Then, we secure free segments which doesn't need fggc any more.
-    if (fs_->GetSegmentManager().PrefreeSegments()) {
+    if (segment_manager.PrefreeSegments()) {
+      auto before = segment_manager.FreeSections();
       fs_->WriteCheckpoint(false, false);
+      sec_freed = (safemath::CheckSub<uint32_t>(segment_manager.FreeSections(), before) + sec_freed)
+                      .ValueOrDie();
+      // After acquiring free sections, check if further gc is necessary.
+      continue;
     }
 
-    if (gc_type == GcType::kBgGc && fs_->GetSegmentManager().HasNotEnoughFreeSecs()) {
+    if (gc_type == GcType::kBgGc && segment_manager.HasNotEnoughFreeSecs()) {
       gc_type = GcType::kFgGc;
     }
 
@@ -195,10 +212,6 @@ zx::status<uint32_t> GcManager::F2fsGc() {
       SetCurVictimSec(kNullSecNo);
       fs_->WriteCheckpoint(false, false);
       ++sec_freed;
-    }
-
-    if (!fs_->GetSegmentManager().HasNotEnoughFreeSecs()) {
-      break;
     }
   }
   if (!sec_freed) {
@@ -347,6 +360,8 @@ zx_status_t GcManager::GcDataSegment(const SummaryBlock &sum_blk, unsigned int s
     data_page->SetColdData();
   }
 
+  // TODO: Instead of SyncDirtyDataPages, make a method to flush an array of locked victim Pages
+  // acquired before.
   if (gc_type == GcType::kFgGc) {
     WritebackOperation op;
     op.bSync = false;

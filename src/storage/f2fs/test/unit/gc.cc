@@ -94,21 +94,18 @@ TEST_F(GcManagerTest, PageColdData) {
   auto old_blk_addr_or = file->FindDataBlkAddr(0);
   ASSERT_EQ(old_blk_addr_or.is_error(), false);
 
-  // If kPageColdData flag is not set, f2fs would execute IPU
-  ASSERT_TRUE(fs_->GetSegmentManager().NeedInplaceUpdate(file.get()));
   {
     auto result = file->WriteBegin(0, kPageSize);
     ASSERT_TRUE(result.is_ok());
     std::vector<LockedPage> data_pages = std::move(result.value());
     data_pages[0]->SetDirty();
   }
+  // If kPageColdData flag is not set, allocate its block as SSR or LFS.
   ASSERT_NE(fs_->SyncDirtyDataPages(op), 0UL);
   auto new_blk_addr_or = file->FindDataBlkAddr(0);
   ASSERT_EQ(old_blk_addr_or.is_error(), false);
-  ASSERT_EQ(new_blk_addr_or.value(), old_blk_addr_or.value());
+  ASSERT_NE(new_blk_addr_or.value(), old_blk_addr_or.value());
 
-  // If kPageColdData flag is set, f2fs would move data page
-  ASSERT_TRUE(fs_->GetSegmentManager().NeedInplaceUpdate(file.get()));
   {
     auto result = file->WriteBegin(0, kPageSize);
     ASSERT_TRUE(result.is_ok());
@@ -116,10 +113,15 @@ TEST_F(GcManagerTest, PageColdData) {
     data_pages[0]->SetDirty();
     data_pages[0]->SetColdData();
   }
+  // If kPageColdData flag is set, allocate its block as LFS.
+  CursegInfo *cold_curseg = fs_->GetSegmentManager().CURSEG_I(CursegType::kCursegColdData);
+  auto expected_addr = fs_->GetSegmentManager().NextFreeBlkAddr(CursegType::kCursegColdData);
+  ASSERT_EQ(cold_curseg->alloc_type, static_cast<uint8_t>(AllocMode::kLFS));
   ASSERT_NE(fs_->SyncDirtyDataPages(op), 0UL);
   new_blk_addr_or = file->FindDataBlkAddr(0);
   ASSERT_EQ(old_blk_addr_or.is_error(), false);
   ASSERT_NE(new_blk_addr_or.value(), old_blk_addr_or.value());
+  ASSERT_EQ(new_blk_addr_or.value(), expected_addr);
   {
     LockedPage data_page;
     ASSERT_EQ(file->GrabCachePage(0, &data_page), ZX_OK);

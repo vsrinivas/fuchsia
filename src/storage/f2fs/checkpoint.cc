@@ -519,6 +519,9 @@ bool F2fs::IsCheckpointAvailable() {
   return segment_manager_->FreeSections() > GetFreeSectionsForDirtyPages();
 }
 
+// Release-acquire ordering between the writeback (loader) and others such as checkpoint and gc.
+bool F2fs::CanReclaim() const { return !stop_reclaim_flag_.test(std::memory_order_acquire); }
+
 // We guarantee that this checkpoint procedure should not fail.
 void F2fs::WriteCheckpoint(bool blocked, bool is_umount) {
   SuperblockInfo &superblock_info = GetSuperblockInfo();
@@ -529,7 +532,12 @@ void F2fs::WriteCheckpoint(bool blocked, bool is_umount) {
     return;
   }
 
-  std::lock_guard cp_lock(superblock_info.GetCheckpointMutex());
+  std::lock_guard cp_lock(checkpoint_mutex_);
+  // Stop writeback during checkpoint.
+  FlagAcquireGuard flag(&stop_reclaim_flag_);
+  if (flag.IsAcquired()) {
+    ZX_ASSERT(WaitForWriteback().is_ok());
+  }
   ZX_DEBUG_ASSERT(IsCheckpointAvailable());
   BlockOperations();
 
@@ -556,4 +564,5 @@ void F2fs::WriteCheckpoint(bool blocked, bool is_umount) {
   }
   UnblockOperations();
 }
+
 }  // namespace f2fs

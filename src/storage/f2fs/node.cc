@@ -974,16 +974,6 @@ pgoff_t NodeManager::FsyncNodePages(VnodeF2fs &vnode) {
 }
 
 zx_status_t NodeManager::F2fsWriteNodePage(LockedPage &page, bool is_reclaim) {
-#if 0  // porting needed
-  // 	if (wbc->for_reclaim) {
-  // 		superblock_info.DecreasePageCount(CountType::kDirtyNodes);
-  // 		++wbc->pages_skipped;
-  //		// set_page_dirty(page);
-  //		FlushDirtyNodePage(fs_, page);
-  // 		return kAopWritepageActivate;
-  // 	}
-#endif
-  fs::SharedLock rlock(GetSuperblockInfo().GetFsLock(LockType::kNodeOp));
   page->WaitOnWriteback();
   if (page->ClearDirtyForIo()) {
     page->SetWriteback();
@@ -999,7 +989,6 @@ zx_status_t NodeManager::F2fsWriteNodePage(LockedPage &page, bool is_reclaim) {
     }
 
     block_t new_addr;
-    // insert node offset
     fs_->GetSegmentManager().WriteNodePage(page, nid, ni.blk_addr, &new_addr);
     SetNodeAddr(ni, new_addr);
   }
@@ -1340,7 +1329,7 @@ void NodeManager::FlushNatEntries() {
       nid_t nid;
       RawNatEntry raw_ne;
       int offset = -1;
-      __UNUSED block_t old_blkaddr, new_blkaddr;
+      [[maybe_unused]] block_t old_blkaddr, new_blkaddr;
 
       // During each iteration, |iter| can be removed from |dirty_nat_list_|.
       // Therefore, make a copy of |iter| and move to the next element before futher operations.

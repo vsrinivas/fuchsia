@@ -87,7 +87,7 @@ TEST(BCacheTest, Destroy) {
     ASSERT_EQ(f2fs::CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
 
     ASSERT_EQ(bc->DeviceBlockSize(), kDefaultSectorSize);
-    __UNUSED auto unused = f2fs::Bcache::Destroy(std::move(bc));
+    [[maybe_unused]] auto unused = f2fs::Bcache::Destroy(std::move(bc));
   }
 }
 

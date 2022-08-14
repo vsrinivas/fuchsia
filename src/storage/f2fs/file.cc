@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <algorithm>
-
 #include "src/storage/f2fs/f2fs.h"
 
 namespace f2fs {
@@ -375,6 +373,8 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
     data_pages = std::move(result.value());
   }
 
+  // Trigger writeback every dirty Page.
+  auto trigger_writeback = fit::defer([fs = Vfs()] { fs->ScheduleWriteback(); });
   size_t off_in_block = safemath::CheckMod<size_t>(offset, kBlockSize).ValueOrDie();
   size_t off_in_buf = 0;
   size_t left = len;

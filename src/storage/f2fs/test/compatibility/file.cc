@@ -3,9 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/fit/defer.h>
-#include <stdlib.h>
-
-#include <vector>
 
 #include "src/storage/f2fs/test/compatibility/compatibility.h"
 

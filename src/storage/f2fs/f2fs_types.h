@@ -9,12 +9,6 @@
 #include <zircon/listnode.h>
 #include <zircon/types.h>
 
-#include <atomic>
-
-#ifdef __Fuchsia__
-#include <threads.h>
-#endif  // __Fuchsia__
-
 namespace f2fs {
 
 class Page;
@@ -53,7 +47,7 @@ constexpr size_t kBitsPerByte = 8;
 constexpr size_t kPageCacheShift = 12;
 constexpr size_t kF2fsSuperMagic = 0xF2F52010;
 constexpr size_t kCrcPolyLe = 0xedb88320;
-constexpr size_t kAopWritepageActivate = 0x80000;
+constexpr auto kWriteTimeOut = std::chrono::seconds(60);
 
 constexpr size_t kRead = 0x0;
 constexpr size_t kWrite = 0x1;

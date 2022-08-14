@@ -245,7 +245,7 @@ TEST_F(FileTest, MixedSizeWrite) {
   {
     WritebackOperation op = {.bSync = true};
     test_file_ptr->Writeback(op);
-    __UNUSED auto unused = test_file_ptr->InvalidatePages();
+    [[maybe_unused]] auto unused = test_file_ptr->InvalidatePages();
   }
   w_buf_iter = w_buf;
   for (size_t i = 0; i < total_pages; ++i) {
@@ -318,7 +318,7 @@ TEST_F(FileTest, MixedSizeWriteUnaligned) {
   {
     WritebackOperation op = {.bSync = true};
     test_file_ptr->Writeback(op);
-    __UNUSED auto unused = test_file_ptr->InvalidatePages();
+    [[maybe_unused]] auto unused = test_file_ptr->InvalidatePages();
   }
   w_buf_iter = w_buf;
   for (size_t i = 0; i < total_pages; ++i) {

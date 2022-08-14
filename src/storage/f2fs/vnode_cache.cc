@@ -29,10 +29,10 @@ void VnodeCache::Reset() {
 }
 
 zx_status_t VnodeCache::ForAllVnodes(VnodeCallback callback) {
-  fbl::RefPtr<VnodeF2fs> prev_vnode = nullptr;
+  fbl::RefPtr<VnodeF2fs> prev_vnode;
 
   while (true) {
-    fbl::RefPtr<VnodeF2fs> vnode = nullptr;
+    fbl::RefPtr<VnodeF2fs> vnode;
     // Scope the lock to prevent letting fbl::RefPtr<VnodeF2fs> destructors from running while
     // it is held.
     {
@@ -87,39 +87,29 @@ zx_status_t VnodeCache::ForAllVnodes(VnodeCallback callback) {
 }
 
 zx_status_t VnodeCache::ForDirtyVnodesIf(VnodeCallback cb, VnodeCallback cb_if) {
-  std::vector<fbl::RefPtr<VnodeF2fs>> dirty_vnodes(0);
-  int count = 0;
+  std::vector<fbl::RefPtr<VnodeF2fs>> dirty_vnodes;
   {
     std::lock_guard lock(list_lock_);
-    dirty_vnodes.resize(ndirty_);
     for (auto iter = dirty_list_.begin(); iter != dirty_list_.end(); ++iter) {
-      fbl::RefPtr<VnodeF2fs> vn = iter.CopyPointer();
-      if (cb_if == nullptr || cb_if(vn) == ZX_OK) {
-        dirty_vnodes[count] = std::move(vn);
-        ++count;
+      fbl::RefPtr<VnodeF2fs> vnode = iter.CopyPointer();
+      if (cb_if == nullptr || cb_if(vnode) == ZX_OK) {
+        dirty_vnodes.push_back(std::move(vnode));
       }
     }
   }
 
-  if (!count) {
+  if (dirty_vnodes.empty()) {
     return ZX_OK;
   }
 
-  for (int i = 0; i < count; ++i) {
-    fbl::RefPtr<VnodeF2fs>& vn = dirty_vnodes[i];
-    zx_status_t status = cb(vn);
-    if (status == ZX_ERR_STOP) {
+  for (auto& vnode : dirty_vnodes) {
+    if (zx_status_t status = cb(vnode); status == ZX_ERR_STOP) {
       break;
-    }
-    if (status != ZX_ERR_NEXT && status != ZX_OK) {
-      dirty_vnodes.clear();
-      dirty_vnodes.shrink_to_fit();
+    } else if (status != ZX_ERR_NEXT && status != ZX_OK) {
       return status;
     }
   }
 
-  dirty_vnodes.clear();
-  dirty_vnodes.shrink_to_fit();
   return ZX_OK;
 }
 
@@ -144,14 +134,13 @@ void VnodeCache::Downgrade(VnodeF2fs* raw_vnode) {
 }
 
 zx_status_t VnodeCache::Lookup(const ino_t& ino, fbl::RefPtr<VnodeF2fs>* out) {
-  fbl::RefPtr<VnodeF2fs> vnode = nullptr;
+  fbl::RefPtr<VnodeF2fs> vnode;
   {
     std::lock_guard lock(table_lock_);
     if (zx_status_t status = LookupUnsafe(ino, &vnode); status != ZX_OK) {
       return status;
     }
   }
-  ZX_ASSERT(vnode != nullptr);
   *out = std::move(vnode);
   return ZX_OK;
 }

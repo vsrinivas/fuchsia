@@ -4,7 +4,6 @@
 
 #include <getopt.h>
 
-#include <cmath>
 #include <iostream>
 
 #include <safemath/checked_math.h>

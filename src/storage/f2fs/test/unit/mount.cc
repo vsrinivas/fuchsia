@@ -132,9 +132,9 @@ void MountTestActiveLogs(F2fs *fs, MountOptions options) {
 
   constexpr int dir_file = 0;
   constexpr int warm_file = 1;
-  __UNUSED constexpr int cold_file = 2;
+  [[maybe_unused]] constexpr int cold_file = 2;
 
-  __UNUSED constexpr int data_block = 0;
+  [[maybe_unused]] constexpr int data_block = 0;
   constexpr int dnode_block = 1;
   constexpr int indirect_node_block = 2;
 

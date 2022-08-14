@@ -5,7 +5,6 @@
 #include "src/storage/f2fs/f2fs.h"
 
 #include <fcntl.h>
-#include <inttypes.h>
 #ifdef __Fuchsia__
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -13,15 +12,8 @@
 #include <lib/trace-provider/provider.h>
 #include <lib/zx/event.h>
 #endif  // __Fuchsia__
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
-
-#include <memory>
 
 #ifdef __Fuchsia__
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"

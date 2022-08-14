@@ -14,14 +14,6 @@
 #include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #endif  // __Fuchsia__
 
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-
-#include <utility>
-
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_ptr.h>
 #include <storage/buffer/block_buffer.h>

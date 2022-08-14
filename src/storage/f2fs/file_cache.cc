@@ -490,6 +490,13 @@ pgoff_t FileCache::Writeback(WritebackOperation &operation) {
   // The Pages of a vnode should belong to a PageType.
   PageType type = vnode_->GetPageType();
   for (size_t i = 0; i < pages.size(); ++i) {
+    // Writeback for memory reclaim is not allowed for some reason such as gc and checkpoint.
+    if (operation.bReclaim && !vnode_->Vfs()->CanReclaim()) {
+      // Release remaining Pages in |pages| for waiters.
+      pages.clear();
+      pages.shrink_to_fit();
+      break;
+    }
     LockedPage page = std::move(pages[i]);
 
     ZX_DEBUG_ASSERT(page->IsUptodate());
@@ -497,13 +504,13 @@ pgoff_t FileCache::Writeback(WritebackOperation &operation) {
     if (vnode_->IsNode() && operation.node_page_cb) {
       operation.node_page_cb(page.CopyRefPtr());
     }
-    zx_status_t ret = vnode_->WriteDirtyPage(page, false);
+    zx_status_t ret = vnode_->WriteDirtyPage(page, operation.bReclaim);
     if (ret != ZX_OK) {
       if (ret != ZX_ERR_NOT_FOUND && ret != ZX_ERR_OUT_OF_RANGE) {
         if (page->IsUptodate()) {
           // In case of failure, we just redirty it.
           page->SetDirty();
-          FX_LOGS(WARNING) << "[f2fs] A unexpected error occurred during writing Pages: " << ret;
+          FX_LOGS(WARNING) << "[f2fs] Writeback is not available for now." << ret;
         }
       }
       page->ClearWriteback();

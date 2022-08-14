@@ -56,7 +56,7 @@ TEST(MultiThreads, Truncate) {
 
 TEST(MultiThreads, Write) {
   std::unique_ptr<Bcache> bc;
-  FileTester::MkfsOnFakeDev(&bc, 20971520);
+  FileTester::MkfsOnFakeDev(&bc, 2097152);
 
   std::unique_ptr<F2fs> fs;
   MountOptions options{};

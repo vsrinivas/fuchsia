@@ -55,7 +55,7 @@ void AddArg(std::vector<const char *> &argv, ArgType t, const char *val) {
   argv.push_back(val);
 }
 
-__UNUSED void PrintArg(std::vector<const char *> &argv) {
+[[maybe_unused]] void PrintArg(std::vector<const char *> &argv) {
   std::string str_args;
 
   for (auto &i : argv) {

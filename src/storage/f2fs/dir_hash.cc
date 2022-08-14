@@ -11,7 +11,7 @@ namespace f2fs {
 
 f2fs_hash_t DentryHash(std::string_view name) {
   uint32_t hash;
-  __UNUSED uint32_t minor_hash;
+  [[maybe_unused]] uint32_t minor_hash;
   f2fs_hash_t f2fs_hash;
   uint32_t in[8], buf[4];
 

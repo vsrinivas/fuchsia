@@ -177,7 +177,8 @@ uint32_t SegmentManager::Utilization() {
 // Sometimes f2fs may be better to drop out-of-place update policy.
 // So, if fs utilization is over kMinIpuUtil, then f2fs tries to write
 // data in the original place likewise other traditional file systems.
-constexpr uint32_t kMinIpuUtil = 70;
+// TODO: Currently, we do not use IPU. Consider using IPU for fsynced data.
+constexpr uint32_t kMinIpuUtil = 100;
 bool SegmentManager::NeedInplaceUpdate(VnodeF2fs *vnode) {
   if (vnode->IsDir())
     return false;
@@ -319,7 +320,6 @@ void SegmentManager::BalanceFs() {
       ZX_DEBUG_ASSERT(ret.error_value() == ZX_ERR_UNAVAILABLE);
     }
   }
-  fs_->ScheduleWriteback();
 }
 
 void SegmentManager::LocateDirtySegment(uint32_t segno, DirtyType dirty_type) {

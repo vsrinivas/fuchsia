@@ -5,8 +5,6 @@
 #ifndef SRC_STORAGE_F2FS_SYNC_HOST_H_
 #define SRC_STORAGE_F2FS_SYNC_HOST_H_
 
-#include <atomic>
-
 namespace f2fs {
 
 // Temporarily define sync_completion_t for compatibility tests on Linux.

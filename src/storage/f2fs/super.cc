@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <string.h>
-
 #include <safemath/checked_math.h>
 
 #include "src/storage/f2fs/f2fs.h"
@@ -44,50 +42,35 @@ void F2fs::PutSuper() {
 
 void F2fs::ScheduleWriteback() {
   block_t dirty_data_pages = superblock_info_->GetPageCount(CountType::kDirtyData);
-  block_t limit = kMaxDirtyDataPages;
-  block_t flush_limit = limit / 2;
+  block_t limit = kMaxDirtyDataPages / 2;
 
   // |limit| is configurable according to the maximum allowable memory for f2fs
   // TODO: when f2fs can get hints about memory pressure, revisit it.
-  if (dirty_data_pages < flush_limit) {
+  if (dirty_data_pages < limit) {
     return;
   }
 
-  if (!writeback_flag_.test_and_set(std::memory_order_acquire)) {
-    auto promise = fpromise::make_promise([this, limit, flush_limit]() mutable {
-      // It adjusts the number of dirty Pages to be flushed (X) according to |level| as below.
-      // If |level| = 0, X = |dirty_data_pages| / 3
-      // If |level| = 1, X = |dirty_data_pages| * 2 / 3
-      // If |level| = 2, X = |dirty_data_pages|
-      // Writeback runs until |dirty_data_pages| is less than a half of |limit|.
-      int level = 0;
+  // Only one writeback task can run for memory reclaim at a time.
+  if (writeback_flag_.try_acquire()) {
+    auto promise = fpromise::make_promise([this, limit]() mutable {
       block_t dirty_pages = superblock_info_->GetPageCount(CountType::kDirtyData);
-      FX_LOGS(INFO) << "[f2fs] A writeback thread triggered..";
-      ZX_DEBUG_ASSERT(writeback_flag_.test(std::memory_order_acquire));
-      while (dirty_pages >= flush_limit) {
-        block_t to_write = ((dirty_pages * safemath::CheckAdd<block_t>(1, level)) / 3).ValueOrDie();
-        WritebackOperation op = {.to_write = to_write};
-        op.if_vnode = [](fbl::RefPtr<VnodeF2fs> &vnode) {
-          if (!vnode->IsDir() && vnode->GetDirtyPageCount()) {
+      [[maybe_unused]] pgoff_t written = 0;
+      // Flushing kDefaultBlocksPerSegment of dirty Pages can produce kDefaultBlocksPerSegment
+      // of additional dirty node Pages in the worst case. If there is not enough space, stop
+      // writeback.
+      while (dirty_pages >= limit && !segment_manager_->HasNotEnoughFreeSecs() && CanReclaim()) {
+        WritebackOperation op = {.to_write = kDefaultBlocksPerSegment, .bReclaim = true};
+        op.if_vnode = [this](fbl::RefPtr<VnodeF2fs> &vnode) {
+          if (!vnode->IsDir() && vnode->GetDirtyPageCount() && CanReclaim()) {
             return ZX_OK;
           }
           return ZX_ERR_NEXT;
         };
-        auto written = SyncDirtyDataPages(op);
-        FX_LOGS(INFO) << "[f2fs] Writeback [" << level << "] " << written << " of " << dirty_pages
-                      << " dirty Pages..";
-        block_t after_writeback = superblock_info_->GetPageCount(CountType::kDirtyData);
-        // If the number of dirty Pages increases after writeback, flush more dirty Pages by
-        // increasing |level|. Otherwise, |level| decreases.
-        if (dirty_pages < after_writeback || after_writeback >= limit) {
-          level = std::min(level + 1, 2);
-        } else {
-          level = std::max(level - 1, 0);
-        }
-        dirty_pages = after_writeback;
+        written += SyncDirtyDataPages(op);
+        dirty_pages = superblock_info_->GetPageCount(CountType::kDirtyData);
       }
-      writeback_flag_.clear(std::memory_order_relaxed);
-      writeback_flag_.notify_all();
+      // Wake waiters of WaitForWriteback().
+      writeback_flag_.release();
       return fpromise::ok();
     });
     writer_->ScheduleWriteback(std::move(promise));
@@ -98,16 +81,30 @@ void F2fs::SyncFs(bool bShutdown) {
   // TODO:: Consider !superblock_info_.IsDirty()
   if (bShutdown) {
     FX_LOGS(INFO) << "[f2fs] Unmount triggered";
-    WritebackOperation op;
-    // Checkpointing will flush all Pages that Writer is holding.
-    op.if_vnode = [](fbl::RefPtr<VnodeF2fs> &vnode) {
-      if (!vnode->IsDir()) {
-        return ZX_OK;
+    // Stop writeback before umount.
+    FlagAcquireGuard flag(&stop_reclaim_flag_);
+    ZX_DEBUG_ASSERT(flag.IsAcquired());
+    ZX_ASSERT(WaitForWriteback().is_ok());
+    // Flush every dirty Pages.
+    while (superblock_info_->GetPageCount(CountType::kDirtyData)) {
+      // If necessary, do gc.
+      if (segment_manager_->HasNotEnoughFreeSecs()) {
+        if (auto ret = gc_manager_->F2fsGc(); ret.is_error()) {
+          // F2fsGc() returns ZX_ERR_UNAVAILABLE when there is no available victim section,
+          // otherwise BUG
+          ZX_DEBUG_ASSERT(ret.error_value() == ZX_ERR_UNAVAILABLE);
+        }
       }
-      return ZX_ERR_NEXT;
-    };
-    StopWriteback();
-    SyncDirtyDataPages(op);
+      WritebackOperation op = {.to_write = kDefaultBlocksPerSegment};
+      // Checkpointing will flush all Pages that Writer is holding.
+      op.if_vnode = [](fbl::RefPtr<VnodeF2fs> &vnode) {
+        if (!vnode->IsDir()) {
+          return ZX_OK;
+        }
+        return ZX_ERR_NEXT;
+      };
+      SyncDirtyDataPages(op);
+    }
   } else {
     WriteCheckpoint(false, false);
   }

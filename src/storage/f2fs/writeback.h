@@ -16,7 +16,6 @@
 
 namespace f2fs {
 
-constexpr auto kWriteTimeOut = std::chrono::seconds(60);
 // F2fs flushes dirty pages when the number of dirty data pages exceeds a half of
 // |kMaxDirtyDataPages|.
 constexpr int kMaxDirtyDataPages = 51200;

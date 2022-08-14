@@ -394,7 +394,6 @@ zx_status_t VnodeF2fs::DoWriteDataPage(LockedPage &page) {
 }
 
 zx_status_t VnodeF2fs::WriteDataPage(LockedPage &page, bool is_reclaim) {
-  SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
   const pgoff_t end_index = (GetSize() >> kPageCacheShift);
 
   if (page->GetIndex() >= end_index) {
@@ -419,7 +418,6 @@ zx_status_t VnodeF2fs::WriteDataPage(LockedPage &page, bool is_reclaim) {
   // return kAopWritepageActivate;
   //}
 
-  fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
   if (page->ClearDirtyForIo()) {
     page->SetWriteback();
     if (zx_status_t err = DoWriteDataPage(page); err != ZX_OK) {
@@ -494,9 +492,9 @@ zx::status<std::vector<LockedPage>> VnodeF2fs::WriteBegin(const size_t offset, c
 
 zx_status_t VnodeF2fs::WriteDirtyPage(LockedPage &page, bool is_reclaim) {
   if (IsMeta()) {
-    return Vfs()->F2fsWriteMetaPage(page, false);
+    return Vfs()->F2fsWriteMetaPage(page, is_reclaim);
   } else if (IsNode()) {
-    return Vfs()->GetNodeManager().F2fsWriteNodePage(page, false);
+    return Vfs()->GetNodeManager().F2fsWriteNodePage(page, is_reclaim);
   }
   return WriteDataPage(page, false);
 }
