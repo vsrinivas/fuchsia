@@ -131,8 +131,6 @@ protocol Node {
 
 /// Node defines the minimal interface for entities which can be accessed in a filesystem.
 protocol Node1 {
-    compose Node2;
-
     /// Create another connection to the same remote object.
     ///
     /// `flags` may be any of:

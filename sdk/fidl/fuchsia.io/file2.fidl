@@ -47,9 +47,7 @@ type FileInfo = resource table {
 /// A [`File`] that provides [`FileInfo`].
 protocol File {
     compose AdvisoryLocking;
-
     compose Node1;
-
     compose File2;
 
     @selector("fuchsia.io/File.Describe")
@@ -62,7 +60,6 @@ protocol File {
 /// NOTE: cloned connections do not share their seek offset with their source
 /// connection.
 protocol File2 {
-    compose Node1;
     compose Node2;
 
     /// Moves the offset at which the next invocation of [`Read`] or [`Write`]
