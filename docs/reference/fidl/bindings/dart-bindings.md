@@ -125,7 +125,7 @@ or every flag set (`$mask`):
 * `String toString()`: Returns a readable representation of the `FileMode`.
 * `FileMode operator |(FileMode other)`: Bitwise or operator.
 * `FileMode operator &(FileMode other)`: Bitwise and operator.
-* `bool operator(dynamic other)`: Equality operator.
+* `bool operator==(Object other)`: Equality operator.
 * `int getUnknownBits()`: Returns only the set bits that are unknown. Always
   returns 0 for [strict][lang-flexible] bits.
 * `bool hasUnknownBits()`: Returns whether this value contains any unknown bits.
@@ -203,7 +203,7 @@ The FIDL toolchain generates a `Color` class with the following methods:
   provided named arguments.
 * `List<Object> get $fields`: Returns a list of fields in declaration order.
 * `String toString()`: Returns a readable string of the `Color`
-* `bool operator==(dynamic other)`: Equality operator that performs a deep
+* `bool operator==(Object other)`: Equality operator that performs a deep
   comparison when compared to another instance of a `Color`.
 
 Example usage:
@@ -241,7 +241,7 @@ As well as a `JsonValue` class with the following methods:
 * `String toString()`: Returns a readable string of the `JsonValue`.
 * `int get $ordinal`: Getter for the underlying [ordinal][union-lexicon] value.
 * `Object get $data`: Getter for the underlying union data.
-* `bool operator ==(dynamic other)`: Equality operator that performs deep
+* `bool operator ==(Object other)`: Equality operator that performs deep
    comparison when compared to another `JsonValue` of the same variant.
 * `fidl.UnknownRawData? get $unknownData`: Returns the bytes and handles of the
   unknown data if this union contains an unknown variant, or `null` otherwise.
@@ -306,7 +306,7 @@ The FIDL toolchain generates a `User` class that defines the following methods:
   to unknown field values (i.e. bytes and handles). The list of handles is
   returned in [traversal order][traversal], and is guaranteed to be empty if the
   table is a [value][lang-resource] type.
-* `bool operator ==(dynamic other)`: Equality operator that performs deep
+* `bool operator ==(Object other)`: Equality operator that performs deep
   comparison when compared to another `User`.
 
 Example usage:

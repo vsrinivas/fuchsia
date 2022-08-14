@@ -170,7 +170,7 @@ class MockViewRef extends Mock implements ViewRef {
   int get hashCode => super.noSuchMethod(Invocation.method(#hashCode, []));
 
   @override
-  bool operator ==(dynamic other) =>
+  bool operator ==(Object other) =>
       super.noSuchMethod(Invocation.method(#==, [other]));
 }
 

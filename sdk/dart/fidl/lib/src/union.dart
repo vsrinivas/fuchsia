@@ -16,14 +16,14 @@ abstract class Union {
   int get hashCode => deepHash([$ordinal, $data]);
 
   @override
-  bool operator ==(dynamic other) {
+  bool operator ==(Object other) {
     if (identical(this, other)) {
       return true;
     }
     if (runtimeType != other.runtimeType) {
       return false;
     }
-    final Union otherUnion = other;
+    final otherUnion = other as Union;
     if ($ordinal != otherUnion.$ordinal) {
       return false;
     }

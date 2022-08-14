@@ -270,7 +270,7 @@ class MatchableArgument {
       MatchableArgument._(null, MatchType.unrestricted);
 
   @override
-  bool operator ==(dynamic other) {
+  bool operator ==(Object other) {
     return identical(this, other) ||
         (other is MatchableArgument &&
             runtimeType == other.runtimeType &&

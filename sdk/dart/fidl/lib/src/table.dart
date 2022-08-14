@@ -18,14 +18,14 @@ abstract class Table {
   int get hashCode => deepHash($fields.values);
 
   @override
-  bool operator ==(dynamic other) {
+  bool operator ==(Object other) {
     if (identical(this, other)) {
       return true;
     }
     if (runtimeType != other.runtimeType) {
       return false;
     }
-    final Table otherTable = other;
+    final otherTable = other as Table;
     return deepEquals($fields, otherTable.$fields);
   }
 

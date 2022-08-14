@@ -12,7 +12,7 @@ abstract class Bits {
   int get $value;
 
   @override
-  bool operator ==(dynamic other) {
+  bool operator ==(Object other) {
     if (other is Bits) {
       return $value == other.$value;
     }

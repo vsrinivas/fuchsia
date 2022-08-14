@@ -55,7 +55,7 @@ class TimeDelta implements Comparable<TimeDelta> {
   bool operator >=(TimeDelta other) => _delta >= other._delta;
 
   @override
-  bool operator ==(dynamic other) =>
+  bool operator ==(Object other) =>
       other is TimeDelta && _delta == other._delta;
   @override
   int get hashCode => _delta.hashCode;

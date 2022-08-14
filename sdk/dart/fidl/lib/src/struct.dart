@@ -18,14 +18,14 @@ abstract class Struct {
   void $encode(Encoder encoder, int offset, int depth);
 
   @override
-  bool operator ==(dynamic other) {
+  bool operator ==(Object other) {
     if (identical(this, other)) {
       return true;
     }
     if (runtimeType != other.runtimeType) {
       return false;
     }
-    final Struct otherStruct = other;
+    final otherStruct = other as Struct;
     return deepEquals($fields, otherStruct.$fields);
   }
 

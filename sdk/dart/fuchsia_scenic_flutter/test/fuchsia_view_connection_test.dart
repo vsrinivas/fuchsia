@@ -404,7 +404,7 @@ class MockViewHolderToken extends Mock implements ViewHolderToken {
   int get hashCode => super.noSuchMethod(Invocation.method(#hashCode, []));
 
   @override
-  bool operator ==(dynamic other) =>
+  bool operator ==(Object other) =>
       super.noSuchMethod(Invocation.method(#==, [other]));
 }
 
@@ -413,7 +413,7 @@ class MockViewportCreationToken extends Mock implements ViewportCreationToken {
   int get hashCode => super.noSuchMethod(Invocation.method(#hashCode, []));
 
   @override
-  bool operator ==(dynamic other) =>
+  bool operator ==(Object other) =>
       super.noSuchMethod(Invocation.method(#==, [other]));
 }
 
@@ -422,7 +422,7 @@ class MockViewRef extends Mock implements ViewRef {
   int get hashCode => super.noSuchMethod(Invocation.method(#hashCode, []));
 
   @override
-  bool operator ==(dynamic other) =>
+  bool operator ==(Object other) =>
       super.noSuchMethod(Invocation.method(#==, [other]));
 }
 
@@ -435,7 +435,7 @@ class MockHandle extends Mock implements Handle {
   int get hashCode => super.noSuchMethod(Invocation.method(#hashCode, []));
 
   @override
-  bool operator ==(dynamic other) =>
+  bool operator ==(Object other) =>
       super.noSuchMethod(Invocation.method(#==, [other]));
 
   @override

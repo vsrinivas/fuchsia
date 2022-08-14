@@ -34,7 +34,7 @@
                   "isRequiredPositional": true,
                   "name": "other",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "dynamic"
+                  "varType": "Object"
                 }
               },
               "isAbstract": false,
@@ -4320,7 +4320,7 @@
                   "isRequiredPositional": true,
                   "name": "other",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "dynamic"
+                  "varType": "Object"
                 }
               },
               "isAbstract": false,
@@ -4442,7 +4442,7 @@
                   "isRequiredPositional": true,
                   "name": "other",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "dynamic"
+                  "varType": "Object"
                 }
               },
               "isAbstract": false,
@@ -12225,7 +12225,7 @@
                   "isRequiredPositional": true,
                   "name": "other",
                   "type": "SimpleFormalParameterImpl",
-                  "varType": "dynamic"
+                  "varType": "Object"
                 }
               },
               "isAbstract": false,

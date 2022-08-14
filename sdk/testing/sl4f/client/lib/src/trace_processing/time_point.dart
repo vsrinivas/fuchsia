@@ -30,7 +30,7 @@ class TimePoint implements Comparable<TimePoint> {
   bool operator >=(TimePoint other) => _ticks >= other._ticks;
 
   @override
-  bool operator ==(dynamic other) =>
+  bool operator ==(Object other) =>
       other is TimePoint && _ticks == other._ticks;
   @override
   int get hashCode => _ticks.hashCode;
