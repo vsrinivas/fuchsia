@@ -75,7 +75,7 @@ mod tests {
             mut item in arb_package_index_entry()
         ) {
             let actual = item.measure();
-            let expected = ::fidl::encoding::with_tls_encoded(
+            let expected = ::fidl::encoding::with_tls_encoded::<_, _, false>(
                 &mut item,
                 |bytes, _handles| Result::<_, ::fidl::Error>::Ok(bytes.len())
             ).unwrap();

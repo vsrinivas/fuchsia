@@ -608,7 +608,11 @@ impl MainProtocolSynchronousProxy {
         &self,
         mut payload: fidl_test_protocollayouts_imported::ComposedProtocolOneWayAnonComposedRequest,
     ) -> Result<(), fidl::Error> {
-        self.client.send(&mut (payload,), 0x67da05e1ae3f5e1, fidl::encoding::DynamicFlags::empty())
+        self.client.send::<_, false>(
+            &mut (payload,),
+            0x67da05e1ae3f5e1,
+            fidl::encoding::DynamicFlags::empty(),
+        )
     }
     pub fn r#two_way_anon_composed(
         &self,
@@ -648,7 +652,11 @@ impl MainProtocolSynchronousProxy {
         &self,
         mut payload: fidl_test_protocollayouts_imported::ImportTablePayload,
     ) -> Result<(), fidl::Error> {
-        self.client.send(&mut (payload,), 0x5d78ce13958eee58, fidl::encoding::DynamicFlags::empty())
+        self.client.send::<_, false>(
+            &mut (payload,),
+            0x5d78ce13958eee58,
+            fidl::encoding::DynamicFlags::empty(),
+        )
     }
     pub fn r#two_way_named_composed(
         &self,
@@ -684,7 +692,11 @@ impl MainProtocolSynchronousProxy {
         &self,
         mut payload: fidl_test_protocollayouts_imported::ImportTablePayload,
     ) -> Result<(), fidl::Error> {
-        self.client.send(&mut (payload,), 0x530db65f2691d3b, fidl::encoding::DynamicFlags::empty())
+        self.client.send::<_, false>(
+            &mut (payload,),
+            0x530db65f2691d3b,
+            fidl::encoding::DynamicFlags::empty(),
+        )
     }
     pub fn r#two_way_import(
         &self,
@@ -715,7 +727,11 @@ impl MainProtocolSynchronousProxy {
         Ok(_value.map(|_value| _value.0))
     }
     pub fn r#one_way_local(&self, mut payload: LocalTablePayload) -> Result<(), fidl::Error> {
-        self.client.send(&mut (payload,), 0x54759b55efd60f43, fidl::encoding::DynamicFlags::empty())
+        self.client.send::<_, false>(
+            &mut (payload,),
+            0x54759b55efd60f43,
+            fidl::encoding::DynamicFlags::empty(),
+        )
     }
     pub fn r#two_way_local(
         &self,
@@ -748,7 +764,11 @@ impl MainProtocolSynchronousProxy {
         &self,
         mut payload: MainProtocolOneWayAnonRequest,
     ) -> Result<(), fidl::Error> {
-        self.client.send(&mut (payload,), 0x3a552f30c77c76ec, fidl::encoding::DynamicFlags::empty())
+        self.client.send::<_, false>(
+            &mut (payload,),
+            0x3a552f30c77c76ec,
+            fidl::encoding::DynamicFlags::empty(),
+        )
     }
     pub fn r#two_way_anon(
         &self,
@@ -918,7 +938,11 @@ impl MainProtocolProxyInterface for MainProtocolProxy {
         &self,
         mut payload: fidl_test_protocollayouts_imported::ComposedProtocolOneWayAnonComposedRequest,
     ) -> Result<(), fidl::Error> {
-        self.client.send(&mut (payload), 0x67da05e1ae3f5e1, fidl::encoding::DynamicFlags::empty())
+        self.client.send::<_, false>(
+            &mut (payload),
+            0x67da05e1ae3f5e1,
+            fidl::encoding::DynamicFlags::empty(),
+        )
     }
     type TwoWayAnonComposedResponseFut = fidl::client::QueryResponseFut<
         (fidl_test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedResponse),
@@ -987,7 +1011,11 @@ impl MainProtocolProxyInterface for MainProtocolProxy {
         &self,
         mut payload: fidl_test_protocollayouts_imported::ImportTablePayload,
     ) -> Result<(), fidl::Error> {
-        self.client.send(&mut (payload), 0x5d78ce13958eee58, fidl::encoding::DynamicFlags::empty())
+        self.client.send::<_, false>(
+            &mut (payload),
+            0x5d78ce13958eee58,
+            fidl::encoding::DynamicFlags::empty(),
+        )
     }
     type TwoWayNamedComposedResponseFut =
         fidl::client::QueryResponseFut<(fidl_test_protocollayouts_imported::ImportTablePayload)>;
@@ -1043,7 +1071,11 @@ impl MainProtocolProxyInterface for MainProtocolProxy {
         &self,
         mut payload: fidl_test_protocollayouts_imported::ImportTablePayload,
     ) -> Result<(), fidl::Error> {
-        self.client.send(&mut (payload), 0x530db65f2691d3b, fidl::encoding::DynamicFlags::empty())
+        self.client.send::<_, false>(
+            &mut (payload),
+            0x530db65f2691d3b,
+            fidl::encoding::DynamicFlags::empty(),
+        )
     }
     type TwoWayImportResponseFut =
         fidl::client::QueryResponseFut<(fidl_test_protocollayouts_imported::ImportTablePayload)>;
@@ -1096,7 +1128,11 @@ impl MainProtocolProxyInterface for MainProtocolProxy {
     type OnImportWithErrorResponseFut =
         fidl::client::QueryResponseFut<(MainProtocolOnImportWithErrorResult)>;
     fn r#one_way_local(&self, mut payload: LocalTablePayload) -> Result<(), fidl::Error> {
-        self.client.send(&mut (payload), 0x54759b55efd60f43, fidl::encoding::DynamicFlags::empty())
+        self.client.send::<_, false>(
+            &mut (payload),
+            0x54759b55efd60f43,
+            fidl::encoding::DynamicFlags::empty(),
+        )
     }
     type TwoWayLocalResponseFut = fidl::client::QueryResponseFut<(LocalTablePayload)>;
     fn r#two_way_local(&self, mut payload: &mut LocalUnionPayload) -> Self::TwoWayLocalResponseFut {
@@ -1147,7 +1183,11 @@ impl MainProtocolProxyInterface for MainProtocolProxy {
         &self,
         mut payload: MainProtocolOneWayAnonRequest,
     ) -> Result<(), fidl::Error> {
-        self.client.send(&mut (payload), 0x3a552f30c77c76ec, fidl::encoding::DynamicFlags::empty())
+        self.client.send::<_, false>(
+            &mut (payload),
+            0x3a552f30c77c76ec,
+            fidl::encoding::DynamicFlags::empty(),
+        )
     }
     type TwoWayAnonResponseFut = fidl::client::QueryResponseFut<(MainProtocolTwoWayAnonResponse)>;
     fn r#two_way_anon(
@@ -2147,7 +2187,7 @@ impl MainProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -2172,7 +2212,7 @@ impl MainProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -2197,7 +2237,7 @@ impl MainProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -2222,7 +2262,7 @@ impl MainProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -2247,7 +2287,7 @@ impl MainProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -2272,7 +2312,7 @@ impl MainProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -2294,7 +2334,7 @@ impl MainProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -2319,7 +2359,7 @@ impl MainProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -2344,7 +2384,7 @@ impl MainProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -2369,7 +2409,7 @@ impl MainProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)

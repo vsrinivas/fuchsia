@@ -3135,10 +3135,18 @@ impl UnknownInteractionsAjarProtocolSynchronousProxy {
         UnknownInteractionsAjarProtocolEvent::decode(self.client.wait_for_event(deadline)?)
     }
     pub fn r#strict_one_way(&self) -> Result<(), fidl::Error> {
-        self.client.send(&mut (), 0xd4663d6b2b5048b, fidl::encoding::DynamicFlags::empty())
+        self.client.send::<_, false>(
+            &mut (),
+            0xd4663d6b2b5048b,
+            fidl::encoding::DynamicFlags::empty(),
+        )
     }
     pub fn r#flexible_one_way(&self) -> Result<(), fidl::Error> {
-        self.client.send(&mut (), 0x2275b8171ae4834f, fidl::encoding::DynamicFlags::FLEXIBLE)
+        self.client.send::<_, false>(
+            &mut (),
+            0x2275b8171ae4834f,
+            fidl::encoding::DynamicFlags::FLEXIBLE,
+        )
     }
     pub fn r#strict_two_way(&self, ___deadline: zx::Time) -> Result<(), fidl::Error> {
         let _value: () = self.client.send_query::<_, _, false, false>(
@@ -3329,10 +3337,18 @@ impl UnknownInteractionsAjarProtocolProxy {
 
 impl UnknownInteractionsAjarProtocolProxyInterface for UnknownInteractionsAjarProtocolProxy {
     fn r#strict_one_way(&self) -> Result<(), fidl::Error> {
-        self.client.send(&mut (), 0xd4663d6b2b5048b, fidl::encoding::DynamicFlags::empty())
+        self.client.send::<_, false>(
+            &mut (),
+            0xd4663d6b2b5048b,
+            fidl::encoding::DynamicFlags::empty(),
+        )
     }
     fn r#flexible_one_way(&self) -> Result<(), fidl::Error> {
-        self.client.send(&mut (), 0x2275b8171ae4834f, fidl::encoding::DynamicFlags::FLEXIBLE)
+        self.client.send::<_, false>(
+            &mut (),
+            0x2275b8171ae4834f,
+            fidl::encoding::DynamicFlags::FLEXIBLE,
+        )
     }
     type StrictTwoWayResponseFut = fidl::client::QueryResponseFut<()>;
     fn r#strict_two_way(&self) -> Self::StrictTwoWayResponseFut {
@@ -4408,7 +4424,7 @@ impl UnknownInteractionsAjarProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -4430,7 +4446,7 @@ impl UnknownInteractionsAjarProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -4455,7 +4471,7 @@ impl UnknownInteractionsAjarProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -4480,7 +4496,7 @@ impl UnknownInteractionsAjarProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -4505,7 +4521,7 @@ impl UnknownInteractionsAjarProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -4530,7 +4546,7 @@ impl UnknownInteractionsAjarProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -4555,7 +4571,7 @@ impl UnknownInteractionsAjarProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -4580,7 +4596,7 @@ impl UnknownInteractionsAjarProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -4602,7 +4618,7 @@ impl UnknownInteractionsAjarProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -4624,7 +4640,7 @@ impl UnknownInteractionsAjarProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -4649,7 +4665,7 @@ impl UnknownInteractionsAjarProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -4674,7 +4690,7 @@ impl UnknownInteractionsAjarProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -4699,7 +4715,7 @@ impl UnknownInteractionsAjarProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -4724,7 +4740,7 @@ impl UnknownInteractionsAjarProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -4749,7 +4765,7 @@ impl UnknownInteractionsAjarProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -4774,7 +4790,7 @@ impl UnknownInteractionsAjarProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -5614,7 +5630,11 @@ impl UnknownInteractionsClosedProtocolSynchronousProxy {
         UnknownInteractionsClosedProtocolEvent::decode(self.client.wait_for_event(deadline)?)
     }
     pub fn r#strict_one_way(&self) -> Result<(), fidl::Error> {
-        self.client.send(&mut (), 0x59282385962da24, fidl::encoding::DynamicFlags::empty())
+        self.client.send::<_, false>(
+            &mut (),
+            0x59282385962da24,
+            fidl::encoding::DynamicFlags::empty(),
+        )
     }
     pub fn r#strict_two_way(&self, ___deadline: zx::Time) -> Result<(), fidl::Error> {
         let _value: () = self.client.send_query::<_, _, false, false>(
@@ -5802,7 +5822,11 @@ impl UnknownInteractionsClosedProtocolProxy {
 
 impl UnknownInteractionsClosedProtocolProxyInterface for UnknownInteractionsClosedProtocolProxy {
     fn r#strict_one_way(&self) -> Result<(), fidl::Error> {
-        self.client.send(&mut (), 0x59282385962da24, fidl::encoding::DynamicFlags::empty())
+        self.client.send::<_, false>(
+            &mut (),
+            0x59282385962da24,
+            fidl::encoding::DynamicFlags::empty(),
+        )
     }
     type StrictTwoWayResponseFut = fidl::client::QueryResponseFut<()>;
     fn r#strict_two_way(&self) -> Self::StrictTwoWayResponseFut {
@@ -6643,7 +6667,7 @@ impl UnknownInteractionsClosedProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -6665,7 +6689,7 @@ impl UnknownInteractionsClosedProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -6690,7 +6714,7 @@ impl UnknownInteractionsClosedProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -6715,7 +6739,7 @@ impl UnknownInteractionsClosedProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -6740,7 +6764,7 @@ impl UnknownInteractionsClosedProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -6765,7 +6789,7 @@ impl UnknownInteractionsClosedProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -6790,7 +6814,7 @@ impl UnknownInteractionsClosedProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -6815,7 +6839,7 @@ impl UnknownInteractionsClosedProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -7682,10 +7706,18 @@ impl UnknownInteractionsProtocolSynchronousProxy {
         UnknownInteractionsProtocolEvent::decode(self.client.wait_for_event(deadline)?)
     }
     pub fn r#strict_one_way(&self) -> Result<(), fidl::Error> {
-        self.client.send(&mut (), 0x4e7273b964d117a6, fidl::encoding::DynamicFlags::empty())
+        self.client.send::<_, false>(
+            &mut (),
+            0x4e7273b964d117a6,
+            fidl::encoding::DynamicFlags::empty(),
+        )
     }
     pub fn r#flexible_one_way(&self) -> Result<(), fidl::Error> {
-        self.client.send(&mut (), 0x818bb3a7a910446, fidl::encoding::DynamicFlags::FLEXIBLE)
+        self.client.send::<_, false>(
+            &mut (),
+            0x818bb3a7a910446,
+            fidl::encoding::DynamicFlags::FLEXIBLE,
+        )
     }
     pub fn r#strict_two_way(&self, ___deadline: zx::Time) -> Result<(), fidl::Error> {
         let _value: () = self.client.send_query::<_, _, false, false>(
@@ -8030,10 +8062,18 @@ impl UnknownInteractionsProtocolProxy {
 
 impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolProxy {
     fn r#strict_one_way(&self) -> Result<(), fidl::Error> {
-        self.client.send(&mut (), 0x4e7273b964d117a6, fidl::encoding::DynamicFlags::empty())
+        self.client.send::<_, false>(
+            &mut (),
+            0x4e7273b964d117a6,
+            fidl::encoding::DynamicFlags::empty(),
+        )
     }
     fn r#flexible_one_way(&self) -> Result<(), fidl::Error> {
-        self.client.send(&mut (), 0x818bb3a7a910446, fidl::encoding::DynamicFlags::FLEXIBLE)
+        self.client.send::<_, false>(
+            &mut (),
+            0x818bb3a7a910446,
+            fidl::encoding::DynamicFlags::FLEXIBLE,
+        )
     }
     type StrictTwoWayResponseFut = fidl::client::QueryResponseFut<()>;
     fn r#strict_two_way(&self) -> Self::StrictTwoWayResponseFut {
@@ -9612,7 +9652,7 @@ impl UnknownInteractionsProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -9634,7 +9674,7 @@ impl UnknownInteractionsProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -9659,7 +9699,7 @@ impl UnknownInteractionsProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -9684,7 +9724,7 @@ impl UnknownInteractionsProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -9709,7 +9749,7 @@ impl UnknownInteractionsProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -9734,7 +9774,7 @@ impl UnknownInteractionsProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -9759,7 +9799,7 @@ impl UnknownInteractionsProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -9784,7 +9824,7 @@ impl UnknownInteractionsProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -9806,7 +9846,7 @@ impl UnknownInteractionsProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -9828,7 +9868,7 @@ impl UnknownInteractionsProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -9853,7 +9893,7 @@ impl UnknownInteractionsProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -9878,7 +9918,7 @@ impl UnknownInteractionsProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -9903,7 +9943,7 @@ impl UnknownInteractionsProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -9928,7 +9968,7 @@ impl UnknownInteractionsProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -9953,7 +9993,7 @@ impl UnknownInteractionsProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)
@@ -9978,7 +10018,7 @@ impl UnknownInteractionsProtocolControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
             self.inner
                 .channel()
                 .write_etc(&*bytes, &mut *handles)

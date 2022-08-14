@@ -76,7 +76,7 @@ impl ChildSynchronousProxy {
         &self,
         mut request: fidl::endpoints::ServerEnd<ParentMarker>,
     ) -> Result<(), fidl::Error> {
-        self.client.send(
+        self.client.send::<_, false>(
             &mut (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
                 fidl::endpoints::ServerEnd<ParentMarker>,
             >(request),),
@@ -88,7 +88,7 @@ impl ChildSynchronousProxy {
         &self,
         mut request: fidl::endpoints::ServerEnd<ParentMarker>,
     ) -> Result<(), fidl::Error> {
-        self.client.send(
+        self.client.send::<_, false>(
             &mut (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
                 fidl::endpoints::ServerEnd<ParentMarker>,
             >(request),),
@@ -153,7 +153,7 @@ impl ChildProxyInterface for ChildProxy {
         &self,
         mut request: fidl::endpoints::ServerEnd<ParentMarker>,
     ) -> Result<(), fidl::Error> {
-        self.client.send(
+        self.client.send::<_, false>(
             &mut (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
                 fidl::endpoints::ServerEnd<ParentMarker>,
             >(request)),
@@ -165,7 +165,7 @@ impl ChildProxyInterface for ChildProxy {
         &self,
         mut request: fidl::endpoints::ServerEnd<ParentMarker>,
     ) -> Result<(), fidl::Error> {
-        self.client.send(
+        self.client.send::<_, false>(
             &mut (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
                 fidl::endpoints::ServerEnd<ParentMarker>,
             >(request)),
@@ -426,7 +426,7 @@ impl ParentSynchronousProxy {
         &self,
         mut request: fidl::endpoints::ServerEnd<ParentMarker>,
     ) -> Result<(), fidl::Error> {
-        self.client.send(
+        self.client.send::<_, false>(
             &mut (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
                 fidl::endpoints::ServerEnd<ParentMarker>,
             >(request),),
@@ -485,7 +485,7 @@ impl ParentProxyInterface for ParentProxy {
         &self,
         mut request: fidl::endpoints::ServerEnd<ParentMarker>,
     ) -> Result<(), fidl::Error> {
-        self.client.send(
+        self.client.send::<_, false>(
             &mut (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
                 fidl::endpoints::ServerEnd<ParentMarker>,
             >(request)),

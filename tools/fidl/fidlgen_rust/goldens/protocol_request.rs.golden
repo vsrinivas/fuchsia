@@ -343,7 +343,7 @@ impl ParentSynchronousProxy {
         &self,
         mut c: fidl::endpoints::ClientEnd<ChildMarker>,
     ) -> Result<(), fidl::Error> {
-        self.client.send(
+        self.client.send::<_, false>(
             &mut (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
                 fidl::endpoints::ClientEnd<ChildMarker>,
             >(c),),
@@ -355,7 +355,7 @@ impl ParentSynchronousProxy {
         &self,
         mut r: fidl::endpoints::ServerEnd<ChildMarker>,
     ) -> Result<(), fidl::Error> {
-        self.client.send(
+        self.client.send::<_, false>(
             &mut (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
                 fidl::endpoints::ServerEnd<ChildMarker>,
             >(r),),
@@ -484,7 +484,7 @@ impl ParentProxyInterface for ParentProxy {
         &self,
         mut c: fidl::endpoints::ClientEnd<ChildMarker>,
     ) -> Result<(), fidl::Error> {
-        self.client.send(
+        self.client.send::<_, false>(
             &mut (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
                 fidl::endpoints::ClientEnd<ChildMarker>,
             >(c)),
@@ -496,7 +496,7 @@ impl ParentProxyInterface for ParentProxy {
         &self,
         mut r: fidl::endpoints::ServerEnd<ChildMarker>,
     ) -> Result<(), fidl::Error> {
-        self.client.send(
+        self.client.send::<_, false>(
             &mut (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
                 fidl::endpoints::ServerEnd<ChildMarker>,
             >(r)),

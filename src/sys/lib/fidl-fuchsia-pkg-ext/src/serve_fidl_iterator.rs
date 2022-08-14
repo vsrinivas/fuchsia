@@ -257,7 +257,7 @@ mod tests {
                 body: &mut nop,
             };
 
-            fidl::encoding::with_tls_encoded(&mut msg, |bytes, _handles| {
+            fidl::encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, _handles| {
                 Result::<_, fidl::Error>::Ok(bytes.len())
             })
             .unwrap()

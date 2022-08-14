@@ -212,7 +212,7 @@ impl Client {
     }
 
     /// Send an encodable message without expecting a response.
-    pub fn send<T: Encodable>(
+    pub fn send<T: Encodable, const OVERFLOWABLE: bool>(
         &self,
         body: &mut T,
         ordinal: u64,
@@ -222,7 +222,7 @@ impl Client {
             header: TransactionHeader::new(0, ordinal, dynamic_flags),
             body,
         };
-        crate::encoding::with_tls_encoded(msg, |bytes, handles| {
+        crate::encoding::with_tls_encoded::<_, _, OVERFLOWABLE>(msg, |bytes, handles| {
             self.send_raw_msg(&**bytes, handles)
         })
     }
@@ -828,7 +828,7 @@ pub mod sync {
         }
 
         /// Send a new message.
-        pub fn send<E: Encodable>(
+        pub fn send<E: Encodable, const OVERFLOWABLE: bool>(
             &self,
             msg: &mut E,
             ordinal: u64,
@@ -842,6 +842,11 @@ pub mod sync {
                 body: msg,
             };
             Encoder::encode(&mut write_bytes, &mut write_handles, msg)?;
+
+            if OVERFLOWABLE {
+                maybe_overflowing_on_encode(&mut write_bytes, &mut write_handles)?;
+            }
+
             self.channel
                 .write_etc(&mut write_bytes, &mut write_handles)
                 .map_err(|e| self.wrap_error(Error::ClientWrite, e))?;
@@ -1002,7 +1007,7 @@ mod tests {
         let (client_end, server_end) = zx::Channel::create().context("chan create")?;
         let client = sync::Client::new(client_end, "test_protocol");
         client
-            .send(&mut SEND_DATA.clone(), SEND_ORDINAL, DynamicFlags::empty())
+            .send::<u8, false>(&mut SEND_DATA.clone(), SEND_ORDINAL, DynamicFlags::empty())
             .context("sending")?;
         let mut received = MessageBufEtc::new();
         server_end.read_etc(&mut received).context("reading")?;
@@ -1126,7 +1131,7 @@ mod tests {
         // Close the server channel.
         drop(server_end);
         assert_matches!(
-            client.send(&mut SEND_DATA.clone(), SEND_ORDINAL, DynamicFlags::empty()),
+            client.send::<u8, false>(&mut SEND_DATA.clone(), SEND_ORDINAL, DynamicFlags::empty()),
             Err(crate::Error::ClientChannelClosed {
                 status: zx_status::Status::PEER_CLOSED,
                 protocol_name: "test_protocol",
@@ -1146,7 +1151,7 @@ mod tests {
             .close_with_epitaph(zx_status::Status::UNAVAILABLE)
             .expect("failed to write epitaph");
         assert_matches!(
-            client.send(&mut SEND_DATA.clone(), SEND_ORDINAL, DynamicFlags::empty()),
+            client.send::<u8, false>(&mut SEND_DATA.clone(), SEND_ORDINAL, DynamicFlags::empty()),
             Err(crate::Error::ClientChannelClosed {
                 status: zx_status::Status::PEER_CLOSED,
                 protocol_name: "test_protocol",
@@ -1175,7 +1180,7 @@ mod tests {
 
         let sender = fasync::Timer::new(100.millis().after_now()).map(|()| {
             client
-                .send(&mut SEND_DATA.clone(), SEND_ORDINAL, DynamicFlags::empty())
+                .send::<u8, false>(&mut SEND_DATA.clone(), SEND_ORDINAL, DynamicFlags::empty())
                 .expect("failed to send msg");
         });
 
@@ -1676,7 +1681,11 @@ mod tests {
             for (index, action) in two_actions.iter().enumerate() {
                 let err = match action {
                     SendMsg => client
-                        .send(&mut SEND_DATA.clone(), SEND_ORDINAL, DynamicFlags::empty())
+                        .send::<u8, false>(
+                            &mut SEND_DATA.clone(),
+                            SEND_ORDINAL,
+                            DynamicFlags::empty(),
+                        )
                         .err(),
                     SendQuery => client
                         .send_query::<u8, u8, false, false>(

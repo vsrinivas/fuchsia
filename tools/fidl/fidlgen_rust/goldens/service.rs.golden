@@ -63,7 +63,11 @@ impl FirstProtocolSynchronousProxy {
         FirstProtocolEvent::decode(self.client.wait_for_event(deadline)?)
     }
     pub fn r#method_on_first(&self) -> Result<(), fidl::Error> {
-        self.client.send(&mut (), 0x5828c91b57492931, fidl::encoding::DynamicFlags::empty())
+        self.client.send::<_, false>(
+            &mut (),
+            0x5828c91b57492931,
+            fidl::encoding::DynamicFlags::empty(),
+        )
     }
 }
 
@@ -110,7 +114,11 @@ impl FirstProtocolProxy {
 
 impl FirstProtocolProxyInterface for FirstProtocolProxy {
     fn r#method_on_first(&self) -> Result<(), fidl::Error> {
-        self.client.send(&mut (), 0x5828c91b57492931, fidl::encoding::DynamicFlags::empty())
+        self.client.send::<_, false>(
+            &mut (),
+            0x5828c91b57492931,
+            fidl::encoding::DynamicFlags::empty(),
+        )
     }
 }
 
@@ -329,7 +337,11 @@ impl SecondProtocolSynchronousProxy {
         SecondProtocolEvent::decode(self.client.wait_for_event(deadline)?)
     }
     pub fn r#method_on_second(&self) -> Result<(), fidl::Error> {
-        self.client.send(&mut (), 0x70b439758de25c44, fidl::encoding::DynamicFlags::empty())
+        self.client.send::<_, false>(
+            &mut (),
+            0x70b439758de25c44,
+            fidl::encoding::DynamicFlags::empty(),
+        )
     }
 }
 
@@ -376,7 +388,11 @@ impl SecondProtocolProxy {
 
 impl SecondProtocolProxyInterface for SecondProtocolProxy {
     fn r#method_on_second(&self) -> Result<(), fidl::Error> {
-        self.client.send(&mut (), 0x70b439758de25c44, fidl::encoding::DynamicFlags::empty())
+        self.client.send::<_, false>(
+            &mut (),
+            0x70b439758de25c44,
+            fidl::encoding::DynamicFlags::empty(),
+        )
     }
 }
 
