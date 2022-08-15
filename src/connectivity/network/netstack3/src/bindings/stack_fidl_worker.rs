@@ -22,7 +22,7 @@ use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
 use fidl_fuchsia_net_stack::{
     self as fidl_net_stack, ForwardingEntry, StackRequest, StackRequestStream,
 };
-use futures::{TryFutureExt as _, TryStreamExt as _};
+use futures::{FutureExt as _, TryFutureExt as _, TryStreamExt as _};
 use log::{debug, error};
 use net_types::{ethernet::Mac, SpecifiedAddr, UnicastAddr};
 use netstack3_core::{
@@ -68,10 +68,13 @@ where
                         );
                     }
                     StackRequest::DelEthernetInterface { id, responder } => {
-                        responder_send!(
-                            responder,
-                            &mut worker.lock_worker().await.fidl_del_ethernet_interface(id).await
-                        );
+                        match worker.lock_worker().await.cancel_interface_control(id) {
+                            Err(e) => responder_send!(responder, &mut Err(e)),
+                            Ok(interface_control_fut) => {
+                                interface_control_fut.await;
+                                responder_send!(responder, &mut worker.lock_worker().await.remove_ethernet_interface(id));
+                            }
+                        }
                     }
                     StackRequest::EnableInterfaceDeprecated { id, responder } => {
                         responder_send!(
@@ -130,7 +133,8 @@ where
                         enabled: _,
                         responder,
                     } => {
-                        // TODO(https://fxbug.dev/76987): Support configuring per-NIC forwarding.
+                        // TODO(https://fxbug.dev/76987): Support configuring
+                        // per-NIC forwarding.
                         responder_send!(responder, &mut Err(fidl_net_stack::Error::NotSupported));
                     }
                     StackRequest::GetDnsServerWatcher { watcher, control_handle: _ } => {
@@ -212,9 +216,9 @@ where
                     };
                     let name = format!("eth{}", id);
 
-                    // We do not support updating the device's mac-address, mtu, and
-                    // features during it's lifetime, their cached states are hence
-                    // not updated once initialized.
+                    // We do not support updating the device's mac-address, mtu,
+                    // and features during it's lifetime, their cached states
+                    // are hence not updated once initialized.
                     DeviceSpecificInfo::Ethernet(EthernetInfo {
                         common_info: CommonInfo {
                             mtu,
@@ -235,8 +239,8 @@ where
                                 id,
                                 interface_control_stop_receiver,
                                 control_receiver,
-                            ),
-                            cancelation_sender: interface_control_stop_sender,
+                            ).shared(),
+                            cancelation_sender: Some(interface_control_stop_sender),
                         },
                     })
                 })
@@ -260,31 +264,52 @@ where
     C: LockableContext,
     C::NonSyncCtx: AsMut<Devices>,
 {
-    async fn fidl_del_ethernet_interface(mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
-        match self.ctx.non_sync_ctx.as_mut().remove_device(id) {
-            Some(info) => {
-                match info.into_info() {
-                    devices::DeviceSpecificInfo::Ethernet(devices::EthernetInfo {
-                        common_info: _,
-                        client: _,
-                        mac: _,
-                        features: _,
-                        phy_up: _,
-                        interface_control: EthernetInterfaceControl { worker, cancelation_sender },
-                    }) => {
-                        cancelation_sender
-                            .send(fnet_interfaces_admin::InterfaceRemovedReason::User)
-                            .expect("failed to cancel interface control");
-                        worker.await;
-                    }
-                    i @ devices::DeviceSpecificInfo::Loopback(_)
-                    | i @ devices::DeviceSpecificInfo::Netdevice(_) => {
-                        log::error!("unexpected device info {:?} for interface {}", i, id)
-                    }
+    /// Cancels the `fuchsia.net.interfaces.admin/Control` task.
+    ///
+    /// Returns a [`Future`] resolving on task completion, or a NotFound error.
+    fn cancel_interface_control(
+        mut self,
+        id: u64,
+    ) -> Result<impl futures::Future<Output = ()>, fidl_net_stack::Error> {
+        let info = match self.ctx.non_sync_ctx.as_mut().get_device_mut(id) {
+            Some(info) => info,
+            None => return Err(fidl_net_stack::Error::NotFound),
+        };
+        match info.info_mut() {
+            devices::DeviceSpecificInfo::Ethernet(devices::EthernetInfo {
+                common_info: _,
+                client: _,
+                mac: _,
+                features: _,
+                phy_up: _,
+                interface_control: EthernetInterfaceControl { worker, cancelation_sender },
+            }) => {
+                if let Some(cancelation_sender) = cancelation_sender.take() {
+                    cancelation_sender
+                        .send(fnet_interfaces_admin::InterfaceRemovedReason::User)
+                        .expect("failed to cancel interface control");
                 }
-                // TODO(rheacock): ensure that the core client deletes all data
-                Ok(())
+                Ok(worker.clone())
             }
+            i @ devices::DeviceSpecificInfo::Loopback(_)
+            | i @ devices::DeviceSpecificInfo::Netdevice(_) => {
+                log::error!("unexpected device info {:?} for interface {}", i, id);
+                Err(fidl_net_stack::Error::NotSupported)
+            }
+        }
+    }
+
+    // Remove the given interface from core.
+    fn remove_ethernet_interface(mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
+        match self.ctx.non_sync_ctx.as_mut().remove_device(id) {
+            Some(info) => match info.into_info() {
+                devices::DeviceSpecificInfo::Ethernet(_) => Ok(()),
+                i @ devices::DeviceSpecificInfo::Loopback(_)
+                | i @ devices::DeviceSpecificInfo::Netdevice(_) => {
+                    log::error!("unexpected device info {:?} for interface {}", i, id);
+                    Err(fidl_net_stack::Error::NotSupported)
+                }
+            },
             None => {
                 // Invalid device ID
                 Err(fidl_net_stack::Error::NotFound)

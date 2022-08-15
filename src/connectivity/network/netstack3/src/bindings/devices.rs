@@ -191,9 +191,9 @@ pub struct EthernetInfo {
 
 #[derive(Debug)]
 pub struct EthernetInterfaceControl {
-    pub worker: fuchsia_async::Task<()>,
+    pub worker: futures::future::Shared<fuchsia_async::Task<()>>,
     pub cancelation_sender:
-        futures::channel::oneshot::Sender<fnet_interfaces_admin::InterfaceRemovedReason>,
+        Option<futures::channel::oneshot::Sender<fnet_interfaces_admin::InterfaceRemovedReason>>,
 }
 
 impl From<EthernetInfo> for DeviceSpecificInfo {
