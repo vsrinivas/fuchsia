@@ -661,27 +661,53 @@ where
 
 /// WPA descriptor.
 ///
-/// Describes the configuration of the WPA security protocol.
+/// Describes the configuration of the WPA security protocol. WPA descriptors optionally specify a
+/// pairwise cipher. Descriptors that lack this information are simply less specific than
+/// descriptors that include it.
 pub type WpaDescriptor = Wpa<()>;
 
 impl WpaDescriptor {
-    pub const WPA1: WpaDescriptor = WpaDescriptor::Wpa1 { credentials: () };
-    pub const WPA2_PERSONAL_TKIP: WpaDescriptor = WpaDescriptor::Wpa2 {
-        cipher: Some(Wpa2Cipher::TKIP),
-        authentication: Authentication::Personal(()),
-    };
-    pub const WPA2_PERSONAL_CCMP: WpaDescriptor = WpaDescriptor::Wpa2 {
-        cipher: Some(Wpa2Cipher::CCMP),
-        authentication: Authentication::Personal(()),
-    };
-    pub const WPA3_PERSONAL_CCMP: WpaDescriptor = WpaDescriptor::Wpa3 {
-        cipher: Some(Wpa3Cipher::CCMP),
-        authentication: Authentication::Personal(()),
-    };
-    pub const WPA3_PERSONAL_GCMP: WpaDescriptor = WpaDescriptor::Wpa3 {
-        cipher: Some(Wpa3Cipher::GCMP),
-        authentication: Authentication::Personal(()),
-    };
+    pub fn bind(self, credentials: BareCredentials) -> Result<WpaAuthenticator, SecurityError> {
+        match credentials {
+            BareCredentials::WpaPassphrase(passphrase) => match self {
+                WpaDescriptor::Wpa1 { .. } => {
+                    Ok(WpaAuthenticator::Wpa1 { credentials: passphrase.into() })
+                }
+                WpaDescriptor::Wpa2 { cipher, authentication } => Ok(WpaAuthenticator::Wpa2 {
+                    cipher,
+                    authentication: match authentication {
+                        Authentication::Personal(_) => {
+                            Ok(Authentication::Personal(passphrase.into()))
+                        }
+                        Authentication::Enterprise(_) => Err(SecurityError::Unsupported),
+                    }?,
+                }),
+                WpaDescriptor::Wpa3 { cipher, authentication } => Ok(WpaAuthenticator::Wpa3 {
+                    cipher,
+                    authentication: match authentication {
+                        Authentication::Personal(_) => {
+                            Ok(Authentication::Personal(passphrase.into()))
+                        }
+                        Authentication::Enterprise(_) => Err(SecurityError::Unsupported),
+                    }?,
+                }),
+            },
+            BareCredentials::WpaPsk(psk) => match self {
+                WpaDescriptor::Wpa1 { .. } => {
+                    Ok(WpaAuthenticator::Wpa1 { credentials: psk.into() })
+                }
+                WpaDescriptor::Wpa2 { cipher, authentication } => Ok(WpaAuthenticator::Wpa2 {
+                    cipher,
+                    authentication: match authentication {
+                        Authentication::Personal(_) => Ok(Authentication::Personal(psk.into())),
+                        Authentication::Enterprise(_) => Err(SecurityError::Unsupported),
+                    }?,
+                }),
+                WpaDescriptor::Wpa3 { .. } => Err(SecurityError::Incompatible),
+            },
+            _ => Err(SecurityError::Incompatible),
+        }
+    }
 }
 
 /// WPA authenticator.
@@ -723,9 +749,25 @@ mod tests {
     use test_case::test_case;
 
     use crate::security::{
-        wpa::{self, credential::Passphrase},
-        SecurityError,
+        wep::{WepKey, WEP40_KEY_BYTES},
+        wpa::{
+            self,
+            credential::{Passphrase, Psk, PSK_SIZE_BYTES},
+        },
+        BareCredentials, SecurityError,
     };
+
+    fn wep_key() -> WepKey {
+        [170u8; WEP40_KEY_BYTES].into()
+    }
+
+    fn wpa_psk() -> Psk {
+        [170u8; PSK_SIZE_BYTES].into()
+    }
+
+    fn wpa_passphrase() -> Passphrase {
+        Passphrase::try_from("password").unwrap()
+    }
 
     trait PersonalCredentialsTestCase: Sized {
         fn psk() -> Self;
@@ -734,11 +776,11 @@ mod tests {
 
     impl PersonalCredentialsTestCase for wpa::PersonalCredentials {
         fn psk() -> Self {
-            wpa::PersonalCredentials::Psk([0u8; 32].into())
+            wpa::PersonalCredentials::Psk(wpa_psk())
         }
 
         fn passphrase() -> Self {
-            wpa::PersonalCredentials::Passphrase(Passphrase::try_from("password").unwrap())
+            wpa::PersonalCredentials::Passphrase(wpa_passphrase())
         }
     }
 
@@ -749,12 +791,50 @@ mod tests {
 
     impl WpaCredentialsTestCase for fidl_security::WpaCredentials {
         fn psk() -> Self {
-            fidl_security::WpaCredentials::Psk([0u8; 32])
+            fidl_security::WpaCredentials::Psk(wpa_psk().0)
         }
 
         fn passphrase() -> Self {
-            fidl_security::WpaCredentials::Passphrase(b"password".to_vec())
+            fidl_security::WpaCredentials::Passphrase(wpa_passphrase().into())
         }
+    }
+
+    trait BareCredentialsTestCase: Sized {
+        fn wep_key() -> Self;
+        fn psk() -> Self;
+        fn passphrase() -> Self;
+    }
+
+    impl BareCredentialsTestCase for BareCredentials {
+        fn wep_key() -> Self {
+            BareCredentials::WepKey(wep_key())
+        }
+
+        fn psk() -> Self {
+            BareCredentials::WpaPsk(wpa_psk())
+        }
+
+        fn passphrase() -> Self {
+            BareCredentials::WpaPassphrase(wpa_passphrase())
+        }
+    }
+
+    trait WpaDescriptorTestCase: Sized {
+        const WPA1: Self;
+        const WPA2_PERSONAL: Self;
+        const WPA3_PERSONAL: Self;
+    }
+
+    impl WpaDescriptorTestCase for wpa::WpaDescriptor {
+        const WPA1: Self = wpa::WpaDescriptor::Wpa1 { credentials: () };
+        const WPA2_PERSONAL: Self = wpa::WpaDescriptor::Wpa2 {
+            cipher: None,
+            authentication: wpa::Authentication::Personal(()),
+        };
+        const WPA3_PERSONAL: Self = wpa::WpaDescriptor::Wpa3 {
+            cipher: None,
+            authentication: wpa::Authentication::Personal(()),
+        };
     }
 
     #[test_case(WpaCredentialsTestCase::psk() => matches Ok(wpa::Wpa1Credentials::Psk(_)))]
@@ -819,5 +899,39 @@ mod tests {
     #[test_case(wpa::Cipher::GCMP => Ok(wpa::Wpa3Cipher::GCMP))]
     fn wpa3_cipher_from_cipher(cipher: wpa::Cipher) -> Result<wpa::Wpa3Cipher, SecurityError> {
         cipher.try_into()
+    }
+
+    #[test_case(WpaDescriptorTestCase::WPA1, BareCredentialsTestCase::psk() =>
+        Ok(wpa::WpaAuthenticator::Wpa1 {
+            credentials: wpa::Wpa1Credentials::Psk(wpa_psk()),
+        })
+    )]
+    #[test_case(WpaDescriptorTestCase::WPA2_PERSONAL, BareCredentialsTestCase::psk() =>
+        Ok(wpa::WpaAuthenticator::Wpa2 {
+            cipher: None,
+            authentication: wpa::Authentication::Personal(
+                wpa::Wpa2PersonalCredentials::Psk(wpa_psk())
+            ),
+        })
+    )]
+    #[test_case(WpaDescriptorTestCase::WPA3_PERSONAL, BareCredentialsTestCase::passphrase() =>
+        Ok(wpa::WpaAuthenticator::Wpa3 {
+            cipher: None,
+            authentication: wpa::Authentication::Personal(
+                wpa::Wpa3PersonalCredentials::Passphrase(wpa_passphrase())
+            ),
+        })
+    )]
+    #[test_case(WpaDescriptorTestCase::WPA2_PERSONAL, BareCredentialsTestCase::wep_key() =>
+        Err(SecurityError::Incompatible)
+    )]
+    #[test_case(WpaDescriptorTestCase::WPA3_PERSONAL, BareCredentialsTestCase::psk() =>
+        Err(SecurityError::Incompatible)
+    )]
+    fn wpa_bind_descriptor(
+        descriptor: wpa::WpaDescriptor,
+        credentials: BareCredentials,
+    ) -> Result<wpa::WpaAuthenticator, SecurityError> {
+        descriptor.bind(credentials)
     }
 }

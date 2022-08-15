@@ -198,6 +198,64 @@ pub enum SecurityDescriptor {
 }
 
 impl SecurityDescriptor {
+    /// Open (no user authentication nor traffic encryption).
+    pub const OPEN: Self = SecurityDescriptor::Open;
+    /// WEP (trivially insecure; for legacy support only).
+    ///
+    /// This protocol is not configurable beyond the format of credentials used to authenticate.
+    /// WEP provides no protection and is provided for legacy support only.
+    pub const WEP: Self = SecurityDescriptor::Wep;
+    /// Legacy WPA (WPA1).
+    ///
+    /// This protocol is not configurable beyond the format of credentials used to authenticate.
+    pub const WPA1: Self = SecurityDescriptor::Wpa(wpa::WpaDescriptor::Wpa1 { credentials: () });
+    /// WPA2 Personal.
+    ///
+    /// Describes the personal variant of the WPA2 protocol. This descriptor does not specify a
+    /// pairwise cipher.
+    pub const WPA2_PERSONAL: Self = SecurityDescriptor::Wpa(wpa::WpaDescriptor::Wpa2 {
+        cipher: None,
+        authentication: wpa::Authentication::Personal(()),
+    });
+    /// WPA3 Personal.
+    ///
+    /// Describes the personal variant of the WPA3 protocol. This descriptor does not specify a
+    /// pairwise cipher.
+    pub const WPA3_PERSONAL: Self = SecurityDescriptor::Wpa(wpa::WpaDescriptor::Wpa3 {
+        cipher: None,
+        authentication: wpa::Authentication::Personal(()),
+    });
+
+    /// Binds bare credentials to a descriptor to form an authenticator.
+    ///
+    /// A security descriptor only describes a protocol and bare credentials provide authentication
+    /// data without completely describing a protocol. When compatible, a descriptor and
+    /// credentials form the components of an authenticator, and this function attempts to form an
+    /// authenticator by binding these components together.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the bare credentials are incompatible with the descriptor.
+    pub fn bind(
+        self,
+        credentials: Option<BareCredentials>,
+    ) -> Result<SecurityAuthenticator, SecurityError> {
+        match self {
+            SecurityDescriptor::Open if credentials.is_none() => Ok(SecurityAuthenticator::Open),
+            SecurityDescriptor::Wep => match credentials {
+                Some(BareCredentials::WepKey(key)) => {
+                    Ok(SecurityAuthenticator::Wep(wep::WepAuthenticator { key }))
+                }
+                _ => Err(SecurityError::Incompatible),
+            },
+            SecurityDescriptor::Wpa(wpa) => match credentials {
+                Some(credentials) => wpa.bind(credentials).map(SecurityAuthenticator::Wpa),
+                _ => Err(SecurityError::Incompatible),
+            },
+            _ => Err(SecurityError::Incompatible),
+        }
+    }
+
     pub fn is_open(&self) -> bool {
         matches!(self, SecurityDescriptor::Open)
     }
