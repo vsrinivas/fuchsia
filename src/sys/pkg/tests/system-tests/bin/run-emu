@@ -11,7 +11,7 @@
 ## in that script, and can be discovered by passing -h or --help.
 ##
 
-set -ex
+set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/../../../../../../tools/devshell/lib/image_build_vars.sh" || exit $?
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/../../../../../../tools/devshell/lib/fvm.sh" || exit $?

@@ -8,20 +8,22 @@
 
 function HELP {
     echo "help:"
-    echo "-a <arch>            : arm64, or x64"
-    echo "-c <text>            : add item to kernel commandline"
+    echo "-a <arch>            : arm64 or x64"
+    echo "-c <text>            : append item to kernel commandline"
     echo "-d                   : run with emulated disk"
     echo "-D <disk file|device>: specify disk file or device path on host, default is blk.bin"
     echo "--disktype[=<type>]  : should be one of (ahci, virtio, nvme, virtio-scsi), default is ahci"
     echo "--diskfmt[=<format>] : disk format (raw, qcow2, etc), default is raw"
     echo "-g                   : use graphical console"
+    echo "-H                   : use HVF (only valid on mac)"
     echo "-I <interface name>  : network interface name, default is qemu."
-    echo "-k                   : use KVM (Linux host only)"
+    echo "-k, --kvm            : use KVM (Linux host only). defaults to true if supported."
+    echo "    --no-kvm         : don't use KVM, even if supported."
     echo "-m <memory in MB>    : memory size, default is ${MEMSIZE_DEFAULT}MB"
     echo "-n                   : run with emulated nic"
     echo "-N                   : run with emulated nic via tun/tap"
     echo "-q <directory>       : location of qemu, defaults to looking in prebuilt/downloads/qemu/bin, then \$PATH"
-    echo "-s <number of cpus>  : number of cpus, 1 for uniprocessor, default is 4"
+    echo "-s <number of cpus>  : number of cpus, 1 for uniprocessor, default is $SMP_DEFAULT"
     echo "-t <binary>          : use <binary> as the QEMU->ZBI trampoline"
     echo "-u <path>            : execute qemu startUp script, default is no script"
     echo "-V                   : try to use virtio devices"
@@ -30,7 +32,7 @@ function HELP {
     echo "                     : <host_drv> should be one of (alsa, oss, pa, wav, none)"
     echo "--ahci=<disk image>  : run with disk image file as raw ahci drive"
     echo "--debugger           : Enable gdb stub and wait for connection"
-    echo "--gic=<version>      : use GIC v2 or v3"
+    echo "--gic=<version>      : use GIC 2, 3, or max supported. default is max"
     echo "--no-serial          : Disable writing out to the guest's serial port"
     echo "--vnc=<display>      : use vnc based display"
     echo "--wavfile=<file>     : When audio host_drv == wav, output to the specified WAV file"
@@ -41,6 +43,31 @@ function HELP {
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+# Note these match the defaults in `fx emu` (//tools/devshell/emu) and the ram value in `fx vdl`
+# (//src/developer/ffx/plugins/emulator/src/vdl_files.rs).This can be overriden by the emulator
+# configs in the infra/recipe repo
+# (https://fuchsia.googlesource.com/infra/recipes/+/refs/heads/main/recipe_modules/emu/api.py).
+readonly MEMSIZE_DEFAULT=8192
+readonly SMP_DEFAULT=4
+
+# Host operating system. Will either be "Linux" or "Darwin" (macOS) on
+# supported platforms.
+readonly HOST_OS=$(uname -s)
+
+# Determine host architecture.
+case "$(uname -m)" in
+  aarch64*|arm64)
+    readonly HOST_ARCH="arm64"
+    ;;
+  x86_64)
+    readonly HOST_ARCH="x64"
+    ;;
+  *)
+    echo "unknown host architecture: $(uname -m)"
+    exit 1
+    ;;
+esac
+
 AHCI=()
 ARCH=
 AUDIO=
@@ -50,14 +77,10 @@ DISK=0
 DISKFILE="blk.bin"
 DISKTYPE=
 DISKFMT="raw"
-GIC=3
+GIC=max
 GRAPHICS=0
-DO_KVM=0
-LTO=0
-THINLTO=0
-PROFILE=0
-XRAY=0
-MEMSIZE_DEFAULT=2048
+DO_HVF=
+DO_KVM=
 MEMSIZE=$MEMSIZE_DEFAULT
 NET=0
 QEMUDIR=
@@ -65,13 +88,14 @@ UPSCRIPT=no
 VNC=
 VIRTIO=0
 SERIAL=1
-SMP=4
+SMP=$SMP_DEFAULT
 CMDLINE=""
+OPT_CMDLINE=""
 QEMU_KERNEL=
 OVMF_CODE=
 OVMF_VARS=
 
-if [[ "$(uname -s)" == "Darwin" ]]; then
+if [[ $HOST_OS == "Darwin" ]]; then
   IFNAME="tap0"
 else
   IFNAME="qemu"
@@ -100,13 +124,20 @@ abspath() {
   esac
 }
 
-while getopts "a:c:dD:gI:km:nNq:s:t::u:Vz:h-:" FLAG; do
+while getopts "a:c:dD:gHI:km:nNq:s:t::u:Vz:h-:" FLAG; do
     case $FLAG in
         a) ARCH=$OPTARG;;
-        c) CMDLINE+="$OPTARG ";;
+        c) OPT_CMDLINE+="$OPTARG ";;
         d) DISK=1;;
         D) DISKFILE="$(abspath "$OPTARG")";;
         g) GRAPHICS=1;;
+        H)
+            if [[ "$(uname -s)" != "Darwin" ]]; then
+                echo "error: HVF option (-H) is only supported on MacOS"
+                exit 1
+            fi
+            DO_HVF=1
+            ;;
         I) IFNAME=$OPTARG;;
         k)
             if [[ "$(uname -s)" == "Darwin" ]]; then
@@ -114,6 +145,12 @@ while getopts "a:c:dD:gI:km:nNq:s:t::u:Vz:h-:" FLAG; do
                 exit 1
             fi
             DO_KVM=1
+            if [[ ! -w "/dev/kvm" ]]; then
+                echo "To use KVM acceleration, adjust permissions to /dev/kvm using:"
+                echo
+                echo "sudo chmod 666 /dev/kvm"
+                exit 1
+            fi
             ;;
         m) MEMSIZE=$OPTARG;;
         n) NET=1;;
@@ -140,6 +177,8 @@ while getopts "a:c:dD:gI:km:nNq:s:t::u:Vz:h-:" FLAG; do
             gic=*) GIC=${OPTARG#*=};;
             no-serial) SERIAL=0;;
             vnc=*) VNC=${OPTARG#*=};;
+            no-kvm) DO_KVM=0;;
+            kvm) DO_KVM=1;;
             ovmf-code=*) OVMF_CODE=${OPTARG#*=};;
             ovmf-vars=*) OVMF_VARS=${OPTARG#*=};;
             *)
@@ -161,15 +200,6 @@ fi
 # by default use the qemu binary located in the fuchsia //prebuilt
 # repo if we can find it, but allow -q to override it for people
 # who want to use their own.
-case "$(uname -s)" in
-  Darwin)
-    readonly HOST_PLATFORM="mac-x64"
-    ;;
-  Linux)
-    readonly HOST_PLATFORM="linux-x64"
-    ;;
-esac
-
 if [[ -z $QEMUDIR && -d "$DIR/../prebuilt/downloads/qemu/bin" ]]; then
     QEMUDIR="$DIR/../prebuilt/downloads/qemu/bin/"
 fi
@@ -189,6 +219,9 @@ ARGS=" -m $MEMSIZE"
 if [[ -n $VNC ]]; then
     ARGS+=" -vnc $VNC"
 fi
+
+# Always use virtio as the rng source
+ARGS+=" -device virtio-rng-pci"
 
 if (( !$GRAPHICS  )); then
     ARGS+=" -nographic"
@@ -218,7 +251,7 @@ if (( $DISK )); then
     if [[ "$DISKTYPE" == "virtio" ]]; then
         ARGS+=" -device virtio-blk-pci,drive=mydisk"
     elif [[ "$DISKTYPE" == "ahci" ]]; then
-        ARGS+=" -device ahci,id=ahci -device ide-hd,drive=mydisk,bus=ahci.0"
+        ARGS+=" -device ich9-ahci,id=ahci -device ide-hd,drive=mydisk,bus=ahci.0"
     elif [[ "$DISKTYPE" == "nvme" ]]; then
         ARGS+=" -device nvme,drive=mydisk,serial=zircon"
     elif [[ "$DISKTYPE" == "virtio-scsi" ]]; then
@@ -233,7 +266,7 @@ ahcinum=1
 for ahcifile in ${AHCI[@]}; do
     ARGS+=" -drive file=${ahcifile},format=raw,if=none,id=ahcidisk${ahcinum}"
     ARGS+=" -device ich9-ahci,id=ahci${ahcinum}"
-    ARGS+=" -device ide-drive,drive=ahcidisk${ahcinum},bus=ahci.${ahcinum}"
+    ARGS+=" -device ide-hd,drive=ahcidisk${ahcinum},bus=ahci.${ahcinum}"
     ahcinum=$((ahcinum + 1))
 done
 
@@ -273,14 +306,15 @@ else
         echo "Active firewall detected: If this emulator is unreachable, run: fx setup-ufw"
       fi
     fi
-    HASH=$(echo $IFNAME | shasum)
-    SUFFIX=$(for i in {0..2}; do echo -n :${HASH:$(( 2 * $i )):2}; done)
-    ARGS+=" -nic tap,ifname=$IFNAME,script=$UPSCRIPT,downscript=no,mac=52:54:00$SUFFIX"
+    ARGS+=" -netdev tap,id=net0,ifname=$IFNAME,script=$UPSCRIPT,downscript=no"
   fi
+  HASH=$(echo $IFNAME | shasum)
+  SUFFIX=$(for i in {0..2}; do echo -n :${HASH:$(( 2 * $i )):2}; done)
+  MAC="52:54:00$SUFFIX"
   if [[ "$ARCH" == "x64" ]] && [[ $VIRTIO == 0 ]]; then
-    ARGS+=",model=e1000"
+    ARGS+=" -device e1000,netdev=net0,mac=$MAC"
   else
-    ARGS+=",model=virtio-net-pci"
+    ARGS+=" -device virtio-net-pci,netdev=net0,vectors=8,mac=$MAC"
   fi
 fi
 
@@ -313,7 +347,6 @@ fi
 # start a few extra harmless virtio devices that can be ignored
 if (( $VIRTIO )); then
     ARGS+=" -device virtio-serial-pci"
-    ARGS+=" -device virtio-rng-pci"
     ARGS+=" -device virtio-mouse-pci"
     ARGS+=" -device virtio-keyboard-pci"
 fi
@@ -322,37 +355,89 @@ if (( $DEBUGGER )); then
     ARGS+=" -s -S"
 fi
 
+# Auto-detect if KVM support exists if not explicitly specified.
+if [[ -z $DO_KVM ]]; then
+  if [[
+      # We only support linux for KVM at the moment.
+      $HOST_OS == "Linux" &&
+      # Ensure the host and target arch match.
+      $HOST_ARCH == "${ARCH}" &&
+      # Ensure we have "/dev/kvm" and it is writable.
+      -w /dev/kvm
+  ]]; then
+    echo "Enabling KVM acceleration: use '--no-kvm' to disable." >&2
+    DO_KVM=1
+  else
+    DO_KVM=0
+  fi
+fi
+
 case $ARCH in
     arm64)
         QEMU=${QEMUDIR}qemu-system-aarch64
         if (( $DO_KVM )); then
           ARGS+=" -enable-kvm -cpu host"
           GIC=host
+        elif (( $DO_HVF )); then
+          ARGS+=" -machine accel=hvf"
+          if [[ $HOST_ARCH == "arm64" ]]; then
+            # M1s only support 36 bits of physical address space.
+            ARGS+=",highmem=off"
+          fi
+          ARGS+=" -cpu host"
+          # at the moment GICv3 appears to not pass through HVF properly
+          GIC=2
         else
-          ARGS+=" -machine virtualization=true -cpu cortex-a53"
+          # Ask for all of the features TCG emulates
+          ARGS+=" -machine virtualization=true -cpu max"
         fi
-        ARGS+=" -machine virt"
+        # Ask for a specific virt machine version.
+        # TODO(fxbug.dev/54317) add support for high PCIe aperture
+        # Can switch to plain 'virt' once this is fixed.
+        ARGS+=" -machine virt-2.12"
         # append a gic version to the machine specifier
         if [[ $GIC != 0 ]]; then
-            ARGS+=",gic_version=${GIC}"
+            ARGS+=",gic-version=${GIC}"
+        fi
+
+        if (( !$SERIAL )); then
+          CMDLINE+="kernel.serial=none "
         fi
         ;;
     x64)
         QEMU=${QEMUDIR}qemu-system-x86_64
         ARGS+=" -machine q35"
         ARGS+=" -device isa-debug-exit,iobase=0xf4,iosize=0x04"
+
+        # Override the SeaBIOS serial port to keep it from outputting
+        # a terminal reset on start.
+        ARGS+=" -fw_cfg name=etc/sercon-port,string=0"
+
         if (( $DO_KVM )); then
           ARGS+=" -enable-kvm -cpu host,migratable=no,+invtsc"
           # fxbug.dev/33174: Work around KVM bug on AMD Zen machines
           # where SMAP and CPL=3 MMIO accesses trigger a loop
           # in the Linux kernel.
+          #
+          # fxbug.dev/63110: Work around KVM bug on AMD Zen machines
+          # where XSAVES is enumerated but the IA32_XSS MSR is not
+          # available. The bug fix is in 864e2ab2b46db1ac266c46a7c
+          # in upstream Linux but has not percolated to popular
+          # distributions yet.
           if [[ "$(uname -s)" == "Linux" ]]; then
             if [[ "$(lsmod | grep kvm_amd)" != "" ]]; then
-              ARGS+=",-smap"
+              # Add topoext to properly report hyperthreading on AMD CPUs
+              ARGS+=",-smap,-xsaves,+topoext"
             fi
           fi
         else
           ARGS+=" -cpu Haswell,+smap,-check,-fsgsbase"
+        fi
+
+        if (( $SERIAL )); then
+          CMDLINE+="kernel.serial=legacy "
+        else
+          CMDLINE+="kernel.serial=none "
         fi
         ;;
     *)
@@ -361,7 +446,18 @@ case $ARCH in
         ;;
 esac
 
+# Add entropy to the kernel
+CMDLINE+="kernel.entropy-mixin=$(head -c 32 /dev/urandom | shasum -a 256 | awk '{ print $1 }') "
+
+# Don't 'reboot' the emulator if the kernel crashes
+CMDLINE+="kernel.halt-on-panic=true "
+
+# Finally, append any values received via option. We save them for last so that
+# they can override others since "last value wins".
+CMDLINE+=$OPT_CMDLINE
+
 # run qemu
+echo CMDLINE: $CMDLINE
 cd /
 set -x
 exec $QEMU \
