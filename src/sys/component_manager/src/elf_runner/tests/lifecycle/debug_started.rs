@@ -35,6 +35,8 @@ async fn test_debug_started() {
     // connect_to_binder starts the component. Otherwise the component is only declared.
     instance.connect_to_binder().unwrap();
 
+    let start = Time::now();
+
     let moniker = format!("./{}:{}", collection_name, instance.child_name());
 
     let event = EventMatcher::ok()
@@ -65,7 +67,6 @@ async fn test_debug_started() {
 
     // Instead, we depends on the fact that the component exits immediately and check the arrival
     // time of the Stopped event.
-    let start = Time::now();
     let _task = Task::spawn(async move {
         // Drop break_on_start after 20 milliseconds.
         Timer::new(Duration::from_millis(20)).await;
