@@ -21,9 +21,6 @@ fuzzing-related files and knows various common [options].
   fx fuzz <var>package</var>/<var>fuzzer</var>
   </pre>
 
-Note: if `fx fuzz` reports that the package cannot be resolved or the component is not found
-(`... not found`, or `Could not load package ...`), you may need to run `fx build` and restart
-the emulator/reflash the device.
 
 `package` and `fuzzer` match those reported by `fx fuzz list`, and may be abbreviated.  For commands
 that accept a single fuzzer, e.g. `check`, the abbreviated name must uniquely identify exactly one

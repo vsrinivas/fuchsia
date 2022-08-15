@@ -11,9 +11,6 @@ from .buildenv import BuildEnv
 from .device import Device
 from .fuzzer import Fuzzer
 
-_FUCHSIA_DEV_BUILD_FUZZER = "See https://fuchsia.dev/fuchsia-src/development/testing/fuzzing/build-a-fuzzer"
-_FUCHSIA_DEV_RUN_FUZZER = "See https://fuchsia.dev/fuchsia-src/development/testing/fuzzing/run-a-fuzzer"
-
 
 class Factory(object):
     """Facility for creating associated objects.
@@ -89,20 +86,7 @@ class Factory(object):
         disambiguation menu if specified name matches more than one fuzzer."""
         fuzzers = self.buildenv.fuzzers(args.name, include_tests=include_tests)
         if not fuzzers:
-            if not include_tests:
-                # For developer friendliness, check if only fuzzer tests are
-                # available, which is an indication that the user did not build
-                # the fuzzer variant.
-                all_fuzzers = self.buildenv.fuzzers(include_tests=False)
-                fuzzer_tests = self.buildenv.fuzzers(include_tests=True)
-                if not all_fuzzers and fuzzer_tests:
-                    self.host.error(
-                        'The build does not contain any fuzzer.',
-                        'Have you run "fx set ... --fuzz-with <sanitizer>"?',
-                        _FUCHSIA_DEV_BUILD_FUZZER)
-            self.host.error(
-                'No matching fuzzers found.', 'Try "fx fuzz list".',
-                _FUCHSIA_DEV_RUN_FUZZER)
+            self.host.error('No matching fuzzers found.', 'Try "fx fuzz list".')
         if len(fuzzers) > 1:
             choices = {}
             for fuzzer in fuzzers:
