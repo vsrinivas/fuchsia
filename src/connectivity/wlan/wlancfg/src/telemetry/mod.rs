@@ -1037,6 +1037,10 @@ impl Telemetry {
                         telemetry_proxy,
                     });
                     self.last_checked_connection_state = now;
+                } else if !result.is_credential_rejected {
+                    // In the case where the connection failed for a reason other than a credential
+                    // mismatch, log a connection failure occurrence metric.
+                    self.stats_logger.log_connection_failure().await
                 }
             }
             TelemetryEvent::Disconnected { track_subsequent_downtime, info } => {
@@ -2570,6 +2574,16 @@ impl StatsLogger {
     async fn log_scan_issue(&mut self, issue: ScanIssue) {
         log_cobalt_1dot1!(self.cobalt_1dot1_proxy, log_occurrence, issue.into_metric_id(), 1, &[])
     }
+
+    async fn log_connection_failure(&mut self) {
+        log_cobalt_1dot1!(
+            self.cobalt_1dot1_proxy,
+            log_occurrence,
+            metrics::CONNECTION_FAILURES_METRIC_ID,
+            1,
+            &[]
+        )
+    }
 }
 
 fn append_device_connected_channel_cobalt_metrics(
@@ -3384,7 +3398,7 @@ mod tests {
         let (mut test_helper, mut test_fut) = setup_test();
 
         // Send 10 failed connect results, then 1 successful.
-        for _ in 0..10 {
+        for i in 0..10 {
             let event = TelemetryEvent::ConnectResult {
                 iface_id: IFACE_ID,
                 policy_connect_reason: Some(
@@ -3395,6 +3409,12 @@ mod tests {
                 latest_ap_state: random_bss_description!(Wpa1),
             };
             test_helper.telemetry_sender.send(event);
+
+            // Verify that the connection failure has been logged.
+            test_helper.drain_cobalt_events(&mut test_fut);
+            let logged_metrics =
+                test_helper.get_logged_metrics(metrics::CONNECTION_FAILURES_METRIC_ID);
+            assert_eq!(logged_metrics.len(), i + 1);
         }
         test_helper.send_connected_event(random_bss_description!(Wpa2));
         test_helper.drain_cobalt_events(&mut test_fut);
