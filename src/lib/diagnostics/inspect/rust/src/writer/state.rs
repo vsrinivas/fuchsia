@@ -954,6 +954,11 @@ impl InnerState {
             constants::EMPTY_STRING_SLOT_INDEX
         };
 
+        let existing_index = block.array_get_string_index_slot(slot_index)?;
+        if existing_index != constants::EMPTY_STRING_SLOT_INDEX {
+            self.release_string_reference(self.heap.get_block(existing_index)?)?;
+        }
+
         block.array_set_string_slot(slot_index, reference_index)?;
         Ok(())
     }
@@ -1619,6 +1624,110 @@ mod tests {
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes().unwrap()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
+    }
+
+    #[fuchsia::test]
+    fn update_string_array_value() {
+        let core_state = get_state(4096);
+        {
+            let mut state = core_state.try_lock().expect("lock state");
+            let array = state.create_string_array("array", 2, 0).unwrap();
+
+            state.set_array_string_slot(array.index(), 0, "abc").unwrap();
+            state.set_array_string_slot(array.index(), 1, "def").unwrap();
+
+            state.set_array_string_slot(array.index(), 0, "cba").unwrap();
+            state.set_array_string_slot(array.index(), 1, "fed").unwrap();
+
+            assert_eq!(
+                "cba".to_string(),
+                state.load_string(array.array_get_string_index_slot(0).unwrap()).unwrap()
+            );
+            assert_eq!(
+                "fed".to_string(),
+                state.load_string(array.array_get_string_index_slot(1).unwrap()).unwrap()
+            );
+
+            state.clear_array(array.index(), 0).unwrap();
+            state.free_value(array.index()).unwrap();
+        }
+
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes().unwrap()).unwrap();
+        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        blocks[1..].iter().enumerate().for_each(|(i, b)| {
+            assert!(b.block_type() == BlockType::Free, "index is {}", i + 1);
+        });
+    }
+
+    #[fuchsia::test]
+    fn set_string_reference_instances_multiple_times_in_array() {
+        let core_state = get_state(4096);
+        {
+            let mut state = core_state.try_lock().expect("lock state");
+            let array = state.create_string_array("array", 2, 0).unwrap();
+
+            let abc = StringReference::new("abc");
+            let def = StringReference::new("def");
+            let cba = StringReference::new("cba");
+            let fed = StringReference::new("fed");
+
+            state.set_array_string_slot(array.index(), 0, &abc).unwrap();
+            state.set_array_string_slot(array.index(), 1, &def).unwrap();
+            state.set_array_string_slot(array.index(), 0, &abc).unwrap();
+            state.set_array_string_slot(array.index(), 1, &def).unwrap();
+
+            assert_eq!(
+                "abc".to_string(),
+                state.load_string(array.array_get_string_index_slot(0).unwrap()).unwrap()
+            );
+            assert_eq!(
+                "def".to_string(),
+                state.load_string(array.array_get_string_index_slot(1).unwrap()).unwrap()
+            );
+
+            state.set_array_string_slot(array.index(), 0, &cba).unwrap();
+            state.set_array_string_slot(array.index(), 1, &fed).unwrap();
+            assert_eq!(
+                "cba".to_string(),
+                state.load_string(array.array_get_string_index_slot(0).unwrap()).unwrap()
+            );
+            assert_eq!(
+                "fed".to_string(),
+                state.load_string(array.array_get_string_index_slot(1).unwrap()).unwrap()
+            );
+
+            state.set_array_string_slot(array.index(), 0, &abc).unwrap();
+            state.set_array_string_slot(array.index(), 1, &def).unwrap();
+            assert_eq!(
+                "abc".to_string(),
+                state.load_string(array.array_get_string_index_slot(0).unwrap()).unwrap()
+            );
+            assert_eq!(
+                "def".to_string(),
+                state.load_string(array.array_get_string_index_slot(1).unwrap()).unwrap()
+            );
+
+            state.set_array_string_slot(array.index(), 0, &cba).unwrap();
+            state.set_array_string_slot(array.index(), 1, &fed).unwrap();
+
+            assert_eq!(
+                "cba".to_string(),
+                state.load_string(array.array_get_string_index_slot(0).unwrap()).unwrap()
+            );
+            assert_eq!(
+                "fed".to_string(),
+                state.load_string(array.array_get_string_index_slot(1).unwrap()).unwrap()
+            );
+
+            state.clear_array(array.index(), 0).unwrap();
+            state.free_value(array.index()).unwrap();
+        }
+
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes().unwrap()).unwrap();
+        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        blocks[1..].iter().enumerate().for_each(|(i, b)| {
+            assert!(b.block_type() == BlockType::Free, "index is {}", i + 1);
+        });
     }
 
     #[fuchsia::test]

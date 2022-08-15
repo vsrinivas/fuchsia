@@ -149,7 +149,7 @@ WrapperType State::InnerCreateArray(BorrowedStringValue name, BlockIndex parent,
 }
 
 template <typename ValueType, typename WrapperType, BlockType BlockTypeValue>
-void State::InnerSetArray(WrapperType* metric, size_t index, ValueType value) {
+void State::InnerSetArray(WrapperType* metric, size_t index_into_array, ValueType value) {
   ZX_ASSERT(metric->state_.get() == this);
   std::lock_guard<std::mutex> lock(mutex_);
   std::unique_ptr<AutoGenerationIncrement> gen = MaybeIncrementGeneration();
@@ -164,10 +164,15 @@ void State::InnerSetArray(WrapperType* metric, size_t index, ValueType value) {
                       ? std::is_same<ValueType, BlockIndex>::value
                       : true,
                   "Invalid type set in string array");
+    auto current_value = GetArraySlotForString(block, index_into_array);
+    if (current_value.has_value() && *current_value != kEmptyStringSlotIndex) {
+      InnerReleaseStringReference(*current_value);
+    }
     // static_cast to get rid of incorrect lint errors
-    SetArraySlotForString(block, index, static_cast<BlockIndex>(value));
+    auto index_of_string_ref_block = static_cast<BlockIndex>(value);
+    SetArraySlotForString(block, index_into_array, index_of_string_ref_block);
   } else {
-    auto* slot = GetArraySlot<ValueType>(block, index);
+    auto* slot = GetArraySlot<ValueType>(block, index_into_array);
     if (slot != nullptr) {
       *slot = value;
     }

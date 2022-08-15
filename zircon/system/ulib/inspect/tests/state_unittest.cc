@@ -594,6 +594,42 @@ TEST(State, CreateStringArray) {
   EXPECT_EQ(allocated_blocks, 1u);
 }
 
+TEST(State, UpdateStringArrayValue) {
+  auto state = InitState(4096);
+  ASSERT_TRUE(state != nullptr);
+
+  StringArray d = state->CreateStringArray("d", 0, 2, ArrayBlockFormat::kDefault);
+  d.Set(0, "abc");
+  d.Set(1, "wxyz");
+
+  d.Set(0, "cba");
+  d.Set(1, "zyxw");
+
+  fbl::WAVLTree<BlockIndex, std::unique_ptr<ScannedBlock>> blocks;
+  size_t free_blocks, allocated_blocks;
+  auto snapshot = SnapshotAndScan(state->GetVmo(), &blocks, &free_blocks, &allocated_blocks);
+  ASSERT_TRUE(snapshot);
+
+  CompareBlock(blocks.find(1)->block, MakeInlinedOrder0StringReferenceBlock("d"));
+
+  CompareBlock(
+      blocks.find(2)->block,
+      MakeBlock(ValueBlockFields::Type::Make(BlockType::kArrayValue) |
+                    ValueBlockFields::Order::Make(1) | ValueBlockFields::NameIndex::Make(1),
+                ArrayBlockPayload::EntryType::Make(BlockType::kStringReference) |
+                    ArrayBlockPayload::Flags::Make(ArrayBlockFormat::kDefault) |
+                    ArrayBlockPayload::Count::Make(2)));
+  uint32_t value_indexes[] = {6, 4};
+  CompareArray(blocks.find(2)->block, value_indexes, 2);
+
+  CompareBlock(blocks.find(6)->block, MakeInlinedOrder0StringReferenceBlock("cba"));
+  CompareBlock(blocks.find(4)->block, MakeInlinedOrder0StringReferenceBlock("zyxw"));
+
+  state->FreeStringArray(&d);
+
+  // debug assert in heap insures that at this point there are no leaked blocks
+}
+
 TEST(State, CreateNumericArrays) {
   auto state = InitState(4096);
   ASSERT_TRUE(state != NULL);
