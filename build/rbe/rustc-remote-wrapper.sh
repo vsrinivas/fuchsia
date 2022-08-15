@@ -1147,9 +1147,9 @@ test "$status" -ne 0 || test "$compare" = 0 || {
   done
 
   # Run locally.
-  "${local_trace_prefix[@]}" "${rustc_command[@]}" || {
+  "${local_trace_prefix[@]}" "${original_rustc_command[@]}" || {
     status=$?
-    echo "Local command failed for comparison: ${rustc_command[@]}"
+    echo "Local command failed for comparison: ${original_rustc_command[@]}"
     exit "$status"
   }
 
