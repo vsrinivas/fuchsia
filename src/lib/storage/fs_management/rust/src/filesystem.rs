@@ -199,6 +199,11 @@ impl<FSC: FSConfig> Filesystem<FSC> {
         }
     }
 
+    // TODO(fxbug.dev//87511): Add an alias to help migrate an OOT user for an upcoming change.
+    pub async fn serve_legacy(&self) -> Result<ServingSingleVolumeFilesystem, Error> {
+        self.serve().await
+    }
+
     /// Serves the filesystem on the block device and returns a [`ServingMultiVolumeFilesystem`]
     /// representing the running filesystem process.  No volumes are opened; clients have to do that
     /// explicitly.
