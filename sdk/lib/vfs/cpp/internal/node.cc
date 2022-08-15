@@ -20,15 +20,6 @@ constexpr fuchsia::io::OpenFlags kCommonAllowedFlags =
     fuchsia::io::OpenFlags::POSIX_WRITABLE | fuchsia::io::OpenFlags::POSIX_EXECUTABLE |
     fuchsia::io::OpenFlags::CLONE_SAME_RIGHTS;
 
-constexpr std::tuple<NodeKind::Type, fuchsia::io::OpenFlags> kKindFlagMap[] = {
-    {NodeKind::kReadable, fuchsia::io::OpenFlags::RIGHT_READABLE},
-    {NodeKind::kWritable, fuchsia::io::OpenFlags::RIGHT_WRITABLE},
-    {NodeKind::kExecutable, fuchsia::io::OpenFlags::RIGHT_EXECUTABLE},
-    {NodeKind::kAppendable, fuchsia::io::OpenFlags::APPEND},
-    {NodeKind::kCanTruncate, fuchsia::io::OpenFlags::TRUNCATE},
-    {NodeKind::kCreatable,
-     fuchsia::io::OpenFlags::CREATE | fuchsia::io::OpenFlags::CREATE_IF_ABSENT}};
-
 }  // namespace
 
 namespace internal {
@@ -125,26 +116,6 @@ zx_status_t Node::ValidateFlags(fuchsia::io::OpenFlags flags) const {
 zx_status_t Node::Lookup(const std::string& name, Node** out_node) const {
   ZX_ASSERT(!IsDirectory());
   return ZX_ERR_NOT_DIR;
-}
-
-fuchsia::io::OpenFlags Node::GetAllowedFlags() const {
-  NodeKind::Type kind = GetKind();
-  fuchsia::io::OpenFlags flags = {};
-  for (auto& tuple : kKindFlagMap) {
-    if ((kind & std::get<0>(tuple)) == std::get<0>(tuple)) {
-      flags = flags | std::get<1>(tuple);
-    }
-  }
-  return flags;
-}
-
-fuchsia::io::OpenFlags Node::GetProhibitiveFlags() const {
-  NodeKind::Type kind = GetKind();
-  if (NodeKind::IsDirectory(kind)) {
-    return fuchsia::io::OpenFlags::CREATE | fuchsia::io::OpenFlags::CREATE_IF_ABSENT |
-           fuchsia::io::OpenFlags::TRUNCATE | fuchsia::io::OpenFlags::APPEND;
-  }
-  return {};
 }
 
 zx_status_t Node::SetAttr(fuchsia::io::NodeAttributeFlags flags,

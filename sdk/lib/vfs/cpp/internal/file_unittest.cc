@@ -9,7 +9,6 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/limits.h>
 #include <lib/vfs/cpp/internal/file.h>
-#include <lib/vfs/cpp/node_kind.h>
 #include <unistd.h>
 #include <zircon/processargs.h>
 
@@ -53,10 +52,9 @@ class TestFile : public vfs::internal::File {
   size_t GetCapacity() override { return buffer_->size(); }
 
  protected:
-  vfs::NodeKind::Type GetKind() const override {
-    vfs::NodeKind::Type kind =
-        File::GetKind() | vfs::NodeKind::kReadable | vfs::NodeKind::kWritable;
-    return kind;
+  fuchsia::io::OpenFlags GetAllowedFlags() const override {
+    return File::GetAllowedFlags() | fuchsia::io::OpenFlags::RIGHT_READABLE |
+           fuchsia::io::OpenFlags::RIGHT_WRITABLE;
   }
 
  private:

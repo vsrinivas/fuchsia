@@ -54,7 +54,9 @@ class Service : public vfs::internal::Node {
   const Connector& connector() const { return connector_; }
 
  protected:
-  NodeKind::Type GetKind() const override;
+  fuchsia::io::OpenFlags GetAllowedFlags() const override;
+  fuchsia::io::OpenFlags GetProhibitiveFlags() const override;
+
   // |Node| implementations:
   zx_status_t CreateConnection(fuchsia::io::OpenFlags flags,
                                std::unique_ptr<vfs::internal::Connection>* connection) final;

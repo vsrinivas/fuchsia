@@ -22,6 +22,8 @@ RemoteDir::RemoteDir(fidl::InterfaceHandle<fuchsia::io::Directory> dir) {
 
 RemoteDir::~RemoteDir() = default;
 
+bool RemoteDir::IsRemote() const { return true; }
+
 zx_status_t RemoteDir::Connect(fuchsia::io::OpenFlags flags, zx::channel request,
                                async_dispatcher_t* dispatcher) {
   dir_ptr_->Clone(flags, fidl::InterfaceRequest<fuchsia ::io::Node>(std::move(request)));
@@ -32,8 +34,6 @@ zx_status_t RemoteDir::Readdir(uint64_t offset, void* data, uint64_t len, uint64
                                uint64_t* out_actual) {
   return ZX_ERR_NOT_SUPPORTED;
 }
-
-NodeKind::Type RemoteDir::GetKind() const { return Directory::GetKind() | NodeKind::kRemote; }
 
 void RemoteDir::OpenRemote(fuchsia::io::OpenFlags flags, uint32_t mode, std::string_view path,
                            fidl::InterfaceRequest<fuchsia::io::Node> request) {

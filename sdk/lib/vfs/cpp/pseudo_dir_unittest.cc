@@ -25,7 +25,8 @@ class TestNode : public vfs::internal::Node {
   }
 
  protected:
-  vfs::NodeKind::Type GetKind() const override { return 0; }
+  fuchsia::io::OpenFlags GetAllowedFlags() const override { return {}; }
+  fuchsia::io::OpenFlags GetProhibitiveFlags() const override { return {}; }
 
  private:
   void Describe(fuchsia::io::NodeInfo* out_info) override {}

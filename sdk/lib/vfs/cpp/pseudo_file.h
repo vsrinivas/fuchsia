@@ -62,7 +62,7 @@ class PseudoFile final : public vfs::internal::File {
   zx_status_t CreateConnection(fuchsia::io::OpenFlags flags,
                                std::unique_ptr<vfs::internal::Connection>* connection) override;
 
-  NodeKind::Type GetKind() const override;
+  fuchsia::io::OpenFlags GetAllowedFlags() const override;
 
  private:
   class Content final : public vfs::internal::Connection, public File {
@@ -95,7 +95,8 @@ class PseudoFile final : public vfs::internal::File {
    protected:
     void SendOnOpenEvent(zx_status_t status) override;
 
-    NodeKind::Type GetKind() const override;
+    fuchsia::io::OpenFlags GetAllowedFlags() const override;
+    fuchsia::io::OpenFlags GetProhibitiveFlags() const override;
 
    private:
     zx_status_t TryFlushIfRequired();

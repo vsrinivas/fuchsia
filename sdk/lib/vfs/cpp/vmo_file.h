@@ -100,7 +100,7 @@ class VmoFile final : public vfs::internal::File {
   zx_status_t GetAttr(fuchsia::io::NodeAttributes* out_attributes) const override;
 
  protected:
-  NodeKind::Type GetKind() const override;
+  fuchsia::io::OpenFlags GetAllowedFlags() const override;
 
  private:
   const size_t length_;

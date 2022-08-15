@@ -103,9 +103,12 @@ zx_status_t VmoFile::GetAttr(fuchsia::io::NodeAttributes* out_attributes) const 
   return ZX_OK;
 }
 
-NodeKind::Type VmoFile::GetKind() const {
-  return File::GetKind() | NodeKind::kVmo | NodeKind::kReadable |
-         (write_option_ == WriteOption::WRITABLE ? NodeKind::kWritable : 0);
+fuchsia::io::OpenFlags VmoFile::GetAllowedFlags() const {
+  fuchsia::io::OpenFlags flags = File::GetAllowedFlags() | fuchsia::io::OpenFlags::RIGHT_READABLE;
+  if (write_option_ == WriteOption::WRITABLE) {
+    flags |= fuchsia::io::OpenFlags::RIGHT_WRITABLE;
+  }
+  return flags;
 }
 
 }  // namespace vfs

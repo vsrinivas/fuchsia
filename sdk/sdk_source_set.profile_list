@@ -267,7 +267,6 @@ src:../../sdk/lib/vfs/cpp/internal/file_connection.h
 src:../../sdk/lib/vfs/cpp/internal/node.h
 src:../../sdk/lib/vfs/cpp/internal/node_connection.h
 src:../../sdk/lib/vfs/cpp/lazy_dir.h
-src:../../sdk/lib/vfs/cpp/node_kind.h
 src:../../sdk/lib/vfs/cpp/pseudo_dir.h
 src:../../sdk/lib/vfs/cpp/pseudo_file.h
 src:../../sdk/lib/vfs/cpp/remote_dir.h

@@ -53,12 +53,12 @@ zx_status_t PseudoFile::GetAttr(fuchsia::io::NodeAttributes* out_attributes) con
   return ZX_OK;
 }
 
-NodeKind::Type PseudoFile::GetKind() const {
-  auto kind = File::GetKind() | NodeKind::kReadable;
+fuchsia::io::OpenFlags PseudoFile::GetAllowedFlags() const {
+  fuchsia::io::OpenFlags flags = File::GetAllowedFlags() | fuchsia::io::OpenFlags::RIGHT_READABLE;
   if (write_handler_ != nullptr) {
-    kind |= NodeKind::kWritable | NodeKind::kCanTruncate;
+    flags |= fuchsia::io::OpenFlags::RIGHT_WRITABLE | fuchsia::io::OpenFlags::TRUNCATE;
   }
-  return kind;
+  return flags;
 }
 
 uint64_t PseudoFile::GetLength() {
@@ -93,7 +93,13 @@ zx_status_t PseudoFile::Content::TryFlushIfRequired() {
 
 zx_status_t PseudoFile::Content::PreClose(Connection* connection) { return TryFlushIfRequired(); }
 
-NodeKind::Type PseudoFile::Content::GetKind() const { return file_->GetKind(); }
+fuchsia::io::OpenFlags PseudoFile::Content::GetAllowedFlags() const {
+  return file_->GetAllowedFlags();
+}
+
+fuchsia::io::OpenFlags PseudoFile::Content::GetProhibitiveFlags() const {
+  return file_->GetProhibitiveFlags();
+}
 
 zx_status_t PseudoFile::Content::ReadAt(uint64_t count, uint64_t offset,
                                         std::vector<uint8_t>* out_data) {

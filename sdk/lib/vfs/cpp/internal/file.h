@@ -68,7 +68,8 @@ class File : public Node {
   virtual zx_status_t GetBackingMemory(fuchsia::io::VmoFlags flags, zx::vmo* out_vmo);
 
  protected:
-  NodeKind::Type GetKind() const override;
+  fuchsia::io::OpenFlags GetAllowedFlags() const override;
+  fuchsia::io::OpenFlags GetProhibitiveFlags() const override;
 
   zx_status_t CreateConnection(fuchsia::io::OpenFlags flags,
                                std::unique_ptr<Connection>* connection) override;

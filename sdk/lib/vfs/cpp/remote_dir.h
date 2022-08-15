@@ -33,6 +33,8 @@ class RemoteDir final : public vfs::internal::Directory {
   void OpenRemote(fuchsia::io::OpenFlags flags, uint32_t mode, std::string_view,
                   fidl::InterfaceRequest<fuchsia::io::Node> request) override;
 
+  bool IsRemote() const override;
+
  protected:
   // |Node| implementation
   zx_status_t Connect(fuchsia::io::OpenFlags flags, zx::channel request,
@@ -41,8 +43,6 @@ class RemoteDir final : public vfs::internal::Directory {
   // |Directory| implementation
   zx_status_t Readdir(uint64_t offset, void* data, uint64_t len, uint64_t* out_offset,
                       uint64_t* out_actual) final;
-
-  NodeKind::Type GetKind() const final;
 
  private:
   fuchsia::io::DirectorySyncPtr dir_ptr_;

@@ -378,7 +378,6 @@ pkg/vfs_cpp/include/lib/vfs/cpp/internal/file_connection.h
 pkg/vfs_cpp/include/lib/vfs/cpp/internal/node.h
 pkg/vfs_cpp/include/lib/vfs/cpp/internal/node_connection.h
 pkg/vfs_cpp/include/lib/vfs/cpp/lazy_dir.h
-pkg/vfs_cpp/include/lib/vfs/cpp/node_kind.h
 pkg/vfs_cpp/include/lib/vfs/cpp/pseudo_dir.h
 pkg/vfs_cpp/include/lib/vfs/cpp/pseudo_file.h
 pkg/vfs_cpp/include/lib/vfs/cpp/remote_dir.h

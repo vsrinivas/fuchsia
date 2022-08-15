@@ -82,8 +82,16 @@ zx_status_t Directory::ValidatePath(const char* path, size_t path_len) {
   return ZX_OK;
 }
 
-NodeKind::Type Directory::GetKind() const {
-  return NodeKind::kDirectory | NodeKind::kReadable | NodeKind::kWritable | NodeKind::kExecutable;
+bool Directory::IsDirectory() const { return true; }
+
+fuchsia::io::OpenFlags Directory::GetAllowedFlags() const {
+  return fuchsia::io::OpenFlags::DIRECTORY | fuchsia::io::OpenFlags::RIGHT_READABLE |
+         fuchsia::io::OpenFlags::RIGHT_WRITABLE | fuchsia::io::OpenFlags::RIGHT_EXECUTABLE;
+}
+
+fuchsia::io::OpenFlags Directory::GetProhibitiveFlags() const {
+  return fuchsia::io::OpenFlags::CREATE | fuchsia::io::OpenFlags::CREATE_IF_ABSENT |
+         fuchsia::io::OpenFlags::TRUNCATE | fuchsia::io::OpenFlags::APPEND;
 }
 
 zx_status_t Directory::GetAttr(fuchsia::io::NodeAttributes* out_attributes) const {

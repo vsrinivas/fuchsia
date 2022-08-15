@@ -39,7 +39,9 @@ zx_status_t File::GetBackingMemory(fuchsia::io::VmoFlags flags, zx::vmo* out_vmo
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-NodeKind::Type File::GetKind() const { return NodeKind::kFile; }
+fuchsia::io::OpenFlags File::GetAllowedFlags() const { return {}; }
+
+fuchsia::io::OpenFlags File::GetProhibitiveFlags() const { return {}; }
 
 }  // namespace internal
 }  // namespace vfs

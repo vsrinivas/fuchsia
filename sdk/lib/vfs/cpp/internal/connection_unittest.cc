@@ -11,7 +11,6 @@
 #include <lib/vfs/cpp/internal/file_connection.h>
 #include <lib/vfs/cpp/internal/node.h>
 #include <lib/vfs/cpp/internal/node_connection.h>
-#include <lib/vfs/cpp/node_kind.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -77,7 +76,9 @@ class DummyTestNode : public vfs::internal::Node {
   void Describe(fuchsia::io::NodeInfo* out_info) override {}
   void GetConnectionInfo(fuchsia::io::ConnectionInfo* out_info) override {}
 
-  vfs::NodeKind::Type GetKind() const override { return vfs::NodeKind::kFile; }
+  fuchsia::io::OpenFlags GetAllowedFlags() const override { return {}; }
+
+  fuchsia::io::OpenFlags GetProhibitiveFlags() const override { return {}; }
 
   zx_status_t CreateConnection(fuchsia::io::OpenFlags flags,
                                std::unique_ptr<vfs::internal::Connection>* connection) override {

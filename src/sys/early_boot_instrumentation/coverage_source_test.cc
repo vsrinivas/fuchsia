@@ -252,7 +252,6 @@ void ValidatePublishedRequests(uint32_t svc_index, cpp20::span<PublishRequest> r
 
     auto* typed_dir = reinterpret_cast<vfs::PseudoDir*>(lookup_node);
     ASSERT_EQ(typed_dir->Lookup(name, &lookup_node), ZX_OK) << name;
-    ASSERT_TRUE(lookup_node->IsVMO());
 
     auto* vmo_file = reinterpret_cast<vfs::VmoFile*>(lookup_node);
     std::vector<uint8_t> actual_data;

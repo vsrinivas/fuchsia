@@ -83,14 +83,15 @@ class Directory : public Node {
   // |Node| implementation
   zx_status_t GetAttr(fuchsia::io::NodeAttributes* out_attributes) const override;
 
+  bool IsDirectory() const override;
+
  protected:
   // |Node| implementations
   zx_status_t CreateConnection(fuchsia::io::OpenFlags flags,
                                std::unique_ptr<Connection>* connection) override;
 
-  // Markes directory with |NODE_KIND_DIRECTORY| and also marks it readable and
-  // writable.
-  NodeKind::Type GetKind() const override;
+  fuchsia::io::OpenFlags GetAllowedFlags() const override;
+  fuchsia::io::OpenFlags GetProhibitiveFlags() const override;
 
   // Walks |path| until the node corresponding to |path| is found, or a remote
   // filesystem was encountered during traversal. In the latter case,
