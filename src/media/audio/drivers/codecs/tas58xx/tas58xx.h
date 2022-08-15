@@ -22,6 +22,7 @@
 
 #include "ddktl/suspend-txn.h"
 #include "lib/fidl/cpp/binding_set.h"
+#include "tas58xx-inspect.h"
 
 namespace audio {
 
@@ -125,6 +126,7 @@ class Tas58xx : public SimpleCodecServer,
     uint8_t global_fault2;  // More global fault bits
     uint8_t ot_warning;     // Over-temperature warning bit
   } fault_info_;
+  Tas58xxInspect inspect_reporter_;
 
   // AGL.
   bool last_agl_ = false;

@@ -80,7 +80,10 @@ static const audio::DaiSupportedFormats kSupportedDaiDaiFormats = {
 };
 
 Tas58xx::Tas58xx(zx_device_t* device, ddk::I2cChannel i2c, ddk::GpioProtocolClient fault_gpio)
-    : SimpleCodecServer(device), i2c_(std::move(i2c)), fault_gpio_(std::move(fault_gpio)) {
+    : SimpleCodecServer(device),
+      i2c_(std::move(i2c)),
+      fault_gpio_(std::move(fault_gpio)),
+      inspect_reporter_(Tas58xxInspect(inspect(), "tas58xx")) {
   size_t actual = 0;
   auto status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &metadata_,
                                     sizeof(metadata_), &actual);
@@ -194,10 +197,12 @@ void Tas58xx::ScheduleFaultPolling() {
 }
 
 void Tas58xx::PeriodicPollFaults() {
+  zx::time time_now = zx::clock::get_monotonic();
   uint8_t fault_state;
   auto status = fault_gpio_.Read(&fault_state);
   if (status != ZX_OK) {
     zxlogf(WARNING, "GPIO error while polling fault data");
+    inspect_reporter_.ReportGpioError(time_now);
   } else if (fault_state == 0) {  // Active low; 0 means the pin is active!
     // Codec is driving fault pin active.  Read the fault registers.
     fault_info_.i2c_error = (ReadReg(kRegChanFault, &fault_info_.chan_fault) != ZX_OK) ||
@@ -210,16 +215,24 @@ void Tas58xx::PeriodicPollFaults() {
 
     // Log the fault based on the data retrieved earlier.
     zxlogf(WARNING, "Codec fault detected");
-    if (fault_info_.i2c_error)
+    if (fault_info_.i2c_error) {
       zxlogf(WARNING, "I2C error while retrieving fault data");
-    if (fault_info_.chan_fault)
-      zxlogf(WARNING, "Channel fault seen: %02X", fault_info_.chan_fault);
-    if (fault_info_.global_fault1)
-      zxlogf(WARNING, "Global fault1 seen: %02X", fault_info_.global_fault1);
-    if (fault_info_.global_fault2)
-      zxlogf(WARNING, "Global fault2 seen: %02X", fault_info_.global_fault2);
-    if (fault_info_.ot_warning)
-      zxlogf(WARNING, "OT warning seen: %02X", fault_info_.ot_warning);
+      inspect_reporter_.ReportI2CError(time_now);
+    } else {
+      if (fault_info_.chan_fault)
+        zxlogf(WARNING, "Channel fault seen: %02X", fault_info_.chan_fault);
+      if (fault_info_.global_fault1)
+        zxlogf(WARNING, "Global fault1 seen: %02X", fault_info_.global_fault1);
+      if (fault_info_.global_fault2)
+        zxlogf(WARNING, "Global fault2 seen: %02X", fault_info_.global_fault2);
+      if (fault_info_.ot_warning)
+        zxlogf(WARNING, "OT warning seen: %02X", fault_info_.ot_warning);
+
+      inspect_reporter_.ReportFault(time_now, fault_info_.chan_fault, fault_info_.global_fault1,
+                                    fault_info_.global_fault2, fault_info_.ot_warning);
+    }
+  } else {
+    inspect_reporter_.ReportFaultFree(time_now);
   }
 
   ScheduleFaultPolling();

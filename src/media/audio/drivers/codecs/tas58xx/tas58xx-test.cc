@@ -9,6 +9,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/mock-i2c/mock-i2c.h>
 #include <lib/simple-codec/simple-codec-client.h>
 #include <lib/simple-codec/simple-codec-helper.h>
@@ -16,6 +17,7 @@
 
 #include <string>
 
+#include <sdk/lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <zxtest/zxtest.h>
 
 #include "src/devices/testing/mock-ddk/mock-device.h"
@@ -30,16 +32,18 @@ struct Tas58xxCodec : public Tas58xx {
                         ddk::GpioProtocolClient gpio_fault)
       : Tas58xx(parent, std::move(i2c), std::move(gpio_fault)) {}
   codec_protocol_t GetProto() { return {&this->codec_protocol_ops_, this}; }
+  inspect::Inspector& inspect() { return Tas58xx::inspect(); }
   uint64_t GetTopologyId() { return Tas58xx::GetTopologyId(); }
   uint64_t GetAglPeId() { return Tas58xx::GetAglPeId(); }
   uint64_t GetEqPeId() { return Tas58xx::GetEqPeId(); }
+  void PeriodicPollFaults() { Tas58xx::PeriodicPollFaults(); }
   zx_status_t SetBand(bool enabled, size_t index, uint32_t frequency, float Q, float gain_db) {
     return Tas58xx::SetBand(enabled, index, frequency, Q, gain_db);
   }
   bool BackgroundFaultPollingIsEnabled() override { return false; }
 };
 
-class Tas58xxTest : public zxtest::Test {
+class Tas58xxTest : public inspect::InspectTestHelper, public zxtest::Test {
  public:
   Tas58xxTest() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
   void SetUp() override {
@@ -56,22 +60,22 @@ class Tas58xxTest : public zxtest::Test {
     mock_i2c_.ExpectWrite({0x67}).ExpectReadStop({0x00}, ZX_ERR_INTERNAL);  // Error will retry.
     mock_i2c_.ExpectWrite({0x67}).ExpectReadStop({0x00}, ZX_OK);  // Check DIE ID, no error now.
 
-    ddk::MockGpio mock_fault;
-
     ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas58xxCodec>(
-        fake_parent_.get(), std::move(endpoints->client), mock_fault.GetProto()));
+        fake_parent_.get(), std::move(endpoints->client), mock_fault_.GetProto()));
 
     auto* child_dev = fake_parent_->GetLatestChild();
     ASSERT_NOT_NULL(child_dev);
-    auto codec = child_dev->GetDeviceContext<Tas58xxCodec>();
-    codec_proto_ = codec->GetProto();
+    codec_ = child_dev->GetDeviceContext<Tas58xxCodec>();
+    codec_proto_ = codec_->GetProto();
     client_.SetProtocol(&codec_proto_);
   }
   void TearDown() override { mock_i2c_.VerifyAndClear(); }
 
  protected:
   mock_i2c::MockI2c mock_i2c_;
+  ddk::MockGpio mock_fault_;
   SimpleCodecClient client_;
+  Tas58xxCodec* codec_;
 
  private:
   std::shared_ptr<zx_device> fake_parent_;
@@ -1443,6 +1447,115 @@ TEST(Tas58xxTest, ExternalConfig) {
   }
 
   mock_i2c.VerifyAndClear();
+}
+
+TEST_F(Tas58xxTest, FaultNotSeen) {
+  mock_fault_.ExpectRead(ZX_OK, 1);  // 1 means FAULT inactive
+  codec_->PeriodicPollFaults();
+  mock_fault_.VerifyAndClear();  // FAULT should have been polled
+
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(codec_->inspect().DuplicateVmo()));
+  auto* fault_root = hierarchy().GetByPath({"tas58xx"});
+  ASSERT_TRUE(fault_root);
+  auto& faults = fault_root->children();
+  ASSERT_EQ(faults.size(), 1);
+  ASSERT_NO_FATAL_FAILURE(
+      CheckProperty(faults[0].node(), "state", inspect::StringPropertyValue("No fault")));
+}
+
+TEST_F(Tas58xxTest, FaultPollGpioError) {
+  mock_fault_.ExpectRead(ZX_ERR_INTERNAL, 0);  // Gpio Error
+  codec_->PeriodicPollFaults();
+  mock_fault_.VerifyAndClear();  // FAULT should have been polled
+
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(codec_->inspect().DuplicateVmo()));
+  auto* fault_root = hierarchy().GetByPath({"tas58xx"});
+  ASSERT_TRUE(fault_root);
+  auto& faults = fault_root->children();
+  ASSERT_EQ(faults.size(), 1);
+  ASSERT_NO_FATAL_FAILURE(
+      CheckProperty(faults[0].node(), "state", inspect::StringPropertyValue("GPIO error")));
+}
+
+TEST_F(Tas58xxTest, FaultPollI2CError) {
+  mock_fault_.ExpectRead(ZX_OK, 0);  // 0 means FAULT active
+  // Repeat I2C timeout 3 times.
+  mock_i2c_.ExpectWrite({0x70}).ExpectReadStop({0xFF}, ZX_ERR_TIMED_OUT);
+  mock_i2c_.ExpectWrite({0x70}).ExpectReadStop({0xFF}, ZX_ERR_TIMED_OUT);
+  mock_i2c_.ExpectWrite({0x70}).ExpectReadStop({0xFF}, ZX_ERR_TIMED_OUT);
+  mock_i2c_.ExpectWriteStop({0x78, 0x80});
+  codec_->PeriodicPollFaults();
+  mock_fault_.VerifyAndClear();  // FAULT should have been polled
+
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(codec_->inspect().DuplicateVmo()));
+  auto* fault_root = hierarchy().GetByPath({"tas58xx"});
+  ASSERT_TRUE(fault_root);
+  auto& faults = fault_root->children();
+  ASSERT_EQ(faults.size(), 1);
+  ASSERT_NO_FATAL_FAILURE(
+      CheckProperty(faults[0].node(), "state", inspect::StringPropertyValue("I2C error")));
+}
+
+TEST_F(Tas58xxTest, FaultPollClockFault) {
+  mock_fault_.ExpectRead(ZX_OK, 0);  // 0 means FAULT active
+  mock_i2c_.ExpectWrite({0x70}).ExpectReadStop({0x00});
+  mock_i2c_.ExpectWrite({0x71}).ExpectReadStop({0x04});
+  mock_i2c_.ExpectWrite({0x72}).ExpectReadStop({0x00});
+  mock_i2c_.ExpectWrite({0x73}).ExpectReadStop({0x00});
+  mock_i2c_.ExpectWriteStop({0x78, 0x80});
+  codec_->PeriodicPollFaults();
+  mock_fault_.VerifyAndClear();  // FAULT should have been polled
+
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(codec_->inspect().DuplicateVmo()));
+  auto* fault_root = hierarchy().GetByPath({"tas58xx"});
+  ASSERT_TRUE(fault_root);
+  auto& faults = fault_root->children();
+  ASSERT_EQ(faults.size(), 1);
+  ASSERT_NO_FATAL_FAILURE(CheckProperty(faults[0].node(), "state",
+                                        inspect::StringPropertyValue("Clock fault, 00 04 00 00")));
+}
+
+// Trigger 20 "events" -- ten faults, each of which then goes away.
+// This should result in the 10 most recent events being reported,
+// and the 10 oldest being dropped.  Don't bother verifying the
+// event details, just check the timestamps to verify that
+// the first half are dropped.
+TEST_F(Tas58xxTest, FaultsAgeOut) {
+  zx_time_t time_threshold = 0;
+
+  for (int fault_count = 0; fault_count < 10; fault_count++) {
+    if (fault_count == 5)
+      time_threshold = zx_clock_get_monotonic();
+
+    // Detect fault
+    mock_fault_.ExpectRead(ZX_OK, 0);  // 0 means FAULT active
+    mock_i2c_.ExpectWrite({0x70}).ExpectReadStop({0x00});
+    mock_i2c_.ExpectWrite({0x71}).ExpectReadStop({0x04});
+    mock_i2c_.ExpectWrite({0x72}).ExpectReadStop({0x00});
+    mock_i2c_.ExpectWrite({0x73}).ExpectReadStop({0x00});
+    mock_i2c_.ExpectWriteStop({0x78, 0x80});
+    codec_->PeriodicPollFaults();
+    mock_fault_.VerifyAndClear();  // FAULT should have been polled
+
+    // Fault goes away
+    mock_fault_.ExpectRead(ZX_OK, 1);  // 1 means FAULT inactive
+    codec_->PeriodicPollFaults();
+    mock_fault_.VerifyAndClear();  // FAULT should have been polled
+  }
+
+  // We should have ten events seen, and all of them should be
+  // timestamped after time_threshold.
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(codec_->inspect().DuplicateVmo()));
+  auto* fault_root = hierarchy().GetByPath({"tas58xx"});
+  ASSERT_TRUE(fault_root);
+  auto& faults = fault_root->children();
+  ASSERT_EQ(faults.size(), 10);
+  for (int event_count = 0; event_count < 10; event_count++) {
+    const auto* first_seen_property =
+        faults[event_count].node().get_property<inspect::IntPropertyValue>("first_seen");
+    ASSERT_TRUE(first_seen_property);
+    ASSERT_GT(first_seen_property->value(), time_threshold);
+  }
 }
 
 }  // namespace audio
