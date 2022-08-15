@@ -23,11 +23,14 @@ abstract class Union {
     if (runtimeType != other.runtimeType) {
       return false;
     }
-    final otherUnion = other as Union;
-    if ($ordinal != otherUnion.$ordinal) {
-      return false;
+    if (other is Union) {
+      if ($ordinal != other.$ordinal) {
+        return false;
+      }
+
+      return deepEquals($data, other.$data);
     }
-    return deepEquals($data, otherUnion.$data);
+    return false;
   }
 
   @override

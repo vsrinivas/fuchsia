@@ -25,8 +25,10 @@ abstract class Table {
     if (runtimeType != other.runtimeType) {
       return false;
     }
-    final otherTable = other as Table;
-    return deepEquals($fields, otherTable.$fields);
+    if (other is Table) {
+      return deepEquals($fields, other.$fields);
+    }
+    return false;
   }
 
   @override

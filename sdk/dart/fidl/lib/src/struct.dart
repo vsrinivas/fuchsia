@@ -25,8 +25,10 @@ abstract class Struct {
     if (runtimeType != other.runtimeType) {
       return false;
     }
-    final otherStruct = other as Struct;
-    return deepEquals($fields, otherStruct.$fields);
+    if (other is Struct) {
+      return deepEquals($fields, other.$fields);
+    }
+    return false;
   }
 
   @override
