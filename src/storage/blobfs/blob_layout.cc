@@ -113,7 +113,7 @@ class CompactMerkleTreeAtEndBlobLayout : public BlobLayout {
       return zx::error(ZX_ERR_INVALID_ARGS);
     }
     return zx::ok(std::make_unique<CompactMerkleTreeAtEndBlobLayout>(
-        file_size, data_size, CalculateMerkleTreeSize(file_size), blobfs_block_size));
+        file_size, data_size, merkle_tree_size, blobfs_block_size));
   }
 
  private:

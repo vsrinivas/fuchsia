@@ -157,10 +157,10 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
 
   // Construct the Blobfs object, without intensive validation, since it
   // may require upgrades / journal replays to become valid.
-  auto fs = std::unique_ptr<Blobfs>(
-      new Blobfs(dispatcher, std::move(device), vfs, superblock, options.writability,
-                 options.compression_settings, std::move(vmex_resource),
-                 options.pager_backed_cache_policy, decompression_connector));
+  auto fs = std::unique_ptr<Blobfs>(new Blobfs(
+      dispatcher, std::move(device), vfs, superblock, options.writability,
+      options.compression_settings, std::move(vmex_resource), options.pager_backed_cache_policy,
+      decompression_connector, options.enable_streaming_writes));
   fs->block_info_ = block_info;
 
   auto fs_ptr = fs.get();
@@ -828,19 +828,11 @@ void Blobfs::Sync(SyncCallback cb) {
       }));
 }
 
-bool Blobfs::StreamingWritesEnabled() {
-#if defined(__Fuchsia__) && defined(BLOBFS_ENABLE_STREAMING_WRITES)
-  return true;
-#else
-  return false;
-#endif  // __Fuchsia__
-}
-
 Blobfs::Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
                fs::PagedVfs* vfs, const Superblock* info, Writability writable,
                CompressionSettings write_compression_settings, zx::resource vmex_resource,
                std::optional<CachePolicy> pager_backed_cache_policy,
-               DecompressorCreatorConnector* decompression_connector)
+               DecompressorCreatorConnector* decompression_connector, bool use_streaming_writes)
     : vfs_(vfs),
       info_(*info),
       dispatcher_(dispatcher),
@@ -851,7 +843,8 @@ Blobfs::Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> devi
       inspect_tree_(),
       metrics_(CreateBlobfsMetrics(inspect_tree_.inspector())),
       pager_backed_cache_policy_(pager_backed_cache_policy),
-      decompression_connector_(decompression_connector) {
+      decompression_connector_(decompression_connector),
+      use_streaming_writes_(use_streaming_writes) {
   ZX_ASSERT(vfs_);
 
   // It's easy to forget to initialize the PagedVfs in tests which will cause mysterious failures

@@ -58,6 +58,16 @@ struct MountOptions {
 #ifndef NDEBUG
   bool fsck_at_end_of_every_transaction = false;
 #endif
+
+  // [EXPERIMENTAL] Enable support for streaming writes. Streaming writes are only used when
+  // compression is disabled, or writing pre-compressed blobs (offline compression).
+  bool enable_streaming_writes = {
+#ifdef BLOBFS_ENABLE_STREAMING_WRITES
+      true
+#else
+      false
+#endif
+  };
 };
 
 // Begins serving requests to the filesystem by parsing the on-disk format using |device|.

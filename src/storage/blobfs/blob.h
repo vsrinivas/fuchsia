@@ -116,7 +116,8 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
     return map_index_;
   }
 
-  uint64_t SizeData() const __TA_EXCLUDES(mutex_);
+  // Size of the blob data (i.e. total number of bytes that can be read).
+  uint64_t FileSize() const __TA_EXCLUDES(mutex_);
 
   void CompleteSync() __TA_EXCLUDES(mutex_);
 
@@ -207,7 +208,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
   // If successful, allocates Blob Node and Blocks (in-memory)
   // kBlobStateEmpty --> kBlobStateDataWrite
-  zx_status_t SpaceAllocate(uint64_t block_count) __TA_REQUIRES(mutex_);
+  zx_status_t SpaceAllocate() __TA_REQUIRES(mutex_);
 
   // Write blob data into memory (or stream to disk) and update Merkle tree.
   zx_status_t WriteInternal(const void* data, size_t len, size_t* actual) __TA_REQUIRES(mutex_);
@@ -224,8 +225,11 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   zx_status_t LoadPagedVmosFromDisk() __TA_REQUIRES(mutex_);
   zx_status_t LoadVmosFromDisk() __TA_REQUIRES(mutex_);
 
-  // Initializes the data VMO for writing.  Idempotent.
-  zx_status_t PrepareDataVmoForWriting() __TA_REQUIRES(mutex_);
+  // Initialize the blob layout for writing.
+  zx_status_t InitializeBlobLayout(uint64_t blob_size, uint64_t data_size) __TA_REQUIRES(mutex_);
+
+  // Initialize Merkle tree buffers for writing.
+  zx_status_t InitializeMerkleBuffer(uint64_t blob_size) __TA_REQUIRES(mutex_);
 
   // Verifies the integrity of the null blob (i.e. that its name is correct). Can only be called on
   // the null blob and will assert otherwise.
@@ -244,13 +248,26 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // Returns the block size used by blobfs.
   uint64_t GetBlockSize() const;
 
-  // Write |block_count| blocks using the data from |producer| into |streamer|.
-  zx_status_t WriteData(uint64_t block_count, BlobDataProducer& producer,
+  // Flush blob data to persistent storage, and issue commit of metadata. Only blob data is
+  // guaranteed to persist on return. Metadata may still remain in cache until next journal flush.
+  zx_status_t FlushData(CompressionAlgorithm compression_algorithm) __TA_REQUIRES(mutex_);
+
+  // Write |block_count| blocks at |block_offset| using the data from |producer| into |streamer|.
+  zx_status_t WriteData(uint64_t block_count, uint64_t block_offset, BlobDataProducer& producer,
                         fs::DataStreamer& streamer) __TA_REQUIRES(mutex_);
 
   // Sets the name on the paged_vmo() to indicate where this blob came from. The name will vary
   // according to whether the vmo is currently active to help developers find bugs.
   void SetPagedVmoName(bool active) __TA_REQUIRES(mutex_);
+
+  // Stream as much outstanding data as possible when performing streaming writes. |buff_pos| refers
+  // to the offset of the last byte which was buffered in the write buffer VMO. Some data may be
+  // flushed to disk to save memory, but this is not guaranteed.
+  zx_status_t StreamBufferedData(size_t buff_pos) __TA_REQUIRES(mutex_);
+
+  // When using deprecated blob format with Merkle tree at beginning, ensure outstanding data writes
+  // have been issued, and reset block iterator. This ensures only the Merkle tree is outstanding.
+  zx_status_t WriteRemainingDataForDeprecatedFormat() __TA_REQUIRES(mutex_);
 
   Blobfs* const blobfs_;  // Doesn't need locking because this is never changed.
   BlobState state_ __TA_GUARDED(mutex_) = BlobState::kEmpty;
