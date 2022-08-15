@@ -11,6 +11,7 @@
 #extension GL_EXT_control_flow_attributes          : require
 #extension GL_KHR_shader_subgroup_basic            : require
 #extension GL_KHR_shader_subgroup_arithmetic       : require
+#extension GL_KHR_shader_subgroup_vote             : require
 #extension GL_KHR_memory_scope_semantics           : require
 #extension GL_KHR_shader_subgroup_ballot           : require
 // clang-format on
@@ -469,6 +470,7 @@ rs_histogram_rank(const RS_KEYVAL_TYPE kv[RS_SCATTER_BLOCK_ROWS],
 #define RS_HISTOGRAM_STORE(digit_, count_) smem.extent[RS_SMEM_HISTOGRAM_OFFSET + (digit_)] = (count_)
   // clang-format on
 
+#ifdef RS_SCATTER_ENABLE_NV_MATCH
   //----------------------------------------------------------------------
   //
   // Use the Volta/Turing `match.sync` instruction.
@@ -477,13 +479,11 @@ rs_histogram_rank(const RS_KEYVAL_TYPE kv[RS_SCATTER_BLOCK_ROWS],
   // `match.sync` requires more bits.
   //
   //----------------------------------------------------------------------
-#ifdef RS_SCATTER_ENABLE_NV_MATCH
 
+#if (RS_SUBGROUP_SIZE == 32)
   //
   // 32
   //
-#if (RS_SUBGROUP_SIZE == 32)
-
   [[unroll]] for (uint32_t ii = 0; ii < RS_SCATTER_BLOCK_ROWS; ii++)
     {
       //
@@ -499,25 +499,24 @@ rs_histogram_rank(const RS_KEYVAL_TYPE kv[RS_SCATTER_BLOCK_ROWS],
       kr[ii] = (bitCount(match) << 16) | bitCount(match & gl_SubgroupLeMask.x);
     }
 
-    //
-    // Undefined!
-    //
 #else
+  //
+  // Undefined!
+  //
 #error "Error: rs_histogram_rank() undefined for subgroup size"
 #endif
 
-    //----------------------------------------------------------------------
-    //
-    // Default is to emulate a `match` operation with ballots.
-    //
-    //----------------------------------------------------------------------
 #elif !defined(RS_SCATTER_ENABLE_BROADCAST_MATCH)
+  //----------------------------------------------------------------------
+  //
+  // Default is to emulate a `match` operation with ballots.
+  //
+  //----------------------------------------------------------------------
 
+#if (RS_SUBGROUP_SIZE == 64)
   //
   // 64
   //
-#if (RS_SUBGROUP_SIZE == 64)
-
   [[unroll]] for (uint32_t ii = 0; ii < RS_SCATTER_BLOCK_ROWS; ii++)
     {
       const uint32_t digit = RS_KV_EXTRACT_DIGIT(kv[ii]);
@@ -525,7 +524,7 @@ rs_histogram_rank(const RS_KEYVAL_TYPE kv[RS_SCATTER_BLOCK_ROWS],
       u32vec2 match;
 
       {
-        const bool     is_one = RS_BIT_IS_ONE(digit, 0);
+        const bool     is_one = RS_BIT_IS_ONE(digit, RS_RADIX_LOG2 - 1);
         const u32vec2  ballot = subgroupBallot(is_one).xy;
         const uint32_t mask   = is_one ? 0 : 0xFFFFFFFF;
 
@@ -533,7 +532,7 @@ rs_histogram_rank(const RS_KEYVAL_TYPE kv[RS_SCATTER_BLOCK_ROWS],
         match.y = (ballot.y ^ mask);
       }
 
-      [[unroll]] for (int32_t bit = 1; bit < RS_RADIX_LOG2; bit++)
+      [[unroll]] for (int32_t bit = RS_RADIX_LOG2 - 2; bit >= 0; bit--)
         {
           const bool     is_one = RS_BIT_IS_ONE(digit, bit);
           const u32vec2  ballot = subgroupBallot(is_one).xy;
@@ -541,6 +540,22 @@ rs_histogram_rank(const RS_KEYVAL_TYPE kv[RS_SCATTER_BLOCK_ROWS],
 
           match.x &= (ballot.x ^ mask);
           match.y &= (ballot.y ^ mask);
+
+          //
+          // Use the pigeonhole principle to exit early.
+          //
+          // If every key partition only contains itself then we're done.
+          //
+#ifdef RS_SCATTER_RANK_EARLY_EXIT_LOG2
+          if ((bit > 0) && (bit <= RS_RADIX_LOG2 - RS_SCATTER_SUBGROUP_SIZE_LOG2) &&
+              (bit == RS_SCATTER_RANK_EARLY_EXIT_LOG2))
+            {
+              if (subgroupAll(bitCount(match.x) + bitCount(match.y) == 1))
+                {
+                  break;
+                }
+            }
+#endif
         }
 
       kr[ii] = ((bitCount(match.x) + bitCount(match.y)) << 16) |
@@ -548,11 +563,10 @@ rs_histogram_rank(const RS_KEYVAL_TYPE kv[RS_SCATTER_BLOCK_ROWS],
                 bitCount(match.y & gl_SubgroupLeMask.y));
     }
 
-    //
-    // <= 32
-    //
 #elif ((RS_SUBGROUP_SIZE <= 32) && !defined(RS_SCATTER_ENABLE_NV_MATCH))
-
+  //
+  // <= 32
+  //
   [[unroll]] for (uint32_t ii = 0; ii < RS_SCATTER_BLOCK_ROWS; ii++)
     {
       const uint32_t digit = RS_KV_EXTRACT_DIGIT(kv[ii]);
@@ -560,46 +574,61 @@ rs_histogram_rank(const RS_KEYVAL_TYPE kv[RS_SCATTER_BLOCK_ROWS],
       uint32_t match;
 
       {
-        const bool     is_one = RS_BIT_IS_ONE(digit, 0);
+        const bool     is_one = RS_BIT_IS_ONE(digit, RS_RADIX_LOG2 - 1);
         const uint32_t ballot = subgroupBallot(is_one).x;
         const uint32_t mask   = is_one ? 0 : RS_SUBGROUP_MASK;
 
         match = (ballot ^ mask);
       }
 
-      [[unroll]] for (int32_t bit = 1; bit < RS_RADIX_LOG2; bit++)
+      [[unroll]] for (int32_t bit = RS_RADIX_LOG2 - 2; bit >= 0; bit--)
         {
           const bool     is_one = RS_BIT_IS_ONE(digit, bit);
           const uint32_t ballot = subgroupBallot(is_one).x;
           const uint32_t mask   = is_one ? 0 : RS_SUBGROUP_MASK;
 
           match &= (ballot ^ mask);
+
+          //
+          // Use the pigeonhole principle to exit early.
+          //
+          // If every key partition only contains itself then we're done.
+          //
+#ifdef RS_SCATTER_RANK_EARLY_EXIT_LOG2
+          if ((bit > 0) && (bit <= RS_RADIX_LOG2 - RS_SCATTER_SUBGROUP_SIZE_LOG2) &&
+              (bit == RS_SCATTER_RANK_EARLY_EXIT_LOG2))
+            {
+              if (subgroupAll(bitCount(match) == 1))
+                {
+                  break;
+                }
+            }
+#endif
         }
 
       kr[ii] = (bitCount(match) << 16) | bitCount(match & gl_SubgroupLeMask.x);
     }
 
-    //
-    // Undefined!
-    //
 #else
+  //
+  // Undefined!
+  //
 #error "Error: rs_histogram_rank() undefined for subgroup size"
 #endif
 
-    //----------------------------------------------------------------------
-    //
-    // Emulate a `match` operation with broadcasts.
-    //
-    // In general, using broadcasts is a win for narrow subgroups.
-    //
-    //----------------------------------------------------------------------
 #else
+  //----------------------------------------------------------------------
+  //
+  // Emulate a `match` operation with broadcasts.
+  //
+  // In general, using broadcasts is a win for narrow subgroups.
+  //
+  //----------------------------------------------------------------------
 
+#if (RS_SUBGROUP_SIZE == 64)
   //
   // 64
   //
-#if (RS_SUBGROUP_SIZE == 64)
-
   [[unroll]] for (uint32_t ii = 0; ii < RS_SCATTER_BLOCK_ROWS; ii++)
     {
       const uint32_t digit = RS_KV_EXTRACT_DIGIT(kv[ii]);
@@ -633,11 +662,10 @@ rs_histogram_rank(const RS_KEYVAL_TYPE kv[RS_SCATTER_BLOCK_ROWS],
                 bitCount(match.y & gl_SubgroupLeMask.y));
     }
 
-    //
-    // <= 32
-    //
 #elif ((RS_SUBGROUP_SIZE <= 32) && !defined(RS_SCATTER_ENABLE_NV_MATCH))
-
+  //
+  // <= 32
+  //
   [[unroll]] for (uint32_t ii = 0; ii < RS_SCATTER_BLOCK_ROWS; ii++)
     {
       const uint32_t digit = RS_KV_EXTRACT_DIGIT(kv[ii]);
@@ -654,10 +682,10 @@ rs_histogram_rank(const RS_KEYVAL_TYPE kv[RS_SCATTER_BLOCK_ROWS],
       kr[ii] = (bitCount(match) << 16) | bitCount(match & gl_SubgroupLeMask.x);
     }
 
-    //
-    // Undefined!
-    //
 #else
+  //
+  // Undefined!
+  //
 #error "Error: rs_histogram_rank() undefined for subgroup size"
 #endif
 
