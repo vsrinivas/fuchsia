@@ -706,13 +706,10 @@ where
 /// If internal_url is a file scheme, join `product_url` and `internal_url`.
 /// Otherwise, return `internal_url`.
 fn make_remote_url(product_url: &url::Url, internal_url: &str) -> Result<url::Url> {
-    // TODO(fxbug.dev/106117): only strip the "file:/". The extra "../"
-    // is a workaround for the bug.
-    let result = if internal_url.starts_with("file:/../") {
-        product_url.join(&internal_url[9..])?
-    } else if internal_url.starts_with("file:/..") {
-        // TODO(fxbug.dev/106117): This should be current dir.
-        product_url.join(".")?
+    let result = if let Some(remainder) = internal_url.strip_prefix("file:/") {
+        // Note: The product_url must either be a path to the product_bundle.json file or to the
+        // parent directory (with a trailing slash).
+        product_url.join(remainder)?
     } else {
         url::Url::parse(&internal_url).with_context(|| format!("parsing url {:?}", internal_url))?
     };
@@ -825,16 +822,18 @@ mod tests {
 
     #[test]
     fn test_make_remote_url() {
-        let base = url::Url::parse("gs://foo/bar/blah.txt").expect("url");
+        let base = url::Url::parse("gs://foo/bar/cat/blah.txt").expect("url");
+        let base_directory = url::Url::parse("gs://foo/bar/cat/").expect("url directory");
         assert_eq!(
             make_remote_url(&base, &"gs://a/b").expect("make_remote_url").as_str(),
             "gs://a/b"
         );
-        // TODO(fxbug.dev/106117): only strip the "file:/". The extra "../"
-        // is a workaround for the bug, so these tests currently have the
-        // workaround. Later a "../" should be removed from many of these tests.
         assert_eq!(
             make_remote_url(&base, &"file:/../../c").expect("make_remote_url").as_str(),
+            "gs://foo/c"
+        );
+        assert_eq!(
+            make_remote_url(&base_directory, &"file:/../../c").expect("make_remote_url").as_str(),
             "gs://foo/c"
         );
         assert_eq!(
@@ -842,15 +841,31 @@ mod tests {
             "gs://foo/bar/c"
         );
         assert_eq!(
-            make_remote_url(&base, &"file:/../../c/").expect("make_remote_url").as_str(),
-            "gs://foo/c/"
+            make_remote_url(&base_directory, &"file:/../c").expect("make_remote_url").as_str(),
+            "gs://foo/bar/c"
         );
         assert_eq!(
             make_remote_url(&base, &"file:/../c/").expect("make_remote_url").as_str(),
             "gs://foo/bar/c/"
         );
         assert_eq!(
+            make_remote_url(&base_directory, &"file:/../c/").expect("make_remote_url").as_str(),
+            "gs://foo/bar/c/"
+        );
+        assert_eq!(
+            make_remote_url(&base, &"file:/c/").expect("make_remote_url").as_str(),
+            "gs://foo/bar/cat/c/"
+        );
+        assert_eq!(
+            make_remote_url(&base_directory, &"file:/c/").expect("make_remote_url").as_str(),
+            "gs://foo/bar/cat/c/"
+        );
+        assert_eq!(
             make_remote_url(&base, &"file:/..").expect("make_remote_url").as_str(),
+            "gs://foo/bar/"
+        );
+        assert_eq!(
+            make_remote_url(&base_directory, &"file:/..").expect("make_remote_url").as_str(),
             "gs://foo/bar/"
         );
     }
