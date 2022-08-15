@@ -66,17 +66,11 @@ executable("isolated_devmgr") {
 
   # STOP: Do not add any new entries to this allow list. Use //sdk/lib/driver_test_realm instead.
   visibility = [
-    "//src/bringup/bin/device-name-provider/tests/*",
-    "//src/connectivity/network/testing/netemul/runner/*",
     "//src/connectivity/openthread/tests/ot-devmgr/*",
-    "//src/connectivity/telephony/lib/tel-devmgr/*",
     "//src/connectivity/wlan/testing/wlan-devmgr/*",
-    "//src/devices/bus/drivers/platform/test/*",
-    "//src/diagnostics/validator/logs/ddk/sink/*",
     "//src/lib:lib",
     "//src/lib/isolated_devmgr/*",
     "//src/lib/storage/ramdevice_client/rust/*",
-    "//src/media/audio/lib/audio_test_devmgr/*",
     "//vendor/*",
   ]
 
@@ -93,46 +87,6 @@ executable("isolated_devmgr") {
       },
     ]
   }
-}
-
-static_library("usb-virtual-bus") {
-  testonly = true
-  sources = [
-    "usb-virtual-bus-helper.cc",
-    "usb-virtual-bus-helper.h",
-    "usb-virtual-bus.cc",
-    "usb-virtual-bus.h",
-  ]
-  public_deps = [
-    "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_cpp_wire",
-    "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_cpp_wire",
-    "//src/lib/testing/loop_fixture",
-  ]
-  deps = [
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/lib/device-watcher/cpp",
-    "//sdk/lib/fdio",
-    "//sdk/lib/fit",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/ddk",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
-    "//zircon/system/ulib/zx",
-  ]
-  configs += [
-    "//build/config/fuchsia:enable_zircon_asserts",
-    "//build/config/fuchsia:static_cpp_standard_library",
-  ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
-
-  # STOP: Do not add any new entries to this allow list. Use //sdk/lib/driver_test_realm instead.
-  visibility = [ "//src/connectivity/telephony/tests/driver-integration/*" ]
 }
 
 executable("test_bin") {

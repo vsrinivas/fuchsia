@@ -29,7 +29,6 @@ group("tests") {
     "drivers:tests",
     "examples:tests",
     "lib:tests",
-    "lib/audio_test_devmgr",
     "services:tests",
     "tools:tests",
   ]
