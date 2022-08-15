@@ -75,11 +75,22 @@ class ScreenReaderMessageGenerator {
       const std::vector<i18n::MessageFormatter::ArgValue>& arg_values =
           std::vector<i18n::MessageFormatter::ArgValue>());
 
-  // Returns an utterance that describes a character to be used when spelling a word or entering
-  // text. For example, the symbol '.' may be described as 'dot', if the current language is
-  // English. If the symbol is not known, the symbol itself is returned. Note that a string is the
-  // parameter here because not all UTF-8 grapheme clusters can be represented in a char.
-  virtual UtteranceAndContext FormatCharacterForSpelling(const std::string& character);
+  // Returns an utterance that spells out a single character.
+  // 1. Pronounces single symbols: For example, the label '.' may be described as 'dot', if the
+  // current language is English.
+  // 2. Pronounces capital letters: For example, the label 'A' may be described as 'capital A'.
+  // If neither of these occur, the original label will be returned.
+  //
+  // Note that 'character' should only be a single character (its type is 'string' because not all
+  // UTF-8 grapheme clusters can be represented in a 'char').
+  //
+  // Virtual for testing.
+  virtual UtteranceAndContext DescribeCharacterForSpelling(const std::string& character);
+
+  // Helper method that describes a list element marker.
+  // If the node label only contains a single symbol, instead pronounces a canonicalized version
+  // (e.g., " •" becomes "bullet").
+  UtteranceAndContext DescribeListElementMarkerLabel(const std::string& label);
 
   i18n::MessageFormatter* message_formatter_for_test() { return message_formatter_.get(); }
 
@@ -98,7 +109,7 @@ class ScreenReaderMessageGenerator {
                            std::vector<UtteranceAndContext>& description);
 
   // Helper method to describe button nodes. The description will be:
-  // <seleccted*> <label> button <toggled*> <actionable>
+  // <selected*> <label> button <toggled*> <actionable>
   //
   // * = if applicable
   void DescribeButton(const fuchsia::accessibility::semantics::Node* node,
@@ -113,6 +124,12 @@ class ScreenReaderMessageGenerator {
   // node (checked / not checked for example).
   void DescribeCheckBox(const fuchsia::accessibility::semantics::Node* node,
                         std::vector<UtteranceAndContext>& description);
+
+  // Helper method to describe a node that is a list element marker. The only
+  // difference is that we may canonicalize special-character labels
+  // (motivating example: labels like '•' should be pronunced 'bullet').
+  void DescribeListElementMarker(const fuchsia::accessibility::semantics::Node* node,
+                                 std::vector<UtteranceAndContext>& description);
 
   // Helper method to describe a node that is a toggle switch.
   void DescribeToggleSwitch(const fuchsia::accessibility::semantics::Node* node,

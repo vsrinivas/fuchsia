@@ -450,24 +450,61 @@ TEST_F(ScreenReaderMessageGeneratorTest, NodeToggleSwitchMessageFormatterReturns
   ASSERT_FALSE(result[0].utterance.has_message());
 }
 
-TEST_F(ScreenReaderMessageGeneratorTest, FormatCharacterForSpelling) {
+TEST_F(ScreenReaderMessageGeneratorTest, DescribeCharacterForSpelling) {
   mock_message_formatter_ptr_->SetMessageForId(
       static_cast<uint64_t>(MessageIds::PERIOD_SYMBOL_NAME), "dot");
-  auto result = screen_reader_message_generator_->FormatCharacterForSpelling(".");
+  auto result = screen_reader_message_generator_->DescribeCharacterForSpelling(".");
   ASSERT_TRUE(result.utterance.has_message());
   ASSERT_EQ(result.utterance.message(), "dot");
 
   // Sends a character that does not have a special spelling.
-  auto result2 = screen_reader_message_generator_->FormatCharacterForSpelling("a");
+  auto result2 = screen_reader_message_generator_->DescribeCharacterForSpelling("a");
   ASSERT_TRUE(result2.utterance.has_message());
   ASSERT_EQ(result2.utterance.message(), "a");
 
   // Sends a letter that is capitalized and should be read as such.
   mock_message_formatter_ptr_->SetMessageForId(
       static_cast<uint64_t>(MessageIds::CAPITALIZED_LETTER), "capital A");
-  auto result3 = screen_reader_message_generator_->FormatCharacterForSpelling("A");
+  auto result3 = screen_reader_message_generator_->DescribeCharacterForSpelling("A");
   ASSERT_TRUE(result3.utterance.has_message());
   ASSERT_EQ(result3.utterance.message(), "capital A");
+}
+
+TEST_F(ScreenReaderMessageGeneratorTest, NodeListElementMarkerPreprocessesSymbols) {
+  Node node;
+  node.mutable_attributes()->set_label("•");
+  node.set_role(Role::LIST_ELEMENT_MARKER);
+  mock_message_formatter_ptr_->SetMessageForId(
+      static_cast<uint64_t>(MessageIds::BULLET_SYMBOL_NAME), "bullet");
+  auto result = screen_reader_message_generator_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 1u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  ASSERT_EQ(result[0].utterance.message(), "bullet");
+}
+
+TEST_F(ScreenReaderMessageGeneratorTest, NodeListElementMarkerStripsWhitespace) {
+  Node node;
+  node.mutable_attributes()->set_label(" \t• ");
+  node.set_role(Role::LIST_ELEMENT_MARKER);
+  mock_message_formatter_ptr_->SetMessageForId(
+      static_cast<uint64_t>(MessageIds::BULLET_SYMBOL_NAME), "bullet");
+  auto result = screen_reader_message_generator_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 1u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  ASSERT_EQ(result[0].utterance.message(), "bullet");
+}
+
+TEST_F(ScreenReaderMessageGeneratorTest, NodeListElementMarkerOnlyProcessesSingleSymbols) {
+  Node node;
+  node.mutable_attributes()->set_label("••");
+  node.set_role(Role::LIST_ELEMENT_MARKER);
+  mock_message_formatter_ptr_->SetMessageForId(
+      static_cast<uint64_t>(MessageIds::BULLET_SYMBOL_NAME), "bullet");
+  auto result = screen_reader_message_generator_->DescribeNode(&node);
+  ASSERT_EQ(result.size(), 1u);
+  ASSERT_TRUE(result[0].utterance.has_message());
+  // We only preprocess single symbols, so this label doesn't get changed.
+  ASSERT_EQ(result[0].utterance.message(), "••");
 }
 
 TEST_F(ScreenReaderMessageGeneratorTest, NodeTextField) {

@@ -94,7 +94,7 @@ fpromise::promise<> Speaker::SpeakNodeCanonicalizedLabelPromise(
   const std::string label =
       node->has_attributes() && node->attributes().has_label() ? node->attributes().label() : "";
   std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> utterances;
-  utterances.emplace_back(screen_reader_message_generator_->FormatCharacterForSpelling(label));
+  utterances.emplace_back(screen_reader_message_generator_->DescribeCharacterForSpelling(label));
   FX_DCHECK(!utterances.empty());
   auto task = std::make_shared<SpeechTask>(std::move(utterances));
 

@@ -9,6 +9,7 @@
 #include "fuchsia/accessibility/semantics/cpp/fidl.h"
 // This header file has been generated from the strings library fuchsia.intl.l10n.
 #include "fuchsia/intl/l10n/cpp/fidl.h"
+#include "src/lib/fxl/strings/trim.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_message_generator.h"
 #include "src/ui/a11y/lib/screen_reader/util/util.h"
 
@@ -91,6 +92,10 @@ ScreenReaderMessageGenerator::ScreenReaderMessageGenerator(
   character_to_message_id_.insert({"|", MessageIds::VERTICAL_LINE_SYMBOL_NAME});
   character_to_message_id_.insert({"√", MessageIds::SQUARE_ROOT_SYMBOL_NAME});
   character_to_message_id_.insert({"•", MessageIds::BULLET_SYMBOL_NAME});
+  character_to_message_id_.insert({"◦", MessageIds::WHITE_BULLET_SYMBOL_NAME});
+  character_to_message_id_.insert({"▪", MessageIds::BLACK_SQUARE_SYMBOL_NAME});
+  character_to_message_id_.insert({"‣", MessageIds::TRIANGULAR_BULLET_SYMBOL_NAME});
+  character_to_message_id_.insert({"⁃", MessageIds::HYPHEN_BULLET_SYMBOL_NAME});
   character_to_message_id_.insert({"✕", MessageIds::MULTIPLICATION_SYMBOL_NAME});
   character_to_message_id_.insert({"÷", MessageIds::DIVISION_SYMBOL_NAME});
   character_to_message_id_.insert({"¶", MessageIds::PILCROW_SYMBOL_NAME});
@@ -173,6 +178,9 @@ ScreenReaderMessageGenerator::DescribeNode(const Node* node,
     case Role::CHECK_BOX:
       DescribeCheckBox(node, description);
       break;
+    case Role::LIST_ELEMENT_MARKER:
+      DescribeListElementMarker(node, description);
+      break;
     default:
       DescribeTypicalNode(node, description);
   }
@@ -207,8 +215,9 @@ void ScreenReaderMessageGenerator::MaybeAddLabelDescriptor(
   }
 }
 
-void ScreenReaderMessageGenerator::MaybeAddRoleDescriptor(const fuchsia::accessibility::semantics::Node* node,
-                                                std::vector<UtteranceAndContext>& description) {
+void ScreenReaderMessageGenerator::MaybeAddRoleDescriptor(
+    const fuchsia::accessibility::semantics::Node* node,
+    std::vector<UtteranceAndContext>& description) {
   FX_DCHECK(node);
 
   if (!node->has_role()) {
@@ -333,6 +342,18 @@ void ScreenReaderMessageGenerator::DescribeCheckBox(
   MaybeAddDoubleTapHint(node, description);
 }
 
+void ScreenReaderMessageGenerator::DescribeListElementMarker(
+    const fuchsia::accessibility::semantics::Node* node,
+    std::vector<UtteranceAndContext>& description) {
+  if (node->has_attributes() && node->attributes().has_label() &&
+      !node->attributes().label().empty()) {
+    description.push_back(DescribeListElementMarkerLabel(node->attributes().label()));
+  }
+
+  MaybeAddRoleDescriptor(node, description);
+  MaybeAddDoubleTapHint(node, description);
+}
+
 void ScreenReaderMessageGenerator::DescribeToggleSwitch(
     const fuchsia::accessibility::semantics::Node* node,
     std::vector<UtteranceAndContext>& description) {
@@ -375,13 +396,11 @@ void ScreenReaderMessageGenerator::DescribeSlider(
 }
 
 ScreenReaderMessageGenerator::UtteranceAndContext
-ScreenReaderMessageGenerator::FormatCharacterForSpelling(const std::string& character) {
+ScreenReaderMessageGenerator::DescribeCharacterForSpelling(const std::string& character) {
   const auto it = character_to_message_id_.find(character);
   if (it != character_to_message_id_.end()) {
     return GenerateUtteranceByMessageId(it->second);
   }
-
-  UtteranceAndContext utterance;
 
   // TODO(fxbug.dev/89506): Logic to detect uppercase letters may lead to bugs in non English
   // locales. Checks if this character is uppercase.
@@ -390,7 +409,21 @@ ScreenReaderMessageGenerator::FormatCharacterForSpelling(const std::string& char
                                         {character});
   }
 
+  UtteranceAndContext utterance;
   utterance.utterance.set_message(character);
+  return utterance;
+}
+
+ScreenReaderMessageGenerator::UtteranceAndContext
+ScreenReaderMessageGenerator::DescribeListElementMarkerLabel(const std::string& label) {
+  const auto trimmed_label = std::string(fxl::TrimString(label, " \t"));
+  const auto it = character_to_message_id_.find(trimmed_label);
+  if (it != character_to_message_id_.end()) {
+    return GenerateUtteranceByMessageId(it->second);
+  }
+
+  UtteranceAndContext utterance;
+  utterance.utterance.set_message(label);
   return utterance;
 }
 
