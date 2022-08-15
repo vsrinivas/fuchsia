@@ -56,14 +56,14 @@ std::array<glm::vec3, 4> ConvertRectToVerts(fuchsia::math::Rect rect) {
   return {glm::vec3(static_cast<float>(rect.x), static_cast<float>(rect.y), 1),
           glm::vec3(static_cast<float>(rect.x + rect.width), static_cast<float>(rect.y), 1),
           glm::vec3(static_cast<float>(rect.x + rect.width),
-                    static_cast<float>(rect.y - rect.height), 1),
-          glm::vec3(static_cast<float>(rect.x), static_cast<float>(rect.y - rect.height), 1)};
+                    static_cast<float>(rect.y + rect.height), 1),
+          glm::vec3(static_cast<float>(rect.x), static_cast<float>(rect.y + rect.height), 1)};
 }
 
 std::array<glm::vec3, 4> ConvertRectFToVerts(fuchsia::math::RectF rect) {
   return {glm::vec3(rect.x, rect.y, 1), glm::vec3(rect.x + rect.width, rect.y, 1),
-          glm::vec3(rect.x + rect.width, rect.y - rect.height, 1),
-          glm::vec3(rect.x, rect.y - rect.height, 1)};
+          glm::vec3(rect.x + rect.width, rect.y + rect.height, 1),
+          glm::vec3(rect.x, rect.y + rect.height, 1)};
 }
 
 // Template to handle both vec2 and vec3 inputs.
@@ -106,10 +106,10 @@ std::pair<std::array<glm::vec2, 4>, std::array<glm::vec2, 4>> MatrixMultiplyVert
 
   return {verts,
           {
-              glm::vec2(min_x, max_y),  // top_left
-              glm::vec2(max_x, max_y),  // top_right
-              glm::vec2(max_x, min_y),  // bottom_right
-              glm::vec2(min_x, min_y),  // bottom_left
+              glm::vec2(min_x, min_y),  // top_left
+              glm::vec2(max_x, min_y),  // top_right
+              glm::vec2(max_x, max_y),  // bottom_right
+              glm::vec2(min_x, max_y),  // bottom_left
           }};
 }
 
@@ -127,14 +127,14 @@ fuchsia::math::RectF MatrixMultiplyRectF(const glm::mat3& matrix, fuchsia::math:
 escher::Rectangle2D CreateRectangle2D(const glm::mat3& matrix, const TransformClipRegion& clip,
                                       const std::array<glm::vec2, 4>& uvs) {
   // The local space of the renderable has its top-left origin point at (0,0) and grows
-  // downward and to the right, so that the bottom-right point is at (1,-1). We apply
+  // downward and to the right, so that the bottom-right point is at (1,1). We apply
   // the matrix to the four points that represent this unit square to get the points in
   // the global coordinate space.
   auto [verts, reordered_verts] = MatrixMultiplyVerts(matrix, {
                                                                   glm::vec3(0, 0, 1),
                                                                   glm::vec3(1, 0, 1),
-                                                                  glm::vec3(1, -1, 1),
-                                                                  glm::vec3(0, -1, 1),
+                                                                  glm::vec3(1, 1, 1),
+                                                                  glm::vec3(0, 1, 1),
                                                               });
 
   std::array<glm::vec2, 4> reordered_uvs;
@@ -149,7 +149,7 @@ escher::Rectangle2D CreateRectangle2D(const glm::mat3& matrix, const TransformCl
 
   // Grab the origin and extent of the rectangle.
   auto origin = reordered_verts[0];
-  auto extent = reordered_verts[1] - reordered_verts[3];
+  auto extent = reordered_verts[2] - reordered_verts[0];
 
   // Now clip the origin and extent based on the clip rectangle.
   auto [clipped_origin, clipped_extent] = ClipRectangle(clip, origin, extent);
@@ -378,17 +378,20 @@ GlobalRectangleVector ComputeGlobalRectangles(
 
   const uint32_t num = matrices.size();
   for (uint32_t i = 0; i < num; i++) {
-    const auto& s = sample_regions[i];
+    const auto& matrix = matrices[i];
+    const auto& clip = clip_regions[i];
+    const auto& sample = sample_regions[i];
     const auto& image = images[i];
     auto w = image.width;
     auto h = image.height;
     FX_DCHECK(w >= 0.f && h >= 0.f);
-    const std::array<glm::vec2, 4> uvs = {glm::vec2(s.x / w, s.y / h),
-                                          glm::vec2((s.x + s.width) / w, s.y / h),
-                                          glm::vec2((s.x + s.width) / w, (s.y + s.height) / h),
-                                          glm::vec2(s.x / w, (s.y + s.height) / h)};
+    const std::array<glm::vec2, 4> uvs = {
+        glm::vec2(sample.x / w, sample.y / h),
+        glm::vec2((sample.x + sample.width) / w, sample.y / h),
+        glm::vec2((sample.x + sample.width) / w, (sample.y + sample.height) / h),
+        glm::vec2(sample.x / w, (sample.y + sample.height) / h)};
 
-    rectangles.emplace_back(CreateRectangle2D(matrices[i], clip_regions[i], uvs));
+    rectangles.emplace_back(CreateRectangle2D(matrix, clip, uvs));
   }
 
   return rectangles;

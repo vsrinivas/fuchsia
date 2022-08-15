@@ -46,6 +46,25 @@ escher::Rectangle2D GetRectangleForMatrixAndClip(const glm::mat3& matrix,
   return rectangles[0];
 }
 
+// The expected orientation (in a coordinate space where +y points upwards).
+enum class Orientation { CCW_90, CCW_180, CCW_270 };
+
+// Helper function for getting the correct rotation angle. Matrices are specified in view-space
+// coordinates, in which the +y axis points downwards (not upwards). Rotations which are specified
+// as counter-clockwise must actually occur in a clockwise fashion in this coordinate space (a
+// vector on the +x axis rotates towards -y axis to give the appearance of a counter-clockwise
+// rotation).
+float GetOrientationAngleInViewSpaceCoordinates(Orientation angle) {
+  switch (angle) {
+    case Orientation::CCW_90:
+      return -glm::half_pi<float>();
+    case Orientation::CCW_180:
+      return -glm::pi<float>();
+    case Orientation::CCW_270:
+      return -glm::three_over_two_pi<float>();
+  }
+}
+
 }  // namespace
 
 // The following tests ensure the transform hierarchy is properly reflected in the list of global
@@ -235,11 +254,12 @@ TEST(Rectangle2DTest, RectangleAndClipPartialOverlap) {
 
 TEST(Rectangle2DTest, ScaleAndRotate90DegreesTest) {
   const glm::vec2 extent(100.f, 50.f);
-  glm::mat3 matrix = glm::rotate(glm::mat3(), glm::half_pi<float>());
+  glm::mat3 matrix =
+      glm::rotate(glm::mat3(), GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_90));
   matrix = glm::scale(matrix, extent);
 
   const escher::Rectangle2D expected_rectangle(
-      glm::vec2(0.f, 100.f), glm::vec2(50.f, 100.f),
+      glm::vec2(0.f, -100.f), glm::vec2(50.f, 100.f),
       {glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1), glm::vec2(0, 0)});
 
   const auto rectangle = GetRectangleForMatrix(matrix);
@@ -248,11 +268,12 @@ TEST(Rectangle2DTest, ScaleAndRotate90DegreesTest) {
 
 TEST(Rectangle2DTest, ScaleAndRotate180DegreesTest) {
   const glm::vec2 extent(100.f, 50.f);
-  glm::mat3 matrix = glm::rotate(glm::mat3(), glm::pi<float>());
+  glm::mat3 matrix =
+      glm::rotate(glm::mat3(), GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_180));
   matrix = glm::scale(matrix, extent);
 
   const escher::Rectangle2D expected_rectangle(
-      glm::vec2(-100.f, 50.f), glm::vec2(100.f, 50.f),
+      glm::vec2(-100.f, -50.f), glm::vec2(100.f, 50.f),
       {glm::vec2(1, 1), glm::vec2(0, 1), glm::vec2(0, 0), glm::vec2(1, 0)});
 
   const auto rectangle = GetRectangleForMatrix(matrix);
@@ -261,7 +282,8 @@ TEST(Rectangle2DTest, ScaleAndRotate180DegreesTest) {
 
 TEST(Rectangle2DTest, ScaleAndRotate270DegreesTest) {
   const glm::vec2 extent(100.f, 50.f);
-  glm::mat3 matrix = glm::rotate(glm::mat3(), glm::three_over_two_pi<float>());
+  glm::mat3 matrix =
+      glm::rotate(glm::mat3(), GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_270));
   matrix = glm::scale(matrix, extent);
 
   const escher::Rectangle2D expected_rectangle(
@@ -296,7 +318,7 @@ TEST(Rectangle2DTest, NegativeScaleTest) {
 
     // These are the expected UVs for a 180 degree rotation.
     const escher::Rectangle2D expected_rectangle(
-        glm::vec2(-10.f, 5.f), glm::vec2(10.f, 5.f),
+        glm::vec2(-10.f, -5.f), glm::vec2(10.f, 5.f),
         {glm::vec2(1, 1), glm::vec2(0, 1), glm::vec2(0, 0), glm::vec2(1, 0)});
 
     const auto rectangle = GetRectangleForMatrix(matrix);
@@ -326,7 +348,7 @@ TEST(Rectangle2DTest, NegativeScaleTest) {
 
     // These are the expected UVs for a vertical flip.
     const escher::Rectangle2D expected_rectangle(
-        glm::vec2(0.f, 5.f), glm::vec2(10.f, 5.f),
+        glm::vec2(0.f, -5.f), glm::vec2(10.f, 5.f),
         {glm::vec2(0, 1), glm::vec2(1, 1), glm::vec2(1, 0), glm::vec2(0, 0)});
 
     const auto rectangle = GetRectangleForMatrix(matrix);
@@ -361,25 +383,27 @@ TEST(Rectangle2DTest, OrderOfOperationsTest) {
 
   // Second subtest tests swapping translation and rotation.
   {
-    // Since the rotation is applied first, the origin point rotates around (0,0) and then we
-    // translate and wind up at (10, 5).
+    // Since the rotation is applied first, the origin point rotates around (0,0), placing the
+    // origin at (0, -1). We then translate by (10, 5) to wind up at (10, 4).
     const glm::mat3 test_1 =
-        glm::rotate(glm::translate(glm::mat3(), glm::vec2(10.f, 5.f)), glm::half_pi<float>());
+        glm::rotate(glm::translate(glm::mat3(), glm::vec2(10.f, 5.f)),
+                    GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_90));
 
     const escher::Rectangle2D expected_rectangle_1(
-        glm::vec2(10.f, 6.f), glm::vec2(1.f, 1.f),
+        glm::vec2(10.f, 4.f), glm::vec2(1.f, 1.f),
         {glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1), glm::vec2(0, 0)});
 
     const auto rectangle_1 = GetRectangleForMatrix(test_1);
     EXPECT_EQ(rectangle_1, expected_rectangle_1);
 
     // Since we translated first here, the point goes from (0,0) to (10,5) and then rotates
-    // 90 degrees counterclockwise and winds up at (-5, 10).
-    const glm::mat3 test_2 =
-        glm::translate(glm::rotate(glm::mat3(), glm::half_pi<float>()), glm::vec2(10.f, 5.f));
+    // 90 degrees counterclockwise. This places the origin at (5, -11).
+    const glm::mat3 test_2 = glm::translate(
+        glm::rotate(glm::mat3(), GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_90)),
+        glm::vec2(10.f, 5.f));
 
     const escher::Rectangle2D expected_rectangle_2(
-        glm::vec2(-5.f, 11.f), glm::vec2(1.f, 1.f),
+        glm::vec2(5.f, -11.f), glm::vec2(1.f, 1.f),
         {glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1), glm::vec2(0, 0)});
 
     const auto rectangle_2 = GetRectangleForMatrix(test_2);
@@ -390,21 +414,23 @@ TEST(Rectangle2DTest, OrderOfOperationsTest) {
   {
     // We rotate first and then scale, so the scaling isn't affected by the rotation.
     const glm::mat3 test_1 =
-        glm::rotate(glm::scale(glm::mat3(), glm::vec2(9.f, 7.f)), glm::half_pi<float>());
+        glm::rotate(glm::scale(glm::mat3(), glm::vec2(9.f, 7.f)),
+                    GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_90));
 
     const escher::Rectangle2D expected_rectangle_1(
-        glm::vec2(0.f, 7.f), glm::vec2(9.f, 7.f),
+        glm::vec2(0.f, -7.f), glm::vec2(9.f, 7.f),
         {glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1), glm::vec2(0, 0)});
 
     const auto rectangle_1 = GetRectangleForMatrix(test_1);
     EXPECT_EQ(rectangle_1, expected_rectangle_1);
 
     // Here we scale and then rotate so the scale winds up rotated.
-    const glm::mat3 test_2 =
-        glm::scale(glm::rotate(glm::mat3(), glm::half_pi<float>()), glm::vec2(9.f, 7.f));
+    const glm::mat3 test_2 = glm::scale(
+        glm::rotate(glm::mat3(), GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_90)),
+        glm::vec2(9.f, 7.f));
 
     const escher::Rectangle2D expected_rectangle_2(
-        glm::vec2(0.f, 9.f), glm::vec2(7.f, 9.f),
+        glm::vec2(0.f, -9.f), glm::vec2(7.f, 9.f),
         {glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1), glm::vec2(0, 0)});
 
     const auto rectangle_2 = GetRectangleForMatrix(test_2);

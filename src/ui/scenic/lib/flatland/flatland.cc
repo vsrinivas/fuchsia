@@ -1500,15 +1500,19 @@ void Flatland::CloseConnection(FlatlandError error) {
 
 // static
 float Flatland::MatrixData::GetOrientationAngle(fuchsia::ui::composition::Orientation orientation) {
+  // The matrix is specified in view-space coordinates, in which the +y axis points downwards (not
+  // upwards). Rotations which are specified as counter-clockwise must actually occur in a clockwise
+  // fashion in this coordinate space (a vector on the +x axis rotates towards -y axis to give the
+  // appearance of a counter-clockwise rotation).
   switch (orientation) {
     case Orientation::CCW_0_DEGREES:
       return 0.f;
     case Orientation::CCW_90_DEGREES:
-      return glm::half_pi<float>();
+      return -glm::half_pi<float>();
     case Orientation::CCW_180_DEGREES:
-      return glm::pi<float>();
+      return -glm::pi<float>();
     case Orientation::CCW_270_DEGREES:
-      return glm::three_over_two_pi<float>();
+      return -glm::three_over_two_pi<float>();
   }
 }
 

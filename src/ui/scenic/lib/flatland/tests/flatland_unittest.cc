@@ -202,11 +202,11 @@ float GetOrientationAngle(fuchsia::ui::composition::Orientation orientation) {
     case Orientation::CCW_0_DEGREES:
       return 0.f;
     case Orientation::CCW_90_DEGREES:
-      return glm::half_pi<float>();
+      return -glm::half_pi<float>();
     case Orientation::CCW_180_DEGREES:
-      return glm::pi<float>();
+      return -glm::pi<float>();
     case Orientation::CCW_270_DEGREES:
-      return glm::three_over_two_pi<float>();
+      return -glm::three_over_two_pi<float>();
   }
 }
 
