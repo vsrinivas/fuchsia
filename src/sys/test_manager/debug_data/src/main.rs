@@ -15,6 +15,7 @@ use fidl_fuchsia_sys2 as fsys;
 use fidl_fuchsia_test_debug as ftest_debug;
 use fidl_fuchsia_test_internal as ftest_internal;
 use fidl_fuchsia_test_manager as ftest_manager;
+use fuchsia_component::client::connect_to_protocol_at_path;
 use fuchsia_component::{client::connect_to_protocol, server::ServiceFs};
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, pin_mut, FutureExt, StreamExt};
@@ -26,9 +27,6 @@ const TIMEOUT_AFTER_FINISH: zx::Duration = zx::Duration::from_seconds(20);
 #[fuchsia::main]
 async fn main() -> Result<(), Error> {
     info!("started");
-
-    let event_source = connect_to_protocol::<fsys::EventSourceMarker>()?;
-    let event_stream = event_source.take_static_event_stream("EventStream").await?.unwrap();
 
     let mut fs = ServiceFs::new();
     inspect_runtime::serve(fuchsia_inspect::component::inspector(), &mut fs)?;
@@ -43,11 +41,13 @@ async fn main() -> Result<(), Error> {
         },
     );
     fs.take_and_serve_directory_handle()?;
+    let event_stream =
+        connect_to_protocol_at_path::<fsys::EventStream2Marker>("/events/event_stream").unwrap();
 
     futures::future::join(
         debug_data_set::handle_debug_data_controller_and_events(
             request_stream_recv.flatten(),
-            event_stream.into_stream()?,
+            event_stream,
             PublisherHandlerImpl,
             TIMEOUT_AFTER_FINISH,
             fuchsia_inspect::component::inspector().root(),
