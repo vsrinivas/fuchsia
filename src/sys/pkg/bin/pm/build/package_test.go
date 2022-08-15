@@ -9,7 +9,6 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -164,6 +163,9 @@ func TestInit(t *testing.T) {
 func TestUpdate(t *testing.T) {
 	cfg := TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
+
+	cfg.PkgABIRevision = TestABIRevision
+
 	TestPackage(cfg)
 
 	manifest, err := cfg.Manifest()
@@ -190,10 +192,8 @@ func TestUpdate(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// FIXME(http://fxbug.dev/87309): In order to ease migration, initially the
-	// abi-revision is not required.
-	if _, ok := manifest.Meta()[abiRevisionKey]; ok {
-		t.Fatalf("%s should not be created by default", abiRevisionKey)
+	if _, ok := manifest.Meta()[abiRevisionKey]; !ok {
+		t.Fatalf("%s was not found in manifest after update", abiRevisionKey)
 	}
 
 	contentsPath, ok := manifest.Meta()["meta/contents"]
@@ -247,49 +247,46 @@ func TestUpdate(t *testing.T) {
 			break
 		}
 	}
-}
 
-func TestUpdateTakesABIRevisionAndWritesABIRevision(t *testing.T) {
-	cfg := TestConfig()
-	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
-
-	cfg.PkgABIRevision = testABIRevision
-
-	TestPackage(cfg)
-
-	manifest, err := cfg.Manifest()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if err := Update(cfg); err != nil {
-		t.Fatal(err)
-	}
-
-	// FIXME(http://fxbug.dev/87309): In order to ease migration, initially the
-	// abi-revision is not required.
 	abiRevisionPath, ok := manifest.Meta()[abiRevisionKey]
 	if !ok {
 		t.Fatalf("%s was not found in manifest after update", abiRevisionKey)
 	}
 
-	f, err := os.Open(abiRevisionPath)
+	f, err = os.Open(abiRevisionPath)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer f.Close()
 
 	var abiRevision uint64
 	if err := binary.Read(f, binary.LittleEndian, &abiRevision); err != nil {
 		t.Fatal(err)
 	}
-	if abiRevision != testABIRevision {
-		t.Fatalf("expected ABI revision to be %x, not %x", testABIRevision, abiRevision)
+	if abiRevision != TestABIRevision {
+		t.Fatalf("expected ABI revision to be %x, not %x", TestABIRevision, abiRevision)
+	}
+}
+
+func TestUpdateRequiresABIRevision(t *testing.T) {
+	cfg := TestConfig()
+	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
+
+	cfg.PkgABIRevision = 0
+
+	TestPackage(cfg)
+
+	if err := Update(cfg); err == nil {
+		t.Fatalf("expected update to fail because ABI revision was not specified")
 	}
 }
 
 func TestValidate(t *testing.T) {
 	cfg := TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
+
+	cfg.PkgABIRevision = TestABIRevision
+
 	TestPackage(cfg)
 
 	if err := Update(cfg); err != nil {
@@ -320,70 +317,8 @@ func TestValidate(t *testing.T) {
 func TestSeal(t *testing.T) {
 	cfg := TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
-	TestPackage(cfg)
 
-	if err := Update(cfg); err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err := Seal(cfg); err != nil {
-		t.Fatal(err)
-	}
-
-	// TODO(raggi): until we have far reader support this test only verifies that
-	// the package meta data was correctly updated, it doesn't actually verify
-	// that the contents of the far are correct.
-	metafar := filepath.Join(cfg.OutputDir, "meta.far")
-	if _, err := os.Stat(metafar); err != nil {
-		t.Errorf("meta.far was not created")
-	}
-
-	merklefile := filepath.Join(cfg.OutputDir, "meta.far.merkle")
-	if _, err := os.Stat(merklefile); err != nil {
-		t.Errorf("meta.far.merkle was not created")
-	}
-
-	m, err := ioutil.ReadFile(merklefile)
-	if err != nil {
-		t.Fatal(err)
-	}
-	fromFile := string(m)
-
-	var tree merkle.Tree
-	f, err := os.Open(metafar)
-	if err != nil {
-		t.Fatal(err)
-	}
-	tree.ReadFrom(f)
-	fromFar := fmt.Sprintf("%x", tree.Root())
-
-	if fromFile != fromFar {
-		t.Errorf("meta.far.merkle != merkle(meta.far)\n%q\n%q", fromFile, fromFar)
-	}
-
-	// Make sure the meta.far doesn't contain the ABI revision by default.
-	f.Seek(0, io.SeekStart)
-	r, err := far.NewReader(f)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// FIXME(http://fxbug.dev/87309): In order to ease migration, initially the
-	// abi-revision is not required.
-	_, err = r.Open("meta/fuchsia.pkg/abi-revision")
-	if err == nil {
-		t.Fatalf("expected meta/fuchsia.pkg/abi-revision to not be present in meta.far")
-	}
-	if !errors.Is(err, os.ErrNotExist) {
-		t.Fatalf("expected error to be does not exist, not %s", err)
-	}
-}
-
-func TestSealCreatesABIRevisionFile(t *testing.T) {
-	cfg := TestConfig()
-	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
-
-	cfg.PkgABIRevision = testABIRevision
+	cfg.PkgABIRevision = TestABIRevision
 
 	TestPackage(cfg)
 
@@ -418,8 +353,54 @@ func TestSealCreatesABIRevisionFile(t *testing.T) {
 	if err := binary.Read(bytes.NewReader(abiBytes), binary.LittleEndian, &abiRevision); err != nil {
 		t.Fatal(err)
 	}
-	if abiRevision != testABIRevision {
-		t.Fatalf("expected ABI revision to be %x, not %x", testABIRevision, abiRevision)
+	if abiRevision != TestABIRevision {
+		t.Fatalf("expected ABI revision to be %x, not %x", TestABIRevision, abiRevision)
+	}
+}
+
+func TestSealRequiresABIRevision(t *testing.T) {
+	cfg := TestConfig()
+	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
+
+	cfg.PkgABIRevision = TestABIRevision
+
+	TestPackage(cfg)
+
+	if err := Update(cfg); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg.PkgABIRevision = 0
+
+	if _, err := Seal(cfg); err != nil {
+		t.Fatal(err)
+	}
+
+	// This test only verifies that the package meta data was correctly
+	// updated, it doesn't actually verify that the contents of the far are
+	// correct.
+	metafar := filepath.Join(cfg.OutputDir, "meta.far")
+	f, err := os.Open(metafar)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r, err := far.NewReader(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	abiBytes, err := r.ReadFile(abiRevisionKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var abiRevision uint64
+	if err := binary.Read(bytes.NewReader(abiBytes), binary.LittleEndian, &abiRevision); err != nil {
+		t.Fatal(err)
+	}
+	if abiRevision != TestABIRevision {
+		t.Fatalf("expected ABI revision to be %x, not %x", TestABIRevision, abiRevision)
 	}
 }
 

@@ -19,6 +19,8 @@ import (
 // TestFiles is the list of files created by the default factories in this package.
 var TestFiles = []string{"a", "b", "dir/c", "rand1", "rand2", "meta/test/t"}
 
+const TestABIRevision uint64 = 0xE9CACD17EA11859D
+
 // TestPackage initializes a set of files into a package directory next to the
 // config manifest
 func TestPackage(cfg *Config) {

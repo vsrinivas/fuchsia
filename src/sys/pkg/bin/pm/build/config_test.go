@@ -18,6 +18,9 @@ import (
 func TestRepository(t *testing.T) {
 	cfg := TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
+
+	cfg.PkgABIRevision = TestABIRevision
+
 	BuildTestPackage(cfg)
 
 	// Read repository field in the manifest.
@@ -35,6 +38,9 @@ func TestRepository(t *testing.T) {
 func TestOrderedBlobInfo(t *testing.T) {
 	cfg := TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
+
+	cfg.PkgABIRevision = TestABIRevision
+
 	BuildTestPackage(cfg)
 
 	blobs, err := cfg.BlobInfo()
@@ -63,7 +69,7 @@ func TestCannotParseAPILevelAndABIRevision(t *testing.T) {
 	fs := flag.NewFlagSet("test", flag.ContinueOnError)
 	cfg.InitFlags(fs)
 
-	if err := fs.Parse([]string{"--api-level", "6", "--abi-revision", fmt.Sprintf("%d", testABIRevision)}); err == nil {
+	if err := fs.Parse([]string{"--api-level", "6", "--abi-revision", fmt.Sprintf("%d", TestABIRevision)}); err == nil {
 		t.Fatalf("expected an error, but parsed ABI revision %x", cfg.PkgABIRevision)
 	}
 }
@@ -78,8 +84,8 @@ func TestParseAPILevelIntoABIRevision(t *testing.T) {
 	if err := fs.Parse([]string{"--api-level", "6"}); err != nil {
 		t.Fatal(err)
 	}
-	if cfg.PkgABIRevision != testABIRevision {
-		t.Fatalf("expected ABI revision %x, not %x", testABIRevision, cfg.PkgABIRevision)
+	if cfg.PkgABIRevision != TestABIRevision {
+		t.Fatalf("expected ABI revision %x, not %x", TestABIRevision, cfg.PkgABIRevision)
 	}
 }
 
@@ -90,11 +96,11 @@ func TestParseABIRevisionAsDecimal(t *testing.T) {
 	fs := flag.NewFlagSet("test", flag.ContinueOnError)
 	cfg.InitFlags(fs)
 
-	if err := fs.Parse([]string{"--abi-revision", fmt.Sprintf("%d", testABIRevision)}); err != nil {
+	if err := fs.Parse([]string{"--abi-revision", fmt.Sprintf("%d", TestABIRevision)}); err != nil {
 		t.Fatal(err)
 	}
-	if cfg.PkgABIRevision != testABIRevision {
-		t.Fatalf("expected ABI revision %x, not %x", testABIRevision, cfg.PkgABIRevision)
+	if cfg.PkgABIRevision != TestABIRevision {
+		t.Fatalf("expected ABI revision %x, not %x", TestABIRevision, cfg.PkgABIRevision)
 	}
 }
 
@@ -105,11 +111,11 @@ func TestParseABIRevisionAsHex(t *testing.T) {
 	fs := flag.NewFlagSet("test", flag.ContinueOnError)
 	cfg.InitFlags(fs)
 
-	if err := fs.Parse([]string{"--abi-revision", fmt.Sprintf("0x%x", testABIRevision)}); err != nil {
+	if err := fs.Parse([]string{"--abi-revision", fmt.Sprintf("0x%x", TestABIRevision)}); err != nil {
 		t.Fatal(err)
 	}
-	if cfg.PkgABIRevision != testABIRevision {
-		t.Fatalf("expected ABI revision %x, not %x", testABIRevision, cfg.PkgABIRevision)
+	if cfg.PkgABIRevision != TestABIRevision {
+		t.Fatalf("expected ABI revision %x, not %x", TestABIRevision, cfg.PkgABIRevision)
 	}
 }
 

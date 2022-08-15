@@ -67,8 +67,13 @@ func TestParseFlags(t *testing.T) {
 func TestServer(t *testing.T) {
 	defer resetFlags()
 	defer resetServer()
+
 	cfg := build.TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
+
+	// The package ABI revision is required.
+	cfg.PkgABIRevision = 1
+
 	build.BuildTestPackage(cfg)
 
 	portFileDir := t.TempDir()
@@ -285,8 +290,13 @@ func TestServer(t *testing.T) {
 func TestServerV2(t *testing.T) {
 	defer resetFlags()
 	defer resetServer()
+
 	cfg := build.TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
+
+	// The package ABI revision is required.
+	cfg.PkgABIRevision = 1
+
 	build.BuildTestPackage(cfg)
 
 	portFileDir := t.TempDir()
@@ -382,8 +392,13 @@ func TestServeAuto(t *testing.T) {
 	defer resetFlags()
 	defer resetServer()
 	defer pushPopMonitorPollInterval(20 * time.Millisecond)()
+
 	cfg := build.TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
+
+	// The package ABI revision is required.
+	cfg.PkgABIRevision = 1
+
 	build.BuildTestPackage(cfg)
 
 	portFileDir := t.TempDir()
@@ -514,8 +529,12 @@ func TestServeAutoIncremental(t *testing.T) {
 	defer resetFlags()
 	defer resetServer()
 	defer pushPopMonitorPollInterval(20 * time.Millisecond)()
+
 	cfg := build.TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
+
+	// The package ABI revision is required.
+	cfg.PkgABIRevision = 1
 
 	portFileDir, err := ioutil.TempDir("", "pm-serve-test-port-file-dir")
 	if err != nil {

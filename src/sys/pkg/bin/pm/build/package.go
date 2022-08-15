@@ -228,10 +228,8 @@ func Update(cfg *Config) error {
 }
 
 func writeABIRevision(cfg *Config, manifest *Manifest) error {
-	// FIXME(): We can stop treating the ABI revision as optional once the
-	// ecosystem has migrated to specifying it everywhere.
 	if cfg.PkgABIRevision == 0 {
-		return nil
+		return fmt.Errorf("ABI revision is required")
 	}
 
 	abiDir := filepath.Join(cfg.OutputDir, "meta", "fuchsia.abi")
