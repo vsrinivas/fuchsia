@@ -140,81 +140,6 @@ fuchsia_unittest_component("session-shell-test") {
   deps = [ ":session_shell_test" ]
 }
 
-executable("basemgr_test") {
-  testonly = true
-
-  sources = [ "basemgr_test.cc" ]
-
-  deps = [
-    ":fuchsia.testing.modular",
-    "//sdk/lib/inspect/contrib/cpp:archive_reader",
-    "//sdk/lib/modular/testing/cpp",
-    "//sdk/lib/stdcompat",
-    "//sdk/lib/sys/inspect/cpp",
-    "//src/lib/fsl",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/modular/lib/fidl:clone",
-    "//src/modular/lib/modular_config",
-    "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
-    "//src/modular/lib/pseudo_dir:pseudo_dir_server",
-    "//third_party/googletest:gmock",
-  ]
-}
-
-fuchsia_unittest_component("basemgr-test") {
-  manifest = "meta/basemgr_test.cmx"
-  deps = [ ":basemgr_test" ]
-}
-
-executable("inspect_session_test") {
-  testonly = true
-
-  sources = [ "inspect_session_test.cc" ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/lib/inspect/contrib/cpp:archive_reader",
-    "//sdk/lib/inspect/testing/cpp",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
-    "//sdk/lib/sys/inspect/cpp",
-    "//src/lib/fsl",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/modular/lib/modular_config",
-    "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
-    "//src/modular/lib/modular_test_harness/cpp:test_harness_impl",
-    "//third_party/googletest:gmock",
-  ]
-}
-
-fuchsia_unittest_component("inspect-session-test") {
-  manifest = "meta/inspect_session_test.cmx"
-  deps = [ ":inspect_session_test" ]
-}
-
-executable("inspect_basemgr_test") {
-  testonly = true
-
-  sources = [ "inspect_basemgr_test.cc" ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/lib/inspect/contrib/cpp:archive_reader",
-    "//sdk/lib/inspect/testing/cpp",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
-    "//sdk/lib/sys/inspect/cpp",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/modular/lib/modular_config",
-    "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
-    "//src/modular/lib/modular_test_harness/cpp:test_harness_impl",
-    "//third_party/googletest:gmock",
-  ]
-}
-
-fuchsia_unittest_component("inspect-basemgr-test") {
-  manifest = "meta/inspect_basemgr_test.cmx"
-  deps = [ ":inspect_basemgr_test" ]
-}
-
 executable("intents_test") {
   testonly = true
 
@@ -557,11 +482,8 @@ fuchsia_test_package("modular_integration_tests") {
     ":agent-services-test",
     ":agent-session-restart-test",
     ":annotations-test",
-    ":basemgr-test",
     ":component-context-test",
     ":element-manager-test",
-    ":inspect-basemgr-test",
-    ":inspect-session-test",
     ":intents-test",
     ":module-context-test",
     ":session-shell-test",

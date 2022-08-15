@@ -13,9 +13,7 @@ group("integration_tests") {
     "component_events",
     "components",
     "fidl",
-    "inspect",
     "lifecycle",
-    "logs",
     "mock_runner",
     "outdir",
     "policy",
@@ -54,26 +52,6 @@ executable("realm_tests") {
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-}
-
-executable("hub_tests") {
-  testonly = true
-
-  output_name = "appmgr_hub_integration_tests"
-
-  sources = [ "hub_integration_test.cc" ]
-
-  deps = [
-    "fidl:echo",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
-    "//sdk/lib/sys/inspect/cpp",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/sys/sysmgr:lib",
-    "//third_party/googletest:gmock",
-    "//zircon/system/ulib/async:async-cpp",
   ]
 }
 
@@ -136,30 +114,6 @@ executable("failing_appmgr_bin") {
   ]
 }
 
-executable("hub_test_helper_bin") {
-  testonly = true
-  output_name = "hub_test_helper"
-  sources = [ "hub_test_helper.cc" ]
-}
-
-fuchsia_component("hub_test_helper") {
-  testonly = true
-  deps = [ ":hub_test_helper_bin" ]
-  manifest = "meta/hub_test_helper.cmx"
-}
-
-fuchsia_component("appmgr_integration_tests_inspect_test_app") {
-  testonly = true
-  deps = [ "//src/sys/appmgr/integration_tests/inspect:bin-vmo" ]
-  manifest = "inspect/meta/inspect_vmo_test_app.cmx"
-}
-
-fuchsia_component("appmgr_hub_integration_tests") {
-  testonly = true
-  deps = [ ":hub_tests" ]
-  manifest = "meta/appmgr_hub_integration_tests.cmx"
-}
-
 fuchsia_component("appmgr_realm_integration_tests") {
   testonly = true
   deps = [ ":realm_tests" ]
@@ -185,17 +139,12 @@ fuchsia_component("crashing_component") {
 }
 
 fuchsia_test_package("appmgr_integration_tests") {
-  test_components = [
-    ":appmgr_hub_integration_tests",
-    ":appmgr_realm_integration_tests",
-  ]
+  test_components = [ ":appmgr_realm_integration_tests" ]
   deps = [
-    ":appmgr_integration_tests_inspect_test_app",
     ":crashing_component",
     ":crashing_process",
     ":echo_server",
     ":failing_appmgr",
-    ":hub_test_helper",
     ":sysmgr_config",
   ]
   test_specs = {
