@@ -115,15 +115,16 @@ pub async fn run_test_manager_query_server(
                         break;
                     }
                 };
-                let launch_fut = facet::get_suite_facets(&test_url, &resolver).and_then(|facets| {
-                    RunningSuite::launch(
-                        &test_url,
-                        facets,
-                        None,
-                        resolver.clone(),
-                        above_root_capabilities_for_test.clone(),
-                    )
-                });
+                let launch_fut = facet::get_suite_facets(test_url.clone(), resolver.clone())
+                    .and_then(|facets| {
+                        RunningSuite::launch(
+                            &test_url,
+                            facets,
+                            None,
+                            resolver.clone(),
+                            above_root_capabilities_for_test.clone(),
+                        )
+                    });
                 match launch_fut.await {
                     Ok(suite_instance) => {
                         let suite = match suite_instance.connect_to_suite() {

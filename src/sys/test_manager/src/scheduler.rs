@@ -59,3 +59,30 @@ impl Scheduler for SerialScheduler {
         }
     }
 }
+
+pub struct ParallelScheduler {}
+
+#[async_trait]
+impl Scheduler for ParallelScheduler {
+    async fn execute(
+        &self,
+        suites: Vec<test_suite::Suite>,
+        inspect_node_ref: &self_diagnostics::RunInspectNode,
+        stop_recv: &mut oneshot::Receiver<()>,
+        run_id: u32,
+        debug_controller: &ftest_internal::DebugDataSetControllerProxy,
+    ) {
+        // run test suites serially for now
+        for (suite_idx, suite) in suites.into_iter().enumerate() {
+            // only check before running the test. We should complete the test run for
+            // running tests, if stop is called.
+            if let Ok(Some(())) = stop_recv.try_recv() {
+                break;
+            }
+            let instance_name = format!("{:?}-{:?}", run_id, suite_idx);
+            let suite_inspect = inspect_node_ref.new_suite(&instance_name, &suite.test_url);
+            test_suite::run_single_suite(suite, debug_controller, &instance_name, suite_inspect)
+                .await;
+        }
+    }
+}

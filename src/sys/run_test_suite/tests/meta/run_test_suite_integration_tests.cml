@@ -26,6 +26,10 @@
             storage: "custom_artifacts",
             path: "/custom_artifacts",
         },
+        {
+            protocol: "fuchsia.diagnostics.ArchiveAccessor",
+            from: "parent",
+        },
     ],
     offer: [
         {

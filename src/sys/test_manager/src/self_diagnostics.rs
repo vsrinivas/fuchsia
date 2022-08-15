@@ -59,6 +59,7 @@ struct RunInspectNodeInner {
     debug_data_state: DebugDataState,
     controller_state: RunControllerState,
     suites: Vec<Arc<SuiteInspectNode>>,
+    used_parallel_scheduler: bool,
 }
 
 impl RunInspectNode {
@@ -73,6 +74,7 @@ impl RunInspectNode {
             debug_data_state: DebugDataState::PendingDebugDataProduced,
             controller_state: RunControllerState::AwaitingRequest,
             suites: vec![],
+            used_parallel_scheduler: false,
         }));
         let inner_clone = inner.clone();
         let node = executing_root.create_lazy_child(node_name, move || {
@@ -82,6 +84,7 @@ impl RunInspectNode {
             root.record_string("execution_state", format!("{:#?}", lock.execution_state));
             root.record_string("debug_data_state", format!("{:#?}", lock.debug_data_state));
             root.record_string("controller_state", format!("{:#?}", lock.controller_state));
+            root.record_bool("used_parallel_scheduler", lock.used_parallel_scheduler);
             let suites = lock.suites.clone();
             drop(lock);
             let suite_node = root.create_child("suites");
@@ -104,6 +107,10 @@ impl RunInspectNode {
 
     pub fn set_controller_state(&self, state: RunControllerState) {
         self.inner.lock().unwrap().controller_state = state;
+    }
+
+    pub fn set_used_parallel_scheduler(&self, used_parallel_scheduler: bool) {
+        self.inner.lock().unwrap().used_parallel_scheduler = used_parallel_scheduler;
     }
 
     pub fn new_suite(&self, name: &str, url: &str) -> Arc<SuiteInspectNode> {
@@ -241,7 +248,8 @@ mod test {
                         controller_state: "AwaitingRequest",
                         execution_state: "NotStarted",
                         debug_data_state: "PendingDebugDataProduced",
-                        suites: {}
+                        suites: {},
+                        used_parallel_scheduler: false
                     }
                 },
                 finished: {}
@@ -250,6 +258,7 @@ mod test {
 
         run.set_execution_state(RunExecutionState::Executing);
         run.set_debug_data_state(DebugDataState::NoDebugData);
+        run.set_used_parallel_scheduler(true);
         assert_data_tree!(
             inspector,
             root: {
@@ -258,7 +267,8 @@ mod test {
                         controller_state: "AwaitingRequest",
                         execution_state: "Executing",
                         debug_data_state: "NoDebugData",
-                        suites: {}
+                        suites: {},
+                        used_parallel_scheduler: true
                     }
                 },
                 finished: {}
@@ -279,7 +289,8 @@ mod test {
                                 url: "suite-url",
                                 execution_state: "Pending"
                             }
-                        }
+                        },
+                        used_parallel_scheduler: true
                     }
                 },
                 finished: {}
@@ -301,6 +312,7 @@ mod test {
                                 execution_state: "Pending"
                             }
                         },
+                        used_parallel_scheduler: true
                     }
                 },
                 finished: {}
@@ -330,7 +342,8 @@ mod test {
                         controller_state: "AwaitingRequest",
                         execution_state: "NotStarted",
                         debug_data_state: "PendingDebugDataProduced",
-                        suites: {}
+                        suites: {},
+                        used_parallel_scheduler: false
                     }
                 },
                 finished: {}
@@ -347,7 +360,8 @@ mod test {
                         controller_state: "AwaitingRequest",
                         execution_state: "Executing",
                         debug_data_state: "NoDebugData",
-                        suites: {}
+                        suites: {},
+                        used_parallel_scheduler: false
                     }
                 },
                 finished: {}
@@ -368,7 +382,8 @@ mod test {
                                 url: "suite-url",
                                 execution_state: "Pending"
                             }
-                        }
+                        },
+                        used_parallel_scheduler: false
                     }
                 },
                 finished: {}
@@ -392,7 +407,8 @@ mod test {
                                     url: "suite-url",
                                     execution_state: "Pending"
                                 }
-                            }
+                            },
+                            used_parallel_scheduler: false
                         }
                     }
                 },

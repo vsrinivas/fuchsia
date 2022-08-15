@@ -10,6 +10,7 @@ use {
     anyhow::format_err,
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_resolution as fresolution,
     fidl_fuchsia_data as fdata,
+    std::sync::Arc,
 };
 
 const TEST_TYPE_FACET_KEY: &'static str = "fuchsia.test.type";
@@ -21,15 +22,15 @@ pub(crate) struct SuiteFacets {
 
 pub(crate) enum ResolveStatus {
     Unresolved,
-    _Resolved(Result<SuiteFacets, LaunchTestError>),
+    Resolved(Result<SuiteFacets, LaunchTestError>),
 }
 
 pub(crate) async fn get_suite_facets(
-    test_url: &str,
-    resolver: &fresolution::ResolverProxy,
+    test_url: String,
+    resolver: Arc<fresolution::ResolverProxy>,
 ) -> Result<SuiteFacets, LaunchTestError> {
     let component = resolver
-        .resolve(test_url)
+        .resolve(&test_url)
         .await
         .map_err(|e| LaunchTestError::ResolveTest(e.into()))?
         .map_err(|e| LaunchTestError::ResolveTest(format_err!("{:?}", e)))?;

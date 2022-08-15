@@ -28,6 +28,12 @@ impl AboveRootCapabilitiesForTest {
         Ok(Self { capabilities })
     }
 
+    #[cfg(test)]
+    pub fn new_empty_for_tests() -> Self {
+        let empty_capabilities = HashMap::new();
+        Self { capabilities: empty_capabilities }
+    }
+
     pub async fn apply(
         &self,
         collection: &str,

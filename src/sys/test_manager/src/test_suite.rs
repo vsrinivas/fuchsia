@@ -4,8 +4,9 @@
 
 use {
     crate::{
-        above_root_capabilities::AboveRootCapabilitiesForTest, debug_data_server, error::*, facet,
-        run_events::RunEvent, running_suite, scheduler, scheduler::Scheduler, self_diagnostics,
+        above_root_capabilities::AboveRootCapabilitiesForTest, constants::TEST_TYPE_REALM_MAP,
+        debug_data_server, error::*, facet, facet::SuiteFacets, run_events::RunEvent,
+        running_suite, scheduler, scheduler::Scheduler, self_diagnostics,
     },
     anyhow::{Context, Error},
     fidl::endpoints::ClientEnd,
@@ -155,7 +156,7 @@ impl TestRunBuilder {
         debug_controller: ftest_internal::DebugDataSetControllerProxy,
         debug_iterator: ClientEnd<ftest_manager::DebugDataIteratorMarker>,
         inspect_node: self_diagnostics::RunInspectNode,
-        _scheduling_options: Option<SchedulingOptions>,
+        scheduling_options: Option<SchedulingOptions>,
     ) {
         let (stop_sender, mut stop_recv) = oneshot::channel::<()>();
         let (event_sender, event_recv) = mpsc::channel::<RunEvent>(16);
@@ -168,15 +169,60 @@ impl TestRunBuilder {
         );
         let inspect_node_ref = &inspect_node;
 
+        let max_parallel_suites = match scheduling_options {
+            Some(options) => options.max_parallel_suites,
+            None => None,
+        };
+        let max_parallel_suites_ref = &max_parallel_suites;
+
         // Generate a random number in an attempt to prevent realm name collisions between runs.
         let run_id: u32 = rand::random();
-        let run_suites_fut = async move {
+        let suite_scheduler_fut = async move {
             inspect_node_ref.set_execution_state(self_diagnostics::RunExecutionState::Executing);
 
-            let serial_executer = scheduler::SerialScheduler {};
-            serial_executer
-                .execute(self.suites, inspect_node_ref, &mut stop_recv, run_id, &debug_controller)
-                .await;
+            let serial_executor = scheduler::SerialScheduler {};
+            let parallel_executor = scheduler::ParallelScheduler {};
+
+            match max_parallel_suites_ref {
+                Some(_max_parallel_suites) => {
+                    inspect_node_ref.set_used_parallel_scheduler(true);
+                    let get_facets_fn = |test_url, resolver| async move {
+                        facet::get_suite_facets(test_url, resolver).await
+                    };
+                    let (serial_suites, parallel_suites) =
+                        split_suites_by_hermeticity(self.suites, get_facets_fn).await;
+
+                    parallel_executor
+                        .execute(
+                            parallel_suites,
+                            inspect_node_ref,
+                            &mut stop_recv,
+                            run_id,
+                            &debug_controller,
+                        )
+                        .await;
+                    serial_executor
+                        .execute(
+                            serial_suites,
+                            inspect_node_ref,
+                            &mut stop_recv,
+                            run_id,
+                            &debug_controller,
+                        )
+                        .await;
+                }
+                None => {
+                    serial_executor
+                        .execute(
+                            self.suites,
+                            inspect_node_ref,
+                            &mut stop_recv,
+                            run_id,
+                            &debug_controller,
+                        )
+                        .await;
+                }
+            }
 
             debug_controller
                 .finish()
@@ -189,7 +235,7 @@ impl TestRunBuilder {
             inspect_node_ref.set_execution_state(self_diagnostics::RunExecutionState::Complete);
         };
 
-        let (remote, remote_handle) = futures::future::join(debug_event_fut, run_suites_fut)
+        let (remote, remote_handle) = futures::future::join(debug_event_fut, suite_scheduler_fut)
             .map(|((), ())| ())
             .remote_handle();
 
@@ -207,6 +253,9 @@ impl TestRunBuilder {
 
         if let Err(()) = controller_res {
             warn!("Controller terminated early. Last known state: {:#?}", &inspect_node);
+            inspect_node.persist();
+        } else if max_parallel_suites.is_some() {
+            warn!("This run used experimental parallel test suite execution");
             inspect_node.persist();
         }
     }
@@ -313,7 +362,7 @@ pub(crate) async fn run_single_suite(
             // Currently, all suites are passed in with unresolved facets by the
             // SerialScheduler. ParallelScheduler will pass in Resolved facets
             // once it is implemented.
-            facet::ResolveStatus::_Resolved(result) => {
+            facet::ResolveStatus::Resolved(result) => {
                 match result {
                     Ok(facets) => facets,
 
@@ -328,7 +377,7 @@ pub(crate) async fn run_single_suite(
                 }
             }
             facet::ResolveStatus::Unresolved => {
-                match facet::get_suite_facets(&test_url, &resolver).await {
+                match facet::get_suite_facets(test_url.clone(), resolver.clone()).await {
                     Ok(facets) => facets,
                     Err(error) => {
                         sender.send(Err(error.into())).await.unwrap();
@@ -396,11 +445,46 @@ pub(crate) async fn run_single_suite(
     }
 }
 
+// Separate suite into a hermetic and a non-hermetic collection
+// Note: F takes String and Arc<ResolverProxy> to circumvent the
+// borrow checker.
+async fn split_suites_by_hermeticity<F, Fut>(
+    suites: Vec<Suite>,
+    get_facets_fn: F,
+) -> (Vec<Suite>, Vec<Suite>)
+where
+    F: Fn(String, Arc<ResolverProxy>) -> Fut,
+    Fut: futures::future::Future<Output = Result<SuiteFacets, LaunchTestError>>,
+{
+    let mut serial_suites: Vec<Suite> = Vec::new();
+    let mut parallel_suites: Vec<Suite> = Vec::new();
+
+    for mut suite in suites {
+        let test_url = suite.test_url.clone();
+        let resolver = suite.resolver.clone();
+        let facet_result = get_facets_fn(test_url, resolver).await;
+        let can_run_in_parallel = match &facet_result {
+            Ok(facets) => {
+                facets.collection == TEST_TYPE_REALM_MAP["hermetic"]
+                    || facets.collection == TEST_TYPE_REALM_MAP["hermetic-tier-2"]
+            }
+            Err(_) => false,
+        };
+        suite.facets = facet::ResolveStatus::Resolved(facet_result);
+        if can_run_in_parallel {
+            parallel_suites.push(suite);
+        } else {
+            serial_suites.push(suite);
+        }
+    }
+    (serial_suites, parallel_suites)
+}
+
 #[cfg(test)]
 mod tests {
     use {
         super::*, crate::run_events::SuiteEvents, fidl::endpoints::create_proxy_and_stream,
-        self_diagnostics::RootInspectNode,
+        fidl_fuchsia_component_resolution as fresolution, self_diagnostics::RootInspectNode,
     };
 
     fn new_run_inspect_node() -> self_diagnostics::RunInspectNode {
@@ -553,6 +637,54 @@ mod tests {
         assert_eq!(events, vec![]);
         // this should end
         run_controller.await.unwrap();
+    }
+
+    async fn create_fake_suite(test_url: String) -> Suite {
+        let (_controller_proxy, controller_stream) =
+            create_proxy_and_stream::<ftest_manager::SuiteControllerMarker>()
+                .expect("create controller proxy");
+        let (resolver_proxy, _resolver_stream) =
+            create_proxy_and_stream::<fresolution::ResolverMarker>()
+                .expect("create resolver proxy");
+        let resolver_proxy = Arc::new(resolver_proxy);
+        let routing_info = Arc::new(AboveRootCapabilitiesForTest::new_empty_for_tests());
+        Suite {
+            test_url,
+            options: ftest_manager::RunOptions {
+                parallel: None,
+                arguments: None,
+                run_disabled_tests: Some(false),
+                timeout: None,
+                case_filters_to_run: None,
+                log_iterator: None,
+                ..ftest_manager::RunOptions::EMPTY
+            },
+            controller: controller_stream,
+            resolver: resolver_proxy,
+            above_root_capabilities_for_test: routing_info,
+            facets: facet::ResolveStatus::Unresolved,
+        }
+    }
+
+    #[fuchsia::test]
+    async fn split_suites_by_hermeticity_test() {
+        let hermetic_suite = create_fake_suite("hermetic_suite".to_string()).await;
+        let non_hermetic_suite = create_fake_suite("non_hermetic_suite".to_string()).await;
+        let suites = vec![hermetic_suite, non_hermetic_suite];
+
+        // call split_suites_by_hermeticity
+        let get_facets_fn = |test_url, _resolver| async move {
+            if test_url == "hermetic_suite".to_string() {
+                Ok(SuiteFacets { collection: TEST_TYPE_REALM_MAP["hermetic"] })
+            } else {
+                Ok(SuiteFacets { collection: TEST_TYPE_REALM_MAP["system"] })
+            }
+        };
+        let (serial_suites, parallel_suites) =
+            split_suites_by_hermeticity(suites, get_facets_fn).await;
+
+        assert_eq!(parallel_suites[0].test_url, "hermetic_suite".to_string());
+        assert_eq!(serial_suites[0].test_url, "non_hermetic_suite".to_string());
     }
 
     #[test]

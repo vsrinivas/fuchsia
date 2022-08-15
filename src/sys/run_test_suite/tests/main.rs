@@ -4,6 +4,7 @@
 
 use assert_matches::assert_matches;
 use diagnostics_data::Severity;
+use diagnostics_reader::{ArchiveReader, Inspect, Property};
 use fidl_fuchsia_test_manager::{LaunchError, RunBuilderMarker};
 use regex::Regex;
 use run_test_suite_lib::{output, Outcome, RunTestSuiteError, TestParams};
@@ -280,6 +281,66 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-exa
                 )
             )
     );
+}
+
+#[fixture::fixture(run_with_reporter)]
+#[fuchsia::test]
+// TODO(fxbug.dev/106819): we should add a test case similar to this one where run_test_suite does
+// not use experimental_parallel_execution. We currently don't have one because
+// it is possible for a test run to persist because its controller terminated
+// early, which may cause the test to fail depending on the implementation.
+async fn experimental_parallel_execution_integ_test(
+    reporter: TestMuxMuxReporter,
+    _output: TestOutputView,
+    _output_dir: tempfile::TempDir,
+) {
+    let reporter = output::RunReporter::new(reporter);
+    let mut run_params = new_run_params();
+    run_params.experimental_parallel_execution = Some(8);
+    let _outcome = run_test_suite_lib::run_tests_and_get_outcome(
+        fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
+                    .expect("connecting to RunBuilderProxy"),
+        vec![new_test_params(
+            "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
+        )],
+        run_params,
+        None,
+        reporter,
+        futures::future::pending(),
+    )
+    .await;
+
+    let data = ArchiveReader::new()
+        .add_selector("test_manager:root")
+        .snapshot::<Inspect>()
+        .await
+        .expect("got inspect data");
+    assert_eq!(data[0].moniker, "test_manager");
+
+    // Manually look through all of the children in the "finished"
+    // DiagnosticsHierarchy to look for a run that
+    // contains used_parallel_scheduler: true.
+    let root = data[0].payload.as_ref().unwrap();
+    let root_children = &root.children;
+
+    let finished_node = root_children
+        .iter()
+        .filter(|child| child.name == "finished")
+        .next()
+        .expect("expected finished node");
+
+    let finished_node_children = &finished_node.children;
+    for child in finished_node_children {
+        let grandchildren = &child.children;
+        for grandchild in grandchildren {
+            let properties = &grandchild.properties;
+            let expected_property = Property::Bool("used_parallel_scheduler".to_string(), true);
+            if properties.contains(&expected_property) {
+                return;
+            }
+        }
+    }
+    panic!("Did not route parallel config as expected");
 }
 
 #[fixture::fixture(run_with_reporter)]
