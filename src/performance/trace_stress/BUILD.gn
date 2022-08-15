@@ -18,7 +18,6 @@ executable("bin") {
   ]
 }
 
-fuchsia_package_with_single_component("trace_stress") {
-  manifest = "meta/trace_stress.cmx"
+fuchsia_shell_package("trace_stress") {
   deps = [ ":bin" ]
 }
