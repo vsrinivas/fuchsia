@@ -3976,7 +3976,7 @@ Default app id will always return no update.
 
 **Current value (from the default):** `"fuchsia-test:no-update"`
 
-From //src/sys/pkg/bin/omaha-client/BUILD.gn:14
+From //src/sys/pkg/bin/omaha-client/BUILD.gn:16
 
 ### openthread_config_anycast_locator_enable
 Enable anycast locator functionality
