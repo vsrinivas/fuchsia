@@ -72,4 +72,8 @@ void main() {
   });
 }
 
-class MockFuchsiaViewController extends Mock implements FuchsiaViewController {}
+// TODO(http://fxbug.dev/106858): Replace MockFuchsiaViewController implementation
+class MockFuchsiaViewController extends Mock implements FuchsiaViewController {
+  @override
+  bool get awaitingCreation => true;
+}
