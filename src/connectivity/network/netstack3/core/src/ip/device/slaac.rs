@@ -165,24 +165,19 @@ pub(super) trait SlaacStateContext<C: SlaacNonSyncContext<Self::DeviceId>>:
     IpDeviceIdContext<Ipv6> + for<'a> SlaacStateLayout<'a, C>
 {
     fn with_slaac_addrs_mut_and_configs<
-        'a,
         O,
-        F: FnOnce(SlaacAddrsMutAndConfig<'_, C, <Self as SlaacStateLayout<'a, C>>::SlaacAddrs>) -> O,
+        F: FnOnce(SlaacAddrsMutAndConfig<'_, C, <Self as SlaacStateLayout<'_, C>>::SlaacAddrs>) -> O,
     >(
-        &'a mut self,
+        &mut self,
         device_id: Self::DeviceId,
         cb: F,
-    ) -> O
-    where
-        C: 'a;
+    ) -> O;
 
-    fn with_slaac_addrs_mut<'a, F: FnOnce(&mut <Self as SlaacStateLayout<'a, C>>::SlaacAddrs)>(
-        &'a mut self,
+    fn with_slaac_addrs_mut<F: FnOnce(&mut <Self as SlaacStateLayout<'_, C>>::SlaacAddrs)>(
+        &mut self,
         device_id: Self::DeviceId,
         cb: F,
-    ) where
-        C: 'a,
-    {
+    ) {
         self.with_slaac_addrs_mut_and_configs(
             device_id,
             |SlaacAddrsMutAndConfig {
@@ -1648,17 +1643,13 @@ mod tests {
 
     impl SlaacStateContext<MockNonSyncCtx> for MockCtx {
         fn with_slaac_addrs_mut_and_configs<
-            'a,
             O,
-            F: FnOnce(SlaacAddrsMutAndConfig<'_, MockNonSyncCtx, &'a mut MockSlaacAddrs>) -> O,
+            F: FnOnce(SlaacAddrsMutAndConfig<'_, MockNonSyncCtx, &mut MockSlaacAddrs>) -> O,
         >(
-            &'a mut self,
+            &mut self,
             DummyDeviceId: DummyDeviceId,
             cb: F,
-        ) -> O
-        where
-            MockNonSyncCtx: 'a,
-        {
+        ) -> O {
             let MockSlaacContext { config, dad_transmits, retrans_timer, iid, slaac_addrs } =
                 self.get_mut();
             let mut slaac_addrs = slaac_addrs;

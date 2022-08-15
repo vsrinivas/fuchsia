@@ -181,17 +181,13 @@ impl<
     > SlaacStateContext<C> for SC
 {
     fn with_slaac_addrs_mut_and_configs<
-        'a,
         O,
-        F: FnOnce(SlaacAddrsMutAndConfig<'_, C, SlaacAddrs<'a, C, SC>>) -> O,
+        F: FnOnce(SlaacAddrsMutAndConfig<'_, C, SlaacAddrs<'_, C, SC>>) -> O,
     >(
-        &'a mut self,
+        &mut self,
         device_id: Self::DeviceId,
         cb: F,
-    ) -> O
-    where
-        C: 'a,
-    {
+    ) -> O {
         let (config, dad_transmits, retrans_timer) =
             self.with_ip_device_state(device_id, |state| {
                 let Ipv6DeviceState {
