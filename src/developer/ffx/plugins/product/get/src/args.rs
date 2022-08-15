@@ -1,0 +1,29 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+use argh::FromArgs;
+use ffx_core::ffx_command;
+use std::path::PathBuf;
+
+/// Retrieve image data.
+#[ffx_command()]
+#[derive(FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "get")]
+pub struct GetCommand {
+    /// get the data again, even if it's already present locally.
+    #[argh(switch)]
+    pub force: bool,
+
+    /// repositories will be named `NAME`. Defaults to the product bundle name.
+    #[argh(option)]
+    pub repository: Option<String>,
+
+    /// url to the product bundle to download.
+    #[argh(positional)]
+    pub product_bundle_url: String,
+
+    /// local directory to download the product bundle into.
+    #[argh(positional, default = "PathBuf::from(\"local_pb\")")]
+    pub out_dir: PathBuf,
+}
