@@ -220,6 +220,10 @@ group("difference") {
   public_deps = [ ":difference-v2_0_0" ]
 }
 
+group("dyn-clone") {
+  public_deps = [ ":dyn-clone-v1_0_5" ]
+}
+
 if (!(current_os == "fuchsia")) {
   group("easy-parallel") {
     public_deps = [ ":easy-parallel-v3_1_0" ]
@@ -8315,13 +8319,13 @@ rust_library("ring-v0_16_12") {
     "--cfg=feature=\"lazy_static\"",
   ]
 
-  group_visibility = []
-  group_visibility += [ ":ring" ]
-  group_visibility += [ ":rustls-v0_19_1" ]
-  group_visibility += [ ":sct-v0_6_0" ]
-  group_visibility += [ ":trust-dns-proto-v0_21_2" ]
-  group_visibility += [ ":tuf-v0_3_0-beta9" ]
-  group_visibility += [ ":webpki-v0_21_0" ]
+  visibility = []
+  visibility += [ ":ring" ]
+  visibility += [ ":rustls-v0_19_1" ]
+  visibility += [ ":sct-v0_6_0" ]
+  visibility += [ ":trust-dns-proto-v0_21_2" ]
+  visibility += [ ":tuf-v0_3_0-beta9" ]
+  visibility += [ ":webpki-v0_21_0" ]
 }
 
 rust_library("rust_icu_common-v2_0_2") {

@@ -1285,6 +1285,7 @@ dependencies = [
  "derive_builder",
  "derp",
  "difference",
+ "dyn-clone",
  "easy-parallel",
  "ecdsa",
  "either",

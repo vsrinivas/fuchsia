@@ -82,6 +82,7 @@ derivative = { version = "2.2.0", features = ["use_core"] }
 derive_builder = "0.11.1"
 derp = "0.0.14"
 difference = "2.0.0"
+dyn-clone = "1.0.5"
 ecdsa = { version = "0.13.4", features = ["pkcs8"] }
 elliptic-curve = { version = "0.11.12", features = [ "ecdh" ] }
 either = "1.5.0"
