@@ -5,9 +5,7 @@
 use core::ops::{Deref as _, DerefMut as _};
 
 use super::{
-    devices::{
-        self, CommonInfo, DeviceSpecificInfo, Devices, EthernetInfo, EthernetInterfaceControl,
-    },
+    devices::{self, CommonInfo, DeviceSpecificInfo, Devices, EthernetInfo, FidlWorkerInfo},
     ethernet_worker, interfaces_admin,
     util::{IntoFidl, TryFromFidlWithContext as _, TryIntoCore as _, TryIntoFidlWithContext as _},
     DeviceStatusNotifier, InterfaceControl as _, InterfaceControlRunner,
@@ -28,6 +26,7 @@ use net_types::{ethernet::Mac, SpecifiedAddr, UnicastAddr};
 use netstack3_core::{
     add_ip_addr_subnet, add_route, del_ip_addr, del_route, ip::types::AddableEntryEither, Ctx,
 };
+use std::collections::HashMap;
 
 pub(crate) struct StackFidlWorker<C> {
     ctx: C,
@@ -229,12 +228,13 @@ where
                             ),
                             name,
                             control_hook: control_sender,
+                            address_state_providers: HashMap::new(),
                         },
                         client,
                         mac: mac_addr,
                         features,
                         phy_up: online,
-                        interface_control: EthernetInterfaceControl {
+                        interface_control: FidlWorkerInfo {
                             worker: self.worker.ctx.spawn_interface_control(
                                 id,
                                 interface_control_stop_receiver,
@@ -282,7 +282,7 @@ where
                 mac: _,
                 features: _,
                 phy_up: _,
-                interface_control: EthernetInterfaceControl { worker, cancelation_sender },
+                interface_control: FidlWorkerInfo { worker, cancelation_sender },
             }) => {
                 if let Some(cancelation_sender) = cancelation_sender.take() {
                     cancelation_sender

@@ -339,14 +339,6 @@ impl TryIntoFidl<fidl_net::Subnet> for SubnetEither {
     }
 }
 
-impl TryFromFidl<fidl_net::Subnet> for SpecifiedAddr<IpAddr> {
-    type Error = AddrClassError;
-
-    fn try_from_fidl(fidl: fidl_net::Subnet) -> Result<SpecifiedAddr<IpAddr>, AddrClassError> {
-        SpecifiedAddr::new(fidl.addr.into_core()).ok_or(AddrClassError)
-    }
-}
-
 /// Provides a stateful context for operations that require state-keeping to be
 /// completed.
 ///

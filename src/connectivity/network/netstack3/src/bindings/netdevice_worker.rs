@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use std::{
+    collections::HashMap,
     convert::{TryFrom as _, TryInto as _},
     ops::DerefMut as _,
     sync::Arc,
@@ -235,6 +236,7 @@ impl DeviceHandler {
                     ),
                     name,
                     control_hook: control_hook,
+                    address_state_providers: HashMap::new(),
                 },
                 handler: PortHandler { id, port_id: port, inner: self.inner.clone() },
                 mac: mac_addr,

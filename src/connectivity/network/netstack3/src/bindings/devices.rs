@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::collections::hash_map::HashMap;
+use std::collections::HashMap;
 
 use derivative::Derivative;
 use ethernet as eth;
 use fidl_fuchsia_hardware_ethernet::Features;
 use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
-use net_types::{ethernet::Mac, UnicastAddr};
+use net_types::{ethernet::Mac, ip::IpAddr, SpecifiedAddr, UnicastAddr};
 use netstack3_core::{
     data_structures::id_map_collection::{Entry, IdMapCollection, IdMapCollectionKey},
     device::DeviceId,
@@ -170,6 +170,8 @@ pub struct CommonInfo {
     // Admin worker.
     #[derivative(Debug = "ignore")]
     pub control_hook: futures::channel::mpsc::Sender<interfaces_admin::OwnedControlHandle>,
+    pub(crate) address_state_providers:
+        HashMap<SpecifiedAddr<IpAddr>, FidlWorkerInfo<fnet_interfaces_admin::AddressRemovalReason>>,
 }
 
 /// Loopback device information.
@@ -186,14 +188,19 @@ pub struct EthernetInfo {
     pub mac: UnicastAddr<Mac>,
     pub features: Features,
     pub phy_up: bool,
-    pub interface_control: EthernetInterfaceControl,
+    pub(crate) interface_control: FidlWorkerInfo<fnet_interfaces_admin::InterfaceRemovedReason>,
 }
 
+/// Information associated with FIDL Protocol workers.
 #[derive(Debug)]
-pub struct EthernetInterfaceControl {
+pub(crate) struct FidlWorkerInfo<R> {
+    // The worker `Task`, wrapped in a `Shared` future so that it can be awaited
+    // multiple times.
     pub worker: futures::future::Shared<fuchsia_async::Task<()>>,
-    pub cancelation_sender:
-        Option<futures::channel::oneshot::Sender<fnet_interfaces_admin::InterfaceRemovedReason>>,
+    // Mechanism to cancel the worker with reason `R`. If `Some`, the worker is
+    // active (and holds the `Receiver`). Otherwise, the worker has been
+    // canceled.
+    pub cancelation_sender: Option<futures::channel::oneshot::Sender<R>>,
 }
 
 impl From<EthernetInfo> for DeviceSpecificInfo {

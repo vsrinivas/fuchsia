@@ -25,6 +25,7 @@ mod stack_fidl_worker;
 mod timers;
 mod util;
 
+use std::collections::HashMap;
 use std::convert::TryFrom as _;
 use std::future::Future;
 use std::num::NonZeroU16;
@@ -311,7 +312,14 @@ where
         match dev.info_mut() {
             DeviceSpecificInfo::Ethernet(EthernetInfo {
                 common_info:
-                    CommonInfo { admin_enabled, mtu: _, events: _, name: _, control_hook: _ },
+                    CommonInfo {
+                        admin_enabled,
+                        mtu: _,
+                        events: _,
+                        name: _,
+                        control_hook: _,
+                        address_state_providers: _,
+                    },
                 client,
                 mac: _,
                 features: _,
@@ -324,7 +332,14 @@ where
             }
             DeviceSpecificInfo::Netdevice(NetdeviceInfo {
                 common_info:
-                    CommonInfo { admin_enabled, mtu: _, events: _, name: _, control_hook: _ },
+                    CommonInfo {
+                        admin_enabled,
+                        mtu: _,
+                        events: _,
+                        name: _,
+                        control_hook: _,
+                        address_state_providers: _,
+                    },
                 handler,
                 mac: _,
                 phy_up,
@@ -542,7 +557,15 @@ fn set_interface_enabled<NonSyncCtx: NonSyncContext + AsRef<Devices> + AsMut<Dev
 
     let (dev_enabled, events) = match device.info_mut() {
         DeviceSpecificInfo::Ethernet(EthernetInfo {
-            common_info: CommonInfo { admin_enabled, mtu: _, events, name: _, control_hook: _ },
+            common_info:
+                CommonInfo {
+                    admin_enabled,
+                    mtu: _,
+                    events,
+                    name: _,
+                    control_hook: _,
+                    address_state_providers: _,
+                },
             client: _,
             mac: _,
             features: _,
@@ -550,13 +573,29 @@ fn set_interface_enabled<NonSyncCtx: NonSyncContext + AsRef<Devices> + AsMut<Dev
             interface_control: _,
         })
         | DeviceSpecificInfo::Netdevice(NetdeviceInfo {
-            common_info: CommonInfo { admin_enabled, mtu: _, events, name: _, control_hook: _ },
+            common_info:
+                CommonInfo {
+                    admin_enabled,
+                    mtu: _,
+                    events,
+                    name: _,
+                    control_hook: _,
+                    address_state_providers: _,
+                },
             handler: _,
             mac: _,
             phy_up,
         }) => (*admin_enabled && *phy_up, events),
         DeviceSpecificInfo::Loopback(LoopbackInfo {
-            common_info: CommonInfo { admin_enabled, mtu: _, events, name: _, control_hook: _ },
+            common_info:
+                CommonInfo {
+                    admin_enabled,
+                    mtu: _,
+                    events,
+                    name: _,
+                    control_hook: _,
+                    address_state_providers: _,
+                },
         }) => (*admin_enabled, events),
     };
 
@@ -779,6 +818,7 @@ impl NetstackSeed {
                             events,
                             name: LOOPBACK_NAME.to_string(),
                             control_hook: control_sender,
+                            address_state_providers: HashMap::new(),
                         },
                     })
                 })

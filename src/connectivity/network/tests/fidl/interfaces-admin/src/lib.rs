@@ -288,18 +288,19 @@ async fn add_address_errors<N: Netstack>(name: &str) {
 }
 
 #[variants_test]
-async fn add_address_removal<E: netemul::Endpoint>(name: &str) {
+async fn add_address_removal<N: Netstack, E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("new sandbox");
-    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
-    let stack = realm
-        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
-        .expect("connect to protocol");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
     let device = sandbox.create_endpoint::<E, _>(name).await.expect("create endpoint");
     let interface = device.into_interface_in_realm(&realm).await.expect("add endpoint to Netstack");
     let id = interface.id();
 
-    let did_enable = interface.control().enable().await.expect("send enable").expect("enable");
-    assert!(did_enable);
+    let expect_enable = !(E::NETEMUL_BACKING == fnetemul_network::EndpointBacking::Ethertap
+        && N::VERSION == NetstackVersion::Netstack3);
+    assert_eq!(
+        expect_enable,
+        interface.control().enable().await.expect("send enable").expect("enable")
+    );
     let () = interface.set_link_up(true).await.expect("bring device up");
 
     let debug_control = realm
@@ -349,12 +350,20 @@ async fn add_address_removal<E: netemul::Endpoint>(name: &str) {
                 .await
                 .expect("add address failed unexpectedly");
 
-        let () = stack
-            .del_ethernet_interface(id)
-            .await
-            .squash_result()
-            .expect("delete ethernet interface");
-
+        // Remove Ethernet devices with the `fuchsi.net.stack` API.
+        let (_netemul_endpoint, control_handle, _device_control_handle) = interface.into_inner();
+        if E::NETEMUL_BACKING == fnetemul_network::EndpointBacking::Ethertap {
+            let stack = realm
+                .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
+                .expect("connect to protocol");
+            let () = stack
+                .del_ethernet_interface(id)
+                .await
+                .squash_result()
+                .expect("delete ethernet interface");
+        } else {
+            std::mem::drop(control_handle);
+        }
         let fidl_fuchsia_net_interfaces_admin::AddressStateProviderEvent::OnAddressRemoved {
             error: reason,
         } = address_state_provider
@@ -433,12 +442,10 @@ async fn add_address_offline<E: netemul::Endpoint>(name: &str) {
     .expect("wait for ASSIGNED address assignment state");
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn add_address_success() {
-    let name = "interfaces_admin_add_address_success";
-
+#[variants_test]
+async fn add_address_success<N: Netstack>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("new sandbox");
-    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
 
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
@@ -546,7 +553,8 @@ async fn add_address_success() {
     }
 
     // Adding a valid address and detaching does not cause the address to be removed.
-    {
+    // TODO(https://fxbug.dev/105011): Test against NS3 once Detach is supported.
+    if N::VERSION != NetstackVersion::Netstack3 {
         let subnet = fidl_subnet!("2.2.2.2/32");
         let address_state_provider =
             interfaces::add_address_wait_assigned(&control, subnet, VALID_ADDRESS_PARAMETERS)
@@ -1469,6 +1477,22 @@ async fn control_add_remove_address<N: Netstack, E: netemul::Endpoint>(name: &st
             .expect("failed to send remove address request")
             .expect("failed to remove address");
         assert!(did_remove);
+        interfaces::wait_for_addresses(&interface_state, id, |addresses| {
+            addresses
+                .iter()
+                .all(|&fidl_fuchsia_net_interfaces_ext::Address { addr, valid_until: _ }| {
+                    addr != address
+                })
+                .then(|| ())
+        })
+        .await
+        .expect("wait for address absence");
+
+        // Add an address and drop the AddressStateProvider handle, verifying
+        // the address was removed.
+        let address_state_provider =
+            add_address(&mut address, &interface.control(), id, &interface_state).await;
+        std::mem::drop(address_state_provider);
         interfaces::wait_for_addresses(&interface_state, id, |addresses| {
             addresses
                 .iter()

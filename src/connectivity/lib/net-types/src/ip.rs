@@ -2517,6 +2517,14 @@ impl<A: IpAddrWitness> AddrSubnetEither<A> {
         })
     }
 
+    /// Gets the IP address.
+    pub fn addr(&self) -> A {
+        match self {
+            AddrSubnetEither::V4(v4) => v4.addr.into(),
+            AddrSubnetEither::V6(v6) => v6.addr.into(),
+        }
+    }
+
     /// Gets the IP address and prefix.
     #[inline]
     pub fn addr_prefix(&self) -> (A, u8) {

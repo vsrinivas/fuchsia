@@ -491,6 +491,7 @@ impl TestStack {
                     events: _,
                     name: _,
                     control_hook: _,
+                    address_state_providers: _,
                 },
                 client: _,
                 mac: _,
