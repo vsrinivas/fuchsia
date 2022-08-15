@@ -93,6 +93,7 @@ test("zbitl-unittests") {
     "array-tests.cc",
     "checking-tests.cc",
     "cpu-topology-tests.cc",
+    "debugdata-tests.cc",
     "efi-tests.cc",
     "fd-tests.cc",
     "json-tests.cc",
