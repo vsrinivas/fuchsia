@@ -66,7 +66,8 @@ class FlutterEmbedderTestIp : public ::loop_fixture::RealLoop,
   }
 
   void BuildRealmAndLaunchApp(const std::string& component_url,
-                              const std::vector<std::string>& component_args = {});
+                              const std::vector<std::string>& component_args = {},
+                              bool usePointerInjection2 = false);
 
   bool TakeScreenshotUntil(scenic::Color color,
                            fit::function<void(std::map<scenic::Color, size_t>)> callback = nullptr,
@@ -114,6 +115,8 @@ class FlutterEmbedderTestIp : public ::loop_fixture::RealLoop,
   fuchsia::ui::scenic::Scenic* scenic() { return scenic_.get(); }
 
   void SetUpRealmBase();
+
+  std::string GetPointerInjectorArgs();
 
   fuchsia::ui::scenic::ScenicPtr scenic_;
   fuchsia::ui::test::input::RegistryPtr input_registry_;

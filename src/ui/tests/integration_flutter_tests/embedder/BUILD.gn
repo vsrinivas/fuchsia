@@ -103,6 +103,7 @@ test("flutter-embedder-test-ip-bin") {
     "//sdk/fidl/fuchsia.scheduler",
     "//sdk/fidl/fuchsia.tracing.provider",
     "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.pointerinjector",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.test.input",
     "//sdk/fidl/fuchsia.ui.test.scene",

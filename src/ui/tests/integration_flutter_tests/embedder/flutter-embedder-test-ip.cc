@@ -8,6 +8,7 @@
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <fuchsia/tracing/provider/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
+#include <fuchsia/ui/pointerinjector/cpp/fidl.h>
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
@@ -29,6 +30,7 @@ static constexpr auto kParentFlutterRealm = "parent_flutter";
 static constexpr auto kParentFlutterRealmRef = ChildRef{kParentFlutterRealm};
 static constexpr auto kTestUIStack = "ui";
 static constexpr auto kTestUIStackRef = ChildRef{kTestUIStack};
+static constexpr auto kUsePointerInjection2Args = "--usePointerInjection2";
 
 bool CheckViewExistsInSnapshot(const fuchsia::ui::observation::geometry::ViewTreeSnapshot& snapshot,
                                zx_koid_t view_ref_koid) {
@@ -140,7 +142,8 @@ bool FlutterEmbedderTestIp::HasViewConnected(
 }
 
 void FlutterEmbedderTestIp::BuildRealmAndLaunchApp(const std::string& component_url,
-                                                   const std::vector<std::string>& component_args) {
+                                                   const std::vector<std::string>& component_args,
+                                                   bool usePointerInjection2) {
   FX_LOGS(INFO) << "Building realm with component: " << component_url;
   realm_builder_.AddChild(kParentFlutterRealm, kParentViewUrl);
 
@@ -148,6 +151,12 @@ void FlutterEmbedderTestIp::BuildRealmAndLaunchApp(const std::string& component_
   realm_builder_.AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
                                 .source = kTestUIStackRef,
                                 .targets = {kParentFlutterRealmRef}});
+
+  realm_builder_.AddRoute(
+      Route{.capabilities = {Protocol{fuchsia::ui::pointerinjector::Registry::Name_}},
+            .source = kTestUIStackRef,
+            .targets = {kParentFlutterRealmRef}});
+
   realm_builder_.AddRoute(
       Route{.capabilities = {Protocol{fuchsia::logger::LogSink::Name_},
                              Protocol{fuchsia::sys::Environment::Name_},
@@ -165,20 +174,35 @@ void FlutterEmbedderTestIp::BuildRealmAndLaunchApp(const std::string& component_
                                 .source = kChildFlutterRealmRef,
                                 .targets = {kParentFlutterRealmRef}});
 
-  if (!component_args.empty()) {
-    // Construct a args.csv file containing the specified comma-separated component args.
-    std::string csv;
-    for (const auto& arg : component_args) {
-      csv += arg + ',';
-    }
-    // Remove last comma.
-    csv.pop_back();
+  // Construct a args.csv file containing the specified comma-separated component args.
+  std::string csv;
+  for (const auto& arg : component_args) {
+    csv += arg + ',';
+  }
 
+  if (usePointerInjection2) {
+    csv += kUsePointerInjection2Args;
+  } else {
+    if (csv.length() > 0) {
+      // Remove last comma.
+      csv.pop_back();
+    }
+  }
+
+  if (csv.length() > 0) {
+    // Route the /config/data to the parent view.
     auto config_directory_contents = DirectoryContents();
+
     config_directory_contents.AddFile("args.csv", csv);
+
+    if (usePointerInjection2) {
+      config_directory_contents.AddFile("flutter_runner_config", GetPointerInjectorArgs());
+    }
+
     realm_builder_.RouteReadOnlyDirectory("config-data", {kParentFlutterRealmRef},
                                           std::move(config_directory_contents));
   }
+
   realm_ = std::make_unique<RealmRoot>(realm_builder_.Build());
 
   // Register fake touch screen device.
@@ -237,6 +261,16 @@ void FlutterEmbedderTestIp::TryInject(int32_t x, int32_t y) {
   InjectTap(x, y);
   async::PostDelayedTask(
       dispatcher(), [this, x, y] { TryInject(x, y); }, kTapRetryInterval);
+}
+
+std::string FlutterEmbedderTestIp::GetPointerInjectorArgs() {
+  std::ostringstream config;
+
+  config << "{"
+         << "   \"intercept_all_input\" : true"
+         << "}";
+
+  return config.str();
 }
 
 // TODO(fxb/106074): Re-enable gfx scene manager variant by adding the following
@@ -343,4 +377,24 @@ TEST_P(FlutterEmbedderTestIp, HittestEmbeddingWithOverlay) {
     EXPECT_GT(overlay_pixel_count, histogram[kChildTappedColor]);
   }));
 }
+
+TEST_P(FlutterEmbedderTestIp, ChildViewReinjectionTest) {
+  BuildRealmAndLaunchApp(kParentViewUrl, {}, true);
+
+  // Take screenshot until we see the child-view's embedded color.
+  ASSERT_TRUE(TakeScreenshotUntil(kChildBackgroundColor));
+
+  // Simulate a tap at the center of the child view.
+  TryInject(/* x = */ 0, /* y = */ 0);
+
+  // Take screenshot until we see the child-view's tapped color.
+  ASSERT_TRUE(TakeScreenshotUntil(kChildTappedColor, [](std::map<scenic::Color, size_t> histogram) {
+    // Expect parent and child background colors, with parent color > child color.
+    EXPECT_GT(histogram[kParentBackgroundColor], 0u);
+    EXPECT_EQ(histogram[kChildBackgroundColor], 0u);
+    EXPECT_GT(histogram[kChildTappedColor], 0u);
+    EXPECT_GT(histogram[kParentBackgroundColor], histogram[kChildTappedColor]);
+  }));
+}
+
 }  // namespace flutter_embedder_test_ip

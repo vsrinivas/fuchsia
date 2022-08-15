@@ -24,7 +24,8 @@ Future<void> main(List<String> args) async {
     ..addFlag('showOverlay', defaultsTo: false)
     ..addFlag('hitTestable', defaultsTo: true)
     ..addFlag('focusable', defaultsTo: true)
-    ..addFlag('useFlatland', defaultsTo: false);
+    ..addFlag('useFlatland', defaultsTo: false)
+    ..addFlag('usePointerInjection2', defaultsTo: false);
   final arguments = parser.parse(args);
   for (final option in arguments.options) {
     print('parent-view: $option: ${arguments[option]}');
@@ -36,21 +37,25 @@ Future<void> main(List<String> args) async {
     runApp(MaterialApp(
       debugShowCheckedModeBanner: false,
       home: TestApp(
-        FuchsiaViewConnection.flatland(viewportCreationToken),
+        FuchsiaViewConnection.flatland(viewportCreationToken,
+            usePointerInjection2: arguments['usePointerInjection2']),
         showOverlay: arguments['showOverlay'],
         hitTestable: arguments['hitTestable'],
         focusable: arguments['focusable'],
       ),
     ));
   } else {
-    final childViewToken = _launchGfxApp();
+    final childViewArgs = _launchGfxApp();
     runApp(MaterialApp(
       debugShowCheckedModeBanner: false,
       home: TestApp(
-        FuchsiaViewConnection(childViewToken),
+        FuchsiaViewConnection(childViewArgs[0] /*ViewHolderToken*/,
+            viewRef: childViewArgs[1] /*ViewRef*/,
+            usePointerInjection2: arguments['usePointerInjection2']),
         showOverlay: arguments['showOverlay'],
         hitTestable: arguments['hitTestable'],
         focusable: arguments['focusable'],
+        usePointerInjection2: arguments['usePointerInjection2'],
       ),
     ));
   }
@@ -64,18 +69,24 @@ class TestApp extends StatelessWidget {
   final bool showOverlay;
   final bool hitTestable;
   final bool focusable;
+  final bool usePointerInjection2;
 
   final _backgroundColor = ValueNotifier(_blue);
 
   TestApp(this.connection,
       {this.showOverlay = false,
       this.hitTestable = true,
-      this.focusable = true});
+      this.focusable = true,
+      this.usePointerInjection2 = false});
 
   @override
   Widget build(BuildContext context) {
     return Listener(
-      onPointerDown: (_) => _backgroundColor.value = _black,
+      // When testing pointer injection, a gesture recognizer here would steal
+      // input from the child platform view's gesture recognizer.  In that case,
+      // don't use any gesture recognizer here.
+      onPointerDown:
+          usePointerInjection2 ? null : (_) => _backgroundColor.value = _black,
       child: AnimatedBuilder(
           animation: _backgroundColor,
           builder: (context, snapshot) {
@@ -134,21 +145,33 @@ ViewportCreationToken _launchFlatlandApp() {
   return viewportCreationToken;
 }
 
-ViewHolderToken _launchGfxApp() {
+List _launchGfxApp() {
   ViewProviderProxy viewProvider = ViewProviderProxy();
   Incoming.fromSvcPath()
     ..connectToService(viewProvider)
     ..close();
 
   final viewTokens = EventPairPair();
+  final viewRefTokens = EventPairPair();
+
   assert(viewTokens.status == ZX.OK);
+  assert(viewRefTokens.status == ZX.OK);
+
   final viewHolderToken = ViewHolderToken(value: viewTokens.first);
   final viewToken = ViewToken(value: viewTokens.second);
 
-  viewProvider.createView(viewToken.value, null, null);
+  final viewRefClone =
+      ViewRef(reference: viewRefTokens.first.duplicate((ZX.RIGHTS_BASIC)));
+  final viewRef = ViewRef(reference: viewRefTokens.first);
+  final viewRefControl = ViewRefControl(
+      reference: viewRefTokens.second
+          .duplicate(ZX.DEFAULT_EVENTPAIR_RIGHTS & (~ZX.RIGHT_DUPLICATE)));
+
+  viewProvider.createViewWithViewRef(
+      viewToken.value, viewRefControl, viewRefClone);
   viewProvider.ctrl.close();
 
-  return viewHolderToken;
+  return [viewHolderToken, viewRef];
 }
 
 List<String> _GetArgsFromConfigFile() {

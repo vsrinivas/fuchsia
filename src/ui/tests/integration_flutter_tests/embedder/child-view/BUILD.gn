@@ -10,7 +10,10 @@ import(
 dart_library("lib") {
   package_name = "child-view"
   sources = [ "child_view.dart" ]
-  deps = [ "//third_party/dart-pkg/git/flutter/packages/flutter" ]
+  deps = [
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/pub/args",
+  ]
 }
 
 flutter_component("component") {

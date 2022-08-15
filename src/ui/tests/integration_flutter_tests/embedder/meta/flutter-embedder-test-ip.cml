@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 {
     include: [
-        "//src/lib/vulkan/vulkan-test.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
         "sys/component/realm_builder.shard.cml",
+        "sys/testing/system-test.shard.cml",
     ],
     program: {
         binary: "test/flutter-embedder-test-ip",

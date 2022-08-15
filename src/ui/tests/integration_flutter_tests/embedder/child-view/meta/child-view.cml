@@ -20,6 +20,11 @@
                 "fuchsia.vulkan.loader.Loader",
             ],
         },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
     ],
     expose: [
         {

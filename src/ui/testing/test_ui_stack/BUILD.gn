@@ -17,6 +17,7 @@ executable("bin") {
     "//sdk/fidl/fuchsia.ui.composition",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.input3",
+    "//sdk/fidl/fuchsia.ui.pointerinjector",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.shortcut",
     "//sdk/fidl/fuchsia.ui.test.input",

@@ -44,6 +44,11 @@
             from: "parent",
             to: "#parent_view",
         },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#flutter_aot_runner",
+        },
     ],
     expose: [
         {
