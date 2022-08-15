@@ -7668,7 +7668,7 @@ const (
 // Bindings for this protocol have not been generated because it is an
 // ajar protocol. If bindings for ajar protocols are
 // needed in Go, please contact the FIDL team: fidl-dev@fuchsia.dev.
-type UnknownInteractionsAjarProtocolWithCtxInterface struct{}
+type UnknownInteractionsAjarProtocolWithCtxInterface _bindings.ChannelProxy
 
 // Bindings for this protocol have not been generated because it is an
 // ajar protocol. If bindings for ajar protocols are
@@ -7963,7 +7963,7 @@ const (
 // Bindings for this protocol have not been generated because it is an
 // open protocol. If bindings for open protocols are
 // needed in Go, please contact the FIDL team: fidl-dev@fuchsia.dev.
-type UnknownInteractionsProtocolWithCtxInterface struct{}
+type UnknownInteractionsProtocolWithCtxInterface _bindings.ChannelProxy
 
 // Bindings for this protocol have not been generated because it is an
 // open protocol. If bindings for open protocols are

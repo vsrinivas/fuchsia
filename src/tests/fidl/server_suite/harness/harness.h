@@ -6,6 +6,7 @@
 #define SRC_TESTS_FIDL_SERVER_SUITE_HARNESS_HARNESS_H_
 
 #include <fidl/fidl.serversuite/cpp/fidl.h>
+#include <lib/service/llcpp/service.h>
 
 #include <gtest/gtest.h>
 
@@ -18,11 +19,15 @@
 // Defines a new server test. Relies on gtest under the hood.
 // Tests must use upper camel case names and be defined in the |Test| enum in
 // serversuite.test.fidl.
-#define SERVER_TEST(test_name)                                                           \
-  struct ServerTestWrapper##test_name : public ServerTest {                              \
-    ServerTestWrapper##test_name() : ServerTest(fidl_serversuite::Test::k##test_name) {} \
-  };                                                                                     \
+#define SERVER_TEST(test_name, target_type)                                \
+  struct ServerTestWrapper##test_name : public ServerTest {                \
+    ServerTestWrapper##test_name()                                         \
+        : ServerTest(fidl_serversuite::Test::k##test_name, target_type) {} \
+  };                                                                       \
   TEST_F(ServerTestWrapper##test_name, test_name)
+
+#define CLOSED_SERVER_TEST(test_name) \
+  SERVER_TEST(test_name, fidl_serversuite::AnyTarget::Tag::kClosedTarget)
 
 namespace server_suite {
 
@@ -33,17 +38,27 @@ class Reporter : public fidl::Server<fidl_serversuite::Reporter> {
 
   bool received_one_way_no_payload() const { return received_one_way_no_payload_; }
 
+  void ReceivedUnknownMethod(ReceivedUnknownMethodRequest& request,
+                             ReceivedUnknownMethodCompleter::Sync& completer) override;
+
+  std::optional<fidl_serversuite::UnknownMethodInfo> received_unknown_method() const {
+    return unknown_method_info_;
+  }
+
  private:
   bool received_one_way_no_payload_ = false;
+  std::optional<fidl_serversuite::UnknownMethodInfo> unknown_method_info_;
 };
 
 class ServerTest : private ::loop_fixture::RealLoop, public ::testing::Test {
  protected:
   static constexpr zx::duration kTimeoutDuration = zx::sec(5);
 
-  explicit ServerTest(fidl_serversuite::Test test) : test_(test) {}
+  explicit ServerTest(fidl_serversuite::Test test, fidl_serversuite::AnyTarget::Tag target_type)
+      : test_(test), target_type_(target_type) {}
 
   void SetUp() override;
+
   void TearDown() override;
 
   const Reporter& reporter() { return reporter_; }
@@ -56,6 +71,8 @@ class ServerTest : private ::loop_fixture::RealLoop, public ::testing::Test {
 
  private:
   fidl_serversuite::Test test_;
+
+  fidl_serversuite::AnyTarget::Tag target_type_;
 
   fidl::SyncClient<fidl_serversuite::Runner> runner_;
 

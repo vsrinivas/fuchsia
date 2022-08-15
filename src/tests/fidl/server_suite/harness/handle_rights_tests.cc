@@ -12,7 +12,7 @@ using namespace channel_util;
 namespace server_suite {
 
 // The channel should close when the wrong handle type is sent.
-SERVER_TEST(ClientSendsWrongHandleType) {
+CLOSED_SERVER_TEST(ClientSendsWrongHandleType) {
   constexpr zx_txid_t kTxid = 123u;
 
   zx::port port;
@@ -31,7 +31,7 @@ SERVER_TEST(ClientSendsWrongHandleType) {
 }
 
 // When a handle with too many rights is sent, the rights should be reduced.
-SERVER_TEST(ClientSendsTooManyRights) {
+CLOSED_SERVER_TEST(ClientSendsTooManyRights) {
   constexpr zx_txid_t kTxid = 123u;
 
   zx::event event;
@@ -69,7 +69,7 @@ SERVER_TEST(ClientSendsTooManyRights) {
 }
 
 // The channel should close when a channel with too few rights is sent.
-SERVER_TEST(ClientSendsTooFewRights) {
+CLOSED_SERVER_TEST(ClientSendsTooFewRights) {
   constexpr zx_txid_t kTxid = 123u;
 
   zx::event event;
@@ -98,7 +98,7 @@ SERVER_TEST(ClientSendsTooFewRights) {
 
 // Server bindings need to implement special cases for ZX_RIGHT_SAME_RIGHTS and ZX_OBJ_TYPE_NONE.
 // This tests that these special cases correctly pass through the existing object type and rights.
-SERVER_TEST(ClientSendsObjectOverPlainHandle) {
+CLOSED_SERVER_TEST(ClientSendsObjectOverPlainHandle) {
   constexpr zx_txid_t kTxid = 123u;
 
   zx::event event;
@@ -129,7 +129,7 @@ SERVER_TEST(ClientSendsObjectOverPlainHandle) {
 }
 
 // The channel should close when the wrong handle type is sent.
-SERVER_TEST(ServerSendsWrongHandleType) {
+CLOSED_SERVER_TEST(ServerSendsWrongHandleType) {
   constexpr zx_txid_t kTxid = 123u;
 
   zx::port port;
@@ -149,7 +149,7 @@ SERVER_TEST(ServerSendsWrongHandleType) {
 }
 
 // When a handle with too many rights is sent, the rights should be reduced.
-SERVER_TEST(ServerSendsTooManyRights) {
+CLOSED_SERVER_TEST(ServerSendsTooManyRights) {
   constexpr zx_txid_t kTxid = 123u;
 
   zx::event event;
@@ -195,7 +195,7 @@ SERVER_TEST(ServerSendsTooManyRights) {
 }
 
 // The channel should close when a channel with too few rights is sent.
-SERVER_TEST(ServerSendsTooFewRights) {
+CLOSED_SERVER_TEST(ServerSendsTooFewRights) {
   constexpr zx_txid_t kTxid = 123u;
 
   zx::event event;

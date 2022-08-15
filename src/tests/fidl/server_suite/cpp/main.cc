@@ -9,46 +9,47 @@
 
 #include <iostream>
 
-class TargetServer : public fidl::Server<fidl_serversuite::Target> {
+class ClosedTargetServer : public fidl::Server<fidl_serversuite::ClosedTarget> {
  public:
-  explicit TargetServer(fidl::ClientEnd<fidl_serversuite::Reporter> reporter)
+  explicit ClosedTargetServer(fidl::ClientEnd<fidl_serversuite::Reporter> reporter)
       : reporter_(std::move(reporter)) {}
 
   void OneWayNoPayload(OneWayNoPayloadRequest& request,
                        OneWayNoPayloadCompleter::Sync& completer) override {
-    std::cout << "Target.OneWayNoPayload()" << std::endl;
+    std::cout << "ClosedTarget.OneWayNoPayload()" << std::endl;
     auto result = reporter_->ReceivedOneWayNoPayload();
     ZX_ASSERT(result.is_ok());
   }
 
   void TwoWayNoPayload(TwoWayNoPayloadRequest& request,
                        TwoWayNoPayloadCompleter::Sync& completer) override {
-    std::cout << "Target.TwoWayNoPayload()" << std::endl;
+    std::cout << "ClosedTarget.TwoWayNoPayload()" << std::endl;
     completer.Reply();
   }
 
   void TwoWayStructPayload(TwoWayStructPayloadRequest& request,
                            TwoWayStructPayloadCompleter::Sync& completer) override {
-    std::cout << "Target.TwoWayStructPayload()" << std::endl;
+    std::cout << "ClosedTarget.TwoWayStructPayload()" << std::endl;
     completer.Reply(request.v());
   }
 
   void TwoWayTablePayload(TwoWayTablePayloadRequest& request,
                           TwoWayTablePayloadCompleter::Sync& completer) override {
-    std::cout << "Target.TwoWayTablePayload()" << std::endl;
-    fidl_serversuite::TargetTwoWayTablePayloadResponse response({.v = request.v()});
+    std::cout << "ClosedTarget.TwoWayTablePayload()" << std::endl;
+    fidl_serversuite::ClosedTargetTwoWayTablePayloadResponse response({.v = request.v()});
     completer.Reply(response);
   }
 
   void TwoWayUnionPayload(TwoWayUnionPayloadRequest& request,
                           TwoWayUnionPayloadCompleter::Sync& completer) override {
-    std::cout << "Target.TwoWayUnionPayload()" << std::endl;
+    std::cout << "ClosedTarget.TwoWayUnionPayload()" << std::endl;
     ZX_ASSERT(request.v().has_value());
-    completer.Reply(fidl_serversuite::TargetTwoWayUnionPayloadResponse::WithV(request.v().value()));
+    completer.Reply(
+        fidl_serversuite::ClosedTargetTwoWayUnionPayloadResponse::WithV(request.v().value()));
   }
 
   void TwoWayResult(TwoWayResultRequest& request, TwoWayResultCompleter::Sync& completer) override {
-    std::cout << "Target.TwoWayResult()" << std::endl;
+    std::cout << "ClosedTarget.TwoWayResult()" << std::endl;
     switch (request.Which()) {
       case TwoWayResultRequest::Tag::kPayload:
         completer.Reply(fitx::ok(request.payload().value()));
@@ -116,6 +117,47 @@ class TargetServer : public fidl::Server<fidl_serversuite::Target> {
   fidl::SyncClient<fidl_serversuite::Reporter> reporter_;
 };
 
+class AjarTargetServer : public fidl::Server<fidl_serversuite::AjarTarget> {
+ public:
+  explicit AjarTargetServer(fidl::ClientEnd<fidl_serversuite::Reporter> reporter)
+      : reporter_(std::move(reporter)) {}
+
+  void handle_unknown_method(fidl::UnknownMethodMetadata<fidl_serversuite::AjarTarget> metadata,
+                             fidl::UnknownMethodCompleter::Sync& completer) override {
+    auto result = reporter_->ReceivedUnknownMethod(fidl_serversuite::UnknownMethodInfo(
+        metadata.method_ordinal, fidl_serversuite::UnknownMethodType::kOneWay));
+    ZX_ASSERT(result.is_ok());
+  }
+
+ private:
+  fidl::SyncClient<fidl_serversuite::Reporter> reporter_;
+};
+
+class OpenTargetServer : public fidl::Server<fidl_serversuite::OpenTarget> {
+ public:
+  explicit OpenTargetServer(fidl::ClientEnd<fidl_serversuite::Reporter> reporter)
+      : reporter_(std::move(reporter)) {}
+
+  void handle_unknown_method(fidl::UnknownMethodMetadata<fidl_serversuite::OpenTarget> metadata,
+                             fidl::UnknownMethodCompleter::Sync& completer) override {
+    fidl_serversuite::wire::UnknownMethodType method_type;
+    switch (metadata.unknown_interaction_type) {
+      case fidl::UnknownInteractionType::kOneWay:
+        method_type = fidl_serversuite::wire::UnknownMethodType::kOneWay;
+        break;
+      case fidl::UnknownInteractionType::kTwoWay:
+        method_type = fidl_serversuite::wire::UnknownMethodType::kTwoWay;
+        break;
+    }
+    auto result = reporter_->ReceivedUnknownMethod(
+        fidl_serversuite::UnknownMethodInfo(metadata.method_ordinal, method_type));
+    ZX_ASSERT(result.is_ok());
+  }
+
+ private:
+  fidl::SyncClient<fidl_serversuite::Reporter> reporter_;
+};
+
 class RunnerServer : public fidl::Server<fidl_serversuite::Runner> {
  public:
   explicit RunnerServer(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
@@ -139,18 +181,53 @@ class RunnerServer : public fidl::Server<fidl_serversuite::Runner> {
   void Start(StartRequest& request, StartCompleter::Sync& completer) override {
     std::cout << "Runner.Start()" << std::endl;
 
-    auto target_server = std::make_unique<TargetServer>(std::move(request.reporter()));
-    auto endpoints = fidl::CreateEndpoints<fidl_serversuite::Target>();
-    fidl::BindServer(dispatcher_, std::move(endpoints->server), std::move(target_server),
-                     [](auto*, fidl::UnbindInfo info, auto) {
-                       if (!info.is_dispatcher_shutdown() && !info.is_user_initiated() &&
-                           !info.is_peer_closed()) {
-                         std::cout << "Target unbound with error: " << info.FormatDescription()
-                                   << std::endl;
-                       }
-                     });
+    switch (request.target().Which()) {
+      case fidl_serversuite::AnyTarget::Tag::kClosedTarget: {
+        auto target_server = std::make_unique<ClosedTargetServer>(std::move(request.reporter()));
+        fidl::BindServer(dispatcher_, std::move(request.target().closed_target().value()),
+                         std::move(target_server), [](auto*, fidl::UnbindInfo info, auto) {
+                           if (!info.is_dispatcher_shutdown() && !info.is_user_initiated() &&
+                               !info.is_peer_closed()) {
+                             std::cout
+                                 << "ClosedTarget unbound with error: " << info.FormatDescription()
+                                 << std::endl;
+                           }
+                         });
 
-    completer.Reply(std::move(endpoints->client));
+        completer.Reply();
+        break;
+      }
+      case fidl_serversuite::AnyTarget::Tag::kAjarTarget: {
+        auto target_server = std::make_unique<AjarTargetServer>(std::move(request.reporter()));
+        fidl::BindServer(dispatcher_, std::move(request.target().ajar_target().value()),
+                         std::move(target_server), [](auto*, fidl::UnbindInfo info, auto) {
+                           if (!info.is_dispatcher_shutdown() && !info.is_user_initiated() &&
+                               !info.is_peer_closed()) {
+                             std::cout
+                                 << "AjarTarget unbound with error: " << info.FormatDescription()
+                                 << std::endl;
+                           }
+                         });
+
+        completer.Reply();
+        break;
+      }
+      case fidl_serversuite::AnyTarget::Tag::kOpenTarget: {
+        auto target_server = std::make_unique<OpenTargetServer>(std::move(request.reporter()));
+        fidl::BindServer(dispatcher_, std::move(request.target().open_target().value()),
+                         std::move(target_server), [](auto*, fidl::UnbindInfo info, auto) {
+                           if (!info.is_dispatcher_shutdown() && !info.is_user_initiated() &&
+                               !info.is_peer_closed()) {
+                             std::cout
+                                 << "OpenTarget unbound with error: " << info.FormatDescription()
+                                 << std::endl;
+                           }
+                         });
+
+        completer.Reply();
+        break;
+      }
+    }
   }
 
   void CheckAlive(CheckAliveRequest& request, CheckAliveCompleter::Sync& completer) override {

@@ -20,20 +20,20 @@ namespace server_suite {
 //
 // Ordinals are redefined here even though they may be accessible via C++
 // binding definitions to ensure they are unchanged by changes in the bindings.
-static const uint64_t kOrdinalOneWayNoPayload = 5311082811961759320lu;
-static const uint64_t kOrdinalTwoWayNoPayload = 6235614372471446922lu;
-static const uint64_t kOrdinalTwoWayStructPayload = 3102081843793342568lu;
-static const uint64_t kOrdinalTwoWayTablePayload = 7227173894832335597lu;
-static const uint64_t kOrdinalTwoWayUnionPayload = 4769605746696017857lu;
-static const uint64_t kOrdinalTwoWayResult = 4276344194462732275lu;
-static const uint64_t kOrdinalGetHandleRights = 3148800032398744921lu;
-static const uint64_t kOrdinalGetSignalableEventRights = 3631219818281166758lu;
-static const uint64_t kOrdinalEchoAsTransferableSignalableEvent = 4125688742220565241lu;
-static const uint64_t kOrdinalCloseWithEpitaph = 1984795898489927722lu;
-static const uint64_t kOrdinalByteVectorSize = 8245646720506823661lu;
-static const uint64_t kOrdinalHandleVectorSize = 2764861973611717871lu;
-static const uint64_t kOrdinalCreateNByteVector = 2839580799346827533lu;
-static const uint64_t kOrdinalCreateNHandleVector = 6926497579720970001lu;
+static const uint64_t kOrdinalOneWayNoPayload = 462698674125537694lu;
+static const uint64_t kOrdinalTwoWayNoPayload = 6618634609655918175lu;
+static const uint64_t kOrdinalTwoWayStructPayload = 3546419415198665872lu;
+static const uint64_t kOrdinalTwoWayTablePayload = 7142567342575659946lu;
+static const uint64_t kOrdinalTwoWayUnionPayload = 8633460217663942074lu;
+static const uint64_t kOrdinalTwoWayResult = 806800322701855052lu;
+static const uint64_t kOrdinalGetHandleRights = 1195943399487699944lu;
+static const uint64_t kOrdinalGetSignalableEventRights = 475344252578913711lu;
+static const uint64_t kOrdinalEchoAsTransferableSignalableEvent = 6829189580925709472lu;
+static const uint64_t kOrdinalCloseWithEpitaph = 2952455201600597941lu;
+static const uint64_t kOrdinalByteVectorSize = 1174084469162245669lu;
+static const uint64_t kOrdinalHandleVectorSize = 5483915628125979959lu;
+static const uint64_t kOrdinalCreateNByteVector = 2219580753158511713lu;
+static const uint64_t kOrdinalCreateNHandleVector = 2752855654734922045lu;
 
 static const uint64_t kOrdinalEpitaph = 0xffffffffffffffffu;
 

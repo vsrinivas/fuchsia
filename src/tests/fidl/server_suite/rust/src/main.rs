@@ -4,19 +4,21 @@
 
 use {
     anyhow::{Context as _, Error},
-    fidl::endpoints::{create_endpoints, ControlHandle, ServerEnd},
+    fidl::endpoints::{ControlHandle, ServerEnd, UnknownInteractionDirection},
     fidl::{AsHandleRef, Event, Status},
     fidl_fidl_serversuite::{
-        ReporterProxy, RunnerRequest, RunnerRequestStream, TargetMarker, TargetRequest,
-        TargetTwoWayResultRequest, TargetTwoWayTablePayloadResponse,
-        TargetTwoWayUnionPayloadRequest, TargetTwoWayUnionPayloadResponse, Test,
+        AjarTargetMarker, AjarTargetRequest, AnyTarget, ClosedTargetMarker, ClosedTargetRequest,
+        ClosedTargetTwoWayResultRequest, ClosedTargetTwoWayTablePayloadResponse,
+        ClosedTargetTwoWayUnionPayloadRequest, ClosedTargetTwoWayUnionPayloadResponse,
+        OpenTargetMarker, OpenTargetRequest, ReporterProxy, RunnerRequest, RunnerRequestStream,
+        Test, UnknownMethodType,
     },
     fuchsia_component::server::ServiceFs,
     futures::prelude::*,
 };
 
-async fn run_target_server(
-    server_end: ServerEnd<TargetMarker>,
+async fn run_closed_target_server(
+    server_end: ServerEnd<ClosedTargetMarker>,
     reporter_proxy: &ReporterProxy,
 ) -> Result<(), Error> {
     server_end
@@ -24,50 +26,54 @@ async fn run_target_server(
         .map(|result| result.context("failed request"))
         .try_for_each(|request| async move {
             match request {
-                TargetRequest::OneWayNoPayload { control_handle: _ } => {
+                ClosedTargetRequest::OneWayNoPayload { control_handle: _ } => {
                     println!("OneWayNoPayload");
                     reporter_proxy
                         .received_one_way_no_payload()
                         .expect("calling received_one_way_no_payload failed");
                 }
-                TargetRequest::TwoWayNoPayload { responder } => {
+                ClosedTargetRequest::TwoWayNoPayload { responder } => {
                     println!("TwoWayNoPayload");
                     responder.send().expect("failed to send two way payload response");
                 }
-                TargetRequest::TwoWayStructPayload { v, responder } => {
+                ClosedTargetRequest::TwoWayStructPayload { v, responder } => {
                     println!("TwoWayStructPayload");
                     responder.send(v).expect("failed to send two way payload response");
                 }
-                TargetRequest::TwoWayTablePayload { payload, responder } => {
+                ClosedTargetRequest::TwoWayTablePayload { payload, responder } => {
                     println!("TwoWayTablePayload");
                     responder
-                        .send(TargetTwoWayTablePayloadResponse {
+                        .send(ClosedTargetTwoWayTablePayloadResponse {
                             v: payload.v,
-                            ..TargetTwoWayTablePayloadResponse::EMPTY
+                            ..ClosedTargetTwoWayTablePayloadResponse::EMPTY
                         })
                         .expect("failed to send two way payload response");
                 }
-                TargetRequest::TwoWayUnionPayload { payload, responder } => {
+                ClosedTargetRequest::TwoWayUnionPayload { payload, responder } => {
                     println!("TwoWayUnionPayload");
                     let v = match payload {
-                        TargetTwoWayUnionPayloadRequest::V(v) => v,
+                        ClosedTargetTwoWayUnionPayloadRequest::V(v) => v,
                         _ => {
                             panic!("unexpected union value");
                         }
                     };
                     responder
-                        .send(&mut TargetTwoWayUnionPayloadResponse::V(v))
+                        .send(&mut ClosedTargetTwoWayUnionPayloadResponse::V(v))
                         .expect("failed to send two way payload response");
                 }
-                TargetRequest::TwoWayResult { payload, responder } => {
+                ClosedTargetRequest::TwoWayResult { payload, responder } => {
                     println!("TwoWayResult");
                     match payload {
-                        TargetTwoWayResultRequest::Payload(value) => responder.send(&mut Ok(value)),
-                        TargetTwoWayResultRequest::Error(value) => responder.send(&mut Err(value)),
+                        ClosedTargetTwoWayResultRequest::Payload(value) => {
+                            responder.send(&mut Ok(value))
+                        }
+                        ClosedTargetTwoWayResultRequest::Error(value) => {
+                            responder.send(&mut Err(value))
+                        }
                     }
                     .expect("failed to send two way payload response");
                 }
-                TargetRequest::GetHandleRights { handle, responder } => {
+                ClosedTargetRequest::GetHandleRights { handle, responder } => {
                     let basic_info = handle
                         .as_handle_ref()
                         .basic_info()
@@ -76,7 +82,7 @@ async fn run_target_server(
                         .expect("bits should be valid");
                     responder.send(rights).expect("failed to send response");
                 }
-                TargetRequest::GetSignalableEventRights { handle, responder } => {
+                ClosedTargetRequest::GetSignalableEventRights { handle, responder } => {
                     let basic_info = handle
                         .as_handle_ref()
                         .basic_info()
@@ -85,28 +91,76 @@ async fn run_target_server(
                         .expect("bits should be valid");
                     responder.send(rights).expect("failed to send response");
                 }
-                TargetRequest::EchoAsTransferableSignalableEvent { handle, responder } => {
+                ClosedTargetRequest::EchoAsTransferableSignalableEvent { handle, responder } => {
                     responder.send(fidl::Event::from(handle)).expect("failed to send response");
                 }
-                TargetRequest::CloseWithEpitaph { epitaph_status, control_handle } => {
+                ClosedTargetRequest::CloseWithEpitaph { epitaph_status, control_handle } => {
                     control_handle.shutdown_with_epitaph(Status::from_raw(epitaph_status));
                 }
-                TargetRequest::ByteVectorSize { vec, responder } => {
+                ClosedTargetRequest::ByteVectorSize { vec, responder } => {
                     responder.send(vec.len().try_into().unwrap()).expect("failed to send response");
                 }
-                TargetRequest::HandleVectorSize { vec, responder } => {
+                ClosedTargetRequest::HandleVectorSize { vec, responder } => {
                     responder.send(vec.len().try_into().unwrap()).expect("failed to send response");
                 }
-                TargetRequest::CreateNByteVector { n, responder } => {
+                ClosedTargetRequest::CreateNByteVector { n, responder } => {
                     let bytes: Vec<u8> = vec![0; n.try_into().unwrap()];
                     responder.send(&bytes).expect("failed to send response");
                 }
-                TargetRequest::CreateNHandleVector { n, responder } => {
+                ClosedTargetRequest::CreateNHandleVector { n, responder } => {
                     let mut handles: Vec<fidl::Event> = Vec::new();
                     for _ in 0..n {
                         handles.push(Event::create().unwrap());
                     }
                     responder.send(&mut handles.into_iter()).expect("failed to send response");
+                }
+            }
+            Ok(())
+        })
+        .await
+}
+
+async fn run_ajar_target_server(
+    server_end: ServerEnd<AjarTargetMarker>,
+    reporter_proxy: &ReporterProxy,
+) -> Result<(), Error> {
+    server_end
+        .into_stream()?
+        .map(|result| result.context("failed request"))
+        .try_for_each(|request| async move {
+            match request {
+                AjarTargetRequest::_UnknownInteraction { ordinal, control_handle: _ } => {
+                    reporter_proxy
+                        .received_unknown_method(ordinal, UnknownMethodType::OneWay)
+                        .expect("failed to report unknown method call");
+                }
+            }
+            Ok(())
+        })
+        .await
+}
+
+async fn run_open_target_server(
+    server_end: ServerEnd<OpenTargetMarker>,
+    reporter_proxy: &ReporterProxy,
+) -> Result<(), Error> {
+    server_end
+        .into_stream()?
+        .map(|result| result.context("failed request"))
+        .try_for_each(|request| async move {
+            match request {
+                OpenTargetRequest::_UnknownInteraction {
+                    ordinal,
+                    direction,
+                    control_handle: _,
+                } => {
+                    let unknown_method_type = match direction {
+                        UnknownInteractionDirection::OneWay => UnknownMethodType::OneWay,
+                        UnknownInteractionDirection::TwoWay => UnknownMethodType::TwoWay,
+                    };
+                    reporter_proxy
+                        .received_unknown_method(ordinal, unknown_method_type)
+                        .expect("failed to report unknown method call");
                 }
             }
             Ok(())
@@ -132,14 +186,31 @@ async fn run_runner_server(stream: RunnerRequestStream) -> Result<(), Error> {
                     };
                     responder.send(enabled)?;
                 }
-                RunnerRequest::Start { reporter, responder } => {
+                RunnerRequest::Start { reporter, target, responder } => {
                     println!("Runner.Start() called");
                     let reporter_proxy: &ReporterProxy = &reporter.into_proxy()?;
-                    let (client_end, server_end) = create_endpoints::<TargetMarker>()?;
-                    responder.send(client_end).expect("sending response failed");
-                    run_target_server(server_end, reporter_proxy)
-                        .await
-                        .unwrap_or_else(|e| println!("target server failed {:?}", e));
+                    match target {
+                        AnyTarget::ClosedTarget(server_end) => {
+                            responder.send().expect("sending response failed");
+                            run_closed_target_server(server_end, reporter_proxy)
+                                .await
+                                .unwrap_or_else(|e| {
+                                    println!("closed target server failed {:?}", e)
+                                });
+                        }
+                        AnyTarget::AjarTarget(server_end) => {
+                            responder.send().expect("sending response failed");
+                            run_ajar_target_server(server_end, reporter_proxy)
+                                .await
+                                .unwrap_or_else(|e| println!("ajar target server failed {:?}", e));
+                        }
+                        AnyTarget::OpenTarget(server_end) => {
+                            responder.send().expect("sending response failed");
+                            run_open_target_server(server_end, reporter_proxy)
+                                .await
+                                .unwrap_or_else(|e| println!("open target server failed {:?}", e));
+                        }
+                    }
                 }
                 RunnerRequest::CheckAlive { responder } => {
                     responder.send().expect("sending response failed");

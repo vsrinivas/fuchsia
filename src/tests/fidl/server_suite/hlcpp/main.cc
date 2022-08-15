@@ -13,55 +13,55 @@
 
 #include <iostream>
 
-class TargetServer : public fidl::serversuite::Target {
+class ClosedTargetServer : public fidl::serversuite::ClosedTarget {
  public:
-  explicit TargetServer(fidl::InterfacePtr<fidl::serversuite::Reporter> reporter)
+  explicit ClosedTargetServer(fidl::InterfacePtr<fidl::serversuite::Reporter> reporter)
       : reporter_(std::move(reporter)) {}
 
   void OneWayNoPayload() override {
-    std::cout << "Target.OneWayNoPayload()" << std::endl;
+    std::cout << "ClosedTarget.OneWayNoPayload()" << std::endl;
     reporter_->ReceivedOneWayNoPayload();
   }
 
   void TwoWayNoPayload(TwoWayNoPayloadCallback callback) override {
-    std::cout << "Target.TwoWayNoPayload()" << std::endl;
+    std::cout << "ClosedTarget.TwoWayNoPayload()" << std::endl;
     callback();
   }
 
   void TwoWayStructPayload(int8_t v, TwoWayStructPayloadCallback callback) override {
-    std::cout << "Target.TwoWayStructPayload()" << std::endl;
+    std::cout << "ClosedTarget.TwoWayStructPayload()" << std::endl;
     callback(v);
   }
 
-  void TwoWayTablePayload(::fidl::serversuite::TargetTwoWayTablePayloadRequest request,
+  void TwoWayTablePayload(::fidl::serversuite::ClosedTargetTwoWayTablePayloadRequest request,
                           TwoWayTablePayloadCallback callback) override {
-    std::cout << "Target.TwoWayTablePayload()" << std::endl;
-    fidl::serversuite::TargetTwoWayTablePayloadResponse response;
+    std::cout << "ClosedTarget.TwoWayTablePayload()" << std::endl;
+    fidl::serversuite::ClosedTargetTwoWayTablePayloadResponse response;
     response.set_v(request.v());
     callback(std::move(response));
   }
 
-  void TwoWayUnionPayload(::fidl::serversuite::TargetTwoWayUnionPayloadRequest request,
+  void TwoWayUnionPayload(::fidl::serversuite::ClosedTargetTwoWayUnionPayloadRequest request,
                           TwoWayUnionPayloadCallback callback) override {
-    std::cout << "Target.TwoWayUnionPayload()" << std::endl;
-    fidl::serversuite::TargetTwoWayUnionPayloadResponse response;
+    std::cout << "ClosedTarget.TwoWayUnionPayload()" << std::endl;
+    fidl::serversuite::ClosedTargetTwoWayUnionPayloadResponse response;
     response.set_v(request.v());
     callback(std::move(response));
   }
 
-  void TwoWayResult(::fidl::serversuite::TargetTwoWayResultRequest request,
+  void TwoWayResult(::fidl::serversuite::ClosedTargetTwoWayResultRequest request,
                     TwoWayResultCallback callback) override {
-    std::cout << "Target.TwoWayResult()" << std::endl;
+    std::cout << "ClosedTarget.TwoWayResult()" << std::endl;
     switch (request.Which()) {
-      case fidl::serversuite::TargetTwoWayResultRequest::kPayload:
-        callback(fidl::serversuite::Target_TwoWayResult_Result::WithResponse(
-            fidl::serversuite::Target_TwoWayResult_Response(request.payload())));
+      case fidl::serversuite::ClosedTargetTwoWayResultRequest::kPayload:
+        callback(fidl::serversuite::ClosedTarget_TwoWayResult_Result::WithResponse(
+            fidl::serversuite::ClosedTarget_TwoWayResult_Response(request.payload())));
         break;
-      case fidl::serversuite::TargetTwoWayResultRequest::kError:
-        callback(
-            fidl::serversuite::Target_TwoWayResult_Result::WithErr(std::move(request.error())));
+      case fidl::serversuite::ClosedTargetTwoWayResultRequest::kError:
+        callback(fidl::serversuite::ClosedTarget_TwoWayResult_Result::WithErr(
+            std::move(request.error())));
         break;
-      case fidl::serversuite::TargetTwoWayResultRequest::Invalid:
+      case fidl::serversuite::ClosedTargetTwoWayResultRequest::Invalid:
         ZX_PANIC("unexpected invalid case");
         break;
     }
@@ -111,11 +111,11 @@ class TargetServer : public fidl::serversuite::Target {
     callback(std::move(handles));
   }
 
-  void set_binding(fidl::Binding<fidl::serversuite::Target>* binding) { binding_ = binding; }
+  void set_binding(fidl::Binding<fidl::serversuite::ClosedTarget>* binding) { binding_ = binding; }
 
  private:
   fidl::InterfacePtr<fidl::serversuite::Reporter> reporter_;
-  fidl::Binding<fidl::serversuite::Target>* binding_ = nullptr;
+  fidl::Binding<fidl::serversuite::ClosedTarget>* binding_ = nullptr;
 };
 
 class RunnerServer : public fidl::serversuite::Runner {
@@ -138,25 +138,27 @@ class RunnerServer : public fidl::serversuite::Runner {
   }
 
   void Start(fidl::InterfaceHandle<fidl::serversuite::Reporter> reporter,
-             StartCallback callback) override {
-    target_server_ = std::make_unique<TargetServer>(reporter.Bind());
-    target_binding_ =
-        std::make_unique<fidl::Binding<fidl::serversuite::Target>>(target_server_.get());
-    target_server_->set_binding(target_binding_.get());
+             fidl::serversuite::AnyTarget target, StartCallback callback) override {
+    if (target.is_closed_target()) {
+      target_server_ = std::make_unique<ClosedTargetServer>(reporter.Bind());
+      target_binding_ =
+          std::make_unique<fidl::Binding<fidl::serversuite::ClosedTarget>>(target_server_.get());
+      target_server_->set_binding(target_binding_.get());
 
-    zx::channel client_end, server_end;
-    ZX_ASSERT(ZX_OK == zx::channel::create(0, &client_end, &server_end));
-    target_binding_->Bind(fidl::InterfaceRequest<fidl::serversuite::Target>(std::move(server_end)),
-                          dispatcher_);
-    callback(fidl::InterfaceHandle<fidl::serversuite::Target>(std::move(client_end)));
+      target_binding_->Bind(std::move(target.closed_target()), dispatcher_);
+      callback();
+    } else {
+      // TODO(fxbug.dev/88366): cover the other target types.
+      ZX_PANIC("HLCPP does not support open or ajar protocols yet.");
+    }
   }
 
   void CheckAlive(CheckAliveCallback callback) override { return callback(); }
 
  private:
   async_dispatcher_t* dispatcher_;
-  std::unique_ptr<TargetServer> target_server_;
-  std::unique_ptr<fidl::Binding<fidl::serversuite::Target>> target_binding_;
+  std::unique_ptr<ClosedTargetServer> target_server_;
+  std::unique_ptr<fidl::Binding<fidl::serversuite::ClosedTarget>> target_binding_;
 };
 
 int main(int argc, const char** argv) {

@@ -10,7 +10,7 @@ using namespace channel_util;
 namespace server_suite {
 
 // The server sends epitaphs to clients.
-SERVER_TEST(ServerSendsEpitaph) {
+CLOSED_SERVER_TEST(ServerSendsEpitaph) {
   constexpr zx_status_t sent_status = 123;
 
   Bytes bytes_out = {
@@ -34,7 +34,7 @@ SERVER_TEST(ServerSendsEpitaph) {
 }
 
 // It is not permissible to send epitaphs to servers.
-SERVER_TEST(ServerReceivesEpitaphInvalid) {
+CLOSED_SERVER_TEST(ServerReceivesEpitaphInvalid) {
   Bytes bytes_out = {
       header(0, kOrdinalEpitaph, fidl::MessageDynamicFlags::kStrictMethod),
       i32(123),

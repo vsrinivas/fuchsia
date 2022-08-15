@@ -8,6 +8,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"syscall/zx"
@@ -19,58 +20,57 @@ import (
 	fidlzx "fidl/zx"
 )
 
-type targetImpl struct {
+type closedTargetImpl struct {
 	reporter serversuite.ReporterWithCtxInterface
-	channel  zx.Channel
 }
 
-var _ serversuite.TargetWithCtx = (*targetImpl)(nil)
+var _ serversuite.ClosedTargetWithCtx = (*closedTargetImpl)(nil)
 
-func (t *targetImpl) OneWayNoPayload(_ fidl.Context) error {
-	log.Println("serversuite.Target OneWayNoPayload() called")
+func (t *closedTargetImpl) OneWayNoPayload(_ fidl.Context) error {
+	log.Println("serversuite.ClosedTarget OneWayNoPayload() called")
 	t.reporter.ReceivedOneWayNoPayload(context.Background())
 	return nil
 }
 
-func (t *targetImpl) TwoWayNoPayload(_ fidl.Context) error {
-	log.Println("serversuite.Target TwoWayNoPayload() called")
+func (t *closedTargetImpl) TwoWayNoPayload(_ fidl.Context) error {
+	log.Println("serversuite.ClosedTarget TwoWayNoPayload() called")
 	return nil
 }
 
-func (t *targetImpl) TwoWayStructPayload(_ fidl.Context, v int8) (int8, error) {
-	log.Println("serversuite.Target TwoWayStructPayload() called")
+func (t *closedTargetImpl) TwoWayStructPayload(_ fidl.Context, v int8) (int8, error) {
+	log.Println("serversuite.ClosedTarget TwoWayStructPayload() called")
 	return v, nil
 }
 
-func (t *targetImpl) TwoWayTablePayload(_ fidl.Context, request serversuite.TargetTwoWayTablePayloadRequest) (serversuite.TargetTwoWayTablePayloadResponse, error) {
-	log.Println("serversuite.Target TwoWayTablePayload() called")
-	var response serversuite.TargetTwoWayTablePayloadResponse
+func (t *closedTargetImpl) TwoWayTablePayload(_ fidl.Context, request serversuite.ClosedTargetTwoWayTablePayloadRequest) (serversuite.ClosedTargetTwoWayTablePayloadResponse, error) {
+	log.Println("serversuite.ClosedTarget TwoWayTablePayload() called")
+	var response serversuite.ClosedTargetTwoWayTablePayloadResponse
 	response.SetV(request.V)
 	return response, nil
 }
 
-func (t *targetImpl) TwoWayUnionPayload(_ fidl.Context, request serversuite.TargetTwoWayUnionPayloadRequest) (serversuite.TargetTwoWayUnionPayloadResponse, error) {
-	log.Println("serversuite.Target TwoWayUnionPayload() called")
-	var response serversuite.TargetTwoWayUnionPayloadResponse
+func (t *closedTargetImpl) TwoWayUnionPayload(_ fidl.Context, request serversuite.ClosedTargetTwoWayUnionPayloadRequest) (serversuite.ClosedTargetTwoWayUnionPayloadResponse, error) {
+	log.Println("serversuite.ClosedTarget TwoWayUnionPayload() called")
+	var response serversuite.ClosedTargetTwoWayUnionPayloadResponse
 	response.SetV(request.V)
 	return response, nil
 }
 
-func (t *targetImpl) TwoWayResult(_ fidl.Context, request serversuite.TargetTwoWayResultRequest) (serversuite.TargetTwoWayResultResult, error) {
-	log.Println("serversuite.Target TwoWayResult() called")
-	var result serversuite.TargetTwoWayResultResult
+func (t *closedTargetImpl) TwoWayResult(_ fidl.Context, request serversuite.ClosedTargetTwoWayResultRequest) (serversuite.ClosedTargetTwoWayResultResult, error) {
+	log.Println("serversuite.ClosedTarget TwoWayResult() called")
+	var result serversuite.ClosedTargetTwoWayResultResult
 	switch request.Which() {
-	case serversuite.TargetTwoWayResultRequestPayload:
-		result.SetResponse(serversuite.TargetTwoWayResultResponse{
+	case serversuite.ClosedTargetTwoWayResultRequestPayload:
+		result.SetResponse(serversuite.ClosedTargetTwoWayResultResponse{
 			Payload: request.Payload,
 		})
-	case serversuite.TargetTwoWayResultRequestError:
+	case serversuite.ClosedTargetTwoWayResultRequestError:
 		result.SetErr(request.Error)
 	}
 	return result, nil
 }
 
-func (t *targetImpl) GetHandleRights(_ fidl.Context, handle zx.Handle) (fidlzx.Rights, error) {
+func (t *closedTargetImpl) GetHandleRights(_ fidl.Context, handle zx.Handle) (fidlzx.Rights, error) {
 	info, err := handle.GetInfoHandleBasic()
 	if err != nil {
 		return 0, err
@@ -78,7 +78,7 @@ func (t *targetImpl) GetHandleRights(_ fidl.Context, handle zx.Handle) (fidlzx.R
 	return fidlzx.Rights(info.Rights), nil
 }
 
-func (t *targetImpl) GetSignalableEventRights(_ fidl.Context, handle zx.Event) (fidlzx.Rights, error) {
+func (t *closedTargetImpl) GetSignalableEventRights(_ fidl.Context, handle zx.Event) (fidlzx.Rights, error) {
 	info, err := handle.Handle().GetInfoHandleBasic()
 	if err != nil {
 		return 0, err
@@ -86,27 +86,27 @@ func (t *targetImpl) GetSignalableEventRights(_ fidl.Context, handle zx.Event) (
 	return fidlzx.Rights(info.Rights), nil
 }
 
-func (t *targetImpl) EchoAsTransferableSignalableEvent(_ fidl.Context, handle zx.Handle) (zx.Event, error) {
+func (t *closedTargetImpl) EchoAsTransferableSignalableEvent(_ fidl.Context, handle zx.Handle) (zx.Event, error) {
 	return zx.Event(handle), nil
 }
 
-func (t *targetImpl) CloseWithEpitaph(_ fidl.Context, status int32) error {
+func (t *closedTargetImpl) CloseWithEpitaph(_ fidl.Context, status int32) error {
 	return &component.Epitaph{Status: zx.Status(status)}
 }
 
-func (t *targetImpl) ByteVectorSize(_ fidl.Context, v []uint8) (uint32, error) {
+func (t *closedTargetImpl) ByteVectorSize(_ fidl.Context, v []uint8) (uint32, error) {
 	return uint32(len(v)), nil
 }
 
-func (t *targetImpl) HandleVectorSize(_ fidl.Context, v []zx.Event) (uint32, error) {
+func (t *closedTargetImpl) HandleVectorSize(_ fidl.Context, v []zx.Event) (uint32, error) {
 	return uint32(len(v)), nil
 }
 
-func (t *targetImpl) CreateNByteVector(_ fidl.Context, n uint32) ([]uint8, error) {
+func (t *closedTargetImpl) CreateNByteVector(_ fidl.Context, n uint32) ([]uint8, error) {
 	return make([]uint8, n), nil
 }
 
-func (t *targetImpl) CreateNHandleVector(_ fidl.Context, n uint32) ([]zx.Event, error) {
+func (t *closedTargetImpl) CreateNHandleVector(_ fidl.Context, n uint32) ([]zx.Event, error) {
 	out := make([]zx.Event, n)
 	for i := range out {
 		var err error
@@ -142,29 +142,28 @@ func (*runnerImpl) IsTestEnabled(_ fidl.Context, test serversuite.Test) (bool, e
 
 func (*runnerImpl) Start(
 	_ fidl.Context,
-	reporter serversuite.ReporterWithCtxInterface) (serversuite.TargetWithCtxInterface, error) {
+	reporter serversuite.ReporterWithCtxInterface,
+	target serversuite.AnyTarget) error {
 
-	clientEnd, serverEnd, err := zx.NewChannel(0)
-	if err != nil {
-		return serversuite.TargetWithCtxInterface{}, err
+	if target.Which() != serversuite.AnyTargetClosedTarget {
+		return errors.New("Go only supports closed protocols")
 	}
 
 	go func() {
-		stub := serversuite.TargetWithCtxStub{
-			Impl: &targetImpl{
+		stub := serversuite.ClosedTargetWithCtxStub{
+			Impl: &closedTargetImpl{
 				reporter: reporter,
-				channel:  serverEnd,
 			},
 		}
-		component.Serve(context.Background(), &stub, serverEnd, component.ServeOptions{
+		component.Serve(context.Background(), &stub, target.ClosedTarget.Channel, component.ServeOptions{
 			OnError: func(err error) {
 				// Failures are expected as part of tests.
-				log.Printf("serversuite.Target errored: %s", err)
+				log.Printf("serversuite.ClosedTarget errored: %s", err)
 			},
 		})
 	}()
 
-	return serversuite.TargetWithCtxInterface{Channel: clientEnd}, nil
+	return nil
 }
 
 func (*runnerImpl) CheckAlive(_ fidl.Context) error { return nil }

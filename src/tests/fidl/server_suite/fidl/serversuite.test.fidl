@@ -8,57 +8,68 @@ using zx;
 
 // The Runner coordinates test activity and is shared by multiple tests.
 @discoverable
-protocol Runner {
+closed protocol Runner {
     // Check if a test with a given name is enabled before running it.
-    IsTestEnabled(struct {
+    strict IsTestEnabled(struct {
         test Test;
     }) -> (struct {
         is_enabled bool;
     });
 
     // Create a Target to run tests against.
-    Start(resource struct {
+    strict Start(resource struct {
+        // Reporter to send events to.
         reporter client_end:Reporter;
-    }) -> (resource struct {
-        target client_end:Target;
-    });
+        // Target server end to bind for this test.
+        target AnyTarget;
+    }) -> ();
 
     // A two-way function to test that the Runner is still responding.
-    CheckAlive() -> ();
+    strict CheckAlive() -> ();
 };
 
-// The Target is the server under test.
-protocol Target {
-    OneWayNoPayload();
+// Type which can hold the server end of any target type. The test case will
+// create the channel and pass it to the runner in Start.
+type AnyTarget = strict resource union {
+    1: closed_target server_end:ClosedTarget;
+    2: ajar_target server_end:AjarTarget;
+    3: open_target server_end:OpenTarget;
+};
 
-    TwoWayNoPayload() -> ();
+// The Target is the server under test. This target is used for tests which use
+// a closed protocol, or which don't care whether the protocol is open or
+// closed.
+closed protocol ClosedTarget {
+    strict OneWayNoPayload();
 
-    TwoWayStructPayload(struct {
+    strict TwoWayNoPayload() -> ();
+
+    strict TwoWayStructPayload(struct {
         v int8;
     }) -> (struct {
         v int8;
     });
 
-    TwoWayTablePayload(table {
+    strict TwoWayTablePayload(table {
         1: v int8;
     }) -> (table {
         1: v int8;
     });
 
-    TwoWayUnionPayload(union {
+    strict TwoWayUnionPayload(union {
         1: v int8;
     }) -> (union {
         1: v int8;
     });
 
-    TwoWayResult(strict union {
+    strict TwoWayResult(strict union {
         1: payload string:MAX;
         2: error uint32;
     }) -> (struct {
         payload string:MAX;
     }) error uint32;
 
-    GetHandleRights(resource struct {
+    strict GetHandleRights(resource struct {
         // Plain handle, there should be no rights or type checking.
         handle zx.handle;
     }) -> (struct {
@@ -67,7 +78,7 @@ protocol Target {
         rights zx.rights;
     });
 
-    GetSignalableEventRights(resource struct {
+    strict GetSignalableEventRights(resource struct {
         handle zx.handle:<EVENT, zx.rights.SIGNAL>;
     }) -> (struct {
         // Rights should be obtained by calling zx_object_get_info on |handle|
@@ -75,45 +86,72 @@ protocol Target {
         rights zx.rights;
     });
 
-    EchoAsTransferableSignalableEvent(resource struct {
+    strict EchoAsTransferableSignalableEvent(resource struct {
         handle zx.handle;
     }) -> (resource struct {
         // The response handle should be the same as the request handle.
         handle zx.handle:<EVENT, zx.rights.TRANSFER | zx.rights.SIGNAL>;
     });
 
-    CloseWithEpitaph(struct {
+    strict CloseWithEpitaph(struct {
         epitaph_status int32;
     });
 
-    ByteVectorSize(struct {
+    strict ByteVectorSize(struct {
         vec vector<uint8>;
     }) -> (struct {
         n uint32;
     });
 
-    HandleVectorSize(resource struct {
+    strict HandleVectorSize(resource struct {
         vec vector<zx.handle:EVENT>;
     }) -> (struct {
         n uint32;
     });
 
-    CreateNByteVector(struct {
+    strict CreateNByteVector(struct {
         n uint32;
     }) -> (struct {
         vec vector<uint8>;
     });
 
-    CreateNHandleVector(resource struct {
+    strict CreateNHandleVector(resource struct {
         n uint32;
     }) -> (resource struct {
         vec vector<zx.handle:EVENT>;
     });
 };
 
+// This is a version of Target only used for tests which care about having an
+// ajar protocol. This is mostly used for Unknown Interaction testing.
+ajar protocol AjarTarget {};
+
+// This is a version of Target only used for tests which care about having an
+// open protocol. This is mostly used for Unknown Interaction testing.
+open protocol OpenTarget {};
+
+// Identifies which type of unknown method was received in the unknown
+// interaction handler.
+type UnknownMethodType = strict enum {
+    // Unknown method was a one-way method, like "SomeMethod(...);"
+    ONE_WAY = 1;
+    // Unknown method was a two-way method, like "SomeMethod(...) -> (...);"
+    TWO_WAY = 2;
+};
+
+type UnknownMethodInfo = struct {
+    // Ordinal that was received in the interaction handler.
+    ordinal uint64;
+    // Whether the unknown method is one-way or two-way.
+    unknown_method_type UnknownMethodType;
+};
+
 // The Reporter sends results of the test to the test harness.
-protocol Reporter {
-    ReceivedOneWayNoPayload();
+closed protocol Reporter {
+    strict ReceivedOneWayNoPayload();
+
+    // Report that the unknown interaction handler ran.
+    strict ReceivedUnknownMethod(UnknownMethodInfo);
 };
 
 type Test = flexible enum : uint32 {

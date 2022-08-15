@@ -9,7 +9,7 @@ using namespace channel_util;
 
 namespace server_suite {
 
-SERVER_TEST(BadPayloadEncoding) {
+CLOSED_SERVER_TEST(BadPayloadEncoding) {
   Bytes bytes_in = {
       // clang-format off
       header(123, kOrdinalTwoWayResult, fidl::MessageDynamicFlags::kStrictMethod),

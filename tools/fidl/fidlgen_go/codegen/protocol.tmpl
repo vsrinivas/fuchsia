@@ -206,7 +206,7 @@ func (p *{{ $.EventProxyName }}) {{ .Name }}(
 // Bindings for this protocol have not been generated because it is an
 // {{ .Openness }} protocol. If bindings for {{ .Openness }} protocols are
 // needed in Go, please contact the FIDL team: fidl-dev@fuchsia.dev.
-type {{ .ProxyName }} struct {}
+type {{ .ProxyName }} _bindings.{{ .ProxyType }}
 
 // Bindings for this protocol have not been generated because it is an
 // {{ .Openness }} protocol. If bindings for {{ .Openness }} protocols are

@@ -13,7 +13,7 @@ constexpr uint32_t maxVecBytesInMsg =
     ZX_CHANNEL_MAX_MSG_BYTES - sizeof(fidl_message_header_t) - sizeof(fidl_vector_t);
 constexpr uint32_t maxVecHandlesInMsg = ZX_CHANNEL_MAX_MSG_HANDLES;
 
-SERVER_TEST(RequestMatchesByteLimit) {
+CLOSED_SERVER_TEST(RequestMatchesByteLimit) {
   constexpr zx_txid_t kTxid = 123u;
   constexpr uint32_t n = maxVecBytesInMsg;
 
@@ -34,7 +34,7 @@ SERVER_TEST(RequestMatchesByteLimit) {
   ASSERT_OK(client_end().write(bytes_out));
 }
 
-SERVER_TEST(RequestMatchesHandleLimit) {
+CLOSED_SERVER_TEST(RequestMatchesHandleLimit) {
   constexpr zx_txid_t kTxid = 123u;
   constexpr uint32_t n = maxVecHandlesInMsg;
 
@@ -66,7 +66,7 @@ SERVER_TEST(RequestMatchesHandleLimit) {
   ASSERT_OK(client_end().write(bytes_out));
 }
 
-SERVER_TEST(ResponseMatchesByteLimit) {
+CLOSED_SERVER_TEST(ResponseMatchesByteLimit) {
   constexpr zx_txid_t kTxid = 123u;
   constexpr uint32_t n = maxVecBytesInMsg;
 
@@ -87,7 +87,7 @@ SERVER_TEST(ResponseMatchesByteLimit) {
   ASSERT_OK(client_end().read_and_check(bytes_out));
 }
 
-SERVER_TEST(ResponseExceedsByteLimit) {
+CLOSED_SERVER_TEST(ResponseExceedsByteLimit) {
   constexpr zx_txid_t kTxid = 123u;
   constexpr uint32_t n = maxVecBytesInMsg + 1;
 
@@ -102,7 +102,7 @@ SERVER_TEST(ResponseExceedsByteLimit) {
   ASSERT_FALSE(client_end().is_signal_present(ZX_CHANNEL_READABLE));
 }
 
-SERVER_TEST(ResponseMatchesHandleLimit) {
+CLOSED_SERVER_TEST(ResponseMatchesHandleLimit) {
   constexpr zx_txid_t kTxid = 123u;
   constexpr uint32_t n = maxVecHandlesInMsg;
 
@@ -130,7 +130,7 @@ SERVER_TEST(ResponseMatchesHandleLimit) {
   ASSERT_OK(client_end().read_and_check(bytes_out, handle_infos_out));
 }
 
-SERVER_TEST(ResponseExceedsHandleLimit) {
+CLOSED_SERVER_TEST(ResponseExceedsHandleLimit) {
   constexpr zx_txid_t kTxid = 123u;
   constexpr uint32_t n = maxVecHandlesInMsg + 1;
 

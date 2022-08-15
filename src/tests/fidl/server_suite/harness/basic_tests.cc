@@ -10,10 +10,10 @@ using namespace channel_util;
 namespace server_suite {
 
 // Check that the test runner is set up correctly without doing anything else.
-SERVER_TEST(Setup) {}
+CLOSED_SERVER_TEST(Setup) {}
 
 // Check that a one-way call is received at Target.
-SERVER_TEST(OneWayNoPayload) {
+CLOSED_SERVER_TEST(OneWayNoPayload) {
   ASSERT_OK(client_end().write(
       header(0, kOrdinalOneWayNoPayload, fidl::MessageDynamicFlags::kStrictMethod)));
 
@@ -21,7 +21,7 @@ SERVER_TEST(OneWayNoPayload) {
 }
 
 // Check that Target replies to a two-way call.
-SERVER_TEST(TwoWayNoPayload) {
+CLOSED_SERVER_TEST(TwoWayNoPayload) {
   constexpr zx_txid_t kTxid = 123u;
 
   ASSERT_OK(client_end().write(
@@ -33,7 +33,7 @@ SERVER_TEST(TwoWayNoPayload) {
       header(kTxid, kOrdinalTwoWayNoPayload, fidl::MessageDynamicFlags::kStrictMethod)));
 }
 
-SERVER_TEST(TwoWayStructPayload) {
+CLOSED_SERVER_TEST(TwoWayStructPayload) {
   constexpr zx_txid_t kTxid = 123u;
 
   Bytes bytes = {
@@ -48,7 +48,7 @@ SERVER_TEST(TwoWayStructPayload) {
   ASSERT_OK(client_end().read_and_check(bytes));
 }
 
-SERVER_TEST(TwoWayTablePayload) {
+CLOSED_SERVER_TEST(TwoWayTablePayload) {
   constexpr zx_txid_t kTxid = 123u;
 
   Bytes bytes = {
@@ -68,7 +68,7 @@ SERVER_TEST(TwoWayTablePayload) {
   ASSERT_OK(client_end().read_and_check(bytes));
 }
 
-SERVER_TEST(TwoWayUnionPayload) {
+CLOSED_SERVER_TEST(TwoWayUnionPayload) {
   constexpr zx_txid_t kTxid = 123u;
 
   Bytes bytes = {
@@ -87,7 +87,7 @@ SERVER_TEST(TwoWayUnionPayload) {
 }
 
 // Check that Target replies to a two-way call with a result (for a method using error syntax).
-SERVER_TEST(TwoWayResultWithPayload) {
+CLOSED_SERVER_TEST(TwoWayResultWithPayload) {
   constexpr zx_txid_t kTxid = 123u;
 
   Bytes bytes_in = {
@@ -114,7 +114,7 @@ SERVER_TEST(TwoWayResultWithPayload) {
 }
 
 // Check that Target replies to a two-way call with an error (for a method using error syntax).
-SERVER_TEST(TwoWayResultWithError) {
+CLOSED_SERVER_TEST(TwoWayResultWithError) {
   constexpr zx_txid_t kTxid = 123u;
 
   Bytes bytes_in = {

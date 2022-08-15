@@ -10,7 +10,7 @@ using namespace channel_util;
 namespace server_suite {
 
 // Check that the channel is closed when a new one-way request with a non-zero txid is received.
-SERVER_TEST(OneWayWithNonZeroTxid) {
+CLOSED_SERVER_TEST(OneWayWithNonZeroTxid) {
   ASSERT_OK(client_end().write(header(56 /* txid not 0 */, kOrdinalOneWayNoPayload,
                                       fidl::MessageDynamicFlags::kStrictMethod)));
 
@@ -19,7 +19,7 @@ SERVER_TEST(OneWayWithNonZeroTxid) {
 }
 
 // Check that the channel is closed when a new two-way request with a zero txid is received.
-SERVER_TEST(TwoWayNoPayloadWithZeroTxid) {
+CLOSED_SERVER_TEST(TwoWayNoPayloadWithZeroTxid) {
   ASSERT_OK(client_end().write(
       header(0, kOrdinalTwoWayNoPayload, fidl::MessageDynamicFlags::kStrictMethod)));
 
@@ -28,7 +28,7 @@ SERVER_TEST(TwoWayNoPayloadWithZeroTxid) {
 }
 
 // Check that the server closes the channel when unknown ordinals are received.
-SERVER_TEST(UnknownOrdinalCausesClose) {
+CLOSED_SERVER_TEST(UnknownOrdinalCausesClose) {
   ASSERT_OK(client_end().write(
       header(0, /* some wrong ordinal */ 8888888lu, fidl::MessageDynamicFlags::kStrictMethod)));
 
@@ -37,7 +37,7 @@ SERVER_TEST(UnknownOrdinalCausesClose) {
 }
 
 // Check that the server closes the channel when an unknown magic number is received.
-SERVER_TEST(BadMagicNumberCausesClose) {
+CLOSED_SERVER_TEST(BadMagicNumberCausesClose) {
   ASSERT_OK(client_end().write(as_bytes(fidl_message_header_t{
       .txid = 123,
       .at_rest_flags = {FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2, 0},
@@ -51,7 +51,7 @@ SERVER_TEST(BadMagicNumberCausesClose) {
 }
 
 // Check that the server closes the channel when unknown at rest flags are received.
-SERVER_TEST(BadAtRestFlagsCausesClose) {
+CLOSED_SERVER_TEST(BadAtRestFlagsCausesClose) {
   ASSERT_OK(client_end().write(as_bytes(fidl_message_header_t{
       .txid = 123,
       .at_rest_flags = {100, 200},
@@ -65,7 +65,7 @@ SERVER_TEST(BadAtRestFlagsCausesClose) {
 }
 
 // Check that the server closes the channel when unknown dynamic flags are received.
-SERVER_TEST(BadDynamicFlagsCausesClose) {
+CLOSED_SERVER_TEST(BadDynamicFlagsCausesClose) {
   ASSERT_OK(client_end().write(as_bytes(fidl_message_header_t{
       .txid = 123,
       .at_rest_flags = {FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2, 0},
