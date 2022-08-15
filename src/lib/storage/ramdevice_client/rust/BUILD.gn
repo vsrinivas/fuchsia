@@ -4,7 +4,6 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
-import("//src/lib/isolated_devmgr/isolated_devmgr.gni")
 import("//src/storage/testing/driver_test_realm.gni")
 
 group("rust") {
@@ -38,32 +37,6 @@ storage_driver_test_realm_v2_component("ramdevice-client-test-component") {
 
 fuchsia_test_package("ramdevice-client-tests") {
   test_components = [ ":ramdevice-client-test-component" ]
-}
-
-# Test component that exposes a /dev filesystem containing ramdisk support as
-# its fuchsia.test.IsolatedDevmgr service.
-isolated_devmgr_component("ramdisk-isolated-devmgr-component") {
-  component_name = "ramdisk-isolated-devmgr"
-  args = [
-    "--sys_device=fuchsia-boot:///#driver/platform-bus.so",
-    "--svc_name=fuchsia.test.IsolatedDevmgr",
-    "--wait_for=sys/platform/00:00:2d/ramctl",
-  ]
-
-  deps = [
-    "//src/devices/block/drivers/core",
-    "//src/devices/block/drivers/ftl",
-    "//src/devices/block/drivers/gpt",
-    "//src/devices/block/drivers/mbr",
-    "//src/devices/block/drivers/ramdisk",
-    "//src/devices/bus/drivers/platform",
-    "//src/storage/fvm/driver",
-  ]
-}
-
-fuchsia_package("ramdisk-isolated-devmgr") {
-  testonly = true
-  deps = [ ":ramdisk-isolated-devmgr-component" ]
 }
 
 group("tests") {

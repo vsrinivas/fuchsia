@@ -116,7 +116,6 @@ group("core_base_packages") {
     "//src/identity/bin/account_manager:account_manager",
     "//src/identity/bin/dev_authenticator:dev_authenticator",
     "//src/intl/intl_services:pkg",
-    "//src/lib/storage/ramdevice_client/rust:ramdisk-isolated-devmgr",
     "//src/media/codec:codec_factory",
     "//src/media/codec:codec_runner_sw_aac",
     "//src/media/codec:codec_runner_sw_ffmpeg",

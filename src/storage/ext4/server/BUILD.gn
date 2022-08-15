@@ -91,10 +91,7 @@ fuchsia_component("ext4_server_integration_test_comp") {
   testonly = true
   component_name = "ext4_server_integration_test"
   manifest = "meta/ext4_server_integration_test.cml"
-  deps = [
-    ":ext4_server_integration_test",
-    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr-component",
-  ]
+  deps = [ ":ext4_server_integration_test" ]
 }
 
 resource("ext4_server_integration_test_data") {

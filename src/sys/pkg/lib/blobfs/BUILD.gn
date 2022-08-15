@@ -44,9 +44,8 @@ fuchsia_unittest_package("blobfs-lib-tests") {
   manifest = "meta/blobfs-lib-test.cml"
   deps = [
     ":blobfs_test",
-    "//sdk/lib/driver_test_realm/platform",
-    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr-component",
     "//src/storage/bin/blobfs",
+    "//src/storage/testing/driver_test_realm",
   ]
   test_specs = {
     log_settings = {

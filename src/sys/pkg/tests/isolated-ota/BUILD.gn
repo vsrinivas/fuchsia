@@ -47,9 +47,6 @@ fuchsia_test_package("isolated-ota-integration-tests") {
   deps = [
     "//src/connectivity/network/dns:component",
     "//src/connectivity/network/netstack:component",
-
-    # For ramdisk devices, needed to back blobfs (which in turn backs pkg-cache)
-    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr-component",
     "//src/storage/bin/blobfs",
     "//src/storage/testing:storage_driver_test_realm",
     "//src/sys/pkg/bin/pm:pm_bin",

@@ -12,11 +12,3 @@ group("tests") {
 group("ramdevice_client") {
   public_deps = [ "rust" ]
 }
-group("ramdisk-isolated-devmgr") {
-  testonly = true
-  public_deps = [ "rust:ramdisk-isolated-devmgr" ]
-}
-group("ramdisk-isolated-devmgr-component") {
-  testonly = true
-  public_deps = [ "rust:ramdisk-isolated-devmgr-component" ]
-}

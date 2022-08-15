@@ -69,11 +69,13 @@ rustc_test("factory_store_providers_test") {
     "//sdk/fidl/fuchsia.factory:fuchsia.factory_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//sdk/lib/device-watcher/rust",
+    "//src/devices/bus/drivers/platform",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-fs",
     "//src/lib/syslog/rust:syslog",
+    "//src/storage/testing:storage_drivers",
     "//third_party/rust_crates:anyhow",
   ]
 
@@ -134,10 +136,7 @@ resource("factory_ext4_image") {
 fuchsia_test_component("factory_store_providers_ext4_test_comp") {
   component_name = "factory_store_providers_ext4_test"
   manifest = "meta/factory_store_providers_ext4_test.cml"
-  deps = [
-    ":factory_store_providers_test",
-    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr-component",
-  ]
+  deps = [ ":factory_store_providers_test" ]
 }
 
 fuchsia_test_package("factory_store_providers_ext4_tests") {

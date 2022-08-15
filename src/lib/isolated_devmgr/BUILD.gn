@@ -70,7 +70,6 @@ executable("isolated_devmgr") {
     "//src/connectivity/wlan/testing/wlan-devmgr/*",
     "//src/lib:lib",
     "//src/lib/isolated_devmgr/*",
-    "//src/lib/storage/ramdevice_client/rust/*",
     "//vendor/*",
   ]
 

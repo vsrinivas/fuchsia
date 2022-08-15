@@ -52,7 +52,6 @@ use {
 };
 enum DevRoot {
     Provided(fs::File),
-    Isolated,
 }
 
 /// A type to help construct a [`RamdeviceClient`] from an existing VMO.
@@ -80,14 +79,6 @@ impl VmoRamdiskClientBuilder {
         self
     }
 
-    /// Use "/svc/fuchsia.test.IsolatedDevmgr" as "/dev" instead of opening "/dev" directly from
-    /// the environment. Tests using this API should ensure a service with that name exists in the
-    /// current namespace. See the module documentation for more info.
-    pub fn isolated_dev_root(mut self) -> Self {
-        self.dev_root = Some(DevRoot::Isolated);
-        self
-    }
-
     /// Create the ramdisk.
     pub fn build(self) -> Result<RamdiskClient, zx::Status> {
         let vmo_handle = self.vmo.into_raw();
@@ -97,12 +88,8 @@ impl VmoRamdiskClientBuilder {
             (Some(dev_root), Some(block_size)) => {
                 // If this statement needs to open the dev_root itself, hold onto the File to
                 // ensure dev_root_fd is valid for this block.
-                let (dev_root_fd, _dev_root) = match &dev_root {
-                    DevRoot::Provided(f) => (f.as_raw_fd(), None),
-                    DevRoot::Isolated => {
-                        let devmgr = open_isolated_devmgr()?;
-                        (devmgr.as_raw_fd(), Some(devmgr))
-                    }
+                let dev_root_fd = match &dev_root {
+                    DevRoot::Provided(f) => f.as_raw_fd(),
                 };
 
                 // Safe because ramdisk_create_at_from_vmo_with_block_size creates a duplicate fd
@@ -120,12 +107,8 @@ impl VmoRamdiskClientBuilder {
             (Some(dev_root), None) => {
                 // If this statement needs to open the dev_root itself, hold onto the File to
                 // ensure dev_root_fd is valid for this block.
-                let (dev_root_fd, _dev_root) = match &dev_root {
-                    DevRoot::Provided(f) => (f.as_raw_fd(), None),
-                    DevRoot::Isolated => {
-                        let devmgr = open_isolated_devmgr()?;
-                        (devmgr.as_raw_fd(), Some(devmgr))
-                    }
+                let dev_root_fd = match &dev_root {
+                    DevRoot::Provided(f) => f.as_raw_fd(),
                 };
                 // Safe because ramdisk_create_at_from_vmo creates a duplicate fd of the provided
                 // dev_root_fd. The returned ramdisk is valid iff the FFI method returns ZX_OK.
@@ -174,14 +157,6 @@ impl RamdiskClientBuilder {
         self
     }
 
-    /// Use "/svc/fuchsia.test.IsolatedDevmgr" as "/dev" instead of opening "/dev" directly from
-    /// the environment. Tests using this API should ensure a service with that name exists in the
-    /// current namespace. See the module documentation for more info.
-    pub fn isolated_dev_root(&mut self) -> &mut Self {
-        self.dev_root = Some(DevRoot::Isolated);
-        self
-    }
-
     /// Initialize the ramdisk with the given GUID, which can be queried from the ramdisk instance.
     pub fn guid(&mut self, guid: [u8; 16]) -> &mut Self {
         self.guid = Some(guid);
@@ -198,12 +173,8 @@ impl RamdiskClientBuilder {
             (Some(dev_root), Some(guid)) => {
                 // If this statement needs to open the dev_root itself, hold onto the File to
                 // ensure dev_root_fd is valid for this block.
-                let (dev_root_fd, _dev_root) = match &dev_root {
-                    DevRoot::Provided(f) => (f.as_raw_fd(), None),
-                    DevRoot::Isolated => {
-                        let devmgr = open_isolated_devmgr()?;
-                        (devmgr.as_raw_fd(), Some(devmgr))
-                    }
+                let dev_root_fd = match &dev_root {
+                    DevRoot::Provided(f) => f.as_raw_fd(),
                 };
 
                 // Safe because ramdisk_create_at creates a duplicate fd of the provided dev_root_fd.
@@ -222,12 +193,8 @@ impl RamdiskClientBuilder {
             (Some(dev_root), None) => {
                 // If this statement needs to open the dev_root itself, hold onto the File to
                 // ensure dev_root_fd is valid for this block.
-                let (dev_root_fd, _dev_root) = match &dev_root {
-                    DevRoot::Provided(f) => (f.as_raw_fd(), None),
-                    DevRoot::Isolated => {
-                        let devmgr = open_isolated_devmgr()?;
-                        (devmgr.as_raw_fd(), Some(devmgr))
-                    }
+                let dev_root_fd = match &dev_root {
+                    DevRoot::Provided(f) => f.as_raw_fd(),
                 };
                 // Safe because ramdisk_create_at creates a duplicate fd of the provided dev_root_fd.
                 // The returned ramdisk is valid iff the FFI method returns ZX_OK.
@@ -334,13 +301,6 @@ impl Drop for RamdiskClient {
     fn drop(&mut self) {
         let _ = unsafe { ramdevice_sys::ramdisk_destroy(self.ramdisk) };
     }
-}
-
-fn open_isolated_devmgr() -> Result<fs::File, zx::Status> {
-    let (client_chan, server_chan) = zx::Channel::create()?;
-    fdio::service_connect("/svc/fuchsia.test.IsolatedDevmgr", server_chan)?;
-
-    Ok(fdio::create_fd(client_chan.into())?)
 }
 
 /// Wait for no longer than |duration| for the device at |path| to appear.

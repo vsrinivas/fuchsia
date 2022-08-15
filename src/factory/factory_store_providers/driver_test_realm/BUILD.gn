@@ -38,5 +38,7 @@ fuchsia_component("component") {
   deps = [
     ":bin",
     "//sdk/lib/driver_test_realm",
+    "//src/devices/bus/drivers/platform",
+    "//src/storage/testing:storage_drivers",
   ]
 }
