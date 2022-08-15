@@ -378,3 +378,5 @@ toc:
     path: /docs/contribute/governance/rfcs/0180_test_ui_stack.md
   - title: "RFC-0181: Lockless Discardable VMO"
     path: /docs/contribute/governance/rfcs/0181_lockless_discardable_vmo.md
+  - title: "RFC-NNNN: Deprecate config-data"
+    path: /docs/contribute/governance/rfcs/0182_deprecate_config-data.md

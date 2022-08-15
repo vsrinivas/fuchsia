@@ -2366,3 +2366,16 @@
   reviewers: ['eieio@google.com', 'cpu@google.com', 'davemoore@google.com', 'nathanrogers@google.com', 'rashaeqbal@google.com']
   consulted: []
   reviewed: '2022-08-03'
+
+- name: 'RFC-0182'
+  title: 'Deprecate config-data'
+  short_description: 'Intent to deprecate the legacy mechanism to provide/consume configuration files between components across repositories'
+  authors: ['shayba@google.com']
+  file: '0182_deprecate_config-data.md'
+  area: ['Component Framework']
+  issue: ['101976']
+  gerrit_change_id: ['696482']
+  status: 'Accepted'
+  reviewers: ['aaronwood@google.com', 'adamperry@google.com', 'ampearce@google.com', 'awolter@google.com', 'ddorwin@google.com', 'fmil@google.com', 'geb@google.com', 'jsankey@google.com', 'kpozin@google.com', 'wez@google.com', 'yaar@google.com', 'ypomortsev@google.com']
+  submitted: '2022-08-15'
+  reviewed: '2022-08-15'
