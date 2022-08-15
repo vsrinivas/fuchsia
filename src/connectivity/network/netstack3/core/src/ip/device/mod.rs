@@ -1009,6 +1009,26 @@ pub(crate) fn del_ipv4_addr<
     })
 }
 
+fn del_ipv6_addr<
+    C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>,
+    SC: Ipv6DeviceContext<C> + GmpHandler<Ipv6, C> + DadHandler<C>,
+>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    device_id: SC::DeviceId,
+    addr: &SpecifiedAddr<Ipv6Addr>,
+) -> Result<Ipv6AddressEntry<C::Instant>, NotFoundError> {
+    let entry =
+        sync_ctx.with_ip_device_state_mut(device_id, |state| state.ip_state.remove_addr(&addr))?;
+    let addr = entry.addr_sub.addr();
+    DadHandler::stop_duplicate_address_detection(sync_ctx, ctx, device_id, addr);
+    leave_ip_multicast(sync_ctx, ctx, device_id, addr.to_solicited_node_address());
+
+    ctx.on_event(IpDeviceEvent::AddressRemoved { device: device_id, addr: *addr });
+
+    Ok(entry)
+}
+
 /// Removes an IPv6 address and associated subnet from this device.
 pub(crate) fn del_ipv6_addr_with_reason<
     C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>,
@@ -1020,22 +1040,14 @@ pub(crate) fn del_ipv6_addr_with_reason<
     addr: &SpecifiedAddr<Ipv6Addr>,
     reason: DelIpv6AddrReason,
 ) -> Result<(), NotFoundError> {
-    let Ipv6AddressEntry { addr_sub, state: _, config, deprecated: _ } =
-        sync_ctx.with_ip_device_state_mut(device_id, |state| state.ip_state.remove_addr(&addr))?;
-    let addr = addr_sub.addr();
-    DadHandler::stop_duplicate_address_detection(sync_ctx, ctx, device_id, addr);
-    leave_ip_multicast(sync_ctx, ctx, device_id, addr.to_solicited_node_address());
-
-    match config {
-        AddrConfig::Slaac(s) => {
-            SlaacHandler::on_address_removed(sync_ctx, ctx, device_id, addr_sub, s, reason)
-        }
-        AddrConfig::Manual => {}
-    }
-
-    ctx.on_event(IpDeviceEvent::AddressRemoved { device: device_id, addr: *addr_sub.addr() });
-
-    Ok(())
+    del_ipv6_addr(sync_ctx, ctx, device_id, addr).map(
+        |Ipv6AddressEntry { addr_sub, state: _, config, deprecated: _ }| match config {
+            AddrConfig::Slaac(s) => {
+                SlaacHandler::on_address_removed(sync_ctx, ctx, device_id, addr_sub, s, reason)
+            }
+            AddrConfig::Manual => {}
+        },
+    )
 }
 
 /// Sends an IP packet through the device.

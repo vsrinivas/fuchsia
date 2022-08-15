@@ -25,8 +25,8 @@ use crate::{
         device::{
             self, add_ipv6_addr_subnet,
             dad::{DadHandler, Ipv6DeviceDadContext, Ipv6LayerDadContext},
-            del_ipv6_addr_with_reason, get_ipv4_addr_subnet, get_ipv6_hop_limit,
-            is_ip_device_enabled, is_ip_routing_enabled,
+            del_ipv6_addr, get_ipv4_addr_subnet, get_ipv6_hop_limit, is_ip_device_enabled,
+            is_ip_routing_enabled,
             route_discovery::{Ipv6RouteDiscoveryState, Ipv6RouteDiscoveryStateContext},
             router_solicitation::{Ipv6DeviceRsContext, Ipv6LayerRsContext},
             send_ip_frame,
@@ -35,9 +35,9 @@ use crate::{
                 SlaacStateContext, SlaacStateLayout,
             },
             state::{
-                AddrConfig, AddressState, DelIpv6AddrReason, IpDeviceConfiguration,
-                Ipv4DeviceConfiguration, Ipv4DeviceState, Ipv6AddressEntry,
-                Ipv6DeviceConfiguration, Ipv6DeviceState, SlaacConfig,
+                AddrConfig, AddressState, IpDeviceConfiguration, Ipv4DeviceConfiguration,
+                Ipv4DeviceState, Ipv6AddressEntry, Ipv6DeviceConfiguration, Ipv6DeviceState,
+                SlaacConfig,
             },
             IpDeviceIpExt, IpDeviceNonSyncContext,
         },
@@ -86,7 +86,7 @@ fn with_iter_slaac_addrs_mut<
 impl<
         'a,
         C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>,
-        SC: device::Ipv6DeviceContext<C> + GmpHandler<Ipv6, C> + DadHandler<C> + 'static,
+        SC: device::Ipv6DeviceContext<C> + GmpHandler<Ipv6, C> + DadHandler<C>,
     > SlaacAddresses<C> for SlaacAddrs<'a, C, SC>
 {
     fn with_addrs_mut<
@@ -154,14 +154,24 @@ impl<
         &mut self,
         ctx: &mut C,
         addr: &UnicastAddr<Ipv6Addr>,
-    ) -> Result<(), NotFoundError> {
+    ) -> Result<(AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>, SlaacConfig<C::Instant>), NotFoundError>
+    {
         let SlaacAddrs { sync_ctx, device_id, _marker } = self;
-        del_ipv6_addr_with_reason(
-            *sync_ctx,
-            ctx,
-            *device_id,
-            &addr.into_specified(),
-            DelIpv6AddrReason::ManualAction,
+        del_ipv6_addr(*sync_ctx, ctx, *device_id, &addr.into_specified()).map(
+            |Ipv6AddressEntry { addr_sub, state: _, config, deprecated: _ }| {
+                assert_eq!(&addr_sub.addr(), addr);
+                match config {
+                    AddrConfig::Slaac(s) => (addr_sub, s),
+                    AddrConfig::Manual => {
+                        unreachable!(
+                        "address {} on device {} should have been a SLAAC address; config = {:?}",
+                        addr_sub,
+                        *device_id,
+                        config
+                    );
+                    }
+                }
+            },
         )
     }
 }
@@ -169,7 +179,7 @@ impl<
 impl<
         'a,
         C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>,
-        SC: device::Ipv6DeviceContext<C> + GmpHandler<Ipv6, C> + DadHandler<C> + 'static,
+        SC: device::Ipv6DeviceContext<C> + GmpHandler<Ipv6, C> + DadHandler<C> + 'a,
     > SlaacStateLayout<'a, C> for SC
 {
     type SlaacAddrs = SlaacAddrs<'a, C, SC>;
@@ -177,7 +187,10 @@ impl<
 
 impl<
         C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>,
-        SC: device::Ipv6DeviceContext<C> + GmpHandler<Ipv6, C> + DadHandler<C> + 'static,
+        SC: device::Ipv6DeviceContext<C>
+            + GmpHandler<Ipv6, C>
+            + DadHandler<C>
+            + for<'a> SlaacStateLayout<'a, C, SlaacAddrs = SlaacAddrs<'a, C, SC>>,
     > SlaacStateContext<C> for SC
 {
     fn with_slaac_addrs_mut_and_configs<

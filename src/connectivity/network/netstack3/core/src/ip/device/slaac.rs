@@ -144,7 +144,7 @@ pub(super) trait SlaacAddresses<C: InstantContext> {
         &mut self,
         ctx: &mut C,
         addr: &UnicastAddr<Ipv6Addr>,
-    ) -> Result<(), NotFoundError>;
+    ) -> Result<(AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>, SlaacConfig<C::Instant>), NotFoundError>;
 }
 
 pub(super) trait SlaacStateLayout<'a, C: InstantContext> {
@@ -173,11 +173,14 @@ pub(super) trait SlaacStateContext<C: SlaacNonSyncContext<Self::DeviceId>>:
         cb: F,
     ) -> O;
 
-    fn with_slaac_addrs_mut<F: FnOnce(&mut <Self as SlaacStateLayout<'_, C>>::SlaacAddrs)>(
+    fn with_slaac_addrs_mut<
+        O,
+        F: FnOnce(&mut <Self as SlaacStateLayout<'_, C>>::SlaacAddrs) -> O,
+    >(
         &mut self,
         device_id: Self::DeviceId,
         cb: F,
-    ) {
+    ) -> O {
         self.with_slaac_addrs_mut_and_configs(
             device_id,
             |SlaacAddrsMutAndConfig {
@@ -791,9 +794,12 @@ impl<C: SlaacNonSyncContext<SC::DeviceId>, SC: SlaacContext<C>> SlaacHandler<C> 
             slaac_addrs
                 .with_addrs(|addrs| addrs.map(|a| a.addr_sub.addr()).collect::<Vec<_>>())
                 .into_iter()
-                .for_each(|addr| {
-                    slaac_addrs.remove_addr(ctx, &addr).expect("remove existing address")
-                })
+                .map(|addr| slaac_addrs.remove_addr(ctx, &addr).expect("remove existing address"))
+                .collect::<Vec<_>>()
+        })
+        .into_iter()
+        .for_each(|(addr, config)| {
+            self.on_address_removed(ctx, device_id, addr, config, DelIpv6AddrReason::ManualAction)
         })
     }
 }
@@ -819,9 +825,16 @@ impl<C: SlaacNonSyncContext<SC::DeviceId>, SC: SlaacContext<C>>
                 })
             }
             InnerSlaacTimerId::InvalidateSlaacAddress { addr } => {
-                self.with_slaac_addrs_mut(device_id, |slaac_addrs| {
+                let (addr, config) = self.with_slaac_addrs_mut(device_id, |slaac_addrs| {
                     slaac_addrs.remove_addr(ctx, &addr).expect("remove invalidated address")
-                })
+                });
+                self.on_address_removed(
+                    ctx,
+                    device_id,
+                    addr,
+                    config,
+                    DelIpv6AddrReason::ManualAction,
+                );
             }
             InnerSlaacTimerId::RegenerateTemporaryAddress { addr_subnet } => {
                 regenerate_temporary_slaac_addr(self, ctx, device_id, &addr_subnet);
@@ -1623,7 +1636,10 @@ mod tests {
             &mut self,
             _ctx: &mut MockNonSyncCtx,
             addr: &UnicastAddr<Ipv6Addr>,
-        ) -> Result<(), NotFoundError> {
+        ) -> Result<
+            (AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>, SlaacConfig<DummyInstant>),
+            NotFoundError,
+        > {
             let MockSlaacAddrs { slaac_addrs, non_slaac_addr: _ } = self;
 
             slaac_addrs
@@ -1632,7 +1648,9 @@ mod tests {
                 .find_map(|(i, a)| (&a.addr_sub.addr() == addr).then(|| i))
                 .ok_or(NotFoundError)
                 .map(|i| {
-                    let _: SlaacAddressEntry<_> = slaac_addrs.remove(i);
+                    let SlaacAddressEntry { addr_sub, config, deprecated: _ } =
+                        slaac_addrs.remove(i);
+                    (addr_sub, config)
                 })
         }
     }
