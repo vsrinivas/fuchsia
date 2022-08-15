@@ -21,7 +21,8 @@ void copy_loop() {
 
 void set_loop() {
   for (uint64_t iter = 0; iter < iterations; iter++) {
-    memset(b, 0, buffer_size);
+    // Set to a non-zero value to avoid interacting with zero page de-duplication.
+    memset(b, 2, buffer_size);
   }
 }
 
