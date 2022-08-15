@@ -11,9 +11,17 @@ use std::path::PathBuf;
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "verify")]
 pub struct VerifyCommand {
-    /// local directory containing the product bundle.
-    #[argh(positional)]
-    pub product_bundle: PathBuf,
+    /// local path to the product_bundle.json file.
+    #[argh(option)]
+    pub product_bundle: Option<PathBuf>,
+
+    /// local path to the virtual_device.json file.
+    #[argh(option)]
+    pub virtual_device: Option<PathBuf>,
+
+    /// local path to the physical_device.json file.
+    #[argh(option)]
+    pub physical_device: Option<PathBuf>,
 
     /// optional verified file to write after successfully verifying,
     /// so that build systems have an output to watch.

@@ -10,19 +10,34 @@
 use anyhow::{bail, Context, Result};
 use ffx_core::ffx_plugin;
 use ffx_product_verify_args::VerifyCommand;
-use sdk_metadata::{ElementType, Envelope, ProductBundleV1};
+use sdk_metadata::{ElementType, Envelope, PhysicalDeviceV1, ProductBundleV1, VirtualDeviceV1};
 use std::fs::{self, File};
 
 /// Verify that the product bundle has the correct format and is ready for use.
 #[ffx_plugin("product.experimental")]
 fn pb_verify(cmd: VerifyCommand) -> Result<()> {
-    let file = File::open(&cmd.product_bundle).context("opening product bundle")?;
-    let envelope: Envelope<ProductBundleV1> =
-        serde_json::from_reader(file).context("parsing product bundle")?;
+    if let Some(product_bundle) = &cmd.product_bundle {
+        let file = File::open(product_bundle).context("opening product bundle")?;
+        let envelope: Envelope<ProductBundleV1> =
+            serde_json::from_reader(file).context("parsing product bundle")?;
+        pb_verify_product_bundle(envelope.data)?;
+    }
+    if let Some(virtual_device) = &cmd.virtual_device {
+        let file = File::open(virtual_device).context("opening virtual device")?;
+        let _: Envelope<VirtualDeviceV1> =
+            serde_json::from_reader(file).context("parsing virtual device")?;
+        // If serde can deserialize the virtual device, then it is valid.
+    }
+    if let Some(physical_device) = &cmd.physical_device {
+        let file = File::open(physical_device).context("opening physical device")?;
+        let _: Envelope<PhysicalDeviceV1> =
+            serde_json::from_reader(file).context("parsing physical_device")?;
+        // If serde can deserialize the physical device, then it is valid.
+    }
     if let Some(verified_path) = &cmd.verified_file {
         fs::write(verified_path, "verified").context("writing verified file")?;
     }
-    pb_verify_product_bundle(envelope.data)
+    Ok(())
 }
 
 fn pb_verify_product_bundle(product_bundle: ProductBundleV1) -> Result<()> {
