@@ -5,6 +5,8 @@
 //! Socket features exposed by netstack3.
 
 pub(crate) mod datagram;
+pub(crate) mod packet;
+pub(crate) mod raw;
 pub(crate) mod stream;
 
 use std::convert::Infallible as Never;

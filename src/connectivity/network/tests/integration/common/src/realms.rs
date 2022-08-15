@@ -58,33 +58,34 @@ impl NetstackVersion {
 
     /// Gets the services exposed by this Netstack component.
     pub fn get_services(&self) -> &[&'static str] {
-        match self {
-            NetstackVersion::Netstack2
-            | NetstackVersion::ProdNetstack2
-            | NetstackVersion::Netstack2WithFastUdp => &[
+        macro_rules! common_services_and {
+            ($($name:expr),*) => {[
+                fnet_debug::InterfacesMarker::PROTOCOL_NAME,
                 fnet_filter::FilterMarker::PROTOCOL_NAME,
                 fnet_interfaces_admin::InstallerMarker::PROTOCOL_NAME,
                 fnet_interfaces::StateMarker::PROTOCOL_NAME,
-                fnet_debug::InterfacesMarker::PROTOCOL_NAME,
+                fnet_stack::StackMarker::PROTOCOL_NAME,
+                fposix_socket_packet::ProviderMarker::PROTOCOL_NAME,
+                fposix_socket_raw::ProviderMarker::PROTOCOL_NAME,
+                fposix_socket::ProviderMarker::PROTOCOL_NAME,
+                $($name),*
+            ]};
+            // Strip trailing comma.
+            ($($name:expr),*,) => {common_services_and!($($name),*)}
+        }
+        match self {
+            NetstackVersion::Netstack2
+            | NetstackVersion::ProdNetstack2
+            | NetstackVersion::Netstack2WithFastUdp => &common_services_and!(
                 fnet_multicast_admin::Ipv4RoutingTableControllerMarker::PROTOCOL_NAME,
                 fnet_multicast_admin::Ipv6RoutingTableControllerMarker::PROTOCOL_NAME,
                 fnet_neighbor::ControllerMarker::PROTOCOL_NAME,
                 fnet_neighbor::ViewMarker::PROTOCOL_NAME,
                 fnet_routes::StateMarker::PROTOCOL_NAME,
                 fnet_stack::LogMarker::PROTOCOL_NAME,
-                fnet_stack::StackMarker::PROTOCOL_NAME,
                 fnetstack::NetstackMarker::PROTOCOL_NAME,
-                fposix_socket::ProviderMarker::PROTOCOL_NAME,
-                fposix_socket_packet::ProviderMarker::PROTOCOL_NAME,
-                fposix_socket_raw::ProviderMarker::PROTOCOL_NAME,
-            ],
-            NetstackVersion::Netstack3 => &[
-                fnet_interfaces::StateMarker::PROTOCOL_NAME,
-                fnet_interfaces_admin::InstallerMarker::PROTOCOL_NAME,
-                fnet_stack::StackMarker::PROTOCOL_NAME,
-                fposix_socket::ProviderMarker::PROTOCOL_NAME,
-                fnet_debug::InterfacesMarker::PROTOCOL_NAME,
-            ],
+            ),
+            NetstackVersion::Netstack3 => &common_services_and!(),
         }
     }
 }

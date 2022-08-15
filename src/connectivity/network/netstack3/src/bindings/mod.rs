@@ -738,6 +738,8 @@ impl InterfaceControlRunner for Netstack {
 enum Service {
     Stack(fidl_fuchsia_net_stack::StackRequestStream),
     Socket(fidl_fuchsia_posix_socket::ProviderRequestStream),
+    PacketSocket(fidl_fuchsia_posix_socket_packet::ProviderRequestStream),
+    RawSocket(fidl_fuchsia_posix_socket_raw::ProviderRequestStream),
     Interfaces(fidl_fuchsia_net_interfaces::StateRequestStream),
     InterfacesAdmin(fidl_fuchsia_net_interfaces_admin::InstallerRequestStream),
     Debug(fidl_fuchsia_net_debug::InterfacesRequestStream),
@@ -883,6 +885,8 @@ impl NetstackSeed {
             .add_fidl_service(Service::Debug)
             .add_fidl_service(Service::Stack)
             .add_fidl_service(Service::Socket)
+            .add_fidl_service(Service::PacketSocket)
+            .add_fidl_service(Service::RawSocket)
             .add_fidl_service(Service::Interfaces)
             .add_fidl_service(Service::InterfacesAdmin)
             .add_fidl_service(Service::Filter);
@@ -908,6 +912,12 @@ impl NetstackSeed {
                 }
                 WorkItem::Incoming(Service::Socket(socket)) => {
                     socket.serve_with(|rs| socket::serve(netstack.clone(), rs)).await
+                }
+                WorkItem::Incoming(Service::PacketSocket(socket)) => {
+                    socket.serve_with(|rs| socket::packet::serve(rs)).await
+                }
+                WorkItem::Incoming(Service::RawSocket(socket)) => {
+                    socket.serve_with(|rs| socket::raw::serve(rs)).await
                 }
                 WorkItem::Incoming(Service::Interfaces(interfaces)) => {
                     interfaces
