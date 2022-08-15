@@ -86,6 +86,22 @@ fn handle_touchscreen_request_stream(
                             .send_input_report(input_report)
                             .expect("Failed to send tap input report");
 
+                        // Send a report with an empty set of touch contacts, so that input
+                        // pipeline generates a pointer event with phase == UP.
+                        let empty_report = InputReport {
+                            event_time: Some(1),
+                            touch: Some(TouchInputReport {
+                                contacts: Some(vec![]),
+                                pressed_buttons: Some(vec![]),
+                                ..TouchInputReport::EMPTY
+                            }),
+                            ..InputReport::EMPTY
+                        };
+
+                        touchscreen_device
+                            .send_input_report(empty_report)
+                            .expect("Failed to send tap input report");
+
                         responder.send().expect("Failed to send SimulateTap response");
                     } else {
                         warn!("SimulateTap request missing tap location");
