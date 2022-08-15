@@ -4,11 +4,12 @@
 
 //! A Netstack3 worker to serve fuchsia.net.debug.Interfaces API requests.
 
-use fidl::endpoints::{ProtocolMarker as _, ServerEnd};
+use async_utils::channel::TrySend as _;
+use fidl::endpoints::{ControlHandle as _, ProtocolMarker as _, ServerEnd};
 use fidl_fuchsia_net_debug as fnet_debug;
 use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
 use fuchsia_zircon as zx;
-use futures::{SinkExt as _, TryStreamExt as _};
+use futures::TryStreamExt as _;
 use tracing::{debug, error};
 
 use crate::bindings::{
@@ -56,13 +57,19 @@ async fn handle_get_admin(
             return;
         }
     };
-    device_info
+
+    match device_info
         .info_mut()
         .common_info_mut()
         .control_hook
-        .send(interfaces_admin::OwnedControlHandle::new_unowned(control))
+        .try_send_fut(interfaces_admin::OwnedControlHandle::new_unowned(control))
         .await
-        .expect("failed to attach to control");
+    {
+        Ok(()) => {}
+        Err(owned_control_handle) => {
+            owned_control_handle.into_control_handle().shutdown_with_epitaph(zx::Status::NOT_FOUND)
+        }
+    }
 }
 
 async fn handle_get_mac(ns: &Netstack, interface_id: u64) -> fnet_debug::InterfacesGetMacResult {

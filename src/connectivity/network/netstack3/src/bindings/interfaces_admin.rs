@@ -178,6 +178,11 @@ impl OwnedControlHandle {
             .expect("failed to attach initial control handle");
         (sender, receiver)
     }
+
+    // Consumes the OwnedControlHandle and returns its `control_handle`.
+    pub(crate) fn into_control_handle(self) -> fnet_interfaces_admin::ControlControlHandle {
+        self.control_handle
+    }
 }
 
 /// Operates a fuchsia.net.interfaces.admin/DeviceControl.CreateInterface
@@ -382,8 +387,8 @@ pub(crate) async fn run_interface_control(
     }
     // Convert `control_receiver` (a stream-of-streams) into a stream of futures, where each future
     // represents the termination of an inner `ControlRequestStream`.
-    let stream_of_fut = control_receiver
-        .map(|OwnedControlHandle { request_stream, control_handle, owns_interface }| {
+    let stream_of_fut = control_receiver.map(
+        |OwnedControlHandle { request_stream, control_handle, owns_interface }| {
             let initial_state =
                 ReqStreamState { owns_interface, control_handle, ctx: ctx.clone(), id };
             // Attach `cancel_request_streams` as a short-circuit mechanism to stop handling new
@@ -417,10 +422,8 @@ pub(crate) async fn run_interface_control(
                     // Return `state` to be used when handling the next `ControlRequest`.
                     state
                 })
-        })
-        // Attach `cancel_request_streams` as a short-circuit mechanism to stop attaching new
-        // `ControlRequestStreams`.
-        .take_until(cancel_request_streams.wait_or_dropped());
+        },
+    );
     // Enable the stream of futures to be polled concurrently.
     let mut stream_of_fut = stream_of_fut.buffer_unordered(std::usize::MAX);
 
@@ -446,6 +449,8 @@ pub(crate) async fn run_interface_control(
         }
     };
 
+    // Close the control_receiver, preventing new RequestStreams from attaching.
+    stream_of_fut.get_mut().get_mut().close();
     // Cancel the active request streams, and drive the remaining `ControlRequestStreams` to
     // completion, allowing each handle to send termination events.
     assert!(cancel_request_streams.signal(), "expected the event to be unsignaled");
