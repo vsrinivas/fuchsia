@@ -148,16 +148,6 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "zx/handle:<EVENTPAIR,optional>",
-        "kind": "struct/member",
-        "name": "fuchsia.io/Device.unused"
-    },
-    {
-        "kind": "struct",
-        "name": "fuchsia.io/Device",
-        "resourceness": "resource"
-    },
-    {
         "declaration": "(string:4095 path,fuchsia.io/InotifyWatchMask filter,uint32 watch_descriptor,zx/handle:SOCKET socket) -> ()",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory.AddInotifyFilter"
@@ -1736,11 +1726,6 @@
         "declaration": "fuchsia.io/DatagramSocket",
         "kind": "union/member",
         "name": "fuchsia.io/NodeInfo.datagram_socket"
-    },
-    {
-        "declaration": "fuchsia.io/Device",
-        "kind": "union/member",
-        "name": "fuchsia.io/NodeInfo.device"
     },
     {
         "declaration": "fuchsia.io/DirectoryObject",

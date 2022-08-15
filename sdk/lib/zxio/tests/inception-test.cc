@@ -126,39 +126,6 @@ TEST(CreateWithInfo, Unsupported) {
   ASSERT_OK(zxio_close(zxio));
 }
 
-TEST(CreateWithInfo, Device) {
-  zx::status node_ends = fidl::CreateEndpoints<fuchsia_io::Node>();
-  ASSERT_OK(node_ends.status_value());
-  auto [node_client, node_server] = std::move(node_ends.value());
-
-  auto node_info = fuchsia_io::wire::NodeInfo::WithDevice({});
-
-  auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {
-    if (type != ZXIO_OBJECT_TYPE_DEVICE) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
-    *out_storage = new zxio_storage_t;
-    *out_context = *out_storage;
-    return ZX_OK;
-  };
-
-  async::Loop device_control_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  zxio_tests::CloseOnlyNodeServer server;
-  fidl::BindServer(device_control_loop.dispatcher(), std::move(node_server), &server);
-  device_control_loop.StartThread("device_control_thread");
-
-  void* context = nullptr;
-  ASSERT_OK(zxio_create_with_allocator(std::move(node_client), node_info, allocator, &context));
-  ASSERT_NE(context, nullptr);
-
-  std::unique_ptr<zxio_storage_t> storage(static_cast<zxio_storage_t*>(context));
-  zxio_t* zxio = &(storage->io);
-
-  ASSERT_OK(zxio_close(zxio));
-
-  device_control_loop.Shutdown();
-}
-
 namespace {
 
 class TestDirectoryServer final : public zxio_tests::TestDirectoryServerBase {

@@ -74,7 +74,7 @@ TEST(FidlTestCase, OpenDev) {
   ASSERT_OK(fdio_ns_get_installed(&ns));
   ASSERT_OK(fdio_ns_service_connect(ns, "/dev", endpoints->server.channel().release()));
 
-  FidlOpenValidator(endpoints->client, "zero", zx::ok(fio::wire::NodeInfo::Tag::kDevice));
+  FidlOpenValidator(endpoints->client, "zero", zx::ok(fio::wire::NodeInfo::Tag::kFile));
   FidlOpenValidator(endpoints->client, "this-path-better-not-actually-exist",
                     zx::error(ZX_ERR_NOT_FOUND));
   FidlOpenValidator(endpoints->client, "zero/this-path-better-not-actually-exist",
@@ -110,7 +110,7 @@ TEST(FidlTestCase, BasicDevZero) {
   const fidl::WireResult result = fidl::WireCall(endpoints->client)->Describe();
   ASSERT_OK(result.status());
   const auto& response = result.value();
-  ASSERT_TRUE(response.info.is_device());
+  ASSERT_TRUE(response.info.is_file());
 }
 
 using watch_buffer_t = struct {

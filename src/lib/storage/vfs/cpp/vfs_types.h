@@ -121,14 +121,13 @@ constexpr Rights operator&(Rights lhs, Rights rhs) { return Rights(lhs.raw_value
 // less than 64. When the need arises as to support more than 64 protocols, we should change the
 // implementation in |VnodeProtocolSet| accordingly.
 enum class VnodeProtocol : uint32_t {
-  // TODO(fxbug.dev/39776): change this back to 0 when the referenced compiler bug is resolved.
-  // Setting |kConnector| to 1 appears to workaround the issue.
+  // TODO(https://fxbug.dev/39776): change this back to 0 when the referenced compiler bug is
+  // resolved. Setting |kConnector| to 1 appears to workaround the issue.
   kConnector = 1,
   kFile,
   kDirectory,
   // TODO(https://fxbug.dev/77623): Remove these variants when Node1.Describe is gone and the tight
   // coupling between io1 and io2 interfaces can be incinerated.
-  kDevice,
   kTty,
   // Note: when appending more members, adjust |kVnodeProtocolCount| accordingly.
 };
@@ -398,8 +397,6 @@ class VnodeRepresentation {
 
   struct Directory {};
 
-  struct Device {};
-
   struct Tty {
     zx::eventpair event = {};
   };
@@ -434,16 +431,12 @@ class VnodeRepresentation {
 
   bool is_directory() const { return std::holds_alternative<Directory>(variants_); }
 
-  Device& device() { return std::get<Device>(variants_); }
-
-  bool is_device() const { return std::holds_alternative<Device>(variants_); }
-
   Tty& tty() { return std::get<Tty>(variants_); }
 
   bool is_tty() const { return std::holds_alternative<Tty>(variants_); }
 
  private:
-  using Variants = std::variant<std::monostate, Connector, File, Directory, Device, Tty>;
+  using Variants = std::variant<std::monostate, Connector, File, Directory, Tty>;
 
   Variants variants_ = {};
 };

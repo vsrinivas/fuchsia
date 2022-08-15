@@ -44,17 +44,7 @@ type NodeInfo = strict resource union {
         length uint64;
     };
 
-    /// The connection composes [`fuchsia.hardware.block.BlockAndNode`] OR
-    /// [`fuchsia.hardware.block.volume.VolumeAndNode`].
-    ///
-    /// TODO(https://fxbug.dev/103827): Document why this is needed or remove
-    /// it.
-    6: device resource struct {
-        /// An optional event which transmits information about a device's state.
-        ///
-        /// The "`DEVICE_SIGNAL_`" values may be observed on this event.
-        unused zx.handle:<EVENTPAIR, optional>;
-    };
+    6: reserved;
 
     /// The connection composes [`fuchsia.hardware.pty/Device`].
     7: tty resource struct {

@@ -223,27 +223,6 @@ using CreateWithOnOpenTest = CreateTestBase<zxio_tests::CloseOnlyNodeServer>;
 using DescribeRequestView = fidl::WireServer<::fuchsia_io::Node>::DescribeRequestView;
 using DescribeCompleter = fidl::WireServer<::fuchsia_io::Node>::DescribeCompleter;
 
-TEST_F(CreateTest, Device) {
-  node_server().set_describe_function(
-      [](DescribeRequestView request, DescribeCompleter::Sync& completer) mutable {
-        completer.Reply(fuchsia_io::wire::NodeInfo::WithDevice({}));
-      });
-
-  StartServerThread();
-
-  ASSERT_OK(zxio_create(TakeClientChannel().release(), storage()));
-}
-
-TEST_F(CreateWithOnOpenTest, Device) {
-  SendOnOpenEvent(fuchsia_io::wire::NodeInfo::WithDevice({}));
-
-  ASSERT_OK(zxio_create_with_on_open(TakeClientChannel().release(), storage()));
-
-  StartServerThread();
-
-  ASSERT_OK(zxio_close(zxio()));
-}
-
 class SyncNodeServer : public zxio_tests::DescribeNodeServer {
  public:
   void Sync(SyncRequestView request, SyncCompleter::Sync& completer) final {

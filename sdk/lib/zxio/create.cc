@@ -172,9 +172,6 @@ zx_status_t zxio_create_with_on_open(zx_handle_t raw_handle, zxio_storage_t* sto
 zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node, fio::wire::NodeInfo& info,
                                       zxio_storage_t* storage) {
   switch (info.Which()) {
-    case fio::wire::NodeInfo::Tag::kDevice: {
-      return zxio_remote_init(storage, node.TakeChannel().release(), ZX_HANDLE_INVALID);
-    }
     case fio::wire::NodeInfo::Tag::kDirectory: {
       return zxio_dir_init(storage, node.TakeChannel().release());
     }

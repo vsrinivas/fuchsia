@@ -46,19 +46,19 @@ void BuiltinDevVnode::HandleFsSpecificMessage(fidl::IncomingMessage& msg, fidl::
 }
 
 fs::VnodeProtocolSet BuiltinDevVnode::GetProtocols() const {
-  return fs::VnodeProtocol::kDevice | fs::VnodeProtocol::kDirectory;
+  return fs::VnodeProtocol::kFile | fs::VnodeProtocol::kDirectory;
 }
 
 fs::VnodeProtocol BuiltinDevVnode::Negotiate(fs::VnodeProtocolSet protocols) const {
-  if ((protocols & fs::VnodeProtocol::kDevice).any()) {
-    return fs::VnodeProtocol::kDevice;
+  if ((protocols & fs::VnodeProtocol::kFile).any()) {
+    return fs::VnodeProtocol::kFile;
   }
   return fs::VnodeProtocol::kDirectory;
 }
 zx_status_t BuiltinDevVnode::GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
                                                     fs::VnodeRepresentation* info) {
-  if (protocol == fs::VnodeProtocol::kDevice) {
-    *info = fs::VnodeRepresentation::Device{};
+  if (protocol == fs::VnodeProtocol::kFile) {
+    *info = fs::VnodeRepresentation::File{};
     return ZX_OK;
   }
   if (protocol == fs::VnodeProtocol::kDirectory) {

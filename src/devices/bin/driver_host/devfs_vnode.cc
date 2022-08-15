@@ -47,12 +47,12 @@ zx_status_t DevfsVnode::GetAttributes(fs::VnodeAttributes* a) {
   return ZX_OK;
 }
 
-fs::VnodeProtocolSet DevfsVnode::GetProtocols() const { return fs::VnodeProtocol::kDevice; }
+fs::VnodeProtocolSet DevfsVnode::GetProtocols() const { return fs::VnodeProtocol::kFile; }
 
 zx_status_t DevfsVnode::GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
                                                fs::VnodeRepresentation* info) {
-  if (protocol == fs::VnodeProtocol::kDevice) {
-    *info = fs::VnodeRepresentation::Device{};
+  if (protocol == fs::VnodeProtocol::kFile) {
+    *info = fs::VnodeRepresentation::File{};
     return ZX_OK;
   }
   return ZX_ERR_NOT_SUPPORTED;

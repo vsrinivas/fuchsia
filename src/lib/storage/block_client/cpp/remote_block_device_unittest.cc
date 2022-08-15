@@ -141,7 +141,9 @@ class MockBlockDevice {
 
     void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {}
     void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
-      completer.Reply(fuchsia_io::wire::NodeInfo::WithDevice({}));
+      fio::wire::FileObject file;
+      completer.Reply(
+          fio::wire::NodeInfo::WithFile(fidl::ObjectView<decltype(file)>::FromExternal(&file)));
     }
     void GetConnectionInfo(GetConnectionInfoRequestView request,
                            GetConnectionInfoCompleter::Sync& completer) override {}
