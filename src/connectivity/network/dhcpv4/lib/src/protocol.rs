@@ -5,13 +5,15 @@
 use net_types::ethernet::Mac as MacAddr;
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
-use std::convert::{Infallible as Never, TryFrom, TryInto};
-use std::fmt;
-use std::iter::Iterator;
-use std::net::Ipv4Addr;
-use std::num::NonZeroU8;
+use std::{
+    convert::{Infallible as Never, TryFrom, TryInto},
+    fmt,
+    iter::Iterator,
+    net::Ipv4Addr,
+    num::NonZeroU8,
+};
 use thiserror::Error;
-use tracing::warn;
+use tracing::debug;
 
 pub const SERVER_PORT: u16 = 67;
 pub const CLIENT_PORT: u16 = 68;
@@ -94,6 +96,13 @@ impl From<InvalidBufferLengthError> for ProtocolError {
     fn from(err: InvalidBufferLengthError) -> ProtocolError {
         let InvalidBufferLengthError(len) = err;
         ProtocolError::InvalidBufferLength(len)
+    }
+}
+
+impl From<InvalidBufferLengthError> for BooleanConversionError {
+    fn from(err: InvalidBufferLengthError) -> BooleanConversionError {
+        let InvalidBufferLengthError(len) = err;
+        BooleanConversionError::InvalidBufferLength(len)
     }
 }
 
@@ -903,180 +912,107 @@ impl DhcpOption {
     }
 
     fn serialize_to(self, buf: &mut Vec<u8>) {
+        let code = self.code();
         match self {
-            DhcpOption::Pad() => {
-                buf.push(OptionCode::Pad.into());
-            }
-            DhcpOption::End() => {
-                buf.push(OptionCode::End.into());
-            }
-            DhcpOption::SubnetMask(v) => serialize_address(OptionCode::SubnetMask, v, buf),
+            DhcpOption::Pad() => buf.push(code.into()),
+            DhcpOption::End() => buf.push(code.into()),
+            DhcpOption::SubnetMask(v) => serialize_address(code, v, buf),
             DhcpOption::TimeOffset(v) => {
                 let size = std::mem::size_of::<i32>();
-                buf.push(OptionCode::TimeOffset.into());
+                buf.push(code.into());
                 buf.push(size as u8);
                 buf.extend_from_slice(&v.to_be_bytes());
             }
-            DhcpOption::Router(v) => serialize_addresses(OptionCode::Router, &v, buf),
-            DhcpOption::TimeServer(v) => serialize_addresses(OptionCode::TimeServer, &v, buf),
-            DhcpOption::NameServer(v) => serialize_addresses(OptionCode::NameServer, &v, buf),
-            DhcpOption::DomainNameServer(v) => {
-                serialize_addresses(OptionCode::DomainNameServer, &v, buf)
-            }
-            DhcpOption::LogServer(v) => serialize_addresses(OptionCode::LogServer, &v, buf),
-            DhcpOption::CookieServer(v) => serialize_addresses(OptionCode::CookieServer, &v, buf),
-            DhcpOption::LprServer(v) => serialize_addresses(OptionCode::LprServer, &v, buf),
-            DhcpOption::ImpressServer(v) => serialize_addresses(OptionCode::ImpressServer, &v, buf),
-            DhcpOption::ResourceLocationServer(v) => {
-                serialize_addresses(OptionCode::ResourceLocationServer, &v, buf)
-            }
-            DhcpOption::HostName(v) => serialize_string(OptionCode::HostName, &v, buf),
-            DhcpOption::BootFileSize(v) => serialize_u16(OptionCode::BootFileSize, v, buf),
-            DhcpOption::MeritDumpFile(v) => serialize_string(OptionCode::MeritDumpFile, &v, buf),
-            DhcpOption::DomainName(v) => serialize_string(OptionCode::DomainName, &v, buf),
-            DhcpOption::SwapServer(v) => serialize_address(OptionCode::SwapServer, v, buf),
-            DhcpOption::RootPath(v) => serialize_string(OptionCode::RootPath, &v, buf),
-            DhcpOption::ExtensionsPath(v) => serialize_string(OptionCode::ExtensionsPath, &v, buf),
-            DhcpOption::IpForwarding(v) => serialize_flag(OptionCode::IpForwarding, v, buf),
-            DhcpOption::NonLocalSourceRouting(v) => {
-                serialize_flag(OptionCode::NonLocalSourceRouting, v, buf)
-            }
-            DhcpOption::PolicyFilter(v) => serialize_addresses(OptionCode::PolicyFilter, &v, buf),
-            DhcpOption::MaxDatagramReassemblySize(v) => {
-                serialize_u16(OptionCode::MaxDatagramReassemblySize, v, buf)
-            }
-            DhcpOption::DefaultIpTtl(v) => serialize_u8(OptionCode::DefaultIpTtl, v.into(), buf),
-            DhcpOption::PathMtuAgingTimeout(v) => {
-                serialize_u32(OptionCode::PathMtuAgingTimeout, v, buf)
-            }
+            DhcpOption::Router(v) => serialize_addresses(code, &v, buf),
+            DhcpOption::TimeServer(v) => serialize_addresses(code, &v, buf),
+            DhcpOption::NameServer(v) => serialize_addresses(code, &v, buf),
+            DhcpOption::DomainNameServer(v) => serialize_addresses(code, &v, buf),
+            DhcpOption::LogServer(v) => serialize_addresses(code, &v, buf),
+            DhcpOption::CookieServer(v) => serialize_addresses(code, &v, buf),
+            DhcpOption::LprServer(v) => serialize_addresses(code, &v, buf),
+            DhcpOption::ImpressServer(v) => serialize_addresses(code, &v, buf),
+            DhcpOption::ResourceLocationServer(v) => serialize_addresses(code, &v, buf),
+            DhcpOption::HostName(v) => serialize_string(code, &v, buf),
+            DhcpOption::BootFileSize(v) => serialize_u16(code, v, buf),
+            DhcpOption::MeritDumpFile(v) => serialize_string(code, &v, buf),
+            DhcpOption::DomainName(v) => serialize_string(code, &v, buf),
+            DhcpOption::SwapServer(v) => serialize_address(code, v, buf),
+            DhcpOption::RootPath(v) => serialize_string(code, &v, buf),
+            DhcpOption::ExtensionsPath(v) => serialize_string(code, &v, buf),
+            DhcpOption::IpForwarding(v) => serialize_flag(code, v, buf),
+            DhcpOption::NonLocalSourceRouting(v) => serialize_flag(code, v, buf),
+            DhcpOption::PolicyFilter(v) => serialize_addresses(code, &v, buf),
+            DhcpOption::MaxDatagramReassemblySize(v) => serialize_u16(code, v, buf),
+            DhcpOption::DefaultIpTtl(v) => serialize_u8(code, v.into(), buf),
+            DhcpOption::PathMtuAgingTimeout(v) => serialize_u32(code, v, buf),
             DhcpOption::PathMtuPlateauTable(v) => {
                 let size = std::mem::size_of_val(&v);
-                buf.push(OptionCode::PathMtuPlateauTable.into());
+                buf.push(code.into());
                 buf.push(size as u8);
                 for mtu in v {
                     buf.extend_from_slice(&mtu.to_be_bytes())
                 }
             }
-            DhcpOption::InterfaceMtu(v) => serialize_u16(OptionCode::InterfaceMtu, v, buf),
-            DhcpOption::AllSubnetsLocal(v) => serialize_flag(OptionCode::AllSubnetsLocal, v, buf),
-            DhcpOption::BroadcastAddress(v) => {
-                serialize_address(OptionCode::BroadcastAddress, v, buf)
-            }
-            DhcpOption::PerformMaskDiscovery(v) => {
-                serialize_flag(OptionCode::PerformMaskDiscovery, v, buf)
-            }
-            DhcpOption::MaskSupplier(v) => serialize_flag(OptionCode::MaskSupplier, v, buf),
-            DhcpOption::PerformRouterDiscovery(v) => {
-                serialize_flag(OptionCode::PerformRouterDiscovery, v, buf)
-            }
-            DhcpOption::RouterSolicitationAddress(v) => {
-                serialize_address(OptionCode::RouterSolicitationAddress, v, buf)
-            }
-            DhcpOption::StaticRoute(v) => serialize_addresses(OptionCode::StaticRoute, &v, buf),
-            DhcpOption::TrailerEncapsulation(v) => {
-                serialize_flag(OptionCode::TrailerEncapsulation, v, buf)
-            }
-            DhcpOption::ArpCacheTimeout(v) => serialize_u32(OptionCode::ArpCacheTimeout, v, buf),
-            DhcpOption::EthernetEncapsulation(v) => {
-                serialize_flag(OptionCode::EthernetEncapsulation, v, buf)
-            }
-            DhcpOption::TcpDefaultTtl(v) => serialize_u8(OptionCode::TcpDefaultTtl, v.into(), buf),
-            DhcpOption::TcpKeepaliveInterval(v) => {
-                serialize_u32(OptionCode::TcpKeepaliveInterval, v, buf)
-            }
-            DhcpOption::TcpKeepaliveGarbage(v) => {
-                serialize_flag(OptionCode::TcpKeepaliveGarbage, v, buf)
-            }
-            DhcpOption::NetworkInformationServiceDomain(v) => {
-                serialize_string(OptionCode::NetworkInformationServiceDomain, &v, buf)
-            }
-            DhcpOption::NetworkInformationServers(v) => {
-                serialize_addresses(OptionCode::NetworkInformationServers, &v, buf)
-            }
-            DhcpOption::NetworkTimeProtocolServers(v) => {
-                serialize_addresses(OptionCode::NetworkTimeProtocolServers, &v, buf)
-            }
-            DhcpOption::VendorSpecificInformation(v) => {
-                serialize_bytes(OptionCode::VendorSpecificInformation, &v, buf)
-            }
-            DhcpOption::NetBiosOverTcpipNameServer(v) => {
-                serialize_addresses(OptionCode::NetBiosOverTcpipNameServer, &v, buf)
-            }
+            DhcpOption::InterfaceMtu(v) => serialize_u16(code, v, buf),
+            DhcpOption::AllSubnetsLocal(v) => serialize_flag(code, v, buf),
+            DhcpOption::BroadcastAddress(v) => serialize_address(code, v, buf),
+            DhcpOption::PerformMaskDiscovery(v) => serialize_flag(code, v, buf),
+            DhcpOption::MaskSupplier(v) => serialize_flag(code, v, buf),
+            DhcpOption::PerformRouterDiscovery(v) => serialize_flag(code, v, buf),
+            DhcpOption::RouterSolicitationAddress(v) => serialize_address(code, v, buf),
+            DhcpOption::StaticRoute(v) => serialize_addresses(code, &v, buf),
+            DhcpOption::TrailerEncapsulation(v) => serialize_flag(code, v, buf),
+            DhcpOption::ArpCacheTimeout(v) => serialize_u32(code, v, buf),
+            DhcpOption::EthernetEncapsulation(v) => serialize_flag(code, v, buf),
+            DhcpOption::TcpDefaultTtl(v) => serialize_u8(code, v.into(), buf),
+            DhcpOption::TcpKeepaliveInterval(v) => serialize_u32(code, v, buf),
+            DhcpOption::TcpKeepaliveGarbage(v) => serialize_flag(code, v, buf),
+            DhcpOption::NetworkInformationServiceDomain(v) => serialize_string(code, &v, buf),
+            DhcpOption::NetworkInformationServers(v) => serialize_addresses(code, &v, buf),
+            DhcpOption::NetworkTimeProtocolServers(v) => serialize_addresses(code, &v, buf),
+            DhcpOption::VendorSpecificInformation(v) => serialize_bytes(code, &v, buf),
+            DhcpOption::NetBiosOverTcpipNameServer(v) => serialize_addresses(code, &v, buf),
             DhcpOption::NetBiosOverTcpipDatagramDistributionServer(v) => {
-                serialize_addresses(OptionCode::NetBiosOverTcpipDatagramDistributionServer, &v, buf)
+                serialize_addresses(code, &v, buf)
             }
-            DhcpOption::NetBiosOverTcpipNodeType(v) => {
-                serialize_enum(OptionCode::NetBiosOverTcpipNodeType, v, buf)
-            }
-            DhcpOption::NetBiosOverTcpipScope(v) => {
-                serialize_string(OptionCode::NetBiosOverTcpipScope, &v, buf)
-            }
-            DhcpOption::XWindowSystemFontServer(v) => {
-                serialize_addresses(OptionCode::XWindowSystemFontServer, &v, buf)
-            }
-            DhcpOption::XWindowSystemDisplayManager(v) => {
-                serialize_addresses(OptionCode::XWindowSystemDisplayManager, &v, buf)
-            }
-            DhcpOption::NetworkInformationServicePlusDomain(v) => {
-                serialize_string(OptionCode::NetworkInformationServicePlusDomain, &v, buf)
-            }
+            DhcpOption::NetBiosOverTcpipNodeType(v) => serialize_enum(code, v, buf),
+            DhcpOption::NetBiosOverTcpipScope(v) => serialize_string(code, &v, buf),
+            DhcpOption::XWindowSystemFontServer(v) => serialize_addresses(code, &v, buf),
+            DhcpOption::XWindowSystemDisplayManager(v) => serialize_addresses(code, &v, buf),
+            DhcpOption::NetworkInformationServicePlusDomain(v) => serialize_string(code, &v, buf),
             DhcpOption::NetworkInformationServicePlusServers(v) => {
-                serialize_addresses(OptionCode::NetworkInformationServicePlusServers, &v, buf)
+                serialize_addresses(code, &v, buf)
             }
-            DhcpOption::MobileIpHomeAgent(v) => {
-                serialize_addresses(OptionCode::MobileIpHomeAgent, &v, buf)
-            }
-            DhcpOption::SmtpServer(v) => serialize_addresses(OptionCode::SmtpServer, &v, buf),
-            DhcpOption::Pop3Server(v) => serialize_addresses(OptionCode::Pop3Server, &v, buf),
-            DhcpOption::NntpServer(v) => serialize_addresses(OptionCode::NntpServer, &v, buf),
-            DhcpOption::DefaultWwwServer(v) => {
-                serialize_addresses(OptionCode::DefaultWwwServer, &v, buf)
-            }
-            DhcpOption::DefaultFingerServer(v) => {
-                serialize_addresses(OptionCode::DefaultFingerServer, &v, buf)
-            }
-            DhcpOption::DefaultIrcServer(v) => {
-                serialize_addresses(OptionCode::DefaultIrcServer, &v, buf)
-            }
-            DhcpOption::StreetTalkServer(v) => {
-                serialize_addresses(OptionCode::StreetTalkServer, &v, buf)
-            }
+            DhcpOption::MobileIpHomeAgent(v) => serialize_addresses(code, &v, buf),
+            DhcpOption::SmtpServer(v) => serialize_addresses(code, &v, buf),
+            DhcpOption::Pop3Server(v) => serialize_addresses(code, &v, buf),
+            DhcpOption::NntpServer(v) => serialize_addresses(code, &v, buf),
+            DhcpOption::DefaultWwwServer(v) => serialize_addresses(code, &v, buf),
+            DhcpOption::DefaultFingerServer(v) => serialize_addresses(code, &v, buf),
+            DhcpOption::DefaultIrcServer(v) => serialize_addresses(code, &v, buf),
+            DhcpOption::StreetTalkServer(v) => serialize_addresses(code, &v, buf),
             DhcpOption::StreetTalkDirectoryAssistanceServer(v) => {
-                serialize_addresses(OptionCode::StreetTalkDirectoryAssistanceServer, &v, buf)
+                serialize_addresses(code, &v, buf)
             }
-            DhcpOption::RequestedIpAddress(v) => {
-                serialize_address(OptionCode::RequestedIpAddress, v, buf)
-            }
-            DhcpOption::IpAddressLeaseTime(v) => {
-                serialize_u32(OptionCode::IpAddressLeaseTime, v, buf)
-            }
-            DhcpOption::OptionOverload(v) => serialize_enum(OptionCode::OptionOverload, v, buf),
-            DhcpOption::TftpServerName(v) => serialize_string(OptionCode::TftpServerName, &v, buf),
-            DhcpOption::BootfileName(v) => serialize_string(OptionCode::BootfileName, &v, buf),
-            DhcpOption::DhcpMessageType(v) => serialize_enum(OptionCode::DhcpMessageType, v, buf),
-            DhcpOption::ServerIdentifier(v) => {
-                serialize_address(OptionCode::ServerIdentifier, v, buf)
-            }
+            DhcpOption::RequestedIpAddress(v) => serialize_address(code, v, buf),
+            DhcpOption::IpAddressLeaseTime(v) => serialize_u32(code, v, buf),
+            DhcpOption::OptionOverload(v) => serialize_enum(code, v, buf),
+            DhcpOption::TftpServerName(v) => serialize_string(code, &v, buf),
+            DhcpOption::BootfileName(v) => serialize_string(code, &v, buf),
+            DhcpOption::DhcpMessageType(v) => serialize_enum(code, v, buf),
+            DhcpOption::ServerIdentifier(v) => serialize_address(code, v, buf),
             DhcpOption::ParameterRequestList(v) => {
                 let size = std::mem::size_of_val(&v);
-                buf.push(OptionCode::ParameterRequestList.into());
+                buf.push(code.into());
                 buf.push(size as u8);
                 buf.extend(v.into_iter().map(|code| code as u8));
             }
-            DhcpOption::Message(v) => serialize_string(OptionCode::Message, &v, buf),
-            DhcpOption::MaxDhcpMessageSize(v) => {
-                serialize_u16(OptionCode::MaxDhcpMessageSize, v, buf)
-            }
-            DhcpOption::RenewalTimeValue(v) => serialize_u32(OptionCode::RenewalTimeValue, v, buf),
-            DhcpOption::RebindingTimeValue(v) => {
-                serialize_u32(OptionCode::RebindingTimeValue, v, buf)
-            }
-            DhcpOption::VendorClassIdentifier(v) => {
-                serialize_bytes(OptionCode::VendorClassIdentifier, &v, buf)
-            }
-            DhcpOption::ClientIdentifier(v) => {
-                serialize_bytes(OptionCode::ClientIdentifier, &v, buf)
-            }
+            DhcpOption::Message(v) => serialize_string(code, &v, buf),
+            DhcpOption::MaxDhcpMessageSize(v) => serialize_u16(code, v, buf),
+            DhcpOption::RenewalTimeValue(v) => serialize_u32(code, v, buf),
+            DhcpOption::RebindingTimeValue(v) => serialize_u32(code, v, buf),
+            DhcpOption::VendorClassIdentifier(v) => serialize_bytes(code, &v, buf),
+            DhcpOption::ClientIdentifier(v) => serialize_bytes(code, &v, buf),
         }
     }
 
@@ -1881,7 +1817,7 @@ fn parse_options<T: Extend<DhcpOption>>(
                         // For example, here is a case where ISC will use the first 4 bytes of an
                         // IPv4 Address even if the option had > 4 length.
                         // https://github.com/isc-projects/dhcp/blob/31e68e5/server/dhcp.c#L947-L959
-                        warn!("Error while parsing Option: {}", e);
+                        debug!("error while parsing option: {}", e);
                         continue;
                     }
                 }
@@ -1955,8 +1891,7 @@ impl BooleanConversionError {
 
 // Returns a bool from a nonempty byte slice.
 fn bytes_to_bool(bytes: &[u8]) -> Result<bool, BooleanConversionError> {
-    let byte = get_byte(bytes)
-        .map_err(|InvalidBufferLengthError(n)| BooleanConversionError::InvalidBufferLength(n))?;
+    let byte = get_byte(bytes)?;
     match byte {
         0 | 1 => Ok(byte == 1),
         b => Err(BooleanConversionError::InvalidValue(b)),
@@ -1993,13 +1928,10 @@ fn trunc_string_to_n_and_push(s: &str, n: usize, buffer: &mut Vec<u8>) {
 
 #[cfg(test)]
 mod tests {
-
-    use super::identifier::ClientIdentifier;
-    use super::*;
     use net_declare::std::ip_v4;
-    use std::net::Ipv4Addr;
-    use std::str::FromStr;
+    use std::{net::Ipv4Addr, str::FromStr};
     use test_case::test_case;
+    use {super::identifier::ClientIdentifier, super::*};
 
     const DEFAULT_SUBNET_MASK: Ipv4Addr = ip_v4!("255.255.255.0");
 

@@ -2,12 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::configuration::ServerParameters;
-use crate::protocol::{identifier::ClientIdentifier, DhcpOption, OptionCode};
-use crate::server::{ClientRecords, DataStore, LeaseRecord};
-use std::collections::{HashMap, HashSet};
-use std::str::FromStr as _;
-use std::string::ToString as _;
+use crate::{
+    configuration::ServerParameters,
+    protocol::{identifier::ClientIdentifier, DhcpOption, OptionCode},
+    server::{ClientRecords, DataStore, LeaseRecord},
+};
+use std::{
+    collections::{HashMap, HashSet},
+    str::FromStr as _,
+    string::ToString as _,
+};
 use tracing::warn;
 
 /// A wrapper around a `fuchsia.stash.StoreAccessor` proxy.

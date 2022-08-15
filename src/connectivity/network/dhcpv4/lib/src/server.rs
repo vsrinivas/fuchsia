@@ -2,18 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::configuration::ServerParameters;
-use crate::protocol::{
-    identifier::ClientIdentifier, DhcpOption, FidlCompatible, FromFidlExt, IntoFidlExt, Message,
-    MessageType, OpCode, OptionCode, ProtocolError,
+use crate::{
+    configuration::ServerParameters,
+    protocol::{
+        identifier::ClientIdentifier, DhcpOption, FidlCompatible, FromFidlExt, IntoFidlExt,
+        Message, MessageType, OpCode, OptionCode, ProtocolError,
+    },
 };
 use anyhow::{Context as _, Error};
 use fuchsia_zircon::Status;
 use net_types::ethernet::Mac as MacAddr;
 use serde::{Deserialize, Serialize};
-use std::collections::{BTreeSet, HashMap};
-use std::convert::TryFrom;
-use std::net::Ipv4Addr;
+use std::{
+    collections::{BTreeSet, HashMap},
+    convert::TryFrom,
+    net::Ipv4Addr,
+};
 use thiserror::Error;
 use tracing::{error, info, warn};
 
@@ -1435,18 +1439,19 @@ pub fn get_server_id_from(req: &Message) -> Option<Ipv4Addr> {
 
 #[cfg(test)]
 pub mod tests {
-
-    use crate::configuration::{
-        LeaseLength, ManagedAddresses, PermittedMacs, StaticAssignments, SubnetMask,
-    };
-    use crate::protocol::{
-        DhcpOption, FidlCompatible as _, IntoFidlExt as _, Message, MessageType, OpCode,
-        OptionCode, ProtocolError,
-    };
-    use crate::server::{
-        get_client_state, validate_discover, AddressPool, AddressPoolError, ClientIdentifier,
-        ClientState, DataStore, LeaseRecord, NakReason, ResponseTarget, ServerAction,
-        ServerDispatcher, ServerError, ServerParameters, SystemTimeSource,
+    use crate::{
+        configuration::{
+            LeaseLength, ManagedAddresses, PermittedMacs, StaticAssignments, SubnetMask,
+        },
+        protocol::{
+            DhcpOption, FidlCompatible as _, IntoFidlExt as _, Message, MessageType, OpCode,
+            OptionCode, ProtocolError,
+        },
+        server::{
+            get_client_state, validate_discover, AddressPool, AddressPoolError, ClientIdentifier,
+            ClientState, DataStore, LeaseRecord, NakReason, ResponseTarget, ServerAction,
+            ServerDispatcher, ServerError, ServerParameters, SystemTimeSource,
+        },
     };
     use anyhow::Error;
     use datastore::{ActionRecordingDataStore, DataStoreAction};
@@ -1454,18 +1459,20 @@ pub mod tests {
     use net_declare::{fidl_ip_v4, std_ip_v4};
     use net_types::ethernet::Mac as MacAddr;
     use rand::Rng;
-    use std::cell::RefCell;
-    use std::collections::{BTreeSet, HashMap, HashSet};
-    use std::iter::FromIterator as _;
-    use std::net::Ipv4Addr;
-    use std::rc::Rc;
-    use std::time::{Duration, SystemTime};
+    use std::{
+        cell::RefCell,
+        collections::{BTreeSet, HashMap, HashSet},
+        iter::FromIterator as _,
+        net::Ipv4Addr,
+        rc::Rc,
+        time::{Duration, SystemTime},
+    };
     use test_case::test_case;
 
     mod datastore {
-        use crate::protocol::{DhcpOption, OptionCode};
-        use crate::server::{
-            ClientIdentifier, ClientRecords, DataStore, LeaseRecord, ServerParameters,
+        use crate::{
+            protocol::{DhcpOption, OptionCode},
+            server::{ClientIdentifier, ClientRecords, DataStore, LeaseRecord, ServerParameters},
         };
         use std::collections::HashMap;
 

@@ -6,11 +6,13 @@ use crate::protocol::{FidlCompatible, FromFidlExt, IntoFidlExt};
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use serde_json;
-use std::collections::HashMap;
-use std::convert::{Infallible as Never, TryFrom, TryInto};
-use std::io;
-use std::net::Ipv4Addr;
-use std::num::TryFromIntError;
+use std::{
+    collections::HashMap,
+    convert::{Infallible as Never, TryFrom, TryInto},
+    io,
+    net::Ipv4Addr,
+    num::TryFromIntError,
+};
 use thiserror::Error;
 
 /// A collection of the basic configuration parameters needed by the server.
