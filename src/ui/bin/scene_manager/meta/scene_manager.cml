@@ -127,4 +127,7 @@
             from: "self",
         },
     ],
+    config: {
+        idle_threshold_minutes: { type: "uint64" },
+    },
 }

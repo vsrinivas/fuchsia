@@ -39,6 +39,7 @@ use {
     fuchsia_zircon as zx,
     futures::lock::Mutex,
     futures::{StreamExt, TryStreamExt},
+    input_config_lib::Config,
     scene_management::{self, SceneManager, ViewingDistance, ViewportToken},
     std::rc::Rc,
     std::sync::Arc,
@@ -247,7 +248,9 @@ async fn inner_main() -> Result<(), Error> {
     }
 
     // Create Activity Manager.
-    let activity_manager = ActivityManager::new();
+    let Config { idle_threshold_minutes } = Config::take_from_startup_handle();
+    let activity_manager =
+        ActivityManager::new(zx::Duration::from_minutes(idle_threshold_minutes as i64));
 
     while let Some(service_request) = fs.next().await {
         match service_request {

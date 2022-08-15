@@ -13,7 +13,9 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::fx_log_warn,
+    fuchsia_zircon::Duration,
     futures::StreamExt,
+    input_config_lib::Config,
     input_pipeline as input_pipeline_lib,
     input_pipeline::input_device,
     input_pipeline::{
@@ -84,7 +86,9 @@ async fn main() -> Result<(), Error> {
     fasync::Task::local(input_pipeline.handle_input_events()).detach();
 
     // Create Activity Manager.
-    let activity_manager = ActivityManager::new();
+    let Config { idle_threshold_minutes } = Config::take_from_startup_handle();
+    let activity_manager =
+        ActivityManager::new(Duration::from_minutes(idle_threshold_minutes as i64));
 
     // Handle incoming injection input devices. Start with u32::Max to avoid conflicting device ids.
     let mut injected_device_id = u32::MAX;

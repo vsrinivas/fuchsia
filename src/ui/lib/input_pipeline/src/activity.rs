@@ -19,8 +19,6 @@ use {
     },
 };
 
-// TODO(https://fxbug.dev/103838): Use structured configuration for this value.
-const ACTIVITY_TIMEOUT: zx::Duration = zx::Duration::from_minutes(15);
 const ACTIVITY_RATE_LIMIT: zx::Duration = zx::Duration::from_minutes(1);
 
 type NotifyFn = Box<dyn Fn(&State, NotifierWatchStateResponder) -> bool>;
@@ -29,6 +27,7 @@ type InteractionHangingGet = HangingGet<State, NotifierWatchStateResponder, Noti
 /// An [`ActivityManager`] tracks the state of user input interaction activity.
 pub struct ActivityManager {
     interaction_hanging_get: RefCell<InteractionHangingGet>,
+    idle_threshold_minutes: zx::Duration,
     idle_transition_task: Cell<Option<Task<()>>>,
     last_event_time: RefCell<zx::Time>,
 }
@@ -36,28 +35,29 @@ pub struct ActivityManager {
 impl ActivityManager {
     /// Creates a new [`ActivityManager`] that listens for user input
     /// input interactions and notifies clients of activity state changes.
-    pub fn new() -> Rc<Self> {
-        Self::new_internal(zx::Time::get_monotonic())
+    pub fn new(idle_threshold_minutes: zx::Duration) -> Rc<Self> {
+        Self::new_internal(idle_threshold_minutes, zx::Time::get_monotonic())
     }
 
     #[cfg(test)]
     /// Sets the initial idleness timer relative to fake time at 0 for tests.
-    fn new_for_test() -> Rc<Self> {
-        Self::new_internal(zx::Time::ZERO)
+    fn new_for_test(idle_threshold_minutes: zx::Duration) -> Rc<Self> {
+        Self::new_internal(idle_threshold_minutes, zx::Time::ZERO)
     }
 
-    fn new_internal(initial_timestamp: zx::Time) -> Rc<Self> {
+    fn new_internal(idle_threshold_minutes: zx::Duration, initial_timestamp: zx::Time) -> Rc<Self> {
         let initial_state = State::Active;
 
         let interaction_hanging_get = ActivityManager::init_hanging_get(initial_state);
         let state_publisher = interaction_hanging_get.new_publisher();
         let idle_transition_task = Task::local(async move {
-            Timer::new(initial_timestamp + ACTIVITY_TIMEOUT).await;
+            Timer::new(initial_timestamp + idle_threshold_minutes).await;
             state_publisher.set(State::Idle);
         });
 
         Rc::new(Self {
             interaction_hanging_get: RefCell::new(interaction_hanging_get),
+            idle_threshold_minutes,
             idle_transition_task: Cell::new(Some(idle_transition_task)),
             last_event_time: RefCell::new(initial_timestamp),
         })
@@ -102,8 +102,9 @@ impl ActivityManager {
 
             // Rate-limit subsequent events within the threshold.
             *self.last_event_time.borrow_mut() = event_time + ACTIVITY_RATE_LIMIT;
+            let idle_threshold_minutes = self.idle_threshold_minutes;
             self.idle_transition_task.set(Some(Task::local(async move {
-                Timer::new(event_time + ACTIVITY_TIMEOUT).await;
+                Timer::new(event_time + idle_threshold_minutes).await;
                 state_publisher.set(State::Idle);
             })));
         }
@@ -156,6 +157,8 @@ mod tests {
         std::task::Poll,
     };
 
+    const ACTIVITY_TIMEOUT: zx::Duration = zx::Duration::from_minutes(2);
+
     fn create_interaction_aggregator_proxy(
         activity_manager: Rc<ActivityManager>,
     ) -> AggregatorProxy {
@@ -195,14 +198,14 @@ mod tests {
 
     #[fuchsia::test]
     async fn interaction_aggregator_reports_activity() {
-        let activity_manager = ActivityManager::new_for_test();
+        let activity_manager = ActivityManager::new_for_test(ACTIVITY_TIMEOUT);
         let proxy = create_interaction_aggregator_proxy(activity_manager.clone());
         proxy.report_discrete_activity(0).await.expect("Failed to report activity");
     }
 
     #[fuchsia::test]
     async fn interaction_notifier_listener_gets_initial_state() {
-        let activity_manager = ActivityManager::new_for_test();
+        let activity_manager = ActivityManager::new_for_test(ACTIVITY_TIMEOUT);
         let notifier_proxy = create_interaction_notifier_proxy(activity_manager.clone());
         let state = notifier_proxy.watch_state().await.expect("Failed to get interaction state");
         assert_eq!(state, State::Active);
@@ -213,7 +216,7 @@ mod tests {
         let mut executor = TestExecutor::new_with_fake_time().unwrap();
         executor.set_fake_time(fuchsia_async::Time::from_nanos(0));
 
-        let activity_manager = ActivityManager::new_for_test();
+        let activity_manager = ActivityManager::new_for_test(ACTIVITY_TIMEOUT);
         let notifier_proxy = create_interaction_notifier_proxy(activity_manager.clone());
 
         // Initial state is active.
@@ -242,7 +245,7 @@ mod tests {
         let mut executor = TestExecutor::new_with_fake_time().unwrap();
         executor.set_fake_time(fuchsia_async::Time::from_nanos(0));
 
-        let activity_manager = ActivityManager::new_for_test();
+        let activity_manager = ActivityManager::new_for_test(ACTIVITY_TIMEOUT);
         let notifier_proxy = create_interaction_notifier_proxy(activity_manager.clone());
 
         // Initial state is active.
@@ -298,7 +301,7 @@ mod tests {
         let mut executor = TestExecutor::new_with_fake_time().unwrap();
         executor.set_fake_time(fuchsia_async::Time::from_nanos(0));
 
-        let activity_manager = ActivityManager::new_for_test();
+        let activity_manager = ActivityManager::new_for_test(ACTIVITY_TIMEOUT);
         let notifier_proxy = create_interaction_notifier_proxy(activity_manager.clone());
 
         // Initial state is active.
@@ -345,7 +348,7 @@ mod tests {
         let mut executor = TestExecutor::new_with_fake_time().unwrap();
         executor.set_fake_time(fuchsia_async::Time::from_nanos(0));
 
-        let activity_manager = ActivityManager::new_for_test();
+        let activity_manager = ActivityManager::new_for_test(ACTIVITY_TIMEOUT);
         let notifier_proxy = create_interaction_notifier_proxy(activity_manager.clone());
 
         // Initial state is active.
@@ -400,7 +403,7 @@ mod tests {
         let mut executor = TestExecutor::new_with_fake_time().unwrap();
         executor.set_fake_time(fuchsia_async::Time::from_nanos(0));
 
-        let activity_manager = ActivityManager::new_for_test();
+        let activity_manager = ActivityManager::new_for_test(ACTIVITY_TIMEOUT);
         let notifier_proxy = create_interaction_notifier_proxy(activity_manager.clone());
 
         // Initial state is active.
@@ -452,7 +455,7 @@ mod tests {
         let mut executor = TestExecutor::new_with_fake_time().unwrap();
         executor.set_fake_time(fuchsia_async::Time::from_nanos(0));
 
-        let activity_manager = ActivityManager::new_for_test();
+        let activity_manager = ActivityManager::new_for_test(ACTIVITY_TIMEOUT);
         let notifier_proxy = create_interaction_notifier_proxy(activity_manager.clone());
 
         // Initial state is active.

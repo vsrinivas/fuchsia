@@ -12,6 +12,7 @@ rustc_binary("scene_manager_bin") {
   edition = "2021"
 
   deps = [
+    ":input_config_lib",
     "//sdk/fidl/fuchsia.accessibility:fuchsia.accessibility_rust",
     "//sdk/fidl/fuchsia.accessibility.scene:fuchsia.accessibility.scene_rust",
     "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection_rust",
@@ -70,10 +71,23 @@ resource("cursor") {
   outputs = [ "data/cursor.png" ]
 }
 
-fuchsia_component("scene_manager_component") {
+fuchsia_component_manifest("manifest") {
   component_name = "scene_manager"
   manifest = "meta/scene_manager.cml"
+}
+
+fuchsia_component("scene_manager_component") {
+  cm_label = ":manifest"
   deps = [ ":scene_manager_bin" ]
+}
+
+# TODO(fxbug.dev/106573): Remove test-only target when
+# default config values are available.
+group("scene_manager_component_for_test") {
+  deps = [
+    ":default_config",
+    ":scene_manager_component",
+  ]
 }
 
 fuchsia_package("scene_manager") {
@@ -85,4 +99,15 @@ fuchsia_package("scene_manager") {
 
 fuchsia_unittest_package("scene_manager_tests") {
   deps = [ ":scene_manager_bin_test" ]
+}
+
+fuchsia_structured_config_rust_lib("input_config_lib") {
+  cm_label = ":manifest"
+}
+
+fuchsia_structured_config_values("default_config") {
+  cm_label = ":manifest"
+  values = {
+    idle_threshold_minutes = 15
+  }
 }

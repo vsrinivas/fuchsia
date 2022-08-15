@@ -50,6 +50,10 @@ pub struct PlatformConfig {
     /// Platform configuration options for the identity area.
     #[serde(default)]
     pub identity: PlatformIdentityConfig,
+
+    /// Platform configuration options for the input area.
+    #[serde(default)]
+    pub input: PlatformInputConfig,
 }
 
 /// The platform's base service level.
@@ -122,6 +126,15 @@ pub struct PlatformIdentityConfig {
     /// boards. Pinweaver will always be disabled if the board does not support the protocol.
     #[serde(default)]
     pub password_pinweaver: FeatureControl,
+}
+
+/// Platform configuration options for the input area.
+#[derive(Debug, Default, Deserialize, Serialize, PartialEq)]
+pub struct PlatformInputConfig {
+    /// The idle threshold is how much time has passed since the last user
+    /// input activity for the system to become idle.
+    #[serde(default)]
+    pub idle_threshold_minutes: Option<u64>,
 }
 
 /// Options for features that may either be forced on, forced off, or allowed

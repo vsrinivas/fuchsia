@@ -16,6 +16,7 @@ rustc_binary("input-pipeline-bin") {
   edition = "2021"
 
   deps = [
+    ":input_config_lib",
     "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection_rust",
     "//sdk/fidl/fuchsia.input.interaction:fuchsia.input.interaction_rust",
     "//sdk/fidl/fuchsia.input.interaction.observation:fuchsia.input.interaction.observation_rust",
@@ -27,6 +28,7 @@ rustc_binary("input-pipeline-bin") {
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/trace/rust:trace-provider",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/ui/lib/input_pipeline",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -38,10 +40,23 @@ rustc_binary("input-pipeline-bin") {
   ]
 }
 
-fuchsia_component("component-v2") {
+fuchsia_component_manifest("manifest") {
   component_name = "input-pipeline"
   manifest = "meta/input-pipeline.cml"
+}
+
+fuchsia_component("component-v2") {
+  cm_label = ":manifest"
   deps = [ ":input-pipeline-bin" ]
+}
+
+# TODO(fxbug.dev/106573): Remove test-only target when
+# default config values are available.
+group("component-v2-for-test") {
+  deps = [
+    ":component-v2",
+    ":default_config",
+  ]
 }
 
 fuchsia_package("input-pipeline") {
@@ -50,4 +65,15 @@ fuchsia_package("input-pipeline") {
 
 fuchsia_unittest_package("input-pipeline-tests") {
   deps = [ ":input-pipeline-bin_test" ]
+}
+
+fuchsia_structured_config_rust_lib("input_config_lib") {
+  cm_label = ":manifest"
+}
+
+fuchsia_structured_config_values("default_config") {
+  cm_label = ":manifest"
+  values = {
+    idle_threshold_minutes = 15
+  }
 }
