@@ -32,6 +32,7 @@
                 "fuchsia.device.NameProvider",
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.mediacodec.CodecFactory",
+                "fuchsia.net.interfaces.State",
                 "fuchsia.net.name.Lookup",
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.sysmem.Allocator",
@@ -61,6 +62,11 @@
         {
             storage: "custom_artifacts",
             from: "self",
+            to: "#google-tests",
+        },
+        {
+            directory: "root-ssl-certificates",
+            from: "parent",
             to: "#google-tests",
         },
     ],
