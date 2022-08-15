@@ -14,6 +14,7 @@ zx_library("boot-shim") {
     "lib/boot-shim/acpi.h",
     "lib/boot-shim/boot-shim.h",
     "lib/boot-shim/efi.h",
+    "lib/boot-shim/debugdata.h",
     "lib/boot-shim/efi-boot-shim.h",
     "lib/boot-shim/item-base.h",
     "lib/boot-shim/pool-mem-config.h",
@@ -42,6 +43,7 @@ zx_library("boot-shim") {
     "acpi.cc",
     "boot-shim.cc",
     "cmdline.cc",
+    "debugdata.cc",
     "efi-boot-shim.cc",
     "efi.cc",
     "pool-mem-config.cc",
@@ -85,6 +87,7 @@ group("tests") {
 test("boot-shim-unittests") {
   sources = [
     "acpi-tests.cc",
+    "debugdata-tests.cc",
     "efi-boot-shim-tests.cc",
     "efi-tests.cc",
     "pool-mem-config-tests.cc",

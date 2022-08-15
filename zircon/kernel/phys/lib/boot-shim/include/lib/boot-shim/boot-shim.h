@@ -149,7 +149,7 @@ class BootShim : public BootShimBase {
 
   // Append additional items to the data ZBI.  The caller ensures there is as
   // much spare capacity as size_bytes() previously returned.
-  fitx::result<DataZbi::Error> AppendItems(DataZbi& zbi) const {
+  fitx::result<DataZbi::Error> AppendItems(DataZbi& zbi) {
     fitx::result<DataZbi::Error> result = fitx::ok();
     auto append = [&zbi, &result](auto& item) {
       result = item.AppendItems(zbi);
