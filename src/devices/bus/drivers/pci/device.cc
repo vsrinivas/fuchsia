@@ -28,7 +28,6 @@
 #include <fbl/string_buffer.h>
 #include <pretty/sizes.h>
 
-#include "src/devices/bus/drivers/pci/allocation.h"
 #include "src/devices/bus/drivers/pci/bus_device_interface.h"
 #include "src/devices/bus/drivers/pci/capabilities/msi.h"
 #include "src/devices/bus/drivers/pci/capabilities/msix.h"
@@ -247,45 +246,6 @@ zx_status_t Device::InitLocked() {
   return ZX_OK;
 }
 
-zx::status<> Device::Configure() {
-  // Some capabilities can only be configured after device BARs have been
-  // configured, and device BARs cannot be configured when a Device object is
-  // created since bridge windows still need to be allocated.  If BAR allocation
-  // fails then from the perspective of driver binding we will consider the
-  // device unbindable. If it it came out of the bootloader already enabled,
-  // with existing BAR allocations then we'll just let it continue operating.
-  // The most common situation we encounter like this is with a debug uart that
-  // the kernel has already carved out an address space reservation for.
-  bool had_configure_errors = false;
-  if (auto result = AllocateBars(); result.is_error()) {
-    zxlogf(ERROR, "[%s] failed to allocate bars: %s", cfg_->addr(), result.status_string());
-    had_configure_errors = true;
-  }
-
-  // Capability parsing may fail if BAR allocation failed. For example, if an
-  // MSI-X BAR for some reason is owned by the kernel (as unlikely as that
-  // seems). Similarly to BARs, we won't bail out here, but we will note that no
-  // driver should use the device.
-  if (auto result = ConfigureCapabilities(); result.is_error()) {
-    zxlogf(ERROR, "[%s] failed to configure capabilities: %s", cfg_->addr(),
-           result.status_string());
-    had_configure_errors = true;
-  }
-
-  // If a device is already running then we'll leave it on in case some function
-  // coming out of the bootloader is in use by the kernel.
-  if (had_configure_errors) {
-    if (Enabled()) {
-      zxlogf(DEBUG, "[%s] leaving device enabled despite configuration errors", cfg_->addr());
-      return zx::ok();
-    }
-
-    return zx::error(ZX_ERR_BAD_STATE);
-  }
-
-  return zx::ok();
-}
-
 zx_status_t Device::ModifyCmd(uint16_t clr_bits, uint16_t set_bits) {
   fbl::AutoLock dev_lock(&dev_lock_);
   // In order to keep internal bookkeeping coherent, and interactions between
@@ -304,17 +264,10 @@ zx_status_t Device::ModifyCmd(uint16_t clr_bits, uint16_t set_bits) {
   return ZX_ERR_UNAVAILABLE;
 }
 
-// Performs a read-modify-write on the device's Command register, but only
-// performs the write if the resulting modified value differs from the value
-// read from the register. Returns the previous value so the caller can know
-// the state that existed prior.
-uint16_t Device::ModifyCmdLocked(uint16_t clr_bits, uint16_t set_bits) {
-  uint16_t prev_value = cfg_->Read(Config::kCommand);
-  uint16_t new_value = static_cast<uint16_t>((prev_value & ~clr_bits) | set_bits);
-  if (new_value != prev_value) {
-    cfg_->Write(Config::kCommand, new_value);
-  }
-  return prev_value;
+void Device::ModifyCmdLocked(uint16_t clr_bits, uint16_t set_bits) {
+  fbl::AutoLock cmd_reg_lock(&cmd_reg_lock_);
+  cfg_->Write(Config::kCommand,
+              static_cast<uint16_t>((cfg_->Read(Config::kCommand) & ~clr_bits) | set_bits));
 }
 
 void Device::Disable() {
@@ -323,21 +276,21 @@ void Device::Disable() {
 }
 
 void Device::DisableLocked() {
+  // Disable a device because we cannot allocate space for all of its BARs (or
+  // forwarding windows, in the case of a bridge).  Flag the device as
+  // disabled from here on out.
+  zxlogf(TRACE, "[%s] %s %s", cfg_->addr(), (is_bridge()) ? " (b)" : "", __func__);
+
   // Flag the device as disabled.  Close the device's MMIO/PIO windows, shut
   // off device initiated accesses to the bus, disable legacy interrupts.
   // Basically, prevent the device from doing anything from here on out.
-  ModifyCmdLocked(
-      PCI_CONFIG_COMMAND_BUS_MASTER_EN | PCI_CONFIG_COMMAND_IO_EN | PCI_CONFIG_COMMAND_MEM_EN,
-      PCI_CONFIG_COMMAND_INT_DISABLE);
+  disabled_ = true;
+  AssignCmdLocked(PCIE_CFG_COMMAND_INT_DISABLE);
 
-  // Release all BAR allocations back into the pool they came from now that
-  // we've disabled all IO access.
+  // Release all BAR allocations back into the pool they came from.
   for (auto& bar : bars_) {
     bar.reset();
   }
-
-  disabled_ = true;
-  zxlogf(TRACE, "[%s] %s disabled", cfg_->addr(), (is_bridge()) ? " (b) " : "");
 }
 
 zx_status_t Device::SetBusMastering(bool enabled) {
@@ -354,24 +307,26 @@ zx_status_t Device::SetBusMastering(bool enabled) {
 // Configures the BAR represented by |bar| by writing to its register and configuring
 // IO and Memory access accordingly.
 zx_status_t Device::WriteBarInformation(const Bar& bar) {
+  // Now write the allocated address space to the BAR.
+  uint16_t cmd_backup = cfg_->Read(Config::kCommand);
+  // Figure out the IO type of the bar and disable that while we adjust the bar address.
+  uint16_t mem_io_en_flag = (bar.is_mmio) ? PCI_CONFIG_COMMAND_MEM_EN : PCI_CONFIG_COMMAND_IO_EN;
+  ModifyCmdLocked(mem_io_en_flag, cmd_backup);
+
   cfg_->Write(Config::kBar(bar.bar_id), static_cast<uint32_t>(bar.address));
   if (bar.is_64bit) {
     uint32_t addr_hi = static_cast<uint32_t>(bar.address >> 32);
     cfg_->Write(Config::kBar(bar.bar_id + 1), addr_hi);
   }
+  // Flip the IO bit back on for this type of bar
+  AssignCmdLocked(cmd_backup | mem_io_en_flag);
   return ZX_OK;
 }
 
 zx::status<> Device::ProbeBar(uint8_t bar_id) {
-  ZX_DEBUG_ASSERT(bar_id < bar_count_);
-  // Disable MMIO & PIO access while we perform the probe. We don't want the
-  // addresses written during probing to conflict with anything else on the
-  // bus. Note: No drivers should have access to this device's registers
-  // during the probe process as the device should not have been published
-  // yet. That said, there could be other (special case) parts of the system
-  // accessing a devices registers at this point in time, like an early init
-  // debug console or serial port.
-  DeviceIoDisable io_disable(this);
+  if (bar_id >= bar_count_) {
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
 
   Bar bar{};
   uint32_t bar_val = cfg_->Read(Config::kBar(bar_id));
@@ -393,7 +348,21 @@ zx::status<> Device::ProbeBar(uint8_t bar_id) {
     return zx::error(ZX_ERR_BAD_STATE);
   }
 
-  if (io_disable.io_was_enabled()) {
+  // Disable MMIO & PIO access while we perform the probe. We don't want the
+  // addresses written during probing to conflict with anything else on the
+  // bus. Note: No drivers should have access to this device's registers
+  // during the probe process as the device should not have been published
+  // yet. That said, there could be other (special case) parts of the system
+  // accessing a devices registers at this point in time, like an early init
+  // debug console or serial port. Don't make any attempt to print or log
+  // until the probe operation has been completed. Hopefully these special
+  // systems are quiescent at this point in time, otherwise they might see
+  // some minor glitching while access is disabled.
+  uint16_t cmd_backup = ReadCmdLocked();
+  bool enabled = !!(cmd_backup & (PCI_CONFIG_COMMAND_MEM_EN | PCI_CONFIG_COMMAND_IO_EN));
+  if (enabled) {
+    ModifyCmdLocked(/*clr_bits=*/PCI_CONFIG_COMMAND_MEM_EN | PCI_CONFIG_COMMAND_IO_EN,
+                    /*set_bits=*/cmd_backup);
     // For enabled devices save the original address in the BAR. If the device
     // is enabled then we should assume the bios configured it and we should
     // attempt to retain the BAR allocation.
@@ -412,7 +381,7 @@ zx::status<> Device::ProbeBar(uint8_t bar_id) {
   if (bar.is_mmio && bar.is_64bit) {
     // Retain the high 32bits of the 64bit address address if the device was
     // enabled already.
-    if (io_disable.io_was_enabled()) {
+    if (enabled) {
       bar.address |= static_cast<uint64_t>(cfg_->Read(Config::kBar(bar_id + 1))) << 32;
     }
 
@@ -500,33 +469,19 @@ zx::status<> Device::AllocateBar(uint8_t bar_id) {
   ZX_DEBUG_ASSERT(upstream_);
   ZX_DEBUG_ASSERT(bar_id < bar_count_);
   ZX_DEBUG_ASSERT(bars_[bar_id].has_value());
-  DeviceIoDisable io_disable(this);
 
   Bar& bar = *bars_[bar_id];
-  // Try to retain existing bar address mappings.
-  if (bar.address) {
-    auto result = AllocateFromUpstream(bar, bar.address);
-    if (result.is_ok()) {
-      bar.allocation = std::move(result.value());
-      // If we succeeded in allocating this range then the bar register itself
-      // is already configured.
-      return zx::ok();
-    }
-
-    // If the device was enabled and we can't remap it then we'll give up on it.
-    if (io_disable.io_was_enabled()) {
-      return result.take_error();
-    }
+  // The goal is to try to allocate the same window configured by the
+  // bootloader/bios, but if unavailable then allocate an appropriately sized
+  // window from anywhere in the upstream allocator.
+  std::unique_ptr<PciAllocation> allocation = {};
+  if (auto result = AllocateFromUpstream(bar, bar.address); result.is_ok()) {
+    bar.allocation = std::move(result.value());
+  } else if (auto result = AllocateFromUpstream(bar, std::nullopt); result.is_ok()) {
+    bar.allocation = std::move(result.value());
+  } else {
+    return zx::error(ZX_ERR_NOT_FOUND);
   }
-
-  // If we've made it here then we either had no existing address, or we had an
-  // address but the device is not yet enableed. In either case it is safe to
-  // allocate a new mapping for the bar.
-  auto result = AllocateFromUpstream(bar, std::nullopt);
-  if (result.is_error()) {
-    return result.take_error();
-  }
-  bar.allocation = std::move(result.value());
 
   bar.address = bar.allocation->base();
   WriteBarInformation(bar);
@@ -552,19 +507,6 @@ zx::status<> Device::AllocateBars() {
     }
   }
 
-  // Based on the Memory / IO space found in active BARs we need to switch on
-  // the relevant access bits in the device's Command register.
-  config::Command cmd{.value = ReadCmdLocked()};
-  for (auto& bar : bars_) {
-    if (bar) {
-      if (bar->is_mmio) {
-        cmd.set_memory_space(true);
-      } else {
-        cmd.set_io_space(true);
-      }
-    }
-  }
-  AssignCmdLocked(cmd.value);
   return zx::ok();
 }
 

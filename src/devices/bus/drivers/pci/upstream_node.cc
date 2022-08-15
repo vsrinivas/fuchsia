@@ -17,9 +17,10 @@ namespace pci {
 
 void UpstreamNode::ConfigureDownstreamDevices() {
   for (auto& device : downstream_) {
-    // Bring up the remainder of the device and allow driver binding, but
-    // disable it if any problems are encountered.
-    if (auto result = device.Configure(); result.is_error()) {
+    // Some capabilities can only be configured after device BARs have been
+    // configured, and device BARs cannot be configured when a Device is object
+    // is created since bridge windows still need to be allocated.
+    if (device.AllocateBars().is_error() || device.ConfigureCapabilities() != ZX_OK) {
       device.Disable();
     }
   }

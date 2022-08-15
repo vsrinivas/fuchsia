@@ -121,7 +121,7 @@ zx_status_t AllocateCapability(
 
 }  // namespace
 
-zx::status<> Device::ConfigureCapabilities() {
+zx_status_t Device::ConfigureCapabilities() {
   fbl::AutoLock dev_lock(&dev_lock_);
   zx_status_t st;
   if (caps_.msix) {
@@ -132,11 +132,11 @@ zx::status<> Device::ConfigureCapabilities() {
     st = msix.Init(*bars()[msix.table_bar()], *bars()[msix.pba_bar()]);
     if (st != ZX_OK) {
       zxlogf(ERROR, "Failed to initialize MSI-X: %d", st);
-      return zx::error(st);
+      return st;
     }
   }
 
-  return zx::ok();
+  return ZX_OK;
 }
 
 zx_status_t Device::ParseCapabilities() {

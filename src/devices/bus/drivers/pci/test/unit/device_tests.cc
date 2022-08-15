@@ -20,7 +20,6 @@
 
 #include "src/devices/bus/drivers/pci/capabilities.h"
 #include "src/devices/bus/drivers/pci/capabilities/power_management.h"
-#include "src/devices/bus/drivers/pci/common.h"
 #include "src/devices/bus/drivers/pci/config.h"
 #include "src/devices/bus/drivers/pci/device.h"
 #include "src/devices/bus/drivers/pci/test/fakes/fake_bus.h"
@@ -496,24 +495,6 @@ TEST_F(PciDeviceTests, PowerStateTransitions) {
   ASSERT_TRUE(test_recovery_delay(PowerManagementCapability::PowerState::D2,
                                   PowerManagementCapability::PowerState::D1));
   ASSERT_EQ(dev.GetPowerState().value(), PowerManagementCapability::PowerState::D1);
-}
-
-// Ensures that the DeviceIoDisable inner class properly disables and then
-// re-enables the IO access bits.
-TEST_F(PciDeviceTests, DeviceIoDisable) {
-  auto& dev = CreateTestDevice(parent(), kFakeQuadroDeviceConfig.data(),
-                               kFakeQuadroDeviceConfig.max_size());
-  config::Command cmd{};
-  cmd.set_bus_master(true).set_io_space(1).set_memory_space(1);
-  dev.config()->Write(Config::kCommand, cmd.value);
-  {
-    ASSERT_EQ(cmd.value, dev.config()->Read(Config::kCommand));
-    Device::DeviceIoDisable disable(&dev);
-    cmd.set_io_space(0).set_memory_space(0);
-    ASSERT_EQ(cmd.value, dev.config()->Read(Config::kCommand));
-  }
-  cmd.set_io_space(1).set_memory_space(1);
-  ASSERT_EQ(cmd.value, dev.config()->Read(Config::kCommand));
 }
 
 }  // namespace pci
