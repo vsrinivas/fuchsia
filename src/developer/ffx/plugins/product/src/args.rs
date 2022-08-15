@@ -48,4 +48,9 @@ pub struct VerifyCommand {
     /// local directory containing the product bundle.
     #[argh(positional)]
     pub product_bundle: PathBuf,
+
+    /// optional verified file to write after successfully verifying,
+    /// so that build systems have an output to watch.
+    #[argh(option)]
+    pub verified_file: Option<PathBuf>,
 }

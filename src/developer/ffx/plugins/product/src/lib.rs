@@ -19,7 +19,7 @@ use {
     sdk_metadata::{self, ElementType, Envelope, ProductBundleV1},
     std::{
         convert::TryInto,
-        fs::File,
+        fs::{self, File},
         io::{stdout, Write},
         path::Path,
     },
@@ -216,6 +216,9 @@ fn pb_verify(cmd: &VerifyCommand) -> Result<()> {
     let file = File::open(&cmd.product_bundle).context("opening product bundle")?;
     let envelope: Envelope<ProductBundleV1> =
         serde_json::from_reader(file).context("parsing product bundle")?;
+    if let Some(verified_path) = &cmd.verified_file {
+        fs::write(verified_path, "verified").context("writing verified file")?;
+    }
     pb_verify_product_bundle(envelope.data)
 }
 
