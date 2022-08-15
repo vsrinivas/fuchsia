@@ -141,6 +141,8 @@ product_bootfs_labels += [
 product_bootfs_labels += [ "//bundles/drivers:usb-peripheral-stack" ]
 product_bootfs_labels -= [ "//bundles/drivers:usb-peripheral-stack" ]
 
+legacy_base_package_labels += [ "//src/media/codec/bundles:codec_factory" ]
+
 # Shards for media.
 core_realm_shards += [
   "//src/media/codec:codec_factory_shard",
