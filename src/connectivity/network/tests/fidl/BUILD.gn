@@ -14,12 +14,17 @@ group("tests") {
 
 tests = [
   "debug",
-  "filter",
   "interfaces",
   "interfaces-admin",
   "neighbor",
   "routes",
 ]
+
+# TODO(https://fxbug.dev/106480): Flaky test disabled on coverage.
+# Please fix the flake and remove the condition below.
+if (!is_coverage) {
+  tests += [ "filter" ]
+}
 
 foreach(test, tests) {
   name = "netstack-${test}-fidl-test"
