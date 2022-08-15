@@ -36,8 +36,6 @@
 
 namespace modular {
 
-using cobalt_registry::ModularLifetimeEventsMetricDimensionEventType;
-
 namespace {
 
 constexpr char kSessionEnvironmentLabelPrefix[] = "session-";

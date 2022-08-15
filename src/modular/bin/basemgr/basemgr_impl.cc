@@ -34,8 +34,6 @@
 
 namespace modular {
 
-using cobalt_registry::ModularLifetimeEventsMetricDimensionEventType;
-
 // Implementation of the |fuchsia::modular::session::Launcher| protocol.
 class LauncherImpl : public fuchsia::modular::session::Launcher {
  public:
