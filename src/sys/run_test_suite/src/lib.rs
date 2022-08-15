@@ -12,7 +12,7 @@ use {
     },
     fuchsia_async as fasync,
     futures::{prelude::*, stream::FuturesUnordered, StreamExt},
-    log::{error, warn},
+    log::{error, info, warn},
     std::collections::{HashMap, HashSet},
     std::convert::TryInto,
     std::io::Write,
@@ -70,7 +70,7 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
     let mut tasks = vec![];
     let suite_events_done_event = event::Event::new();
 
-    let colect_results_fut = async {
+    let collect_results_fut = async {
         while let Some(event_result) = running_suite.next_event().named("next_event").await {
             match event_result {
                 Err(e) => {
@@ -175,35 +175,21 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
                         ftest_manager::SuiteEventPayload::CaseFinished(CaseFinished {
                             identifier,
                         }) => {
-                            // complete artifact collection first. If the test timed out assume
-                            // collection may hang and cancel the future.
+                            // in case the test timed out, terminate artifact collection since it
+                            // may be hung.
                             let test_case_name = test_cases.get(&identifier).ok_or(
                                 UnexpectedEventError::CaseFinishedButNotFound { identifier },
                             )?;
-                            if let Some(tasks) = test_cases_output.remove(&identifier) {
-                                if test_cases_timed_out.remove(&identifier) {
-                                    for t in tasks {
-                                        if let Some(Err(e)) = t.now_or_never() {
-                                            error!(
-                                                "Cannot write output for {}: {:?}",
-                                                test_case_name, e
-                                            );
-                                        }
-                                    }
-                                } else {
-                                    for t in tasks {
-                                        if let Err(e) = t.await {
-                                            error!(
-                                                "Cannot write output for {}: {:?}",
-                                                test_case_name, e
-                                            )
-                                        }
+                            if test_cases_timed_out.remove(&identifier) {
+                                for t in test_cases_output.remove(&identifier).unwrap_or(vec![]) {
+                                    if let Some(Err(e)) = t.now_or_never() {
+                                        error!(
+                                            "Cannot write output for {}: {:?}",
+                                            test_case_name, e
+                                        );
                                     }
                                 }
                             }
-
-                            let reporter = test_case_reporters.remove(&identifier).unwrap();
-                            reporter.finished().await?;
                         }
                         ftest_manager::SuiteEventPayload::SuiteArtifact(SuiteArtifact {
                             artifact,
@@ -316,7 +302,20 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
         }
         suite_events_done_event.signal();
 
+        // complete collecting all case artifacts and signal completion
+        info!("Awaiting case artifacts");
+        for (identifier, test_case_reporter) in test_case_reporters.into_iter() {
+            for t in test_cases_output.remove(&identifier).unwrap_or(vec![]) {
+                if let Err(e) = t.await {
+                    let test_case_name = test_cases.get(&identifier).unwrap();
+                    error!("Cannot write output for {}: {:?}", test_case_name, e);
+                }
+            }
+            test_case_reporter.finished().await?;
+        }
+
         // collect all logs
+        info!("Awaiting suite artifacts");
         for t in suite_log_tasks {
             match t.await {
                 Ok(r) => match r {
@@ -344,7 +343,7 @@ async fn run_suite_and_collect_logs<F: Future<Output = ()> + Unpin>(
         Ok(())
     };
 
-    match colect_results_fut.boxed_local().or_cancelled(cancel_fut).await {
+    match collect_results_fut.boxed_local().or_cancelled(cancel_fut).await {
         Ok(Ok(())) => (),
         Ok(Err(e)) => return Err(e),
         Err(Cancelled) => {
@@ -409,15 +408,16 @@ impl RunningSuite {
     /// Number of concurrently active GetEvents requests. Chosen by testing powers of 2 when
     /// running a set of tests using ffx test against an emulator, and taking the value at
     /// which improvement stops.
-    const PIPELINED_REQUESTS: usize = 8;
+    const DEFAULT_PIPELINED_REQUESTS: usize = 8;
     async fn wait_for_start(
         proxy: ftest_manager::SuiteControllerProxy,
         url: String,
         max_severity_logs: Option<Severity>,
+        max_pipelined: Option<usize>,
     ) -> Self {
         // Stream of fidl responses, with multiple concurrently active requests.
         let unprocessed_event_stream = futures::stream::repeat_with(move || proxy.get_events())
-            .buffered(Self::PIPELINED_REQUESTS);
+            .buffered(max_pipelined.unwrap_or(Self::DEFAULT_PIPELINED_REQUESTS));
         // Terminate the stream after we get an error or empty list of events.
         let terminated_event_stream =
             unprocessed_event_stream.take_until_stop_after(|result| match &result {
@@ -534,6 +534,7 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
             suite_controller,
             params.test_url.clone(),
             params.max_severity_logs,
+            None,
         )
         .map(move |running_suite| (running_suite, suite_id));
         suite_start_futs.push(suite_and_id_fut);
@@ -875,7 +876,7 @@ mod test {
         });
 
         let mut running_suite =
-            RunningSuite::wait_for_start(suite_proxy, TEST_URL.to_string(), None).await;
+            RunningSuite::wait_for_start(suite_proxy, TEST_URL.to_string(), None, None).await;
         assert_empty_events_eq!(
             running_suite.next_event().await.unwrap().unwrap(),
             create_empty_event(0)
@@ -907,7 +908,7 @@ mod test {
         });
 
         let mut running_suite =
-            RunningSuite::wait_for_start(suite_proxy, TEST_URL.to_string(), None).await;
+            RunningSuite::wait_for_start(suite_proxy, TEST_URL.to_string(), None, None).await;
 
         for num in 0..4 {
             assert_empty_events_eq!(
@@ -930,7 +931,7 @@ mod test {
         });
 
         let mut running_suite =
-            RunningSuite::wait_for_start(suite_proxy, TEST_URL.to_string(), None).await;
+            RunningSuite::wait_for_start(suite_proxy, TEST_URL.to_string(), None, None).await;
         assert_empty_events_eq!(
             running_suite.next_event().await.unwrap().unwrap(),
             create_empty_event(1)
@@ -1057,7 +1058,8 @@ mod test {
             let suite_reporter =
                 run_reporter.new_suite("test-url", &SuiteId(0)).await.expect("create new suite");
 
-            let suite = RunningSuite::wait_for_start(proxy, "test-url".to_string(), None).await;
+            let suite =
+                RunningSuite::wait_for_start(proxy, "test-url".to_string(), None, None).await;
             assert_eq!(
                 run_suite_and_collect_logs(
                     suite,
@@ -1129,7 +1131,8 @@ mod test {
             let suite_reporter =
                 run_reporter.new_suite("test-url", &SuiteId(0)).await.expect("create new suite");
 
-            let suite = RunningSuite::wait_for_start(proxy, "test-url".to_string(), None).await;
+            let suite =
+                RunningSuite::wait_for_start(proxy, "test-url".to_string(), None, None).await;
             assert_eq!(
                 run_suite_and_collect_logs(
                     suite,
@@ -1179,6 +1182,93 @@ mod test {
     }
 
     #[fuchsia::test]
+    async fn collect_suite_events_case_artifacts_complete_after_suite() {
+        const STDOUT_CONTENT: &str = "stdout from my_test_case";
+        const STDERR_CONTENT: &str = "stderr from my_test_case";
+
+        let (stdout_write, stdout_read) =
+            fidl::Socket::create(fidl::SocketOpts::STREAM).expect("create socket");
+        let (stderr_write, stderr_read) =
+            fidl::Socket::create(fidl::SocketOpts::STREAM).expect("create socket");
+        let all_events = vec![
+            suite_started_event(0),
+            case_found_event(100, 0, "my_test_case"),
+            case_started_event(200, 0),
+            case_stdout_event(300, 0, stdout_read),
+            case_stderr_event(300, 0, stderr_read),
+            case_stopped_event(300, 0, ftest_manager::CaseStatus::Passed),
+            case_finished_event(400, 0),
+            suite_stopped_event(500, ftest_manager::SuiteStatus::Passed),
+        ];
+
+        let (proxy, stream) = create_proxy_and_stream::<ftest_manager::SuiteControllerMarker>()
+            .expect("create stream");
+        let serve_fut = async move {
+            // server side will send all events, then write to (and close) sockets.
+            serve_all_events(stream, all_events).await;
+            let mut async_stdout =
+                fasync::Socket::from_socket(stdout_write).expect("make async socket");
+            async_stdout.write_all(STDOUT_CONTENT.as_bytes()).await.expect("write to socket");
+            let mut async_stderr =
+                fasync::Socket::from_socket(stderr_write).expect("make async socket");
+            async_stderr.write_all(STDERR_CONTENT.as_bytes()).await.expect("write to socket");
+        };
+        let test_fut = async move {
+            let reporter = output::InMemoryReporter::new();
+            let run_reporter = output::RunReporter::new(reporter.clone());
+            let suite_reporter =
+                run_reporter.new_suite("test-url", &SuiteId(0)).await.expect("create new suite");
+
+            let suite =
+                RunningSuite::wait_for_start(proxy, "test-url".to_string(), None, Some(1)).await;
+            assert_eq!(
+                run_suite_and_collect_logs(
+                    suite,
+                    &suite_reporter,
+                    diagnostics::LogCollectionOptions::default(),
+                    futures::future::pending()
+                )
+                .await
+                .expect("collect results"),
+                Outcome::Passed
+            );
+            suite_reporter.finished().await.expect("Reporter finished");
+
+            let reports = reporter.get_reports();
+            let case = reports
+                .iter()
+                .find(|report| report.id == EntityId::Case { suite: SuiteId(0), case: CaseId(0) })
+                .unwrap();
+            assert_eq!(case.report.name, "my_test_case");
+            assert_eq!(case.report.outcome, Some(output::ReportedOutcome::Passed));
+            assert!(case.report.is_finished);
+            assert_eq!(case.report.artifacts.len(), 2);
+            assert_eq!(
+                case.report
+                    .artifacts
+                    .iter()
+                    .map(|(artifact_type, artifact)| (*artifact_type, artifact.get_contents()))
+                    .collect::<HashMap<_, _>>(),
+                hashmap! {
+                    output::ArtifactType::Stdout => STDOUT_CONTENT.as_bytes().to_vec(),
+                    output::ArtifactType::Stderr => STDERR_CONTENT.as_bytes().to_vec()
+                }
+            );
+            assert!(case.report.directories.is_empty());
+
+            let suite =
+                reports.iter().find(|report| report.id == EntityId::Suite(SuiteId(0))).unwrap();
+            assert_eq!(suite.report.name, "test-url");
+            assert_eq!(suite.report.outcome, Some(output::ReportedOutcome::Passed));
+            assert!(suite.report.is_finished);
+            assert!(suite.report.artifacts.is_empty());
+            assert!(suite.report.directories.is_empty());
+        };
+
+        futures::future::join(serve_fut, test_fut).await;
+    }
+
+    #[fuchsia::test]
     async fn collect_suite_events_with_case_artifacts_sent_after_case_stopped() {
         const STDOUT_CONTENT: &str = "stdout from my_test_case";
         const STDERR_CONTENT: &str = "stderr from my_test_case";
@@ -1214,7 +1304,8 @@ mod test {
             let suite_reporter =
                 run_reporter.new_suite("test-url", &SuiteId(0)).await.expect("create new suite");
 
-            let suite = RunningSuite::wait_for_start(proxy, "test-url".to_string(), None).await;
+            let suite =
+                RunningSuite::wait_for_start(proxy, "test-url".to_string(), None, None).await;
             assert_eq!(
                 run_suite_and_collect_logs(
                     suite,
@@ -1290,7 +1381,8 @@ mod test {
             let suite_reporter =
                 run_reporter.new_suite("test-url", &SuiteId(0)).await.expect("create new suite");
 
-            let suite = RunningSuite::wait_for_start(proxy, "test-url".to_string(), None).await;
+            let suite =
+                RunningSuite::wait_for_start(proxy, "test-url".to_string(), None, None).await;
             assert_eq!(
                 run_suite_and_collect_logs(
                     suite,
