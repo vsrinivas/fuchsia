@@ -842,13 +842,13 @@ You may pass `v2 = false` to either `fuchsia_unittest_component` or
 The generated component manifest file can be found with the following command:
 
 ```posix-terminal
-fx gn outputs $(fx get-build-dir) {{ '<var>unittest target</var>' }}_generated_manifest
+fx gn outputs $(fx get-build-dir) {{ '<var>//some/path/to/build/file:unittest target</var>' }}_component_generated_manifest
 ```
 
 To print it directly:
 
 ```posix-terminal
-fx build && cat $(fx get-build-dir)/$(fx gn outputs $(fx get-build-dir) {{ '<var>unittest target</var>' }}_generated_manifest)
+fx build && cat $(fx get-build-dir)/$(fx gn outputs $(fx get-build-dir) {{ '<var>//some/path/to/build/file:unittest target</var>' }}_component_generated_manifest)
 ```
 
 Note: `fx gn outputs` prints an output path, but the file at the path
