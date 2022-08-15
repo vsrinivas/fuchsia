@@ -182,9 +182,7 @@ zx_status_t TestHarnessImpl::PopulateEnvServices(sys::testing::EnvironmentServic
        "fuchsia-pkg://fuchsia.com/intl-services-small#meta/intl_services.cmx"},
       {fuchsia::settings::Intl::Name_,
        "fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cmx"},
-      {fuchsia::stash::Store::Name_, "fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx"},
-      {fuchsia::cobalt::LoggerFactory::Name_,
-       "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx"}};
+      {fuchsia::stash::Store::Name_, "fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx"}};
 
   std::set<std::string> added_svcs;
 

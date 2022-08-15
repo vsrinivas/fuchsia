@@ -33,13 +33,6 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-fuchsia_component("component_v1") {
-  component_name = "mock_cobalt"
-  testonly = true
-  manifest = "meta/mock_cobalt.cmx"
-  deps = [ ":bin" ]
-}
-
 fuchsia_component("component_v2") {
   component_name = "mock_cobalt"
   testonly = true
@@ -49,10 +42,7 @@ fuchsia_component("component_v2") {
 
 fuchsia_package("mock_cobalt") {
   testonly = true
-  deps = [
-    ":component_v1",
-    ":component_v2",
-  ]
+  deps = [ ":component_v2" ]
 }
 
 fuchsia_unittest_package("mock-cobalt-tests") {

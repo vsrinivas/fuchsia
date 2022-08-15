@@ -26,13 +26,8 @@ class BasemgrNonHermeticTest : public gtest::TestWithEnvironmentFixture {
   BasemgrNonHermeticTest() = default;
 
   void SetUp() override {
-    // Setup an enclosing environment that provides basemgr with a mock of the cobalt logger
-    // factory.
+    // Setup an enclosing environment that provides basemgr.
     auto env_services = CreateServices();
-    env_services->AddServiceWithLaunchInfo(
-        fuchsia::sys::LaunchInfo{.url =
-                                     "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx"},
-        fuchsia::metrics::MetricEventLoggerFactory::Name_);
 
     env_services->AddService(std::make_unique<vfs::Service>(
                                  [presenter_channels = std::vector<zx::channel>()](
