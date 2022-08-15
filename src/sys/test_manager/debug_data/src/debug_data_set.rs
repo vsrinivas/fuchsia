@@ -8,7 +8,6 @@ use async_trait::async_trait;
 use fidl::{endpoints::ServerEnd, prelude::*};
 use fidl_fuchsia_debugdata as fdebug;
 use fidl_fuchsia_sys2 as fsys;
-use fidl_fuchsia_sys2::EventStream2Proxy;
 use fidl_fuchsia_test_internal as ftest_internal;
 use fidl_fuchsia_test_manager as ftest_manager;
 use fuchsia_inspect::types::Node;
@@ -53,7 +52,7 @@ pub trait PublishRequestHandler {
 /// Stopped instead.
 pub async fn handle_debug_data_controller_and_events<CS, D>(
     controller_requests: CS,
-    event_source: EventStream2Proxy,
+    events: fsys::EventStreamRequestStream,
     publish_request_handler: D,
     timeout_after_finish: zx::Duration,
     inspect_node: &Node,
@@ -101,49 +100,54 @@ pub async fn handle_debug_data_controller_and_events<CS, D>(
         }
         .unwrap_or_else(|e| warn!("Error serving debug data set: {:?}", e))
     });
-    let event_fut = route_events(event_source, debug_data_sets_ref)
+    let event_fut = route_events(events, debug_data_sets_ref)
         .unwrap_or_else(|e| error!("Error routing debug data events: {:?}", e));
     futures::future::join(controller_fut, event_fut).await;
 }
 
 async fn route_events(
-    event_stream: EventStream2Proxy,
+    mut event_stream: fsys::EventStreamRequestStream,
     sets: &Mutex<Vec<Weak<Mutex<inner::DebugDataSet>>>>,
 ) -> Result<(), Error> {
-    while let Ok(events) = event_stream.get_next().await {
-        for event in events {
-            let header = event.header.as_ref().unwrap();
-            let moniker = RelativeMoniker::parse(&header.moniker.as_ref().unwrap()).unwrap();
-            let mut locked_sets = sets.lock().await;
-            let mut active_sets = vec![];
-            locked_sets.retain(|weak_set| match Weak::upgrade(weak_set) {
-                Some(set) => {
-                    active_sets.push(set);
-                    true
-                }
-                None => false,
-            });
-            drop(locked_sets);
-            let mut matched = false;
-            for active_set in active_sets {
-                let mut locked_set = active_set.lock().await;
-                if locked_set.includes_moniker(&moniker) {
-                    locked_set
-                        .handle_event(event)
-                        .await
-                        .unwrap_or_else(|e| warn!("Error handling event: {:?}", e));
-                    matched = true;
-                    break;
-                }
+    while let Some(req_res) = event_stream.next().await {
+        let fsys::EventStreamRequest::OnEvent { event, .. } = match req_res {
+            Ok(req) => req,
+            Err(e) => {
+                warn!("Error getting event: {:?}", e);
+                continue;
             }
-            if !matched {
-                match moniker.down_path().get(0) {
-                    Some(child_moniker) if child_moniker.collection.is_some() => {
-                        warn!("Unhandled event moniker {}", moniker)
-                    }
-                    // suppress warning if the moniker isn't in a collection (and thus isn't a test).
-                    None | Some(_) => (),
+        };
+        let header = event.header.as_ref().unwrap();
+        let moniker = RelativeMoniker::parse(&header.moniker.as_ref().unwrap()).unwrap();
+        let mut locked_sets = sets.lock().await;
+        let mut active_sets = vec![];
+        locked_sets.retain(|weak_set| match Weak::upgrade(weak_set) {
+            Some(set) => {
+                active_sets.push(set);
+                true
+            }
+            None => false,
+        });
+        drop(locked_sets);
+        let mut matched = false;
+        for active_set in active_sets {
+            let mut locked_set = active_set.lock().await;
+            if locked_set.includes_moniker(&moniker) {
+                locked_set
+                    .handle_event(event)
+                    .await
+                    .unwrap_or_else(|e| warn!("Error handling event: {:?}", e));
+                matched = true;
+                break;
+            }
+        }
+        if !matched {
+            match moniker.down_path().get(0) {
+                Some(child_moniker) if child_moniker.collection.is_some() => {
+                    warn!("Unhandled event moniker {}", moniker)
                 }
+                // suppress warning if the moniker isn't in a collection (and thus isn't a test).
+                None | Some(_) => (),
             }
         }
     }
@@ -966,54 +970,13 @@ mod test {
     use super::*;
     use assert_matches::assert_matches;
     use fidl::endpoints::{create_proxy, create_proxy_and_stream};
-    use fidl_fuchsia_sys2 as fsys;
-    use fsys::EventStream2RequestStream;
-    use fuchsia_async as fasync;
-    use futures::channel::mpsc;
     use futures::Future;
-    use futures::StreamExt;
     use maplit::hashmap;
     use std::sync::atomic::{AtomicU32, Ordering};
 
     /// A |PublishRequestHandler| implementation that counts the number of requests per state, and
     /// sends them on completion.
     struct TestPublishRequestHandler(AtomicU32, mpsc::Sender<DebugSetState>);
-
-    /// Simulates a V2 event stream
-    struct EventStreamServer {
-        _task: fasync::Task<()>,
-        sender: mpsc::UnboundedSender<fsys::Event>,
-    }
-
-    impl EventStreamServer {
-        fn on_event(
-            &self,
-            event: fsys::Event,
-        ) -> Result<(), futures::channel::mpsc::TrySendError<fidl_fuchsia_sys2::Event>> {
-            self.sender.unbounded_send(event)
-        }
-
-        fn new(mut stream: EventStream2RequestStream) -> Self {
-            let (sender, mut receiver) = mpsc::unbounded();
-            let _task = fasync::Task::spawn(async move {
-                while let Some(event) = stream.next().await {
-                    match event {
-                        Ok(fsys::EventStream2Request::GetNext { responder }) => {
-                            if let Some(event) = receiver.next().await {
-                                responder.send(&mut vec![event].into_iter()).unwrap();
-                            } else {
-                                break;
-                            }
-                        }
-                        Err(e) => {
-                            panic!("Error in event stream: {:?}", e);
-                        }
-                    }
-                }
-            });
-            Self { sender, _task }
-        }
-    }
 
     #[derive(PartialEq, Debug)]
     struct DebugSetState {
@@ -1055,7 +1018,7 @@ mod test {
     where
         F: Fn(
             ftest_internal::DebugDataControllerProxy,
-            EventStreamServer,
+            fsys::EventStreamProxy,
             mpsc::Receiver<DebugSetState>,
         ) -> Fut,
         Fut: Future<Output = ()>,
@@ -1063,21 +1026,17 @@ mod test {
         let (controller_request_proxy, controller_request_stream) =
             create_proxy_and_stream::<ftest_internal::DebugDataControllerMarker>().unwrap();
         let (event_proxy, event_request_stream) =
-            create_proxy_and_stream::<fsys::EventStream2Marker>().unwrap();
+            create_proxy_and_stream::<fsys::EventStreamMarker>().unwrap();
         let (request_handler, request_recv) = TestPublishRequestHandler::new();
         let ((), ()) = futures::future::join(
             handle_debug_data_controller_and_events(
                 controller_request_stream,
-                event_proxy,
+                event_request_stream,
                 request_handler,
                 zx::Duration::INFINITE,
                 fuchsia_inspect::Inspector::new().root(),
             ),
-            test_fn(
-                controller_request_proxy,
-                EventStreamServer::new(event_request_stream),
-                request_recv,
-            ),
+            test_fn(controller_request_proxy, event_proxy, request_recv),
         )
         .await;
     }
