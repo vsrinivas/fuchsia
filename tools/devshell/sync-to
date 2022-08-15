@@ -661,8 +661,6 @@ class SyncToCommand:
                     f"\n  {colorize(force_cmd, Color.RED)}"
                     f"\n  {colorize(fixup_cmd, Color.RED)}")
 
-        print("Dry-run: nothing will be changed on your local repo.")
-
         while True:  # Loop until we get a valid input.
             if self.force:
                 uncomitted_info = (
