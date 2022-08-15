@@ -37,18 +37,6 @@ fuchsia_component("component-legacy") {
   deps = [ ":bin" ]
 }
 
-fuchsia_component("component-with-fast-udp-legacy") {
-  component_name = "netstack_with_fast_udp"
-  manifest = "meta/netstack_with_fast_udp.cmx"
-  deps = [
-    ":bin",
-
-    # This component is only used for testing so ensure it doesn't show up in
-    # production builds.
-    "//build/validate:non_production_tag",
-  ]
-}
-
 go_binary("bin_with_deadlock_detection") {
   gopackage = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/stub"
   output_name = string_replace(target_name, "bin", "netstack")

@@ -121,7 +121,6 @@ fuchsia_package("network-legacy-deprecated") {
     # reference v1 components.
     "dns:component-legacy",
     "netstack:component-legacy",
-    "netstack:component-with-fast-udp-legacy",
   ]
 }
 
