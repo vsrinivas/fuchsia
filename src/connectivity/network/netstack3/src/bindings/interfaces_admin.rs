@@ -791,6 +791,10 @@ async fn run_address_state_provider(
     req_stream: fnet_interfaces_admin::AddressStateProviderRequestStream,
     stop_receiver: futures::channel::oneshot::Receiver<fnet_interfaces_admin::AddressRemovalReason>,
 ) {
+    // When detached, the lifetime of `req_stream` should not be tied to the
+    // lifetime of `address`.
+    let mut detached = false;
+    let stop_receiver = stop_receiver.fuse();
     enum AddressStateProviderEvent {
         Request(Result<Option<fnet_interfaces_admin::AddressStateProviderRequest>, fidl::Error>),
         Canceled(fnet_interfaces_admin::AddressRemovalReason),
@@ -806,15 +810,18 @@ async fn run_address_state_provider(
             AddressStateProviderEvent::Request(req) => match req {
                 // The client hung up, stop serving.
                 Ok(None) => break,
-                Ok(Some(request)) => dispatch_address_state_provider_request(request)
-                    .unwrap_or_else(|e| {
-                        log::error!(
-                            "failed to handle request for address {:?} on interface {}: {:?}",
-                            address,
-                            id,
-                            e
-                        );
-                    }),
+                Ok(Some(request)) => {
+                    dispatch_address_state_provider_request(request, &mut detached).unwrap_or_else(
+                        |e| {
+                            log::error!(
+                                "failed to handle request for address {:?} on interface {}: {:?}",
+                                address,
+                                id,
+                                e
+                            );
+                        },
+                    )
+                }
                 Err(e) => {
                     log::error!(
                         "error operating {} stream for address {:?} on interface {}: {:?}",
@@ -839,9 +846,16 @@ async fn run_address_state_provider(
             }
         }
     }
+    // Only exit the loop if a) the client hung up, or b) we were canceled.
+    debug_assert_ne!(stop_receiver.is_terminated(), req_stream.is_terminated());
+
+    // If detached, wait to be canceled before removing the address.
+    if detached && !stop_receiver.is_terminated() {
+        let _reason: fnet_interfaces_admin::AddressRemovalReason =
+            stop_receiver.await.expect("failed to receive stop");
+    }
 
     // Remove the address.
-    // TODO(https://fxbug.dev/105011): Delay removing the addr if detached.
     let mut ctx = ctx.lock().await;
     let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
     let device_info =
@@ -864,6 +878,7 @@ async fn run_address_state_provider(
 /// Serves a `fuchsia.net.interfaces.admin/AddressStateProvider` request.
 fn dispatch_address_state_provider_request(
     req: fnet_interfaces_admin::AddressStateProviderRequest,
+    detached: &mut bool,
 ) -> Result<(), fidl::Error> {
     log::debug!("serving {:?}", req);
     match req {
@@ -880,7 +895,8 @@ fn dispatch_address_state_provider_request(
             responder.send(fnet_interfaces_admin::AddressAssignmentState::Assigned)
         }
         fnet_interfaces_admin::AddressStateProviderRequest::Detach { control_handle: _ } => {
-            todo!("https://fxbug.dev/105011 Support detach")
+            *detached = true;
+            Ok(())
         }
     }
 }

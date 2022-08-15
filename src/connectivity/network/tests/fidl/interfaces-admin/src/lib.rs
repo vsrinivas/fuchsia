@@ -552,9 +552,9 @@ async fn add_address_success<N: Netstack>(name: &str) {
         .expect("wait for address absence");
     }
 
-    // Adding a valid address and detaching does not cause the address to be removed.
-    // TODO(https://fxbug.dev/105011): Test against NS3 once Detach is supported.
-    if N::VERSION != NetstackVersion::Netstack3 {
+    // Adding a valid address and detaching does not cause the address to be
+    // removed.
+    {
         let subnet = fidl_subnet!("2.2.2.2/32");
         let address_state_provider =
             interfaces::add_address_wait_assigned(&control, subnet, VALID_ADDRESS_PARAMETERS)
