@@ -16,14 +16,10 @@ use {
     fidl_fuchsia_developer_ffx::RepositoryRegistryProxy,
     fidl_fuchsia_developer_ffx_ext::{RepositoryError, RepositorySpec},
     fuchsia_url::RepositoryUrl,
-    pbms::{
-        get_product_data, is_pb_ready, product_bundle_urls, update_metadata_all,
-        update_metadata_from,
-    },
+    pbms::{get_product_data, is_pb_ready, product_bundle_urls, update_metadata_all},
     std::{
         convert::TryInto,
         io::{stdout, Write},
-        path::PathBuf,
     },
 };
 
@@ -94,7 +90,7 @@ async fn pb_get<W: Write + Sync>(
         Ok(ProgressResponse::Continue)
     })
     .await?;
-    let output_dir = get_output_dir(&product_url, &cmd.out_dir).await?;
+    let output_dir = pbms::get_product_dir(&product_url).await?;
     get_product_data(&product_url, &output_dir, &mut |_d, _f| {
         write!(writer, ".")?;
         writer.flush()?;
@@ -160,39 +156,16 @@ async fn determine_pbm_url<F>(cmd: &GetCommand, progress: &mut F) -> Result<url:
 where
     F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
 {
-    // If an output directory is specified, use new entirely different methods
-    // to determine the PB to use. Eventually the 'else' clause is expected to
-    // be deprecated and removed.
-    Ok(if let Some(dir) = &cmd.out_dir {
-        if let Some(bundle_name) = &cmd.product_bundle_name {
-            let product_url = url::Url::parse(&bundle_name).context("parsing product url")?;
-            update_metadata_from(&product_url, dir, progress).await?;
-            product_url
-        } else {
-            bail!("When using --out-dir, a product bundle url is required.");
-        }
-    } else {
-        if !cmd.cached {
-            let base_dir = pbms::get_storage_dir().await?;
-            update_metadata_all(&base_dir, progress).await?;
-        }
-        pbms::select_product_bundle(&cmd.product_bundle_name).await?
-    })
+    if !cmd.cached {
+        let base_dir = pbms::get_storage_dir().await?;
+        update_metadata_all(&base_dir, progress).await?;
+    }
+    pbms::select_product_bundle(&cmd.product_bundle_name).await
 }
 
 /// `ffx product-bundle create` sub-command.
 async fn pb_create(cmd: &CreateCommand) -> Result<()> {
     create::create_product_bundle(cmd).await
-}
-
-/// Determine the output dir from the args.
-async fn get_output_dir(product_url: &url::Url, output_dir: &Option<PathBuf>) -> Result<PathBuf> {
-    let path = match output_dir {
-        Some(d) => d.to_path_buf(),
-        None => pbms::get_product_dir(product_url).await?,
-    };
-    tracing::debug!("get_output_dir {:?}", path);
-    Ok(path)
 }
 
 #[cfg(test)]

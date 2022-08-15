@@ -42,10 +42,6 @@ pub struct GetCommand {
     #[argh(positional)]
     pub product_bundle_name: Option<String>,
 
-    /// download to directory (Experimental).
-    #[argh(option)]
-    pub out_dir: Option<PathBuf>,
-
     /// repositories will be named `NAME`. Defaults to the product bundle name.
     #[argh(option)]
     pub repository: Option<String>,
