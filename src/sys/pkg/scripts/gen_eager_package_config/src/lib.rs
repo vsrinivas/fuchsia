@@ -12,7 +12,7 @@ use {
     eager_package_config::pkg_resolver::EagerPackageConfig as ResolverConfig,
     eager_package_config::pkg_resolver::EagerPackageConfigs as ResolverConfigs,
     fuchsia_url::UnpinnedAbsolutePackageUrl,
-    omaha_client::cup_ecdsa::{PublicKeyAndId, PublicKeys},
+    omaha_client::cup_ecdsa::PublicKeys,
     serde::{Deserialize, Serialize},
     std::collections::{BTreeMap, HashSet},
 };
@@ -65,23 +65,9 @@ pub struct InputConfig {
     service_url: String,
 }
 
-fn make_public_keys(service_url: &str, key_config: &PublicKeysByServiceUrl) -> PublicKeys {
-    let public_keys = &key_config
-        .get(service_url)
-        .expect(&format!("could not find service_url {:?} in key_config map", service_url));
-    PublicKeys {
-        latest: PublicKeyAndId { key: public_keys.latest.key.into(), id: public_keys.latest.id },
-        historical: public_keys
-            .historical
-            .iter()
-            .map(|h| PublicKeyAndId { key: h.key.into(), id: h.id })
-            .collect(),
-    }
-}
-
 pub fn generate_omaha_client_config(
     input_configs: &Vec<InputConfig>,
-    key_config: &PublicKeysByServiceUrl,
+    key_configs: &PublicKeysByServiceUrl,
 ) -> OmahaConfigsJson {
     let mut packages_by_service_url = BTreeMap::<String, Vec<OmahaConfig>>::new();
 
@@ -117,18 +103,22 @@ pub fn generate_omaha_client_config(
         packages_by_service_url.entry(input_config.service_url.clone()).or_default().push(package);
     }
 
-    OmahaConfigsJson {
-        eager_package_configs: packages_by_service_url
+    let json = OmahaConfigsJson {
+        eager_package_configs: key_configs
             .into_iter()
-            .map(|(service_url, packages)| OmahaConfigs {
+            .map(|(service_url, key_config)| OmahaConfigs {
                 server: OmahaServer {
                     service_url: service_url.clone(),
-                    public_keys: make_public_keys(&service_url, key_config),
+                    public_keys: key_config.clone(),
                 },
-                packages,
+                packages: packages_by_service_url.remove(service_url).unwrap_or(vec![]),
             })
             .collect(),
-    }
+    };
+    assert!(packages_by_service_url.is_empty(),
+      "There were service_url keys present in the input configs which did not have a corresponding keyconfig: {:?}",
+      packages_by_service_url.keys());
+    json
 }
 
 pub fn generate_pkg_resolver_config(
@@ -140,7 +130,13 @@ pub fn generate_pkg_resolver_config(
         .map(|i| ResolverConfig {
             url: i.url.clone(),
             executable: i.executable.unwrap_or(false),
-            public_keys: make_public_keys(&i.service_url, key_config),
+            public_keys: key_config
+                .get(&i.service_url)
+                .expect(&format!(
+                    "could not find service_url {:?} in key_config map",
+                    i.service_url
+                ))
+                .clone(),
         })
         .collect();
     if packages.iter().map(|config| config.url.path()).collect::<HashSet<_>>().len()
@@ -239,6 +235,47 @@ pub mod test_support {
 mod tests {
     use super::*;
     use crate::test_support;
+
+    #[test]
+    fn test_generate_omaha_client_config_empty() {
+        let key_config = test_support::make_key_config_for_test();
+        let empty_configs = vec![];
+        let omaha_client_config = generate_omaha_client_config(&empty_configs, &key_config);
+        let expected = r#"{
+            "eager_package_configs": [
+              {
+                "server": {
+                  "service_url": "https://example.com",
+                  "public_keys": {
+                    "latest": {
+                      "key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt\n7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==\n-----END PUBLIC KEY-----\n",
+                      "id": 42
+                    },
+                    "historical": []
+                  }
+                },
+                "packages": []
+              },
+              {
+                "server": {
+                  "service_url": "https://other_example.com",
+                  "public_keys": {
+                    "latest": {
+                      "key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt\n7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==\n-----END PUBLIC KEY-----\n",
+                      "id": 43
+                    },
+                    "historical": []
+                  }
+                },
+                "packages": []
+              }
+            ]
+        }"#;
+        assert_eq!(
+            omaha_client_config,
+            serde_json::from_str::<OmahaConfigsJson>(&expected).unwrap()
+        );
+    }
 
     #[test]
     fn test_generate_omaha_client_config() {

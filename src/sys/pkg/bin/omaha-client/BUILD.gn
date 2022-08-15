@@ -7,6 +7,8 @@ import("//build/config.gni")
 import("//build/rust/rustc_library.gni")
 import("//src/sys/core/build/core_shard.gni")
 import("//src/sys/pkg/bin/grand-swd-binary/gsb.gni")
+import(
+    "//src/sys/pkg/scripts/gen_eager_package_config/eager_package_config.gni")
 
 import("//third_party/cobalt/metrics_registry.gni")
 declare_args() {
@@ -236,4 +238,9 @@ fuchsia_structured_config_values(
 fuchsia_structured_config_rust_lib("omaha-client-structured-config-lib") {
   name = "omaha_client_structured_config"
   cm_label = ":manifest"
+}
+
+eager_package_config("empty_eager_package_config") {
+  key_config = "testdata/key_config.json"
+  sources = []
 }
