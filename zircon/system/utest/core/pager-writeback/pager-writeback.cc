@@ -4047,6 +4047,59 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(OpZeroWriteback, ZX_VMO_RESIZABLE) {
   ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
+// Tests OP_ZERO over zero page markers.
+TEST_WITH_AND_WITHOUT_TRAP_DIRTY(OpZeroWithMarkers, 0) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(5, create_option, &vmo));
+
+  // Supply with empty pages so we have zero markers. Insert zero markers at the tail as well as in
+  // the middle with a gap.
+  zx::vmo empty_src;
+  ASSERT_OK(zx::vmo::create(2 * zx_system_get_page_size(), 0, &empty_src));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+  ASSERT_OK(pager.pager().supply_pages(vmo->vmo(), zx_system_get_page_size(),
+                                       zx_system_get_page_size(), empty_src, 0));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 2, 1));
+  ASSERT_OK(pager.pager().supply_pages(vmo->vmo(), 3 * zx_system_get_page_size(),
+                                       2 * zx_system_get_page_size(), empty_src, 0));
+
+  // Verify VMO contents and dirty pages.
+  std::vector<uint8_t> expected(5 * zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  vmo->GenerateBufferContents(expected.data() + 2 * zx_system_get_page_size(), 1, 2);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 5, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // Zero the marker in the middle. This should be a no-op.
+  ASSERT_OK(vmo->vmo().op_range(ZX_VMO_OP_ZERO, zx_system_get_page_size(),
+                                zx_system_get_page_size(), nullptr, 0));
+
+  // No page requests seen.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+
+  // Verify VMO contents and dirty pages.
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 5, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // Zero the markers at the end. This should succeed without blocking.
+  ASSERT_OK(vmo->vmo().op_range(ZX_VMO_OP_ZERO, 3 * zx_system_get_page_size(),
+                                2 * zx_system_get_page_size(), nullptr, 0));
+
+  // No page requests seen.
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+
+  // Verify VMO contents and dirty pages.
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 5, expected.data(), true));
+  zx_vmo_dirty_range_t range = {.offset = 3, .length = 2, .options = ZX_VMO_DIRTY_RANGE_IS_ZERO};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+}
+
 // Tests that dirty pages can be written back after detach.
 TEST_WITH_AND_WITHOUT_TRAP_DIRTY(WritebackDirtyPagesAfterDetach, 0) {
   UserPager pager;

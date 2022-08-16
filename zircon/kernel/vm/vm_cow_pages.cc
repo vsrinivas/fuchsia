@@ -3271,6 +3271,17 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
     // are implicitly zero.
     page_list_.RemovePages(
         [this, &freed_list, prev_supply_zero_offset](VmPageOrMarker* p, uint64_t off) {
+          if (p->IsMarker()) {
+            // We cannot have markers i.e. clean zero pages beyond supply_zero_offset_. But if we
+            // updated supply_zero_offset_ above to a smaller value, it is possible to encounter
+            // markers in the range before the prev_supply_zero_offset.
+            ASSERT(off < prev_supply_zero_offset);
+            AssertHeld(this->lock_);
+            RangeChangeUpdateLocked(off, PAGE_SIZE, RangeChangeOp::Unmap);
+            *p = VmPageOrMarker::Empty();
+            return ZX_ERR_NEXT;
+          }
+
           ASSERT(p->IsPage());
           vm_page_t* page = p->Page();
           ASSERT(is_page_dirty_tracked(page));
