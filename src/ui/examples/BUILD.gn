@@ -19,8 +19,6 @@ group("tests") {
 fuchsia_package("flatland-examples") {
   package_name = "flatland-examples"
   deps = [
-    "flatland-display",
-    "flatland-display:flatland-display-rust",
     "flatland-view-provider",
     "flatland-view-provider:flatland-view-provider-v1",
     "simplest_sysmem:simplest_sysmem_component",
