@@ -426,6 +426,32 @@ func (p Protocol) UnknownInteractionReplySender() string {
 	return "::fidl::internal::SendChannelUnknownInteractionReply"
 }
 
+// endpointTypeName formats endpoint type names for this protocol in the new C++ bindings.
+func (p Protocol) endpointTypeName(kind string) string {
+	return fmt.Sprintf("::%s::%sEnd<%s>", p.Transport.Namespace, kind, p.Wire)
+
+}
+
+// ClientEnd returns the type for client ends of this protocol in the new C++ bindings.
+func (p Protocol) ClientEnd() string {
+	return p.endpointTypeName("Client")
+}
+
+// UnownedClientEnd returns the type for unowned client ends of this protocol in the new C++ bindings.
+func (p Protocol) UnownedClientEnd() string {
+	return p.endpointTypeName("UnownedClient")
+}
+
+// ServerEnd returns the type for server ends of this protocol in the new C++ bindings.
+func (p Protocol) ServerEnd() string {
+	return p.endpointTypeName("Server")
+}
+
+// UnownedServerEnd returns the type for unowned server ends of this protocol in the new C++ bindings.
+func (p Protocol) UnownedServerEnd() string {
+	return p.endpointTypeName("UnownedServer")
+}
+
 func newProtocol(inner protocolInner) Protocol {
 	type kinds []methodKind
 

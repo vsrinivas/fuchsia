@@ -11,7 +11,7 @@ template<>
 class [[nodiscard]] {{ .WireUnownedResult }} final : public {{ .BaseWireResult }} {
  public:
   {{- if .Transport.HasSyncClient }}
-    {{- $args := (printf "::%s::UnownedClientEnd<%s> client_end" .Transport.Namespace .Protocol) }}
+    {{- $args := (printf "%s client_end" .Protocol.UnownedClientEnd) }}
     {{- $args = (List $args "::fidl::internal::AnyBufferAllocator& allocator") }}
     {{- $args = (List $args (printf "%s* request" .WireTransactionalRequest)) }}
     explicit {{ .WireUnownedResult.Self }}({{ RenderParams $args }});
@@ -55,7 +55,7 @@ class [[nodiscard]] {{ .WireUnownedResult }} final : public {{ .BaseWireResult }
 {{- if .Transport.HasSyncClient }}
 {{- IfdefFuchsia -}}
 {{- EnsureNamespace "" }}
-{{- $args := (printf "::%s::UnownedClientEnd<%s> client_end" .Transport.Namespace .Protocol) }}
+{{- $args := (printf "%s client_end" .Protocol.UnownedClientEnd) }}
 {{- $args = (List $args "::fidl::internal::AnyBufferAllocator& allocator") }}
 {{- $args = (List $args (printf "%s* request" .WireTransactionalRequest)) }}
 {{ .WireUnownedResult }}::{{ .WireUnownedResult.Self }}({{ RenderParams $args }}) {

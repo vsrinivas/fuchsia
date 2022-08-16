@@ -18,7 +18,7 @@ template<>
 class [[nodiscard]] {{ .WireResult }} final : public {{ .BaseWireResult }} {
  public:
   {{ .WireResult.Self }}(
-      ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ .Protocol }}> client,
+      {{ .Protocol.UnownedClientEnd }} client,
       {{ .WireTransactionalRequest }}* request
       {{- if .HasResponse }}, std::optional<zx::time> deadline = std::nullopt{{ end }}
   );
@@ -45,7 +45,7 @@ class [[nodiscard]] {{ .WireResult }} final : public {{ .BaseWireResult }} {
 {{- IfdefFuchsia -}}
 {{- EnsureNamespace "" }}
 {{ .WireResult }}::{{ .WireResult.Self }}(
-    ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ .Protocol }}> client,
+    {{ .Protocol.UnownedClientEnd }} client,
     {{ .WireTransactionalRequest }}* request
     {{- if .HasResponse }}, std::optional<zx::time> deadline{{ end }}
 ) {

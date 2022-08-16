@@ -389,7 +389,7 @@ class ::fidl::internal::WireEventDispatcher<::test_transitivedependenciescompose
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_transitivedependenciescompose::Top>|,
+// const reference to a |::fidl::ClientEnd<::test_transitivedependenciescompose::Top>|,
 // avoiding setting up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<::test_transitivedependenciescompose::Top> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_transitivedependenciescompose::Top>> {
@@ -461,8 +461,8 @@ class ::fidl::internal::WireCompleterBase<::test_transitivedependenciescompose::
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_transitivedependenciescompose::Top>|
+// and |::fidl::ServerEnd<::test_transitivedependenciescompose::Top>|).
 template <>
 class ::fidl::WireServer<::test_transitivedependenciescompose::Top> : public ::fidl::internal::IncomingMessageDispatcher {
  public:

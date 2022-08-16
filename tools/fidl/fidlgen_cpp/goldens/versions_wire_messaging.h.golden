@@ -106,7 +106,7 @@ class ::fidl::internal::WireEventDispatcher<::test_versions::OtherProtocol> fina
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_versions::OtherProtocol>|,
+// const reference to a |::fidl::ClientEnd<::test_versions::OtherProtocol>|,
 // avoiding setting up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<::test_versions::OtherProtocol> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_versions::OtherProtocol>> {
@@ -129,8 +129,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_versions::OtherProtocol>
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_versions::OtherProtocol>|
+// and |::fidl::ServerEnd<::test_versions::OtherProtocol>|).
 template <>
 class ::fidl::WireServer<::test_versions::OtherProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
@@ -341,7 +341,7 @@ class ::fidl::internal::WireEventDispatcher<::test_versions::Protocol> final : p
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_versions::Protocol>|,
+// const reference to a |::fidl::ClientEnd<::test_versions::Protocol>|,
 // avoiding setting up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<::test_versions::Protocol> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_versions::Protocol>> {
@@ -376,8 +376,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_versions::Protocol> fina
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_versions::Protocol>|
+// and |::fidl::ServerEnd<::test_versions::Protocol>|).
 template <>
 class ::fidl::WireServer<::test_versions::Protocol> : public ::fidl::internal::IncomingMessageDispatcher {
  public:

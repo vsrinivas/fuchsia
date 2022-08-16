@@ -732,7 +732,7 @@ class ::fidl::internal::WireEventDispatcher<::test_requestflexibleenvelope::Prot
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_requestflexibleenvelope::Protocol>|,
+// const reference to a |::fidl::ClientEnd<::test_requestflexibleenvelope::Protocol>|,
 // avoiding setting up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<::test_requestflexibleenvelope::Protocol> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_requestflexibleenvelope::Protocol>> {
@@ -853,8 +853,8 @@ class ::fidl::internal::WireCompleterBase<::test_requestflexibleenvelope::Protoc
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_requestflexibleenvelope::Protocol>|
+// and |::fidl::ServerEnd<::test_requestflexibleenvelope::Protocol>|).
 template <>
 class ::fidl::WireServer<::test_requestflexibleenvelope::Protocol> : public ::fidl::internal::IncomingMessageDispatcher {
  public:

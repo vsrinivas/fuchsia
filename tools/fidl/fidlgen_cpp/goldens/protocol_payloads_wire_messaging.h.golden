@@ -4400,7 +4400,7 @@ class ::fidl::internal::WireEventDispatcher<::test_protocolpayloads::MainProtoco
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_protocolpayloads::MainProtocol>|,
+// const reference to a |::fidl::ClientEnd<::test_protocolpayloads::MainProtocol>|,
 // avoiding setting up a client.
 template<>
 class ::fidl::internal::WireSyncClientImpl<::test_protocolpayloads::MainProtocol> final :
@@ -4885,8 +4885,8 @@ class ::fidl::internal::WireCompleterBase<::test_protocolpayloads::MainProtocol:
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_protocolpayloads::MainProtocol>|
+// and |::fidl::ServerEnd<::test_protocolpayloads::MainProtocol>|).
 template<>
 class ::fidl::WireServer<::test_protocolpayloads::MainProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
   public:

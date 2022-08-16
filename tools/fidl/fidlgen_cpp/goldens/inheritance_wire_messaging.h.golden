@@ -420,7 +420,7 @@ class ::fidl::internal::WireEventDispatcher<::test_inheritance::Super> final : p
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_inheritance::Super>|,
+// const reference to a |::fidl::ClientEnd<::test_inheritance::Super>|,
 // avoiding setting up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<::test_inheritance::Super> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_inheritance::Super>> {
@@ -492,8 +492,8 @@ class ::fidl::internal::WireCompleterBase<::test_inheritance::Super::Foo> : publ
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_inheritance::Super>|
+// and |::fidl::ServerEnd<::test_inheritance::Super>|).
 template <>
 class ::fidl::WireServer<::test_inheritance::Super> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
@@ -913,7 +913,7 @@ class ::fidl::internal::WireEventDispatcher<::test_inheritance::Sub> final : pub
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_inheritance::Sub>|,
+// const reference to a |::fidl::ClientEnd<::test_inheritance::Sub>|,
 // avoiding setting up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<::test_inheritance::Sub> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_inheritance::Sub>> {
@@ -985,8 +985,8 @@ class ::fidl::internal::WireCompleterBase<::test_inheritance::Sub::Foo> : public
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_inheritance::Sub>|
+// and |::fidl::ServerEnd<::test_inheritance::Sub>|).
 template <>
 class ::fidl::WireServer<::test_inheritance::Sub> : public ::fidl::internal::IncomingMessageDispatcher {
  public:

@@ -261,7 +261,7 @@ class ::fidl::internal::WireEventDispatcher<::test_inheritancewithrecursivedecl:
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_inheritancewithrecursivedecl::Parent>|,
+// const reference to a |::fidl::ClientEnd<::test_inheritancewithrecursivedecl::Parent>|,
 // avoiding setting up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<::test_inheritancewithrecursivedecl::Parent> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_inheritancewithrecursivedecl::Parent>> {
@@ -296,8 +296,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_inheritancewithrecursive
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_inheritancewithrecursivedecl::Parent>|
+// and |::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>|).
 template <>
 class ::fidl::WireServer<::test_inheritancewithrecursivedecl::Parent> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
@@ -714,7 +714,7 @@ class ::fidl::internal::WireEventDispatcher<::test_inheritancewithrecursivedecl:
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_inheritancewithrecursivedecl::Child>|,
+// const reference to a |::fidl::ClientEnd<::test_inheritancewithrecursivedecl::Child>|,
 // avoiding setting up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<::test_inheritancewithrecursivedecl::Child> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_inheritancewithrecursivedecl::Child>> {
@@ -761,8 +761,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_inheritancewithrecursive
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_inheritancewithrecursivedecl::Child>|
+// and |::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Child>|).
 template <>
 class ::fidl::WireServer<::test_inheritancewithrecursivedecl::Child> : public ::fidl::internal::IncomingMessageDispatcher {
  public:

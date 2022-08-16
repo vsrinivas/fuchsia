@@ -5392,8 +5392,8 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fdf::ClientEnd<SomeProtocol>|
-// and |fdf::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fdf::ClientEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol>|
+// and |::fdf::ServerEnd<::test_unknowninteractions::UnknownInteractionsDriverProtocol>|).
 template<>
 class ::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol> : public ::fidl::internal::IncomingMessageDispatcher, public ::fidl::UnknownMethodHandler<::test_unknowninteractions::UnknownInteractionsDriverProtocol> {
   public:
@@ -8348,8 +8348,8 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fdf::ClientEnd<SomeProtocol>|
-// and |fdf::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fdf::ClientEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>|
+// and |::fdf::ServerEnd<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>|).
 template<>
 class ::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> : public ::fidl::internal::IncomingMessageDispatcher, public ::fidl::UnknownMethodHandler<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> {
   public:
@@ -11137,8 +11137,8 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fdf::ClientEnd<SomeProtocol>|
-// and |fdf::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fdf::ClientEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>|
+// and |::fdf::ServerEnd<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>|).
 template<>
 class ::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
   public:

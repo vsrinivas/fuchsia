@@ -104,7 +104,7 @@ class ::fidl::internal::WireEventDispatcher<::test_protocolrequest::Child> final
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_protocolrequest::Child>|,
+// const reference to a |::fidl::ClientEnd<::test_protocolrequest::Child>|,
 // avoiding setting up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<::test_protocolrequest::Child> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_protocolrequest::Child>> {
@@ -127,8 +127,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_protocolrequest::Child> 
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_protocolrequest::Child>|
+// and |::fidl::ServerEnd<::test_protocolrequest::Child>|).
 template <>
 class ::fidl::WireServer<::test_protocolrequest::Child> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
@@ -1128,7 +1128,7 @@ class ::fidl::internal::WireEventDispatcher<::test_protocolrequest::Parent> fina
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_protocolrequest::Parent>|,
+// const reference to a |::fidl::ClientEnd<::test_protocolrequest::Parent>|,
 // avoiding setting up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<::test_protocolrequest::Parent> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_protocolrequest::Parent>> {
@@ -1273,8 +1273,8 @@ class ::fidl::internal::WireCompleterBase<::test_protocolrequest::Parent::GetChi
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_protocolrequest::Parent>|
+// and |::fidl::ServerEnd<::test_protocolrequest::Parent>|).
 template <>
 class ::fidl::WireServer<::test_protocolrequest::Parent> : public ::fidl::internal::IncomingMessageDispatcher {
  public:

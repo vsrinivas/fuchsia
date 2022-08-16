@@ -419,7 +419,7 @@ class ::fidl::internal::WireEventDispatcher<::test_nullable::SimpleProtocol> fin
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_nullable::SimpleProtocol>|,
+// const reference to a |::fidl::ClientEnd<::test_nullable::SimpleProtocol>|,
 // avoiding setting up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<::test_nullable::SimpleProtocol> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_nullable::SimpleProtocol>> {
@@ -491,8 +491,8 @@ class ::fidl::internal::WireCompleterBase<::test_nullable::SimpleProtocol::Add> 
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_nullable::SimpleProtocol>|
+// and |::fidl::ServerEnd<::test_nullable::SimpleProtocol>|).
 template <>
 class ::fidl::WireServer<::test_nullable::SimpleProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
  public:

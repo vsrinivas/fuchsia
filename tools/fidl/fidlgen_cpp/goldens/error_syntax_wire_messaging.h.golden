@@ -740,7 +740,7 @@ class ::fidl::internal::WireEventDispatcher<::test_errorsyntax::ExampleUseOfErro
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax>|,
+// const reference to a |::fidl::ClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax>|,
 // avoiding setting up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<::test_errorsyntax::ExampleUseOfErrorSyntax> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_errorsyntax::ExampleUseOfErrorSyntax>> {
@@ -869,8 +869,8 @@ class ::fidl::internal::WireCompleterBase<::test_errorsyntax::ExampleUseOfErrorS
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax>|
+// and |::fidl::ServerEnd<::test_errorsyntax::ExampleUseOfErrorSyntax>|).
 template <>
 class ::fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax> : public ::fidl::internal::IncomingMessageDispatcher {
  public:

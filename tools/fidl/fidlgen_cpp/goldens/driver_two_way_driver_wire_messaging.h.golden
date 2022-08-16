@@ -412,8 +412,8 @@ class ::fidl::internal::WireCompleterBase<::test_drivertwoway::TwoWay::Add> : pu
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fdf::ClientEnd<SomeProtocol>|
-// and |fdf::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fdf::ClientEnd<::test_drivertwoway::TwoWay>|
+// and |::fdf::ServerEnd<::test_drivertwoway::TwoWay>|).
 template <>
 class ::fdf::WireServer<::test_drivertwoway::TwoWay> : public ::fidl::internal::IncomingMessageDispatcher {
  public:

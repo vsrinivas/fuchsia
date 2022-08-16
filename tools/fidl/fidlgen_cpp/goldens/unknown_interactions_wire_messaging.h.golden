@@ -7095,7 +7095,7 @@ class ::fidl::internal::WireEventDispatcher<::test_unknowninteractions::UnknownI
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol>|,
+// const reference to a |::fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol>|,
 // avoiding setting up a client.
 template<>
 class ::fidl::internal::WireSyncClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol> final :
@@ -7964,8 +7964,8 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol>|
+// and |::fidl::ServerEnd<::test_unknowninteractions::UnknownInteractionsProtocol>|).
 template<>
 class ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol> : public ::fidl::internal::IncomingMessageDispatcher, public ::fidl::UnknownMethodHandler<::test_unknowninteractions::UnknownInteractionsProtocol> {
   public:
@@ -12727,7 +12727,7 @@ class ::fidl::internal::WireEventDispatcher<::test_unknowninteractions::UnknownI
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol>|,
+// const reference to a |::fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol>|,
 // avoiding setting up a client.
 template<>
 class ::fidl::internal::WireSyncClientImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol> final :
@@ -13188,8 +13188,8 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol>|
+// and |::fidl::ServerEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol>|).
 template<>
 class ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol> : public ::fidl::internal::IncomingMessageDispatcher, public ::fidl::UnknownMethodHandler<::test_unknowninteractions::UnknownInteractionsAjarProtocol> {
   public:
@@ -16839,7 +16839,7 @@ class ::fidl::internal::WireEventDispatcher<::test_unknowninteractions::UnknownI
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol>|,
+// const reference to a |::fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol>|,
 // avoiding setting up a client.
 template<>
 class ::fidl::internal::WireSyncClientImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol> final :
@@ -17288,8 +17288,8 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol>|
+// and |::fidl::ServerEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol>|).
 template<>
 class ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
   public:

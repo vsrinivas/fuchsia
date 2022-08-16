@@ -308,7 +308,7 @@ class ::fidl::internal::WireEventDispatcher<::test_doccomments::Interface> final
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_doccomments::Interface>|,
+// const reference to a |::fidl::ClientEnd<::test_doccomments::Interface>|,
 // avoiding setting up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<::test_doccomments::Interface> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_doccomments::Interface>> {
@@ -350,8 +350,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_doccomments::Interface> 
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_doccomments::Interface>|
+// and |::fidl::ServerEnd<::test_doccomments::Interface>|).
 template <>
 class ::fidl::WireServer<::test_doccomments::Interface> : public ::fidl::internal::IncomingMessageDispatcher {
  public:

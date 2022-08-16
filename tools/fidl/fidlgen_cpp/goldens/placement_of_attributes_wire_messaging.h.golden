@@ -248,7 +248,7 @@ class ::fidl::internal::WireEventDispatcher<::test_placementofattributes::Exampl
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_placementofattributes::ExampleProtocol>|,
+// const reference to a |::fidl::ClientEnd<::test_placementofattributes::ExampleProtocol>|,
 // avoiding setting up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<::test_placementofattributes::ExampleProtocol> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_placementofattributes::ExampleProtocol>> {
@@ -283,8 +283,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_placementofattributes::E
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_placementofattributes::ExampleProtocol>|
+// and |::fidl::ServerEnd<::test_placementofattributes::ExampleProtocol>|).
 template <>
 class ::fidl::WireServer<::test_placementofattributes::ExampleProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
  public:

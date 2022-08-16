@@ -24,8 +24,8 @@
         [&] (std::shared_ptr<::fidl::internal::AnyTransport> _transport) {
           {{ .WireTransactionalRequest }} _request{ {{ RenderForwardParams .RequestArgs }} };
           {{- $transport := (printf
-              "::%s::UnownedClientEnd<%s>(_transport->get<%s>())"
-              .Transport.Namespace .Protocol .Transport.Type) }}
+              "%s(_transport->get<%s>())"
+              .Protocol.UnownedClientEnd .Transport.Type) }}
           return {{ .WireUnownedResult }}({{- RenderForwardParams (List $transport "arena_" "&_request") }});
         });
   }

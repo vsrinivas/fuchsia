@@ -49,7 +49,7 @@ class {{ .WireAsyncEventHandler }}
     // Blocks to consume exactly one message from the channel, then call the corresponding virtual
     // method.
     ::fidl::Status HandleOneEvent(
-        ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}> client_end);
+        {{ .UnownedClientEnd }} client_end);
   };
 {{- end }}
 
@@ -77,7 +77,7 @@ class {{ .WireEventDispatcher }} final :
 
 {{ if .Transport.HasEvents }}
   ::fidl::Status {{ .WireSyncEventHandler.NoLeading }}::HandleOneEvent(
-      ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}> client_end) {
+      {{ .UnownedClientEnd }} client_end) {
       {{ .IncomingEventsStorage }} event_storage;
       {{ .WireEventDispatcher.NoLeading }} dispatcher{this};
       return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
@@ -181,7 +181,7 @@ class {{ .NaturalAsyncEventHandler }}
     // Blocks to consume exactly one message from the channel, then call the corresponding virtual
     // method.
     ::fidl::Status HandleOneEvent(
-        ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}> client_end);
+        {{ .UnownedClientEnd }} client_end);
   };
 {{- end }}
 
@@ -209,7 +209,7 @@ class {{ .NaturalEventDispatcher }} final :
 
 {{ if .Transport.HasEvents }}
   ::fidl::Status {{ .NaturalSyncEventHandler.NoLeading }}::HandleOneEvent(
-      ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}> client_end) {
+      {{ .UnownedClientEnd }} client_end) {
       {{ .IncomingEventsStorage }} event_storage;
       {{ .NaturalEventDispatcher.NoLeading }} dispatcher{this};
       return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);

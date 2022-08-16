@@ -223,7 +223,7 @@ class ::fidl::internal::WireEventDispatcher<::test_service::FirstProtocol> final
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_service::FirstProtocol>|,
+// const reference to a |::fidl::ClientEnd<::test_service::FirstProtocol>|,
 // avoiding setting up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<::test_service::FirstProtocol> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_service::FirstProtocol>> {
@@ -258,8 +258,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_service::FirstProtocol> 
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_service::FirstProtocol>|
+// and |::fidl::ServerEnd<::test_service::FirstProtocol>|).
 template <>
 class ::fidl::WireServer<::test_service::FirstProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
@@ -476,7 +476,7 @@ class ::fidl::internal::WireEventDispatcher<::test_service::SecondProtocol> fina
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_service::SecondProtocol>|,
+// const reference to a |::fidl::ClientEnd<::test_service::SecondProtocol>|,
 // avoiding setting up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<::test_service::SecondProtocol> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_service::SecondProtocol>> {
@@ -511,8 +511,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_service::SecondProtocol>
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_service::SecondProtocol>|
+// and |::fidl::ServerEnd<::test_service::SecondProtocol>|).
 template <>
 class ::fidl::WireServer<::test_service::SecondProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
  public:

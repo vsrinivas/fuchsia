@@ -112,7 +112,7 @@ class ::fidl::internal::WireEventDispatcher<::test_bindingsdenylist::OnlyLibfuzz
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>|,
+// const reference to a |::fidl::ClientEnd<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>|,
 // avoiding setting up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>> {
@@ -135,8 +135,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_bindingsdenylist::OnlyLi
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>|
+// and |::fidl::ServerEnd<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>|).
 template <>
 class ::fidl::WireServer<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
@@ -238,7 +238,7 @@ class ::fidl::internal::WireEventDispatcher<::test_bindingsdenylist::OnlyCppAndD
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_bindingsdenylist::OnlyCppAndDeps>|,
+// const reference to a |::fidl::ClientEnd<::test_bindingsdenylist::OnlyCppAndDeps>|,
 // avoiding setting up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<::test_bindingsdenylist::OnlyCppAndDeps> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_bindingsdenylist::OnlyCppAndDeps>> {
@@ -261,8 +261,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_bindingsdenylist::OnlyCp
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_bindingsdenylist::OnlyCppAndDeps>|
+// and |::fidl::ServerEnd<::test_bindingsdenylist::OnlyCppAndDeps>|).
 template <>
 class ::fidl::WireServer<::test_bindingsdenylist::OnlyCppAndDeps> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
@@ -1956,7 +1956,7 @@ class ::fidl::internal::WireEventDispatcher<::test_bindingsdenylist::DenyEachBin
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_bindingsdenylist::DenyEachBinding>|,
+// const reference to a |::fidl::ClientEnd<::test_bindingsdenylist::DenyEachBinding>|,
 // avoiding setting up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<::test_bindingsdenylist::DenyEachBinding> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_bindingsdenylist::DenyEachBinding>> {
@@ -2244,8 +2244,8 @@ class ::fidl::internal::WireCompleterBase<::test_bindingsdenylist::DenyEachBindi
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_bindingsdenylist::DenyEachBinding>|
+// and |::fidl::ServerEnd<::test_bindingsdenylist::DenyEachBinding>|).
 template <>
 class ::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
@@ -2377,7 +2377,7 @@ class ::fidl::internal::WireEventDispatcher<::test_bindingsdenylist::Allowed> fi
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_bindingsdenylist::Allowed>|,
+// const reference to a |::fidl::ClientEnd<::test_bindingsdenylist::Allowed>|,
 // avoiding setting up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<::test_bindingsdenylist::Allowed> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_bindingsdenylist::Allowed>> {
@@ -2400,8 +2400,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_bindingsdenylist::Allowe
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_bindingsdenylist::Allowed>|
+// and |::fidl::ServerEnd<::test_bindingsdenylist::Allowed>|).
 template <>
 class ::fidl::WireServer<::test_bindingsdenylist::Allowed> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
@@ -2721,7 +2721,7 @@ class ::fidl::internal::WireEventDispatcher<::test_bindingsdenylist::ImportsSame
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_bindingsdenylist::ImportsSameNameContext>|,
+// const reference to a |::fidl::ClientEnd<::test_bindingsdenylist::ImportsSameNameContext>|,
 // avoiding setting up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<::test_bindingsdenylist::ImportsSameNameContext> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_bindingsdenylist::ImportsSameNameContext>> {
@@ -2768,8 +2768,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_bindingsdenylist::Import
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_bindingsdenylist::ImportsSameNameContext>|
+// and |::fidl::ServerEnd<::test_bindingsdenylist::ImportsSameNameContext>|).
 template <>
 class ::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext> : public ::fidl::internal::IncomingMessageDispatcher {
  public:

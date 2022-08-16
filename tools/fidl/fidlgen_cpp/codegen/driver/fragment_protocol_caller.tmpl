@@ -23,8 +23,8 @@ class {{ .WireSyncBufferClientImpl }} final :
   {{- end }}
 
  private:
-  ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}> _client_end() const {
-    return ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}>(
+  {{ .UnownedClientEnd }} _client_end() const {
+    return {{ .UnownedClientEnd }}(
       _transport().get<{{ .Transport.Type }}>());
   }
 };

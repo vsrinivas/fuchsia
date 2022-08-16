@@ -1834,7 +1834,7 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::WithAndWithoutRequ
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_protocols::WithAndWithoutRequestResponse>|,
+// const reference to a |::fidl::ClientEnd<::test_protocols::WithAndWithoutRequestResponse>|,
 // avoiding setting up a client.
 template<>
 class ::fidl::internal::WireSyncClientImpl<::test_protocols::WithAndWithoutRequestResponse> final :
@@ -2083,8 +2083,8 @@ class ::fidl::internal::WireCompleterBase<::test_protocols::WithAndWithoutReques
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_protocols::WithAndWithoutRequestResponse>|
+// and |::fidl::ServerEnd<::test_protocols::WithAndWithoutRequestResponse>|).
 template<>
 class ::fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse> : public ::fidl::internal::IncomingMessageDispatcher {
   public:
@@ -3484,7 +3484,7 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::WithErrorSyntax> f
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_protocols::WithErrorSyntax>|,
+// const reference to a |::fidl::ClientEnd<::test_protocols::WithErrorSyntax>|,
 // avoiding setting up a client.
 template<>
 class ::fidl::internal::WireSyncClientImpl<::test_protocols::WithErrorSyntax> final :
@@ -3725,8 +3725,8 @@ class ::fidl::internal::WireCompleterBase<::test_protocols::WithErrorSyntax::Han
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_protocols::WithErrorSyntax>|
+// and |::fidl::ServerEnd<::test_protocols::WithErrorSyntax>|).
 template<>
 class ::fidl::WireServer<::test_protocols::WithErrorSyntax> : public ::fidl::internal::IncomingMessageDispatcher {
   public:
@@ -5155,7 +5155,7 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::ChannelProtocol> f
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_protocols::ChannelProtocol>|,
+// const reference to a |::fidl::ClientEnd<::test_protocols::ChannelProtocol>|,
 // avoiding setting up a client.
 template<>
 class ::fidl::internal::WireSyncClientImpl<::test_protocols::ChannelProtocol> final :
@@ -5343,8 +5343,8 @@ class ::fidl::internal::WireCompleterBase<::test_protocols::ChannelProtocol::Mut
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_protocols::ChannelProtocol>|
+// and |::fidl::ServerEnd<::test_protocols::ChannelProtocol>|).
 template<>
 class ::fidl::WireServer<::test_protocols::ChannelProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
   public:
@@ -6095,7 +6095,7 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::Transitional> fina
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_protocols::Transitional>|,
+// const reference to a |::fidl::ClientEnd<::test_protocols::Transitional>|,
 // avoiding setting up a client.
 template<>
 class ::fidl::internal::WireSyncClientImpl<::test_protocols::Transitional> final :
@@ -6185,8 +6185,8 @@ class ::fidl::internal::WireCompleterBase<::test_protocols::Transitional::Reques
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_protocols::Transitional>|
+// and |::fidl::ServerEnd<::test_protocols::Transitional>|).
 template<>
 class ::fidl::WireServer<::test_protocols::Transitional> : public ::fidl::internal::IncomingMessageDispatcher {
   public:
@@ -6432,7 +6432,7 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::DiscoverableProtoc
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_protocols::DiscoverableProtocol>|,
+// const reference to a |::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>|,
 // avoiding setting up a client.
 template<>
 class ::fidl::internal::WireSyncClientImpl<::test_protocols::DiscoverableProtocol> final :
@@ -6473,8 +6473,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_protocols::DiscoverableP
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>|
+// and |::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>|).
 template<>
 class ::fidl::WireServer<::test_protocols::DiscoverableProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
   public:
@@ -6594,7 +6594,7 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::AnotherDiscoverabl
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_protocols::AnotherDiscoverableProtocol>|,
+// const reference to a |::fidl::ClientEnd<::test_protocols::AnotherDiscoverableProtocol>|,
 // avoiding setting up a client.
 template<>
 class ::fidl::internal::WireSyncClientImpl<::test_protocols::AnotherDiscoverableProtocol> final :
@@ -6623,8 +6623,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_protocols::AnotherDiscov
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_protocols::AnotherDiscoverableProtocol>|
+// and |::fidl::ServerEnd<::test_protocols::AnotherDiscoverableProtocol>|).
 template<>
 class ::fidl::WireServer<::test_protocols::AnotherDiscoverableProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
   public:
@@ -7402,7 +7402,7 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::HandleRightsProtoc
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_protocols::HandleRightsProtocol>|,
+// const reference to a |::fidl::ClientEnd<::test_protocols::HandleRightsProtocol>|,
 // avoiding setting up a client.
 template<>
 class ::fidl::internal::WireSyncClientImpl<::test_protocols::HandleRightsProtocol> final :
@@ -7492,8 +7492,8 @@ class ::fidl::internal::WireCompleterBase<::test_protocols::HandleRightsProtocol
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_protocols::HandleRightsProtocol>|
+// and |::fidl::ServerEnd<::test_protocols::HandleRightsProtocol>|).
 template<>
 class ::fidl::WireServer<::test_protocols::HandleRightsProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
   public:
@@ -8708,7 +8708,7 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::WithProtocolEnds> 
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_protocols::WithProtocolEnds>|,
+// const reference to a |::fidl::ClientEnd<::test_protocols::WithProtocolEnds>|,
 // avoiding setting up a client.
 template<>
 class ::fidl::internal::WireSyncClientImpl<::test_protocols::WithProtocolEnds> final :
@@ -8884,8 +8884,8 @@ class ::fidl::internal::WireCompleterBase<::test_protocols::WithProtocolEnds::St
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_protocols::WithProtocolEnds>|
+// and |::fidl::ServerEnd<::test_protocols::WithProtocolEnds>|).
 template<>
 class ::fidl::WireServer<::test_protocols::WithProtocolEnds> : public ::fidl::internal::IncomingMessageDispatcher {
   public:
@@ -9183,7 +9183,7 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::ManyParameters> fi
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_protocols::ManyParameters>|,
+// const reference to a |::fidl::ClientEnd<::test_protocols::ManyParameters>|,
 // avoiding setting up a client.
 template<>
 class ::fidl::internal::WireSyncClientImpl<::test_protocols::ManyParameters> final :
@@ -9224,8 +9224,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_protocols::ManyParameter
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_protocols::ManyParameters>|
+// and |::fidl::ServerEnd<::test_protocols::ManyParameters>|).
 template<>
 class ::fidl::WireServer<::test_protocols::ManyParameters> : public ::fidl::internal::IncomingMessageDispatcher {
   public:
@@ -9679,7 +9679,7 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::MethodWithUnion> f
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_protocols::MethodWithUnion>|,
+// const reference to a |::fidl::ClientEnd<::test_protocols::MethodWithUnion>|,
 // avoiding setting up a client.
 template<>
 class ::fidl::internal::WireSyncClientImpl<::test_protocols::MethodWithUnion> final :
@@ -9757,8 +9757,8 @@ class ::fidl::internal::WireCompleterBase<::test_protocols::MethodWithUnion::Uni
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_protocols::MethodWithUnion>|
+// and |::fidl::ServerEnd<::test_protocols::MethodWithUnion>|).
 template<>
 class ::fidl::WireServer<::test_protocols::MethodWithUnion> : public ::fidl::internal::IncomingMessageDispatcher {
   public:

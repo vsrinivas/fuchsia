@@ -14,8 +14,8 @@
 {{- end }}
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |{{ .Transport.Namespace }}::ClientEnd<SomeProtocol>|
-// and |{{ .Transport.Namespace }}::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |{{ .ClientEnd }}|
+// and |{{ .ServerEnd }}|).
 template<>
 class {{ .WireServer }} : public ::fidl::internal::IncomingMessageDispatcher
 {{- if .HandlesOneWayUnknownInteractions -}}

@@ -422,7 +422,7 @@ class ::fidl::internal::WireEventDispatcher<::test_error::Example> final : publi
 };
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |fidl::ClientEnd<::test_error::Example>|,
+// const reference to a |::fidl::ClientEnd<::test_error::Example>|,
 // avoiding setting up a client.
 template <>
 class ::fidl::internal::WireSyncClientImpl<::test_error::Example> final : public ::fidl::internal::SyncEndpointManagedVeneer<::fidl::internal::WireSyncClientImpl<::test_error::Example>> {
@@ -498,8 +498,8 @@ class ::fidl::internal::WireCompleterBase<::test_error::Example::Foo> : public :
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-// and |fidl::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fidl::ClientEnd<::test_error::Example>|
+// and |::fidl::ServerEnd<::test_error::Example>|).
 template <>
 class ::fidl::WireServer<::test_error::Example> : public ::fidl::internal::IncomingMessageDispatcher {
  public:

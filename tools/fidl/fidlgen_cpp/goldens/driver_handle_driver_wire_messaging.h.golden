@@ -86,8 +86,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_driverhandle::DriverProt
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fdf::ClientEnd<SomeProtocol>|
-// and |fdf::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fdf::ClientEnd<::test_driverhandle::DriverProtocol>|
+// and |::fdf::ServerEnd<::test_driverhandle::DriverProtocol>|).
 template <>
 class ::fdf::WireServer<::test_driverhandle::DriverProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
  public:
@@ -321,8 +321,8 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_driverhandle::HandlesInP
 };
 
 // Pure-virtual interface to be implemented by a server.
-// This interface uses typed channels (i.e. |fdf::ClientEnd<SomeProtocol>|
-// and |fdf::ServerEnd<SomeProtocol>|).
+// This interface uses typed channels (i.e. |::fdf::ClientEnd<::test_driverhandle::HandlesInProtocol>|
+// and |::fdf::ServerEnd<::test_driverhandle::HandlesInProtocol>|).
 template <>
 class ::fdf::WireServer<::test_driverhandle::HandlesInProtocol> : public ::fidl::internal::IncomingMessageDispatcher {
  public:

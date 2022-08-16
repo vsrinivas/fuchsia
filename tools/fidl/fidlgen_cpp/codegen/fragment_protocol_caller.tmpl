@@ -8,7 +8,7 @@
 {{- EnsureNamespace "" }}
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
-// const reference to a |{{ .Transport.Namespace }}::ClientEnd<{{ .WireType }}>|,
+// const reference to a |{{ .ClientEnd }}|,
 // avoiding setting up a client.
 template<>
 class {{ .WireSyncClientImpl }} final :
@@ -28,8 +28,8 @@ class {{ .WireSyncClientImpl }} final :
   {{- end }}
 
  private:
-  ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}> _client_end() const {
-    return ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}>(
+  {{ .UnownedClientEnd }} _client_end() const {
+    return {{ .UnownedClientEnd }}(
       _transport().get<{{ .Transport.Type }}>());
   }
 };
@@ -49,8 +49,8 @@ class {{ .WireSyncBufferClientImpl }} final :
   {{- end }}
 
  private:
-  ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}> _client_end() const {
-    return ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}>(
+  {{ .UnownedClientEnd }} _client_end() const {
+    return {{ .UnownedClientEnd }}(
       _transport().get<{{ .Transport.Type }}>());
   }
 };
@@ -79,8 +79,8 @@ class {{ .NaturalSyncClientImpl }} final
   {{ end }}
 
  private:
-  ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}> _client_end() const {
-    return ::{{ .Transport.Namespace }}::UnownedClientEnd<{{ . }}>(
+  {{ .UnownedClientEnd }} _client_end() const {
+    return {{ .UnownedClientEnd }}(
       _transport().get<{{ .Transport.Type }}>());
   }
 };
