@@ -133,7 +133,7 @@ environments.
        --target {{ '<var>' }}x86_64|aarch64{{ '</var>' }}-fuchsia \
        --run=always --jobs 1 --test-args "--target-panic=abort
        --remote-test-client $TEST_TOOLCHAIN" --rustc-args "-C debuginfo=2
-       -C opt-level=0 -C panic=abort -Zpanic_abort_tests
+       -C opt-level=0 -C strip=none -C panic=abort -Zpanic_abort_tests
        -L $DEV_ROOT/sdk/arch/{{ '<var>' }}x64|a64{{ '</var>' }}/sysroot/lib
        -L $DEV_ROOT/sdk/arch/{{ '<var>' }}x64|a64{{ '</var>' }}/lib" \
     )
