@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_test_manager as ftest_manager,
     fidl_fuchsia_test_manager::{DebugData, DebugDataIteratorMarker, DebugDataIteratorRequest},
     fuchsia_async as fasync,
-    futures::{channel::mpsc, future::join_all, prelude::*, Future, StreamExt, TryStreamExt},
+    futures::{channel::mpsc, prelude::*, Future, StreamExt, TryStreamExt},
     std::path::{Path, PathBuf},
     tracing::warn,
 };
@@ -125,90 +125,65 @@ pub async fn send_debug_data_if_produced(
     }
 }
 
-const PROFILE_ARTIFACT_ENUMERATE_TIMEOUT_SECONDS: i64 = 15;
-const DYNAMIC_PROFILE_PREFIX: &'static str = "/debugdata/llvm-profile/dynamic";
-const STATIC_PROFILE_PREFIX: &'static str = "/debugdata/llvm-profile/static";
+const DEBUG_DATA_TIMEOUT_SECONDS: i64 = 15;
+const DEBUG_DATA_PATH: &'static str = "/debugdata";
 
 pub async fn send_kernel_debug_data(mut event_sender: mpsc::Sender<RunEvent>) {
-    let prefixes = vec![DYNAMIC_PROFILE_PREFIX, STATIC_PROFILE_PREFIX];
-    let directories = prefixes
-        .iter()
-        .filter_map(|path| {
-            match fuchsia_fs::directory::open_in_namespace(
-                path,
-                fuchsia_fs::OpenFlags::RIGHT_READABLE,
-            ) {
-                Ok(d) => Some((*path, d)),
-                Err(e) => {
-                    warn!("Failed to open {} profile directory: {:?}", path, e);
-                    None
-                }
-            }
-        })
-        .collect::<Vec<(&str, fio::DirectoryProxy)>>();
+    let root_dir = match fuchsia_fs::directory::open_in_namespace(
+        DEBUG_DATA_PATH,
+        fuchsia_fs::OpenFlags::RIGHT_READABLE,
+    ) {
+        Ok(dir) => dir,
+        Err(err) => {
+            warn!("Failed to open '/debugdata'. Error: {}", err);
+            return;
+        }
+    };
 
-    // Iterate over files as tuples containing an entry and the prefix the entry was found at.
-    struct IteratedEntry {
-        prefix: &'static str,
-        entry: fuchsia_fs::directory::DirEntry,
-    }
-
-    // Create a single stream over the files in all directories
-    let mut file_stream = futures::stream::iter(
-        directories
-            .iter()
-            .map(move |val| {
-                let (prefix, directory) = val;
-                fuchsia_fs::directory::readdir_recursive(
-                    directory,
-                    Some(fasync::Duration::from_seconds(
-                        PROFILE_ARTIFACT_ENUMERATE_TIMEOUT_SECONDS,
-                    )),
-                )
-                .map_ok(move |file| IteratedEntry { prefix: prefix, entry: file })
-            })
-            .collect::<Vec<_>>(),
+    let files = fuchsia_fs::directory::readdir_recursive(
+        &root_dir,
+        Some(fasync::Duration::from_seconds(DEBUG_DATA_TIMEOUT_SECONDS)),
     )
-    .flatten();
-
-    let mut file_futs = vec![];
-    while let Some(Ok(IteratedEntry { prefix, entry })) = file_stream.next().await {
-        file_futs.push(async move {
-            let prefix = PathBuf::from(prefix);
-            let name = entry.name;
-            let path = prefix.join(&name).to_string_lossy().to_string();
-            let file =
-                fuchsia_fs::file::open_in_namespace(&path, fuchsia_fs::OpenFlags::RIGHT_READABLE)?;
-            let content = fuchsia_fs::read_file_bytes(&file).await;
-
-            // Store the file in a directory prefixed with the last part of the file path (i.e.
-            // "static" or "dynamic").
-            let name_prefix = prefix
-                .file_stem()
-                .map(|v| v.to_string_lossy().to_string())
-                .unwrap_or_else(|| "".to_string());
-            let name = format!("{}/{}", name_prefix, name);
-
-            Ok::<_, Error>((name, content))
-        });
-    }
-
-    let file_futs: Vec<(String, Result<Vec<u8>, Error>)> =
-        join_all(file_futs).await.into_iter().filter_map(|v| v.ok()).collect();
-
-    let files = file_futs
-        .into_iter()
-        .filter_map(|v| {
-            let (name, result) = v;
-            match result {
-                Ok(contents) => Some(DebugDataFile { name: name.to_string(), contents }),
-                Err(e) => {
-                    warn!("Failed to read debug data file {}: {:?}", name, e);
+    .filter_map(|result| async move {
+        match result {
+            Ok(entry) => {
+                if entry.kind != fio::DirentType::File {
                     None
+                } else {
+                    Some(entry)
                 }
             }
-        })
-        .collect::<Vec<_>>();
+            Err(err) => {
+                warn!("Error while reading directory entry. Error: {}", err);
+                None
+            }
+        }
+    })
+    .filter_map(|entry| async move {
+        let path = PathBuf::from(DEBUG_DATA_PATH).join(entry.name).to_string_lossy().to_string();
+        match fuchsia_fs::file::open_in_namespace(&path, fuchsia_fs::OpenFlags::RIGHT_READABLE) {
+            Ok(file) => Some((path, file)),
+            Err(err) => {
+                warn!("Failed to read file {}. Error {}", path, err);
+                None
+            }
+        }
+    })
+    .filter_map(|(path, file)| async move {
+        match fuchsia_fs::read_file_bytes(&file).await {
+            Ok(contents) => Some((path, contents)),
+            Err(err) => {
+                warn!("Failed to read file {}. Error {}", path, err);
+                None
+            }
+        }
+    })
+    .map(|(name, contents)| {
+        // Remove the leading '/' so there is no 'root' entry.
+        DebugDataFile { name: name.trim_start_matches('/').to_string(), contents }
+    })
+    .collect::<Vec<DebugDataFile>>()
+    .await;
 
     if !files.is_empty() {
         // We copy the files to a well known directory in /tmp. This supports exporting the
