@@ -47,18 +47,24 @@ impl<S: Subscriber> Layer<S> for KernelLogger {
         // tracing levels run the opposite direction of fuchsia severity
         let level = event.metadata().level();
         if *level <= Level::INFO {
-            let mut visitor = StringVisitor(format!("[component_manager] {}:", level));
+            let mut visitor = StringVisitor("".to_string());
             event.record(&mut visitor);
             let mut msg = visitor.0;
+
+            // msg always has a leading space
+            msg = msg.trim_start().to_string();
+            let msg_prefix = format!("[component_manager] {}: ", level);
 
             while msg.len() > 0 {
                 // TODO(fxbug.dev/32998): zx_debuglog_write also accepts options and the possible options include
                 // log levels, but they seem to be mostly unused and not displayed today, so we don't pass
                 // along log level yet.
-                if let Err(s) = self.debuglog.write(msg.as_bytes()) {
+                let msg_to_write = format!("{}{}", msg_prefix, msg);
+                if let Err(s) = self.debuglog.write(msg_to_write.as_bytes()) {
                     eprintln!("failed to write log ({}): {}", s, msg);
                 }
-                let num_to_drain = std::cmp::min(msg.len(), zx::sys::ZX_LOG_RECORD_DATA_MAX);
+                let num_to_drain =
+                    std::cmp::min(msg.len(), zx::sys::ZX_LOG_RECORD_DATA_MAX - msg_prefix.len());
                 msg.drain(..num_to_drain);
             }
         }
