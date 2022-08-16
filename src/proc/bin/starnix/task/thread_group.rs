@@ -41,7 +41,15 @@ pub struct ThreadGroupMutableState {
     pub children: BTreeMap<pid_t, Weak<ThreadGroup>>,
 
     /// Child tasks that have exited, but not yet been waited for.
+    ///
+    /// TODO(tbodt): Storing zombies this way is problematic since zombies take up space in the pid
+    /// table and prevent their pid from being reallocated. We should eventually stop using
+    /// ZombieProcess for returning waitpid() results and instead put the information in the pid
+    /// table.
     pub zombie_children: Vec<ZombieProcess>,
+
+    /// WaitQueue for updates to the WaitResults of tasks in this group.
+    pub child_status_waiters: WaitQueue,
 
     /// Whether this thread group will inherit from children of dying processes in its descendant
     /// tree.
@@ -176,6 +184,7 @@ impl ThreadGroup {
                 tasks: BTreeMap::new(),
                 children: BTreeMap::new(),
                 zombie_children: vec![],
+                child_status_waiters: WaitQueue::default(),
                 is_child_subreaper: false,
                 process_group: Arc::clone(&process_group),
                 itimers: Default::default(),
@@ -292,7 +301,7 @@ impl ThreadGroup {
                 if let Some(signal_target) = parent.get_signal_target(&SIGCHLD.into()) {
                     send_signal(&signal_target, signal_info);
                 }
-                parent.interrupt(InterruptionType::ChildChange);
+                parent.child_status_waiters.notify_all();
             }
 
             // TODO: Set the error_code on the Zircon process object. Currently missing a way
@@ -423,7 +432,7 @@ impl ThreadGroup {
             if let Some(parent) = state.parent.clone() {
                 // OK to drop state here since we don't access it anymore.
                 std::mem::drop(state);
-                parent.read().interrupt(InterruptionType::ChildChange);
+                parent.write().child_status_waiters.notify_all();
             }
         }
     }
@@ -688,6 +697,9 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
                 return Ok(Some(child));
             }
         }
+
+        // TODO(tbodt): Try and unify .zombie_children with .waitable. This function is essentially
+        // the same code twice. See also the TODO on zombie_children.
 
         // The vector of potential matches.
         let children_filter = |child: &Arc<ThreadGroup>| match selector {

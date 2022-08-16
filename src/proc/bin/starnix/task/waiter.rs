@@ -50,7 +50,6 @@ pub enum InterruptionType {
     Signal,
     Exit,
     Continue,
-    ChildChange,
 }
 
 impl InterruptionType {
@@ -64,7 +63,6 @@ impl InterruptionType {
             InterruptionType::Signal => task_state.signals.is_any_pending(),
             InterruptionType::Exit => task_state.exit_status.is_some(),
             InterruptionType::Continue => !thread_state.stopped,
-            InterruptionType::ChildChange => false,
         }
     }
 }
@@ -98,15 +96,6 @@ impl Waiter {
         Self::new_with_interruption_filter(vec![InterruptionType::Exit, InterruptionType::Continue])
     }
 
-    /// Create a new waiter object for a thread waiting for a child status to change.
-    pub fn new_for_wait_on_child_thread() -> Arc<Waiter> {
-        Self::new_with_interruption_filter(vec![
-            InterruptionType::Exit,
-            InterruptionType::Signal,
-            InterruptionType::ChildChange,
-        ])
-    }
-
     /// Wait until the waiter is woken up.
     ///
     /// If the wait is interrupted (see [`Waiter::interrupt`]), this function returns
@@ -120,7 +109,7 @@ impl Waiter {
     /// The returned guard must be kept for as long as the waiter must be registered.
     ///
     /// This method will return an EINTR error if the condition for the waiter is already reached.
-    pub fn register_waiter<'a>(
+    fn register_waiter<'a>(
         self: &Arc<Self>,
         task: &'a Task,
     ) -> Result<scopeguard::ScopeGuard<&'a Task, impl FnOnce(&'a Task), scopeguard::Always>, Errno>
@@ -157,17 +146,14 @@ impl Waiter {
         self.wait_kernel_until(deadline)
     }
 
-    /// Waits until the waiter is woken up.
-    ///
-    /// This method allows the kernel to wait without a specific task at hand.
-    pub fn wait_kernel(self: &Arc<Self>) -> Result<(), Errno> {
+    /// Waits until the waiter is woken up. Do not use if a current_task is available, this will
+    /// result in incorrect signal behavior.
+    pub fn wait_without_current_task_dont_use_if_possible(self: &Arc<Self>) -> Result<(), Errno> {
         self.wait_kernel_until(zx::Time::INFINITE)
     }
 
     /// Waits until the given deadline has passed or the waiter is woken up.
-    ///
-    /// This method allows the kernel to wait without a specific task at hand.
-    pub fn wait_kernel_until(self: &Arc<Self>, deadline: zx::Time) -> Result<(), Errno> {
+    fn wait_kernel_until(self: &Arc<Self>, deadline: zx::Time) -> Result<(), Errno> {
         match self.port.wait(deadline) {
             Ok(packet) => match packet.status() {
                 zx::sys::ZX_OK => {

@@ -522,29 +522,21 @@ fn wait_on_pid(
     selector: ProcessSelector,
     options: &WaitingOptions,
 ) -> Result<Option<ZombieProcess>, Errno> {
-    let waiter = Waiter::new_for_wait_on_child_thread();
-    let (mut _guard, mut wait_result) = match waiter.register_waiter(current_task) {
-        Ok(guard) => (Some(guard), Ok(())),
-        Err(err) => (None, Err(err)),
-    };
+    let waiter = Waiter::new();
     loop {
         {
             let pids = current_task.kernel().pids.read();
-            if let Some(child) =
-                current_task.thread_group.write().get_waitable_child(selector, options, &pids)?
-            {
+            let mut thread_group = current_task.thread_group.write();
+            if let Some(child) = thread_group.get_waitable_child(selector, options, &pids)? {
                 return Ok(Some(child));
             }
+            thread_group.child_status_waiters.wait_async(&waiter);
         }
 
         if !options.block {
             return Ok(None);
         }
-        // Return any error encountered during previous iteration's wait. This is done after the
-        // zombie process has been dequeued to make sure that the zombie process is returned even
-        // if the wait was interrupted.
-        wait_result.restartable()?;
-        wait_result = waiter.wait_kernel();
+        waiter.wait(current_task).restartable()?;
     }
 }
 

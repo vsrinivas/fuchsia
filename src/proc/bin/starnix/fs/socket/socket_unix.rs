@@ -313,7 +313,7 @@ impl UnixSocket {
                 WaitCallback::none(),
             );
             drop(inner);
-            waiter.wait_kernel()?;
+            waiter.wait_without_current_task_dont_use_if_possible()?;
         }
     }
 
