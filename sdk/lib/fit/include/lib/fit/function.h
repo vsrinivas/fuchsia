@@ -5,6 +5,8 @@
 #ifndef LIB_FIT_INCLUDE_LIB_FIT_FUNCTION_H_
 #define LIB_FIT_INCLUDE_LIB_FIT_FUNCTION_H_
 
+#include <type_traits>
+
 #include "function_internal.h"
 #include "traits.h"
 #include "utility_internal.h"
@@ -12,10 +14,18 @@
 namespace fit {
 
 template <size_t inline_target_size, bool require_inline, typename Callable>
-class function_impl;
+class function_impl {
+  static_assert(std::is_function<Callable>::value,
+                "fit::function must be instantiated with a function type, such as void() or "
+                "int(char*, bool)");
+};
 
 template <size_t inline_target_size, bool require_inline, typename Callable>
-class callback_impl;
+class callback_impl {
+  static_assert(std::is_function<Callable>::value,
+                "fit::callback must be instantiated with a function type, such as void() or "
+                "int(char*, bool)");
+};
 
 // The default size allowance for storing a target inline within a function
 // object, in bytes.  This default allows for inline storage of targets
