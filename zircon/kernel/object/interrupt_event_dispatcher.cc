@@ -59,6 +59,10 @@ zx_status_t InterruptEventDispatcher::Create(KernelHandle<InterruptDispatcher>* 
   switch (options & ZX_INTERRUPT_MODE_MASK) {
     case ZX_INTERRUPT_MODE_DEFAULT:
       default_mode = true;
+      if (zx_status_t status = get_interrupt_config(vector, &tm, &pol); status != ZX_OK) {
+        dprintf(CRITICAL, "Internal error fetching IRQ %u's config (%d)\n", vector, status);
+        return ZX_ERR_INTERNAL;
+      }
       break;
     case ZX_INTERRUPT_MODE_EDGE_LOW:
       tm = IRQ_TRIGGER_MODE_EDGE;
@@ -71,15 +75,17 @@ zx_status_t InterruptEventDispatcher::Create(KernelHandle<InterruptDispatcher>* 
     case ZX_INTERRUPT_MODE_LEVEL_LOW:
       tm = IRQ_TRIGGER_MODE_LEVEL;
       pol = IRQ_POLARITY_ACTIVE_LOW;
-      interrupt_flags = INTERRUPT_UNMASK_PREWAIT | INTERRUPT_MASK_POSTWAIT;
       break;
     case ZX_INTERRUPT_MODE_LEVEL_HIGH:
       tm = IRQ_TRIGGER_MODE_LEVEL;
       pol = IRQ_POLARITY_ACTIVE_HIGH;
-      interrupt_flags = INTERRUPT_UNMASK_PREWAIT | INTERRUPT_MASK_POSTWAIT;
       break;
     default:
       return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (tm == IRQ_TRIGGER_MODE_LEVEL) {
+    interrupt_flags = INTERRUPT_UNMASK_PREWAIT | INTERRUPT_MASK_POSTWAIT;
   }
 
   if (!default_mode) {
