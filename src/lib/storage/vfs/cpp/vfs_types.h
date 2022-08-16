@@ -121,9 +121,7 @@ constexpr Rights operator&(Rights lhs, Rights rhs) { return Rights(lhs.raw_value
 // less than 64. When the need arises as to support more than 64 protocols, we should change the
 // implementation in |VnodeProtocolSet| accordingly.
 enum class VnodeProtocol : uint32_t {
-  // TODO(https://fxbug.dev/39776): change this back to 0 when the referenced compiler bug is
-  // resolved. Setting |kConnector| to 1 appears to workaround the issue.
-  kConnector = 1,
+  kConnector,
   kFile,
   kDirectory,
   // TODO(https://fxbug.dev/77623): Remove these variants when Node1.Describe is gone and the tight
