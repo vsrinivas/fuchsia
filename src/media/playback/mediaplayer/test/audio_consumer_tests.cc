@@ -27,7 +27,7 @@
 #include "lib/zx/time.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/media/playback/mediaplayer/audio_consumer_impl.h"
-#include "src/media/playback/mediaplayer/test/fakes/fake_audio.h"
+#include "src/media/playback/mediaplayer/test/fakes/fake_audio_cfv1.h"
 #include "src/media/playback/mediaplayer/test/sink_feeder.h"
 
 namespace media_player {

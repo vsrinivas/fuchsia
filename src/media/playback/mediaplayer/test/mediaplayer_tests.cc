@@ -16,7 +16,7 @@
 #include "lib/ui/scenic/cpp/view_token_pair.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/media/playback/mediaplayer/test/command_queue.h"
-#include "src/media/playback/mediaplayer/test/fakes/fake_audio.h"
+#include "src/media/playback/mediaplayer/test/fakes/fake_audio_cfv1.h"
 #include "src/media/playback/mediaplayer/test/fakes/fake_scenic.h"
 #include "src/media/playback/mediaplayer/test/fakes/fake_sysmem.h"
 #include "src/media/playback/mediaplayer/test/fakes/fake_wav_reader.h"
