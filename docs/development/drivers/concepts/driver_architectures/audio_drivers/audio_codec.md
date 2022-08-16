@@ -195,6 +195,9 @@ notifications are added to Banjo.
 
 ### Gain Control {#gain-control}
 
+Note: The gain control APIs in this section are deprecated. Use a `Gain` `Element` instead
+exported and used via  the [Audio Signal Processing](audio_signal_processing.md) APIs.
+
 Gain related support by any given codec is returned by the codec in response to
 a `GetGainFormat` function in the `GainFormat` structure. The controller can
 control gain, mute and AGC states in a codec using the `SetGainState` function.
