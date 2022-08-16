@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/scheduler/c/fidl.h>
+#include <fidl/fuchsia.scheduler/cpp/wire.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -24,14 +24,14 @@ namespace {
 zx_status_t CreateProfile(const zx::channel& profile_provider, uint32_t priority,
                           const std::string& name, zx_status_t* server_status,
                           zx::profile* profile) {
-  zx_handle_t raw_profile_handle;
-  zx_status_t result = fuchsia_scheduler_ProfileProviderGetProfile(
-      profile_provider.get(), priority, name.data(), name.length(), server_status,
-      &raw_profile_handle);
-  if (result != ZX_OK) {
-    return result;
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_scheduler::ProfileProvider>(
+                                   profile_provider.borrow()))
+                    ->GetProfile(priority, fidl::StringView::FromExternal(name));
+  if (!result.ok()) {
+    return result.status();
   }
-  *profile = zx::profile(raw_profile_handle);
+  *server_status = result.value().status;
+  *profile = std::move(result.value().profile);
   return ZX_OK;
 }
 
@@ -39,14 +39,15 @@ zx_status_t CreateDeadlineProfile(const zx::channel& profile_provider, zx_durati
                                   zx_duration_t relative_deadline, zx_duration_t period,
                                   const std::string& name, zx_status_t* server_status,
                                   zx::profile* profile) {
-  zx_handle_t raw_profile_handle;
-  zx_status_t result = fuchsia_scheduler_ProfileProviderGetDeadlineProfile(
-      profile_provider.get(), capacity, relative_deadline, period, name.data(), name.length(),
-      server_status, &raw_profile_handle);
-  if (result != ZX_OK) {
-    return result;
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_scheduler::ProfileProvider>(
+                                   profile_provider.borrow()))
+                    ->GetDeadlineProfile(capacity, relative_deadline, period,
+                                         fidl::StringView::FromExternal(name));
+  if (!result.ok()) {
+    return result.status();
   }
-  *profile = zx::profile(raw_profile_handle);
+  *server_status = result.value().status;
+  *profile = std::move(result.value().profile);
   return ZX_OK;
 }
 
@@ -58,16 +59,23 @@ zx_status_t SetProfileByRole(const zx::channel& profile_provider, zx::unowned_th
       status != ZX_OK) {
     return status;
   }
-  return fuchsia_scheduler_ProfileProviderSetProfileByRole(
-      profile_provider.get(), duplicate.release(), role.data(), role.length(), server_status);
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_scheduler::ProfileProvider>(
+                                   profile_provider.borrow()))
+                    ->SetProfileByRole(std::move(duplicate), fidl::StringView::FromExternal(role));
+  if (!result.ok()) {
+    return result.status();
+  }
+  *server_status = result.value().status;
+  return ZX_OK;
 }
 
 void GetProfileProvider(zx::channel* channel) {
   // Connect to ProfileProvider.
   zx::channel server_endpoint;
   ASSERT_OK(zx::channel::create(/*flags=*/0u, &server_endpoint, channel));
-  ASSERT_OK(fdio_service_connect("/svc/" fuchsia_scheduler_ProfileProvider_Name,
-                                 server_endpoint.release()),
+  ASSERT_OK(fdio_service_connect_by_name(
+                fidl::DiscoverableProtocolName<fuchsia_scheduler::ProfileProvider>,
+                server_endpoint.release()),
             "Could not connect to ProfileProvider.");
   ASSERT_EQ(server_endpoint.get(), ZX_HANDLE_INVALID);
 }
@@ -119,15 +127,15 @@ TEST(Profile, GetCpuAffinityProfile) {
   GetProfileProvider(&provider);
   ASSERT_FALSE(CURRENT_TEST_HAS_FAILURES());
 
-  fuchsia_scheduler_CpuSet cpu_set = {};
+  fuchsia_scheduler::wire::CpuSet cpu_set = {};
   cpu_set.mask[0] = 1;
-  zx::profile profile;
-  zx_status_t server_status;
-  ASSERT_OK(fuchsia_scheduler_ProfileProviderGetCpuAffinityProfile(
-      provider.get(), &cpu_set, &server_status, profile.reset_and_get_address()));
-  ASSERT_OK(server_status);
+  auto result =
+      fidl::WireCall(fidl::UnownedClientEnd<fuchsia_scheduler::ProfileProvider>(provider.borrow()))
+          ->GetCpuAffinityProfile(cpu_set);
+  ASSERT_TRUE(result.ok());
+  ASSERT_OK(result.value().status);
 
-  CheckBasicDetails(profile);
+  CheckBasicDetails(result.value().profile);
 }
 
 // Test setting a profile via the SetProfileByRole FIDL method.
