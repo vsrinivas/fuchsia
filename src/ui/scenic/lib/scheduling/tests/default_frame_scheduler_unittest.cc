@@ -194,7 +194,9 @@ TEST_F(FrameSchedulerTest, SquashedPresents_ShouldScheduleForInitialPresent) {
   // Schedule two updates. The first with a later requested_presentation_time than the second. They
   // should be squashed.
   constexpr SessionId kSessionId = 1;
-  ScheduleUpdate(scheduler, kSessionId, zx::time(1.5f * vsync_timing_->vsync_interval().get()));
+  ScheduleUpdate(scheduler, kSessionId,
+                 zx::time(static_cast<zx_time_t>(
+                     1.5 * static_cast<double>(vsync_timing_->vsync_interval().get()))));
   ScheduleUpdate(scheduler, kSessionId, zx::time(0));
 
   // Run loop past when a frame would have been scheduled in case update #2 was used.
