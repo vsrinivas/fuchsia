@@ -22,7 +22,6 @@
                 "fuchsia.media.ActivityReporter",
                 "fuchsia.media.audio.EffectsController",
                 "fuchsia.media.UsageGainReporter",
-                "fuchsia.nn.ModelExecutor",
                 "fuchsia.timezone.Timezone",
                 "fuchsia.ultrasound.Factory",
                 "fuchsia.weave.Provisioner",
@@ -40,7 +39,6 @@
             protocol: [
                 "fuchsia.lowpan.bootstrap.Thread",
                 "fuchsia.media.SessionAudioConsumerFactory",
-                "fuchsia.nn.ModelExecutor",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Loader",
                 "fuchsia.timezone.Timezone",
@@ -174,6 +172,15 @@
             ],
             from: "#regulatory_region",
             to: "#session-manager",
+        },
+
+        // TODO(b/231628370): Removing the protocol offered here and uncomment
+        // the offer in the actual server's core shard.
+        {
+            protocol: "fuchsia.nn.ModelExecutor",
+            from: "#openvx_nn_server",
+            to: "#session-manager",
+            source_availability: "unknown",
         },
         {
             protocol: [ "fuchsia.media.sounds.Player" ],
