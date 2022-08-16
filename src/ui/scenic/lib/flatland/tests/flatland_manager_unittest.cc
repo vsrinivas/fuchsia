@@ -494,6 +494,9 @@ TEST_F(FlatlandManagerTest, PresentWithoutTokensClosesSession) {
   // ultimately posts the destruction back onto the worker.
   RunLoopUntil([&flatland] { return !flatland.is_bound(); });
   EXPECT_EQ(error_returned, FlatlandError::NO_PRESENTS_REMAINING);
+
+  // FlatlandManager::RemoveFlatlandInstance() will be posted on main thread and may not be run yet.
+  RunLoopUntilIdle();
 }
 
 TEST_F(FlatlandManagerTest, ErrorClosesSession) {
