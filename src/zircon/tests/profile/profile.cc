@@ -29,7 +29,7 @@ zx_status_t CreateProfile(const zx::channel& profile_provider, uint32_t priority
       profile_provider.get(), priority, name.data(), name.length(), server_status,
       &raw_profile_handle);
   if (result != ZX_OK) {
-    return ZX_OK;
+    return result;
   }
   *profile = zx::profile(raw_profile_handle);
   return ZX_OK;
@@ -44,7 +44,7 @@ zx_status_t CreateDeadlineProfile(const zx::channel& profile_provider, zx_durati
       profile_provider.get(), capacity, relative_deadline, period, name.data(), name.length(),
       server_status, &raw_profile_handle);
   if (result != ZX_OK) {
-    return ZX_OK;
+    return result;
   }
   *profile = zx::profile(raw_profile_handle);
   return ZX_OK;
@@ -91,6 +91,7 @@ TEST(Profile, GetProfile) {
   zx_status_t status;
   ASSERT_OK(CreateProfile(provider, /*priority=*/0u, "<test>", &status, &profile),
             "Error creating profile.");
+  ASSERT_OK(status);
 
   CheckBasicDetails(profile);
 }
@@ -107,6 +108,7 @@ TEST(Profile, GetDeadlineProfile) {
       CreateDeadlineProfile(provider, /*capacity=*/ZX_MSEC(2), /*relative_deadline=*/ZX_MSEC(10),
                             /*period=*/ZX_MSEC(10), "<test>", &status, &profile),
       "Error creating deadline profile.");
+  ASSERT_OK(status);
 
   CheckBasicDetails(profile);
 }
@@ -123,6 +125,7 @@ TEST(Profile, GetCpuAffinityProfile) {
   zx_status_t server_status;
   ASSERT_OK(fuchsia_scheduler_ProfileProviderGetCpuAffinityProfile(
       provider.get(), &cpu_set, &server_status, profile.reset_and_get_address()));
+  ASSERT_OK(server_status);
 
   CheckBasicDetails(profile);
 }
