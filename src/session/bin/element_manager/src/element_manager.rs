@@ -14,6 +14,7 @@ use {
     },
     crate::element::Element,
     anyhow::{format_err, Error},
+    component_events::{events::*, matcher::*},
     fidl,
     fidl::endpoints::{
         create_request_stream, ClientEnd, ControlHandle, Proxy, RequestStream, ServerEnd,
@@ -24,12 +25,14 @@ use {
     fidl_fuchsia_sys as fsys, fidl_fuchsia_ui_app as fuiapp,
     fuchsia_async::{self as fasync, DurationExt},
     fuchsia_component, fuchsia_scenic as scenic, fuchsia_zircon as zx,
+    futures::channel::mpsc::{channel, Receiver, Sender},
     futures::{lock::Mutex, select, FutureExt, StreamExt, TryStreamExt},
     rand::{
         distributions::{Alphanumeric, DistString},
         thread_rng,
     },
     realm_management,
+    std::collections::HashMap,
     std::sync::Arc,
     tracing::{error, info},
 };
@@ -91,6 +94,11 @@ pub enum ElementManagerError {
     /// a given element.
     #[error("Element {} not bound at \"{}/{}\": {:?}", url, collection, name, err_str)]
     NotBound { name: String, collection: String, url: String, err_str: String },
+
+    /// Returned when an element is proposed with a moniker that was previously
+    /// proposed and is still active.
+    #[error("Element moniker \"{}\" was already proposed", moniker)]
+    DuplicateMoniker { moniker: String },
 }
 
 impl ElementManagerError {
@@ -166,6 +174,10 @@ impl ElementManagerError {
             err_str: err_str.into(),
         }
     }
+
+    pub fn duplicate_moniker(moniker: impl Into<String>) -> ElementManagerError {
+        ElementManagerError::DuplicateMoniker { moniker: moniker.into() }
+    }
 }
 
 /// Checks whether the component is a *.cm or not
@@ -216,6 +228,10 @@ pub struct ElementManager {
     /// Returns whether the client should use Flatland to interact with Scenic.
     /// TODO(fxbug.dev/64206): Remove after Flatland migration is completed.
     scenic_uses_flatland: bool,
+
+    /// A map from the relative monikers returned in a component Stopped event
+    /// to an mpsc channel Sender, to trigger the Element to stop.
+    element_stopped_channels: Arc<Mutex<HashMap<String, Sender<()>>>>,
 }
 
 impl ElementManager {
@@ -232,6 +248,7 @@ impl ElementManager {
             sys_launcher,
             collection: collection.to_string(),
             scenic_uses_flatland,
+            element_stopped_channels: Arc::new(Mutex::new(HashMap::default())),
         }
     }
 
@@ -356,6 +373,58 @@ impl ElementManager {
         Ok(Element::from_app(app, child_url))
     }
 
+    async fn register_element_stopped_channel(
+        &self,
+        moniker: &str,
+    ) -> Result<Receiver<()>, ElementManagerError> {
+        let (tx, rx) = channel(1);
+        if self.element_stopped_channels.lock().await.insert(moniker.to_owned(), tx).is_some() {
+            return Err(ElementManagerError::duplicate_moniker(moniker));
+        }
+        Ok(rx)
+    }
+
+    pub fn clone_element_stopped_channels(&self) -> Arc<Mutex<HashMap<String, Sender<()>>>> {
+        self.element_stopped_channels.clone()
+    }
+
+    /// Listens for component stopped events to close their corresponding
+    /// elements. To avoid complications of sharing the ElementManager across
+    /// threads, this function does not borrow the `ElementManager`, but the
+    /// caller must call ElementManager's `clone_element_stopped_channels()` to
+    /// get the required function argument.
+    pub fn handle_stopped_events(
+        element_stopped_channels: Arc<Mutex<HashMap<String, Sender<()>>>>,
+    ) -> Result<(), Error> {
+        let mut stopped_events = EventStream::open_at_path("/events/stopped")?;
+        fasync::Task::spawn(async move {
+            loop {
+                match EventMatcher::ok()
+                    .moniker_regex(".*")
+                    .wait::<Stopped>(&mut stopped_events)
+                    .await
+                {
+                    Ok(event) => {
+                        let m = event.target_moniker();
+                        if let Some(slash) = m.rfind('/') {
+                            let moniker = &m[slash + 1..m.len()];
+                            if let Some(mut sender) =
+                                element_stopped_channels.lock().await.remove(moniker)
+                            {
+                                sender.try_send(()).unwrap();
+                            }
+                        }
+                    }
+                    Err(err) => {
+                        error!("Error awaiting element Stopped event: {err}");
+                    }
+                }
+            }
+        })
+        .detach();
+        Ok(())
+    }
+
     /// Launches a CFv2 component as an element.
     ///
     /// The component is created as a child in the Element Manager's realm.
@@ -379,10 +448,14 @@ impl ElementManager {
             "launch_v2_element"
         );
 
+        let collection_name = self.collection.as_ref();
+        let moniker = format!("{collection_name}:{child_name}");
+        let stopped_receiver = self.register_element_stopped_channel(&moniker).await?;
+
         realm_management::create_child_component(
             &child_name,
             &child_url,
-            &self.collection,
+            collection_name,
             &self.realm,
         )
         .await
@@ -426,6 +499,7 @@ impl ElementManager {
             child_name,
             child_url,
             &self.collection,
+            stopped_receiver,
         ))
     }
 
@@ -637,11 +711,17 @@ async fn run_element_until_closed(
     );
 }
 
-/// Waits for the element to signal that it closed
-async fn await_element_close(element: Element) {
-    let channel = element.directory_channel();
-    let _ =
-        fasync::OnSignals::new(&channel.as_handle_ref(), zx::Signals::CHANNEL_PEER_CLOSED).await;
+/// Waits for the element to signal that it closed, via a component stopped
+/// event, or (for CFv1 only) by closing its directory channel. (Note that a
+/// component process that exits will trigger one of these events.)
+async fn await_element_close(mut element: Element) {
+    if let Some(mut stopped_receiver) = element.take_stopped_receiver() {
+        stopped_receiver.next().await;
+    } else {
+        let channel = element.directory_channel();
+        let _ = fasync::OnSignals::new(&channel.as_handle_ref(), zx::Signals::CHANNEL_PEER_CLOSED)
+            .await;
+    }
 }
 
 /// Waits for the view controller to signal that it wants to close.

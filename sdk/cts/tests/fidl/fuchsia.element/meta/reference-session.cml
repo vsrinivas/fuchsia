@@ -43,6 +43,11 @@
             to: "#element_manager",
         },
         {
+            event_stream: [ "stopped_v2" ],
+            from: "parent",
+            to: "#element_manager",
+        },
+        {
             protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
             to: "#reference-graphical-presenter",

@@ -27,6 +27,11 @@
                 "#reference-session",
             ],
         },
+        {
+            event_stream: [ "stopped_v2" ],
+            from: "parent",
+            to: "#reference-session",
+        },
     ],
     expose: [
         {
