@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components/fuchsia_shell_package.gni")
+
 executable("backlight") {
   sources = [ "main.cc" ]
   deps = [
@@ -14,4 +16,10 @@ executable("backlight") {
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+}
+
+fuchsia_shell_package("backlight-pkg") {
+  package_name = "backlight"
+  deps = [ ":backlight" ]
+  manifest = "meta/backlight.cml"
 }
