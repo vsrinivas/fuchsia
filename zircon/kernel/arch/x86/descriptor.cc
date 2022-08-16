@@ -138,7 +138,7 @@ void gdt_setup() {
   DEBUG_ASSERT(arch_curr_cpu_num() == 0);
   DEBUG_ASSERT(mp_get_online_mask() == 1);
   // Max GDT size is limited to 64K and we reserve the whole 64K area, but we map
-  // just enough pages to store GDT and leave the rest mapped copy-on-write
+  // just enough read/write to store GDT and leave the rest mapped read-only
   // so all write accesses beyond GDT last page are going to cause page fault.
   //
   // Why don't we just set a a proper limit value? That's because during VM exit
@@ -147,15 +147,15 @@ void gdt_setup() {
   // requiring the hypervisor to restore GDT limit after VM exit using LGDT
   // instruction which is a serializing instruction (see Intel SDM, Volume 3, 8.3
   // Serializing Instructions).
-  uint32_t vmar_flags =
+  const uint32_t vmar_flags =
       VMAR_FLAG_CAN_MAP_SPECIFIC | VMAR_FLAG_CAN_MAP_READ | VMAR_FLAG_CAN_MAP_WRITE;
-  uint32_t mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
 
-  size_t gdt_real_size = _temp_gdt_end - _temp_gdt;
+  const size_t gdt_real_size = _temp_gdt_end - _temp_gdt;
   constexpr size_t gdt_size = 0x10000;
 
   fbl::RefPtr<VmObjectPaged> vmo;
-  zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, /*options*/ 0u, gdt_size, &vmo);
+  zx_status_t status = VmObjectPaged::Create(
+      PMM_ALLOC_FLAG_ANY, /*options*/ VmObjectPaged::kAlwaysPinned, gdt_size, &vmo);
   ASSERT(status == ZX_OK);
 
   status = vmo->Write(_temp_gdt, 0, gdt_real_size);  // Copy the temporary gdt.
@@ -166,20 +166,31 @@ void gdt_setup() {
                                                                 vmar_flags, "gdt_vmar", &vmar);
   ASSERT(status == ZX_OK);
 
+  // Can only create a protection boundary at page boundaries, so round up the gdt to the next page
+  // boundary for mapping and protection purposes.
+  const size_t gdt_real_map_size = ROUNDUP(gdt_real_size, PAGE_SIZE);
+
+  // Create the read/write real gdt mapping.
   fbl::RefPtr<VmMapping> mapping;
   status = vmar->CreateVmMapping(
-      /*mapping_offset*/ 0u, gdt_size, PAGE_SIZE_SHIFT, VMAR_FLAG_SPECIFIC, ktl::move(vmo),
-      /*vmo_offset*/ 0u, mmu_flags, "gdt", &mapping);
+      /*mapping_offset*/ 0u, gdt_real_map_size, PAGE_SIZE_SHIFT, VMAR_FLAG_SPECIFIC, vmo,
+      /*vmo_offset*/ 0u, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE, "gdt-rw", &mapping);
   ASSERT(status == ZX_OK);
 
-  status = mapping->MapRange(0, gdt_real_size, /*commit*/ false);
+  status = mapping->MapRange(0, gdt_real_map_size, /*commit*/ false);
   ASSERT(status == ZX_OK);
 
-  // Map in copy-on-write zero-pages for this mapping by soft faulting read accesses.
-  for (size_t offset = gdt_real_size; offset < mapping->size(); offset += PAGE_SIZE) {
-    status = vmar->aspace()->SoftFault(mapping->base() + offset, /* flag */ 0);
-    ASSERT_MSG(status == ZX_OK, "SoftFault failed: %d\n", status);
-  }
+  // Create the read-only mapping to the maximal GDT size
+  fbl::RefPtr<VmMapping> ro_mapping;
+  const size_t gdt_ro_size = gdt_size - gdt_real_map_size;
+  status = vmar->CreateVmMapping(
+      /*mapping_offset*/ gdt_real_map_size, gdt_ro_size, PAGE_SIZE_SHIFT, VMAR_FLAG_SPECIFIC,
+      ktl::move(vmo),
+      /*vmo_offset*/ gdt_real_map_size, ARCH_MMU_FLAG_PERM_READ, "gdt-ro", &ro_mapping);
+  ASSERT(status == ZX_OK);
+
+  status = ro_mapping->MapRange(0, gdt_ro_size, /*commit*/ false);
+  ASSERT(status == ZX_OK);
 
   gdt = mapping->base();
   gdt_load(gdt_get());
