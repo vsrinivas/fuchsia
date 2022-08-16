@@ -113,9 +113,6 @@ struct fdio : protected fbl::RefCounted<fdio>, protected fbl::Recyclable<fdio> {
   static zx::status<fdio_ptr> create(fidl::ClientEnd<fuchsia_io::Node> node,
                                      fuchsia_io::wire::NodeInfo info);
 
-  // Uses |fuchsia.io/Node.Describe| to obtain a |fuchsia.io/NodeInfo|.
-  static zx::status<fdio_ptr> create_with_describe(fidl::ClientEnd<fuchsia_io::Node> node);
-
   // Waits for a |fuchsia.io/Node.OnOpen| event on channel.
   static zx::status<fdio_ptr> create_with_on_open(fidl::ClientEnd<fuchsia_io::Node> node);
 

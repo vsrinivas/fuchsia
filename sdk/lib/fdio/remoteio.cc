@@ -150,15 +150,6 @@ zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node, fio::wire::No
   }
 }
 
-zx::status<fdio_ptr> fdio::create_with_describe(fidl::ClientEnd<fio::Node> node) {
-  auto response = fidl::WireCall(node)->Describe();
-  zx_status_t status = response.status();
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-  return fdio::create(std::move(node), std::move(response.value().info));
-}
-
 zx::status<fdio_ptr> fdio::create_with_on_open(fidl::ClientEnd<fio::Node> node) {
   class EventHandler : public fidl::WireSyncEventHandler<fio::Node> {
    public:
@@ -207,10 +198,16 @@ zx::status<fdio_ptr> fdio::create(zx::handle handle) {
   if (status != ZX_OK) {
     return zx::error(status);
   }
+  // zxio doesn't yet support all channel types; see fallback list in the other fdio::create
+  // overload.
   if (info.type == ZX_OBJ_TYPE_CHANNEL) {
-    return fdio::create_with_describe(fidl::ClientEnd<fio::Node>(zx::channel(std::move(handle))));
+    fidl::ClientEnd<fio::Node> node(zx::channel(std::move(handle)));
+    fidl::WireResult result = fidl::WireCall(node)->Describe();
+    if (!result.ok()) {
+      return zx::error(result.status());
+    }
+    return fdio::create(std::move(node), std::move(result.value().info));
   }
-  // zxio understands how to wrap all non-channel types.
   void* context = nullptr;
   status = zxio_create_with_allocator(std::move(handle), info, ZxioAllocator, &context);
   if (status == ZX_ERR_NO_MEMORY) {
