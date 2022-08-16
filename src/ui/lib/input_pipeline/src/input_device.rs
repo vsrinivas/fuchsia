@@ -108,6 +108,12 @@ pub enum InputDeviceDescriptor {
     Fake,
 }
 
+impl From<keyboard_binding::KeyboardDeviceDescriptor> for InputDeviceDescriptor {
+    fn from(b: keyboard_binding::KeyboardDeviceDescriptor) -> Self {
+        InputDeviceDescriptor::Keyboard(b)
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum InputDeviceType {
     Keyboard,

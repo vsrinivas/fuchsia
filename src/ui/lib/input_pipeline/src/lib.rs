@@ -16,6 +16,7 @@ pub mod mouse_binding;
 pub mod touch_binding;
 
 pub mod autorepeater;
+pub mod chromebook_keyboard_handler;
 pub mod click_drag_handler;
 pub mod dead_keys_handler;
 pub mod display_ownership;

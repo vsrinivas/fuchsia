@@ -100,6 +100,11 @@ impl KeyboardEvent {
         self.key
     }
 
+    /// Converts [KeyboardEvent] into the same one, but with specified key.
+    pub fn into_with_key(self, key: fidl_fuchsia_input::Key) -> Self {
+        Self { key, ..self }
+    }
+
     pub fn get_event_type(&self) -> KeyEventType {
         self.event_type
     }

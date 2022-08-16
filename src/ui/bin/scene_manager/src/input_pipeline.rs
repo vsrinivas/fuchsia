@@ -209,9 +209,10 @@ async fn build_input_pipeline_assembly(
         // Keep this handler first because it keeps performance measurement counters
         // for the rest of the pipeline at entry.
         assembly = add_inspect_handler(node.create_child("input_pipeline_entry"), assembly);
+        // Add as early as possible, but not before inspect handlers.
+        assembly = add_chromebook_keyboard_handler(assembly);
         assembly = assembly.add_display_ownership(display_ownership_event);
         assembly = add_modifier_handler(assembly);
-
         // Add the text settings handler early in the pipeline to use the
         // keymap settings in the remainder of the pipeline.
         assembly = add_text_settings_handler(assembly);
@@ -299,6 +300,11 @@ async fn build_input_pipeline_assembly(
     }
 
     assembly
+}
+
+fn add_chromebook_keyboard_handler(assembly: InputPipelineAssembly) -> InputPipelineAssembly {
+    assembly
+        .add_handler(input_pipeline::chromebook_keyboard_handler::ChromebookKeyboardHandler::new())
 }
 
 /// Hooks up the modifier keys handler.

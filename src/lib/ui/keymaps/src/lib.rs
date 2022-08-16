@@ -544,7 +544,7 @@ impl KeyState {
 
     /// Gets the list of all currently pressed keys, in the order they were
     /// pressed.
-    pub fn get_ordered_keys(&mut self) -> Vec<Key> {
+    pub fn get_ordered_keys(&self) -> Vec<Key> {
         // Iteration MUST produce keys in a strictly increasing sequence.
         self.ordinal_to_key.iter().map(|(_, key)| *key).collect()
     }
