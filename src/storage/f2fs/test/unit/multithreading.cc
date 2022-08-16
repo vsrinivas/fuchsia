@@ -75,7 +75,8 @@ TEST(MultiThreads, Write) {
 
   constexpr int kNTry = 51200;
   uint8_t buf[kPageSize * 2] = {1};
-  for (int i = 0; i < 4; i++) {
+  // 3 iterations are enough to touch every block and trigger gc.
+  for (int i = 0; i < 3; ++i) {
     std::thread thread1 = std::thread([&]() {
       for (int i = 0; i < kNTry; ++i) {
         size_t out_actual;

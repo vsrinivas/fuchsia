@@ -81,14 +81,15 @@ zx::status<uint32_t> SegmentManager::GetVictimByDefault(GcType gc_type, CursegTy
   //  }
 #endif
 
+  auto gc_mode = static_cast<int>(policy.gc_mode);
   if (policy.min_segno == kNullSegNo) {
     block_t last_segment = TotalSegs();
     while (nSearched < policy.max_search) {
       uint32_t segno = FindNextBit(policy.dirty_segmap, last_segment, policy.offset);
       if (segno >= last_segment) {
-        if (superblock_info_->GetLastVictim(static_cast<int>(policy.gc_mode))) {
-          last_segment = superblock_info_->GetLastVictim(static_cast<int>(policy.gc_mode));
-          superblock_info_->SetLastVictim(static_cast<int>(policy.gc_mode), 0);
+        if (superblock_info_->GetLastVictim(gc_mode)) {
+          last_segment = superblock_info_->GetLastVictim(gc_mode);
+          superblock_info_->SetLastVictim(gc_mode, 0);
           policy.offset = 0;
           continue;
         }
@@ -98,7 +99,7 @@ zx::status<uint32_t> SegmentManager::GetVictimByDefault(GcType gc_type, CursegTy
       uint32_t secno = GetSecNo(segno);
 
       if (policy.ofs_unit > 1) {
-        policy.offset -= segno % policy.ofs_unit;
+        policy.offset = fbl::round_down(policy.offset, policy.ofs_unit);
         nSearched +=
             CountBits(policy.dirty_segmap, policy.offset - policy.ofs_unit, policy.ofs_unit);
       } else {
@@ -125,9 +126,11 @@ zx::status<uint32_t> SegmentManager::GetVictimByDefault(GcType gc_type, CursegTy
       }
 
       if (nSearched >= policy.max_search) {
+        // It has already checked all or |kMaxSearchLimit| of dirty segments. Set the last victim to
+        // |policy.offset| from which the next search will start to find victims.
         superblock_info_->SetLastVictim(
-            static_cast<int>(policy.gc_mode),
-            (segno + 1) % fs_->GetSegmentManager().GetMainSegmentsCount());
+            gc_mode, (safemath::CheckAdd<uint32_t>(segno, 1) % fs_->GetSegmentManager().TotalSegs())
+                         .ValueOrDie());
       }
     }
   }

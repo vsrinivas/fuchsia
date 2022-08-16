@@ -14,7 +14,7 @@
 namespace f2fs {
 namespace {
 
-constexpr uint64_t kDefaultBlockCount = 262144;
+constexpr uint64_t kDefaultBlockCount = 143360;
 class GcManagerTest : public F2fsFakeDevTestFixture {
  public:
   GcManagerTest(TestOptions options = TestOptions{.block_count = kDefaultBlockCount})
@@ -33,7 +33,9 @@ class GcManagerTest : public F2fsFakeDevTestFixture {
         break;
       }
       std::vector<std::string> file_names;
-      for (uint32_t i = 0; i < fs_->GetSuperblockInfo().GetBlocksPerSeg(); ++i, ++count) {
+      for (uint32_t i = 0; i < fs_->GetSuperblockInfo().GetBlocksPerSeg() &&
+                           !fs_->GetSegmentManager().HasNotEnoughFreeSecs();
+           ++i, ++count) {
         std::string file_name = std::to_string(count);
         fbl::RefPtr<fs::Vnode> test_file;
         EXPECT_EQ(root_dir_->Create(file_name, S_IFREG, &test_file), ZX_OK);
@@ -213,33 +215,31 @@ TEST_P(GcManagerTestWithLargeSec, SegmentFreeInfo) {
 
 TEST_P(GcManagerTestWithLargeSec, SecureSpace) {
   MakeGcTriggerCondition();
+  // Set the number of blocks to be gc'ed as 2 sections or available space of the volume.
+  uint64_t blocks_to_secure =
+      std::min((safemath::CheckMul<uint64_t>(fs_->GetSuperblockInfo().GetUserBlockCount(),
+                                             100 - fs_->GetSegmentManager().Utilization()) /
+                100)
+                   .ValueOrDie(),
+               (safemath::CheckMul<uint64_t>(2, fs_->GetSuperblockInfo().GetBlocksPerSeg()) *
+                fs_->GetSuperblockInfo().GetSegsPerSec())
+                   .ValueOrDie());
 
-  for (uint32_t i = 0;; ++i) {
+  // It should be able to create new files on free blocks that gc acquires.
+  for (uint32_t i = 0; i < blocks_to_secure; ++i) {
     std::string file_name = "_" + std::to_string(i);
     fbl::RefPtr<fs::Vnode> test_file;
-    if (auto err = root_dir_->Create(file_name, S_IFDIR, &test_file); err != ZX_OK) {
-      ASSERT_EQ(err, ZX_ERR_NO_SPACE);
-      break;
-    }
+    ASSERT_EQ(root_dir_->Create(file_name, S_IFDIR, &test_file), ZX_OK);
     test_file->Close();
   }
-  WritebackOperation op = {.bSync = true};
-  fs_->SyncDirtyDataPages(op);
-  // Without gc, lack of space;
-  fs_->WriteCheckpoint(false, false);
 }
 
 TEST_P(GcManagerTestWithLargeSec, GcConsistency) {
   std::vector<std::string> file_names = MakeGcTriggerCondition();
 
-  while (true) {
-    auto result = fs_->GetGcManager().F2fsGc();
-    // no victim
-    if (result.is_error() && result.error_value() == ZX_ERR_UNAVAILABLE) {
-      break;
-    }
-    ASSERT_FALSE(result.is_error());
-  }
+  // It secures enough free sections.
+  auto secs_or = fs_->GetGcManager().F2fsGc();
+  ASSERT_TRUE(secs_or.is_ok());
 
   for (auto name : file_names) {
     fbl::RefPtr<fs::Vnode> vn;
@@ -256,8 +256,8 @@ TEST_P(GcManagerTestWithLargeSec, GcConsistency) {
   }
 }
 
-const std::array<std::pair<uint64_t, uint32_t>, 3> kSecParams = {
-    {{kDefaultBlockCount, 1}, {kDefaultBlockCount, 2}, {2 * kDefaultBlockCount, 4}}};
+const std::array<std::pair<uint64_t, uint32_t>, 2> kSecParams = {
+    {{kDefaultBlockCount, 1}, {4 * kDefaultBlockCount, 4}}};
 INSTANTIATE_TEST_SUITE_P(GcManagerTestWithLargeSec, GcManagerTestWithLargeSec,
                          ::testing::ValuesIn(kSecParams));
 
