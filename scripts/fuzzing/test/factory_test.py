@@ -111,6 +111,7 @@ class FactoryTest(TestCaseWithFactory):
             lambda: factory.create_fuzzer(args),
             'No matching fuzzers found.',
             'Try "fx fuzz list".',
+            'See https://fuchsia.dev/fuchsia-src/development/testing/fuzzing/run-a-fuzzer',
         )
 
         # Multiple matches
@@ -143,6 +144,7 @@ class FactoryTest(TestCaseWithFactory):
             lambda: factory.create_fuzzer(args),
             'No matching fuzzers found.',
             'Try "fx fuzz list".',
+            'See https://fuchsia.dev/fuchsia-src/development/testing/fuzzing/run-a-fuzzer',
         )
         fuzzer = factory.create_fuzzer(args, include_tests=True)
         self.assertEqual(fuzzer.package, 'fake-package1')
