@@ -78,6 +78,13 @@ int main(int argc, char **argv) {
   bool quiet = ::fuzzing::ExtractFlag("-q", &argc, argv);
   for (int i = 1; i < argc; ++i) {
     std::string arg(argv[i]);
+    if (arg.empty() || arg[0] == '-') {
+      continue;
+    }
+    if (files::IsFile(arg)) {
+      ::fuzzing::gTestInputs.push_back(arg);
+      continue;
+    }
     std::vector<std::string> corpus;
     if (!files::ReadDirContents(arg, &corpus)) {
       if (!quiet) {
