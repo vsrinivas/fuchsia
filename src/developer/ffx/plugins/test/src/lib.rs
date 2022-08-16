@@ -63,7 +63,15 @@ pub async fn test(
     }
 }
 
-async fn get_directory_manager() -> Result<DirectoryManager> {
+async fn get_directory_manager(experiments: &Experiments) -> Result<DirectoryManager> {
+    if !experiments.managed_structured_output.enabled {
+        ffx_bail!(
+            "Managed structured output is experimental and is subject to breaking changes. \
+            To enable structured output run \
+            'ffx config set {} true'",
+            experiments.managed_structured_output.name
+        )
+    }
     let output_path_config: PathBuf = match ffx_config::get("test.output_path").await? {
         Some(output_path) => output_path,
         None => ffx_bail!(
@@ -82,6 +90,8 @@ struct Experiment {
 
 struct Experiments {
     structured_output: Experiment,
+    managed_structured_output: Experiment,
+    result_command: Experiment,
     json_input: Experiment,
     parallel_execution: Experiment,
 }
@@ -100,6 +110,11 @@ impl Experiments {
     async fn from_env() -> Self {
         Self {
             structured_output: Self::get_experiment("test.experimental_structured_output").await,
+            managed_structured_output: Self::get_experiment(
+                "test.experimental_managed_structured_output",
+            )
+            .await,
+            result_command: Self::get_experiment("test.experimental_result_command").await,
             json_input: Self::get_experiment("test.experimental_json_input").await,
             parallel_execution: Self::get_experiment("test.enable_experimental_parallel_execution")
                 .await,
@@ -132,13 +147,13 @@ async fn run_test<W: 'static + Write + Send + Sync>(
                 experiments.structured_output.name
             )
         }
-        // Default to a managed directory when structured output is enabled.
-        (false, None, true) => {
-            let mut directory_manager = get_directory_manager().await?;
+        // Default to a managed directory when both structured output and output features are enabled.
+        (false, None, true) if experiments.managed_structured_output.enabled => {
+            let mut directory_manager = get_directory_manager(&experiments).await?;
             Some(directory_manager.new_directory()?)
         }
-        // Default to nothing when structured output is disabled.
-        (false, None, false) => None,
+        // Default to nothing when either structured or managed output is disabled.
+        (false, None, false) | (false, None, true) => None,
     };
     let reporter = run_test_suite_lib::create_reporter(cmd.filter_ansi, output_directory, writer)?;
 
@@ -320,12 +335,12 @@ async fn result_command<W: Write>(
     mut writer: W,
 ) -> Result<()> {
     let experiments = Experiments::from_env().await;
-    if !experiments.structured_output.enabled {
+    if !experiments.result_command.enabled {
         ffx_bail!(
-            "The result subcommand relies on structured output, which is experimental \
-            and subject to breaking changes. \
-            To enable structured output run {} true'",
-            experiments.structured_output.name,
+            "The result subcommand is experimental and subject to breaking changes. \
+            To enable structured output run 'ffx config set {} true'
+        ",
+            experiments.result_command.name
         )
     }
 
@@ -334,11 +349,15 @@ async fn result_command<W: Write>(
             let directory_to_display = if let Some(directory_override) = directory {
                 Some(directory_override.into())
             } else if let Some(specified_index) = index {
-                get_directory_manager().await?.get_by_id(DirectoryId::Index(specified_index))?
+                get_directory_manager(&experiments)
+                    .await?
+                    .get_by_id(DirectoryId::Index(specified_index))?
             } else if let Some(specified_name) = name {
-                get_directory_manager().await?.get_by_id(DirectoryId::Name(specified_name))?
+                get_directory_manager(&experiments)
+                    .await?
+                    .get_by_id(DirectoryId::Name(specified_name))?
             } else {
-                get_directory_manager().await?.latest_directory()?
+                get_directory_manager(&experiments).await?.latest_directory()?
             };
             match directory_to_display {
                 Some(dir) => display_output_directory(dir, writer),
@@ -348,17 +367,19 @@ async fn result_command<W: Write>(
                 }
             }
         }
-        ResultSubCommand::List(_) => result_list_command(writer).await,
-        ResultSubCommand::Delete(delete) => result_delete_command(delete, writer).await,
+        ResultSubCommand::List(_) => result_list_command(writer, &experiments).await,
+        ResultSubCommand::Delete(delete) => {
+            result_delete_command(delete, writer, &experiments).await
+        }
         ResultSubCommand::Save(save) => {
-            get_directory_manager().await?.save_directory(save.index, save.name)?;
+            get_directory_manager(&experiments).await?.save_directory(save.index, save.name)?;
             Ok(())
         }
     }
 }
 
-async fn result_list_command<W: Write>(mut writer: W) -> Result<()> {
-    let entries = get_directory_manager().await?.entries_ordered()?;
+async fn result_list_command<W: Write>(mut writer: W, experiments: &Experiments) -> Result<()> {
+    let entries = get_directory_manager(experiments).await?.entries_ordered()?;
     let unsaved_entries = entries
         .iter()
         .filter_map(|(id, entry)| match id {
@@ -453,6 +474,7 @@ fn display_output_directory<W: Write>(path: PathBuf, mut writer: W) -> Result<()
 async fn result_delete_command<W: Write>(
     DeleteResultCommand { index, name }: DeleteResultCommand,
     mut writer: W,
+    experiments: &Experiments,
 ) -> Result<()> {
     let id = match (index, name) {
         (Some(_), Some(_)) => {
@@ -466,7 +488,7 @@ async fn result_delete_command<W: Write>(
             return Ok(());
         }
     };
-    match get_directory_manager().await?.delete(id) {
+    match get_directory_manager(experiments).await?.delete(id) {
         Ok(()) => {
             writeln!(writer, "Deleted a run result.")?;
             Ok(())
