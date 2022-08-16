@@ -69,7 +69,17 @@ class ConstString {
     return *this + ConstString<OtherLenWithTerminator - 1>(other);
   }
 
+  template <size_t OtherLen>
+  constexpr bool operator==(const ConstString<OtherLen>& other) const {
+    return static_cast<std::string_view>(*this) == other;
+  }
+
+  template <auto N, unsigned int Base>
+  friend constexpr auto IntegerConstString();
+
  private:
+  constexpr ConstString() = default;
+
   struct Appender {
     template <size_t OtherLen>
     constexpr void operator()(const ConstString<OtherLen>& str) {
@@ -95,6 +105,35 @@ ConstString(ConstString<Len> other) -> ConstString<Len>;
 
 template <size_t LiteralLen>
 ConstString(const char (&literal)[LiteralLen]) -> ConstString<LiteralLen - 1>;
+
+template <typename T>
+constexpr size_t IntegerDigits(T n, unsigned int base) {
+  size_t digits = 1;
+  while (n >= static_cast<T>(base)) {
+    n /= static_cast<T>(base);
+    ++digits;
+  }
+  return digits;
+}
+
+template <auto N, unsigned int Base = 10>
+constexpr auto IntegerConstString() {
+  static_assert(N >= 0);
+  constexpr size_t kDigits = IntegerDigits(N, Base);
+  ConstString<kDigits> result;
+  auto n = N;
+  auto it = result.str_.rbegin();
+  *it++ = '\0';
+  for (auto end = result.str_.rend(); it != end; it++) {
+    char& c = *it;
+    static_assert(Base <= 16);
+    c = "0123456789abcdef"[n % Base];
+    n /= Base;
+  }
+  return result;
+}
+
+static_assert(IntegerConstString<1234567>() == ConstString("1234567"));
 
 }  // namespace elfldltl::internal
 

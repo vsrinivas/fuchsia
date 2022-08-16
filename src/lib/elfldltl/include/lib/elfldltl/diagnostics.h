@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_ELFLDLTL_INCLUDE_LIB_ELFLDLTL_DIAGNOSTICS_H_
 #define SRC_LIB_ELFLDLTL_INCLUDE_LIB_ELFLDLTL_DIAGNOSTICS_H_
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <zircon/assert.h>
 
@@ -13,6 +14,7 @@
 #include <type_traits>
 #include <utility>
 
+#include "internal/const-string.h"
 #include "internal/diagnostics-printf.h"
 
 namespace elfldltl {
@@ -192,6 +194,15 @@ class Diagnostics {
 
   constexpr unsigned int warnings() const { return warnings_; }
 
+  // Reset the counters.
+  // This doesn't do anything to the state of the Report object.
+  constexpr void reset() {
+    errors_ = {};
+    warnings_ = {};
+  }
+
+  // The following methods are the actual "diagnostics" API as described above.
+
   template <typename... Args>
   constexpr bool FormatError(std::string_view error, Args&&... args) {
     ++errors_;
@@ -205,11 +216,27 @@ class Diagnostics {
            (flags_.multiple_errors || !flags_.warnings_are_errors);
   }
 
-  // Reset the counters.
-  // This doesn't do anything to the state of the Report object.
-  constexpr void reset() {
-    errors_ = {};
-    warnings_ = {};
+  constexpr bool extra_checking() const { return flags_.extra_checking; }
+
+  constexpr bool ResourceError(std::string_view error, size_t requested) {
+    return FormatError(error, internal::ConstString(": cannot allocate "), requested);
+  }
+
+  constexpr bool ResourceError(std::string_view error) { return FormatError(error); }
+
+  template <size_t MaxObjects>
+  constexpr bool ResourceLimit(std::string_view error, size_t requested) {
+    return FormatError(error,
+                       internal::ConstString(": maximum ") +
+                           internal::IntegerConstString<MaxObjects>() +
+                           internal::ConstString(" < requested "),
+                       requested);
+  }
+
+  template <size_t MaxObjects>
+  constexpr bool ResourceLimit(std::string_view error) {
+    return FormatError(
+        error, internal::ConstString(": maximum ") + internal::IntegerConstString<MaxObjects>());
   }
 
  private:
@@ -335,6 +362,11 @@ constexpr auto CollectStringsDiagnostics(T& container, Flags&&... flags) {
     return true;
   };
   return Diagnostics(add_error, std::forward<Flags>(flags)...);
+}
+
+template <typename S, size_t N>
+constexpr decltype(auto) operator<<(S&& ostream, internal::ConstString<N> string) {
+  return std::forward<S>(ostream) << static_cast<std::string_view>(string);
 }
 
 // This returns a Diagnostics object that uses << on an ostream-style object.

@@ -15,6 +15,7 @@ zx_library("elfldltl") {
   sdk_headers = [
     "lib/elfldltl/compat-hash.h",
     "lib/elfldltl/constants.h",
+    "lib/elfldltl/container.h",
     "lib/elfldltl/diagnostics.h",
     "lib/elfldltl/dynamic.h",
     "lib/elfldltl/field.h",
@@ -69,6 +70,7 @@ test("elfldltl-unittests") {
 source_set("unittests") {
   sources = [
     "abi-tests.cc",
+    "container-tests.cc",
     "diagnostics-tests.cc",
     "dynamic-tests.cc",
     "field-tests.cc",
