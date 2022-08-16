@@ -1822,9 +1822,9 @@ struct BaseNetworkSocket : public BaseSocket<T> {
               return proc.Process(client()->GetTcpDeferAccept(),
                                   [](const auto& response) { return response.value_secs; });
             case TCP_INFO:
-              return proc.Process(
-                  client()->GetTcpInfo(),
-                  [](const auto& response) -> const auto& { return response.info; });
+              return proc.Process(client()->GetTcpInfo(), [](const auto& response) -> const auto& {
+                return response.info;
+              });
             case TCP_SYNCNT:
               return proc.Process(client()->GetTcpSynCount(),
                                   [](const auto& response) { return response.value; });

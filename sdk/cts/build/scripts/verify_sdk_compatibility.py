@@ -1,7 +1,6 @@
 # Copyright 2022 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
 """
 Test to prevent integrators from having future breakages caused
 by instability of the Fuchsia SDK package directory.
@@ -221,7 +220,7 @@ def generate_sdk_layout_golden_file(current_archive):
             continue
         # Set to True if the file in question is not going to be compatibility tested.
         ignoring_file = False
-        
+
         # Add the directory into the golden set if it exists.
         for dir in dirs_exist:
             if path.name.startswith(dir):
@@ -233,7 +232,7 @@ def generate_sdk_layout_golden_file(current_archive):
 
         gold_dir = path.name
         if path.isdir() and not path.name.endswith(os.sep):
-        # Ensure directory type paths end in a "/".
+            # Ensure directory type paths end in a "/".
             gold_dir += os.sep
         elif not (path.isfile() or path.isdir()):
             raise GoldenFileGenerationError(
