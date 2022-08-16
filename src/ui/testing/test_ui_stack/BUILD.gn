@@ -14,6 +14,7 @@ executable("bin") {
     ":test_ui_stack_config_lib",
     "//sdk/fidl/fuchsia.accessibility.semantics",
     "//sdk/fidl/fuchsia.element",
+    "//sdk/fidl/fuchsia.input.interaction",
     "//sdk/fidl/fuchsia.ui.composition",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.input3",

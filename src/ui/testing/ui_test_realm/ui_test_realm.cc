@@ -399,6 +399,16 @@ void UITestRealm::ConfigureSceneProvider() {
                                 ConfigValue::Bool(use_scene_manager));
 }
 
+void UITestRealm::ConfigureActivityService() {
+  if (!config_.use_input) {
+    return;
+  }
+
+  realm_builder_.InitMutableConfigFromPackage(InputOwnerName(config_));
+  realm_builder_.SetConfigValue(InputOwnerName(config_), "idle_threshold_minutes",
+                                ConfigValue::Uint64(config_.idle_threshold_minutes));
+}
+
 void UITestRealm::Build() {
   // Set up a11y manager, if requested, and route semantics manager service to
   // client subrealm.
@@ -422,6 +432,10 @@ void UITestRealm::Build() {
   // Override component config for scene provider to specify which API to use to
   // attach the client view to the scene.
   ConfigureSceneProvider();
+
+  // Override component config for input owner to specify how long the idle
+  // threshold timeout should be.
+  ConfigureActivityService();
 
   realm_root_ = std::make_unique<component_testing::RealmRoot>(realm_builder_.Build());
 }

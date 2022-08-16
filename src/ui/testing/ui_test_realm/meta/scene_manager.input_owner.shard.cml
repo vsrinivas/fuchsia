@@ -64,6 +64,7 @@
         {
             protocol: [
                 "fuchsia.input.injection.InputDeviceRegistry",
+                "fuchsia.input.interaction.Notifier",
                 "fuchsia.ui.policy.DeviceListenerRegistry",
             ],
             from: "#scene-manager",

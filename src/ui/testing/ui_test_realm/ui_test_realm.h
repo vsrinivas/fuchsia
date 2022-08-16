@@ -163,6 +163,9 @@ class UITestRealm {
     // Indicates which graphics composition API to use (true -> flatland, false
     // -> gfx).
     bool use_flatland = false;
+
+    // Idle threshold minutes for the activity service.
+    int idle_threshold_minutes = 1;
   };
 
   explicit UITestRealm(Config config);
@@ -189,6 +192,7 @@ class UITestRealm {
   void ConfigureAccessibility();
   void RouteConfigData();
   void ConfigureSceneProvider();
+  void ConfigureActivityService();
 
   // Helper method to route a set of services from the specified source to the
   // spceified targets.
