@@ -559,6 +559,7 @@ int main(int argc, char** argv) {
   }
 
   status = loop.Run();
+  device_loop.Shutdown();
 
   return status;
 }
