@@ -11,7 +11,7 @@ use {
 };
 
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "i2cutil", description = "Perform reads and writes on an I2C device")]
+#[argh(subcommand, name = "i2c", description = "Perform reads and writes on an I2C device")]
 pub struct I2cCommand {
     #[argh(subcommand)]
     pub subcommand: I2cSubCommand,
