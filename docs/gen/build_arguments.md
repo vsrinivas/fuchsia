@@ -3651,6 +3651,13 @@ built and mounted inside the container at /mnt/chromeos.
 
 From //src/virtualization/bin/linux_runner/BUILD.gn:14
 
+### linux_runner_fxfs_stateful_image
+Whether to use Fxfs for the stateful image
+
+**Current value (from the default):** `false`
+
+From //src/virtualization/bin/linux_runner/BUILD.gn:28
+
 ### linux_runner_stateful_image_path
 Point this to the location of a prebuilt stateful image in QCOW2 format
 
