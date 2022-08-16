@@ -28,7 +28,7 @@ resource("license-text") {
 flutter_component("component") {
   main_dart = "main.dart"
   component_name = "license_settings"
-  manifest = "meta/license_settings.cmx"
+  manifest = "meta/license_settings.cml"
   deps = [
     ":lib",
     ":license-text",
