@@ -123,13 +123,14 @@
   // Zero general-purpose registers to constrain speculative execution with
   // potentially-hostile register values; the values may have come from user
   // mode and could be consumed by in-kernel speculative execution.
+  // Zeroing of ebp is delayed till we check precisely if this was a user fault
+  // so that kernel faults can have correct stack frames for backtraces.
   xorl %eax, %eax
   xorl %ebx, %ebx
   xorl %ecx, %ecx
   xorl %edx, %edx
   xorl %esi, %esi
   xorl %edi, %edi
-  xorl %ebp, %ebp
   xorq %r8, %r8
   xorq %r9, %r9
   xorq %r10, %r10
@@ -158,6 +159,9 @@
   // %cs selector that was saved on the stack automatically.  Check for != 0.
   testb $3, X86_IFRAME_OFFSET_CS(%rsp)
   jz 1f
+  // Perform the last zero from the previous block now that we know this is a
+  // user fault and we do not need the stack frame.
+  xorl %ebp, %ebp
   // Swap %gs.base to kernel space.
   swapgs
 1:
