@@ -512,10 +512,18 @@ impl<'de> Deserialize<'de> for ImagePackagesManifest {
 
         let parsed = DeImagePackagesManifest::deserialize(deserializer)?;
 
-        // Check for duplicate image destinations and check that a zbi is present if vbmeta is present.
+        // Check for duplicate image destinations, verify URL always contains a hash,
+        // and check that a zbi is present if vbmeta is present.
         {
             let mut keys = HashSet::new();
             for image in &parsed.partitions {
+                if image.metadata().url().package_url().hash().is_none() {
+                    return Err(D::Error::custom(format!(
+                        "image url {:?} does not contain hash",
+                        image.metadata().url()
+                    )));
+                }
+
                 if !keys.insert(image.key()) {
                     return Err(D::Error::custom(format!(
                         "duplicate image entry: {:?}",
@@ -536,10 +544,17 @@ impl<'de> Deserialize<'de> for ImagePackagesManifest {
             }
         }
 
-        // Check for duplicate firmware destinations
+        // Check for duplicate firmware destinations and verify that url field contains a  hash.
         {
             let mut keys = HashSet::new();
             for image in &parsed.firmware {
+                if image.metadata().url().package_url().hash().is_none() {
+                    return Err(D::Error::custom(format!(
+                        "firmware url {:?} does not contain hash",
+                        image.metadata().url()
+                    )));
+                }
+
                 if !keys.insert(image.key()) {
                     return Err(D::Error::custom(format!(
                         "duplicate firmware entry: {:?}",
@@ -1114,6 +1129,45 @@ mod tests {
                     "url" : image_package_resource_url("package", 1, "vbmeta")
                 }],
                 "firmware": [],
+            }
+        })
+        .to_string();
+
+        assert_matches!(parse_image_packages_json(raw_json.as_bytes()), Err(_));
+    }
+
+    #[test]
+    fn rejects_urls_without_hash_paritions() {
+        let raw_json = json!({
+            "version": "1",
+            "contents":  {
+                "partitions": [{
+                    "slot" : "fuchsia",
+                    "type" : "zbi",
+                    "size" : 1,
+                    "hash" : hashstr(1),
+                    "url" : "fuchsia-pkg://fuchsia.com/package/0#zbi"
+                }],
+                "firmware": [],
+            }
+        })
+        .to_string();
+
+        assert_matches!(parse_image_packages_json(raw_json.as_bytes()), Err(_));
+    }
+
+    #[test]
+    fn rejects_urls_without_hash_firmware() {
+        let raw_json = json!({
+            "version": "1",
+            "contents":  {
+                "partitions": [],
+                "firmware": [{
+                    "type" : "",
+                    "size" : 5,
+                    "hash" : hashstr(5),
+                    "url" : "fuchsia-pkg://fuchsia.com/package/0#firmware"
+                }],
             }
         })
         .to_string();
