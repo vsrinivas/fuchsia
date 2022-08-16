@@ -4,6 +4,7 @@
 
 #include "test-tool-process.h"
 
+#include <dirent.h>
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -232,6 +233,17 @@ std::string TestToolProcess::File::OutputContents() {
   return contents;
 }
 
+TestToolProcess::File TestToolProcess::File::NoFile() {
+  auto it = owner_->files_.begin();
+  while (it != owner_->files_.end() && std::addressof(*it) != this) {
+    ++it;
+  }
+  EXPECT_NE(it, owner_->files_.end());
+  File result = std::move(*this);
+  result.owner_->files_.erase(it);
+  return result;
+}
+
 TestToolProcess::File::~File() = default;
 
 void TestToolProcess::Start(const std::string& tool, const std::vector<std::string>& args) {
@@ -322,7 +334,16 @@ TestToolProcess::~TestToolProcess() {
   if (!tmp_path_.empty()) {
     EXPECT_EQ(tmp_path_.back(), '/');
     tmp_path_.resize(tmp_path_.size() - 1);  // Remove trailing slash.
-    EXPECT_EQ(rmdir(tmp_path_.c_str()), 0) << tmp_path_ << ": " << strerror(errno);
+    if (rmdir(tmp_path_.c_str()) != 0) {
+      EXPECT_EQ(errno, ENOTEMPTY) << tmp_path_ << ": " << strerror(errno);
+      // Emit more complaints with unexpected directory contents if any.
+      if (DIR* dir = opendir(tmp_path_.c_str())) {
+        while (const dirent* d = readdir(dir)) {
+          EXPECT_TRUE(std::string_view(".") == d->d_name || std::string_view("..") == d->d_name)
+              << "left in " << tmp_path_ << ": " << d->d_name;
+        }
+      }
+    }
   }
 }
 

@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <charconv>
 #include <cstdint>
 #include <cstdlib>
 #include <limits>
@@ -22,6 +23,7 @@
 #include <vector>
 
 #include "core.h"
+#include "job-archive.h"
 #include "rights.h"
 
 namespace zxdump {
@@ -44,7 +46,6 @@ class NoteData {
   size_t size_bytes() const { return size_bytes_; }
 
   void push_back(ByteView data) {
-    ZX_DEBUG_ASSERT(data.size() % NoteAlign() == 0);
     if (!data.empty()) {
       data_.push_back(data);
       size_bytes_ += data.size();
@@ -89,6 +90,121 @@ class NoteHeader {
   char name_[kAlignedSize_] = {};
 };
 
+constexpr std::byte kZeroBytes[NoteAlign() - 1] = {};
+
+// This returns a ByteView of as many zero bytes are needed for alignment
+// padding after the given ELF note payload data.
+constexpr ByteView PadForElfNote(ByteView data) {
+  return {kZeroBytes, NoteAlign(data.size()) - data.size()};
+}
+
+// This represents one archive member header.
+//
+// The name field in the traditional header is only 16 characters.  So the
+// modern protocol is to use a name of "/%u" to encode an offset into the
+// name table, which is a special member at the beginning of the archive,
+// itself named "//".
+class ArchiveMemberHeader {
+ public:
+  ArchiveMemberHeader() {
+    // Initialize the header.  All fields are left-justified and padded with
+    // spaces.  There are no separators between fields.
+    memset(&header_, ' ', sizeof(header_));
+    static_assert(ar_hdr::kMagic.size() == sizeof(header_.ar_fmag));
+    memcpy(header_.ar_fmag, ar_hdr::kMagic.data(), sizeof(header_.ar_fmag));
+  }
+
+  // The name is copied directly into the header, truncated if necessary.
+  // The size must be filled in later, and the date may be.
+  explicit ArchiveMemberHeader(std::string_view name) : ArchiveMemberHeader() {
+    name.copy(header_.ar_name, sizeof(header_.ar_name));
+    Init();
+  }
+
+  // The name is stored here to go into the name table later.  The name
+  // table offset and size must be filled in later, and the date may be.
+  // This constructor
+  void InitAccumulate(std::string name) {
+    // Each name in the table is terminated by a slash and newline.
+    name_ = std::move(name);
+    name_ += "/\n";
+    Init();
+  }
+
+  // This sets up the state for the special name table member.
+  void InitNameTable(size_t size) {
+    Check();
+    header_.ar_name[0] = '/';
+    header_.ar_name[1] = '/';
+    set_size(size);
+  }
+
+  void set_name_offset(size_t name_offset) {
+    Check();
+    ZX_DEBUG_ASSERT(header_.ar_name[0] == ' ');
+    header_.ar_name[0] = '/';
+    auto [ptr, ec] = std::to_chars(&header_.ar_name[1], std::end(header_.ar_name), name_offset);
+    ZX_ASSERT_MSG(ec == std::errc{}, "archive member name offset %zu too large for header",
+                  name_offset);
+  }
+
+  void set_size(size_t size) {
+    Check();
+    auto [ptr, ec] = std::to_chars(header_.ar_size, std::end(header_.ar_size), size);
+    ZX_ASSERT_MSG(ec == std::errc{}, "archive member size %zu too large for header", size);
+  }
+
+  void set_date(time_t mtime) {
+    Check();
+    auto [ptr, ec] = std::to_chars(header_.ar_date, std::end(header_.ar_date), mtime);
+    ZX_ASSERT_MSG(ec == std::errc{}, "archive member timestamp %zu too large for header", mtime);
+  }
+
+  ByteView bytes() const {
+    Check();
+    return {reinterpret_cast<const std::byte*>(&header_), sizeof(header_)};
+  }
+
+  ByteView name_bytes() const {
+    Check();
+    ZX_DEBUG_ASSERT(!name_.empty());
+    return {reinterpret_cast<const std::byte*>(name_.data()), name_.size()};
+  }
+
+ private:
+  void Check() const {
+    ZX_DEBUG_ASSERT(!memcmp(header_.ar_fmag, ar_hdr::kMagic.data(), sizeof(header_.ar_fmag)));
+  }
+
+  void Init() {
+    Check();
+
+    // The mode field is encoded in octal, but we always emit a constant value
+    // anyway.  Other integer fields are encoded in decimal.
+    kZero_.copy(header_.ar_date, sizeof(header_.ar_date));
+    kZero_.copy(header_.ar_uid, sizeof(header_.ar_uid));
+    kZero_.copy(header_.ar_gid, sizeof(header_.ar_gid));
+    kMode_.copy(header_.ar_mode, sizeof(header_.ar_mode));
+  }
+
+  static constexpr std::string_view kZero_{"0"};
+  static constexpr std::string_view kMode_{"400"};  // octal
+
+  std::string name_;
+  ar_hdr header_;
+};
+
+constexpr const std::byte kArchiveMemberPadByte = std::byte{'\n'};
+constexpr ByteView kArchiveMemberPad{&kArchiveMemberPadByte, 1};
+
+// This returns any necessary padding after the given member contents.
+constexpr ByteView PadForArchive(ByteView data) {
+  if (data.size() % 2 != 0) {
+    return kArchiveMemberPad;
+  }
+  return {};
+}
+
 // Each note format has an object in notes_ of a NoteBase type.
 // The Type is the n_type field for the ELF note header.
 // The Class represents a set of notes handled the same way.
@@ -96,10 +212,15 @@ class NoteHeader {
 template <typename Class, uint32_t Type>
 class NoteBase {
  public:
+  NoteBase() = default;
+  NoteBase(NoteBase&&) noexcept = default;
+  NoteBase& operator=(NoteBase&&) noexcept = default;
+
   void AddToNoteData(NoteData& notes) const {
     if (!data_.empty()) {
       notes.push_back(header_.bytes());
       notes.push_back(data_);
+      notes.push_back(Class::Pad(data_));
     }
   }
 
@@ -108,7 +229,12 @@ class NoteBase {
   const auto& header() const { return header_; }
   auto& header() { return header_; }
 
-  size_t size_bytes() const { return empty() ? 0 : header_.bytes().size() + data_.size(); }
+  size_t size_bytes() const {
+    if (empty()) {
+      return 0;
+    }
+    return header_.bytes().size() + data_.size() + Class::Pad(data_).size();
+  }
 
   void clear() { data_ = {}; }
 
@@ -123,8 +249,12 @@ class NoteBase {
   }
 
  private:
+  using HeaderType = decltype(Class::MakeHeader(Type));
+  static_assert(std::is_move_constructible_v<HeaderType>);
+  static_assert(std::is_move_assignable_v<HeaderType>);
+
   // This holds the storage for the note header that NoteData points into.
-  decltype(Class::MakeHeader(Type)) header_ = Class::MakeHeader(Type);
+  HeaderType header_ = Class::MakeHeader(Type);
 
   // This points into the subclass storage for the note contents.
   // It's empty until the subclass calls Emplace.
@@ -134,9 +264,22 @@ class NoteBase {
 // Each class derived from NoteBase uses a core.h kFooNoteName constant in:
 // ```
 //   static constexpr auto MakeHeader = kMakeNote<kFooNoteName>;
+//   static constexpr auto Pad = PadForElfNote;
 // ```
 template <const std::string_view& Name>
 constexpr auto kMakeNote = [](uint32_t type) { return NoteHeader<Name.size()>(Name, 0, type); };
+
+// Each job-specific class uses a job-archive.h kFooPrefix constant in:
+// ```
+//   static constexpr auto MakeHeader = kMakeMember<kFooPrefix>;
+//   static constexpr auto Pad = PadForArchive;
+// ```
+template <const std::string_view& Prefix>
+constexpr auto kMakeMember = [](uint32_t type) {
+  ArchiveMemberHeader header;
+  header.InitAccumulate(std::string{Prefix} + std::to_string(type));
+  return header;
+};
 
 // This is called with each note (classes derived from NoteBase) when its
 // information is required.  It can be called more than once, so it does
@@ -257,6 +400,7 @@ constexpr auto CollectNoteData =
   auto collect = [&handle, &result, &total](auto& note) -> bool {
     result = CollectNote(handle, note);
     if (result.is_ok()) {
+      ZX_DEBUG_ASSERT(note.size_bytes() % 2 == 0);
       total += note.size_bytes();
       return true;
     }
@@ -466,6 +610,7 @@ class ProcessDumpBase::Collector {
   struct ProcessInfoClass {
     using Handle = zx::process;
     static constexpr auto MakeHeader = kMakeNote<kProcessInfoNoteName>;
+    static constexpr auto Pad = PadForElfNote;
   };
 
   template <zx_object_info_topic_t Topic, typename T>
@@ -474,6 +619,7 @@ class ProcessDumpBase::Collector {
   struct ProcessPropertyClass : public PropertyBaseClass {
     using Handle = zx::process;
     static constexpr auto MakeHeader = kMakeNote<kProcessPropertyNoteName>;
+    static constexpr auto Pad = PadForElfNote;
   };
 
   template <uint32_t Prop, typename T>
@@ -482,6 +628,7 @@ class ProcessDumpBase::Collector {
   struct ThreadInfoClass {
     using Handle = zx::thread;
     static constexpr auto MakeHeader = kMakeNote<kThreadInfoNoteName>;
+    static constexpr auto Pad = PadForElfNote;
   };
 
   template <zx_object_info_topic_t Topic, typename T>
@@ -490,6 +637,7 @@ class ProcessDumpBase::Collector {
   struct ThreadPropertyClass : public PropertyBaseClass {
     using Handle = zx::thread;
     static constexpr auto MakeHeader = kMakeNote<kThreadPropertyNoteName>;
+    static constexpr auto Pad = PadForElfNote;
   };
 
   template <uint32_t Prop, typename T>
@@ -501,6 +649,7 @@ class ProcessDumpBase::Collector {
     static constexpr std::string_view kCall_{"zx_thread_read_state"};
     static constexpr auto kSyscall = &zx::thread::read_state;
     static constexpr auto MakeHeader = kMakeNote<kThreadStateNoteName>;
+    static constexpr auto Pad = PadForElfNote;
   };
 
   template <zx_thread_state_topic_t Topic, typename T>
@@ -1025,6 +1174,8 @@ class ProcessDumpBase::Collector {
   size_t notes_size_bytes_ = 0;
 };
 
+ProcessDumpBase::ProcessDumpBase(ProcessDumpBase&&) noexcept = default;
+ProcessDumpBase& ProcessDumpBase::operator=(ProcessDumpBase&&) noexcept = default;
 ProcessDumpBase::~ProcessDumpBase() = default;
 
 void ProcessDumpBase::clear() { collector_->clear(); }
@@ -1063,6 +1214,261 @@ template <>
 ProcessDump<zx::unowned_process>::ProcessDump(zx::unowned_process process) noexcept
     : process_{std::move(process)} {
   Emplace(zx::unowned_process{process_});
+}
+
+class JobDumpBase::Collector {
+ public:
+  // Only constructed by Emplace.
+  Collector() = delete;
+
+  // Only Emplace and clear call this.  The job is mandatory and all other
+  // members are safely default-initialized.
+  explicit Collector(zx::unowned_job job) : job_(std::move(job)) { ZX_ASSERT(job_->is_valid()); }
+
+  // Reset to initial state.
+  void clear() { *this = Collector{std::move(job_)}; }
+
+  // This collects information about job-wide state.
+  fitx::result<Error, size_t> CollectJob() {
+    // Collect the job-wide note data.
+    auto collect = [this](auto&... note) -> fitx::result<Error, size_t> {
+      return CollectNoteData(*job_, note...);
+    };
+    auto result = std::apply(collect, notes_);
+    if (result.is_error()) {
+      return result.take_error();
+    }
+    ZX_DEBUG_ASSERT(result.value() % 2 == 0);
+
+    // Each note added its name to the name table inside CollectNoteData.
+    auto count_job_note_names = [](const auto&... note) -> size_t {
+      return (note.header().name_bytes().size() + ...);
+    };
+    size_t name_table_size = std::apply(count_job_note_names, notes_);
+    name_table_.InitNameTable(name_table_size);
+
+    // The name table member will be padded on the way out.
+    name_table_size += name_table_size % 2;
+
+    return fitx::ok(kArchiveMagic.size() +        // Archive header +
+                    name_table_.bytes().size() +  // name table member header +
+                    name_table_size +             // name table contents +
+                    result.value());              // note members & headers.
+  }
+
+  fitx::result<Error, JobVector> CollectChildren() {
+    auto result = GetChildren();
+    if (result.is_error()) {
+      return result.take_error();
+    }
+    JobVector jobs;
+    for (zx_koid_t koid : result.value().get().info()) {
+      zx::job child;
+      zx_status_t status = job_->get_child(koid, kChildRights, &child);
+      switch (status) {
+        case ZX_OK:
+          jobs.push_back({std::move(child), koid});
+          break;
+
+        case ZX_ERR_NOT_FOUND:
+          // It died in a race.
+          continue;
+
+        default:
+          return fitx::error{Error{"zx_object_get_child", status}};
+      }
+    }
+    return fitx::ok(std::move(jobs));
+  }
+
+  fitx::result<Error, ProcessVector> CollectProcesses() {
+    auto result = GetProcesses();
+    if (result.is_error()) {
+      return result.take_error();
+    }
+    ProcessVector processes;
+    for (zx_koid_t koid : result.value().get().info()) {
+      zx::process process;
+      zx_status_t status = job_->get_child(koid, kChildRights, &process);
+      switch (status) {
+        case ZX_OK:
+          processes.push_back({std::move(process), koid});
+          break;
+
+        case ZX_ERR_NOT_FOUND:
+          // It died in a race.
+          continue;
+
+        default:
+          return fitx::error{Error{"zx_object_get_child", status}};
+      }
+    }
+    return fitx::ok(std::move(processes));
+  }
+
+  fitx::result<Error, size_t> DumpHeaders(DumpCallback dump, time_t mtime) {
+    size_t offset = 0;
+    auto append = [&](ByteView data) -> bool {
+      bool bail = dump(offset, data);
+      offset += data.size();
+      return bail;
+    };
+
+    // Generate the archive header.
+    if (append({
+            reinterpret_cast<const std::byte*>(kArchiveMagic.data()),
+            kArchiveMagic.size(),
+        })) {
+      return fitx::ok(offset);
+    }
+    ZX_DEBUG_ASSERT(offset % 2 == 0);
+
+    // The name table member header has been initialized.  Write it out now.
+    if (append(name_table_.bytes())) {
+      return fitx::ok(offset);
+    }
+    ZX_DEBUG_ASSERT(offset % 2 == 0);
+
+    // Finalize each note by setting its name and date fields, and stream
+    // out the contents of the name table at the same time.  Additional
+    // members streamed out later can only use the truncated name field in
+    // the member header.
+    size_t name_table_pos = 0;
+    auto finish_note = [&](auto& note) -> bool {
+      note.header().set_date(mtime);
+      note.header().set_name_offset(name_table_pos);
+      ByteView name = note.header().name_bytes();
+      name_table_pos += name.size();
+      return append(name);
+    };
+    auto finalize = [&](auto&... note) { return (finish_note(note) || ...); };
+    if (std::apply(finalize, notes_)) {
+      return fitx::ok(offset);
+    }
+    ZX_DEBUG_ASSERT(offset % 2 == name_table_pos % 2);
+
+    if (name_table_pos % 2 != 0 && append(kArchiveMemberPad)) {
+      return fitx::ok(offset);
+    }
+    ZX_DEBUG_ASSERT(offset % 2 == 0);
+
+    // Generate the job-wide note data.
+    for (ByteView data : notes()) {
+      if (append(data)) {
+        return fitx::ok(offset);
+      }
+    }
+    ZX_DEBUG_ASSERT(offset % 2 == 0);
+
+    return fitx::ok(offset);
+  }
+
+ private:
+  struct JobInfoClass {
+    using Handle = zx::job;
+    static constexpr auto MakeHeader = kMakeMember<kJobInfoPrefix>;
+    static constexpr auto Pad = PadForArchive;
+  };
+
+  template <zx_object_info_topic_t Topic, typename T>
+  using JobInfo = InfoNote<JobInfoClass, Topic, T>;
+
+  struct JobPropertyClass : public PropertyBaseClass {
+    using Handle = zx::job;
+    static constexpr auto MakeHeader = kMakeMember<kJobPropertyPrefix>;
+    static constexpr auto Pad = PadForArchive;
+  };
+
+  template <uint32_t Prop, typename T>
+  using JobProperty = PropertyNote<JobPropertyClass, Prop, T>;
+
+  // These are named for use by CollectChildren and CollectProcesses.
+  using Children = JobInfo<ZX_INFO_JOB_CHILDREN, zx_koid_t>;
+  using Processes = JobInfo<ZX_INFO_JOB_PROCESSES, zx_koid_t>;
+
+  using JobNotes = std::tuple<
+      // This lists all the notes for job-wide state.
+      JobInfo<ZX_INFO_HANDLE_BASIC, zx_info_handle_basic_t>,
+      JobProperty<ZX_PROP_NAME, char[ZX_MAX_NAME_LEN]>,
+      // Ordering of the other notes is not specified and can change.
+      JobInfo<ZX_INFO_JOB, zx_info_job_t>, Children, Processes,
+      JobInfo<ZX_INFO_TASK_RUNTIME, zx_info_task_runtime_t>>;
+
+  // Returns a vector of views into the storage held in this->notes_.
+  NoteData::Vector notes() const { return std::apply(DumpNoteData, notes_); }
+
+  // Some of the job-wide state is needed in CollectChildren and
+  // CollectProcesses anyway, so pre-collect it directly in the notes.
+
+  fitx::result<Error, std::reference_wrapper<const Children>> GetChildren() {
+    Children& children = std::get<Children>(notes_);
+    auto result = CollectNote(*job_, children);
+    if (result.is_error()) {
+      return result.take_error();
+    }
+    return fitx::ok(std::cref(children));
+  }
+
+  fitx::result<Error, std::reference_wrapper<const Processes>> GetProcesses() {
+    Processes& processes = std::get<Processes>(notes_);
+    auto result = CollectNote(*job_, processes);
+    if (result.is_error()) {
+      return result.take_error();
+    }
+    return fitx::ok(std::cref(processes));
+  }
+
+  zx::unowned_job job_;
+  ArchiveMemberHeader name_table_;
+  JobNotes notes_;
+};
+
+JobDumpBase::JobDumpBase(JobDumpBase&&) noexcept = default;
+JobDumpBase& JobDumpBase::operator=(JobDumpBase&&) noexcept = default;
+JobDumpBase::~JobDumpBase() = default;
+
+fitx::result<Error, size_t> JobDumpBase::CollectJob() { return collector_->CollectJob(); }
+
+fitx::result<Error, std::vector<std::pair<zx::job, zx_koid_t>>> JobDumpBase::CollectChildren() {
+  return collector_->CollectChildren();
+}
+
+fitx::result<Error, std::vector<std::pair<zx::process, zx_koid_t>>>
+JobDumpBase::CollectProcesses() {
+  return collector_->CollectProcesses();
+}
+
+fitx::result<Error, size_t> JobDumpBase::DumpHeadersImpl(DumpCallback dump, time_t mtime) {
+  return collector_->DumpHeaders(std::move(dump), mtime);
+}
+
+fitx::result<Error, size_t> JobDumpBase::DumpMemberHeaderImpl(DumpCallback dump, size_t offset,
+                                                              std::string_view name, size_t size,
+                                                              time_t mtime) {
+  ArchiveMemberHeader header{name};
+  header.set_size(size);
+  header.set_date(mtime);
+  dump(offset, header.bytes());
+  return fitx::ok(offset + header.bytes().size());
+}
+
+size_t JobDumpBase::MemberHeaderSize() { return sizeof(ar_hdr); }
+
+// The Collector borrows the job handle.  A single Collector cannot be used for
+// a different job later.  It can be clear()'d to reset all state other than
+// the job handle.
+void JobDumpBase::Emplace(zx::unowned_job job) {
+  collector_ = std::make_unique<Collector>(std::move(job));
+}
+
+template <>
+JobDump<zx::job>::JobDump(zx::job job) noexcept : job_{std::move(job)} {
+  Emplace(zx::unowned_job{job_});
+}
+
+template <>
+JobDump<zx::unowned_job>::JobDump(zx::unowned_job job) noexcept : job_{std::move(job)} {
+  Emplace(zx::unowned_job{job_});
 }
 
 }  // namespace zxdump

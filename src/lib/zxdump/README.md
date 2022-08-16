@@ -15,7 +15,7 @@ A simple writer using POSIX I/O is provided to plug into the callback API to
 stream to a file descriptor.  This works with either seekable or non-seekable
 file descriptors, seeking forward over gaps of zero padding when possible.
 
-**TODO:** reading, jobs
+**TODO:** reading
 
 ## Core file format
 
@@ -160,3 +160,123 @@ is exactly the `zx_thread_state_topic_t` argument to `zx_thread_read_state`.
 The note's "description" (payload) has the size and layout that corresponds to
 that topic's `zx_thread_state_*_t` type.  The types and layouts that will
 appear vary by machine.
+
+## Job archives
+
+As well as an individual process, a Zircon job can be dumped into a file
+called a "job archive" that represents the job itself and may include dumps
+for its processes and/or child jobs, at the discretion of the dump-writer.
+
+A job archive is a standard `ar` format archive (like `.a` files for linking).
+The archive's member files can be listed and extracted using the standard `ar`
+tool.  It has the standard archive header and uses the standard long-name table
+special member, but does not have a symbol table special member like the
+archives used for static linking.
+
+The initial portion of the job archive contains member files that describe the
+job itself.  This subset alone is called the "stub archive".  After the stub
+archive, there may be additional member files containing dumps for processes
+or child jobs.
+
+### Stub archive
+
+The member files of the stub archive are analogous to the notes in an
+`ET_CORE` file as described above.  Rather than using ELF note format, the
+name of each file encodes its type.
+
+#### ZirconJobInfo
+
+Member files with name `ZirconJobInfo.%u` contain all the types that
+`zx_object_get_info` yields on a Zircon job.  `%u` is the decimal
+representation of the `zx_object_info_topic_t` value in `zx_object_get_info`.
+The file has the size and layout that corresponds to that topic.  All
+available types are usually included in the dump.
+
+#### ZirconJobProperty
+
+Member files with name `ZirconJobProperty.%u` contain all the types that
+`zx_object_get_property` yields on a Zircon job.  `%u` is the decimal
+representation of the `property` argument to `zx_object_get_property`.  The
+file has the size and layout that corresponds to that property.  All available
+properties are usually included in the dump.
+
+### Process dump member files
+
+A job archive can include the whole dumps for the processes within the job.  A
+member file for a process dump is an `ET_CORE` file as described above.  The
+name of a process dump member file doesn't matter, but it is usually `core.%u`
+where `%u` is the decimal representation of the process KOID (aka PID).  The
+definitive process KOID should be discovered from the notes inside the process
+dump member file itself, not by parsing the member file name.
+
+### Child job dump member files
+
+A job archive can include the whole dumps for child jobs within the job.  A
+member file for a child job dump is itself another job archive file.  The name
+of a child job dump member file doesn't matter, but it is usually `core.%u.a`
+where `%u` is the decimal representation of the job KOID.  The definitive job
+KOID should be discovered from the information inside the job archive itself,
+not by parsing the member file name.
+
+### Member file ordering
+
+Robust readers can ignore the order of member files in a job archive and
+recognize the stub archive members by name and others by their contents.  This
+works with job archives unpacked and repacked using `ar` or similar tools.
+However, standard Zircon job archives are streamed out in a specific order.
+
+All member files that form the stub archive appear before any process or child
+job dump member files.  Usually all members in the stub archive use the long
+name table and additional member files for process or child job dumps have
+short names truncated to fit in the traditional member header.
+
+The first member in the stub archive is for `ZX_INFO_HANDLE_BASIC`; this has
+the job KOID.  (Note that the `rights` field indicates the rights the
+dump-writer had to dump the job; this does not represent any handle present in
+any dumped process.)  The second member is always for `ZX_PROP_NAME`.  The set
+of remaining members and their order is unspecified and subject to change.
+Dumps generally include all the information the kernel makes available.
+
+The order of process and/or child dump member files doesn't matter, but
+usually all the processes are dumped and then all the child jobs, in the order
+the kernel reported them as seen in the stub archive.  The definitive type and
+KOID of each process or child dump member file should be discovered from the
+information inside the member file itself, not from member ordering or names.
+
+### Flattened job archives
+
+When a job archive includes child job dumps, this can be done in two ways.
+
+In a hierarchical job archive, there are `ET_CORE` member files for each
+process in the job and job archive member files for each child job.  Each
+child job's member file is itself another hierarchical job archive that might
+contain a grandchild job archive, etc.
+
+In a flattened job archive, the archive member file for a child job is just
+the stub archive that describes the job itself.  That child job's processes
+appear as member files in the flattened job archive, not inside the contained
+job archive for the child job.  Likewise, any grandchild jobs appear as member
+files in the flattened job archive that are themselves just stub archives,
+followed by the grandchild's processes and the great-grandchildren, etc.
+
+A hierarchical job archive preserves the job hierarchy in the structure of the
+files.  A flattened job archive loses that structure, requiring a reader to
+reconstruct it from the process and child KOID lists in each stub archive.
+
+The very simple way the traditional `ar` archive format works means that the
+hierarchical and flattened job archives for the same job tree are exactly the
+same size and have all the same contents in all the same places.  The only
+difference is in the member header for a child job archive, which either says
+the member extends to include the following additional dump members or that it
+stops after just the stub archive so those members come after the child's stub
+archive in the outer archive.
+
+Because the whole child job archive's size must be determined in advance,
+hierarchical job archives require holding all the processes in the child's
+whole subtree suspended while dumping the whole child's job archive _en masse_.
+A flattened job archive can always be streamed out piecemeal while only one
+process at a time is held suspended long enough to dump it.  Thus streaming out
+a flattened job archive will usually go more quickly than the equivalent
+hierarchical job archive.  However, the hierarchical job archive also ensures
+that the state shown in the dump is synchronized across all the processes in
+the hierarchy since they were all kept suspended while doing all the dumping.

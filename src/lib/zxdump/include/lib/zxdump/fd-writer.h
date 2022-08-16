@@ -42,11 +42,12 @@ class FdWriter {
   // The writer takes ownership of the fd.
   explicit FdWriter(fbl::unique_fd fd) : fd_(std::move(fd)) {}
 
-  // Pass the result of this to zxdump::ProcessDump::DumpHeaders.  The callback
-  // accumulates small fragments to be written out by WriteFragments.  The
-  // views passed to the callback must stay valid pointers until after
-  // WriteFragments returns.  This callback expects to receive a contiguous
-  // stream of data with no gaps before each offset.
+  // Pass the result of this to zxdump::ProcessDump::DumpHeaders or
+  // zxdump::JobDump::DumpHeaders.  The callback accumulates small fragments to
+  // be written out by WriteFragments.  The views passed to the callback must
+  // stay valid pointers until after WriteFragments returns.  This callback
+  // expects to receive a contiguous stream of data with no gaps before each
+  // offset.
   //
   // The returned callable object is valid for the lifetime of the FdWriter.
   auto AccumulateFragmentsCallback() {

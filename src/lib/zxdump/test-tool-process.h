@@ -5,10 +5,10 @@
 #ifndef SRC_LIB_ZXDUMP_TEST_TOOL_PROCESS_H_
 #define SRC_LIB_ZXDUMP_TEST_TOOL_PROCESS_H_
 
+#include <list>
 #include <string>
 #include <string_view>
 #include <thread>
-#include <vector>
 #ifdef __Fuchsia__
 #include <lib/zx/process.h>
 #endif
@@ -49,6 +49,9 @@ class TestToolProcess {
 
     // Uses OpenOutput to read the whole file.
     std::string OutputContents();
+
+    // Don't expect this file to be created.
+    File NoFile();
 
    private:
     TestToolProcess* owner_ = nullptr;
@@ -116,7 +119,7 @@ class TestToolProcess {
   void SandboxCommand(PipedCommand& command);
 
   std::string tmp_path_;
-  std::vector<File> files_;
+  std::list<File> files_;
   std::string collected_stdout_, collected_stderr_;
   std::thread stdin_thread_, stdout_thread_, stderr_thread_;
   fbl::unique_fd tool_stdin_, tool_stdout_, tool_stderr_;

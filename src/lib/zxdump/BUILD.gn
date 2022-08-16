@@ -39,8 +39,12 @@ zx_library("zxdump") {
     "core.h",
     "error.cc",
     "fd-writer.cc",
+    "job-archive.h",
     "rights.h",
   ]
+
+  # Test code can use private headers from sources.
+  friend = [ ":*" ]
 
   deps = [ "//src/lib/elfldltl" ]
 

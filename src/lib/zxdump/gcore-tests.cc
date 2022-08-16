@@ -10,6 +10,7 @@
 #include <gtest/gtest.h>
 
 #include "dump-tests.h"
+#include "job-archive.h"
 #include "test-tool-process.h"
 
 namespace {
@@ -17,6 +18,31 @@ namespace {
 constexpr const char* kOutputSwitch = "-o";
 constexpr const char* kExcludeMemorySwitch = "--exclude-memory";
 constexpr const char* kNoThreadsSwitch = "--no-threads";
+constexpr const char* kNoChildrenSwitch = "--no-children";
+constexpr const char* kNoProcessesSwitch = "--no-processes";
+constexpr const char* kJobsSwitch = "--jobs";
+constexpr const char* kJobArchiveSwitch = "--job-archive";
+
+constexpr std::string_view kArchiveSuffix = ".a";
+
+struct OutputFile {
+  zxdump::testing::TestToolProcess::File& file;
+  std::string prefix;
+  std::string pid_string;
+};
+
+OutputFile GetOutputFile(zxdump::testing::TestToolProcess& child, std::string_view name,
+                         zx_koid_t koid, bool archive = false) {
+  std::string pid_string = std::to_string(koid);
+  std::string suffix = "." + pid_string;
+  if (archive) {
+    suffix += kArchiveSuffix;
+  }
+  auto& file = child.MakeFile(name, std::move(suffix));
+  std::string prefix = file.name();
+  prefix.resize(prefix.size() - pid_string.size() - (archive ? kArchiveSuffix.size() : 0));
+  return {file, prefix, pid_string};
+}
 
 void UsageTest(int expected_status, const std::vector<std::string>& args = {}) {
   zxdump::testing::TestToolProcess child;
@@ -39,12 +65,10 @@ TEST(ZxdumpTests, GcoreUsage) { UsageTest(EXIT_FAILURE); }
 TEST(Zxdump, GcoreProcessDumpIsElfCore) {
   zxdump::testing::TestProcess process;
   ASSERT_NO_FATAL_FAILURE(process.StartChild());
-  const std::string pid_string = std::to_string(process.koid());
 
   zxdump::testing::TestToolProcess child;
-  auto& dump_file = child.MakeFile("process-dump", "." + pid_string);
-  std::string prefix = dump_file.name();
-  prefix.resize(prefix.size() - pid_string.size());
+  const auto& [dump_file, prefix, pid_string] =
+      GetOutputFile(child, "process-dump", process.koid());
   std::vector<std::string> args({
       // Don't dump memory since we don't need it and it is large.
       kExcludeMemorySwitch,
@@ -70,6 +94,109 @@ TEST(Zxdump, GcoreProcessDumpIsElfCore) {
       << strerror(errno);
   EXPECT_TRUE(ehdr.Valid());
   EXPECT_EQ(ehdr.type, elfldltl::ElfType::kCore);
+}
+
+// Without --jobs, `gcore JOB_KOID` is an error.
+TEST(Zxdump, GcoreJobRequiresSwitch) {
+  zxdump::testing::TestProcess process;
+
+  // We don't even need to spawn a process for this test.
+  // Just create an empty job and (fail to) dump it.
+  ASSERT_NO_FATAL_FAILURE(process.HermeticJob());
+
+  zxdump::testing::TestToolProcess child;
+  const auto& [dump_file, prefix, pid_string] =
+      GetOutputFile(child, "job-dump", process.job_koid(), true);
+  dump_file.NoFile();
+  std::vector<std::string> args({
+      kNoChildrenSwitch,
+      kNoProcessesSwitch,
+      kOutputSwitch,
+      prefix,
+      pid_string,
+  });
+  ASSERT_NO_FATAL_FAILURE(child.Start("gcore", args));
+  ASSERT_NO_FATAL_FAILURE(child.CollectStdout());
+  ASSERT_NO_FATAL_FAILURE(child.CollectStderr());
+  int status;
+  ASSERT_NO_FATAL_FAILURE(child.Finish(status));
+  EXPECT_EQ(status, EXIT_FAILURE);
+  EXPECT_EQ(child.collected_stdout(), "");
+  std::string error_text = child.collected_stderr();
+  EXPECT_TRUE(cpp20::ends_with(std::string_view(error_text), ": KOID is not a process\n"));
+}
+
+// With --jobs, you still just get an ET_CORE file (for each process).
+TEST(Zxdump, GcoreProcessDumpViaJob) {
+  zxdump::testing::TestProcess process;
+  ASSERT_NO_FATAL_FAILURE(process.HermeticJob());
+  ASSERT_NO_FATAL_FAILURE(process.StartChild());
+
+  zxdump::testing::TestToolProcess child;
+  const auto& [dump_file, prefix, pid_string] =
+      GetOutputFile(child, "process-dump-via-job", process.koid());
+  std::vector<std::string> args({
+      kJobsSwitch,
+      // Don't dump memory since we don't need it and it is large.
+      kExcludeMemorySwitch,
+      // Don't bother dumping threads since this test doesn't check for them.
+      kNoThreadsSwitch,
+      kOutputSwitch,
+      prefix,
+      std::to_string(process.job_koid()),
+  });
+  ASSERT_NO_FATAL_FAILURE(child.Start("gcore", args));
+  ASSERT_NO_FATAL_FAILURE(child.CollectStdout());
+  ASSERT_NO_FATAL_FAILURE(child.CollectStderr());
+  int status;
+  ASSERT_NO_FATAL_FAILURE(child.Finish(status));
+  EXPECT_EQ(status, EXIT_SUCCESS);
+  EXPECT_EQ(child.collected_stdout(), "");
+  EXPECT_EQ(child.collected_stderr(), "");
+
+  fbl::unique_fd fd = dump_file.OpenOutput();
+  ASSERT_TRUE(fd);
+  elfldltl::Elf<>::Ehdr ehdr;
+  ASSERT_EQ(read(fd.get(), &ehdr, sizeof(ehdr)), static_cast<ssize_t>(sizeof(ehdr)))
+      << strerror(errno);
+  EXPECT_TRUE(ehdr.Valid());
+  EXPECT_EQ(ehdr.type, elfldltl::ElfType::kCore);
+}
+
+TEST(Zxdump, GcoreJobDumpIsArchive) {
+  zxdump::testing::TestProcess process;
+
+  // We don't even need to spawn a process for this test.
+  // Just create an empty job and dump it.
+  ASSERT_NO_FATAL_FAILURE(process.HermeticJob());
+
+  zxdump::testing::TestToolProcess child;
+  const auto& [dump_file, prefix, pid_string] =
+      GetOutputFile(child, "job-dump", process.job_koid(), true);
+  std::vector<std::string> args({
+      kJobArchiveSwitch,
+      kNoChildrenSwitch,
+      kNoProcessesSwitch,
+      kOutputSwitch,
+      prefix,
+      pid_string,
+  });
+  ASSERT_NO_FATAL_FAILURE(child.Start("gcore", args));
+  ASSERT_NO_FATAL_FAILURE(child.CollectStdout());
+  ASSERT_NO_FATAL_FAILURE(child.CollectStderr());
+  int status;
+  ASSERT_NO_FATAL_FAILURE(child.Finish(status));
+  EXPECT_EQ(status, EXIT_SUCCESS);
+  EXPECT_EQ(child.collected_stdout(), "");
+  EXPECT_EQ(child.collected_stderr(), "");
+
+  fbl::unique_fd fd = dump_file.OpenOutput();
+  ASSERT_TRUE(fd);
+
+  char buffer[zxdump::kMinimumArchive];
+  ASSERT_EQ(read(fd.get(), buffer, sizeof(buffer)), static_cast<ssize_t>(sizeof(buffer)))
+      << strerror(errno);
+  EXPECT_TRUE(cpp20::starts_with(std::string_view(buffer, sizeof(buffer)), zxdump::kArchiveMagic));
 }
 
 }  // namespace
