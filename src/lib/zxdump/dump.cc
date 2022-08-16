@@ -5,10 +5,12 @@
 #include "lib/zxdump/dump.h"
 
 #include <lib/stdcompat/span.h>
+#include <lib/zx/thread.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
 
+#include <algorithm>
 #include <array>
 #include <cassert>
 #include <cstdint>
@@ -20,13 +22,15 @@
 #include <vector>
 
 #include "core.h"
+#include "rights.h"
 
 namespace zxdump {
 
 namespace {
 
-// This collects a bunch of note data, header and payload ByteView items.  The
-// actual data the items point to is stored in Collector::notes_.
+// This collects a bunch of note data, header and payload ByteView items.
+// There's one of these for each thread, and one for the process.  The actual
+// data the items point to is stored in Collector::notes_ and Thread::notes_.
 class NoteData {
  public:
   using Vector = std::vector<ByteView>;
@@ -240,7 +244,7 @@ struct PropertyBaseClass {
   static constexpr auto kSyscall = &zx::object_base::get_property;
 };
 
-// These are called via std::apply on ProcessNotes tuples.
+// These are called via std::apply on ProcessNotes and ThreadNotes tuples.
 
 constexpr auto CollectNoteData =
     // For each note that hasn't already been fetched, try to fetch it now.
@@ -294,16 +298,34 @@ class ProcessDumpBase::Collector {
   // Only constructed by Emplace.
   Collector() = delete;
 
-  // Only Emplace and clear call this.  The process is mandatory and all other
-  // members are safely default-initialized.  Note memory_ can't be initialized
-  // in its declaration since that uses process_ before it's been set here.
-  explicit Collector(zx::unowned_process process)
-      : process_(std::move(process)), memory_(*process_) {
+  // Only Emplace and clear call this.  The process is mandatory; the suspend
+  // token handle is optional and can be null; and all other members are safely
+  // default-initialized.  Note memory_ can't be initialized in its declaration
+  // since that uses process_ before it's been set here.
+  explicit Collector(zx::unowned_process process, zx::suspend_token suspended = {})
+      : process_(std::move(process)), process_suspended_(std::move(suspended)), memory_(*process_) {
     ZX_ASSERT(process_->is_valid());
   }
 
-  // Reset to initial state.
-  void clear() { *this = Collector{std::move(process_)}; }
+  // Reset to initial state, except that if the process is already suspended,
+  // it stays that way.
+  void clear() { *this = Collector{std::move(process_), std::move(process_suspended_)}; }
+
+  // This can be called at most once and must be called first if at all.  If
+  // this is not called, then threads may be allowed to run while the dump
+  // takes place, yielding an inconsistent memory image; and CollectProcess
+  // will report only about memory and process-wide state, nothing about
+  // threads.  Afterwards the process remains suspended until the Collector is
+  // destroyed.
+  fitx::result<Error> SuspendAndCollectThreads() {
+    ZX_ASSERT(!process_suspended_);
+    ZX_DEBUG_ASSERT(notes_size_bytes_ == 0);
+    zx_status_t status = process_->suspend(&process_suspended_);
+    if (status == ZX_OK) {
+      return CollectThreads();
+    }
+    return fitx::error(Error{"zx_task_suspend", status});
+  }
 
   // This collects information about memory and other process-wide state.  The
   // return value gives the total size of the ET_CORE file to be written.
@@ -343,7 +365,7 @@ class ProcessDumpBase::Collector {
 
   // Accumulate header and note data to be written out, by calling
   // `dump(offset, ByreView{...})` repeatedly.
-  // The views point to storage in this->notes.
+  // The views point to storage in this->notes and Thread::notes_.
   fitx::result<Error, size_t> DumpHeaders(DumpCallback dump, size_t limit) {
     // Layout has already been done.
     ZX_ASSERT(ehdr_.type == elfldltl::ElfType::kCore);
@@ -373,12 +395,23 @@ class ProcessDumpBase::Collector {
       return fitx::ok(offset);
     }
 
+    // Returns true early if any append call returns true.
+    auto append_notes = [&](auto&& notes) -> bool {
+      return std::any_of(notes.begin(), notes.end(), append);
+    };
+
     // Generate the process-wide note data.
-    for (ByteView data : notes()) {
-      if (append(data)) {
+    if (append_notes(notes())) {
+      return fitx::ok(offset);
+    }
+
+    // Generate the note data for each thread.
+    for (const auto& thread : threads_) {
+      if (append_notes(thread.notes())) {
         return fitx::ok(offset);
       }
     }
+
     ZX_DEBUG_ASSERT(offset % NoteAlign() == 0);
     return fitx::ok(offset);
   }
@@ -446,6 +479,52 @@ class ProcessDumpBase::Collector {
   template <uint32_t Prop, typename T>
   using ProcessProperty = PropertyNote<ProcessPropertyClass, Prop, T>;
 
+  struct ThreadInfoClass {
+    using Handle = zx::thread;
+    static constexpr auto MakeHeader = kMakeNote<kThreadInfoNoteName>;
+  };
+
+  template <zx_object_info_topic_t Topic, typename T>
+  using ThreadInfo = InfoNote<ThreadInfoClass, Topic, T>;
+
+  struct ThreadPropertyClass : public PropertyBaseClass {
+    using Handle = zx::thread;
+    static constexpr auto MakeHeader = kMakeNote<kThreadPropertyNoteName>;
+  };
+
+  template <uint32_t Prop, typename T>
+  using ThreadProperty = PropertyNote<ThreadPropertyClass, Prop, T>;
+
+  // Classes using zx_thread_read_state use this.
+  struct ThreadStateClass {
+    using Handle = zx::thread;
+    static constexpr std::string_view kCall_{"zx_thread_read_state"};
+    static constexpr auto kSyscall = &zx::thread::read_state;
+    static constexpr auto MakeHeader = kMakeNote<kThreadStateNoteName>;
+  };
+
+  template <zx_thread_state_topic_t Topic, typename T>
+  using ThreadState = PropertyNote<ThreadStateClass, Topic, T>;
+
+  using ThreadNotes = std::tuple<
+      // This lists all the notes that can be extracted from a thread.
+      // Ordering of the notes after the first two is not specified and can
+      // change.  Nothing separates the notes for one thread from the notes for
+      // the next thread, but consumers recognize the zx_info_handle_basic_t
+      // note as the key for a new thread's notes.  Whatever subset of these
+      // notes that is available for the given thread is present in the dump.
+      ThreadInfo<ZX_INFO_HANDLE_BASIC, zx_info_handle_basic_t>,
+      ThreadProperty<ZX_PROP_NAME, char[ZX_MAX_NAME_LEN]>,
+      ThreadInfo<ZX_INFO_THREAD, zx_info_thread_t>,
+      ThreadInfo<ZX_INFO_THREAD_EXCEPTION_REPORT, zx_exception_report_t>,
+      ThreadInfo<ZX_INFO_THREAD_STATS, zx_info_thread_stats_t>,
+      ThreadInfo<ZX_INFO_TASK_RUNTIME, zx_info_task_runtime_t>,
+      ThreadState<ZX_THREAD_STATE_GENERAL_REGS, zx_thread_state_general_regs_t>,
+      ThreadState<ZX_THREAD_STATE_FP_REGS, zx_thread_state_fp_regs_t>,
+      ThreadState<ZX_THREAD_STATE_VECTOR_REGS, zx_thread_state_vector_regs_t>,
+      ThreadState<ZX_THREAD_STATE_DEBUG_REGS, zx_thread_state_debug_regs_t>,
+      ThreadState<ZX_THREAD_STATE_SINGLE_STEP, zx_thread_state_single_step_t>>;
+
   using ProcessNotes = std::tuple<
       // This lists all the notes for process-wide state.  Ordering of the
       // notes after the first two is not specified and can change.
@@ -464,6 +543,88 @@ class ProcessDumpBase::Collector {
       ProcessProperty<ZX_PROP_PROCESS_VDSO_BASE_ADDRESS, uintptr_t>,
       ProcessProperty<ZX_PROP_PROCESS_HW_TRACE_CONTEXT_ID, uintptr_t>>;
 
+  class Thread {
+   public:
+    Thread() = delete;
+    Thread(const Thread&) = delete;
+    Thread(Thread&&) = default;
+    Thread& operator=(Thread&&) noexcept = default;
+
+    explicit Thread(zx_koid_t koid) : koid_(koid) {}
+
+    // Acquire the thread handle if possible.
+    fitx::result<Error> Acquire(const zx::process& process) {
+      if (!handle_) {
+        zx::handle child;
+        zx_status_t status = process.get_child(koid_, kThreadRights, &child);
+        switch (status) {
+          case ZX_OK:
+            handle_.emplace(std::move(child));
+            break;
+
+          case ZX_ERR_NOT_FOUND:
+            // It's not an error if the thread has simply died already so the
+            // KOID is no longer valid.
+            handle_.emplace();
+            break;
+
+          default:
+            return fitx::error(Error{"zx_object_get_child", status});
+        }
+      }
+      return fitx::ok();
+    }
+
+    // Return the item to wait for this thread if it needs to be waited for.
+    [[nodiscard]] std::optional<zx_wait_item_t> wait() const {
+      if (handle_ && handle_->is_valid()) {
+        return zx_wait_item_t{.handle = handle_->get(), .waitfor = kWaitFor_};
+      }
+      return std::nullopt;
+    }
+
+    // This can be called after the wait() item has been used in wait_many.
+    // If it still needs to be waited for, it returns success but zero size.
+    // The next call to wait() will show whether collection is finished.
+    fitx::result<Error, size_t> Collect(zx_signals_t pending) {
+      ZX_DEBUG_ASSERT(handle_);
+      ZX_DEBUG_ASSERT(handle_->is_valid());
+
+      if (pending & kWaitFor_) {
+        // Now that this thread is quiescent, collect its data.
+        // Reset *handle_ so wait() will say no next time.
+        // It's only needed for the collection being done right now.
+        auto collect = [thread = std::exchange(*handle_, {})](auto&... note) {
+          return CollectNoteData(thread, note...);
+        };
+        return std::apply(collect, notes_);
+      }
+
+      // Still need to wait for this one.
+      return fitx::ok(0);
+    }
+
+    // Returns a vector of views into the storage held in this->notes_.
+    NoteData::Vector notes() const {
+      ZX_DEBUG_ASSERT(handle_);
+      ZX_DEBUG_ASSERT(!handle_->is_valid());
+      return std::apply(DumpNoteData, notes_);
+    }
+
+   private:
+    static constexpr zx_signals_t kWaitFor_ =  // Suspension or death is fine.
+        ZX_THREAD_SUSPENDED | ZX_THREAD_TERMINATED;
+
+    zx_koid_t koid_;
+
+    // This is std::nullopt before the thread has been acquired.  Once the
+    // thread has been acquired, this holds its thread handle until it's been
+    // collected.  Once it's been collected, this holds the invalid handle.
+    std::optional<zx::thread> handle_;
+
+    ThreadNotes notes_;
+  };
+
   // Returns a vector of views into the storage held in this->notes_.
   NoteData::Vector notes() const { return std::apply(DumpNoteData, notes_); }
 
@@ -480,6 +641,97 @@ class ProcessDumpBase::Collector {
 
   auto& process_vmos() {
     return std::get<ProcessInfo<ZX_INFO_PROCESS_VMOS, zx_info_vmo_t>>(notes_);
+  }
+
+  // Each thread not seen before is added to the end of the list.  These are
+  // always processed in the order ZX_INFO_PROCESS_THREADS gives them, which is
+  // chronological order of creation, with old dead threads maybe pruned out.
+  // If a KOID seen before is not in the current list, it's an old dead thread.
+  // That's fine.  Thread::Acquire will fail to find it and that threads_ slot
+  // will be ignored.  If a new KOID is seen, it goes on the end of threads_
+  // regardless of its position in the current list, so it will always be after
+  // older threads already in the list.
+  Thread& AddThread(zx_koid_t koid) {
+    auto [it, is_new] = thread_koid_to_index_.insert({koid, threads_.size()});
+    if (is_new) {
+      threads_.emplace_back(koid);
+      return threads_.back();
+    }
+    return threads_[it->second];
+  }
+
+  // Acquire all the threads.  Then collect all their data as soon as they are
+  // done suspending, waiting as necessary.
+  fitx::result<Error> CollectThreads() {
+    ZX_DEBUG_ASSERT(process_suspended_);
+    threads_.clear();
+    while (true) {
+      // We need fresh data each time through to see if there are new threads.
+      // Since the process is suspended, no new threads will run in user mode.
+      // But threads already running might not have finished suspension yet,
+      // and while not suspended they may create and/or start new threads that
+      // will "start suspended" but their suspension is asynchronous too.
+      // Hence, don't use CollectNote here, because it caches old data.
+      //
+      // Also a third party with the process handle could be creating and
+      // starting new suspended threads too.  We don't really care about that
+      // or about the racing new threads, because they won't have any user
+      // state that's interesting to dump yet.  So if we overlook those threads
+      // the dump will just appear to be from before they existed.
+
+      if (auto get = process_threads().Collect(*process_); get.is_error()) {
+        return get.take_error();
+      }
+
+      zx_wait_item_t wait_for[ZX_WAIT_MANY_MAX_ITEMS];
+      Thread* wait_for_thread[std::size(wait_for)];
+      uint32_t wait_for_count = 0;
+
+      // Look for new threads or unfinished threads.
+      for (zx_koid_t koid : process_threads().info()) {
+        Thread& thread = AddThread(koid);
+
+        // Make sure we have the thread handle if possible.
+        // If this is not a new thread, this is a no-op.
+        if (auto acquire = thread.Acquire(*process_); acquire.is_error()) {
+          return acquire;
+        }
+
+        if (auto wait = thread.wait()) {
+          // This thread hasn't been collected yet.  Wait for it to finish
+          // suspension (or die).  If the wait_for list is full, that's OK.
+          // We'll block until some other thread finishes, and then come back.
+          // This one might be quiescent already by the time there's room.
+          if (wait_for_count < std::size(wait_for)) {
+            wait_for[wait_for_count] = *wait;
+            wait_for_thread[wait_for_count] = &thread;
+            ++wait_for_count;
+          }
+        }
+      }
+
+      // If there are no unfinished threads, collection is all done.
+      if (wait_for_count == 0) {
+        return fitx::ok();
+      }
+
+      // Wait for a thread to finish its suspension (or death).
+      zx_status_t status = zx::thread::wait_many(wait_for, wait_for_count, zx::time::infinite());
+      if (status != ZX_OK) {
+        return fitx::error(Error{"zx_object_wait_many", status});
+      }
+      for (uint32_t i = 0; i < wait_for_count; ++i) {
+        auto result = wait_for_thread[i]->Collect(wait_for[i].pending);
+        if (result.is_error()) {
+          return result.take_error();
+        }
+        notes_size_bytes_ += result.value();
+      }
+
+      // Even if all known threads are quiescent now, another iteration is
+      // needed to be sure that no new threads were created by these threads
+      // before they went quiescent.
+    }
   }
 
   // Populate phdrs_.  The p_offset fields are filled in later by Layout.
@@ -758,8 +1010,12 @@ class ProcessDumpBase::Collector {
   };
 
   zx::unowned_process process_;
+  zx::suspend_token process_suspended_;
   ProcessMemoryReader memory_;
   ProcessNotes notes_;
+
+  std::vector<Thread> threads_;
+  std::map<zx_koid_t, size_t> thread_koid_to_index_;
 
   std::vector<Elf::Phdr> phdrs_;
   Elf::Ehdr ehdr_ = {};
@@ -775,6 +1031,10 @@ void ProcessDumpBase::clear() { collector_->clear(); }
 
 fitx::result<Error, size_t> ProcessDumpBase::CollectProcess(SegmentCallback prune, size_t limit) {
   return collector_->CollectProcess(std::move(prune), limit);
+}
+
+fitx::result<Error> ProcessDumpBase::SuspendAndCollectThreads() {
+  return collector_->SuspendAndCollectThreads();
 }
 
 fitx::result<Error, size_t> ProcessDumpBase::DumpHeadersImpl(DumpCallback dump, size_t limit) {

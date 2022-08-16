@@ -28,6 +28,21 @@ inline constexpr uint32_t NoteAlign(size_t note_size = 1) {
 inline constexpr std::string_view kProcessInfoNoteName{"ZirconProcessInfo"};
 inline constexpr std::string_view kProcessPropertyNoteName{"ZirconProcessProperty"};
 
+// Many threads appear in the same ET_CORE file for one process.  These note
+// names give information about each thread, and appear after all the process
+// notes: first all the notes for one thread; then all the notes for the next
+// thread; and so on.  The first note for each thread is ZX_INFO_HANDLE_BASIC,
+// so that can be used to partition a run of thread notes in a core file into
+// the set of notes for each separate thread.
+//
+// These are get_info / get_property for threads, as for processes above.
+inline constexpr std::string_view kThreadInfoNoteName{"ZirconThreadInfo"};
+inline constexpr std::string_view kThreadPropertyNoteName{"ZirconThreadProperty"};
+
+// The n_type field contains the zx_thread_state_topic_t value and the contents
+// of the note are exactly as returned by read_state.
+inline constexpr std::string_view kThreadStateNoteName{"ZirconThreadState"};
+
 }  // namespace zxdump
 
 #endif  // SRC_LIB_ZXDUMP_CORE_H_

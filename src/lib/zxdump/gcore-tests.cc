@@ -16,6 +16,7 @@ namespace {
 
 constexpr const char* kOutputSwitch = "-o";
 constexpr const char* kExcludeMemorySwitch = "--exclude-memory";
+constexpr const char* kNoThreadsSwitch = "--no-threads";
 
 void UsageTest(int expected_status, const std::vector<std::string>& args = {}) {
   zxdump::testing::TestToolProcess child;
@@ -47,6 +48,8 @@ TEST(Zxdump, GcoreProcessDumpIsElfCore) {
   std::vector<std::string> args({
       // Don't dump memory since we don't need it and it is large.
       kExcludeMemorySwitch,
+      // Don't bother dumping threads since this test doesn't check for them.
+      kNoThreadsSwitch,
       kOutputSwitch,
       prefix,
       pid_string,

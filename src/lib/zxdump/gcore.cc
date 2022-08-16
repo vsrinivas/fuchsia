@@ -36,6 +36,7 @@ struct Flags {
   std::optional<std::string_view> output_prefix_;
   size_t limit_ = zxdump::DefaultLimit();
   bool dump_memory_ = true;
+  bool collect_threads_ = true;
 };
 
 // This handles writing a single output file, and removing that output file if
@@ -114,6 +115,15 @@ class ProcessDumper {
       // TODO(mcgrathr): more filtering switches
       prune = PruneDefault;
     }
+
+    if (flags.collect_threads_) {
+      auto result = dumper_.SuspendAndCollectThreads();
+      if (result.is_error()) {
+        Error(result.error_value());
+        return false;
+      }
+    }
+
     auto result = dumper_.CollectProcess(std::move(prune), flags.limit_);
     if (result.is_error()) {
       Error(result.error_value());
@@ -182,12 +192,13 @@ bool WriteProcessCoreFile(zx::process process, zx_koid_t pid, const Flags& flags
   return writer.Ok(dumper.Collect(flags) && dumper.Dump(writer, flags));
 }
 
-constexpr const char kOptString[] = "hlo:m";
+constexpr const char kOptString[] = "hlo:mt";
 constexpr const option kLongOpts[] = {
     {"help", no_argument, nullptr, 'h'},                 //
     {"limit", required_argument, nullptr, 'l'},          //
     {"output-prefix", required_argument, nullptr, 'o'},  //
     {"exclude-memory", no_argument, nullptr, 'm'},       //
+    {"no-threads", no_argument, nullptr, 't'},           //
     {nullptr, no_argument, nullptr, 0},                  //
 };
 
@@ -202,6 +213,7 @@ int main(int argc, char** argv) {
     --output-prefix=PREFIX, -o PREFIX  write <PREFIX><PID>, not core.<PID>
     --limit=BYTES, -l BYTES            truncate output to BYTES per process
     --exclude-memory, -M               exclude all process memory from dumps
+    --no-threads, -t                   collect only memory, threads left to run
 )""";
     return status;
   };
@@ -227,6 +239,10 @@ int main(int argc, char** argv) {
 
       case 'm':
         flags.dump_memory_ = false;
+        continue;
+
+      case 't':
+        flags.collect_threads_ = false;
         continue;
 
       default:

@@ -29,8 +29,6 @@ program headers, which uses a special section header).  Each `PT_LOAD` segment
 represents a memory mapping.  One or more `PT_NOTE` segments give additional
 information about the process and (optionally) its threads.
 
-**TODO:** threads
-
 ### Memory segments
 
 The representation of memory in core dumps is standard across systems.  Zircon
@@ -105,3 +103,60 @@ notes and their order is unspecified and subject to change.  Dumps generally
 include all the information the kernel makes available, but a dump-writer might
 be configured to omit some information or might be forced to omit some
 information due to runtime errors from the system calls to collect data.
+
+#### Per-thread notes
+
+Additional sets of notes describe each thread in the process.  These notes are
+not always included in the dump, at the discretion of the dump-writer.  The
+process-wide data and memory can be collected while letting the threads
+continue to run.  In that case, the data and/or threads may be mutually
+inconsistent since threads changed things while the dump was being taken.
+Moreover, there is no per-thread data whatsoever.  Ordinarily, the dump-writer
+suspends the process and each thread before collecting any data.  Only when all
+data and memory has been dumped does it allow those threads to run again.  In
+this (usual) case, full information is dumped about each thread.
+
+There is no formal grouping or separation between the notes for one thread and
+the next.  All the notes for one thread appear, then all the notes for the next
+thread.  This is in the order those threads were reported by the kernel,
+usually chronological order of their creation.
+
+The first note for each thread is always for `ZX_INFO_HANDLE_BASIC`; this has
+the thread KOID and indicates that following notes apply to that thread.  (Note
+that the `rights` field indicates the rights the dump-writer had to dump the
+thread; this does not represent any handle present in the process.)  The second
+note for each thread is always for `ZX_PROP_NAME`.  The set of remaining notes
+and their order is unspecified and subject to change; see above.
+
+The dump-writer normally tries to include every known per-thread note for each
+thread.  Some types are not available because they aren't used on the current
+machine or because the thread was already dying when the dump started, but some
+might be elided just because their contents are boring.  If a known type is
+omitted for a thread, it usually means there was no interesting data to report.
+
+##### ZirconThreadInfo
+
+ELF notes using the name `ZirconThreadInfo` contain all the types that
+`zx_object_get_info` yields on a Zircon thread.  The ELF note's 32-bit type is
+exactly the `zx_object_info_topic_t` value in `zx_object_get_info`.  The note's
+"description" (payload) has the size and layout that corresponds to that topic.
+As mentioned above, the `ZX_INFO_HANDLE_BASIC` note comes first and provides
+the KOID that can be used as a unique identifier for the thread across the
+whole dump.
+
+##### ZirconThreadProperty
+
+ELF notes using the name `ZirconThreadProperty` contain all the data that
+`zx_object_get_property` yields on a Zircon thread.  The ELF note's 32-bit type
+is exactly the `property` argument to `zx_object_get_proprety`.  The note's
+"description" (payload) has the size and layout that corresponds to that
+property.
+
+##### ZirconThreadState
+
+ELF notes using the name `ZirconThreadState` contain all the data that
+`zx_thread_read_state` yields on a Zircon thread.  The ELF note's 32-bit type
+is exactly the `zx_thread_state_topic_t` argument to `zx_thread_read_state`.
+The note's "description" (payload) has the size and layout that corresponds to
+that topic's `zx_thread_state_*_t` type.  The types and layouts that will
+appear vary by machine.

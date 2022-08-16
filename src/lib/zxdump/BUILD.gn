@@ -39,6 +39,7 @@ zx_library("zxdump") {
     "core.h",
     "error.cc",
     "fd-writer.cc",
+    "rights.h",
   ]
 
   deps = [ "//src/lib/elfldltl" ]

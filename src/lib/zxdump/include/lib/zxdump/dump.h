@@ -77,7 +77,15 @@ class ProcessDumpBase {
   // it stays that way.
   void clear();
 
-  // This must be called first.
+  // This can be called at most once and must be called first if at all.  If
+  // this is not called, then threads may be allowed to run while the dump
+  // takes place, yielding an inconsistent memory image; and CollectProcess
+  // will report only about memory and process-wide state, nothing about
+  // threads.  Afterwards the process remains suspended until the ProcessDump
+  // object is destroyed.
+  fitx::result<Error> SuspendAndCollectThreads();
+
+  // This can be called first or after SuspendAndCollectThreads.
   //
   // This collects information about memory and other process-wide state.  The
   // return value gives the total size of the ET_CORE file to be written.
