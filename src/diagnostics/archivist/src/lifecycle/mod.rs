@@ -4,9 +4,9 @@
 
 use {
     crate::pipeline::Pipeline,
+    async_lock::RwLock,
     diagnostics_data::{Data, LifecycleData},
     futures::prelude::*,
-    parking_lot::RwLock,
     selectors,
     std::{
         pin::Pin,
@@ -29,9 +29,9 @@ pub struct LifecycleServer {
 }
 
 impl LifecycleServer {
-    pub fn new(diagnostics_pipeline: Arc<RwLock<Pipeline>>) -> Self {
+    pub async fn new(diagnostics_pipeline: Arc<RwLock<Pipeline>>) -> Self {
         LifecycleServer {
-            data: diagnostics_pipeline.read().fetch_lifecycle_event_data().into_iter(),
+            data: diagnostics_pipeline.read().await.fetch_lifecycle_event_data().await.into_iter(),
         }
     }
 
@@ -164,15 +164,19 @@ mod tests {
 
         diagnostics_repo
             .write()
+            .await
             .add_new_component(identity.clone(), zx::Time::from_nanos(0))
+            .await
             .unwrap();
 
         diagnostics_repo
             .write()
+            .await
             .add_inspect_artifacts(identity.clone(), out_dir_proxy, zx::Time::from_nanos(0))
+            .await
             .unwrap();
 
-        pipeline_wrapper.write().add_inspect_artifacts(&identity.relative_moniker).unwrap();
+        pipeline_wrapper.write().await.add_inspect_artifacts(&identity.relative_moniker).unwrap();
 
         let inspector = Inspector::new();
         let root = inspector.root();
@@ -184,21 +188,21 @@ mod tests {
         let test_batch_iterator_stats1 =
             Arc::new(test_accessor_stats.new_lifecycle_batch_iterator());
         {
-            let reader_server = LifecycleServer::new(pipeline_wrapper.clone());
+            let reader_server = LifecycleServer::new(pipeline_wrapper.clone()).await;
             let result_json = read_snapshot(reader_server, test_batch_iterator_stats1).await;
 
             let result_array = result_json.as_array().expect("unit test json should be array.");
             assert_eq!(result_array.len(), 2, "Expect only two schemas to be returned.");
         }
 
-        diagnostics_repo.write().mark_stopped(&identity.unique_key().into());
-        pipeline_wrapper.write().remove(&identity.relative_moniker);
+        diagnostics_repo.write().await.mark_stopped(&identity.unique_key().into()).await;
+        pipeline_wrapper.write().await.remove(&identity.relative_moniker);
 
         let test_batch_iterator_stats2 =
             Arc::new(test_accessor_stats.new_lifecycle_batch_iterator());
 
         {
-            let reader_server = LifecycleServer::new(pipeline_wrapper.clone());
+            let reader_server = LifecycleServer::new(pipeline_wrapper.clone()).await;
             let result_json = read_snapshot(reader_server, test_batch_iterator_stats2).await;
 
             let result_array = result_json.as_array().expect("unit test json should be array.");

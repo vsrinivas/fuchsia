@@ -191,10 +191,12 @@ impl State {
                 }
                 Status::Pending(ref mut pending) => match pending.pop_front() {
                     None => {
-                        self.global_stats.record_component_duration(
-                            self.unpopulated.identity.relative_moniker.to_string(),
-                            self.elapsed_time + (zx::Time::get_monotonic() - start_time),
-                        );
+                        self.global_stats
+                            .record_component_duration(
+                                self.unpopulated.identity.relative_moniker.to_string(),
+                                self.elapsed_time + (zx::Time::get_monotonic() - start_time),
+                            )
+                            .await;
                         return None;
                     }
                     Some((filename, data)) => {

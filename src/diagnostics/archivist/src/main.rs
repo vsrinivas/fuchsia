@@ -126,7 +126,7 @@ async fn async_main(config: Config) -> Result<(), Error> {
     }
 
     if config.enable_component_event_provider {
-        archivist.install_component_event_provider();
+        archivist.install_component_event_provider().await;
     }
 
     assert!(

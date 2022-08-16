@@ -69,7 +69,7 @@ mod tests {
         fifth_message.severity = fifth_packet.metadata.severity;
 
         let mut harness = TestHarness::new();
-        let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown()));
+        let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown())).await;
         stream.write_packets(vec![
             first_packet,
             second_packet,
@@ -157,10 +157,10 @@ mod tests {
             let mut message2 = message.clone();
             message2.severity = packet2.metadata.severity;
 
-            let mut foo_stream = $harness.create_stream_from_log_reader($log_reader1);
+            let mut foo_stream = $harness.create_stream_from_log_reader($log_reader1).await;
             foo_stream.write_packet(&mut packet);
 
-            let mut bar_stream = $harness.create_stream_from_log_reader($log_reader2);
+            let mut bar_stream = $harness.create_stream_from_log_reader($log_reader2).await;
             bar_stream.write_packet(&mut packet2);
             drop((foo_stream, bar_stream));
 
@@ -343,7 +343,7 @@ mod tests {
         };
 
         let mut harness = TestHarness::new();
-        let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown()));
+        let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown())).await;
         stream.write_packets(vec![p, p2]);
         drop(stream);
         harness.filter_test(vec![lm], Some(options)).await;
@@ -375,7 +375,7 @@ mod tests {
         };
 
         let mut harness = TestHarness::new();
-        let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown()));
+        let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown())).await;
         stream.write_packets(vec![p, p2]);
         drop(stream);
         harness.filter_test(vec![lm], Some(options)).await;
@@ -414,7 +414,7 @@ mod tests {
         };
 
         let mut harness = TestHarness::new();
-        let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown()));
+        let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown())).await;
         stream.write_packets(vec![p, p2, p3, p4, p5]);
         drop(stream);
         harness.filter_test(vec![lm], Some(options)).await;
@@ -449,7 +449,7 @@ mod tests {
         };
 
         let mut harness = TestHarness::new();
-        let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown()));
+        let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown())).await;
         stream.write_packets(vec![p, p2, p3]);
         drop(stream);
         harness.filter_test(vec![lm], Some(options)).await;
@@ -498,7 +498,7 @@ mod tests {
         };
 
         let mut harness = TestHarness::new();
-        let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown()));
+        let mut stream = harness.create_stream(Arc::new(ComponentIdentity::unknown())).await;
         stream.write_packets(vec![p, p2]);
         drop(stream);
         harness.filter_test(vec![lm1, lm2], Some(options)).await;
@@ -579,7 +579,8 @@ mod tests {
             },
         ];
         let mut harness = TestHarness::new();
-        let mut stream = harness.create_structured_stream(Arc::new(ComponentIdentity::unknown()));
+        let mut stream =
+            harness.create_structured_stream(Arc::new(ComponentIdentity::unknown())).await;
         stream.write_packets(logs);
         drop(stream);
         harness.filter_test(expected_logs, None).await;
@@ -592,12 +593,12 @@ mod tests {
         let log3 = TestDebugEntry::new("log3".as_bytes());
 
         let klog_reader = TestDebugLog::new();
-        klog_reader.enqueue_read_entry(&log1);
-        klog_reader.enqueue_read_entry(&log2);
+        klog_reader.enqueue_read_entry(&log1).await;
+        klog_reader.enqueue_read_entry(&log2).await;
         // logs received after kernel indicates no logs should be read
-        klog_reader.enqueue_read_fail(zx::Status::SHOULD_WAIT);
-        klog_reader.enqueue_read_entry(&log3);
-        klog_reader.enqueue_read_fail(zx::Status::SHOULD_WAIT);
+        klog_reader.enqueue_read_fail(zx::Status::SHOULD_WAIT).await;
+        klog_reader.enqueue_read_entry(&log3).await;
+        klog_reader.enqueue_read_fail(zx::Status::SHOULD_WAIT).await;
 
         let expected_logs = vec![
             LogMessage {

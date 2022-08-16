@@ -19,6 +19,7 @@ use {
         repository::DataRepo,
     },
     archivist_config::Config,
+    async_lock::RwLock,
     async_trait::async_trait,
     fidl_fuchsia_io as fio, fidl_fuchsia_logger as flogger,
     fidl_fuchsia_sys2::EventSourceMarker,
@@ -35,7 +36,6 @@ use {
         future::{self, abortable},
         prelude::*,
     },
-    parking_lot::RwLock,
     std::{path::Path, sync::Arc},
     tracing::{debug, error, info, warn},
 };
@@ -254,7 +254,7 @@ impl Archivist {
         }
     }
 
-    pub fn install_component_event_provider(&mut self) {
+    pub async fn install_component_event_provider(&mut self) {
         let proxy = match connect_to_protocol::<fsys_internal::ComponentEventProviderMarker>() {
             Ok(proxy) => proxy,
             Err(err) => {
@@ -318,7 +318,7 @@ impl Archivist {
         let run_outgoing = self.fs.collect::<()>();
 
         let (snd, rcv) = mpsc::unbounded::<Arc<ComponentIdentity>>();
-        self.archivist_state.logs_budget.set_remover(snd);
+        self.archivist_state.logs_budget.set_remover(snd).await;
         let component_removal_task = fasync::Task::spawn(Self::process_removal_of_components(
             rcv,
             data_repo.clone(),
@@ -350,8 +350,8 @@ impl Archivist {
         let all_msg = async {
             log_receiver.for_each_concurrent(None, |rx| async move { rx.await }).await;
             debug!("Log ingestion stopped.");
-            data_repo.terminate_logs();
-            logs_budget.terminate();
+            data_repo.terminate_logs().await;
+            logs_budget.terminate().await;
             debug!("Flushing to listeners.");
             drain_listeners_task.await;
             debug!("Log listeners and batch iterators stopped.");
@@ -373,7 +373,7 @@ impl Archivist {
                 }
                 listen_sender.disconnect();
                 log_sender.disconnect();
-                archivist_state_log_sender.write().disconnect();
+                archivist_state_log_sender.write().await.disconnect();
                 abort_handle.abort()
             }
             .left_future(),
@@ -391,23 +391,23 @@ impl Archivist {
         diagnostics_pipelines: Arc<Vec<Arc<RwLock<Pipeline>>>>,
     ) {
         while let Some(identity) = removal_requests.next().await {
-            maybe_remove_component(&identity, &diagnostics_repo, &diagnostics_pipelines);
+            maybe_remove_component(&identity, &diagnostics_repo, &diagnostics_pipelines).await;
         }
     }
 }
 
-fn maybe_remove_component(
+async fn maybe_remove_component(
     identity: &ComponentIdentity,
     diagnostics_repo: &DataRepo,
     diagnostics_pipelines: &[Arc<RwLock<Pipeline>>],
 ) {
-    if !diagnostics_repo.is_live(identity) {
+    if !diagnostics_repo.is_live(identity).await {
         debug!(%identity, "Removing component from repository.");
-        diagnostics_repo.write().data_directories.remove(&*identity.unique_key());
+        diagnostics_repo.write().await.data_directories.remove(&*identity.unique_key());
 
         // TODO(fxbug.dev/55736): The pipeline specific updates should be happening asynchronously.
         for pipeline in diagnostics_pipelines {
-            pipeline.write().remove(&identity.relative_moniker);
+            pipeline.write().await.remove(&identity.relative_moniker);
         }
     }
 }
@@ -441,7 +441,7 @@ impl ArchivistState {
         })
     }
 
-    fn handle_diagnostics_ready(
+    async fn handle_diagnostics_ready(
         &self,
         component: ComponentIdentity,
         directory: Option<fio::DirectoryProxy>,
@@ -452,7 +452,9 @@ impl ArchivistState {
             // Update the central repository to reference the new diagnostics source.
             self.diagnostics_repo
                 .write()
+                .await
                 .add_inspect_artifacts(component.clone(), directory, timestamp)
+                .await
                 .unwrap_or_else(|err| {
                     warn!(identity = %component, ?err, "Failed to add inspect artifacts to repository");
                 });
@@ -462,41 +464,48 @@ impl ArchivistState {
             // TODO(fxbug.dev/55736): The pipeline specific updates should be happening
             // asynchronously.
             for pipeline in self.diagnostics_pipelines.iter() {
-                pipeline.write().add_inspect_artifacts(&component.relative_moniker).unwrap_or_else(
-                    |e| {
+                pipeline
+                    .write()
+                    .await
+                    .add_inspect_artifacts(&component.relative_moniker)
+                    .unwrap_or_else(|e| {
                         warn!(identity = %component, ?e,
                             "Failed to add inspect artifacts to pipeline wrapper");
-                    },
-                );
+                    });
             }
         }
     }
 
     /// Updates the central repository to reference the new diagnostics source.
-    fn handle_started(&self, component: ComponentIdentity, timestamp: zx::Time) {
+    async fn handle_started(&self, component: ComponentIdentity, timestamp: zx::Time) {
         debug!(identity = %component, "Adding new component.");
-        if let Err(e) =
-            self.diagnostics_repo.write().add_new_component(component.clone(), timestamp)
+        if let Err(e) = self
+            .diagnostics_repo
+            .write()
+            .await
+            .add_new_component(component.clone(), timestamp)
+            .await
         {
             error!(identity = %component, ?e, "Failed to add new component to repository");
         }
     }
 
-    fn handle_stopped(&self, component: ComponentIdentity) {
+    async fn handle_stopped(&self, component: ComponentIdentity) {
         debug!(identity = %component, "Component stopped");
-        self.diagnostics_repo.write().mark_stopped(&component.unique_key());
-        maybe_remove_component(&component, &self.diagnostics_repo, &self.diagnostics_pipelines);
+        self.diagnostics_repo.write().await.mark_stopped(&component.unique_key()).await;
+        maybe_remove_component(&component, &self.diagnostics_repo, &self.diagnostics_pipelines)
+            .await;
     }
 
-    fn handle_log_sink_requested(
+    async fn handle_log_sink_requested(
         &self,
         component: ComponentIdentity,
         request_stream: Option<flogger::LogSinkRequestStream>,
     ) {
         debug!(identity = %component, "LogSink requested.");
         if let Some(request_stream) = request_stream {
-            let container = self.diagnostics_repo.write().get_log_container(component);
-            container.handle_log_sink(request_stream, self.log_sender.read().clone());
+            let container = self.diagnostics_repo.write().await.get_log_container(component).await;
+            container.handle_log_sink(request_stream, self.log_sender.read().await.clone()).await;
         }
     }
 }
@@ -506,19 +515,19 @@ impl EventConsumer for ArchivistState {
     async fn handle(self: Arc<Self>, event: Event) {
         match event.payload {
             EventPayload::ComponentStarted(ComponentStartedPayload { component }) => {
-                self.handle_started(component, event.timestamp);
+                self.handle_started(component, event.timestamp).await;
             }
             EventPayload::ComponentStopped(ComponentStoppedPayload { component }) => {
-                self.handle_stopped(component);
+                self.handle_stopped(component).await;
             }
             EventPayload::DiagnosticsReady(DiagnosticsReadyPayload { component, directory }) => {
-                self.handle_diagnostics_ready(component, directory, event.timestamp);
+                self.handle_diagnostics_ready(component, directory, event.timestamp).await;
             }
             EventPayload::LogSinkRequested(LogSinkRequestedPayload {
                 component,
                 request_stream,
             }) => {
-                self.handle_log_sink_requested(component, request_stream);
+                self.handle_log_sink_requested(component, request_stream).await;
             }
         }
     }

@@ -325,6 +325,7 @@ mod tests {
             events::types::ComponentIdentifier, identity::ComponentIdentity, pipeline::Pipeline,
             repository::DataRepo,
         },
+        async_lock::RwLock,
         diagnostics_hierarchy::trie::TrieIterableNode,
         fdio,
         fidl::endpoints::{create_proxy_and_stream, DiscoverableProtocolMarker},
@@ -338,7 +339,6 @@ mod tests {
         fuchsia_zircon::Peered,
         futures::future::join_all,
         futures::{FutureExt, StreamExt},
-        parking_lot::RwLock,
         selectors::{self, VerboseError},
         serde_json::json,
         std::path::PathBuf,
@@ -604,7 +604,7 @@ mod tests {
     #[fuchsia::test]
     async fn inspect_repo_disallows_duplicated_dirs() {
         let inspect_repo = DataRepo::default();
-        let mut inspect_repo = inspect_repo.write();
+        let mut inspect_repo = inspect_repo.write().await;
         let instance_id = "1234".to_string();
 
         let identity = ComponentIdentity::from_identifier_and_url(
@@ -616,6 +616,7 @@ mod tests {
 
         inspect_repo
             .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
+            .await
             .expect("add to repo");
 
         let (proxy, _) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
@@ -623,6 +624,7 @@ mod tests {
 
         inspect_repo
             .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
+            .await
             .expect("add to repo");
 
         assert_eq!(
@@ -735,11 +737,14 @@ mod tests {
                     let identity = ComponentIdentity::from_identifier_and_url(cid, TEST_URL);
                     inspect_repo
                         .write()
+                        .await
                         .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
+                        .await
                         .unwrap();
 
                     pipeline_wrapper
                         .write()
+                        .await
                         .add_inspect_artifacts(&identity.relative_moniker)
                         .unwrap();
                 }
@@ -907,10 +912,12 @@ mod tests {
         let identity = ComponentIdentity::from_identifier_and_url(component_id, TEST_URL);
         inspect_repo
             .write()
+            .await
             .add_inspect_artifacts(identity.clone(), out_dir_proxy, zx::Time::from_nanos(0))
+            .await
             .unwrap();
 
-        pipeline_wrapper.write().add_inspect_artifacts(&identity.relative_moniker).unwrap();
+        pipeline_wrapper.write().await.add_inspect_artifacts(&identity.relative_moniker).unwrap();
 
         let expected_get_next_result_errors = match mode {
             VerifyMode::ExpectComponentFailure => 1u64,
@@ -1034,8 +1041,8 @@ mod tests {
 
         let test_batch_iterator_stats2 = Arc::new(test_accessor_stats.new_inspect_batch_iterator());
 
-        inspect_repo.write().mark_stopped(&identity.unique_key());
-        pipeline_wrapper.write().remove(&identity.relative_moniker);
+        inspect_repo.write().await.mark_stopped(&identity.unique_key()).await;
+        pipeline_wrapper.write().await.remove(&identity.relative_moniker);
         {
             let result_json = read_snapshot(
                 pipeline_wrapper.clone(),
@@ -1127,7 +1134,7 @@ mod tests {
         }
     }
 
-    fn start_snapshot(
+    async fn start_snapshot(
         inspect_pipeline: Arc<RwLock<Pipeline>>,
         stats: Arc<BatchIteratorConnectionStats>,
     ) -> (BatchIteratorProxy, Task<()>) {
@@ -1137,7 +1144,7 @@ mod tests {
         };
 
         let reader_server = Box::pin(ReaderServer::stream(
-            inspect_pipeline.read().fetch_inspect_data(&None),
+            inspect_pipeline.read().await.fetch_inspect_data(&None).await,
             test_performance_config,
             // No selectors
             None,
@@ -1170,7 +1177,7 @@ mod tests {
         _test_inspector: Arc<Inspector>,
         stats: Arc<BatchIteratorConnectionStats>,
     ) -> serde_json::Value {
-        let (consumer, server) = start_snapshot(inspect_pipeline, stats);
+        let (consumer, server) = start_snapshot(inspect_pipeline, stats).await;
 
         let mut result_vec: Vec<String> = Vec::new();
         loop {
@@ -1208,7 +1215,7 @@ mod tests {
         expected_batch_sizes: Vec<usize>,
         stats: Arc<BatchIteratorConnectionStats>,
     ) -> serde_json::Value {
-        let (consumer, server) = start_snapshot(inspect_repo, stats);
+        let (consumer, server) = start_snapshot(inspect_repo, stats).await;
 
         let mut result_vec: Vec<String> = Vec::new();
         let mut batch_counts = Vec::new();

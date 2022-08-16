@@ -20,6 +20,7 @@ use {
         },
         ImmutableString,
     },
+    async_lock::{Mutex, RwLock},
     diagnostics_data::LogsData,
     diagnostics_hierarchy::{
         trie::{self, TrieIterableNode},
@@ -36,7 +37,6 @@ use {
     futures::channel::mpsc,
     futures::prelude::*,
     lazy_static::lazy_static,
-    parking_lot::{Mutex, RwLock},
     selectors,
     std::{
         collections::{BTreeMap, HashMap},
@@ -86,7 +86,7 @@ impl DataRepo {
         K: DebugLog + Send + Sync + 'static,
     {
         debug!("Draining debuglog.");
-        let container = self.write().get_log_container(KERNEL_IDENTITY.clone());
+        let container = self.write().await.get_log_container(KERNEL_IDENTITY.clone()).await;
         let mut kernel_logger = DebugLogBridge::create(klog_reader);
         let mut messages = match kernel_logger.existing_logs().await {
             Ok(messages) => messages,
@@ -97,13 +97,13 @@ impl DataRepo {
         };
         messages.sort_by_key(|m| m.timestamp());
         for message in messages {
-            container.ingest_message(message);
+            container.ingest_message(message).await;
         }
 
         let res = kernel_logger
             .listen()
             .try_for_each(|message| async {
-                container.ingest_message(message);
+                container.ingest_message(message).await;
                 Ok(())
             })
             .await;
@@ -157,14 +157,14 @@ impl DataRepo {
             let listener = Listener::new(listener, options)?;
             let mode =
                 if dump_logs { StreamMode::Snapshot } else { StreamMode::SnapshotThenSubscribe };
-            let logs = self.logs_cursor(mode, None);
+            let logs = self.logs_cursor(mode, None).await;
             if let Some(s) = selectors {
-                self.write().update_logs_interest(connection_id, s);
+                self.write().await.update_logs_interest(connection_id, s).await;
             }
 
             sender.send(listener.spawn(logs, dump_logs)).await.ok();
         }
-        self.write().finish_interest_connection(connection_id);
+        self.write().await.finish_interest_connection(connection_id).await;
         Ok(())
     }
 
@@ -180,21 +180,21 @@ impl DataRepo {
             })?;
             match request {
                 LogSettingsRequest::RegisterInterest { selectors, .. } => {
-                    self.write().update_logs_interest(connection_id, selectors);
+                    self.write().await.update_logs_interest(connection_id, selectors).await;
                 }
             }
         }
-        self.write().finish_interest_connection(connection_id);
+        self.write().await.finish_interest_connection(connection_id).await;
 
         Ok(())
     }
 
-    pub fn logs_cursor(
+    pub async fn logs_cursor(
         &self,
         mode: StreamMode,
         selectors: Option<Vec<Selector>>,
     ) -> impl Stream<Item = Arc<LogsData>> + Send + 'static {
-        let mut repo = self.write();
+        let mut repo = self.write().await;
         let (mut merged, mpx_handle) = Multiplexer::new();
         if let Some(selectors) = selectors {
             merged.set_selectors(selectors);
@@ -208,7 +208,7 @@ impl DataRepo {
             .for_each(|(n, c)| {
                 mpx_handle.send(n, c);
             });
-        repo.logs_multiplexers.add(mode, mpx_handle);
+        repo.logs_multiplexers.add(mode, mpx_handle).await;
         merged.set_on_drop_id_sender(repo.logs_multiplexers.cleanup_sender());
 
         merged
@@ -216,11 +216,11 @@ impl DataRepo {
 
     /// Returns `true` if a container exists for the requested `identity` and that container either
     /// corresponds to a running component or we've decided to still retain it.
-    pub fn is_live(&self, identity: &ComponentIdentity) -> bool {
-        let this = self.read();
+    pub async fn is_live(&self, identity: &ComponentIdentity) -> bool {
+        let this = self.read().await;
         if let Some(containers) = this.data_directories.get(&identity.unique_key().into()) {
             let diagnostics_containers = containers.get_values();
-            diagnostics_containers.len() == 1 && diagnostics_containers[0].should_retain()
+            diagnostics_containers.len() == 1 && diagnostics_containers[0].should_retain().await
         } else {
             false
         }
@@ -228,12 +228,12 @@ impl DataRepo {
 
     /// Stop accepting new messages, ensuring that pending Cursors return Poll::Ready(None) after
     /// consuming any messages received before this call.
-    pub fn terminate_logs(&self) {
-        let mut repo = self.write();
+    pub async fn terminate_logs(&self) {
+        let mut repo = self.write().await;
         for container in repo.data_directories.iter().filter_map(|(_, v)| v) {
             container.terminate_logs();
         }
-        repo.logs_multiplexers.terminate();
+        repo.logs_multiplexers.terminate().await;
     }
 }
 
@@ -265,16 +265,16 @@ impl DataRepoState {
         }))
     }
 
-    pub fn mark_stopped(&mut self, key: &UniqueKey) {
+    pub async fn mark_stopped(&mut self, key: &UniqueKey) {
         if let Some(containers) = self.data_directories.get_mut(key) {
             let diagnostics_containers = containers.get_values_mut();
             if diagnostics_containers.len() == 1 {
-                diagnostics_containers[0].mark_stopped();
+                diagnostics_containers[0].mark_stopped().await;
             }
         }
     }
 
-    pub fn add_new_component(
+    pub async fn add_new_component(
         &mut self,
         identity: ComponentIdentity,
         event_timestamp: zx::Time,
@@ -307,7 +307,7 @@ impl DataRepoState {
                         // Races may occur between seeing diagnostics ready and seeing
                         // creation lifecycle events. Handle this here.
                         // TODO(fxbug.dev/52047): Remove once caching handles ordering issues.
-                        existing_diagnostics_artifact_container.mark_started();
+                        existing_diagnostics_artifact_container.mark_started().await;
                         if existing_diagnostics_artifact_container.lifecycle.is_none() {
                             existing_diagnostics_artifact_container.lifecycle =
                                 Some(lifecycle_artifact_container);
@@ -334,7 +334,7 @@ impl DataRepoState {
 
     /// Returns a container for logs artifacts, constructing one and adding it to the trie if
     /// necessary.
-    pub fn get_log_container(
+    pub async fn get_log_container(
         &mut self,
         identity: ComponentIdentity,
     ) -> Arc<LogsArtifactsContainer> {
@@ -345,11 +345,9 @@ impl DataRepoState {
             () => {{
                 let mut to_insert =
                     ComponentDiagnostics::empty(Arc::new(identity), &self.inspect_node);
-                let logs = to_insert.logs(
-                    &self.logs_budget,
-                    &self.logs_interest,
-                    &mut self.logs_multiplexers,
-                );
+                let logs = to_insert
+                    .logs(&self.logs_budget, &self.logs_interest, &mut self.logs_multiplexers)
+                    .await;
                 self.data_directories.insert(trie_key, to_insert);
                 logs
             }};
@@ -358,18 +356,18 @@ impl DataRepoState {
         match self.data_directories.get_mut(&trie_key) {
             Some(component) => match &mut component.get_values_mut()[..] {
                 [] => insert_component!(),
-                [existing] => existing.logs(
-                    &self.logs_budget,
-                    &self.logs_interest,
-                    &mut self.logs_multiplexers,
-                ),
+                [existing] => {
+                    existing
+                        .logs(&self.logs_budget, &self.logs_interest, &mut self.logs_multiplexers)
+                        .await
+                }
                 _ => unreachable!("invariant: each trie node has 0-1 entries"),
             },
             None => insert_component!(),
         }
     }
 
-    pub fn update_logs_interest(
+    async fn update_logs_interest(
         &mut self,
         connection_id: usize,
         selectors: Vec<LogInterestSelector>,
@@ -381,26 +379,26 @@ impl DataRepoState {
         for (_, dir) in self.data_directories.iter() {
             if let Some(dir) = dir {
                 if let Some(logs) = &dir.logs {
-                    logs.update_interest(new_selectors, &previous_selectors);
+                    logs.update_interest(new_selectors, &previous_selectors).await;
                 }
             }
         }
     }
 
-    pub fn finish_interest_connection(&mut self, connection_id: usize) {
+    pub async fn finish_interest_connection(&mut self, connection_id: usize) {
         let selectors = self.interest_registrations.remove(&connection_id);
         if let Some(selectors) = selectors {
             for (_, dir) in self.data_directories.iter() {
                 if let Some(dir) = dir {
                     if let Some(logs) = &dir.logs {
-                        logs.reset_interest(&selectors);
+                        logs.reset_interest(&selectors).await;
                     }
                 }
             }
         }
     }
 
-    pub fn add_inspect_artifacts(
+    pub async fn add_inspect_artifacts(
         &mut self,
         identity: ComponentIdentity,
         directory_proxy: fio::DirectoryProxy,
@@ -411,11 +409,11 @@ impl DataRepoState {
             event_timestamp,
         };
 
-        self.insert_inspect_artifact_container(inspect_container, identity)
+        self.insert_inspect_artifact_container(inspect_container, identity).await
     }
 
     // Inserts an InspectArtifactsContainer into the data repository.
-    fn insert_inspect_artifact_container(
+    async fn insert_inspect_artifact_container(
         &mut self,
         inspect_container: InspectArtifactsContainer,
         identity: ComponentIdentity,
@@ -447,7 +445,7 @@ impl DataRepoState {
                         // Races may occur between synthesized and real diagnostics_ready
                         // events, so we must handle de-duplication here.
                         // TODO(fxbug.dev/52047): Remove once caching handles ordering issues.
-                        existing_diagnostics_artifact_container.mark_started();
+                        existing_diagnostics_artifact_container.mark_started().await;
                         if existing_diagnostics_artifact_container.inspect.is_none() {
                             // This is expected to be the most common case. We've encountered the
                             // diagnostics_ready event for a component that has already been
@@ -607,7 +605,7 @@ impl MultiplexerBroker {
             cleanup_sender,
             _live_iterators_cleanup_task: fasync::Task::spawn(async move {
                 while let Some(id) = receiver.next().await {
-                    live_iterators_clone.lock().remove(&id);
+                    live_iterators_clone.lock().await.remove(&id);
                 }
             }),
         }
@@ -619,27 +617,30 @@ impl MultiplexerBroker {
 
     /// A new BatchIterator has been created and must be notified when future log containers are
     /// created.
-    fn add(&mut self, mode: StreamMode, recipient: MultiplexerHandle<Arc<LogsData>>) {
+    async fn add(&mut self, mode: StreamMode, recipient: MultiplexerHandle<Arc<LogsData>>) {
         match mode {
             // snapshot streams only want to know about what's currently available
             StreamMode::Snapshot => recipient.close(),
             StreamMode::SnapshotThenSubscribe | StreamMode::Subscribe => {
-                self.live_iterators.lock().insert(recipient.multiplexer_id(), (mode, recipient));
+                self.live_iterators
+                    .lock()
+                    .await
+                    .insert(recipient.multiplexer_id(), (mode, recipient));
             }
         }
     }
 
     /// Notify existing BatchIterators of a new logs container so they can include its messages
     /// in their results.
-    pub fn send(&mut self, container: &Arc<LogsArtifactsContainer>) {
-        self.live_iterators.lock().retain(|_, (mode, recipient)| {
+    pub async fn send(&mut self, container: &Arc<LogsArtifactsContainer>) {
+        self.live_iterators.lock().await.retain(|_, (mode, recipient)| {
             recipient.send(container.identity.relative_moniker.clone(), container.cursor(*mode))
         });
     }
 
     /// Notify all multiplexers to terminate their streams once sub streams have terminated.
-    fn terminate(&mut self) {
-        for (_, (_, recipient)) in self.live_iterators.lock().drain() {
+    async fn terminate(&mut self) {
+        for (_, (_, recipient)) in self.live_iterators.lock().await.drain() {
             recipient.close();
         }
     }
@@ -664,7 +665,7 @@ mod tests {
     #[fuchsia::test]
     async fn inspect_repo_disallows_duplicated_dirs() {
         let inspect_repo = DataRepo::default();
-        let mut inspect_repo = inspect_repo.write();
+        let mut inspect_repo = inspect_repo.write().await;
         let moniker = vec!["a", "b", "foo.cmx"].into();
         let instance_id = "1234".to_string();
 
@@ -676,6 +677,7 @@ mod tests {
 
         inspect_repo
             .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
+            .await
             .expect("add to repo");
 
         let (proxy, _) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
@@ -683,6 +685,7 @@ mod tests {
 
         inspect_repo
             .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
+            .await
             .expect("add to repo");
 
         assert_eq!(
@@ -699,7 +702,7 @@ mod tests {
     #[fuchsia::test]
     async fn data_repo_updates_existing_entry_to_hold_inspect_data() {
         let data_repo = DataRepo::default();
-        let mut data_repo = data_repo.write();
+        let mut data_repo = data_repo.write().await;
         let moniker = vec!["a", "b", "foo.cmx"].into();
         let instance_id = "1234".to_string();
 
@@ -708,6 +711,7 @@ mod tests {
 
         data_repo
             .add_new_component(identity.clone(), zx::Time::from_nanos(0))
+            .await
             .expect("instantiated new component.");
 
         let (proxy, _) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
@@ -715,6 +719,7 @@ mod tests {
 
         data_repo
             .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
+            .await
             .expect("add to repo");
 
         assert_eq!(
@@ -735,7 +740,7 @@ mod tests {
     #[fuchsia::test]
     async fn data_repo_tolerates_duplicate_new_component_insertions() {
         let data_repo = DataRepo::default();
-        let mut data_repo = data_repo.write();
+        let mut data_repo = data_repo.write().await;
         let moniker = vec!["a", "b", "foo.cmx"].into();
         let instance_id = "1234".to_string();
 
@@ -744,10 +749,11 @@ mod tests {
 
         data_repo
             .add_new_component(identity.clone(), zx::Time::from_nanos(0))
+            .await
             .expect("instantiated new component.");
 
         let duplicate_new_component_insertion =
-            data_repo.add_new_component(identity.clone(), zx::Time::from_nanos(1));
+            data_repo.add_new_component(identity.clone(), zx::Time::from_nanos(1)).await;
 
         assert!(duplicate_new_component_insertion.is_ok());
 
@@ -763,7 +769,7 @@ mod tests {
     #[fuchsia::test]
     async fn running_components_provide_start_time() {
         let data_repo = DataRepo::default();
-        let mut data_repo = data_repo.write();
+        let mut data_repo = data_repo.write().await;
         let moniker = vec!["a", "b", "foo.cmx"].into();
         let instance_id = "1234".to_string();
 
@@ -771,7 +777,7 @@ mod tests {
         let identity = ComponentIdentity::from_identifier_and_url(component_id.clone(), TEST_URL);
 
         let component_insertion =
-            data_repo.add_new_component(identity.clone(), zx::Time::from_nanos(1));
+            data_repo.add_new_component(identity.clone(), zx::Time::from_nanos(1)).await;
 
         assert!(component_insertion.is_ok());
 
@@ -787,7 +793,7 @@ mod tests {
     #[fuchsia::test]
     async fn data_repo_tolerant_of_new_component_calls_if_diagnostics_ready_already_processed() {
         let data_repo = DataRepo::default();
-        let mut data_repo = data_repo.write();
+        let mut data_repo = data_repo.write().await;
         let moniker = vec!["a", "b", "foo.cmx"].into();
         let instance_id = "1234".to_string();
 
@@ -799,10 +805,11 @@ mod tests {
 
         data_repo
             .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
+            .await
             .expect("add to repo");
 
         let false_new_component_result =
-            data_repo.add_new_component(identity.clone(), zx::Time::from_nanos(0));
+            data_repo.add_new_component(identity.clone(), zx::Time::from_nanos(0)).await;
         assert!(false_new_component_result.is_ok());
 
         // We shouldn't have overwritten the entry. There should still be an inspect
@@ -826,7 +833,7 @@ mod tests {
     #[fuchsia::test]
     async fn diagnostics_repo_cant_have_more_than_one_diagnostics_data_container_per_component() {
         let data_repo = DataRepo::default();
-        let mut data_repo = data_repo.write();
+        let mut data_repo = data_repo.write().await;
         let moniker = vec!["a", "b", "foo.cmx"].into();
         let instance_id = "1234".to_string();
 
@@ -835,6 +842,7 @@ mod tests {
 
         data_repo
             .add_new_component(identity.clone(), zx::Time::from_nanos(0))
+            .await
             .expect("insertion will succeed.");
 
         assert_eq!(
@@ -859,7 +867,10 @@ mod tests {
         let (proxy, _) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
             .expect("create directory proxy");
 
-        assert!(data_repo.add_inspect_artifacts(identity, proxy, zx::Time::from_nanos(0)).is_err());
+        assert!(data_repo
+            .add_inspect_artifacts(identity, proxy, zx::Time::from_nanos(0))
+            .await
+            .is_err());
     }
 
     #[fuchsia::test]
@@ -875,11 +886,14 @@ mod tests {
 
         data_repo
             .write()
+            .await
             .add_new_component(identity.clone(), zx::Time::from_nanos(0))
+            .await
             .expect("insertion will succeed.");
 
         data_repo
             .write()
+            .await
             .add_inspect_artifacts(
                 identity,
                 fuchsia_fs::directory::open_in_namespace(
@@ -889,6 +903,7 @@ mod tests {
                 .expect("open root"),
                 zx::Time::from_nanos(0),
             )
+            .await
             .expect("add inspect artifacts");
 
         let mut moniker = realm_path;
@@ -901,11 +916,14 @@ mod tests {
 
         data_repo
             .write()
+            .await
             .add_new_component(identity2.clone(), zx::Time::from_nanos(0))
+            .await
             .expect("insertion will succeed.");
 
         data_repo
             .write()
+            .await
             .add_inspect_artifacts(
                 identity2,
                 fuchsia_fs::directory::open_in_namespace(
@@ -915,54 +933,63 @@ mod tests {
                 .expect("open root"),
                 zx::Time::from_nanos(0),
             )
+            .await
             .expect("add inspect artifacts");
 
-        assert_eq!(2, data_repo.read().fetch_inspect_data(&None, None).len());
+        assert_eq!(2, data_repo.read().await.fetch_inspect_data(&None, None).len());
 
         let selectors = Some(vec![
             selectors::parse_selector::<FastError>("a/b/foo.cmx:root").expect("parse selector")
         ]);
-        assert_eq!(1, data_repo.read().fetch_inspect_data(&selectors, None).len());
+        assert_eq!(1, data_repo.read().await.fetch_inspect_data(&selectors, None).len());
 
         let selectors = Some(vec![
             selectors::parse_selector::<FastError>("a/b/f*.cmx:root").expect("parse selector")
         ]);
-        assert_eq!(2, data_repo.read().fetch_inspect_data(&selectors, None).len());
+        assert_eq!(2, data_repo.read().await.fetch_inspect_data(&selectors, None).len());
 
         let selectors = Some(vec![
             selectors::parse_selector::<FastError>("foo.cmx:root").expect("parse selector")
         ]);
-        assert_eq!(0, data_repo.read().fetch_inspect_data(&selectors, None).len());
+        assert_eq!(0, data_repo.read().await.fetch_inspect_data(&selectors, None).len());
     }
 
     #[fuchsia::test]
     async fn data_repo_filters_logs_by_selectors() {
         let repo = DataRepo::default();
-        let foo_container =
-            repo.write().get_log_container(ComponentIdentity::from_identifier_and_url(
+        let foo_container = repo
+            .write()
+            .await
+            .get_log_container(ComponentIdentity::from_identifier_and_url(
                 ComponentIdentifier::parse_from_moniker("./foo").unwrap(),
                 "fuchsia-pkg://foo",
-            ));
-        let bar_container =
-            repo.write().get_log_container(ComponentIdentity::from_identifier_and_url(
+            ))
+            .await;
+        let bar_container = repo
+            .write()
+            .await
+            .get_log_container(ComponentIdentity::from_identifier_and_url(
                 ComponentIdentifier::parse_from_moniker("./bar").unwrap(),
                 "fuchsia-pkg://bar",
-            ));
+            ))
+            .await;
 
-        foo_container.ingest_message(make_message("a", 1));
-        bar_container.ingest_message(make_message("b", 2));
-        foo_container.ingest_message(make_message("c", 3));
+        foo_container.ingest_message(make_message("a", 1)).await;
+        bar_container.ingest_message(make_message("b", 2)).await;
+        foo_container.ingest_message(make_message("c", 3)).await;
 
-        let stream = repo.logs_cursor(StreamMode::Snapshot, None);
+        let stream = repo.logs_cursor(StreamMode::Snapshot, None).await;
 
         let results =
             stream.map(|value| value.msg().unwrap().to_string()).collect::<Vec<_>>().await;
         assert_eq!(results, vec!["a".to_string(), "b".to_string(), "c".to_string()]);
 
-        let filtered_stream = repo.logs_cursor(
-            StreamMode::Snapshot,
-            Some(vec![selectors::parse_selector::<FastError>("foo:root").unwrap()]),
-        );
+        let filtered_stream = repo
+            .logs_cursor(
+                StreamMode::Snapshot,
+                Some(vec![selectors::parse_selector::<FastError>("foo:root").unwrap()]),
+            )
+            .await;
 
         let results =
             filtered_stream.map(|value| value.msg().unwrap().to_string()).collect::<Vec<_>>().await;
@@ -972,15 +999,15 @@ mod tests {
     #[fuchsia::test]
     async fn multiplexer_broker_cleanup() {
         let repo = DataRepo::default();
-        let stream = repo.logs_cursor(StreamMode::SnapshotThenSubscribe, None);
+        let stream = repo.logs_cursor(StreamMode::SnapshotThenSubscribe, None).await;
 
-        assert_eq!(repo.read().logs_multiplexers.live_iterators.lock().len(), 1);
+        assert_eq!(repo.read().await.logs_multiplexers.live_iterators.lock().await.len(), 1);
 
         // When the multiplexer goes away it must be forgotten by the broker.
         drop(stream);
         loop {
             fasync::Timer::new(Duration::from_millis(100)).await;
-            if repo.read().logs_multiplexers.live_iterators.lock().len() == 0 {
+            if repo.read().await.logs_multiplexers.live_iterators.lock().await.len() == 0 {
                 break;
             }
         }

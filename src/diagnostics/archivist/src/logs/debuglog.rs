@@ -266,8 +266,8 @@ mod tests {
     async fn logger_existing_logs_test() {
         let debug_log = TestDebugLog::new();
         let klog = TestDebugEntry::new("test log".as_bytes());
-        debug_log.enqueue_read_entry(&klog);
-        debug_log.enqueue_read_fail(zx::Status::SHOULD_WAIT);
+        debug_log.enqueue_read_entry(&klog).await;
+        debug_log.enqueue_read_fail(zx::Status::SHOULD_WAIT).await;
         let mut log_bridge = DebugLogBridge::create(debug_log);
 
         assert_eq!(
@@ -296,9 +296,9 @@ mod tests {
         let debug_log = TestDebugLog::new();
         // This is a malformed record because the message contains invalid UTF8.
         let malformed_klog = TestDebugEntry::new(b"\x80");
-        debug_log.enqueue_read_entry(&malformed_klog);
+        debug_log.enqueue_read_entry(&malformed_klog).await;
 
-        debug_log.enqueue_read_fail(zx::Status::SHOULD_WAIT);
+        debug_log.enqueue_read_fail(zx::Status::SHOULD_WAIT).await;
         let mut log_bridge = DebugLogBridge::create(debug_log);
         assert!(!log_bridge.existing_logs().await.unwrap().is_empty());
     }
@@ -306,9 +306,9 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn logger_keep_listening_after_exhausting_initial_contents_test() {
         let debug_log = TestDebugLog::new();
-        debug_log.enqueue_read_entry(&TestDebugEntry::new("test log".as_bytes()));
-        debug_log.enqueue_read_fail(zx::Status::SHOULD_WAIT);
-        debug_log.enqueue_read_entry(&TestDebugEntry::new("second test log".as_bytes()));
+        debug_log.enqueue_read_entry(&TestDebugEntry::new("test log".as_bytes())).await;
+        debug_log.enqueue_read_fail(zx::Status::SHOULD_WAIT).await;
+        debug_log.enqueue_read_entry(&TestDebugEntry::new("second test log".as_bytes())).await;
         let log_bridge = DebugLogBridge::create(debug_log);
         let mut log_stream =
             Box::pin(log_bridge.listen()).map(|r| r.unwrap().parse(&*KERNEL_IDENTITY));
@@ -321,9 +321,9 @@ mod tests {
         let debug_log = TestDebugLog::new();
         // This is a malformed record because the message contains invalid UTF8.
         let malformed_klog = TestDebugEntry::new(b"\x80");
-        debug_log.enqueue_read_entry(&malformed_klog);
+        debug_log.enqueue_read_entry(&malformed_klog).await;
 
-        debug_log.enqueue_read_entry(&TestDebugEntry::new("test log".as_bytes()));
+        debug_log.enqueue_read_entry(&TestDebugEntry::new("test log".as_bytes())).await;
         let log_bridge = DebugLogBridge::create(debug_log);
         let mut log_stream = Box::pin(log_bridge.listen());
         let log_message =
@@ -337,12 +337,12 @@ mod tests {
     #[fasync::run_until_stalled(test)]
     async fn severity_parsed_from_log() {
         let debug_log = TestDebugLog::new();
-        debug_log.enqueue_read_entry(&TestDebugEntry::new("ERROR: first log".as_bytes()));
+        debug_log.enqueue_read_entry(&TestDebugEntry::new("ERROR: first log".as_bytes())).await;
         // We look for the string 'ERROR:' to label this as a Severity::Error.
-        debug_log.enqueue_read_entry(&TestDebugEntry::new("first log error".as_bytes()));
-        debug_log.enqueue_read_entry(&TestDebugEntry::new("WARNING: second log".as_bytes()));
-        debug_log.enqueue_read_entry(&TestDebugEntry::new("INFO: third log".as_bytes()));
-        debug_log.enqueue_read_entry(&TestDebugEntry::new("fourth log".as_bytes()));
+        debug_log.enqueue_read_entry(&TestDebugEntry::new("first log error".as_bytes())).await;
+        debug_log.enqueue_read_entry(&TestDebugEntry::new("WARNING: second log".as_bytes())).await;
+        debug_log.enqueue_read_entry(&TestDebugEntry::new("INFO: third log".as_bytes())).await;
+        debug_log.enqueue_read_entry(&TestDebugEntry::new("fourth log".as_bytes())).await;
         // Create a string prefixed with multi-byte UTF-8 characters. This entry will be labeled as
         // Info rather than Error because the string "ERROR:" only appears after the
         // MAX_STRING_SEARCH_SIZE. It's crucial that we use multi-byte UTF-8 characters because we
@@ -351,7 +351,7 @@ mod tests {
         // character.
         let long_padding = (0..100).map(|_| "\u{10FF}").collect::<String>();
         let long_log = format!("{}ERROR: fifth log", long_padding);
-        debug_log.enqueue_read_entry(&TestDebugEntry::new(long_log.as_bytes()));
+        debug_log.enqueue_read_entry(&TestDebugEntry::new(long_log.as_bytes())).await;
 
         let log_bridge = DebugLogBridge::create(debug_log);
         let mut log_stream =

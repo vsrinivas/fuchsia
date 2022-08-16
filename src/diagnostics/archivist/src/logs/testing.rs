@@ -151,7 +151,7 @@ impl TestHarness {
         };
         let mut lm2 = copy_log_message(&lm1);
         let mut lm3 = copy_log_message(&lm1);
-        let mut stream = self.create_stream(Arc::new(ComponentIdentity::unknown()));
+        let mut stream = self.create_stream(Arc::new(ComponentIdentity::unknown())).await;
         stream.write_packet(&mut p);
 
         p.metadata.severity = LogLevelFilter::Info.into_primitive().into();
@@ -173,37 +173,37 @@ impl TestHarness {
 
     /// Create a [`TestStream`] which should be dropped before calling `filter_test` or
     /// `manager_test`.
-    pub fn create_stream(
+    pub async fn create_stream(
         &mut self,
         identity: Arc<ComponentIdentity>,
     ) -> TestStream<LogPacketWriter> {
-        self.make_stream(DefaultLogReader::new(self.log_manager.clone(), identity))
+        self.make_stream(DefaultLogReader::new(self.log_manager.clone(), identity)).await
     }
 
     /// Create a [`TestStream`] which should be dropped before calling `filter_test` or
     /// `manager_test`.
-    pub fn create_stream_from_log_reader(
+    pub async fn create_stream_from_log_reader(
         &mut self,
         log_reader: Arc<dyn LogReader>,
     ) -> TestStream<LogPacketWriter> {
-        self.make_stream(log_reader)
+        self.make_stream(log_reader).await
     }
 
     /// Create a [`TestStream`] which should be dropped before calling `filter_test` or
     /// `manager_test`.
-    pub fn create_structured_stream(
+    pub async fn create_structured_stream(
         &mut self,
         identity: Arc<ComponentIdentity>,
     ) -> TestStream<StructuredMessageWriter> {
-        self.make_stream(DefaultLogReader::new(self.log_manager.clone(), identity))
+        self.make_stream(DefaultLogReader::new(self.log_manager.clone(), identity)).await
     }
 
-    fn make_stream<E, P>(&mut self, log_reader: Arc<dyn LogReader>) -> TestStream<E>
+    async fn make_stream<E, P>(&mut self, log_reader: Arc<dyn LogReader>) -> TestStream<E>
     where
         E: LogWriter<Packet = P>,
     {
         let (log_sender, log_receiver) = mpsc::unbounded();
-        let _log_sink_proxy = log_reader.handle_request(log_sender);
+        let _log_sink_proxy = log_reader.handle_request(log_sender).await;
 
         fasync::Task::spawn(log_receiver.for_each_concurrent(None, |rx| async move { rx.await }))
             .detach();
@@ -267,8 +267,9 @@ impl LogWriter for StructuredMessageWriter {
 }
 
 /// A `LogReader` host a LogSink connection.
+#[async_trait]
 pub trait LogReader {
-    fn handle_request(&self, sender: mpsc::UnboundedSender<Task<()>>) -> LogSinkProxy;
+    async fn handle_request(&self, sender: mpsc::UnboundedSender<Task<()>>) -> LogSinkProxy;
 }
 
 // A LogReader that exercises the handle_log_sink code path.
@@ -283,12 +284,14 @@ impl DefaultLogReader {
     }
 }
 
+#[async_trait]
 impl LogReader for DefaultLogReader {
-    fn handle_request(&self, log_sender: mpsc::UnboundedSender<Task<()>>) -> LogSinkProxy {
+    async fn handle_request(&self, log_sender: mpsc::UnboundedSender<Task<()>>) -> LogSinkProxy {
         let (log_sink_proxy, log_sink_stream) =
             fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().unwrap();
-        let container = self.log_manager.write().get_log_container((*self.identity).clone());
-        container.handle_log_sink(log_sink_stream, log_sender);
+        let container =
+            self.log_manager.write().await.get_log_container((*self.identity).clone()).await;
+        container.handle_log_sink(log_sink_stream, log_sender).await;
         log_sink_proxy
     }
 }
@@ -322,13 +325,13 @@ impl EventStreamLogReader {
         while let Ok(Some(request)) = stream.try_next().await {
             match request {
                 fsys::EventStreamRequest::OnEvent { event, .. } => {
-                    Self::handle_event(event, sender.clone(), log_manager.clone())
+                    Self::handle_event(event, sender.clone(), log_manager.clone()).await
                 }
             }
         }
     }
 
-    fn handle_event(
+    async fn handle_event(
         event: fsys::Event,
         sender: mpsc::UnboundedSender<Task<()>>,
         log_manager: DataRepo,
@@ -338,13 +341,14 @@ impl EventStreamLogReader {
                 Event { payload: EventPayload::LogSinkRequested(payload), .. } => payload,
                 other => unreachable!("should never see {:?} here", other),
             };
-        let container = log_manager.write().get_log_container(component);
-        container.handle_log_sink(request_stream.unwrap(), sender);
+        let container = log_manager.write().await.get_log_container(component).await;
+        container.handle_log_sink(request_stream.unwrap(), sender).await;
     }
 }
 
+#[async_trait]
 impl LogReader for EventStreamLogReader {
-    fn handle_request(&self, log_sender: mpsc::UnboundedSender<Task<()>>) -> LogSinkProxy {
+    async fn handle_request(&self, log_sender: mpsc::UnboundedSender<Task<()>>) -> LogSinkProxy {
         let (event_stream_proxy, event_stream) =
             fidl::endpoints::create_proxy_and_stream::<fsys::EventStreamMarker>().unwrap();
         let (log_sink_proxy, log_sink_server_end) =
@@ -435,18 +439,18 @@ pub fn copy_log_message(log_message: &LogMessage) -> LogMessage {
 
 /// A fake reader that returns enqueued responses on read.
 pub struct TestDebugLog {
-    read_responses: parking_lot::Mutex<VecDeque<ReadResponse>>,
+    read_responses: async_lock::Mutex<VecDeque<ReadResponse>>,
 }
 type ReadResponse = Result<zx::sys::zx_log_record_t, zx::Status>;
 
 #[async_trait]
 impl crate::logs::debuglog::DebugLog for TestDebugLog {
     async fn read(&self) -> Result<zx::sys::zx_log_record_t, zx::Status> {
-        self.read_responses.lock().pop_front().expect("Got more read requests than enqueued")
+        self.read_responses.lock().await.pop_front().expect("Got more read requests than enqueued")
     }
 
     async fn ready_signal(&self) -> Result<(), zx::Status> {
-        if self.read_responses.lock().is_empty() {
+        if self.read_responses.lock().await.is_empty() {
             // ready signal should never complete if we have no logs left.
             futures::future::pending().await
         }
@@ -456,19 +460,19 @@ impl crate::logs::debuglog::DebugLog for TestDebugLog {
 
 impl TestDebugLog {
     pub fn new() -> Self {
-        TestDebugLog { read_responses: parking_lot::Mutex::new(VecDeque::new()) }
+        TestDebugLog { read_responses: async_lock::Mutex::new(VecDeque::new()) }
     }
 
-    pub fn enqueue_read(&self, response: zx::sys::zx_log_record_t) {
-        self.read_responses.lock().push_back(Ok(response));
+    pub async fn enqueue_read(&self, response: zx::sys::zx_log_record_t) {
+        self.read_responses.lock().await.push_back(Ok(response));
     }
 
-    pub fn enqueue_read_entry(&self, entry: &TestDebugEntry) {
-        self.enqueue_read(entry.record);
+    pub async fn enqueue_read_entry(&self, entry: &TestDebugEntry) {
+        self.enqueue_read(entry.record).await;
     }
 
-    pub fn enqueue_read_fail(&self, error: zx::Status) {
-        self.read_responses.lock().push_back(Err(error))
+    pub async fn enqueue_read_fail(&self, error: zx::Status) {
+        self.read_responses.lock().await.push_back(Err(error))
     }
 }
 

@@ -82,7 +82,7 @@ impl ComponentDiagnostics {
         new
     }
 
-    pub fn logs(
+    pub async fn logs(
         &mut self,
         budget: &BudgetManager,
         interest_selectors: &[LogInterestSelector],
@@ -94,15 +94,18 @@ impl ComponentDiagnostics {
             let stats = LogStreamStats::default()
                 .with_inspect(&self.source_node, "logs")
                 .expect("failed to attach component log stats");
-            let container = Arc::new(LogsArtifactsContainer::new(
-                self.identity.clone(),
-                interest_selectors,
-                stats,
-                budget.handle(),
-            ));
-            budget.add_container(container.clone());
+            let container = Arc::new(
+                LogsArtifactsContainer::new(
+                    self.identity.clone(),
+                    interest_selectors,
+                    stats,
+                    budget.handle(),
+                )
+                .await,
+            );
+            budget.add_container(container.clone()).await;
             self.logs = Some(container.clone());
-            multiplexers.send(&container);
+            multiplexers.send(&container).await;
             container
         }
     }
@@ -114,11 +117,11 @@ impl ComponentDiagnostics {
 
     /// Ensure this container is marked as live even if the component it represents had previously
     /// stopped.
-    pub fn mark_started(&mut self) {
+    pub async fn mark_started(&mut self) {
         debug!(%self.identity, "Marking component as started.");
         self.is_live = true;
         if let Some(logs) = &self.logs {
-            logs.mark_started();
+            logs.mark_started().await;
         }
     }
 
@@ -127,22 +130,24 @@ impl ComponentDiagnostics {
     ///
     /// Sets `inspect` and `lifecycle` to `None` so that this component will be excluded from
     /// accessors for those data types.
-    pub fn mark_stopped(&mut self) {
+    pub async fn mark_stopped(&mut self) {
         debug!(%self.identity, "Marking stopped.");
         self.inspect = None;
         self.lifecycle = None;
         self.is_live = false;
         if let Some(logs) = &self.logs {
-            logs.mark_stopped();
+            logs.mark_stopped().await;
         }
     }
 
     /// Returns `true` if the DataRepo should continue holding this container. This container should
     /// be retained as long as we believe the corresponding component is still running or as long as
     /// we still have logs from its execution.
-    pub fn should_retain(&self) -> bool {
-        let should_retain_logs = self.logs.as_ref().map(|l| l.should_retain()).unwrap_or(false);
-        self.is_live || should_retain_logs
+    pub async fn should_retain(&self) -> bool {
+        match self.logs.as_ref() {
+            Some(log) => self.is_live || log.should_retain().await,
+            None => false,
+        }
     }
 
     /// Ensure that no new log messages can be consumed from the corresponding component, causing

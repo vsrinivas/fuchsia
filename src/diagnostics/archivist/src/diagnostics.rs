@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    async_lock::Mutex,
     fuchsia_component::server::{ServiceFs, ServiceObjTrait},
     fuchsia_inspect::{
         component, health::Reporter, ExponentialHistogramParams, HistogramProperty,
@@ -11,7 +12,6 @@ use {
     },
     fuchsia_zircon::{self as zx, Duration},
     lazy_static::lazy_static,
-    parking_lot::Mutex,
     std::{
         collections::BTreeMap,
         sync::{
@@ -248,12 +248,12 @@ impl GlobalConnectionStats {
     }
 
     /// Record the duration of obtaining data from a single component.
-    pub fn record_component_duration(&self, moniker: impl AsRef<str>, duration: Duration) {
+    pub async fn record_component_duration(&self, moniker: impl AsRef<str>, duration: Duration) {
         let nanos = duration.into_nanos();
         if nanos >= 0 {
             // Lazily initialize stats that may not be needed for all diagnostics types.
 
-            let mut component_time_usec = self.component_time_usec.lock();
+            let mut component_time_usec = self.component_time_usec.lock().await;
             if component_time_usec.is_none() {
                 *component_time_usec = Some(self.node.create_uint_exponential_histogram(
                     &*COMPONENT_TIME_USEC,
@@ -261,7 +261,7 @@ impl GlobalConnectionStats {
                 ));
             }
 
-            let mut processing_time_tracker = self.processing_time_tracker.lock();
+            let mut processing_time_tracker = self.processing_time_tracker.lock().await;
             if processing_time_tracker.is_none() {
                 *processing_time_tracker = Some(ProcessingTimeTracker::new(
                     self.node.create_child(&*LONGEST_PROCESSING_TIMES),

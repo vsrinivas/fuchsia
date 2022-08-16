@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use crate::{identity::ComponentIdentity, logs::container::LogsArtifactsContainer};
+use async_lock::Mutex;
 use futures::channel::mpsc;
-use parking_lot::Mutex;
 use std::sync::{Arc, Weak};
 use tracing::{debug, error};
 
@@ -25,12 +25,12 @@ impl BudgetManager {
         }
     }
 
-    pub fn set_remover(&self, remover: mpsc::UnboundedSender<Arc<ComponentIdentity>>) {
-        self.state.lock().remover = Some(remover);
+    pub async fn set_remover(&self, remover: mpsc::UnboundedSender<Arc<ComponentIdentity>>) {
+        self.state.lock().await.remover = Some(remover);
     }
 
-    pub fn add_container(&self, container: Arc<LogsArtifactsContainer>) {
-        self.state.lock().containers.push(container);
+    pub async fn add_container(&self, container: Arc<LogsArtifactsContainer>) {
+        self.state.lock().await.containers.push(container);
     }
 
     pub fn handle(&self) -> BudgetHandle {
@@ -56,7 +56,7 @@ struct BudgetState {
 }
 
 impl BudgetState {
-    fn allocate(&mut self, size: usize) {
+    async fn allocate(&mut self, size: usize) {
         self.current += size;
 
         while self.current > self.capacity {
@@ -82,7 +82,7 @@ impl BudgetState {
         // https://doc.rust-lang.org/std/vec/struct.Vec.html#method.drain_filter
         let mut i = 0;
         while i != self.containers.len() {
-            if !self.containers[i].should_retain() {
+            if !self.containers[i].should_retain().await {
                 let container = self.containers.remove(i);
                 container.terminate();
                 debug!(identity = %container.identity, "Removing now that we've popped the last message.");
@@ -112,14 +112,25 @@ pub struct BudgetHandle {
 }
 
 impl BudgetHandle {
-    pub fn allocate(&self, size: usize) {
-        self.state.upgrade().expect("budgetmanager outlives all containers").lock().allocate(size);
+    pub async fn allocate(&self, size: usize) {
+        self.state
+            .upgrade()
+            .expect("budgetmanager outlives all containers")
+            .lock()
+            .await
+            .allocate(size)
+            .await;
     }
 
     /// Terminate the log buffers of all components here in case we have some that have been
     /// removed from the data repo but we haven't dropped ourselves.
-    pub fn terminate(&self) {
-        self.state.upgrade().expect("budgetmanager outlives all containers").lock().terminate();
+    pub async fn terminate(&self) {
+        self.state
+            .upgrade()
+            .expect("budgetmanager outlives all containers")
+            .lock()
+            .await
+            .terminate();
     }
 }
 
@@ -157,34 +168,40 @@ mod tests {
     #[fuchsia::test]
     async fn verify_container_is_terminated_on_removal() {
         let manager = BudgetManager::new(128);
-        let container_a = Arc::new(LogsArtifactsContainer::new(
-            TEST_IDENTITY.clone(),
-            &vec![],
-            LogStreamStats::default(),
-            manager.handle(),
-        ));
-        let container_b = Arc::new(LogsArtifactsContainer::new(
-            TEST_IDENTITY.clone(),
-            &vec![],
-            LogStreamStats::default(),
-            manager.handle(),
-        ));
-        manager.add_container(container_a.clone());
-        manager.add_container(container_b.clone());
-        assert_eq!(manager.state.lock().containers.len(), 2);
+        let container_a = Arc::new(
+            LogsArtifactsContainer::new(
+                TEST_IDENTITY.clone(),
+                &vec![],
+                LogStreamStats::default(),
+                manager.handle(),
+            )
+            .await,
+        );
+        let container_b = Arc::new(
+            LogsArtifactsContainer::new(
+                TEST_IDENTITY.clone(),
+                &vec![],
+                LogStreamStats::default(),
+                manager.handle(),
+            )
+            .await,
+        );
+        manager.add_container(container_a.clone()).await;
+        manager.add_container(container_b.clone()).await;
+        assert_eq!(manager.state.lock().await.containers.len(), 2);
 
         // Add a few test messages
-        container_b.ingest_message(fake_message_bytes(1));
-        container_a.ingest_message(fake_message_bytes(2));
+        container_b.ingest_message(fake_message_bytes(1)).await;
+        container_a.ingest_message(fake_message_bytes(2)).await;
 
         let mut cursor = CursorWrapper(container_b.cursor(StreamMode::SnapshotThenSubscribe));
         assert_eq!(cursor.next().await, Some(Arc::new(fake_message(1))));
 
-        container_b.mark_stopped();
+        container_b.mark_stopped().await;
 
         // This allocation exceeds capacity, so the B container is dropped and terminated.
-        container_a.ingest_message(fake_message_bytes(3));
-        assert_eq!(manager.state.lock().containers.len(), 1);
+        container_a.ingest_message(fake_message_bytes(3)).await;
+        assert_eq!(manager.state.lock().await.containers.len(), 1);
 
         // The container was terminated too.
         assert_eq!(container_b.buffer().final_entry(), 1);

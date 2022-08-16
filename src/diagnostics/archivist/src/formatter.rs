@@ -6,7 +6,6 @@ use {
     fidl_fuchsia_diagnostics::{DataType, FormattedContent, StreamMode, MAXIMUM_ENTRIES_PER_BATCH},
     fuchsia_zircon as zx,
     futures::prelude::*,
-    parking_lot::Mutex,
     serde::Serialize,
     std::{
         io::{BufWriter, Result as IoResult, Write},
@@ -92,7 +91,8 @@ where
 
 #[derive(Clone)]
 struct VmoWriter {
-    inner: Arc<Mutex<InnerVmoWriter>>,
+    // TODO(https://fxbug.dev/106877) make this an async lock
+    inner: Arc<std::sync::Mutex<InnerVmoWriter>>,
 }
 
 enum InnerVmoWriter {
@@ -106,25 +106,33 @@ impl VmoWriter {
         let vmo = zx::Vmo::create_with_opts(zx::VmoOptions::RESIZABLE, start_size)
             .expect("can always create resizable vmo's");
         let capacity = vmo.get_size().expect("can always read vmo size");
-        Self { inner: Arc::new(Mutex::new(InnerVmoWriter::Active { vmo, capacity, tail: 0 })) }
+        Self {
+            inner: Arc::new(std::sync::Mutex::new(InnerVmoWriter::Active {
+                vmo,
+                capacity,
+                tail: 0,
+            })),
+        }
     }
 
     fn tail(&self) -> u64 {
-        match *self.inner.lock() {
+        let guard = self.inner.lock().unwrap();
+        match &*guard {
             InnerVmoWriter::Done => 0,
-            InnerVmoWriter::Active { tail, .. } => tail,
+            InnerVmoWriter::Active { tail, .. } => *tail,
         }
     }
 
     fn capacity(&self) -> u64 {
-        match *self.inner.lock() {
+        let guard = self.inner.lock().unwrap();
+        match &*guard {
             InnerVmoWriter::Done => 0,
-            InnerVmoWriter::Active { capacity, .. } => capacity,
+            InnerVmoWriter::Active { capacity, .. } => *capacity,
         }
     }
 
     fn finalize(self) -> Option<(zx::Vmo, u64)> {
-        let mut inner = self.inner.lock();
+        let mut inner = self.inner.lock().unwrap();
         let mut swapped = InnerVmoWriter::Done;
         std::mem::swap(&mut *inner, &mut swapped);
         match swapped {
@@ -134,7 +142,7 @@ impl VmoWriter {
     }
 
     fn reset(&mut self, new_tail: u64, new_capacity: u64) {
-        let mut inner = self.inner.lock();
+        let mut inner = self.inner.lock().unwrap();
         match &mut *inner {
             InnerVmoWriter::Done => {}
             InnerVmoWriter::Active { vmo, capacity, tail } => {
@@ -148,7 +156,7 @@ impl VmoWriter {
 
 impl Write for VmoWriter {
     fn write(&mut self, buf: &[u8]) -> IoResult<usize> {
-        match &mut *self.inner.lock() {
+        match &mut *self.inner.lock().unwrap() {
             InnerVmoWriter::Done => Ok(0),
             InnerVmoWriter::Active { vmo, tail, capacity } => {
                 let new_tail = *tail + buf.len() as u64;

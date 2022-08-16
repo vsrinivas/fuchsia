@@ -8,6 +8,7 @@ use {
         lifecycle::container::LifecycleDataContainer, moniker_rewriter::MonikerRewriter,
         repository::DataRepo, ImmutableString,
     },
+    async_lock::RwLock,
     diagnostics_data::LogsData,
     diagnostics_hierarchy::InspectHierarchyMatcher,
     fidl::prelude::*,
@@ -16,7 +17,6 @@ use {
     fuchsia_component::server::{ServiceFs, ServiceObj},
     fuchsia_inspect as inspect,
     futures::{channel::mpsc, prelude::*},
-    parking_lot::RwLock,
     selectors,
     std::{collections::HashMap, convert::TryInto, path::Path, sync::Arc},
 };
@@ -204,12 +204,12 @@ impl Pipeline {
         this
     }
 
-    pub fn logs(
+    pub async fn logs(
         &self,
         mode: StreamMode,
         selectors: Option<Vec<Selector>>,
     ) -> impl Stream<Item = Arc<LogsData>> {
-        self.data_repo.logs_cursor(mode, selectors)
+        self.data_repo.logs_cursor(mode, selectors).await
     }
 
     pub fn remove(&mut self, relative_moniker: &[String]) {
@@ -237,13 +237,13 @@ impl Pipeline {
         Ok(())
     }
 
-    pub fn fetch_lifecycle_event_data(&self) -> Vec<LifecycleDataContainer> {
-        self.data_repo.read().fetch_lifecycle_event_data()
+    pub async fn fetch_lifecycle_event_data(&self) -> Vec<LifecycleDataContainer> {
+        self.data_repo.read().await.fetch_lifecycle_event_data()
     }
 
     /// Return all of the DirectoryProxies that contain Inspect hierarchies
     /// which contain data that should be selected from.
-    pub fn fetch_inspect_data(
+    pub async fn fetch_inspect_data(
         &self,
         component_selectors: &Option<Vec<Selector>>,
     ) -> Vec<UnpopulatedInspectDataContainer> {
@@ -252,6 +252,7 @@ impl Pipeline {
 
         self.data_repo
             .read()
+            .await
             .fetch_inspect_data(component_selectors, moniker_to_static_selector_opt)
     }
 }

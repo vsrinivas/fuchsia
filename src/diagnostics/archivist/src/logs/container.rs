@@ -15,6 +15,7 @@ use crate::{
     },
     utils::AutoCall,
 };
+use async_lock::Mutex;
 use diagnostics_data::{BuilderArgs, Data, LogError, Logs, LogsData, LogsDataBuilder};
 use fidl::prelude::*;
 use fidl_fuchsia_diagnostics::{Interest as FidlInterest, LogInterestSelector, StreamMode};
@@ -28,7 +29,6 @@ use futures::{
     channel::{mpsc, oneshot},
     prelude::*,
 };
-use parking_lot::Mutex;
 use std::{
     cmp::Ordering,
     collections::BTreeMap,
@@ -92,7 +92,7 @@ struct ContainerState {
 }
 
 impl LogsArtifactsContainer {
-    pub fn new(
+    pub async fn new(
         identity: Arc<ComponentIdentity>,
         interest_selectors: &[LogInterestSelector],
         stats: LogStreamStats,
@@ -116,7 +116,7 @@ impl LogsArtifactsContainer {
         };
 
         // there are no control handles so this won't notify anyone
-        new.update_interest(interest_selectors, &[]);
+        new.update_interest(interest_selectors, &[]).await;
 
         new
     }
@@ -187,12 +187,12 @@ impl LogsArtifactsContainer {
     /// Sends an `OnRegisterInterest` message right away so producers know someone is listening.
     /// We send `Interest::EMPTY` unless a different interest has previously been specified for
     /// this component.
-    pub fn handle_log_sink(
+    pub async fn handle_log_sink(
         self: &Arc<Self>,
         stream: LogSinkRequestStream,
         sender: mpsc::UnboundedSender<Task<()>>,
     ) {
-        self.state.lock().num_active_channels += 1;
+        self.state.lock().await.num_active_channels += 1;
         let task = Task::spawn(self.clone().actually_handle_log_sink(stream, sender.clone()));
         sender.unbounded_send(task).expect("channel is live for whole program");
     }
@@ -213,7 +213,7 @@ impl LogsArtifactsContainer {
             ($ctor:ident($socket:ident, $control_handle:ident)) => {{
                 match LogMessageSocket::$ctor($socket, self.stats.clone()) {
                     Ok(log_stream) => {
-                        self.state.lock().num_active_sockets += 1;
+                        self.state.lock().await.num_active_sockets += 1;
                         let task = Task::spawn(self.clone().drain_messages(log_stream));
                         sender.unbounded_send(task).expect("channel alive for whole program");
                     }
@@ -238,8 +238,8 @@ impl LogsArtifactsContainer {
                     let min_interest;
                     let needs_interest_broadcast;
                     {
-                        let state = self.state.lock();
-                        let previous_interest = previous_interest_sent.lock();
+                        let state = self.state.lock().await;
+                        let previous_interest = previous_interest_sent.lock().await;
                         needs_interest_broadcast = {
                             if let Some(prev) = &*previous_interest {
                                 *prev != state.min_interest()
@@ -252,7 +252,7 @@ impl LogsArtifactsContainer {
                     if needs_interest_broadcast {
                         // Send interest if not yet received
                         let _ = responder.send(&mut Ok(min_interest.clone()));
-                        let mut previous_interest = previous_interest_sent.lock();
+                        let mut previous_interest = previous_interest_sent.lock().await;
                         *previous_interest = Some(min_interest.clone());
                     } else {
                         // Wait for broadcast event asynchronously
@@ -269,7 +269,7 @@ impl LogsArtifactsContainer {
             }
         }
         debug!(%self.identity, "LogSink channel closed.");
-        self.state.lock().num_active_channels -= 1;
+        self.state.lock().await.num_active_channels -= 1;
     }
 
     async fn wait_for_interest_change_async(
@@ -281,7 +281,7 @@ impl LogsArtifactsContainer {
     ) {
         let (tx, rx) = oneshot::channel();
         {
-            let mut locked_sender = sender.lock();
+            let mut locked_sender = sender.lock().await;
             if let Some(value) = locked_sender.take() {
                 // Error to call API twice without waiting for first return
                 let _ = value.send(Err(InterestChangeError::CalledTwice));
@@ -292,7 +292,7 @@ impl LogsArtifactsContainer {
             listener.await;
         }
 
-        let mut state = self.state.lock();
+        let mut state = self.state.lock().await;
         let id = self.fetch_add_hanging_get_id();
         {
             state.hanging_gets.insert(id, sender.clone());
@@ -303,19 +303,22 @@ impl LogsArtifactsContainer {
         *interest_listener = Some(Task::spawn(async move {
             // Block started
             if cfg!(test) {
-                let mut get_state = get_clone.lock();
+                let mut get_state = get_clone.lock().await;
                 *get_state = TestState::Blocked;
             }
             let _ac = AutoCall::new(|| {
-                let mut state = unlocked_state.lock();
-                state.hanging_gets.remove(&id);
+                Task::spawn(async move {
+                    let mut state = unlocked_state.lock().await;
+                    state.hanging_gets.remove(&id);
+                })
+                .detach();
             });
             let res = rx.await;
             if let Ok(value) = res {
                 match value {
                     Ok(value) => {
                         let _ = responder.send(&mut Ok(value.clone()));
-                        let mut write_lock = prev_interest_clone.lock();
+                        let mut write_lock = prev_interest_clone.lock().await;
                         *write_lock = Some(value);
                     }
                     Err(error) => {
@@ -325,7 +328,7 @@ impl LogsArtifactsContainer {
             }
             // No longer blocked
             if cfg!(test) {
-                let mut get_state = get_clone.lock();
+                let mut get_state = get_clone.lock().await;
                 *get_state = TestState::NoRequest;
             }
         }));
@@ -341,7 +344,7 @@ impl LogsArtifactsContainer {
         loop {
             match log_stream.next().await {
                 Ok(message) => {
-                    self.ingest_message(message);
+                    self.ingest_message(message).await;
                 }
                 Err(StreamError::Closed) => break,
                 Err(e) => {
@@ -351,12 +354,12 @@ impl LogsArtifactsContainer {
             }
         }
         debug!(%self.identity, "Socket closed.");
-        self.state.lock().num_active_sockets -= 1;
+        self.state.lock().await.num_active_sockets -= 1;
     }
 
     /// Updates log stats in inspect and push the message onto the container's buffer.
-    pub fn ingest_message(&self, mut message: StoredMessage) {
-        self.budget.allocate(message.size());
+    pub async fn ingest_message(&self, mut message: StoredMessage) {
+        self.budget.allocate(message.size()).await;
         self.stats.ingest_message(&message);
         if !message.has_stats() {
             message.with_stats(self.stats.clone());
@@ -368,7 +371,7 @@ impl LogsArtifactsContainer {
     /// control handles if it is a change from the previous interest. For any match that is also
     /// contained in `previous_selectors`, the previous values will be removed from the set of
     /// interests.
-    pub fn update_interest(
+    pub async fn update_interest(
         &self,
         interest_selectors: &[LogInterestSelector],
         previous_selectors: &[LogInterestSelector],
@@ -398,41 +401,47 @@ impl LogsArtifactsContainer {
             remove_interest = previous_selector.interest.clone();
         }
 
-        let mut state = self.state.lock();
+        let mut state = self.state.lock().await;
         // Unfortunately we cannot use a match statement since `FidlInterest` doesn't derive Eq.
         // It does derive PartialEq though. All these branches will send an interest update if the
         // minimum interest changes after performing the required actions.
         if new_interest == FidlInterest::EMPTY && remove_interest != FidlInterest::EMPTY {
             // Undo the previous interest. There's no new interest to add.
-            state.maybe_send_updates(
-                |state| {
-                    state.erase(&remove_interest);
-                },
-                &self.identity,
-            );
+            state
+                .maybe_send_updates(
+                    |state| {
+                        state.erase(&remove_interest);
+                    },
+                    &self.identity,
+                )
+                .await;
         } else if new_interest != FidlInterest::EMPTY && remove_interest == FidlInterest::EMPTY {
             // Apply the new interest. There's no previous interest to remove.
-            state.maybe_send_updates(
-                |state| {
-                    state.push_interest(new_interest);
-                },
-                &self.identity,
-            );
+            state
+                .maybe_send_updates(
+                    |state| {
+                        state.push_interest(new_interest);
+                    },
+                    &self.identity,
+                )
+                .await;
         } else if new_interest != FidlInterest::EMPTY && remove_interest != FidlInterest::EMPTY {
             // Remove the previous interest and insert the new one.
-            state.maybe_send_updates(
-                |state| {
-                    state.erase(&remove_interest);
-                    state.push_interest(new_interest);
-                },
-                &self.identity,
-            );
+            state
+                .maybe_send_updates(
+                    |state| {
+                        state.erase(&remove_interest);
+                        state.push_interest(new_interest);
+                    },
+                    &self.identity,
+                )
+                .await;
         }
     }
 
     /// Resets the `Interest` for this component, calling `LogSink/OnRegisterInterest` with the
     /// lowest interest found in the set of requested interests for all control handles.
-    pub fn reset_interest(&self, interest_selectors: &[LogInterestSelector]) {
+    pub async fn reset_interest(&self, interest_selectors: &[LogInterestSelector]) {
         for selector in interest_selectors {
             if selectors::match_moniker_against_component_selector(
                 &self.identity.relative_moniker,
@@ -440,24 +449,26 @@ impl LogsArtifactsContainer {
             )
             .unwrap_or_default()
             {
-                let mut state = self.state.lock();
-                state.maybe_send_updates(
-                    |state| {
-                        state.erase(&selector.interest);
-                    },
-                    &self.identity,
-                );
+                let mut state = self.state.lock().await;
+                state
+                    .maybe_send_updates(
+                        |state| {
+                            state.erase(&selector.interest);
+                        },
+                        &self.identity,
+                    )
+                    .await;
                 return;
             }
         }
     }
 
-    pub fn mark_started(&self) {
-        self.state.lock().is_live = true;
+    pub async fn mark_started(&self) {
+        self.state.lock().await.is_live = true;
     }
 
-    pub fn mark_stopped(&self) {
-        self.state.lock().is_live = false;
+    pub async fn mark_stopped(&self) {
+        self.state.lock().await.is_live = false;
     }
 
     /// Remove the oldest message from this buffer, returning it.
@@ -467,8 +478,8 @@ impl LogsArtifactsContainer {
 
     /// Returns `true` if this container corresponds to a running component, still has log messages
     /// or still has pending objects to drain.
-    pub fn should_retain(&self) -> bool {
-        let state = self.state.lock();
+    pub async fn should_retain(&self) -> bool {
+        let state = self.state.lock().await;
         state.is_live
             || state.num_active_sockets > 0
             || state.num_active_channels > 0
@@ -507,7 +518,7 @@ fn maybe_add_rolled_out_error(dropped_messages: &mut u64, mut msg: Data<Logs>) -
 impl ContainerState {
     /// Executes the given callback on the state. If the minimum interest before executing the given
     /// actions and after isn't the same, then the new interest is sent to the registered listeners.
-    fn maybe_send_updates<F>(&mut self, action: F, identity: &ComponentIdentity)
+    async fn maybe_send_updates<F>(&mut self, action: F, identity: &ComponentIdentity)
     where
         F: FnOnce(&mut ContainerState),
     {
@@ -519,7 +530,7 @@ impl ContainerState {
         {
             debug!(%identity, ?new_min_interest, "Updating interest.");
             for value in self.hanging_gets.values_mut() {
-                let locked = value.lock().take();
+                let locked = value.lock().await.take();
                 if let Some(value) = locked {
                     let _ = value.send(Ok(new_min_interest.clone()));
                 }
@@ -616,23 +627,26 @@ mod tests {
     ) -> (Arc<LogsArtifactsContainer>, LogSinkProxy, UnboundedReceiver<Task<()>>) {
         // Initialize container
         let budget_manager = BudgetManager::new(0);
-        let container = Arc::new(LogsArtifactsContainer::new(
-            Arc::new(ComponentIdentity::from_identifier_and_url(
-                ComponentIdentifier::Moniker(vec![
-                    MonikerSegment { name: "foo".to_string(), collection: None },
-                    MonikerSegment { name: "bar".to_string(), collection: None },
-                ]),
-                "fuchsia-pkg://test",
-            )),
-            &[],
-            LogStreamStats::default(),
-            budget_manager.handle(),
-        ));
+        let container = Arc::new(
+            LogsArtifactsContainer::new(
+                Arc::new(ComponentIdentity::from_identifier_and_url(
+                    ComponentIdentifier::Moniker(vec![
+                        MonikerSegment { name: "foo".to_string(), collection: None },
+                        MonikerSegment { name: "bar".to_string(), collection: None },
+                    ]),
+                    "fuchsia-pkg://test",
+                )),
+                &[],
+                LogStreamStats::default(),
+                budget_manager.handle(),
+            )
+            .await,
+        );
         // Connect out LogSink under test and take its events channel.
         let (sender, _recv) = mpsc::unbounded();
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<LogSinkMarker>().expect("create log sink");
-        container.handle_log_sink(stream, sender);
+        container.handle_log_sink(stream, sender).await;
         (container, proxy, _recv)
     }
 
@@ -643,7 +657,7 @@ mod tests {
         // Get initial interest
         let initial_interest = log_sink.wait_for_interest_change().await.unwrap().unwrap();
         {
-            let test_state = container.hanging_get_test_state.lock();
+            let test_state = container.hanging_get_test_state.lock().await;
             assert_eq!(*test_state, TestState::NoRequest);
         }
         // Async (blocking) path test.
@@ -655,14 +669,14 @@ mod tests {
         loop {
             fuchsia_async::Timer::new(Duration::from_millis(200)).await;
             {
-                let test_state = container.hanging_get_test_state.lock();
+                let test_state = container.hanging_get_test_state.lock().await;
                 if *test_state == TestState::Blocked {
                     break;
                 }
             }
         }
         // We should see this interest update. This should unblock the hanging get.
-        container.update_interest(&[interest(&["foo", "bar"], Some(Severity::Info))], &[]);
+        container.update_interest(&[interest(&["foo", "bar"], Some(Severity::Info))], &[]).await;
 
         // Verify we see the last interest we set.
         assert_eq!(interest_future.await.unwrap().unwrap().min_severity, Some(Severity::Info));
@@ -676,7 +690,7 @@ mod tests {
         loop {
             fuchsia_async::Timer::new(Duration::from_millis(200)).await;
             {
-                let test_state = container.hanging_get_test_state.lock();
+                let test_state = container.hanging_get_test_state.lock().await;
                 if *test_state == TestState::Blocked {
                     break;
                 }
@@ -700,67 +714,72 @@ mod tests {
         let initial_interest = log_sink.wait_for_interest_change().await.unwrap().unwrap();
         assert_eq!(initial_interest.min_severity, None);
         // Set some interest.
-        container.update_interest(&[interest(&["foo", "bar"], Some(Severity::Info))], &[]);
+        container.update_interest(&[interest(&["foo", "bar"], Some(Severity::Info))], &[]).await;
         assert_severity(&log_sink, Severity::Info).await;
-        assert_interests(&container, [(Severity::Info, 1)]);
+        assert_interests(&container, [(Severity::Info, 1)]).await;
 
         // Sending a higher interest (WARN > INFO) has no visible effect, even if the new interest
         // (WARN) will be tracked internally until reset.
-        container.update_interest(&[interest(&["foo", "bar"], Some(Severity::Warn))], &[]);
-        assert_interests(&container, [(Severity::Info, 1), (Severity::Warn, 1)]);
+        container.update_interest(&[interest(&["foo", "bar"], Some(Severity::Warn))], &[]).await;
+        assert_interests(&container, [(Severity::Info, 1), (Severity::Warn, 1)]).await;
 
         // Sending a lower interest (DEBUG < INFO) updates the previous one.
-        container.update_interest(&[interest(&["foo", "bar"], Some(Severity::Debug))], &[]);
+        container.update_interest(&[interest(&["foo", "bar"], Some(Severity::Debug))], &[]).await;
         assert_severity(&log_sink, Severity::Debug).await;
         assert_interests(
             &container,
             [(Severity::Debug, 1), (Severity::Info, 1), (Severity::Warn, 1)],
-        );
+        )
+        .await;
 
         // Sending the same interest leads to tracking it twice, but no updates are sent since it's
         // the same minimum interest.
-        container.update_interest(&[interest(&["foo", "bar"], Some(Severity::Debug))], &[]);
+        container.update_interest(&[interest(&["foo", "bar"], Some(Severity::Debug))], &[]).await;
         assert_interests(
             &container,
             [(Severity::Debug, 2), (Severity::Info, 1), (Severity::Warn, 1)],
-        );
+        )
+        .await;
 
         // The first reset does nothing, since the new minimum interest remains the same (we had
         // inserted twice, therefore we need to reset twice).
-        container.reset_interest(&[interest(&["foo", "bar"], Some(Severity::Debug))]);
+        container.reset_interest(&[interest(&["foo", "bar"], Some(Severity::Debug))]).await;
         assert_interests(
             &container,
             [(Severity::Debug, 1), (Severity::Info, 1), (Severity::Warn, 1)],
-        );
+        )
+        .await;
 
         // The second reset causes a change in minimum interest -> now INFO.
-        container.reset_interest(&[interest(&["foo", "bar"], Some(Severity::Debug))]);
+        container.reset_interest(&[interest(&["foo", "bar"], Some(Severity::Debug))]).await;
         assert_severity(&log_sink, Severity::Info).await;
-        assert_interests(&container, [(Severity::Info, 1), (Severity::Warn, 1)]);
+        assert_interests(&container, [(Severity::Info, 1), (Severity::Warn, 1)]).await;
 
         // If we pass a previous severity (INFO), then we undo it and set the new one (ERROR).
         // However, we get WARN since that's the minimum severity in the set.
-        container.update_interest(
-            &[interest(&["foo", "bar"], Some(Severity::Error))],
-            &[interest(&["foo", "bar"], Some(Severity::Info))],
-        );
+        container
+            .update_interest(
+                &[interest(&["foo", "bar"], Some(Severity::Error))],
+                &[interest(&["foo", "bar"], Some(Severity::Info))],
+            )
+            .await;
         assert_severity(&log_sink, Severity::Warn).await;
-        assert_interests(&container, [(Severity::Error, 1), (Severity::Warn, 1)]);
+        assert_interests(&container, [(Severity::Error, 1), (Severity::Warn, 1)]).await;
 
         // When we reset warn, now we get ERROR since that's the minimum severity in the set.
-        container.reset_interest(&[interest(&["foo", "bar"], Some(Severity::Warn))]);
+        container.reset_interest(&[interest(&["foo", "bar"], Some(Severity::Warn))]).await;
         assert_severity(&log_sink, Severity::Error).await;
-        assert_interests(&container, [(Severity::Error, 1)]);
+        assert_interests(&container, [(Severity::Error, 1)]).await;
 
         // When we reset ERROR , we get back to EMPTY since we have removed all interests from the
         // set.
-        container.reset_interest(&[interest(&["foo", "bar"], Some(Severity::Error))]);
+        container.reset_interest(&[interest(&["foo", "bar"], Some(Severity::Error))]).await;
         assert_eq!(
             log_sink.wait_for_interest_change().await.unwrap().unwrap(),
             FidlInterest::EMPTY
         );
 
-        assert_interests(&container, []);
+        assert_interests(&container, []).await;
     }
 
     fn interest(moniker: &[&str], min_severity: Option<Severity>) -> LogInterestSelector {
@@ -785,7 +804,7 @@ mod tests {
         );
     }
 
-    fn assert_interests<const N: usize>(
+    async fn assert_interests<const N: usize>(
         container: &LogsArtifactsContainer,
         severities: [(Severity, usize); N],
     ) {
@@ -794,6 +813,6 @@ mod tests {
             let interest = FidlInterest { min_severity: Some(s), ..FidlInterest::EMPTY };
             (interest.into(), c)
         }));
-        assert_eq!(expected_map, container.state.lock().interests);
+        assert_eq!(expected_map, container.state.lock().await.interests);
     }
 }

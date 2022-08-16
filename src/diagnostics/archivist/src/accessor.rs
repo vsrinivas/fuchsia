@@ -14,6 +14,7 @@ use {
         pipeline::Pipeline,
         ImmutableString,
     },
+    async_lock::{Mutex, RwLock},
     diagnostics_data::{Data, DiagnosticsData},
     fidl::endpoints::RequestStream,
     fidl_fuchsia_diagnostics::{
@@ -30,7 +31,6 @@ use {
         future::{select, Either},
         prelude::*,
     },
-    parking_lot::{Mutex, RwLock},
     selectors::{self, FastError},
     serde::Serialize,
     std::collections::HashMap,
@@ -159,7 +159,8 @@ impl ArchiveAccessor {
                     (selectors, _) => (selectors, None),
                 };
 
-                let unpopulated_container_vec = pipeline.read().fetch_inspect_data(&selectors);
+                let unpopulated_container_vec =
+                    pipeline.read().await.fetch_inspect_data(&selectors).await;
 
                 let per_component_budget_opt = if unpopulated_container_vec.is_empty() {
                     None
@@ -204,7 +205,7 @@ impl ArchiveAccessor {
                     ));
                 }
 
-                let events = LifecycleServer::new(pipeline);
+                let events = LifecycleServer::new(pipeline).await;
 
                 BatchIterator::new(events, requests, mode, stats, None)?.run().await
             }
@@ -217,8 +218,12 @@ impl ArchiveAccessor {
                     Some(ClientSelectorConfiguration::SelectAll(_)) => None,
                     _ => return Err(AccessorError::InvalidSelectors("unrecognized selectors")),
                 };
-                let logs =
-                    pipeline.read().logs(mode, selectors).map(move |inner: _| (*inner).clone());
+                let logs = pipeline
+                    .read()
+                    .await
+                    .logs(mode, selectors)
+                    .await
+                    .map(move |inner: _| (*inner).clone());
                 BatchIterator::new_serving_arrays(logs, requests, mode, stats)?.run().await
             }
         }
@@ -335,53 +340,59 @@ impl BatchIterator {
     ) -> Result<Self, AccessorError>
     where
         Items: Stream<Item = Data<D>> + Send + 'static,
-        D: DiagnosticsData,
+        D: DiagnosticsData + 'static,
     {
-        let result_stats = stats.clone();
+        let result_stats_for_fut = stats.clone();
 
-        let mut budget_tracker: HashMap<ImmutableString, usize> = HashMap::new();
+        let budget_tracker_shared = Arc::new(Mutex::new(HashMap::new()));
 
         let truncation_counter = SchemaTruncationCounter::new();
-        let stream_owned_counter = truncation_counter.clone();
+        let stream_owned_counter_for_fut = truncation_counter.clone();
 
-        let data = data.map(move |d| {
-            let mut unlocked_counter = stream_owned_counter.lock();
-            unlocked_counter.total_schemas += 1;
-            if D::has_errors(&d.metadata) {
-                result_stats.add_result_error();
-            }
-
-            match JsonString::serialize(&d, D::DATA_TYPE) {
-                Err(e) => {
+        let data = data.then(move |d| {
+            let stream_owned_counter = stream_owned_counter_for_fut.clone();
+            let result_stats = result_stats_for_fut.clone();
+            let budget_tracker = budget_tracker_shared.clone();
+            async move {
+                let mut unlocked_counter = stream_owned_counter.lock().await;
+                let mut tracker_guard = budget_tracker.lock().await;
+                unlocked_counter.total_schemas += 1;
+                if D::has_errors(&d.metadata) {
                     result_stats.add_result_error();
-                    Err(e)
                 }
-                Ok(contents) => {
-                    result_stats.add_result();
-                    match per_component_byte_limit_opt {
-                        Some(x) => {
-                            if maybe_update_budget(
-                                &mut budget_tracker,
-                                &d.moniker,
-                                contents.size as usize,
-                                x,
-                            ) {
-                                Ok(contents)
-                            } else {
-                                result_stats.add_schema_truncated();
-                                unlocked_counter.truncated_schemas += 1;
 
-                                let new_data = d.dropped_payload_schema(
-                                    "Schema failed to fit component budget.".to_string(),
-                                );
+                match JsonString::serialize(&d, D::DATA_TYPE) {
+                    Err(e) => {
+                        result_stats.add_result_error();
+                        Err(e)
+                    }
+                    Ok(contents) => {
+                        result_stats.add_result();
+                        match per_component_byte_limit_opt {
+                            Some(x) => {
+                                if maybe_update_budget(
+                                    &mut tracker_guard,
+                                    &d.moniker,
+                                    contents.size as usize,
+                                    x,
+                                ) {
+                                    Ok(contents)
+                                } else {
+                                    result_stats.add_schema_truncated();
+                                    unlocked_counter.truncated_schemas += 1;
 
-                                // TODO(66085): If a payload is truncated, cache the
-                                // new schema so that we can reuse if other schemas from
-                                // the same component get dropped.
-                                JsonString::serialize(&new_data, D::DATA_TYPE)
+                                    let new_data = d.dropped_payload_schema(
+                                        "Schema failed to fit component budget.".to_string(),
+                                    );
+
+                                    // TODO(66085): If a payload is truncated, cache the
+                                    // new schema so that we can reuse if other schemas from
+                                    // the same component get dropped.
+                                    JsonString::serialize(&new_data, D::DATA_TYPE)
+                                }
                             }
+                            None => Ok(contents),
                         }
-                        None => Ok(contents),
                     }
                 }
             }
@@ -447,7 +458,7 @@ impl BatchIterator {
             self.stats.add_response();
             if batch.is_empty() {
                 if let Some(truncation_count) = &self.truncation_counter {
-                    let unlocked_count = truncation_count.lock();
+                    let unlocked_count = truncation_count.lock().await;
                     if unlocked_count.total_schemas > 0 {
                         self.stats.global_stats().record_percent_truncated_schemas(
                             ((unlocked_count.truncated_schemas as f32
@@ -530,11 +541,11 @@ mod tests {
     use super::*;
     use crate::{pipeline::Pipeline, repository::DataRepo};
     use assert_matches::assert_matches;
+    use async_lock::RwLock;
     use fidl_fuchsia_diagnostics::{ArchiveAccessorMarker, BatchIteratorMarker};
     use fuchsia_inspect::Node;
     use fuchsia_zircon_status as zx_status;
     use futures::channel::mpsc;
-    use parking_lot::RwLock;
 
     #[fuchsia::test]
     async fn logs_only_accept_basic_component_selectors() {
