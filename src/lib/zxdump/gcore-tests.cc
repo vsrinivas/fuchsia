@@ -14,7 +14,10 @@
 
 namespace {
 
-void UsageTest(int expected_status, std::vector<std::string> args = {}) {
+constexpr const char* kOutputSwitch = "-o";
+constexpr const char* kExcludeMemorySwitch = "--exclude-memory";
+
+void UsageTest(int expected_status, const std::vector<std::string>& args = {}) {
   zxdump::testing::TestToolProcess child;
   ASSERT_NO_FATAL_FAILURE(child.Start("gcore", args));
   ASSERT_NO_FATAL_FAILURE(child.CollectStdout());
@@ -41,7 +44,14 @@ TEST(Zxdump, GcoreProcessDumpIsElfCore) {
   auto& dump_file = child.MakeFile("process-dump", "." + pid_string);
   std::string prefix = dump_file.name();
   prefix.resize(prefix.size() - pid_string.size());
-  ASSERT_NO_FATAL_FAILURE(child.Start("gcore", {"-o", prefix, pid_string}));
+  std::vector<std::string> args({
+      // Don't dump memory since we don't need it and it is large.
+      kExcludeMemorySwitch,
+      kOutputSwitch,
+      prefix,
+      pid_string,
+  });
+  ASSERT_NO_FATAL_FAILURE(child.Start("gcore", args));
   ASSERT_NO_FATAL_FAILURE(child.CollectStdout());
   ASSERT_NO_FATAL_FAILURE(child.CollectStderr());
   int status;

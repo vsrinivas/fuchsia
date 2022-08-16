@@ -35,6 +35,7 @@ struct Flags {
 
   std::optional<std::string_view> output_prefix_;
   size_t limit_ = zxdump::DefaultLimit();
+  bool dump_memory_ = true;
 };
 
 // This handles writing a single output file, and removing that output file if
@@ -77,6 +78,27 @@ class Writer : public zxdump::FdWriter {
 // and of the dump and where it goes.
 class ProcessDumper {
  public:
+  static fitx::result<zxdump::Error, zxdump::SegmentDisposition> PruneAll(
+      zxdump::SegmentDisposition segment, const zx_info_maps_t& mapping, const zx_info_vmo_t& vmo) {
+    segment.filesz = 0;
+    return fitx::ok(segment);
+  }
+
+  static fitx::result<zxdump::Error, zxdump::SegmentDisposition> PruneDefault(
+      zxdump::SegmentDisposition segment, const zx_info_maps_t& mapping, const zx_info_vmo_t& vmo) {
+    if (mapping.u.mapping.committed_pages == 0 &&   // No private RAM here,
+        vmo.parent_koid == ZX_KOID_INVALID &&       // and none shared,
+        !(vmo.flags & ZX_INFO_VMO_PAGER_BACKED)) {  // and no backing store.
+      // Since it's not pager-backed, there isn't data hidden in backing
+      // store.  If we read this, it would just be zero-fill anyway.
+      segment.filesz = 0;
+    }
+
+    // TODO(mcgrathr): for now, dump everything else.
+
+    return fitx::ok(segment);
+  }
+
   ProcessDumper(zx::unowned_process process, zx_koid_t pid)
       : dumper_{std::move(process)}, pid_(pid) {}
 
@@ -87,7 +109,12 @@ class ProcessDumper {
 
   // Phase 1: Collect underpants!
   bool Collect(const Flags& flags) {
-    auto result = dumper_.CollectProcess(flags.limit_);
+    zxdump::SegmentCallback prune = PruneAll;
+    if (flags.dump_memory_) {
+      // TODO(mcgrathr): more filtering switches
+      prune = PruneDefault;
+    }
+    auto result = dumper_.CollectProcess(std::move(prune), flags.limit_);
     if (result.is_error()) {
       Error(result.error_value());
       return false;
@@ -105,7 +132,7 @@ class ProcessDumper {
     size_t total;
     if (auto result = dumper_.DumpHeaders(writer.AccumulateFragmentsCallback(), flags.limit_);
         result.is_error()) {
-      writer.Error(result.error_value());
+      Error(result.error_value());
       return false;
     } else {
       total = result.value();
@@ -119,6 +146,11 @@ class ProcessDumper {
 
     if (auto result = writer.WriteFragments(); result.is_error()) {
       writer.Error(result.error_value());
+      return false;
+    }
+
+    if (auto memory = dumper_.DumpMemory(writer.WriteCallback(), flags.limit_); memory.is_error()) {
+      Error(memory.error_value());
       return false;
     }
 
@@ -150,11 +182,12 @@ bool WriteProcessCoreFile(zx::process process, zx_koid_t pid, const Flags& flags
   return writer.Ok(dumper.Collect(flags) && dumper.Dump(writer, flags));
 }
 
-constexpr const char kOptString[] = "hlo:";
+constexpr const char kOptString[] = "hlo:m";
 constexpr const option kLongOpts[] = {
     {"help", no_argument, nullptr, 'h'},                 //
     {"limit", required_argument, nullptr, 'l'},          //
     {"output-prefix", required_argument, nullptr, 'o'},  //
+    {"exclude-memory", no_argument, nullptr, 'm'},       //
     {nullptr, no_argument, nullptr, 0},                  //
 };
 
@@ -168,6 +201,7 @@ int main(int argc, char** argv) {
     --help, -h                         print this message
     --output-prefix=PREFIX, -o PREFIX  write <PREFIX><PID>, not core.<PID>
     --limit=BYTES, -l BYTES            truncate output to BYTES per process
+    --exclude-memory, -M               exclude all process memory from dumps
 )""";
     return status;
   };
@@ -190,6 +224,10 @@ int main(int argc, char** argv) {
         }
         continue;
       }
+
+      case 'm':
+        flags.dump_memory_ = false;
+        continue;
 
       default:
         return usage(EXIT_SUCCESS);

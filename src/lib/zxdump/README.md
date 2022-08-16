@@ -29,7 +29,35 @@ program headers, which uses a special section header).  Each `PT_LOAD` segment
 represents a memory mapping.  One or more `PT_NOTE` segments give additional
 information about the process and (optionally) its threads.
 
-**TODO:** memory, threads, build-id
+**TODO:** threads
+
+### Memory segments
+
+The representation of memory in core dumps is standard across systems.  Zircon
+core dumps do not deviate.
+
+The `PT_LOAD` segments represent all of the address space of the process.  Each
+uses a `p_align` value of page size, and both its `p_vaddr` and `p_offset` are
+aligned to page size.  As ELF requires, `PT_LOAD` segments are in ascending
+order of address (`p_vaddr`) and do not overlap.  Every gap not covered by the
+`p_vaddr` and `p_memsz` of some `PT_LOAD` segment should be a hole in the
+address space where nothing was mapped in the process.
+
+Each `PT_LOAD` segment has a `p_filesz` that may be anywhere from zero up to
+its `p_memsz`.  The `p_memsz` value says how much of the address space this
+mapping took up in the process, and is always a multiple of page size.  The
+`p_filesz` value is what leading subset of that memory is included in the dump.
+It's usually a multiple of page size too, but is not required to be.  If it's
+zero or less than the full `p_memsz` value, that means the dump-writer decided
+to elide or truncate the contents of this memory.  That could be because it
+would just read as zero (though the dump-writer could instead leave a
+sparse-file "hole" for zero pages when the filesystem supports that); or
+because it was memory that the writer's policy said should never be dumped,
+such as device memory or shared memory; or simply memory that the writer
+decided was too uninteresting or too big to include, such as read-only program
+code and data attributable to mapped files.  In Zircon core dumps, the
+information about mappings and VMOs in the process-wide notes (below) may shed
+additional light on what some elided memory was or why it was not dumped.
 
 ### Note segments
 

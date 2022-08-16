@@ -13,6 +13,7 @@
 #include <limits>
 #include <memory>
 #include <optional>
+#include <string_view>
 #include <type_traits>
 
 #include "types.h"
@@ -21,6 +22,30 @@ namespace zxdump {
 
 // This is the default limit on ET_CORE file size (in bytes), i.e. unlimited.
 inline constexpr size_t DefaultLimit() { return std::numeric_limits<size_t>::max(); }
+
+// This is used in the return value of the `prune_segment` callback passed to
+// zxdump::ProcessDump<...>::CollectProcess.  It says how much of the segment
+// to include in the dump.  Default-constructed state elides the whole segment.
+//
+// The callback receives zx_info_maps_t and zx_info_vmo_t data about the
+// mapping and the memory to consider; and an zxdump::SegmentDisposition
+// describing the default policy, which is usually to dump the whole thing,
+// i.e. `filesz = maps.size`.  It can set `filesz = 0` to elide the segment;
+// or set it to a smaller size to include only part of the segment.
+//
+// TODO(mcgrathr): Add PT_NOTE feature later.
+struct SegmentDisposition {
+  // The leading subset of the segment that should be included in the dump.
+  // This can be zero to elide the whole segment, and must not be greater
+  // than the original p_filesz value.  This doesn't have to be page-aligned,
+  // but the next segment will be written at a page-aligned offset and the
+  // gap filled with zero bytes (or a sparse region of the file) so there's
+  // not much point in eliding a partial page.
+  size_t filesz = 0;
+};
+
+using SegmentCallback = fit::function<fitx::result<Error, SegmentDisposition>(
+    const SegmentDisposition&, const zx_info_maps_t&, const zx_info_vmo_t&)>;
 
 // zxdump::ProcessDump<zx::process> or zxdump::ProcessDump<zx::unowned_process>
 // represents one dump being made from the process whose handle is transferred
@@ -64,16 +89,17 @@ class ProcessDumpBase {
   // has been done and the live data from the process won't be consulted again.
   // The only state still left to be collected from the process is the contents
   // of its memory.
-  fitx::result<Error, size_t> CollectProcess(size_t limit = DefaultLimit());
+  fitx::result<Error, size_t> CollectProcess(SegmentCallback prune_segment,
+                                             size_t limit = DefaultLimit());
 
   // This must be called after CollectProcess.
   //
   // Accumulate header and note data to be written out, by repeatedly calling
-  // `dump(size_t offset, ByteView data)`.  The callback returns some
+  // `dump(size_t offset, ByteView data)`.  The Dump callback returns some
   // `fitx::result<error_type>` type.  DumpHeaders returns a result of type
-  // `fitx::result<error_type, size_t>` with the result of the first failing
-  // callback, or with the total number of bytes dumped (i.e. the ending value
-  // of `offset`).
+  // `fitx::result<zxdump::DumpError<Dump>, size_t>` with the result of the
+  // first failing callback, or with the total number of bytes dumped (i.e. the
+  // ending value of `offset`).
   //
   // This can be used to collect data in place or to stream it out.  The
   // callbacks supply a stream of data where the first chunk has offset 0 and
@@ -84,7 +110,34 @@ class ProcessDumpBase {
   // until the object is destroyed or clear()'d.
   template <typename Dump>
   auto DumpHeaders(Dump&& dump, size_t limit) {
-    return CallImpl(&ProcessDumpBase::DumpHeadersImpl, std::forward<Dump>(dump), limit);
+    using namespace std::literals;
+    return CallImpl(&ProcessDumpBase::DumpHeadersImpl, "DumpHeader"sv, std::forward<Dump>(dump),
+                    limit);
+  }
+
+  // This must be called after DumpHeaders.
+  //
+  // Stream out memory data for the PT_LOAD segments, by repeatedly calling
+  // `dump(size_t offset, ByteView data)` as in DumpHeaders, above.  While
+  // DumpHeaders can really only fail if the Dump function returns an error,
+  // DumpMemory's error result might have `.dump_error_ == std::nullopt` when
+  // there was an error for reading memory from the process.  On success,
+  // result value is the total byte size of the ET_CORE file, which is now
+  // complete.  (This includes the size returned by DumpHeaders plus all the
+  // memory segments written and any padding in between.)
+  //
+  // The offset in the first callback is greater than the offset in the last
+  // DumpHeaders callback, and later callbacks always increase the offset.
+  // There may be a gap from the end of previous chunk, which should be filled
+  // with zero (or made sparse in the output file).  Unlike DumpHeaders, the
+  // view passed to the `dump` callback here points into a temporary buffer
+  // that will be reused for the next callback.  So this `dump` callback must
+  // stream the data out or copy it, not just accumulate the view objects.
+  template <typename Dump>
+  fitx::result<DumpError<Dump>, size_t> DumpMemory(Dump&& dump, size_t limit) {
+    using namespace std::literals;
+    return CallImpl(&ProcessDumpBase::DumpMemoryImpl, "DumpMemory"sv, std::forward<Dump>(dump),
+                    limit);
   }
 
  protected:
@@ -97,35 +150,28 @@ class ProcessDumpBase {
   void Emplace(zx::unowned_process process);
 
  private:
-  template <typename Dump>
-  using DumpResult = std::decay_t<decltype(std::declval<Dump>()(size_t{}, ByteView{}))>;
-
-  template <typename Dump>
-  using DumpError = std::decay_t<decltype(std::declval<DumpResult<Dump>>().error_value())>;
-
-  template <typename Dump>
-  using DumpMemoryResult = fitx::result<Error, fitx::result<DumpError<Dump>, size_t>>;
-
-  template <typename Impl>
-  using ImplResult = std::invoke_result_t<Impl, ProcessDumpBase*, DumpCallback, size_t>;
-
   template <typename Impl, typename Dump>
-  auto CallImpl(Impl&& impl, Dump&& dump, size_t limit)
-      -> fitx::result<DumpError<Dump>, ImplResult<Impl>> {
-    using Result = std::decay_t<std::invoke_result_t<Dump, size_t, ByteView>>;
-    Result result = fitx::ok();
+  fitx::result<DumpError<Dump>, size_t> CallImpl(Impl&& impl, std::string_view op, Dump&& dump,
+                                                 size_t limit) {
+    fitx::result<DumpError<Dump>, size_t> result = fitx::ok(0);
     auto dump_callback = [&](size_t offset, ByteView data) {
-      result = dump(offset, data);
-      return result.is_error();
+      auto dump_result = dump(offset, data);
+      if (dump_result.is_ok()) {
+        return false;
+      }
+      DumpError<Dump> error(Error{.op_ = op, .status_ = ZX_OK});
+      error.dump_error_ = std::move(dump_result).error_value(),
+      result = fitx::error{std::move(error)};
+      return true;
     };
     auto value = std::invoke(impl, this, dump_callback, limit);
     if (result.is_error()) {
       return std::move(result).take_error();
     }
-    return fitx::ok(std::move(value));
+    return fitx::ok(*value);
   }
 
-  size_t DumpHeadersImpl(DumpCallback dump, size_t limit);
+  fitx::result<Error, size_t> DumpHeadersImpl(DumpCallback dump, size_t limit);
 
   fitx::result<Error, size_t> DumpMemoryImpl(DumpCallback callback, size_t limit);
 
