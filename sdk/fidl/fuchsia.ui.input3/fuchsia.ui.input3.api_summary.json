@@ -251,8 +251,28 @@
     },
     {
         "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.ALT",
+        "value": "17"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.ALT_GRAPH",
+        "value": "18"
+    },
+    {
+        "kind": "enum/member",
         "name": "fuchsia.ui.input3/NonPrintableKey.BACKSPACE",
         "value": "65"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.CAPS_LOCK",
+        "value": "19"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.CONTROL",
+        "value": "20"
     },
     {
         "kind": "enum/member",
@@ -271,13 +291,98 @@
     },
     {
         "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.F1",
+        "value": "36865"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.F10",
+        "value": "36874"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.F11",
+        "value": "36875"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.F12",
+        "value": "36876"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.F2",
+        "value": "36866"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.F3",
+        "value": "36867"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.F4",
+        "value": "36868"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.F5",
+        "value": "36869"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.F6",
+        "value": "36870"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.F7",
+        "value": "36871"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.F8",
+        "value": "36872"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.F9",
+        "value": "36873"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.FN",
+        "value": "21"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.FN_LOCK",
+        "value": "22"
+    },
+    {
+        "kind": "enum/member",
         "name": "fuchsia.ui.input3/NonPrintableKey.HOME",
         "value": "102"
     },
     {
         "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.HYPER",
+        "value": "29"
+    },
+    {
+        "kind": "enum/member",
         "name": "fuchsia.ui.input3/NonPrintableKey.LEFT",
         "value": "98"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.META",
+        "value": "23"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.NUM_LOCK",
+        "value": "24"
     },
     {
         "kind": "enum/member",
@@ -296,8 +401,58 @@
     },
     {
         "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.SCROLL_LOCK",
+        "value": "25"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.SHIFT",
+        "value": "26"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.SOFT_1",
+        "value": "36881"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.SOFT_2",
+        "value": "36882"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.SOFT_3",
+        "value": "36883"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.SOFT_4",
+        "value": "36884"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.SUPER",
+        "value": "30"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.SYMBOL",
+        "value": "27"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.SYMBOL_LOCK",
+        "value": "28"
+    },
+    {
+        "kind": "enum/member",
         "name": "fuchsia.ui.input3/NonPrintableKey.TAB",
         "value": "50"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.UNIDENTIFIED",
+        "value": "0"
     },
     {
         "kind": "enum/member",

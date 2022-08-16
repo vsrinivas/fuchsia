@@ -29,15 +29,135 @@ type KeyEventType = strict enum {
 
 /// NonPrintableKey represents the meaning of a non-symbolic key on a keyboard.
 ///
-/// The definition of each key is derived from W3C named values of a key attribute:
-/// https://www.w3.org/TR/uievents-key/#named-key-attribute-values
+/// The definition of each key is derived from [W3C named values of a key
+/// attribute][1].
 ///
-/// The space of the arrow keys is subdivided roughly to correspond to the
-/// subsections of section 3 of that document.  The choice for the section
-/// values is arbitrary, so long as blocks of values are allocated at once, and
-/// the keys with similar purpose are kept together.
+/// ## API version 9 and onwards
+///
+/// Starting from API version 9, the enum value space is subdivided based on the
+/// subsection numbers of the section [Named Key Attribute Values][1], multiplied
+/// by 0x1000.
+///
+/// For example, the keys from section [3.10 Multimedia keys][2] will be located
+/// at `0xa000`-`0xafff`. The values and reservations that were present
+/// in this enum prior to the introduction of the convention have not been moved,
+/// and values that go logically into pre-existing sections have been inserted
+/// into their logical place using the prior convention (see below). This allows
+/// us to extract the section ranges if this is for some reason useful to the
+/// application.
+///
+/// ## Prior to API version 9
+///
+/// The space of the nonprintable keys is subdivided roughly to correspond to the
+/// subsections of Section 3 of the document Named Key Attribute Values.
+/// The choice for the section values is arbitrary, so long as blocks of
+/// values are allocated at once, and the keys with similar purpose are kept
+/// together.
+///
+/// [1]: https://www.w3.org/TR/uievents-key/#named-key-attribute-values
+/// [2]: https://www.w3.org/TR/uievents-key/#keys-multimedia
 type NonPrintableKey = flexible enum : uint32 {
+    // Special keys
+    // https://www.w3.org/TR/uievents-key/#keys-special
+    //
+    // Reserved range: 0x00-0x10
+
+    /// This key value is used when an implementation is unable to identify
+    /// another key value, due to either hardware, platform, or software
+    /// constraints.
+    @available(added=9)
+    @unknown
+    UNIDENTIFIED = 0x00;
+
+    // Modifier keys
+    // https://www.w3.org/TR/uievents-key/#keys-modifier
+    //
+    // Reserved range: 0x11 - 0x30
+
+    /// The Alt (Alternative) key.
+    ///
+    /// This key enables the alternate modifier function for interpreting concurrent 
+    /// or subsequent keyboard input.
+    /// This key value is also used for the Apple Option key.
+    @available(added=9)
+    ALT = 0x11;
+
+    /// The Alternate Graphics (AltGr or AltGraph).
+    ///
+    /// This key is used enable the ISO Level 3 shift modifier (the standard Shift key is the level
+    /// 2 modifier). See [ISO9995-1].
+    ///
+    /// [ISO9995-1]: http://www.iso.org/iso/home/store/catalogue_tc/catalogue_detail.htm?csnumber=51645
+    @available(added=9)
+    ALT_GRAPH = 0x12;
+
+    /// The Caps Lock (Capital) key.
+    ///
+    /// Toggle capital character lock function for interpreting subsequent keyboard input event.
+    @available(added=9)
+    CAPS_LOCK = 0x13;
+
+    /// The Control or Ctrl key, to enable control modifier function for interpreting concurrent or
+    /// subsequent keyboard input.
+    @available(added=9)
+    CONTROL = 0x14;
+
+    /// The Function switch Fn key.
+    ///
+    /// Activating this key simultaneously with another key changes that key’s value to an alternate
+    /// character or function. This key is often handled directly in the keyboard hardware and does
+    /// not usually generate key events.
+    @available(added=9)
+    FN = 0x15;
+
+    /// The Function-Lock (FnLock or F-Lock) key.
+    ///
+    /// Activating this key switches the mode of the keyboard to changes some keys' values to an
+    /// alternate character or function. This key is often handled directly in the keyboard hardware
+    /// and does not usually generate key events.
+    @available(added=9)
+    FN_LOCK = 0x16;
+
+    /// The Meta key, to enable meta modifier function for interpreting concurrent or subsequent
+    /// keyboard input.
+    ///
+    /// This key value is used for the Windows Logo key and the Apple Command or ⌘ key.
+    @available(added=9)
+    META = 0x17;
+
+    /// The NumLock or Number Lock key, to toggle numpad mode function for interpreting subsequent
+    /// keyboard input.
+    @available(added=9)
+    NUM_LOCK = 0x18;
+
+    /// The Scroll Lock key, to toggle between scrolling and cursor movement modes.
+    @available(added=9)
+    SCROLL_LOCK = 0x19;
+
+    /// The Shift key, to enable shift modifier function for interpreting concurrent or subsequent
+    /// keyboard input.
+    @available(added=9)
+    SHIFT = 0x1a;
+
+    /// The Symbol modifier key (used on some virtual keyboards).
+    @available(added=9)
+    SYMBOL = 0x1b;
+
+    /// The Symbol Lock key.
+    @available(added=9)
+    SYMBOL_LOCK = 0x1c;
+
+    /// The Hyper key. A legacy modifier.
+    @available(added=9)
+    HYPER = 0x1d;
+
+    /// The Super key. A legacy modifier.
+    @available(added=9)
+    SUPER = 0x1e;
+
     // Whitespace keys
+    // https://www.w3.org/TR/uievents-key/#keys-whitespace
+    //
     // Reserved range: 0x00000031 - 0x00000040
 
     /// The Enter or ↵ key, to activate current selection or accept current input.
@@ -55,7 +175,9 @@ type NonPrintableKey = flexible enum : uint32 {
     BACKSPACE = 0x41;
 
     // Navigation keys
-    // Range reserved for navigation keys: 0x61-0x81.
+    // https://www.w3.org/TR/uievents-key/#keys-navigation
+    //
+    // Range reserved for navigation keys: 0x61-0x80.
     // Arrow keys are named for consistency with keys in `fuchsia.ui.input`,
     // althought W3C name them ArrowUp for example, and not Up.
 
@@ -82,6 +204,74 @@ type NonPrintableKey = flexible enum : uint32 {
 
     /// The "Page Up" key.
     PAGE_UP = 0x68;
+
+    // General-purpose function keys.
+    // https://www.w3.org/TR/uievents-key/#keys-function
+    // Reserved range: 0x9000-0x9FFF
+
+    /// The F1 key, a general purpose function key, as index 1.
+    @available(added=9)
+    F1 = 0x9001;
+
+    /// The F2 key, a general purpose function key, as index 2.
+    @available(added=9)
+    F2 = 0x9002;
+
+    /// The F3 key, a general purpose function key, as index 3.
+    @available(added=9)
+    F3 = 0x9003;
+
+    /// The F4 key, a general purpose function key, as index 4.
+    @available(added=9)
+    F4 = 0x9004;
+
+    /// The F5 key, a general purpose function key, as index 5.
+    @available(added=9)
+    F5 = 0x9005;
+
+    /// The F6 key, a general purpose function key, as index 6.
+    @available(added=9)
+    F6 = 0x9006;
+
+    /// The F7 key, a general purpose function key, as index 7.
+    @available(added=9)
+    F7 = 0x9007;
+
+    /// The F8 key, a general purpose function key, as index 8.
+    @available(added=9)
+    F8 = 0x9008;
+
+    /// The F9 key, a general purpose function key, as index 9.
+    @available(added=9)
+    F9 = 0x9009;
+
+    /// The F10 key, a general purpose function key, as index 10.
+    @available(added=9)
+    F10 = 0x900a;
+
+    /// The F11 key, a general purpose function key, as index 11.
+    @available(added=9)
+    F11 = 0x900b;
+
+    /// The F1 key, a general purpose function key, as index 12.
+    @available(added=9)
+    F12 = 0x900c;
+
+    /// General purpose virtual function key, as index 1.
+    @available(added=9)
+    SOFT_1 = 0x9011;
+
+    /// General purpose virtual function key, as index 2.
+    @available(added=9)
+    SOFT_2 = 0x9012;
+
+    /// General purpose virtual function key, as index 3.
+    @available(added=9)
+    SOFT_3 = 0x9013;
+
+    /// General purpose virtual function key, as index 4.
+    @available(added=9)
+    SOFT_4 = 0x9014;
 };
 
 /// The meaning of the key press. This is typically the Unicode codepoint inserted
