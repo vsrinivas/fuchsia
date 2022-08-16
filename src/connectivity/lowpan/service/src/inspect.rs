@@ -19,14 +19,13 @@ use lowpan_driver_common::lowpan_fidl::{
     TelemetryProviderMarker,
 };
 use parking_lot::Mutex;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 type IfaceId = String;
 
 // Limit was chosen arbitrary.
 const EVENTS_LIMIT: usize = 20;
-const DEAD_IFACE_LIMIT: usize = 20;
 
 pub struct LowpanServiceTree {
     // Root of the tree
@@ -39,8 +38,7 @@ pub struct LowpanServiceTree {
     ifaces_trees: Mutex<HashMap<IfaceId, Arc<IfaceTreeHolder>>>,
 
     // Iface devices that have been removed but whose debug infos are still kept in Inspect tree.
-    // Number of dead Iface devices are bounded by |DEAD_IFACE_LIMIT|.
-    dead_ifaces: Mutex<VecDeque<Arc<IfaceTreeHolder>>>,
+    dead_ifaces: Mutex<HashMap<IfaceId, Arc<IfaceTreeHolder>>>,
 }
 
 impl LowpanServiceTree {
@@ -50,15 +48,21 @@ impl LowpanServiceTree {
             inspector,
             events: Mutex::new(BoundedListNode::new(events, EVENTS_LIMIT)),
             ifaces_trees: Mutex::new(HashMap::new()),
-            dead_ifaces: Mutex::new(VecDeque::new()),
+            dead_ifaces: Mutex::new(HashMap::new()),
         }
     }
 
     pub fn create_iface_child(&self, iface_id: IfaceId) -> Arc<IfaceTreeHolder> {
-        let child = self.inspector.root().create_child(&format!("iface-{}", iface_id));
-        let holder = Arc::new(IfaceTreeHolder::new(child));
-        self.ifaces_trees.lock().insert(iface_id, holder.clone());
-        holder
+        // Check if this iface is already in |dead_ifaces|
+        if let Some(prev_holder) = self.dead_ifaces.lock().remove(&iface_id) {
+            self.ifaces_trees.lock().insert(iface_id, prev_holder.clone());
+            prev_holder
+        } else {
+            let child = self.inspector.root().create_child(&format!("iface-{}", iface_id));
+            let holder = Arc::new(IfaceTreeHolder::new(child));
+            self.ifaces_trees.lock().insert(iface_id, holder.clone());
+            holder
+        }
     }
 
     pub fn notify_iface_removed(&self, iface_id: IfaceId) {
@@ -66,10 +70,18 @@ impl LowpanServiceTree {
         let mut dead_iface_list = self.dead_ifaces.lock();
         if let Some(child_holder) = iface_tree_list.remove(&iface_id) {
             inspect_log!(child_holder.events.lock(), msg: "Removed");
-            dead_iface_list.push_back(child_holder);
-            if dead_iface_list.len() > DEAD_IFACE_LIMIT {
-                dead_iface_list.pop_front();
+
+            //Remove lazy child monitoring for these interfaces
+            {
+                let mut lazy_counters = child_holder.counters.lock();
+                *lazy_counters = LazyNode::default();
+                let mut lazy_neighbors = child_holder.neighbors.lock();
+                *lazy_neighbors = LazyNode::default();
+                let mut lazy_telemetry = child_holder.telemetry.lock();
+                *lazy_telemetry = LazyNode::default();
             }
+
+            dead_iface_list.insert(iface_id, child_holder.clone());
         }
     }
 }
