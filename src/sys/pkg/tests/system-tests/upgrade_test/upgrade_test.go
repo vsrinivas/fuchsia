@@ -107,12 +107,20 @@ func doTest(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("failed to configure downgrade build for device: %w", err)
 		}
+
+		if downgradeBuild == nil {
+			return fmt.Errorf("installer did not configure a downgrade build")
+		}
 	}
 
 	if upgradeBuild != nil {
 		upgradeBuild, err = c.installerConfig.ConfigureBuild(ctx, deviceClient, upgradeBuild)
 		if err != nil {
 			return fmt.Errorf("failed to configure upgrade build for device: %w", err)
+		}
+
+		if upgradeBuild == nil {
+			return fmt.Errorf("installer did not configure an upgrade build")
 		}
 	}
 
@@ -135,6 +143,11 @@ func doTest(ctx context.Context) error {
 			rpcClient.Close()
 		}
 	}()
+
+	if upgradeBuild == nil {
+		logger.Infof(ctx, "upgrade build does not exist")
+		return nil
+	}
 
 	return testOTAs(ctx, deviceClient, upgradeBuild, &rpcClient)
 }
