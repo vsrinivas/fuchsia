@@ -27,8 +27,12 @@ use test_case::test_case;
 
 #[variants_test]
 async fn address_deprecation<E: netemul::Endpoint>(name: &str) {
+    // TODO(https://fxbug.dev/105630, https://fxbug.dev/106959): Test against
+    // Netstack3 once adding deprecated addresses and updating address lifetimes
+    // are supported.
+    type N = Netstack2;
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
     let device = sandbox.create_endpoint::<E, _>(name).await.expect("create endpoint");
     let interface = device.into_interface_in_realm(&realm).await.expect("add endpoint to Netstack");
     assert!(interface.control().enable().await.expect("send enable").expect("enable"));
@@ -117,8 +121,11 @@ async fn address_deprecation<E: netemul::Endpoint>(name: &str) {
 
 #[variants_test]
 async fn update_address_lifetimes<E: netemul::Endpoint>(name: &str) {
+    // TODO(https://fxbug.dev/106959): Test against Netstack3 once updating
+    // address lifetimes is supported.
+    type N = Netstack2;
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
     let device = sandbox.create_endpoint::<E, _>(name).await.expect("create endpoint");
     let interface = realm
         .install_endpoint(device, Default::default())
@@ -390,8 +397,11 @@ async fn add_address_removal<N: Netstack, E: netemul::Endpoint>(name: &str) {
 // assignment state is set correctly.
 #[variants_test]
 async fn add_address_offline<E: netemul::Endpoint>(name: &str) {
+    // TODO(https://fxbug.dev/105011): Test against Netstack3 once watching
+    // address assignments states is supported.
+    type N = Netstack2;
     let sandbox = netemul::TestSandbox::new().expect("new sandbox");
-    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
     let device = sandbox.create_endpoint::<E, _>(name).await.expect("create endpoint");
     let interface = device.into_interface_in_realm(&realm).await.expect("add endpoint to Netstack");
     let id = interface.id();
@@ -1132,11 +1142,6 @@ async fn device_control_closes_on_device_close<N: Netstack>(name: &str) {
 // Tests that interfaces created through installer have a valid datapath.
 #[variants_test]
 async fn installer_creates_datapath<N: Netstack, I: net_types::ip::Ip>(test_name: &str) {
-    if N::VERSION == NetstackVersion::Netstack3 && I::VERSION == net_types::ip::IpVersion::V4 {
-        // TODO(https://fxbug.dev/100870): Enable this test on Netstack3 once it
-        // implements AddAddress.
-        return;
-    }
     const SUBNET: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.0/24");
     const ALICE_IP_V4: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.1/24");
     const BOB_IP_V4: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.2/24");
@@ -1618,8 +1623,11 @@ async fn control_owns_interface_lifetime<N: Netstack>(name: &str, detach: bool) 
 
 #[variants_test]
 async fn get_set_forwarding<E: netemul::Endpoint>(name: &str) {
+    // TODO(https://fxbug.dev/76987): Test against Netstack3 once get/set
+    // forwarding is supported.
+    type N = Netstack2;
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create netstack realm");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create netstack realm");
     let net = sandbox.create_network("net").await.expect("create network");
     let iface1 = realm.join_network::<E, _>(&net, "iface1").await.expect("create iface1");
     let iface2 = realm.join_network::<E, _>(&net, "iface2").await.expect("create iface1");
