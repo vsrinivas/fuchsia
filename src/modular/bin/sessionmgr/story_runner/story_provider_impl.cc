@@ -5,12 +5,15 @@
 #include "src/modular/bin/sessionmgr/story_runner/story_provider_impl.h"
 
 #include <fuchsia/ui/app/cpp/fidl.h>
+#include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
+#include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/time.h>
 
 #include <memory>
@@ -119,9 +122,9 @@ class StoryProviderImpl::LoadStoryRuntimeCall : public Operation<StoryRuntimeCon
 
     container.InitializeInspect(story_id_, session_inspect_node_);
 
-    container.controller_impl =
-        std::make_unique<StoryControllerImpl>(story_id_, session_storage_, container.storage.get(),
-                                              story_provider_impl_, container.story_node.get());
+    container.controller_impl = std::make_unique<StoryControllerImpl>(
+        story_id_, session_storage_, container.storage.get(), story_provider_impl_,
+        container.story_node.get(), story_provider_impl_->present_mods_as_stories_);
     auto it =
         story_provider_impl_->story_runtime_containers_.emplace(story_id_, std::move(container));
     story_runtime_container_ = &it.first->second;
@@ -195,6 +198,8 @@ StoryProviderImpl::StoryProviderImpl(Environment* const session_environment,
                                      SessionStorage* const session_storage,
                                      fuchsia::modular::session::AppConfig story_shell_config,
                                      fuchsia::modular::StoryShellFactoryPtr story_shell_factory,
+                                     PresentationProtocolPtr presentation_protocol,
+                                     bool present_mods_as_stories,
                                      ComponentContextInfo component_context_info,
                                      AgentServicesFactory* const agent_services_factory,
                                      inspect::Node* root_node)
@@ -202,44 +207,14 @@ StoryProviderImpl::StoryProviderImpl(Environment* const session_environment,
       session_storage_(session_storage),
       story_shell_config_(std::move(story_shell_config)),
       story_shell_factory_(std::move(story_shell_factory)),
+      presentation_protocol_(std::move(presentation_protocol)),
+      present_mods_as_stories_(present_mods_as_stories),
       component_context_info_(std::move(component_context_info)),
       agent_services_factory_(agent_services_factory),
       session_inspect_node_(root_node),
       weak_factory_(this) {
-  session_storage_->SubscribeStoryDeleted(
-      [weak_this = weak_factory_.GetWeakPtr()](std::string story_id) {
-        if (!weak_this) {
-          return WatchInterest::kStop;
-        }
-        weak_this->OnStoryStorageDeleted(std::move(story_id));
-        return WatchInterest::kContinue;
-      });
-  session_storage_->SubscribeStoryUpdated(
-      [weak_this = weak_factory_.GetWeakPtr()](
-          std::string story_id, const fuchsia::modular::internal::StoryData& story_data) {
-        if (!weak_this) {
-          return WatchInterest::kStop;
-        }
-        weak_this->OnStoryStorageUpdated(std::move(story_id), story_data);
-        return WatchInterest::kContinue;
-      });
-}
-
-StoryProviderImpl::~StoryProviderImpl() = default;
-
-void StoryProviderImpl::Connect(fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) {
-  bindings_.AddBinding(this, std::move(request));
-}
-
-void StoryProviderImpl::StopAllStories(fit::function<void()> callback) {
-  operation_queue_.Add(std::make_unique<StopAllStoriesCall>(this, std::move(callback)));
-}
-
-void StoryProviderImpl::SetPresentationProtocol(PresentationProtocolPtr presentation_protocol) {
-  FX_DCHECK(!std::holds_alternative<std::monostate>(presentation_protocol))
-      << "Presentation protocol cannot be set to the PresentationProtocolPtr default value. "
-         "It must be either a SessionShellPtr or a GraphicalPresenterPtr.";
-  presentation_protocol_ = std::move(presentation_protocol);
+  // |presentation_protocol_| must be set to one of the supported protocols.
+  FX_DCHECK(!std::holds_alternative<std::monostate>(presentation_protocol_));
 
   if (auto graphical_presenter =
           std::get_if<fuchsia::element::GraphicalPresenterPtr>(&presentation_protocol_)) {
@@ -260,12 +235,38 @@ void StoryProviderImpl::SetPresentationProtocol(PresentationProtocolPtr presenta
     FX_NOTREACHED();
   }
 
-  // Re-attach/present pending views from previous calls to AttachOrPresentView()
-  for (auto& pending_call : pending_attach_or_present_view_calls) {
-    AttachOrPresentView(std::move(pending_call.story_id),
-                        std::move(pending_call.view_holder_token));
+  session_storage_->SubscribeStoryDeleted(
+      [weak_this = weak_factory_.GetWeakPtr()](std::string story_id) {
+        if (!weak_this) {
+          return WatchInterest::kStop;
+        }
+        weak_this->OnStoryStorageDeleted(std::move(story_id));
+        return WatchInterest::kContinue;
+      });
+  session_storage_->SubscribeStoryUpdated(
+      [weak_this = weak_factory_.GetWeakPtr()](
+          std::string story_id, const fuchsia::modular::internal::StoryData& story_data) {
+        if (!weak_this) {
+          return WatchInterest::kStop;
+        }
+        weak_this->OnStoryStorageUpdated(std::move(story_id), story_data);
+        return WatchInterest::kContinue;
+      });
+
+  // Process any stories that were created before StoryProvider was constructed.
+  for (const auto& story_data : session_storage_->GetAllStoryData()) {
+    OnStoryStorageUpdated(story_data.story_name(), story_data);
   }
-  pending_attach_or_present_view_calls.clear();
+}
+
+StoryProviderImpl::~StoryProviderImpl() = default;
+
+void StoryProviderImpl::Connect(fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) {
+  bindings_.AddBinding(this, std::move(request));
+}
+
+void StoryProviderImpl::StopAllStories(fit::function<void()> callback) {
+  operation_queue_.Add(std::make_unique<StopAllStoriesCall>(this, std::move(callback)));
 }
 
 void StoryProviderImpl::Teardown(fit::function<void()> callback) {
@@ -280,8 +281,6 @@ void StoryProviderImpl::Teardown(fit::function<void()> callback) {
   } else if (auto session_shell =
                  std::get_if<fuchsia::modular::SessionShellPtr>(&presentation_protocol_)) {
     session_shell->set_error_handler(nullptr);
-  } else if (std::holds_alternative<std::monostate>(presentation_protocol_)) {
-    // Nothing to do. SetPresentationProtocol has not been called, so no error handlers to clear.
   } else {
     FX_LOGS(FATAL) << "Unhandled PresentationProtocolPtr alternative: "
                    << presentation_protocol_.index();
@@ -315,7 +314,7 @@ StoryControllerImpl* StoryProviderImpl::GetStoryControllerImpl(std::string story
 }
 
 std::unique_ptr<AsyncHolderBase> StoryProviderImpl::StartStoryShell(
-    std::string story_id, fuchsia::ui::views::ViewToken view_token,
+    std::string story_id,
     fidl::InterfaceRequest<fuchsia::modular::StoryShell> story_shell_request) {
   // When we're supplied a StoryShellFactory, use it to get StoryShells instead
   // of launching the story shell as a separate component. In this case, there
@@ -331,10 +330,7 @@ std::unique_ptr<AsyncHolderBase> StoryProviderImpl::StartStoryShell(
   }
 
   MaybeLoadStoryShell();
-
-  fuchsia::ui::app::ViewProviderPtr view_provider;
-  preloaded_story_shell_app_->services().ConnectToService(view_provider.NewRequest());
-  view_provider->CreateView(std::move(view_token.value), nullptr, nullptr);
+  AttachOrPresentStoryShellView(story_id);
 
   preloaded_story_shell_app_->services().ConnectToService(std::move(story_shell_request));
 
@@ -349,7 +345,7 @@ void StoryProviderImpl::MaybeLoadStoryShell() {
   }
 
   auto service_list = std::make_unique<fuchsia::sys::ServiceList>();
-  for (auto service_name : component_context_info_.agent_runner->GetAgentServices()) {
+  for (const auto& service_name : component_context_info_.agent_runner->GetAgentServices()) {
     service_list->names.push_back(service_name);
   }
   component_context_info_.agent_runner->PublishAgentServices(story_shell_config_.url(),
@@ -362,6 +358,27 @@ void StoryProviderImpl::MaybeLoadStoryShell() {
   preloaded_story_shell_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
       session_environment_->GetLauncher(), CloneStruct(story_shell_config_), /*data_origin=*/"",
       std::move(service_list));
+}
+
+void StoryProviderImpl::AttachOrPresentStoryShellView(std::string story_id) {
+  FX_DCHECK(preloaded_story_shell_app_);
+
+  // Create the view and present it to the session shell.
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+  scenic::ViewRefPair view_ref_pair = scenic::ViewRefPair::New();
+
+  AttachOrPresentViewParams present_view_params = {
+      .story_id = std::move(story_id),
+      .view_holder_token = std::move(view_holder_token),
+      .view_ref = fidl::Clone(view_ref_pair.view_ref)};
+
+  fuchsia::ui::app::ViewProviderPtr view_provider;
+  preloaded_story_shell_app_->services().ConnectToService(view_provider.NewRequest());
+  view_provider->CreateViewWithViewRef(std::move(view_token.value),
+                                       std::move(view_ref_pair.control_ref),
+                                       std::move(view_ref_pair.view_ref));
+
+  AttachOrPresentView(std::move(present_view_params));
 }
 
 fuchsia::modular::StoryInfo2Ptr StoryProviderImpl::GetCachedStoryInfo(std::string story_id) {
@@ -398,21 +415,11 @@ void StoryProviderImpl::GetStoryInfo2(std::string story_id, GetStoryInfo2Callbac
   }));
 }
 
-void StoryProviderImpl::AttachOrPresentView(std::string story_id,
-                                            fuchsia::ui::views::ViewHolderToken view_holder_token) {
-  if (std::holds_alternative<std::monostate>(presentation_protocol_)) {
-    // The presentation protocol has not been chosen yet. Pend the view request so it can be
-    // attached/presented once the protocol is chosen.
-    auto pending_call = PendingAttachOrPresentViewCall{
-        .story_id = std::move(story_id),
-        .view_holder_token = std::move(view_holder_token),
-    };
-    pending_attach_or_present_view_calls.push_back(std::move(pending_call));
-  } else if (std::holds_alternative<fuchsia::element::GraphicalPresenterPtr>(
-                 presentation_protocol_)) {
-    PresentView(std::move(story_id), std::move(view_holder_token));
-  } else if (std::holds_alternative<fuchsia::modular::SessionShellPtr>(presentation_protocol_)) {
-    AttachView(std::move(story_id), std::move(view_holder_token));
+void StoryProviderImpl::AttachOrPresentView(AttachOrPresentViewParams params) {
+  if (is_graphical_presenter_presentation()) {
+    PresentView(std::move(params));
+  } else if (is_session_shell_presentation()) {
+    AttachView(std::move(params));
   } else {
     FX_LOGS(FATAL) << "Unhandled PresentationProtocolPtr alternative: "
                    << presentation_protocol_.index();
@@ -421,14 +428,9 @@ void StoryProviderImpl::AttachOrPresentView(std::string story_id,
 }
 
 void StoryProviderImpl::DetachOrDismissView(std::string story_id, fit::function<void()> done) {
-  if (std::holds_alternative<std::monostate>(presentation_protocol_)) {
-    // If the view was dismissed before the presentation protocol has been selected, it was never
-    // attached/presented, so there's no need to dismiss/detach it.
-    done();
-  } else if (std::holds_alternative<fuchsia::element::GraphicalPresenterPtr>(
-                 presentation_protocol_)) {
+  if (is_graphical_presenter_presentation()) {
     DismissView(std::move(story_id), std::move(done));
-  } else if (std::holds_alternative<fuchsia::modular::SessionShellPtr>(presentation_protocol_)) {
+  } else if (is_session_shell_presentation()) {
     DetachView(std::move(story_id), std::move(done));
   } else {
     FX_LOGS(FATAL) << "Unhandled PresentationProtocolPtr alternative: "
@@ -437,21 +439,21 @@ void StoryProviderImpl::DetachOrDismissView(std::string story_id, fit::function<
   }
 }
 
-void StoryProviderImpl::AttachView(std::string story_id,
-                                   fuchsia::ui::views::ViewHolderToken view_holder_token) {
-  FX_DCHECK(std::holds_alternative<fuchsia::modular::SessionShellPtr>(presentation_protocol_))
+void StoryProviderImpl::AttachView(AttachOrPresentViewParams params) {
+  FX_DCHECK(params.view_holder_token.has_value());
+  FX_DCHECK(is_session_shell_presentation())
       << "AttachView expects a SessionShellPtr PresentationProtocolPtr";
   auto& session_shell = std::get<fuchsia::modular::SessionShellPtr>(presentation_protocol_);
   FX_CHECK(session_shell.get())
       << "The session shell component must keep alive a "
          "fuchsia.modular.SessionShell service for sessionmgr to function.";
   fuchsia::modular::ViewIdentifier view_id;
-  view_id.story_id = std::move(story_id);
-  session_shell->AttachView2(std::move(view_id), std::move(view_holder_token));
+  view_id.story_id = std::move(params.story_id);
+  session_shell->AttachView2(std::move(view_id), std::move(params.view_holder_token.value()));
 }
 
 void StoryProviderImpl::DetachView(std::string story_id, fit::function<void()> done) {
-  FX_DCHECK(std::holds_alternative<fuchsia::modular::SessionShellPtr>(presentation_protocol_))
+  FX_DCHECK(is_session_shell_presentation())
       << "DetachView expects a SessionShellPtr PresentationProtocolPtr";
   auto& session_shell = std::get<fuchsia::modular::SessionShellPtr>(presentation_protocol_);
   FX_CHECK(session_shell.get())
@@ -462,9 +464,9 @@ void StoryProviderImpl::DetachView(std::string story_id, fit::function<void()> d
   session_shell->DetachView(std::move(view_id), std::move(done));
 }
 
-void StoryProviderImpl::PresentView(std::string story_id,
-                                    fuchsia::ui::views::ViewHolderToken view_holder_token) {
-  FX_DCHECK(std::holds_alternative<fuchsia::element::GraphicalPresenterPtr>(presentation_protocol_))
+void StoryProviderImpl::PresentView(AttachOrPresentViewParams params) {
+  FX_DCHECK(params.view_holder_token.has_value());
+  FX_DCHECK(is_graphical_presenter_presentation())
       << "PresentView expects a GraphicalPresenter PresentationProtocolPtr";
   auto& graphical_presenter =
       std::get<fuchsia::element::GraphicalPresenterPtr>(presentation_protocol_);
@@ -473,11 +475,15 @@ void StoryProviderImpl::PresentView(std::string story_id,
          "for sessionmgr to function.";
 
   fuchsia::element::ViewSpec view_spec;
-  view_spec.set_view_holder_token(std::move(view_holder_token));
+  view_spec.set_view_holder_token(std::move(params.view_holder_token.value()));
+  if (params.view_ref.has_value()) {
+    view_spec.set_view_ref(std::move(params.view_ref.value()));
+  }
 
-  fuchsia::modular::internal::StoryDataPtr story_data = session_storage_->GetStoryData(story_id);
+  fuchsia::modular::internal::StoryDataPtr story_data =
+      session_storage_->GetStoryData(params.story_id);
   if (!story_data) {
-    FX_LOGS(WARNING) << "Not presenting view, story does not exist: " << story_id;
+    FX_LOGS(WARNING) << "Not presenting view, story does not exist: " << params.story_id;
     return;
   }
 
@@ -488,7 +494,7 @@ void StoryProviderImpl::PresentView(std::string story_id,
 
   fuchsia::element::ViewControllerPtr view_controller;
   view_controller.set_error_handler([weak_this = weak_factory_.GetWeakPtr(),
-                                     story_id](zx_status_t status) {
+                                     story_id = params.story_id](zx_status_t status) {
     if (!weak_this) {
       return;
     }
@@ -529,7 +535,7 @@ void StoryProviderImpl::PresentView(std::string story_id,
 
   fuchsia::element::AnnotationControllerPtr annotation_controller;
   annotation_controller.set_error_handler(
-      [weak_this = weak_factory_.GetWeakPtr(), story_id](zx_status_t status) {
+      [weak_this = weak_factory_.GetWeakPtr(), story_id = params.story_id](zx_status_t status) {
         if (!weak_this) {
           return;
         }
@@ -538,12 +544,12 @@ void StoryProviderImpl::PresentView(std::string story_id,
         weak_this->annotation_controllers_.erase(story_id);
       });
   auto annotation_controller_impl =
-      std::make_unique<AnnotationControllerImpl>(story_id, session_storage_);
+      std::make_unique<AnnotationControllerImpl>(params.story_id, session_storage_);
   annotation_controller_impl->Connect(annotation_controller.NewRequest());
 
   graphical_presenter->PresentView(
       std::move(view_spec), std::move(annotation_controller), view_controller.NewRequest(),
-      [weak_this = weak_factory_.GetWeakPtr(), story_id = std::move(story_id),
+      [weak_this = weak_factory_.GetWeakPtr(), story_id = std::move(params.story_id),
        view_controller = std::move(view_controller),
        annotation_controller_impl = std::move(annotation_controller_impl)](
           const fuchsia::element::GraphicalPresenter_PresentView_Result& result) mutable {
@@ -569,7 +575,7 @@ void StoryProviderImpl::PresentView(std::string story_id,
 }
 
 void StoryProviderImpl::DismissView(std::string story_id, fit::function<void()> done) {
-  FX_DCHECK(std::holds_alternative<fuchsia::element::GraphicalPresenterPtr>(presentation_protocol_))
+  FX_DCHECK(is_graphical_presenter_presentation())
       << "DismissView expects a GraphicalPresenter PresentationProtocolPtr";
   auto& graphical_presenter =
       std::get<fuchsia::element::GraphicalPresenterPtr>(presentation_protocol_);
@@ -696,7 +702,7 @@ void StoryProviderImpl::OnStoryStorageUpdated(
     container.ResetInspect();
   } else {
     fuchsia::modular::StoryControllerPtr story_controller;
-    GetController(story_id, story_controller.NewRequest());
+    GetController(std::move(story_id), story_controller.NewRequest());
     story_controller->RequestStart();
   }
   NotifyStoryWatchers(&story_data, runtime_state);

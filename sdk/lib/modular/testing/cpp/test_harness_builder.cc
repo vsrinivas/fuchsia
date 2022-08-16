@@ -161,6 +161,11 @@ TestHarnessBuilder& TestHarnessBuilder::UseSessionShellForStoryShellFactory() {
   return *this;
 }
 
+TestHarnessBuilder& TestHarnessBuilder::SetPresentModsAsStories() {
+  spec_.mutable_sessionmgr_config()->set_present_mods_as_stories(true);
+  return *this;
+}
+
 // static
 std::string TestHarnessBuilder::GenerateFakeUrl(std::string name) {
   name.erase(std::remove_if(name.begin(), name.end(),

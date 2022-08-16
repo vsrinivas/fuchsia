@@ -114,7 +114,8 @@ TEST(ModularConfigXdr, SessionmgrWriteDefaultValues) {
       "agent_service_index": null,
       "v2_modular_agents": null,
       "restart_session_on_agent_crash": null,
-      "disable_agent_restart_on_crash": false
+      "disable_agent_restart_on_crash": false,
+      "present_mods_as_stories": false
     })";
   rapidjson::Document expected_json_doc;
   expected_json_doc.Parse(kExpectedJson);
@@ -186,7 +187,8 @@ TEST(ModularConfigXdr, SessionmgrReadWriteValues) {
       "restart_session_on_agent_crash": [
         "fuchsia-pkg://fuchsia.com/session_agent#meta/session_agent.cmx"
       ],
-      "disable_agent_restart_on_crash": true
+      "disable_agent_restart_on_crash": true,
+      "present_mods_as_stories": true
     })";
   rapidjson::Document expected_json_doc;
   expected_json_doc.Parse(kExpectedJson);
@@ -198,6 +200,7 @@ TEST(ModularConfigXdr, SessionmgrReadWriteValues) {
   write_config.mutable_startup_agents()->push_back(kStartupAgentUrl);
   write_config.mutable_session_agents()->push_back(kSessionAgentUrl);
   write_config.set_disable_agent_restart_on_crash(true);
+  write_config.set_present_mods_as_stories(true);
   {
     fuchsia::modular::session::AppConfig component_arg;
     component_arg.set_url(kAgentUrl);
@@ -242,6 +245,7 @@ TEST(ModularConfigXdr, SessionmgrReadWriteValues) {
   EXPECT_EQ(kAgentUrl, read_config.v2_modular_agents().at(0).agent_url());
   EXPECT_EQ(kSessionAgentUrl, read_config.restart_session_on_agent_crash().at(0));
   EXPECT_TRUE(read_config.disable_agent_restart_on_crash());
+  EXPECT_TRUE(read_config.present_mods_as_stories());
 }
 
 // Tests that default values are set correctly for ModularConfig when reading an empty config.
@@ -278,7 +282,8 @@ TEST(ModularConfigXdr, ModularWriteDefaultValues) {
         "agent_service_index": [],
         "v2_modular_agents": [],
         "restart_session_on_agent_crash": [],
-        "disable_agent_restart_on_crash": false
+        "disable_agent_restart_on_crash": false,
+        "present_mods_as_stories": false
       }
     })";
   rapidjson::Document expected_json_doc;
@@ -317,7 +322,8 @@ TEST(ModularConfigXdr, ModularReadWriteValues) {
         "agent_service_index": null,
         "v2_modular_agents": null,
         "restart_session_on_agent_crash": null,
-        "disable_agent_restart_on_crash": false
+        "disable_agent_restart_on_crash": false,
+        "present_mods_as_stories": false
       }
     })";
   rapidjson::Document expected_json_doc;
