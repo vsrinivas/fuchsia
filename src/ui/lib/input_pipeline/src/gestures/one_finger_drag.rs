@@ -255,7 +255,7 @@ fn make_mouse_event(
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use {
         super::*, crate::touch_binding, assert_matches::assert_matches,
         pretty_assertions::assert_eq, test_case::test_case,

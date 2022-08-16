@@ -561,7 +561,7 @@ fn touchpad_event_to_mouse_scroll_event(
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use {
         super::*, crate::touch_binding, assert_matches::assert_matches, fuchsia_zircon as zx,
         pretty_assertions::assert_eq, test_case::test_case,
