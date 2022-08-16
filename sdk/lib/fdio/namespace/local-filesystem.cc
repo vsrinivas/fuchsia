@@ -425,7 +425,9 @@ zx::status<fdio_ptr> fdio_namespace::OpenRoot() const {
     return zx::error(status);
   }
 
-  return fdio::create_with_describe(fidl::ClientEnd<fio::Node>(std::move(clone)));
+  // We know this is a Directory.
+  return fdio::create(fidl::ClientEnd<fio::Node>(std::move(clone)),
+                      fio::wire::NodeInfo::WithDirectory({}));
 }
 
 zx_status_t fdio_namespace::SetRoot(fdio_t* io) {
