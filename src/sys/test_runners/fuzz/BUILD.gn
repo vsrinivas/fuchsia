@@ -26,13 +26,13 @@ rustc_binary("bin") {
   name = "fuzz_test_runner"
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.process:fuchsia.process-rustc",
+    "//sdk/fidl/fuchsia.process:fuchsia.process_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-runtime",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/sys/fuzzing/fidl:fuchsia.fuzzer-rustc",
+    "//src/sys/fuzzing/fidl:fuchsia.fuzzer_rust",
     "//src/sys/test_runners:lib",
     "//src/sys/test_runners/elf:lib",
     "//third_party/rust_crates:anyhow",

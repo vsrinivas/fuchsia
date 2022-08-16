@@ -13,10 +13,10 @@ rustc_library("light_realm") {
   source_root = "src/light_realm.rs"
   sources = [ "src/light_realm.rs" ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
-    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy-rustc",
+    "//sdk/fidl/fuchsia.hardware.light:fuchsia.hardware.light_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
+    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -37,8 +37,8 @@ rustc_test("hardware_only_bin") {
   sources = [ "src/light_hardware_only_tests.rs" ]
   deps = [
     ":light_realm",
-    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
-    "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types-rustc",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
+    "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types_rust",
     "//src/lib/fuchsia",
   ]
 
@@ -52,8 +52,8 @@ rustc_test("single_config_bin") {
   sources = [ "src/light_single_config_tests.rs" ]
   deps = [
     ":light_realm",
-    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
-    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_rust",
     "//src/lib/fuchsia",
     "//third_party/rust_crates:futures",
   ]
@@ -68,9 +68,9 @@ rustc_test("multi_config_bin") {
   sources = [ "src/light_multi_config_tests.rs" ]
   deps = [
     ":light_realm",
-    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
-    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
-    "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types-rustc",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_rust",
+    "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types_rust",
     "//src/lib/fuchsia",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:test-case",

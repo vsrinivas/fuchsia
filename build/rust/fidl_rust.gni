@@ -127,15 +127,4 @@ template("fidl_rust") {
       configs -= [ "//build/config/rust/lints:allow_unused_results" ]
     }
   }
-
-  # TODO(fxbug.dev/102954): Remove.
-  deprecated_rust_target_name = "${target_name}-rustc"
-  group(deprecated_rust_target_name) {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "visibility",
-                           ])
-    public_deps = [ ":$rust_target_name" ]
-  }
 }

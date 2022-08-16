@@ -8,9 +8,9 @@ import("//build/security.gni")
 import("//src/sys/core/build/core_shard.gni")
 
 COMMON_DEPS = [
-  "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-  "//sdk/fidl/fuchsia.ldsvc:fuchsia.ldsvc-rustc",
-  "//sdk/fidl/fuchsia.process:fuchsia.process-rustc",
+  "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+  "//sdk/fidl/fuchsia.ldsvc:fuchsia.ldsvc_rust",
+  "//sdk/fidl/fuchsia.process:fuchsia.process_rust",
   "//src/lib/fidl/rust/fidl",
   "//src/lib/fuchsia",
   "//src/lib/fuchsia-component",
@@ -37,7 +37,7 @@ rustc_binary("bin") {
   if (auto_update_packages) {
     # Allow resolving packages from the universe
     features = [ "auto_update_packages" ]
-    deps += [ "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc" ]
+    deps += [ "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust" ]
     sources += [ "src/resolve/auto_update.rs" ]
   } else {
     # Only resolve packages from the base set
@@ -92,7 +92,7 @@ rustc_test("unittests-auto-update") {
 
   features = [ "auto_update_packages" ]
   deps += [
-    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
+    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
     "//src/lib/fuchsia-async",
   ]
 }

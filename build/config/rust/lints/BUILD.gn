@@ -45,7 +45,7 @@ config("allow_unused_results") {
   # $ scripts/gn/gen_visibility_globs.py \
   #    --all=//build/config/rust/lints:deny_unused_results \
   #    --allow=//build/config/rust/lints:allow_unused_results \
-  #    --ignore-suffix=-rustc,_banjo_rust
+  #    --ignore-suffix=_rust  # FIDL bindings use the _rust suffix
   visibility = [
     "//build/*",
     "//examples/*",

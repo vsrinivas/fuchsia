@@ -205,7 +205,7 @@ rustc_test("nonhermetic_capability_test_bin") {
   source_root = "nonhermetic_capability_test.rs"
 
   deps = [
-    "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo-rustc",
+    "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
   ]

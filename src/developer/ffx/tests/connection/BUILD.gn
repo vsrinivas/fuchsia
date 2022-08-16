@@ -17,7 +17,7 @@ if (is_host) {
       "src/util.rs",
     ]
     deps = [
-      "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
+      "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust",
       "//src/developer/ffx/daemon:lib",
       "//src/developer/ffx/lib/isolate:lib",
       "//src/developer/ffx/lib/target:lib",
@@ -26,7 +26,7 @@ if (is_host) {
       "//src/lib/fuchsia",
       "//src/lib/fuchsia-async",
       "//src/lib/testing/fixture",
-      "//src/testing/fidl/proxy_stressor/fidl:test.proxy.stress-rustc",
+      "//src/testing/fidl/proxy_stressor/fidl:test.proxy.stress_rust",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:async-lock",
       "//third_party/rust_crates:futures",

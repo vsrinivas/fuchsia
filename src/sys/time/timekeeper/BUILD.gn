@@ -6,13 +6,10 @@ import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
 timekeeper_deps = [
-  "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
-  "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
-  "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc-rustc",
+  "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
+  "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
   "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_rust",
-  "//sdk/fidl/fuchsia.time:fuchsia.time-rustc",
   "//sdk/fidl/fuchsia.time:fuchsia.time_rust",
-  "//sdk/fidl/fuchsia.time.external:fuchsia.time.external-rustc",
   "//sdk/fidl/fuchsia.time.external:fuchsia.time.external_rust",
   "//src/lib/cobalt/rust:fuchsia-cobalt",
   "//src/lib/diagnostics/inspect/runtime/rust",

@@ -14,8 +14,8 @@ rustc_library("common") {
   sources = [ "src/common.rs" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
-    "//sdk/fidl/fuchsia.ui.brightness:fuchsia.ui.brightness-rustc",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
+    "//sdk/fidl/fuchsia.ui.brightness:fuchsia.ui.brightness_rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-component-test",
@@ -35,7 +35,7 @@ rustc_test("bin") {
   source_root = "src/display_tests.rs"
   sources = [ "src/display_tests.rs" ]
   deps = [
-    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
     "//src/lib/fuchsia",
     "//src/settings/service/integration_tests/display_tests:common",
     "//third_party/rust_crates:futures",
@@ -76,7 +76,7 @@ rustc_test("internal_tests_bin") {
   source_root = "src/internal_display_tests.rs"
   sources = [ "src/internal_display_tests.rs" ]
   deps = [
-    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/settings/service/integration_tests/display_tests:common",
