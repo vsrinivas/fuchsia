@@ -1,4 +1,4 @@
-# Memory Reclamation in Fuchsia
+# Memory reclamation in Fuchsia
 
 Most operating systems employ memory reclamation strategies to ensure that the
 working set of running processes at any point in time can efficiently utilize
