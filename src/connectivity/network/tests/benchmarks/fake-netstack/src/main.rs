@@ -12,7 +12,6 @@ use fidl::{
     endpoints::{ControlHandle as _, RequestStream as _},
     HandleBased as _, Peered as _,
 };
-use fidl_fuchsia_io as fio;
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_ext as fnet_ext;
 use fidl_fuchsia_posix as fposix;
@@ -496,16 +495,17 @@ async fn handle_datagram_request(
     icmp_echo_receive_buffer: &mut VecDeque<(fnet::SocketAddress, Vec<u8>)>,
 ) -> Result<(), anyhow::Error> {
     match request.context("receive request")? {
-        fposix_socket::SynchronousDatagramSocketRequest::Describe { responder } => {
+        fposix_socket::SynchronousDatagramSocketRequest::Describe2 { responder } => {
             let event = socket
                 .borrow()
                 .peer_event
                 .duplicate_handle(zx::Rights::BASIC)
                 .context("duplicate peer event")?;
             responder
-                .send(&mut fio::NodeInfo::SynchronousDatagramSocket(
-                    fio::SynchronousDatagramSocket { event },
-                ))
+                .send(fposix_socket::SynchronousDatagramSocketDescribe2Response {
+                    event: Some(event),
+                    ..fposix_socket::SynchronousDatagramSocketDescribe2Response::EMPTY
+                })
                 .context("send Describe response")?;
         }
         fposix_socket::SynchronousDatagramSocketRequest::Bind { addr, responder } => {
@@ -683,14 +683,17 @@ async fn handle_stream_request(
             responder.send(&mut Ok(())).context("send Close response")?;
             socket.borrow().close(sockets);
         }
-        fposix_socket::StreamSocketRequest::Describe { responder } => {
+        fposix_socket::StreamSocketRequest::Describe2 { responder } => {
             let socket = socket
                 .borrow()
                 .peer_socket
                 .duplicate_handle(zx::Rights::SAME_RIGHTS)
                 .context("duplicate socket")?;
             responder
-                .send(&mut fio::NodeInfo::StreamSocket(fio::StreamSocket { socket }))
+                .send(fposix_socket::StreamSocketDescribe2Response {
+                    socket: Some(socket),
+                    ..fposix_socket::StreamSocketDescribe2Response::EMPTY
+                })
                 .context("send Describe response")?;
         }
         fposix_socket::StreamSocketRequest::Bind { addr, responder } => {

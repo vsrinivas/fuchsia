@@ -26,9 +26,9 @@
 #include "sdk/lib/fdio/fdio_unistd.h"
 #include "sdk/lib/fdio/get_client.h"
 #include "sdk/lib/fdio/internal.h"
+#include "sdk/lib/fdio/socket.h"
 #include "src/network/getifaddrs.h"
 
-namespace fio = fuchsia_io;
 namespace fnet = fuchsia_net;
 namespace fnet_name = fuchsia_net_name;
 namespace fsocket = fuchsia_posix_socket;
@@ -39,12 +39,7 @@ constexpr int kSockTypesMask = ~(SOCK_CLOEXEC | SOCK_NONBLOCK);
 
 namespace {
 
-zx::status<fbl::unique_fd> create_node(int type, fidl::ClientEnd<fio::Node> client_end) {
-  zx::status io = fdio::create_with_describe(std::move(client_end));
-  if (io.is_error()) {
-    return io.take_error();
-  }
-
+zx::status<fbl::unique_fd> create_node(int type, const fdio_ptr& io) {
   if (type & SOCK_NONBLOCK) {
     io->ioflag() |= IOFLAG_NONBLOCK;
   }
@@ -53,7 +48,7 @@ zx::status<fbl::unique_fd> create_node(int type, fidl::ClientEnd<fio::Node> clie
   // if (type & SOCK_CLOEXEC) {
   // }
 
-  std::optional fd = bind_to_fd(io.value());
+  std::optional fd = bind_to_fd(io);
   if (fd.has_value()) {
     return zx::ok(fbl::unique_fd(fd.value()));
   }
@@ -94,9 +89,9 @@ int socket(int domain, int type, int protocol) {
         return ERROR(provider.error_value());
       }
 
-      auto socket_result = provider->Socket(kind);
-      zx_status_t status = socket_result.status();
-      if (status != ZX_OK) {
+      fidl::WireResult socket_result = provider->Socket(kind);
+      if (!socket_result.ok()) {
+        zx_status_t status = socket_result.status();
         if (status == ZX_ERR_PEER_CLOSED) {
           // If we got a peer closed error, then it usually means that we
           // do not have the packet socket protocol in our sandbox which
@@ -105,12 +100,25 @@ int socket(int domain, int type, int protocol) {
         }
         return ERROR(status);
       }
-      if (socket_result->is_error()) {
-        return ERRNO(static_cast<int32_t>(socket_result->error_value()));
+      fitx::result socket_response = socket_result.value();
+      if (socket_response.is_error()) {
+        return ERRNO(static_cast<int32_t>(socket_response.error_value()));
       }
-
-      zx::status create_node_result = create_node(
-          type, fidl::ClientEnd<fio::Node>(socket_result->value()->socket.TakeChannel()));
+      fidl::ClientEnd<fpacketsocket::Socket>& control = socket_response.value()->socket;
+      fidl::WireResult result = fidl::WireCall(control)->Describe2();
+      if (!result.ok()) {
+        return ERROR(result.status());
+      }
+      fidl::WireResponse response = result.value();
+      if (!response.has_event()) {
+        return ERROR(ZX_ERR_NOT_SUPPORTED);
+      }
+      zx::status io_result =
+          fdio_packet_socket_create(std::move(response.event()), std::move(control));
+      if (io_result.is_error()) {
+        return ERROR(io_result.status_value());
+      }
+      zx::status create_node_result = create_node(type, io_result.value());
       if (create_node_result.is_error()) {
         return ERROR(create_node_result.error_value());
       }
@@ -136,7 +144,7 @@ int socket(int domain, int type, int protocol) {
       return ERRNO(EPROTONOSUPPORT);
   }
 
-  fidl::ClientEnd<fio::Node> client_end;
+  zx::status<fdio_ptr> io;
   switch (type & kSockTypesMask) {
     case SOCK_STREAM:
       switch (protocol) {
@@ -147,15 +155,25 @@ int socket(int domain, int type, int protocol) {
             return ERRNO(EIO);
           }
 
-          auto result =
+          fidl::WireResult socket_result =
               provider->StreamSocket(sock_domain, fsocket::wire::StreamSocketProtocol::kTcp);
-          if (result.status() != ZX_OK) {
+          if (!socket_result.ok()) {
+            return ERROR(socket_result.status());
+          }
+          fitx::result socket_response = socket_result.value();
+          if (socket_response.is_error()) {
+            return ERRNO(static_cast<int32_t>(socket_response.error_value()));
+          }
+          fidl::ClientEnd<fsocket::StreamSocket>& control = socket_response.value()->s;
+          fidl::WireResult result = fidl::WireCall(control)->Describe2();
+          if (!result.ok()) {
             return ERROR(result.status());
           }
-          if (result->is_error()) {
-            return ERRNO(static_cast<int32_t>(result->error_value()));
+          fidl::WireResponse response = result.value();
+          if (!response.has_socket()) {
+            return ERROR(ZX_ERR_NOT_SUPPORTED);
           }
-          client_end.channel() = result->value()->s.TakeChannel();
+          io = fdio_stream_socket_create(std::move(response.socket()), std::move(control));
         } break;
         default:
           return ERRNO(EPROTONOSUPPORT);
@@ -189,24 +207,53 @@ int socket(int domain, int type, int protocol) {
         return ERRNO(EIO);
       }
 
-      fidl::WireResult result = provider->DatagramSocket(sock_domain, proto);
-      if (result.status() != ZX_OK) {
-        return ERROR(result.status());
+      fidl::WireResult socket_result = provider->DatagramSocket(sock_domain, proto);
+      if (socket_result.status() != ZX_OK) {
+        return ERROR(socket_result.status());
       }
-      if (result->is_error()) {
-        return ERRNO(static_cast<int32_t>(result->error_value()));
+      fitx::result socket_response = socket_result.value();
+      if (socket_response.is_error()) {
+        return ERRNO(static_cast<int32_t>(socket_response.error_value()));
       }
-      fsocket::wire::ProviderDatagramSocketResponse& response = *result->value();
+      fsocket::wire::ProviderDatagramSocketResponse& response = *socket_response.value();
       if (response.has_invalid_tag()) {
         return ERRNO(EIO);
       }
       switch (response.Which()) {
-        case fsocket::wire::ProviderDatagramSocketResponse::Tag::kDatagramSocket:
-          client_end.channel() = response.datagram_socket().TakeChannel();
-          break;
-        case fsocket::wire::ProviderDatagramSocketResponse::Tag::kSynchronousDatagramSocket:
-          client_end.channel() = response.synchronous_datagram_socket().TakeChannel();
-          break;
+        case fsocket::wire::ProviderDatagramSocketResponse::Tag::kDatagramSocket: {
+          fidl::ClientEnd<fsocket::DatagramSocket>& control = response.datagram_socket();
+          fidl::WireResult result = fidl::WireCall(control)->Describe2();
+          if (!result.ok()) {
+            return ERROR(result.status());
+          }
+          fidl::WireResponse response = result.value();
+          if (!response.has_socket()) {
+            return ERROR(ZX_ERR_NOT_SUPPORTED);
+          }
+          if (!response.has_tx_meta_buf_size()) {
+            return ERROR(ZX_ERR_NOT_SUPPORTED);
+          }
+          if (!response.has_rx_meta_buf_size()) {
+            return ERROR(ZX_ERR_NOT_SUPPORTED);
+          }
+          io =
+              fdio_datagram_socket_create(std::move(response.socket()), std::move(control),
+                                          response.tx_meta_buf_size(), response.rx_meta_buf_size());
+        } break;
+        case fsocket::wire::ProviderDatagramSocketResponse::Tag::kSynchronousDatagramSocket: {
+          fidl::ClientEnd<fsocket::SynchronousDatagramSocket>& control =
+              response.synchronous_datagram_socket();
+          fidl::WireResult result = fidl::WireCall(control)->Describe2();
+          if (!result.ok()) {
+            return ERROR(result.status());
+          }
+          fidl::WireResponse response = result.value();
+          if (!response.has_event()) {
+            return ERROR(ZX_ERR_NOT_SUPPORTED);
+          }
+          io = fdio_synchronous_datagram_socket_create(std::move(response.event()),
+                                                       std::move(control));
+        } break;
       }
     } break;
     case SOCK_RAW: {
@@ -236,27 +283,38 @@ int socket(int domain, int type, int protocol) {
       } else {
         proto_assoc = frawsocket::wire::ProtocolAssociation::WithAssociated(sock_protocol);
       }
-      auto result = provider->Socket(sock_domain, proto_assoc);
-      auto status = result.status();
-      if (status != ZX_OK) {
+      fidl::WireResult socket_result = provider->Socket(sock_domain, proto_assoc);
+      if (!socket_result.ok()) {
+        zx_status_t status = socket_result.status();
         if (status == ZX_ERR_PEER_CLOSED) {
           // Client does not have access to the raw socket protocol.
           return ERRNO(EPERM);
         }
         return ERROR(status);
       }
-      if (result->is_error()) {
-        return ERRNO(static_cast<int32_t>(result->error_value()));
+      fitx::result socket_response = socket_result.value();
+      if (socket_response.is_error()) {
+        return ERRNO(static_cast<int32_t>(socket_response.error_value()));
       }
-      client_end.channel() = result->value()->s.TakeChannel();
+      fidl::ClientEnd<frawsocket::Socket>& control = socket_response.value()->s;
+      fidl::WireResult result = fidl::WireCall(control)->Describe2();
+      if (!result.ok()) {
+        return ERROR(result.status());
+      }
+      fidl::WireResponse response = result.value();
+      if (!response.has_event()) {
+        return ERROR(ZX_ERR_NOT_SUPPORTED);
+      }
+      io = fdio_raw_socket_create(std::move(response.event()), std::move(control));
     } break;
     default:
       return ERRNO(EPROTONOSUPPORT);
   }
 
-  // TODO(https://fxbug.dev/101887): Remove superfluous Describe (since we know the socket type
-  // here).
-  zx::status result = create_node(type, std::move(client_end));
+  if (io.is_error()) {
+    return ERROR(io.status_value());
+  }
+  zx::status result = create_node(type, io.value());
   if (result.is_error()) {
     return ERROR(result.error_value());
   }
@@ -394,18 +452,28 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict addr
     }
   }
 
-  zx::status accepted_io =
-      fdio::create_with_describe(fidl::ClientEnd<fio::Node>(zx::channel(std::move(accepted))));
-  if (accepted_io.is_error()) {
-    return ERROR(accepted_io.status_value());
+  fidl::ClientEnd<fsocket::StreamSocket> control(zx::channel(std::move(accepted)));
+  fidl::WireResult result = fidl::WireCall(control)->Describe2();
+  if (!result.ok()) {
+    return ERROR(result.status());
   }
+  fidl::WireResponse response = result.value();
+  if (!response.has_socket()) {
+    return ERROR(ZX_ERR_NOT_SUPPORTED);
+  }
+  zx::status io_result =
+      fdio_stream_socket_create(std::move(response.socket()), std::move(control));
+  if (io_result.is_error()) {
+    return ERROR(io_result.status_value());
+  }
+  fdio_ptr accepted_io = io_result.value();
 
   if (flags & SOCK_NONBLOCK) {
     accepted_io->ioflag() |= IOFLAG_NONBLOCK;
   }
 
   fbl::AutoLock lock(&fdio_lock);
-  if (fdio_fdtab[nfd].try_fill(accepted_io.value())) {
+  if (fdio_fdtab[nfd].try_fill(accepted_io)) {
     return nfd;
   }
 
@@ -421,7 +489,7 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict addr
   //
   // Ownership of reservations isn't maintained, but that should be OK as long as it isn't assumed.
   for (int i = 0; i < FDIO_MAX_FD; ++i) {
-    if (fdio_fdtab[nfd].try_set(accepted_io.value())) {
+    if (fdio_fdtab[nfd].try_set(accepted_io)) {
       return i;
     }
   }
