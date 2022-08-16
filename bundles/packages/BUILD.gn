@@ -7,9 +7,5 @@
 
 group("base_packages") {
   testonly = true
-  public_deps = [
-    "prod:all",
-    "//src/sys/sysmgr:services_config",
-    "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config",
-  ]
+  public_deps = [ "prod:all" ]
 }

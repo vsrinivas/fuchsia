@@ -5,17 +5,9 @@
 # WARNING: This file was machine-generated from previous json files and
 # will eventually be deleted.
 
-group("acpidump") {
-  testonly = true
-  if (target_cpu == "x64") {
-    public_deps = [ "//src/devices/bin/acpidump" ]
-  }
-}
-
 group("all") {
   testonly = true
   public_deps = [
-    ":acpidump",
     ":bluetooth_a2dp",
     ":bluetooth_all",
     ":bluetooth_atheros",
@@ -118,11 +110,6 @@ group("bluetooth_profiles") {
   ]
 }
 
-# TODO(fxbug.dev/105175): Remove once all deps have been removed.
-group("broadcom") {
-  public_deps = [ ":wlan_fullmac_core_drivers" ]
-}
-
 group("cmdutils") {
   testonly = true
   public_deps = [
@@ -178,14 +165,6 @@ group("insntrace") {
   public_deps = [
     "//src/performance/insntrace",
     "//src/performance/insntrace:host_insntrace_print",
-  ]
-}
-
-group("nxp") {
-  public_deps = [
-    "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac:nxpfmac_driver",
-    "//src/connectivity/wlan/drivers/wlanif",
-    "//src/connectivity/wlan/drivers/wlanphy",
   ]
 }
 
@@ -254,7 +233,10 @@ group("wifi_intel") {
 # TODO(fxbug.dev/105176): Remove target once deps have been removed.
 group("wlan_drivers") {
   public_deps = [
-    ":broadcom",
-    ":nxp",
+    ":wlan_fullmac_core_drivers",
+
+    # from :nxp
+    "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac:nxpfmac_driver",
+    "//src/connectivity/wlan/drivers/wlanphy",
   ]
 }
