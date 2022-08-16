@@ -155,7 +155,18 @@ class JobDispatcher final
   fbl::RefPtr<ProcessDispatcher> LookupProcessById(zx_koid_t koid);
   fbl::RefPtr<JobDispatcher> LookupJobById(zx_koid_t koid);
 
-  Exceptionate* exceptionate(Exceptionate::Type type);
+  // It's safe to return a raw pointer because the exceptionate is only used by the threads under
+  // the current job.
+  Exceptionate* exceptionate();
+
+  // Enumerate over a snapshot of debug exceptionates. |func| will be called without the lock held.
+  zx_status_t ForEachDebuExceptionate(fit::inline_function<void(Exceptionate*)> func);
+
+  // Create a new debug exceptionate. Possible errors are ZX_ERR_NO_MEMORY and ZX_ERR_ALREADY_BOUND.
+  // Instead of return an exceptionate, this function calls SetChannel directly because it needs to
+  // be protected by our lock.
+  zx_status_t CreateDebugExceptionate(KernelHandle<ChannelDispatcher> channel_handle,
+                                      zx_rights_t thread_rights, zx_rights_t process_rights);
 
   void set_kill_on_oom(bool kill);
   bool get_kill_on_oom() const;
@@ -172,6 +183,16 @@ class JobDispatcher final
   uint32_t LockOrder() const;
 
  private:
+  // JobDispatcher::DebugExceptionate is a specialization for Exceptionate because we allow
+  // multiple debug exception channels on a job. Rather than being statically owned, its lifecycle
+  // is dynamically managed by CreateDebugExceptionate().
+  struct DebugExceptionate : public Exceptionate,
+                             public fbl::RefCounted<DebugExceptionate>,
+                             public fbl::DoublyLinkedListable<fbl::RefPtr<DebugExceptionate>> {
+   public:
+    using Exceptionate::Exceptionate;
+  };
+
   enum class State { READY, KILLING, DEAD };
 
   template <typename T>
@@ -265,7 +286,7 @@ class JobDispatcher final
   JobPolicy policy_ TA_GUARDED(get_lock());
 
   Exceptionate exceptionate_;
-  Exceptionate debug_exceptionate_;
+  fbl::DoublyLinkedList<fbl::RefPtr<DebugExceptionate>> debug_exceptionates_ TA_GUARDED(get_lock());
 
   // Aggregated runtime stats for processes that have exited.
   TaskRuntimeStats aggregated_runtime_stats_ TA_GUARDED(get_lock());

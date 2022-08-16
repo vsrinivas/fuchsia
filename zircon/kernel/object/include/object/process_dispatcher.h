@@ -164,7 +164,8 @@ class ProcessDispatcher final
   zx_status_t GetThreads(fbl::Array<zx_koid_t>* threads) const;
   zx_status_t SetCriticalToJob(fbl::RefPtr<JobDispatcher> critical_to_job, bool retcode_nonzero);
 
-  Exceptionate* exceptionate(Exceptionate::Type type);
+  Exceptionate* exceptionate();
+  Exceptionate* debug_exceptionate();
 
   // The following two methods can be slow and inaccurate and should only be
   // called from diagnostics code.

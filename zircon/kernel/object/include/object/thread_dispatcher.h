@@ -25,7 +25,6 @@
 #include <ktl/string_view.h>
 #include <object/channel_dispatcher.h>
 #include <object/dispatcher.h>
-#include <object/exception_dispatcher.h>
 #include <object/exceptionate.h>
 #include <object/futex_context.h>
 #include <object/handle.h>

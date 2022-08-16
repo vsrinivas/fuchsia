@@ -126,21 +126,21 @@ whether the `ZX_EXCEPTION_CHANNEL_DEBUGGER` flag is passed to
 [`zx_task_create_exception_channel()`]. The table below summarizes the
 differences between the various channel types:
 
-Channel Type  | `get_thread` | `get_process` | Architectural & Policy Exceptions | Thread Start/Stop Exceptions | Process Start Exception
-------------- | :----------: | :-----------: | :-------------------------------: | :--------------------------: | :---------------------:
-Thread        | X            |               | X                                 |                              |
-Process       | X            | X             | X                                 |                              |
-Process Debug | X            | X             | X                                 | X                            |
-Job           | X            | X             | X                                 |                              |
-Job Debug     | X            | X             |                                   |                              | X
+Channel Type     | `get_thread` | `get_process` | Architectural & Policy Exceptions | Thread Start/Stop Exceptions | Process Start Exception
+---------------- | :----------: | :-----------: | :-------------------------------: | :--------------------------: | :---------------------:
+Thread           | X            |               | X                                 |                              |
+Process          | X            | X             | X                                 |                              |
+Process Debugger | X            | X             | X                                 | X                            |
+Job              | X            | X             | X                                 |                              |
+Job Debugger     | X            | X             |                                   |                              | X
 
 The channel type also determines the order in which exception channels will be
 given the chance to handle an exception:
 
-1. process debug
+1. process debugger
 2. thread
 3. process
-4. process debug (optionally, if the exception is [`'second-chance'`](#process-debugger-first-and-possibly-again-later))
+4. process debugger (optionally, if the exception is [`'second-chance'`](#process-debugger-first-and-possibly-again-later))
 5. job (parent job -> grandparent job -> etc)
 
 If there are no remaining exception channels to try, the kernel terminates the
@@ -155,12 +155,18 @@ will succeed.
 
 ### `ZX_EXCP_PROCESS_STARTING` and Job Debugger Channels
 
-The `ZX_EXCP_PROCESS_STARTING` behaves differently than other exceptions.
-It is only sent to job debugger exception channels, and is only sent to the
-first found handler, essentially assuming `ZX_EXCEPTION_STATE_HANDLED`
-regardless of actual handler behavior. This is also the only exception that
-job debugger channels receive, making them a special-case handler for just
-detecting new processes.
+The `ZX_EXCP_PROCESS_STARTING` behaves differently than other exceptions. It is
+only sent to job debugger exception channels, and is always sent to all found
+handlers, essentially assuming `ZX_EXCEPTION_STATE_TRY_NEXT` regardless of the
+actual handler behavior. This is also the only exception that job debugger
+channels receive, making them a special-case handler for just detecting new
+processes.
+
+Since job debugger channels are considered as "read-only", multiple job debugger
+channels (up to `ZX_EXCEPTION_CHANNEL_JOB_DEBUGGER_MAX_COUNT`) may be created on
+a single job. When multiple debug channels are created on one job, a
+`ZX_EXCP_PROCESS_STARTING` event will be sent to all channels sequentially, with
+the earlier created channels being notified before the later created channels.
 
 ### Process Debugger First... and Possibly Again Later
 

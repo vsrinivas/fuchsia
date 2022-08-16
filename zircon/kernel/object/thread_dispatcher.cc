@@ -25,6 +25,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <kernel/thread.h>
+#include <object/exception_dispatcher.h>
 #include <object/handle.h>
 #include <object/job_dispatcher.h>
 #include <object/process_dispatcher.h>
@@ -330,8 +331,7 @@ void ThreadDispatcher::ExitingCurrent() {
   //
   // Thread exit exceptions don't currently provide an iframe.
   arch_exception_context_t context{};
-  HandleSingleShotException(process_->exceptionate(Exceptionate::Type::kDebug),
-                            ZX_EXCP_THREAD_EXITING, context);
+  HandleSingleShotException(process_->debug_exceptionate(), ZX_EXCP_THREAD_EXITING, context);
 
   // Mark the thread as dead. Do this before removing the thread from the
   // process because if this is the last thread then the process will be
@@ -424,8 +424,7 @@ int ThreadDispatcher::StartRoutine(void* arg) {
   }
 
   // Notify debugger if attached.
-  t->HandleSingleShotException(t->process_->exceptionate(Exceptionate::Type::kDebug),
-                               ZX_EXCP_THREAD_STARTING, context);
+  t->HandleSingleShotException(t->process_->debug_exceptionate(), ZX_EXCP_THREAD_STARTING, context);
 
   arch_iframe_process_pending_signals(&iframe);
 

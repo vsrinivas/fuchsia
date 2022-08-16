@@ -32,6 +32,15 @@ channel will be read-only with the following rights:
 * **ZX_RIGHT_WAIT**
 * **ZX_RIGHT_READ**
 
+### Number of Exception Channels
+
+Each task may have at most one regular exception channel and one debugger
+exception channel, except for jobs. A single job may have up to
+`ZX_EXCEPTION_CHANNEL_JOB_DEBUGGER_MAX_COUNT` debugger exception channels.
+
+Attempting to create an exception channel on a task that already has the maximum
+number of channels for a given type will result in **ZX_ERR_ALREADY_BOUND**.
+
 ### Exception Messages
 
 When an exception occurs, the channel will receive a message containing one
@@ -64,7 +73,8 @@ In the event of failure, a negative error value is returned.
 **ZX_ERR_ACCESS_DENIED** The caller has a job policy in place preventing the
 creation of new channels.
 
-**ZX_ERR_ALREADY_BOUND** *handle* is already bound to an exception channel.
+**ZX_ERR_ALREADY_BOUND** The maximum number of exception channels of the given
+type are already bound to *handle*.
 
 **ZX_ERR_BAD_HANDLE** *handle* is not a valid handle.
 

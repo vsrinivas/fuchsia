@@ -33,6 +33,8 @@ static constexpr uint32_t kRootJobMaxHeight = 32;
 
 static constexpr char kRootJobName[] = "root";
 
+static constexpr size_t kDebugExceptionateInlineCount = 4;
+
 template <>
 uint64_t JobDispatcher::ChildCountLocked<JobDispatcher>() const {
   return jobs_.size();
@@ -177,8 +179,7 @@ JobDispatcher::JobDispatcher(uint32_t /*flags*/, fbl::RefPtr<JobDispatcher> pare
       return_code_(0),
       kill_on_oom_(false),
       policy_(policy),
-      exceptionate_(ZX_EXCEPTION_CHANNEL_TYPE_JOB),
-      debug_exceptionate_(ZX_EXCEPTION_CHANNEL_TYPE_JOB_DEBUGGER) {
+      exceptionate_(ZX_EXCEPTION_CHANNEL_TYPE_JOB) {
   kcounter_add(dispatcher_job_create_count, 1);
 }
 
@@ -298,7 +299,9 @@ void JobDispatcher::FinishDeadTransitionUnlocked() {
     Guard<CriticalMutex> guard{get_lock()};
     state_ = State::DEAD;
     exceptionate_.Shutdown();
-    debug_exceptionate_.Shutdown();
+    for (DebugExceptionate& debug_exceptionate : debug_exceptionates_) {
+      debug_exceptionate.Shutdown();
+    }
     UpdateStateLocked(0u, ZX_JOB_TERMINATED);
   }
 
@@ -654,9 +657,74 @@ zx_status_t JobDispatcher::set_name(const char* name, size_t len) {
   return name_.set(name, len);
 }
 
-Exceptionate* JobDispatcher::exceptionate(Exceptionate::Type type) {
+Exceptionate* JobDispatcher::exceptionate() {
   canary_.Assert();
-  return type == Exceptionate::Type::kDebug ? &debug_exceptionate_ : &exceptionate_;
+  return &exceptionate_;
+}
+
+zx_status_t JobDispatcher::ForEachDebuExceptionate(fit::inline_function<void(Exceptionate*)> func) {
+  Guard<CriticalMutex> guard{get_lock()};
+  // Remove disconnected exceptionates and get the count.
+  size_t count = 0;
+  for (auto it = debug_exceptionates_.begin(); it.IsValid();) {
+    if (!it->HasValidChannel()) {
+      debug_exceptionates_.erase(it++);
+    } else {
+      it++;
+      count++;
+    }
+  }
+  if (count == 0) {
+    return ZX_OK;
+  }
+  fbl::AllocChecker ac;
+  fbl::InlineArray<fbl::RefPtr<DebugExceptionate>, kDebugExceptionateInlineCount> snapshot(&ac,
+                                                                                           count);
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  // Perform the snapshot.
+  ktl::transform(
+      debug_exceptionates_.begin(), debug_exceptionates_.end(), snapshot.get(),
+      [](DebugExceptionate& debug_exceptionate) { return fbl::RefPtr(&debug_exceptionate); });
+  guard.Release();
+  ktl::for_each(snapshot.get(), snapshot.get() + count,
+                [func = ktl::move(func)](const fbl::RefPtr<DebugExceptionate>& exceptionate) {
+                  func(exceptionate.get());
+                });
+  return ZX_OK;
+}
+
+zx_status_t JobDispatcher::CreateDebugExceptionate(KernelHandle<ChannelDispatcher> channel_handle,
+                                                   zx_rights_t thread_rights,
+                                                   zx_rights_t process_rights) {
+  Guard<CriticalMutex> guard{get_lock()};
+  // Remove disconnected exceptionates.
+  size_t count = 0;
+  for (auto it = debug_exceptionates_.begin(); it.IsValid();) {
+    if (!it->HasValidChannel()) {
+      debug_exceptionates_.erase(it++);
+    } else {
+      it++;
+      count++;
+    }
+  }
+  if (count >= ZX_EXCEPTION_CHANNEL_JOB_DEBUGGER_MAX_COUNT) {
+    return ZX_ERR_ALREADY_BOUND;
+  }
+  fbl::AllocChecker ac;
+  auto exceptionate =
+      fbl::MakeRefCountedChecked<DebugExceptionate>(&ac, ZX_EXCEPTION_CHANNEL_TYPE_JOB_DEBUGGER);
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  zx_status_t status =
+      exceptionate->SetChannel(ktl::move(channel_handle), thread_rights, process_rights);
+  if (status != ZX_OK) {
+    return status;
+  }
+  debug_exceptionates_.push_back(ktl::move(exceptionate));
+  return ZX_OK;
 }
 
 void JobDispatcher::set_kill_on_oom(bool value) {
@@ -676,7 +744,7 @@ void JobDispatcher::GetInfo(zx_info_job_t* info) const {
   info->return_code = return_code_;
   info->exited = (state_ == State::DEAD) || (state_ == State::KILLING);
   info->kill_on_oom = kill_on_oom_;
-  info->debugger_attached = debug_exceptionate_.HasValidChannel();
+  info->debugger_attached = !debug_exceptionates_.is_empty();
 }
 
 zx_status_t JobDispatcher::AccumulateRuntimeTo(zx_info_task_runtime_t* info) const {

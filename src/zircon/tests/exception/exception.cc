@@ -1361,32 +1361,43 @@ TEST(ExceptionTest, ProcessLifecycleParentJobChannel) {
   VerifyProcessLifecycle<&TestLoop::parent_job>();
 }
 
-TEST(ExceptionTest, ProcessStartExceptionDoesNotBubbleUp) {
-  zx::channel parent_exception_channel;
-  zx::channel exception_channel;
-  {
-    TestLoop loop(TestLoop::Control::kManual);
+TEST(ExceptionTest, OrderOfProcessStartExceptions) {
+  TestLoop loop(TestLoop::Control::kManual);
+  zx::channel channel_root;
+  zx::channel channels[3];
 
-    ASSERT_OK(loop.parent_job().create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER,
-                                                         &parent_exception_channel));
-    ASSERT_OK(
-        loop.job().create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER, &exception_channel));
+  ASSERT_OK(
+      loop.parent_job().create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER, &channel_root));
+  ASSERT_OK(loop.job().create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER, &channels[0]));
+  ASSERT_OK(loop.job().create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER, &channels[1]));
+  // Intentionally close and recreate channels[1].
+  ASSERT_OK(loop.job().create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER, &channels[1]));
+  ASSERT_OK(loop.job().create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER, &channels[2]));
+  channels[1].reset();
 
-    loop.Step1CreateProcess();
-    loop.Step2StartThreads();
-    ReadException(exception_channel, ZX_EXCP_PROCESS_STARTING);
+  loop.Step1CreateProcess();
+  loop.Step2StartThreads();
+  ReadException(channels[0], ZX_EXCP_PROCESS_STARTING);
+  ReadException(channels[2], ZX_EXCP_PROCESS_STARTING);
+  ReadException(channel_root, ZX_EXCP_PROCESS_STARTING);
+}
 
-    loop.Step3ReadAuxThreadHandle();
-    loop.Step4ShutdownAuxThread();
-    loop.Step5ShutdownMainThread();
+TEST(ExceptionTest, MaximumNumberOfJobDebugChannels) {
+  zx::job job;
+  zx::job::create(*zx::job::default_job(), 0, &job);
+
+  for (size_t i = 0; i < ZX_EXCEPTION_CHANNEL_JOB_DEBUGGER_MAX_COUNT * 2; i++) {
+    zx::channel channel;
+    ASSERT_OK(job.create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER, &channel));
   }
 
-  // The parent job channel should never have seen anything since synthetic
-  // PROCESS_STARTING exceptions do not bubble up the job chain.
-  zx_signals_t signals;
-  EXPECT_OK(
-      parent_exception_channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &signals));
-  EXPECT_FALSE(signals & ZX_CHANNEL_READABLE);
+  zx::channel channels[ZX_EXCEPTION_CHANNEL_JOB_DEBUGGER_MAX_COUNT];
+  for (zx::channel& channel : channels) {
+    ASSERT_OK(job.create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER, &channel));
+  }
+  zx::channel channel;
+  ASSERT_EQ(job.create_exception_channel(ZX_EXCEPTION_CHANNEL_DEBUGGER, &channel),
+            ZX_ERR_ALREADY_BOUND);
 }
 
 // Lifecycle exceptions should not be seen by normal (non-debug) handlers.

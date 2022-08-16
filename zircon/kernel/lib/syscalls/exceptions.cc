@@ -14,6 +14,7 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include <object/exception_dispatcher.h>
 #include <object/exceptionate.h>
 #include <object/job_dispatcher.h>
 #include <object/process_dispatcher.h>
@@ -61,23 +62,35 @@ zx_status_t sys_task_create_exception_channel(zx_handle_t handle, uint32_t optio
   zx_rights_t process_rights = task_rights;
   zx_rights_t thread_rights = task_rights;
 
-  Exceptionate::Type type = (options & ZX_EXCEPTION_CHANNEL_DEBUGGER)
-                                ? Exceptionate::Type::kDebug
-                                : Exceptionate::Type::kStandard;
+  // Only one of the |exceptionate| and |job_to_create_debug_exceptionate| will be non-null.
+  //
+  // When creating debugger exception channel on a job, |exceptionate| will be null and
+  // |job_to_create_debug_exceptionate| is used instead, because JobDispatcher::DebugExceptionate
+  // requires dynamic allocation. For other types, only |exceptionate| will be used.
   Exceptionate* exceptionate = nullptr;
+  JobDispatcher* job_to_create_debug_exceptionate = nullptr;
+
   bool job_or_process = false;
 
   // Use DownCastDispatcher() on the raw task pointer to avoid moving the
   // RefPtr out, we still need to retain the RefPtr to keep our extracted
   // Exceptionate* alive.
   if (auto job = DownCastDispatcher<JobDispatcher>(task.get())) {
-    exceptionate = job->exceptionate(type);
+    if (options & ZX_EXCEPTION_CHANNEL_DEBUGGER) {
+      job_to_create_debug_exceptionate = job;
+    } else {
+      exceptionate = job->exceptionate();
+    }
     job_or_process = true;
   } else if (auto process = DownCastDispatcher<ProcessDispatcher>(task.get())) {
-    exceptionate = process->exceptionate(type);
+    if (options & ZX_EXCEPTION_CHANNEL_DEBUGGER) {
+      exceptionate = process->debug_exceptionate();
+    } else {
+      exceptionate = process->exceptionate();
+    }
     job_or_process = true;
   } else if (auto thread = DownCastDispatcher<ThreadDispatcher>(task.get())) {
-    if (type == Exceptionate::Type::kDebug)
+    if (options & ZX_EXCEPTION_CHANNEL_DEBUGGER)
       return ZX_ERR_INVALID_ARGS;
 
     // We don't provide access up the task chain, so don't send the process
@@ -101,7 +114,12 @@ zx_status_t sys_task_create_exception_channel(zx_handle_t handle, uint32_t optio
   if (status != ZX_OK)
     return status;
 
-  status = exceptionate->SetChannel(ktl::move(kernel_handle), thread_rights, process_rights);
+  if (job_to_create_debug_exceptionate) {
+    status = job_to_create_debug_exceptionate->CreateDebugExceptionate(
+        ktl::move(kernel_handle), thread_rights, process_rights);
+  } else {
+    status = exceptionate->SetChannel(ktl::move(kernel_handle), thread_rights, process_rights);
+  }
   if (status != ZX_OK)
     return status;
 

@@ -166,7 +166,7 @@ typedef struct zx_exception_info {
 } zx_exception_info_t;
 
 // Options for zx_create_exception_channel.
-// When creating an exception channel, use the task's debug channel.
+// When creating an exception channel, use the task's debugger channel.
 #define ZX_EXCEPTION_CHANNEL_DEBUGGER ((uint32_t)1)
 
 // The type of exception handler a thread may be waiting for a response from.
@@ -177,6 +177,9 @@ typedef struct zx_exception_info {
 #define ZX_EXCEPTION_CHANNEL_TYPE_PROCESS      ((uint32_t)3u)
 #define ZX_EXCEPTION_CHANNEL_TYPE_JOB          ((uint32_t)4u)
 #define ZX_EXCEPTION_CHANNEL_TYPE_JOB_DEBUGGER ((uint32_t)5u)
+
+// The maximum number of debugger channels that can be created on a job.
+#define ZX_EXCEPTION_CHANNEL_JOB_DEBUGGER_MAX_COUNT ((uint32_t) 32)
 
 __END_CDECLS
 

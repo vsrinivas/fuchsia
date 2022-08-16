@@ -10,7 +10,6 @@
 #include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/types.h>
 
-#include <fbl/ref_ptr.h>
 #include <kernel/mutex.h>
 #include <object/channel_dispatcher.h>
 #include <object/handle.h>
@@ -22,12 +21,8 @@ class ExceptionDispatcher;
 // This class is thread-safe, does not require external synchronization.
 class Exceptionate {
  public:
-  // Jobs and processes need to distinguish between standard or debug
-  // exception handlers.
-  enum class Type { kStandard, kDebug };
-
   // |type| must be a valid ZX_EXCEPTION_CHANNEL_TYPE_* constant.
-  Exceptionate(uint32_t type);
+  explicit Exceptionate(uint32_t type);
 
   uint32_t type() const { return type_; }
 

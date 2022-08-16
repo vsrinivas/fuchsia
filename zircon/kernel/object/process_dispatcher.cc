@@ -669,9 +669,14 @@ zx_status_t ProcessDispatcher::SetCriticalToJob(fbl::RefPtr<JobDispatcher> criti
   return ZX_OK;
 }
 
-Exceptionate* ProcessDispatcher::exceptionate(Exceptionate::Type type) {
+Exceptionate* ProcessDispatcher::exceptionate() {
   canary_.Assert();
-  return type == Exceptionate::Type::kDebug ? &debug_exceptionate_ : &exceptionate_;
+  return &exceptionate_;
+}
+
+Exceptionate* ProcessDispatcher::debug_exceptionate() {
+  canary_.Assert();
+  return &debug_exceptionate_;
 }
 
 uint32_t ProcessDispatcher::ThreadCount() const {
@@ -815,8 +820,10 @@ void ProcessDispatcher::OnProcessStartForJobDebugger(ThreadDispatcher* t,
                                                      const arch_exception_context_t* context) {
   auto job = job_;
   while (job) {
-    if (t->HandleSingleShotException(job->exceptionate(Exceptionate::Type::kDebug),
-                                     ZX_EXCP_PROCESS_STARTING, *context)) {
+    if (job->ForEachDebuExceptionate([t, context](Exceptionate* exceptionate) {
+          t->HandleSingleShotException(exceptionate, ZX_EXCP_PROCESS_STARTING, *context);
+        }) != ZX_OK) {
+      printf("KERN: failed to allocate memory to notify process starts in %lu\n", get_koid());
       break;
     }
 

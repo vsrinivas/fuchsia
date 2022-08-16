@@ -83,8 +83,8 @@ class ExceptionHandlerIterator final {
 
       switch (next_type_) {
         case ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER:
-          *result = thread_->HandleException(
-              thread_->process()->exceptionate(Exceptionate::Type::kDebug), exception_, &sent);
+          *result =
+              thread_->HandleException(thread_->process()->debug_exceptionate(), exception_, &sent);
           if (second_chance) {
             next_type_ = ZX_EXCEPTION_CHANNEL_TYPE_JOB;
             next_job_ = thread_->process()->job();
@@ -97,8 +97,7 @@ class ExceptionHandlerIterator final {
           next_type_ = ZX_EXCEPTION_CHANNEL_TYPE_PROCESS;
           break;
         case ZX_EXCEPTION_CHANNEL_TYPE_PROCESS:
-          *result = thread_->HandleException(
-              thread_->process()->exceptionate(Exceptionate::Type::kStandard), exception_, &sent);
+          *result = thread_->HandleException(thread_->process()->exceptionate(), exception_, &sent);
 
           if (second_chance) {
             next_type_ = ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER;
@@ -112,8 +111,7 @@ class ExceptionHandlerIterator final {
             // Reached the root job and there was no handler.
             return false;
           }
-          *result = thread_->HandleException(next_job_->exceptionate(Exceptionate::Type::kStandard),
-                                             exception_, &sent);
+          *result = thread_->HandleException(next_job_->exceptionate(), exception_, &sent);
           next_job_ = next_job_->parent();
           break;
         default:
