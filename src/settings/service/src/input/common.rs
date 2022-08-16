@@ -142,6 +142,9 @@ pub(crate) async fn monitor_media_buttons(
     let (client_end, mut stream) = create_request_stream::<MediaButtonsListenerMarker>()
         .expect("failed to create request stream for media buttons listener");
 
+    // TODO(fxbug.dev/106748) This independent spawn is necessary! For some reason removing this or
+    // merging it with the spawn below causes devices to lock up on input button events. Figure out
+    // whether this can be removed or left as-is as part of the linked bug.
     fasync::Task::spawn(async move {
         if let Err(error) = call_async!(presenter_service => register_listener(client_end)).await {
             fx_log_err!(
