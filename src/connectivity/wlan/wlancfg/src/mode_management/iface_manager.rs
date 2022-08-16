@@ -323,6 +323,7 @@ impl IfaceManagerService {
             event_stream,
             receiver,
             self.ap_update_sender.clone(),
+            self.telemetry_sender.clone(),
         )
         .boxed();
 

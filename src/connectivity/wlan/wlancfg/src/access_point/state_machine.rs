@@ -5,6 +5,7 @@
 use {
     crate::{
         access_point::types,
+        telemetry::{TelemetryEvent, TelemetrySender},
         util::{
             listener::{
                 ApListenerMessageSender, ApStateUpdate, ApStatesUpdate, ConnectedClientInformation,
@@ -211,10 +212,12 @@ pub async fn serve(
     sme_event_stream: fidl_sme::ApSmeEventStream,
     req_stream: mpsc::Receiver<ManualRequest>,
     message_sender: ApListenerMessageSender,
+    telemetry_sender: TelemetrySender,
 ) {
     let state_tracker = Arc::new(ApStateTracker::new(message_sender));
     let state_machine =
-        stopped_state(proxy, req_stream.into_future(), state_tracker.clone()).into_state_machine();
+        stopped_state(proxy, req_stream.into_future(), state_tracker.clone(), telemetry_sender)
+            .into_state_machine();
     let removal_watcher = sme_event_stream.map_ok(|_| ()).try_collect::<()>();
     select! {
         state_machine = state_machine.fuse() => {
@@ -242,6 +245,7 @@ fn perform_manual_request(
     req: Option<ManualRequest>,
     req_stream: mpsc::Receiver<ManualRequest>,
     state_tracker: Arc<ApStateTracker>,
+    telemetry_sender: TelemetrySender,
 ) -> Result<State, ExitReason> {
     match req {
         Some(ManualRequest::Start((req, responder))) => Ok(starting_state(
@@ -251,12 +255,17 @@ fn perform_manual_request(
             AP_START_MAX_RETRIES,
             Some(responder),
             state_tracker,
+            telemetry_sender,
         )
         .into_state()),
-        Some(ManualRequest::Stop(responder)) => {
-            Ok(stopping_state(responder, proxy, req_stream.into_future(), state_tracker)
-                .into_state())
-        }
+        Some(ManualRequest::Stop(responder)) => Ok(stopping_state(
+            responder,
+            proxy,
+            req_stream.into_future(),
+            state_tracker,
+            telemetry_sender,
+        )
+        .into_state()),
         Some(ManualRequest::Exit(responder)) => {
             responder.send(()).unwrap_or_else(|_| ());
             Err(ExitReason(Ok(())))
@@ -284,9 +293,18 @@ fn transition_to_starting(
     remaining_retries: u16,
     responder: Option<oneshot::Sender<()>>,
     state_tracker: Arc<ApStateTracker>,
+    telemetry_sender: TelemetrySender,
 ) -> Result<State, ExitReason> {
-    Ok(starting_state(proxy, next_req, req, remaining_retries, responder, state_tracker)
-        .into_state())
+    Ok(starting_state(
+        proxy,
+        next_req,
+        req,
+        remaining_retries,
+        responder,
+        state_tracker,
+        telemetry_sender,
+    )
+    .into_state())
 }
 
 /// In the starting state, a request to ApSmeProxy::Start is made.  If the start request fails,
@@ -316,6 +334,7 @@ async fn starting_state(
     remaining_retries: u16,
     responder: Option<oneshot::Sender<()>>,
     state_tracker: Arc<ApStateTracker>,
+    telemetry_sender: TelemetrySender,
 ) -> Result<State, ExitReason> {
     // Send a stop request to ensure that the AP begins in an unstarting state.
     let stop_result = match proxy.stop().await {
@@ -357,6 +376,9 @@ async fn starting_state(
     let start_result = match proxy.start(&mut ap_config).await {
         Ok(fidl_sme::StartApResultCode::Success) => Ok(()),
         Ok(code) => {
+            // Log a metric indicating that starting the AP failed.
+            telemetry_sender.send(TelemetryEvent::ApStartFailure);
+
             // For any non-Success response, attempt to retry the start operation.  A successful
             // stop operation followed by an unsuccessful start operation likely indicates that the
             // PHY associated with this AP interface is busy scanning.  A future attempt to start
@@ -375,6 +397,7 @@ async fn starting_state(
                             remaining_retries - 1,
                             responder,
                             state_tracker,
+                            telemetry_sender,
                         );
                     },
                     (req, req_stream) = next_req => {
@@ -382,7 +405,13 @@ async fn starting_state(
                         state_tracker
                             .set_stopped_state()
                             .map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
-                        return perform_manual_request(proxy, req, req_stream, state_tracker);
+                        return perform_manual_request(
+                            proxy,
+                            req,
+                            req_stream,
+                            state_tracker,
+                            telemetry_sender,
+                        );
                     }
                 }
             }
@@ -418,7 +447,7 @@ async fn starting_state(
     state_tracker
         .update_operating_state(types::OperatingState::Active)
         .map_err(|e| ExitReason(Err(anyhow::Error::from(e))))?;
-    return Ok(started_state(proxy, next_req, req, state_tracker).into_state());
+    return Ok(started_state(proxy, next_req, req, state_tracker, telemetry_sender).into_state());
 }
 
 /// In the stopping state, an ApSmeProxy::Stop is requested.  Once the stop request has been
@@ -437,6 +466,7 @@ async fn stopping_state(
     proxy: fidl_sme::ApSmeProxy,
     next_req: NextReqFut,
     state_tracker: Arc<ApStateTracker>,
+    telemetry_sender: TelemetrySender,
 ) -> Result<State, ExitReason> {
     let result = match proxy.stop().await {
         Ok(fidl_sme::StopApResultCode::Success) => Ok(()),
@@ -453,13 +483,14 @@ async fn stopping_state(
     // Ack the request to stop the AP.
     responder.send(()).unwrap_or_else(|_| ());
 
-    Ok(stopped_state(proxy, next_req, state_tracker).into_state())
+    Ok(stopped_state(proxy, next_req, state_tracker, telemetry_sender).into_state())
 }
 
 async fn stopped_state(
     proxy: fidl_sme::ApSmeProxy,
     mut next_req: NextReqFut,
     state_tracker: Arc<ApStateTracker>,
+    telemetry_sender: TelemetrySender,
 ) -> Result<State, ExitReason> {
     // Wait for the next request from the caller
     loop {
@@ -472,7 +503,13 @@ async fn stopped_state(
             }
             // All other requests are handled manually
             other => {
-                return perform_manual_request(proxy.clone(), other, req_stream, state_tracker)
+                return perform_manual_request(
+                    proxy.clone(),
+                    other,
+                    req_stream,
+                    state_tracker,
+                    telemetry_sender,
+                )
             }
         }
     }
@@ -483,6 +520,7 @@ async fn started_state(
     mut next_req: NextReqFut,
     req: ApConfig,
     state_tracker: Arc<ApStateTracker>,
+    telemetry_sender: TelemetrySender,
 ) -> Result<State, ExitReason> {
     // Holds a pending status request.  Request status immediately upon entering the started state.
     let mut pending_status_req = FuturesUnordered::new();
@@ -524,7 +562,8 @@ async fn started_state(
                             req,
                             AP_START_MAX_RETRIES,
                             None,
-                            state_tracker
+                            state_tracker,
+                            telemetry_sender
                         );
                     }
                 }
@@ -535,7 +574,13 @@ async fn started_state(
                 }
             },
             (req, req_stream) = next_req => {
-                return perform_manual_request(proxy, req, req_stream, state_tracker);
+                return perform_manual_request(
+                    proxy,
+                    req,
+                    req_stream,
+                    state_tracker,
+                    telemetry_sender
+                );
             },
             complete => {
                 panic!("AP state machine terminated unexpectedly");
@@ -564,6 +609,8 @@ mod tests {
         ap_req_stream: mpsc::Receiver<ManualRequest>,
         update_sender: Arc<ApStateTracker>,
         update_receiver: mpsc::UnboundedReceiver<listener::ApMessage>,
+        telemetry_sender: TelemetrySender,
+        telemetry_receiver: mpsc::Receiver<TelemetryEvent>,
     }
 
     fn test_setup() -> TestValues {
@@ -572,6 +619,8 @@ mod tests {
         let (sme_proxy, sme_server) =
             create_proxy::<fidl_sme::ApSmeMarker>().expect("failed to create an sme channel");
         let sme_req_stream = sme_server.into_stream().expect("could not create SME request stream");
+        let (telemetry_sender, telemetry_receiver) = mpsc::channel(100);
+        let telemetry_sender = TelemetrySender::new(telemetry_sender);
 
         TestValues {
             sme_proxy,
@@ -580,6 +629,8 @@ mod tests {
             ap_req_stream,
             update_sender: Arc::new(ApStateTracker::new(update_sender)),
             update_receiver,
+            telemetry_sender,
+            telemetry_receiver,
         }
     }
 
@@ -639,6 +690,7 @@ mod tests {
             test_values.ap_req_stream.into_future(),
             req,
             test_values.update_sender,
+            test_values.telemetry_sender,
         );
         let fut = run_state_machine(fut);
         pin_mut!(fut);
@@ -707,6 +759,7 @@ mod tests {
             test_values.ap_req_stream.into_future(),
             req,
             test_values.update_sender,
+            test_values.telemetry_sender,
         );
         let fut = run_state_machine(fut);
         pin_mut!(fut);
@@ -766,6 +819,7 @@ mod tests {
             test_values.ap_req_stream.into_future(),
             req,
             test_values.update_sender,
+            test_values.telemetry_sender,
         );
         let fut = run_state_machine(fut);
         pin_mut!(fut);
@@ -854,6 +908,7 @@ mod tests {
             test_values.ap_req_stream.into_future(),
             req,
             test_values.update_sender,
+            test_values.telemetry_sender,
         );
         let fut = run_state_machine(fut);
         pin_mut!(fut);
@@ -913,6 +968,7 @@ mod tests {
             test_values.ap_req_stream.into_future(),
             req,
             test_values.update_sender,
+            test_values.telemetry_sender,
         );
         let fut = run_state_machine(fut);
         pin_mut!(fut);
@@ -976,6 +1032,7 @@ mod tests {
             test_values.ap_req_stream.into_future(),
             req,
             test_values.update_sender,
+            test_values.telemetry_sender,
         );
         let fut = run_state_machine(fut);
         pin_mut!(fut);
@@ -1002,6 +1059,7 @@ mod tests {
             test_values.sme_proxy,
             test_values.ap_req_stream.into_future(),
             test_values.update_sender,
+            test_values.telemetry_sender,
         );
         let fut = run_state_machine(fut);
         pin_mut!(fut);
@@ -1028,6 +1086,7 @@ mod tests {
             test_values.sme_proxy,
             test_values.ap_req_stream.into_future(),
             test_values.update_sender,
+            test_values.telemetry_sender,
         );
         let fut = run_state_machine(fut);
         pin_mut!(fut);
@@ -1052,6 +1111,7 @@ mod tests {
             test_values.sme_proxy,
             test_values.ap_req_stream.into_future(),
             test_values.update_sender,
+            test_values.telemetry_sender,
         );
         let fut = run_state_machine(fut);
         pin_mut!(fut);
@@ -1133,6 +1193,7 @@ mod tests {
             test_values.sme_proxy,
             test_values.ap_req_stream.into_future(),
             test_values.update_sender,
+            test_values.telemetry_sender,
         );
         let fut = run_state_machine(fut);
         pin_mut!(fut);
@@ -1173,6 +1234,7 @@ mod tests {
             test_values.sme_proxy,
             test_values.ap_req_stream.into_future(),
             test_values.update_sender,
+            test_values.telemetry_sender,
         );
         let fut = run_state_machine(fut);
         pin_mut!(fut);
@@ -1222,6 +1284,7 @@ mod tests {
             test_values.sme_proxy,
             test_values.ap_req_stream.into_future(),
             test_values.update_sender,
+            test_values.telemetry_sender,
         );
         let fut = run_state_machine(fut);
         pin_mut!(fut);
@@ -1300,6 +1363,7 @@ mod tests {
             test_values.sme_proxy,
             test_values.ap_req_stream.into_future(),
             test_values.update_sender,
+            test_values.telemetry_sender,
         );
         let fut = run_state_machine(fut);
         pin_mut!(fut);
@@ -1328,6 +1392,7 @@ mod tests {
             test_values.sme_proxy,
             test_values.ap_req_stream.into_future(),
             test_values.update_sender,
+            test_values.telemetry_sender,
         );
         let fut = run_state_machine(fut);
         pin_mut!(fut);
@@ -1362,7 +1427,7 @@ mod tests {
     #[fuchsia::test]
     fn test_stop_while_starting() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let test_values = test_setup();
+        let mut test_values = test_setup();
 
         let (start_sender, mut start_receiver) = oneshot::channel();
         let radio_config = RadioConfig::new(fidl_common::WlanPhyType::Ht, Cbw::Cbw20, 6);
@@ -1382,6 +1447,7 @@ mod tests {
             0,
             Some(start_sender),
             test_values.update_sender,
+            test_values.telemetry_sender,
         );
         let fut = run_state_machine(fut);
         pin_mut!(fut);
@@ -1442,12 +1508,15 @@ mod tests {
         // Expect the responder to be acknowledged
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
         assert_variant!(exec.run_until_stalled(&mut stop_receiver), Poll::Ready(Ok(())));
+
+        // No metric should be logged in this case.
+        assert_variant!(test_values.telemetry_receiver.try_next(), Err(_));
     }
 
     #[fuchsia::test]
     fn test_start_while_starting() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let test_values = test_setup();
+        let mut test_values = test_setup();
 
         let (start_sender, mut start_receiver) = oneshot::channel();
         let radio_config = RadioConfig::new(fidl_common::WlanPhyType::Ht, Cbw::Cbw20, 6);
@@ -1467,6 +1536,7 @@ mod tests {
             0,
             Some(start_sender),
             test_values.update_sender,
+            test_values.telemetry_sender,
         );
         let fut = run_state_machine(fut);
         pin_mut!(fut);
@@ -1558,12 +1628,15 @@ mod tests {
         // The second start request should receive the acknowledgement now.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
         assert_variant!(exec.run_until_stalled(&mut second_start_receiver), Poll::Ready(Ok(())));
+
+        // No metric should be logged in this case.
+        assert_variant!(test_values.telemetry_receiver.try_next(), Err(_));
     }
 
     #[fuchsia::test]
     fn test_exit_while_starting() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let test_values = test_setup();
+        let mut test_values = test_setup();
 
         let (start_sender, mut start_receiver) = oneshot::channel();
         let radio_config = RadioConfig::new(fidl_common::WlanPhyType::Ht, Cbw::Cbw20, 6);
@@ -1583,6 +1656,7 @@ mod tests {
             0,
             Some(start_sender),
             test_values.update_sender,
+            test_values.telemetry_sender,
         );
         let fut = run_state_machine(fut);
         pin_mut!(fut);
@@ -1628,12 +1702,15 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
         assert_variant!(exec.run_until_stalled(&mut exit_receiver), Poll::Ready(Ok(())));
         assert_variant!(exec.run_until_stalled(&mut start_receiver), Poll::Ready(Ok(())));
+
+        // No metric should be logged in this case and the sender should be dropped.
+        assert_variant!(test_values.telemetry_receiver.try_next(), Ok(None));
     }
 
     #[fuchsia::test]
     fn test_sme_breaks_while_starting() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let test_values = test_setup();
+        let mut test_values = test_setup();
 
         // Drop the serving side of the SME so that client requests fail.
         drop(test_values.sme_req_stream);
@@ -1656,12 +1733,16 @@ mod tests {
             0,
             Some(start_sender),
             test_values.update_sender,
+            test_values.telemetry_sender,
         );
         let fut = run_state_machine(fut);
         pin_mut!(fut);
 
         // Run the state machine and expect it to exit
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
+
+        // No metric should be logged in this case and the sender should have been dropped.
+        assert_variant!(test_values.telemetry_receiver.try_next(), Ok(None));
     }
 
     #[fuchsia::test]
@@ -1687,6 +1768,7 @@ mod tests {
             0,
             Some(start_sender),
             test_values.update_sender,
+            test_values.telemetry_sender,
         );
         let fut = run_state_machine(fut);
         pin_mut!(fut);
@@ -1717,6 +1799,9 @@ mod tests {
             let update = updates.access_points.pop().expect("no new updates available.");
             assert_eq!(update.state, types::OperatingState::Failed);
         });
+
+        // No metric should be logged in this case and the sender should have been dropped.
+        assert_variant!(test_values.telemetry_receiver.try_next(), Ok(None));
     }
 
     #[fuchsia::test]
@@ -1742,6 +1827,7 @@ mod tests {
             AP_START_MAX_RETRIES,
             Some(start_sender),
             test_values.update_sender,
+            test_values.telemetry_sender,
         );
         let fut = run_state_machine(fut);
         pin_mut!(fut);
@@ -1817,6 +1903,12 @@ mod tests {
             let update = updates.access_points.pop().expect("no new updates available.");
             assert_eq!(update.state, types::OperatingState::Failed);
         });
+
+        // A metric should be logged for the failure to start the AP.
+        assert_variant!(
+            test_values.telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::ApStartFailure))
+        );
     }
 
     #[fuchsia::test]
@@ -1849,6 +1941,7 @@ mod tests {
             AP_START_MAX_RETRIES,
             Some(start_sender),
             test_values.update_sender,
+            test_values.telemetry_sender,
         );
         let fut = run_state_machine(fut);
         pin_mut!(fut);
@@ -1897,6 +1990,12 @@ mod tests {
         // should also check to see if there are any incoming AP commands and find the initial stop
         // request.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // A metric should be logged for the failure to start the AP.
+        assert_variant!(
+            test_values.telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::ApStartFailure))
+        );
 
         // The start sender will be dropped in this transition.
         assert_variant!(exec.run_until_stalled(&mut start_receiver), Poll::Ready(Err(_)));
@@ -1967,6 +2066,7 @@ mod tests {
             AP_START_MAX_RETRIES,
             Some(start_sender),
             test_values.update_sender,
+            test_values.telemetry_sender,
         );
         let fut = run_state_machine(fut);
         pin_mut!(fut);
@@ -2015,6 +2115,12 @@ mod tests {
         // should also check to see if there are any incoming AP commands and find the initial
         // start request.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // A metric should be logged for the failure to start the AP.
+        assert_variant!(
+            test_values.telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::ApStartFailure))
+        );
 
         // The original start sender will be dropped in this transition.
         assert_variant!(exec.run_until_stalled(&mut start_receiver), Poll::Ready(Err(_)));
@@ -2070,6 +2176,7 @@ mod tests {
             AP_START_MAX_RETRIES,
             Some(start_sender),
             test_values.update_sender,
+            test_values.telemetry_sender,
         );
         let fut = run_state_machine(fut);
         pin_mut!(fut);
@@ -2119,6 +2226,12 @@ mod tests {
         // request at which point it should exit.
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
         assert_variant!(exec.run_until_stalled(&mut exit_receiver), Poll::Ready(Ok(())));
+
+        // A metric should be logged for the failure to start the AP.
+        assert_variant!(
+            test_values.telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::ApStartFailure))
+        );
     }
 
     #[fuchsia::test]
@@ -2143,7 +2256,13 @@ mod tests {
         let ap_req_stream = test_values.ap_req_stream;
         let update_sender = test_values.update_sender;
         let fut = async move {
-            perform_manual_request(sme_proxy, Some(manual_request), ap_req_stream, update_sender)
+            perform_manual_request(
+                sme_proxy,
+                Some(manual_request),
+                ap_req_stream,
+                update_sender,
+                test_values.telemetry_sender,
+            )
         };
         let fut = run_state_machine(fut);
         pin_mut!(fut);
@@ -2195,6 +2314,7 @@ mod tests {
             sme_event_stream,
             test_values.ap_req_stream,
             update_sender,
+            test_values.telemetry_sender,
         );
         pin_mut!(fut);
 
@@ -2216,6 +2336,7 @@ mod tests {
             sme_event_stream,
             test_values.ap_req_stream,
             update_sender,
+            test_values.telemetry_sender,
         );
         pin_mut!(fut);
 
@@ -2246,6 +2367,7 @@ mod tests {
             sme_event_stream,
             test_values.ap_req_stream,
             update_sender,
+            test_values.telemetry_sender,
         );
         pin_mut!(fut);
 

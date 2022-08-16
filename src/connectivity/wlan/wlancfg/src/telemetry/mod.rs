@@ -246,6 +246,8 @@ pub enum TelemetryEvent {
     IfaceDestructionFailure,
     /// Notify telemetry that an unexpected issue occurred while scanning.
     ScanDefect(ScanIssue),
+    /// Notify telemetry that the AP failed to start.
+    ApStartFailure,
 }
 
 #[derive(Clone, Debug)]
@@ -1175,6 +1177,9 @@ impl Telemetry {
             }
             TelemetryEvent::ScanDefect(issue) => {
                 self.stats_logger.log_scan_issue(issue).await;
+            }
+            TelemetryEvent::ApStartFailure => {
+                self.stats_logger.log_ap_start_failure().await;
             }
         }
     }
@@ -2580,6 +2585,16 @@ impl StatsLogger {
             self.cobalt_1dot1_proxy,
             log_occurrence,
             metrics::CONNECTION_FAILURES_METRIC_ID,
+            1,
+            &[]
+        )
+    }
+
+    async fn log_ap_start_failure(&mut self) {
+        log_cobalt_1dot1!(
+            self.cobalt_1dot1_proxy,
+            log_occurrence,
+            metrics::AP_START_FAILURE_METRIC_ID,
             1,
             &[]
         )
@@ -6020,6 +6035,22 @@ mod tests {
         // Expect that Cobalt has been notified of the metric
         test_helper.drain_cobalt_events(&mut test_fut);
         let logged_metrics = test_helper.get_logged_metrics(expected_metric_id);
+        assert_eq!(logged_metrics.len(), 1);
+    }
+
+    #[fuchsia::test]
+    fn test_log_ap_start_failure() {
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        // Send a notification that starting the AP has failed.
+        test_helper.telemetry_sender.send(TelemetryEvent::ApStartFailure);
+
+        // Run the telemetry loop until it stalls.
+        assert_variant!(test_helper.advance_test_fut(&mut test_fut), Poll::Pending);
+
+        // Expect that Cobalt has been notified of the AP start failure.
+        test_helper.drain_cobalt_events(&mut test_fut);
+        let logged_metrics = test_helper.get_logged_metrics(metrics::AP_START_FAILURE_METRIC_ID);
         assert_eq!(logged_metrics.len(), 1);
     }
 
