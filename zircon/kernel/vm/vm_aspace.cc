@@ -351,15 +351,22 @@ zx_status_t VmAspace::MapObjectInternal(fbl::RefPtr<VmObject> vmo, const char* n
   // long-term.
   vmar_flags |= VMAR_CAN_RWX_FLAGS;
 
+  // TODO: Enforce all callers to be passing VMM_FLAG_COMMIT.
+  zx_status_t status = vmo->CommitRangePinned(offset, size, true);
+  if (status != ZX_OK) {
+    return status;
+  }
+
   // allocate a region and put it in the aspace list
   fbl::RefPtr<VmMapping> r(nullptr);
-  zx_status_t status = RootVmar()->CreateVmMapping(vmar_offset, size, align_pow2, vmar_flags, vmo,
-                                                   offset, arch_mmu_flags, name, &r);
+  status = RootVmar()->CreateVmMapping(vmar_offset, size, align_pow2, vmar_flags, vmo, offset,
+                                       arch_mmu_flags, name, &r);
   if (status != ZX_OK) {
     return status;
   }
 
   // if we're committing it, map the region now
+  // TODO: Enforce all callers to be passing VMM_FLAG_COMMIT.
   if (vmm_flags & VMM_FLAG_COMMIT) {
     status = r->MapRange(0, size, true);
     if (status != ZX_OK) {
@@ -462,15 +469,6 @@ zx_status_t VmAspace::Alloc(const char* name, size_t size, void** ptr, uint8_t a
   }
   vmo->set_name(name, strlen(name));
 
-  // commit memory up front if requested
-  if (vmm_flags & VMM_FLAG_COMMIT) {
-    // commit memory to the object
-    status = vmo->CommitRange(0, size);
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
-
   // map it, creating a new region
   return MapObjectInternal(ktl::move(vmo), name, 0, size, ptr, align_pow2, vmm_flags,
                            arch_mmu_flags);
@@ -488,7 +486,23 @@ zx_status_t VmAspace::FreeRegion(vaddr_t va) {
     return ZX_ERR_NOT_FOUND;
   }
 
-  return r->Destroy();
+  fbl::RefPtr<VmMapping> mapping = r->as_vm_mapping();
+  if (!mapping) {
+    return ZX_ERR_BAD_STATE;
+  }
+  // Cache the VMO information for this mapping so that we can unpin. We must destroy the mapping
+  // first though, otherwise we would be unpinning a live mapping.
+  fbl::RefPtr<VmObject> vmo = mapping->vmo();
+  uint64_t vmo_offset = 0;
+  uint64_t unpin_size = 0;
+  {
+    Guard<CriticalMutex> guard{mapping->lock()};
+    vmo_offset = mapping->object_offset_locked();
+    unpin_size = mapping->size();
+  }
+  zx_status_t status = mapping->Destroy();
+  vmo->Unpin(vmo_offset, unpin_size);
+  return status;
 }
 
 fbl::RefPtr<VmAddressRegionOrMapping> VmAspace::FindRegion(vaddr_t va) {
