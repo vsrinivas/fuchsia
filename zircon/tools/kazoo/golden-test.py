@@ -155,8 +155,7 @@ def main():
         print()
         print('Please run:')
         print(
-            '  cp "$(fx get-build-dir)/%s" "$(fx get-build-dir)/%s"' %
-            (args.new_golden, GOLDEN))
+            f'cp {os.path.abspath(args.new_golden)} {os.path.abspath(GOLDEN)}')
         print('to acknowledge these changes.')
         print()
         print(

@@ -49,5 +49,5 @@ $ fx test //zircon/tools/kazoo
 ```
 
 This also includes a "golden"-style run, which compares the output of running kazoo on any current
-syscalls changes with `//zircon/tools/kazoo/golden.txt`. Instructions will be printed on how to
-update `golden.txt` if output differs.
+syscalls changes with `//zircon/tools/kazoo/golden.txt`. Run `fx build` with the `fx set` line
+above to see instructions on how to update `golden.txt` if output differs.
