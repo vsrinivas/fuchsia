@@ -1,6 +1,6 @@
-# Compatibility Test Suite
+# Compatibility Tests for Fuchsia
 
-The Fuchsia Compatibility Test Suite (CTS) is a set of tests designed to provide
+The Compatibility Tests for Fuchsia (CTF) are a set of tests designed to provide
 coverage for Application Programming Interface (API) and Application Binary
 Interface (ABI) elements (e.g., headers, FIDL files) made available to
 developers via a Fuchsia SDK. It was originally proposed as [RFC
@@ -10,12 +10,12 @@ the project code is located at
 
 ## Background, Motivation, and Goals
 
-The CTS exists to determine whether a build of the Fuchsia platform, running on
+The CTF exists to determine whether a build of the Fuchsia platform, running on
 a particular device, correctly implements (or *is compatible with*) the API and
 ABI exposed by a particular Fuchsia SDK.  To put it another way, it demonstrates
 that the build correctly implements Fuchsia.
 
-If a system running Fuchsia passes the CTS tests for a particular ABI revision,
+If a system running Fuchsia passes the CTF tests for a particular ABI revision,
 then its developers can have confidence that components built for that revision
 will work on the system, and that the system is backwards compatible with that
 revision.
@@ -23,22 +23,22 @@ revision.
 Each release of the Fuchsia platform is bundled with a set of Software
 Development Kits (SDKs), which contain tools, libraries, and headers that allow
 developers to target Fuchsia's APIs and ABIs.  We refer to the API and ABI as
-Platform Surface Area (or PlaSA).  Each SDK will be paired with a set of CTS
+Platform Surface Area (or PlaSA).  Each SDK will be paired with a set of CTF
 tests that exercise the surface area it exposes.  The tests will be available in
 both source and binary form.
 
-CTS tests are not comprehensive.  They cannot guarantee that any component that
-is built against one SDK will run against any particular build of Fuchsia.  CTS
+CTF tests are not comprehensive.  They cannot guarantee that any component that
+is built against one SDK will run against any particular build of Fuchsia.  CTF
 must, therefore, be complemented with product-specific testing.
 
-With that in mind, the CTS can then be used to enforce compatibility in the
+With that in mind, the CTF can then be used to enforce compatibility in the
 following ways:
 
 ### For platform developers, including those working in fuchsia.git, system integrators, product developers, and device developers
 
-The CTS binary tests can be run against a device running Fuchsia to ensure that
-the build on that device is ABI compatible with the CTS's associated SDK.  This
-can provide enforcement of backwards compatibility guarantees: if the CTS from a
+The CTF binary tests can be run against a device running Fuchsia to ensure that
+the build on that device is ABI compatible with the CTF's associated SDK.  This
+can provide enforcement of backwards compatibility guarantees: if the CTF from a
 given SDK passes, that is a strong indicator (although not a conclusive one)
 that programs built against that SDK will continue to work.  It can also provide
 confidence that software running on the device that is not exercised by in-tree
@@ -48,7 +48,7 @@ platform.
 As a table:
 
 
-| Run → Against ↓                       | CTS N  | CTS N + 1   |
+| Run → Against ↓                       | CTF N  | CTF N + 1   |
 |---------------------------------------|--------|-------------|
 | SDK / Product Build at version N      | A      | B           |
 | SDK / Product Build at version N + 1  | C      | A           |
@@ -68,17 +68,17 @@ customers whose code targets older SDKs.
 
 ### For SDK vendors
 
-The CTS source tests can be built against an SDK to ensure that the SDK is API
-compatible with the CTS's associated SDK.  Additionally, CTS contains a suite of
+The CTF source tests can be built against an SDK to ensure that the SDK is API
+compatible with the CTF's associated SDK.  Additionally, CTF contains a suite of
 tests for SDK host tools.  These tests can provide confidence that changes to
 the SDK do not break developer code and workflows.  For example, we can build
-the CTS for API version N against an SDK that contains support for API version
+the CTF for API version N against an SDK that contains support for API version
 N+1 to see if the SDK has broken API compatibility.  Currently, the only SDK
-vendor supported by the CTS project is the Fuchsia organization itself.
+vendor supported by the CTF project is the Fuchsia organization itself.
 
 As a table:
 
-| Build → Against ↓                     | CTS N  | CTS N + 1   |
+| Build → Against ↓                     | CTF N  | CTF N + 1   |
 |---------------------------------------|--------|-------------|
 | SDK at version N                      | A      | B           |
 | SDK at version N + 1                  | C      | A           |

@@ -1,7 +1,7 @@
-# The CTS Test Realm
+# The CTF Test Realm
 
-[CTS] tests run in a special realm which is meant to isolate any capabilities
-that are required only for CTS testing. Tests must opt-in to the realm by
+[CTF] tests run in a special realm which is meant to isolate any capabilities
+that are required only for CTF testing. Tests must opt-in to the realm by
 declaring a facet in their component manifests, as shown below.
 
 ```json5
@@ -20,7 +20,7 @@ declaring a facet in their component manifests, as shown below.
 }
 ```
 
-Below is the list of capabilities provided to CTS tests:
+Below is the list of capabilities provided to CTF tests:
 {# Update the list when modifying //sdk/cts/test_realm/meta/cts_test_realm.shard.cml #}
 
 Protocols:
@@ -45,4 +45,4 @@ cache
 custom_artifacts
 ```
 
-[CTS]: /docs/development/testing/cts/overview.md
+[CTF]: /docs/development/testing/cts/overview.md

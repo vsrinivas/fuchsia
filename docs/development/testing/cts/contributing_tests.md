@@ -1,6 +1,6 @@
-# Contributing Tests to CTS
+# Contributing Tests to CTF
 
-This guide provides instructions on how to contribute a test to CTS.
+This guide provides instructions on how to contribute a test to CTF.
 
 ## How to write an ABI test
 
@@ -31,11 +31,11 @@ See existing tests under `//sdk/cts/tests` for examples.
 
 ### Step 2: Create your test executable
 
-Note: The CTS build templates verify that dependencies are released in an SDK.
-If your test needs an exception, [file a bug] in `DeveloperExperience>CTS`. The
+Note: The CTF build templates verify that dependencies are released in an SDK.
+If your test needs an exception, [file a bug] in `DeveloperExperience>CTF`. The
 allow list can be found [here](/sdk/cts/build/allowed_cts_deps.gni).
 
-In your test directory's `BUILD.gn` file, create a test executable using CTS
+In your test directory's `BUILD.gn` file, create a test executable using CTF
 build templates.
 
   * {C/C++}
@@ -85,7 +85,7 @@ Note: This section assumes familiarity with the concept of [Test Components].
 }
 ```
 
-Wrap your executable as a Fuchsia component. CTS provides a special GN template
+Wrap your executable as a Fuchsia component. CTF provides a special GN template
 for creating a component:
 
 ```gn
@@ -98,7 +98,7 @@ cts_fuchsia_component("my_test_component") {
 
 ### Step 4: Create your test package
 
-CTS also provides a special GN template for creating a test package:
+CTF also provides a special GN template for creating a test package:
 
 ```gn
 cts_fuchsia_test_package("my_test") {
@@ -146,11 +146,11 @@ ffx log
 
 See the section about "Debugging tips" below.
 
-### Step 6. Verify your test passes as part of the CTS release
+### Step 6. Verify your test passes as part of the CTF release
 
-This step involves building the CTS in the same way that our CI does when it is
-released, then running those CTS tests in your local checkout. It is necessary
-because upon release, we automatically rewrite each CTS test package's name to
+This step involves building the CTF in the same way that our CI does when it is
+released, then running those CTF tests in your local checkout. It is necessary
+because upon release, we automatically rewrite each CTF test package's name to
 deduplicate it from the same package's name at HEAD (the build does not allow
 duplicate names) and we must verify that the test still passes after this
 rewrite.
@@ -162,7 +162,7 @@ then launch a new terminal and run the following command:
 $FUCHSIA_DIR/sdk/cts/build/scripts/verify_release/verify_release.py
 ```
 
-This command will build the CTS archive, release it to your
+This command will build the CTF archive, release it to your
 `//prebuilt/cts/test/*` directory, and run the tests contained therein. After
 a brief pause, the test results will be printed to the terminal window.
 
@@ -177,13 +177,13 @@ Some common causes of test failure at this stage include:
   * **Solution**: Use a [relative component URL] instead.
 * The test is missing a dependency.
   * **Explanation**: It's possible that the Fuchsia system contained a different
-  set of packages when you built and ran your test at HEAD vs as part of the CTS
+  set of packages when you built and ran your test at HEAD vs as part of the CTF
   and that your test depended on some of those packages.
   * **Solution**: Make sure your test's GN target explicitly lists all of its
   direct dependencies as `deps`.
 
-If you need additional help debugging at this step, please reach out to the CTS
-team by filing a bug in the [CTS bug component].
+If you need additional help debugging at this step, please reach out to the CTF
+team by filing a bug in the [CTF bug component].
 
 ### Step 7. Make the test run on presubmit
 
@@ -200,7 +200,7 @@ group("tests") {
 ```
 
 Next add this target as a dependency to the closest ancestor `group("tests")`
-target. This will ensure that your test is added to the next CTS release.
+target. This will ensure that your test is added to the next CTF release.
 
 ### Debugging Tips
 
@@ -208,15 +208,15 @@ target. This will ensure that your test is added to the next CTS release.
 
 ## How to write a test for experimental FIDL
 
-The CTS supports writing tests for FIDL interfaces that are not yet released in
-the SDK. This allows you to write CTS tests for your API while you are still
-developing it. Writing tests using the CTS framework while you develop your API
+The CTF supports writing tests for FIDL interfaces that are not yet released in
+the SDK. This allows you to write CTF tests for your API while you are still
+developing it. Writing tests using the CTF framework while you develop your API
 ensures that your tests do not depend on any non-SDK targets.
 
 ### Step 1. Ensure your FIDL is marked as experimental
 Your FIDL interface should be marked with `sdk_category = "experimental"`. If
 your interface is marked as `public` or `partner`, follow the steps above to
-write a CTS test.
+write a CTF test.
 
 ```
 fidl("fuchsia.interface") {
@@ -226,9 +226,9 @@ fidl("fuchsia.interface") {
 }
 ```
 
-### Step 2. Add your FIDL to the CTS allow list
-The CTS verifies that its dependencies are in the SDK. To avoid build time
-errors, your FIDL must be added to the CTS [allow list].
+### Step 2. Add your FIDL to the CTF allow list
+The CTF verifies that its dependencies are in the SDK. To avoid build time
+errors, your FIDL must be added to the CTF [allow list].
 
 ```
 # //sdk/cts/build/allowed_cts_deps.gni
@@ -243,9 +243,9 @@ Follow the steps in the [How to write an ABI test](#how_to_write_an_abi_test)
 section to write an ABI test for your experimental FIDL.
 
 ### Step 4. Mark your test package as experimental
-The CTS includes tests based on metadata generated by
+The CTF includes tests based on metadata generated by
 `cts_fuchsia_test_package`. To avoid generating this metadata (and including
-your test in the CTS), mark your test package with `uses_experimental_fidl`.
+your test in the CTF), mark your test package with `uses_experimental_fidl`.
 
 ```
 cts_fuchsia_test_package("my_experimental_test") {
@@ -254,9 +254,9 @@ cts_fuchsia_test_package("my_experimental_test") {
 }
 ```
 
-### Step 5. Release your CTS test
-When your FIDL interface is no longer experimental, release your CTS test!
-To release your CTS test, follow the steps in the
+### Step 5. Release your CTF test
+When your FIDL interface is no longer experimental, release your CTF test!
+To release your CTF test, follow the steps in the
 [How to write an ABI test](#how_to_write_an_abi_test) section and delete the
 `uses_experimental_fidl` line from your `cts_fuchsia_test_package`.
 
@@ -276,7 +276,7 @@ Please see the FAQ section about [disabling tests].
 [Test Components]: /docs/development/testing/components/test_component.md
 [file a bug]: https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=component%3ADeveloperExperience%3ECTS
 [relative component URL]: /docs/reference/components/url.md#relative
-[CTS bug component]: https://bugs.fuchsia.dev/p/fuchsia/templates/detail?saved=1&template=Fuchsia%20Compatibility%20Test%20Suite%20%28CTS%29&ts=1627669234
+[CTF bug component]: https://bugs.fuchsia.dev/p/fuchsia/templates/detail?saved=1&template=Fuchsia%20Compatibility%20Test%20Suite%20%28CTS%29&ts=1627669234
 [disabling tests]: /docs/development/testing/cts/faq.md#disable-a-test
 [retiring tests]: /docs/development/testing/cts/faq.md#retire-a-test
 [allow list]: /sdk/cts/build/allowed_cts_deps.gni

@@ -1,29 +1,29 @@
-# Fuchsia Compatibility Test Suite
+# Compatibility Tests for Fuchsia
 
-The Fuchsia Compatibility Test Suite (CTS) is a suite of tests designed
+The Compatibility Tests for Fuchsia (CTF) is a suite of tests designed
 to detect compatibility changes between two different versions of the
 Fuchsia platform surface.  To learn how it works, and to get started on adding
-CTS tests for your area, please see the links below.
+CTF tests for your area, please see the links below.
 
-## Fuchsia CTS Definition
-* [CTS Overview][overview]: Background, motivation and goals for building the
-Fuchsia CTS.
-* [CTS RFC][rfc15]: Requirements, design and implementation strategy.
+## Fuchsia CTF Definition
+* [CTF Overview][overview]: Background, motivation and goals for building the
+Fuchsia CTF.
+* [CTF RFC][rfc15]: Requirements, design and implementation strategy.
 * [FAQ][faq]: Frequently asked questions.
 
-## Contributing to the CTS
+## Contributing to the CTF
 * [Contributing Guide][contributing]: One-stop shop with everything you need
-to know about contributing to the Fuchsia CTS.  Start here!  Below are a few
-examples of CTS tests in action.
+to know about contributing to the Fuchsia CTF.  Start here!  Below are a few
+examples of CTF tests in action.
 * Code Examples
-  * [Hello World \[c++\]][hello c++]: A barebones example CTS test written in
+  * [Hello World \[c++\]][hello c++]: A barebones example CTF test written in
 C++.
-  * [Hello World \[rust\]][hello rust]: A barebones example CTS test written
+  * [Hello World \[rust\]][hello rust]: A barebones example CTF test written
 in Rust.
-  * [fuchsia.diagnostics][diag]: An example real CTS test running in
+  * [fuchsia.diagnostics][diag]: An example real CTF test running in
 production, protecting the fuchsia.diagnostics FIDL from compatibility issues.
 
-## CTS Test Coverage
+## CTF Test Coverage
 
 Note: TODO: Dashboards are currently internal-only
 

@@ -198,8 +198,8 @@
   reviewed: '2020-12-09'
 
 - name: 'RFC-0015'
-  title: 'Fuchsia Compatibility Test Suite (CTS)'
-  short_description: 'Requirements, goals, and context for a Compatibility Test Suite (CTS) for Fuchsia.'
+  title: 'Compatibility Tests for Fuchsia (CTF)'
+  short_description: 'Requirements, goals, and context for a Compatibility Tests for Fuchsia (CTF).'
   authors: ['jeremymanson@google.com']
   file: '0015_cts.md'
   area: ['Governance', 'Testing']
@@ -1826,8 +1826,8 @@
   reviewed: '2021-11-10'
 
 - name: 'RFC-0141'
-  title: 'CTS Process'
-  short_description: 'Describes a process for driving CTS tests to full coverage.'
+  title: 'CTF Process'
+  short_description: 'Describes a process for driving CTF tests to full coverage.'
   authors: ['jeremymanson@google.com']
   file: '0141_cts_process.md'
   area: ['Testing']

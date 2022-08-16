@@ -1,12 +1,12 @@
 # Frequently Asked Questions
 
-## What is Fuchsia CTS? {#what-is-cts}
+## What is Fuchsia CTF? {#what-is-cts}
 
-Please see the [CTS overview] for an explanation of what CTS is.
+Please see the [CTF overview] for an explanation of what CTF is.
 
-## What is the CTS release schedule? {#schedule}
+## What is the CTF release schedule? {#schedule}
 
-CTS has multiple releases with separate cadences:
+CTF has multiple releases with separate cadences:
 
 | Release  | Schedule |
 |----------|----------|
@@ -18,7 +18,7 @@ are created. Likewise, milestone releases are created when new milestone release
 of the Fuchsia platform are created.
 
 Milestone branches (e.g. releases/f7) often receive cherry picks. When this
-happens, a new CTS for that milestone is generated and automatically rolled
+happens, a new CTF for that milestone is generated and automatically rolled
 into CI/CQ.
 
 {% dynamic if user.is_googler %}
@@ -28,26 +28,26 @@ to monitor new releases.
 
 {% dynamic endif %}
 
-## When will my CTS test start running on CQ? {#wait-time}
+## When will my CTF test start running on CQ? {#wait-time}
 
 The tip-of-tree version of your test will immediately begin running on CI/CQ.
 This version of the test does not guarantee backward compatibility.
 
-When the next CTS release is cut, it will contain a snapshot of your test from
-tip-of-tree which will begin running as soon as that CTS release rolls into
+When the next CTF release is cut, it will contain a snapshot of your test from
+tip-of-tree which will begin running as soon as that CTF release rolls into
 CI/CQ.  This version of your test guarantees backward compatibility.
 
 See [this section](#schedule) above for the release schedule.
 
-## What test environment does CTS use in CQ? {#environments}
+## What test environment does CTF use in CQ? {#environments}
 
 See go/fuchsia-builder-viz. Look for builders whose names end in "-cts".
 
-At minimum, all CTS tests run on the core.x64 image in the Fuchsia emulator.
+At minimum, all CTF tests run on the core.x64 image in the Fuchsia emulator.
 
-## How can I tell which version of a CTS test is failing? {#which-test-version}
+## How can I tell which version of a CTF test is failing? {#which-test-version}
 
-CQ may run several versions of the same CTS test at a time: The version from
+CQ may run several versions of the same CTF test at a time: The version from
 tip-of-tree, from the latest canary release, and from a previous milestone
 release.
 
@@ -66,7 +66,7 @@ fuchsia-pkg://fuchsia.com/memfs-test-package_6.20211109.1.3166058#meta/memfs-com
 ```
 
 
-## How do I reproduce a CTS test failure locally? {#repro}
+## How do I reproduce a CTF test failure locally? {#repro}
 
 This depends on the [version](#which-test-version) of the test you'd like to run.
 
@@ -101,7 +101,7 @@ fx test memfs-test-package_6.20211109.1.3166058
 Please see [Run Fuchsia Tests] for more information about how to run
 tests.
 
-## What do I do if a CTS test is blocking my CL? {#broken-test}
+## What do I do if a CTF test is blocking my CL? {#broken-test}
 
 This is a sign that your CL is breaking a part of the platform surface area.
 Please verify that there are no projects in downstream repositories that rely
@@ -109,34 +109,34 @@ on the APIs and ABIs modified by your CL. If so, you will need to make a
 soft transition. The general worklow is as follows:
 
 1. Submit a CL that introduces the new behavior in your change and verify that
-   the tip-of-tree version of the CTS test passes.
+   the tip-of-tree version of the CTF test passes.
 1. Notify any downstream SDK Users of the upcoming breaking change, ask them to
    migrate and depend on the new behavior.
-1. Wait for the next CTS release to roll into CI/CQ.
+1. Wait for the next CTF release to roll into CI/CQ.
 1. Submit a CL to remove the old behavior.
 
-## Are there any examples of CTS tests? {#examples}
+## Are there any examples of CTF tests? {#examples}
 
 Yes!  See [//sdk/cts/examples] for some examples, or peruse the complete set
 of tests under [//sdk/cts/tests].
 
-## When and why should I write a CTS test? {#why-cts}
+## When and why should I write a CTF test? {#why-cts}
 
-You should write a CTS test if:
+You should write a CTF test if:
 
 1. Your software is part of the public or partner SDKs.
 2. You want CQ to prevent backward-incompatible changes to your software
    across multiple releases of the Fuchsia platform.
 
-## How do I retire a CTS test? {#retire-a-test}
+## How do I retire a CTF test? {#retire-a-test}
 
-A CTS test should stop guarding against breaking changes once the SDK element
+A CTF test should stop guarding against breaking changes once the SDK element
 it covers is removed (deprecated and no longer supported by the platform, even
 for legacy clients). This process is called test "retirement" and allows Fuchsia
 contributors to remove things from the SDK.
 
-To retire an entire CTS test, delete the test at HEAD before the upcoming
-milestone release. The version of the test from the previous CTS release will
+To retire an entire CTF test, delete the test at HEAD before the upcoming
+milestone release. The version of the test from the previous CTF release will
 continue running in CQ until the next release is cut.
 
 To retire a few test cases, follow the same procedure: Delete the test cases at
@@ -150,7 +150,7 @@ To verify that your change will succeed, you should sync your local Fuchsia
 checkout to the release branch and test the change yourself, first.  After
 verifying, submit the CL and file a bug against the Release Team.
 
-## How do I temporarily disable a CTS test? {#disable-a-test}
+## How do I temporarily disable a CTF test? {#disable-a-test}
 
 You can disable a test by adding the test's archive name and component name to
 the list of `disabled_tests` on the appropriate `compatibility_test_suite`
@@ -182,10 +182,10 @@ Tests should be enabled again within 72 hours.
 ## Additional questions
 
 For questions and clarification on this document, please reach out to this
-directory's owners or file a bug in the [CTS bug component].
+directory's owners or file a bug in the [CTF bug component].
 
 
-[CTS bug component]: https://bugs.fuchsia.dev/p/fuchsia/templates/detail?saved=1&template=Fuchsia%20Compatibility%20Test%20Suite%20%28CTS%29&ts=1627669234
+[CTF bug component]: https://bugs.fuchsia.dev/p/fuchsia/templates/detail?saved=1&template=Fuchsia%20Compatibility%20Test%20Suite%20%28CTS%29&ts=1627669234
 [CTS overview]: /docs/development/testing/cts/overview.md
 [Run Fuchsia Tests]: /docs/development/testing/run_fuchsia_tests.md
 [//sdk/cts/examples]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/sdk/cts/examples/

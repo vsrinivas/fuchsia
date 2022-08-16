@@ -5,7 +5,7 @@
 ## Motivation
 
 Provide an exhaustive list of platform surface elements for computing platform
-surface test coverage for the CTS effort.
+surface test coverage for the CTF effort.
 
 ## Glossary
 
@@ -45,21 +45,21 @@ surface test coverage for the CTS effort.
 
 ## Why now?
 
-For the CTS test coverage dashboard to be universally useful, it should show
+For the CTF test coverage dashboard to be universally useful, it should show
 the covered and uncovered parts of the platform surface.
 
 1. The covered parts of the platform surface allow us to make certain
    correctness and safety guarantees about the underlying platform.
 
-2. The uncovered parts of the platform surface guide CTS test authors to the
-   parts of the API surface that are not adequately covered by CTS tests.
+2. The uncovered parts of the platform surface guide CTF test authors to the
+   parts of the API surface that are not adequately covered by CTF tests.
 
 The platform surface area manifest complements (1) and fulfills (2).
 
 ## Stakeholders
 
-*   [CTS][cts] maintainers
-*   CTS test authors
+*   [CTF][cts] maintainers
+*   CTF test authors
 
 ## Design
 
@@ -167,7 +167,7 @@ The format may be expanded as need arises.
 ```
 ## Documentation & examples
 
-We may want to update the CTS documentation to include the existence of the
+We may want to update the CTF documentation to include the existence of the
 platform surface manifests.
 
 *   [The rule that generates the manifest][l1].

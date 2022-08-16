@@ -1,4 +1,4 @@
-# CTS Testing Guidelines
+# CTF Testing Guidelines
 
 ### Follow Fuchsia's best practices.
 
@@ -8,18 +8,18 @@
 
 ### Test must use the cts_* rule variants found in //sdk/cts/build.
 
-CTS tests target API and ABI available through SDKs.  Build support ensures that
+CTF tests target API and ABI available through SDKs.  Build support ensures that
 tests only depend on API elements that are available via an SDK, or allowlisted
-for use within the CTS.  All build targets must use the `cts_` rule variants
+for use within the CTF.  All build targets must use the `cts_` rule variants
 found in `//sdk/cts/build` instead of the standard fuchsia.git rules (i.e., use
 `cts_fuchsia_component`, `cts_executable`, and so on). The allowlist for non-SDK
 code can be found in `//sdk/cts/build/allowed_cts_deps.gni`.  Test authors who
 believe they need an additional inclusion should file a bug in the
-[CTS bug component].
+[CTF bug component].
 
 ### Tests may depend on anything released via the SDK.
 
-Depending on software that is not released via the SDK makes a CTS test more
+Depending on software that is not released via the SDK makes a CTF test more
 subject to failure due to unrelated changes in Fuchsia platform internals. We
 make exceptions for dependencies on a case-by-case basis. (e.g., internal test
 frameworks that would work just as well out of tree).
@@ -50,11 +50,11 @@ Instead, timeouts should be enforced by the test infrastructure.
 ### Tests should not be stress or performance tests.
 
 We do not encourage developers to submit stress tests or performance tests to
-the CTS. Such tests will be examined closely for coverage value.
+the CTF. Such tests will be examined closely for coverage value.
 
 ### Tests should target one element of the platform surface area.
 
-CTS tests typically target elements of the platform surface area directly. If one fails,
+CTF tests typically target elements of the platform surface area directly. If one fails,
 it should be clear which parts of the platform surface area were triggered, and what the
 changed outcome is. As a result of this rule, typically, the amount of application logic
 in a test is small.
@@ -68,7 +68,7 @@ of a test wait an arbitrary amount of time for other code to finish.
 
 ### Tests should avoid mocking or faking the internal state of the target device.
 
-The intent of the CTS is to make sure the entire device behaves correctly, not to make
+The intent of the CTF is to make sure the entire device behaves correctly, not to make
 sure that a particular component behaves correctly in isolation.
 
 ### Tests should exercise edge cases as well as typical inputs and outputs.
@@ -81,7 +81,7 @@ For example, a test that makes a system-wide change to set the background color
 of text should reset the color to its original value at the end of the test.
 This prevents tests from affecting one another.
 
-[CTS bug component]: https://bugs.fuchsia.dev/p/fuchsia/templates/detail?saved=1&template=Fuchsia%20Compatibility%20Test%20Suite%20%28CTS%29&ts=1627669234
+[CTF bug component]: https://bugs.fuchsia.dev/p/fuchsia/templates/detail?saved=1&template=Fuchsia%20Compatibility%20Test%20Suite%20%28CTS%29&ts=1627669234
 [Documentation Guide]: /docs/contribute/docs/documentation-standards.md
 [Languages]: /docs/development/languages/README.md
 [Testing Best Practices]: /docs/contribute/testing/best-practices.md

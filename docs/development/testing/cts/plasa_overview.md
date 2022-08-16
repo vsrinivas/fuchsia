@@ -17,7 +17,7 @@ implementors alike.
 Plasa provides input to the following efforts:
 
 * Platform versioning per [RFC-0002][rfc2]
-* [Compatibility Test Suite (CTS)][cts] per [RFC0015][rfccts]
+* [Compatibility Tests for Fuchsia (CTF)][cts] per [RFC0015][rfccts]
 
 ## Limitations
 
