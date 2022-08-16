@@ -31,9 +31,31 @@ type with a name of `LowerSnakeCase(${id1}_${id2}_..._${idn}_${declname}_t)`;
 `LowerSnakeCase(${id1}_${id2}_..._${idn}_${declname})_t`, with an
 obvious mapping of members.
 
+### Go
+* The generated (nested) package name is `${id1}/.../${idn}`, which is also
+written to a text file `pkg_name.txt`.
+* One file `${id1}/${id2}/.../${idn}/${idn}/${filename}.go` is generated
+per original FIDL source file, containing the bindings for the declarations
+defined there.
+* Type translation from FIDL to C is as follows:
+  - `bool`, `string` and `{u,}int{8,16,32,64}`map identically into Go's type
+  system;
+  - unbounded `string`s are only permitted in constants and map to string
+  literals;
+  - TODO(fxbug.dev/51002): Document more as we go.
+* A constant declaration yields a constant of name
+`UpperCamelCase(${declname})`;
+* An enum or bits declaration yields a new type declaration of the underlying
+primitive type with a name of `UpperCamelCase(${declname})`;
+  - a member yields a constant of name
+  `UpperCamelCase(${parent_name}${declname}`)
+* A struct declaration yields a struct of name `UpperCamelCase(${declname})`,
+with an obvious mapping of members.
+
+
 * TODO(fxbug.dev/51002): Document more as we go.
 
-TODO(fxbug.dev/91102): Also C++, Rust, and Go.
+TODO(fxbug.dev/91102): Also C++ and Rust
 
 TODO(fxbug.dev/93393): Also Assembly.
 

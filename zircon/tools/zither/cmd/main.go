@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"go/format"
 	"os"
 	"strings"
 
@@ -17,13 +18,15 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/zircon/tools/zither"
 	"go.fuchsia.dev/fuchsia/zircon/tools/zither/c"
+	"go.fuchsia.dev/fuchsia/zircon/tools/zither/golang"
 )
 
 const (
-	cBackend string = "c"
+	cBackend  string = "c"
+	goBackend string = "go"
 )
 
-var supportedBackends = []string{cBackend}
+var supportedBackends = []string{cBackend, goBackend}
 
 // Flag values, grouped into a struct to be kept out of the global namespace.
 var flags struct {
@@ -60,6 +63,8 @@ func main() {
 	case cBackend:
 		cf := fidlgen.NewFormatter(flags.clangFormat, flags.clangFormatArgs...)
 		gen = c.NewGenerator(cf)
+	case goBackend:
+		gen = golang.NewGenerator(goFormatter{})
 	default:
 		logger.Errorf(ctx, "unrecognized `-backend` value: %q", flags.backend)
 		os.Exit(1)
@@ -116,4 +121,10 @@ func execute(ctx context.Context, gen generator, ir fidlgen.Root, outputDir, out
 	}
 
 	return nil
+}
+
+type goFormatter struct{}
+
+func (f goFormatter) Format(source []byte) ([]byte, error) {
+	return format.Source(source)
 }

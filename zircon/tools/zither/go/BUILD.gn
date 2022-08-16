@@ -1,0 +1,23 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+
+go_library("go") {
+  visibility = [ "../*" ]
+
+  name = "go.fuchsia.dev/fuchsia/zircon/tools/zither/golang"
+  sources = [
+    "go.go",
+    "templates/bits.tmpl",
+    "templates/const.tmpl",
+    "templates/enum.tmpl",
+    "templates/file.tmpl",
+    "templates/struct.tmpl",
+  ]
+  deps = [
+    "..:common",
+    "//tools/fidl/lib/fidlgen",
+  ]
+}

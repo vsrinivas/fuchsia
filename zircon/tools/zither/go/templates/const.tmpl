@@ -1,0 +1,6 @@
+{{- define "GenerateGoConst" -}}
+{{ range .Comments }}
+//{{ . }}
+{{- end }}
+const {{ ConstName . }} {{ ConstType . }} = {{ ConstValue . }}  {{ if .Expression }}  // {{ .Expression }} {{ end }}
+{{ end }}
