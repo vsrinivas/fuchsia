@@ -2442,8 +2442,15 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
     // PrepareForWriteLocked() would do the right thing depending on ShouldTrapDirtyTransitions(),
     // however we choose to avoid the extra work only to have it be a no-op if dirty transitions
     // should not be trapped.
+    //
+    // We need to generate a DIRTY request if the caller explicitly requested so with mark_dirty, or
+    // if the offset lies beyond supply_zero_offset_. A page that lies beyond supply_zero_offset_
+    // *cannot* be Clean. A gap beyond supply_zero_offset_ is conceptually already dirty (and zero),
+    // so we're transitioning to a dirty actual page here, i.e. we cannot lose dirtiness when we
+    // fork the zero page here.
     if (is_source_preserving_page_content_locked() && page_source_->ShouldTrapDirtyTransitions() &&
-        mark_dirty == DirtyTrackingAction::DirtyAllPagesOnWrite) {
+        (mark_dirty == DirtyTrackingAction::DirtyAllPagesOnWrite ||
+         offset >= supply_zero_offset_)) {
       // The only page we can be forking here is the zero page. A non-slice child VMO does not
       // support dirty page tracking.
       DEBUG_ASSERT(p == vm_get_zero_page());
@@ -2496,12 +2503,16 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
       // The forked page was just allocated, and so cannot be a loaned page.
       DEBUG_ASSERT(!res_page->is_loaned());
 
-      // Mark the forked page dirty or clean depending on the mark_dirty action requested.
-      UpdateDirtyStateLocked(res_page, offset,
-                             mark_dirty == DirtyTrackingAction::DirtyAllPagesOnWrite
-                                 ? DirtyState::Dirty
-                                 : DirtyState::Clean,
-                             /*is_pending_add=*/true);
+      // Mark the forked page dirty or clean depending on the mark_dirty action requested. However,
+      // if the page lies beyond supply_zero_offset_ it *cannot* be Clean. A gap beyond
+      // supply_zero_offset_ is conceptually already dirty (and zero), so we're transitioning to a
+      // dirty actual page here, i.e. we cannot lose dirtiness when we fork the zero page here.
+      UpdateDirtyStateLocked(
+          res_page, offset,
+          mark_dirty == DirtyTrackingAction::DirtyAllPagesOnWrite || offset >= supply_zero_offset_
+              ? DirtyState::Dirty
+              : DirtyState::Clean,
+          /*is_pending_add=*/true);
     }
 
     zx_status_t status = AddPageLocked(&insert, offset, CanOverwriteContent::Zero, nullptr);

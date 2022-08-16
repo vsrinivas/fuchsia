@@ -471,10 +471,18 @@ zx_status_t PageSource::WaitOnRequest(PageRequest* request) {
 zx_status_t PageSource::RequestDirtyTransition(PageRequest* request, uint64_t offset, uint64_t len,
                                                VmoDebugInfo vmo_debug_info) {
   canary_.Assert();
+  ASSERT(request);
+
+  if (request->offset_ != UINT64_MAX) {
+    // If the request was previously initialized, it could only have been in batch accepting mode.
+    // Finalize that batch first since we are going to create a new batch below.
+    DEBUG_ASSERT(request->batch_state_ == PageRequest::BatchState::Accepting);
+    return request->FinalizeRequest();
+  }
+
   if (!page_provider_->SupportsPageRequestType(page_request_type::DIRTY)) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  ASSERT(request);
 
   uint64_t end;
   bool overflow = add_overflow(offset, len, &end);

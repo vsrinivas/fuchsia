@@ -6200,4 +6200,56 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(NoDirtyOnCommit, 0) {
   ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
+// Tests that committing pages in the newly extended tail does not lose dirtiness.
+TEST_WITH_AND_WITHOUT_TRAP_DIRTY(CommitExtendedTail, ZX_VMO_RESIZABLE) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, create_option, &vmo));
+
+  // Verify dirty ranges.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // Resize the vmo up.
+  vmo->Resize(2);
+
+  // Verify VMO contents and dirty ranges.
+  std::vector<uint8_t> expected(2 * zx_system_get_page_size(), 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 1, 1, expected.data(), true));
+  zx_vmo_dirty_range_t range = {.offset = 1, .length = 1, .options = ZX_VMO_DIRTY_RANGE_IS_ZERO};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // Commit the VMO. The existing page will be faulted in and the page beyond the old size will
+  // transition from dirty zero to dirty non-zero.
+  TestThread t([vmo]() -> bool {
+    return vmo->vmo().op_range(ZX_VMO_OP_COMMIT, 0, 2 * zx_system_get_page_size(), nullptr, 0) ==
+           ZX_OK;
+  });
+  ASSERT_TRUE(t.Start());
+
+  ASSERT_TRUE(t.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  if (create_option & ZX_VMO_TRAP_DIRTY) {
+    ASSERT_TRUE(t.WaitForBlocked());
+    ASSERT_TRUE(pager.WaitForPageDirty(vmo, 1, 1, ZX_TIME_INFINITE));
+    ASSERT_TRUE(pager.DirtyPages(vmo, 1, 1));
+  }
+
+  ASSERT_TRUE(t.Wait());
+
+  // Verify VMO contents and dirty ranges.
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 2, expected.data(), true));
+  range.options = 0;
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // No more page requests seen.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+}
+
 }  // namespace pager_tests
