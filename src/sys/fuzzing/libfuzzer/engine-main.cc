@@ -17,7 +17,6 @@ ZxResult<RunnerPtr> MakeLibFuzzerRunnerPtr(int argc, char** argv, ComponentConte
   argc -= 1;
   std::vector<std::string> cmdline(argv, argv + argc);
   runner_impl->set_cmdline(cmdline);
-  runner_impl->set_verbose(true);
   return fpromise::ok(std::move(runner));
 }
 
