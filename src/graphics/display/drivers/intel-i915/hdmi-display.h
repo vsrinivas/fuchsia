@@ -34,6 +34,13 @@ class HdmiDisplay : public DisplayDevice {
  public:
   HdmiDisplay(Controller* controller, uint64_t id, registers::Ddi ddi);
 
+  HdmiDisplay(const HdmiDisplay&) = delete;
+  HdmiDisplay(HdmiDisplay&&) = delete;
+  HdmiDisplay& operator=(const HdmiDisplay&) = delete;
+  HdmiDisplay& operator=(HdmiDisplay&&) = delete;
+
+  ~HdmiDisplay() override;
+
  private:
   bool InitDdi() final;
   bool Query() final;

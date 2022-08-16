@@ -175,6 +175,13 @@ class DpDisplay : public DisplayDevice {
   DpDisplay(Controller* controller, uint64_t id, registers::Ddi ddi, DpcdChannel* dp_aux,
             inspect::Node* parent_node);
 
+  DpDisplay(const DpDisplay&) = delete;
+  DpDisplay(DpDisplay&&) = delete;
+  DpDisplay& operator=(const DpDisplay&) = delete;
+  DpDisplay& operator=(DpDisplay&&) = delete;
+
+  ~DpDisplay() override;
+
   // Gets the backlight brightness as a coefficient on the maximum brightness,
   // between the minimum brightness and 1.
   double GetBacklightBrightness();

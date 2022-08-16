@@ -47,6 +47,12 @@ class DisplayDevice : public fidl::WireServer<FidlBacklight::Device> {
   };
 
   DisplayDevice(Controller* controller, uint64_t id, tgl_registers::Ddi ddi, Type type);
+
+  DisplayDevice(const DisplayDevice&) = delete;
+  DisplayDevice(DisplayDevice&&) = delete;
+  DisplayDevice& operator=(const DisplayDevice&) = delete;
+  DisplayDevice& operator=(DisplayDevice&&) = delete;
+
   ~DisplayDevice() override;
 
   void ApplyConfiguration(const display_config_t* config, const config_stamp_t* config_stamp);

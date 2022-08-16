@@ -1048,6 +1048,8 @@ DpDisplay::DpDisplay(Controller* controller, uint64_t id, tgl_registers::Ddi ddi
   dp_link_rate_mhz_inspect_ = inspect_node_.CreateUint("dp_link_rate_mhz", 0);
 }
 
+DpDisplay::~DpDisplay() = default;
+
 bool DpDisplay::Query() {
   // For eDP displays, assume that the BIOS has enabled panel power, given
   // that we need to rely on it properly configuring panel power anyway. For

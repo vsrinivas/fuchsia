@@ -493,6 +493,8 @@ namespace i915_tgl {
 HdmiDisplay::HdmiDisplay(Controller* controller, uint64_t id, tgl_registers::Ddi ddi)
     : DisplayDevice(controller, id, ddi, /* type */ Type::kHdmi) {}
 
+HdmiDisplay::~HdmiDisplay() = default;
+
 bool HdmiDisplay::Query() {
   // HDMI isn't supported on these DDIs
   if (ddi_to_pin(ddi()) == -1) {
