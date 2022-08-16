@@ -67,18 +67,18 @@ class EfiBootShimLoader {
   // data ZBIs into memory and return the data ZBI with at least the requested
   // extra data capacity available on the end.
   using LoadResult = fitx::result<Error, DataZbi>;
-  using LoadFunction = fit::function<LoadResult(uint32_t extra_data_capacity)>;
+  using LoadFunction = fit::inline_function<LoadResult(uint32_t extra_data_capacity)>;
 
   // This is the type of the `last_chance` callback passed to
   // ElfBootShim<...>::LoadAndBoot, see below.  It is the last chance to
   // prevent the boot or to do anything using UEFI calls of any kind, such as
   // logging.  It gets the final DataZbi that the `boot` callback should use.
-  using LastChanceFunction = fit::function<fitx::result<Error>(DataZbi)>;
+  using LastChanceFunction = fit::inline_function<fitx::result<Error>(DataZbi)>;
 
   // This is the type of the `boot` callback passed to
   // ElfBootShim<...>::LoadAndBoot, see below.  It must not return, but
   // [[noreturn]] can't be applied to a type.
-  using BootFunction = fit::function<void()>;
+  using BootFunction = fit::inline_function<void()>;
 
   // The rest is implementation details used by ElfBootShim<...>::LoadAndBoot.
 
