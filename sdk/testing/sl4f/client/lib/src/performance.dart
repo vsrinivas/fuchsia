@@ -439,7 +439,7 @@ class Performance {
     }
 
     if (expectedMetricNamesFile != null) {
-      final Set<String> metrics = Set();
+      final Set<String> metrics = <String>{};
       for (final Map<String, dynamic> entry in jsonData) {
         metrics.add('${entry['test_suite']}: ${entry['label']}');
       }
@@ -449,14 +449,13 @@ class Performance {
         // Normal case: Compare against the expectation file.
         final String runtimeDepsDir =
             Platform.script.resolve('runtime_deps').toFilePath();
-        final MetricsAllowlist allowlist = MetricsAllowlist(
-            File(path.join(runtimeDepsDir, expectedMetricNamesFile)));
-        allowlist.check(metrics);
+        MetricsAllowlist(
+                File(path.join(runtimeDepsDir, expectedMetricNamesFile)))
+            .check(metrics);
       } else {
         // Special case: Update the expectation file.
         final destFile = File(path.join(updateDir, expectedMetricNamesFile));
-        final list = List.from(metrics);
-        list.sort();
+        final list = List.from(metrics)..sort();
         destFile.writeAsStringSync(list.map((entry) => entry + '\n').join(''));
       }
     }
@@ -623,8 +622,7 @@ class TraceSession {
 }
 
 String _formatSetDiff(Set<String> set1, Set<String> set2) {
-  List<String> union = List.from(set1.union(set2));
-  union.sort();
+  List<String> union = List.from(set1.union(set2))..sort();
   final List<String> lines = [];
   for (final String entry in union) {
     final String tag =
@@ -640,7 +638,7 @@ class MetricsAllowlist {
 
   MetricsAllowlist(File file)
       : filename = file.path,
-        expectedMetrics = Set() {
+        expectedMetrics = <String>{} {
     final String data = file.readAsStringSync();
     for (String line in LineSplitter.split(data)) {
       // Skip comment lines and empty lines.
@@ -654,7 +652,7 @@ class MetricsAllowlist {
       final String diff = _formatSetDiff(expectedMetrics, actualMetrics);
       throw ArgumentError(
           'Metric names produced by the test differ from the expectations in'
-          ' ${filename}:\n$diff\n\n'
+          ' $filename:\n$diff\n\n'
           'One way to update the expectation file is to run the test locally'
           ' with this environment variable set:\n'
           'FUCHSIA_EXPECTED_METRIC_NAMES_DEST_DIR='
