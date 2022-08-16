@@ -12,7 +12,10 @@ import("//src/sys/core/build/core_shard.gni")
 group("intl_services") {
   testonly = true
   public_deps = [
-    ":intl_services_comp_v2",
+    ":component",
+    ":component_small",
+    ":legacy_component",
+    ":legacy_component_small",
     ":pkg",
     ":pkg_small",
     ":tests",
@@ -59,8 +62,8 @@ executable("intl_services_bin") {
   ]
 }
 
-fuchsia_package_with_single_component("pkg") {
-  package_name = "intl_services"
+fuchsia_component("legacy_component") {
+  component_name = "intl_services"
   manifest = "meta/intl_services.cmx"
   deps = [
     ":intl_services_bin",
@@ -68,11 +71,20 @@ fuchsia_package_with_single_component("pkg") {
   ]
 }
 
-fuchsia_component("intl_services_comp_v2") {
+fuchsia_component("component") {
+  component_name = "intl"
   manifest = "meta/intl.cml"
   deps = [
     ":intl_services_bin",
     "//src/intl:icudtl",
+  ]
+}
+
+fuchsia_package("pkg") {
+  package_name = "intl_services"
+  deps = [
+    ":component",
+    ":legacy_component",
   ]
 }
 
@@ -84,13 +96,29 @@ renamed_binary("renamed_a11y_manager") {
   dest = "bin/intl_services"
 }
 
-fuchsia_package_with_single_component("pkg_small") {
-  package_name = "intl-services-small"
+fuchsia_component("legacy_component_small") {
   component_name = "intl_services"
   manifest = "meta/intl_services.cmx"
   deps = [
     ":renamed_a11y_manager",
     "//src/intl:icudtl",
+  ]
+}
+
+fuchsia_component("component_small") {
+  component_name = "intl"
+  manifest = "meta/intl.cml"
+  deps = [
+    ":renamed_a11y_manager",
+    "//src/intl:icudtl",
+  ]
+}
+
+fuchsia_package("pkg_small") {
+  package_name = "intl-services-small"
+  deps = [
+    ":component_small",
+    ":legacy_component_small",
   ]
 }
 

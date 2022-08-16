@@ -45,7 +45,7 @@
         },
         {
             name: "intl",
-            url: "#meta/intl_services_comp_v2.cm",
+            url: "#meta/intl.cm",
         },
         {
             name: "setui_service",

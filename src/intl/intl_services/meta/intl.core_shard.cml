@@ -1,6 +1,12 @@
 // Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
-// TODO(fxbug.dev/90430): Complete migration.
-{}
+{
+    include: [ "//src/intl/intl_services/meta/intl.core_shard.base.cml" ],
+    children: [
+        {
+            name: "intl",
+            url: "fuchsia-pkg://fuchsia.com/intl_services#meta/intl.cm",
+        },
+    ],
+}

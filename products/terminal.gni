@@ -8,12 +8,7 @@ core_realm_package_name = "core-terminal"
 
 legacy_base_package_labels += [
   "//src/fonts",
-  "//src/intl/intl_services/config:sysmgr",
   "//src/intl/intl_services:pkg",
-]
-legacy_base_package_labels -= [
-  # TODO(fxbug.dev/90430): Complete CFv2 migration and remove.
-  "//src/intl/intl_services/config:sysmgr_small",
 ]
 
 # Remove intl_services default shards that were added in core.gni.

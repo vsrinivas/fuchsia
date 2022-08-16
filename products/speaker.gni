@@ -26,10 +26,6 @@ legacy_base_package_labels -= [
   "//src/diagnostics/sampler",
   "//src/connectivity/bluetooth:core",
   "//src/intl/intl_services:pkg_small",
-
-  # TODO(fxbug.dev/90430): Complete CFv2 migration and remove.
-  "//src/intl/intl_services/config:sysmgr_small",
-  "//src/intl/intl_services/config:sysmgr_small_timezones",
   "//src/media/audio/bundles:services",
   "//src/settings/service:setui_service",
   "//src/sys/activity",

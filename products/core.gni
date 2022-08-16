@@ -67,13 +67,6 @@ legacy_base_package_labels += [
   "//src/devices/sysmem/bin/sysmem_connector",
   "//src/intl/intl_services:pkg_small",
   "//src/intl/tzdata_provider:pkg",
-
-  # TODO(fxbug.dev/90430): Complete CFv2 migration and remove.
-  "//src/intl/intl_services/config:sysmgr_small",
-
-  # Serve fuchsia.intl.TimeZones through intl_services by default. This is
-  # needed in core.gni for tests that use the core image.
-  "//src/intl/intl_services/config:sysmgr_small_timezones",
   "//src/settings/service:setui_service",
 ]
 

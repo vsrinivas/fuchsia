@@ -2,14 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "syslog/client.shard.cml" ],
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
     program: {
         runner: "elf",
         binary: "bin/intl_services",
     },
     capabilities: [
         {
-            protocol: [ "fuchsia.intl.PropertyProvider" ],
+            protocol: [
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.intl.TimeZones",
+            ],
         },
     ],
     use: [
@@ -19,7 +25,10 @@
     ],
     expose: [
         {
-            protocol: [ "fuchsia.intl.PropertyProvider" ],
+            protocol: [
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.intl.TimeZones",
+            ],
             from: "self",
         },
     ],
