@@ -2658,7 +2658,7 @@ TEXT runtime·vdsoCall_zx_bti_create(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW iommu+0(FP), R0
 	MOVW options+4(FP), R1
@@ -2677,7 +2677,7 @@ TEXT runtime·vdsoCall_zx_bti_pin(SB),NOSPLIT,$0-60
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW options+4(FP), R1
@@ -2700,7 +2700,7 @@ TEXT runtime·vdsoCall_zx_bti_release_quarantine(SB),NOSPLIT,$0-12
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	BL vdso_zx_bti_release_quarantine(SB)
@@ -2716,7 +2716,7 @@ TEXT runtime·vdsoCall_zx_cache_flush(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVD addr+0(FP), R0
 	MOVD size+8(FP), R1
@@ -2734,7 +2734,7 @@ TEXT runtime·vdsoCall_zx_channel_create(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW options+0(FP), R0
 	MOVD out0+8(FP), R1
@@ -2752,7 +2752,7 @@ TEXT runtime·vdsoCall_zx_channel_read(SB),NOSPLIT,$0-52
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW options+4(FP), R1
@@ -2775,7 +2775,7 @@ TEXT runtime·vdsoCall_zx_channel_read_etc(SB),NOSPLIT,$0-52
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW options+4(FP), R1
@@ -2798,7 +2798,7 @@ TEXT runtime·vdsoCall_zx_channel_write(SB),NOSPLIT,$0-44
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW options+4(FP), R1
@@ -2819,7 +2819,7 @@ TEXT runtime·vdsoCall_zx_channel_write_etc(SB),NOSPLIT,$0-44
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW options+4(FP), R1
@@ -2840,7 +2840,7 @@ TEXT runtime·vdsoCall_zx_channel_call_noretry(SB),NOSPLIT,$0-44
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW options+4(FP), R1
@@ -2861,7 +2861,7 @@ TEXT runtime·vdsoCall_zx_channel_call_finish(SB),NOSPLIT,$0-36
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVD deadline+0(FP), R0
 	MOVD args+8(FP), R1
@@ -2880,7 +2880,7 @@ TEXT runtime·vdsoCall_zx_channel_call(SB),NOSPLIT,$0-44
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	CALL runtime·entersyscall(SB)
 	MOVW handle+0(FP), R0
@@ -2903,7 +2903,7 @@ TEXT runtime·vdsoCall_zx_channel_call_etc_noretry(SB),NOSPLIT,$0-44
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW options+4(FP), R1
@@ -2924,7 +2924,7 @@ TEXT runtime·vdsoCall_zx_channel_call_etc_finish(SB),NOSPLIT,$0-36
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVD deadline+0(FP), R0
 	MOVD args+8(FP), R1
@@ -2943,7 +2943,7 @@ TEXT runtime·vdsoCall_zx_channel_call_etc(SB),NOSPLIT,$0-44
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	CALL runtime·entersyscall(SB)
 	MOVW handle+0(FP), R0
@@ -2966,7 +2966,7 @@ TEXT runtime·vdsoCall_zx_clock_get_monotonic(SB),NOSPLIT,$0-8
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	BL vdso_zx_clock_get_monotonic(SB)
 	MOVD R0, ret+0(FP)
@@ -2981,7 +2981,7 @@ TEXT runtime·vdsoCall_zx_clock_get_monotonic_via_kernel(SB),NOSPLIT,$0-8
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	BL vdso_zx_clock_get_monotonic_via_kernel(SB)
 	MOVD R0, ret+0(FP)
@@ -2996,7 +2996,7 @@ TEXT runtime·vdsoCall_zx_clock_create(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVD options+0(FP), R0
 	MOVD args+8(FP), R1
@@ -3014,7 +3014,7 @@ TEXT runtime·vdsoCall_zx_clock_read(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVD now+8(FP), R1
@@ -3031,7 +3031,7 @@ TEXT runtime·vdsoCall_zx_clock_get_details(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVD options+8(FP), R1
@@ -3049,7 +3049,7 @@ TEXT runtime·vdsoCall_zx_clock_update(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVD options+8(FP), R1
@@ -3067,7 +3067,7 @@ TEXT runtime·vdsoCall_zx_cprng_draw_once(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVD buffer+0(FP), R0
 	MOVD buffer_size+8(FP), R1
@@ -3084,7 +3084,7 @@ TEXT runtime·vdsoCall_zx_cprng_draw(SB),NOSPLIT,$0-16
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVD buffer+0(FP), R0
 	MOVD buffer_size+8(FP), R1
@@ -3100,7 +3100,7 @@ TEXT runtime·vdsoCall_zx_cprng_add_entropy(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVD buffer+0(FP), R0
 	MOVD buffer_size+8(FP), R1
@@ -3117,7 +3117,7 @@ TEXT runtime·vdsoCall_zx_debug_read(SB),NOSPLIT,$0-36
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVD buffer+8(FP), R1
@@ -3136,7 +3136,7 @@ TEXT runtime·vdsoCall_zx_debug_write(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVD buffer+0(FP), R0
 	MOVD buffer_size+8(FP), R1
@@ -3153,7 +3153,7 @@ TEXT runtime·vdsoCall_zx_debug_send_command(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW resource+0(FP), R0
 	MOVD buffer+8(FP), R1
@@ -3171,7 +3171,7 @@ TEXT runtime·vdsoCall_zx_debuglog_create(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW resource+0(FP), R0
 	MOVW options+4(FP), R1
@@ -3189,7 +3189,7 @@ TEXT runtime·vdsoCall_zx_debuglog_write(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW options+4(FP), R1
@@ -3208,7 +3208,7 @@ TEXT runtime·vdsoCall_zx_debuglog_read(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW options+4(FP), R1
@@ -3227,7 +3227,7 @@ TEXT runtime·vdsoCall_zx_event_create(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW options+0(FP), R0
 	MOVD out+8(FP), R1
@@ -3244,7 +3244,7 @@ TEXT runtime·vdsoCall_zx_eventpair_create(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW options+0(FP), R0
 	MOVD out0+8(FP), R1
@@ -3262,7 +3262,7 @@ TEXT runtime·vdsoCall_zx_exception_get_thread(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVD out+8(FP), R1
@@ -3279,7 +3279,7 @@ TEXT runtime·vdsoCall_zx_exception_get_process(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVD out+8(FP), R1
@@ -3296,7 +3296,7 @@ TEXT runtime·vdsoCall_zx_fifo_create(SB),NOSPLIT,$0-44
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVD elem_count+0(FP), R0
 	MOVD elem_size+8(FP), R1
@@ -3316,7 +3316,7 @@ TEXT runtime·vdsoCall_zx_fifo_read(SB),NOSPLIT,$0-44
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVD elem_size+8(FP), R1
@@ -3336,7 +3336,7 @@ TEXT runtime·vdsoCall_zx_fifo_write(SB),NOSPLIT,$0-44
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVD elem_size+8(FP), R1
@@ -3356,7 +3356,7 @@ TEXT runtime·vdsoCall_zx_framebuffer_get_info(SB),NOSPLIT,$0-44
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW resource+0(FP), R0
 	MOVD format+8(FP), R1
@@ -3376,7 +3376,7 @@ TEXT runtime·vdsoCall_zx_framebuffer_set_range(SB),NOSPLIT,$0-36
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW resource+0(FP), R0
 	MOVW vmo+4(FP), R1
@@ -3398,7 +3398,7 @@ TEXT runtime·vdsoCall_zx_futex_wait(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVD value_ptr+0(FP), R0
 	MOVW current_value+8(FP), R1
@@ -3417,7 +3417,7 @@ TEXT runtime·vdsoCall_zx_futex_wake(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVD value_ptr+0(FP), R0
 	MOVW wake_count+8(FP), R1
@@ -3434,7 +3434,7 @@ TEXT runtime·vdsoCall_zx_futex_requeue(SB),NOSPLIT,$0-36
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVD value_ptr+0(FP), R0
 	MOVW wake_count+8(FP), R1
@@ -3455,7 +3455,7 @@ TEXT runtime·vdsoCall_zx_futex_wake_single_owner(SB),NOSPLIT,$0-12
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVD value_ptr+0(FP), R0
 	BL vdso_zx_futex_wake_single_owner(SB)
@@ -3471,7 +3471,7 @@ TEXT runtime·vdsoCall_zx_futex_requeue_single_owner(SB),NOSPLIT,$0-36
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVD value_ptr+0(FP), R0
 	MOVW current_value+8(FP), R1
@@ -3491,7 +3491,7 @@ TEXT runtime·vdsoCall_zx_futex_get_owner(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVD value_ptr+0(FP), R0
 	MOVD koid+8(FP), R1
@@ -3508,7 +3508,7 @@ TEXT runtime·vdsoCall_zx_guest_create(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW resource+0(FP), R0
 	MOVW options+4(FP), R1
@@ -3527,7 +3527,7 @@ TEXT runtime·vdsoCall_zx_guest_set_trap(SB),NOSPLIT,$0-44
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW kind+4(FP), R1
@@ -3548,7 +3548,7 @@ TEXT runtime·vdsoCall_zx_handle_close(SB),NOSPLIT,$0-12
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	BL vdso_zx_handle_close(SB)
@@ -3564,7 +3564,7 @@ TEXT runtime·vdsoCall_zx_handle_close_many(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVD handles+0(FP), R0
 	MOVD num_handles+8(FP), R1
@@ -3581,7 +3581,7 @@ TEXT runtime·vdsoCall_zx_handle_duplicate(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW rights+4(FP), R1
@@ -3599,7 +3599,7 @@ TEXT runtime·vdsoCall_zx_handle_replace(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW rights+4(FP), R1
@@ -3617,7 +3617,7 @@ TEXT runtime·vdsoCall_zx_interrupt_create(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW src_obj+0(FP), R0
 	MOVW src_num+4(FP), R1
@@ -3636,7 +3636,7 @@ TEXT runtime·vdsoCall_zx_interrupt_bind(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW port_handle+4(FP), R1
@@ -3655,7 +3655,7 @@ TEXT runtime·vdsoCall_zx_interrupt_wait(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	CALL runtime·entersyscall(SB)
 	MOVW handle+0(FP), R0
@@ -3674,7 +3674,7 @@ TEXT runtime·vdsoCall_zx_interrupt_destroy(SB),NOSPLIT,$0-12
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	BL vdso_zx_interrupt_destroy(SB)
@@ -3690,7 +3690,7 @@ TEXT runtime·vdsoCall_zx_interrupt_ack(SB),NOSPLIT,$0-12
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	BL vdso_zx_interrupt_ack(SB)
@@ -3706,7 +3706,7 @@ TEXT runtime·vdsoCall_zx_interrupt_trigger(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW options+4(FP), R1
@@ -3724,7 +3724,7 @@ TEXT runtime·vdsoCall_zx_iommu_create(SB),NOSPLIT,$0-36
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW resource+0(FP), R0
 	MOVW typ+4(FP), R1
@@ -3744,7 +3744,7 @@ TEXT runtime·vdsoCall_zx_ioports_request(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW resource+0(FP), R0
 	MOVD io_addr+4(FP), R1
@@ -3762,7 +3762,7 @@ TEXT runtime·vdsoCall_zx_ioports_release(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW resource+0(FP), R0
 	MOVD io_addr+4(FP), R1
@@ -3780,7 +3780,7 @@ TEXT runtime·vdsoCall_zx_job_create(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW parent_job+0(FP), R0
 	MOVW options+4(FP), R1
@@ -3798,7 +3798,7 @@ TEXT runtime·vdsoCall_zx_job_set_policy(SB),NOSPLIT,$0-36
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW options+4(FP), R1
@@ -3818,7 +3818,7 @@ TEXT runtime·vdsoCall_zx_job_set_critical(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW job+0(FP), R0
 	MOVW options+4(FP), R1
@@ -3836,7 +3836,7 @@ TEXT runtime·vdsoCall_zx_ktrace_read(SB),NOSPLIT,$0-44
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVD data+8(FP), R1
@@ -3856,7 +3856,7 @@ TEXT runtime·vdsoCall_zx_ktrace_control(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW action+4(FP), R1
@@ -3875,7 +3875,7 @@ TEXT runtime·vdsoCall_zx_ktrace_write(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW id+4(FP), R1
@@ -3894,7 +3894,7 @@ TEXT runtime·vdsoCall_zx_nanosleep(SB),NOSPLIT,$0-12
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVD deadline+0(FP), R0
 	BL vdso_zx_nanosleep(SB)
@@ -3910,7 +3910,7 @@ TEXT runtime·vdsoCall_zx_ticks_get(SB),NOSPLIT,$0-8
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	BL vdso_zx_ticks_get(SB)
 	MOVD R0, ret+0(FP)
@@ -3925,7 +3925,7 @@ TEXT runtime·vdsoCall_zx_ticks_per_second(SB),NOSPLIT,$0-8
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	BL vdso_zx_ticks_per_second(SB)
 	MOVD R0, ret+0(FP)
@@ -3940,7 +3940,7 @@ TEXT runtime·vdsoCall_zx_deadline_after(SB),NOSPLIT,$0-16
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVD nanoseconds+0(FP), R0
 	BL vdso_zx_deadline_after(SB)
@@ -3956,7 +3956,7 @@ TEXT runtime·vdsoCall_zx_vmar_unmap_handle_close_thread_exit(SB),NOSPLIT,$0-36
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW vmar_handle+0(FP), R0
 	MOVD addr+8(FP), R1
@@ -3975,7 +3975,7 @@ TEXT runtime·vdsoCall_zx_futex_wake_handle_close_thread_exit(SB),NOSPLIT,$0-24
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVD value_ptr+0(FP), R0
 	MOVW wake_count+8(FP), R1
@@ -3993,7 +3993,7 @@ TEXT runtime·vdsoCall_zx_ticks_get_via_kernel(SB),NOSPLIT,$0-8
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	BL vdso_zx_ticks_get_via_kernel(SB)
 	MOVD R0, ret+0(FP)
@@ -4008,7 +4008,7 @@ TEXT runtime·vdsoCall_zx_msi_allocate(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW count+4(FP), R1
@@ -4026,7 +4026,7 @@ TEXT runtime·vdsoCall_zx_msi_create(SB),NOSPLIT,$0-36
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW options+4(FP), R1
@@ -4047,7 +4047,7 @@ TEXT runtime·vdsoCall_zx_mtrace_control(SB),NOSPLIT,$0-36
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW kind+4(FP), R1
@@ -4068,7 +4068,7 @@ TEXT runtime·vdsoCall_zx_object_wait_one(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	CALL runtime·entersyscall(SB)
 	MOVW handle+0(FP), R0
@@ -4089,7 +4089,7 @@ TEXT runtime·vdsoCall_zx_object_wait_many(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	CALL runtime·entersyscall(SB)
 	MOVD items+0(FP), R0
@@ -4109,7 +4109,7 @@ TEXT runtime·vdsoCall_zx_object_wait_async(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW port+4(FP), R1
@@ -4129,7 +4129,7 @@ TEXT runtime·vdsoCall_zx_object_signal(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW clear_mask+4(FP), R1
@@ -4147,7 +4147,7 @@ TEXT runtime·vdsoCall_zx_object_signal_peer(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW clear_mask+4(FP), R1
@@ -4165,7 +4165,7 @@ TEXT runtime·vdsoCall_zx_object_get_property(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW property+4(FP), R1
@@ -4184,7 +4184,7 @@ TEXT runtime·vdsoCall_zx_object_set_property(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW property+4(FP), R1
@@ -4203,7 +4203,7 @@ TEXT runtime·vdsoCall_zx_object_get_info(SB),NOSPLIT,$0-44
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW topic+4(FP), R1
@@ -4224,7 +4224,7 @@ TEXT runtime·vdsoCall_zx_object_get_child(SB),NOSPLIT,$0-36
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVD koid+8(FP), R1
@@ -4243,7 +4243,7 @@ TEXT runtime·vdsoCall_zx_object_set_profile(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW profile+4(FP), R1
@@ -4261,7 +4261,7 @@ TEXT runtime·vdsoCall_zx_pager_create(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW options+0(FP), R0
 	MOVD out+8(FP), R1
@@ -4278,7 +4278,7 @@ TEXT runtime·vdsoCall_zx_pager_create_vmo(SB),NOSPLIT,$0-44
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW pager+0(FP), R0
 	MOVW options+4(FP), R1
@@ -4299,7 +4299,7 @@ TEXT runtime·vdsoCall_zx_pager_detach_vmo(SB),NOSPLIT,$0-12
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW pager+0(FP), R0
 	MOVW vmo+4(FP), R1
@@ -4316,7 +4316,7 @@ TEXT runtime·vdsoCall_zx_pager_supply_pages(SB),NOSPLIT,$0-44
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW pager+0(FP), R0
 	MOVW pager_vmo+4(FP), R1
@@ -4337,7 +4337,7 @@ TEXT runtime·vdsoCall_zx_pager_op_range(SB),NOSPLIT,$0-44
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW pager+0(FP), R0
 	MOVW op+4(FP), R1
@@ -4358,7 +4358,7 @@ TEXT runtime·vdsoCall_zx_pager_query_dirty_ranges(SB),NOSPLIT,$0-60
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW pager+0(FP), R0
 	MOVW pager_vmo+4(FP), R1
@@ -4381,7 +4381,7 @@ TEXT runtime·vdsoCall_zx_pager_query_vmo_stats(SB),NOSPLIT,$0-36
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW pager+0(FP), R0
 	MOVW pager_vmo+4(FP), R1
@@ -4401,7 +4401,7 @@ TEXT runtime·vdsoCall_zx_pc_firmware_tables(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVD acpi_rsdp+8(FP), R1
@@ -4419,7 +4419,7 @@ TEXT runtime·vdsoCall_zx_pci_get_nth_device(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW index+4(FP), R1
@@ -4438,7 +4438,7 @@ TEXT runtime·vdsoCall_zx_pci_enable_bus_master(SB),NOSPLIT,$0-12
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW enable+4(FP), R1
@@ -4455,7 +4455,7 @@ TEXT runtime·vdsoCall_zx_pci_reset_device(SB),NOSPLIT,$0-12
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	BL vdso_zx_pci_reset_device(SB)
@@ -4471,7 +4471,7 @@ TEXT runtime·vdsoCall_zx_pci_config_read(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVD offset+4(FP), R1
@@ -4490,7 +4490,7 @@ TEXT runtime·vdsoCall_zx_pci_config_write(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVD offset+4(FP), R1
@@ -4509,7 +4509,7 @@ TEXT runtime·vdsoCall_zx_pci_cfg_pio_rw(SB),NOSPLIT,$0-68
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVD bus+8(FP), R1
@@ -4532,7 +4532,7 @@ TEXT runtime·vdsoCall_zx_pci_get_bar(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW bar_num+4(FP), R1
@@ -4551,7 +4551,7 @@ TEXT runtime·vdsoCall_zx_pci_map_interrupt(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW which_irq+4(FP), R1
@@ -4569,7 +4569,7 @@ TEXT runtime·vdsoCall_zx_pci_query_irq_mode(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW mode+4(FP), R1
@@ -4587,7 +4587,7 @@ TEXT runtime·vdsoCall_zx_pci_set_irq_mode(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW mode+4(FP), R1
@@ -4605,7 +4605,7 @@ TEXT runtime·vdsoCall_zx_pci_init(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVD init_buf+8(FP), R1
@@ -4623,7 +4623,7 @@ TEXT runtime·vdsoCall_zx_pci_add_subtract_io_range(SB),NOSPLIT,$0-36
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW mmio+4(FP), R1
@@ -4643,7 +4643,7 @@ TEXT runtime·vdsoCall_zx_pmt_unpin(SB),NOSPLIT,$0-12
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	BL vdso_zx_pmt_unpin(SB)
@@ -4659,7 +4659,7 @@ TEXT runtime·vdsoCall_zx_port_create(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW options+0(FP), R0
 	MOVD out+8(FP), R1
@@ -4676,7 +4676,7 @@ TEXT runtime·vdsoCall_zx_port_queue(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVD packet+8(FP), R1
@@ -4693,7 +4693,7 @@ TEXT runtime·vdsoCall_zx_port_wait(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	CALL runtime·entersyscall(SB)
 	MOVW handle+0(FP), R0
@@ -4713,7 +4713,7 @@ TEXT runtime·vdsoCall_zx_port_cancel(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW source+4(FP), R1
@@ -4731,7 +4731,7 @@ TEXT runtime·vdsoCall_zx_process_exit(SB),NOSPLIT,$0-8
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVD retcode+0(FP), R0
 	BL vdso_zx_process_exit(SB)
@@ -4746,7 +4746,7 @@ TEXT runtime·vdsoCall_zx_process_create(SB),NOSPLIT,$0-52
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW job+0(FP), R0
 	MOVD name+8(FP), R1
@@ -4767,7 +4767,7 @@ TEXT runtime·vdsoCall_zx_process_start(SB),NOSPLIT,$0-44
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW thread+4(FP), R1
@@ -4788,7 +4788,7 @@ TEXT runtime·vdsoCall_zx_process_read_memory(SB),NOSPLIT,$0-44
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVD vaddr+8(FP), R1
@@ -4808,7 +4808,7 @@ TEXT runtime·vdsoCall_zx_process_write_memory(SB),NOSPLIT,$0-44
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVD vaddr+8(FP), R1
@@ -4828,7 +4828,7 @@ TEXT runtime·vdsoCall_zx_profile_create(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW root_job+0(FP), R0
 	MOVW options+4(FP), R1
@@ -4847,7 +4847,7 @@ TEXT runtime·vdsoCall_zx_resource_create(SB),NOSPLIT,$0-52
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW parent_rsrc+0(FP), R0
 	MOVW options+4(FP), R1
@@ -4869,7 +4869,7 @@ TEXT runtime·vdsoCall_zx_restricted_enter(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW options+0(FP), R0
 	MOVD vector_table_ptr+8(FP), R1
@@ -4887,7 +4887,7 @@ TEXT runtime·vdsoCall_zx_restricted_write_state(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVD buffer+0(FP), R0
 	MOVD buffer_size+8(FP), R1
@@ -4904,7 +4904,7 @@ TEXT runtime·vdsoCall_zx_restricted_read_state(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVD buffer+0(FP), R0
 	MOVD buffer_size+8(FP), R1
@@ -4921,7 +4921,7 @@ TEXT runtime·vdsoCall_zx_smc_call(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVD parameters+8(FP), R1
@@ -4939,7 +4939,7 @@ TEXT runtime·vdsoCall_zx_socket_create(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW options+0(FP), R0
 	MOVD out0+8(FP), R1
@@ -4957,7 +4957,7 @@ TEXT runtime·vdsoCall_zx_socket_write(SB),NOSPLIT,$0-36
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW options+4(FP), R1
@@ -4977,7 +4977,7 @@ TEXT runtime·vdsoCall_zx_socket_read(SB),NOSPLIT,$0-36
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW options+4(FP), R1
@@ -4997,7 +4997,7 @@ TEXT runtime·vdsoCall_zx_socket_set_disposition(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW disposition+4(FP), R1
@@ -5015,7 +5015,7 @@ TEXT runtime·vdsoCall_zx_stream_create(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW options+0(FP), R0
 	MOVW vmo+4(FP), R1
@@ -5034,7 +5034,7 @@ TEXT runtime·vdsoCall_zx_stream_writev(SB),NOSPLIT,$0-36
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	CALL runtime·entersyscall(SB)
 	MOVW handle+0(FP), R0
@@ -5056,7 +5056,7 @@ TEXT runtime·vdsoCall_zx_stream_writev_at(SB),NOSPLIT,$0-44
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	CALL runtime·entersyscall(SB)
 	MOVW handle+0(FP), R0
@@ -5079,7 +5079,7 @@ TEXT runtime·vdsoCall_zx_stream_readv(SB),NOSPLIT,$0-36
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	CALL runtime·entersyscall(SB)
 	MOVW handle+0(FP), R0
@@ -5101,7 +5101,7 @@ TEXT runtime·vdsoCall_zx_stream_readv_at(SB),NOSPLIT,$0-44
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	CALL runtime·entersyscall(SB)
 	MOVW handle+0(FP), R0
@@ -5124,7 +5124,7 @@ TEXT runtime·vdsoCall_zx_stream_seek(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW whence+4(FP), R1
@@ -5143,7 +5143,7 @@ TEXT runtime·vdsoCall_zx_syscall_test_0(SB),NOSPLIT,$0-4
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	BL vdso_zx_syscall_test_0(SB)
 	MOVW R0, ret+0(FP)
@@ -5158,7 +5158,7 @@ TEXT runtime·vdsoCall_zx_syscall_test_1(SB),NOSPLIT,$0-12
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW a+0(FP), R0
 	BL vdso_zx_syscall_test_1(SB)
@@ -5174,7 +5174,7 @@ TEXT runtime·vdsoCall_zx_syscall_test_2(SB),NOSPLIT,$0-12
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW a+0(FP), R0
 	MOVW b+4(FP), R1
@@ -5191,7 +5191,7 @@ TEXT runtime·vdsoCall_zx_syscall_test_3(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW a+0(FP), R0
 	MOVW b+4(FP), R1
@@ -5209,7 +5209,7 @@ TEXT runtime·vdsoCall_zx_syscall_test_4(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW a+0(FP), R0
 	MOVW b+4(FP), R1
@@ -5228,7 +5228,7 @@ TEXT runtime·vdsoCall_zx_syscall_test_5(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW a+0(FP), R0
 	MOVW b+4(FP), R1
@@ -5248,7 +5248,7 @@ TEXT runtime·vdsoCall_zx_syscall_test_6(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW a+0(FP), R0
 	MOVW b+4(FP), R1
@@ -5269,7 +5269,7 @@ TEXT runtime·vdsoCall_zx_syscall_test_7(SB),NOSPLIT,$0-36
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW a+0(FP), R0
 	MOVW b+4(FP), R1
@@ -5291,7 +5291,7 @@ TEXT runtime·vdsoCall_zx_syscall_test_8(SB),NOSPLIT,$0-36
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW a+0(FP), R0
 	MOVW b+4(FP), R1
@@ -5314,7 +5314,7 @@ TEXT runtime·vdsoCall_zx_syscall_next_1(SB),NOSPLIT,$0-12
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW arg+0(FP), R0
 	BL vdso_zx_syscall_next_1(SB)
@@ -5330,7 +5330,7 @@ TEXT runtime·vdsoCall_zx_syscall_test_wrapper(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW a+0(FP), R0
 	MOVW b+4(FP), R1
@@ -5348,7 +5348,7 @@ TEXT runtime·vdsoCall_zx_syscall_test_handle_create(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW return_value+0(FP), R0
 	MOVD out+8(FP), R1
@@ -5365,7 +5365,7 @@ TEXT runtime·vdsoCall_zx_syscall_test_widening_unsigned_narrow(SB),NOSPLIT,$0-3
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVD a+0(FP), R0
 	MOVW b+8(FP), R1
@@ -5384,7 +5384,7 @@ TEXT runtime·vdsoCall_zx_syscall_test_widening_signed_narrow(SB),NOSPLIT,$0-32
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVD a+0(FP), R0
 	MOVW b+8(FP), R1
@@ -5403,7 +5403,7 @@ TEXT runtime·vdsoCall_zx_syscall_test_widening_unsigned_wide(SB),NOSPLIT,$0-32
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVD a+0(FP), R0
 	MOVW b+8(FP), R1
@@ -5422,7 +5422,7 @@ TEXT runtime·vdsoCall_zx_syscall_test_widening_signed_wide(SB),NOSPLIT,$0-32
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVD a+0(FP), R0
 	MOVW b+8(FP), R1
@@ -5441,7 +5441,7 @@ TEXT runtime·vdsoCall_zx_system_get_dcache_line_size(SB),NOSPLIT,$0-4
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	BL vdso_zx_system_get_dcache_line_size(SB)
 	MOVW R0, ret+0(FP)
@@ -5456,7 +5456,7 @@ TEXT runtime·vdsoCall_zx_system_get_num_cpus(SB),NOSPLIT,$0-4
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	BL vdso_zx_system_get_num_cpus(SB)
 	MOVW R0, ret+0(FP)
@@ -5471,7 +5471,7 @@ TEXT runtime·vdsoCall_zx_system_get_version_string(SB),NOSPLIT,$0-8
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	BL vdso_zx_system_get_version_string(SB)
 	MOVD R0, ret+0(FP)
@@ -5486,7 +5486,7 @@ TEXT runtime·vdsoCall_zx_system_get_page_size(SB),NOSPLIT,$0-4
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	BL vdso_zx_system_get_page_size(SB)
 	MOVW R0, ret+0(FP)
@@ -5501,7 +5501,7 @@ TEXT runtime·vdsoCall_zx_system_get_physmem(SB),NOSPLIT,$0-8
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	BL vdso_zx_system_get_physmem(SB)
 	MOVD R0, ret+0(FP)
@@ -5516,7 +5516,7 @@ TEXT runtime·vdsoCall_zx_system_get_features(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW kind+0(FP), R0
 	MOVD features+8(FP), R1
@@ -5533,7 +5533,7 @@ TEXT runtime·vdsoCall_zx_system_get_event(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW root_job+0(FP), R0
 	MOVW kind+4(FP), R1
@@ -5551,7 +5551,7 @@ TEXT runtime·vdsoCall_zx_system_set_performance_info(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW resource+0(FP), R0
 	MOVW topic+4(FP), R1
@@ -5570,7 +5570,7 @@ TEXT runtime·vdsoCall_zx_system_get_performance_info(SB),NOSPLIT,$0-36
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW resource+0(FP), R0
 	MOVW topic+4(FP), R1
@@ -5590,7 +5590,7 @@ TEXT runtime·vdsoCall_zx_system_mexec(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW resource+0(FP), R0
 	MOVW kernel_vmo+4(FP), R1
@@ -5608,7 +5608,7 @@ TEXT runtime·vdsoCall_zx_system_mexec_payload_get(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW resource+0(FP), R0
 	MOVD buffer+8(FP), R1
@@ -5626,7 +5626,7 @@ TEXT runtime·vdsoCall_zx_system_powerctl(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW resource+0(FP), R0
 	MOVW cmd+4(FP), R1
@@ -5644,7 +5644,7 @@ TEXT runtime·vdsoCall_zx_task_suspend(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVD token+8(FP), R1
@@ -5661,7 +5661,7 @@ TEXT runtime·vdsoCall_zx_task_suspend_token(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVD token+8(FP), R1
@@ -5678,7 +5678,7 @@ TEXT runtime·vdsoCall_zx_task_create_exception_channel(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW options+4(FP), R1
@@ -5696,7 +5696,7 @@ TEXT runtime·vdsoCall_zx_task_kill(SB),NOSPLIT,$0-12
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	BL vdso_zx_task_kill(SB)
@@ -5712,7 +5712,7 @@ TEXT runtime·vdsoCall_zx_thread_exit(SB),NOSPLIT,$0-0
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	BL vdso_zx_thread_exit(SB)
 	MOVD g_m(g), R21
@@ -5726,7 +5726,7 @@ TEXT runtime·vdsoCall_zx_thread_create(SB),NOSPLIT,$0-44
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW process+0(FP), R0
 	MOVD name+8(FP), R1
@@ -5746,7 +5746,7 @@ TEXT runtime·vdsoCall_zx_thread_start(SB),NOSPLIT,$0-44
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVD thread_entry+8(FP), R1
@@ -5766,7 +5766,7 @@ TEXT runtime·vdsoCall_zx_thread_read_state(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW kind+4(FP), R1
@@ -5785,7 +5785,7 @@ TEXT runtime·vdsoCall_zx_thread_write_state(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW kind+4(FP), R1
@@ -5804,7 +5804,7 @@ TEXT runtime·vdsoCall_zx_thread_legacy_yield(SB),NOSPLIT,$0-12
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW options+0(FP), R0
 	BL vdso_zx_thread_legacy_yield(SB)
@@ -5820,7 +5820,7 @@ TEXT runtime·vdsoCall_zx_timer_create(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW options+0(FP), R0
 	MOVW clock_id+4(FP), R1
@@ -5838,7 +5838,7 @@ TEXT runtime·vdsoCall_zx_timer_set(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVD deadline+8(FP), R1
@@ -5856,7 +5856,7 @@ TEXT runtime·vdsoCall_zx_timer_cancel(SB),NOSPLIT,$0-12
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	BL vdso_zx_timer_cancel(SB)
@@ -5872,7 +5872,7 @@ TEXT runtime·vdsoCall_zx_vcpu_create(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW guest+0(FP), R0
 	MOVW options+4(FP), R1
@@ -5891,7 +5891,7 @@ TEXT runtime·vdsoCall_zx_vcpu_enter(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	CALL runtime·entersyscall(SB)
 	MOVW handle+0(FP), R0
@@ -5910,7 +5910,7 @@ TEXT runtime·vdsoCall_zx_vcpu_kick(SB),NOSPLIT,$0-12
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	BL vdso_zx_vcpu_kick(SB)
@@ -5926,7 +5926,7 @@ TEXT runtime·vdsoCall_zx_vcpu_interrupt(SB),NOSPLIT,$0-12
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW vector+4(FP), R1
@@ -5943,7 +5943,7 @@ TEXT runtime·vdsoCall_zx_vcpu_read_state(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW kind+4(FP), R1
@@ -5962,7 +5962,7 @@ TEXT runtime·vdsoCall_zx_vcpu_write_state(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW kind+4(FP), R1
@@ -5981,7 +5981,7 @@ TEXT runtime·vdsoCall_zx_vmar_allocate(SB),NOSPLIT,$0-44
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW parent_vmar+0(FP), R0
 	MOVW options+4(FP), R1
@@ -6002,7 +6002,7 @@ TEXT runtime·vdsoCall_zx_vmar_destroy(SB),NOSPLIT,$0-12
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	BL vdso_zx_vmar_destroy(SB)
@@ -6018,7 +6018,7 @@ TEXT runtime·vdsoCall_zx_vmar_map(SB),NOSPLIT,$0-52
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW options+4(FP), R1
@@ -6040,7 +6040,7 @@ TEXT runtime·vdsoCall_zx_vmar_unmap(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVD addr+8(FP), R1
@@ -6058,7 +6058,7 @@ TEXT runtime·vdsoCall_zx_vmar_protect(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW options+4(FP), R1
@@ -6077,7 +6077,7 @@ TEXT runtime·vdsoCall_zx_vmar_op_range(SB),NOSPLIT,$0-44
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW op+4(FP), R1
@@ -6098,7 +6098,7 @@ TEXT runtime·vdsoCall_zx_vmo_create(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVD size+0(FP), R0
 	MOVW options+8(FP), R1
@@ -6116,7 +6116,7 @@ TEXT runtime·vdsoCall_zx_vmo_read(SB),NOSPLIT,$0-36
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	CALL runtime·entersyscall(SB)
 	MOVW handle+0(FP), R0
@@ -6137,7 +6137,7 @@ TEXT runtime·vdsoCall_zx_vmo_write(SB),NOSPLIT,$0-36
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	CALL runtime·entersyscall(SB)
 	MOVW handle+0(FP), R0
@@ -6158,7 +6158,7 @@ TEXT runtime·vdsoCall_zx_vmo_get_size(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVD size+8(FP), R1
@@ -6175,7 +6175,7 @@ TEXT runtime·vdsoCall_zx_vmo_set_size(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVD size+8(FP), R1
@@ -6192,7 +6192,7 @@ TEXT runtime·vdsoCall_zx_vmo_op_range(SB),NOSPLIT,$0-44
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	CALL runtime·entersyscall(SB)
 	MOVW handle+0(FP), R0
@@ -6215,7 +6215,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_child(SB),NOSPLIT,$0-36
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW options+4(FP), R1
@@ -6235,7 +6235,7 @@ TEXT runtime·vdsoCall_zx_vmo_set_cache_policy(SB),NOSPLIT,$0-12
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW cache_policy+4(FP), R1
@@ -6252,7 +6252,7 @@ TEXT runtime·vdsoCall_zx_vmo_replace_as_executable(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW vmex+4(FP), R1
@@ -6270,7 +6270,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_contiguous(SB),NOSPLIT,$0-36
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW bti+0(FP), R0
 	MOVD size+8(FP), R1
@@ -6289,7 +6289,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$0-36
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW resource+0(FP), R0
 	MOVD paddr+8(FP), R1
@@ -7919,9 +7919,9 @@ TEXT runtime·vdsoCall_zx_bti_create(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL iommu+0(FP), DI
 	MOVL options+4(FP), SI
@@ -7942,9 +7942,9 @@ TEXT runtime·vdsoCall_zx_bti_pin(SB),NOSPLIT,$40-60
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 56(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 56(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL options+4(FP), SI
@@ -7976,9 +7976,9 @@ TEXT runtime·vdsoCall_zx_bti_release_quarantine(SB),NOSPLIT,$8-12
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ vdso_zx_bti_release_quarantine(SB), AX
@@ -7996,9 +7996,9 @@ TEXT runtime·vdsoCall_zx_cache_flush(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ addr+0(FP), DI
 	MOVQ size+8(FP), SI
@@ -8018,9 +8018,9 @@ TEXT runtime·vdsoCall_zx_channel_create(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL options+0(FP), DI
 	MOVQ out0+8(FP), SI
@@ -8040,9 +8040,9 @@ TEXT runtime·vdsoCall_zx_channel_read(SB),NOSPLIT,$40-52
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 56(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 56(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL options+4(FP), SI
@@ -8074,9 +8074,9 @@ TEXT runtime·vdsoCall_zx_channel_read_etc(SB),NOSPLIT,$40-52
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 56(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 56(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL options+4(FP), SI
@@ -8108,9 +8108,9 @@ TEXT runtime·vdsoCall_zx_channel_write(SB),NOSPLIT,$8-44
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL options+4(FP), SI
@@ -8133,9 +8133,9 @@ TEXT runtime·vdsoCall_zx_channel_write_etc(SB),NOSPLIT,$8-44
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL options+4(FP), SI
@@ -8158,9 +8158,9 @@ TEXT runtime·vdsoCall_zx_channel_call_noretry(SB),NOSPLIT,$8-44
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL options+4(FP), SI
@@ -8183,9 +8183,9 @@ TEXT runtime·vdsoCall_zx_channel_call_finish(SB),NOSPLIT,$8-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ deadline+0(FP), DI
 	MOVQ args+8(FP), SI
@@ -8206,9 +8206,9 @@ TEXT runtime·vdsoCall_zx_channel_call(SB),NOSPLIT,$8-44
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	CALL runtime·entersyscall(SB)
 	MOVL handle+0(FP), DI
@@ -8233,9 +8233,9 @@ TEXT runtime·vdsoCall_zx_channel_call_etc_noretry(SB),NOSPLIT,$8-44
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL options+4(FP), SI
@@ -8258,9 +8258,9 @@ TEXT runtime·vdsoCall_zx_channel_call_etc_finish(SB),NOSPLIT,$8-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ deadline+0(FP), DI
 	MOVQ args+8(FP), SI
@@ -8281,9 +8281,9 @@ TEXT runtime·vdsoCall_zx_channel_call_etc(SB),NOSPLIT,$8-44
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	CALL runtime·entersyscall(SB)
 	MOVL handle+0(FP), DI
@@ -8308,9 +8308,9 @@ TEXT runtime·vdsoCall_zx_clock_get_monotonic(SB),NOSPLIT,$8-8
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ vdso_zx_clock_get_monotonic(SB), AX
 	CALL AX
@@ -8327,9 +8327,9 @@ TEXT runtime·vdsoCall_zx_clock_get_monotonic_via_kernel(SB),NOSPLIT,$8-8
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ vdso_zx_clock_get_monotonic_via_kernel(SB), AX
 	CALL AX
@@ -8346,9 +8346,9 @@ TEXT runtime·vdsoCall_zx_clock_create(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ options+0(FP), DI
 	MOVQ args+8(FP), SI
@@ -8368,9 +8368,9 @@ TEXT runtime·vdsoCall_zx_clock_read(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ now+8(FP), SI
@@ -8389,9 +8389,9 @@ TEXT runtime·vdsoCall_zx_clock_get_details(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ options+8(FP), SI
@@ -8411,9 +8411,9 @@ TEXT runtime·vdsoCall_zx_clock_update(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ options+8(FP), SI
@@ -8433,9 +8433,9 @@ TEXT runtime·vdsoCall_zx_cprng_draw_once(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ buffer+0(FP), DI
 	MOVQ buffer_size+8(FP), SI
@@ -8454,9 +8454,9 @@ TEXT runtime·vdsoCall_zx_cprng_draw(SB),NOSPLIT,$8-16
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ buffer+0(FP), DI
 	MOVQ buffer_size+8(FP), SI
@@ -8474,9 +8474,9 @@ TEXT runtime·vdsoCall_zx_cprng_add_entropy(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ buffer+0(FP), DI
 	MOVQ buffer_size+8(FP), SI
@@ -8495,9 +8495,9 @@ TEXT runtime·vdsoCall_zx_debug_read(SB),NOSPLIT,$8-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ buffer+8(FP), SI
@@ -8518,9 +8518,9 @@ TEXT runtime·vdsoCall_zx_debug_write(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ buffer+0(FP), DI
 	MOVQ buffer_size+8(FP), SI
@@ -8539,9 +8539,9 @@ TEXT runtime·vdsoCall_zx_debug_send_command(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL resource+0(FP), DI
 	MOVQ buffer+8(FP), SI
@@ -8561,9 +8561,9 @@ TEXT runtime·vdsoCall_zx_debuglog_create(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL resource+0(FP), DI
 	MOVL options+4(FP), SI
@@ -8583,9 +8583,9 @@ TEXT runtime·vdsoCall_zx_debuglog_write(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL options+4(FP), SI
@@ -8606,9 +8606,9 @@ TEXT runtime·vdsoCall_zx_debuglog_read(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL options+4(FP), SI
@@ -8629,9 +8629,9 @@ TEXT runtime·vdsoCall_zx_event_create(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL options+0(FP), DI
 	MOVQ out+8(FP), SI
@@ -8650,9 +8650,9 @@ TEXT runtime·vdsoCall_zx_eventpair_create(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL options+0(FP), DI
 	MOVQ out0+8(FP), SI
@@ -8672,9 +8672,9 @@ TEXT runtime·vdsoCall_zx_exception_get_thread(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ out+8(FP), SI
@@ -8693,9 +8693,9 @@ TEXT runtime·vdsoCall_zx_exception_get_process(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ out+8(FP), SI
@@ -8714,9 +8714,9 @@ TEXT runtime·vdsoCall_zx_fifo_create(SB),NOSPLIT,$8-44
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ elem_count+0(FP), DI
 	MOVQ elem_size+8(FP), SI
@@ -8738,9 +8738,9 @@ TEXT runtime·vdsoCall_zx_fifo_read(SB),NOSPLIT,$8-44
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ elem_size+8(FP), SI
@@ -8762,9 +8762,9 @@ TEXT runtime·vdsoCall_zx_fifo_write(SB),NOSPLIT,$8-44
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ elem_size+8(FP), SI
@@ -8786,9 +8786,9 @@ TEXT runtime·vdsoCall_zx_framebuffer_get_info(SB),NOSPLIT,$8-44
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL resource+0(FP), DI
 	MOVQ format+8(FP), SI
@@ -8810,9 +8810,9 @@ TEXT runtime·vdsoCall_zx_framebuffer_set_range(SB),NOSPLIT,$32-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 48(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 48(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL resource+0(FP), DI
 	MOVL vmo+4(FP), SI
@@ -8841,9 +8841,9 @@ TEXT runtime·vdsoCall_zx_futex_wait(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ value_ptr+0(FP), DI
 	MOVL current_value+8(FP), SI
@@ -8864,9 +8864,9 @@ TEXT runtime·vdsoCall_zx_futex_wake(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ value_ptr+0(FP), DI
 	MOVL wake_count+8(FP), SI
@@ -8885,9 +8885,9 @@ TEXT runtime·vdsoCall_zx_futex_requeue(SB),NOSPLIT,$8-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ value_ptr+0(FP), DI
 	MOVL wake_count+8(FP), SI
@@ -8910,9 +8910,9 @@ TEXT runtime·vdsoCall_zx_futex_wake_single_owner(SB),NOSPLIT,$8-12
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ value_ptr+0(FP), DI
 	MOVQ vdso_zx_futex_wake_single_owner(SB), AX
@@ -8930,9 +8930,9 @@ TEXT runtime·vdsoCall_zx_futex_requeue_single_owner(SB),NOSPLIT,$8-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ value_ptr+0(FP), DI
 	MOVL current_value+8(FP), SI
@@ -8954,9 +8954,9 @@ TEXT runtime·vdsoCall_zx_futex_get_owner(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ value_ptr+0(FP), DI
 	MOVQ koid+8(FP), SI
@@ -8975,9 +8975,9 @@ TEXT runtime·vdsoCall_zx_guest_create(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL resource+0(FP), DI
 	MOVL options+4(FP), SI
@@ -8998,9 +8998,9 @@ TEXT runtime·vdsoCall_zx_guest_set_trap(SB),NOSPLIT,$8-44
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL kind+4(FP), SI
@@ -9023,9 +9023,9 @@ TEXT runtime·vdsoCall_zx_handle_close(SB),NOSPLIT,$8-12
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ vdso_zx_handle_close(SB), AX
@@ -9043,9 +9043,9 @@ TEXT runtime·vdsoCall_zx_handle_close_many(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ handles+0(FP), DI
 	MOVQ num_handles+8(FP), SI
@@ -9064,9 +9064,9 @@ TEXT runtime·vdsoCall_zx_handle_duplicate(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL rights+4(FP), SI
@@ -9086,9 +9086,9 @@ TEXT runtime·vdsoCall_zx_handle_replace(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL rights+4(FP), SI
@@ -9108,9 +9108,9 @@ TEXT runtime·vdsoCall_zx_interrupt_create(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL src_obj+0(FP), DI
 	MOVL src_num+4(FP), SI
@@ -9131,9 +9131,9 @@ TEXT runtime·vdsoCall_zx_interrupt_bind(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL port_handle+4(FP), SI
@@ -9154,9 +9154,9 @@ TEXT runtime·vdsoCall_zx_interrupt_wait(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	CALL runtime·entersyscall(SB)
 	MOVL handle+0(FP), DI
@@ -9177,9 +9177,9 @@ TEXT runtime·vdsoCall_zx_interrupt_destroy(SB),NOSPLIT,$8-12
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ vdso_zx_interrupt_destroy(SB), AX
@@ -9197,9 +9197,9 @@ TEXT runtime·vdsoCall_zx_interrupt_ack(SB),NOSPLIT,$8-12
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ vdso_zx_interrupt_ack(SB), AX
@@ -9217,9 +9217,9 @@ TEXT runtime·vdsoCall_zx_interrupt_trigger(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL options+4(FP), SI
@@ -9239,9 +9239,9 @@ TEXT runtime·vdsoCall_zx_iommu_create(SB),NOSPLIT,$8-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL resource+0(FP), DI
 	MOVL typ+4(FP), SI
@@ -9263,9 +9263,9 @@ TEXT runtime·vdsoCall_zx_ioports_request(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL resource+0(FP), DI
 	MOVQ io_addr+4(FP), SI
@@ -9285,9 +9285,9 @@ TEXT runtime·vdsoCall_zx_ioports_release(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL resource+0(FP), DI
 	MOVQ io_addr+4(FP), SI
@@ -9307,9 +9307,9 @@ TEXT runtime·vdsoCall_zx_job_create(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL parent_job+0(FP), DI
 	MOVL options+4(FP), SI
@@ -9329,9 +9329,9 @@ TEXT runtime·vdsoCall_zx_job_set_policy(SB),NOSPLIT,$8-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL options+4(FP), SI
@@ -9353,9 +9353,9 @@ TEXT runtime·vdsoCall_zx_job_set_critical(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL job+0(FP), DI
 	MOVL options+4(FP), SI
@@ -9375,9 +9375,9 @@ TEXT runtime·vdsoCall_zx_ktrace_read(SB),NOSPLIT,$8-44
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ data+8(FP), SI
@@ -9399,9 +9399,9 @@ TEXT runtime·vdsoCall_zx_ktrace_control(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL action+4(FP), SI
@@ -9422,9 +9422,9 @@ TEXT runtime·vdsoCall_zx_ktrace_write(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL id+4(FP), SI
@@ -9445,9 +9445,9 @@ TEXT runtime·vdsoCall_zx_nanosleep(SB),NOSPLIT,$8-12
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ deadline+0(FP), DI
 	MOVQ vdso_zx_nanosleep(SB), AX
@@ -9465,9 +9465,9 @@ TEXT runtime·vdsoCall_zx_ticks_get(SB),NOSPLIT,$8-8
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ vdso_zx_ticks_get(SB), AX
 	CALL AX
@@ -9484,9 +9484,9 @@ TEXT runtime·vdsoCall_zx_ticks_per_second(SB),NOSPLIT,$8-8
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ vdso_zx_ticks_per_second(SB), AX
 	CALL AX
@@ -9503,9 +9503,9 @@ TEXT runtime·vdsoCall_zx_deadline_after(SB),NOSPLIT,$8-16
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ nanoseconds+0(FP), DI
 	MOVQ vdso_zx_deadline_after(SB), AX
@@ -9523,9 +9523,9 @@ TEXT runtime·vdsoCall_zx_vmar_unmap_handle_close_thread_exit(SB),NOSPLIT,$8-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL vmar_handle+0(FP), DI
 	MOVQ addr+8(FP), SI
@@ -9546,9 +9546,9 @@ TEXT runtime·vdsoCall_zx_futex_wake_handle_close_thread_exit(SB),NOSPLIT,$8-24
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ value_ptr+0(FP), DI
 	MOVL wake_count+8(FP), SI
@@ -9568,9 +9568,9 @@ TEXT runtime·vdsoCall_zx_ticks_get_via_kernel(SB),NOSPLIT,$8-8
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ vdso_zx_ticks_get_via_kernel(SB), AX
 	CALL AX
@@ -9587,9 +9587,9 @@ TEXT runtime·vdsoCall_zx_msi_allocate(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL count+4(FP), SI
@@ -9609,9 +9609,9 @@ TEXT runtime·vdsoCall_zx_msi_create(SB),NOSPLIT,$8-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL options+4(FP), SI
@@ -9634,9 +9634,9 @@ TEXT runtime·vdsoCall_zx_mtrace_control(SB),NOSPLIT,$8-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL kind+4(FP), SI
@@ -9659,9 +9659,9 @@ TEXT runtime·vdsoCall_zx_object_wait_one(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	CALL runtime·entersyscall(SB)
 	MOVL handle+0(FP), DI
@@ -9684,9 +9684,9 @@ TEXT runtime·vdsoCall_zx_object_wait_many(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	CALL runtime·entersyscall(SB)
 	MOVQ items+0(FP), DI
@@ -9708,9 +9708,9 @@ TEXT runtime·vdsoCall_zx_object_wait_async(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL port+4(FP), SI
@@ -9732,9 +9732,9 @@ TEXT runtime·vdsoCall_zx_object_signal(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL clear_mask+4(FP), SI
@@ -9754,9 +9754,9 @@ TEXT runtime·vdsoCall_zx_object_signal_peer(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL clear_mask+4(FP), SI
@@ -9776,9 +9776,9 @@ TEXT runtime·vdsoCall_zx_object_get_property(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL property+4(FP), SI
@@ -9799,9 +9799,9 @@ TEXT runtime·vdsoCall_zx_object_set_property(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL property+4(FP), SI
@@ -9822,9 +9822,9 @@ TEXT runtime·vdsoCall_zx_object_get_info(SB),NOSPLIT,$8-44
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL topic+4(FP), SI
@@ -9847,9 +9847,9 @@ TEXT runtime·vdsoCall_zx_object_get_child(SB),NOSPLIT,$8-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ koid+8(FP), SI
@@ -9870,9 +9870,9 @@ TEXT runtime·vdsoCall_zx_object_set_profile(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL profile+4(FP), SI
@@ -9892,9 +9892,9 @@ TEXT runtime·vdsoCall_zx_pager_create(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL options+0(FP), DI
 	MOVQ out+8(FP), SI
@@ -9913,9 +9913,9 @@ TEXT runtime·vdsoCall_zx_pager_create_vmo(SB),NOSPLIT,$8-44
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL pager+0(FP), DI
 	MOVL options+4(FP), SI
@@ -9938,9 +9938,9 @@ TEXT runtime·vdsoCall_zx_pager_detach_vmo(SB),NOSPLIT,$8-12
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL pager+0(FP), DI
 	MOVL vmo+4(FP), SI
@@ -9959,9 +9959,9 @@ TEXT runtime·vdsoCall_zx_pager_supply_pages(SB),NOSPLIT,$8-44
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL pager+0(FP), DI
 	MOVL pager_vmo+4(FP), SI
@@ -9984,9 +9984,9 @@ TEXT runtime·vdsoCall_zx_pager_op_range(SB),NOSPLIT,$8-44
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL pager+0(FP), DI
 	MOVL op+4(FP), SI
@@ -10009,9 +10009,9 @@ TEXT runtime·vdsoCall_zx_pager_query_dirty_ranges(SB),NOSPLIT,$40-60
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 56(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 56(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL pager+0(FP), DI
 	MOVL pager_vmo+4(FP), SI
@@ -10043,9 +10043,9 @@ TEXT runtime·vdsoCall_zx_pager_query_vmo_stats(SB),NOSPLIT,$8-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL pager+0(FP), DI
 	MOVL pager_vmo+4(FP), SI
@@ -10067,9 +10067,9 @@ TEXT runtime·vdsoCall_zx_pc_firmware_tables(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ acpi_rsdp+8(FP), SI
@@ -10089,9 +10089,9 @@ TEXT runtime·vdsoCall_zx_pci_get_nth_device(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL index+4(FP), SI
@@ -10112,9 +10112,9 @@ TEXT runtime·vdsoCall_zx_pci_enable_bus_master(SB),NOSPLIT,$8-12
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL enable+4(FP), SI
@@ -10133,9 +10133,9 @@ TEXT runtime·vdsoCall_zx_pci_reset_device(SB),NOSPLIT,$8-12
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ vdso_zx_pci_reset_device(SB), AX
@@ -10153,9 +10153,9 @@ TEXT runtime·vdsoCall_zx_pci_config_read(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ offset+4(FP), SI
@@ -10176,9 +10176,9 @@ TEXT runtime·vdsoCall_zx_pci_config_write(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ offset+4(FP), SI
@@ -10199,9 +10199,9 @@ TEXT runtime·vdsoCall_zx_pci_cfg_pio_rw(SB),NOSPLIT,$40-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 56(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 56(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ bus+4(FP), SI
@@ -10233,9 +10233,9 @@ TEXT runtime·vdsoCall_zx_pci_get_bar(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL bar_num+4(FP), SI
@@ -10256,9 +10256,9 @@ TEXT runtime·vdsoCall_zx_pci_map_interrupt(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL which_irq+4(FP), SI
@@ -10278,9 +10278,9 @@ TEXT runtime·vdsoCall_zx_pci_query_irq_mode(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL mode+4(FP), SI
@@ -10300,9 +10300,9 @@ TEXT runtime·vdsoCall_zx_pci_set_irq_mode(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL mode+4(FP), SI
@@ -10322,9 +10322,9 @@ TEXT runtime·vdsoCall_zx_pci_init(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ init_buf+8(FP), SI
@@ -10344,9 +10344,9 @@ TEXT runtime·vdsoCall_zx_pci_add_subtract_io_range(SB),NOSPLIT,$8-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL mmio+4(FP), SI
@@ -10368,9 +10368,9 @@ TEXT runtime·vdsoCall_zx_pmt_unpin(SB),NOSPLIT,$8-12
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ vdso_zx_pmt_unpin(SB), AX
@@ -10388,9 +10388,9 @@ TEXT runtime·vdsoCall_zx_port_create(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL options+0(FP), DI
 	MOVQ out+8(FP), SI
@@ -10409,9 +10409,9 @@ TEXT runtime·vdsoCall_zx_port_queue(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ packet+8(FP), SI
@@ -10430,9 +10430,9 @@ TEXT runtime·vdsoCall_zx_port_wait(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	CALL runtime·entersyscall(SB)
 	MOVL handle+0(FP), DI
@@ -10454,9 +10454,9 @@ TEXT runtime·vdsoCall_zx_port_cancel(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL source+4(FP), SI
@@ -10476,9 +10476,9 @@ TEXT runtime·vdsoCall_zx_process_exit(SB),NOSPLIT,$8-8
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ retcode+0(FP), DI
 	MOVQ vdso_zx_process_exit(SB), AX
@@ -10495,9 +10495,9 @@ TEXT runtime·vdsoCall_zx_process_create(SB),NOSPLIT,$8-52
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL job+0(FP), DI
 	MOVQ name+8(FP), SI
@@ -10520,9 +10520,9 @@ TEXT runtime·vdsoCall_zx_process_start(SB),NOSPLIT,$8-44
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL thread+4(FP), SI
@@ -10545,9 +10545,9 @@ TEXT runtime·vdsoCall_zx_process_read_memory(SB),NOSPLIT,$8-44
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ vaddr+8(FP), SI
@@ -10569,9 +10569,9 @@ TEXT runtime·vdsoCall_zx_process_write_memory(SB),NOSPLIT,$8-44
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ vaddr+8(FP), SI
@@ -10593,9 +10593,9 @@ TEXT runtime·vdsoCall_zx_profile_create(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL root_job+0(FP), DI
 	MOVL options+4(FP), SI
@@ -10616,9 +10616,9 @@ TEXT runtime·vdsoCall_zx_resource_create(SB),NOSPLIT,$32-52
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 48(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 48(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL parent_rsrc+0(FP), DI
 	MOVL options+4(FP), SI
@@ -10647,9 +10647,9 @@ TEXT runtime·vdsoCall_zx_restricted_enter(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL options+0(FP), DI
 	MOVQ vector_table_ptr+8(FP), SI
@@ -10669,9 +10669,9 @@ TEXT runtime·vdsoCall_zx_restricted_write_state(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ buffer+0(FP), DI
 	MOVQ buffer_size+8(FP), SI
@@ -10690,9 +10690,9 @@ TEXT runtime·vdsoCall_zx_restricted_read_state(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ buffer+0(FP), DI
 	MOVQ buffer_size+8(FP), SI
@@ -10711,9 +10711,9 @@ TEXT runtime·vdsoCall_zx_smc_call(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ parameters+8(FP), SI
@@ -10733,9 +10733,9 @@ TEXT runtime·vdsoCall_zx_socket_create(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL options+0(FP), DI
 	MOVQ out0+8(FP), SI
@@ -10755,9 +10755,9 @@ TEXT runtime·vdsoCall_zx_socket_write(SB),NOSPLIT,$8-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL options+4(FP), SI
@@ -10779,9 +10779,9 @@ TEXT runtime·vdsoCall_zx_socket_read(SB),NOSPLIT,$8-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL options+4(FP), SI
@@ -10803,9 +10803,9 @@ TEXT runtime·vdsoCall_zx_socket_set_disposition(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL disposition+4(FP), SI
@@ -10825,9 +10825,9 @@ TEXT runtime·vdsoCall_zx_stream_create(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL options+0(FP), DI
 	MOVL vmo+4(FP), SI
@@ -10848,9 +10848,9 @@ TEXT runtime·vdsoCall_zx_stream_writev(SB),NOSPLIT,$8-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	CALL runtime·entersyscall(SB)
 	MOVL handle+0(FP), DI
@@ -10874,9 +10874,9 @@ TEXT runtime·vdsoCall_zx_stream_writev_at(SB),NOSPLIT,$8-44
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	CALL runtime·entersyscall(SB)
 	MOVL handle+0(FP), DI
@@ -10901,9 +10901,9 @@ TEXT runtime·vdsoCall_zx_stream_readv(SB),NOSPLIT,$8-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	CALL runtime·entersyscall(SB)
 	MOVL handle+0(FP), DI
@@ -10927,9 +10927,9 @@ TEXT runtime·vdsoCall_zx_stream_readv_at(SB),NOSPLIT,$8-44
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	CALL runtime·entersyscall(SB)
 	MOVL handle+0(FP), DI
@@ -10954,9 +10954,9 @@ TEXT runtime·vdsoCall_zx_stream_seek(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL whence+4(FP), SI
@@ -10977,9 +10977,9 @@ TEXT runtime·vdsoCall_zx_syscall_test_0(SB),NOSPLIT,$8-4
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ vdso_zx_syscall_test_0(SB), AX
 	CALL AX
@@ -10996,9 +10996,9 @@ TEXT runtime·vdsoCall_zx_syscall_test_1(SB),NOSPLIT,$8-12
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL a+0(FP), DI
 	MOVQ vdso_zx_syscall_test_1(SB), AX
@@ -11016,9 +11016,9 @@ TEXT runtime·vdsoCall_zx_syscall_test_2(SB),NOSPLIT,$8-12
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL a+0(FP), DI
 	MOVL b+4(FP), SI
@@ -11037,9 +11037,9 @@ TEXT runtime·vdsoCall_zx_syscall_test_3(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL a+0(FP), DI
 	MOVL b+4(FP), SI
@@ -11059,9 +11059,9 @@ TEXT runtime·vdsoCall_zx_syscall_test_4(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL a+0(FP), DI
 	MOVL b+4(FP), SI
@@ -11082,9 +11082,9 @@ TEXT runtime·vdsoCall_zx_syscall_test_5(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL a+0(FP), DI
 	MOVL b+4(FP), SI
@@ -11106,9 +11106,9 @@ TEXT runtime·vdsoCall_zx_syscall_test_6(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL a+0(FP), DI
 	MOVL b+4(FP), SI
@@ -11131,9 +11131,9 @@ TEXT runtime·vdsoCall_zx_syscall_test_7(SB),NOSPLIT,$32-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 48(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 48(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL a+0(FP), DI
 	MOVL b+4(FP), SI
@@ -11162,9 +11162,9 @@ TEXT runtime·vdsoCall_zx_syscall_test_8(SB),NOSPLIT,$40-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 56(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 56(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL a+0(FP), DI
 	MOVL b+4(FP), SI
@@ -11196,9 +11196,9 @@ TEXT runtime·vdsoCall_zx_syscall_next_1(SB),NOSPLIT,$8-12
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL arg+0(FP), DI
 	MOVQ vdso_zx_syscall_next_1(SB), AX
@@ -11216,9 +11216,9 @@ TEXT runtime·vdsoCall_zx_syscall_test_wrapper(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL a+0(FP), DI
 	MOVL b+4(FP), SI
@@ -11238,9 +11238,9 @@ TEXT runtime·vdsoCall_zx_syscall_test_handle_create(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL return_value+0(FP), DI
 	MOVQ out+8(FP), SI
@@ -11259,9 +11259,9 @@ TEXT runtime·vdsoCall_zx_syscall_test_widening_unsigned_narrow(SB),NOSPLIT,$8-2
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ a+0(FP), DI
 	MOVL b+8(FP), SI
@@ -11282,9 +11282,9 @@ TEXT runtime·vdsoCall_zx_syscall_test_widening_signed_narrow(SB),NOSPLIT,$8-23
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ a+0(FP), DI
 	MOVL b+8(FP), SI
@@ -11305,9 +11305,9 @@ TEXT runtime·vdsoCall_zx_syscall_test_widening_unsigned_wide(SB),NOSPLIT,$8-23
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ a+0(FP), DI
 	MOVL b+8(FP), SI
@@ -11328,9 +11328,9 @@ TEXT runtime·vdsoCall_zx_syscall_test_widening_signed_wide(SB),NOSPLIT,$8-23
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ a+0(FP), DI
 	MOVL b+8(FP), SI
@@ -11351,9 +11351,9 @@ TEXT runtime·vdsoCall_zx_system_get_dcache_line_size(SB),NOSPLIT,$8-4
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ vdso_zx_system_get_dcache_line_size(SB), AX
 	CALL AX
@@ -11370,9 +11370,9 @@ TEXT runtime·vdsoCall_zx_system_get_num_cpus(SB),NOSPLIT,$8-4
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ vdso_zx_system_get_num_cpus(SB), AX
 	CALL AX
@@ -11389,9 +11389,9 @@ TEXT runtime·vdsoCall_zx_system_get_version_string(SB),NOSPLIT,$8-8
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ vdso_zx_system_get_version_string(SB), AX
 	CALL AX
@@ -11408,9 +11408,9 @@ TEXT runtime·vdsoCall_zx_system_get_page_size(SB),NOSPLIT,$8-4
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ vdso_zx_system_get_page_size(SB), AX
 	CALL AX
@@ -11427,9 +11427,9 @@ TEXT runtime·vdsoCall_zx_system_get_physmem(SB),NOSPLIT,$8-8
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ vdso_zx_system_get_physmem(SB), AX
 	CALL AX
@@ -11446,9 +11446,9 @@ TEXT runtime·vdsoCall_zx_system_get_features(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL kind+0(FP), DI
 	MOVQ features+8(FP), SI
@@ -11467,9 +11467,9 @@ TEXT runtime·vdsoCall_zx_system_get_event(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL root_job+0(FP), DI
 	MOVL kind+4(FP), SI
@@ -11489,9 +11489,9 @@ TEXT runtime·vdsoCall_zx_system_set_performance_info(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL resource+0(FP), DI
 	MOVL topic+4(FP), SI
@@ -11512,9 +11512,9 @@ TEXT runtime·vdsoCall_zx_system_get_performance_info(SB),NOSPLIT,$8-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL resource+0(FP), DI
 	MOVL topic+4(FP), SI
@@ -11536,9 +11536,9 @@ TEXT runtime·vdsoCall_zx_system_mexec(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL resource+0(FP), DI
 	MOVL kernel_vmo+4(FP), SI
@@ -11558,9 +11558,9 @@ TEXT runtime·vdsoCall_zx_system_mexec_payload_get(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL resource+0(FP), DI
 	MOVQ buffer+8(FP), SI
@@ -11580,9 +11580,9 @@ TEXT runtime·vdsoCall_zx_system_powerctl(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL resource+0(FP), DI
 	MOVL cmd+4(FP), SI
@@ -11602,9 +11602,9 @@ TEXT runtime·vdsoCall_zx_task_suspend(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ token+8(FP), SI
@@ -11623,9 +11623,9 @@ TEXT runtime·vdsoCall_zx_task_suspend_token(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ token+8(FP), SI
@@ -11644,9 +11644,9 @@ TEXT runtime·vdsoCall_zx_task_create_exception_channel(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL options+4(FP), SI
@@ -11666,9 +11666,9 @@ TEXT runtime·vdsoCall_zx_task_kill(SB),NOSPLIT,$8-12
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ vdso_zx_task_kill(SB), AX
@@ -11686,9 +11686,9 @@ TEXT runtime·vdsoCall_zx_thread_exit(SB),NOSPLIT,$8-0
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ vdso_zx_thread_exit(SB), AX
 	CALL AX
@@ -11704,9 +11704,9 @@ TEXT runtime·vdsoCall_zx_thread_create(SB),NOSPLIT,$8-44
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL process+0(FP), DI
 	MOVQ name+8(FP), SI
@@ -11728,9 +11728,9 @@ TEXT runtime·vdsoCall_zx_thread_start(SB),NOSPLIT,$8-44
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ thread_entry+8(FP), SI
@@ -11752,9 +11752,9 @@ TEXT runtime·vdsoCall_zx_thread_read_state(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL kind+4(FP), SI
@@ -11775,9 +11775,9 @@ TEXT runtime·vdsoCall_zx_thread_write_state(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL kind+4(FP), SI
@@ -11798,9 +11798,9 @@ TEXT runtime·vdsoCall_zx_thread_legacy_yield(SB),NOSPLIT,$8-12
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL options+0(FP), DI
 	MOVQ vdso_zx_thread_legacy_yield(SB), AX
@@ -11818,9 +11818,9 @@ TEXT runtime·vdsoCall_zx_timer_create(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL options+0(FP), DI
 	MOVL clock_id+4(FP), SI
@@ -11840,9 +11840,9 @@ TEXT runtime·vdsoCall_zx_timer_set(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ deadline+8(FP), SI
@@ -11862,9 +11862,9 @@ TEXT runtime·vdsoCall_zx_timer_cancel(SB),NOSPLIT,$8-12
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ vdso_zx_timer_cancel(SB), AX
@@ -11882,9 +11882,9 @@ TEXT runtime·vdsoCall_zx_vcpu_create(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL guest+0(FP), DI
 	MOVL options+4(FP), SI
@@ -11905,9 +11905,9 @@ TEXT runtime·vdsoCall_zx_vcpu_enter(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	CALL runtime·entersyscall(SB)
 	MOVL handle+0(FP), DI
@@ -11928,9 +11928,9 @@ TEXT runtime·vdsoCall_zx_vcpu_kick(SB),NOSPLIT,$8-12
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ vdso_zx_vcpu_kick(SB), AX
@@ -11948,9 +11948,9 @@ TEXT runtime·vdsoCall_zx_vcpu_interrupt(SB),NOSPLIT,$8-12
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL vector+4(FP), SI
@@ -11969,9 +11969,9 @@ TEXT runtime·vdsoCall_zx_vcpu_read_state(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL kind+4(FP), SI
@@ -11992,9 +11992,9 @@ TEXT runtime·vdsoCall_zx_vcpu_write_state(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL kind+4(FP), SI
@@ -12015,9 +12015,9 @@ TEXT runtime·vdsoCall_zx_vmar_allocate(SB),NOSPLIT,$8-44
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL parent_vmar+0(FP), DI
 	MOVL options+4(FP), SI
@@ -12040,9 +12040,9 @@ TEXT runtime·vdsoCall_zx_vmar_destroy(SB),NOSPLIT,$8-12
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ vdso_zx_vmar_destroy(SB), AX
@@ -12060,9 +12060,9 @@ TEXT runtime·vdsoCall_zx_vmar_map(SB),NOSPLIT,$32-52
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 48(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 48(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL options+4(FP), SI
@@ -12091,9 +12091,9 @@ TEXT runtime·vdsoCall_zx_vmar_unmap(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ addr+8(FP), SI
@@ -12113,9 +12113,9 @@ TEXT runtime·vdsoCall_zx_vmar_protect(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL options+4(FP), SI
@@ -12136,9 +12136,9 @@ TEXT runtime·vdsoCall_zx_vmar_op_range(SB),NOSPLIT,$8-44
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL op+4(FP), SI
@@ -12161,9 +12161,9 @@ TEXT runtime·vdsoCall_zx_vmo_create(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ size+0(FP), DI
 	MOVL options+8(FP), SI
@@ -12183,9 +12183,9 @@ TEXT runtime·vdsoCall_zx_vmo_read(SB),NOSPLIT,$8-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	CALL runtime·entersyscall(SB)
 	MOVL handle+0(FP), DI
@@ -12208,9 +12208,9 @@ TEXT runtime·vdsoCall_zx_vmo_write(SB),NOSPLIT,$8-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	CALL runtime·entersyscall(SB)
 	MOVL handle+0(FP), DI
@@ -12233,9 +12233,9 @@ TEXT runtime·vdsoCall_zx_vmo_get_size(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ size+8(FP), SI
@@ -12254,9 +12254,9 @@ TEXT runtime·vdsoCall_zx_vmo_set_size(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ size+8(FP), SI
@@ -12275,9 +12275,9 @@ TEXT runtime·vdsoCall_zx_vmo_op_range(SB),NOSPLIT,$8-44
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	CALL runtime·entersyscall(SB)
 	MOVL handle+0(FP), DI
@@ -12302,9 +12302,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_child(SB),NOSPLIT,$8-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL options+4(FP), SI
@@ -12326,9 +12326,9 @@ TEXT runtime·vdsoCall_zx_vmo_set_cache_policy(SB),NOSPLIT,$8-12
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL cache_policy+4(FP), SI
@@ -12347,9 +12347,9 @@ TEXT runtime·vdsoCall_zx_vmo_replace_as_executable(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL vmex+4(FP), SI
@@ -12369,9 +12369,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_contiguous(SB),NOSPLIT,$8-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL bti+0(FP), DI
 	MOVQ size+8(FP), SI
@@ -12392,9 +12392,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL resource+0(FP), DI
 	MOVQ paddr+8(FP), SI

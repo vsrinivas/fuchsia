@@ -5,8 +5,8 @@
 #include "tools/kazoo/outputs.h"
 #include "tools/kazoo/syscall_library.h"
 #include "tools/kazoo/test.h"
-#include "tools/kazoo/test_ir_test_selection.test.h"
 #include "tools/kazoo/test_ir_test_go_nonblocking.test.h"
+#include "tools/kazoo/test_ir_test_selection.test.h"
 
 namespace {
 
@@ -117,9 +117,9 @@ TEXT runtime·vdsoCall_zx_selection_futex_requeue(SB),NOSPLIT,$8-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ value_ptr+0(FP), DI
 	MOVL wake_count+8(FP), SI
@@ -142,9 +142,9 @@ TEXT runtime·vdsoCall_zx_selection_object_wait_one(SB),NOSPLIT,$8-28
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL signals+4(FP), SI
@@ -165,9 +165,9 @@ TEXT runtime·vdsoCall_zx_selection_ktrace_read(SB),NOSPLIT,$8-44
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ data+8(FP), SI
@@ -189,9 +189,9 @@ TEXT runtime·vdsoCall_zx_selection_pci_cfg_pio_rw(SB),NOSPLIT,$40-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 56(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 56(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ bus+4(FP), SI
@@ -223,9 +223,9 @@ TEXT runtime·vdsoCall_zx_selection_job_set_policy(SB),NOSPLIT,$8-36
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVL options+4(FP), SI
@@ -247,9 +247,9 @@ TEXT runtime·vdsoCall_zx_selection_clock_get(SB),NOSPLIT,$8-20
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL clock_id+0(FP), DI
 	MOVQ out+8(FP), SI
@@ -288,7 +288,7 @@ TEXT runtime·vdsoCall_zx_selection_futex_requeue(SB),NOSPLIT,$0-36
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVD value_ptr+0(FP), R0
 	MOVW wake_count+8(FP), R1
@@ -309,7 +309,7 @@ TEXT runtime·vdsoCall_zx_selection_object_wait_one(SB),NOSPLIT,$0-28
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW signals+4(FP), R1
@@ -328,7 +328,7 @@ TEXT runtime·vdsoCall_zx_selection_ktrace_read(SB),NOSPLIT,$0-44
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVD data+8(FP), R1
@@ -348,7 +348,7 @@ TEXT runtime·vdsoCall_zx_selection_pci_cfg_pio_rw(SB),NOSPLIT,$0-68
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVD bus+8(FP), R1
@@ -371,7 +371,7 @@ TEXT runtime·vdsoCall_zx_selection_job_set_policy(SB),NOSPLIT,$0-36
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW handle+0(FP), R0
 	MOVW options+4(FP), R1
@@ -391,7 +391,7 @@ TEXT runtime·vdsoCall_zx_selection_clock_get(SB),NOSPLIT,$0-20
 	MOVD g_m(g), R21
 	MOVD LR, m_vdsoPC(R21)
 	DMB $0xe
-	MOVD RSP, R20
+	MOVD $ret-8(FP), R20 // caller's SP
 	MOVD R20, m_vdsoSP(R21)
 	MOVW clock_id+0(FP), R0
 	MOVD out+8(FP), R1
@@ -430,9 +430,9 @@ TEXT runtime·vdsoCall_zx_futex_wait(SB),NOSPLIT,$8-12
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL a+0(FP), DI
 	MOVQ vdso_zx_futex_wait(SB), AX
@@ -450,9 +450,9 @@ TEXT runtime·vdsoCall_zx_nanosleep(SB),NOSPLIT,$8-12
 	MOVQ g(CX), AX
 	MOVQ g_m(AX), R14
 	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL a+0(FP), DI
 	MOVQ vdso_zx_nanosleep(SB), AX
@@ -470,7 +470,7 @@ TEST(GoVdsoArm64Calls, SpecialNonBlocking) {
   ASSERT_TRUE(SyscallLibraryLoader::FromJson(k_test_go_nonblocking, &library));
 
   Writer writer;
-  ASSERT_TRUE(GoVdsoX86Calls(library, &writer));
+  ASSERT_TRUE(GoVdsoArm64Calls(library, &writer));
 
   EXPECT_EQ(writer.Out(), R"(// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
@@ -484,43 +484,35 @@ TEST(GoVdsoArm64Calls, SpecialNonBlocking) {
 #include "funcdata.h"
 
 // func vdsoCall_zx_futex_wait(a uint32) int32
-TEXT runtime·vdsoCall_zx_futex_wait(SB),NOSPLIT,$8-12
+TEXT runtime·vdsoCall_zx_futex_wait(SB),NOSPLIT,$0-12
 	GO_ARGS
 	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
-	MOVQ DX, m_vdsoSP(R14)
-	MOVL a+0(FP), DI
-	MOVQ vdso_zx_futex_wait(SB), AX
-	CALL AX
-	MOVL AX, ret+8(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
+	MOVD g_m(g), R21
+	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
+	MOVD $ret-8(FP), R20 // caller's SP
+	MOVD R20, m_vdsoSP(R21)
+	MOVW a+0(FP), R0
+	BL vdso_zx_futex_wait(SB)
+	MOVW R0, ret+8(FP)
+	MOVD g_m(g), R21
+	MOVD $0, m_vdsoSP(R21)
 	RET
 
 // func vdsoCall_zx_nanosleep(a uint32) int32
-TEXT runtime·vdsoCall_zx_nanosleep(SB),NOSPLIT,$8-12
+TEXT runtime·vdsoCall_zx_nanosleep(SB),NOSPLIT,$0-12
 	GO_ARGS
 	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	MOVQ 24(SP), DX
-	MOVQ DX, m_vdsoPC(R14)
-	LEAQ 24(SP), DX
-	MOVQ DX, m_vdsoSP(R14)
-	MOVL a+0(FP), DI
-	MOVQ vdso_zx_nanosleep(SB), AX
-	CALL AX
-	MOVL AX, ret+8(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
+	MOVD g_m(g), R21
+	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
+	MOVD $ret-8(FP), R20 // caller's SP
+	MOVD R20, m_vdsoSP(R21)
+	MOVW a+0(FP), R0
+	BL vdso_zx_nanosleep(SB)
+	MOVW R0, ret+8(FP)
+	MOVD g_m(g), R21
+	MOVD $0, m_vdsoSP(R21)
 	RET
 
 )");

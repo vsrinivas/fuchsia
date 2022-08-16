@@ -123,9 +123,9 @@ void PrintAsm(Writer* writer, Syscall* syscall, Arch arch) {
       writer->Puts("\tMOVQ g(CX), AX\n");
       writer->Puts("\tMOVQ g_m(AX), R14\n");
       writer->Puts("\tPUSHQ R14\n");
-      writer->Printf("\tMOVQ %d(SP), DX\n", frame_size + 16);
-      writer->Puts("\tMOVQ DX, m_vdsoPC(R14)\n");
-      writer->Printf("\tLEAQ %d(SP), DX\n", frame_size + 16);
+      writer->Puts("\tLEAQ ret+0(FP), DX\n");
+      writer->Puts("\tMOVQ -8(DX), CX\n");
+      writer->Puts("\tMOVQ CX, m_vdsoPC(R14)\n");
       writer->Puts("\tMOVQ DX, m_vdsoSP(R14)\n");
       break;
     case Arch::kArm64:
@@ -136,7 +136,7 @@ void PrintAsm(Writer* writer, Syscall* syscall, Arch arch) {
       // be valid due to store/store reordering on ARM64. This store barrier exists to ensure that
       // any observer of m->vdsoSP is also guaranteed to see m->vdsoPC.
       writer->Puts("\tDMB $0xe\n");
-      writer->Puts("\tMOVD RSP, R20\n");
+      writer->Puts("\tMOVD $ret-8(FP), R20 // caller's SP\n");
       writer->Puts("\tMOVD R20, m_vdsoSP(R21)\n");
       break;
   }
