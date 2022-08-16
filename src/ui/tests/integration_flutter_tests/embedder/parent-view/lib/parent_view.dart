@@ -85,7 +85,7 @@ class TestApp extends StatelessWidget {
       // When testing pointer injection, a gesture recognizer here would steal
       // input from the child platform view's gesture recognizer.  In that case,
       // don't use any gesture recognizer here.
-      onPointerDown:
+      onPointerUp:
           usePointerInjection2 ? null : (_) => _backgroundColor.value = _black,
       child: AnimatedBuilder(
           animation: _backgroundColor,

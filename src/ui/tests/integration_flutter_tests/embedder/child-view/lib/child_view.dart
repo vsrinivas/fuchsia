@@ -22,7 +22,7 @@ class TestApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Listener(
-      onPointerDown: (_) => _backgroundColor.value = _yellow,
+      onPointerUp: (_) => _backgroundColor.value = _yellow,
       child: AnimatedBuilder(
           animation: _backgroundColor,
           builder: (context, _) {
