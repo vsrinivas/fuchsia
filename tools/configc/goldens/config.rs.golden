@@ -3,6 +3,7 @@ use fidl_my_config_lib::Config as FidlConfig;
 use fuchsia_inspect::{ArithmeticArrayProperty, ArrayProperty, Node};
 use fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType};
 use fuchsia_zircon as zx;
+#[derive(Debug)]
 pub struct Config {
     pub my_flag: bool,
     pub my_int16: i16,

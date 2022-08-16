@@ -348,6 +348,7 @@ template("fuchsia_structured_config_rust_lib") {
       "//src/lib/zircon/rust:fuchsia-zircon",
     ]
 
+    configs -= [ "//build/config/rust/lints:allow_unused_results" ]
     non_rust_deps = [ ":${rust_source_target}($default_toolchain)" ]
   }
 }

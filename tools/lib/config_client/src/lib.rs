@@ -198,6 +198,7 @@ type Config = struct {
             use fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType};
             use fuchsia_zircon as zx;
 
+            #[derive(Debug)]
             pub struct Config {
                 pub snake_case_string: bool,
                 pub lower_camel_case_string: bool,

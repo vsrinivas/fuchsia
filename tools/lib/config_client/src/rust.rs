@@ -64,6 +64,7 @@ pub fn create_rust_wrapper(
         use fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType};
         use fuchsia_zircon as zx;
 
+        #[derive(Debug)]
         pub struct Config {
             #(#field_declarations),*
         }
