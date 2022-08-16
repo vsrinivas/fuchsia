@@ -781,6 +781,11 @@ void panic_shell_start(void) {
   char input_buffer[PANIC_LINE_LEN];
   cmd_args args[MAX_NUM_ARGS];
 
+  // Panic may have been triggered via an interrupt/exception path, where blocking would normally
+  // disallowed. As some panic shell commands need to take mutexes and perform other operations that
+  // would otherwise be invalid if blocking is disallowed we re-allow it.
+  arch_set_blocking_disallowed(false);
+
   for (;;) {
     panic_puts("! ");
     read_line_panic(input_buffer, PANIC_LINE_LEN);
