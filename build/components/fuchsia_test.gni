@@ -45,6 +45,13 @@ template("fuchsia_test") {
         "A `component` argument was missing when calling fuchsia_test($target_name)")
 
     package_name = get_label_info(invoker.package, "name")
+
+    # Keep this in sync with `fuchsia_test_package`.
+    package_out_dir = get_label_info(invoker.package, "target_out_dir")
+    package_manifest =
+        rebase_path("$package_out_dir/$package_name/package_manifest.json",
+                    root_build_dir)
+
     if (defined(invoker.package_name)) {
       package_name = invoker.package_name
     }
@@ -62,11 +69,7 @@ template("fuchsia_test") {
 
       build_rule = "fuchsia_test"
 
-      package_out_dir = get_label_info(invoker.package, "target_out_dir")
-      package_manifests =
-          [ rebase_path("$package_out_dir/$package_name/package_manifest.json",
-                        root_build_dir) ]
-
+      package_manifests = [ package_manifest ]
       package_url =
           "fuchsia-pkg://fuchsia.com/$package_name#meta/$manifest_name"
       if (!defined(deps)) {
