@@ -208,7 +208,8 @@ bool GetBacktraceFromDapStateTest() {
   // vmar.base()
   //
   fbl::RefPtr<VmObjectPaged> vmo;
-  ASSERT_OK(VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, kVmoSize, &vmo));
+  ASSERT_OK(
+      VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kAlwaysPinned, kVmoSize, &vmo));
   fbl::RefPtr<VmMapping> mapping;
   ASSERT_OK(vmar->CreateVmMapping(PAGE_SIZE, kVmoSize, 0, VMAR_FLAG_SPECIFIC, ktl::move(vmo), 0,
                                   ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE, kName,
