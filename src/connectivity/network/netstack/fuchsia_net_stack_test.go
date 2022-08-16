@@ -332,3 +332,37 @@ func TestDnsServerWatcher(t *testing.T) {
 		t.Fatalf("failed to get watcher: %s", err)
 	}
 }
+
+func TestSetDhcpClientEnabled(t *testing.T) {
+	t.Run("bad NIC", func(t *testing.T) {
+		ns, _ := newNetstack(t, netstackTestOptions{})
+		stackServiceImpl := stackImpl{ns: ns}
+
+		result, err := stackServiceImpl.SetDhcpClientEnabled(context.Background(), 1234, true)
+		if err != nil {
+			t.Fatalf("stackServiceImpl.StartDhcpClient(...) = %s", err)
+		}
+		if got, want := result.Which(), stack.I_stackSetDhcpClientEnabledResultTag(stack.StackSetDhcpClientEnabledResultErr); got != want {
+			t.Fatalf("got result.Which() = %d, want = %d", got, want)
+		}
+		if got, want := result.Err, stack.ErrorNotFound; got != want {
+			t.Fatalf("got result.Err = %s, want = %s", got, want)
+		}
+	})
+
+	t.Run("good NIC", func(t *testing.T) {
+		ns, _ := newNetstack(t, netstackTestOptions{})
+		ifs1 := addNoopEndpoint(t, ns, "")
+		t.Cleanup(ifs1.RemoveByUser)
+
+		stackServiceImpl := stackImpl{ns: ns}
+
+		result, err := stackServiceImpl.SetDhcpClientEnabled(context.Background(), uint64(ifs1.nicid), true)
+		if err != nil {
+			t.Fatalf("stackServiceImpl.StartDhcpClient(...) = %s", err)
+		}
+		if got, want := result.Which(), stack.I_stackSetDhcpClientEnabledResultTag(stack.StackSetDhcpClientEnabledResultResponse); got != want {
+			t.Fatalf("got result.Which() = %d, want = %d", got, want)
+		}
+	})
+}

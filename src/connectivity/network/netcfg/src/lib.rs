@@ -12,7 +12,6 @@ mod virtualization;
 
 use ::dhcpv4::protocol::FromFidlExt as _;
 use std::collections::{hash_map::Entry, HashMap, HashSet};
-use std::convert::TryInto as _;
 use std::fs;
 use std::io;
 use std::path;
@@ -1480,7 +1479,7 @@ impl<'a> NetCfg<'a> {
             let () = Self::configure_host(
                 &self.filter_enabled_interface_types,
                 &self.filter,
-                &self.netstack,
+                &self.stack,
                 interface_id,
                 info,
             )
@@ -1508,7 +1507,7 @@ impl<'a> NetCfg<'a> {
     async fn configure_host(
         filter_enabled_interface_types: &HashSet<InterfaceType>,
         filter: &fnet_filter::FilterProxy,
-        netstack: &fnetstack::NetstackProxy,
+        stack: &fnet_stack::StackProxy,
         interface_id: u64,
         info: &DeviceInfo,
     ) -> Result<(), errors::Error> {
@@ -1548,27 +1547,13 @@ impl<'a> NetCfg<'a> {
                 .map_err(errors::Error::NonFatal)?;
         };
 
-        let interface_id: u32 = interface_id.try_into().expect("NIC ID should fit in a u32");
-
         // Enable DHCP.
-        let (dhcp_client, server_end) = fidl::endpoints::create_proxy::<fnet_dhcp::ClientMarker>()
-            .context("dhcp client: failed to create fidl endpoints")
-            .map_err(errors::Error::Fatal)?;
-        let () = netstack
-            .get_dhcp_client(interface_id, server_end)
+        let () = stack
+            .set_dhcp_client_enabled(interface_id, true)
             .await
-            .context("failed to call netstack.get_dhcp_client")
+            .context("failed to call set dhcp client enabled")
             .map_err(errors::Error::Fatal)?
-            .map_err(zx::Status::from_raw)
-            .context("failed to get dhcp client")
-            .map_err(errors::Error::NonFatal)?;
-        let () = dhcp_client
-            .start()
-            .await
-            .context("error sending start DHCP client request")
-            .map_err(errors::Error::Fatal)?
-            .map_err(zx::Status::from_raw)
-            .context("failed to start dhcp client")
+            .map_err(|e| anyhow!("failed to start dhcp client: {:?}", e))
             .map_err(errors::Error::NonFatal)?;
 
         Ok(())

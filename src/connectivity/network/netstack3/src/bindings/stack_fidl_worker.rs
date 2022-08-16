@@ -143,6 +143,11 @@ where
                                 debug!("failed to close DNS server watcher {:?}", e)
                             });
                     }
+                    StackRequest::SetDhcpClientEnabled { responder, id: _, enable: _ } => {
+                        // TODO(https://fxbug.dev/81593): Remove this once
+                        // DHCPv4 client is implemented out-of-stack.
+                        responder_send!(responder, &mut Err(fidl_net_stack::Error::NotSupported));
+                    }
                 }
                 Ok(worker)
             })

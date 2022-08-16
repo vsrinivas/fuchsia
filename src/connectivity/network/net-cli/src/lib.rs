@@ -732,21 +732,22 @@ async fn do_log<C: NetCliDepsConnector>(cmd: opts::LogEnum, connector: &C) -> Re
 }
 
 async fn do_dhcp<C: NetCliDepsConnector>(cmd: opts::DhcpEnum, connector: &C) -> Result<(), Error> {
-    let netstack = connect_with_context::<fnetstack::NetstackMarker, _>(connector).await?;
-    let (dhcp, server_end) = fidl::endpoints::create_proxy::<fdhcp::ClientMarker>()?;
+    let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
     match cmd {
         opts::DhcpEnum::Start(opts::DhcpStart { interface }) => {
-            let id = interface.find_u32_nicid(connector).await?;
-            let () =
-                netstack.get_dhcp_client(id, server_end).await?.map_err(zx::Status::from_raw)?;
-            let () = dhcp.start().await?.map_err(zx::Status::from_raw)?;
+            let id = interface.find_nicid(connector).await?;
+            let () = fstack_ext::exec_fidl!(
+                stack.set_dhcp_client_enabled(id, true),
+                "error stopping DHCP client"
+            )?;
             info!("dhcp client started on interface {}", id);
         }
         opts::DhcpEnum::Stop(opts::DhcpStop { interface }) => {
-            let id = interface.find_u32_nicid(connector).await?;
-            let () =
-                netstack.get_dhcp_client(id, server_end).await?.map_err(zx::Status::from_raw)?;
-            let () = dhcp.stop().await?.map_err(zx::Status::from_raw)?;
+            let id = interface.find_nicid(connector).await?;
+            let () = fstack_ext::exec_fidl!(
+                stack.set_dhcp_client_enabled(id, false),
+                "error stopping DHCP client"
+            )?;
             info!("dhcp client stopped on interface {}", id);
         }
     }
@@ -2092,49 +2093,26 @@ mac             -
     }
 
     async fn test_do_dhcp(cmd: opts::DhcpEnum) {
-        let (netstack, mut requests) =
-            fidl::endpoints::create_proxy_and_stream::<fnetstack::NetstackMarker>().unwrap();
-        let connector = TestConnector { netstack: Some(netstack), ..Default::default() };
+        let (stack, mut requests) =
+            fidl::endpoints::create_proxy_and_stream::<fstack::StackMarker>().unwrap();
+        let connector = TestConnector { stack: Some(stack), ..Default::default() };
         let op = do_dhcp(cmd.clone(), &connector);
         let op_succeeds = async move {
-            let (received_id, dhcp_requests, netstack_responder) = requests
+            let (expected_id, expected_enable) = match cmd {
+                opts::DhcpEnum::Start(opts::DhcpStart { interface }) => (interface, true),
+                opts::DhcpEnum::Stop(opts::DhcpStop { interface }) => (interface, false),
+            };
+            let request = requests
                 .try_next()
                 .await
-                .expect("get dhcp client FIDL error")
-                .expect("request stream should not have ended")
-                .into_get_dhcp_client()
-                .expect("request should be of type GetDhcpClient");
-            let mut dhcp_requests =
-                dhcp_requests.into_stream().expect("should convert to request stream");
-            let () = netstack_responder
-                .send(&mut Ok(()))
-                .expect("netstack_responder.send should succeed");
-            match cmd {
-                opts::DhcpEnum::Start(opts::DhcpStart { interface: expected_id }) => {
-                    assert_eq!(opts::InterfaceIdentifier::Id(u64::from(received_id)), expected_id);
-                    dhcp_requests
-                        .try_next()
-                        .await
-                        .expect("start FIDL error")
-                        .expect("request stream should not have ended")
-                        .into_start()
-                        .expect("request should be of type Start")
-                        .send(&mut Ok(()))
-                        .map_err(anyhow::Error::new)
-                }
-                opts::DhcpEnum::Stop(opts::DhcpStop { interface: expected_id }) => {
-                    assert_eq!(opts::InterfaceIdentifier::Id(u64::from(received_id)), expected_id);
-                    dhcp_requests
-                        .try_next()
-                        .await
-                        .expect("stop FIDL error")
-                        .expect("request stream should not have ended")
-                        .into_stop()
-                        .expect("request should be of type Stop")
-                        .send(&mut Ok(()))
-                        .map_err(anyhow::Error::new)
-                }
-            }
+                .expect("start FIDL error")
+                .expect("request stream should not have ended");
+            let (received_id, enable, responder) = request
+                .into_set_dhcp_client_enabled()
+                .expect("request should be of type StopDhcpClient");
+            assert_eq!(opts::InterfaceIdentifier::Id(u64::from(received_id)), expected_id);
+            assert_eq!(enable, expected_enable);
+            responder.send(&mut Ok(())).map_err(anyhow::Error::new)
         };
         let ((), ()) =
             futures::future::try_join(op, op_succeeds).await.expect("dhcp command should succeed");

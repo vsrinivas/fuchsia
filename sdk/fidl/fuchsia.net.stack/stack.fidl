@@ -126,6 +126,14 @@ protocol Stack {
     GetDnsServerWatcher(resource struct {
         watcher server_end:fuchsia.net.name.DnsServerWatcher;
     });
+
+    /// Enables or disables the DHCP client on an interface.
+    /// TODO(https://fxbug.dev/81593): Remove this once the DHCP client is moved
+    /// out of the netstack.
+    SetDhcpClientEnabled(resource struct {
+        id fuchsia.net.interface_id;
+        enable bool;
+    }) -> (struct {}) error Error;
 };
 
 @discoverable

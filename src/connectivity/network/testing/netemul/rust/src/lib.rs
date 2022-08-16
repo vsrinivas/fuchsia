@@ -8,7 +8,7 @@
 
 use std::{
     borrow::Cow,
-    convert::{TryFrom as _, TryInto as _},
+    convert::TryFrom as _,
     path::{Path, PathBuf},
 };
 
@@ -16,7 +16,6 @@ use fidl_fuchsia_hardware_ethernet as fethernet;
 use fidl_fuchsia_hardware_network as fnetwork;
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_debug as fnet_debug;
-use fidl_fuchsia_net_dhcp as fnet_dhcp;
 use fidl_fuchsia_net_ext as fnet_ext;
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
@@ -993,21 +992,10 @@ impl<'a> TestEndpoint<'a> {
         let stack = realm
             .connect_to_protocol::<fnet_stack::StackMarker>()
             .context("failed to connect to stack")?;
-        let netstack = realm
-            .connect_to_protocol::<fnetstack::NetstackMarker>()
-            .context("failed to connect to netstack")?;
         let interface_state = realm
             .connect_to_protocol::<fnet_interfaces::StateMarker>()
             .context("failed to connect to interfaces state")?;
-        Ok(TestInterface {
-            endpoint: self,
-            id,
-            stack,
-            netstack,
-            interface_state,
-            control,
-            device_control,
-        })
+        Ok(TestInterface { endpoint: self, id, stack, interface_state, control, device_control })
     }
 }
 
@@ -1017,7 +1005,6 @@ pub struct TestInterface<'a> {
     endpoint: TestEndpoint<'a>,
     id: u64,
     stack: fnet_stack::StackProxy,
-    netstack: fnetstack::NetstackProxy,
     interface_state: fnet_interfaces::StateProxy,
     control: fnet_interfaces_ext::admin::Control,
     device_control: Option<fnet_interfaces_admin::DeviceControlProxy>,
@@ -1025,15 +1012,8 @@ pub struct TestInterface<'a> {
 
 impl<'a> std::fmt::Debug for TestInterface<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
-        let Self {
-            endpoint,
-            id,
-            stack: _,
-            netstack: _,
-            interface_state: _,
-            control: _,
-            device_control: _,
-        } = self;
+        let Self { endpoint, id, stack: _, interface_state: _, control: _, device_control: _ } =
+            self;
         f.debug_struct("TestInterface")
             .field("endpoint", endpoint)
             .field("id", id)
@@ -1154,49 +1134,22 @@ impl<'a> TestInterface<'a> {
         Ok(watcher)
     }
 
-    async fn get_dhcp_client(&self) -> Result<fnet_dhcp::ClientProxy> {
-        let (dhcp_client, server_end) = fidl::endpoints::create_proxy::<fnet_dhcp::ClientMarker>()
-            .context("failed to create endpoints for fuchsia.net.dhcp.Client")?;
-
-        let () = self
-            .netstack
-            .get_dhcp_client(
-                self.id.try_into().with_context(|| {
-                    format!("interface ID should fit in a u32; ID = {}", self.id)
-                })?,
-                server_end,
-            )
+    async fn set_dhcp_client_enabled(&self, enable: bool) -> Result<()> {
+        self.stack
+            .set_dhcp_client_enabled(self.id, enable)
             .await
-            .context("failed to call netstack.get_dhcp_client")?
-            .map_err(zx::Status::from_raw)
-            .context("failed to get dhcp client")?;
-        Ok(dhcp_client)
+            .context("failed to call SetDhcpClientEnabled")?
+            .map_err(|e| anyhow!("{:?}", e))
     }
 
     /// Starts DHCP on this interface.
     pub async fn start_dhcp(&self) -> Result<()> {
-        let dhcp_client = self.get_dhcp_client().await?;
-        let () = dhcp_client
-            .start()
-            .await
-            .context("failed to call dhcp_client.start")?
-            .map_err(zx::Status::from_raw)
-            .context("failed to start dhcp client")?;
-
-        Ok(())
+        self.set_dhcp_client_enabled(true).await.context("failed to start dhcp client")
     }
 
     /// Stops DHCP on this interface.
     pub async fn stop_dhcp(&self) -> Result<()> {
-        let dhcp_client = self.get_dhcp_client().await?;
-        let () = dhcp_client
-            .stop()
-            .await
-            .context("failed to call dhcp_client.stop")?
-            .map_err(zx::Status::from_raw)
-            .context("failed to stop dhcp client")?;
-
-        Ok(())
+        self.set_dhcp_client_enabled(true).await.context("failed to stop dhcp client")
     }
 
     /// Adds an address and a subnet route, waiting until the address assignment
@@ -1243,7 +1196,6 @@ impl<'a> TestInterface<'a> {
             endpoint: TestEndpoint { endpoint, name: _, _sandbox: _ },
             id: _,
             stack: _,
-            netstack: _,
             interface_state: _,
             control,
             device_control,

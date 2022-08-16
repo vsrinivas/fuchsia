@@ -335,6 +335,21 @@ func (ni *stackImpl) GetDnsServerWatcher(ctx_ fidl.Context, watcher name.DnsServ
 	return ni.dnsWatchers.Bind(watcher)
 }
 
+func (ni *stackImpl) SetDhcpClientEnabled(ctx_ fidl.Context, id uint64, enable bool) (stack.StackSetDhcpClientEnabledResult, error) {
+	var r stack.StackSetDhcpClientEnabledResult
+
+	nicInfo, ok := ni.ns.stack.NICInfo()[tcpip.NICID(id)]
+	if !ok {
+		return stack.StackSetDhcpClientEnabledResultWithErr(stack.ErrorNotFound), nil
+	}
+
+	ifState := nicInfo.Context.(*ifState)
+	ifState.setDHCPStatus(nicInfo.Name, enable)
+
+	r.SetResponse(stack.StackSetDhcpClientEnabledResponse{})
+	return r, nil
+}
+
 var _ stack.LogWithCtx = (*logImpl)(nil)
 
 type logImpl struct {

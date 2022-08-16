@@ -4,7 +4,6 @@
 library fuchsia.netstack;
 
 using fuchsia.hardware.ethernet;
-using fuchsia.net.dhcp;
 using fuchsia.net.interfaces;
 using zx;
 
@@ -39,16 +38,4 @@ protocol Netstack {
     }) -> (struct {
         nicid uint32;
     }) error zx.status;
-
-    /// Connects to a DHCP client.
-    ///
-    /// + request `nicid` the interface on which the target client is running.
-    /// + request `request` grants control over the client.
-    // TODO(stijlist): re-home this protocol. GetDhcpClient should be a member
-    // of the protocol that eventually owns network interface management
-    // in general.
-    GetDhcpClient(resource struct {
-        nicid uint32;
-        client server_end:fuchsia.net.dhcp.Client;
-    }) -> (struct {}) error zx.status;
 };

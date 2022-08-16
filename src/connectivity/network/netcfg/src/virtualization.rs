@@ -9,7 +9,6 @@ use std::pin::Pin;
 use fidl::endpoints::Proxy as _;
 use fidl_fuchsia_hardware_network as fhardware_network;
 use fidl_fuchsia_net_debug as fnet_debug;
-use fidl_fuchsia_net_dhcp as fnet_dhcp;
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
 use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
@@ -747,26 +746,13 @@ impl BridgeHandlerImpl {
     }
 
     // Starts a DHCPv4 client.
-    async fn start_dhcpv4_client(&self, bridge_id: u32) -> Result<(), errors::Error> {
-        let (dhcp_client, server_end) = fidl::endpoints::create_proxy::<fnet_dhcp::ClientMarker>()
-            .context("create dhcp::Client endpoints")
-            .map_err(errors::Error::NonFatal)?;
-        let () = self
-            .netstack
-            .get_dhcp_client(bridge_id, server_end)
+    async fn start_dhcpv4_client(&self, bridge_id: u64) -> Result<(), errors::Error> {
+        self.stack
+            .set_dhcp_client_enabled(bridge_id, true)
             .await
-            .context("call get DHCPv4 client")
+            .context("failed to call SetDhcpClientEnabled")
             .map_err(errors::Error::Fatal)?
-            .map_err(zx::Status::from_raw)
-            .context("failed to get DHCPv4 client")
-            .map_err(errors::Error::NonFatal)?;
-        dhcp_client
-            .start()
-            .await
-            .context("call start on DHCPv4 client")
-            .map_err(errors::Error::Fatal)?
-            .map_err(zx::Status::from_raw)
-            .context("failed to start DHCPv4 client")
+            .map_err(|e| anyhow!("failed to start dhcp client: {:?}", e))
             .map_err(errors::Error::NonFatal)
     }
 }
@@ -803,6 +789,8 @@ impl BridgeHandler for BridgeHandlerImpl {
                 .map_err(errors::Error::Fatal)?
         };
 
+        let bridge_id = u64::from(bridge_id);
+
         // Start a DHCPv4 client.
         match self.start_dhcpv4_client(bridge_id).await {
             Ok(()) => {}
@@ -811,8 +799,6 @@ impl BridgeHandler for BridgeHandlerImpl {
             }
             Err(errors::Error::Fatal(e)) => return Err(errors::Error::Fatal(e)),
         }
-
-        let bridge_id = u64::from(bridge_id);
 
         // Enable the bridge we just created.
         let (control, server_end) = fnet_interfaces_ext::admin::Control::create_endpoints()
