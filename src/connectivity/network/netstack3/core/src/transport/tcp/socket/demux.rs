@@ -18,10 +18,7 @@ use packet_formats::{
 use thiserror::Error;
 
 use crate::{
-    ip::{
-        socket::IpSocket as _, BufferIpTransportContext, BufferTransportIpContext, IpExt,
-        TransportReceiveError,
-    },
+    ip::{BufferIpTransportContext, BufferTransportIpContext, IpExt, TransportReceiveError},
     socket::{
         address::{AddrVecIter, ConnAddr, ConnIpAddr, IpPortSpec, ListenerAddr},
         AddrVec, SocketTypeState as _, SocketTypeStateMut as _,

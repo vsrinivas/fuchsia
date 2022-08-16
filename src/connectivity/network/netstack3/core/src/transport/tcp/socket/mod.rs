@@ -46,7 +46,7 @@ use crate::{
         socketmap::{IterShadows as _, SocketMap, Tagged},
     },
     ip::{
-        socket::{IpSock, IpSockCreationError, IpSocket as _},
+        socket::{IpSock, IpSockCreationError},
         BufferTransportIpContext, IpDeviceId, IpDeviceIdContext, IpExt, TransportIpContext,
     },
     socket::{

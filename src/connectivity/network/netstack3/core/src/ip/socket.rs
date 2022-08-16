@@ -24,15 +24,6 @@ use crate::{
     },
 };
 
-/// A socket identifying a connection between a local and remote IP host.
-pub(crate) trait IpSocket<I: Ip> {
-    /// Get the local IP address.
-    fn local_ip(&self) -> &SpecifiedAddr<I::Addr>;
-
-    /// Get the remote IP address.
-    fn remote_ip(&self) -> &SpecifiedAddr<I::Addr>;
-}
-
 /// An execution context defining a type of IP socket.
 pub trait IpSocketHandler<I: IpExt, C>: IpDeviceIdContext<I> {
     /// A builder carrying optional parameters passed to [`new_ip_socket`].
@@ -40,9 +31,9 @@ pub trait IpSocketHandler<I: IpExt, C>: IpDeviceIdContext<I> {
     /// [`new_ip_socket`]: crate::ip::socket::IpSocketHandler::new_ip_socket
     type Builder: Default;
 
-    /// Constructs a new [`Self::IpSocket`].
+    /// Constructs a new [`IpSock`].
     ///
-    /// `new_ip_socket` constructs a new `Self::IpSocket` to the given remote IP
+    /// `new_ip_socket` constructs a new `IpSock` to the given remote IP
     /// address from the given local IP address with the given IP protocol. If
     /// no local IP address is given, one will be chosen automatically. If
     /// `device` is `Some`, the socket will be bound to the given device - only
@@ -275,7 +266,7 @@ impl Ipv6SocketBuilder {
     }
 }
 
-/// The production implementation of the [`IpSocket`] trait.
+/// An IP socket.
 #[derive(Clone, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
 pub struct IpSock<I: IpExt, D> {
@@ -298,18 +289,17 @@ struct IpSockDefinition<I: IpExt, D> {
     // even well-defined for IPv4 in the absence of a subnet? B) Presumably we
     // have to always bind to a particular interface?
     local_ip: SpecifiedAddr<I::Addr>,
-    #[cfg_attr(not(test), allow(unused))]
     device: Option<D>,
     hop_limit: Option<NonZeroU8>,
     proto: I::Proto,
 }
 
-impl<I: IpExt, D> IpSocket<I> for IpSock<I, D> {
-    fn local_ip(&self) -> &SpecifiedAddr<I::Addr> {
+impl<I: IpExt, D> IpSock<I, D> {
+    pub(crate) fn local_ip(&self) -> &SpecifiedAddr<I::Addr> {
         &self.defn.local_ip
     }
 
-    fn remote_ip(&self) -> &SpecifiedAddr<I::Addr> {
+    pub(crate) fn remote_ip(&self) -> &SpecifiedAddr<I::Addr> {
         &self.defn.remote_ip
     }
 }

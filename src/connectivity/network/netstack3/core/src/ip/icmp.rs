@@ -59,8 +59,7 @@ use crate::{
         gmp::mld::MldPacketHandler,
         path_mtu::PmtuHandler,
         socket::{
-            BufferIpSocketHandler, IpSock, IpSockCreationError, IpSockSendError, IpSocket,
-            IpSocketHandler,
+            BufferIpSocketHandler, IpSock, IpSockCreationError, IpSockSendError, IpSocketHandler,
         },
         BufferIpLayerHandler, BufferIpTransportContext, IpDeviceIdContext, IpExt,
         IpTransportContext, SendIpPacketMeta, TransportReceiveError, IPV6_DEFAULT_SUBNET,
@@ -298,8 +297,11 @@ pub(crate) struct IcmpConn<S> {
     ip: S,
 }
 
-impl<'a, A: IpAddress, S: IpSocket<A::Version>> From<&'a IcmpConn<S>> for IcmpAddr<A> {
-    fn from(conn: &'a IcmpConn<S>) -> IcmpAddr<A> {
+impl<'a, A: IpAddress, D> From<&'a IcmpConn<IpSock<A::Version, D>>> for IcmpAddr<A>
+where
+    A::Version: IpExt,
+{
+    fn from(conn: &'a IcmpConn<IpSock<A::Version, D>>) -> IcmpAddr<A> {
         IcmpAddr {
             local_addr: *conn.ip.local_ip(),
             remote_addr: *conn.ip.remote_ip(),
@@ -2954,13 +2956,13 @@ fn connect_icmpv6_inner<C: IcmpNonSyncCtx<Ipv6>, SC: InnerIcmpv6Context<C>>(
     })
 }
 
-fn connect_icmp_inner<I: IcmpIpExt + IpExt, S: IpSocket<I>>(
+fn connect_icmp_inner<I: IcmpIpExt + IpExt, D>(
     unbound: &mut IdMap<()>,
-    conns: &mut ConnSocketMap<IcmpAddr<I::Addr>, IcmpConn<S>>,
+    conns: &mut ConnSocketMap<IcmpAddr<I::Addr>, IcmpConn<IpSock<I, D>>>,
     id: IcmpUnboundId<I>,
     remote_addr: SpecifiedAddr<I::Addr>,
     icmp_id: u16,
-    ip: S,
+    ip: IpSock<I, D>,
 ) -> Result<IcmpConnId<I>, IcmpSockCreationError> {
     let addr = IcmpAddr { local_addr: *ip.local_ip(), remote_addr, icmp_id };
     if conns.get_id_by_addr(&addr).is_some() {

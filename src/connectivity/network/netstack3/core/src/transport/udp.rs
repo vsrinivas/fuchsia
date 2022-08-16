@@ -45,7 +45,7 @@ use crate::{
     error::{ExistsError, LocalAddressError, ZonedAddressError},
     ip::{
         icmp::IcmpIpExt,
-        socket::{IpSock, IpSockCreationError, IpSockSendError, IpSocket},
+        socket::{IpSock, IpSockCreationError, IpSockSendError},
         BufferIpTransportContext, BufferTransportIpContext, IpDeviceId, IpExt, IpTransportContext,
         TransportIpContext, TransportReceiveError,
     },
