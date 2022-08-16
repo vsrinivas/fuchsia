@@ -50,21 +50,6 @@ declare_args() {
   # 5. delete 'product.txt.orig' and remove it from this list.
   fuchsia_zbi_bootfs_filelist_goldens = []
 
-  # An optional list of golden files for fuchsia.zbi bootFS package index. If
-  # specified, they would be compared against fuchsia.zbi bootFS package index
-  # during build time. At least one of the golden files must match.
-  # In normal case, there should only be one golden file in this list.
-  # During a soft transition where changes are made in a different repo than
-  # the golden file repo, user need to
-  # 1. copy the old golden file before the change to '*.orig'
-  # 2. create a new golden file reflecting the changes
-  # 3. add both the old golden file and new golden file to this list. e.g. there
-  # would be 'product.txt' and 'product.txt.orig' in this list and check in the
-  # above changes.
-  # 4. check in the changes that is made in a different repo.
-  # 5. delete 'product.txt.orig' and remove it from this list.
-  fuchsia_zbi_bootfs_packages_goldens = []
-
   # An optional list of golden files for recovery.zbi bootFS file list. If
   # specified, they would be compared against recovery.zbi bootFS file list
   # during build time.  At least one of the golden files must match.
@@ -80,8 +65,8 @@ declare_args() {
   # 5. delete 'product.txt.orig' and remove it from this list.
   recovery_zbi_bootfs_filelist_goldens = []
 
-  # An optional list of golden files for fuchsia.zbi static pkgs list. If
-  # specified, they would be compared against fuchsia.zbi static pkgs list
+  # An optional list of golden files for fuchsia.zbi bootFS package index. If
+  # specified, they would be compared against fuchsia.zbi bootFS package index
   # during build time. At least one of the golden files must match.
   # In normal case, there should only be one golden file in this list.
   # During a soft transition where changes are made in a different repo than
@@ -93,40 +78,7 @@ declare_args() {
   # above changes.
   # 4. check in the changes that is made in a different repo.
   # 5. delete 'product.txt.orig' and remove it from this list.
-  fuchsia_static_pkgs_goldens = []
-
-  # An optional file path to the route_sources verifier configuration to be used
-  # on the assembled fuchsia system.
-  fuchsia_route_sources_config = ""
-
-  # An optional list of (capability, moniker) pairs that determine exceptions
-  # to the verify_route.gni build rule that prevents v2 components from
-  # attempting to use capabilities they were not offered. Generally new entries
-  # should not be added to this allowlist and acts as a marker for future
-  # technical debt to clean up.
-  fuchsia_verify_routes_exceptions_allowlist =
-      "//src/security/policy/build/verify_routes_exceptions_allowlist.json5"
-
-  # Same as above, except this allowlist gets added in bootfs_only builds.
-  fuchsia_verify_routes_exceptions_allowlist_bootfs = "//src/security/policy/build/verify_routes_exceptions_allowlist_bootfs.json5"
-
-  # Same as above, except these allowlists get added according to
-  # product-specific configuration.
-  fuchsia_verify_routes_exceptions_allowlist_product = []
-
-  # An optional component tree configuration file used to finalize dynamic
-  # elements of the component tree constructed for route verification. When
-  # non-empty, this value is passed as the `--component-tree-config` option
-  # to `ffx scrutiny verify routes` to verify routes in the fuchsia component
-  # tree.
-  fuchsia_verify_routes_component_tree_config = ""
-
-  # An optional mapping of (scheme, resolver moniker, and resolver capability)
-  # to component monikers that determine which component resolvers are compared
-  # to the allowlist and which components are allowed to be resolved by the
-  # matching component resolver. Used by verify_component_resolvers.gni.
-  fuchsia_verify_component_resolvers_allowlist =
-      "//src/security/policy/component_resolvers_policy.json5"
+  fuchsia_zbi_bootfs_packages_goldens = []
 
   # An optional list of golden files for recovery.zbi bootfs package index. If
   # specified, they would be compared against recovery.zbi bootfs package index
@@ -143,6 +95,21 @@ declare_args() {
   # 5. delete 'product.txt.orig' and remove it from this list.
   recovery_zbi_bootfs_packages_goldens = []
 
+  # An optional list of golden files for fuchsia.zbi static pkgs list. If
+  # specified, they would be compared against fuchsia.zbi static pkgs list
+  # during build time. At least one of the golden files must match.
+  # In normal case, there should only be one golden file in this list.
+  # During a soft transition where changes are made in a different repo than
+  # the golden file repo, user need to
+  # 1. copy the old golden file before the change to '*.orig'
+  # 2. create a new golden file reflecting the changes
+  # 3. add both the old golden file and new golden file to this list. e.g. there
+  # would be 'product.txt' and 'product.txt.orig' in this list and check in the
+  # above changes.
+  # 4. check in the changes that is made in a different repo.
+  # 5. delete 'product.txt.orig' and remove it from this list.
+  fuchsia_static_pkgs_goldens = []
+
   # An optional list of golden files for recovery.zbi static pkgs list. If
   # specified, they would be compared against recovery.zbi static pkgs list
   # during build time.  At least one of the golden files must match.
@@ -157,6 +124,76 @@ declare_args() {
   # 4. check in the changes that is made in a different repo.
   # 5. delete 'product.txt.orig' and remove it from this list.
   recovery_static_pkgs_goldens = []
+
+  # An optional file path to the route_sources verifier configuration to be used
+  # on the assembled fuchsia system.
+  fuchsia_route_sources_config = ""
+
+  # An optional file path to the route_sources verifier configuration to be used
+  # on the assembled recovery system.
+  recovery_route_sources_config = ""
+
+  # An optional list of (capability, moniker) pairs that determine exceptions
+  # to the verify_route.gni build rule that prevents v2 components from
+  # attempting to use capabilities they were not offered in the fuchsia
+  # system. Generally new entries should not be added to this allowlist and acts
+  # as a marker for future technical debt to clean up.
+  fuchsia_verify_routes_exceptions_allowlist =
+      "//src/security/policy/build/verify_routes_exceptions_allowlist.json5"
+
+  # An optional list of (capability, moniker) pairs that determine exceptions
+  # to the verify_route.gni build rule that prevents v2 components from
+  # attempting to use capabilities they were not offered in the recovery
+  # system. Generally new entries should not be added to this allowlist and acts
+  # as a marker for future technical debt to clean up.
+  recovery_verify_routes_exceptions_allowlist =
+      "//src/security/policy/build/verify_routes_exceptions_allowlist.json5"
+
+  # Same as fuchsia_verify_routes_exceptions_allowlist, except this allowlist
+  # gets added in bootfs_only builds.
+  fuchsia_verify_routes_exceptions_allowlist_bootfs = "//src/security/policy/build/verify_routes_exceptions_allowlist_bootfs.json5"
+
+  # Same as recovery_verify_routes_exceptions_allowlist, except this allowlist
+  # gets added in bootfs_only builds.
+  recovery_verify_routes_exceptions_allowlist_bootfs = "//src/security/policy/build/verify_routes_exceptions_allowlist_bootfs.json5"
+
+  # Same as fuchsia_verify_routes_exceptions_allowlist, except these allowlists
+  # get added according to product-specific configuration.
+  fuchsia_verify_routes_exceptions_allowlist_product = []
+
+  # Same as recovery_verify_routes_exceptions_allowlist, except these allowlists
+  # get added according to product-specific configuration.
+  recovery_verify_routes_exceptions_allowlist_product = []
+
+  # An optional component tree configuration file used to finalize dynamic
+  # elements of the component tree constructed for route verification on the
+  # fuchsia assembled system. When non-empty, this value is passed as the
+  # `--component-tree-config` option to `ffx scrutiny verify routes` to verify
+  # routes in the fuchsia component tree.
+  fuchsia_verify_routes_component_tree_config = ""
+
+  # An optional component tree configuration file used to finalize dynamic
+  # elements of the component tree constructed for route verification on the
+  # recovery assembled system. When non-empty, this value is passed as the
+  # `--component-tree-config` option to `ffx scrutiny verify routes` to verify
+  # routes in the fuchsia component tree.
+  recovery_verify_routes_component_tree_config = ""
+
+  # An optional mapping of (scheme, resolver moniker, and resolver capability)
+  # to component monikers that determine which component resolvers are compared
+  # to the allowlist and which components are allowed to be resolved by the
+  # matching component resolver in the fuchsia assembled system. Used by
+  # verify_component_resolvers.gni.
+  fuchsia_verify_component_resolvers_allowlist =
+      "//src/security/policy/component_resolvers_policy.json5"
+
+  # An optional mapping of (scheme, resolver moniker, and resolver capability)
+  # to component monikers that determine which component resolvers are compared
+  # to the allowlist and which components are allowed to be resolved by the
+  # matching component resolver in the recovery assembled system. Used by
+  # verify_component_resolvers.gni.
+  recovery_verify_component_resolvers_allowlist =
+      "//src/security/policy/component_resolvers_policy.json5"
 
   # Whether to allow testonly=true targets in fuchsia ZBI or base/cache packages.
   #
