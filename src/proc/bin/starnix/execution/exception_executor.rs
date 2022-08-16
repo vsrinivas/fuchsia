@@ -104,16 +104,18 @@ fn start_task_thread(current_task: &CurrentTask) -> Result<zx::Channel, zx::Stat
 }
 
 /// Block the exception handler as long as the task is stopped and not terminated.
-fn block_while_stopped(task: &Task) {
+fn block_while_stopped(current_task: &CurrentTask) {
+    let waiter = Waiter::new_ignoring_signals();
     loop {
-        if task.read().exit_status.is_some() {
+        current_task.thread_group.write().stopped_waiters.wait_async(&waiter);
+        if current_task.read().exit_status.is_some() {
             return;
         }
-        if !task.thread_group.read().stopped {
+        if !current_task.thread_group.read().stopped {
             return;
         }
         // Result is not needed, as this is not in a syscall.
-        let _: Result<(), Errno> = Waiter::new_for_stopped_thread().wait(task);
+        let _: Result<(), Errno> = waiter.wait(current_task);
     }
 }
 
@@ -370,19 +372,19 @@ mod tests {
 
         let cloned_task = task.task_arc_clone();
         let thread = std::thread::spawn(move || {
-            // Block until continued.
-            block_while_stopped(&cloned_task);
+            // Wait for the task to have a waiter.
+            while cloned_task.read().signals.waiter.is_none() {
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+
+            // Continue the task.
+            cloned_task.thread_group.set_stopped(false, SignalInfo::default(SIGCONT));
         });
 
-        // Wait for the task to have a waiter.
-        while task.read().signals.waiter.is_none() {
-            std::thread::sleep(std::time::Duration::from_millis(10));
-        }
+        // Block until continued.
+        block_while_stopped(&task);
 
-        // Continue the task.
-        task.thread_group.set_stopped(false, SignalInfo::default(SIGCONT));
-
-        // Join the task, which will ensure block_while_stopped terminated.
+        // Join the thread, which will ensure set_stopped terminated.
         thread.join().expect("joined");
 
         // The task should not be blocked anymore.
@@ -401,19 +403,19 @@ mod tests {
 
         let cloned_task = task.task_arc_clone();
         let thread = std::thread::spawn(move || {
-            // Block until continued.
-            block_while_stopped(&cloned_task);
+            // Wait for the task to have a waiter.
+            while cloned_task.read().signals.waiter.is_none() {
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+
+            // exit the task.
+            cloned_task.thread_group.exit(ExitStatus::Exit(1));
         });
 
-        // Wait for the task to have a waiter.
-        while task.read().signals.waiter.is_none() {
-            std::thread::sleep(std::time::Duration::from_millis(10));
-        }
+        // Block until continued.
+        block_while_stopped(&task);
 
-        // exit the task.
-        task.thread_group.exit(ExitStatus::Exit(1));
-
-        // Join the task, which will ensure block_while_stopped terminated.
+        // Join the task, which will ensure thread_group.exit terminated.
         thread.join().expect("joined");
 
         // The task should not be blocked because it is stopped.
