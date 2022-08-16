@@ -100,7 +100,6 @@ group("kitchen_sink") {
   testonly = true
   public_deps = [
     ":tests",
-    "packages:all",
     "//bundles:tools",
     "//examples",
     "//src/graphics/examples",

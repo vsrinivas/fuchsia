@@ -25,7 +25,7 @@ group("no_e2e_dep") {
   deps = [
     "//build:tests",
     "//bundles:tools",
-    "//bundles/packages:all",
+    "//bundles/packages/tests:all",
     "//examples",
     "//examples:tests",
     "//scripts:tests",

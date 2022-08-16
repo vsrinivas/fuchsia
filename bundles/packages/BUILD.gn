@@ -5,18 +5,6 @@
 # WARNING: This file was machine-generated from previous json files and
 # will eventually be deleted.
 
-group("all") {
-  testonly = true
-  public_deps = [
-    "examples:all",
-    "experimental:all",
-    "prod:all",
-    "testing:all",
-    "tests:all",
-    "//src/ui/tools:scenic",
-  ]
-}
-
 group("base_packages") {
   testonly = true
   public_deps = [
