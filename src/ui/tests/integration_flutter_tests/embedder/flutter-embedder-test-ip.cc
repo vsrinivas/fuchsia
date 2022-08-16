@@ -273,14 +273,11 @@ std::string FlutterEmbedderTestIp::GetPointerInjectorArgs() {
   return config.str();
 }
 
-// TODO(fxb/106074): Re-enable gfx scene manager variant by adding the following
-// as an additional parameter:
-//
-// "fuchsia-pkg://fuchsia.com/gfx-scene-manager-test-ui-stack#meta/test-ui-stack.cm"
 INSTANTIATE_TEST_SUITE_P(
     FlutterEmbedderTestIpWithParams, FlutterEmbedderTestIp,
     ::testing::Values(
-        "fuchsia-pkg://fuchsia.com/gfx-root-presenter-test-ui-stack#meta/test-ui-stack.cm"));
+        "fuchsia-pkg://fuchsia.com/gfx-root-presenter-test-ui-stack#meta/test-ui-stack.cm",
+        "fuchsia-pkg://fuchsia.com/gfx-scene-manager-test-ui-stack#meta/test-ui-stack.cm"));
 
 TEST_P(FlutterEmbedderTestIp, Embedding) {
   BuildRealmAndLaunchApp(kParentViewUrl);
