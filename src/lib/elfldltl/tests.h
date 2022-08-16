@@ -9,6 +9,9 @@
 #include <lib/elfldltl/layout.h>
 
 #include <functional>
+#include <string>
+#include <tuple>
+#include <type_traits>
 
 #include <zxtest/zxtest.h>
 
@@ -34,27 +37,46 @@ inline void TestAllFormats(Test&&... test) {
 // diag() method returns a Diagnostics object.  When the helper object goes out
 // of scope, it will assert that the Diagnostics object got the expected one
 // error logged.
+template <typename... Args>
 class ExpectedSingleError {
  public:
-  // Default-constructed, expect no errors.
-  explicit ExpectedSingleError() = default;
-
-  // With a string, expect exactly that one error.
-  explicit ExpectedSingleError(std::string_view expected) : expected_(expected) {
-    ASSERT_FALSE(expected_.empty());
-  }
+  explicit ExpectedSingleError(Args&&... args) : expected_(args...) {}
 
   auto& diag() { return diag_; }
 
-  template <typename... Args>
-  bool operator()(std::string_view error, Args&&... args) {
-    EXPECT_STREQ(error, expected_, "\"%.*s\" != \"%.*s\"", static_cast<int>(error.size()),
-                 error.data(), static_cast<int>(expected_.size()), expected_.data());
-    expected_ = {};
+  template <typename... Ts>
+  bool operator()(Ts&&... args) {
+    if constexpr (sizeof...(Args) != sizeof...(Ts)) {
+      ADD_FAILURE("Expected %zu args, got %zu\n", sizeof...(Args), sizeof...(Ts));
+    }
+    Check(std::make_tuple(args...), std::make_index_sequence<sizeof...(Args)>());
     return true;
   }
 
-  ~ExpectedSingleError() { EXPECT_TRUE(expected_.empty()); }
+ private:
+  template <typename T, typename T2 = void>
+  struct ExpectedType {
+    using type = T;
+  };
+
+  template <typename T>
+  struct ExpectedType<T, std::enable_if_t<std::is_constructible_v<std::string_view, T>>> {
+    using type = std::string_view;
+  };
+
+  template <typename T>
+  struct ExpectedType<T, std::enable_if_t<std::is_integral_v<T>>> {
+    using type = uint64_t;
+  };
+
+  template <typename Tuple, size_t... I>
+  void Check(Tuple&& args, std::index_sequence<I...> seq) {
+    ([&]() { EXPECT_EQ(std::get<I>(args), std::get<I>(expected_), "argument %zu", I); }(), ...);
+  }
+
+ public:
+  template <typename T>
+  using expected_t = typename ExpectedType<T>::type;
 
  private:
   // Diagnostic flags for signaling as much information as possible.
@@ -64,8 +86,12 @@ class ExpectedSingleError {
       .extra_checking = true,
   };
 
-  std::string_view expected_;
+  std::tuple<Args...> expected_;
   elfldltl::Diagnostics<std::reference_wrapper<ExpectedSingleError>> diag_{*this, kFlags};
 };
+
+template <typename... Args>
+ExpectedSingleError(Args...)
+    -> ExpectedSingleError<ExpectedSingleError<>::expected_t<std::decay_t<Args>>...>;
 
 #endif  // SRC_LIB_ELFLDLTL_TESTS_H_

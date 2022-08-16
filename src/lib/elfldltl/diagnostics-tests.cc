@@ -8,9 +8,12 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include <zxtest/zxtest.h>
+
+#include "tests.h"
 
 namespace {
 
@@ -141,6 +144,27 @@ TEST(ElfldltlDiagnosticsTests, Ostream) {
                "a1:first error\n"
                "a1:second error\n"
                "a1:warning\n");
+}
+
+template <size_t... Args>
+auto CreateExpect(std::index_sequence<Args...>) {
+  return ExpectedSingleError{"error ", Args...};
+}
+
+template <typename Diag, size_t... Args>
+auto CreateError(Diag& diag, std::index_sequence<Args...>) {
+  diag.FormatError("error ", Args...);
+}
+
+TEST(ElfldltlDiagnosticsTests, FormatErrorVariadic) {
+  {
+    ExpectedSingleError expected("abc ", 123ull, " --- ", 45678910);
+    expected.diag().FormatError("abc ", 123ull, " --- ", 45678910);
+  }
+  {
+    auto expected = CreateExpect(std::make_index_sequence<20>{});
+    CreateError(expected.diag(), std::make_index_sequence<20>{});
+  }
 }
 
 }  // namespace
