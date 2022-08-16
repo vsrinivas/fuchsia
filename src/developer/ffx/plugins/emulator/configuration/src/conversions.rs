@@ -51,7 +51,11 @@ pub fn convert_bundle_to_configs(
     if let Some(emu) = &product_bundle.manifests.emu {
         emulator_configuration.guest = GuestConfig {
             // TODO(fxbug.dev/88908): Eventually we'll need to support multiple disk_images.
-            fvm_image: Some(data_root.join(&emu.disk_images[0])),
+            fvm_image: if !emu.disk_images.is_empty() {
+                Some(data_root.join(&emu.disk_images[0]))
+            } else {
+                None
+            },
             kernel_image: data_root.join(&emu.kernel),
             zbi_image: data_root.join(&emu.initial_ramdisk),
         };

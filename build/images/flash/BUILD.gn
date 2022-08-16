@@ -543,58 +543,58 @@ generated_file("fastboot_manifest_archive") {
 ## TODO: Move this to it's own BUILD.gn file once the template are taught to
 ## read a flash.json rather than taking the GN object.
 
-# We shouldn't generate a product metadata if we are building an SDK.
-if (!use_bringup_assembly) {
-  compatible_devices = []
+compatible_devices = []
 
-  # Virtual device manifest should only be generated for emu compatible boards.
-  if (board_is_emu) {
-    # Append '-emu' to the end of the device_name in order to make it unique for
-    # cases where the board is compatible with a physical and virtual device.
-    device_name = "${board_name}-emu"
-    if (virtual_device_name_prefix != "") {
-      device_name = "${virtual_device_name_prefix}-${device_name}"
-    }
-
-    virtual_device_specification("virtual_device_specification") {
-      testonly = true
-      name = device_name
-      output = "$root_build_dir/virtual_device.json"
-    }
-    compatible_devices += [ device_name ]
+# Virtual device manifest should only be generated for emu compatible boards.
+if (board_is_emu) {
+  # Append '-emu' to the end of the device_name in order to make it unique for
+  # cases where the board is compatible with a physical and virtual device.
+  device_name = "${board_name}-emu"
+  if (virtual_device_name_prefix != "") {
+    device_name = "${virtual_device_name_prefix}-${device_name}"
   }
 
-  # Physical device manifest should only be generated for physical boards.
-  if (board_is_phys) {
-    device_name = board_name
-
-    physical_device_manifest("physical_device_manifest") {
-      testonly = true
-      name = device_name
-      output = "$root_build_dir/physical_device.json"
-    }
-    compatible_devices += [ device_name ]
-  }
-
-  product_metadata("product_metadata") {
+  virtual_device_specification("virtual_device_specification") {
     testonly = true
-    devices = compatible_devices
-    output = "$root_build_dir/product_bundle.json"
-    deps = []
+    name = device_name
+    output = "$root_build_dir/virtual_device.json"
+  }
+  compatible_devices += [ device_name ]
+}
 
-    if (board_is_emu) {
-      deps += [ ":virtual_device_specification" ]
-      emu_manifest = {
-        initial_ramdisk = "fuchsia.zbi"
-        kernel = rebase_path(files.qemu_kernel, root_out_dir)
+# Physical device manifest should only be generated for physical boards.
+if (board_is_phys) {
+  device_name = board_name
+
+  physical_device_manifest("physical_device_manifest") {
+    testonly = true
+    name = device_name
+    output = "$root_build_dir/physical_device.json"
+  }
+  compatible_devices += [ device_name ]
+}
+
+product_metadata("product_metadata") {
+  testonly = true
+  devices = compatible_devices
+  output = "$root_build_dir/product_bundle.json"
+  deps = []
+
+  if (board_is_emu) {
+    deps += [ ":virtual_device_specification" ]
+    emu_manifest = {
+      initial_ramdisk = "fuchsia.zbi"
+      kernel = rebase_path(files.qemu_kernel, root_out_dir)
+      disk_images = []
+      if (defined(files.fvm)) {
         disk_images = [ rebase_path(files.fvm, root_build_dir) ]
       }
     }
+  }
 
-    if (board_is_phys) {
-      flash_manifest = flash_manifest_content
-      deps += [ ":physical_device_manifest" ]
-    }
+  if (board_is_phys) {
+    flash_manifest = flash_manifest_content
+    deps += [ ":physical_device_manifest" ]
   }
 }
 
