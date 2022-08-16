@@ -11,7 +11,7 @@ pub(crate) mod posix;
 
 use alloc::{collections::HashMap, vec::Vec};
 use core::{fmt::Debug, hash::Hash, marker::PhantomData};
-use net_types::ip::IpAddress;
+use net_types::ip::{Ip, IpAddress};
 
 use derivative::Derivative;
 
@@ -69,8 +69,10 @@ impl<A: Eq + Hash, S> Default for ConnSocketMap<A, S> {
 }
 
 pub(crate) trait SocketMapAddrSpec {
+    /// The version of IP addresses in socket addresses.
+    type IpVersion: Ip<Addr = Self::IpAddr>;
     /// The type of IP addresses in the socket address.
-    type IpAddr: IpAddress;
+    type IpAddr: IpAddress<Version = Self::IpVersion>;
     /// The type of the device component of a socket address.
     type DeviceId: IpDeviceId;
     /// The local identifier portion of a socket address.
@@ -785,7 +787,10 @@ mod tests {
 
     use assert_matches::assert_matches;
     use net_declare::net_ip_v4;
-    use net_types::{ip::Ipv4Addr, SpecifiedAddr};
+    use net_types::{
+        ip::{Ipv4, Ipv4Addr},
+        SpecifiedAddr,
+    };
 
     use crate::{
         ip::DummyDeviceId,
@@ -841,6 +846,7 @@ mod tests {
     enum FakeAddrSpec {}
 
     impl SocketMapAddrSpec for FakeAddrSpec {
+        type IpVersion = Ipv4;
         type IpAddr = Ipv4Addr;
         type DeviceId = DummyDeviceId;
         type LocalIdentifier = u16;

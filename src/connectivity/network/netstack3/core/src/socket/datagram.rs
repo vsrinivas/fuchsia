@@ -133,7 +133,7 @@ impl<A: IpAddress, D: IpDeviceId> ConnAddr<A, D, NonZeroU16, NonZeroU16> {
 fn leave_all_joined_groups<
     A: SocketMapAddrSpec,
     S: DatagramSocketSpec,
-    C: DatagramStateNonSyncContext<<A::IpAddr as IpAddress>::Version>,
+    C: DatagramStateNonSyncContext<A::IpVersion>,
     SC: DatagramStateContext<A, C, S>,
 >(
     sync_ctx: &mut SC,
@@ -210,7 +210,7 @@ where
 pub(crate) fn remove_unbound<
     A: SocketMapAddrSpec,
     S: DatagramSocketSpec,
-    C: DatagramStateNonSyncContext<<A::IpAddr as IpAddress>::Version>,
+    C: DatagramStateNonSyncContext<A::IpVersion>,
     SC: DatagramStateContext<A, C, S>,
 >(
     sync_ctx: &mut SC,
@@ -231,7 +231,7 @@ pub(crate) fn remove_unbound<
 
 pub(crate) fn remove_listener<
     A: SocketMapAddrSpec,
-    C: DatagramStateNonSyncContext<<A::IpAddr as IpAddress>::Version>,
+    C: DatagramStateNonSyncContext<A::IpVersion>,
     SC: DatagramStateContext<A, C, S>,
     S: DatagramSocketSpec<ListenerState = ListenerState<A::IpAddr, A::DeviceId>>
         + SocketMapConflictPolicy<
@@ -263,7 +263,7 @@ where
 
 pub(crate) fn remove_conn<
     A: SocketMapAddrSpec,
-    C: DatagramStateNonSyncContext<<A::IpAddr as IpAddress>::Version>,
+    C: DatagramStateNonSyncContext<A::IpVersion>,
     SC: DatagramStateContext<A, C, S>,
     CS,
     S: DatagramSocketSpec<ConnState = ConnState<A::IpAddr, A::DeviceId, CS>>
@@ -315,7 +315,7 @@ pub enum SetMulticastMembershipError {
 fn pick_matching_interface<
     A: SocketMapAddrSpec,
     S,
-    C: DatagramStateNonSyncContext<<A::IpAddr as IpAddress>::Version>,
+    C: DatagramStateNonSyncContext<A::IpVersion>,
     SC: DatagramStateContext<A, C, S>,
 >(
     sync_ctx: &SC,
@@ -334,7 +334,7 @@ fn pick_matching_interface<
 fn pick_interface_for_addr<
     A: SocketMapAddrSpec,
     S,
-    C: DatagramStateNonSyncContext<<A::IpAddr as IpAddress>::Version>,
+    C: DatagramStateNonSyncContext<A::IpVersion>,
     SC: DatagramStateContext<A, C, S>,
 >(
     _sync_ctx: &SC,
@@ -377,7 +377,7 @@ pub enum MulticastInterfaceSelector<A, D> {
 /// socket state.
 pub(crate) fn set_multicast_membership<
     A: SocketMapAddrSpec,
-    C: DatagramStateNonSyncContext<<A::IpAddr as IpAddress>::Version>,
+    C: DatagramStateNonSyncContext<A::IpVersion>,
     SC: DatagramStateContext<A, C, S>,
     CS,
     S: DatagramSocketSpec<

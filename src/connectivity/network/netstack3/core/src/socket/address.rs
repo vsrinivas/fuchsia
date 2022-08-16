@@ -52,6 +52,7 @@ pub(crate) struct ConnAddr<A: IpAddress, D, LI, RI> {
 pub(crate) struct IpPortSpec<I, D>(PhantomData<(I, D)>, Never);
 
 impl<I: Ip, D: IpDeviceId> SocketMapAddrSpec for IpPortSpec<I, D> {
+    type IpVersion = I;
     type IpAddr = I::Addr;
     type DeviceId = D;
     type RemoteIdentifier = NonZeroU16;

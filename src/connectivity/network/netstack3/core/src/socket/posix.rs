@@ -356,6 +356,7 @@ mod tests {
     }
 
     impl<I: Ip> SocketMapAddrSpec for TransportSocketPosixSpec<I> {
+        type IpVersion = I;
         type IpAddr = I::Addr;
         type RemoteIdentifier = NonZeroU16;
         type LocalIdentifier = NonZeroU16;
