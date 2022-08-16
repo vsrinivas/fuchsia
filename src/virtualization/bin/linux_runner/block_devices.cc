@@ -6,6 +6,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -16,11 +17,15 @@
 #include <lib/trace/event.h>
 #include <zircon/hw/gpt.h>
 
+#include <filesystem>
+
 #include <fbl/unique_fd.h>
 
 #include "src/lib/storage/block_client/cpp/remote_block_device.h"
 
 namespace {
+
+namespace fio = fuchsia_io;
 
 constexpr size_t kNumRetries = 5;
 constexpr auto kRetryDelay = zx::msec(100);
@@ -37,6 +42,7 @@ using ManagerHandle = fidl::InterfaceHandle<fuchsia::hardware::block::volume::Vo
 struct DiskImage {
   const char* path;                             // Path to the file containing the image
   fuchsia::virtualization::BlockFormat format;  // Format of the disk image
+  bool use_fxfs;                                // Whether to use a Fxfs block device
   bool read_only;
 };
 
@@ -51,6 +57,14 @@ constexpr DiskImage kStatefulImage = DiskImage{
     .path = "/pkg/data/stateful.qcow2",
     .format = fuchsia::virtualization::BlockFormat::QCOW,
     .read_only = true,
+};
+#elif defined(USE_FXFS_STATEFUL_IMAGE)
+constexpr DiskImage kStatefulImage = DiskImage{
+    // NOTE: This assumes the /data directory is using Fxfs
+    .path = "/data/fxfs_virtualization_guest_image",
+    .format = fuchsia::virtualization::BlockFormat::BLOCK,
+    .use_fxfs = true,
+    .read_only = false,
 };
 #else
 constexpr DiskImage kStatefulImage = DiskImage{
@@ -199,10 +213,85 @@ zx::status<fuchsia::io::FileHandle> GetPartition(const DiskImage& image) {
   return zx::ok(std::move(file));
 }
 
+// Opens the given disk image.
+zx::status<fuchsia::io::FileHandle> GetFxfsPartition(const DiskImage& image,
+                                                     const size_t image_size_bytes) {
+  TRACE_DURATION("linux_runner", "GetFxfsPartition");
+
+  // First, use regular file operations to make a huge file at image.path
+  // NOTE: image.path is assumed to be a path on an Fxfs filesystem
+  fbl::unique_fd fd(open(image.path, O_CREAT | O_RDWR, S_IRUSR | S_IWUSR));
+  if (!fd) {
+    FX_LOGS(ERROR) << "open(image.path) failed with errno: " << strerror(errno);
+    return zx::error(ZX_ERR_IO);
+  }
+
+  // Make sure the file is the requested size (image_size_bytes).
+  // NOTE: This is usually a huge size (e.g. 40 gigabytes).
+  off_t existingFilesize = lseek(fd.get(), 0, SEEK_END);
+  if (existingFilesize == static_cast<off_t>(-1) ||
+      static_cast<size_t>(existingFilesize) < image_size_bytes) {
+    if (ftruncate(fd.get(), image_size_bytes) == -1) {
+      FX_LOGS(ERROR) << "ftruncate(image.path) failed with errno: " << strerror(errno);
+      return zx::error(ZX_ERR_IO);
+    }
+  }
+  if (close(fd.release()) == -1) {
+    FX_LOGS(ERROR) << "close(image.path) failed with errno: " << strerror(errno);
+    return zx::error(ZX_ERR_IO);
+  }
+
+  /// Now we can try to reopen the file, but in block device mode
+
+  /// First we have to open the parent directory...
+  auto dir_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (dir_endpoints.status_value() != ZX_OK) {
+    FX_PLOGS(ERROR, dir_endpoints.status_value())
+        << "CreateEndpoints() for Fxfs parent directory failed";
+    return zx::error(dir_endpoints.status_value());
+  }
+  auto [dir_client, dir_server] = *std::move(dir_endpoints);
+  std::filesystem::path image_path(image.path);
+  uint32_t dir_flags = static_cast<uint32_t>(
+      fio::OpenFlags::kRightReadable | fio::OpenFlags::kRightWritable | fio::OpenFlags::kDirectory);
+  zx_status_t dir_open_status =
+      fdio_open(image_path.parent_path().c_str(), dir_flags, dir_server.TakeChannel().release());
+  if (dir_open_status != ZX_OK) {
+    FX_PLOGS(ERROR, dir_open_status) << "fdio_open(Fxfs image.path.parent) failed";
+    return zx::error(dir_open_status);
+  }
+
+  // We want to open the "file" at image.path, but as a block device (i.e. fuchsia.hardware.block).
+  fio::OpenFlags flags = fio::OpenFlags::kRightReadable;
+  if (!image.read_only) {
+    flags |= fio::OpenFlags::kRightWritable;
+  }
+  auto device_endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
+  if (device_endpoints.status_value() != ZX_OK) {
+    FX_PLOGS(ERROR, device_endpoints.status_value())
+        << "CreateEndpoints() for Fxfs block device file failed";
+    return zx::error(device_endpoints.status_value());
+  }
+  auto [device_client, device_server] = *std::move(device_endpoints);
+  uint32_t mode = fuchsia::io::MODE_TYPE_BLOCK_DEVICE;
+  // TODO(fxbug.dev/103241): Consider using io2 for the Open() call.
+  auto device_open_result =
+      fidl::WireCall(dir_client)
+          ->Open(flags, mode, fidl::StringView::FromExternal(image_path.filename().c_str()),
+                 std::move(device_server));
+  if (!device_open_result.ok()) {
+    FX_PLOGS(ERROR, device_open_result.status())
+        << "WireCall->Open(image.path) as Fxfs block device failed";
+    return zx::error(device_open_result.status());
+  }
+
+  return zx::ok(fuchsia::io::FileHandle(device_client.TakeChannel()));
+}
+
 }  // namespace
 
 fitx::result<std::string, std::vector<fuchsia::virtualization::BlockSpec>> GetBlockDevices(
-    size_t stateful_image_size) {
+    size_t stateful_image_size_bytes) {
   TRACE_DURATION("linux_runner", "Guest::GetBlockDevices");
 
   std::vector<fuchsia::virtualization::BlockSpec> devices;
@@ -210,12 +299,22 @@ fitx::result<std::string, std::vector<fuchsia::virtualization::BlockSpec>> GetBl
   // Get/create the stateful partition.
   zx::channel stateful;
   if (kStatefulImage.format == fuchsia::virtualization::BlockFormat::BLOCK) {
-    auto handle = FindOrAllocatePartition(kBlockPath, stateful_image_size);
-    if (handle.is_error()) {
-      return fitx::error("Failed to find or allocate a partition");
+    if (kStatefulImage.use_fxfs) {
+      auto handle = GetFxfsPartition(kStatefulImage, stateful_image_size_bytes);
+      if (handle.is_error()) {
+        return fitx::error("Failed to open or create stateful Fxfs file / block device");
+      }
+      stateful = handle->TakeChannel();
+    } else {
+      // FVM
+      auto handle = FindOrAllocatePartition(kBlockPath, stateful_image_size_bytes);
+      if (handle.is_error()) {
+        return fitx::error("Failed to find or allocate a partition");
+      }
+      stateful = handle->TakeChannel();
     }
-    stateful = handle->TakeChannel();
   } else {
+    // Handles BlockFormat::QCOW and also BlockFormat::FILE (which is currently unused)
     auto handle = GetPartition(kStatefulImage);
     if (handle.is_error()) {
       return fitx::error("Failed to open or create stateful file");

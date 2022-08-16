@@ -23,6 +23,9 @@ declare_args() {
 
   # Point this to the location of a prebuilt stateful image in QCOW2 format
   linux_runner_stateful_image_path = ""
+
+  # Whether to use Fxfs for the stateful image
+  linux_runner_fxfs_stateful_image = false
 }
 
 extras_image = "$target_out_dir/linux/extras.img"
@@ -42,55 +45,80 @@ if (linux_runner_stateful_image_path != "") {
   }
 }
 
+_LIB_SOURCES = [
+  "block_devices.cc",
+  "block_devices.h",
+  "crash_listener.h",
+  "guest.cc",
+  "guest.h",
+  "linux_runner.cc",
+  "linux_runner.h",
+  "log_collector.cc",
+  "log_collector.h",
+  "ports.h",
+]
+
+_LIB_PUBLIC_DEPS = [
+  "//sdk/fidl/fuchsia.device",
+  "//sdk/fidl/fuchsia.hardware.block.volume",
+  "//sdk/fidl/fuchsia.sys",
+  "//sdk/fidl/fuchsia.ui.app",
+  "//sdk/fidl/fuchsia.ui.scenic",
+  "//sdk/fidl/fuchsia.virtualization",
+  "//sdk/fidl/fuchsia.wayland",
+  "//sdk/lib/fit-promise",
+  "//sdk/lib/sys/cpp",
+  "//src/lib/fsl",
+  "//src/lib/fxl",
+  "//src/lib/storage/block_client/cpp",
+  "//src/lib/storage/vfs/cpp",
+  "//src/virtualization/lib/grpc",
+  "//src/virtualization/lib/guest_config",
+  "//src/virtualization/third_party/vm_tools:vm_cc_proto",
+  "//third_party/grpc:grpc++",
+  "//third_party/protobuf:protobuf_lite",
+  "//zircon/system/ulib/async:async-cpp",
+  "//zircon/system/ulib/async-loop:async-loop-cpp",
+  "//zircon/system/ulib/async-loop:async-loop-default",
+  "//zircon/system/ulib/fdio-caller",
+  "//zircon/system/ulib/fzl",
+  "//zircon/system/ulib/trace-provider",
+  "//zircon/system/ulib/zxc",
+]
+
 source_set("lib") {
-  sources = [
-    "block_devices.cc",
-    "block_devices.h",
-    "crash_listener.h",
-    "guest.cc",
-    "guest.h",
-    "linux_runner.cc",
-    "linux_runner.h",
-    "log_collector.cc",
-    "log_collector.h",
-    "ports.h",
-  ]
-  public_deps = [
-    "//sdk/fidl/fuchsia.device",
-    "//sdk/fidl/fuchsia.hardware.block.volume",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/fidl/fuchsia.virtualization",
-    "//sdk/fidl/fuchsia.wayland",
-    "//sdk/lib/fit-promise",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fsl",
-    "//src/lib/fxl",
-    "//src/lib/storage/block_client/cpp",
-    "//src/lib/storage/vfs/cpp",
-    "//src/virtualization/lib/grpc",
-    "//src/virtualization/lib/guest_config",
-    "//src/virtualization/third_party/vm_tools:vm_cc_proto",
-    "//third_party/grpc:grpc++",
-    "//third_party/protobuf:protobuf_lite",
-    "//zircon/system/ulib/async:async-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fdio-caller",
-    "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/trace-provider",
-    "//zircon/system/ulib/zxc",
-  ]
+  sources = _LIB_SOURCES
+  public_deps = _LIB_PUBLIC_DEPS
 
   defines = []
   if (linux_runner_volatile_block) {
     defines += [ "USE_VOLATILE_BLOCK" ]
   }
   if (linux_runner_stateful_image_path != "") {
+    assert(
+        !linux_runner_fxfs_stateful_image,
+        "linux_runner_stateful_image_path and linux_runner_fxfs_stateful_image are exclusive")
     public_deps += [ ":stateful_qcow2" ]
     defines += [ "USE_PREBUILT_STATEFUL_IMAGE" ]
+  } else if (linux_runner_fxfs_stateful_image) {
+    assert(!defined(data_filesystem_format) || data_filesystem_format == "fxfs",
+           "data_filesystem_format is set to something other than fxfs")
+    defines += [ "USE_FXFS_STATEFUL_IMAGE" ]
   }
+}
+
+# This only exists for a build-test of the Fxfs mode
+source_set("lib_fxfs") {
+  sources = _LIB_SOURCES
+  public_deps = _LIB_PUBLIC_DEPS
+
+  defines = []
+  if (linux_runner_volatile_block) {
+    defines += [ "USE_VOLATILE_BLOCK" ]
+  }
+
+  # We always define this when building lib_fxfs
+  defines += [ "USE_FXFS_STATEFUL_IMAGE" ]
 }
 
 romfs_image("extras") {
@@ -137,10 +165,15 @@ romfs_image("extras") {
 
 executable("bin") {
   output_name = "linux_runner"
-
   sources = [ "main.cc" ]
-
   deps = [ ":lib" ]
+}
+
+# Build-test of the Linux runner in Fxfs mode
+executable("bin_fxfs") {
+  output_name = "linux_runner_fxfs"
+  sources = [ "main.cc" ]
+  deps = [ ":lib_fxfs" ]
 }
 
 fuchsia_package_with_single_component("linux_runner_pkg") {
@@ -205,5 +238,8 @@ core_shard("linux_runner_core_shard") {
 
 group("tests") {
   testonly = true
-  deps = [ ":linux_runner_tests" ]
+  deps = [
+    ":bin_fxfs",  # This is a build-test of the Fxfs mode
+    ":linux_runner_tests",
+  ]
 }

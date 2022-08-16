@@ -21,10 +21,11 @@ namespace {
 
 using DeviceTest = fs_test::FilesystemTest;
 
-void CreateFxFile(const std::string& kFilename) {
-  fbl::unique_fd fd(open(kFilename.c_str(), O_CREAT | O_RDWR, 0666));
+// Defaults to a filesize of 1 megabyte.
+void CreateFxFile(const std::string& file_name, const off_t file_size = 1024 * 1024) {
+  fbl::unique_fd fd(open(file_name.c_str(), O_CREAT | O_RDWR, 0666));
   ASSERT_TRUE(fd);
-  ASSERT_EQ(ftruncate(fd.get(), static_cast<off_t>(1024) * 1024), 0);
+  ASSERT_EQ(ftruncate(fd.get(), file_size), 0);
 }
 
 TEST_P(DeviceTest, TestValidDiskFormat) {
@@ -35,12 +36,13 @@ TEST_P(DeviceTest, TestValidDiskFormat) {
 
 TEST_P(DeviceTest, TestWriteThenRead) {
   const std::string kFilename = GetPath("block_device");
-  { CreateFxFile(kFilename); }
+  const off_t kFileSize = 10 * 1024 * 1024;  // 10 megabytes
+  CreateFxFile(kFilename, kFileSize);
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
   ASSERT_EQ(endpoints.status_value(), ZX_OK);
   auto [client, server] = *std::move(endpoints);
 
-  // Re-open file as block device
+  // Re-open file as block device i.e. using MODE_TYPE_BLOCK_DEVICE
   fdio_cpp::FdioCaller caller(fs().GetRootFd());
   ASSERT_EQ(fidl::WireCall(caller.directory())
                 ->Open(fuchsia_io::wire::OpenFlags::kRightReadable |
@@ -52,11 +54,13 @@ TEST_P(DeviceTest, TestWriteThenRead) {
   std::unique_ptr<block_client::RemoteBlockDevice> device;
   ASSERT_EQ(block_client::RemoteBlockDevice::Create(client.TakeChannel(), &device), ZX_OK);
 
+  fuchsia_hardware_block_BlockInfo info = {};
+  ASSERT_EQ(device->BlockGetInfo(&info), ZX_OK);
+  ASSERT_EQ(info.block_count, static_cast<unsigned long>(kFileSize) / info.block_size);
+
   zx::vmo vmo;
   storage::OwnedVmoid vmoid;
   const size_t kVmoBlocks = 5;
-  fuchsia_hardware_block_BlockInfo info = {};
-  ASSERT_EQ(device->BlockGetInfo(&info), ZX_OK);
   ASSERT_EQ(zx::vmo::create(kVmoBlocks * info.block_size, 0, &vmo), ZX_OK);
   ASSERT_NO_FATAL_FAILURE(device->BlockAttachVmo(vmo, &vmoid.GetReference(device.get())));
 
@@ -96,7 +100,7 @@ TEST_P(DeviceTest, TestWriteThenRead) {
 // Tests multiple reads and writes in a group
 TEST_P(DeviceTest, TestGroupWritesThenReads) {
   const std::string kFilename = GetPath("block_device");
-  { CreateFxFile(kFilename); }
+  CreateFxFile(kFilename);
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
   ASSERT_EQ(endpoints.status_value(), ZX_OK);
   auto [client, server] = *std::move(endpoints);
@@ -179,7 +183,7 @@ TEST_P(DeviceTest, TestGroupWritesThenReads) {
 
 TEST_P(DeviceTest, TestWriteThenFlushThenRead) {
   const std::string kFilename = GetPath("block_device");
-  { CreateFxFile(kFilename); }
+  CreateFxFile(kFilename);
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
   ASSERT_EQ(endpoints.status_value(), ZX_OK);
   auto [client, server] = *std::move(endpoints);
@@ -238,7 +242,7 @@ TEST_P(DeviceTest, TestWriteThenFlushThenRead) {
 
 TEST_P(DeviceTest, TestInvalidGroupRequests) {
   const std::string kFilename = GetPath("block_device");
-  { CreateFxFile(kFilename); }
+  CreateFxFile(kFilename);
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
   ASSERT_EQ(endpoints.status_value(), ZX_OK);
   auto [client, server] = *std::move(endpoints);

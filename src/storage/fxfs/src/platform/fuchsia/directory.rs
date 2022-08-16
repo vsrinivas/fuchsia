@@ -240,6 +240,7 @@ impl FxDirectory {
         name: &str,
         mode: u32,
     ) -> Result<Arc<dyn FxNode>, Error> {
+        // NOTE: The usage of | below is for a match case OR, not a bitwise OR
         match mode & fio::MODE_TYPE_MASK {
             fio::MODE_TYPE_DIRECTORY => Ok(Arc::new(FxDirectory::new(
                 Some(self.clone()),
@@ -580,7 +581,7 @@ impl DirectoryEntry for FxDirectory {
                         .await;
                     } else if node.is::<FxFile>() {
                         let node = node.downcast::<FxFile>().unwrap_or_else(|_| unreachable!());
-                        if mode == fio::MODE_TYPE_BLOCK_DEVICE {
+                        if mode & fio::MODE_TYPE_MASK == fio::MODE_TYPE_BLOCK_DEVICE {
                             let mut server =
                                 BlockServer::new(node, scope, server_end.into_channel());
                             let _ = server.run().await;
