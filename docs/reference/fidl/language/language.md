@@ -767,19 +767,18 @@ Consider:
 Here, the `Message` struct contains a string of `MAX_SIZE` bytes called `baseline`,
 and a vector of up to `5` strings of `MAX_SIZE` called `chapters`.
 
-Note that **`byte`** and **`bytes`** are built-in aliases, [see below](#built-in-aliases).
+Note that **`byte`** is a built-in aliases, [see below](#built-in-aliases).
 
 ### Built-ins
 
 FIDL provides several built-ins:
 
-* convenience types (**`byte`** and **`bytes`**)
+* convenience types (**`byte`**)
 * `zx library` [see below](#zx-library)
 
 #### Built-in aliases {#built-in-aliases}
 
-The types **`byte`** and **`bytes`** are built-in, and are conceptually
-equivalent to:
+The **`byte`** type is built-in, and is conceptually equivalent to:
 
 ```fidl
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference_builtin.test.fidl" region_tag="builtin" %}
