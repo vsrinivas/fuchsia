@@ -82,6 +82,16 @@ driver_bind_rules("audio-tas5707-stereo-bind") {
   deps = [ "//src/devices/bind/fuchsia.i2c" ]
 }
 
+driver_bind_rules("av400-tee-bind") {
+  rules = "bind/av400-tee.bind"
+  header_output = "av400-tee-bind.h"
+  deps = [
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.rpmb",
+    "//src/devices/bind/fuchsia.sysmem",
+  ]
+}
+
 fuchsia_driver("av400-driver") {
   output_name = "av400"
   configs += [
@@ -101,6 +111,7 @@ fuchsia_driver("av400-driver") {
     "av400-sdio.cc",
     "av400-spi.cc",
     "av400-sysmem.cc",
+    "av400-tee.cc",
     "av400-thermal.cc",
     "av400-usb.cc",
     "av400.cc",
@@ -110,6 +121,7 @@ fuchsia_driver("av400-driver") {
     ":av400-bind",
     ":av400-emmc-bind_header",
     ":av400-sdio-bind_header",
+    ":av400-tee-bind_header",
     ":pwm_init_bind_header",
     ":spi_1_bind_header",
     ":tdm-i2s-bind_header",

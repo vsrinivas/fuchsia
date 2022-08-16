@@ -132,6 +132,11 @@ int Av400::Thread() {
     init_txn_->Reply(status);
     return status;
   }
+  if ((status = TeeInit()) != ZX_OK) {
+    zxlogf(ERROR, "TeeInit() failed: %s", zx_status_get_string(status));
+    init_txn_->Reply(status);
+    return status;
+  }
   init_txn_->Reply(status);
   return ZX_OK;
 }

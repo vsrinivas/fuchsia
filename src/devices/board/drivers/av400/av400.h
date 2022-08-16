@@ -35,6 +35,7 @@ enum {
   BTI_SPI1,
   BTI_AUDIO_OUT,
   BTI_AUDIO_IN,
+  BTI_TEE,
 };
 
 // Av400 SPI bus arbiters (should match spi_channels[] in av400-spi.cc  ).
@@ -83,6 +84,7 @@ class Av400 : public Av400Type {
   zx_status_t UsbInit();
   zx_status_t ThermalInit();
   zx_status_t SysmemInit();
+  zx_status_t TeeInit();
 
   int Thread();
 
