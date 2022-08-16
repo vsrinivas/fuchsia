@@ -175,15 +175,6 @@ std::string MakeTestHarnessEnvironmentName(std::string user_env_suffix) {
 }
 
 zx_status_t TestHarnessImpl::PopulateEnvServices(sys::testing::EnvironmentServices* env_services) {
-  // The default set of component-provided services are all basemgr's hard
-  // dependencies. A map of service name => component URL providing the service.
-  std::map<std::string, std::string> default_svcs = {
-      {fuchsia::intl::PropertyProvider::Name_,
-       "fuchsia-pkg://fuchsia.com/intl-services-small#meta/intl_services.cmx"},
-      {fuchsia::settings::Intl::Name_,
-       "fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cmx"},
-      {fuchsia::stash::Store::Name_, "fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx"}};
-
   std::set<std::string> added_svcs;
 
   // 1. Allow services to be inherited from parent environment.
@@ -202,16 +193,6 @@ zx_status_t TestHarnessImpl::PopulateEnvServices(sys::testing::EnvironmentServic
   // 3. Inject service_dir services.
   if (auto retval = PopulateEnvServicesWithServiceDir(env_services, &added_svcs) != ZX_OK) {
     return retval;
-  }
-
-  // 4. Inject the remaining default component-provided services.
-  for (const auto& svc_component : default_svcs) {
-    if (added_svcs.find(svc_component.first) != added_svcs.end()) {
-      continue;
-    }
-    fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = svc_component.second;
-    env_services->AddServiceWithLaunchInfo(std::move(launch_info), svc_component.first);
   }
 
   return ZX_OK;
