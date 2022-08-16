@@ -132,8 +132,8 @@
                 "fuchsia.ui.brightness.Control",
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
-                "fuchsia.ui.composition.ScreenCapture",
                 "fuchsia.ui.composition.internal.ScreenCapture",
+                "fuchsia.ui.composition.ScreenCapture",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
                 "fuchsia.ui.input.ImeService",
                 "fuchsia.ui.input3.Keyboard",
@@ -226,6 +226,11 @@
         },
         {
             resolver: "full-resolver",
+            from: "parent",
+            to: "#ermine_shell",
+        },
+        {
+            event_stream: [ "stopped_v2" ],
             from: "parent",
             to: "#ermine_shell",
         },
