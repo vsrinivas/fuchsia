@@ -348,6 +348,17 @@ int Sdhci::IrqThread() {
       TransferCompleteLocked();
     }
     if (irq.card_interrupt() && interrupt_cb_.is_valid()) {
+      // The only way to clear this interrupt at the controller is to disable the interrupt status.
+      // If the client driver(s) don't service the interrupt via the callback then it may be
+      // asserted again during the next card interrupt period, but this at least prevents a flood of
+      // interrupts during normal operation.
+      InterruptStatusEnable::Get()
+          .ReadFrom(&regs_mmio_buffer_)
+          .set_card_interrupt(0)
+          .WriteTo(&regs_mmio_buffer_)
+          .set_card_interrupt(1)
+          .WriteTo(&regs_mmio_buffer_);
+
       interrupt_cb_.Callback();
     }
     if (irq.ErrorInterrupt()) {
