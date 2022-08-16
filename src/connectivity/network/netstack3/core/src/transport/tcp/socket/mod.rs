@@ -112,19 +112,14 @@ pub struct SocketAddr<A: IpAddress> {
 pub(crate) enum TcpIpTransportContext {}
 
 /// Uninstantiatable type for implementing [`SocketMapStateSpec`].
-struct TcpSocketSpec<Ip, Device, Instant, ReceiveBuffer, SendBuffer>(
-    PhantomData<(Ip, Device, Instant, ReceiveBuffer, SendBuffer)>,
-    Never,
-);
+struct TcpSocketSpec<Ip, Device, NonSyncContext>(PhantomData<(Ip, Device, NonSyncContext)>, Never);
 
-impl<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer> SocketMapStateSpec
-    for TcpSocketSpec<I, D, II, R, S>
-{
+impl<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext> SocketMapStateSpec for TcpSocketSpec<I, D, C> {
     type ListenerId = MaybeListenerId;
     type ConnId = ConnectionId;
 
     type ListenerState = MaybeListener;
-    type ConnState = Connection<I, D, II, R, S>;
+    type ConnState = Connection<I, D, C::Instant, C::ReceiveBuffer, C::SendBuffer>;
 
     type ListenerSharingState = ();
     type ConnSharingState = ();
@@ -134,9 +129,9 @@ impl<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer> Sock
     type ConnAddrState = ConnectionId;
 }
 
-impl<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer>
+impl<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext>
     SocketMapConflictPolicy<ListenerAddr<I::Addr, D, NonZeroU16>, (), IpPortSpec<I, D>>
-    for TcpSocketSpec<I, D, II, R, S>
+    for TcpSocketSpec<I, D, C>
 {
     fn check_for_conflicts(
         (): &(),
@@ -159,9 +154,9 @@ impl<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer>
     }
 }
 
-impl<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer>
+impl<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext>
     SocketMapConflictPolicy<ConnAddr<I::Addr, D, NonZeroU16, NonZeroU16>, (), IpPortSpec<I, D>>
-    for TcpSocketSpec<I, D, II, R, S>
+    for TcpSocketSpec<I, D, C>
 {
     fn check_for_conflicts(
         (): &(),
@@ -196,21 +191,13 @@ struct Inactive;
 
 /// Holds all the TCP socket states.
 pub struct TcpSockets<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext> {
-    port_alloc: PortAlloc<
-        BoundSocketMap<
-            IpPortSpec<I, D>,
-            TcpSocketSpec<I, D, C::Instant, C::ReceiveBuffer, C::SendBuffer>,
-        >,
-    >,
+    port_alloc: PortAlloc<BoundSocketMap<IpPortSpec<I, D>, TcpSocketSpec<I, D, C>>>,
     inactive: IdMap<Inactive>,
-    socketmap: BoundSocketMap<
-        IpPortSpec<I, D>,
-        TcpSocketSpec<I, D, C::Instant, C::ReceiveBuffer, C::SendBuffer>,
-    >,
+    socketmap: BoundSocketMap<IpPortSpec<I, D>, TcpSocketSpec<I, D, C>>,
 }
 
-impl<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer> PortAllocImpl
-    for BoundSocketMap<IpPortSpec<I, D>, TcpSocketSpec<I, D, II, R, S>>
+impl<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext> PortAllocImpl
+    for BoundSocketMap<IpPortSpec<I, D>, TcpSocketSpec<I, D, C>>
 {
     const TABLE_SIZE: NonZeroUsize = nonzero!(20usize);
     const EPHEMERAL_RANGE: RangeInclusive<u16> = 49152..=65535;
