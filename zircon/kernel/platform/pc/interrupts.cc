@@ -235,7 +235,7 @@ bool is_valid_interrupt(unsigned int vector, uint32_t flags) {
 }
 
 unsigned int remap_interrupt(unsigned int vector) {
-  if (vector > NUM_ISA_IRQS) {
+  if (vector >= NUM_ISA_IRQS) {
     return vector;
   }
   return apic_io_isa_to_global(static_cast<uint8_t>(vector));
