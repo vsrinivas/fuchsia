@@ -22,6 +22,57 @@ import 'package:test/test.dart';
 // TODO(fxbug.dev/53292): update to use test size.
 const _timeout = Timeout(Duration(minutes: 5));
 
+class Ffx {
+  static String _ffxPath =
+      Platform.script.resolve('runtime_deps/ffx').toFilePath();
+  static List<String> _ffxArgs =
+      Platform.environment['FUCHSIA_DEVICE_ADDR']?.isNotEmpty
+          ? ['--target', Platform.environment['FUCHSIA_DEVICE_ADDR']]
+          : [];
+  // Convert FUCHSIA_SSH_KEY into an absolute path. Otherwise ffx cannot find
+  // key and complains "Timeout attempting to reach target".
+  // See fxbug.dev/101081.
+  static Map<String, String> _environment =
+      Platform.environment['FUCHSIA_SSH_KEY']?.isNotEmpty
+          ? {
+              'FUCHSIA_SSH_KEY':
+                  File(Platform.environment['FUCHSIA_SSH_KEY']).absolute.path
+            }
+          : {};
+
+  static Future<Process> start([List<String> commandArgs]) {
+    return Process.start(_ffxPath, _ffxArgs + commandArgs,
+        environment: _environment);
+  }
+
+  static Future<ProcessResult> run([List<String> commandArgs]) async {
+    var result = await Process.run(_ffxPath, _ffxArgs + commandArgs,
+        environment: _environment);
+    if (result.exitCode != 0) {
+      throw Exception('Unexpected error running ffx:\n'
+          'command: ffx ${commandArgs.join(" ")}\n'
+          'stdout: ${result.stdout}\n'
+          'stderror: ${result.stderr}\n');
+    }
+    return result;
+  }
+  static Future<bool> expectLog(String tag, String expect) async {
+    var process = await Ffx.start(['log', '--severity', 'TRACE', '--filter', tag]);
+    var success = false;
+    var found = Completer();
+    process.stdout.listen((s) {
+      var line = String.fromCharCodes(s);
+      if (!found.isCompleted && line.contains(expect)) {
+        found.complete();
+        success = true;
+      }
+    });
+    await found.future;
+    await process.kill();
+    return success;
+  }
+}
+
 void printErrorHelp() {
   print('If this test fails, see '
       'https://fuchsia.googlesource.com/a/fuchsia/+/HEAD/src/tests/end_to_end/package_manger/README.md'
@@ -84,6 +135,15 @@ void main() {
 
     printErrorHelp();
   });
+
+  /// A helper function that will create and run the component, then
+  /// destroy the component.
+  Future<bool> runComponentExpect(String url, String name, String expect) async {
+    await Ffx.run(['component', 'run', '--name', name, url]);
+    await Ffx.run(['component', 'destroy', '/core/ffx-laboratory:$name']);
+    return await Ffx.expectLog(name, expect);
+  }
+
   group('Package Manager', () {
     String originalRewriteRuleJson;
     Set<String> originalRepos;
@@ -498,14 +558,16 @@ void main() {
       await repoServer.pkgctlRuleReplace(
           'Setting rewriting rule for new repository', localRewriteRule, 0);
 
-      var response = await sl4fDriver.ssh.run(
-          'run fuchsia-pkg://package-manager-test/$testPackageName#meta/package-manager-sample.cmx');
-      expect(response.exitCode, 0);
-      expect(response.stdout.toString(), 'Hello, World!\n');
-      response = await sl4fDriver.ssh.run(
-          'run fuchsia-pkg://package-manager-test/$testPackageName#meta/package-manager-sample2.cmx');
-      expect(response.exitCode, 0);
-      expect(response.stdout.toString(), 'Hello, World2!\n');
+      var response = await runComponentExpect(
+          'fuchsia-pkg://package-manager-test/$testPackageName#meta/package-manager-sample.cm',
+          '${testPackageName}-1',
+          'Hello, World!');
+      expect(response, isTrue);
+      response = await runComponentExpect(
+          'fuchsia-pkg://package-manager-test/$testPackageName#meta/package-manager-sample2.cm',
+          '${testPackageName}-2',
+          'Hello, World2!');
+      expect(response, isTrue);
 
       await repoServer.pkgctlRuleReplace(
           'Restoring rewriting rule to original state',
@@ -541,14 +603,16 @@ void main() {
       await repoServer.pkgctlRuleReplace(
           'Setting rewriting rule for new repository', localRewriteRule, 0);
 
-      var response = await sl4fDriver.ssh
-          .run('run $repoUrl/$testPackageName#meta/package-manager-sample.cmx');
-      expect(response.exitCode, 0);
-      expect(response.stdout.toString(), 'Hello, World!\n');
-      response = await sl4fDriver.ssh.run(
-          'run $repoUrl/$testPackageName#meta/package-manager-sample2.cmx');
-      expect(response.exitCode, 0);
-      expect(response.stdout.toString(), 'Hello, World2!\n');
+      var response = await runComponentExpect(
+          '$repoUrl/$testPackageName#meta/package-manager-sample.cm',
+          '${testPackageName}-3',
+          'Hello, World!');
+      expect(response, isTrue);
+      response = await runComponentExpect(
+          '$repoUrl/$testPackageName#meta/package-manager-sample2.cm',
+          '${testPackageName}-4',
+          'Hello, World2!');
+      expect(response, isTrue);
 
       await repoServer.pkgctlRuleReplace(
           'Restoring rewriting rule to original state',
