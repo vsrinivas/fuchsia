@@ -10,15 +10,9 @@
 
 namespace flatland {
 
-DefaultFlatlandPresenter::DefaultFlatlandPresenter(async_dispatcher_t* main_dispatcher)
-    : main_dispatcher_(main_dispatcher) {}
-
-void DefaultFlatlandPresenter::SetFrameScheduler(
-    const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler) {
-  FX_DCHECK(main_dispatcher_ == async_get_default_dispatcher());
-  FX_DCHECK(frame_scheduler_.expired()) << "FrameScheduler already set.";
-  frame_scheduler_ = frame_scheduler;
-}
+DefaultFlatlandPresenter::DefaultFlatlandPresenter(async_dispatcher_t* main_dispatcher,
+                                                   scheduling::FrameScheduler& frame_scheduler)
+    : main_dispatcher_(main_dispatcher), frame_scheduler_(frame_scheduler) {}
 
 scheduling::SessionUpdater::UpdateResults DefaultFlatlandPresenter::UpdateSessions(
     const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
@@ -56,34 +50,24 @@ void DefaultFlatlandPresenter::ScheduleUpdateForSession(zx::time requested_prese
                                                         scheduling::SchedulingIdPair id_pair,
                                                         bool unsquashable,
                                                         std::vector<zx::event> release_fences) {
-  if (auto scheduler = frame_scheduler_.lock()) {
-    // TODO(fxbug.dev/61178): The FrameScheduler is not thread-safe, but a lock is not sufficient
-    // since GFX sessions may access the FrameScheduler without passing through this object. Post a
-    // task to the main thread, which is where GFX runs, to account for thread safety.
-    async::PostTask(main_dispatcher_, [thiz = shared_from_this(), scheduler,
-                                       requested_presentation_time, id_pair, unsquashable,
-                                       release_fences = std::move(release_fences)]() mutable {
-      FX_DCHECK(thiz->release_fences_.find(id_pair) == thiz->release_fences_.end());
-      thiz->release_fences_.emplace(id_pair, std::move(release_fences));
-      scheduler->RegisterPresent(id_pair.session_id, {}, id_pair.present_id);
-      scheduler->ScheduleUpdateForSession(requested_presentation_time, id_pair, !unsquashable);
-    });
-  } else {
-    // TODO(fxbug.dev/56290): Account for missing FrameScheduler case.
-    FX_LOGS(WARNING) << "Cannot schedule update for session due to missing FrameScheduler.";
-  }
+  // TODO(fxbug.dev/61178): The FrameScheduler is not thread-safe, but a lock is not sufficient
+  // since GFX sessions may access the FrameScheduler without passing through this object. Post a
+  // task to the main thread, which is where GFX runs, to account for thread safety.
+  async::PostTask(
+      main_dispatcher_, [thiz = shared_from_this(), requested_presentation_time, id_pair,
+                         unsquashable, release_fences = std::move(release_fences)]() mutable {
+        FX_DCHECK(thiz->release_fences_.find(id_pair) == thiz->release_fences_.end());
+        thiz->release_fences_.emplace(id_pair, std::move(release_fences));
+        thiz->frame_scheduler_.RegisterPresent(id_pair.session_id, {}, id_pair.present_id);
+        thiz->frame_scheduler_.ScheduleUpdateForSession(requested_presentation_time, id_pair,
+                                                        !unsquashable);
+      });
 }
 
 std::vector<scheduling::FuturePresentationInfo>
 DefaultFlatlandPresenter::GetFuturePresentationInfos() {
   FX_DCHECK(main_dispatcher_ == async_get_default_dispatcher());
-  if (auto scheduler = frame_scheduler_.lock()) {
-    return scheduler->GetFuturePresentationInfos(kDefaultPredictionSpan);
-  } else {
-    // TODO(fxbug.dev/56290): Account for missing FrameScheduler case.
-    FX_LOGS(WARNING) << "Cannot get future presentation infos due to missing FrameScheduler.";
-    return {};
-  }
+  return frame_scheduler_.GetFuturePresentationInfos(kDefaultPredictionSpan);
 }
 
 void DefaultFlatlandPresenter::RemoveSession(scheduling::SessionId session_id) {
@@ -96,12 +80,7 @@ void DefaultFlatlandPresenter::RemoveSession(scheduling::SessionId session_id) {
     release_fences_.erase(start, end);
   }
 
-  if (auto scheduler = frame_scheduler_.lock()) {
-    scheduler->RemoveSession(session_id);
-  } else {
-    // TODO(fxbug.dev/56290): Account for missing FrameScheduler case.
-    FX_LOGS(WARNING) << "Cannot remove session due to missing FrameScheduler.";
-  }
+  frame_scheduler_.RemoveSession(session_id);
 }
 
 }  // namespace flatland

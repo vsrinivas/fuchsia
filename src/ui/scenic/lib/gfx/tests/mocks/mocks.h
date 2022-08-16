@@ -11,6 +11,7 @@
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/gfx_system.h"
 #include "src/ui/scenic/lib/scenic/scenic.h"
+#include "src/ui/scenic/lib/scheduling/tests/mocks/frame_scheduler_mocks.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -18,7 +19,7 @@ namespace test {
 
 class MockImagePipeUpdater : public ImagePipeUpdater {
  public:
-  MockImagePipeUpdater() : ImagePipeUpdater() {}
+  MockImagePipeUpdater() : ImagePipeUpdater(scheduler_) {}
 
   scheduling::PresentId ScheduleImagePipeUpdate(
       scheduling::SessionId scheduling_id, zx::time presentation_time,
@@ -37,6 +38,7 @@ class MockImagePipeUpdater : public ImagePipeUpdater {
   uint64_t cleanup_image_pipe_count_ = 0;
 
  private:
+  scheduling::test::MockFrameScheduler scheduler_;
   scheduling::PresentId latest_present_id_ = 0;
 };
 

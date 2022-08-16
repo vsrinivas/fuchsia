@@ -44,8 +44,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   auto renderer = std::make_shared<MockFrameRenderer>();
 
   auto frame_scheduler = std::make_unique<DefaultFrameScheduler>(
-      vsync_timing, std::make_unique<ConstantFramePredictor>(constant_prediction_offset));
-  frame_scheduler->Initialize(renderer, {updater});
+      std::make_unique<ConstantFramePredictor>(constant_prediction_offset));
+  frame_scheduler->Initialize(vsync_timing, renderer, {updater});
 
   const bool squashable = fuzzed_data.ConsumeIntegral<bool>();
 

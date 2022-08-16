@@ -13,9 +13,11 @@ namespace scenic_impl {
 
 Session::Session(SessionId id, fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
                  fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener,
+                 scheduling::FrameScheduler& frame_scheduler,
                  std::function<void()> destroy_session_function)
     : id_(id),
       listener_(listener.Bind()),
+      frame_scheduler_(frame_scheduler),
       reporter_(std::make_shared<EventAndErrorReporter>(this)),
       binding_(this, std::move(session_request)),
       destroy_session_func_(std::move(destroy_session_function)),
@@ -28,12 +30,6 @@ Session::~Session() { reporter_->Reset(); }
 
 void Session::set_binding_error_handler(fit::function<void(zx_status_t)> error_handler) {
   binding_.set_error_handler(std::move(error_handler));
-}
-
-void Session::SetFrameScheduler(
-    const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler) {
-  FX_DCHECK(frame_scheduler_.expired()) << "Error: FrameScheduler already set";
-  frame_scheduler_ = frame_scheduler;
 }
 
 void Session::Enqueue(std::vector<fuchsia::ui::scenic::Command> cmds) {
@@ -87,14 +83,11 @@ void Session::Present(uint64_t presentation_time, std::vector<zx::event> acquire
   TRACE_FLOW_END("gfx", "Session::Present", next_present_trace_id_);
   next_present_trace_id_++;
 
-  // TODO(fxbug.dev/56290): Handle the missing frame scheduler case.
-  if (auto scheduler = frame_scheduler_.lock()) {
-    const scheduling::PresentId present_id =
-        scheduler->RegisterPresent(id_, std::move(release_fences));
-    std::get<scheduling::Present1Helper>(present_helper_)
-        .RegisterPresent(present_id, std::move(callback));
-    SchedulePresentRequest(present_id, requested_presentation_time, std::move(acquire_fences));
-  }
+  const scheduling::PresentId present_id =
+      frame_scheduler_.RegisterPresent(id_, std::move(release_fences));
+  std::get<scheduling::Present1Helper>(present_helper_)
+      .RegisterPresent(present_id, std::move(callback));
+  SchedulePresentRequest(present_id, requested_presentation_time, std::move(acquire_fences));
 }
 
 void Session::Present2(fuchsia::ui::scenic::Present2Args args, Present2Callback callback) {
@@ -147,18 +140,15 @@ void Session::Present2(fuchsia::ui::scenic::Present2Args args, Present2Callback 
   TRACE_FLOW_END("gfx", "Session::Present", next_present_trace_id_);
   next_present_trace_id_++;
 
-  // TODO(fxbug.dev/56290): Handle the missing frame scheduler case.
-  if (auto scheduler = frame_scheduler_.lock()) {
-    const scheduling::PresentId present_id =
-        scheduler->RegisterPresent(id_, std::move(*args.mutable_release_fences()));
-    std::get<scheduling::Present2Helper>(present_helper_)
-        .RegisterPresent(present_id, /*present_received_time*/ zx::time(
-                             async_now(async_get_default_dispatcher())));
+  const scheduling::PresentId present_id =
+      frame_scheduler_.RegisterPresent(id_, std::move(*args.mutable_release_fences()));
+  std::get<scheduling::Present2Helper>(present_helper_)
+      .RegisterPresent(present_id, /*present_received_time*/ zx::time(
+                           async_now(async_get_default_dispatcher())));
 
-    InvokeFuturePresentationTimesCallback(args.requested_prediction_span(), std::move(callback));
-    SchedulePresentRequest(present_id, requested_presentation_time,
-                           std::move(*args.mutable_acquire_fences()));
-  }
+  InvokeFuturePresentationTimesCallback(args.requested_prediction_span(), std::move(callback));
+  SchedulePresentRequest(present_id, requested_presentation_time,
+                         std::move(*args.mutable_acquire_fences()));
 }
 
 void Session::SchedulePresentRequest(scheduling::PresentId present_id,
@@ -172,22 +162,17 @@ void Session::SchedulePresentRequest(scheduling::PresentId present_id,
   fence_queue_->QueueTask(
       [this, present_id, requested_presentation_time,
        commands = std::move(commands_pending_present_)]() mutable {
-        if (auto scheduler = frame_scheduler_.lock()) {
-          TRACE_DURATION("gfx", "scenic_impl::Session::ScheduleNextPresent", "session_id", id_,
-                         "requested_presentation_time",
-                         requested_presentation_time.get() / 1'000'000);
-          TRACE_FLOW_END("gfx", "wait_for_fences", SESSION_TRACE_ID(id_, present_id));
+        TRACE_DURATION("gfx", "scenic_impl::Session::ScheduleNextPresent", "session_id", id_,
+                       "requested_presentation_time",
+                       requested_presentation_time.get() / 1'000'000);
+        TRACE_FLOW_END("gfx", "wait_for_fences", SESSION_TRACE_ID(id_, present_id));
 
-          for (auto& cmd : commands) {
-            dispatchers_.at(SystemTypeForCmd(cmd))->DispatchCommand(std::move(cmd), present_id);
-          }
-
-          scheduler->ScheduleUpdateForSession(requested_presentation_time, {id_, present_id},
-                                              /*squashable=*/true);
-        } else {
-          // TODO(fxbug.dev/56290): Handle the missing frame scheduler case.
-          FX_LOGS(WARNING) << "FrameScheduler is missing.";
+        for (auto& cmd : commands) {
+          dispatchers_.at(SystemTypeForCmd(cmd))->DispatchCommand(std::move(cmd), present_id);
         }
+
+        frame_scheduler_.ScheduleUpdateForSession(requested_presentation_time, {id_, present_id},
+                                                  /*squashable=*/true);
       },
       std::move(acquire_fences));
 
@@ -204,19 +189,16 @@ void Session::InvokeFuturePresentationTimesCallback(zx_duration_t requested_pred
                                                     RequestPresentationTimesCallback callback) {
   if (!callback)
     return;
-  // TODO(fxbug.dev/56290): Handle the missing frame scheduler case.
-  if (auto locked_frame_scheduler = frame_scheduler_.lock()) {
-    std::vector<scheduling::FuturePresentationInfo> presentation_infos =
-        locked_frame_scheduler->GetFuturePresentationInfos(zx::duration(requested_prediction_span));
-    std::vector<fuchsia::scenic::scheduling::PresentationInfo> infos;
-    for (auto& presentation_info : presentation_infos) {
-      auto& info = infos.emplace_back();
-      info.set_latch_point(presentation_info.latch_point.get());
-      info.set_presentation_time(presentation_info.presentation_time.get());
-    }
-
-    callback({std::move(infos), num_presents_allowed_});
+  std::vector<scheduling::FuturePresentationInfo> presentation_infos =
+      frame_scheduler_.GetFuturePresentationInfos(zx::duration(requested_prediction_span));
+  std::vector<fuchsia::scenic::scheduling::PresentationInfo> infos;
+  for (auto& presentation_info : presentation_infos) {
+    auto& info = infos.emplace_back();
+    info.set_latch_point(presentation_info.latch_point.get());
+    info.set_presentation_time(presentation_info.presentation_time.get());
   }
+
+  callback({std::move(infos), num_presents_allowed_});
 }
 
 void Session::OnPresented(const std::map<scheduling::PresentId, zx::time>& latched_times,

@@ -33,6 +33,7 @@ class Session final : public fuchsia::ui::scenic::Session {
  public:
   Session(SessionId id, fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
           fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener,
+          scheduling::FrameScheduler& frame_scheduler,
           std::function<void()> destroy_session_function);
   ~Session() override;
 
@@ -63,8 +64,6 @@ class Session final : public fuchsia::ui::scenic::Session {
 
   // |fuchsia::ui::scenic::Session|
   void DeregisterBufferCollection(uint32_t buffer_collection_id) override;
-
-  void SetFrameScheduler(const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler);
 
   void OnPresented(const std::map<scheduling::PresentId, zx::time>& latched_times,
                    scheduling::PresentTimestamps present_times);
@@ -164,7 +163,7 @@ class Session final : public fuchsia::ui::scenic::Session {
 
   std::unordered_map<System::TypeId, CommandDispatcherUniquePtr> dispatchers_;
 
-  std::weak_ptr<scheduling::FrameScheduler> frame_scheduler_;
+  scheduling::FrameScheduler& frame_scheduler_;
 
   std::vector<fuchsia::ui::scenic::Command> commands_pending_present_;
 

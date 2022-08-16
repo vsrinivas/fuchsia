@@ -7,6 +7,7 @@ import("//build/fuzzing/fuzzer.gni")
 fuzzer("frame-scheduler-fuzzer") {
   sources = [ "frame_scheduler_fuzztest.cc" ]
   deps = [
+    "//src/lib/testing/loop_fixture",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
     "//src/ui/scenic/lib/scheduling/tests/mocks:frame_scheduler_mocks",
   ]

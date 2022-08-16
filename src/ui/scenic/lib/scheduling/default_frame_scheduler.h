@@ -26,15 +26,15 @@ namespace scheduling {
 // the frame scheduler should be added to it as well.
 class DefaultFrameScheduler final : public FrameScheduler {
  public:
-  explicit DefaultFrameScheduler(std::shared_ptr<const VsyncTiming> vsync_timing,
-                                 std::unique_ptr<FramePredictor> predictor,
+  explicit DefaultFrameScheduler(std::unique_ptr<FramePredictor> predictor,
                                  inspect::Node inspect_node = inspect::Node(),
                                  metrics::Metrics* metrics_logger = nullptr);
   ~DefaultFrameScheduler();
 
   // Set the renderer and session updaters to be used. Can only be called once.
   // |session_updaters| will be called in this order for every event.
-  void Initialize(std::weak_ptr<FrameRenderer> frame_renderer,
+  void Initialize(std::shared_ptr<const VsyncTiming> vsync_timing,
+                  std::weak_ptr<FrameRenderer> frame_renderer,
                   std::vector<std::weak_ptr<SessionUpdater>> session_updaters);
 
   // |FrameScheduler|
@@ -150,7 +150,7 @@ class DefaultFrameScheduler final : public FrameScheduler {
 
   // References.
   async_dispatcher_t* const dispatcher_;
-  const std::shared_ptr<const VsyncTiming> vsync_timing_;
+  std::shared_ptr<const VsyncTiming> vsync_timing_ = nullptr;
 
   bool initialized_ = false;
   std::weak_ptr<FrameRenderer> frame_renderer_;

@@ -26,17 +26,14 @@ static void RemoveSessionIdFromMap(scheduling::SessionId session_id,
 
 namespace scheduling {
 
-DefaultFrameScheduler::DefaultFrameScheduler(std::shared_ptr<const VsyncTiming> vsync_timing,
-                                             std::unique_ptr<FramePredictor> predictor,
+DefaultFrameScheduler::DefaultFrameScheduler(std::unique_ptr<FramePredictor> predictor,
                                              inspect::Node inspect_node,
                                              metrics::Metrics* metrics_logger)
     : dispatcher_(async_get_default_dispatcher()),
-      vsync_timing_(vsync_timing),
       frame_predictor_(std::move(predictor)),
       inspect_node_(std::move(inspect_node)),
       stats_(inspect_node_.CreateChild("Frame Stats"), metrics_logger),
       weak_factory_(this) {
-  FX_DCHECK(vsync_timing_);
   FX_DCHECK(frame_predictor_);
 
   inspect_frame_number_ = inspect_node_.CreateUint("most_recent_frame_number", frame_number_);
@@ -50,10 +47,11 @@ DefaultFrameScheduler::DefaultFrameScheduler(std::shared_ptr<const VsyncTiming> 
 DefaultFrameScheduler::~DefaultFrameScheduler() {}
 
 void DefaultFrameScheduler::Initialize(
-    std::weak_ptr<FrameRenderer> frame_renderer,
+    std::shared_ptr<const VsyncTiming> vsync_timing, std::weak_ptr<FrameRenderer> frame_renderer,
     std::vector<std::weak_ptr<SessionUpdater>> session_updaters) {
   FX_CHECK(!initialized_);
   initialized_ = true;
+  vsync_timing_ = vsync_timing;
   frame_renderer_ = std::move(frame_renderer);
   session_updaters_ = std::move(session_updaters);
 }

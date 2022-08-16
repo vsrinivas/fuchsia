@@ -40,7 +40,8 @@ class Scenic final : public fuchsia::ui::scenic::Scenic, public scheduling::Sess
         fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) = 0;
   };
 
-  Scenic(sys::ComponentContext* app_context, inspect::Node inspect_node, fit::closure quit_callback,
+  Scenic(sys::ComponentContext* app_context, inspect::Node& inspect_node,
+         scheduling::FrameScheduler& frame_scheduler, fit::closure quit_callback,
          bool use_flatland);
   ~Scenic();
 
@@ -125,8 +126,6 @@ class Scenic final : public fuchsia::ui::scenic::Scenic, public scheduling::Sess
       fit::function<void(zx_koid_t, fidl::InterfaceRequest<fuchsia::ui::views::ViewRefFocused>)>
           vrf_register_function);
 
-  void SetFrameScheduler(const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler);
-
   void InitializeSnapshotService(std::unique_ptr<fuchsia::ui::scenic::internal::Snapshot> snapshot);
 
   fuchsia::ui::scenic::internal::Snapshot* snapshot() { return snapshot_.get(); }
@@ -140,14 +139,13 @@ class Scenic final : public fuchsia::ui::scenic::Scenic, public scheduling::Sess
 
   sys::ComponentContext* const app_context_;
   fit::closure quit_callback_;
-  inspect::Node inspect_node_;
+  inspect::Node& inspect_node_;
+  scheduling::FrameScheduler& frame_scheduler_;
 
   const bool use_flatland_;
 
   // Registered systems, mapped to their TypeId.
   std::unordered_map<System::TypeId, std::shared_ptr<System>> systems_;
-
-  std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
 
   // Session bindings rely on setup of systems_; order matters.
   std::unordered_map<scheduling::SessionId, std::unique_ptr<scenic_impl::Session>> sessions_;

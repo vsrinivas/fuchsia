@@ -9,11 +9,8 @@ source_set("frame_scheduler_mocks") {
     "frame_scheduler_mocks.h",
   ]
   deps = [
+    "//src/lib/testing/loop_fixture",
     "//src/ui/scenic/lib/display/tests:mocks",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
-  ]
-  public_deps = [
-    "//src/ui/scenic/lib/gfx/tests/mocks:util",
-    "//zircon/system/ulib/inspect",
   ]
 }

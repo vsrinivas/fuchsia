@@ -23,11 +23,9 @@ class DefaultFlatlandPresenter final
  public:
   // The |main_dispatcher| must be the dispatcher that GFX sessions run and update on. That thread
   // is typically refered to as the "main thread" or "render thread".
-  explicit DefaultFlatlandPresenter(async_dispatcher_t* main_dispatcher);
-
-  // Sets the FrameScheduler this DefaultFlatlandPresenter will use for frame scheduling calls.
-  // This function should be called once before any Flatland clients begin making API calls.
-  void SetFrameScheduler(const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler);
+  // FrameScheduler is what DefaultFlatlandPresenter will use for frame scheduling calls.
+  DefaultFlatlandPresenter(async_dispatcher_t* main_dispatcher,
+                           scheduling::FrameScheduler& frame_scheduler);
 
   // Return all release fences that were accumulated during calls to UpdateSessions().  The caller
   // takes responsibility for signaling these fences when it is safe for clients to reuse the
@@ -65,7 +63,7 @@ class DefaultFlatlandPresenter final
 
  private:
   async_dispatcher_t* main_dispatcher_;
-  std::weak_ptr<scheduling::FrameScheduler> frame_scheduler_;
+  scheduling::FrameScheduler& frame_scheduler_;
   std::map<scheduling::SchedulingIdPair, std::vector<zx::event>> release_fences_;
   std::vector<zx::event> accumulated_release_fences_;
 

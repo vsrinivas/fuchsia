@@ -19,6 +19,7 @@ source_set("util") {
     "//src/ui/scenic/lib/gfx:gfx",
     "//src/ui/scenic/lib/scenic",
     "//src/ui/scenic/lib/scenic/util",
+    "//src/ui/scenic/lib/scheduling/tests/mocks:frame_scheduler_mocks",
     "//third_party/glm",
     "//zircon/system/ulib/inspect",
   ]

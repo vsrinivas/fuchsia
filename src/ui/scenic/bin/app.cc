@@ -230,8 +230,14 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
       metrics_logger_(
           async_get_default_dispatcher(),
           fidl::ClientEnd<fuchsia_io::Directory>(service::OpenServiceRoot()->TakeChannel())),
+      inspect_node_(std::move(inspect_node)),
+      frame_scheduler_(std::make_unique<scheduling::WindowedFramePredictor>(
+                           config_values_.min_predicted_frame_duration,
+                           scheduling::DefaultFrameScheduler::kInitialRenderDuration,
+                           scheduling::DefaultFrameScheduler::kInitialUpdateDuration),
+                       inspect_node_.CreateChild("FrameScheduler"), &metrics_logger_),
       scenic_(std::make_shared<Scenic>(
-          app_context_.get(), std::move(inspect_node),
+          app_context_.get(), inspect_node_, frame_scheduler_,
           [weak = std::weak_ptr<ShutdownManager>(shutdown_manager_)] {
             if (auto strong = weak.lock()) {
               strong->Shutdown(LifecycleControllerImpl::kShutdownTimeout);
@@ -241,8 +247,8 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
       uber_struct_system_(std::make_shared<flatland::UberStructSystem>()),
       link_system_(
           std::make_shared<flatland::LinkSystem>(uber_struct_system_->GetNextInstanceId())),
-      flatland_presenter_(
-          std::make_shared<flatland::DefaultFlatlandPresenter>(async_get_default_dispatcher())),
+      flatland_presenter_(std::make_shared<flatland::DefaultFlatlandPresenter>(
+          async_get_default_dispatcher(), frame_scheduler_)),
       annotation_registry_(app_context_.get()),
       lifecycle_controller_impl_(app_context_.get(),
                                  std::weak_ptr<ShutdownManager>(shutdown_manager_)) {
@@ -351,10 +357,9 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
 
   escher_ = std::move(escher);
 
-  CreateFrameScheduler(display->vsync_timing());
   InitializeGraphics(display);
   InitializeInput();
-  InitializeHeartbeat();
+  InitializeHeartbeat(*display);
 }
 
 App::~App() {
@@ -363,17 +368,6 @@ App::~App() {
   FX_DCHECK(status == ZX_OK);
   status = fdio_ns_unbind(ns, kDependencyPath);
   FX_DCHECK(status == ZX_OK);
-}
-
-void App::CreateFrameScheduler(std::shared_ptr<const scheduling::VsyncTiming> vsync_timing) {
-  TRACE_DURATION("gfx", "App::CreateFrameScheduler");
-  frame_scheduler_ = std::make_shared<scheduling::DefaultFrameScheduler>(
-      std::move(vsync_timing),
-      std::make_unique<scheduling::WindowedFramePredictor>(
-          config_values_.min_predicted_frame_duration,
-          scheduling::DefaultFrameScheduler::kInitialRenderDuration,
-          scheduling::DefaultFrameScheduler::kInitialUpdateDuration),
-      scenic_->inspect_node()->CreateChild("FrameScheduler"), &metrics_logger_);
 }
 
 void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
@@ -415,7 +409,7 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
   {
     TRACE_DURATION("gfx", "App::InitializeServices[engine]");
     engine_ = std::make_shared<gfx::Engine>(escher_->GetWeakPtr(), gfx_buffer_collection_importer,
-                                            scenic_->inspect_node()->CreateChild("Engine"));
+                                            inspect_node_.CreateChild("Engine"));
 
     if (!config_values_.i_can_haz_flatland) {
       color_converter_ =
@@ -423,7 +417,6 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
     }
   }
 
-  scenic_->SetFrameScheduler(frame_scheduler_);
   annotation_registry_.InitializeWithGfxAnnotationManager(engine_->annotation_manager());
 
   image_pipe_updater_ = std::make_shared<gfx::ImagePipeUpdater>(frame_scheduler_);
@@ -436,8 +429,6 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
   singleton_display_service_->AddPublicService(scenic_->app_context()->outgoing().get());
   display_info_delegate_ = std::make_unique<DisplayInfoDelegate>(display);
   scenic_->SetDisplayInfoDelegate(display_info_delegate_.get());
-
-  flatland_presenter_->SetFrameScheduler(frame_scheduler_);
 
   // Create the snapshotter and pass it to scenic.
   auto snapshotter =
@@ -538,7 +529,7 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
 
     flatland_engine_ = std::make_shared<flatland::Engine>(
         flatland_compositor_, flatland_presenter_, uber_struct_system_, link_system_,
-        scenic_->inspect_node()->CreateChild("FlatlandEngine"), [this] {
+        inspect_node_.CreateChild("FlatlandEngine"), [this] {
           FX_DCHECK(flatland_manager_);
           const auto display = flatland_manager_->GetPrimaryFlatlandDisplayForRendering();
           return display ? std::optional<flatland::TransformHandle>(display->root_transform())
@@ -663,7 +654,7 @@ void App::InitializeInput() {
              zx_koid_t vrf) { input_->RegisterMouseSource(std::move(mouse_source), vrf); });
 
   focus_manager_ = std::make_unique<focus::FocusManager>(
-      scenic_->inspect_node()->CreateChild("FocusManager"),
+      inspect_node_.CreateChild("FocusManager"),
       /*legacy_focus_listener*/ [this](zx_koid_t old_focus, zx_koid_t new_focus) {
         engine_->scene_graph()->OnNewFocusedView(old_focus, new_focus);
       });
@@ -674,7 +665,7 @@ void App::InitializeInput() {
   focus_manager_->Publish(*app_context_);
 }
 
-void App::InitializeHeartbeat() {
+void App::InitializeHeartbeat(display::Display& display) {
   TRACE_DURATION("gfx", "App::InitializeHeartbeat");
   {  // Initialize ViewTreeSnapshotter
 
@@ -738,10 +729,12 @@ void App::InitializeHeartbeat() {
   }
 
   // |session_updaters| will be updated in submission order.
-  frame_scheduler_->Initialize(
+  frame_scheduler_.Initialize(
+      /*vsync_timing*/ display.vsync_timing(),
       /*frame_renderer*/ frame_renderer_,
-      /*session_updaters*/ {scenic_, image_pipe_updater_, flatland_manager_,
-                            screen_capture2_manager_, flatland_presenter_, view_tree_snapshotter_});
+      /*session_updaters*/
+      {scenic_, image_pipe_updater_, flatland_manager_, screen_capture2_manager_,
+       flatland_presenter_, view_tree_snapshotter_});
 }
 
 }  // namespace scenic_impl

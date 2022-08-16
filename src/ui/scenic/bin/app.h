@@ -92,11 +92,9 @@ class App {
  private:
   void InitializeServices(escher::EscherUniquePtr escher,
                           std::shared_ptr<display::Display> display);
-
-  void CreateFrameScheduler(std::shared_ptr<const scheduling::VsyncTiming> vsync_timing);
   void InitializeGraphics(std::shared_ptr<display::Display> display);
   void InitializeInput();
-  void InitializeHeartbeat();
+  void InitializeHeartbeat(display::Display& display);
 
   async::Executor executor_;
   std::unique_ptr<sys::ComponentContext> app_context_;
@@ -104,6 +102,11 @@ class App {
 
   std::shared_ptr<ShutdownManager> shutdown_manager_;
   metrics::MetricsImpl metrics_logger_;
+  inspect::Node inspect_node_;
+
+  // FrameScheduler must be initialized early, since it must outlive all its
+  // dependencies.
+  scheduling::DefaultFrameScheduler frame_scheduler_;
 
   gfx::Sysmem sysmem_;
   std::unique_ptr<display::DisplayManager> display_manager_;
@@ -135,8 +138,6 @@ class App {
 
   std::unique_ptr<input::InputSystem> input_;
   std::unique_ptr<focus::FocusManager> focus_manager_;
-
-  std::shared_ptr<scheduling::DefaultFrameScheduler> frame_scheduler_;
 
   std::shared_ptr<view_tree::ViewTreeSnapshotter> view_tree_snapshotter_;
 

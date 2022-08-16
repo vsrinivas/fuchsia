@@ -14,11 +14,13 @@ namespace scenic_impl {
 
 using fuchsia::ui::scenic::SessionEndpoints;
 
-Scenic::Scenic(sys::ComponentContext* app_context, inspect::Node inspect_node,
-               fit::closure quit_callback, bool use_flatland)
+Scenic::Scenic(sys::ComponentContext* app_context, inspect::Node& inspect_node,
+               scheduling::FrameScheduler& frame_scheduler, fit::closure quit_callback,
+               bool use_flatland)
     : app_context_(app_context),
       quit_callback_(std::move(quit_callback)),
-      inspect_node_(std::move(inspect_node)),
+      inspect_node_(inspect_node),
+      frame_scheduler_(frame_scheduler),
       use_flatland_(use_flatland) {
   FX_DCHECK(app_context_);
 
@@ -43,24 +45,16 @@ void Scenic::SetViewRefFocusedRegisterFunction(
   view_ref_focused_register_ = std::move(vrf_register_function);
 }
 
-void Scenic::SetFrameScheduler(const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler) {
-  FX_DCHECK(!frame_scheduler_) << "Error: FrameScheduler already set";
-  FX_DCHECK(frame_scheduler) << "Error: No FrameScheduler provided";
-  frame_scheduler_ = frame_scheduler;
-}
-
 void Scenic::CloseSession(scheduling::SessionId session_id) {
   FX_LOGS(INFO) << "Scenic::CloseSession() session_id=" << session_id;
 
   sessions_.erase(session_id);
 
-  if (frame_scheduler_) {
-    frame_scheduler_->RemoveSession(session_id);
-    // Schedule a final update to clean up any session leftovers from last frame.
-    auto present_id = frame_scheduler_->RegisterPresent(session_id, /*release_fences*/ {});
-    frame_scheduler_->ScheduleUpdateForSession(zx::time(0), {session_id, present_id},
-                                               /*squashable*/ false);
-  }
+  frame_scheduler_.RemoveSession(session_id);
+  // Schedule a final update to clean up any session leftovers from last frame.
+  auto present_id = frame_scheduler_.RegisterPresent(session_id, /*release_fences*/ {});
+  frame_scheduler_.ScheduleUpdateForSession(zx::time(0), {session_id, present_id},
+                                            /*squashable*/ false);
 }
 
 scheduling::SessionUpdater::UpdateResults Scenic::UpdateSessions(
@@ -137,10 +131,8 @@ void Scenic::CreateSessionImmediately(SessionEndpoints endpoints) {
 
   auto session = std::make_unique<scenic_impl::Session>(
       session_id, std::move(*endpoints.mutable_session()),
-      std::move(*endpoints.mutable_session_listener()), destroy_session_function);
+      std::move(*endpoints.mutable_session_listener()), frame_scheduler_, destroy_session_function);
   FX_DCHECK(session_id == session->id());
-
-  session->SetFrameScheduler(frame_scheduler_);
 
   session->set_binding_error_handler(destroy_session_function);
 

@@ -599,7 +599,6 @@ TEST_F(FrameSchedulerTest, InfinitelyLargePredictionRequest_ShouldBeTruncated) {
 
 TEST_F(FrameSchedulerTest, SessionUpdaters_ShouldBeCalledInOrder) {
   auto scheduler = std::make_unique<DefaultFrameScheduler>(
-      vsync_timing_,
       std::make_unique<ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));
 
   int updater1_counter = 1;
@@ -625,7 +624,7 @@ TEST_F(FrameSchedulerTest, SessionUpdaters_ShouldBeCalledInOrder) {
       });
 
   // Initialization order is call order, so |updater1| should always be called before |updater2|.
-  scheduler->Initialize(mock_renderer_, {updater1, updater2});
+  scheduler->Initialize(vsync_timing_, mock_renderer_, {updater1, updater2});
 
   ScheduleUpdate(scheduler, /*session_id*/ 1, zx::time(0));
   RunLoopFor(zx::duration(vsync_timing_->vsync_interval()));
@@ -642,7 +641,6 @@ TEST_F(FrameSchedulerTest, SessionUpdaters_ShouldBeCalledInOrder) {
 // Verify that we properly observe 4 updates for all session updaters.
 TEST_F(FrameSchedulerTest, MultiUpdaterMultiSession) {
   auto scheduler = std::make_unique<DefaultFrameScheduler>(
-      vsync_timing_,
       std::make_unique<ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));
 
   // Pre-declare the Session IDs used in this test.
@@ -652,7 +650,7 @@ TEST_F(FrameSchedulerTest, MultiUpdaterMultiSession) {
   constexpr SessionId kSession4 = 4;
   auto updater1 = std::make_shared<MockSessionUpdater>();
   auto updater2 = std::make_shared<MockSessionUpdater>();
-  scheduler->Initialize(mock_renderer_, {updater1, updater2});
+  scheduler->Initialize(vsync_timing_, mock_renderer_, {updater1, updater2});
 
   ScheduleUpdate(scheduler, kSession1, zx::time(2));
   ScheduleUpdate(scheduler, kSession2, zx::time(3));

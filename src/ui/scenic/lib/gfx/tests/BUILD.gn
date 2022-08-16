@@ -31,8 +31,6 @@ source_set("testing_deps") {
     "session_test.h",
     "view_tree_session_test.cc",
     "view_tree_session_test.h",
-    "vk_session_handler_test.cc",
-    "vk_session_handler_test.h",
     "vk_session_test.cc",
     "vk_session_test.h",
     "vk_util.cc",

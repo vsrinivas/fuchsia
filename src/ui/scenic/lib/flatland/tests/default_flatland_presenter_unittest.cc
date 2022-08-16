@@ -34,56 +34,22 @@ namespace {
 // tasks posted by the DefaultFlatlandPresenter to run without blocking the worker threads.
 class DefaultFlatlandPresenterTest : public gtest::RealLoopFixture {
  public:
-  std::shared_ptr<DefaultFlatlandPresenter> CreateDefaultFlatlandPresenter() {
-    return std::make_shared<DefaultFlatlandPresenter>(dispatcher());
+  std::shared_ptr<DefaultFlatlandPresenter> CreateDefaultFlatlandPresenter(
+      scheduling::FrameScheduler& scheduler) {
+    return std::make_shared<DefaultFlatlandPresenter>(dispatcher(), scheduler);
   }
 };
 
 }  // namespace
 
-TEST_F(DefaultFlatlandPresenterTest, NoFrameSchedulerSet) {
-  auto presenter = CreateDefaultFlatlandPresenter();
-
-  const scheduling::SessionId kSessionId = 1;
-  const scheduling::PresentId kPresentId = 2;
-
-  // No function should crash, even though there is no FrameScheduler.
-  presenter->ScheduleUpdateForSession(zx::time(123), {kSessionId, kPresentId}, true,
-                                      /*release_fences=*/{});
-  RunLoopUntilIdle();
-
-  presenter->RemoveSession(kSessionId);
-  RunLoopUntilIdle();
-}
-
-TEST_F(DefaultFlatlandPresenterTest, FrameSchedulerExpired) {
-  auto frame_scheduler = std::make_shared<scheduling::test::MockFrameScheduler>();
-
-  auto presenter = CreateDefaultFlatlandPresenter();
-  presenter->SetFrameScheduler(frame_scheduler);
-
-  frame_scheduler.reset();
-
-  const scheduling::SessionId kSessionId = 1;
-  const scheduling::PresentId kPresentId = 2;
-
-  // No function should crash, even though the FrameScheduler has expired.
-  presenter->ScheduleUpdateForSession(zx::time(123), {kSessionId, kPresentId}, true,
-                                      /*release_fences=*/{});
-  RunLoopUntilIdle();
-
-  presenter->RemoveSession(kSessionId);
-  RunLoopUntilIdle();
-}
-
 TEST_F(DefaultFlatlandPresenterTest, RegisterPresentForwardsToFrameScheduler) {
-  auto frame_scheduler = std::make_shared<scheduling::test::MockFrameScheduler>();
+  scheduling::test::MockFrameScheduler frame_scheduler;
 
   // Capture the relevant arguments of the RegisterPresent() call.
   scheduling::SessionId last_session_id = scheduling::kInvalidSessionId;
   scheduling::PresentId last_present_id = scheduling::kInvalidPresentId;
 
-  frame_scheduler->set_register_present_callback(
+  frame_scheduler.set_register_present_callback(
       [&last_session_id, &last_present_id](scheduling::SessionId session_id,
                                            std::vector<zx::event> release_fences,
                                            scheduling::PresentId present_id) {
@@ -91,8 +57,7 @@ TEST_F(DefaultFlatlandPresenterTest, RegisterPresentForwardsToFrameScheduler) {
         last_present_id = present_id;
       });
 
-  auto presenter = CreateDefaultFlatlandPresenter();
-  presenter->SetFrameScheduler(frame_scheduler);
+  auto presenter = CreateDefaultFlatlandPresenter(frame_scheduler);
 
   const scheduling::SessionId kSessionId = 2;
   const scheduling::PresentId present_id = scheduling::GetNextPresentId();
@@ -105,7 +70,7 @@ TEST_F(DefaultFlatlandPresenterTest, RegisterPresentForwardsToFrameScheduler) {
 }
 
 TEST_F(DefaultFlatlandPresenterTest, ScheduleUpdateForSessionForwardsToFrameScheduler) {
-  auto frame_scheduler = std::make_shared<scheduling::test::MockFrameScheduler>();
+  scheduling::test::MockFrameScheduler frame_scheduler;
 
   // Capture the relevant arguments of the ScheduleUpdateForSession() call.
   zx::time last_presentation_time = zx::time(0);
@@ -115,7 +80,7 @@ TEST_F(DefaultFlatlandPresenterTest, ScheduleUpdateForSessionForwardsToFrameSche
   });
   bool last_squashable = false;
 
-  frame_scheduler->set_schedule_update_for_session_callback(
+  frame_scheduler.set_schedule_update_for_session_callback(
       [&last_presentation_time, &last_id_pair, &last_squashable](
           zx::time presentation_time, scheduling::SchedulingIdPair id_pair, bool squashable) {
         last_presentation_time = presentation_time;
@@ -123,8 +88,7 @@ TEST_F(DefaultFlatlandPresenterTest, ScheduleUpdateForSessionForwardsToFrameSche
         last_squashable = squashable;
       });
 
-  auto presenter = CreateDefaultFlatlandPresenter();
-  presenter->SetFrameScheduler(frame_scheduler);
+  auto presenter = CreateDefaultFlatlandPresenter(frame_scheduler);
 
   const auto kIdPair = scheduling::SchedulingIdPair({
       .session_id = 1,
@@ -143,16 +107,15 @@ TEST_F(DefaultFlatlandPresenterTest, ScheduleUpdateForSessionForwardsToFrameSche
 }
 
 TEST_F(DefaultFlatlandPresenterTest, RemoveSessionForwardsToFrameScheduler) {
-  auto frame_scheduler = std::make_shared<scheduling::test::MockFrameScheduler>();
+  scheduling::test::MockFrameScheduler frame_scheduler;
 
   // Capture the relevant arguments of the ScheduleUpdateForSession() call.
   scheduling::SessionId last_session_id = scheduling::kInvalidSessionId;
 
-  frame_scheduler->set_remove_session_callback(
+  frame_scheduler.set_remove_session_callback(
       [&last_session_id](scheduling::SessionId session_id) { last_session_id = session_id; });
 
-  auto presenter = CreateDefaultFlatlandPresenter();
-  presenter->SetFrameScheduler(frame_scheduler);
+  auto presenter = CreateDefaultFlatlandPresenter(frame_scheduler);
 
   const scheduling::SessionId kSessionId = 1;
 
@@ -163,13 +126,13 @@ TEST_F(DefaultFlatlandPresenterTest, RemoveSessionForwardsToFrameScheduler) {
 }
 
 TEST_F(DefaultFlatlandPresenterTest, GetFuturePresentationInfosForwardsToFrameScheduler) {
-  auto frame_scheduler = std::make_shared<scheduling::test::MockFrameScheduler>();
+  scheduling::test::MockFrameScheduler frame_scheduler;
 
   // Capture the relevant arguments of the GetFuturePresentationInfos() call.
   zx::duration last_requested_prediction_span;
   const zx::time kLatchPoint = zx::time(15122);
   const zx::time kPresentationTime = zx::time(15410);
-  frame_scheduler->set_get_future_presentation_infos_callback(
+  frame_scheduler.set_get_future_presentation_infos_callback(
       [&last_requested_prediction_span, kLatchPoint,
        kPresentationTime](zx::duration requested_prediction_span) {
         last_requested_prediction_span = requested_prediction_span;
@@ -179,8 +142,7 @@ TEST_F(DefaultFlatlandPresenterTest, GetFuturePresentationInfosForwardsToFrameSc
         return presentation_infos;
       });
 
-  auto presenter = CreateDefaultFlatlandPresenter();
-  presenter->SetFrameScheduler(frame_scheduler);
+  auto presenter = CreateDefaultFlatlandPresenter(frame_scheduler);
 
   std::vector<scheduling::FuturePresentationInfo> presentation_infos =
       presenter->GetFuturePresentationInfos();
@@ -204,12 +166,10 @@ static std::vector<zx::event> TakeReleaseFences(
 }
 
 TEST_F(DefaultFlatlandPresenterTest, TakeReleaseFences) {
-  auto presenter = CreateDefaultFlatlandPresenter();
-
   // The frame scheduler isn't actually used for this test, although it *is* required for the
   // presenter to properly stash the release fences (not inherently, just an implementation detail).
-  auto frame_scheduler = std::make_shared<scheduling::test::MockFrameScheduler>();
-  presenter->SetFrameScheduler(frame_scheduler);
+  scheduling::test::MockFrameScheduler frame_scheduler;
+  auto presenter = CreateDefaultFlatlandPresenter(frame_scheduler);
 
   const scheduling::SessionId kSessionIdA = 3;
   const scheduling::SessionId kSessionIdB = 7;
@@ -287,7 +247,7 @@ TEST_F(DefaultFlatlandPresenterTest, TakeReleaseFences) {
 }
 
 TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
-  auto frame_scheduler = std::make_shared<scheduling::test::MockFrameScheduler>();
+  scheduling::test::MockFrameScheduler frame_scheduler;
 
   // The FrameScheduler will be accessed in a thread-safe way, so the test instead collects the
   // registered presents and scheduled updates and ensures each function was called the correct
@@ -298,7 +258,7 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
   // Also use a generic function call counter to test mutual exclusion between function calls.
   size_t function_count = 0;
 
-  frame_scheduler->set_register_present_callback(
+  frame_scheduler.set_register_present_callback(
       [&registered_presents, &function_count](scheduling::SessionId session_id,
                                               std::vector<zx::event> release_fences,
                                               scheduling::PresentId present_id) {
@@ -306,7 +266,7 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
         ++function_count;
       });
 
-  frame_scheduler->set_schedule_update_for_session_callback(
+  frame_scheduler.set_schedule_update_for_session_callback(
       [&scheduled_updates, &function_count](zx::time presentation_time,
                                             scheduling::SchedulingIdPair id_pair, bool squashable) {
         scheduled_updates.insert(id_pair);
@@ -314,7 +274,7 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
         ++function_count;
       });
 
-  frame_scheduler->set_get_future_presentation_infos_callback(
+  frame_scheduler.set_get_future_presentation_infos_callback(
       [&function_count](zx::duration requested_prediction_span)
           -> std::vector<scheduling::FuturePresentationInfo> {
         ++function_count;
@@ -322,8 +282,7 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
         return infos;
       });
 
-  auto presenter = CreateDefaultFlatlandPresenter();
-  presenter->SetFrameScheduler(frame_scheduler);
+  auto presenter = CreateDefaultFlatlandPresenter(frame_scheduler);
 
   // Start 10 "sessions", each of which registers 100 presents and schedules 100 updates.
   static constexpr uint64_t kNumSessions = 10;
@@ -409,12 +368,12 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
   for (uint64_t i = 0; i < kNumGfxPresents; ++i) {
     // RegisterPresent() is one of the three functions being tested.
     auto present_id = scheduling::GetNextPresentId();
-    frame_scheduler->RegisterPresent(kGfxSessionId, /*release_fences=*/{}, present_id);
+    frame_scheduler.RegisterPresent(kGfxSessionId, /*release_fences=*/{}, present_id);
     gfx_presents.push_back(present_id);
 
     // ScheduleUpdateForSession() is the second function being tested.
-    frame_scheduler->ScheduleUpdateForSession(zx::time(0), {kGfxSessionId, present_id},
-                                              /*squashable=*/true);
+    frame_scheduler.ScheduleUpdateForSession(zx::time(0), {kGfxSessionId, present_id},
+                                             /*squashable=*/true);
   }
 
   {

@@ -28,7 +28,6 @@ class GfxSystemTest : public scenic_impl::test::ScenicTest {
  private:
   void InitializeScenic(std::shared_ptr<Scenic> scenic) override;
 
-  std::shared_ptr<scheduling::DefaultFrameScheduler> frame_scheduler_;
   std::shared_ptr<Engine> engine_;
 
   std::weak_ptr<GfxSystem> gfx_system_;

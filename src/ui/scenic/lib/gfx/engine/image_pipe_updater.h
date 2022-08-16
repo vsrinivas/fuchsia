@@ -40,7 +40,7 @@ using PresentImageCallback = fuchsia::images::ImagePipe2::PresentImageCallback;
 class ImagePipeUpdater : public scheduling::SessionUpdater,
                          public std::enable_shared_from_this<ImagePipeUpdater> {
  public:
-  ImagePipeUpdater(const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler);
+  ImagePipeUpdater(scheduling::FrameScheduler& frame_scheduler);
   ~ImagePipeUpdater();
 
   // Called in ImagePipe::PresentImage(). Waits until the |acquire_fences| for an update have been
@@ -76,9 +76,6 @@ class ImagePipeUpdater : public scheduling::SessionUpdater,
     scheduling::Present1Helper present1_helper;
   };
 
-  // Constructor for test.
-  ImagePipeUpdater();
-
   // Destroys all fence listeners for |scheduling_id| up to, but not including, |present_id|.
   void RemoveFenceListenersPriorTo(scheduling::SessionId scheduling_id,
                                    scheduling::PresentId present_id);
@@ -90,7 +87,7 @@ class ImagePipeUpdater : public scheduling::SessionUpdater,
   // Map from SessionId to an ImagePipe and its corresponding Present1Helper.
   std::unordered_map<scheduling::SessionId, Pipe> image_pipes_;
 
-  std::weak_ptr<scheduling::FrameScheduler> frame_scheduler_;
+  scheduling::FrameScheduler& frame_scheduler_;
 };
 
 }  // namespace gfx

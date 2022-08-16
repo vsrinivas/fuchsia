@@ -172,7 +172,6 @@ class InputSystemTest : public scenic_impl::test::ScenicTest {
 
   sys::testing::ComponentContextProvider context_provider_;
   inspect::Node inspect_node_;
-  std::shared_ptr<scheduling::DefaultFrameScheduler> frame_scheduler_;
   std::shared_ptr<scenic_impl::gfx::Engine> engine_;
   std::shared_ptr<scenic_impl::display::Display> display_;
   std::shared_ptr<view_tree::ViewTreeSnapshotter> view_tree_snapshotter_;

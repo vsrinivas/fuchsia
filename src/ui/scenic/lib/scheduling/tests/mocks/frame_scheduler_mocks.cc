@@ -95,7 +95,6 @@ void MockFrameRenderer::EndFrame(const Timestamps& timestamps) {
 
 void MockFrameRenderer::EndFrame() {
   FX_CHECK(!frames_.empty());
-  auto& next_frame = frames_.front();
 
   FrameRenderer::Timestamps timestamps;
   timestamps.render_done_time = Now();

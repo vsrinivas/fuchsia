@@ -214,9 +214,6 @@ void InputSystemTest::InitializeScenic(std::shared_ptr<Scenic> scenic) {
   display_ = std::make_unique<Display>(
       /*id*/ 0, test_display_width_px(), test_display_height_px());
   engine_ = std::make_shared<Engine>(escher::EscherWeakPtr());
-  frame_scheduler_ = std::make_shared<DefaultFrameScheduler>(
-      display_->vsync_timing(),
-      std::make_unique<ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));
 
   std::function<void(zx_koid_t)> request_focus = [this, use_auto_focus =
                                                             auto_focus_behavior()](zx_koid_t koid) {
@@ -235,7 +232,6 @@ void InputSystemTest::InitializeScenic(std::shared_ptr<Scenic> scenic) {
                                     /* sysmem */ nullptr,
                                     /* display_manager */ nullptr,
                                     /*image_pipe_updater*/ nullptr);
-  scenic->SetFrameScheduler(frame_scheduler_);
 
   // TODO(fxbug.dev/72919): There's a bunch of logic copied from app.cc here. This will be removed
   // when moving out the integration tests from this folder.
@@ -260,7 +256,8 @@ void InputSystemTest::InitializeScenic(std::shared_ptr<Scenic> scenic) {
         std::move(subtrees), std::move(subscribers));
   }
 
-  frame_scheduler_->Initialize(/*frame_renderer*/ engine_,
+  frame_scheduler_->Initialize(/*vsync_timing*/ display_->vsync_timing(),
+                               /*frame_renderer*/ engine_,
                                /*session_updaters*/ {scenic, view_tree_snapshotter_});
 }
 

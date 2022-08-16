@@ -13,6 +13,7 @@
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/ui/scenic/lib/scenic/scenic.h"
+#include "src/ui/scenic/lib/scheduling/default_frame_scheduler.h"
 
 namespace scenic_impl::test {
 
@@ -39,6 +40,8 @@ class ScenicTest : public ::gtest::TestLoopFixture {
 
   bool use_flatland_ = false;
   std::unique_ptr<sys::ComponentContext> context_;
+  std::unique_ptr<scheduling::DefaultFrameScheduler> frame_scheduler_;
+  inspect::Node inspect_node_;
   std::shared_ptr<Scenic> scenic_;
 };
 

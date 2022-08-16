@@ -11,19 +11,12 @@
 namespace scenic_impl {
 namespace gfx {
 
-ImagePipeUpdater::ImagePipeUpdater(
-    const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler)
-    : frame_scheduler_(frame_scheduler) {
-  FX_DCHECK(frame_scheduler);
-}
-
-ImagePipeUpdater::ImagePipeUpdater() {}
+ImagePipeUpdater::ImagePipeUpdater(scheduling::FrameScheduler& frame_scheduler)
+    : frame_scheduler_(frame_scheduler) {}
 
 ImagePipeUpdater::~ImagePipeUpdater() {
-  if (auto scheduler = frame_scheduler_.lock()) {
-    for (const auto& [scheduling_id, _] : image_pipes_) {
-      scheduler->RemoveSession(scheduling_id);
-    }
+  for (const auto& [scheduling_id, _] : image_pipes_) {
+    frame_scheduler_.RemoveSession(scheduling_id);
   }
 }
 
@@ -42,38 +35,34 @@ scheduling::PresentId ImagePipeUpdater::ScheduleImagePipeUpdate(
   }
 
   auto& pipe = image_pipes_.at(scheduling_id);
-  if (auto scheduler = frame_scheduler_.lock()) {
-    present_id = scheduler->RegisterPresent(scheduling_id, std::move(release_fences));
-    const scheduling::SchedulingIdPair id_pair{scheduling_id, present_id};
+  present_id = frame_scheduler_.RegisterPresent(scheduling_id, std::move(release_fences));
+  const scheduling::SchedulingIdPair id_pair{scheduling_id, present_id};
 
-    pipe.present1_helper.RegisterPresent(present_id, std::move(callback));
+  pipe.present1_helper.RegisterPresent(present_id, std::move(callback));
 
-    auto [it, success] = fence_listeners_.emplace(id_pair, std::move(acquire_fences));
-    FX_DCHECK(success);
+  auto [it, success] = fence_listeners_.emplace(id_pair, std::move(acquire_fences));
+  FX_DCHECK(success);
 
-    const auto trace_id = SESSION_TRACE_ID(scheduling_id, present_id);
-    TRACE_FLOW_BEGIN("gfx", "wait_for_fences", trace_id);
+  const auto trace_id = SESSION_TRACE_ID(scheduling_id, present_id);
+  TRACE_FLOW_BEGIN("gfx", "wait_for_fences", trace_id);
 
-    // Set callback for the acquire fence listener.
-    auto& fence_listener = it->second;
-    fence_listener.WaitReadyAsync(
-        [weak = weak_from_this(), id_pair, presentation_time, trace_id]() mutable {
-          auto this_locked = weak.lock();
-          if (!this_locked)
-            return;
-          TRACE_DURATION("gfx", "ImagePipeUpdater::ScheduleImagePipeUpdate::fences_ready");
-          TRACE_FLOW_END("gfx", "wait_for_fences", trace_id);
+  // Set callback for the acquire fence listener.
+  auto& fence_listener = it->second;
+  fence_listener.WaitReadyAsync(
+      [weak = weak_from_this(), id_pair, presentation_time, trace_id]() mutable {
+        auto this_locked = weak.lock();
+        if (!this_locked)
+          return;
+        TRACE_DURATION("gfx", "ImagePipeUpdater::ScheduleImagePipeUpdate::fences_ready");
+        TRACE_FLOW_END("gfx", "wait_for_fences", trace_id);
 
-          if (auto locked_frame_scheduler = this_locked->frame_scheduler_.lock()) {
-            locked_frame_scheduler->ScheduleUpdateForSession(presentation_time, id_pair,
-                                                             /*squashable=*/true);
-          }
+        this_locked->frame_scheduler_.ScheduleUpdateForSession(presentation_time, id_pair,
+                                                               /*squashable=*/true);
 
-          // Release fences have been moved into frame scheduler. Delete the remaining fence
-          // listener.
-          this_locked->fence_listeners_.erase(id_pair);
-        });
-  }
+        // Release fences have been moved into frame scheduler. Delete the remaining fence
+        // listener.
+        this_locked->fence_listeners_.erase(id_pair);
+      });
 
   return present_id;
 }
@@ -129,13 +118,11 @@ void ImagePipeUpdater::CleanupImagePipe(scheduling::SessionId scheduling_id) {
 
   // Remove all old updates and schedule a new dummy update to ensure we draw a new clean frame
   // without the removed pipe.
-  if (auto scheduler = frame_scheduler_.lock()) {
-    scheduler->RemoveSession(scheduling_id);
-    const auto present_id = scheduler->RegisterPresent(scheduling_id, /*release_fences*/ {});
-    scheduler->ScheduleUpdateForSession(/*presentation_time*/ zx::time(0),
-                                        /*id_pair*/ {scheduling_id, present_id},
-                                        /*squashable=*/true);
-  }
+  frame_scheduler_.RemoveSession(scheduling_id);
+  const auto present_id = frame_scheduler_.RegisterPresent(scheduling_id, /*release_fences*/ {});
+  frame_scheduler_.ScheduleUpdateForSession(/*presentation_time*/ zx::time(0),
+                                            /*id_pair*/ {scheduling_id, present_id},
+                                            /*squashable=*/true);
 }
 
 }  // namespace gfx

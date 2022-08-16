@@ -46,8 +46,7 @@ class ImagePipeUpdaterTest : public ::gtest::TestLoopFixture {
  public:
   // | ::testing::Test |
   void SetUp() override {
-    scheduler_ = std::make_shared<scheduling::test::MockFrameScheduler>();
-    scheduler_->set_schedule_update_for_session_callback(
+    scheduler_.set_schedule_update_for_session_callback(
         [this](auto...) { ++schedule_call_count_; });
     image_pipe_updater_ = std::make_shared<ImagePipeUpdater>(scheduler_);
     SessionContext context{};
@@ -57,7 +56,6 @@ class ImagePipeUpdaterTest : public ::gtest::TestLoopFixture {
 
   // | ::testing::Test |
   void TearDown() override {
-    scheduler_.reset();
     image_pipe_updater_.reset();
     image_pipe_.reset();
     session_.reset();
@@ -66,7 +64,7 @@ class ImagePipeUpdaterTest : public ::gtest::TestLoopFixture {
   int64_t schedule_call_count_ = 0;
   int64_t remove_session_call_count_ = 0;
 
-  std::shared_ptr<scheduling::test::MockFrameScheduler> scheduler_;
+  scheduling::test::MockFrameScheduler scheduler_;
   std::shared_ptr<ImagePipeUpdater> image_pipe_updater_;
   fxl::RefPtr<MockImagePipe> image_pipe_;
   std::unique_ptr<gfx::Session> session_;
@@ -82,10 +80,10 @@ TEST_F(ImagePipeUpdaterTest, CleansUpCorrectly) {
       /*acquire_fences=*/{}, std::move(release_fences1), /*callback=*/[](auto...) {});
 
   std::vector<std::pair<scheduling::SessionId, int32_t>> result;
-  scheduler_->set_remove_session_callback([&result](scheduling::SessionId session_id) {
+  scheduler_.set_remove_session_callback([&result](scheduling::SessionId session_id) {
     result.push_back({session_id, 1});
   });
-  scheduler_->set_schedule_update_for_session_callback(
+  scheduler_.set_schedule_update_for_session_callback(
       [&result](zx::time, scheduling::SchedulingIdPair id_pair, bool) {
         result.push_back({id_pair.session_id, 2});
       });

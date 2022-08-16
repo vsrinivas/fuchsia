@@ -41,6 +41,7 @@ source_set("frame_scheduler") {
     ":vsync_timing",
     "//src/ui/scenic/lib/utils",
     "//third_party/cobalt/src/lib/client/cpp:buckets_config",
+    "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/trace",
   ]
 }

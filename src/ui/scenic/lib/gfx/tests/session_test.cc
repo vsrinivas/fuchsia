@@ -15,11 +15,11 @@ void SessionTest::SetUp() {
   ErrorReportingTest::SetUp();
 
   frame_scheduler_ = std::make_shared<scheduling::DefaultFrameScheduler>(
-      std::make_shared<scheduling::VsyncTiming>(),
       std::make_unique<scheduling::ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));
 
-  image_pipe_updater_ = std::make_shared<ImagePipeUpdater>(frame_scheduler_);
-  frame_scheduler_->Initialize(std::weak_ptr<scheduling::FrameRenderer>(), {image_pipe_updater_});
+  image_pipe_updater_ = std::make_shared<ImagePipeUpdater>(*frame_scheduler_);
+  frame_scheduler_->Initialize(std::make_shared<scheduling::VsyncTiming>(),
+                               std::weak_ptr<scheduling::FrameRenderer>(), {image_pipe_updater_});
 
   session_context_ = CreateSessionContext();
   session_ = CreateSession();

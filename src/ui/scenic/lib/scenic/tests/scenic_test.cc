@@ -6,14 +6,19 @@
 
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
+#include "src/ui/scenic/lib/scheduling/constant_frame_predictor.h"
+
 namespace scenic_impl {
 namespace test {
 
 void ScenicTest::SetUp() {
   sys::testing::ComponentContextProvider provider;
   context_ = provider.TakeContext();
+  frame_scheduler_ = std::make_unique<scheduling::DefaultFrameScheduler>(
+      std::make_unique<scheduling::ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));
   scenic_ = std::make_shared<Scenic>(
-      context_.get(), inspect::Node(), [this] { QuitLoop(); }, use_flatland_);
+      context_.get(), inspect_node_, *frame_scheduler_, [this] { QuitLoop(); },
+      /*use_flatland=*/false);
   InitializeScenic(scenic_);
 }
 

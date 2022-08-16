@@ -69,22 +69,15 @@ class ScenicSessionTest : public ::gtest::TestLoopFixture {
     std::unordered_map<System::TypeId, CommandDispatcherUniquePtr> dispatchers;
     dispatchers[System::TypeId::kGfx] = CommandDispatcherUniquePtr(dispatcher_.get(), [](auto) {});
     session.SetCommandDispatchers(std::move(dispatchers));
-    session.SetFrameScheduler(scheduler_);
   }
 
   std::unique_ptr<MockGfxSession> dispatcher_;
-  std::shared_ptr<MockFrameScheduler> scheduler_;
+  MockFrameScheduler scheduler_;
 
  protected:
-  void SetUp() override {
-    dispatcher_ = std::make_unique<MockGfxSession>();
-    scheduler_ = std::make_shared<MockFrameScheduler>();
-  }
+  void SetUp() override { dispatcher_ = std::make_unique<MockGfxSession>(); }
 
-  void TearDown() override {
-    scheduler_.reset();
-    dispatcher_.reset();
-  }
+  void TearDown() override { dispatcher_.reset(); }
 
   class TestSessionListener : public fuchsia::ui::scenic::SessionListener {
    public:
@@ -109,7 +102,7 @@ TEST_F(ScenicSessionTest, EventReporterFiltersViewDetachedAndAttachedEvents) {
 
   fuchsia::ui::scenic::SessionPtr session_ptr;
   scenic_impl::Session session(/*id=*/1, session_ptr.NewRequest(),
-                               std::move(session_listener_handle),
+                               std::move(session_listener_handle), scheduler_,
                                /*destroy_session_function*/ [] {});
   InitializeSession(session);
 
@@ -185,7 +178,7 @@ TEST_F(ScenicSessionTest, ScheduleUpdateOutOfOrder_ShouldGiveErrorAndDestroySess
   fuchsia::ui::scenic::SessionPtr session_ptr;
   bool session_destroyed = false;
   scenic_impl::Session session(
-      /*id=*/1, session_ptr.NewRequest(), /*listener=*/nullptr,
+      /*id=*/1, session_ptr.NewRequest(), /*listener=*/nullptr, scheduler_,
       /*destroy_session_function*/ [&session_destroyed] { session_destroyed = true; });
   InitializeSession(session);
   std::string last_error;
@@ -203,7 +196,7 @@ TEST_F(ScenicSessionTest, SchedulePresent2UpdatesOutOfOrder_ShouldGiveErrorAndDe
   fuchsia::ui::scenic::SessionPtr session_ptr;
   bool session_destroyed = false;
   scenic_impl::Session session(
-      /*id=*/1, session_ptr.NewRequest(), /*listener=*/nullptr,
+      /*id=*/1, session_ptr.NewRequest(), /*listener=*/nullptr, scheduler_,
       /*destroy_session_function*/ [&session_destroyed] { session_destroyed = true; });
   InitializeSession(session);
   std::string last_error;
@@ -221,7 +214,7 @@ TEST_F(ScenicSessionTest, ScheduleUpdateInOrder_ShouldBeFine) {
   fuchsia::ui::scenic::SessionPtr session_ptr;
   bool session_destroyed = false;
   scenic_impl::Session session(
-      /*id=*/1, session_ptr.NewRequest(), /*listener=*/nullptr,
+      /*id=*/1, session_ptr.NewRequest(), /*listener=*/nullptr, scheduler_,
       /*destroy_session_function*/ [&session_destroyed] { session_destroyed = true; });
   InitializeSession(session);
   std::string last_error;
@@ -237,7 +230,7 @@ TEST_F(ScenicSessionTest, SchedulePresent2UpdateInOrder_ShouldBeFine) {
   fuchsia::ui::scenic::SessionPtr session_ptr;
   bool session_destroyed = false;
   scenic_impl::Session session(
-      /*id=*/1, session_ptr.NewRequest(), /*listener=*/nullptr,
+      /*id=*/1, session_ptr.NewRequest(), /*listener=*/nullptr, scheduler_,
       /*destroy_session_function*/ [&session_destroyed] { session_destroyed = true; });
   InitializeSession(session);
   std::string last_error;
@@ -253,7 +246,7 @@ TEST_F(ScenicSessionTest, PresentMoreThanAllowed_ShouldGiveError) {
   fuchsia::ui::scenic::SessionPtr session_ptr;
   bool session_destroyed = false;
   scenic_impl::Session session(
-      /*id=*/1, session_ptr.NewRequest(), /*listener=*/nullptr,
+      /*id=*/1, session_ptr.NewRequest(), /*listener=*/nullptr, scheduler_,
       /*destroy_session_function*/ [&session_destroyed] { session_destroyed = true; });
   InitializeSession(session);
   std::string last_error;
@@ -276,7 +269,7 @@ TEST_F(ScenicSessionTest, Present2MoreThanAllowed_ShouldGiveErrorAndDestroySessi
   fuchsia::ui::scenic::SessionPtr session_ptr;
   bool session_destroyed = false;
   scenic_impl::Session session(
-      /*id=*/1, session_ptr.NewRequest(), /*listener=*/nullptr,
+      /*id=*/1, session_ptr.NewRequest(), /*listener=*/nullptr, scheduler_,
       /*destroy_session_function*/ [&session_destroyed] { session_destroyed = true; });
   InitializeSession(session);
   std::string last_error;
@@ -298,7 +291,7 @@ TEST_F(ScenicSessionTest, TriggeringOnPresented_ShouldIncrementPresentsAllowed) 
   fuchsia::ui::scenic::SessionPtr session_ptr;
   bool session_destroyed = false;
   scenic_impl::Session session(
-      /*id=*/1, session_ptr.NewRequest(), /*listener=*/nullptr,
+      /*id=*/1, session_ptr.NewRequest(), /*listener=*/nullptr, scheduler_,
       /*destroy_session_function*/ [&session_destroyed] { session_destroyed = true; });
   InitializeSession(session);
   std::string last_error;
@@ -331,7 +324,7 @@ TEST_F(ScenicSessionTest, TriggeringPresent2Callback_ShouldIncrementPresentsAllo
   fuchsia::ui::scenic::SessionPtr session_ptr;
   bool session_destroyed = false;
   scenic_impl::Session session(
-      /*id=*/1, session_ptr.NewRequest(), /*listener=*/nullptr,
+      /*id=*/1, session_ptr.NewRequest(), /*listener=*/nullptr, scheduler_,
       /*destroy_session_function*/ [&session_destroyed] { session_destroyed = true; });
   InitializeSession(session);
   std::string last_error;
@@ -370,7 +363,7 @@ TEST_F(ScenicSessionTest, Present2Update_ShouldHaveReasonablePresentReceivedTime
         frame_presented_info = std::move(info);
       };
 
-  scenic_impl::Session session(/*id=*/1, session_ptr.NewRequest(), /*listener=*/nullptr,
+  scenic_impl::Session session(/*id=*/1, session_ptr.NewRequest(), /*listener=*/nullptr, scheduler_,
                                /*destroy_session_function*/ [] {});
   InitializeSession(session);
 
@@ -394,7 +387,8 @@ TEST_F(ScenicSessionTest, Present2Update_ShouldHaveReasonablePresentReceivedTime
 TEST_F(ScenicSessionTest, AcquireFences_WithPresent1) {
   fuchsia::ui::scenic::SessionPtr session_ptr;
   scenic_impl::Session session(/*id=*/1, session_ptr.NewRequest(),
-                               /*listener=*/nullptr, /*destroy_session_function*/ [] {});
+                               /*listener=*/nullptr, scheduler_,
+                               /*destroy_session_function*/ [] {});
   InitializeSession(session);
 
   // Create acquire fences.
@@ -405,16 +399,16 @@ TEST_F(ScenicSessionTest, AcquireFences_WithPresent1) {
   // Call Present with the acquire fences.
   session.Present(0u, std::move(acquire_fences), {}, [](auto) {});
   RunLoopUntilIdle();
-  EXPECT_EQ(scheduler_->schedule_called_count_, 0);
+  EXPECT_EQ(scheduler_.schedule_called_count_, 0);
 
   acquire_fence1.signal(0u, ZX_EVENT_SIGNALED);
   // Nothing should have happened.
   RunLoopUntilIdle();
-  EXPECT_EQ(scheduler_->schedule_called_count_, 0);
+  EXPECT_EQ(scheduler_.schedule_called_count_, 0);
 
   acquire_fence2.signal(0u, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
-  EXPECT_EQ(scheduler_->schedule_called_count_, 1);
+  EXPECT_EQ(scheduler_.schedule_called_count_, 1);
 }
 
 // Tests creating a session, and calling Present with two acquire fences. The call should not be
@@ -422,7 +416,8 @@ TEST_F(ScenicSessionTest, AcquireFences_WithPresent1) {
 TEST_F(ScenicSessionTest, AcquireFences_WithPresent2) {
   fuchsia::ui::scenic::SessionPtr session_ptr;
   scenic_impl::Session session(/*id=*/1, session_ptr.NewRequest(),
-                               /*listener=*/nullptr, /*destroy_session_function*/ [] {});
+                               /*listener=*/nullptr, scheduler_,
+                               /*destroy_session_function*/ [] {});
   InitializeSession(session);
 
   // Create acquire fences.
@@ -433,23 +428,24 @@ TEST_F(ScenicSessionTest, AcquireFences_WithPresent2) {
   // Call Present with the acquire fences.
   session.Present2(utils::CreatePresent2Args(0, std::move(acquire_fences), {}, 0), [](auto) {});
   RunLoopUntilIdle();
-  EXPECT_EQ(scheduler_->schedule_called_count_, 0);
+  EXPECT_EQ(scheduler_.schedule_called_count_, 0);
 
   acquire_fence1.signal(0u, ZX_EVENT_SIGNALED);
   // Nothing should have happened.
   RunLoopUntilIdle();
-  EXPECT_EQ(scheduler_->schedule_called_count_, 0);
+  EXPECT_EQ(scheduler_.schedule_called_count_, 0);
 
   acquire_fence2.signal(0u, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
-  EXPECT_EQ(scheduler_->schedule_called_count_, 1);
+  EXPECT_EQ(scheduler_.schedule_called_count_, 1);
 }
 
 // Tests creating a session, and calling Present twice with different sets of acquire fences.
 TEST_F(ScenicSessionTest, AcquireFences_WithMultiplePresent1) {
   fuchsia::ui::scenic::SessionPtr session_ptr;
   scenic_impl::Session session(/*id=*/1, session_ptr.NewRequest(),
-                               /*listener=*/nullptr, /*destroy_session_function*/ [] {});
+                               /*listener=*/nullptr, scheduler_,
+                               /*destroy_session_function*/ [] {});
   InitializeSession(session);
 
   // Create acquire fences.
@@ -466,24 +462,25 @@ TEST_F(ScenicSessionTest, AcquireFences_WithMultiplePresent1) {
   session.Present(0u, {}, {}, [](auto) {});
 
   RunLoopUntilIdle();
-  EXPECT_EQ(scheduler_->schedule_called_count_, 0);
+  EXPECT_EQ(scheduler_.schedule_called_count_, 0);
 
   acquire_fence1.signal(0u, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
   // Only the first call should have been made.
-  EXPECT_EQ(scheduler_->schedule_called_count_, 1);
+  EXPECT_EQ(scheduler_.schedule_called_count_, 1);
 
   acquire_fence2.signal(0u, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
   // Both the remaining calls should have been made.
-  EXPECT_EQ(scheduler_->schedule_called_count_, 3);
+  EXPECT_EQ(scheduler_.schedule_called_count_, 3);
 }
 
 // Tests creating a session, and calling Present twice with different sets of acquire fences.
 TEST_F(ScenicSessionTest, AcquireFences_WithMultiplePresent2) {
   fuchsia::ui::scenic::SessionPtr session_ptr;
   scenic_impl::Session session(/*id=*/1, session_ptr.NewRequest(),
-                               /*listener=*/nullptr, /*destroy_session_function*/ [] {});
+                               /*listener=*/nullptr, scheduler_,
+                               /*destroy_session_function*/ [] {});
   InitializeSession(session);
 
   // Create acquire fences.
@@ -500,17 +497,17 @@ TEST_F(ScenicSessionTest, AcquireFences_WithMultiplePresent2) {
   session.Present2(utils::CreatePresent2Args(0, {}, {}, 0), [](auto) {});
 
   RunLoopUntilIdle();
-  EXPECT_EQ(scheduler_->schedule_called_count_, 0);
+  EXPECT_EQ(scheduler_.schedule_called_count_, 0);
 
   acquire_fence1.signal(0u, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
   // Only the first call should have been made.
-  EXPECT_EQ(scheduler_->schedule_called_count_, 1);
+  EXPECT_EQ(scheduler_.schedule_called_count_, 1);
 
   acquire_fence2.signal(0u, ZX_EVENT_SIGNALED);
   RunLoopUntilIdle();
   // Both the remaining calls should have been made.
-  EXPECT_EQ(scheduler_->schedule_called_count_, 3);
+  EXPECT_EQ(scheduler_.schedule_called_count_, 3);
 }
 
 // This tests checks that commands enqueued for separate Present aren't dispatched until (at least)
@@ -518,7 +515,8 @@ TEST_F(ScenicSessionTest, AcquireFences_WithMultiplePresent2) {
 TEST_F(ScenicSessionTest, CommandForDifferentPresents_MustBeEnqueuedSeparately) {
   fuchsia::ui::scenic::SessionPtr session_ptr;
   scenic_impl::Session session(/*id=*/1, session_ptr.NewRequest(),
-                               /*listener=*/nullptr, /*destroy_session_function*/ [] {});
+                               /*listener=*/nullptr, scheduler_,
+                               /*destroy_session_function*/ [] {});
   InitializeSession(session);
 
   // Enqueue a command.

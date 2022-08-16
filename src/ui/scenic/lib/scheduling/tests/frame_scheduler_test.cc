@@ -26,11 +26,10 @@ void FrameSchedulerTest::TearDown() {
 
 std::unique_ptr<DefaultFrameScheduler> FrameSchedulerTest::CreateDefaultFrameScheduler() {
   auto scheduler = std::make_unique<DefaultFrameScheduler>(
-      vsync_timing_,
       std::make_unique<WindowedFramePredictor>(DefaultFrameScheduler::kMinPredictedFrameDuration,
                                                DefaultFrameScheduler::kInitialRenderDuration,
                                                DefaultFrameScheduler::kInitialUpdateDuration));
-  scheduler->Initialize(mock_renderer_, {mock_updater_});
+  scheduler->Initialize(vsync_timing_, mock_renderer_, {mock_updater_});
 
   return scheduler;
 }
