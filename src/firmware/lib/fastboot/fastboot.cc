@@ -305,11 +305,19 @@ zx::status<> Fastboot::Flash(const std::string& command, Transport* transport) {
                       transport, data_sink);
   } else if (info.partition == "fvm") {
     auto ret = data_sink->WriteOpaqueVolume(GetWireBufferFromDownload());
-    zx_status_t status = ret.status();
+
+    zx_status_t status = ZX_OK;
+    if (ret.status() != ZX_OK) {
+      status = ret.status();
+    } else if (ret->is_error()) {
+      status = ret->error_value();
+    }
+
     if (status != ZX_OK) {
       return SendResponse(ResponseType::kFail, "Failed to flash opaque fvm", transport,
                           zx::error(status));
     }
+
     return SendResponse(ResponseType::kOkay, "", transport);
   } else if (info.partition == "fvm.sparse") {
     // Flashing the sparse format FVM image via the paver. Note that at the time this code is

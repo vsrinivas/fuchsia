@@ -821,6 +821,26 @@ TEST_F(FastbootFlashTest, FlashRawFVM) {
   ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
 }
 
+TEST_F(FastbootFlashTest, FlashRawFVMFail) {
+  Fastboot fastboot(0x40000, std::move(svc_chan()));
+  std::vector<uint8_t> download_content(256, 1);
+  ASSERT_NO_FATAL_FAILURE(DownloadData(fastboot, download_content));
+  paver_test::FakePaver& fake_paver = paver();
+
+  // Use an incorrect size to trigger an error
+  fake_paver.set_expected_payload_size(download_content.size() + 1);
+
+  std::string command = "flash:fvm";
+  TestTransport transport;
+  transport.AddInPacket(command);
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_error());
+
+  const std::vector<std::string>& sent_packets = transport.GetOutPackets();
+  ASSERT_EQ(sent_packets.size(), 1ULL);
+  ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
+}
+
 TEST_F(FastbootFlashTest, AndroidSparseImageNotSupported) {
   Fastboot fastboot(0x40000, std::move(svc_chan()));
   sparse_header_t header{

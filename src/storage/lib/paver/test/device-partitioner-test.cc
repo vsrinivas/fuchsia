@@ -935,6 +935,8 @@ TEST_F(CrosDevicePartitionerTests, SupportsPartition) {
   EXPECT_TRUE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kVbMetaR)));
   EXPECT_TRUE(
       partitioner->SupportsPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager)));
+  EXPECT_TRUE(partitioner->SupportsPartition(
+      PartitionSpec(paver::Partition::kFuchsiaVolumeManager, paver::kOpaqueVolumeContentType)));
 
   // Unsupported partition type.
   EXPECT_FALSE(partitioner->SupportsPartition(PartitionSpec(paver::Partition::kUnknown)));
