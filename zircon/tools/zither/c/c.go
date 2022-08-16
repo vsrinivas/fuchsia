@@ -46,15 +46,19 @@ func (gen Generator) DeclOrder() zither.DeclOrder {
 	return zither.DependencyDeclOrder
 }
 
-func (gen *Generator) Generate(summary zither.Summary, outputDir string) ([]string, error) {
-	parts := summary.Name.Parts()
+func (gen *Generator) Generate(summaries []zither.FileSummary, outputDir string) ([]string, error) {
+	parts := summaries[0].Library.Parts()
 	outputDir = filepath.Join(outputDir, filepath.Join(parts...))
-	name := parts[len(parts)-1] + ".h"
-	output := filepath.Join(outputDir, name)
-	if err := gen.GenerateFile(output, "GenerateCFile", summary); err != nil {
-		return nil, err
+
+	var outputs []string
+	for _, summary := range summaries {
+		output := filepath.Join(outputDir, summary.Name+".h")
+		if err := gen.GenerateFile(output, "GenerateCFile", summary); err != nil {
+			return nil, err
+		}
+		outputs = append(outputs, output)
 	}
-	return []string{output}, nil
+	return outputs, nil
 }
 
 //

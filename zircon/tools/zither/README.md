@@ -12,8 +12,9 @@ Here we document the supported zither backends and their particularities.
 Consider a FIDL library by the name of `${id1}.${id2}.....${idn}`:
 
 ### C
-* A single header `<${id1}/${id2}/.../${idn}/${idn}.h>` is generated.
-  - TODO(fxbug.dev/51002): this is a simple placeholder policy.
+* One header `<${id1}/${id2}/.../${idn}/${idn}/${filename}.h>` is generated
+per original FIDL source file, containing the bindings for the declarations
+defined there.
 * Type translation from FIDL to C is as follows:
   - `{u,}int{8,16,32,64}`map to `{u,}int{8,16,32,64}_t`, respectively;
   - `bool` maps to `bool`;

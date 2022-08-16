@@ -83,16 +83,16 @@ type generator interface {
 	DeclOrder() zither.DeclOrder
 
 	// Generate generates bindings into the provided output directory.
-	Generate(summary zither.Summary, outputDir string) ([]string, error)
+	Generate(summaries []zither.FileSummary, outputDir string) ([]string, error)
 }
 
 func execute(ctx context.Context, gen generator, ir fidlgen.Root, outputDir, outputManifest string) error {
-	summary, err := zither.NewSummary(ir, gen.DeclOrder())
+	summaries, err := zither.Summarize(ir, gen.DeclOrder())
 	if err != nil {
 		return err
 	}
 
-	outputs, err := gen.Generate(*summary, outputDir)
+	outputs, err := gen.Generate(summaries, outputDir)
 	if err != nil {
 		return err
 	}

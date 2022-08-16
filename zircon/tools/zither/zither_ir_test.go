@@ -19,15 +19,66 @@ import (
 // Permits the comparison of unexported members of fidlgen.{Library,}Name.
 var cmpNameOpt = cmp.AllowUnexported(fidlgen.LibraryName{}, fidlgen.Name{})
 
+func TestGeneratedFileCount(t *testing.T) {
+	{
+		ir := fidlgentest.EndToEndTest{T: t}.Single(`
+	library example;
+
+	const A bool = true;
+	`)
+
+		summaries, err := zither.Summarize(ir, zither.SourceDeclOrder)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(summaries) != 1 {
+			t.Fatalf("expected one summary; got %d", len(summaries))
+		}
+	}
+
+	{
+		ir := fidlgentest.EndToEndTest{T: t}.Multiple([]string{
+			`
+	library example;
+
+	const A bool = true;
+	`,
+			`
+	library example;
+
+	const B bool = true;
+	`,
+			`
+	library example;
+
+	const C bool = true;
+	`,
+		})
+
+		summaries, err := zither.Summarize(ir, zither.SourceDeclOrder)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(summaries) != 3 {
+			t.Fatalf("expected three summaries; got %d", len(summaries))
+		}
+	}
+}
+
 func TestCanSummarizeLibraryName(t *testing.T) {
 	name := "this.is.an.example.library"
-	ir := fidlgentest.EndToEndTest{T: t}.Single(fmt.Sprintf("library %s;", name))
-	sum, err := zither.NewSummary(ir, zither.SourceDeclOrder)
+	ir := fidlgentest.EndToEndTest{T: t}.Single(fmt.Sprintf(`
+	library %s;
+
+	const A bool = true;
+	`, name))
+
+	summaries, err := zither.Summarize(ir, zither.SourceDeclOrder)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if sum.Name.String() != name {
-		t.Errorf("expected %s; got %s", name, sum.Name)
+	if summaries[0].Library.String() != name {
+		t.Errorf("expected %s; got %s", name, summaries[0].Library)
 	}
 }
 
@@ -45,13 +96,13 @@ const G int32 = 2;
 `)
 
 	{
-		sum, err := zither.NewSummary(ir, zither.SourceDeclOrder)
+		summaries, err := zither.Summarize(ir, zither.SourceDeclOrder)
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		var actual []string
-		for _, decl := range sum.Decls {
+		for _, decl := range summaries[0].Decls {
 			actual = append(actual, decl.Name().String())
 		}
 		expected := []string{
@@ -69,13 +120,13 @@ const G int32 = 2;
 	}
 
 	{
-		sum, err := zither.NewSummary(ir, zither.DependencyDeclOrder)
+		summaries, err := zither.Summarize(ir, zither.DependencyDeclOrder)
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		var actual []string
-		for _, decl := range sum.Decls {
+		for _, decl := range summaries[0].Decls {
 			actual = append(actual, decl.Name().String())
 		}
 		expected := []string{
@@ -106,7 +157,7 @@ library example;
 %s
 `, decl))
 
-		_, err := zither.NewSummary(ir, zither.SourceDeclOrder)
+		_, err := zither.Summarize(ir, zither.SourceDeclOrder)
 		if err == nil {
 			t.Fatal("expected an error")
 		}
@@ -163,13 +214,13 @@ const COMMENTED_BOOL bool = true;
 /// comment.
 const COMMENTED_STRING string = "YYY";
 `)
-	sum, err := zither.NewSummary(ir, zither.SourceDeclOrder)
+	summaries, err := zither.Summarize(ir, zither.SourceDeclOrder)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	var actual []zither.Const
-	for _, decl := range sum.Decls {
+	for _, decl := range summaries[0].Decls {
 		if decl.IsConst() {
 			actual = append(actual, decl.AsConst())
 		}
@@ -319,14 +370,14 @@ type Int64Enum = enum : int64 {
   HEX_DEADBEEF = 0xdeadbeef;
 };
 `)
-	sum, err := zither.NewSummary(ir, zither.SourceDeclOrder)
+	summaries, err := zither.Summarize(ir, zither.SourceDeclOrder)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Normalize member order by name for a stable comparison.
 	var actual []zither.Enum
-	for _, decl := range sum.Decls {
+	for _, decl := range summaries[0].Decls {
 		if decl.IsEnum() {
 			enum := decl.AsEnum()
 			sort.Slice(enum.Members, func(i, j int) bool {
@@ -399,14 +450,14 @@ type Uint64Bits = bits : uint64 {
   MEMBER = 0x1000;
 };
 `)
-	sum, err := zither.NewSummary(ir, zither.SourceDeclOrder)
+	summaries, err := zither.Summarize(ir, zither.SourceDeclOrder)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Normalize member order by name for a stable comparison.
 	var actual []zither.Bits
-	for _, decl := range sum.Decls {
+	for _, decl := range summaries[0].Decls {
 		if decl.IsBits() {
 			bits := decl.AsBits()
 			sort.Slice(bits.Members, func(i, j int) bool {
@@ -489,14 +540,13 @@ type StructWithArrayMembers = struct {
     nested array<array<bool, 2>, 4>;
 };
 `)
-	sum, err := zither.NewSummary(ir, zither.SourceDeclOrder)
+	summaries, err := zither.Summarize(ir, zither.SourceDeclOrder)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	// Normalize member order by name for a stable comparison.
 	var actual []zither.Struct
-	for _, decl := range sum.Decls {
+	for _, decl := range summaries[0].Decls {
 		if decl.IsStruct() {
 			actual = append(actual, decl.AsStruct())
 		}

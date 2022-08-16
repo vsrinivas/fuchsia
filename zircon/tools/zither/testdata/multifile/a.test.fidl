@@ -1,0 +1,11 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library zither.multifile;
+
+// Not dependent on declarations in other files.
+
+type A = enum : uint32 {
+    MEMBER = 0;
+};

@@ -8,9 +8,11 @@ package zither
 import (
 	"fmt"
 	"math/bits"
+	"path/filepath"
 	"reflect"
 	"sort"
 	"strconv"
+	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen_cpp"
@@ -42,11 +44,20 @@ const (
 	DependencyDeclOrder
 )
 
-// Summary is a summarized representation of a FIDL library's set of
-// declarations. It contains the minimal subset of information needed for the
-// zither backends in a maximally convenient form.
-type Summary struct {
-	Name  fidlgen.LibraryName
+// FileSummary is a summarized representation of a FIDL source file.
+type FileSummary struct {
+	// Library is the associated FIDL library.
+	Library fidlgen.LibraryName
+
+	// Name is the extension-less basename of the file.
+	Name string
+
+	// Deps records the (extension-less) file names that this file depends on;
+	// we say a file "depends" on another if the former has a declaration that
+	// depends on a declaration in the latter.
+	Deps map[string]struct{}
+
+	// The contained declarations.
 	Decls []Decl
 }
 
@@ -111,10 +122,10 @@ func (decl Decl) AsStruct() Struct {
 
 type declMap map[string]fidlgen.Declaration
 
-// NewSummary creates a Summary from FIDL IR. The resulting list of
-// declarations are ordered according to `order`.
-func NewSummary(ir fidlgen.Root, order DeclOrder) (*Summary, error) {
-	name, err := fidlgen.ReadLibraryName(string(ir.Name))
+// Summarize creates FIDL file summaries from FIDL IR. Within each file
+// summary, declarations are ordered according to `order`.
+func Summarize(ir fidlgen.Root, order DeclOrder) ([]FileSummary, error) {
+	libName, err := fidlgen.ReadLibraryName(string(ir.Name))
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +139,24 @@ func NewSummary(ir fidlgen.Root, order DeclOrder) (*Summary, error) {
 	decls := g.SortedDecls()
 	processed := make(declMap)
 
-	s := &Summary{Name: name}
+	filesByName := make(map[string]*FileSummary)
+	getFile := func(decl fidlgen.Declaration) *FileSummary {
+		name := filepath.Base(decl.GetLocation().Filename)
+		name = strings.TrimSuffix(name, ".test.fidl")
+		name = strings.TrimSuffix(name, ".fidl")
+
+		file, ok := filesByName[name]
+		if !ok {
+			file = &FileSummary{
+				Library: libName,
+				Name:    name,
+				Deps:    make(map[string]struct{}),
+			}
+			filesByName[name] = file
+		}
+		return file
+	}
+
 	for _, decl := range decls {
 		var summarized interface{}
 		var err error
@@ -147,25 +175,44 @@ func NewSummary(ir fidlgen.Root, order DeclOrder) (*Summary, error) {
 		if err != nil {
 			return nil, err
 		}
-		s.Decls = append(s.Decls, Decl{summarized})
+
+		file := getFile(decl)
+		d := Decl{summarized}
+		file.Decls = append(file.Decls, d)
+
+		// Now go back and record the dependents' dependency on this declaration.
+		dependents, ok := g.GetDirectDependents(decl.GetName())
+		if !ok {
+			panic(fmt.Sprintf("%s not found in declaration graph", decl.GetName()))
+		}
+		for _, dependent := range dependents {
+			dependentFile := getFile(dependent)
+			if dependentFile.Name != file.Name {
+				dependentFile.Deps[file.Name] = struct{}{}
+			}
+		}
 		processed[string(decl.GetName())] = decl
 	}
 
-	// Now reorder declarations in the order expected by the backends.
-	switch order {
-	case SourceDeclOrder:
-		sort.Slice(s.Decls, func(i, j int) bool {
-			ith := processed[s.Decls[i].Name().String()]
-			jth := processed[s.Decls[j].Name().String()]
-			return fidlgen.LocationCmp(ith.GetLocation(), jth.GetLocation())
-		})
-	case DependencyDeclOrder:
-		// Already in this order.
-	default:
-		panic(fmt.Sprintf("unknown declaration order: %v", order))
-	}
+	var files []FileSummary
+	for _, file := range filesByName {
+		// Now reorder declarations in the order expected by the backends.
+		switch order {
+		case SourceDeclOrder:
+			sort.Slice(file.Decls, func(i, j int) bool {
+				ith := processed[file.Decls[i].Name().String()]
+				jth := processed[file.Decls[j].Name().String()]
+				return fidlgen.LocationCmp(ith.GetLocation(), jth.GetLocation())
+			})
+		case DependencyDeclOrder:
+			// Already in this order.
+		default:
+			panic(fmt.Sprintf("unknown declaration order: %v", order))
+		}
 
-	return s, nil
+		files = append(files, *file)
+	}
+	return files, nil
 }
 
 // TypeKind gives a rough categorization of FIDL primitive and declaration types.

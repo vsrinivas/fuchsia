@@ -5,13 +5,23 @@
 
 {{/* TODO(fxbug.dev/51002): Give source-relative path to library. */}}
 // DO NOT EDIT.
-// Generated from FIDL library `{{ .Name.String }}` by zither, a Fuchsia platform tool.
+// Generated from FIDL library `{{ .Library.String }}` by zither, a Fuchsia platform tool.
 
 // TODO(fxbug.dev/51002): Give a traditional header guard.
 #pragma once
 
 #include <stdbool.h>
 #include <stdint.h>
+
+{{/*
+    TODO(fxbug.dev/106538) We are not protected against cyclic includes here.
+    Either we need to generate headers differently or appeal to a FIDL feature
+    that does not yet exist in order to restrict what sort of FIDL gets
+    processed by zither.
+*/}}
+{{ range $name, $unused := .Deps }}
+#include "{{ Append $name ".h" }}"
+{{ end }}
 
 #if defined(__cplusplus)
 extern "C" {

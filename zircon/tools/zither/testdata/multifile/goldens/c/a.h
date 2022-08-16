@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // DO NOT EDIT.
-// Generated from FIDL library `zither.empty` by zither, a Fuchsia platform tool.
+// Generated from FIDL library `zither.multifile` by zither, a Fuchsia platform tool.
 
 // TODO(fxbug.dev/51002): Give a traditional header guard.
 #pragma once
@@ -14,6 +14,10 @@
 #if defined(__cplusplus)
 extern "C" {
 #endif
+
+typedef uint32_t zither_multifile_a_t;
+
+#define ZITHER_MULTIFILE_A_MEMBER ((zither_multifile_a_t)(0u))
 
 #if defined(__cplusplus)
 }

@@ -18,8 +18,8 @@ group("tests") {
     # golden testing
     ":bits",
     ":constants",
-    ":empty",
     ":enums",
+    ":multifile",
     ":structs",
   ]
 }
@@ -293,19 +293,6 @@ template("zither_golden_test") {
   }
 }
 
-# FIDL: testdata/empty/
-# Goldens: testdata/empty/goldens/${backend}/
-zither_golden_test("empty") {
-  sources = [ "empty.test.fidl" ]
-
-  cases = [
-    {
-      backend = "c"
-      files = [ "empty.h" ]
-    },
-  ]
-}
-
 # FIDL: testdata/constants/
 # Goldens: testdata/constants/goldens/${backend}/
 zither_golden_test("constants") {
@@ -354,6 +341,27 @@ zither_golden_test("structs") {
     {
       backend = "c"
       files = [ "structs.h" ]
+    },
+  ]
+}
+
+# FIDL: testdata/multifile/
+# Goldens: testdata/multifile/goldens/${backend}/
+zither_golden_test("multifile") {
+  sources = [
+    "a.test.fidl",
+    "b.test.fidl",
+    "c.test.fidl",
+  ]
+
+  cases = [
+    {
+      backend = "c"
+      files = [
+        "a.h",
+        "b.h",
+        "c.h",
+      ]
     },
   ]
 }
