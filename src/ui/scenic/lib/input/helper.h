@@ -53,7 +53,7 @@ T EventWithReceiverFromViewportTransform(const T& event, zx_koid_t receiver,
                                          const view_tree::Snapshot& snapshot) {
   T event_copy = event;
   event_copy.viewport.receiver_from_viewport_transform =
-      GetDestinationFromViewportTransform(event, event.target, snapshot);
+      GetDestinationFromViewportTransform(event, receiver, snapshot);
   return event_copy;
 }
 
