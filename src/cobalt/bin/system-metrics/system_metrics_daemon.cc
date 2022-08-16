@@ -100,6 +100,7 @@ SystemMetricsDaemon::SystemMetricsDaemon(
 void SystemMetricsDaemon::StartLogging() {
   TRACE_DURATION("system_metrics", "SystemMetricsDaemon::StartLogging");
   // We keep gathering metrics until this process is terminated.
+  RepeatedlyLogActiveTime();
   RepeatedlyLogUpPing();
   RepeatedlyLogUptime();
   RepeatedlyLogCpuUsage();
