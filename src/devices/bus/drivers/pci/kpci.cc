@@ -44,6 +44,14 @@ static const device_fragment_part_t sysmem_fragment[] = {
     {std::size(sysmem_fragment_match), sysmem_fragment_match},
 };
 
+static const zx_bind_inst_t sysmem_fidl_fragment_match[] = {
+    BI_MATCH_IF(EQ, BIND_FIDL_PROTOCOL, ZX_FIDL_PROTOCOL_SYSMEM),
+};
+
+static const device_fragment_part_t sysmem_fidl_fragment[] = {
+    {std::size(sysmem_fidl_fragment_match), sysmem_fidl_fragment_match},
+};
+
 zx_status_t KernelPci::CreateComposite(zx_device_t* parent, kpci_device device, bool uses_acpi) {
   auto pci_bind_topo = static_cast<uint32_t>(
       BIND_PCI_TOPO_PACK(device.info.bus_id, device.info.dev_id, device.info.func_id));
@@ -94,6 +102,7 @@ zx_status_t KernelPci::CreateComposite(zx_device_t* parent, kpci_device device, 
 
   const device_fragment_t fragments[] = {
       {"sysmem", std::size(sysmem_fragment), sysmem_fragment},
+      {"sysmem-fidl", std::size(sysmem_fidl_fragment), sysmem_fidl_fragment},
       {"pci", std::size(pci_fragment), pci_fragment},
       {"acpi", std::size(acpi_fragment), acpi_fragment},
   };
