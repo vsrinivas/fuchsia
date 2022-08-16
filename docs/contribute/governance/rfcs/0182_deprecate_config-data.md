@@ -175,6 +175,7 @@ for the font-provider, to that component.
 The contents of `config-data` might come from build definitions such as this:
 
 ```gn
+{% verbatim %}
 import("//build/config.gni")
 
 config_data("example_config_data") {
@@ -186,6 +187,7 @@ config_data("example_config_data") {
   ]
   outputs = [ "{{source_file_part}}" ]
 }
+{% endverbatim %}
 ```
 
 The target above, and others like it, are collected by the build system to form
