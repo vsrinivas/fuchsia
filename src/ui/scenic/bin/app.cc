@@ -247,7 +247,7 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
       uber_struct_system_(std::make_shared<flatland::UberStructSystem>()),
       link_system_(
           std::make_shared<flatland::LinkSystem>(uber_struct_system_->GetNextInstanceId())),
-      flatland_presenter_(std::make_shared<flatland::DefaultFlatlandPresenter>(
+      flatland_presenter_(std::make_shared<flatland::FlatlandPresenterImpl>(
           async_get_default_dispatcher(), frame_scheduler_)),
       annotation_registry_(app_context_.get()),
       lifecycle_controller_impl_(app_context_.get(),

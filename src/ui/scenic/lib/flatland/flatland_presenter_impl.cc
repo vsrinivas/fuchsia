@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/scenic/lib/flatland/default_flatland_presenter.h"
+#include "src/ui/scenic/lib/flatland/flatland_presenter_impl.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
@@ -10,11 +10,11 @@
 
 namespace flatland {
 
-DefaultFlatlandPresenter::DefaultFlatlandPresenter(async_dispatcher_t* main_dispatcher,
-                                                   scheduling::FrameScheduler& frame_scheduler)
+FlatlandPresenterImpl::FlatlandPresenterImpl(async_dispatcher_t* main_dispatcher,
+                                             scheduling::FrameScheduler& frame_scheduler)
     : main_dispatcher_(main_dispatcher), frame_scheduler_(frame_scheduler) {}
 
-scheduling::SessionUpdater::UpdateResults DefaultFlatlandPresenter::UpdateSessions(
+scheduling::SessionUpdater::UpdateResults FlatlandPresenterImpl::UpdateSessions(
     const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
     uint64_t trace_id) {
   FX_DCHECK(main_dispatcher_ == async_get_default_dispatcher());
@@ -38,7 +38,7 @@ scheduling::SessionUpdater::UpdateResults DefaultFlatlandPresenter::UpdateSessio
   return UpdateResults{};
 }
 
-std::vector<zx::event> DefaultFlatlandPresenter::TakeReleaseFences() {
+std::vector<zx::event> FlatlandPresenterImpl::TakeReleaseFences() {
   FX_DCHECK(main_dispatcher_ == async_get_default_dispatcher());
 
   std::vector<zx::event> result(std::move(accumulated_release_fences_));
@@ -46,10 +46,10 @@ std::vector<zx::event> DefaultFlatlandPresenter::TakeReleaseFences() {
   return result;
 }
 
-void DefaultFlatlandPresenter::ScheduleUpdateForSession(zx::time requested_presentation_time,
-                                                        scheduling::SchedulingIdPair id_pair,
-                                                        bool unsquashable,
-                                                        std::vector<zx::event> release_fences) {
+void FlatlandPresenterImpl::ScheduleUpdateForSession(zx::time requested_presentation_time,
+                                                     scheduling::SchedulingIdPair id_pair,
+                                                     bool unsquashable,
+                                                     std::vector<zx::event> release_fences) {
   // TODO(fxbug.dev/61178): The FrameScheduler is not thread-safe, but a lock is not sufficient
   // since GFX sessions may access the FrameScheduler without passing through this object. Post a
   // task to the main thread, which is where GFX runs, to account for thread safety.
@@ -65,12 +65,12 @@ void DefaultFlatlandPresenter::ScheduleUpdateForSession(zx::time requested_prese
 }
 
 std::vector<scheduling::FuturePresentationInfo>
-DefaultFlatlandPresenter::GetFuturePresentationInfos() {
+FlatlandPresenterImpl::GetFuturePresentationInfos() {
   FX_DCHECK(main_dispatcher_ == async_get_default_dispatcher());
   return frame_scheduler_.GetFuturePresentationInfos(kDefaultPredictionSpan);
 }
 
-void DefaultFlatlandPresenter::RemoveSession(scheduling::SessionId session_id) {
+void FlatlandPresenterImpl::RemoveSession(scheduling::SessionId session_id) {
   FX_DCHECK(main_dispatcher_ == async_get_default_dispatcher());
 
   // Remove any registered release fences for the removed session.

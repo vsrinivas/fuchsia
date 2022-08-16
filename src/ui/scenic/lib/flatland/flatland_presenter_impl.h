@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_SCENIC_LIB_FLATLAND_DEFAULT_FLATLAND_PRESENTER_H_
-#define SRC_UI_SCENIC_LIB_FLATLAND_DEFAULT_FLATLAND_PRESENTER_H_
+#ifndef SRC_UI_SCENIC_LIB_FLATLAND_FLATLAND_PRESENTER_IMPL_H_
+#define SRC_UI_SCENIC_LIB_FLATLAND_FLATLAND_PRESENTER_IMPL_H_
 
 #include <fuchsia/ui/composition/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
@@ -16,16 +16,15 @@
 
 namespace flatland {
 
-class DefaultFlatlandPresenter final
-    : public FlatlandPresenter,
-      public scheduling::SessionUpdater,
-      public std::enable_shared_from_this<DefaultFlatlandPresenter> {
+class FlatlandPresenterImpl final : public FlatlandPresenter,
+                                    public scheduling::SessionUpdater,
+                                    public std::enable_shared_from_this<FlatlandPresenterImpl> {
  public:
   // The |main_dispatcher| must be the dispatcher that GFX sessions run and update on. That thread
   // is typically refered to as the "main thread" or "render thread".
-  // FrameScheduler is what DefaultFlatlandPresenter will use for frame scheduling calls.
-  DefaultFlatlandPresenter(async_dispatcher_t* main_dispatcher,
-                           scheduling::FrameScheduler& frame_scheduler);
+  // FrameScheduler is what FlatlandPresenterImpl will use for frame scheduling calls.
+  FlatlandPresenterImpl(async_dispatcher_t* main_dispatcher,
+                        scheduling::FrameScheduler& frame_scheduler);
 
   // Return all release fences that were accumulated during calls to UpdateSessions().  The caller
   // takes responsibility for signaling these fences when it is safe for clients to reuse the
@@ -78,4 +77,4 @@ class DefaultFlatlandPresenter final
 
 }  // namespace flatland
 
-#endif  // SRC_UI_SCENIC_LIB_FLATLAND_DEFAULT_FLATLAND_PRESENTER_H_
+#endif  // SRC_UI_SCENIC_LIB_FLATLAND_FLATLAND_PRESENTER_IMPL_H_

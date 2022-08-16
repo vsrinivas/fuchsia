@@ -16,9 +16,9 @@
 #include <set>
 #include <utility>
 
-#include "src/ui/scenic/lib/flatland/default_flatland_presenter.h"
 #include "src/ui/scenic/lib/flatland/engine/display_compositor.h"
 #include "src/ui/scenic/lib/flatland/flatland_manager.h"
+#include "src/ui/scenic/lib/flatland/flatland_presenter_impl.h"
 #include "src/ui/scenic/lib/flatland/global_matrix_data.h"
 #include "src/ui/scenic/lib/flatland/link_system.h"
 #include "src/ui/scenic/lib/flatland/uber_struct_system.h"
@@ -37,7 +37,7 @@ using Renderables = std::pair<ImageRectangles, ImageMetadatas>;
 class Engine {
  public:
   Engine(std::shared_ptr<flatland::DisplayCompositor> flatland_compositor,
-         std::shared_ptr<flatland::DefaultFlatlandPresenter> flatland_presenter,
+         std::shared_ptr<flatland::FlatlandPresenterImpl> flatland_presenter,
          std::shared_ptr<flatland::UberStructSystem> uber_struct_system,
          std::shared_ptr<flatland::LinkSystem> link_system, inspect::Node inspect_node,
          GetRootTransformFunc get_root_transform);
@@ -56,7 +56,6 @@ class Engine {
   // Returns all renderables reachable from the display's root transform.
   Renderables GetRenderables(const FlatlandDisplay& display);
 
-
  private:
   // Initialize all inspect::Nodes, so that the Engine state can be observed.
   void InitializeInspectObjects();
@@ -73,7 +72,7 @@ class Engine {
   };
 
   std::shared_ptr<flatland::DisplayCompositor> flatland_compositor_;
-  std::shared_ptr<flatland::DefaultFlatlandPresenter> flatland_presenter_;
+  std::shared_ptr<flatland::FlatlandPresenterImpl> flatland_presenter_;
   std::shared_ptr<flatland::UberStructSystem> uber_struct_system_;
   std::shared_ptr<flatland::LinkSystem> link_system_;
 

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/scenic/lib/flatland/default_flatland_presenter.h"
-
 #include <lib/async-testing/test_loop.h>
 #include <lib/async/default.h>
 #include <lib/async/dispatcher.h>
@@ -20,10 +18,11 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
+#include "src/ui/scenic/lib/flatland/flatland_presenter_impl.h"
 #include "src/ui/scenic/lib/scheduling/tests/mocks/frame_scheduler_mocks.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 
-using flatland::DefaultFlatlandPresenter;
+using flatland::FlatlandPresenterImpl;
 
 namespace flatland {
 namespace test {
@@ -31,18 +30,18 @@ namespace test {
 namespace {
 
 // This harness uses a real loop instead of a test loop since the multithreading test requires the
-// tasks posted by the DefaultFlatlandPresenter to run without blocking the worker threads.
-class DefaultFlatlandPresenterTest : public gtest::RealLoopFixture {
+// tasks posted by the FlatlandPresenterImpl to run without blocking the worker threads.
+class FlatlandPresenterTest : public gtest::RealLoopFixture {
  public:
-  std::shared_ptr<DefaultFlatlandPresenter> CreateDefaultFlatlandPresenter(
+  std::shared_ptr<FlatlandPresenterImpl> CreateFlatlandPresenterImpl(
       scheduling::FrameScheduler& scheduler) {
-    return std::make_shared<DefaultFlatlandPresenter>(dispatcher(), scheduler);
+    return std::make_shared<FlatlandPresenterImpl>(dispatcher(), scheduler);
   }
 };
 
 }  // namespace
 
-TEST_F(DefaultFlatlandPresenterTest, RegisterPresentForwardsToFrameScheduler) {
+TEST_F(FlatlandPresenterTest, RegisterPresentForwardsToFrameScheduler) {
   scheduling::test::MockFrameScheduler frame_scheduler;
 
   // Capture the relevant arguments of the RegisterPresent() call.
@@ -57,7 +56,7 @@ TEST_F(DefaultFlatlandPresenterTest, RegisterPresentForwardsToFrameScheduler) {
         last_present_id = present_id;
       });
 
-  auto presenter = CreateDefaultFlatlandPresenter(frame_scheduler);
+  auto presenter = CreateFlatlandPresenterImpl(frame_scheduler);
 
   const scheduling::SessionId kSessionId = 2;
   const scheduling::PresentId present_id = scheduling::GetNextPresentId();
@@ -69,7 +68,7 @@ TEST_F(DefaultFlatlandPresenterTest, RegisterPresentForwardsToFrameScheduler) {
   EXPECT_EQ(last_present_id, present_id);
 }
 
-TEST_F(DefaultFlatlandPresenterTest, ScheduleUpdateForSessionForwardsToFrameScheduler) {
+TEST_F(FlatlandPresenterTest, ScheduleUpdateForSessionForwardsToFrameScheduler) {
   scheduling::test::MockFrameScheduler frame_scheduler;
 
   // Capture the relevant arguments of the ScheduleUpdateForSession() call.
@@ -88,7 +87,7 @@ TEST_F(DefaultFlatlandPresenterTest, ScheduleUpdateForSessionForwardsToFrameSche
         last_squashable = squashable;
       });
 
-  auto presenter = CreateDefaultFlatlandPresenter(frame_scheduler);
+  auto presenter = CreateFlatlandPresenterImpl(frame_scheduler);
 
   const auto kIdPair = scheduling::SchedulingIdPair({
       .session_id = 1,
@@ -106,7 +105,7 @@ TEST_F(DefaultFlatlandPresenterTest, ScheduleUpdateForSessionForwardsToFrameSche
   EXPECT_EQ(last_squashable, !kUnsquashable);
 }
 
-TEST_F(DefaultFlatlandPresenterTest, RemoveSessionForwardsToFrameScheduler) {
+TEST_F(FlatlandPresenterTest, RemoveSessionForwardsToFrameScheduler) {
   scheduling::test::MockFrameScheduler frame_scheduler;
 
   // Capture the relevant arguments of the ScheduleUpdateForSession() call.
@@ -115,7 +114,7 @@ TEST_F(DefaultFlatlandPresenterTest, RemoveSessionForwardsToFrameScheduler) {
   frame_scheduler.set_remove_session_callback(
       [&last_session_id](scheduling::SessionId session_id) { last_session_id = session_id; });
 
-  auto presenter = CreateDefaultFlatlandPresenter(frame_scheduler);
+  auto presenter = CreateFlatlandPresenterImpl(frame_scheduler);
 
   const scheduling::SessionId kSessionId = 1;
 
@@ -125,7 +124,7 @@ TEST_F(DefaultFlatlandPresenterTest, RemoveSessionForwardsToFrameScheduler) {
   EXPECT_EQ(last_session_id, kSessionId);
 }
 
-TEST_F(DefaultFlatlandPresenterTest, GetFuturePresentationInfosForwardsToFrameScheduler) {
+TEST_F(FlatlandPresenterTest, GetFuturePresentationInfosForwardsToFrameScheduler) {
   scheduling::test::MockFrameScheduler frame_scheduler;
 
   // Capture the relevant arguments of the GetFuturePresentationInfos() call.
@@ -142,7 +141,7 @@ TEST_F(DefaultFlatlandPresenterTest, GetFuturePresentationInfosForwardsToFrameSc
         return presentation_infos;
       });
 
-  auto presenter = CreateDefaultFlatlandPresenter(frame_scheduler);
+  auto presenter = CreateFlatlandPresenterImpl(frame_scheduler);
 
   std::vector<scheduling::FuturePresentationInfo> presentation_infos =
       presenter->GetFuturePresentationInfos();
@@ -158,18 +157,18 @@ TEST_F(DefaultFlatlandPresenterTest, GetFuturePresentationInfosForwardsToFrameSc
 // Helper function for TakeReleaseFences test below.  Encapsulates two calls which always happen
 // together in the test: UpdateSessions() and TakeReleaseFences().
 static std::vector<zx::event> TakeReleaseFences(
-    const std::shared_ptr<DefaultFlatlandPresenter>& presenter,
+    const std::shared_ptr<FlatlandPresenterImpl>& presenter,
     const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update) {
   auto result = presenter->UpdateSessions(sessions_to_update, 0);
   EXPECT_TRUE(result.sessions_with_failed_updates.empty());
   return presenter->TakeReleaseFences();
 }
 
-TEST_F(DefaultFlatlandPresenterTest, TakeReleaseFences) {
+TEST_F(FlatlandPresenterTest, TakeReleaseFences) {
   // The frame scheduler isn't actually used for this test, although it *is* required for the
   // presenter to properly stash the release fences (not inherently, just an implementation detail).
   scheduling::test::MockFrameScheduler frame_scheduler;
-  auto presenter = CreateDefaultFlatlandPresenter(frame_scheduler);
+  auto presenter = CreateFlatlandPresenterImpl(frame_scheduler);
 
   const scheduling::SessionId kSessionIdA = 3;
   const scheduling::SessionId kSessionIdB = 7;
@@ -246,7 +245,7 @@ TEST_F(DefaultFlatlandPresenterTest, TakeReleaseFences) {
   }
 }
 
-TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
+TEST_F(FlatlandPresenterTest, MultithreadedAccess) {
   scheduling::test::MockFrameScheduler frame_scheduler;
 
   // The FrameScheduler will be accessed in a thread-safe way, so the test instead collects the
@@ -282,7 +281,7 @@ TEST_F(DefaultFlatlandPresenterTest, MultithreadedAccess) {
         return infos;
       });
 
-  auto presenter = CreateDefaultFlatlandPresenter(frame_scheduler);
+  auto presenter = CreateFlatlandPresenterImpl(frame_scheduler);
 
   // Start 10 "sessions", each of which registers 100 presents and schedules 100 updates.
   static constexpr uint64_t kNumSessions = 10;

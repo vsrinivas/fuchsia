@@ -30,7 +30,7 @@ static constexpr uint32_t kNumDisplayFramebuffers = 2;
 namespace flatland {
 
 Engine::Engine(std::shared_ptr<DisplayCompositor> flatland_compositor,
-               std::shared_ptr<DefaultFlatlandPresenter> flatland_presenter,
+               std::shared_ptr<FlatlandPresenterImpl> flatland_presenter,
                std::shared_ptr<UberStructSystem> uber_struct_system,
                std::shared_ptr<LinkSystem> link_system, inspect::Node inspect_node,
                GetRootTransformFunc get_root_transform)

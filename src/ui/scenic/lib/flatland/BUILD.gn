@@ -4,8 +4,6 @@
 
 source_set("flatland") {
   sources = [
-    "default_flatland_presenter.cc",
-    "default_flatland_presenter.h",
     "flatland.cc",
     "flatland.h",
     "flatland_display.cc",
@@ -13,6 +11,8 @@ source_set("flatland") {
     "flatland_manager.cc",
     "flatland_manager.h",
     "flatland_presenter.h",
+    "flatland_presenter_impl.cc",
+    "flatland_presenter_impl.h",
     "global_image_data.cc",
     "global_image_data.h",
     "global_matrix_data.cc",
