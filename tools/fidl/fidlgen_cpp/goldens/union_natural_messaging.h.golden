@@ -15,6 +15,7 @@
 namespace fidl {
 
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> {
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>>;
@@ -62,7 +63,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_union::TestProtoc
   static constexpr bool kHasPayload = true;
   using Payload = ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse;
 };
-namespace test_union {}  // namespace test_union
+namespace test_union {
+}  // namespace test_union
+
 template <>
 class ::fidl::Result<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> final : public ::fitx::result<::fidl::Error, ::test_union::TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse> {
  public:
@@ -85,6 +88,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_union::TestProtoc
   static constexpr bool kHasPayload = true;
   using Payload = ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse;
 };
+
 template <>
 class ::fidl::Result<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated> final : public ::fitx::result<::fidl::Error, ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse> {
  public:
@@ -103,9 +107,11 @@ class ::fidl::internal::NaturalClientImpl<::test_union::TestProtocol> final : pu
   ::fidl::internal::NaturalThenable<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated> FlexibleXUnionHenceResponseMustBeHeapAllocated() const;
 };
 namespace test_union {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_union
+
 #ifdef __Fuchsia__
 
 template <>
@@ -122,6 +128,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_union::TestProtocol> final
         _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -159,6 +166,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_union::TestProtocol> final
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_union::TestProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -174,6 +182,7 @@ class ::fidl::internal::NaturalEventSender<::test_union::TestProtocol>
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -188,6 +197,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_union::TestProtoco
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -202,6 +212,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_union::TestProtoco
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -262,4 +273,5 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_union::TestProtocol> fin
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__

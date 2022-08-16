@@ -5,6 +5,7 @@
 #include <memory>
 
 namespace test_nullable {
+
 [[maybe_unused]] constexpr uint64_t kSimpleProtocol_Add_Ordinal = 9142761280038437494lu;
 
 [[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kSimpleProtocol_Add_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
@@ -14,6 +15,7 @@ extern "C" const fidl_type_t test_nullable_SimpleProtocolAddRequestTable;
 extern "C" const fidl_type_t test_nullable_SimpleProtocolAddTopResponseTable;
 #ifdef __Fuchsia__
 }  // namespace test_nullable
+
 ::fidl::WireResult<::test_nullable::SimpleProtocol::Add>::WireResult(
     ::fidl::UnownedClientEnd<::test_nullable::SimpleProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>* request, std::optional<zx::time> deadline) {
@@ -34,10 +36,12 @@ extern "C" const fidl_type_t test_nullable_SimpleProtocolAddTopResponseTable;
   }
 }
 namespace test_nullable {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_nullable
+
 ::fidl::WireUnownedResult<::test_nullable::SimpleProtocol::Add>::WireUnownedResult(::fidl::UnownedClientEnd<::test_nullable::SimpleProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_nullable::SimpleProtocol::Add>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -69,9 +73,11 @@ namespace test_nullable {
   }
 }
 namespace test_nullable {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_nullable
+
 #ifdef __Fuchsia__
 
 ::fidl::internal::WireThenable<::test_nullable::SimpleProtocol::Add> fidl::internal::WireWeakAsyncClientImpl<::test_nullable::SimpleProtocol>::Add(int32_t a, int32_t b) {
@@ -94,6 +100,7 @@ fidl::internal::WireWeakSyncClientImpl<::test_nullable::SimpleProtocol>::Add(int
         return ::fidl::WireResult<::test_nullable::SimpleProtocol::Add>(::fidl::UnownedClientEnd<::test_nullable::SimpleProtocol>(_transport->get<::fidl::internal::ChannelTransport>()), &_request);
       });
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -104,6 +111,7 @@ fidl::internal::WireWeakSyncClientImpl<::test_nullable::SimpleProtocol>::Add(int
   fidl::internal::WireEventDispatcher<::test_nullable::SimpleProtocol> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -141,11 +149,13 @@ void fidl::internal::WireServerDispatcher<::test_nullable::SimpleProtocol>::Disp
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
+
 void fidl::WireServer<::test_nullable::SimpleProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_nullable::SimpleProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -184,6 +194,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_nullable::SimpleProtocol::Ad
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 #endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>::_InitHeader() {

@@ -20,6 +20,7 @@ namespace internal {
 ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond> WireNaturalConversionTraits<::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>, ::fidl::Request<::test_service::SecondProtocol::MethodOnSecond>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_service::SecondProtocol::MethodOnSecond> src) {
   return ::fidl::WireRequest<::test_service::SecondProtocol::MethodOnSecond>();
 }
+
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

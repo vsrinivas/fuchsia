@@ -4,6 +4,7 @@
 #include <lib/fidl/cpp/wire/unknown_interactions.h>
 
 namespace test_doccomments {
+
 [[maybe_unused]] constexpr inline uint64_t kInterface_Method_Ordinal = 5017051197196532121lu;
 
 [[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kInterface_Method_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
@@ -14,6 +15,7 @@ namespace test_doccomments {
 
 #ifdef __Fuchsia__
 }  // namespace test_doccomments
+
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_doccomments::Interface>::Method() const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
@@ -23,9 +25,11 @@ fidl::internal::NaturalClientImpl<::test_doccomments::Interface>::Method() const
   return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_doccomments {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_doccomments
+
 #ifdef __Fuchsia__
 
 ::fitx::result<::fidl::Error>
@@ -68,6 +72,7 @@ fidl::internal::NaturalEventDispatcher<::test_doccomments::Interface>::DispatchE
       return ::fidl::Status::UnknownOrdinal();
   }
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -117,9 +122,11 @@ void fidl::internal::NaturalServerDispatcher<::test_doccomments::Interface>::Dis
                                                                                       internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
+
 void fidl::Server<::test_doccomments::Interface>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_doccomments::Interface>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__

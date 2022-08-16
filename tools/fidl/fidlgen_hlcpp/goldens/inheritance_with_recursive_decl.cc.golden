@@ -9,6 +9,7 @@
 //
 namespace test {
 namespace inheritancewithrecursivedecl {
+
 #ifdef __Fuchsia__
 
 extern "C" const fidl_type_t test_inheritancewithrecursivedecl_ParentFirstRequestTable;
@@ -40,6 +41,7 @@ zx_status_t ParentFirstRequest::Clone(ParentFirstRequest* _result) const {
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -73,6 +75,7 @@ zx_status_t ChildSecondRequest::Clone(ChildSecondRequest* _result) const {
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 //
@@ -84,6 +87,7 @@ namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_inheritancewithrecursivedecl_ParentFirstRequestTable;
 
 }  // namespace _internal
+
 Parent::~Parent() = default;
 
 const fidl_type_t* ::test::inheritancewithrecursivedecl::Parent_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
@@ -192,6 +196,7 @@ zx_status_t Parent_SyncProxy::First(::fidl::InterfaceRequest<::test::inheritance
   const fidl_type_t* req_type = &::test::inheritancewithrecursivedecl::_internal::test_inheritancewithrecursivedecl_ParentFirstRequestTable;
   return proxy_.Send(req_type, ::test::inheritancewithrecursivedecl::Parent_RequestEncoder::First(&_encoder, &request));
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -200,6 +205,7 @@ namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_inheritancewithrecursivedecl_ChildSecondRequestTable;
 
 }  // namespace _internal
+
 Child::~Child() = default;
 
 const fidl_type_t* ::test::inheritancewithrecursivedecl::Child_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
@@ -327,6 +333,7 @@ zx_status_t Child_SyncProxy::Second(::fidl::InterfaceRequest<::test::inheritance
   const fidl_type_t* req_type = &::test::inheritancewithrecursivedecl::_internal::test_inheritancewithrecursivedecl_ChildSecondRequestTable;
   return proxy_.Send(req_type, ::test::inheritancewithrecursivedecl::Child_RequestEncoder::Second(&_encoder, &request));
 }
+
 #endif  // __Fuchsia__
 
 }  // namespace inheritancewithrecursivedecl

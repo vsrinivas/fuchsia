@@ -18,6 +18,7 @@ enum class ObjType : uint32_t {
 };
 
 }  // namespace test_handlesintypes
+
 template <>
 struct fidl::internal::DisplayError<::test_handlesintypes::ObjType> {
   static size_t Format(const ::test_handlesintypes::ObjType& value, char* destination, size_t capacity);

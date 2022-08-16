@@ -18,29 +18,38 @@
 #endif  // __Fuchsia__
 
 namespace test_requestflexibleenvelope {
+
 class Protocol;
 
 __LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
 }  // namespace test_requestflexibleenvelope
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> final {
   static constexpr uint64_t value = 700529454616207123lu;
 };
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> final {
   static constexpr uint64_t value = 5191655763393883319lu;
 };
 
 namespace test_requestflexibleenvelope {
+
 }  // namespace test_requestflexibleenvelope
+
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_requestflexibleenvelope::Protocol> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -61,6 +70,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_requestflexibleenvelope::Pr
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -544,6 +554,7 @@ static_assert(sizeof(::fidl::WireResponse<::test_requestflexibleenvelope::Protoc
 static_assert(offsetof(::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>, f) == 0);
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> final
     : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>> {
@@ -697,6 +708,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_requestflexibleenvelope::Pr
  private:
   ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> decoded_;
 };
+
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_requestflexibleenvelope::Protocol> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
@@ -882,10 +894,12 @@ class ::fidl::WireServer<::test_requestflexibleenvelope::Protocol> : public ::fi
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireWeakOnewayClientImpl<::test_requestflexibleenvelope::Protocol> : public ::fidl::internal::ClientImplBase {
  public:
@@ -931,9 +945,11 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_requestflexibleenvelope::P
   ::fidl::WireResult<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> RequestFlexibleResponseStrict(::test_requestflexibleenvelope::wire::FlexibleFoo s);
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl
+
 #ifdef __Fuchsia__
 template <>
 class ::fidl::internal::WireWeakEventSender<::test_requestflexibleenvelope::Protocol> : public ::fidl::internal::WeakEventSenderBase {
@@ -960,4 +976,5 @@ class ::fidl::internal::WireBufferEventSender<::test_requestflexibleenvelope::Pr
  public:
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
+
 #endif  // __Fuchsia__

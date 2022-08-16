@@ -22,6 +22,7 @@ namespace internal {
   return ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(
       WireNaturalConversionTraits<::test_middle::wire::MiddleGetFooTopResponse, ::test_middle::MiddleGetFooTopResponse>::ToWire(arena, std::move(src)));
 }
+
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

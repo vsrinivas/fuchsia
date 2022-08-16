@@ -8,6 +8,7 @@
 #ifdef __Fuchsia__
 #include <fidl/test.protocollayouts/cpp/natural_messaging.h>
 #include <fidl/test.protocollayouts/cpp/wire_messaging.h>
+
 #endif  // __Fuchsia__
 #include <fidl/test.protocollayouts.imported/cpp/type_conversions.h>
 #include <lib/fidl/cpp/wire_natural_conversions.h>
@@ -955,6 +956,7 @@ template <>
 struct WireTypeForNaturalType<::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError>> {
   using type = ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonWithError>;
 };
+
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

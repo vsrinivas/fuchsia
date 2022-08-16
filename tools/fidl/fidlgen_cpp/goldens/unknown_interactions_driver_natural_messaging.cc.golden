@@ -1,6 +1,7 @@
 #include <fidl/test.unknowninteractions/cpp/driver/natural_messaging.h>
 #include <lib/fidl_driver/cpp/unknown_interactions.h>
 namespace test_unknowninteractions {
+
 [[maybe_unused]] constexpr inline uint64_t kUnknownInteractionsDriverProtocol_StrictOneWay_Ordinal = 6982839851953080288lu;
 
 [[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsDriverProtocol_StrictOneWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
@@ -74,6 +75,7 @@ namespace test_unknowninteractions {
 [[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>
 fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::StrictTwoWay() const {
   auto _arena = fdf::Arena::Create(0, 'FIDL');
@@ -676,8 +678,10 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
   return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 }  // namespace test_unknowninteractions
+
 #ifdef __Fuchsia__
 
 ::fidl::Status
@@ -702,6 +706,7 @@ fidl::internal::NaturalEventDispatcher<::test_unknowninteractions::UnknownIntera
       return ::fidl::Status::UnknownOrdinal();
   }
 }
+
 #endif  // __Fuchsia__
 
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay>::Reply() {
@@ -1318,14 +1323,17 @@ void fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::Unknown
                                                                                                                       internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
+
 void fdf::Server<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 namespace test_unknowninteractions {
+
 [[maybe_unused]] constexpr inline uint64_t kUnknownInteractionsAjarDriverProtocol_StrictOneWay_Ordinal = 200845620698173917lu;
 
 [[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsAjarDriverProtocol_StrictOneWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
@@ -1367,6 +1375,7 @@ namespace test_unknowninteractions {
 [[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsAjarDriverProtocol_StrictTwoWayTableErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>
 fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::StrictTwoWay() const {
   auto _arena = fdf::Arena::Create(0, 'FIDL');
@@ -1689,8 +1698,10 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
   return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 }  // namespace test_unknowninteractions
+
 #ifdef __Fuchsia__
 
 ::fidl::Status
@@ -1715,6 +1726,7 @@ fidl::internal::NaturalEventDispatcher<::test_unknowninteractions::UnknownIntera
       return ::fidl::Status::UnknownOrdinal();
   }
 }
+
 #endif  // __Fuchsia__
 
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay>::Reply() {
@@ -2050,14 +2062,17 @@ void fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::Unknown
                                                                                                                           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
+
 void fdf::Server<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 namespace test_unknowninteractions {
+
 [[maybe_unused]] constexpr inline uint64_t kUnknownInteractionsClosedDriverProtocol_StrictOneWay_Ordinal = 9111839835597799810lu;
 
 [[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsClosedDriverProtocol_StrictOneWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
@@ -2095,6 +2110,7 @@ namespace test_unknowninteractions {
 [[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsClosedDriverProtocol_StrictTwoWayTableErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay>
 fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>::StrictTwoWay() const {
   auto _arena = fdf::Arena::Create(0, 'FIDL');
@@ -2396,8 +2412,10 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
   return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 }  // namespace test_unknowninteractions
+
 #ifdef __Fuchsia__
 
 #endif  // __Fuchsia__
@@ -2706,9 +2724,11 @@ void fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::Unknown
                                                                                                                             internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
+
 void fdf::Server<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__

@@ -9,6 +9,7 @@
 //
 namespace test {
 namespace union_ {
+
 extern "C" const fidl_type_t test_union_PizzaTable;
 const fidl_type_t* Pizza::FidlType = &test_union_PizzaTable;
 
@@ -4986,6 +4987,7 @@ __LOCAL extern "C" const fidl_type_t test_union_TestProtocolStrictXUnionHenceRes
 __LOCAL extern "C" const fidl_type_t test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
 
 }  // namespace _internal
+
 TestProtocol::~TestProtocol() = default;
 
 const fidl_type_t* ::test::union_::TestProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
@@ -5197,6 +5199,7 @@ zx_status_t TestProtocol_SyncProxy::FlexibleXUnionHenceResponseMustBeHeapAllocat
   *out_xu = ::fidl::DecodeAs<::test::union_::OlderSimpleUnion>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 }  // namespace union_

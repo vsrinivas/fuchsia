@@ -5,6 +5,7 @@
 #include <memory>
 
 namespace test_union {
+
 [[maybe_unused]] constexpr uint64_t kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal = 582913180652179677lu;
 
 [[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
@@ -18,6 +19,7 @@ extern "C" const fidl_type_t test_union_TestProtocolStrictXUnionHenceResponseMay
 extern "C" const fidl_type_t test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
 #ifdef __Fuchsia__
 }  // namespace test_union
+
 ::fidl::WireResult<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>::WireResult(
     ::fidl::UnownedClientEnd<::test_union::TestProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>* request, std::optional<zx::time> deadline) {
@@ -38,10 +40,12 @@ extern "C" const fidl_type_t test_union_TestProtocolFlexibleXUnionHenceResponseM
   }
 }
 namespace test_union {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_union
+
 ::fidl::WireUnownedResult<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>::WireUnownedResult(::fidl::UnownedClientEnd<::test_union::TestProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -73,10 +77,12 @@ namespace test_union {
   }
 }
 namespace test_union {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_union
+
 ::fidl::WireResult<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>::WireResult(
     ::fidl::UnownedClientEnd<::test_union::TestProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>* request, std::optional<zx::time> deadline) {
@@ -97,10 +103,12 @@ namespace test_union {
   }
 }
 namespace test_union {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_union
+
 ::fidl::WireUnownedResult<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>::WireUnownedResult(::fidl::UnownedClientEnd<::test_union::TestProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -132,9 +140,11 @@ namespace test_union {
   }
 }
 namespace test_union {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_union
+
 #ifdef __Fuchsia__
 
 ::fidl::internal::WireThenable<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> fidl::internal::WireWeakAsyncClientImpl<::test_union::TestProtocol>::StrictXUnionHenceResponseMayBeStackAllocated() {
@@ -178,6 +188,7 @@ fidl::internal::WireWeakSyncClientImpl<::test_union::TestProtocol>::FlexibleXUni
         return ::fidl::WireResult<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>(::fidl::UnownedClientEnd<::test_union::TestProtocol>(_transport->get<::fidl::internal::ChannelTransport>()), &_request);
       });
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -188,6 +199,7 @@ fidl::internal::WireWeakSyncClientImpl<::test_union::TestProtocol>::FlexibleXUni
   fidl::internal::WireEventDispatcher<::test_union::TestProtocol> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -234,11 +246,13 @@ void fidl::internal::WireServerDispatcher<::test_union::TestProtocol>::Dispatch(
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
+
 void fidl::WireServer<::test_union::TestProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_union::TestProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -277,6 +291,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_union::TestProtocol::StrictX
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -315,6 +330,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_union::TestProtocol::Flexibl
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 #endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalRequest<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>::_InitHeader() {

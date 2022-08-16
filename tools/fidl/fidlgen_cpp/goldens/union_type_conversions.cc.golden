@@ -948,6 +948,7 @@ std::unique_ptr<::test_union::OnlyReservedFlexibleUnion> WireNaturalConversionTr
   return ::fidl::WireResponse<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>(
       WireNaturalConversionTraits<::test_union::wire::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse, ::test_union::TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse>::ToWire(arena, std::move(src)));
 }
+
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

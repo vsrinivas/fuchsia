@@ -20,6 +20,7 @@ __LOCAL extern "C" const fidl_type_t test_inheritancewithrecursivedecl_ParentFir
 
 #ifdef __Fuchsia__
 }  // namespace test_inheritancewithrecursivedecl
+
 template <>
 class ::fidl::internal::NaturalClientImpl<::test_inheritancewithrecursivedecl::Parent> final : public ::fidl::internal::NaturalClientBase {
  public:
@@ -27,9 +28,11 @@ class ::fidl::internal::NaturalClientImpl<::test_inheritancewithrecursivedecl::P
   ::fitx::result<::fidl::Error> First(::fidl::Request<::test_inheritancewithrecursivedecl::Parent::First> request) const;
 };
 namespace test_inheritancewithrecursivedecl {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_inheritancewithrecursivedecl
+
 #ifdef __Fuchsia__
 
 template <>
@@ -44,6 +47,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_inheritancewithrecursivedec
         _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -81,6 +85,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_inheritancewithrecursivede
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_inheritancewithrecursivedecl::Parent>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -96,6 +101,7 @@ class ::fidl::internal::NaturalEventSender<::test_inheritancewithrecursivedecl::
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -113,6 +119,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_inheritancewithrec
   static constexpr bool kHasPayload = true;
   using Payload = ::test_inheritancewithrecursivedecl::ParentFirstRequest;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -150,6 +157,7 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_inheritancewithrecursive
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 namespace test_inheritancewithrecursivedecl {
@@ -157,6 +165,7 @@ __LOCAL extern "C" const fidl_type_t test_inheritancewithrecursivedecl_ChildSeco
 
 #ifdef __Fuchsia__
 }  // namespace test_inheritancewithrecursivedecl
+
 template <>
 class ::fidl::internal::NaturalClientImpl<::test_inheritancewithrecursivedecl::Child> final : public ::fidl::internal::NaturalClientBase {
  public:
@@ -166,9 +175,11 @@ class ::fidl::internal::NaturalClientImpl<::test_inheritancewithrecursivedecl::C
   ::fitx::result<::fidl::Error> Second(::fidl::Request<::test_inheritancewithrecursivedecl::Child::Second> request) const;
 };
 namespace test_inheritancewithrecursivedecl {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_inheritancewithrecursivedecl
+
 #ifdef __Fuchsia__
 
 template <>
@@ -185,6 +196,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_inheritancewithrecursivedec
         _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -222,6 +234,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_inheritancewithrecursivede
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_inheritancewithrecursivedecl::Child>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -237,6 +250,7 @@ class ::fidl::internal::NaturalEventSender<::test_inheritancewithrecursivedecl::
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -254,6 +268,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_inheritancewithrec
   static constexpr bool kHasPayload = true;
   using Payload = ::test_inheritancewithrecursivedecl::ParentFirstRequest;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -271,6 +286,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_inheritancewithrec
   static constexpr bool kHasPayload = true;
   using Payload = ::test_inheritancewithrecursivedecl::ChildSecondRequest;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -313,4 +329,5 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_inheritancewithrecursive
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__

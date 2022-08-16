@@ -82,6 +82,7 @@ class ExampleProtocolMethodRequest;
 
 class ExampleProtocol;
 using ExampleProtocolHandle = ::fidl::InterfaceHandle<ExampleProtocol>;
+
 #endif  // __Fuchsia__
 
 class ExampleStruct;
@@ -121,6 +122,7 @@ namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_placementofattributes_ExampleProtocolMethodRequestTable;
 
 }  // namespace _internal
+
 class ExampleProtocol_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage Method(::fidl::MessageEncoder* _encoder, ::test::exampleusing::Empty* arg) {
@@ -137,6 +139,7 @@ class ExampleProtocol_RequestEncoder {
 class ExampleProtocol_ResponseEncoder {
  public:
 };
+
 #endif  // __Fuchsia__
 
 class ExampleStruct final {
@@ -406,6 +409,7 @@ using ExampleXUnionPtr = ::std::unique_ptr<ExampleXUnion>;
 }  // namespace placementofattributes
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::placementofattributes::ExampleBits> {
   static constexpr size_t inline_size_v2 = sizeof(::test::placementofattributes::ExampleBits);
@@ -646,6 +650,7 @@ struct Equality<::test::placementofattributes::ExampleXUnion> {
 }  // namespace fidl
 namespace test {
 namespace placementofattributes {
+
 #ifdef __Fuchsia__
 
 using ExampleProtocolPtr = ::fidl::InterfacePtr<ExampleProtocol>;
@@ -657,9 +662,12 @@ using ExampleProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<ExampleProtocol>;
 class ExampleProtocol_SyncProxy;
 
 namespace internal {
+
 constexpr uint64_t kExampleProtocol_Method_Ordinal = 0x53978e6fc7476749lu;
+
 constexpr ::fidl::MessageDynamicFlags kExampleProtocol_Method_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -742,6 +750,7 @@ class ExampleProtocol_SyncProxy : public ::test::placementofattributes::ExampleP
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<ExampleProtocol>;
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace placementofattributes

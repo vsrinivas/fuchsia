@@ -65,6 +65,7 @@ class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse;
 
 class TestProtocol;
 using TestProtocolHandle = ::fidl::InterfaceHandle<TestProtocol>;
+
 #endif  // __Fuchsia__
 
 class StructWithNullableXUnion;
@@ -2016,9 +2017,11 @@ class TestProtocol_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponseTable;
 
 }  // namespace _internal
+
 class TestProtocol_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage StrictXUnionHenceResponseMayBeStackAllocated(::fidl::MessageEncoder* _encoder, ::test::union_::StrictBoundedXUnion* xu) {
@@ -2042,6 +2045,7 @@ class TestProtocol_ResponseEncoder {
     return _encoder->GetMessage();
   }
 };
+
 #endif  // __Fuchsia__
 
 class StructWithNullableXUnion final {
@@ -2418,6 +2422,7 @@ using OnlyReservedFlexibleUnionPtr = ::std::unique_ptr<OnlyReservedFlexibleUnion
 }  // namespace union_
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::union_::Pizza>
     : public EncodableCodingTraits<::test::union_::Pizza, 16> {};
@@ -3922,6 +3927,7 @@ struct Equality<::test::union_::OnlyReservedFlexibleUnion> {
 }  // namespace fidl
 namespace test {
 namespace union_ {
+
 #ifdef __Fuchsia__
 
 using TestProtocolPtr = ::fidl::InterfacePtr<TestProtocol>;
@@ -3933,11 +3939,16 @@ using TestProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<TestProtocol>;
 class TestProtocol_SyncProxy;
 
 namespace internal {
+
 constexpr uint64_t kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal = 0x816ec730baa90ddlu;
+
 constexpr ::fidl::MessageDynamicFlags kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal = 0x6ad517317388ea05lu;
+
 constexpr ::fidl::MessageDynamicFlags kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -4034,6 +4045,7 @@ class TestProtocol_SyncProxy : public ::test::union_::TestProtocol_Sync {
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<TestProtocol>;
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace union_

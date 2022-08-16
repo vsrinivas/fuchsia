@@ -72,6 +72,7 @@ std::unique_ptr<::test_versions::Union> WireNaturalConversionTraits<::test_versi
 ::fidl::WireRequest<::test_versions::Protocol::Foo> WireNaturalConversionTraits<::fidl::WireRequest<::test_versions::Protocol::Foo>, ::fidl::Request<::test_versions::Protocol::Foo>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_versions::Protocol::Foo> src) {
   return ::fidl::WireRequest<::test_versions::Protocol::Foo>();
 }
+
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

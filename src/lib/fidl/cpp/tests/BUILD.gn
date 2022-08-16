@@ -11,6 +11,7 @@ group("tests") {
     "dispatcher",
     "hlcpp_conversion",
     "integration",
+    "natural_ostream",
     "natural_types",
   ]
 }

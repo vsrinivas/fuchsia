@@ -19,6 +19,7 @@
   fidl::internal::NaturalEventDispatcher<::test_protocolrequest::Child> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -36,14 +37,17 @@ void fidl::internal::NaturalServerDispatcher<::test_protocolrequest::Child>::Dis
                                                                                       internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
+
 void fidl::Server<::test_protocolrequest::Child>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_protocolrequest::Child>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 namespace test_protocolrequest {
+
 [[maybe_unused]] constexpr inline uint64_t kParent_GetChild_Ordinal = 881818649151440699lu;
 
 [[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kParent_GetChild_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
@@ -62,6 +66,7 @@ namespace test_protocolrequest {
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolrequest
+
 ::fidl::internal::NaturalThenable<::test_protocolrequest::Parent::GetChild>
 fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::GetChild() const {
   return ::fidl::internal::NaturalThenable<::test_protocolrequest::Parent::GetChild>(
@@ -118,9 +123,11 @@ fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent>::TakeChildRequ
   return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_protocolrequest {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_protocolrequest
+
 #ifdef __Fuchsia__
 
 ::fidl::Result<::test_protocolrequest::Parent::GetChild>
@@ -175,6 +182,7 @@ fidl::internal::NaturalSyncClientImpl<::test_protocolrequest::Parent>::TakeChild
   fidl::internal::NaturalEventDispatcher<::test_protocolrequest::Parent> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -271,9 +279,11 @@ void fidl::internal::NaturalServerDispatcher<::test_protocolrequest::Parent>::Di
                                                                                        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
+
 void fidl::Server<::test_protocolrequest::Parent>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_protocolrequest::Parent>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__

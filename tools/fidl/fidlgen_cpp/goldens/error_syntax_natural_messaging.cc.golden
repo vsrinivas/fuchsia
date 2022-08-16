@@ -4,6 +4,7 @@
 #include <lib/fidl/cpp/wire/unknown_interactions.h>
 
 namespace test_errorsyntax {
+
 [[maybe_unused]] constexpr inline uint64_t kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal = 3565108794310607393lu;
 
 [[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
@@ -14,6 +15,7 @@ namespace test_errorsyntax {
 
 #ifdef __Fuchsia__
 }  // namespace test_errorsyntax
+
 ::fidl::internal::NaturalThenable<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
 fidl::internal::NaturalClientImpl<::test_errorsyntax::ExampleUseOfErrorSyntax>::ComposedCallWhichMayFail(const ::fidl::Request<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>& request) const {
   return ::fidl::internal::NaturalThenable<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>(
@@ -51,9 +53,11 @@ fidl::internal::NaturalClientImpl<::test_errorsyntax::ExampleUseOfErrorSyntax>::
 }
 
 namespace test_errorsyntax {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_errorsyntax
+
 #ifdef __Fuchsia__
 
 ::fidl::Result<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>
@@ -90,6 +94,7 @@ fidl::internal::NaturalSyncClientImpl<::test_errorsyntax::ExampleUseOfErrorSynta
   fidl::internal::NaturalEventDispatcher<::test_errorsyntax::ExampleUseOfErrorSyntax> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -156,9 +161,11 @@ void fidl::internal::NaturalServerDispatcher<::test_errorsyntax::ExampleUseOfErr
                                                                                                     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
+
 void fidl::Server<::test_errorsyntax::ExampleUseOfErrorSyntax>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_errorsyntax::ExampleUseOfErrorSyntax>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__

@@ -25,6 +25,7 @@
 namespace test_union {
 
 namespace wire {
+
 struct Pizza;
 
 struct Pasta;

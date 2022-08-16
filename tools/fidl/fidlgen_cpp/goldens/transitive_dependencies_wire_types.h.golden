@@ -25,6 +25,7 @@
 namespace test_transitivedependencies {
 
 namespace wire {
+
 struct Baz;
 
 extern "C" const fidl_type_t test_transitivedependencies_BazTable;

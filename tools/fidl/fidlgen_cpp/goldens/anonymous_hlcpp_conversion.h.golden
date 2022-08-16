@@ -9,6 +9,7 @@
 
 namespace fidl {
 namespace internal {
+
 template <>
 struct NaturalToHLCPPTraits<::test_anonymous::Op> : public NaturalToHLCPPTraitsEnum<::test_anonymous::Op, ::test::anonymous::Op> {};
 template <>

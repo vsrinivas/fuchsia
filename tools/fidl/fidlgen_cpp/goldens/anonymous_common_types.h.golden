@@ -9,6 +9,7 @@
 #include <cinttypes>
 
 namespace test_anonymous {
+
 // |Flags| is flexible, hence may contain unknown members not
 // defined in the FIDL schema.
 class Flags final {
@@ -222,6 +223,7 @@ constexpr const ::test_anonymous::Op Op::kDiv =
     ::test_anonymous::Op(3u);
 
 }  // namespace test_anonymous
+
 template <>
 struct fidl::internal::DisplayError<::test_anonymous::Op> {
   static size_t Format(const ::test_anonymous::Op& value, char* destination, size_t capacity);
@@ -263,6 +265,7 @@ constexpr const ::test_anonymous::SomeProtocolSomeMethodError SomeProtocolSomeMe
     ::test_anonymous::SomeProtocolSomeMethodError(2u);
 
 }  // namespace test_anonymous
+
 template <>
 struct fidl::internal::DisplayError<::test_anonymous::SomeProtocolSomeMethodError> {
   static size_t Format(const ::test_anonymous::SomeProtocolSomeMethodError& value, char* destination, size_t capacity);

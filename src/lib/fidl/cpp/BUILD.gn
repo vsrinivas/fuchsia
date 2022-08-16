@@ -91,3 +91,9 @@ sdk_source_set("hlcpp_conversion") {
   public_configs = [ ":cpp_base.headers" ]
   public_deps = [ "//sdk/lib/fidl/cpp:cpp_base" ]
 }
+
+# The support header for Natural type printing
+source_set("natural_ostream") {
+  public = [ "include/lib/fidl/cpp/natural_ostream.h" ]
+  public_configs = [ ":cpp_base.headers" ]
+}

@@ -25,8 +25,11 @@ namespace test_enum {
 
 namespace wire {
 using MyStrictEnum = ::test_enum::MyStrictEnum;
+
 using MyFlexibleEnum = ::test_enum::MyFlexibleEnum;
+
 using MyFlexibleEnumWithCustomUnknown = ::test_enum::MyFlexibleEnumWithCustomUnknown;
+
 using MyEmptyFlexibleEnum = ::test_enum::MyEmptyFlexibleEnum;
 
 }  // namespace wire

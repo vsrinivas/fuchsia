@@ -26,6 +26,7 @@
 namespace test_protocolpayloads {
 
 namespace wire {
+
 struct LocalStructPayload;
 
 struct MainProtocolTwoWayLocalWithErrorTopResponse;

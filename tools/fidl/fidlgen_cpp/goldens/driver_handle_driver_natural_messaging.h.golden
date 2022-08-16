@@ -18,6 +18,7 @@ class ::fidl::internal::NaturalClientImpl<::test_driverhandle::DriverProtocol> f
  public:
   using NaturalClientBase::NaturalClientBase;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -42,6 +43,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_driverhandle::DriverProtoc
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_driverhandle::DriverProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -73,6 +75,7 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_driverhandle::DriverProt
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 namespace test_driverhandle {
@@ -80,6 +83,7 @@ __LOCAL extern "C" const fidl_type_t test_driverhandle_HandlesInProtocolSendHand
 
 #ifdef __Fuchsia__
 }  // namespace test_driverhandle
+
 template <>
 class ::fidl::internal::NaturalClientImpl<::test_driverhandle::HandlesInProtocol> final : public ::fidl::internal::NaturalClientBase {
  public:
@@ -87,8 +91,10 @@ class ::fidl::internal::NaturalClientImpl<::test_driverhandle::HandlesInProtocol
   ::fitx::result<::fidl::Error> SendHandles(::fidl::Request<::test_driverhandle::HandlesInProtocol::SendHandles> request) const;
 };
 namespace test_driverhandle {
+
 #endif  // __Fuchsia__
 }  // namespace test_driverhandle
+
 #ifdef __Fuchsia__
 
 template <>
@@ -111,6 +117,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_driverhandle::HandlesInPro
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_driverhandle::HandlesInProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -128,6 +135,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_driverhandle::Hand
   static constexpr bool kHasPayload = true;
   using Payload = ::test_driverhandle::HandlesInProtocolSendHandlesRequest;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -164,4 +172,5 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_driverhandle::HandlesInP
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__

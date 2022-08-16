@@ -152,6 +152,7 @@ std::unique_ptr<::test_requestflexibleenvelope::StrictFoo> WireNaturalConversion
   return ::fidl::WireResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>(
       WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::ProtocolRequestFlexibleResponseStrictTopResponse, ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse>::ToWire(arena, std::move(src)));
 }
+
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

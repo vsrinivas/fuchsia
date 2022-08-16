@@ -38,6 +38,7 @@ using DocCommentWithQuotesPtr = ::std::unique_ptr<DocCommentWithQuotes>;
 }  // namespace escaping
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::escaping::DocCommentWithQuotes>
     : public EncodableCodingTraits<::test::escaping::DocCommentWithQuotes, 1> {};

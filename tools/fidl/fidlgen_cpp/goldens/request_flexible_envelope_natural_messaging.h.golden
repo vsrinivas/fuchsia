@@ -15,6 +15,7 @@
 namespace fidl {
 
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> {
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>>;
@@ -42,8 +43,11 @@ struct ::fidl::internal::NaturalMethodTypes<::test_requestflexibleenvelope::Prot
 };
 namespace test_requestflexibleenvelope {
 __LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
 
 #ifdef __Fuchsia__
@@ -62,7 +66,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_requestflexibleen
   static constexpr bool kHasPayload = true;
   using Payload = ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse;
 };
-namespace test_requestflexibleenvelope {}  // namespace test_requestflexibleenvelope
+namespace test_requestflexibleenvelope {
+}  // namespace test_requestflexibleenvelope
+
 template <>
 class ::fidl::Result<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible> final : public ::fitx::result<::fidl::Error, ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleTopResponse> {
  public:
@@ -85,6 +91,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_requestflexibleen
   static constexpr bool kHasPayload = true;
   using Payload = ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse;
 };
+
 template <>
 class ::fidl::Result<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> final : public ::fitx::result<::fidl::Error, ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictTopResponse> {
  public:
@@ -103,9 +110,11 @@ class ::fidl::internal::NaturalClientImpl<::test_requestflexibleenvelope::Protoc
   ::fidl::internal::NaturalThenable<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict> RequestFlexibleResponseStrict(const ::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>& request) const;
 };
 namespace test_requestflexibleenvelope {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_requestflexibleenvelope
+
 #ifdef __Fuchsia__
 
 template <>
@@ -122,6 +131,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_requestflexibleenvelope::Pr
         _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -159,6 +169,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_requestflexibleenvelope::P
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_requestflexibleenvelope::Protocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -174,6 +185,7 @@ class ::fidl::internal::NaturalEventSender<::test_requestflexibleenvelope::Proto
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -191,6 +203,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_requestflexibleenv
   static constexpr bool kHasPayload = true;
   using Payload = ::test_requestflexibleenvelope::ProtocolRequestStrictResponseFlexibleRequest;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -208,6 +221,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_requestflexibleenv
   static constexpr bool kHasPayload = true;
   using Payload = ::test_requestflexibleenvelope::ProtocolRequestFlexibleResponseStrictRequest;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -268,4 +282,5 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_requestflexibleenvelope:
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__

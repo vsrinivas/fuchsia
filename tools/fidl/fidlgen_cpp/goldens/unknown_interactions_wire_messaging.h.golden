@@ -17,18 +17,22 @@
     #include <lib/fidl/cpp/wire/sync_call.h>
     #include <lib/fidl/cpp/wire/unknown_interaction_handler.h>
   
+
 #endif  // __Fuchsia__
 
 
   
     
   namespace test_unknowninteractions {
+
   class UnknownInteractionsProtocol;
     
   
+
   class UnknownInteractionsAjarProtocol;
     
   
+
   class UnknownInteractionsClosedProtocol;
     
 
@@ -39,147 +43,214 @@
     
     
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsTopResponseTable;
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionResponseTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTableResponseTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayErrTopResponseTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsErrTopResponseTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionErrTopResponseTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTableErrTopResponseTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTopResponseTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsTopResponseTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionTopResponseTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableTopResponseTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayErrTopResponseTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsErrTopResponseTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionErrTopResponseTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableErrTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsTopResponseTable;
     
     
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventFieldsRequestTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventUnionRequestTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventTableRequestTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventErrRequestTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventFieldsErrRequestTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventUnionErrRequestTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventTableErrRequestTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionResponseTable;
     
     
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTableResponseTable;
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventFieldsRequestTable;
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventUnionRequestTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayErrTopResponseTable;
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventTableRequestTable;
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventErrRequestTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsErrTopResponseTable;
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventFieldsErrRequestTable;
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventUnionErrRequestTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionErrTopResponseTable;
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventTableErrRequestTable;
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTableErrTopResponseTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTopResponseTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsTopResponseTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionTopResponseTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableTopResponseTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayErrTopResponseTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsErrTopResponseTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionErrTopResponseTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableErrTopResponseTable;
+    
+    
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventFieldsRequestTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventUnionRequestTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventTableRequestTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventErrRequestTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventFieldsErrRequestTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventUnionErrRequestTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventTableErrRequestTable;
+    
+    
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventFieldsRequestTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventUnionRequestTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventTableRequestTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventErrRequestTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventFieldsErrRequestTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventUnionErrRequestTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventTableErrRequestTable;
 }  // namespace test_unknowninteractions
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay> final { static constexpr uint64_t value = 5652707722400962470lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay> final { static constexpr uint64_t value = 583422011583300678lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay> final { static constexpr uint64_t value = 8308184097687583042lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields> final { static constexpr uint64_t value = 3697260130745060067lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion> final { static constexpr uint64_t value = 2455165891480464557lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable> final { static constexpr uint64_t value = 8389853739594228663lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> final { static constexpr uint64_t value = 7862264614495172967lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr> final { static constexpr uint64_t value = 2414673307948662059lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr> final { static constexpr uint64_t value = 4988571416540160202lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr> final { static constexpr uint64_t value = 5487292735562672344lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> final { static constexpr uint64_t value = 334879577560091516lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields> final { static constexpr uint64_t value = 4257018954691721778lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion> final { static constexpr uint64_t value = 4913460516188409782lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable> final { static constexpr uint64_t value = 9171907422498283911lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> final { static constexpr uint64_t value = 6999736795697216519lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr> final { static constexpr uint64_t value = 1093132337162001157lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr> final { static constexpr uint64_t value = 2410151523245950935lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr> final { static constexpr uint64_t value = 7893309626427980786lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent> final { static constexpr uint64_t value = 685715276307386305lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields> final { static constexpr uint64_t value = 8896208255987935026lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion> final { static constexpr uint64_t value = 3919175221694221274lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable> final { static constexpr uint64_t value = 2711448698318579984lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr> final { static constexpr uint64_t value = 4437558874343717997lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr> final { static constexpr uint64_t value = 8268703922238340235lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr> final { static constexpr uint64_t value = 4681887988605004475lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr> final { static constexpr uint64_t value = 7827903484869638218lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent> final { static constexpr uint64_t value = 7042257263728687206lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields> final { static constexpr uint64_t value = 3613822014516746241lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion> final { static constexpr uint64_t value = 2499446536152409191lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable> final { static constexpr uint64_t value = 5724881371349617120lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr> final { static constexpr uint64_t value = 5465749747219019177lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr> final { static constexpr uint64_t value = 1096356983683709514lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr> final { static constexpr uint64_t value = 906517230981154796lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr> final { static constexpr uint64_t value = 5605294921124359491lu; };
 
 namespace test_unknowninteractions {
+
 }  // namespace test_unknowninteractions
+
 #ifdef __Fuchsia__
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_unknowninteractions::UnknownInteractionsProtocol> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 
 template<>
 struct ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsProtocol> final {
@@ -196,7 +267,9 @@ struct ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::Unknow
   static const ::fidl::internal::MethodEntry* entries_end_;
   static const ::fidl::internal::UnknownInteractionHandlerEntry unknown_interaction_handler_entry_;
 };
+
 #endif  // __Fuchsia__
+
 
 
 template<>
@@ -234,6 +307,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay> final {
 
@@ -268,6 +342,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay> final {
@@ -304,6 +379,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
+
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay> final {
 
@@ -338,6 +414,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields> final {
@@ -375,6 +452,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse {
@@ -438,6 +516,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion> final {
 
@@ -474,6 +553,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionResponse {
@@ -536,6 +616,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable> final {
 
@@ -572,6 +653,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableResponse {
@@ -634,6 +716,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> final {
 
@@ -670,6 +753,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayErrTopResponse {
@@ -734,6 +818,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr> final {
 
@@ -770,6 +855,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsErrTopResponse {
@@ -834,6 +920,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr> final {
 
@@ -870,6 +957,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrTopResponse {
@@ -934,6 +1022,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr> final {
 
@@ -970,6 +1059,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrTopResponse {
@@ -1034,6 +1124,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> final {
 
@@ -1070,6 +1161,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTopResponse {
@@ -1134,6 +1226,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields> final {
 
@@ -1170,6 +1263,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsTopResponse {
@@ -1234,6 +1328,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion> final {
 
@@ -1270,6 +1365,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionTopResponse {
@@ -1334,6 +1430,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable> final {
 
@@ -1370,6 +1467,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableTopResponse {
@@ -1434,6 +1532,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> final {
 
@@ -1470,6 +1569,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayErrTopResponse {
@@ -1534,6 +1634,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr> final {
 
@@ -1570,6 +1671,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrTopResponse {
@@ -1634,6 +1736,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr> final {
 
@@ -1670,6 +1773,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrTopResponse {
@@ -1734,6 +1838,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr> final {
 
@@ -1770,6 +1875,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrTopResponse {
@@ -1834,6 +1940,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent> final {
 
@@ -1869,6 +1976,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventFieldsRequest {
@@ -1933,6 +2041,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
+
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionRequest {
 
@@ -1995,6 +2104,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
+
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableRequest {
 
@@ -2056,6 +2166,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventErrRequest {
@@ -2121,6 +2232,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
+
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventFieldsErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventFieldsErrResult;
@@ -2184,6 +2296,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventUnionErrRequest {
@@ -2249,6 +2362,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
+
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableErrResult;
@@ -2313,6 +2427,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
+
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent> final {
 
@@ -2348,6 +2463,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventFieldsRequest {
@@ -2412,6 +2528,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
+
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionRequest {
 
@@ -2474,6 +2591,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
+
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableRequest {
 
@@ -2535,6 +2653,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventErrRequest {
@@ -2600,6 +2719,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
+
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventFieldsErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventFieldsErrResult;
@@ -2664,6 +2784,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
+
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventUnionErrResult;
@@ -2727,6 +2848,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableErrRequest {
@@ -2796,6 +2918,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
 
 
 
+
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>>;
@@ -2818,10 +2941,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -2847,10 +2972,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -2876,10 +3003,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -2905,10 +3034,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -2937,10 +3068,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -2969,10 +3102,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -3001,10 +3136,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -3033,10 +3170,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -3062,10 +3201,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -3091,10 +3232,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -3120,10 +3263,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -3149,10 +3294,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -3181,10 +3328,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -3213,10 +3362,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -3245,10 +3396,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -3277,10 +3430,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 namespace fidl {
+
 
 
 template <>
@@ -5826,6 +5981,7 @@ static_assert(sizeof(::fidl::WireEvent<::test_unknowninteractions::UnknownIntera
 static_assert(offsetof(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>, result) == 0);
 #ifdef __Fuchsia__
 }  // namespace fidl
+
     template<>
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>>> {
@@ -6102,6 +6258,8 @@ static_assert(offsetof(::fidl::WireEvent<::test_unknowninteractions::UnknownInte
 
 
 
+
+
 template<>
 class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay> {
  public:
@@ -6118,6 +6276,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
   ~WireResult() = default;
 };
 
+
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay> {
  public:
@@ -6132,6 +6291,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
 
   
 };
+
 
 
 
@@ -6151,6 +6311,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
   ~WireResult() = default;
 };
 
+
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay> {
  public:
@@ -6165,6 +6326,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
 
   
 };
+
 
 
 
@@ -6186,6 +6348,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::InlineMessageBuffer<16> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay> {
@@ -6217,6 +6380,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields> {
   using Type = ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>;
@@ -6240,6 +6404,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::InlineMessageBuffer<24> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields> {
@@ -6271,6 +6436,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion> {
   using Type = ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>;
@@ -6294,6 +6460,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion> {
@@ -6325,6 +6492,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable> {
   using Type = ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>;
@@ -6348,6 +6516,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable> {
@@ -6379,6 +6548,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> {
   using Type = ::fitx::result<int32_t>;
@@ -6402,6 +6572,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::InlineMessageBuffer<48> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> {
@@ -6433,6 +6604,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr> {
   using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsErrResponse*>;
@@ -6456,6 +6628,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::InlineMessageBuffer<48> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr> {
@@ -6487,6 +6660,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr> {
   using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrResponse*>;
@@ -6510,6 +6684,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr> {
@@ -6541,6 +6716,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr> {
   using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResponse*>;
@@ -6564,6 +6740,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr> {
@@ -6597,6 +6774,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
 
 
 
+
 template<>
 class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> {
  public:
@@ -6615,6 +6793,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::InlineMessageBuffer<48> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> {
@@ -6646,6 +6825,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields> {
   using Type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsResponse;
@@ -6669,6 +6849,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::InlineMessageBuffer<48> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields> {
@@ -6700,6 +6881,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion> {
   using Type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionResponse;
@@ -6723,6 +6905,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion> {
@@ -6754,6 +6937,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable> {
   using Type = ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableResponse;
@@ -6777,6 +6961,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable> {
@@ -6808,6 +6993,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> {
   using Type = ::fitx::result<int32_t>;
@@ -6831,6 +7017,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::InlineMessageBuffer<48> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> {
@@ -6862,6 +7049,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr> {
   using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse*>;
@@ -6885,6 +7073,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::InlineMessageBuffer<48> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr> {
@@ -6916,6 +7105,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr> {
   using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse*>;
@@ -6939,6 +7129,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr> {
@@ -6970,6 +7161,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr> {
   using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse*>;
@@ -6993,6 +7185,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr> {
@@ -7023,6 +7216,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
   private:
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>> decoded_;
 };
+
 template<>
 class ::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsProtocol> : public ::fidl::internal::BaseEventHandlerInterface, public ::fidl::UnknownEventHandler<::test_unknowninteractions::UnknownInteractionsProtocol> {
 public:
@@ -7093,6 +7287,8 @@ class ::fidl::internal::WireEventDispatcher<::test_unknowninteractions::UnknownI
         ::fidl::IncomingMessage& msg,
         ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
+
+
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
 // const reference to a |::fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol>|,
@@ -7339,6 +7535,7 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_unknowninteractions::Unk
   }
 };
 
+
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay> {
  public:
@@ -7375,6 +7572,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
     return *this;
   }
 };
+
 
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields> {
@@ -7413,6 +7611,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
   }
 };
 
+
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion> {
  public:
@@ -7450,6 +7649,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
   }
 };
 
+
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable> {
  public:
@@ -7486,6 +7686,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
     return *this;
   }
 };
+
 
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr> {
@@ -7528,6 +7729,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
   }
 };
 
+
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr> {
  public:
@@ -7568,6 +7770,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
     return *this;
   }
 };
+
 
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr> {
@@ -7610,6 +7813,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
   }
 };
 
+
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr> {
  public:
@@ -7651,6 +7855,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
   }
 };
 
+
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay> {
  public:
@@ -7687,6 +7892,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
     return *this;
   }
 };
+
 
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields> {
@@ -7725,6 +7931,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
   }
 };
 
+
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion> {
  public:
@@ -7762,6 +7969,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
   }
 };
 
+
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable> {
  public:
@@ -7798,6 +8006,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
     return *this;
   }
 };
+
 
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr> {
@@ -7840,6 +8049,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
   }
 };
 
+
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr> {
  public:
@@ -7881,6 +8091,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
   }
 };
 
+
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr> {
  public:
@@ -7921,6 +8132,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
     return *this;
   }
 };
+
 
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr> {
@@ -8108,6 +8320,7 @@ class ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };namespace fidl {
+
 #endif  // __Fuchsia__
 
     
@@ -8120,115 +8333,166 @@ class ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol
     
     
     }  // namespace fidl
-namespace test_unknowninteractions {__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponseTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionResponseTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTableResponseTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponseTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrTopResponseTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionErrTopResponseTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTableErrTopResponseTable;
+namespace test_unknowninteractions {
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponseTable;
     
     
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionResponseTable;
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventFieldsRequestTable;
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventUnionRequestTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTableResponseTable;
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventTableRequestTable;
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventErrRequestTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponseTable;
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventFieldsErrRequestTable;
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventUnionErrRequestTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrTopResponseTable;
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventTableErrRequestTable;
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionErrTopResponseTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTableErrTopResponseTable;
     
     
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventFieldsRequestTable;
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventUnionRequestTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventFieldsRequestTable;
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventTableRequestTable;
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventErrRequestTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventUnionRequestTable;
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequestTable;
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequestTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventTableRequestTable;
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventTableErrRequestTable;
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventErrRequestTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventFieldsErrRequestTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventUnionErrRequestTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventTableErrRequestTable;
+    
+    
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventFieldsRequestTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventUnionRequestTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventTableRequestTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventErrRequestTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequestTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequestTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventTableErrRequestTable;
 }  // namespace test_unknowninteractions
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay> final { static constexpr uint64_t value = 956561744635167883lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay> final { static constexpr uint64_t value = 2483093178939638607lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay> final { static constexpr uint64_t value = 364341676962177080lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields> final { static constexpr uint64_t value = 1821674633227946298lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion> final { static constexpr uint64_t value = 5870221221557233361lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable> final { static constexpr uint64_t value = 8038805778859962068lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> final { static constexpr uint64_t value = 6577335136969723910lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr> final { static constexpr uint64_t value = 595881957484758745lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr> final { static constexpr uint64_t value = 3224530777258896533lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr> final { static constexpr uint64_t value = 3515589146717969463lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent> final { static constexpr uint64_t value = 6927291151663612592lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields> final { static constexpr uint64_t value = 5838220329633564521lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion> final { static constexpr uint64_t value = 6303151946645602671lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable> final { static constexpr uint64_t value = 659277224687564957lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr> final { static constexpr uint64_t value = 8168400161206646253lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr> final { static constexpr uint64_t value = 4242995963205975993lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr> final { static constexpr uint64_t value = 48232470144455723lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr> final { static constexpr uint64_t value = 7812263497101509638lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent> final { static constexpr uint64_t value = 1281760452005010931lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields> final { static constexpr uint64_t value = 4298964238728681570lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion> final { static constexpr uint64_t value = 8950943792372972717lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable> final { static constexpr uint64_t value = 705539350563403440lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr> final { static constexpr uint64_t value = 5746044819880601020lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr> final { static constexpr uint64_t value = 2496089713358680516lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr> final { static constexpr uint64_t value = 870945044986422912lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr> final { static constexpr uint64_t value = 7956124159916849703lu; };
 
 namespace test_unknowninteractions {
+
 }  // namespace test_unknowninteractions
+
 #ifdef __Fuchsia__
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_unknowninteractions::UnknownInteractionsAjarProtocol> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 
 template<>
 struct ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarProtocol> final {
@@ -8245,7 +8509,9 @@ struct ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::Unknow
   static const ::fidl::internal::MethodEntry* entries_end_;
   static const ::fidl::internal::UnknownInteractionHandlerEntry unknown_interaction_handler_entry_;
 };
+
 #endif  // __Fuchsia__
+
 
 
 template<>
@@ -8283,6 +8549,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay> final {
 
@@ -8317,6 +8584,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay> final {
@@ -8353,6 +8621,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
+
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay> final {
 
@@ -8387,6 +8656,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields> final {
@@ -8424,6 +8694,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse {
@@ -8487,6 +8758,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion> final {
 
@@ -8523,6 +8795,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse {
@@ -8585,6 +8858,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable> final {
 
@@ -8621,6 +8895,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableResponse {
@@ -8683,6 +8958,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> final {
 
@@ -8719,6 +8995,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse {
@@ -8783,6 +9060,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr> final {
 
@@ -8819,6 +9097,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrTopResponse {
@@ -8883,6 +9162,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr> final {
 
@@ -8919,6 +9199,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrTopResponse {
@@ -8983,6 +9264,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr> final {
 
@@ -9019,6 +9301,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrTopResponse {
@@ -9083,6 +9366,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent> final {
 
@@ -9118,6 +9402,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventFieldsRequest {
@@ -9182,6 +9467,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
+
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionRequest {
 
@@ -9244,6 +9530,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
+
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableRequest {
 
@@ -9305,6 +9592,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventErrRequest {
@@ -9370,6 +9658,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
+
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventFieldsErrResult;
@@ -9433,6 +9722,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventUnionErrRequest {
@@ -9498,6 +9788,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
+
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableErrResult;
@@ -9562,6 +9853,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
+
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent> final {
 
@@ -9597,6 +9889,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest {
@@ -9661,6 +9954,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
+
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest {
 
@@ -9723,6 +10017,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
+
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableRequest {
 
@@ -9784,6 +10079,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventErrRequest {
@@ -9849,6 +10145,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
+
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventFieldsErrResult;
@@ -9913,6 +10210,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
+
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult;
@@ -9976,6 +10274,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest {
@@ -10045,6 +10344,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
 
 
 
+
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>>;
@@ -10067,10 +10367,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -10096,10 +10398,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -10125,10 +10429,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -10154,10 +10460,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -10186,10 +10494,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -10218,10 +10528,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -10250,10 +10562,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -10282,10 +10596,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 namespace fidl {
+
 
 
 template <>
@@ -12015,6 +12331,7 @@ static_assert(sizeof(::fidl::WireEvent<::test_unknowninteractions::UnknownIntera
 static_assert(offsetof(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>, result) == 0);
 #ifdef __Fuchsia__
 }  // namespace fidl
+
     template<>
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>>> {
@@ -12163,6 +12480,8 @@ static_assert(offsetof(::fidl::WireEvent<::test_unknowninteractions::UnknownInte
 
 
 
+
+
 template<>
 class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay> {
  public:
@@ -12179,6 +12498,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
   ~WireResult() = default;
 };
 
+
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay> {
  public:
@@ -12193,6 +12513,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
 
   
 };
+
 
 
 
@@ -12212,6 +12533,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
   ~WireResult() = default;
 };
 
+
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay> {
  public:
@@ -12226,6 +12548,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
 
   
 };
+
 
 
 
@@ -12247,6 +12570,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::InlineMessageBuffer<16> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay> {
@@ -12278,6 +12602,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields> {
   using Type = ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>;
@@ -12301,6 +12626,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::InlineMessageBuffer<24> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields> {
@@ -12332,6 +12658,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion> {
   using Type = ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>;
@@ -12355,6 +12682,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion> {
@@ -12386,6 +12714,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable> {
   using Type = ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>;
@@ -12409,6 +12738,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable> {
@@ -12440,6 +12770,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> {
   using Type = ::fitx::result<int32_t>;
@@ -12463,6 +12794,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::InlineMessageBuffer<48> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> {
@@ -12494,6 +12826,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr> {
   using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResponse*>;
@@ -12517,6 +12850,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::InlineMessageBuffer<48> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr> {
@@ -12548,6 +12882,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr> {
   using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse*>;
@@ -12571,6 +12906,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr> {
@@ -12602,6 +12938,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr> {
   using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse*>;
@@ -12625,6 +12962,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr> {
@@ -12655,6 +12993,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
   private:
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>> decoded_;
 };
+
 template<>
 class ::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsAjarProtocol> : public ::fidl::internal::BaseEventHandlerInterface, public ::fidl::UnknownEventHandler<::test_unknowninteractions::UnknownInteractionsAjarProtocol> {
 public:
@@ -12725,6 +13064,8 @@ class ::fidl::internal::WireEventDispatcher<::test_unknowninteractions::UnknownI
         ::fidl::IncomingMessage& msg,
         ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
+
+
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
 // const reference to a |::fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol>|,
@@ -12875,6 +13216,7 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_unknowninteractions::Unk
   }
 };
 
+
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay> {
  public:
@@ -12911,6 +13253,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
     return *this;
   }
 };
+
 
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields> {
@@ -12949,6 +13292,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
   }
 };
 
+
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion> {
  public:
@@ -12986,6 +13330,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
   }
 };
 
+
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable> {
  public:
@@ -13022,6 +13367,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
     return *this;
   }
 };
+
 
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr> {
@@ -13064,6 +13410,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
   }
 };
 
+
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr> {
  public:
@@ -13105,6 +13452,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
   }
 };
 
+
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr> {
  public:
@@ -13145,6 +13493,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
     return *this;
   }
 };
+
 
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr> {
@@ -13276,6 +13625,7 @@ class ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProt
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };namespace fidl {
+
 #endif  // __Fuchsia__
 
     
@@ -13286,81 +13636,116 @@ class ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProt
     
     
     }  // namespace fidl
-namespace test_unknowninteractions {__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponseTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionResponseTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTableResponseTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponseTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrTopResponseTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionErrTopResponseTable;
-    
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTableErrTopResponseTable;
+namespace test_unknowninteractions {
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponseTable;
     
     
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionResponseTable;
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventFieldsRequestTable;
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventUnionRequestTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTableResponseTable;
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventTableRequestTable;
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventErrRequestTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponseTable;
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventFieldsErrRequestTable;
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventUnionErrRequestTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrTopResponseTable;
     
-    __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventTableErrRequestTable;
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionErrTopResponseTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTableErrTopResponseTable;
+    
+    
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventFieldsRequestTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventUnionRequestTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventTableRequestTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventErrRequestTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventFieldsErrRequestTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventUnionErrRequestTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventTableErrRequestTable;
 }  // namespace test_unknowninteractions
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay> final { static constexpr uint64_t value = 401526495318825508lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay> final { static constexpr uint64_t value = 6834828562275693047lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields> final { static constexpr uint64_t value = 1379139029283639891lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion> final { static constexpr uint64_t value = 7544414847426850727lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable> final { static constexpr uint64_t value = 7947328131967870853lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> final { static constexpr uint64_t value = 5738532966428790074lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr> final { static constexpr uint64_t value = 802395819586836733lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr> final { static constexpr uint64_t value = 925029359463709824lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr> final { static constexpr uint64_t value = 1260407702860823440lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent> final { static constexpr uint64_t value = 760799297757210939lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields> final { static constexpr uint64_t value = 6736355582617074292lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion> final { static constexpr uint64_t value = 4288682345454280036lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable> final { static constexpr uint64_t value = 2871682464255309246lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr> final { static constexpr uint64_t value = 1346864022452572673lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr> final { static constexpr uint64_t value = 3248847528447859862lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr> final { static constexpr uint64_t value = 7912657362107850804lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr> final { static constexpr uint64_t value = 5661281118329630458lu; };
 
 namespace test_unknowninteractions {
+
 }  // namespace test_unknowninteractions
+
 #ifdef __Fuchsia__
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_unknowninteractions::UnknownInteractionsClosedProtocol> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 
 template<>
 struct ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedProtocol> final {
@@ -13378,7 +13763,9 @@ struct ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::Unknow
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
+
 
 
 template<>
@@ -13416,6 +13803,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay> final {
 
@@ -13451,6 +13839,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
+
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay> final {
 
@@ -13485,6 +13874,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields> final {
@@ -13522,6 +13912,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields> final : public ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse {
@@ -13585,6 +13976,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion> final {
 
@@ -13621,6 +14013,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion> final : public ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse {
@@ -13683,6 +14076,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable> final {
 
@@ -13719,6 +14113,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable> final : public ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableResponse {
@@ -13781,6 +14176,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> final {
 
@@ -13817,6 +14213,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse {
@@ -13881,6 +14278,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr> final {
 
@@ -13917,6 +14315,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrTopResponse {
@@ -13981,6 +14380,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr> final {
 
@@ -14017,6 +14417,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrTopResponse {
@@ -14081,6 +14482,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr> final {
 
@@ -14117,6 +14519,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrTopResponse {
@@ -14181,6 +14584,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent> final {
 
@@ -14216,6 +14620,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields> final : public ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventFieldsRequest {
@@ -14280,6 +14685,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
+
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion> final : public ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionRequest {
 
@@ -14342,6 +14748,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
+
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable> final : public ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableRequest {
 
@@ -14403,6 +14810,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventErrRequest {
@@ -14468,6 +14876,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
+
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventFieldsErrResult;
@@ -14532,6 +14941,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
   }
 };
 
+
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionErrRequest {
     using Result = test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventUnionErrResult;
@@ -14595,6 +15005,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 
   template<>
   struct ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr> final : public ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableErrRequest {
@@ -14664,6 +15075,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
 
 
 
+
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>>;
@@ -14686,10 +15098,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -14715,10 +15129,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -14744,10 +15160,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -14773,10 +15191,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -14805,10 +15225,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -14837,10 +15259,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -14869,10 +15293,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -14901,10 +15327,12 @@ struct ::fidl::internal::WireMethodTypes<::test_unknowninteractions::UnknownInte
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 namespace fidl {
+
 
 
 template <>
@@ -16176,6 +16604,7 @@ static_assert(sizeof(::fidl::WireEvent<::test_unknowninteractions::UnknownIntera
 static_assert(offsetof(::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>, result) == 0);
 #ifdef __Fuchsia__
 }  // namespace fidl
+
     template<>
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>>> {
@@ -16324,6 +16753,8 @@ static_assert(offsetof(::fidl::WireEvent<::test_unknowninteractions::UnknownInte
 
 
 
+
+
 template<>
 class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay> {
  public:
@@ -16340,6 +16771,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
   ~WireResult() = default;
 };
 
+
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay> {
  public:
@@ -16354,6 +16786,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
 
   
 };
+
 
 
 
@@ -16375,6 +16808,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::InlineMessageBuffer<16> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay> {
@@ -16406,6 +16840,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields> {
   using Type = ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>;
@@ -16429,6 +16864,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::InlineMessageBuffer<24> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields> {
@@ -16460,6 +16896,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion> {
   using Type = ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>;
@@ -16483,6 +16920,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion> {
@@ -16514,6 +16952,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable> {
   using Type = ::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>;
@@ -16537,6 +16976,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable> {
@@ -16568,6 +17008,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> {
   using Type = ::fitx::result<int32_t>;
@@ -16591,6 +17032,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::InlineMessageBuffer<48> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> {
@@ -16622,6 +17064,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr> {
   using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResponse*>;
@@ -16645,6 +17088,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::InlineMessageBuffer<48> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr> {
@@ -16676,6 +17120,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr> {
   using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse*>;
@@ -16699,6 +17144,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr> {
@@ -16730,6 +17176,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr> {
   using Type = ::fitx::result<int32_t, ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse*>;
@@ -16753,6 +17200,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
     ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr> final : public ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr> {
@@ -16783,6 +17231,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_unknowninteractions::Unknow
   private:
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>> decoded_;
 };
+
 template<>
 class ::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsClosedProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
 public:
@@ -16837,6 +17286,8 @@ class ::fidl::internal::WireEventDispatcher<::test_unknowninteractions::UnknownI
         ::fidl::IncomingMessage& msg,
         ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
+
+
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
 // const reference to a |::fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol>|,
@@ -16975,6 +17426,7 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_unknowninteractions::Unk
   }
 };
 
+
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay> {
  public:
@@ -17011,6 +17463,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
     return *this;
   }
 };
+
 
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields> {
@@ -17049,6 +17502,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
   }
 };
 
+
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion> {
  public:
@@ -17086,6 +17540,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
   }
 };
 
+
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable> {
  public:
@@ -17122,6 +17577,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
     return *this;
   }
 };
+
 
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr> {
@@ -17164,6 +17620,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
   }
 };
 
+
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr> {
  public:
@@ -17205,6 +17662,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
   }
 };
 
+
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr> {
  public:
@@ -17245,6 +17703,7 @@ class ::fidl::internal::WireCompleterBase<::test_unknowninteractions::UnknownInt
     return *this;
   }
 };
+
 
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr> : public ::fidl::internal::CompleterImplBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr> {
@@ -17369,13 +17828,16 @@ class ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedPr
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };namespace fidl {
+
 #endif  // __Fuchsia__
 
 
   
+
     
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template<>
 class ::fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol> : public ::fidl::internal::ClientImplBase {
  public:
@@ -17562,11 +18024,13 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::Unkno
   // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr> FlexibleTwoWayTableErr();
 };namespace fidl {
+
 #endif  // __Fuchsia__
 
 
     
 }  // namespace fidl
+
 #ifdef __Fuchsia__
 template<>
 class ::fidl::internal::WireWeakEventSender<::test_unknowninteractions::UnknownInteractionsProtocol> : public ::fidl::internal::WeakEventSenderBase {
@@ -17789,10 +18253,12 @@ class ::fidl::internal::WireBufferEventSender<::test_unknowninteractions::Unknow
 
 
 };
+
 #endif  // __Fuchsia__
 
     
 #ifdef __Fuchsia__
+
 
 template<>
 class ::fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol> : public ::fidl::internal::ClientImplBase {
@@ -17908,10 +18374,12 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::Unkno
   // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr> StrictTwoWayTableErr();
 };
+
 #endif  // __Fuchsia__
 
 
     
+
 
 #ifdef __Fuchsia__
 template<>
@@ -18135,10 +18603,12 @@ class ::fidl::internal::WireBufferEventSender<::test_unknowninteractions::Unknow
 
 
 };
+
 #endif  // __Fuchsia__
 
     
 #ifdef __Fuchsia__
+
 
 template<>
 class ::fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol> : public ::fidl::internal::ClientImplBase {
@@ -18247,10 +18717,12 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::Unkno
   // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr> StrictTwoWayTableErr();
 };
+
 #endif  // __Fuchsia__
 
 
     
+
 
 #ifdef __Fuchsia__
 template<>
@@ -18378,7 +18850,9 @@ class ::fidl::internal::WireBufferEventSender<::test_unknowninteractions::Unknow
 
 
 };
+
 #endif  // __Fuchsia__
 
 
   
+

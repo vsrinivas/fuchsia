@@ -9,6 +9,7 @@
 //
 namespace test {
 namespace encapsulatedstructs {
+
 extern "C" const fidl_type_t test_encapsulatedstructs_Int8Int32Table;
 const fidl_type_t* Int8Int32::FidlType = &test_encapsulatedstructs_Int8Int32Table;
 
@@ -174,6 +175,7 @@ zx_status_t NonInlineStructTestStruct::Clone(NonInlineStructTestStruct* _result)
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -209,6 +211,7 @@ zx_status_t TopLevelStruct::Clone(TopLevelStruct* _result) const {
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 //

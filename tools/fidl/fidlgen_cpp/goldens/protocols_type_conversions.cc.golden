@@ -1060,6 +1060,7 @@ std::unique_ptr<::test_protocols::TheUnion> WireNaturalConversionTraits<::test_p
   return ::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>(
       WireNaturalConversionTraits<::test_protocols::wire::MethodWithUnionUnionMethodTopResponse, ::test_protocols::MethodWithUnionUnionMethodTopResponse>::ToWire(arena, std::move(src)));
 }
+
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

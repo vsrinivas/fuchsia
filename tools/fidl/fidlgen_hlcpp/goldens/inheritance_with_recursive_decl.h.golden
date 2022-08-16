@@ -17,6 +17,7 @@ class ParentFirstRequest;
 
 class Parent;
 using ParentHandle = ::fidl::InterfaceHandle<Parent>;
+
 #endif  // __Fuchsia__
 
 class ChildSecondRequest;
@@ -25,6 +26,7 @@ class ChildSecondRequest;
 
 class Child;
 using ChildHandle = ::fidl::InterfaceHandle<Child>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -49,6 +51,7 @@ inline zx_status_t Clone(const ::test::inheritancewithrecursivedecl::ParentFirst
 }
 
 using ParentFirstRequestPtr = ::std::unique_ptr<ParentFirstRequest>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -57,6 +60,7 @@ namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_inheritancewithrecursivedecl_ParentFirstRequestTable;
 
 }  // namespace _internal
+
 class Parent_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage First(::fidl::MessageEncoder* _encoder, ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>* request) {
@@ -76,6 +80,7 @@ class Parent_RequestEncoder {
 class Parent_ResponseEncoder {
  public:
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -100,6 +105,7 @@ inline zx_status_t Clone(const ::test::inheritancewithrecursivedecl::ChildSecond
 }
 
 using ChildSecondRequestPtr = ::std::unique_ptr<ChildSecondRequest>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -108,6 +114,7 @@ namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_inheritancewithrecursivedecl_ChildSecondRequestTable;
 
 }  // namespace _internal
+
 class Child_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage First(::fidl::MessageEncoder* _encoder, ::fidl::InterfaceRequest<::test::inheritancewithrecursivedecl::Parent>* request) {
@@ -139,11 +146,13 @@ class Child_RequestEncoder {
 class Child_ResponseEncoder {
  public:
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace inheritancewithrecursivedecl
 }  // namespace test
 namespace fidl {
+
 #ifdef __Fuchsia__
 
 template <>
@@ -168,6 +177,7 @@ struct Equality<::test::inheritancewithrecursivedecl::ParentFirstRequest> {
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -194,6 +204,7 @@ struct Equality<::test::inheritancewithrecursivedecl::ChildSecondRequest> {
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 //
@@ -202,6 +213,7 @@ struct Equality<::test::inheritancewithrecursivedecl::ChildSecondRequest> {
 }  // namespace fidl
 namespace test {
 namespace inheritancewithrecursivedecl {
+
 #ifdef __Fuchsia__
 
 using ParentPtr = ::fidl::InterfacePtr<Parent>;
@@ -213,9 +225,12 @@ using ParentSyncPtr = ::fidl::SynchronousInterfacePtr<Parent>;
 class Parent_SyncProxy;
 
 namespace internal {
+
 constexpr uint64_t kParent_First_Ordinal = 0x3723835775b3455blu;
+
 constexpr ::fidl::MessageDynamicFlags kParent_First_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -229,11 +244,16 @@ using ChildSyncPtr = ::fidl::SynchronousInterfacePtr<Child>;
 class Child_SyncProxy;
 
 namespace internal {
+
 constexpr uint64_t kChild_First_Ordinal = 0x3723835775b3455blu;
+
 constexpr ::fidl::MessageDynamicFlags kChild_First_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kChild_Second_Ordinal = 0x23521821ca109865lu;
+
 constexpr ::fidl::MessageDynamicFlags kChild_Second_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -316,6 +336,7 @@ class Parent_SyncProxy : public ::test::inheritancewithrecursivedecl::Parent_Syn
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<Parent>;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -406,6 +427,7 @@ class Child_SyncProxy : public ::test::inheritancewithrecursivedecl::Child_Sync 
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<Child>;
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace inheritancewithrecursivedecl

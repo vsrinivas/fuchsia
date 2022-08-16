@@ -5,6 +5,7 @@
 #include <memory>
 
 namespace test_transitivedependenciescompose {
+
 [[maybe_unused]] constexpr uint64_t kTop_GetFoo_Ordinal = 2618685789258237543lu;
 
 [[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kTop_GetFoo_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
@@ -12,6 +13,7 @@ namespace test_transitivedependenciescompose {
 extern "C" const fidl_type_t test_bottom_BottomGetFooTopResponseTable;
 #ifdef __Fuchsia__
 }  // namespace test_transitivedependenciescompose
+
 ::fidl::WireResult<::test_transitivedependenciescompose::Top::GetFoo>::WireResult(
     ::fidl::UnownedClientEnd<::test_transitivedependenciescompose::Top> client,
     ::fidl::internal::TransactionalRequest<::test_transitivedependenciescompose::Top::GetFoo>* request, std::optional<zx::time> deadline) {
@@ -32,10 +34,12 @@ extern "C" const fidl_type_t test_bottom_BottomGetFooTopResponseTable;
   }
 }
 namespace test_transitivedependenciescompose {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_transitivedependenciescompose
+
 ::fidl::WireUnownedResult<::test_transitivedependenciescompose::Top::GetFoo>::WireUnownedResult(::fidl::UnownedClientEnd<::test_transitivedependenciescompose::Top> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_transitivedependenciescompose::Top::GetFoo>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_transitivedependenciescompose::Top::GetFoo>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -67,9 +71,11 @@ namespace test_transitivedependenciescompose {
   }
 }
 namespace test_transitivedependenciescompose {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_transitivedependenciescompose
+
 #ifdef __Fuchsia__
 
 ::fidl::internal::WireThenable<::test_transitivedependenciescompose::Top::GetFoo> fidl::internal::WireWeakAsyncClientImpl<::test_transitivedependenciescompose::Top>::GetFoo() {
@@ -92,6 +98,7 @@ fidl::internal::WireWeakSyncClientImpl<::test_transitivedependenciescompose::Top
         return ::fidl::WireResult<::test_transitivedependenciescompose::Top::GetFoo>(::fidl::UnownedClientEnd<::test_transitivedependenciescompose::Top>(_transport->get<::fidl::internal::ChannelTransport>()), &_request);
       });
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -102,6 +109,7 @@ fidl::internal::WireWeakSyncClientImpl<::test_transitivedependenciescompose::Top
   fidl::internal::WireEventDispatcher<::test_transitivedependenciescompose::Top> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -136,11 +144,13 @@ void fidl::internal::WireServerDispatcher<::test_transitivedependenciescompose::
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
+
 void fidl::WireServer<::test_transitivedependenciescompose::Top>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_transitivedependenciescompose::Top>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -179,6 +189,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_transitivedependenciescompos
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 #endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalRequest<::test_transitivedependenciescompose::Top::GetFoo>::_InitHeader() {

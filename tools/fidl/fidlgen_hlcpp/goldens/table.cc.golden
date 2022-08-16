@@ -9,6 +9,7 @@
 //
 namespace test {
 namespace table {
+
 extern "C" const fidl_type_t test_table_EmptyTableTable;
 const fidl_type_t* EmptyTable::FidlType = &test_table_EmptyTableTable;
 

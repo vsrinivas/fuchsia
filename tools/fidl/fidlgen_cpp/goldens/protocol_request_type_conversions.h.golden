@@ -8,6 +8,7 @@
 #ifdef __Fuchsia__
 #include <fidl/test.protocolrequest/cpp/natural_messaging.h>
 #include <fidl/test.protocolrequest/cpp/wire_messaging.h>
+
 #endif  // __Fuchsia__
 #include <lib/fidl/cpp/wire_natural_conversions.h>
 
@@ -181,6 +182,7 @@ template <>
 struct WireTypeForNaturalType<::fidl::Response<::test_protocolrequest::Parent::GetChildRequest>> {
   using type = ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>;
 };
+
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

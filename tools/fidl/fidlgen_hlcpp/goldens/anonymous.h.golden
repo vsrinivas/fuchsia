@@ -310,6 +310,7 @@ class SomeProtocolSomeMethodTopResponse;
 
 class SomeProtocol;
 using SomeProtocolHandle = ::fidl::InterfaceHandle<SomeProtocol>;
+
 #endif  // __Fuchsia__
 
 class OverrideTest final {
@@ -1003,6 +1004,7 @@ namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_anonymous_SomeProtocolSomeMethodRequestTable;
 
 }  // namespace _internal
+
 class SomeProtocol_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage SomeMethod(::fidl::MessageEncoder* _encoder, ::test::anonymous::UnionMember* union_member, ::test::anonymous::TableMember* table_member) {
@@ -1021,6 +1023,7 @@ namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_anonymous_SomeProtocolSomeMethodTopResponseTable;
 
 }  // namespace _internal
+
 class SomeProtocol_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage SomeMethod(::fidl::MessageEncoder* _encoder, ::test::anonymous::SomeProtocol_SomeMethod_Result* result) {
@@ -1034,11 +1037,13 @@ class SomeProtocol_ResponseEncoder {
     return _encoder->GetMessage();
   }
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace anonymous
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::anonymous::Op> {
   static constexpr size_t inline_size_v2 = sizeof(::test::anonymous::Op);
@@ -1523,6 +1528,7 @@ struct Equality<::test::anonymous::SomeProtocolSomeMethodTopResponse> {
 }  // namespace fidl
 namespace test {
 namespace anonymous {
+
 #ifdef __Fuchsia__
 
 using SomeProtocolPtr = ::fidl::InterfacePtr<SomeProtocol>;
@@ -1534,9 +1540,12 @@ using SomeProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<SomeProtocol>;
 class SomeProtocol_SyncProxy;
 
 namespace internal {
+
 constexpr uint64_t kSomeProtocol_SomeMethod_Ordinal = 0x22ea52ec7a5146d8lu;
+
 constexpr ::fidl::MessageDynamicFlags kSomeProtocol_SomeMethod_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1622,6 +1631,7 @@ class SomeProtocol_SyncProxy : public ::test::anonymous::SomeProtocol_Sync {
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<SomeProtocol>;
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace anonymous

@@ -9,6 +9,7 @@
 //
 namespace test {
 namespace byteandbytes {
+
 extern "C" const fidl_type_t test_byteandbytes_ByteAndBytesTable;
 const fidl_type_t* ByteAndBytes::FidlType = &test_byteandbytes_ByteAndBytesTable;
 

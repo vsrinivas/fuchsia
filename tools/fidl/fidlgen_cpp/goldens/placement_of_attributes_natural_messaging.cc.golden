@@ -4,12 +4,14 @@
 #include <lib/fidl/cpp/wire/unknown_interactions.h>
 
 namespace test_placementofattributes {
+
 [[maybe_unused]] constexpr inline uint64_t kExampleProtocol_Method_Ordinal = 6023439637367187273lu;
 
 [[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kExampleProtocol_Method_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
 #ifdef __Fuchsia__
 }  // namespace test_placementofattributes
+
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_placementofattributes::ExampleProtocol>::Method(const ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>& request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
@@ -22,9 +24,11 @@ fidl::internal::NaturalClientImpl<::test_placementofattributes::ExampleProtocol>
   return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_placementofattributes {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_placementofattributes
+
 #ifdef __Fuchsia__
 
 ::fitx::result<::fidl::Error>
@@ -48,6 +52,7 @@ fidl::internal::NaturalSyncClientImpl<::test_placementofattributes::ExampleProto
   fidl::internal::NaturalEventDispatcher<::test_placementofattributes::ExampleProtocol> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -81,9 +86,11 @@ void fidl::internal::NaturalServerDispatcher<::test_placementofattributes::Examp
                                                                                                       internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
+
 void fidl::Server<::test_placementofattributes::ExampleProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_placementofattributes::ExampleProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__

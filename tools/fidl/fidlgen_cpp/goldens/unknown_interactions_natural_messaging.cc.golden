@@ -8,239 +8,307 @@
 
 
 namespace test_unknowninteractions {
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_StrictOneWay_Ordinal = 5652707722400962470lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictOneWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_FlexibleOneWay_Ordinal = 583422011583300678lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleOneWay_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_StrictTwoWay_Ordinal = 8308184097687583042lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictTwoWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_StrictTwoWayFields_Ordinal = 3697260130745060067lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictTwoWayFields_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_StrictTwoWayUnion_Ordinal = 2455165891480464557lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictTwoWayUnion_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_StrictTwoWayTable_Ordinal = 8389853739594228663lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictTwoWayTable_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_StrictTwoWayErr_Ordinal = 7862264614495172967lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictTwoWayErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_StrictTwoWayFieldsErr_Ordinal = 2414673307948662059lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictTwoWayFieldsErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_StrictTwoWayUnionErr_Ordinal = 4988571416540160202lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictTwoWayUnionErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_StrictTwoWayTableErr_Ordinal = 5487292735562672344lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictTwoWayTableErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_FlexibleTwoWay_Ordinal = 334879577560091516lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleTwoWay_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_FlexibleTwoWayFields_Ordinal = 4257018954691721778lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleTwoWayFields_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_FlexibleTwoWayUnion_Ordinal = 4913460516188409782lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleTwoWayUnion_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_FlexibleTwoWayTable_Ordinal = 9171907422498283911lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleTwoWayTable_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_FlexibleTwoWayErr_Ordinal = 6999736795697216519lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleTwoWayErr_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Ordinal = 1093132337162001157lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Ordinal = 2410151523245950935lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleTwoWayUnionErr_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_FlexibleTwoWayTableErr_Ordinal = 7893309626427980786lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleTwoWayTableErr_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_StrictEvent_Ordinal = 685715276307386305lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictEvent_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_StrictEventFields_Ordinal = 8896208255987935026lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictEventFields_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_StrictEventUnion_Ordinal = 3919175221694221274lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictEventUnion_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_StrictEventTable_Ordinal = 2711448698318579984lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictEventTable_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_StrictEventErr_Ordinal = 4437558874343717997lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictEventErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_StrictEventFieldsErr_Ordinal = 8268703922238340235lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictEventFieldsErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_StrictEventUnionErr_Ordinal = 4681887988605004475lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictEventUnionErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_StrictEventTableErr_Ordinal = 7827903484869638218lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictEventTableErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_FlexibleEvent_Ordinal = 7042257263728687206lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleEvent_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_FlexibleEventFields_Ordinal = 3613822014516746241lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleEventFields_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_FlexibleEventUnion_Ordinal = 2499446536152409191lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleEventUnion_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_FlexibleEventTable_Ordinal = 5724881371349617120lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleEventTable_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_FlexibleEventErr_Ordinal = 5465749747219019177lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleEventErr_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_FlexibleEventFieldsErr_Ordinal = 1096356983683709514lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleEventFieldsErr_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_FlexibleEventUnionErr_Ordinal = 906517230981154796lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleEventUnionErr_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsProtocol_FlexibleEventTableErr_Ordinal = 5605294921124359491lu;
+
 
 
 [[maybe_unused]]
@@ -248,6 +316,7 @@ constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_Flexib
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>
 fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictTwoWay() const {
   return ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>(
@@ -264,6 +333,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
         return base->SendTwoWay(msg, response_context);
       });
 }
+
 
 
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>
@@ -284,6 +354,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
 }
 
 
+
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>
 fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictTwoWayUnion() const {
   return ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>(
@@ -300,6 +371,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
         return base->SendTwoWay(msg, response_context);
       });
 }
+
 
 
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>
@@ -320,6 +392,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
 }
 
 
+
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>
 fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictTwoWayErr() const {
   return ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>(
@@ -336,6 +409,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
         return base->SendTwoWay(msg, response_context);
       });
 }
+
 
 
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>
@@ -356,6 +430,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
 }
 
 
+
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>
 fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictTwoWayUnionErr() const {
   return ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>(
@@ -372,6 +447,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
         return base->SendTwoWay(msg, response_context);
       });
 }
+
 
 
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>
@@ -392,6 +468,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
 }
 
 
+
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>
 fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleTwoWay() const {
   return ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>(
@@ -408,6 +485,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
         return base->SendTwoWay(msg, response_context);
       });
 }
+
 
 
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>
@@ -428,6 +506,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
 }
 
 
+
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>
 fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleTwoWayUnion() const {
   return ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>(
@@ -444,6 +523,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
         return base->SendTwoWay(msg, response_context);
       });
 }
+
 
 
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>
@@ -464,6 +544,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
 }
 
 
+
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>
 fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleTwoWayErr() const {
   return ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>(
@@ -480,6 +561,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
         return base->SendTwoWay(msg, response_context);
       });
 }
+
 
 
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>
@@ -500,6 +582,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
 }
 
 
+
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>
 fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleTwoWayUnionErr() const {
   return ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>(
@@ -516,6 +599,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
         return base->SendTwoWay(msg, response_context);
       });
 }
+
 
 
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>
@@ -536,6 +620,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
 }
 
 
+
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictOneWay() const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
@@ -544,6 +629,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
   ::fidl::Status status = client_base().SendOneWay(_encoded_message);
   return ::fidl::internal::ToFitxResult(status);
 }
+
 
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleOneWay() const {
@@ -554,9 +640,11 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
   return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_unknowninteractions
+
 #ifdef __Fuchsia__
 
 
@@ -759,7 +847,9 @@ namespace test_unknowninteractions {
   }
 
 
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -1000,7 +1090,9 @@ namespace test_unknowninteractions {
         return ::fidl::Status::UnknownOrdinal();
     }
   }
+
 #endif  // __Fuchsia__
+
 
 
 
@@ -1350,7 +1442,9 @@ namespace test_unknowninteractions {
 }
 
   
+
 #endif  // __Fuchsia__
+
 
 
 
@@ -1361,6 +1455,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
+
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>::Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayFields_DynamicFlags };
@@ -1369,6 +1464,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
+
 
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>::Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
@@ -1379,6 +1475,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
+
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>::Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayTable_DynamicFlags };
@@ -1387,6 +1484,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
+
 
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>::Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
@@ -1397,6 +1495,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
+
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>::Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayFieldsErr_DynamicFlags };
@@ -1405,6 +1504,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
+
 
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>::Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
@@ -1415,6 +1515,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
+
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>::Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayTableErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayTableErr_DynamicFlags };
@@ -1424,6 +1525,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
+
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>::Reply() {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWay_DynamicFlags };
@@ -1431,6 +1533,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
+
 
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>::Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
@@ -1441,6 +1544,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
+
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>::Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayUnion_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayUnion_DynamicFlags };
@@ -1449,6 +1553,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
+
 
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>::Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
@@ -1459,6 +1564,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
+
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>::Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayErr_DynamicFlags };
@@ -1467,6 +1573,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
+
 
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>::Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
@@ -1477,6 +1584,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
+
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>::Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayUnionErr_DynamicFlags };
@@ -1485,6 +1593,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
+
 
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>::Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
@@ -1496,6 +1605,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
 }
 
 #ifdef __Fuchsia__
+
 
 
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsProtocol>::entries_[] = {
@@ -1773,196 +1883,251 @@ const ::fidl::internal::UnknownInteractionHandlerEntry fidl::internal::NaturalSe
 
 
 
+
 void fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsProtocol>::Dispatch(::fidl::Server<::test_unknowninteractions::UnknownInteractionsProtocol>* impl, ::fidl::IncomingMessage&& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
+
 void fidl::Server<::test_unknowninteractions::UnknownInteractionsProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 
 namespace test_unknowninteractions {
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsAjarProtocol_StrictOneWay_Ordinal = 956561744635167883lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictOneWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsAjarProtocol_FlexibleOneWay_Ordinal = 2483093178939638607lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_FlexibleOneWay_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsAjarProtocol_StrictTwoWay_Ordinal = 364341676962177080lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictTwoWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsAjarProtocol_StrictTwoWayFields_Ordinal = 1821674633227946298lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictTwoWayFields_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsAjarProtocol_StrictTwoWayUnion_Ordinal = 5870221221557233361lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictTwoWayUnion_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsAjarProtocol_StrictTwoWayTable_Ordinal = 8038805778859962068lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictTwoWayTable_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Ordinal = 6577335136969723910lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictTwoWayErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_Ordinal = 595881957484758745lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_Ordinal = 3224530777258896533lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsAjarProtocol_StrictTwoWayTableErr_Ordinal = 3515589146717969463lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictTwoWayTableErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsAjarProtocol_StrictEvent_Ordinal = 6927291151663612592lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictEvent_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsAjarProtocol_StrictEventFields_Ordinal = 5838220329633564521lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictEventFields_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsAjarProtocol_StrictEventUnion_Ordinal = 6303151946645602671lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictEventUnion_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsAjarProtocol_StrictEventTable_Ordinal = 659277224687564957lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictEventTable_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsAjarProtocol_StrictEventErr_Ordinal = 8168400161206646253lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictEventErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsAjarProtocol_StrictEventFieldsErr_Ordinal = 4242995963205975993lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictEventFieldsErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsAjarProtocol_StrictEventUnionErr_Ordinal = 48232470144455723lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictEventUnionErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsAjarProtocol_StrictEventTableErr_Ordinal = 7812263497101509638lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictEventTableErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsAjarProtocol_FlexibleEvent_Ordinal = 1281760452005010931lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_FlexibleEvent_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsAjarProtocol_FlexibleEventFields_Ordinal = 4298964238728681570lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_FlexibleEventFields_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsAjarProtocol_FlexibleEventUnion_Ordinal = 8950943792372972717lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_FlexibleEventUnion_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsAjarProtocol_FlexibleEventTable_Ordinal = 705539350563403440lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_FlexibleEventTable_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsAjarProtocol_FlexibleEventErr_Ordinal = 5746044819880601020lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_FlexibleEventErr_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_Ordinal = 2496089713358680516lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsAjarProtocol_FlexibleEventUnionErr_Ordinal = 870945044986422912lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_FlexibleEventUnionErr_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsAjarProtocol_FlexibleEventTableErr_Ordinal = 7956124159916849703lu;
+
 
 
 [[maybe_unused]]
@@ -1970,6 +2135,7 @@ constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_Fl
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>
 fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictTwoWay() const {
   return ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>(
@@ -1986,6 +2152,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
         return base->SendTwoWay(msg, response_context);
       });
 }
+
 
 
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>
@@ -2006,6 +2173,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
 }
 
 
+
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>
 fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictTwoWayUnion() const {
   return ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>(
@@ -2022,6 +2190,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
         return base->SendTwoWay(msg, response_context);
       });
 }
+
 
 
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>
@@ -2042,6 +2211,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
 }
 
 
+
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>
 fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictTwoWayErr() const {
   return ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>(
@@ -2058,6 +2228,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
         return base->SendTwoWay(msg, response_context);
       });
 }
+
 
 
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>
@@ -2078,6 +2249,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
 }
 
 
+
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>
 fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictTwoWayUnionErr() const {
   return ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>(
@@ -2094,6 +2266,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
         return base->SendTwoWay(msg, response_context);
       });
 }
+
 
 
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>
@@ -2114,6 +2287,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
 }
 
 
+
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictOneWay() const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
@@ -2122,6 +2296,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
   ::fidl::Status status = client_base().SendOneWay(_encoded_message);
   return ::fidl::internal::ToFitxResult(status);
 }
+
 
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::FlexibleOneWay() const {
@@ -2132,9 +2307,11 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
   return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_unknowninteractions
+
 #ifdef __Fuchsia__
 
 
@@ -2249,7 +2426,9 @@ namespace test_unknowninteractions {
   }
 
 
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -2490,7 +2669,9 @@ namespace test_unknowninteractions {
         return ::fidl::Status::UnknownOrdinal();
     }
   }
+
 #endif  // __Fuchsia__
+
 
 
 
@@ -2840,7 +3021,9 @@ namespace test_unknowninteractions {
 }
 
   
+
 #endif  // __Fuchsia__
+
 
 
 
@@ -2851,6 +3034,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
+
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>::Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayFields_DynamicFlags };
@@ -2859,6 +3043,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
+
 
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>::Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
@@ -2869,6 +3054,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
+
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>::Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayTable_DynamicFlags };
@@ -2877,6 +3063,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
+
 
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>::Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
@@ -2887,6 +3074,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
+
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>::Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_DynamicFlags };
@@ -2896,6 +3084,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
+
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>::Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_DynamicFlags };
@@ -2904,6 +3093,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
+
 
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>::Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
@@ -2915,6 +3105,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
 }
 
 #ifdef __Fuchsia__
+
 
 
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::entries_[] = {
@@ -3078,133 +3269,170 @@ const ::fidl::internal::UnknownInteractionHandlerEntry fidl::internal::NaturalSe
 
 
 
+
 void fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::Dispatch(::fidl::Server<::test_unknowninteractions::UnknownInteractionsAjarProtocol>* impl, ::fidl::IncomingMessage&& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
+
 void fidl::Server<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 
 namespace test_unknowninteractions {
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsClosedProtocol_StrictOneWay_Ordinal = 401526495318825508lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictOneWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsClosedProtocol_StrictTwoWay_Ordinal = 6834828562275693047lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictTwoWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsClosedProtocol_StrictTwoWayFields_Ordinal = 1379139029283639891lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictTwoWayFields_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsClosedProtocol_StrictTwoWayUnion_Ordinal = 7544414847426850727lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictTwoWayUnion_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsClosedProtocol_StrictTwoWayTable_Ordinal = 7947328131967870853lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictTwoWayTable_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Ordinal = 5738532966428790074lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictTwoWayErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_Ordinal = 802395819586836733lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_Ordinal = 925029359463709824lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsClosedProtocol_StrictTwoWayTableErr_Ordinal = 1260407702860823440lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictTwoWayTableErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsClosedProtocol_StrictEvent_Ordinal = 760799297757210939lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictEvent_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsClosedProtocol_StrictEventFields_Ordinal = 6736355582617074292lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictEventFields_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsClosedProtocol_StrictEventUnion_Ordinal = 4288682345454280036lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictEventUnion_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsClosedProtocol_StrictEventTable_Ordinal = 2871682464255309246lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictEventTable_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsClosedProtocol_StrictEventErr_Ordinal = 1346864022452572673lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictEventErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsClosedProtocol_StrictEventFieldsErr_Ordinal = 3248847528447859862lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictEventFieldsErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsClosedProtocol_StrictEventUnionErr_Ordinal = 7912657362107850804lu;
+
 
 
 [[maybe_unused]]
 constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictEventUnionErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr inline uint64_t kUnknownInteractionsClosedProtocol_StrictEventTableErr_Ordinal = 5661281118329630458lu;
+
 
 
 [[maybe_unused]]
@@ -3212,6 +3440,7 @@ constexpr inline ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>
 fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictTwoWay() const {
   return ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>(
@@ -3228,6 +3457,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
         return base->SendTwoWay(msg, response_context);
       });
 }
+
 
 
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>
@@ -3248,6 +3478,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
 }
 
 
+
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>
 fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictTwoWayUnion() const {
   return ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>(
@@ -3264,6 +3495,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
         return base->SendTwoWay(msg, response_context);
       });
 }
+
 
 
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>
@@ -3284,6 +3516,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
 }
 
 
+
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>
 fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictTwoWayErr() const {
   return ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>(
@@ -3300,6 +3533,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
         return base->SendTwoWay(msg, response_context);
       });
 }
+
 
 
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>
@@ -3320,6 +3554,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
 }
 
 
+
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>
 fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictTwoWayUnionErr() const {
   return ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>(
@@ -3336,6 +3571,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
         return base->SendTwoWay(msg, response_context);
       });
 }
+
 
 
 ::fidl::internal::NaturalThenable<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>
@@ -3356,6 +3592,7 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
 }
 
 
+
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictOneWay() const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
@@ -3365,9 +3602,11 @@ fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInteraction
   return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_unknowninteractions
+
 #ifdef __Fuchsia__
 
 
@@ -3472,7 +3711,9 @@ namespace test_unknowninteractions {
   }
 
 
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -3598,7 +3839,9 @@ namespace test_unknowninteractions {
         return ::fidl::Status::UnknownOrdinal();
     }
   }
+
 #endif  // __Fuchsia__
+
 
 
 
@@ -3776,7 +4019,9 @@ namespace test_unknowninteractions {
 }
 
   
+
 #endif  // __Fuchsia__
+
 
 
 
@@ -3787,6 +4032,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
+
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>::Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayFields_DynamicFlags };
@@ -3795,6 +4041,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
+
 
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>::Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
@@ -3805,6 +4052,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
+
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>::Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayTable_DynamicFlags };
@@ -3813,6 +4061,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
+
 
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>::Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
@@ -3823,6 +4072,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
+
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>::Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_DynamicFlags };
@@ -3832,6 +4082,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
 
+
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>::Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
       &::fidl::internal::ChannelTransport::VTable, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_DynamicFlags };
@@ -3840,6 +4091,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
   ::fidl::OutgoingMessage _encoded_message = _encoder.GetMessage();
   SendReply(&_encoded_message, ::fidl::internal::OutgoingTransportContext{});
 }
+
 
 void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>::Reply(const ::fidl::Response<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>& response) {
   ::fidl::internal::NaturalMessageEncoder _encoder{
@@ -3851,6 +4103,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
 }
 
 #ifdef __Fuchsia__
+
 
 
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::entries_[] = {
@@ -3986,16 +4239,20 @@ const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::t
     &entries_[9];
 
 
+
 void fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::Dispatch(::fidl::Server<::test_unknowninteractions::UnknownInteractionsClosedProtocol>* impl, ::fidl::IncomingMessage&& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
+
 void fidl::Server<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
+
 
 
 

@@ -16,15 +16,18 @@ namespace fidl {
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::NaturalClientImpl<::test_versions::OtherProtocol> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl
+
 #ifdef __Fuchsia__
 
 template <>
@@ -37,6 +40,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_versions::OtherProtocol> fi
         _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -74,6 +78,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_versions::OtherProtocol> f
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_versions::OtherProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -89,6 +94,7 @@ class ::fidl::internal::NaturalEventSender<::test_versions::OtherProtocol>
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -121,6 +127,7 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_versions::OtherProtocol>
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -131,6 +138,7 @@ class ::fidl::internal::NaturalClientImpl<::test_versions::Protocol> final : pub
   using NaturalClientBase::NaturalClientBase;
   ::fitx::result<::fidl::Error> Foo() const;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -147,6 +155,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_versions::Protocol> final
         _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -184,6 +193,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_versions::Protocol> final 
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_versions::Protocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -199,6 +209,7 @@ class ::fidl::internal::NaturalEventSender<::test_versions::Protocol>
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -213,6 +224,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_versions::Protocol
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -250,4 +262,5 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_versions::Protocol> fina
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__

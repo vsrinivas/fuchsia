@@ -8,6 +8,7 @@
 namespace test {
 namespace transitivedependenciescompose {
 namespace testing {
+
 class Top_TestBase : public ::test::transitivedependenciescompose::Top {
  public:
   virtual ~Top_TestBase() {}

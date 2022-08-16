@@ -6,10 +6,12 @@
 void ::test_encapsulatedstructs::wire::NonInlineStructTestStruct::_CloseHandles() {
   h.reset();
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 void ::test_encapsulatedstructs::wire::TopLevelStruct::_CloseHandles() {
   b._CloseHandles();
 }
+
 #endif  // __Fuchsia__

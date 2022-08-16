@@ -243,6 +243,7 @@ std::unique_ptr<::test_anonymous::SomeProtocolSomeMethodResult> WireNaturalConve
   return ::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>(
       WireNaturalConversionTraits<::test_anonymous::wire::SomeProtocolSomeMethodTopResponse, ::fitx::result<::test_anonymous::SomeProtocolSomeMethodError, ::test_anonymous::SomeProtocolSomeMethodResponse>>::ToWire(arena, std::move(src)));
 }
+
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

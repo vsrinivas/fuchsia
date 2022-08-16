@@ -8,4 +8,5 @@ void ::test_typealiases::wire::ExampleOfUseOfAliases::_CloseHandles() {
   field_of_client_end.reset();
   field_of_nullable_client_end.reset();
 }
+
 #endif  // __Fuchsia__

@@ -16,6 +16,7 @@
   fidl::internal::WireEventDispatcher<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -37,11 +38,13 @@ void fidl::internal::WireServerDispatcher<::test_bindingsdenylist::OnlyLibfuzzer
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
+
 void fidl::WireServer<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -60,6 +63,7 @@ void fidl::WireServer<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::dispatch_m
   fidl::internal::WireEventDispatcher<::test_bindingsdenylist::OnlyCppAndDeps> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -81,11 +85,13 @@ void fidl::internal::WireServerDispatcher<::test_bindingsdenylist::OnlyCppAndDep
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
+
 void fidl::WireServer<::test_bindingsdenylist::OnlyCppAndDeps>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_bindingsdenylist::OnlyCppAndDeps>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -93,6 +99,7 @@ void fidl::WireServer<::test_bindingsdenylist::OnlyCppAndDeps>::dispatch_message
 #endif  // __Fuchsia__
 
 namespace test_bindingsdenylist {
+
 [[maybe_unused]] constexpr uint64_t kDenyEachBinding_OnlyDenyDart_Ordinal = 8446571910689294295lu;
 
 [[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kDenyEachBinding_OnlyDenyDart_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
@@ -134,6 +141,7 @@ extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenySyzkal
 extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable;
 #ifdef __Fuchsia__
 }  // namespace test_bindingsdenylist
+
 ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>::WireResult(
     ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
     ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>* request, std::optional<zx::time> deadline) {
@@ -154,10 +162,12 @@ extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenySyzkal
   }
 }
 namespace test_bindingsdenylist {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_bindingsdenylist
+
 ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>::WireUnownedResult(::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -189,10 +199,12 @@ namespace test_bindingsdenylist {
   }
 }
 namespace test_bindingsdenylist {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_bindingsdenylist
+
 ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>::WireResult(
     ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
     ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>* request, std::optional<zx::time> deadline) {
@@ -213,10 +225,12 @@ namespace test_bindingsdenylist {
   }
 }
 namespace test_bindingsdenylist {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_bindingsdenylist
+
 ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>::WireUnownedResult(::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -248,10 +262,12 @@ namespace test_bindingsdenylist {
   }
 }
 namespace test_bindingsdenylist {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_bindingsdenylist
+
 ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>::WireResult(
     ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
     ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>* request, std::optional<zx::time> deadline) {
@@ -272,10 +288,12 @@ namespace test_bindingsdenylist {
   }
 }
 namespace test_bindingsdenylist {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_bindingsdenylist
+
 ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>::WireUnownedResult(::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -307,10 +325,12 @@ namespace test_bindingsdenylist {
   }
 }
 namespace test_bindingsdenylist {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_bindingsdenylist
+
 ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>::WireResult(
     ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
     ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>* request, std::optional<zx::time> deadline) {
@@ -331,10 +351,12 @@ namespace test_bindingsdenylist {
   }
 }
 namespace test_bindingsdenylist {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_bindingsdenylist
+
 ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>::WireUnownedResult(::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -366,10 +388,12 @@ namespace test_bindingsdenylist {
   }
 }
 namespace test_bindingsdenylist {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_bindingsdenylist
+
 ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>::WireResult(
     ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
     ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>* request, std::optional<zx::time> deadline) {
@@ -390,10 +414,12 @@ namespace test_bindingsdenylist {
   }
 }
 namespace test_bindingsdenylist {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_bindingsdenylist
+
 ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>::WireUnownedResult(::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -425,9 +451,11 @@ namespace test_bindingsdenylist {
   }
 }
 namespace test_bindingsdenylist {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_bindingsdenylist
+
 #ifdef __Fuchsia__
 
 ::fidl::internal::WireThenable<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> fidl::internal::WireWeakAsyncClientImpl<::test_bindingsdenylist::DenyEachBinding>::OnlyDenyDart(bool a) {
@@ -534,6 +562,7 @@ fidl::internal::WireWeakSyncClientImpl<::test_bindingsdenylist::DenyEachBinding>
         return ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>(::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding>(_transport->get<::fidl::internal::ChannelTransport>()), &_request);
       });
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -544,6 +573,7 @@ fidl::internal::WireWeakSyncClientImpl<::test_bindingsdenylist::DenyEachBinding>
   fidl::internal::WireEventDispatcher<::test_bindingsdenylist::DenyEachBinding> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -641,11 +671,13 @@ void fidl::internal::WireServerDispatcher<::test_bindingsdenylist::DenyEachBindi
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
+
 void fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_bindingsdenylist::DenyEachBinding>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -710,6 +742,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEachBi
 void fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>::ReplyError(uint32_t error) {
   return MakeReply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyDartResult::WithErr(std::move(error)));
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -774,6 +807,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEachBi
 void fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>::ReplyError(uint32_t error) {
   return MakeReply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyGoResult::WithErr(std::move(error)));
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -838,6 +872,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEachBi
 void fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>::ReplyError(uint32_t error) {
   return MakeReply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyLibfuzzerResult::WithErr(std::move(error)));
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -902,6 +937,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEachBi
 void fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>::ReplyError(uint32_t error) {
   return MakeReply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenyRustResult::WithErr(std::move(error)));
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -966,6 +1002,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEachBi
 void fidl::internal::WireBufferCompleterImpl<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>::ReplyError(uint32_t error) {
   return MakeReply(::test_bindingsdenylist::wire::DenyEachBindingOnlyDenySyzkallerResult::WithErr(std::move(error)));
 }
+
 #endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>::_InitHeader() {
@@ -1024,6 +1061,7 @@ void ::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBi
   fidl::internal::WireEventDispatcher<::test_bindingsdenylist::Allowed> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1045,11 +1083,13 @@ void fidl::internal::WireServerDispatcher<::test_bindingsdenylist::Allowed>::Dis
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
+
 void fidl::WireServer<::test_bindingsdenylist::Allowed>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_bindingsdenylist::Allowed>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1057,6 +1097,7 @@ void fidl::WireServer<::test_bindingsdenylist::Allowed>::dispatch_message(
 #endif  // __Fuchsia__
 
 namespace test_bindingsdenylist {
+
 [[maybe_unused]] constexpr uint64_t kImportsSameNameContext_Unattributed_Ordinal = 475191379775102607lu;
 
 [[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kImportsSameNameContext_Unattributed_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
@@ -1066,6 +1107,7 @@ namespace test_bindingsdenylist {
 [[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kImportsSameNameContext_AlwaysAppearsInImportingLibrary_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 #ifdef __Fuchsia__
 }  // namespace test_bindingsdenylist
+
 ::fidl::WireResult<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>::WireResult(
     ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext> client,
     ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>* request) {
@@ -1077,10 +1119,12 @@ namespace test_bindingsdenylist {
   SetStatus(outgoing);
 }
 namespace test_bindingsdenylist {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_bindingsdenylist
+
 ::fidl::WireUnownedResult<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>::WireUnownedResult(::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -1099,10 +1143,12 @@ namespace test_bindingsdenylist {
   SetStatus(outgoing);
 }
 namespace test_bindingsdenylist {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_bindingsdenylist
+
 ::fidl::WireResult<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>::WireResult(
     ::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext> client,
     ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>* request) {
@@ -1114,10 +1160,12 @@ namespace test_bindingsdenylist {
   SetStatus(outgoing);
 }
 namespace test_bindingsdenylist {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_bindingsdenylist
+
 ::fidl::WireUnownedResult<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>::WireUnownedResult(::fidl::UnownedClientEnd<::test_bindingsdenylist::ImportsSameNameContext> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -1136,9 +1184,11 @@ namespace test_bindingsdenylist {
   SetStatus(outgoing);
 }
 namespace test_bindingsdenylist {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_bindingsdenylist
+
 #ifdef __Fuchsia__
 
 ::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_bindingsdenylist::ImportsSameNameContext>::Unattributed() {
@@ -1181,6 +1231,7 @@ namespace test_bindingsdenylist {
       _allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1191,6 +1242,7 @@ namespace test_bindingsdenylist {
   fidl::internal::WireEventDispatcher<::test_bindingsdenylist::ImportsSameNameContext> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1237,11 +1289,13 @@ void fidl::internal::WireServerDispatcher<::test_bindingsdenylist::ImportsSameNa
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
+
 void fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_bindingsdenylist::ImportsSameNameContext>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed>::_InitHeader() {

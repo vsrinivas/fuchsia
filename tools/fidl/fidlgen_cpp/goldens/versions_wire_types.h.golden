@@ -43,6 +43,7 @@ struct Struct {
 
 }  // namespace wire
 }  // namespace test_versions
+
 template <>
 class ::fidl::WireTableBuilder<::test_versions::wire::Table>;
 template <>
@@ -73,6 +74,7 @@ struct ::fidl::WireTableFrame<::test_versions::wire::Table> final {
 
 namespace test_versions {
 namespace wire {
+
 extern "C" const fidl_type_t test_versions_TableTable;
 
 class Table {
@@ -153,6 +155,7 @@ class Table {
 };
 }  // namespace wire
 }  // namespace test_versions
+
 template <typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_versions::wire::Table, BuilderImpl> {
  public:
@@ -206,6 +209,7 @@ class ::fidl::WireTableExternalBuilder<::test_versions::wire::Table> final : pub
 };
 namespace test_versions {
 namespace wire {
+
 inline ::fidl::WireTableBuilder<::test_versions::wire::Table> Table::Builder(::fidl::AnyArena& arena) {
   return ::fidl::WireTableBuilder<::test_versions::wire::Table>(arena);
 }

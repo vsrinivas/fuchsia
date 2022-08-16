@@ -60,6 +60,7 @@ using OneWaySendRequestPtr = ::std::unique_ptr<OneWaySendRequest>;
 }  // namespace driveroneway
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::driveroneway::Payload>
     : public EncodableCodingTraits<::test::driveroneway::Payload, 4> {};

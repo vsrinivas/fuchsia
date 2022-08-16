@@ -17,39 +17,50 @@
     #include <lib/fidl/cpp/wire/sync_call.h>
     #include <lib/fidl/cpp/wire/unknown_interaction_handler.h>
   
+
 #endif  // __Fuchsia__
 
 
   
     
   namespace test_protocols {
+
   class WithAndWithoutRequestResponse;
     
   
+
   class WithErrorSyntax;
     
   
+
   class ChannelProtocol;
     
   
+
   class Transitional;
     
   
+
   class DiscoverableProtocol;
     
   
+
   class AnotherDiscoverableProtocol;
     
   
+
   class HandleRightsProtocol;
     
   
+
   class WithProtocolEnds;
     
   
+
   class ManyParameters;
     
   
+
   class MethodWithUnion;
     
 
@@ -58,45 +69,63 @@
     
     
     
-    __LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable;
-    __LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
     
-    __LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable;
     
-    __LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
-    __LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
     
     
+__LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
     
-    __LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable;
+    
+__LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
+    
+__LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseTopResponseTable;
+    
+    
+    
+    
+__LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable;
 }  // namespace test_protocols
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse> final { static constexpr uint64_t value = 5413654872775949227lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> final { static constexpr uint64_t value = 1631193469798418024lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> final { static constexpr uint64_t value = 9037369643591427517lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse> final { static constexpr uint64_t value = 7326057319832554103lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> final { static constexpr uint64_t value = 2877322062572412767lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> final { static constexpr uint64_t value = 6417226585456833969lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse> final { static constexpr uint64_t value = 5397663296507358806lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse> final { static constexpr uint64_t value = 5811598563493228968lu; };
 
 namespace test_protocols {
+
 }  // namespace test_protocols
+
 #ifdef __Fuchsia__
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_protocols::WithAndWithoutRequestResponse> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 
 template<>
 struct ::fidl::internal::WireServerDispatcher<::test_protocols::WithAndWithoutRequestResponse> final {
@@ -114,7 +143,9 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::WithAndWithoutRe
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
+
 
 
 template<>
@@ -152,6 +183,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> final {
 
@@ -187,6 +219,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
+
 template<>
 struct ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> final {
 
@@ -221,6 +254,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> final {
@@ -258,6 +292,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> final : public ::test_protocols::wire::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse {
@@ -321,6 +356,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse> final : public ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestNoResponseRequest {
 
@@ -382,6 +418,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 
 template<>
 struct ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> final : public ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest {
@@ -445,6 +482,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
+
 template<>
 struct ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> final {
 
@@ -479,6 +517,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> final : public ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseRequest {
@@ -544,6 +583,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
+
 template<>
 struct ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> final : public ::test_protocols::wire::WithAndWithoutRequestResponseWithRequestWithResponseTopResponse {
 
@@ -606,6 +646,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
   template<>
   struct ::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse> final {
 
@@ -641,6 +682,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
   template<>
   struct ::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse> final : public ::test_protocols::wire::WithAndWithoutRequestResponseOnWithResponseRequest {
@@ -709,6 +751,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
 
 
 
+
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>>;
@@ -731,10 +774,12 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithAndWithoutRequest
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -760,10 +805,12 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithAndWithoutRequest
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -789,10 +836,12 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithAndWithoutRequest
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -818,10 +867,12 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithAndWithoutRequest
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 namespace fidl {
+
 
 
 template <>
@@ -1433,6 +1484,7 @@ static_assert(sizeof(::fidl::WireEvent<::test_protocols::WithAndWithoutRequestRe
 static_assert(offsetof(::fidl::WireEvent<::test_protocols::WithAndWithoutRequestResponse::OnWithResponse>, ret) == 0);
 #ifdef __Fuchsia__
 }  // namespace fidl
+
     template<>
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>>> {
@@ -1517,6 +1569,8 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocols::WithAndWithoutRequest
 
 
 
+
+
 template<>
 class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse> final : public ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse> {
  public:
@@ -1533,6 +1587,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithAndWithoutRequestRe
   ~WireResult() = default;
 };
 
+
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse> final : public ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse> {
  public:
@@ -1547,6 +1602,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithAndWithoutRe
 
   
 };
+
 
 
 
@@ -1568,6 +1624,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithAndWithoutRequestRe
     ::fidl::internal::InlineMessageBuffer<16> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> final : public ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> {
@@ -1599,6 +1656,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithAndWithoutRe
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> {
   using Type = ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>;
@@ -1622,6 +1680,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithAndWithoutRequestRe
     ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> final : public ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> {
@@ -1655,6 +1714,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithAndWithoutRe
 
 
 
+
 template<>
 class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse> final : public ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse> {
  public:
@@ -1671,6 +1731,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithAndWithoutRequestRe
   ~WireResult() = default;
 };
 
+
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse> final : public ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::WithRequestNoResponse> {
  public:
@@ -1685,6 +1746,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithAndWithoutRe
 
   
 };
+
 
 
 
@@ -1706,6 +1768,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithAndWithoutRequestRe
     ::fidl::internal::InlineMessageBuffer<16> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> final : public ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> {
@@ -1737,6 +1800,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithAndWithoutRe
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> {
   using Type = ::fidl::WireResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>;
@@ -1760,6 +1824,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithAndWithoutRequestRe
     ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> final : public ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> {
@@ -1790,6 +1855,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithAndWithoutRe
   private:
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>> decoded_;
 };
+
 template<>
 class ::fidl::internal::WireEventHandlerInterface<::test_protocols::WithAndWithoutRequestResponse> : public ::fidl::internal::BaseEventHandlerInterface {
 public:
@@ -1832,6 +1898,8 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::WithAndWithoutRequ
         ::fidl::IncomingMessage& msg,
         ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
+
+
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
 // const reference to a |::fidl::ClientEnd<::test_protocols::WithAndWithoutRequestResponse>|,
@@ -1934,6 +2002,7 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_protocols::WithAndWithou
   }
 };
 
+
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> : public ::fidl::internal::CompleterImplBase<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse> {
  public:
@@ -1970,6 +2039,7 @@ class ::fidl::internal::WireCompleterBase<::test_protocols::WithAndWithoutReques
     return *this;
   }
 };
+
 
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> : public ::fidl::internal::CompleterImplBase<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse> {
@@ -2008,6 +2078,7 @@ class ::fidl::internal::WireCompleterBase<::test_protocols::WithAndWithoutReques
   }
 };
 
+
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> : public ::fidl::internal::CompleterImplBase<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse> {
  public:
@@ -2044,6 +2115,7 @@ class ::fidl::internal::WireCompleterBase<::test_protocols::WithAndWithoutReques
     return *this;
   }
 };
+
 
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> : public ::fidl::internal::CompleterImplBase<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> {
@@ -2143,39 +2215,52 @@ class ::fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse> : publ
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };namespace fidl {
+
 #endif  // __Fuchsia__
 
     
 
     
     }  // namespace fidl
-namespace test_protocols {__LOCAL extern "C" const fidl_type_t test_protocols_WithErrorSyntaxResponseAsStructTopResponseTable;
+namespace test_protocols {
+__LOCAL extern "C" const fidl_type_t test_protocols_WithErrorSyntaxResponseAsStructTopResponseTable;
     
-    __LOCAL extern "C" const fidl_type_t test_protocols_WithErrorSyntaxErrorAsPrimitiveTopResponseTable;
     
-    __LOCAL extern "C" const fidl_type_t test_protocols_WithErrorSyntaxErrorAsEnumTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_WithErrorSyntaxErrorAsPrimitiveTopResponseTable;
     
-    __LOCAL extern "C" const fidl_type_t test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
+    
+__LOCAL extern "C" const fidl_type_t test_protocols_WithErrorSyntaxErrorAsEnumTopResponseTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
 }  // namespace test_protocols
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocols::WithErrorSyntax::ResponseAsStruct> final { static constexpr uint64_t value = 268248568430741139lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> final { static constexpr uint64_t value = 6930994461233198567lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocols::WithErrorSyntax::ErrorAsEnum> final { static constexpr uint64_t value = 5491891352371277635lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocols::WithErrorSyntax::HandleInResult> final { static constexpr uint64_t value = 1371676333068455103lu; };
 
 namespace test_protocols {
+
 }  // namespace test_protocols
+
 #ifdef __Fuchsia__
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_protocols::WithErrorSyntax> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 
 template<>
 struct ::fidl::internal::WireServerDispatcher<::test_protocols::WithErrorSyntax> final {
@@ -2193,7 +2278,9 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::WithErrorSyntax>
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
+
 
 
 template<>
@@ -2232,6 +2319,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct> final : public ::test_protocols::wire::WithErrorSyntaxResponseAsStructTopResponse {
@@ -2296,6 +2384,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> final {
 
@@ -2332,6 +2421,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> final : public ::test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveTopResponse {
@@ -2396,6 +2486,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum> final {
 
@@ -2432,6 +2523,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum> final : public ::test_protocols::wire::WithErrorSyntaxErrorAsEnumTopResponse {
@@ -2496,6 +2588,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_protocols::WithErrorSyntax::HandleInResult> final {
 
@@ -2532,6 +2625,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 #ifdef __Fuchsia__
 
 
@@ -2600,10 +2694,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -2632,10 +2728,12 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithErrorSyntax::Resp
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -2664,10 +2762,12 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithErrorSyntax::Erro
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -2696,10 +2796,12 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithErrorSyntax::Erro
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -2728,10 +2830,12 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithErrorSyntax::Hand
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 namespace fidl {
+
 
 
 template <>
@@ -3146,10 +3250,12 @@ struct TypeTraits<::fidl::WireResponse<::test_protocols::WithErrorSyntax::Handle
 static_assert(sizeof(::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>)
     == TypeTraits<::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireResponse<::test_protocols::WithErrorSyntax::HandleInResult>, result) == 0);
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
     template<>
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>>> {
@@ -3232,6 +3338,8 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::WithErrorSyntax::H
     ::fidl::internal::IncomingEventsHandleStorage<::test_protocols::WithErrorSyntax> handles_storage_;
   };
 
+
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_protocols::WithErrorSyntax::ResponseAsStruct> {
   using Type = ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxResponseAsStructResponse*>;
@@ -3255,6 +3363,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithErrorSyntax::Respon
     ::fidl::internal::InlineMessageBuffer<64> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithErrorSyntax::ResponseAsStruct> final : public ::fidl::BaseWireResult<::test_protocols::WithErrorSyntax::ResponseAsStruct> {
@@ -3286,6 +3395,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithErrorSyntax:
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ResponseAsStruct>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> {
   using Type = ::fitx::result<uint32_t>;
@@ -3309,6 +3419,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithErrorSyntax::ErrorA
     ::fidl::internal::InlineMessageBuffer<48> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> final : public ::fidl::BaseWireResult<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> {
@@ -3340,6 +3451,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithErrorSyntax:
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_protocols::WithErrorSyntax::ErrorAsEnum> {
   using Type = ::fitx::result<::test_protocols::wire::ErrorEnum>;
@@ -3363,6 +3475,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithErrorSyntax::ErrorA
     ::fidl::internal::InlineMessageBuffer<48> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithErrorSyntax::ErrorAsEnum> final : public ::fidl::BaseWireResult<::test_protocols::WithErrorSyntax::ErrorAsEnum> {
@@ -3394,6 +3507,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithErrorSyntax:
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::ErrorAsEnum>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_protocols::WithErrorSyntax::HandleInResult> {
   using Type = ::fitx::result<uint32_t, ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse*>;
@@ -3417,6 +3531,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithErrorSyntax::Handle
     ::fidl::internal::InlineMessageBuffer<48> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithErrorSyntax::HandleInResult> final : public ::fidl::BaseWireResult<::test_protocols::WithErrorSyntax::HandleInResult> {
@@ -3447,6 +3562,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithErrorSyntax:
   private:
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithErrorSyntax::HandleInResult>> decoded_;
 };
+
 template<>
 class ::fidl::internal::WireEventHandlerInterface<::test_protocols::WithErrorSyntax> : public ::fidl::internal::BaseEventHandlerInterface {
 public:
@@ -3482,6 +3598,8 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::WithErrorSyntax> f
   explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_protocols::WithErrorSyntax>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
+
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
 // const reference to a |::fidl::ClientEnd<::test_protocols::WithErrorSyntax>|,
@@ -3560,6 +3678,7 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_protocols::WithErrorSynt
   }
 };
 
+
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::ResponseAsStruct> : public ::fidl::internal::CompleterImplBase<::test_protocols::WithErrorSyntax::ResponseAsStruct> {
  public:
@@ -3600,6 +3719,7 @@ class ::fidl::internal::WireCompleterBase<::test_protocols::WithErrorSyntax::Res
     return *this;
   }
 };
+
 
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> : public ::fidl::internal::CompleterImplBase<::test_protocols::WithErrorSyntax::ErrorAsPrimitive> {
@@ -3642,6 +3762,7 @@ class ::fidl::internal::WireCompleterBase<::test_protocols::WithErrorSyntax::Err
   }
 };
 
+
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::ErrorAsEnum> : public ::fidl::internal::CompleterImplBase<::test_protocols::WithErrorSyntax::ErrorAsEnum> {
  public:
@@ -3682,6 +3803,7 @@ class ::fidl::internal::WireCompleterBase<::test_protocols::WithErrorSyntax::Err
     return *this;
   }
 };
+
 
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_protocols::WithErrorSyntax::HandleInResult> : public ::fidl::internal::CompleterImplBase<::test_protocols::WithErrorSyntax::HandleInResult> {
@@ -3771,43 +3893,60 @@ class ::fidl::WireServer<::test_protocols::WithErrorSyntax> : public ::fidl::int
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };namespace fidl {
+
 #endif  // __Fuchsia__
 
     
 
     }  // namespace fidl
-namespace test_protocols {__LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodARequestTable;
+namespace test_protocols {
+__LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodARequestTable;
     
     
-    __LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolEventARequestTable;
-    __LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodBRequestTable;
-    __LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodBTopResponseTable;
-    __LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolTakeHandleRequestTable;
     
-    __LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketRequestTable;
-    __LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketTopResponseTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolEventARequestTable;
+    
+__LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodBRequestTable;
+    
+__LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodBTopResponseTable;
+    
+__LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolTakeHandleRequestTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketRequestTable;
+    
+__LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketTopResponseTable;
 }  // namespace test_protocols
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocols::ChannelProtocol::MethodA> final { static constexpr uint64_t value = 3155008840945527714lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocols::ChannelProtocol::EventA> final { static constexpr uint64_t value = 2220452875311597006lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocols::ChannelProtocol::MethodB> final { static constexpr uint64_t value = 8903004957800778182lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocols::ChannelProtocol::TakeHandle> final { static constexpr uint64_t value = 591935489944717925lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocols::ChannelProtocol::MutateSocket> final { static constexpr uint64_t value = 7411742788430590287lu; };
 
 namespace test_protocols {
+
 }  // namespace test_protocols
+
 #ifdef __Fuchsia__
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_protocols::ChannelProtocol> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 
 template<>
 struct ::fidl::internal::WireServerDispatcher<::test_protocols::ChannelProtocol> final {
@@ -3825,7 +3964,9 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::ChannelProtocol>
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
+
 
 
 template<>
@@ -3890,6 +4031,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
+
   template<>
   struct ::fidl::WireEvent<::test_protocols::ChannelProtocol::EventA> final : public ::test_protocols::wire::ChannelProtocolEventARequest {
 
@@ -3952,6 +4094,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 
 template<>
 struct ::fidl::WireRequest<::test_protocols::ChannelProtocol::MethodB> final : public ::test_protocols::wire::ChannelProtocolMethodBRequest {
@@ -4017,6 +4160,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
+
 template<>
 struct ::fidl::WireResponse<::test_protocols::ChannelProtocol::MethodB> final : public ::test_protocols::wire::ChannelProtocolMethodBTopResponse {
 
@@ -4078,6 +4222,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 #ifdef __Fuchsia__
 
 
@@ -4145,7 +4290,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 #endif  // __Fuchsia__
+
 
 
 template<>
@@ -4182,6 +4329,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
     internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 #ifdef __Fuchsia__
 
 
@@ -4251,7 +4399,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 #endif  // __Fuchsia__
+
 
 #ifdef __Fuchsia__
 
@@ -4320,10 +4470,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -4349,10 +4501,12 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::ChannelProtocol::Meth
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -4378,10 +4532,12 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::ChannelProtocol::Take
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -4407,10 +4563,12 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::ChannelProtocol::Muta
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 namespace fidl {
+
 
 
 template <>
@@ -4682,6 +4840,7 @@ struct TypeTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHan
 static_assert(sizeof(::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>)
     == TypeTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireRequest<::test_protocols::ChannelProtocol::TakeHandle>, h) == 0);
+
 #endif  // __Fuchsia__
 
 
@@ -4791,6 +4950,7 @@ struct TypeTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateS
 static_assert(sizeof(::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>)
     == TypeTraits<::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireRequest<::test_protocols::ChannelProtocol::MutateSocket>, a) == 0);
+
 #endif  // __Fuchsia__
 
 
@@ -4852,10 +5012,12 @@ struct TypeTraits<::fidl::WireResponse<::test_protocols::ChannelProtocol::Mutate
 static_assert(sizeof(::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>)
     == TypeTraits<::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>, b) == 0);
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
     template<>
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB>>> {
@@ -4924,6 +5086,8 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::ChannelProtocol::M
 
 
 
+
+
 template<>
 class [[nodiscard]] ::fidl::WireResult<::test_protocols::ChannelProtocol::MethodA> final : public ::fidl::BaseWireResult<::test_protocols::ChannelProtocol::MethodA> {
  public:
@@ -4940,6 +5104,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::ChannelProtocol::Method
   ~WireResult() = default;
 };
 
+
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol::MethodA> final : public ::fidl::BaseWireResult<::test_protocols::ChannelProtocol::MethodA> {
  public:
@@ -4954,6 +5119,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol:
 
   
 };
+
 
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_protocols::ChannelProtocol::MethodB> {
@@ -4978,6 +5144,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::ChannelProtocol::Method
     ::fidl::internal::InlineMessageBuffer<24> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MethodB>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol::MethodB> final : public ::fidl::BaseWireResult<::test_protocols::ChannelProtocol::MethodB> {
@@ -5011,6 +5178,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol:
 
 
 
+
 template<>
 class [[nodiscard]] ::fidl::WireResult<::test_protocols::ChannelProtocol::TakeHandle> final : public ::fidl::BaseWireResult<::test_protocols::ChannelProtocol::TakeHandle> {
  public:
@@ -5029,6 +5197,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::ChannelProtocol::TakeHa
     ::fidl::internal::InlineMessageBuffer<16> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::TakeHandle>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol::TakeHandle> final : public ::fidl::BaseWireResult<::test_protocols::ChannelProtocol::TakeHandle> {
@@ -5060,6 +5229,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol:
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::TakeHandle>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_protocols::ChannelProtocol::MutateSocket> {
   using Type = ::fidl::WireResponse<::test_protocols::ChannelProtocol::MutateSocket>;
@@ -5083,6 +5253,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::ChannelProtocol::Mutate
     ::fidl::internal::InlineMessageBuffer<24> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol::MutateSocket> final : public ::fidl::BaseWireResult<::test_protocols::ChannelProtocol::MutateSocket> {
@@ -5113,6 +5284,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::ChannelProtocol:
   private:
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::ChannelProtocol::MutateSocket>> decoded_;
 };
+
 template<>
 class ::fidl::internal::WireEventHandlerInterface<::test_protocols::ChannelProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
 public:
@@ -5153,6 +5325,8 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::ChannelProtocol> f
         ::fidl::IncomingMessage& msg,
         ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
+
+
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
 // const reference to a |::fidl::ClientEnd<::test_protocols::ChannelProtocol>|,
@@ -5231,6 +5405,7 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_protocols::ChannelProtoc
   }
 };
 
+
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_protocols::ChannelProtocol::MethodB> : public ::fidl::internal::CompleterImplBase<::test_protocols::ChannelProtocol::MethodB> {
  public:
@@ -5268,6 +5443,7 @@ class ::fidl::internal::WireCompleterBase<::test_protocols::ChannelProtocol::Met
   }
 };
 
+
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_protocols::ChannelProtocol::TakeHandle> : public ::fidl::internal::CompleterImplBase<::test_protocols::ChannelProtocol::TakeHandle> {
  public:
@@ -5304,6 +5480,7 @@ class ::fidl::internal::WireCompleterBase<::test_protocols::ChannelProtocol::Tak
     return *this;
   }
 };
+
 
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_protocols::ChannelProtocol::MutateSocket> : public ::fidl::internal::CompleterImplBase<::test_protocols::ChannelProtocol::MutateSocket> {
@@ -5389,35 +5566,47 @@ class ::fidl::WireServer<::test_protocols::ChannelProtocol> : public ::fidl::int
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };namespace fidl {
+
 #endif  // __Fuchsia__
 
     
 
     }  // namespace fidl
-namespace test_protocols {__LOCAL extern "C" const fidl_type_t test_protocols_TransitionalRequestRequestTable;
-    __LOCAL extern "C" const fidl_type_t test_protocols_TransitionalRequestTopResponseTable;
-    __LOCAL extern "C" const fidl_type_t test_protocols_TransitionalOneWayRequestTable;
+namespace test_protocols {
+__LOCAL extern "C" const fidl_type_t test_protocols_TransitionalRequestRequestTable;
+    
+__LOCAL extern "C" const fidl_type_t test_protocols_TransitionalRequestTopResponseTable;
+    
+__LOCAL extern "C" const fidl_type_t test_protocols_TransitionalOneWayRequestTable;
     
     
-    __LOCAL extern "C" const fidl_type_t test_protocols_TransitionalEventRequestTable;
+    
+__LOCAL extern "C" const fidl_type_t test_protocols_TransitionalEventRequestTable;
 }  // namespace test_protocols
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocols::Transitional::Request> final { static constexpr uint64_t value = 5849263021838298888lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocols::Transitional::OneWay> final { static constexpr uint64_t value = 4336658926562441191lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocols::Transitional::Event> final { static constexpr uint64_t value = 8507647465196374081lu; };
 
 namespace test_protocols {
+
 }  // namespace test_protocols
+
 #ifdef __Fuchsia__
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_protocols::Transitional> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 
 template<>
 struct ::fidl::internal::WireServerDispatcher<::test_protocols::Transitional> final {
@@ -5435,7 +5624,9 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::Transitional> fi
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
+
 
 
 template<>
@@ -5502,6 +5693,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
   }
 };
 
+
 template<>
 struct ::fidl::WireResponse<::test_protocols::Transitional::Request> final : public ::test_protocols::wire::TransitionalRequestTopResponse {
 
@@ -5564,6 +5756,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
   }
 };
 
+
 template<>
 struct ::fidl::WireRequest<::test_protocols::Transitional::OneWay> final : public ::test_protocols::wire::TransitionalOneWayRequest {
 
@@ -5625,6 +5818,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 
   template<>
   struct ::fidl::WireEvent<::test_protocols::Transitional::Event> final : public ::test_protocols::wire::TransitionalEventRequest {
@@ -5693,6 +5887,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
 
 
 
+
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_protocols::Transitional::Request> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::Transitional::Request>>;
@@ -5715,10 +5910,12 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::Transitional::Request
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 namespace fidl {
+
 
 
 template <>
@@ -5932,6 +6129,7 @@ static_assert(sizeof(::fidl::WireEvent<::test_protocols::Transitional::Event>)
 static_assert(offsetof(::fidl::WireEvent<::test_protocols::Transitional::Event>, x) == 0);
 #ifdef __Fuchsia__
 }  // namespace fidl
+
     template<>
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request>>> {
@@ -5966,6 +6164,8 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocols::Transitional::Event>,
     ::fidl::internal::IncomingEventsHandleStorage<::test_protocols::Transitional> handles_storage_;
   };
 
+
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_protocols::Transitional::Request> {
   using Type = ::fidl::WireResponse<::test_protocols::Transitional::Request>;
@@ -5989,6 +6189,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::Transitional::Request> 
     ::fidl::internal::InlineMessageBuffer<24> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::Transitional::Request>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::Transitional::Request> final : public ::fidl::BaseWireResult<::test_protocols::Transitional::Request> {
@@ -6022,6 +6223,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::Transitional::Re
 
 
 
+
 template<>
 class [[nodiscard]] ::fidl::WireResult<::test_protocols::Transitional::OneWay> final : public ::fidl::BaseWireResult<::test_protocols::Transitional::OneWay> {
  public:
@@ -6038,6 +6240,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::Transitional::OneWay> f
   ~WireResult() = default;
 };
 
+
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::Transitional::OneWay> final : public ::fidl::BaseWireResult<::test_protocols::Transitional::OneWay> {
  public:
@@ -6052,6 +6255,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::Transitional::On
 
   
 };
+
 template<>
 class ::fidl::internal::WireEventHandlerInterface<::test_protocols::Transitional> : public ::fidl::internal::BaseEventHandlerInterface {
 public:
@@ -6093,6 +6297,8 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::Transitional> fina
         ::fidl::IncomingMessage& msg,
         ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
+
+
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
 // const reference to a |::fidl::ClientEnd<::test_protocols::Transitional>|,
@@ -6146,6 +6352,7 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_protocols::Transitional>
       _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
+
 
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_protocols::Transitional::Request> : public ::fidl::internal::CompleterImplBase<::test_protocols::Transitional::Request> {
@@ -6217,6 +6424,7 @@ class ::fidl::WireServer<::test_protocols::Transitional> : public ::fidl::intern
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };namespace fidl {
+
 #endif  // __Fuchsia__
 
     
@@ -6224,20 +6432,25 @@ class ::fidl::WireServer<::test_protocols::Transitional> : public ::fidl::intern
     
     
 }  // namespace fidl
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocols::DiscoverableProtocol::Method> final { static constexpr uint64_t value = 3455873048082739435lu; };
 
 namespace test_protocols {
+
 }  // namespace test_protocols
+
 #ifdef __Fuchsia__
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_protocols::DiscoverableProtocol> {
     static constexpr char DiscoverableName[] = "test.protocols.DiscoverableProtocol";
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 
 template<>
 struct ::fidl::internal::WireServerDispatcher<::test_protocols::DiscoverableProtocol> final {
@@ -6255,7 +6468,9 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::DiscoverableProt
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
+
 
 
 template<>
@@ -6294,6 +6509,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 };
 
 namespace fidl {
+
 
 
 template <>
@@ -6345,6 +6561,7 @@ struct TypeTraits<::fidl::WireRequest<::test_protocols::DiscoverableProtocol::Me
 };
 #ifdef __Fuchsia__
 }  // namespace fidl
+
   template <>
   struct ::fidl::internal::IncomingEventsHandleStorage<::test_protocols::DiscoverableProtocol> final :
       public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_protocols::DiscoverableProtocol>> {
@@ -6365,6 +6582,8 @@ struct TypeTraits<::fidl::WireRequest<::test_protocols::DiscoverableProtocol::Me
 
 
 
+
+
 template<>
 class [[nodiscard]] ::fidl::WireResult<::test_protocols::DiscoverableProtocol::Method> final : public ::fidl::BaseWireResult<::test_protocols::DiscoverableProtocol::Method> {
  public:
@@ -6381,6 +6600,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::DiscoverableProtocol::M
   ~WireResult() = default;
 };
 
+
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::DiscoverableProtocol::Method> final : public ::fidl::BaseWireResult<::test_protocols::DiscoverableProtocol::Method> {
  public:
@@ -6395,6 +6615,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::DiscoverableProt
 
   
 };
+
 template<>
 class ::fidl::internal::WireEventHandlerInterface<::test_protocols::DiscoverableProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
 public:
@@ -6430,6 +6651,8 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::DiscoverableProtoc
   explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_protocols::DiscoverableProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
+
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
 // const reference to a |::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>|,
@@ -6498,6 +6721,7 @@ class ::fidl::WireServer<::test_protocols::DiscoverableProtocol> : public ::fidl
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };namespace fidl {
+
 #endif  // __Fuchsia__
 
     
@@ -6506,16 +6730,20 @@ class ::fidl::WireServer<::test_protocols::DiscoverableProtocol> : public ::fidl
 
 }  // namespace fidl
 namespace test_protocols {
+
 }  // namespace test_protocols
+
 #ifdef __Fuchsia__
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_protocols::AnotherDiscoverableProtocol> {
     static constexpr char DiscoverableName[] = "fake.library.FakeProtocol";
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 
 template<>
 struct ::fidl::internal::WireServerDispatcher<::test_protocols::AnotherDiscoverableProtocol> final {
@@ -6533,13 +6761,16 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::AnotherDiscovera
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 
 namespace fidl {
 
+
 #ifdef __Fuchsia__
 }  // namespace fidl
+
   template <>
   struct ::fidl::internal::IncomingEventsHandleStorage<::test_protocols::AnotherDiscoverableProtocol> final :
       public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_protocols::AnotherDiscoverableProtocol>> {
@@ -6557,6 +6788,8 @@ namespace fidl {
     ::fidl::internal::InlineMessageBuffer<16> bytes_;
     ::fidl::internal::IncomingEventsHandleStorage<::test_protocols::AnotherDiscoverableProtocol> handles_storage_;
   };
+
+
 template<>
 class ::fidl::internal::WireEventHandlerInterface<::test_protocols::AnotherDiscoverableProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
 public:
@@ -6592,6 +6825,8 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::AnotherDiscoverabl
   explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_protocols::AnotherDiscoverableProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
+
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
 // const reference to a |::fidl::ClientEnd<::test_protocols::AnotherDiscoverableProtocol>|,
@@ -6641,35 +6876,47 @@ class ::fidl::WireServer<::test_protocols::AnotherDiscoverableProtocol> : public
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };namespace fidl {
+
 #endif  // __Fuchsia__
 
     
 
     }  // namespace fidl
-namespace test_protocols {__LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
+namespace test_protocols {
+__LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
     
-    __LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolResponseMethodRequestTable;
-    __LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
     
-    __LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolAnEventRequestTable;
+__LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolResponseMethodRequestTable;
+    
+__LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
+    
+    
+__LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolAnEventRequestTable;
 }  // namespace test_protocols
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocols::HandleRightsProtocol::NoResponseMethod> final { static constexpr uint64_t value = 1155044649514904573lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocols::HandleRightsProtocol::ResponseMethod> final { static constexpr uint64_t value = 5956276128041940295lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocols::HandleRightsProtocol::AnEvent> final { static constexpr uint64_t value = 476727631355490611lu; };
 
 namespace test_protocols {
+
 }  // namespace test_protocols
+
 #ifdef __Fuchsia__
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_protocols::HandleRightsProtocol> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 
 template<>
 struct ::fidl::internal::WireServerDispatcher<::test_protocols::HandleRightsProtocol> final {
@@ -6687,7 +6934,9 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::HandleRightsProt
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
+
 
 #ifdef __Fuchsia__
 
@@ -6756,7 +7005,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 #endif  // __Fuchsia__
+
 
 #ifdef __Fuchsia__
 
@@ -6827,7 +7078,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 #endif  // __Fuchsia__
+
 
 #ifdef __Fuchsia__
 
@@ -6896,7 +7149,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 #endif  // __Fuchsia__
+
 
 #ifdef __Fuchsia__
 
@@ -6966,10 +7221,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalEvent<:
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -6995,10 +7252,12 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::HandleRightsProtocol:
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 namespace fidl {
+
 
 
 template <>
@@ -7057,6 +7316,7 @@ struct TypeTraits<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::No
 static_assert(sizeof(::fidl::WireRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>)
     == TypeTraits<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireRequest<::test_protocols::HandleRightsProtocol::NoResponseMethod>, h) == 0);
+
 #endif  // __Fuchsia__
 
 
@@ -7116,6 +7376,7 @@ struct TypeTraits<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::Re
 static_assert(sizeof(::fidl::WireRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>)
     == TypeTraits<::fidl::WireRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>, h) == 0);
+
 #endif  // __Fuchsia__
 
 
@@ -7177,6 +7438,7 @@ struct TypeTraits<::fidl::WireResponse<::test_protocols::HandleRightsProtocol::R
 static_assert(sizeof(::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>)
     == TypeTraits<::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>, h) == 0);
+
 #endif  // __Fuchsia__
 
 
@@ -7236,10 +7498,12 @@ struct TypeTraits<::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEv
 static_assert(sizeof(::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>)
     == TypeTraits<::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireEvent<::test_protocols::HandleRightsProtocol::AnEvent>, h) == 0);
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
     template<>
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>>> {
@@ -7276,6 +7540,8 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocols::HandleRightsProtocol:
 
 
 
+
+
 template<>
 class [[nodiscard]] ::fidl::WireResult<::test_protocols::HandleRightsProtocol::NoResponseMethod> final : public ::fidl::BaseWireResult<::test_protocols::HandleRightsProtocol::NoResponseMethod> {
  public:
@@ -7292,6 +7558,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::HandleRightsProtocol::N
   ~WireResult() = default;
 };
 
+
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::HandleRightsProtocol::NoResponseMethod> final : public ::fidl::BaseWireResult<::test_protocols::HandleRightsProtocol::NoResponseMethod> {
  public:
@@ -7306,6 +7573,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::HandleRightsProt
 
   
 };
+
 
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_protocols::HandleRightsProtocol::ResponseMethod> {
@@ -7330,6 +7598,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::HandleRightsProtocol::R
     ::fidl::internal::InlineMessageBuffer<24> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::HandleRightsProtocol::ResponseMethod> final : public ::fidl::BaseWireResult<::test_protocols::HandleRightsProtocol::ResponseMethod> {
@@ -7360,6 +7629,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::HandleRightsProt
   private:
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::HandleRightsProtocol::ResponseMethod>> decoded_;
 };
+
 template<>
 class ::fidl::internal::WireEventHandlerInterface<::test_protocols::HandleRightsProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
 public:
@@ -7400,6 +7670,8 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::HandleRightsProtoc
         ::fidl::IncomingMessage& msg,
         ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
+
+
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
 // const reference to a |::fidl::ClientEnd<::test_protocols::HandleRightsProtocol>|,
@@ -7453,6 +7725,7 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_protocols::HandleRightsP
       _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
+
 
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_protocols::HandleRightsProtocol::ResponseMethod> : public ::fidl::internal::CompleterImplBase<::test_protocols::HandleRightsProtocol::ResponseMethod> {
@@ -7524,35 +7797,49 @@ class ::fidl::WireServer<::test_protocols::HandleRightsProtocol> : public ::fidl
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };namespace fidl {
+
 #endif  // __Fuchsia__
 
     
 
     }  // namespace fidl
-namespace test_protocols {__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsClientEndsRequestTable;
-    __LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsClientEndsTopResponseTable;
-    __LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsServerEndsRequestTable;
-    __LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsServerEndsTopResponseTable;
-    __LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
-    __LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable;
+namespace test_protocols {
+__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsClientEndsRequestTable;
+    
+__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsClientEndsTopResponseTable;
+    
+__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsServerEndsRequestTable;
+    
+__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsServerEndsTopResponseTable;
+    
+__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
+    
+__LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable;
 }  // namespace test_protocols
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocols::WithProtocolEnds::ClientEnds> final { static constexpr uint64_t value = 5870448041025163330lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocols::WithProtocolEnds::ServerEnds> final { static constexpr uint64_t value = 8115535094437022259lu; };
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocols::WithProtocolEnds::StructContainingEnds> final { static constexpr uint64_t value = 4076866772260025813lu; };
 
 namespace test_protocols {
+
 }  // namespace test_protocols
+
 #ifdef __Fuchsia__
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_protocols::WithProtocolEnds> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 
 template<>
 struct ::fidl::internal::WireServerDispatcher<::test_protocols::WithProtocolEnds> final {
@@ -7570,7 +7857,9 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::WithProtocolEnds
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
+
 
 #ifdef __Fuchsia__
 
@@ -7641,7 +7930,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 #endif  // __Fuchsia__
+
 
 #ifdef __Fuchsia__
 
@@ -7710,7 +8001,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 #endif  // __Fuchsia__
+
 
 #ifdef __Fuchsia__
 
@@ -7781,7 +8074,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 #endif  // __Fuchsia__
+
 
 #ifdef __Fuchsia__
 
@@ -7850,7 +8145,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 #endif  // __Fuchsia__
+
 
 #ifdef __Fuchsia__
 
@@ -7921,7 +8218,9 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 #endif  // __Fuchsia__
+
 
 #ifdef __Fuchsia__
 
@@ -7990,10 +8289,12 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -8019,10 +8320,12 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithProtocolEnds::Cli
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -8048,10 +8351,12 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithProtocolEnds::Ser
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 
@@ -8077,10 +8382,12 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::WithProtocolEnds::Str
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 namespace fidl {
+
 
 
 template <>
@@ -8139,6 +8446,7 @@ struct TypeTraits<::fidl::WireRequest<::test_protocols::WithProtocolEnds::Client
 static_assert(sizeof(::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>)
     == TypeTraits<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireRequest<::test_protocols::WithProtocolEnds::ClientEnds>, in) == 0);
+
 #endif  // __Fuchsia__
 
 
@@ -8200,6 +8508,7 @@ struct TypeTraits<::fidl::WireResponse<::test_protocols::WithProtocolEnds::Clien
 static_assert(sizeof(::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>)
     == TypeTraits<::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>, out) == 0);
+
 #endif  // __Fuchsia__
 
 
@@ -8259,6 +8568,7 @@ struct TypeTraits<::fidl::WireRequest<::test_protocols::WithProtocolEnds::Server
 static_assert(sizeof(::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>)
     == TypeTraits<::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireRequest<::test_protocols::WithProtocolEnds::ServerEnds>, in) == 0);
+
 #endif  // __Fuchsia__
 
 
@@ -8320,6 +8630,7 @@ struct TypeTraits<::fidl::WireResponse<::test_protocols::WithProtocolEnds::Serve
 static_assert(sizeof(::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>)
     == TypeTraits<::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>, out) == 0);
+
 #endif  // __Fuchsia__
 
 
@@ -8379,6 +8690,7 @@ struct TypeTraits<::fidl::WireRequest<::test_protocols::WithProtocolEnds::Struct
 static_assert(sizeof(::fidl::WireRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>)
     == TypeTraits<::fidl::WireRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>, in) == 0);
+
 #endif  // __Fuchsia__
 
 
@@ -8440,10 +8752,12 @@ struct TypeTraits<::fidl::WireResponse<::test_protocols::WithProtocolEnds::Struc
 static_assert(sizeof(::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>)
     == TypeTraits<::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>, out) == 0);
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
     template<>
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>>> {
@@ -8510,6 +8824,8 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::WithProtocolEnds::
     ::fidl::internal::IncomingEventsHandleStorage<::test_protocols::WithProtocolEnds> handles_storage_;
   };
 
+
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_protocols::WithProtocolEnds::ClientEnds> {
   using Type = ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ClientEnds>;
@@ -8533,6 +8849,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithProtocolEnds::Clien
     ::fidl::internal::InlineMessageBuffer<24> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithProtocolEnds::ClientEnds> final : public ::fidl::BaseWireResult<::test_protocols::WithProtocolEnds::ClientEnds> {
@@ -8564,6 +8881,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithProtocolEnds
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ClientEnds>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_protocols::WithProtocolEnds::ServerEnds> {
   using Type = ::fidl::WireResponse<::test_protocols::WithProtocolEnds::ServerEnds>;
@@ -8587,6 +8905,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithProtocolEnds::Serve
     ::fidl::internal::InlineMessageBuffer<24> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithProtocolEnds::ServerEnds> final : public ::fidl::BaseWireResult<::test_protocols::WithProtocolEnds::ServerEnds> {
@@ -8618,6 +8937,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithProtocolEnds
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::ServerEnds>> decoded_;
 };
 
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_protocols::WithProtocolEnds::StructContainingEnds> {
   using Type = ::fidl::WireResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>;
@@ -8641,6 +8961,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithProtocolEnds::Struc
     ::fidl::internal::InlineMessageBuffer<32> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithProtocolEnds::StructContainingEnds> final : public ::fidl::BaseWireResult<::test_protocols::WithProtocolEnds::StructContainingEnds> {
@@ -8671,6 +8992,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::WithProtocolEnds
   private:
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::WithProtocolEnds::StructContainingEnds>> decoded_;
 };
+
 template<>
 class ::fidl::internal::WireEventHandlerInterface<::test_protocols::WithProtocolEnds> : public ::fidl::internal::BaseEventHandlerInterface {
 public:
@@ -8706,6 +9028,8 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::WithProtocolEnds> 
   explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_protocols::WithProtocolEnds>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
+
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
 // const reference to a |::fidl::ClientEnd<::test_protocols::WithProtocolEnds>|,
@@ -8772,6 +9096,7 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_protocols::WithProtocolE
   }
 };
 
+
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_protocols::WithProtocolEnds::ClientEnds> : public ::fidl::internal::CompleterImplBase<::test_protocols::WithProtocolEnds::ClientEnds> {
  public:
@@ -8809,6 +9134,7 @@ class ::fidl::internal::WireCompleterBase<::test_protocols::WithProtocolEnds::Cl
   }
 };
 
+
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_protocols::WithProtocolEnds::ServerEnds> : public ::fidl::internal::CompleterImplBase<::test_protocols::WithProtocolEnds::ServerEnds> {
  public:
@@ -8845,6 +9171,7 @@ class ::fidl::internal::WireCompleterBase<::test_protocols::WithProtocolEnds::Se
     return *this;
   }
 };
+
 
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_protocols::WithProtocolEnds::StructContainingEnds> : public ::fidl::internal::CompleterImplBase<::test_protocols::WithProtocolEnds::StructContainingEnds> {
@@ -8923,27 +9250,34 @@ class ::fidl::WireServer<::test_protocols::WithProtocolEnds> : public ::fidl::in
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };namespace fidl {
+
 #endif  // __Fuchsia__
 
     
 
     }  // namespace fidl
-namespace test_protocols {__LOCAL extern "C" const fidl_type_t test_protocols_ManyParametersFifteenRequestTable;
+namespace test_protocols {
+__LOCAL extern "C" const fidl_type_t test_protocols_ManyParametersFifteenRequestTable;
     
 }  // namespace test_protocols
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocols::ManyParameters::Fifteen> final { static constexpr uint64_t value = 6423043252952467815lu; };
 
 namespace test_protocols {
+
 }  // namespace test_protocols
+
 #ifdef __Fuchsia__
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_protocols::ManyParameters> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 
 template<>
 struct ::fidl::internal::WireServerDispatcher<::test_protocols::ManyParameters> final {
@@ -8961,7 +9295,9 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::ManyParameters> 
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
+
 
 
 template<>
@@ -9027,6 +9363,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
 };
 
 namespace fidl {
+
 
 
 template <>
@@ -9096,6 +9433,7 @@ static_assert(offsetof(::fidl::WireRequest<::test_protocols::ManyParameters::Fif
 static_assert(offsetof(::fidl::WireRequest<::test_protocols::ManyParameters::Fifteen>, p15) == 14);
 #ifdef __Fuchsia__
 }  // namespace fidl
+
   template <>
   struct ::fidl::internal::IncomingEventsHandleStorage<::test_protocols::ManyParameters> final :
       public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_protocols::ManyParameters>> {
@@ -9116,6 +9454,8 @@ static_assert(offsetof(::fidl::WireRequest<::test_protocols::ManyParameters::Fif
 
 
 
+
+
 template<>
 class [[nodiscard]] ::fidl::WireResult<::test_protocols::ManyParameters::Fifteen> final : public ::fidl::BaseWireResult<::test_protocols::ManyParameters::Fifteen> {
  public:
@@ -9132,6 +9472,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::ManyParameters::Fifteen
   ~WireResult() = default;
 };
 
+
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::ManyParameters::Fifteen> final : public ::fidl::BaseWireResult<::test_protocols::ManyParameters::Fifteen> {
  public:
@@ -9146,6 +9487,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::ManyParameters::
 
   
 };
+
 template<>
 class ::fidl::internal::WireEventHandlerInterface<::test_protocols::ManyParameters> : public ::fidl::internal::BaseEventHandlerInterface {
 public:
@@ -9181,6 +9523,8 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::ManyParameters> fi
   explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_protocols::ManyParameters>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
+
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
 // const reference to a |::fidl::ClientEnd<::test_protocols::ManyParameters>|,
@@ -9249,27 +9593,35 @@ class ::fidl::WireServer<::test_protocols::ManyParameters> : public ::fidl::inte
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };namespace fidl {
+
 #endif  // __Fuchsia__
 
     
 
     }  // namespace fidl
-namespace test_protocols {__LOCAL extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodRequestTable;
-    __LOCAL extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodTopResponseTable;
+namespace test_protocols {
+__LOCAL extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodRequestTable;
+    
+__LOCAL extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodTopResponseTable;
 }  // namespace test_protocols
+
 template<>
 struct ::fidl::internal::WireOrdinal<::test_protocols::MethodWithUnion::UnionMethod> final { static constexpr uint64_t value = 4124874338266649112lu; };
 
 namespace test_protocols {
+
 }  // namespace test_protocols
+
 #ifdef __Fuchsia__
 
 template<>
 struct ::fidl::internal::ProtocolDetails<::test_protocols::MethodWithUnion> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+
 
 template<>
 struct ::fidl::internal::WireServerDispatcher<::test_protocols::MethodWithUnion> final {
@@ -9287,7 +9639,9 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocols::MethodWithUnion>
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
+
 
 
 template<>
@@ -9353,6 +9707,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 
 template<>
 struct ::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod> final : public ::test_protocols::wire::MethodWithUnionUnionMethodTopResponse {
@@ -9420,6 +9775,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
 
 
 
+
 template<>
 struct ::fidl::internal::WireMethodTypes<::test_protocols::MethodWithUnion::UnionMethod> {
   using Completer = fidl::Completer<::fidl::internal::WireCompleterBase<::test_protocols::MethodWithUnion::UnionMethod>>;
@@ -9442,10 +9798,12 @@ struct ::fidl::internal::WireMethodTypes<::test_protocols::MethodWithUnion::Unio
 };
 
 
+
 #endif  // __Fuchsia__
 
 
 namespace fidl {
+
 
 
 template <>
@@ -9555,6 +9913,7 @@ static_assert(sizeof(::fidl::WireResponse<::test_protocols::MethodWithUnion::Uni
 static_assert(offsetof(::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>, u) == 0);
 #ifdef __Fuchsia__
 }  // namespace fidl
+
     template<>
     struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod>> final
         : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod>>> {
@@ -9589,6 +9948,8 @@ static_assert(offsetof(::fidl::WireResponse<::test_protocols::MethodWithUnion::U
     ::fidl::internal::IncomingEventsHandleStorage<::test_protocols::MethodWithUnion> handles_storage_;
   };
 
+
+
 template<>
 struct ::fidl::internal::WireResultUnwrap<::test_protocols::MethodWithUnion::UnionMethod> {
   using Type = ::fidl::WireResponse<::test_protocols::MethodWithUnion::UnionMethod>;
@@ -9612,6 +9973,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::MethodWithUnion::UnionM
     ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod>> decoded_;
 };
+
 
 template<>
 class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::MethodWithUnion::UnionMethod> final : public ::fidl::BaseWireResult<::test_protocols::MethodWithUnion::UnionMethod> {
@@ -9642,6 +10004,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocols::MethodWithUnion:
   private:
     ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocols::MethodWithUnion::UnionMethod>> decoded_;
 };
+
 template<>
 class ::fidl::internal::WireEventHandlerInterface<::test_protocols::MethodWithUnion> : public ::fidl::internal::BaseEventHandlerInterface {
 public:
@@ -9677,6 +10040,8 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::MethodWithUnion> f
   explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_protocols::MethodWithUnion>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
+
 
 // Methods to make a sync FIDL call directly on an unowned handle or a
 // const reference to a |::fidl::ClientEnd<::test_protocols::MethodWithUnion>|,
@@ -9718,6 +10083,7 @@ class ::fidl::internal::WireSyncBufferClientImpl<::test_protocols::MethodWithUni
       _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
+
 
 template<>
 class ::fidl::internal::WireCompleterImpl<::test_protocols::MethodWithUnion::UnionMethod> : public ::fidl::internal::CompleterImplBase<::test_protocols::MethodWithUnion::UnionMethod> {
@@ -9782,13 +10148,16 @@ class ::fidl::WireServer<::test_protocols::MethodWithUnion> : public ::fidl::int
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };namespace fidl {
+
 #endif  // __Fuchsia__
 
 
   
+
     
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template<>
 class ::fidl::internal::WireWeakOnewayClientImpl<::test_protocols::WithAndWithoutRequestResponse> : public ::fidl::internal::ClientImplBase {
  public:
@@ -9867,11 +10236,13 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_protocols::WithAndWithoutR
   // Request is heap-allocated. Response is heap-allocated.
   ::fidl::WireResult<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse> WithRequestWithResponse(::fidl::StringView arg);
 };namespace fidl {
+
 #endif  // __Fuchsia__
 
 
     
 }  // namespace fidl
+
 #ifdef __Fuchsia__
 template<>
 class ::fidl::internal::WireWeakEventSender<::test_protocols::WithAndWithoutRequestResponse> : public ::fidl::internal::WeakEventSenderBase {
@@ -9926,10 +10297,12 @@ class ::fidl::internal::WireBufferEventSender<::test_protocols::WithAndWithoutRe
 
 
 };
+
 #endif  // __Fuchsia__
 
     
 #ifdef __Fuchsia__
+
 
 template<>
 class ::fidl::internal::WireWeakOnewayClientImpl<::test_protocols::WithErrorSyntax> : public ::fidl::internal::ClientImplBase {
@@ -9995,10 +10368,12 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_protocols::WithErrorSyntax
   // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
   ::fidl::WireResult<::test_protocols::WithErrorSyntax::HandleInResult> HandleInResult();
 };
+
 #endif  // __Fuchsia__
 
 
     
+
 
 #ifdef __Fuchsia__
 template<>
@@ -10030,10 +10405,12 @@ class ::fidl::internal::WireBufferEventSender<::test_protocols::WithErrorSyntax>
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 
 };
+
 #endif  // __Fuchsia__
 
     
 #ifdef __Fuchsia__
+
 
 template<>
 class ::fidl::internal::WireWeakOnewayClientImpl<::test_protocols::ChannelProtocol> : public ::fidl::internal::ClientImplBase {
@@ -10097,10 +10474,12 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_protocols::ChannelProtocol
   // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
   ::fidl::WireResult<::test_protocols::ChannelProtocol::MutateSocket> MutateSocket(::zx::socket&& a);
 };
+
 #endif  // __Fuchsia__
 
 
     
+
 
 #ifdef __Fuchsia__
 template<>
@@ -10144,10 +10523,12 @@ class ::fidl::internal::WireBufferEventSender<::test_protocols::ChannelProtocol>
 
 
 };
+
 #endif  // __Fuchsia__
 
     
 #ifdef __Fuchsia__
+
 
 template<>
 class ::fidl::internal::WireWeakOnewayClientImpl<::test_protocols::Transitional> : public ::fidl::internal::ClientImplBase {
@@ -10193,10 +10574,12 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_protocols::Transitional> f
   // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
   ::fidl::WireResult<::test_protocols::Transitional::Request> Request(int64_t x);
 };
+
 #endif  // __Fuchsia__
 
 
     
+
 
 #ifdef __Fuchsia__
 template<>
@@ -10240,10 +10623,12 @@ class ::fidl::internal::WireBufferEventSender<::test_protocols::Transitional>
 
 
 };
+
 #endif  // __Fuchsia__
 
     
 #ifdef __Fuchsia__
+
 
 template<>
 class ::fidl::internal::WireWeakOnewayClientImpl<::test_protocols::DiscoverableProtocol> : public ::fidl::internal::ClientImplBase {
@@ -10280,10 +10665,12 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_protocols::DiscoverablePro
  public:
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
+
 #endif  // __Fuchsia__
 
 
     
+
 
 #ifdef __Fuchsia__
 template<>
@@ -10315,10 +10702,12 @@ class ::fidl::internal::WireBufferEventSender<::test_protocols::DiscoverableProt
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 
 };
+
 #endif  // __Fuchsia__
 
     
 #ifdef __Fuchsia__
+
 
 template<>
 class ::fidl::internal::WireWeakOnewayClientImpl<::test_protocols::AnotherDiscoverableProtocol> : public ::fidl::internal::ClientImplBase {
@@ -10348,10 +10737,12 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_protocols::AnotherDiscover
  public:
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
+
 #endif  // __Fuchsia__
 
 
     
+
 
 #ifdef __Fuchsia__
 template<>
@@ -10383,10 +10774,12 @@ class ::fidl::internal::WireBufferEventSender<::test_protocols::AnotherDiscovera
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 
 };
+
 #endif  // __Fuchsia__
 
     
 #ifdef __Fuchsia__
+
 
 template<>
 class ::fidl::internal::WireWeakOnewayClientImpl<::test_protocols::HandleRightsProtocol> : public ::fidl::internal::ClientImplBase {
@@ -10432,10 +10825,12 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_protocols::HandleRightsPro
   // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
   ::fidl::WireResult<::test_protocols::HandleRightsProtocol::ResponseMethod> ResponseMethod(::zx::socket&& h);
 };
+
 #endif  // __Fuchsia__
 
 
     
+
 
 #ifdef __Fuchsia__
 template<>
@@ -10479,10 +10874,12 @@ class ::fidl::internal::WireBufferEventSender<::test_protocols::HandleRightsProt
 
 
 };
+
 #endif  // __Fuchsia__
 
     
 #ifdef __Fuchsia__
+
 
 template<>
 class ::fidl::internal::WireWeakOnewayClientImpl<::test_protocols::WithProtocolEnds> : public ::fidl::internal::ClientImplBase {
@@ -10539,10 +10936,12 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_protocols::WithProtocolEnd
   // Allocates 64 bytes of message buffer on the stack. No heap allocation necessary.
   ::fidl::WireResult<::test_protocols::WithProtocolEnds::StructContainingEnds> StructContainingEnds(::test_protocols::wire::ProtocolEnds&& in);
 };
+
 #endif  // __Fuchsia__
 
 
     
+
 
 #ifdef __Fuchsia__
 template<>
@@ -10574,10 +10973,12 @@ class ::fidl::internal::WireBufferEventSender<::test_protocols::WithProtocolEnds
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 
 };
+
 #endif  // __Fuchsia__
 
     
 #ifdef __Fuchsia__
+
 
 template<>
 class ::fidl::internal::WireWeakOnewayClientImpl<::test_protocols::ManyParameters> : public ::fidl::internal::ClientImplBase {
@@ -10614,10 +11015,12 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_protocols::ManyParameters>
  public:
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
+
 #endif  // __Fuchsia__
 
 
     
+
 
 #ifdef __Fuchsia__
 template<>
@@ -10649,10 +11052,12 @@ class ::fidl::internal::WireBufferEventSender<::test_protocols::ManyParameters>
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 
 };
+
 #endif  // __Fuchsia__
 
     
 #ifdef __Fuchsia__
+
 
 template<>
 class ::fidl::internal::WireWeakOnewayClientImpl<::test_protocols::MethodWithUnion> : public ::fidl::internal::ClientImplBase {
@@ -10691,10 +11096,12 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_protocols::MethodWithUnion
   // Allocates 32 bytes of request buffer on the stack. Response is heap-allocated.
   ::fidl::WireResult<::test_protocols::MethodWithUnion::UnionMethod> UnionMethod(::test_protocols::wire::TheUnion u);
 };
+
 #endif  // __Fuchsia__
 
 
     
+
 
 #ifdef __Fuchsia__
 template<>
@@ -10726,7 +11133,9 @@ class ::fidl::internal::WireBufferEventSender<::test_protocols::MethodWithUnion>
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 
 };
+
 #endif  // __Fuchsia__
 
 
   
+

@@ -382,6 +382,7 @@ using UnionLargeArrayPtr = ::std::unique_ptr<UnionLargeArray>;
 }  // namespace arrays
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::arrays::StructSmallArray>
     : public EncodableCodingTraits<::test::arrays::StructSmallArray, 8> {};

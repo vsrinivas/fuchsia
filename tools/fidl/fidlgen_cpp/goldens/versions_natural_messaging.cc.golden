@@ -19,6 +19,7 @@
   fidl::internal::NaturalEventDispatcher<::test_versions::OtherProtocol> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -36,20 +37,24 @@ void fidl::internal::NaturalServerDispatcher<::test_versions::OtherProtocol>::Di
                                                                                        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
+
 void fidl::Server<::test_versions::OtherProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_versions::OtherProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 namespace test_versions {
+
 [[maybe_unused]] constexpr inline uint64_t kProtocol_Foo_Ordinal = 6231434419097198905lu;
 
 [[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kProtocol_Foo_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
 #ifdef __Fuchsia__
 }  // namespace test_versions
+
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_versions::Protocol>::Foo() const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
@@ -59,9 +64,11 @@ fidl::internal::NaturalClientImpl<::test_versions::Protocol>::Foo() const {
   return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_versions {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_versions
+
 #ifdef __Fuchsia__
 
 ::fitx::result<::fidl::Error>
@@ -83,6 +90,7 @@ fidl::internal::NaturalSyncClientImpl<::test_versions::Protocol>::Foo() {
   fidl::internal::NaturalEventDispatcher<::test_versions::Protocol> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -116,9 +124,11 @@ void fidl::internal::NaturalServerDispatcher<::test_versions::Protocol>::Dispatc
                                                                                   internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
+
 void fidl::Server<::test_versions::Protocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_versions::Protocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__

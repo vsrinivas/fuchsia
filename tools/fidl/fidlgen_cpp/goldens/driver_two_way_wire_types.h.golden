@@ -25,6 +25,7 @@
 namespace test_drivertwoway {
 
 namespace wire {
+
 struct TwoWayAddRequest;
 
 struct TwoWayAddTopResponse;

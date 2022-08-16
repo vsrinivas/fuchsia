@@ -4,6 +4,7 @@
 #include <lib/fidl/cpp/wire/unknown_interactions.h>
 
 namespace test_protocolpayloads {
+
 [[maybe_unused]] constexpr inline uint64_t kMainProtocol_OneWayComposed_Ordinal = 2602591870026304272lu;
 
 [[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kMainProtocol_OneWayComposed_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
@@ -86,6 +87,7 @@ namespace test_protocolpayloads {
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolpayloads
+
 ::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayComposed>
 fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::TwoWayComposed(const ::fidl::Request<::test_protocolpayloads::MainProtocol::TwoWayComposed>& request) const {
   return ::fidl::internal::NaturalThenable<::test_protocolpayloads::MainProtocol::TwoWayComposed>(
@@ -278,9 +280,11 @@ fidl::internal::NaturalClientImpl<::test_protocolpayloads::MainProtocol>::OneWay
   return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_protocolpayloads {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_protocolpayloads
+
 #ifdef __Fuchsia__
 
 ::fidl::Result<::test_protocolpayloads::MainProtocol::TwoWayComposed>
@@ -531,6 +535,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocolpayloads::MainProtocol>::D
       return ::fidl::Status::UnknownOrdinal();
   }
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -961,9 +966,11 @@ void fidl::internal::NaturalServerDispatcher<::test_protocolpayloads::MainProtoc
                                                                                               internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
+
 void fidl::Server<::test_protocolpayloads::MainProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_protocolpayloads::MainProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__

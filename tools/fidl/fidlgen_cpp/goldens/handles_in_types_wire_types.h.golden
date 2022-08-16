@@ -37,6 +37,7 @@ class UnionWithHandle;
 
 }  // namespace wire
 }  // namespace test_handlesintypes
+
 template <>
 class ::fidl::WireTableBuilder<::test_handlesintypes::wire::TableWithHandle>;
 template <>
@@ -67,6 +68,7 @@ struct ::fidl::WireTableFrame<::test_handlesintypes::wire::TableWithHandle> fina
 
 namespace test_handlesintypes {
 namespace wire {
+
 extern "C" const fidl_type_t test_handlesintypes_TableWithHandleTable;
 
 class TableWithHandle {
@@ -148,6 +150,7 @@ class TableWithHandle {
 };
 }  // namespace wire
 }  // namespace test_handlesintypes
+
 template <typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_handlesintypes::wire::TableWithHandle, BuilderImpl> {
  public:
@@ -201,12 +204,14 @@ class ::fidl::WireTableExternalBuilder<::test_handlesintypes::wire::TableWithHan
 };
 namespace test_handlesintypes {
 namespace wire {
+
 inline ::fidl::WireTableBuilder<::test_handlesintypes::wire::TableWithHandle> TableWithHandle::Builder(::fidl::AnyArena& arena) {
   return ::fidl::WireTableBuilder<::test_handlesintypes::wire::TableWithHandle>(arena);
 }
 inline ::fidl::WireTableExternalBuilder<::test_handlesintypes::wire::TableWithHandle> TableWithHandle::ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_handlesintypes::wire::TableWithHandle>> frame) {
   return ::fidl::WireTableExternalBuilder<::test_handlesintypes::wire::TableWithHandle>(std::move(frame));
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -267,6 +272,7 @@ class UnionWithHandle {
   FIDL_ALIGNDECL
   ::fidl::UntypedEnvelope envelope_;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -288,6 +294,7 @@ struct HandlesInTypes {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace wire
@@ -401,6 +408,7 @@ struct ::fidl::internal::WireCodingTraits<::test_handlesintypes::wire::HandlesIn
     internal::WireCheckPadding<uint64_t>(decoder, position + 40, 0xffffffff00000000ull);
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -492,6 +500,7 @@ struct ::fidl::internal::WireCodingTraits<::test_handlesintypes::wire::TableWith
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -606,6 +615,7 @@ struct ::fidl::internal::WireCodingTraits<::test_handlesintypes::wire::UnionWith
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::test_handlesintypes::wire::UnionWithHandle, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
     : public ::fidl::internal::WireCodingTraits<::test_handlesintypes::wire::UnionWithHandle, ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl

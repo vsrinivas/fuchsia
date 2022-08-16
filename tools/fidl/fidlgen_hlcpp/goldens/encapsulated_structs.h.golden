@@ -139,6 +139,7 @@ inline zx_status_t Clone(const ::test::encapsulatedstructs::NonInlineStructTestS
 }
 
 using NonInlineStructTestStructPtr = ::std::unique_ptr<NonInlineStructTestStruct>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -165,11 +166,13 @@ inline zx_status_t Clone(const ::test::encapsulatedstructs::TopLevelStruct& _val
 }
 
 using TopLevelStructPtr = ::std::unique_ptr<TopLevelStruct>;
+
 #endif  // __Fuchsia__
 
 }  // namespace encapsulatedstructs
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::encapsulatedstructs::Int8Int32>
     : public EncodableCodingTraits<::test::encapsulatedstructs::Int8Int32, 8> {};
@@ -312,6 +315,7 @@ struct Equality<::test::encapsulatedstructs::NonInlineStructTestStruct> {
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -344,6 +348,7 @@ struct Equality<::test::encapsulatedstructs::TopLevelStruct> {
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 //

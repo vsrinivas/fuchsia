@@ -62,6 +62,7 @@ using TwoWayAddTopResponsePtr = ::std::unique_ptr<TwoWayAddTopResponse>;
 }  // namespace drivertwoway
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::drivertwoway::TwoWayAddRequest>
     : public EncodableCodingTraits<::test::drivertwoway::TwoWayAddRequest, 4> {};

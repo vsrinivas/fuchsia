@@ -109,6 +109,7 @@ std::unique_ptr<::test_doccomments::FlexibleUnion> WireNaturalConversionTraits<:
 ::fidl::WireEvent<::test_doccomments::Interface::OnEvent> WireNaturalConversionTraits<::fidl::WireEvent<::test_doccomments::Interface::OnEvent>, ::fidl::Event<::test_doccomments::Interface::OnEvent>>::ToWire(fidl::AnyArena& arena, ::fidl::Event<::test_doccomments::Interface::OnEvent> src) {
   return ::fidl::WireEvent<::test_doccomments::Interface::OnEvent>();
 }
+
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

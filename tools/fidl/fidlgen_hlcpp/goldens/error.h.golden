@@ -23,6 +23,7 @@ class ExampleFooTopResponse;
 
 class Example;
 using ExampleHandle = ::fidl::InterfaceHandle<Example>;
+
 #endif  // __Fuchsia__
 
 class ExampleFooRequest final {
@@ -210,6 +211,7 @@ namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_error_ExampleFooRequestTable;
 
 }  // namespace _internal
+
 class Example_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage foo(::fidl::MessageEncoder* _encoder, ::std::string* s) {
@@ -226,6 +228,7 @@ namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_error_ExampleFooTopResponseTable;
 
 }  // namespace _internal
+
 class Example_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage foo(::fidl::MessageEncoder* _encoder, ::test::error::Example_foo_Result* result) {
@@ -239,11 +242,13 @@ class Example_ResponseEncoder {
     return _encoder->GetMessage();
   }
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace error
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::error::ExampleFooRequest>
     : public EncodableCodingTraits<::test::error::ExampleFooRequest, 16> {};
@@ -380,6 +385,7 @@ struct Equality<::test::error::ExampleFooTopResponse> {
 }  // namespace fidl
 namespace test {
 namespace error {
+
 #ifdef __Fuchsia__
 
 using ExamplePtr = ::fidl::InterfacePtr<Example>;
@@ -391,9 +397,12 @@ using ExampleSyncPtr = ::fidl::SynchronousInterfacePtr<Example>;
 class Example_SyncProxy;
 
 namespace internal {
+
 constexpr uint64_t kExample_foo_Ordinal = 0xf5f1179dc411e44lu;
+
 constexpr ::fidl::MessageDynamicFlags kExample_foo_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -479,6 +488,7 @@ class Example_SyncProxy : public ::test::error::Example_Sync {
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<Example>;
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace error

@@ -20,6 +20,7 @@
 #include <fidl/test.dependent/cpp/wire_messaging.h>
 
 namespace test_bindingsdenylist {
+
 class OnlyLibfuzzerAndDeps;
 
 class OnlyCppAndDeps;
@@ -31,11 +32,13 @@ class Allowed;
 class ImportsSameNameContext;
 
 }  // namespace test_bindingsdenylist
+
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -56,12 +59,14 @@ struct ::fidl::internal::WireServerDispatcher<::test_bindingsdenylist::OnlyLibfu
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 namespace fidl {
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::IncomingEventsHandleStorage<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> final : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>> {
  public:
@@ -77,6 +82,7 @@ struct ::fidl::internal::IncomingEventsStorage<::test_bindingsdenylist::OnlyLibf
   ::fidl::internal::InlineMessageBuffer<16> bytes_;
   ::fidl::internal::IncomingEventsHandleStorage<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> handles_storage_;
 };
+
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
@@ -152,16 +158,20 @@ class ::fidl::WireServer<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> : public
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl
 namespace test_bindingsdenylist {
+
 }  // namespace test_bindingsdenylist
+
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_bindingsdenylist::OnlyCppAndDeps> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -182,12 +192,14 @@ struct ::fidl::internal::WireServerDispatcher<::test_bindingsdenylist::OnlyCppAn
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 namespace fidl {
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::IncomingEventsHandleStorage<::test_bindingsdenylist::OnlyCppAndDeps> final : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_bindingsdenylist::OnlyCppAndDeps>> {
  public:
@@ -203,6 +215,7 @@ struct ::fidl::internal::IncomingEventsStorage<::test_bindingsdenylist::OnlyCppA
   ::fidl::internal::InlineMessageBuffer<16> bytes_;
   ::fidl::internal::IncomingEventsHandleStorage<::test_bindingsdenylist::OnlyCppAndDeps> handles_storage_;
 };
+
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_bindingsdenylist::OnlyCppAndDeps> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
@@ -278,49 +291,67 @@ class ::fidl::WireServer<::test_bindingsdenylist::OnlyCppAndDeps> : public ::fid
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl
 namespace test_bindingsdenylist {
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable;
 }  // namespace test_bindingsdenylist
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> final {
   static constexpr uint64_t value = 8446571910689294295lu;
 };
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> final {
   static constexpr uint64_t value = 7311125300308839833lu;
 };
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> final {
   static constexpr uint64_t value = 2184115815603862302lu;
 };
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> final {
   static constexpr uint64_t value = 3719805222870932662lu;
 };
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> final {
   static constexpr uint64_t value = 2319043834522757514lu;
 };
 
 namespace test_bindingsdenylist {
+
 }  // namespace test_bindingsdenylist
+
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_bindingsdenylist::DenyEachBinding> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -341,6 +372,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_bindingsdenylist::DenyEachB
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -1561,6 +1593,7 @@ static_assert(sizeof(::fidl::WireResponse<::test_bindingsdenylist::DenyEachBindi
 static_assert(offsetof(::fidl::WireResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>, result) == 0);
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>> final
     : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>>> {
@@ -1921,6 +1954,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_bindingsdenylist::DenyEachB
  private:
   ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>> decoded_;
 };
+
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_bindingsdenylist::DenyEachBinding> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
@@ -2291,16 +2325,20 @@ class ::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding> : public ::fi
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl
 namespace test_bindingsdenylist {
+
 }  // namespace test_bindingsdenylist
+
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_bindingsdenylist::Allowed> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2321,12 +2359,14 @@ struct ::fidl::internal::WireServerDispatcher<::test_bindingsdenylist::Allowed> 
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 namespace fidl {
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::IncomingEventsHandleStorage<::test_bindingsdenylist::Allowed> final : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_bindingsdenylist::Allowed>> {
  public:
@@ -2342,6 +2382,7 @@ struct ::fidl::internal::IncomingEventsStorage<::test_bindingsdenylist::Allowed>
   ::fidl::internal::InlineMessageBuffer<16> bytes_;
   ::fidl::internal::IncomingEventsHandleStorage<::test_bindingsdenylist::Allowed> handles_storage_;
 };
+
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_bindingsdenylist::Allowed> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
@@ -2417,25 +2458,31 @@ class ::fidl::WireServer<::test_bindingsdenylist::Allowed> : public ::fidl::inte
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> final {
   static constexpr uint64_t value = 475191379775102607lu;
 };
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> final {
   static constexpr uint64_t value = 2914965219653596920lu;
 };
 
 namespace test_bindingsdenylist {
+
 }  // namespace test_bindingsdenylist
+
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_bindingsdenylist::ImportsSameNameContext> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2456,6 +2503,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_bindingsdenylist::ImportsSa
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -2615,6 +2663,7 @@ struct TypeTraits<::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameCo
 };
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::IncomingEventsHandleStorage<::test_bindingsdenylist::ImportsSameNameContext> final : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_bindingsdenylist::ImportsSameNameContext>> {
  public:
@@ -2686,6 +2735,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_bindingsdenylist::ImportsSa
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };
+
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_bindingsdenylist::ImportsSameNameContext> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
@@ -2797,10 +2847,12 @@ class ::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext> : publ
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireWeakOnewayClientImpl<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> : public ::fidl::internal::ClientImplBase {
  public:
@@ -2830,9 +2882,11 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_bindingsdenylist::OnlyLibf
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl
+
 #ifdef __Fuchsia__
 template <>
 class ::fidl::internal::WireWeakEventSender<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> : public ::fidl::internal::WeakEventSenderBase {
@@ -2859,6 +2913,7 @@ class ::fidl::internal::WireBufferEventSender<::test_bindingsdenylist::OnlyLibfu
  public:
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2891,6 +2946,7 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_bindingsdenylist::OnlyCppA
  public:
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2919,6 +2975,7 @@ class ::fidl::internal::WireBufferEventSender<::test_bindingsdenylist::OnlyCppAn
  public:
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2991,6 +3048,7 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_bindingsdenylist::DenyEach
   // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
   ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> OnlyDenySyzkaller(bool a);
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3019,6 +3077,7 @@ class ::fidl::internal::WireBufferEventSender<::test_bindingsdenylist::DenyEachB
  public:
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3051,6 +3110,7 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_bindingsdenylist::Allowed>
  public:
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3079,6 +3139,7 @@ class ::fidl::internal::WireBufferEventSender<::test_bindingsdenylist::Allowed>
  public:
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3123,6 +3184,7 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_bindingsdenylist::ImportsS
  public:
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3151,4 +3213,5 @@ class ::fidl::internal::WireBufferEventSender<::test_bindingsdenylist::ImportsSa
  public:
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
+
 #endif  // __Fuchsia__

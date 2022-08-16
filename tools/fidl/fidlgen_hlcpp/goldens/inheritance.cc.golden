@@ -9,6 +9,7 @@
 //
 namespace test {
 namespace inheritance {
+
 extern "C" const fidl_type_t test_inheritance_SuperFooRequestTable;
 const fidl_type_t* SuperFooRequest::FidlType = &test_inheritance_SuperFooRequestTable;
 
@@ -70,9 +71,11 @@ zx_status_t SuperFooTopResponse::Clone(SuperFooTopResponse* _result) const {
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_inheritance_SuperFooRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
 
 }  // namespace _internal
+
 super::~super() = default;
 
 const fidl_type_t* ::test::inheritance::super_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
@@ -224,6 +227,7 @@ zx_status_t super_SyncProxy::foo(::std::string s, int64_t* out_y) {
   *out_y = ::fidl::DecodeAs<int64_t>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -379,6 +383,7 @@ zx_status_t sub_SyncProxy::foo(::std::string s, int64_t* out_y) {
   *out_y = ::fidl::DecodeAs<int64_t>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 }  // namespace inheritance

@@ -3,8 +3,10 @@
 #include <fidl/test.handlesintypes/cpp/common_types.h>
 
 namespace test_handlesintypes {
+
 extern "C" const fidl_type_t test_handlesintypes_obj_typeTable;
 }  // namespace test_handlesintypes
+
 size_t fidl::internal::DisplayError<::test_handlesintypes::ObjType>::Format(
     const ::test_handlesintypes::ObjType& value, char* destination, size_t capacity) {
   const char* name = [&]() -> const char* {

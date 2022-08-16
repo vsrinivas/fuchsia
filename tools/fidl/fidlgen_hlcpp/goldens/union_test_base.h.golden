@@ -6,6 +6,7 @@
 namespace test {
 namespace union_ {
 namespace testing {
+
 class TestProtocol_TestBase : public ::test::union_::TestProtocol {
  public:
   virtual ~TestProtocol_TestBase() {}

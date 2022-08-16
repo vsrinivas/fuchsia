@@ -20,14 +20,17 @@
 #include <fidl/fdf/cpp/driver/wire_messaging.h>
 
 namespace test_handles {
+
 class DriverProtocol;
 
 }  // namespace test_handles
+
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_handles::DriverProtocol> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -48,12 +51,14 @@ struct ::fidl::internal::WireServerDispatcher<::test_handles::DriverProtocol> fi
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 namespace fidl {
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_handles::DriverProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
@@ -103,6 +108,7 @@ class ::fdf::WireServer<::test_handles::DriverProtocol> : public ::fidl::interna
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -136,6 +142,7 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_handles::DriverProtocol> f
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl

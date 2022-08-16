@@ -9,6 +9,7 @@
 //
 namespace test {
 namespace emptystruct {
+
 extern "C" const fidl_type_t test_emptystruct_EmptyTable;
 const fidl_type_t* Empty::FidlType = &test_emptystruct_EmptyTable;
 
@@ -153,10 +154,13 @@ namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendRequestTable;
 
 __LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolReceiveRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
 
 }  // namespace _internal
+
 EmptyProtocol::~EmptyProtocol() = default;
 
 const fidl_type_t* ::test::emptystruct::EmptyProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
@@ -350,6 +354,7 @@ zx_status_t EmptyProtocol_SyncProxy::SendAndReceive(::test::emptystruct::Empty e
   *out_e = ::fidl::DecodeAs<::test::emptystruct::Empty>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 }  // namespace emptystruct

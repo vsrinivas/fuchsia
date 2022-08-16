@@ -6,6 +6,7 @@
 namespace test {
 namespace protocols {
 namespace testing {
+
 class WithAndWithoutRequestResponse_TestBase : public ::test::protocols::WithAndWithoutRequestResponse {
  public:
   virtual ~WithAndWithoutRequestResponse_TestBase() {}

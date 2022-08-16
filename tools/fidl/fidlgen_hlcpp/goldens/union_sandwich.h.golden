@@ -439,6 +439,7 @@ using SandwichUnionSize36Alignment4Ptr = ::std::unique_ptr<SandwichUnionSize36Al
 }  // namespace unionsandwich
 }  // namespace test
 namespace fidl {
+
 template <>
 struct IsFidlXUnion<::test::unionsandwich::UnionSize8Alignment4> : public std::true_type {};
 

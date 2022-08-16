@@ -5,6 +5,7 @@
 #include <memory>
 
 namespace test_doccomments {
+
 [[maybe_unused]] constexpr uint64_t kInterface_Method_Ordinal = 5017051197196532121lu;
 
 [[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kInterface_Method_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
@@ -14,6 +15,7 @@ namespace test_doccomments {
 [[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kInterface_OnEvent_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 #ifdef __Fuchsia__
 }  // namespace test_doccomments
+
 ::fidl::WireResult<::test_doccomments::Interface::Method>::WireResult(
     ::fidl::UnownedClientEnd<::test_doccomments::Interface> client,
     ::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>* request) {
@@ -25,10 +27,12 @@ namespace test_doccomments {
   SetStatus(outgoing);
 }
 namespace test_doccomments {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_doccomments
+
 ::fidl::WireUnownedResult<::test_doccomments::Interface::Method>::WireUnownedResult(::fidl::UnownedClientEnd<::test_doccomments::Interface> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_doccomments::Interface::Method>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -47,9 +51,11 @@ namespace test_doccomments {
   SetStatus(outgoing);
 }
 namespace test_doccomments {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_doccomments
+
 #ifdef __Fuchsia__
 
 ::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_doccomments::Interface>::Method() {
@@ -72,6 +78,7 @@ namespace test_doccomments {
       _allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -104,6 +111,7 @@ fidl::internal::WireEventDispatcher<::test_doccomments::Interface>::DispatchEven
       return ::fidl::Status::UnknownOrdinal();
   }
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -138,11 +146,13 @@ void fidl::internal::WireServerDispatcher<::test_doccomments::Interface>::Dispat
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
+
 void fidl::WireServer<::test_doccomments::Interface>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_doccomments::Interface>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>::_InitHeader() {

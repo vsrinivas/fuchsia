@@ -6,10 +6,12 @@
 void ::test_inheritancewithrecursivedecl::wire::ParentFirstRequest::_CloseHandles() {
   request.reset();
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 void ::test_inheritancewithrecursivedecl::wire::ChildSecondRequest::_CloseHandles() {
   request.reset();
 }
+
 #endif  // __Fuchsia__

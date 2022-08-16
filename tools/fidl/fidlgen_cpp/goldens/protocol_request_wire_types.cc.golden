@@ -6,22 +6,26 @@
 void ::test_protocolrequest::wire::ParentGetChildTopResponse::_CloseHandles() {
   c.reset();
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 void ::test_protocolrequest::wire::ParentGetChildRequestTopResponse::_CloseHandles() {
   r.reset();
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 void ::test_protocolrequest::wire::ParentTakeChildRequest::_CloseHandles() {
   c.reset();
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 void ::test_protocolrequest::wire::ParentTakeChildRequestRequest::_CloseHandles() {
   r.reset();
 }
+
 #endif  // __Fuchsia__

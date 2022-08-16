@@ -4,12 +4,14 @@
 #include <lib/fidl/cpp/wire/unknown_interactions.h>
 
 namespace test_nullable {
+
 [[maybe_unused]] constexpr inline uint64_t kSimpleProtocol_Add_Ordinal = 9142761280038437494lu;
 
 [[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kSimpleProtocol_Add_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
 #ifdef __Fuchsia__
 }  // namespace test_nullable
+
 ::fidl::internal::NaturalThenable<::test_nullable::SimpleProtocol::Add>
 fidl::internal::NaturalClientImpl<::test_nullable::SimpleProtocol>::Add(const ::fidl::Request<::test_nullable::SimpleProtocol::Add>& request) const {
   return ::fidl::internal::NaturalThenable<::test_nullable::SimpleProtocol::Add>(
@@ -29,9 +31,11 @@ fidl::internal::NaturalClientImpl<::test_nullable::SimpleProtocol>::Add(const ::
 }
 
 namespace test_nullable {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_nullable
+
 #ifdef __Fuchsia__
 
 ::fidl::Result<::test_nullable::SimpleProtocol::Add>
@@ -56,6 +60,7 @@ fidl::internal::NaturalSyncClientImpl<::test_nullable::SimpleProtocol>::Add(cons
   fidl::internal::NaturalEventDispatcher<::test_nullable::SimpleProtocol> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -98,9 +103,11 @@ void fidl::internal::NaturalServerDispatcher<::test_nullable::SimpleProtocol>::D
                                                                                         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
+
 void fidl::Server<::test_nullable::SimpleProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_nullable::SimpleProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__

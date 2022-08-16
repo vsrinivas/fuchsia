@@ -4,12 +4,14 @@
 #include <lib/fidl/cpp/wire/unknown_interactions.h>
 
 namespace test_anonymous {
+
 [[maybe_unused]] constexpr inline uint64_t kSomeProtocol_SomeMethod_Ordinal = 2515914517457749720lu;
 
 [[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kSomeProtocol_SomeMethod_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
 #ifdef __Fuchsia__
 }  // namespace test_anonymous
+
 ::fidl::internal::NaturalThenable<::test_anonymous::SomeProtocol::SomeMethod>
 fidl::internal::NaturalClientImpl<::test_anonymous::SomeProtocol>::SomeMethod(const ::fidl::Request<::test_anonymous::SomeProtocol::SomeMethod>& request) const {
   return ::fidl::internal::NaturalThenable<::test_anonymous::SomeProtocol::SomeMethod>(
@@ -29,9 +31,11 @@ fidl::internal::NaturalClientImpl<::test_anonymous::SomeProtocol>::SomeMethod(co
 }
 
 namespace test_anonymous {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_anonymous
+
 #ifdef __Fuchsia__
 
 ::fidl::Result<::test_anonymous::SomeProtocol::SomeMethod>
@@ -56,6 +60,7 @@ fidl::internal::NaturalSyncClientImpl<::test_anonymous::SomeProtocol>::SomeMetho
   fidl::internal::NaturalEventDispatcher<::test_anonymous::SomeProtocol> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -98,9 +103,11 @@ void fidl::internal::NaturalServerDispatcher<::test_anonymous::SomeProtocol>::Di
                                                                                        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
+
 void fidl::Server<::test_anonymous::SomeProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_anonymous::SomeProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__

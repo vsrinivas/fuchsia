@@ -77,6 +77,7 @@ constexpr ::test::bitsconstants::BitsType Const3 = static_cast<::test::bitsconst
 }  // namespace bitsconstants
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::bitsconstants::BitsType> {
   static constexpr size_t inline_size_v2 = sizeof(::test::bitsconstants::BitsType);

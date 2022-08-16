@@ -17,15 +17,18 @@ namespace fidl {
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::NaturalClientImpl<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl
+
 #ifdef __Fuchsia__
 
 template <>
@@ -38,6 +41,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::OnlyLibfu
         _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -75,6 +79,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::OnlyLibf
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -90,6 +95,7 @@ class ::fidl::internal::NaturalEventSender<::test_bindingsdenylist::OnlyLibfuzze
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -122,6 +128,7 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::OnlyLi
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -131,6 +138,7 @@ class ::fidl::internal::NaturalClientImpl<::test_bindingsdenylist::OnlyCppAndDep
  public:
   using NaturalClientBase::NaturalClientBase;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -145,6 +153,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::OnlyCppAn
         _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -182,6 +191,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::OnlyCppA
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::OnlyCppAndDeps>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -197,6 +207,7 @@ class ::fidl::internal::NaturalEventSender<::test_bindingsdenylist::OnlyCppAndDe
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -229,6 +240,7 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::OnlyCp
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -307,14 +319,23 @@ struct ::fidl::internal::NaturalMethodTypes<::test_bindingsdenylist::DenyEachBin
 };
 namespace test_bindingsdenylist {
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable;
 
 #ifdef __Fuchsia__
@@ -356,7 +377,9 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindings
     }
   }
 };
-namespace test_bindingsdenylist {}  // namespace test_bindingsdenylist
+namespace test_bindingsdenylist {
+}  // namespace test_bindingsdenylist
+
 template <>
 class ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart> final : public ::fitx::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartResponse> {
  public:
@@ -402,6 +425,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindings
     }
   }
 };
+
 template <>
 class ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo> final : public ::fitx::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoResponse> {
  public:
@@ -447,6 +471,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindings
     }
   }
 };
+
 template <>
 class ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer> final : public ::fitx::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerResponse> {
  public:
@@ -492,6 +517,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindings
     }
   }
 };
+
 template <>
 class ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust> final : public ::fitx::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>, ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustResponse> {
  public:
@@ -537,6 +563,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_bindings
     }
   }
 };
+
 template <>
 class ::fidl::Result<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> final : public ::fitx::result<::fidl::AnyErrorIn<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>, ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResponse> {
  public:
@@ -561,9 +588,11 @@ class ::fidl::internal::NaturalClientImpl<::test_bindingsdenylist::DenyEachBindi
   ::fidl::internal::NaturalThenable<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller> OnlyDenySyzkaller(const ::fidl::Request<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>& request) const;
 };
 namespace test_bindingsdenylist {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_bindingsdenylist
+
 #ifdef __Fuchsia__
 
 template <>
@@ -586,6 +615,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::DenyEachB
         _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -623,6 +653,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::DenyEach
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::DenyEachBinding>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -638,6 +669,7 @@ class ::fidl::internal::NaturalEventSender<::test_bindingsdenylist::DenyEachBind
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -655,6 +687,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_bindingsdenylist::
   static constexpr bool kHasPayload = true;
   using Payload = ::test_bindingsdenylist::DenyEachBindingOnlyDenyDartRequest;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -672,6 +705,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_bindingsdenylist::
   static constexpr bool kHasPayload = true;
   using Payload = ::test_bindingsdenylist::DenyEachBindingOnlyDenyGoRequest;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -689,6 +723,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_bindingsdenylist::
   static constexpr bool kHasPayload = true;
   using Payload = ::test_bindingsdenylist::DenyEachBindingOnlyDenyLibfuzzerRequest;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -706,6 +741,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_bindingsdenylist::
   static constexpr bool kHasPayload = true;
   using Payload = ::test_bindingsdenylist::DenyEachBindingOnlyDenyRustRequest;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -723,6 +759,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_bindingsdenylist::
   static constexpr bool kHasPayload = true;
   using Payload = ::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerRequest;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -825,6 +862,7 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::DenyEa
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -834,6 +872,7 @@ class ::fidl::internal::NaturalClientImpl<::test_bindingsdenylist::Allowed> fina
  public:
   using NaturalClientBase::NaturalClientBase;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -848,6 +887,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::Allowed> 
         _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -885,6 +925,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::Allowed>
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::Allowed>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -900,6 +941,7 @@ class ::fidl::internal::NaturalEventSender<::test_bindingsdenylist::Allowed>
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -932,6 +974,7 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::Allowe
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -944,6 +987,7 @@ class ::fidl::internal::NaturalClientImpl<::test_bindingsdenylist::ImportsSameNa
 
   ::fitx::result<::fidl::Error> AlwaysAppearsInImportingLibrary() const;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -962,6 +1006,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_bindingsdenylist::ImportsSa
         _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -999,6 +1044,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_bindingsdenylist::ImportsS
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_bindingsdenylist::ImportsSameNameContext>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1014,6 +1060,7 @@ class ::fidl::internal::NaturalEventSender<::test_bindingsdenylist::ImportsSameN
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1028,6 +1075,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_bindingsdenylist::
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1042,6 +1090,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_bindingsdenylist::
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -1084,4 +1133,5 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::Import
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__

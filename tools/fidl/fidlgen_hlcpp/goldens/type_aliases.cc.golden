@@ -85,6 +85,7 @@ zx_status_t ExampleOfUseOfAliases::Clone(ExampleOfUseOfAliases* _result) const {
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 //

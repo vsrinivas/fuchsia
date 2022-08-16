@@ -20,29 +20,38 @@
 #include <fidl/test.errorsyntax.parent/cpp/wire_messaging.h>
 
 namespace test_errorsyntax {
+
 class ExampleUseOfErrorSyntax;
 
 __LOCAL extern "C" const fidl_type_t test_errorsyntax_parent_ParentUsesErrorSyntaxComposedCallWhichMayFailRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_errorsyntax_parent_ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponseTable;
 }  // namespace test_errorsyntax
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail> final {
   static constexpr uint64_t value = 3565108794310607393lu;
 };
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> final {
   static constexpr uint64_t value = 3757408930698888354lu;
 };
 
 namespace test_errorsyntax {
+
 }  // namespace test_errorsyntax
+
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_errorsyntax::ExampleUseOfErrorSyntax> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -63,6 +72,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_errorsyntax::ExampleUseOfEr
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -552,6 +562,7 @@ static_assert(sizeof(::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorS
 static_assert(offsetof(::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>, result) == 0);
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> final
     : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>>> {
@@ -705,6 +716,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_errorsyntax::ExampleUseOfEr
  private:
   ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> decoded_;
 };
+
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_errorsyntax::ExampleUseOfErrorSyntax> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
@@ -898,10 +910,12 @@ class ::fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax> : public :
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireWeakOnewayClientImpl<::test_errorsyntax::ExampleUseOfErrorSyntax> : public ::fidl::internal::ClientImplBase {
  public:
@@ -947,9 +961,11 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_errorsyntax::ExampleUseOfE
   ::fidl::WireResult<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail> CallWhichMayFail(::fidl::StringView s);
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl
+
 #ifdef __Fuchsia__
 template <>
 class ::fidl::internal::WireWeakEventSender<::test_errorsyntax::ExampleUseOfErrorSyntax> : public ::fidl::internal::WeakEventSenderBase {
@@ -976,4 +992,5 @@ class ::fidl::internal::WireBufferEventSender<::test_errorsyntax::ExampleUseOfEr
  public:
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
+
 #endif  // __Fuchsia__

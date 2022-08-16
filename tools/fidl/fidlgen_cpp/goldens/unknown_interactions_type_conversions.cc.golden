@@ -7,6 +7,7 @@ namespace internal {
 
 
 
+
 ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse  WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse, ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse>::ToNatural(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse src) {
   return ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse(WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.some_field)));
 }
@@ -6066,6 +6067,8 @@ std::unique_ptr<::test_unknowninteractions::UnknownInteractionsClosedDriverProto
   return ::fidl::WireEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>(
     WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableErrRequest, ::fitx::result<int32_t, ::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventTableErrResponse>>::ToWire(arena, std::move(src)));
 }
+
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl
+

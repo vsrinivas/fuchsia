@@ -18,6 +18,7 @@
 #endif  // __Fuchsia__
 
 namespace test_versions {
+
 class OtherProtocol;
 
 class Protocol;
@@ -25,11 +26,13 @@ class Protocol;
 class Service;
 
 }  // namespace test_versions
+
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_versions::OtherProtocol> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -50,12 +53,14 @@ struct ::fidl::internal::WireServerDispatcher<::test_versions::OtherProtocol> fi
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 namespace fidl {
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::IncomingEventsHandleStorage<::test_versions::OtherProtocol> final : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_versions::OtherProtocol>> {
  public:
@@ -71,6 +76,7 @@ struct ::fidl::internal::IncomingEventsStorage<::test_versions::OtherProtocol> f
   ::fidl::internal::InlineMessageBuffer<16> bytes_;
   ::fidl::internal::IncomingEventsHandleStorage<::test_versions::OtherProtocol> handles_storage_;
 };
+
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_versions::OtherProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
@@ -146,21 +152,26 @@ class ::fidl::WireServer<::test_versions::OtherProtocol> : public ::fidl::intern
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_versions::Protocol::Foo> final {
   static constexpr uint64_t value = 6231434419097198905lu;
 };
 
 namespace test_versions {
+
 }  // namespace test_versions
+
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_versions::Protocol> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -181,6 +192,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_versions::Protocol> final {
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -263,6 +275,7 @@ struct TypeTraits<::fidl::WireRequest<::test_versions::Protocol::Foo>> {
 };
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::IncomingEventsHandleStorage<::test_versions::Protocol> final : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_versions::Protocol>> {
  public:
@@ -306,6 +319,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_versions::Protocol::Foo> fi
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };
+
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_versions::Protocol> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
@@ -399,6 +413,7 @@ class ::fidl::WireServer<::test_versions::Protocol> : public ::fidl::internal::I
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl
@@ -481,6 +496,7 @@ namespace fidl {
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireWeakOnewayClientImpl<::test_versions::OtherProtocol> : public ::fidl::internal::ClientImplBase {
  public:
@@ -510,9 +526,11 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_versions::OtherProtocol> f
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl
+
 #ifdef __Fuchsia__
 template <>
 class ::fidl::internal::WireWeakEventSender<::test_versions::OtherProtocol> : public ::fidl::internal::WeakEventSenderBase {
@@ -539,6 +557,7 @@ class ::fidl::internal::WireBufferEventSender<::test_versions::OtherProtocol>
  public:
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -577,6 +596,7 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_versions::Protocol> final 
  public:
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -605,4 +625,5 @@ class ::fidl::internal::WireBufferEventSender<::test_versions::Protocol>
  public:
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
+
 #endif  // __Fuchsia__

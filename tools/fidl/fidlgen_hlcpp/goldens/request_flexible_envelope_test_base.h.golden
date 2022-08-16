@@ -6,6 +6,7 @@
 namespace test {
 namespace requestflexibleenvelope {
 namespace testing {
+
 class Protocol_TestBase : public ::test::requestflexibleenvelope::Protocol {
  public:
   virtual ~Protocol_TestBase() {}

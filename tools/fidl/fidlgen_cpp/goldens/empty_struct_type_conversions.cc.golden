@@ -87,6 +87,7 @@ namespace internal {
   return ::fidl::WireEvent<::test_emptystruct::EmptyProtocol::Receive>(
       WireNaturalConversionTraits<::test_emptystruct::wire::EmptyProtocolReceiveRequest, ::test_emptystruct::EmptyProtocolReceiveRequest>::ToWire(arena, std::move(src)));
 }
+
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

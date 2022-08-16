@@ -9,6 +9,7 @@
 //
 namespace test {
 namespace arrays {
+
 extern "C" const fidl_type_t test_arrays_StructSmallArrayTable;
 const fidl_type_t* StructSmallArray::FidlType = &test_arrays_StructSmallArrayTable;
 

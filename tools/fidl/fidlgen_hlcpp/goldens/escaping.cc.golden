@@ -9,6 +9,7 @@
 //
 namespace test {
 namespace escaping {
+
 extern "C" const fidl_type_t test_escaping_DocCommentWithQuotesTable;
 const fidl_type_t* DocCommentWithQuotes::FidlType = &test_escaping_DocCommentWithQuotesTable;
 

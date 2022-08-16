@@ -6,6 +6,7 @@
 namespace test {
 namespace inheritance {
 namespace testing {
+
 class super_TestBase : public ::test::inheritance::super {
  public:
   virtual ~super_TestBase() {}

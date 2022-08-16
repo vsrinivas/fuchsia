@@ -166,6 +166,7 @@ std::unique_ptr<::test_nullable::SimpleUnion> WireNaturalConversionTraits<::test
   return ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>(
       WireNaturalConversionTraits<::test_nullable::wire::SimpleProtocolAddTopResponse, ::test_nullable::SimpleProtocolAddTopResponse>::ToWire(arena, std::move(src)));
 }
+
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

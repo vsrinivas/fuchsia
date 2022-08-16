@@ -6,6 +6,7 @@
 namespace test {
 namespace versions {
 namespace testing {
+
 class OtherProtocol_TestBase : public ::test::versions::OtherProtocol {
  public:
   virtual ~OtherProtocol_TestBase() {}

@@ -8,6 +8,7 @@
 #ifdef __Fuchsia__
 #include <fidl/test.foreigntypeinresponseusedthroughcompose/cpp/natural_messaging.h>
 #include <fidl/test.foreigntypeinresponseusedthroughcompose/cpp/wire_messaging.h>
+
 #endif  // __Fuchsia__
 #include <fidl/test.bottom/cpp/type_conversions.h>
 #include <fidl/test.middle/cpp/type_conversions.h>
@@ -46,6 +47,7 @@ template <>
 struct WireTypeForNaturalType<::fidl::Response<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>> {
   using type = ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>;
 };
+
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

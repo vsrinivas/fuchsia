@@ -10,6 +10,7 @@
 //
 namespace test {
 namespace unknowninteractions {
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsTopResponseTable;
 const fidl_type_t* UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsTopResponseTable;
 
@@ -36,6 +37,7 @@ zx_status_t UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse::Clone(Unkn
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionResponseTable;
 const fidl_type_t* UnknownInteractionsProtocolStrictTwoWayUnionResponse::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionResponseTable;
@@ -213,6 +215,7 @@ void UnknownInteractionsProtocolStrictTwoWayUnionResponse::EnsureStorageInitiali
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTableResponseTable;
 const fidl_type_t* UnknownInteractionsProtocolStrictTwoWayTableResponse::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTableResponseTable;
 
@@ -327,6 +330,7 @@ zx_status_t UnknownInteractionsProtocolStrictTwoWayTableResponse::Clone(UnknownI
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsProtocol_StrictTwoWayErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayErr_ResponseTable;
 
@@ -353,6 +357,7 @@ zx_status_t UnknownInteractionsProtocol_StrictTwoWayErr_Response::Clone(UnknownI
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayErr_ResultTable;
 const fidl_type_t* UnknownInteractionsProtocol_StrictTwoWayErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayErr_ResultTable;
@@ -558,6 +563,7 @@ void UnknownInteractionsProtocol_StrictTwoWayErr_Result::EnsureStorageInitialize
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsProtocolStrictTwoWayErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayErrTopResponseTable;
 
@@ -585,6 +591,7 @@ zx_status_t UnknownInteractionsProtocolStrictTwoWayErrTopResponse::Clone(Unknown
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayFieldsErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsProtocol_StrictTwoWayFieldsErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayFieldsErr_ResponseTable;
 
@@ -611,6 +618,7 @@ zx_status_t UnknownInteractionsProtocol_StrictTwoWayFieldsErr_Response::Clone(Un
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayFieldsErr_ResultTable;
 const fidl_type_t* UnknownInteractionsProtocol_StrictTwoWayFieldsErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayFieldsErr_ResultTable;
@@ -816,6 +824,7 @@ void UnknownInteractionsProtocol_StrictTwoWayFieldsErr_Result::EnsureStorageInit
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsProtocolStrictTwoWayFieldsErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsErrTopResponseTable;
 
@@ -842,6 +851,7 @@ zx_status_t UnknownInteractionsProtocolStrictTwoWayFieldsErrTopResponse::Clone(U
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayUnionErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsProtocol_StrictTwoWayUnionErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayUnionErr_ResponseTable;
@@ -1018,6 +1028,7 @@ void UnknownInteractionsProtocol_StrictTwoWayUnionErr_Response::EnsureStorageIni
     }
   }
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayUnionErr_ResultTable;
 const fidl_type_t* UnknownInteractionsProtocol_StrictTwoWayUnionErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayUnionErr_ResultTable;
@@ -1223,6 +1234,7 @@ void UnknownInteractionsProtocol_StrictTwoWayUnionErr_Result::EnsureStorageIniti
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsProtocolStrictTwoWayUnionErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionErrTopResponseTable;
 
@@ -1249,6 +1261,7 @@ zx_status_t UnknownInteractionsProtocolStrictTwoWayUnionErrTopResponse::Clone(Un
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayTableErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsProtocol_StrictTwoWayTableErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayTableErr_ResponseTable;
@@ -1363,6 +1376,7 @@ zx_status_t UnknownInteractionsProtocol_StrictTwoWayTableErr_Response::Clone(Unk
   }
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayTableErr_ResultTable;
 const fidl_type_t* UnknownInteractionsProtocol_StrictTwoWayTableErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayTableErr_ResultTable;
@@ -1568,6 +1582,7 @@ void UnknownInteractionsProtocol_StrictTwoWayTableErr_Result::EnsureStorageIniti
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTableErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsProtocolStrictTwoWayTableErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTableErrTopResponseTable;
 
@@ -1595,6 +1610,7 @@ zx_status_t UnknownInteractionsProtocolStrictTwoWayTableErrTopResponse::Clone(Un
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWay_ResponseTable;
 const fidl_type_t* UnknownInteractionsProtocol_FlexibleTwoWay_Response::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWay_ResponseTable;
 
@@ -1621,6 +1637,7 @@ zx_status_t UnknownInteractionsProtocol_FlexibleTwoWay_Response::Clone(UnknownIn
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWay_ResultTable;
 const fidl_type_t* UnknownInteractionsProtocol_FlexibleTwoWay_Result::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWay_ResultTable;
@@ -1826,6 +1843,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWay_Result::EnsureStorageInitialized
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTopResponseTable;
 const fidl_type_t* UnknownInteractionsProtocolFlexibleTwoWayTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTopResponseTable;
 
@@ -1853,6 +1871,7 @@ zx_status_t UnknownInteractionsProtocolFlexibleTwoWayTopResponse::Clone(UnknownI
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFields_ResponseTable;
 const fidl_type_t* UnknownInteractionsProtocol_FlexibleTwoWayFields_Response::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFields_ResponseTable;
 
@@ -1879,6 +1898,7 @@ zx_status_t UnknownInteractionsProtocol_FlexibleTwoWayFields_Response::Clone(Unk
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFields_ResultTable;
 const fidl_type_t* UnknownInteractionsProtocol_FlexibleTwoWayFields_Result::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFields_ResultTable;
@@ -2084,6 +2104,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayFields_Result::EnsureStorageIniti
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsTopResponseTable;
 const fidl_type_t* UnknownInteractionsProtocolFlexibleTwoWayFieldsTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsTopResponseTable;
 
@@ -2110,6 +2131,7 @@ zx_status_t UnknownInteractionsProtocolFlexibleTwoWayFieldsTopResponse::Clone(Un
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayUnion_ResponseTable;
 const fidl_type_t* UnknownInteractionsProtocol_FlexibleTwoWayUnion_Response::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayUnion_ResponseTable;
@@ -2286,6 +2308,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayUnion_Response::EnsureStorageInit
     }
   }
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayUnion_ResultTable;
 const fidl_type_t* UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayUnion_ResultTable;
@@ -2491,6 +2514,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result::EnsureStorageInitia
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionTopResponseTable;
 const fidl_type_t* UnknownInteractionsProtocolFlexibleTwoWayUnionTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionTopResponseTable;
 
@@ -2517,6 +2541,7 @@ zx_status_t UnknownInteractionsProtocolFlexibleTwoWayUnionTopResponse::Clone(Unk
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayTable_ResponseTable;
 const fidl_type_t* UnknownInteractionsProtocol_FlexibleTwoWayTable_Response::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayTable_ResponseTable;
@@ -2631,6 +2656,7 @@ zx_status_t UnknownInteractionsProtocol_FlexibleTwoWayTable_Response::Clone(Unkn
   }
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayTable_ResultTable;
 const fidl_type_t* UnknownInteractionsProtocol_FlexibleTwoWayTable_Result::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayTable_ResultTable;
@@ -2836,6 +2862,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayTable_Result::EnsureStorageInitia
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableTopResponseTable;
 const fidl_type_t* UnknownInteractionsProtocolFlexibleTwoWayTableTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableTopResponseTable;
 
@@ -2863,6 +2890,7 @@ zx_status_t UnknownInteractionsProtocolFlexibleTwoWayTableTopResponse::Clone(Unk
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsProtocol_FlexibleTwoWayErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayErr_ResponseTable;
 
@@ -2889,6 +2917,7 @@ zx_status_t UnknownInteractionsProtocol_FlexibleTwoWayErr_Response::Clone(Unknow
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayErr_ResultTable;
 const fidl_type_t* UnknownInteractionsProtocol_FlexibleTwoWayErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayErr_ResultTable;
@@ -3145,6 +3174,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayErr_Result::EnsureStorageInitiali
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsProtocolFlexibleTwoWayErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayErrTopResponseTable;
 
@@ -3172,6 +3202,7 @@ zx_status_t UnknownInteractionsProtocolFlexibleTwoWayErrTopResponse::Clone(Unkno
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_ResponseTable;
 
@@ -3198,6 +3229,7 @@ zx_status_t UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Response::Clone(
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_ResultTable;
 const fidl_type_t* UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_ResultTable;
@@ -3454,6 +3486,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Result::EnsureStorageIn
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsProtocolFlexibleTwoWayFieldsErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsErrTopResponseTable;
 
@@ -3480,6 +3513,7 @@ zx_status_t UnknownInteractionsProtocolFlexibleTwoWayFieldsErrTopResponse::Clone
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_ResponseTable;
@@ -3656,6 +3690,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Response::EnsureStorageI
     }
   }
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_ResultTable;
 const fidl_type_t* UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_ResultTable;
@@ -3912,6 +3947,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result::EnsureStorageIni
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsProtocolFlexibleTwoWayUnionErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionErrTopResponseTable;
 
@@ -3938,6 +3974,7 @@ zx_status_t UnknownInteractionsProtocolFlexibleTwoWayUnionErrTopResponse::Clone(
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayTableErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayTableErr_ResponseTable;
@@ -4052,6 +4089,7 @@ zx_status_t UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Response::Clone(U
   }
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayTableErr_ResultTable;
 const fidl_type_t* UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayTableErr_ResultTable;
@@ -4308,6 +4346,7 @@ void UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result::EnsureStorageIni
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsProtocolFlexibleTwoWayTableErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableErrTopResponseTable;
 
@@ -4335,6 +4374,7 @@ zx_status_t UnknownInteractionsProtocolFlexibleTwoWayTableErrTopResponse::Clone(
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventFieldsRequestTable;
 const fidl_type_t* UnknownInteractionsProtocolStrictEventFieldsRequest::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolStrictEventFieldsRequestTable;
 
@@ -4361,6 +4401,7 @@ zx_status_t UnknownInteractionsProtocolStrictEventFieldsRequest::Clone(UnknownIn
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventUnionRequestTable;
 const fidl_type_t* UnknownInteractionsProtocolStrictEventUnionRequest::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolStrictEventUnionRequestTable;
@@ -4538,6 +4579,7 @@ void UnknownInteractionsProtocolStrictEventUnionRequest::EnsureStorageInitialize
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventTableRequestTable;
 const fidl_type_t* UnknownInteractionsProtocolStrictEventTableRequest::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolStrictEventTableRequestTable;
 
@@ -4652,6 +4694,7 @@ zx_status_t UnknownInteractionsProtocolStrictEventTableRequest::Clone(UnknownInt
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_StrictEventErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsProtocol_StrictEventErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_StrictEventErr_ResponseTable;
 
@@ -4678,6 +4721,7 @@ zx_status_t UnknownInteractionsProtocol_StrictEventErr_Response::Clone(UnknownIn
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_StrictEventErr_ResultTable;
 const fidl_type_t* UnknownInteractionsProtocol_StrictEventErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_StrictEventErr_ResultTable;
@@ -4883,6 +4927,7 @@ void UnknownInteractionsProtocol_StrictEventErr_Result::EnsureStorageInitialized
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventErrRequestTable;
 const fidl_type_t* UnknownInteractionsProtocolStrictEventErrRequest::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolStrictEventErrRequestTable;
 
@@ -4910,6 +4955,7 @@ zx_status_t UnknownInteractionsProtocolStrictEventErrRequest::Clone(UnknownInter
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_StrictEventFieldsErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsProtocol_StrictEventFieldsErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_StrictEventFieldsErr_ResponseTable;
 
@@ -4936,6 +4982,7 @@ zx_status_t UnknownInteractionsProtocol_StrictEventFieldsErr_Response::Clone(Unk
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_StrictEventFieldsErr_ResultTable;
 const fidl_type_t* UnknownInteractionsProtocol_StrictEventFieldsErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_StrictEventFieldsErr_ResultTable;
@@ -5141,6 +5188,7 @@ void UnknownInteractionsProtocol_StrictEventFieldsErr_Result::EnsureStorageIniti
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventFieldsErrRequestTable;
 const fidl_type_t* UnknownInteractionsProtocolStrictEventFieldsErrRequest::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolStrictEventFieldsErrRequestTable;
 
@@ -5167,6 +5215,7 @@ zx_status_t UnknownInteractionsProtocolStrictEventFieldsErrRequest::Clone(Unknow
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_StrictEventUnionErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsProtocol_StrictEventUnionErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_StrictEventUnionErr_ResponseTable;
@@ -5343,6 +5392,7 @@ void UnknownInteractionsProtocol_StrictEventUnionErr_Response::EnsureStorageInit
     }
   }
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_StrictEventUnionErr_ResultTable;
 const fidl_type_t* UnknownInteractionsProtocol_StrictEventUnionErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_StrictEventUnionErr_ResultTable;
@@ -5548,6 +5598,7 @@ void UnknownInteractionsProtocol_StrictEventUnionErr_Result::EnsureStorageInitia
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventUnionErrRequestTable;
 const fidl_type_t* UnknownInteractionsProtocolStrictEventUnionErrRequest::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolStrictEventUnionErrRequestTable;
 
@@ -5574,6 +5625,7 @@ zx_status_t UnknownInteractionsProtocolStrictEventUnionErrRequest::Clone(Unknown
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_StrictEventTableErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsProtocol_StrictEventTableErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_StrictEventTableErr_ResponseTable;
@@ -5688,6 +5740,7 @@ zx_status_t UnknownInteractionsProtocol_StrictEventTableErr_Response::Clone(Unkn
   }
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_StrictEventTableErr_ResultTable;
 const fidl_type_t* UnknownInteractionsProtocol_StrictEventTableErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_StrictEventTableErr_ResultTable;
@@ -5893,6 +5946,7 @@ void UnknownInteractionsProtocol_StrictEventTableErr_Result::EnsureStorageInitia
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventTableErrRequestTable;
 const fidl_type_t* UnknownInteractionsProtocolStrictEventTableErrRequest::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolStrictEventTableErrRequestTable;
 
@@ -5920,6 +5974,7 @@ zx_status_t UnknownInteractionsProtocolStrictEventTableErrRequest::Clone(Unknown
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventFieldsRequestTable;
 const fidl_type_t* UnknownInteractionsProtocolFlexibleEventFieldsRequest::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventFieldsRequestTable;
 
@@ -5946,6 +6001,7 @@ zx_status_t UnknownInteractionsProtocolFlexibleEventFieldsRequest::Clone(Unknown
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventUnionRequestTable;
 const fidl_type_t* UnknownInteractionsProtocolFlexibleEventUnionRequest::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventUnionRequestTable;
@@ -6123,6 +6179,7 @@ void UnknownInteractionsProtocolFlexibleEventUnionRequest::EnsureStorageInitiali
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventTableRequestTable;
 const fidl_type_t* UnknownInteractionsProtocolFlexibleEventTableRequest::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventTableRequestTable;
 
@@ -6237,6 +6294,7 @@ zx_status_t UnknownInteractionsProtocolFlexibleEventTableRequest::Clone(UnknownI
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsProtocol_FlexibleEventErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventErr_ResponseTable;
 
@@ -6263,6 +6321,7 @@ zx_status_t UnknownInteractionsProtocol_FlexibleEventErr_Response::Clone(Unknown
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventErr_ResultTable;
 const fidl_type_t* UnknownInteractionsProtocol_FlexibleEventErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventErr_ResultTable;
@@ -6468,6 +6527,7 @@ void UnknownInteractionsProtocol_FlexibleEventErr_Result::EnsureStorageInitializ
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventErrRequestTable;
 const fidl_type_t* UnknownInteractionsProtocolFlexibleEventErrRequest::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventErrRequestTable;
 
@@ -6495,6 +6555,7 @@ zx_status_t UnknownInteractionsProtocolFlexibleEventErrRequest::Clone(UnknownInt
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventFieldsErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsProtocol_FlexibleEventFieldsErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventFieldsErr_ResponseTable;
 
@@ -6521,6 +6582,7 @@ zx_status_t UnknownInteractionsProtocol_FlexibleEventFieldsErr_Response::Clone(U
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventFieldsErr_ResultTable;
 const fidl_type_t* UnknownInteractionsProtocol_FlexibleEventFieldsErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventFieldsErr_ResultTable;
@@ -6726,6 +6788,7 @@ void UnknownInteractionsProtocol_FlexibleEventFieldsErr_Result::EnsureStorageIni
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventFieldsErrRequestTable;
 const fidl_type_t* UnknownInteractionsProtocolFlexibleEventFieldsErrRequest::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventFieldsErrRequestTable;
 
@@ -6752,6 +6815,7 @@ zx_status_t UnknownInteractionsProtocolFlexibleEventFieldsErrRequest::Clone(Unkn
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventUnionErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsProtocol_FlexibleEventUnionErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventUnionErr_ResponseTable;
@@ -6928,6 +6992,7 @@ void UnknownInteractionsProtocol_FlexibleEventUnionErr_Response::EnsureStorageIn
     }
   }
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventUnionErr_ResultTable;
 const fidl_type_t* UnknownInteractionsProtocol_FlexibleEventUnionErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventUnionErr_ResultTable;
@@ -7133,6 +7198,7 @@ void UnknownInteractionsProtocol_FlexibleEventUnionErr_Result::EnsureStorageInit
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventUnionErrRequestTable;
 const fidl_type_t* UnknownInteractionsProtocolFlexibleEventUnionErrRequest::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventUnionErrRequestTable;
 
@@ -7159,6 +7225,7 @@ zx_status_t UnknownInteractionsProtocolFlexibleEventUnionErrRequest::Clone(Unkno
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventTableErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsProtocol_FlexibleEventTableErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventTableErr_ResponseTable;
@@ -7273,6 +7340,7 @@ zx_status_t UnknownInteractionsProtocol_FlexibleEventTableErr_Response::Clone(Un
   }
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventTableErr_ResultTable;
 const fidl_type_t* UnknownInteractionsProtocol_FlexibleEventTableErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventTableErr_ResultTable;
@@ -7478,6 +7546,7 @@ void UnknownInteractionsProtocol_FlexibleEventTableErr_Result::EnsureStorageInit
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventTableErrRequestTable;
 const fidl_type_t* UnknownInteractionsProtocolFlexibleEventTableErrRequest::FidlType = &test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventTableErrRequestTable;
 
@@ -7505,6 +7574,7 @@ zx_status_t UnknownInteractionsProtocolFlexibleEventTableErrRequest::Clone(Unkno
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponseTable;
 const fidl_type_t* UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponseTable;
 
@@ -7531,6 +7601,7 @@ zx_status_t UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse::Clone(
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionResponseTable;
 const fidl_type_t* UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionResponseTable;
@@ -7708,6 +7779,7 @@ void UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse::EnsureStorageInit
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTableResponseTable;
 const fidl_type_t* UnknownInteractionsAjarProtocolStrictTwoWayTableResponse::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTableResponseTable;
 
@@ -7822,6 +7894,7 @@ zx_status_t UnknownInteractionsAjarProtocolStrictTwoWayTableResponse::Clone(Unkn
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsAjarProtocol_StrictTwoWayErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayErr_ResponseTable;
 
@@ -7848,6 +7921,7 @@ zx_status_t UnknownInteractionsAjarProtocol_StrictTwoWayErr_Response::Clone(Unkn
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayErr_ResultTable;
 const fidl_type_t* UnknownInteractionsAjarProtocol_StrictTwoWayErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayErr_ResultTable;
@@ -8053,6 +8127,7 @@ void UnknownInteractionsAjarProtocol_StrictTwoWayErr_Result::EnsureStorageInitia
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponseTable;
 
@@ -8080,6 +8155,7 @@ zx_status_t UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse::Clone(Unk
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_ResponseTable;
 
@@ -8106,6 +8182,7 @@ zx_status_t UnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_Response::Clon
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_ResultTable;
 const fidl_type_t* UnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_ResultTable;
@@ -8311,6 +8388,7 @@ void UnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_Result::EnsureStorage
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrTopResponseTable;
 
@@ -8337,6 +8415,7 @@ zx_status_t UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrTopResponse::Clo
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_ResponseTable;
@@ -8513,6 +8592,7 @@ void UnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_Response::EnsureStorag
     }
   }
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_ResultTable;
 const fidl_type_t* UnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_ResultTable;
@@ -8718,6 +8798,7 @@ void UnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_Result::EnsureStorageI
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsAjarProtocolStrictTwoWayUnionErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionErrTopResponseTable;
 
@@ -8744,6 +8825,7 @@ zx_status_t UnknownInteractionsAjarProtocolStrictTwoWayUnionErrTopResponse::Clon
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayTableErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsAjarProtocol_StrictTwoWayTableErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayTableErr_ResponseTable;
@@ -8858,6 +8940,7 @@ zx_status_t UnknownInteractionsAjarProtocol_StrictTwoWayTableErr_Response::Clone
   }
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayTableErr_ResultTable;
 const fidl_type_t* UnknownInteractionsAjarProtocol_StrictTwoWayTableErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayTableErr_ResultTable;
@@ -9063,6 +9146,7 @@ void UnknownInteractionsAjarProtocol_StrictTwoWayTableErr_Result::EnsureStorageI
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTableErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsAjarProtocolStrictTwoWayTableErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTableErrTopResponseTable;
 
@@ -9090,6 +9174,7 @@ zx_status_t UnknownInteractionsAjarProtocolStrictTwoWayTableErrTopResponse::Clon
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventFieldsRequestTable;
 const fidl_type_t* UnknownInteractionsAjarProtocolStrictEventFieldsRequest::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventFieldsRequestTable;
 
@@ -9116,6 +9201,7 @@ zx_status_t UnknownInteractionsAjarProtocolStrictEventFieldsRequest::Clone(Unkno
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventUnionRequestTable;
 const fidl_type_t* UnknownInteractionsAjarProtocolStrictEventUnionRequest::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventUnionRequestTable;
@@ -9293,6 +9379,7 @@ void UnknownInteractionsAjarProtocolStrictEventUnionRequest::EnsureStorageInitia
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventTableRequestTable;
 const fidl_type_t* UnknownInteractionsAjarProtocolStrictEventTableRequest::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventTableRequestTable;
 
@@ -9407,6 +9494,7 @@ zx_status_t UnknownInteractionsAjarProtocolStrictEventTableRequest::Clone(Unknow
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsAjarProtocol_StrictEventErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventErr_ResponseTable;
 
@@ -9433,6 +9521,7 @@ zx_status_t UnknownInteractionsAjarProtocol_StrictEventErr_Response::Clone(Unkno
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventErr_ResultTable;
 const fidl_type_t* UnknownInteractionsAjarProtocol_StrictEventErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventErr_ResultTable;
@@ -9638,6 +9727,7 @@ void UnknownInteractionsAjarProtocol_StrictEventErr_Result::EnsureStorageInitial
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventErrRequestTable;
 const fidl_type_t* UnknownInteractionsAjarProtocolStrictEventErrRequest::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventErrRequestTable;
 
@@ -9665,6 +9755,7 @@ zx_status_t UnknownInteractionsAjarProtocolStrictEventErrRequest::Clone(UnknownI
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventFieldsErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsAjarProtocol_StrictEventFieldsErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventFieldsErr_ResponseTable;
 
@@ -9691,6 +9782,7 @@ zx_status_t UnknownInteractionsAjarProtocol_StrictEventFieldsErr_Response::Clone
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventFieldsErr_ResultTable;
 const fidl_type_t* UnknownInteractionsAjarProtocol_StrictEventFieldsErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventFieldsErr_ResultTable;
@@ -9896,6 +9988,7 @@ void UnknownInteractionsAjarProtocol_StrictEventFieldsErr_Result::EnsureStorageI
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventFieldsErrRequestTable;
 const fidl_type_t* UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventFieldsErrRequestTable;
 
@@ -9922,6 +10015,7 @@ zx_status_t UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest::Clone(Un
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventUnionErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsAjarProtocol_StrictEventUnionErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventUnionErr_ResponseTable;
@@ -10098,6 +10192,7 @@ void UnknownInteractionsAjarProtocol_StrictEventUnionErr_Response::EnsureStorage
     }
   }
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventUnionErr_ResultTable;
 const fidl_type_t* UnknownInteractionsAjarProtocol_StrictEventUnionErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventUnionErr_ResultTable;
@@ -10303,6 +10398,7 @@ void UnknownInteractionsAjarProtocol_StrictEventUnionErr_Result::EnsureStorageIn
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventUnionErrRequestTable;
 const fidl_type_t* UnknownInteractionsAjarProtocolStrictEventUnionErrRequest::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventUnionErrRequestTable;
 
@@ -10329,6 +10425,7 @@ zx_status_t UnknownInteractionsAjarProtocolStrictEventUnionErrRequest::Clone(Unk
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventTableErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsAjarProtocol_StrictEventTableErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventTableErr_ResponseTable;
@@ -10443,6 +10540,7 @@ zx_status_t UnknownInteractionsAjarProtocol_StrictEventTableErr_Response::Clone(
   }
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventTableErr_ResultTable;
 const fidl_type_t* UnknownInteractionsAjarProtocol_StrictEventTableErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventTableErr_ResultTable;
@@ -10648,6 +10746,7 @@ void UnknownInteractionsAjarProtocol_StrictEventTableErr_Result::EnsureStorageIn
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventTableErrRequestTable;
 const fidl_type_t* UnknownInteractionsAjarProtocolStrictEventTableErrRequest::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventTableErrRequestTable;
 
@@ -10675,6 +10774,7 @@ zx_status_t UnknownInteractionsAjarProtocolStrictEventTableErrRequest::Clone(Unk
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventFieldsRequestTable;
 const fidl_type_t* UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventFieldsRequestTable;
 
@@ -10701,6 +10801,7 @@ zx_status_t UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest::Clone(Unk
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventUnionRequestTable;
 const fidl_type_t* UnknownInteractionsAjarProtocolFlexibleEventUnionRequest::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventUnionRequestTable;
@@ -10878,6 +10979,7 @@ void UnknownInteractionsAjarProtocolFlexibleEventUnionRequest::EnsureStorageInit
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventTableRequestTable;
 const fidl_type_t* UnknownInteractionsAjarProtocolFlexibleEventTableRequest::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventTableRequestTable;
 
@@ -10992,6 +11094,7 @@ zx_status_t UnknownInteractionsAjarProtocolFlexibleEventTableRequest::Clone(Unkn
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsAjarProtocol_FlexibleEventErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventErr_ResponseTable;
 
@@ -11018,6 +11121,7 @@ zx_status_t UnknownInteractionsAjarProtocol_FlexibleEventErr_Response::Clone(Unk
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventErr_ResultTable;
 const fidl_type_t* UnknownInteractionsAjarProtocol_FlexibleEventErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventErr_ResultTable;
@@ -11223,6 +11327,7 @@ void UnknownInteractionsAjarProtocol_FlexibleEventErr_Result::EnsureStorageIniti
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventErrRequestTable;
 const fidl_type_t* UnknownInteractionsAjarProtocolFlexibleEventErrRequest::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventErrRequestTable;
 
@@ -11250,6 +11355,7 @@ zx_status_t UnknownInteractionsAjarProtocolFlexibleEventErrRequest::Clone(Unknow
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_ResponseTable;
 
@@ -11276,6 +11382,7 @@ zx_status_t UnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_Response::Clo
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_ResultTable;
 const fidl_type_t* UnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_ResultTable;
@@ -11481,6 +11588,7 @@ void UnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_Result::EnsureStorag
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequestTable;
 const fidl_type_t* UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequestTable;
 
@@ -11507,6 +11615,7 @@ zx_status_t UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest::Clone(
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventUnionErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsAjarProtocol_FlexibleEventUnionErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventUnionErr_ResponseTable;
@@ -11683,6 +11792,7 @@ void UnknownInteractionsAjarProtocol_FlexibleEventUnionErr_Response::EnsureStora
     }
   }
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventUnionErr_ResultTable;
 const fidl_type_t* UnknownInteractionsAjarProtocol_FlexibleEventUnionErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventUnionErr_ResultTable;
@@ -11888,6 +11998,7 @@ void UnknownInteractionsAjarProtocol_FlexibleEventUnionErr_Result::EnsureStorage
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequestTable;
 const fidl_type_t* UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequestTable;
 
@@ -11914,6 +12025,7 @@ zx_status_t UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest::Clone(U
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventTableErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsAjarProtocol_FlexibleEventTableErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventTableErr_ResponseTable;
@@ -12028,6 +12140,7 @@ zx_status_t UnknownInteractionsAjarProtocol_FlexibleEventTableErr_Response::Clon
   }
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventTableErr_ResultTable;
 const fidl_type_t* UnknownInteractionsAjarProtocol_FlexibleEventTableErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventTableErr_ResultTable;
@@ -12233,6 +12346,7 @@ void UnknownInteractionsAjarProtocol_FlexibleEventTableErr_Result::EnsureStorage
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventTableErrRequestTable;
 const fidl_type_t* UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest::FidlType = &test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventTableErrRequestTable;
 
@@ -12260,6 +12374,7 @@ zx_status_t UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest::Clone(U
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponseTable;
 const fidl_type_t* UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponseTable;
 
@@ -12286,6 +12401,7 @@ zx_status_t UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse::Clon
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionResponseTable;
 const fidl_type_t* UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionResponseTable;
@@ -12463,6 +12579,7 @@ void UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse::EnsureStorageIn
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTableResponseTable;
 const fidl_type_t* UnknownInteractionsClosedProtocolStrictTwoWayTableResponse::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTableResponseTable;
 
@@ -12577,6 +12694,7 @@ zx_status_t UnknownInteractionsClosedProtocolStrictTwoWayTableResponse::Clone(Un
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsClosedProtocol_StrictTwoWayErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayErr_ResponseTable;
 
@@ -12603,6 +12721,7 @@ zx_status_t UnknownInteractionsClosedProtocol_StrictTwoWayErr_Response::Clone(Un
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayErr_ResultTable;
 const fidl_type_t* UnknownInteractionsClosedProtocol_StrictTwoWayErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayErr_ResultTable;
@@ -12808,6 +12927,7 @@ void UnknownInteractionsClosedProtocol_StrictTwoWayErr_Result::EnsureStorageInit
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponseTable;
 
@@ -12835,6 +12955,7 @@ zx_status_t UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse::Clone(U
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_ResponseTable;
 
@@ -12861,6 +12982,7 @@ zx_status_t UnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_Response::Cl
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_ResultTable;
 const fidl_type_t* UnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_ResultTable;
@@ -13066,6 +13188,7 @@ void UnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_Result::EnsureStora
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrTopResponseTable;
 
@@ -13092,6 +13215,7 @@ zx_status_t UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrTopResponse::C
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_ResponseTable;
@@ -13268,6 +13392,7 @@ void UnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_Response::EnsureStor
     }
   }
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_ResultTable;
 const fidl_type_t* UnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_ResultTable;
@@ -13473,6 +13598,7 @@ void UnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_Result::EnsureStorag
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsClosedProtocolStrictTwoWayUnionErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionErrTopResponseTable;
 
@@ -13499,6 +13625,7 @@ zx_status_t UnknownInteractionsClosedProtocolStrictTwoWayUnionErrTopResponse::Cl
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayTableErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsClosedProtocol_StrictTwoWayTableErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayTableErr_ResponseTable;
@@ -13613,6 +13740,7 @@ zx_status_t UnknownInteractionsClosedProtocol_StrictTwoWayTableErr_Response::Clo
   }
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayTableErr_ResultTable;
 const fidl_type_t* UnknownInteractionsClosedProtocol_StrictTwoWayTableErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayTableErr_ResultTable;
@@ -13818,6 +13946,7 @@ void UnknownInteractionsClosedProtocol_StrictTwoWayTableErr_Result::EnsureStorag
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTableErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsClosedProtocolStrictTwoWayTableErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTableErrTopResponseTable;
 
@@ -13845,6 +13974,7 @@ zx_status_t UnknownInteractionsClosedProtocolStrictTwoWayTableErrTopResponse::Cl
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventFieldsRequestTable;
 const fidl_type_t* UnknownInteractionsClosedProtocolStrictEventFieldsRequest::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventFieldsRequestTable;
 
@@ -13871,6 +14001,7 @@ zx_status_t UnknownInteractionsClosedProtocolStrictEventFieldsRequest::Clone(Unk
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventUnionRequestTable;
 const fidl_type_t* UnknownInteractionsClosedProtocolStrictEventUnionRequest::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventUnionRequestTable;
@@ -14048,6 +14179,7 @@ void UnknownInteractionsClosedProtocolStrictEventUnionRequest::EnsureStorageInit
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventTableRequestTable;
 const fidl_type_t* UnknownInteractionsClosedProtocolStrictEventTableRequest::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventTableRequestTable;
 
@@ -14162,6 +14294,7 @@ zx_status_t UnknownInteractionsClosedProtocolStrictEventTableRequest::Clone(Unkn
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsClosedProtocol_StrictEventErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventErr_ResponseTable;
 
@@ -14188,6 +14321,7 @@ zx_status_t UnknownInteractionsClosedProtocol_StrictEventErr_Response::Clone(Unk
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventErr_ResultTable;
 const fidl_type_t* UnknownInteractionsClosedProtocol_StrictEventErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventErr_ResultTable;
@@ -14393,6 +14527,7 @@ void UnknownInteractionsClosedProtocol_StrictEventErr_Result::EnsureStorageIniti
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventErrRequestTable;
 const fidl_type_t* UnknownInteractionsClosedProtocolStrictEventErrRequest::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventErrRequestTable;
 
@@ -14420,6 +14555,7 @@ zx_status_t UnknownInteractionsClosedProtocolStrictEventErrRequest::Clone(Unknow
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventFieldsErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsClosedProtocol_StrictEventFieldsErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventFieldsErr_ResponseTable;
 
@@ -14446,6 +14582,7 @@ zx_status_t UnknownInteractionsClosedProtocol_StrictEventFieldsErr_Response::Clo
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventFieldsErr_ResultTable;
 const fidl_type_t* UnknownInteractionsClosedProtocol_StrictEventFieldsErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventFieldsErr_ResultTable;
@@ -14651,6 +14788,7 @@ void UnknownInteractionsClosedProtocol_StrictEventFieldsErr_Result::EnsureStorag
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventFieldsErrRequestTable;
 const fidl_type_t* UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventFieldsErrRequestTable;
 
@@ -14677,6 +14815,7 @@ zx_status_t UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest::Clone(
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventUnionErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsClosedProtocol_StrictEventUnionErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventUnionErr_ResponseTable;
@@ -14853,6 +14992,7 @@ void UnknownInteractionsClosedProtocol_StrictEventUnionErr_Response::EnsureStora
     }
   }
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventUnionErr_ResultTable;
 const fidl_type_t* UnknownInteractionsClosedProtocol_StrictEventUnionErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventUnionErr_ResultTable;
@@ -15058,6 +15198,7 @@ void UnknownInteractionsClosedProtocol_StrictEventUnionErr_Result::EnsureStorage
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventUnionErrRequestTable;
 const fidl_type_t* UnknownInteractionsClosedProtocolStrictEventUnionErrRequest::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventUnionErrRequestTable;
 
@@ -15084,6 +15225,7 @@ zx_status_t UnknownInteractionsClosedProtocolStrictEventUnionErrRequest::Clone(U
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventTableErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsClosedProtocol_StrictEventTableErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventTableErr_ResponseTable;
@@ -15198,6 +15340,7 @@ zx_status_t UnknownInteractionsClosedProtocol_StrictEventTableErr_Response::Clon
   }
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventTableErr_ResultTable;
 const fidl_type_t* UnknownInteractionsClosedProtocol_StrictEventTableErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventTableErr_ResultTable;
@@ -15403,6 +15546,7 @@ void UnknownInteractionsClosedProtocol_StrictEventTableErr_Result::EnsureStorage
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventTableErrRequestTable;
 const fidl_type_t* UnknownInteractionsClosedProtocolStrictEventTableErrRequest::FidlType = &test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventTableErrRequestTable;
 
@@ -15430,6 +15574,7 @@ zx_status_t UnknownInteractionsClosedProtocolStrictEventTableErrRequest::Clone(U
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponseTable;
 const fidl_type_t* UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponseTable;
 
@@ -15456,6 +15601,7 @@ zx_status_t UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse::Clon
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayUnionResponseTable;
 const fidl_type_t* UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayUnionResponseTable;
@@ -15633,6 +15779,7 @@ void UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse::EnsureStorageIn
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayTableResponseTable;
 const fidl_type_t* UnknownInteractionsDriverProtocolStrictTwoWayTableResponse::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayTableResponseTable;
 
@@ -15747,6 +15894,7 @@ zx_status_t UnknownInteractionsDriverProtocolStrictTwoWayTableResponse::Clone(Un
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsDriverProtocol_StrictTwoWayErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayErr_ResponseTable;
 
@@ -15773,6 +15921,7 @@ zx_status_t UnknownInteractionsDriverProtocol_StrictTwoWayErr_Response::Clone(Un
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayErr_ResultTable;
 const fidl_type_t* UnknownInteractionsDriverProtocol_StrictTwoWayErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayErr_ResultTable;
@@ -15978,6 +16127,7 @@ void UnknownInteractionsDriverProtocol_StrictTwoWayErr_Result::EnsureStorageInit
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponseTable;
 
@@ -16005,6 +16155,7 @@ zx_status_t UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse::Clone(U
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayFieldsErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsDriverProtocol_StrictTwoWayFieldsErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayFieldsErr_ResponseTable;
 
@@ -16031,6 +16182,7 @@ zx_status_t UnknownInteractionsDriverProtocol_StrictTwoWayFieldsErr_Response::Cl
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayFieldsErr_ResultTable;
 const fidl_type_t* UnknownInteractionsDriverProtocol_StrictTwoWayFieldsErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayFieldsErr_ResultTable;
@@ -16236,6 +16388,7 @@ void UnknownInteractionsDriverProtocol_StrictTwoWayFieldsErr_Result::EnsureStora
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrTopResponseTable;
 
@@ -16262,6 +16415,7 @@ zx_status_t UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrTopResponse::C
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayUnionErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsDriverProtocol_StrictTwoWayUnionErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayUnionErr_ResponseTable;
@@ -16438,6 +16592,7 @@ void UnknownInteractionsDriverProtocol_StrictTwoWayUnionErr_Response::EnsureStor
     }
   }
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayUnionErr_ResultTable;
 const fidl_type_t* UnknownInteractionsDriverProtocol_StrictTwoWayUnionErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayUnionErr_ResultTable;
@@ -16643,6 +16798,7 @@ void UnknownInteractionsDriverProtocol_StrictTwoWayUnionErr_Result::EnsureStorag
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayUnionErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsDriverProtocolStrictTwoWayUnionErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayUnionErrTopResponseTable;
 
@@ -16669,6 +16825,7 @@ zx_status_t UnknownInteractionsDriverProtocolStrictTwoWayUnionErrTopResponse::Cl
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayTableErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsDriverProtocol_StrictTwoWayTableErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayTableErr_ResponseTable;
@@ -16783,6 +16940,7 @@ zx_status_t UnknownInteractionsDriverProtocol_StrictTwoWayTableErr_Response::Clo
   }
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayTableErr_ResultTable;
 const fidl_type_t* UnknownInteractionsDriverProtocol_StrictTwoWayTableErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayTableErr_ResultTable;
@@ -16988,6 +17146,7 @@ void UnknownInteractionsDriverProtocol_StrictTwoWayTableErr_Result::EnsureStorag
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayTableErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsDriverProtocolStrictTwoWayTableErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayTableErrTopResponseTable;
 
@@ -17015,6 +17174,7 @@ zx_status_t UnknownInteractionsDriverProtocolStrictTwoWayTableErrTopResponse::Cl
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWay_ResponseTable;
 const fidl_type_t* UnknownInteractionsDriverProtocol_FlexibleTwoWay_Response::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWay_ResponseTable;
 
@@ -17041,6 +17201,7 @@ zx_status_t UnknownInteractionsDriverProtocol_FlexibleTwoWay_Response::Clone(Unk
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWay_ResultTable;
 const fidl_type_t* UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWay_ResultTable;
@@ -17246,6 +17407,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result::EnsureStorageIniti
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponseTable;
 const fidl_type_t* UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponseTable;
 
@@ -17273,6 +17435,7 @@ zx_status_t UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse::Clone(Un
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_ResponseTable;
 const fidl_type_t* UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Response::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_ResponseTable;
 
@@ -17299,6 +17462,7 @@ zx_status_t UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Response::Clo
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_ResultTable;
 const fidl_type_t* UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_ResultTable;
@@ -17504,6 +17668,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Result::EnsureStorag
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsTopResponseTable;
 const fidl_type_t* UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsTopResponseTable;
 
@@ -17530,6 +17695,7 @@ zx_status_t UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsTopResponse::Cl
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_ResponseTable;
 const fidl_type_t* UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Response::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_ResponseTable;
@@ -17706,6 +17872,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Response::EnsureStora
     }
   }
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_ResultTable;
 const fidl_type_t* UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_ResultTable;
@@ -17911,6 +18078,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result::EnsureStorage
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayUnionTopResponseTable;
 const fidl_type_t* UnknownInteractionsDriverProtocolFlexibleTwoWayUnionTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayUnionTopResponseTable;
 
@@ -17937,6 +18105,7 @@ zx_status_t UnknownInteractionsDriverProtocolFlexibleTwoWayUnionTopResponse::Clo
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_ResponseTable;
 const fidl_type_t* UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Response::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_ResponseTable;
@@ -18051,6 +18220,7 @@ zx_status_t UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Response::Clon
   }
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_ResultTable;
 const fidl_type_t* UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_ResultTable;
@@ -18256,6 +18426,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Result::EnsureStorage
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayTableTopResponseTable;
 const fidl_type_t* UnknownInteractionsDriverProtocolFlexibleTwoWayTableTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayTableTopResponseTable;
 
@@ -18283,6 +18454,7 @@ zx_status_t UnknownInteractionsDriverProtocolFlexibleTwoWayTableTopResponse::Clo
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_ResponseTable;
 
@@ -18309,6 +18481,7 @@ zx_status_t UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response::Clone(
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_ResultTable;
 const fidl_type_t* UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_ResultTable;
@@ -18565,6 +18738,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result::EnsureStorageIn
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponseTable;
 
@@ -18592,6 +18766,7 @@ zx_status_t UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse::Clone
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_ResponseTable;
 
@@ -18618,6 +18793,7 @@ zx_status_t UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Response::
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_ResultTable;
 const fidl_type_t* UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_ResultTable;
@@ -18874,6 +19050,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Result::EnsureSto
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrTopResponseTable;
 
@@ -18900,6 +19077,7 @@ zx_status_t UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrTopResponse:
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_ResponseTable;
@@ -19076,6 +19254,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Response::EnsureSt
     }
   }
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_ResultTable;
 const fidl_type_t* UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_ResultTable;
@@ -19332,6 +19511,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result::EnsureStor
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrTopResponseTable;
 
@@ -19358,6 +19538,7 @@ zx_status_t UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrTopResponse::
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_ResponseTable;
@@ -19472,6 +19653,7 @@ zx_status_t UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Response::C
   }
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_ResultTable;
 const fidl_type_t* UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_ResultTable;
@@ -19728,6 +19910,7 @@ void UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Result::EnsureStor
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrTopResponseTable;
 
@@ -19755,6 +19938,7 @@ zx_status_t UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrTopResponse::
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponseTable;
 const fidl_type_t* UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponseTable;
 
@@ -19781,6 +19965,7 @@ zx_status_t UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse::
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponseTable;
 const fidl_type_t* UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse::FidlType = &test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponseTable;
@@ -19958,6 +20143,7 @@ void UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse::EnsureStora
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponseTable;
 const fidl_type_t* UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponse::FidlType = &test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponseTable;
 
@@ -20072,6 +20258,7 @@ zx_status_t UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponse::Clon
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_ResponseTable;
 
@@ -20098,6 +20285,7 @@ zx_status_t UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Response::Clon
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_ResultTable;
 const fidl_type_t* UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_ResultTable;
@@ -20303,6 +20491,7 @@ void UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Result::EnsureStorage
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponseTable;
 
@@ -20330,6 +20519,7 @@ zx_status_t UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse::Clo
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayFieldsErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsAjarDriverProtocol_StrictTwoWayFieldsErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayFieldsErr_ResponseTable;
 
@@ -20356,6 +20546,7 @@ zx_status_t UnknownInteractionsAjarDriverProtocol_StrictTwoWayFieldsErr_Response
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayFieldsErr_ResultTable;
 const fidl_type_t* UnknownInteractionsAjarDriverProtocol_StrictTwoWayFieldsErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayFieldsErr_ResultTable;
@@ -20561,6 +20752,7 @@ void UnknownInteractionsAjarDriverProtocol_StrictTwoWayFieldsErr_Result::EnsureS
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrTopResponseTable;
 
@@ -20587,6 +20779,7 @@ zx_status_t UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrTopRespons
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayUnionErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsAjarDriverProtocol_StrictTwoWayUnionErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayUnionErr_ResponseTable;
@@ -20763,6 +20956,7 @@ void UnknownInteractionsAjarDriverProtocol_StrictTwoWayUnionErr_Response::Ensure
     }
   }
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayUnionErr_ResultTable;
 const fidl_type_t* UnknownInteractionsAjarDriverProtocol_StrictTwoWayUnionErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayUnionErr_ResultTable;
@@ -20968,6 +21162,7 @@ void UnknownInteractionsAjarDriverProtocol_StrictTwoWayUnionErr_Result::EnsureSt
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrTopResponseTable;
 
@@ -20994,6 +21189,7 @@ zx_status_t UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrTopResponse
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayTableErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsAjarDriverProtocol_StrictTwoWayTableErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayTableErr_ResponseTable;
@@ -21108,6 +21304,7 @@ zx_status_t UnknownInteractionsAjarDriverProtocol_StrictTwoWayTableErr_Response:
   }
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayTableErr_ResultTable;
 const fidl_type_t* UnknownInteractionsAjarDriverProtocol_StrictTwoWayTableErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayTableErr_ResultTable;
@@ -21313,6 +21510,7 @@ void UnknownInteractionsAjarDriverProtocol_StrictTwoWayTableErr_Result::EnsureSt
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrTopResponseTable;
 
@@ -21340,6 +21538,7 @@ zx_status_t UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrTopResponse
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponseTable;
 const fidl_type_t* UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponseTable;
 
@@ -21366,6 +21565,7 @@ zx_status_t UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponseTable;
 const fidl_type_t* UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse::FidlType = &test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponseTable;
@@ -21543,6 +21743,7 @@ void UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse::EnsureSto
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponseTable;
 const fidl_type_t* UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponse::FidlType = &test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponseTable;
 
@@ -21657,6 +21858,7 @@ zx_status_t UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponse::Cl
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_ResponseTable;
 
@@ -21683,6 +21885,7 @@ zx_status_t UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Response::Cl
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_ResultTable;
 const fidl_type_t* UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_ResultTable;
@@ -21888,6 +22091,7 @@ void UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Result::EnsureStora
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponseTable;
 
@@ -21915,6 +22119,7 @@ zx_status_t UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse::C
   return ZX_OK;
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayFieldsErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsClosedDriverProtocol_StrictTwoWayFieldsErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayFieldsErr_ResponseTable;
 
@@ -21941,6 +22146,7 @@ zx_status_t UnknownInteractionsClosedDriverProtocol_StrictTwoWayFieldsErr_Respon
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayFieldsErr_ResultTable;
 const fidl_type_t* UnknownInteractionsClosedDriverProtocol_StrictTwoWayFieldsErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayFieldsErr_ResultTable;
@@ -22146,6 +22352,7 @@ void UnknownInteractionsClosedDriverProtocol_StrictTwoWayFieldsErr_Result::Ensur
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrTopResponseTable;
 
@@ -22172,6 +22379,7 @@ zx_status_t UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrTopRespo
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayUnionErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsClosedDriverProtocol_StrictTwoWayUnionErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayUnionErr_ResponseTable;
@@ -22348,6 +22556,7 @@ void UnknownInteractionsClosedDriverProtocol_StrictTwoWayUnionErr_Response::Ensu
     }
   }
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayUnionErr_ResultTable;
 const fidl_type_t* UnknownInteractionsClosedDriverProtocol_StrictTwoWayUnionErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayUnionErr_ResultTable;
@@ -22553,6 +22762,7 @@ void UnknownInteractionsClosedDriverProtocol_StrictTwoWayUnionErr_Result::Ensure
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrTopResponseTable;
 
@@ -22579,6 +22789,7 @@ zx_status_t UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrTopRespon
     return _status;
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayTableErr_ResponseTable;
 const fidl_type_t* UnknownInteractionsClosedDriverProtocol_StrictTwoWayTableErr_Response::FidlType = &test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayTableErr_ResponseTable;
@@ -22693,6 +22904,7 @@ zx_status_t UnknownInteractionsClosedDriverProtocol_StrictTwoWayTableErr_Respons
   }
   return ZX_OK;
 }
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayTableErr_ResultTable;
 const fidl_type_t* UnknownInteractionsClosedDriverProtocol_StrictTwoWayTableErr_Result::FidlType = &test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayTableErr_ResultTable;
@@ -22898,6 +23110,7 @@ void UnknownInteractionsClosedDriverProtocol_StrictTwoWayTableErr_Result::Ensure
   }
 }
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrTopResponseTable;
 const fidl_type_t* UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrTopResponse::FidlType = &test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrTopResponseTable;
 
@@ -22937,69 +23150,99 @@ zx_status_t UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrTopRespon
   
   
   
-  namespace _internal {__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsTopResponseTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionResponseTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTableResponseTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayErrTopResponseTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsErrTopResponseTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionErrTopResponseTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTableErrTopResponseTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTopResponseTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsTopResponseTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionTopResponseTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableTopResponseTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayErrTopResponseTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsErrTopResponseTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionErrTopResponseTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableErrTopResponseTable;
+  namespace _internal {
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsTopResponseTable;
   
   
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventFieldsRequestTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventUnionRequestTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventTableRequestTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventErrRequestTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventFieldsErrRequestTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventUnionErrRequestTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventTableErrRequestTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionResponseTable;
   
   
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTableResponseTable;
   
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventFieldsRequestTable;
   
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventUnionRequestTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayErrTopResponseTable;
   
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventTableRequestTable;
   
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventErrRequestTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsErrTopResponseTable;
   
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventFieldsErrRequestTable;
   
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventUnionErrRequestTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionErrTopResponseTable;
   
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventTableErrRequestTable;
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTableErrTopResponseTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTopResponseTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsTopResponseTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionTopResponseTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableTopResponseTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayErrTopResponseTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsErrTopResponseTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionErrTopResponseTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableErrTopResponseTable;
+  
+  
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventFieldsRequestTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventUnionRequestTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventTableRequestTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventErrRequestTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventFieldsErrRequestTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventUnionErrRequestTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventTableErrRequestTable;
+  
+  
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventFieldsRequestTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventUnionRequestTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventTableRequestTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventErrRequestTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventFieldsErrRequestTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventUnionErrRequestTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventTableErrRequestTable;
 
 }  // namespace _internal
+
 UnknownInteractionsProtocol::~UnknownInteractionsProtocol() = default;
 
 const fidl_type_t* ::test::unknowninteractions::UnknownInteractionsProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
@@ -24439,6 +24682,7 @@ zx_status_t UnknownInteractionsProtocol_SyncProxy::FlexibleTwoWayTableErr(::test
   *out_result = ::fidl::DecodeAs<::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayTableErr_Result>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -24450,53 +24694,75 @@ zx_status_t UnknownInteractionsProtocol_SyncProxy::FlexibleTwoWayTableErr(::test
   
   
   
-  namespace _internal {__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponseTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionResponseTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTableResponseTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponseTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrTopResponseTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionErrTopResponseTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTableErrTopResponseTable;
+  namespace _internal {
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponseTable;
   
   
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionResponseTable;
   
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventFieldsRequestTable;
   
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventUnionRequestTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTableResponseTable;
   
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventTableRequestTable;
   
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventErrRequestTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponseTable;
   
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventFieldsErrRequestTable;
   
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventUnionErrRequestTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrTopResponseTable;
   
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventTableErrRequestTable;
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionErrTopResponseTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTableErrTopResponseTable;
   
   
   
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventFieldsRequestTable;
   
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventUnionRequestTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventFieldsRequestTable;
   
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventTableRequestTable;
   
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventErrRequestTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventUnionRequestTable;
   
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequestTable;
   
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequestTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventTableRequestTable;
   
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventTableErrRequestTable;
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventErrRequestTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventFieldsErrRequestTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventUnionErrRequestTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventTableErrRequestTable;
+  
+  
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventFieldsRequestTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventUnionRequestTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventTableRequestTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventErrRequestTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequestTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequestTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventTableErrRequestTable;
 
 }  // namespace _internal
+
 UnknownInteractionsAjarProtocol::~UnknownInteractionsAjarProtocol() = default;
 
 const fidl_type_t* ::test::unknowninteractions::UnknownInteractionsAjarProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
@@ -25448,6 +25714,7 @@ zx_status_t UnknownInteractionsAjarProtocol_SyncProxy::StrictTwoWayTableErr(::te
   *out_result = ::fidl::DecodeAs<::test::unknowninteractions::UnknownInteractionsAjarProtocol_StrictTwoWayTableErr_Result>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -25457,37 +25724,52 @@ zx_status_t UnknownInteractionsAjarProtocol_SyncProxy::StrictTwoWayTableErr(::te
   
   
   
-  namespace _internal {__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponseTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionResponseTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTableResponseTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponseTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrTopResponseTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionErrTopResponseTable;
-  
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTableErrTopResponseTable;
+  namespace _internal {
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponseTable;
   
   
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionResponseTable;
   
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventFieldsRequestTable;
   
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventUnionRequestTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTableResponseTable;
   
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventTableRequestTable;
   
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventErrRequestTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponseTable;
   
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventFieldsErrRequestTable;
   
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventUnionErrRequestTable;
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrTopResponseTable;
   
-  __LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventTableErrRequestTable;
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionErrTopResponseTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTableErrTopResponseTable;
+  
+  
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventFieldsRequestTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventUnionRequestTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventTableRequestTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventErrRequestTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventFieldsErrRequestTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventUnionErrRequestTable;
+  
+  
+__LOCAL extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventTableErrRequestTable;
 
 }  // namespace _internal
+
 UnknownInteractionsClosedProtocol::~UnknownInteractionsClosedProtocol() = default;
 
 const fidl_type_t* ::test::unknowninteractions::UnknownInteractionsClosedProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
@@ -26251,9 +26533,11 @@ zx_status_t UnknownInteractionsClosedProtocol_SyncProxy::StrictTwoWayTableErr(::
   *out_result = ::fidl::DecodeAs<::test::unknowninteractions::UnknownInteractionsClosedProtocol_StrictTwoWayTableErr_Result>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 
 }  // namespace unknowninteractions
 }  // namespace test
+
 

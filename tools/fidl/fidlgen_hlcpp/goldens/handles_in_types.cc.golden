@@ -135,6 +135,7 @@ zx_status_t TableWithHandle::Clone(TableWithHandle* result) const {
   }
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -317,6 +318,7 @@ void UnionWithHandle::EnsureStorageInitialized(::fidl_xunion_tag_t tag) {
     }
   }
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -387,6 +389,7 @@ zx_status_t HandlesInTypes::Clone(HandlesInTypes* _result) const {
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 //

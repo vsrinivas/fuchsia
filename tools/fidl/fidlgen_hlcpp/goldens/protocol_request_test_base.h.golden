@@ -6,6 +6,7 @@
 namespace test {
 namespace protocolrequest {
 namespace testing {
+
 class Child_TestBase : public ::test::protocolrequest::Child {
  public:
   virtual ~Child_TestBase() {}

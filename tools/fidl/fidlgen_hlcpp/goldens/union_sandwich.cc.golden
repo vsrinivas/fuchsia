@@ -9,6 +9,7 @@
 //
 namespace test {
 namespace unionsandwich {
+
 extern "C" const fidl_type_t test_unionsandwich_UnionSize8Alignment4Table;
 const fidl_type_t* UnionSize8Alignment4::FidlType = &test_unionsandwich_UnionSize8Alignment4Table;
 

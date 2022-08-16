@@ -87,6 +87,7 @@ std::unique_ptr<::test_error::ExampleFooResult> WireNaturalConversionTraits<::te
   return ::fidl::WireResponse<::test_error::Example::Foo>(
       WireNaturalConversionTraits<::test_error::wire::ExampleFooTopResponse, ::fitx::result<uint32_t, ::test_error::ExampleFooResponse>>::ToWire(arena, std::move(src)));
 }
+
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

@@ -4,12 +4,14 @@
 #include <lib/fidl/cpp/wire/unknown_interactions.h>
 
 namespace test_transitivedependenciescompose {
+
 [[maybe_unused]] constexpr inline uint64_t kTop_GetFoo_Ordinal = 2618685789258237543lu;
 
 [[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kTop_GetFoo_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
 #ifdef __Fuchsia__
 }  // namespace test_transitivedependenciescompose
+
 ::fidl::internal::NaturalThenable<::test_transitivedependenciescompose::Top::GetFoo>
 fidl::internal::NaturalClientImpl<::test_transitivedependenciescompose::Top>::GetFoo() const {
   return ::fidl::internal::NaturalThenable<::test_transitivedependenciescompose::Top::GetFoo>(
@@ -27,9 +29,11 @@ fidl::internal::NaturalClientImpl<::test_transitivedependenciescompose::Top>::Ge
 }
 
 namespace test_transitivedependenciescompose {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_transitivedependenciescompose
+
 #ifdef __Fuchsia__
 
 ::fidl::Result<::test_transitivedependenciescompose::Top::GetFoo>
@@ -52,6 +56,7 @@ fidl::internal::NaturalSyncClientImpl<::test_transitivedependenciescompose::Top>
   fidl::internal::NaturalEventDispatcher<::test_transitivedependenciescompose::Top> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -94,9 +99,11 @@ void fidl::internal::NaturalServerDispatcher<::test_transitivedependenciescompos
                                                                                                   internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
+
 void fidl::Server<::test_transitivedependenciescompose::Top>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_transitivedependenciescompose::Top>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__

@@ -25,6 +25,7 @@ class SimpleProtocolAddTopResponse;
 
 class SimpleProtocol;
 using SimpleProtocolHandle = ::fidl::InterfaceHandle<SimpleProtocol>;
+
 #endif  // __Fuchsia__
 
 class StructWithNullableProtocol;
@@ -103,6 +104,7 @@ inline zx_status_t Clone(const ::test::nullable::StructWithNullableHandle& _valu
 }
 
 using StructWithNullableHandlePtr = ::std::unique_ptr<StructWithNullableHandle>;
+
 #endif  // __Fuchsia__
 
 class SimpleProtocolAddRequest final {
@@ -155,6 +157,7 @@ namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_nullable_SimpleProtocolAddRequestTable;
 
 }  // namespace _internal
+
 class SimpleProtocol_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage Add(::fidl::MessageEncoder* _encoder, int32_t* a, int32_t* b) {
@@ -173,6 +176,7 @@ namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_nullable_SimpleProtocolAddTopResponseTable;
 
 }  // namespace _internal
+
 class SimpleProtocol_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage Add(::fidl::MessageEncoder* _encoder, int32_t* sum) {
@@ -186,6 +190,7 @@ class SimpleProtocol_ResponseEncoder {
     return _encoder->GetMessage();
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -210,6 +215,7 @@ inline zx_status_t Clone(const ::test::nullable::StructWithNullableProtocol& _va
 }
 
 using StructWithNullableProtocolPtr = ::std::unique_ptr<StructWithNullableProtocol>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -234,6 +240,7 @@ inline zx_status_t Clone(const ::test::nullable::StructWithNullableRequest& _val
 }
 
 using StructWithNullableRequestPtr = ::std::unique_ptr<StructWithNullableRequest>;
+
 #endif  // __Fuchsia__
 
 class Int32Wrapper final {
@@ -389,6 +396,7 @@ using StructWithNullableUnionPtr = ::std::unique_ptr<StructWithNullableUnion>;
 }  // namespace nullable
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::nullable::StructWithNullableString>
     : public EncodableCodingTraits<::test::nullable::StructWithNullableString, 16> {};
@@ -463,6 +471,7 @@ struct Equality<::test::nullable::StructWithNullableHandle> {
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -536,6 +545,7 @@ struct Equality<::test::nullable::StructWithNullableProtocol> {
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -562,6 +572,7 @@ struct Equality<::test::nullable::StructWithNullableRequest> {
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -700,6 +711,7 @@ struct Equality<::test::nullable::StructWithNullableUnion> {
 }  // namespace fidl
 namespace test {
 namespace nullable {
+
 #ifdef __Fuchsia__
 
 using SimpleProtocolPtr = ::fidl::InterfacePtr<SimpleProtocol>;
@@ -711,9 +723,12 @@ using SimpleProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<SimpleProtocol>;
 class SimpleProtocol_SyncProxy;
 
 namespace internal {
+
 constexpr uint64_t kSimpleProtocol_Add_Ordinal = 0x7ee19cf19ae30276lu;
+
 constexpr ::fidl::MessageDynamicFlags kSimpleProtocol_Add_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -799,6 +814,7 @@ class SimpleProtocol_SyncProxy : public ::test::nullable::SimpleProtocol_Sync {
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<SimpleProtocol>;
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace nullable

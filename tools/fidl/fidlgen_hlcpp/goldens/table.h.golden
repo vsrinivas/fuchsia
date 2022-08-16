@@ -3358,6 +3358,7 @@ using SixtyFourOrdinalTablePtr = ::std::unique_ptr<SixtyFourOrdinalTable>;
 }  // namespace table
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::table::EmptyTable>
     : public EncodableCodingTraits<::test::table::EmptyTable, 16> {};

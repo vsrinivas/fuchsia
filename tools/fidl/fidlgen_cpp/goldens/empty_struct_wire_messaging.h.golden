@@ -18,34 +18,43 @@
 #endif  // __Fuchsia__
 
 namespace test_emptystruct {
+
 class EmptyProtocol;
 
 __LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendRequestTable;
 
 __LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolReceiveRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
 }  // namespace test_emptystruct
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_emptystruct::EmptyProtocol::Send> final {
   static constexpr uint64_t value = 1378773277029173000lu;
 };
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_emptystruct::EmptyProtocol::Receive> final {
   static constexpr uint64_t value = 2301564782476583487lu;
 };
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_emptystruct::EmptyProtocol::SendAndReceive> final {
   static constexpr uint64_t value = 534401212734647530lu;
 };
 
 namespace test_emptystruct {
+
 }  // namespace test_emptystruct
+
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_emptystruct::EmptyProtocol> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -66,6 +75,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_emptystruct::EmptyProtocol>
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -527,6 +537,7 @@ static_assert(sizeof(::fidl::WireResponse<::test_emptystruct::EmptyProtocol::Sen
 static_assert(offsetof(::fidl::WireResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>, e) == 0);
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> final
     : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>>> {
@@ -639,6 +650,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_emptystruct::EmptyProtocol:
  private:
   ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> decoded_;
 };
+
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_emptystruct::EmptyProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
@@ -792,10 +804,12 @@ class ::fidl::WireServer<::test_emptystruct::EmptyProtocol> : public ::fidl::int
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireWeakOnewayClientImpl<::test_emptystruct::EmptyProtocol> : public ::fidl::internal::ClientImplBase {
  public:
@@ -839,9 +853,11 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_emptystruct::EmptyProtocol
   ::fidl::WireResult<::test_emptystruct::EmptyProtocol::SendAndReceive> SendAndReceive(const ::test_emptystruct::wire::Empty& e);
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl
+
 #ifdef __Fuchsia__
 template <>
 class ::fidl::internal::WireWeakEventSender<::test_emptystruct::EmptyProtocol> : public ::fidl::internal::WeakEventSenderBase {
@@ -876,4 +892,5 @@ class ::fidl::internal::WireBufferEventSender<::test_emptystruct::EmptyProtocol>
 
   fidl::Status Receive(const ::test_emptystruct::wire::Empty& e);
 };
+
 #endif  // __Fuchsia__

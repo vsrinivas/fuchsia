@@ -9,6 +9,7 @@
 //
 namespace test {
 namespace drivertwoway {
+
 extern "C" const fidl_type_t test_drivertwoway_TwoWayAddRequestTable;
 const fidl_type_t* TwoWayAddRequest::FidlType = &test_drivertwoway_TwoWayAddRequestTable;
 

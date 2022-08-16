@@ -4,6 +4,7 @@
 #include <lib/fidl/cpp/wire/unknown_interactions.h>
 
 namespace test_requestflexibleenvelope {
+
 [[maybe_unused]] constexpr inline uint64_t kProtocol_RequestStrictResponseFlexible_Ordinal = 700529454616207123lu;
 
 [[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kProtocol_RequestStrictResponseFlexible_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
@@ -14,6 +15,7 @@ namespace test_requestflexibleenvelope {
 
 #ifdef __Fuchsia__
 }  // namespace test_requestflexibleenvelope
+
 ::fidl::internal::NaturalThenable<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
 fidl::internal::NaturalClientImpl<::test_requestflexibleenvelope::Protocol>::RequestStrictResponseFlexible(const ::fidl::Request<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>& request) const {
   return ::fidl::internal::NaturalThenable<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>(
@@ -51,9 +53,11 @@ fidl::internal::NaturalClientImpl<::test_requestflexibleenvelope::Protocol>::Req
 }
 
 namespace test_requestflexibleenvelope {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_requestflexibleenvelope
+
 #ifdef __Fuchsia__
 
 ::fidl::Result<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>
@@ -90,6 +94,7 @@ fidl::internal::NaturalSyncClientImpl<::test_requestflexibleenvelope::Protocol>:
   fidl::internal::NaturalEventDispatcher<::test_requestflexibleenvelope::Protocol> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -156,9 +161,11 @@ void fidl::internal::NaturalServerDispatcher<::test_requestflexibleenvelope::Pro
                                                                                                  internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
+
 void fidl::Server<::test_requestflexibleenvelope::Protocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_requestflexibleenvelope::Protocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__

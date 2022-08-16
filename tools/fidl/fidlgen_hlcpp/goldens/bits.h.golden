@@ -314,6 +314,7 @@ inline zx_status_t Clone(::test::bits::EmptyBits value,
 }  // namespace bits
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::bits::MyBits> {
   static constexpr size_t inline_size_v2 = sizeof(::test::bits::MyBits);

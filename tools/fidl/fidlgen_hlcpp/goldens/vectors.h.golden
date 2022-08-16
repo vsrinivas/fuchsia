@@ -39,6 +39,7 @@ using ExampleUseOfVectorsPtr = ::std::unique_ptr<ExampleUseOfVectors>;
 }  // namespace vectors
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::vectors::ExampleUseOfVectors>
     : public EncodableCodingTraits<::test::vectors::ExampleUseOfVectors, 32> {};

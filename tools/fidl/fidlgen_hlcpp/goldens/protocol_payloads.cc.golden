@@ -9,6 +9,7 @@
 //
 namespace test {
 namespace protocolpayloads {
+
 extern "C" const fidl_type_t test_protocolpayloads_LocalStructPayloadTable;
 const fidl_type_t* LocalStructPayload::FidlType = &test_protocolpayloads_LocalStructPayloadTable;
 
@@ -1644,6 +1645,7 @@ __LOCAL extern "C" const fidl_type_t test_protocolpayloads_imported_ImportStruct
 __LOCAL extern "C" const fidl_type_t test_protocolpayloads_imported_ComposedProtocolTwoWayComposedWithErrorTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocolpayloads_imported_ComposedProtocolOnComposedWithErrorRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocolpayloads_LocalStructPayloadTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocolpayloads_MainProtocolTwoWayLocalWithErrorTopResponseTable;
@@ -1653,11 +1655,15 @@ __LOCAL extern "C" const fidl_type_t test_protocolpayloads_MainProtocolOnLocalWi
 __LOCAL extern "C" const fidl_type_t test_protocolpayloads_MainProtocolTwoWayImportWithErrorTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocolpayloads_MainProtocolOnImportWithErrorRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocolpayloads_MainProtocolOneWayAnonRequestTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocolpayloads_MainProtocolTwoWayAnonRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocolpayloads_MainProtocolTwoWayAnonTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocolpayloads_MainProtocolTwoWayAnonWithErrorRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocolpayloads_MainProtocolTwoWayAnonWithErrorTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocolpayloads_MainProtocolOnAnonRequestTable;
@@ -1665,6 +1671,7 @@ __LOCAL extern "C" const fidl_type_t test_protocolpayloads_MainProtocolOnAnonReq
 __LOCAL extern "C" const fidl_type_t test_protocolpayloads_MainProtocolOnAnonWithErrorRequestTable;
 
 }  // namespace _internal
+
 MainProtocol::~MainProtocol() = default;
 
 const fidl_type_t* ::test::protocolpayloads::MainProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
@@ -2512,6 +2519,7 @@ zx_status_t MainProtocol_SyncProxy::TwoWayAnonWithError(uint32_t a, uint32_t b, 
   *out_result = ::fidl::DecodeAs<::test::protocolpayloads::MainProtocol_TwoWayAnonWithError_Result>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 }  // namespace protocolpayloads

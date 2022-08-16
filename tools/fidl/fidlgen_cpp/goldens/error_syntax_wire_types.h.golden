@@ -26,6 +26,7 @@
 namespace test_errorsyntax {
 
 namespace wire {
+
 struct ExampleUseOfErrorSyntaxCallWhichMayFailRequest;
 
 struct ExampleUseOfErrorSyntaxCallWhichMayFailResponse;

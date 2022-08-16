@@ -5,6 +5,7 @@
 #include <memory>
 
 namespace test_protocolpayloads {
+
 [[maybe_unused]] constexpr uint64_t kMainProtocol_OneWayComposed_Ordinal = 2602591870026304272lu;
 
 [[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kMainProtocol_OneWayComposed_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
@@ -142,6 +143,7 @@ extern "C" const fidl_type_t test_protocolpayloads_MainProtocolOnAnonRequestTabl
 extern "C" const fidl_type_t test_protocolpayloads_MainProtocolOnAnonWithErrorRequestTable;
 #ifdef __Fuchsia__
 }  // namespace test_protocolpayloads
+
 ::fidl::WireResult<::test_protocolpayloads::MainProtocol::OneWayComposed>::WireResult(
     ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayComposed>* request) {
@@ -153,10 +155,12 @@ extern "C" const fidl_type_t test_protocolpayloads_MainProtocolOnAnonWithErrorRe
   SetStatus(outgoing);
 }
 namespace test_protocolpayloads {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolpayloads
+
 ::fidl::WireUnownedResult<::test_protocolpayloads::MainProtocol::OneWayComposed>::WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayComposed>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_protocolpayloads::MainProtocol::OneWayComposed>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -175,10 +179,12 @@ namespace test_protocolpayloads {
   SetStatus(outgoing);
 }
 namespace test_protocolpayloads {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolpayloads
+
 ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayComposed>::WireResult(
     ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposed>* request, std::optional<zx::time> deadline) {
@@ -199,10 +205,12 @@ namespace test_protocolpayloads {
   }
 }
 namespace test_protocolpayloads {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolpayloads
+
 ::fidl::WireUnownedResult<::test_protocolpayloads::MainProtocol::TwoWayComposed>::WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposed>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_protocolpayloads::MainProtocol::TwoWayComposed>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -234,10 +242,12 @@ namespace test_protocolpayloads {
   }
 }
 namespace test_protocolpayloads {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolpayloads
+
 ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::WireResult(
     ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>* request, std::optional<zx::time> deadline) {
@@ -258,10 +268,12 @@ namespace test_protocolpayloads {
   }
 }
 namespace test_protocolpayloads {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolpayloads
+
 ::fidl::WireUnownedResult<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -293,10 +305,12 @@ namespace test_protocolpayloads {
   }
 }
 namespace test_protocolpayloads {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolpayloads
+
 ::fidl::WireResult<::test_protocolpayloads::MainProtocol::OneWayLocal>::WireResult(
     ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayLocal>* request) {
@@ -308,10 +322,12 @@ namespace test_protocolpayloads {
   SetStatus(outgoing);
 }
 namespace test_protocolpayloads {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolpayloads
+
 ::fidl::WireUnownedResult<::test_protocolpayloads::MainProtocol::OneWayLocal>::WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayLocal>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_protocolpayloads::MainProtocol::OneWayLocal>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -330,10 +346,12 @@ namespace test_protocolpayloads {
   SetStatus(outgoing);
 }
 namespace test_protocolpayloads {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolpayloads
+
 ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayLocal>::WireResult(
     ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>* request, std::optional<zx::time> deadline) {
@@ -354,10 +372,12 @@ namespace test_protocolpayloads {
   }
 }
 namespace test_protocolpayloads {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolpayloads
+
 ::fidl::WireUnownedResult<::test_protocolpayloads::MainProtocol::TwoWayLocal>::WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_protocolpayloads::MainProtocol::TwoWayLocal>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -389,10 +409,12 @@ namespace test_protocolpayloads {
   }
 }
 namespace test_protocolpayloads {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolpayloads
+
 ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::WireResult(
     ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>* request, std::optional<zx::time> deadline) {
@@ -413,10 +435,12 @@ namespace test_protocolpayloads {
   }
 }
 namespace test_protocolpayloads {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolpayloads
+
 ::fidl::WireUnownedResult<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -448,10 +472,12 @@ namespace test_protocolpayloads {
   }
 }
 namespace test_protocolpayloads {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolpayloads
+
 ::fidl::WireResult<::test_protocolpayloads::MainProtocol::OneWayImport>::WireResult(
     ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayImport>* request) {
@@ -463,10 +489,12 @@ namespace test_protocolpayloads {
   SetStatus(outgoing);
 }
 namespace test_protocolpayloads {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolpayloads
+
 ::fidl::WireUnownedResult<::test_protocolpayloads::MainProtocol::OneWayImport>::WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayImport>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_protocolpayloads::MainProtocol::OneWayImport>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -485,10 +513,12 @@ namespace test_protocolpayloads {
   SetStatus(outgoing);
 }
 namespace test_protocolpayloads {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolpayloads
+
 ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayImport>::WireResult(
     ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImport>* request, std::optional<zx::time> deadline) {
@@ -509,10 +539,12 @@ namespace test_protocolpayloads {
   }
 }
 namespace test_protocolpayloads {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolpayloads
+
 ::fidl::WireUnownedResult<::test_protocolpayloads::MainProtocol::TwoWayImport>::WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImport>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_protocolpayloads::MainProtocol::TwoWayImport>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -544,10 +576,12 @@ namespace test_protocolpayloads {
   }
 }
 namespace test_protocolpayloads {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolpayloads
+
 ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>::WireResult(
     ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>* request, std::optional<zx::time> deadline) {
@@ -568,10 +602,12 @@ namespace test_protocolpayloads {
   }
 }
 namespace test_protocolpayloads {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolpayloads
+
 ::fidl::WireUnownedResult<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>::WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -603,10 +639,12 @@ namespace test_protocolpayloads {
   }
 }
 namespace test_protocolpayloads {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolpayloads
+
 ::fidl::WireResult<::test_protocolpayloads::MainProtocol::OneWayAnon>::WireResult(
     ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayAnon>* request) {
@@ -618,10 +656,12 @@ namespace test_protocolpayloads {
   SetStatus(outgoing);
 }
 namespace test_protocolpayloads {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolpayloads
+
 ::fidl::WireUnownedResult<::test_protocolpayloads::MainProtocol::OneWayAnon>::WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayAnon>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_protocolpayloads::MainProtocol::OneWayAnon>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -640,10 +680,12 @@ namespace test_protocolpayloads {
   SetStatus(outgoing);
 }
 namespace test_protocolpayloads {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolpayloads
+
 ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayAnon>::WireResult(
     ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>* request, std::optional<zx::time> deadline) {
@@ -664,10 +706,12 @@ namespace test_protocolpayloads {
   }
 }
 namespace test_protocolpayloads {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolpayloads
+
 ::fidl::WireUnownedResult<::test_protocolpayloads::MainProtocol::TwoWayAnon>::WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_protocolpayloads::MainProtocol::TwoWayAnon>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -699,10 +743,12 @@ namespace test_protocolpayloads {
   }
 }
 namespace test_protocolpayloads {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolpayloads
+
 ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::WireResult(
     ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>* request, std::optional<zx::time> deadline) {
@@ -723,10 +769,12 @@ namespace test_protocolpayloads {
   }
 }
 namespace test_protocolpayloads {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolpayloads
+
 ::fidl::WireUnownedResult<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -758,9 +806,11 @@ namespace test_protocolpayloads {
   }
 }
 namespace test_protocolpayloads {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_protocolpayloads
+
 #ifdef __Fuchsia__
 
 ::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_protocolpayloads::MainProtocol>::OneWayComposed(int32_t a) {
@@ -1011,6 +1061,7 @@ fidl::internal::WireWeakSyncClientImpl<::test_protocolpayloads::MainProtocol>::T
         return ::fidl::WireResult<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>(::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol>(_transport->get<::fidl::internal::ChannelTransport>()), &_request);
       });
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1119,6 +1170,7 @@ fidl::internal::WireEventDispatcher<::test_protocolpayloads::MainProtocol>::Disp
       return ::fidl::Status::UnknownOrdinal();
   }
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1321,11 +1373,13 @@ void fidl::internal::WireServerDispatcher<::test_protocolpayloads::MainProtocol>
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
+
 void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_protocolpayloads::MainProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1364,6 +1418,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtoc
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1428,6 +1483,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtoc
 void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>::ReplyError(uint32_t error) {
   return MakeReply(::test_protocolpayloads_imported::wire::ComposedProtocolTwoWayComposedWithErrorResult::WithErr(std::move(error)));
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1466,6 +1522,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtoc
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1532,6 +1589,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtoc
 void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>::ReplyError(uint32_t error) {
   return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayLocalWithErrorResult::WithErr(std::move(error)));
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1570,6 +1628,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtoc
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1634,6 +1693,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtoc
 void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>::ReplyError(uint32_t error) {
   return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayImportWithErrorResult::WithErr(std::move(error)));
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1672,6 +1732,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtoc
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1738,6 +1799,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtoc
 void fidl::internal::WireBufferCompleterImpl<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>::ReplyError(uint32_t error) {
   return MakeReply(::test_protocolpayloads::wire::MainProtocolTwoWayAnonWithErrorResult::WithErr(std::move(error)));
 }
+
 #endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayComposed>::_InitHeader() {

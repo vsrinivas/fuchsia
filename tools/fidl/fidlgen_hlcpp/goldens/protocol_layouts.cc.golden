@@ -9,6 +9,7 @@
 //
 namespace test {
 namespace protocollayouts {
+
 extern "C" const fidl_type_t test_protocollayouts_LocalTablePayloadTable;
 const fidl_type_t* LocalTablePayload::FidlType = &test_protocollayouts_LocalTablePayloadTable;
 
@@ -2634,13 +2635,17 @@ namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_imported_ComposedProtocolOneWayAnonComposedRequestTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedWithErrorRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedWithErrorTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_imported_ComposedProtocolOnAnonComposedRequestTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_imported_ComposedProtocolOnAnonComposedWithErrorRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_imported_ImportTablePayloadTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_imported_ImportUnionPayloadTable;
@@ -2652,6 +2657,7 @@ __LOCAL extern "C" const fidl_type_t test_protocollayouts_imported_ComposedProto
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_MainProtocolTwoWayImportWithErrorTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnImportWithErrorRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_LocalTablePayloadTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_LocalUnionPayloadTable;
@@ -2659,11 +2665,15 @@ __LOCAL extern "C" const fidl_type_t test_protocollayouts_LocalUnionPayloadTable
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_MainProtocolTwoWayLocalWithErrorTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnLocalWithErrorRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_MainProtocolOneWayAnonRequestTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_MainProtocolTwoWayAnonRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_MainProtocolTwoWayAnonResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_MainProtocolTwoWayAnonWithErrorRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_MainProtocolTwoWayAnonWithErrorTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnAnonRequestTable;
@@ -2671,6 +2681,7 @@ __LOCAL extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnAnonRequ
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnAnonWithErrorRequestTable;
 
 }  // namespace _internal
+
 MainProtocol::~MainProtocol() = default;
 
 const fidl_type_t* ::test::protocollayouts::MainProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
@@ -3705,6 +3716,7 @@ zx_status_t MainProtocol_SyncProxy::TwoWayAnonWithError(::test::protocollayouts:
   *out_result = ::fidl::DecodeAs<::test::protocollayouts::MainProtocol_TwoWayAnonWithError_Result>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 }  // namespace protocollayouts

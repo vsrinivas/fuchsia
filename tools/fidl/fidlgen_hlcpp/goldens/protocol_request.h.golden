@@ -15,6 +15,7 @@ namespace protocolrequest {
 
 class Child;
 using ChildHandle = ::fidl::InterfaceHandle<Child>;
+
 #endif  // __Fuchsia__
 
 class ParentGetChildTopResponse;
@@ -29,6 +30,7 @@ class ParentTakeChildRequestRequest;
 
 class Parent;
 using ParentHandle = ::fidl::InterfaceHandle<Parent>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -40,6 +42,7 @@ class Child_RequestEncoder {
 class Child_ResponseEncoder {
  public:
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -64,6 +67,7 @@ inline zx_status_t Clone(const ::test::protocolrequest::ParentGetChildTopRespons
 }
 
 using ParentGetChildTopResponsePtr = ::std::unique_ptr<ParentGetChildTopResponse>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -88,6 +92,7 @@ inline zx_status_t Clone(const ::test::protocolrequest::ParentGetChildRequestTop
 }
 
 using ParentGetChildRequestTopResponsePtr = ::std::unique_ptr<ParentGetChildRequestTopResponse>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -112,6 +117,7 @@ inline zx_status_t Clone(const ::test::protocolrequest::ParentTakeChildRequest& 
 }
 
 using ParentTakeChildRequestPtr = ::std::unique_ptr<ParentTakeChildRequest>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -136,15 +142,18 @@ inline zx_status_t Clone(const ::test::protocolrequest::ParentTakeChildRequestRe
 }
 
 using ParentTakeChildRequestRequestPtr = ::std::unique_ptr<ParentTakeChildRequestRequest>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequestRequestTable;
 
 }  // namespace _internal
+
 class Parent_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage GetChild(::fidl::MessageEncoder* _encoder) {
@@ -180,9 +189,11 @@ class Parent_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentGetChildTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentGetChildRequestTopResponseTable;
 
 }  // namespace _internal
+
 class Parent_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage GetChild(::fidl::MessageEncoder* _encoder, ::fidl::InterfaceHandle<::test::protocolrequest::Child>* c) {
@@ -212,11 +223,13 @@ class Parent_ResponseEncoder {
     return _encoder->GetMessage();
   }
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace protocolrequest
 }  // namespace test
 namespace fidl {
+
 #ifdef __Fuchsia__
 
 template <>
@@ -241,6 +254,7 @@ struct Equality<::test::protocolrequest::ParentGetChildTopResponse> {
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -267,6 +281,7 @@ struct Equality<::test::protocolrequest::ParentGetChildRequestTopResponse> {
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -293,6 +308,7 @@ struct Equality<::test::protocolrequest::ParentTakeChildRequest> {
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -319,6 +335,7 @@ struct Equality<::test::protocolrequest::ParentTakeChildRequestRequest> {
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 //
@@ -327,6 +344,7 @@ struct Equality<::test::protocolrequest::ParentTakeChildRequestRequest> {
 }  // namespace fidl
 namespace test {
 namespace protocolrequest {
+
 #ifdef __Fuchsia__
 
 using ChildPtr = ::fidl::InterfacePtr<Child>;
@@ -350,15 +368,24 @@ using ParentSyncPtr = ::fidl::SynchronousInterfacePtr<Parent>;
 class Parent_SyncProxy;
 
 namespace internal {
+
 constexpr uint64_t kParent_GetChild_Ordinal = 0xc3cd963aafc873blu;
+
 constexpr ::fidl::MessageDynamicFlags kParent_GetChild_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kParent_GetChildRequest_Ordinal = 0xf38d08d64f71c79lu;
+
 constexpr ::fidl::MessageDynamicFlags kParent_GetChildRequest_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kParent_TakeChild_Ordinal = 0x3e08fd7ca04b2290lu;
+
 constexpr ::fidl::MessageDynamicFlags kParent_TakeChild_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kParent_TakeChildRequest_Ordinal = 0x2063f76b1bb45f87lu;
+
 constexpr ::fidl::MessageDynamicFlags kParent_TakeChildRequest_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -433,6 +460,7 @@ class Child_SyncProxy : public ::test::protocolrequest::Child_Sync {
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<Child>;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -545,6 +573,7 @@ class Parent_SyncProxy : public ::test::protocolrequest::Parent_Sync {
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<Parent>;
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace protocolrequest

@@ -18,23 +18,29 @@
 #endif  // __Fuchsia__
 
 namespace test_error {
+
 class Example;
 
 __LOCAL extern "C" const fidl_type_t test_error_ExampleFooRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_error_ExampleFooTopResponseTable;
 }  // namespace test_error
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_error::Example::Foo> final {
   static constexpr uint64_t value = 1107623248440401476lu;
 };
 
 namespace test_error {
+
 }  // namespace test_error
+
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_error::Example> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -55,6 +61,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_error::Example> final {
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -303,6 +310,7 @@ static_assert(sizeof(::fidl::WireResponse<::test_error::Example::Foo>) == TypeTr
 static_assert(offsetof(::fidl::WireResponse<::test_error::Example::Foo>, result) == 0);
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> final
     : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>>> {
@@ -387,6 +395,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_error::Example::Foo> final 
  private:
   ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> decoded_;
 };
+
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_error::Example> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
@@ -521,10 +530,12 @@ class ::fidl::WireServer<::test_error::Example> : public ::fidl::internal::Incom
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireWeakOnewayClientImpl<::test_error::Example> : public ::fidl::internal::ClientImplBase {
  public:
@@ -562,9 +573,11 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_error::Example> final : pu
   ::fidl::WireResult<::test_error::Example::Foo> Foo(::fidl::StringView s);
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl
+
 #ifdef __Fuchsia__
 template <>
 class ::fidl::internal::WireWeakEventSender<::test_error::Example> : public ::fidl::internal::WeakEventSenderBase {
@@ -591,4 +604,5 @@ class ::fidl::internal::WireBufferEventSender<::test_error::Example>
  public:
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
+
 #endif  // __Fuchsia__

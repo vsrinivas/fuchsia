@@ -3,8 +3,10 @@
 #include <fidl/test.enum/cpp/common_types.h>
 
 namespace test_enum {
+
 extern "C" const fidl_type_t test_enum_MyStrictEnumTable;
 }  // namespace test_enum
+
 size_t fidl::internal::DisplayError<::test_enum::MyStrictEnum>::Format(
     const ::test_enum::MyStrictEnum& value, char* destination, size_t capacity) {
   const char* name = [&]() -> const char* {
@@ -22,8 +24,10 @@ size_t fidl::internal::DisplayError<::test_enum::MyStrictEnum>::Format(
 }
 
 namespace test_enum {
+
 extern "C" const fidl_type_t test_enum_MyFlexibleEnumTable;
 }  // namespace test_enum
+
 size_t fidl::internal::DisplayError<::test_enum::MyFlexibleEnum>::Format(
     const ::test_enum::MyFlexibleEnum& value, char* destination, size_t capacity) {
   const char* name = [&]() -> const char* {
@@ -41,8 +45,10 @@ size_t fidl::internal::DisplayError<::test_enum::MyFlexibleEnum>::Format(
 }
 
 namespace test_enum {
+
 extern "C" const fidl_type_t test_enum_MyFlexibleEnumWithCustomUnknownTable;
 }  // namespace test_enum
+
 size_t fidl::internal::DisplayError<::test_enum::MyFlexibleEnumWithCustomUnknown>::Format(
     const ::test_enum::MyFlexibleEnumWithCustomUnknown& value, char* destination, size_t capacity) {
   const char* name = [&]() -> const char* {
@@ -62,8 +68,10 @@ size_t fidl::internal::DisplayError<::test_enum::MyFlexibleEnumWithCustomUnknown
 }
 
 namespace test_enum {
+
 extern "C" const fidl_type_t test_enum_MyEmptyFlexibleEnumTable;
 }  // namespace test_enum
+
 size_t fidl::internal::DisplayError<::test_enum::MyEmptyFlexibleEnum>::Format(
     const ::test_enum::MyEmptyFlexibleEnum& value, char* destination, size_t capacity) {
   const char* name = [&]() -> const char* {

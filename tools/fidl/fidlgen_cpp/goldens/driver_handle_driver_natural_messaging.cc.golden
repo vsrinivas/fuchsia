@@ -19,19 +19,23 @@ void fidl::internal::NaturalServerDispatcher<::test_driverhandle::DriverProtocol
                                                                                             internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
+
 void fdf::Server<::test_driverhandle::DriverProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_driverhandle::DriverProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 namespace test_driverhandle {
+
 [[maybe_unused]] constexpr inline uint64_t kHandlesInProtocol_SendHandles_Ordinal = 8904504160365833729lu;
 
 [[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kHandlesInProtocol_SendHandles_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 #ifdef __Fuchsia__
 }  // namespace test_driverhandle
+
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_driverhandle::HandlesInProtocol>::SendHandles(::fidl::Request<::test_driverhandle::HandlesInProtocol::SendHandles> request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
@@ -55,8 +59,10 @@ fidl::internal::NaturalClientImpl<::test_driverhandle::HandlesInProtocol>::SendH
   return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_driverhandle {
+
 #endif  // __Fuchsia__
 }  // namespace test_driverhandle
+
 #ifdef __Fuchsia__
 
 #endif  // __Fuchsia__
@@ -88,9 +94,11 @@ void fidl::internal::NaturalServerDispatcher<::test_driverhandle::HandlesInProto
                                                                                                internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
+
 void fdf::Server<::test_driverhandle::HandlesInProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_driverhandle::HandlesInProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__

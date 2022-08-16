@@ -18,27 +18,33 @@
 #endif  // __Fuchsia__
 
 namespace test_doccomments {
+
 class Interface;
 
 class Service;
 
 }  // namespace test_doccomments
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_doccomments::Interface::Method> final {
   static constexpr uint64_t value = 5017051197196532121lu;
 };
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_doccomments::Interface::OnEvent> final {
   static constexpr uint64_t value = 28780186509098736lu;
 };
 
 namespace test_doccomments {
+
 }  // namespace test_doccomments
+
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_doccomments::Interface> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -59,6 +65,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_doccomments::Interface> fin
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -219,6 +226,7 @@ struct TypeTraits<::fidl::WireEvent<::test_doccomments::Interface::OnEvent>> {
 };
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::IncomingEventsHandleStorage<::test_doccomments::Interface> final : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_doccomments::Interface>> {
  public:
@@ -262,6 +270,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_doccomments::Interface::Met
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };
+
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_doccomments::Interface> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
@@ -376,6 +385,7 @@ class ::fidl::WireServer<::test_doccomments::Interface> : public ::fidl::interna
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl
@@ -461,6 +471,7 @@ namespace fidl {
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireWeakOnewayClientImpl<::test_doccomments::Interface> : public ::fidl::internal::ClientImplBase {
  public:
@@ -504,9 +515,11 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_doccomments::Interface> fi
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl
+
 #ifdef __Fuchsia__
 template <>
 class ::fidl::internal::WireWeakEventSender<::test_doccomments::Interface> : public ::fidl::internal::WeakEventSenderBase {
@@ -553,4 +566,5 @@ class ::fidl::internal::WireBufferEventSender<::test_doccomments::Interface>
   /// event comment #3
   fidl::Status OnEvent();
 };
+
 #endif  // __Fuchsia__

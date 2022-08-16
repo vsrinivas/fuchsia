@@ -4,6 +4,7 @@
 #include <lib/fidl/cpp/wire/unknown_interactions.h>
 
 namespace test_emptystruct {
+
 [[maybe_unused]] constexpr inline uint64_t kEmptyProtocol_Send_Ordinal = 1378773277029173000lu;
 
 [[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kEmptyProtocol_Send_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
@@ -18,6 +19,7 @@ namespace test_emptystruct {
 
 #ifdef __Fuchsia__
 }  // namespace test_emptystruct
+
 ::fidl::internal::NaturalThenable<::test_emptystruct::EmptyProtocol::SendAndReceive>
 fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol>::SendAndReceive(const ::fidl::Request<::test_emptystruct::EmptyProtocol::SendAndReceive>& request) const {
   return ::fidl::internal::NaturalThenable<::test_emptystruct::EmptyProtocol::SendAndReceive>(
@@ -48,9 +50,11 @@ fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol>::Send(const
   return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_emptystruct {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_emptystruct
+
 #ifdef __Fuchsia__
 
 ::fidl::Result<::test_emptystruct::EmptyProtocol::SendAndReceive>
@@ -107,6 +111,7 @@ fidl::internal::NaturalEventDispatcher<::test_emptystruct::EmptyProtocol>::Dispa
       return ::fidl::Status::UnknownOrdinal();
   }
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -184,9 +189,11 @@ void fidl::internal::NaturalServerDispatcher<::test_emptystruct::EmptyProtocol>:
                                                                                           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
+
 void fidl::Server<::test_emptystruct::EmptyProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_emptystruct::EmptyProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__

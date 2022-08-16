@@ -37,6 +37,7 @@ using ByteAndBytesPtr = ::std::unique_ptr<ByteAndBytes>;
 }  // namespace byteandbytes
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::byteandbytes::ByteAndBytes>
     : public EncodableCodingTraits<::test::byteandbytes::ByteAndBytes, 1> {};

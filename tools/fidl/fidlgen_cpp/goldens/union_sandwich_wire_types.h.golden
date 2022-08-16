@@ -24,6 +24,7 @@
 namespace test_unionsandwich {
 
 namespace wire {
+
 struct SandwichUnionSize8Alignment4;
 
 struct SandwichUnionSize12Alignment4;

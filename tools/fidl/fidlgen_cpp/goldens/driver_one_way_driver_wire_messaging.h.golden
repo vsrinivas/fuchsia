@@ -18,23 +18,28 @@
 #endif  // __Fuchsia__
 
 namespace test_driveroneway {
+
 class OneWay;
 
 __LOCAL extern "C" const fidl_type_t test_driveroneway_OneWaySendRequestTable;
 
 }  // namespace test_driveroneway
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_driveroneway::OneWay::Send> final {
   static constexpr uint64_t value = 7942965975761529343lu;
 };
 
 namespace test_driveroneway {
+
 }  // namespace test_driveroneway
+
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_driveroneway::OneWay> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -55,6 +60,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_driveroneway::OneWay> final
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -181,6 +187,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_driveroneway::OneWay::Send> 
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };
+
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_driveroneway::OneWay> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
@@ -242,6 +249,7 @@ class ::fdf::WireServer<::test_driveroneway::OneWay> : public ::fidl::internal::
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -281,6 +289,7 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_driveroneway::OneWay> fina
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl

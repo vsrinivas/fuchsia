@@ -3,8 +3,10 @@
 #include <fidl/test.protocols/cpp/common_types.h>
 
 namespace test_protocols {
+
 extern "C" const fidl_type_t test_protocols_ErrorEnumTable;
 }  // namespace test_protocols
+
 size_t fidl::internal::DisplayError<::test_protocols::ErrorEnum>::Format(
     const ::test_protocols::ErrorEnum& value, char* destination, size_t capacity) {
   const char* name = [&]() -> const char* {

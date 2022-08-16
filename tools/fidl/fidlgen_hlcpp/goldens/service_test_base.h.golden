@@ -6,6 +6,7 @@
 namespace test {
 namespace service {
 namespace testing {
+
 class FirstProtocol_TestBase : public ::test::service::FirstProtocol {
  public:
   virtual ~FirstProtocol_TestBase() {}

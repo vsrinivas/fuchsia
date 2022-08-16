@@ -260,10 +260,12 @@ class Table;
 /// interface comment #3
 class Interface;
 using InterfaceHandle = ::fidl::InterfaceHandle<Interface>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 class Service;
+
 #endif  // __Fuchsia__
 
 /// const comment #1
@@ -583,11 +585,13 @@ class Interface_ResponseEncoder {
     return _encoder->GetMessage();
   }
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace doccomments
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::doccomments::MyStrictBits> {
   static constexpr size_t inline_size_v2 = sizeof(::test::doccomments::MyStrictBits);
@@ -862,6 +866,7 @@ struct Equality<::test::doccomments::Table> {
 }  // namespace fidl
 namespace test {
 namespace doccomments {
+
 #ifdef __Fuchsia__
 
 /// interface comment #1
@@ -876,15 +881,21 @@ using InterfaceSyncPtr = ::fidl::SynchronousInterfacePtr<Interface>;
 class Interface_SyncProxy;
 
 namespace internal {
+
 constexpr uint64_t kInterface_Method_Ordinal = 0x45a0257b7cd8f999lu;
+
 constexpr ::fidl::MessageDynamicFlags kInterface_Method_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kInterface_OnEvent_Ordinal = 0x663f6d5971bef0lu;
+
 constexpr ::fidl::MessageDynamicFlags kInterface_OnEvent_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 class Service;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -979,6 +990,7 @@ class Interface_SyncProxy : public ::test::doccomments::Interface_Sync {
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<Interface>;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1024,6 +1036,7 @@ class Service::Handler final {
  private:
   ::fidl::ServiceHandlerBase* const service_;
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace doccomments

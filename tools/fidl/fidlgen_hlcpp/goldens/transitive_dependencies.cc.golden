@@ -9,6 +9,7 @@
 //
 namespace test {
 namespace transitivedependencies {
+
 extern "C" const fidl_type_t test_transitivedependencies_BazTable;
 const fidl_type_t* Baz::FidlType = &test_transitivedependencies_BazTable;
 

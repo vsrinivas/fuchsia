@@ -9,6 +9,7 @@
 //
 namespace test {
 namespace consts {
+
 const char* USERNAME = "\"squeenze\"";
 
 //

@@ -6,6 +6,7 @@
 namespace test {
 namespace inheritancewithrecursivedecl {
 namespace testing {
+
 class Parent_TestBase : public ::test::inheritancewithrecursivedecl::Parent {
  public:
   virtual ~Parent_TestBase() {}

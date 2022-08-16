@@ -25,6 +25,7 @@
 namespace test_driveroneway {
 
 namespace wire {
+
 struct Payload;
 
 struct OneWaySendRequest;

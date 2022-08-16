@@ -8,6 +8,7 @@
 #ifdef __Fuchsia__
 #include <fidl/test.errorsyntax/cpp/natural_messaging.h>
 #include <fidl/test.errorsyntax/cpp/wire_messaging.h>
+
 #endif  // __Fuchsia__
 #include <fidl/test.errorsyntax.parent/cpp/type_conversions.h>
 #include <lib/fidl/cpp/wire_natural_conversions.h>
@@ -145,6 +146,7 @@ template <>
 struct WireTypeForNaturalType<::fidl::Response<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> {
   using type = ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>;
 };
+
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

@@ -6,6 +6,7 @@
 namespace test {
 namespace anonymous {
 namespace testing {
+
 class SomeProtocol_TestBase : public ::test::anonymous::SomeProtocol {
  public:
   virtual ~SomeProtocol_TestBase() {}

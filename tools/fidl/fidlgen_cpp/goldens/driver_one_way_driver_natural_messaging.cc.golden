@@ -1,11 +1,13 @@
 #include <fidl/test.driveroneway/cpp/driver/natural_messaging.h>
 #include <lib/fidl_driver/cpp/unknown_interactions.h>
 namespace test_driveroneway {
+
 [[maybe_unused]] constexpr inline uint64_t kOneWay_Send_Ordinal = 7942965975761529343lu;
 
 [[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kOneWay_Send_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 #ifdef __Fuchsia__
 }  // namespace test_driveroneway
+
 ::fitx::result<::fidl::Error>
 fidl::internal::NaturalClientImpl<::test_driveroneway::OneWay>::Send(const ::fidl::Request<::test_driveroneway::OneWay::Send>& request) const {
   ::fidl::internal::NaturalMessageEncoder _encoder{
@@ -29,8 +31,10 @@ fidl::internal::NaturalClientImpl<::test_driveroneway::OneWay>::Send(const ::fid
   return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_driveroneway {
+
 #endif  // __Fuchsia__
 }  // namespace test_driveroneway
+
 #ifdef __Fuchsia__
 
 #endif  // __Fuchsia__
@@ -62,9 +66,11 @@ void fidl::internal::NaturalServerDispatcher<::test_driveroneway::OneWay>::Dispa
                                                                                     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
+
 void fdf::Server<::test_driveroneway::OneWay>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_driveroneway::OneWay>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__

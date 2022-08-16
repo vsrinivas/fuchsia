@@ -3,8 +3,10 @@
 #include <fidl/test.typealiases/cpp/common_types.h>
 
 namespace test_typealiases {
+
 extern "C" const fidl_type_t test_typealiases_obj_typeTable;
 }  // namespace test_typealiases
+
 size_t fidl::internal::DisplayError<::test_typealiases::ObjType>::Format(
     const ::test_typealiases::ObjType& value, char* destination, size_t capacity) {
   const char* name = [&]() -> const char* {

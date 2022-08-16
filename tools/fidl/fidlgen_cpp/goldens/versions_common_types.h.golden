@@ -9,6 +9,7 @@
 #include <cinttypes>
 
 namespace test_versions {
+
 // |Bits| is flexible, hence may contain unknown members not
 // defined in the FIDL schema.
 class Bits final {
@@ -122,6 +123,7 @@ constexpr const ::test_versions::Enum Enum::kA =
     ::test_versions::Enum(1u);
 
 }  // namespace test_versions
+
 template <>
 struct fidl::internal::DisplayError<::test_versions::Enum> {
   static size_t Format(const ::test_versions::Enum& value, char* destination, size_t capacity);

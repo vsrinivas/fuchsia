@@ -4,6 +4,7 @@
 #include <lib/fidl/cpp/wire/unknown_interactions.h>
 
 namespace test_protocollayouts {
+
 [[maybe_unused]] constexpr inline uint64_t kMainProtocol_OneWayAnonComposed_Ordinal = 467706262354916833lu;
 
 [[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kMainProtocol_OneWayAnonComposed_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
@@ -106,6 +107,7 @@ namespace test_protocollayouts {
 
 #ifdef __Fuchsia__
 }  // namespace test_protocollayouts
+
 ::fidl::internal::NaturalThenable<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
 fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::TwoWayAnonComposed(const ::fidl::Request<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>& request) const {
   return ::fidl::internal::NaturalThenable<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>(
@@ -346,9 +348,11 @@ fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol>::OneWayA
   return ::fidl::internal::ToFitxResult(status);
 }
 namespace test_protocollayouts {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_protocollayouts
+
 #ifdef __Fuchsia__
 
 ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>
@@ -656,6 +660,7 @@ fidl::internal::NaturalEventDispatcher<::test_protocollayouts::MainProtocol>::Di
       return ::fidl::Status::UnknownOrdinal();
   }
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1189,9 +1194,11 @@ void fidl::internal::NaturalServerDispatcher<::test_protocollayouts::MainProtoco
                                                                                              internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
+
 void fidl::Server<::test_protocollayouts::MainProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_protocollayouts::MainProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__

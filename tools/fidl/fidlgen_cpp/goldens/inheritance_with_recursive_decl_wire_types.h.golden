@@ -25,6 +25,7 @@
 namespace test_inheritancewithrecursivedecl {
 
 namespace wire {
+
 struct ParentFirstRequest;
 
 struct ChildSecondRequest;
@@ -38,6 +39,7 @@ struct ParentFirstRequest {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -49,6 +51,7 @@ struct ChildSecondRequest {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace wire
@@ -109,6 +112,7 @@ struct ::fidl::internal::WireCodingTraits<::test_inheritancewithrecursivedecl::w
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -165,6 +169,7 @@ struct ::fidl::internal::WireCodingTraits<::test_inheritancewithrecursivedecl::w
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl

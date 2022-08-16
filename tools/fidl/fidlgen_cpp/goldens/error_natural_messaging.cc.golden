@@ -4,12 +4,14 @@
 #include <lib/fidl/cpp/wire/unknown_interactions.h>
 
 namespace test_error {
+
 [[maybe_unused]] constexpr inline uint64_t kExample_foo_Ordinal = 1107623248440401476lu;
 
 [[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kExample_foo_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
 #ifdef __Fuchsia__
 }  // namespace test_error
+
 ::fidl::internal::NaturalThenable<::test_error::Example::Foo>
 fidl::internal::NaturalClientImpl<::test_error::Example>::Foo(const ::fidl::Request<::test_error::Example::Foo>& request) const {
   return ::fidl::internal::NaturalThenable<::test_error::Example::Foo>(
@@ -29,9 +31,11 @@ fidl::internal::NaturalClientImpl<::test_error::Example>::Foo(const ::fidl::Requ
 }
 
 namespace test_error {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_error
+
 #ifdef __Fuchsia__
 
 ::fidl::Result<::test_error::Example::Foo>
@@ -56,6 +60,7 @@ fidl::internal::NaturalSyncClientImpl<::test_error::Example>::Foo(const ::fidl::
   fidl::internal::NaturalEventDispatcher<::test_error::Example> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -98,9 +103,11 @@ void fidl::internal::NaturalServerDispatcher<::test_error::Example>::Dispatch(::
                                                                               internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
+
 void fidl::Server<::test_error::Example>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_error::Example>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__

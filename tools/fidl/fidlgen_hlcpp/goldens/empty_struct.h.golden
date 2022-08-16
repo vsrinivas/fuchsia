@@ -25,6 +25,7 @@ class EmptyProtocolSendAndReceiveTopResponse;
 
 class EmptyProtocol;
 using EmptyProtocolHandle = ::fidl::InterfaceHandle<EmptyProtocol>;
+
 #endif  // __Fuchsia__
 
 class Empty final {
@@ -140,6 +141,7 @@ __LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendRequestTa
 __LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
 
 }  // namespace _internal
+
 class EmptyProtocol_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage Send(::fidl::MessageEncoder* _encoder, ::test::emptystruct::Empty* e) {
@@ -164,9 +166,11 @@ class EmptyProtocol_RequestEncoder {
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolReceiveRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
 
 }  // namespace _internal
+
 class EmptyProtocol_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage Receive(::fidl::MessageEncoder* _encoder, ::test::emptystruct::Empty* e) {
@@ -190,11 +194,13 @@ class EmptyProtocol_ResponseEncoder {
     return _encoder->GetMessage();
   }
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace emptystruct
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::emptystruct::Empty>
     : public EncodableCodingTraits<::test::emptystruct::Empty, 1> {};
@@ -312,6 +318,7 @@ struct Equality<::test::emptystruct::EmptyProtocolSendAndReceiveTopResponse> {
 }  // namespace fidl
 namespace test {
 namespace emptystruct {
+
 #ifdef __Fuchsia__
 
 using EmptyProtocolPtr = ::fidl::InterfacePtr<EmptyProtocol>;
@@ -323,13 +330,20 @@ using EmptyProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<EmptyProtocol>;
 class EmptyProtocol_SyncProxy;
 
 namespace internal {
+
 constexpr uint64_t kEmptyProtocol_Send_Ordinal = 0x132262fd8b200708lu;
+
 constexpr ::fidl::MessageDynamicFlags kEmptyProtocol_Send_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kEmptyProtocol_Receive_Ordinal = 0x1ff0ccf9b710e23flu;
+
 constexpr ::fidl::MessageDynamicFlags kEmptyProtocol_Receive_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kEmptyProtocol_SendAndReceive_Ordinal = 0x76a931254962cealu;
+
 constexpr ::fidl::MessageDynamicFlags kEmptyProtocol_SendAndReceive_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -429,6 +443,7 @@ class EmptyProtocol_SyncProxy : public ::test::emptystruct::EmptyProtocol_Sync {
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<EmptyProtocol>;
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace emptystruct

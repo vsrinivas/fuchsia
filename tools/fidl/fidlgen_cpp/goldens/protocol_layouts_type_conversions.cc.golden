@@ -809,6 +809,7 @@ std::unique_ptr<::test_protocollayouts::MainProtocolOnAnonWithErrorResult> WireN
   return ::fidl::WireEvent<::test_protocollayouts::MainProtocol::OnAnonWithError>(
       WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolOnAnonWithErrorRequest, ::fitx::result<uint32_t, ::test_protocollayouts::MainProtocolOnAnonWithErrorResponse>>::ToWire(arena, std::move(src)));
 }
+
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

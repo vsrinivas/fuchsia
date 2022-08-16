@@ -18,25 +18,31 @@
 #endif  // __Fuchsia__
 
 namespace test_inheritance {
+
 class Super;
 
 class Sub;
 
 __LOCAL extern "C" const fidl_type_t test_inheritance_SuperFooRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
 }  // namespace test_inheritance
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_inheritance::Super::Foo> final {
   static constexpr uint64_t value = 7540745593380780216lu;
 };
 
 namespace test_inheritance {
+
 }  // namespace test_inheritance
+
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_inheritance::Super> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -57,6 +63,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_inheritance::Super> final {
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -301,6 +308,7 @@ static_assert(sizeof(::fidl::WireResponse<::test_inheritance::Super::Foo>) == Ty
 static_assert(offsetof(::fidl::WireResponse<::test_inheritance::Super::Foo>, y) == 0);
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>> final
     : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>>> {
@@ -385,6 +393,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_inheritance::Super::Foo> fi
  private:
   ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>> decoded_;
 };
+
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_inheritance::Super> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
@@ -515,21 +524,26 @@ class ::fidl::WireServer<::test_inheritance::Super> : public ::fidl::internal::I
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_inheritance::Sub::Foo> final {
   static constexpr uint64_t value = 7540745593380780216lu;
 };
 
 namespace test_inheritance {
+
 }  // namespace test_inheritance
+
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_inheritance::Sub> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -550,6 +564,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_inheritance::Sub> final {
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -794,6 +809,7 @@ static_assert(sizeof(::fidl::WireResponse<::test_inheritance::Sub::Foo>) == Type
 static_assert(offsetof(::fidl::WireResponse<::test_inheritance::Sub::Foo>, y) == 0);
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>> final
     : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>>> {
@@ -878,6 +894,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_inheritance::Sub::Foo> fina
  private:
   ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>> decoded_;
 };
+
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_inheritance::Sub> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
@@ -1008,10 +1025,12 @@ class ::fidl::WireServer<::test_inheritance::Sub> : public ::fidl::internal::Inc
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireWeakOnewayClientImpl<::test_inheritance::Super> : public ::fidl::internal::ClientImplBase {
  public:
@@ -1049,9 +1068,11 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_inheritance::Super> final 
   ::fidl::WireResult<::test_inheritance::Super::Foo> Foo(::fidl::StringView s);
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl
+
 #ifdef __Fuchsia__
 template <>
 class ::fidl::internal::WireWeakEventSender<::test_inheritance::Super> : public ::fidl::internal::WeakEventSenderBase {
@@ -1078,6 +1099,7 @@ class ::fidl::internal::WireBufferEventSender<::test_inheritance::Super>
  public:
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1118,6 +1140,7 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_inheritance::Sub> final : 
   // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
   ::fidl::WireResult<::test_inheritance::Sub::Foo> Foo(::fidl::StringView s);
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1146,4 +1169,5 @@ class ::fidl::internal::WireBufferEventSender<::test_inheritance::Sub>
  public:
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
+
 #endif  // __Fuchsia__

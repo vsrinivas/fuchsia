@@ -5,6 +5,7 @@
 #include <memory>
 
 namespace test_foreigntypeinresponseusedthroughcompose {
+
 [[maybe_unused]] constexpr uint64_t kTop_GetFoo_Ordinal = 4619180266423108403lu;
 
 [[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kTop_GetFoo_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
@@ -12,6 +13,7 @@ namespace test_foreigntypeinresponseusedthroughcompose {
 extern "C" const fidl_type_t test_middle_MiddleGetFooTopResponseTable;
 #ifdef __Fuchsia__
 }  // namespace test_foreigntypeinresponseusedthroughcompose
+
 ::fidl::WireResult<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::WireResult(
     ::fidl::UnownedClientEnd<::test_foreigntypeinresponseusedthroughcompose::Top> client,
     ::fidl::internal::TransactionalRequest<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* request, std::optional<zx::time> deadline) {
@@ -32,10 +34,12 @@ extern "C" const fidl_type_t test_middle_MiddleGetFooTopResponseTable;
   }
 }
 namespace test_foreigntypeinresponseusedthroughcompose {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_foreigntypeinresponseusedthroughcompose
+
 ::fidl::WireUnownedResult<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::WireUnownedResult(::fidl::UnownedClientEnd<::test_foreigntypeinresponseusedthroughcompose::Top> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -67,9 +71,11 @@ namespace test_foreigntypeinresponseusedthroughcompose {
   }
 }
 namespace test_foreigntypeinresponseusedthroughcompose {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_foreigntypeinresponseusedthroughcompose
+
 #ifdef __Fuchsia__
 
 ::fidl::internal::WireThenable<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> fidl::internal::WireWeakAsyncClientImpl<::test_foreigntypeinresponseusedthroughcompose::Top>::GetFoo() {
@@ -92,6 +98,7 @@ fidl::internal::WireWeakSyncClientImpl<::test_foreigntypeinresponseusedthroughco
         return ::fidl::WireResult<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(::fidl::UnownedClientEnd<::test_foreigntypeinresponseusedthroughcompose::Top>(_transport->get<::fidl::internal::ChannelTransport>()), &_request);
       });
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -102,6 +109,7 @@ fidl::internal::WireWeakSyncClientImpl<::test_foreigntypeinresponseusedthroughco
   fidl::internal::WireEventDispatcher<::test_foreigntypeinresponseusedthroughcompose::Top> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -136,11 +144,13 @@ void fidl::internal::WireServerDispatcher<::test_foreigntypeinresponseusedthroug
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
+
 void fidl::WireServer<::test_foreigntypeinresponseusedthroughcompose::Top>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_foreigntypeinresponseusedthroughcompose::Top>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -179,6 +189,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_foreigntypeinresponseusedthr
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 #endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalRequest<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>::_InitHeader() {

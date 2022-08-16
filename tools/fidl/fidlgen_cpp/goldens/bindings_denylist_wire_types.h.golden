@@ -26,6 +26,7 @@
 namespace test_bindingsdenylist {
 
 namespace wire {
+
 struct DenyEachBindingOnlyDenyDartRequest;
 
 struct DenyEachBindingOnlyDenyDartResponse;

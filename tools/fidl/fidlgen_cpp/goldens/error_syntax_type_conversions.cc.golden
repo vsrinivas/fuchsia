@@ -105,6 +105,7 @@ std::unique_ptr<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResul
   return ::fidl::WireResponse<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>(
       WireNaturalConversionTraits<::test_errorsyntax::wire::ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse, ::fitx::result<uint32_t, ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse>>::ToWire(arena, std::move(src)));
 }
+
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

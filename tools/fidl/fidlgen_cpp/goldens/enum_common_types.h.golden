@@ -18,6 +18,7 @@ enum class MyStrictEnum : uint32_t {
 };
 
 }  // namespace test_enum
+
 template <>
 struct fidl::internal::DisplayError<::test_enum::MyStrictEnum> {
   static size_t Format(const ::test_enum::MyStrictEnum& value, char* destination, size_t capacity);
@@ -59,6 +60,7 @@ constexpr const ::test_enum::MyFlexibleEnum MyFlexibleEnum::kBar =
     ::test_enum::MyFlexibleEnum(2u);
 
 }  // namespace test_enum
+
 template <>
 struct fidl::internal::DisplayError<::test_enum::MyFlexibleEnum> {
   static size_t Format(const ::test_enum::MyFlexibleEnum& value, char* destination, size_t capacity);
@@ -104,6 +106,7 @@ constexpr const ::test_enum::MyFlexibleEnumWithCustomUnknown MyFlexibleEnumWithC
     ::test_enum::MyFlexibleEnumWithCustomUnknown(3u);
 
 }  // namespace test_enum
+
 template <>
 struct fidl::internal::DisplayError<::test_enum::MyFlexibleEnumWithCustomUnknown> {
   static size_t Format(const ::test_enum::MyFlexibleEnumWithCustomUnknown& value, char* destination, size_t capacity);
@@ -130,6 +133,7 @@ class MyEmptyFlexibleEnum final {
 };
 
 }  // namespace test_enum
+
 template <>
 struct fidl::internal::DisplayError<::test_enum::MyEmptyFlexibleEnum> {
   static size_t Format(const ::test_enum::MyEmptyFlexibleEnum& value, char* destination, size_t capacity);

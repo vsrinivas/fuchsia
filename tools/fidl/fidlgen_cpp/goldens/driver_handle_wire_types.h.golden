@@ -27,6 +27,7 @@
 namespace test_driverhandle {
 
 namespace wire {
+
 struct ClientEndWrapper;
 
 struct ServerEndWrapper;
@@ -44,6 +45,7 @@ struct ClientEndWrapper {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -55,12 +57,14 @@ struct ServerEndWrapper {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
 }  // namespace wire
 }  // namespace test_driverhandle
+
 template <>
 class ::fidl::WireTableBuilder<::test_driverhandle::wire::T>;
 template <>
@@ -92,6 +96,7 @@ struct ::fidl::WireTableFrame<::test_driverhandle::wire::T> final {
 
 namespace test_driverhandle {
 namespace wire {
+
 extern "C" const fidl_type_t test_driverhandle_TTable;
 
 class T {
@@ -199,6 +204,7 @@ class T {
 };
 }  // namespace wire
 }  // namespace test_driverhandle
+
 template <typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_driverhandle::wire::T, BuilderImpl> {
  public:
@@ -259,12 +265,14 @@ class ::fidl::WireTableExternalBuilder<::test_driverhandle::wire::T> final : pub
 };
 namespace test_driverhandle {
 namespace wire {
+
 inline ::fidl::WireTableBuilder<::test_driverhandle::wire::T> T::Builder(::fidl::AnyArena& arena) {
   return ::fidl::WireTableBuilder<::test_driverhandle::wire::T>(arena);
 }
 inline ::fidl::WireTableExternalBuilder<::test_driverhandle::wire::T> T::ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_driverhandle::wire::T>> frame) {
   return ::fidl::WireTableExternalBuilder<::test_driverhandle::wire::T>(std::move(frame));
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -278,6 +286,7 @@ struct HandlesInProtocolSendHandlesRequest {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace wire
@@ -338,6 +347,7 @@ struct ::fidl::internal::WireCodingTraits<::test_driverhandle::wire::ClientEndWr
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -394,6 +404,7 @@ struct ::fidl::internal::WireCodingTraits<::test_driverhandle::wire::ServerEndWr
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -450,6 +461,7 @@ struct ::fidl::internal::WireCodingTraits<::test_driverhandle::wire::HandlesInPr
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -553,6 +565,7 @@ struct ::fidl::internal::WireCodingTraits<::test_driverhandle::wire::T, ::fidl::
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl

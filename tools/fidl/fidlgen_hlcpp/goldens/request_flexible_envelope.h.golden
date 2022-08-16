@@ -27,6 +27,7 @@ class ProtocolRequestFlexibleResponseStrictTopResponse;
 
 class Protocol;
 using ProtocolHandle = ::fidl::InterfaceHandle<Protocol>;
+
 #endif  // __Fuchsia__
 
 class FlexibleFoo final {
@@ -307,9 +308,11 @@ using ProtocolRequestFlexibleResponseStrictTopResponsePtr = ::std::unique_ptr<Pr
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
 
 }  // namespace _internal
+
 class Protocol_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage RequestStrictResponseFlexible(::fidl::MessageEncoder* _encoder, ::test::requestflexibleenvelope::StrictFoo* s) {
@@ -333,9 +336,11 @@ class Protocol_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
 
 }  // namespace _internal
+
 class Protocol_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage RequestStrictResponseFlexible(::fidl::MessageEncoder* _encoder, ::test::requestflexibleenvelope::FlexibleFoo* f) {
@@ -359,11 +364,13 @@ class Protocol_ResponseEncoder {
     return _encoder->GetMessage();
   }
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace requestflexibleenvelope
 }  // namespace test
 namespace fidl {
+
 template <>
 struct IsFidlXUnion<::test::requestflexibleenvelope::FlexibleFoo> : public std::true_type {};
 
@@ -584,6 +591,7 @@ struct Equality<::test::requestflexibleenvelope::ProtocolRequestFlexibleResponse
 }  // namespace fidl
 namespace test {
 namespace requestflexibleenvelope {
+
 #ifdef __Fuchsia__
 
 using ProtocolPtr = ::fidl::InterfacePtr<Protocol>;
@@ -595,11 +603,16 @@ using ProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<Protocol>;
 class Protocol_SyncProxy;
 
 namespace internal {
+
 constexpr uint64_t kProtocol_RequestStrictResponseFlexible_Ordinal = 0x9b8c7d3d118df13lu;
+
 constexpr ::fidl::MessageDynamicFlags kProtocol_RequestStrictResponseFlexible_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kProtocol_RequestFlexibleResponseStrict_Ordinal = 0x480c77690533acb7lu;
+
 constexpr ::fidl::MessageDynamicFlags kProtocol_RequestFlexibleResponseStrict_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -696,6 +709,7 @@ class Protocol_SyncProxy : public ::test::requestflexibleenvelope::Protocol_Sync
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<Protocol>;
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace requestflexibleenvelope

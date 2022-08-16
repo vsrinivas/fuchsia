@@ -24,6 +24,7 @@
 namespace test_struct {
 
 namespace wire {
+
 struct Simple;
 
 struct BasicStruct;

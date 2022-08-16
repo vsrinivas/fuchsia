@@ -25,6 +25,7 @@
 namespace test_importedconstvalues {
 
 namespace wire {
+
 struct MyStruct;
 
 extern "C" const fidl_type_t test_importedconstvalues_MyStructTable;

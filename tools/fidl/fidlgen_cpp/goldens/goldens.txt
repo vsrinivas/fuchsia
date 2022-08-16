@@ -11,6 +11,8 @@ anonymous_hlcpp_conversion.h.golden
 anonymous_markers.h.golden
 anonymous_natural_messaging.cc.golden
 anonymous_natural_messaging.h.golden
+anonymous_natural_ostream.cc.golden
+anonymous_natural_ostream.h.golden
 anonymous_natural_types.cc.golden
 anonymous_natural_types.h.golden
 anonymous_type_conversions.cc.golden
@@ -34,6 +36,8 @@ arrays_hlcpp_conversion.h.golden
 arrays_markers.h.golden
 arrays_natural_messaging.cc.golden
 arrays_natural_messaging.h.golden
+arrays_natural_ostream.cc.golden
+arrays_natural_ostream.h.golden
 arrays_natural_types.cc.golden
 arrays_natural_types.h.golden
 arrays_type_conversions.cc.golden
@@ -57,6 +61,8 @@ bindings_denylist_hlcpp_conversion.h.golden
 bindings_denylist_markers.h.golden
 bindings_denylist_natural_messaging.cc.golden
 bindings_denylist_natural_messaging.h.golden
+bindings_denylist_natural_ostream.cc.golden
+bindings_denylist_natural_ostream.h.golden
 bindings_denylist_natural_types.cc.golden
 bindings_denylist_natural_types.h.golden
 bindings_denylist_type_conversions.cc.golden
@@ -82,6 +88,8 @@ bits_constants_hlcpp_conversion.h.golden
 bits_constants_markers.h.golden
 bits_constants_natural_messaging.cc.golden
 bits_constants_natural_messaging.h.golden
+bits_constants_natural_ostream.cc.golden
+bits_constants_natural_ostream.h.golden
 bits_constants_natural_types.cc.golden
 bits_constants_natural_types.h.golden
 bits_constants_type_conversions.cc.golden
@@ -103,6 +111,8 @@ bits_hlcpp_conversion.h.golden
 bits_markers.h.golden
 bits_natural_messaging.cc.golden
 bits_natural_messaging.h.golden
+bits_natural_ostream.cc.golden
+bits_natural_ostream.h.golden
 bits_natural_types.cc.golden
 bits_natural_types.h.golden
 bits_type_conversions.cc.golden
@@ -126,6 +136,8 @@ byte_and_bytes_hlcpp_conversion.h.golden
 byte_and_bytes_markers.h.golden
 byte_and_bytes_natural_messaging.cc.golden
 byte_and_bytes_natural_messaging.h.golden
+byte_and_bytes_natural_ostream.cc.golden
+byte_and_bytes_natural_ostream.h.golden
 byte_and_bytes_natural_types.cc.golden
 byte_and_bytes_natural_types.h.golden
 byte_and_bytes_type_conversions.cc.golden
@@ -149,6 +161,8 @@ consts_hlcpp_conversion.h.golden
 consts_markers.h.golden
 consts_natural_messaging.cc.golden
 consts_natural_messaging.h.golden
+consts_natural_ostream.cc.golden
+consts_natural_ostream.h.golden
 consts_natural_types.cc.golden
 consts_natural_types.h.golden
 consts_type_conversions.cc.golden
@@ -172,6 +186,8 @@ doc_comments_hlcpp_conversion.h.golden
 doc_comments_markers.h.golden
 doc_comments_natural_messaging.cc.golden
 doc_comments_natural_messaging.h.golden
+doc_comments_natural_ostream.cc.golden
+doc_comments_natural_ostream.h.golden
 doc_comments_natural_types.cc.golden
 doc_comments_natural_types.h.golden
 doc_comments_type_conversions.cc.golden
@@ -195,6 +211,8 @@ driver_handle_hlcpp_conversion.h.golden
 driver_handle_markers.h.golden
 driver_handle_natural_messaging.cc.golden
 driver_handle_natural_messaging.h.golden
+driver_handle_natural_ostream.cc.golden
+driver_handle_natural_ostream.h.golden
 driver_handle_natural_types.cc.golden
 driver_handle_natural_types.h.golden
 driver_handle_type_conversions.cc.golden
@@ -218,6 +236,8 @@ driver_one_way_hlcpp_conversion.h.golden
 driver_one_way_markers.h.golden
 driver_one_way_natural_messaging.cc.golden
 driver_one_way_natural_messaging.h.golden
+driver_one_way_natural_ostream.cc.golden
+driver_one_way_natural_ostream.h.golden
 driver_one_way_natural_types.cc.golden
 driver_one_way_natural_types.h.golden
 driver_one_way_type_conversions.cc.golden
@@ -241,6 +261,8 @@ driver_service_hlcpp_conversion.h.golden
 driver_service_markers.h.golden
 driver_service_natural_messaging.cc.golden
 driver_service_natural_messaging.h.golden
+driver_service_natural_ostream.cc.golden
+driver_service_natural_ostream.h.golden
 driver_service_natural_types.cc.golden
 driver_service_natural_types.h.golden
 driver_service_type_conversions.cc.golden
@@ -264,6 +286,8 @@ driver_two_way_hlcpp_conversion.h.golden
 driver_two_way_markers.h.golden
 driver_two_way_natural_messaging.cc.golden
 driver_two_way_natural_messaging.h.golden
+driver_two_way_natural_ostream.cc.golden
+driver_two_way_natural_ostream.h.golden
 driver_two_way_natural_types.cc.golden
 driver_two_way_natural_types.h.golden
 driver_two_way_type_conversions.cc.golden
@@ -287,6 +311,8 @@ empty_struct_hlcpp_conversion.h.golden
 empty_struct_markers.h.golden
 empty_struct_natural_messaging.cc.golden
 empty_struct_natural_messaging.h.golden
+empty_struct_natural_ostream.cc.golden
+empty_struct_natural_ostream.h.golden
 empty_struct_natural_types.cc.golden
 empty_struct_natural_types.h.golden
 empty_struct_type_conversions.cc.golden
@@ -310,6 +336,8 @@ encapsulated_structs_hlcpp_conversion.h.golden
 encapsulated_structs_markers.h.golden
 encapsulated_structs_natural_messaging.cc.golden
 encapsulated_structs_natural_messaging.h.golden
+encapsulated_structs_natural_ostream.cc.golden
+encapsulated_structs_natural_ostream.h.golden
 encapsulated_structs_natural_types.cc.golden
 encapsulated_structs_natural_types.h.golden
 encapsulated_structs_type_conversions.cc.golden
@@ -333,6 +361,8 @@ enum_hlcpp_conversion.h.golden
 enum_markers.h.golden
 enum_natural_messaging.cc.golden
 enum_natural_messaging.h.golden
+enum_natural_ostream.cc.golden
+enum_natural_ostream.h.golden
 enum_natural_types.cc.golden
 enum_natural_types.h.golden
 enum_type_conversions.cc.golden
@@ -356,6 +386,8 @@ error_hlcpp_conversion.h.golden
 error_markers.h.golden
 error_natural_messaging.cc.golden
 error_natural_messaging.h.golden
+error_natural_ostream.cc.golden
+error_natural_ostream.h.golden
 error_natural_types.cc.golden
 error_natural_types.h.golden
 error_syntax_common_types.cc.golden
@@ -371,6 +403,8 @@ error_syntax_hlcpp_conversion.h.golden
 error_syntax_markers.h.golden
 error_syntax_natural_messaging.cc.golden
 error_syntax_natural_messaging.h.golden
+error_syntax_natural_ostream.cc.golden
+error_syntax_natural_ostream.h.golden
 error_syntax_natural_types.cc.golden
 error_syntax_natural_types.h.golden
 error_syntax_type_conversions.cc.golden
@@ -402,6 +436,8 @@ escaping_hlcpp_conversion.h.golden
 escaping_markers.h.golden
 escaping_natural_messaging.cc.golden
 escaping_natural_messaging.h.golden
+escaping_natural_ostream.cc.golden
+escaping_natural_ostream.h.golden
 escaping_natural_types.cc.golden
 escaping_natural_types.h.golden
 escaping_type_conversions.cc.golden
@@ -425,6 +461,8 @@ foreign_type_in_response_used_through_compose_hlcpp_conversion.h.golden
 foreign_type_in_response_used_through_compose_markers.h.golden
 foreign_type_in_response_used_through_compose_natural_messaging.cc.golden
 foreign_type_in_response_used_through_compose_natural_messaging.h.golden
+foreign_type_in_response_used_through_compose_natural_ostream.cc.golden
+foreign_type_in_response_used_through_compose_natural_ostream.h.golden
 foreign_type_in_response_used_through_compose_natural_types.cc.golden
 foreign_type_in_response_used_through_compose_natural_types.h.golden
 foreign_type_in_response_used_through_compose_type_conversions.cc.golden
@@ -458,6 +496,8 @@ handles_in_types_hlcpp_conversion.h.golden
 handles_in_types_markers.h.golden
 handles_in_types_natural_messaging.cc.golden
 handles_in_types_natural_messaging.h.golden
+handles_in_types_natural_ostream.cc.golden
+handles_in_types_natural_ostream.h.golden
 handles_in_types_natural_types.cc.golden
 handles_in_types_natural_types.h.golden
 handles_in_types_type_conversions.cc.golden
@@ -471,6 +511,8 @@ handles_in_types_wire_types.h.golden
 handles_markers.h.golden
 handles_natural_messaging.cc.golden
 handles_natural_messaging.h.golden
+handles_natural_ostream.cc.golden
+handles_natural_ostream.h.golden
 handles_natural_types.cc.golden
 handles_natural_types.h.golden
 handles_type_conversions.cc.golden
@@ -494,6 +536,8 @@ imported_const_values_hlcpp_conversion.h.golden
 imported_const_values_markers.h.golden
 imported_const_values_natural_messaging.cc.golden
 imported_const_values_natural_messaging.h.golden
+imported_const_values_natural_ostream.cc.golden
+imported_const_values_natural_ostream.h.golden
 imported_const_values_natural_types.cc.golden
 imported_const_values_natural_types.h.golden
 imported_const_values_type_conversions.cc.golden
@@ -517,6 +561,8 @@ inheritance_hlcpp_conversion.h.golden
 inheritance_markers.h.golden
 inheritance_natural_messaging.cc.golden
 inheritance_natural_messaging.h.golden
+inheritance_natural_ostream.cc.golden
+inheritance_natural_ostream.h.golden
 inheritance_natural_types.cc.golden
 inheritance_natural_types.h.golden
 inheritance_type_conversions.cc.golden
@@ -540,6 +586,8 @@ inheritance_with_recursive_decl_hlcpp_conversion.h.golden
 inheritance_with_recursive_decl_markers.h.golden
 inheritance_with_recursive_decl_natural_messaging.cc.golden
 inheritance_with_recursive_decl_natural_messaging.h.golden
+inheritance_with_recursive_decl_natural_ostream.cc.golden
+inheritance_with_recursive_decl_natural_ostream.h.golden
 inheritance_with_recursive_decl_natural_types.cc.golden
 inheritance_with_recursive_decl_natural_types.h.golden
 inheritance_with_recursive_decl_type_conversions.cc.golden
@@ -563,6 +611,8 @@ nullable_hlcpp_conversion.h.golden
 nullable_markers.h.golden
 nullable_natural_messaging.cc.golden
 nullable_natural_messaging.h.golden
+nullable_natural_ostream.cc.golden
+nullable_natural_ostream.h.golden
 nullable_natural_types.cc.golden
 nullable_natural_types.h.golden
 nullable_type_conversions.cc.golden
@@ -586,6 +636,8 @@ padding_hlcpp_conversion.h.golden
 padding_markers.h.golden
 padding_natural_messaging.cc.golden
 padding_natural_messaging.h.golden
+padding_natural_ostream.cc.golden
+padding_natural_ostream.h.golden
 padding_natural_types.cc.golden
 padding_natural_types.h.golden
 padding_type_conversions.cc.golden
@@ -609,6 +661,8 @@ placement_of_attributes_hlcpp_conversion.h.golden
 placement_of_attributes_markers.h.golden
 placement_of_attributes_natural_messaging.cc.golden
 placement_of_attributes_natural_messaging.h.golden
+placement_of_attributes_natural_ostream.cc.golden
+placement_of_attributes_natural_ostream.h.golden
 placement_of_attributes_natural_types.cc.golden
 placement_of_attributes_natural_types.h.golden
 placement_of_attributes_type_conversions.cc.golden
@@ -632,6 +686,8 @@ protocol_layouts_hlcpp_conversion.h.golden
 protocol_layouts_markers.h.golden
 protocol_layouts_natural_messaging.cc.golden
 protocol_layouts_natural_messaging.h.golden
+protocol_layouts_natural_ostream.cc.golden
+protocol_layouts_natural_ostream.h.golden
 protocol_layouts_natural_types.cc.golden
 protocol_layouts_natural_types.h.golden
 protocol_layouts_type_conversions.cc.golden
@@ -655,6 +711,8 @@ protocol_payloads_hlcpp_conversion.h.golden
 protocol_payloads_markers.h.golden
 protocol_payloads_natural_messaging.cc.golden
 protocol_payloads_natural_messaging.h.golden
+protocol_payloads_natural_ostream.cc.golden
+protocol_payloads_natural_ostream.h.golden
 protocol_payloads_natural_types.cc.golden
 protocol_payloads_natural_types.h.golden
 protocol_payloads_type_conversions.cc.golden
@@ -678,6 +736,8 @@ protocol_request_hlcpp_conversion.h.golden
 protocol_request_markers.h.golden
 protocol_request_natural_messaging.cc.golden
 protocol_request_natural_messaging.h.golden
+protocol_request_natural_ostream.cc.golden
+protocol_request_natural_ostream.h.golden
 protocol_request_natural_types.cc.golden
 protocol_request_natural_types.h.golden
 protocol_request_type_conversions.cc.golden
@@ -701,6 +761,8 @@ protocols_hlcpp_conversion.h.golden
 protocols_markers.h.golden
 protocols_natural_messaging.cc.golden
 protocols_natural_messaging.h.golden
+protocols_natural_ostream.cc.golden
+protocols_natural_ostream.h.golden
 protocols_natural_types.cc.golden
 protocols_natural_types.h.golden
 protocols_type_conversions.cc.golden
@@ -724,6 +786,8 @@ request_flexible_envelope_hlcpp_conversion.h.golden
 request_flexible_envelope_markers.h.golden
 request_flexible_envelope_natural_messaging.cc.golden
 request_flexible_envelope_natural_messaging.h.golden
+request_flexible_envelope_natural_ostream.cc.golden
+request_flexible_envelope_natural_ostream.h.golden
 request_flexible_envelope_natural_types.cc.golden
 request_flexible_envelope_natural_types.h.golden
 request_flexible_envelope_type_conversions.cc.golden
@@ -747,6 +811,8 @@ service_hlcpp_conversion.h.golden
 service_markers.h.golden
 service_natural_messaging.cc.golden
 service_natural_messaging.h.golden
+service_natural_ostream.cc.golden
+service_natural_ostream.h.golden
 service_natural_types.cc.golden
 service_natural_types.h.golden
 service_type_conversions.cc.golden
@@ -772,6 +838,8 @@ struct_default_value_enum_library_reference_hlcpp_conversion.h.golden
 struct_default_value_enum_library_reference_markers.h.golden
 struct_default_value_enum_library_reference_natural_messaging.cc.golden
 struct_default_value_enum_library_reference_natural_messaging.h.golden
+struct_default_value_enum_library_reference_natural_ostream.cc.golden
+struct_default_value_enum_library_reference_natural_ostream.h.golden
 struct_default_value_enum_library_reference_natural_types.cc.golden
 struct_default_value_enum_library_reference_natural_types.h.golden
 struct_default_value_enum_library_reference_type_conversions.cc.golden
@@ -793,6 +861,8 @@ struct_hlcpp_conversion.h.golden
 struct_markers.h.golden
 struct_natural_messaging.cc.golden
 struct_natural_messaging.h.golden
+struct_natural_ostream.cc.golden
+struct_natural_ostream.h.golden
 struct_natural_types.cc.golden
 struct_natural_types.h.golden
 struct_type_conversions.cc.golden
@@ -816,6 +886,8 @@ table_hlcpp_conversion.h.golden
 table_markers.h.golden
 table_natural_messaging.cc.golden
 table_natural_messaging.h.golden
+table_natural_ostream.cc.golden
+table_natural_ostream.h.golden
 table_natural_types.cc.golden
 table_natural_types.h.golden
 table_type_conversions.cc.golden
@@ -841,6 +913,8 @@ transitive_dependencies_compose_hlcpp_conversion.h.golden
 transitive_dependencies_compose_markers.h.golden
 transitive_dependencies_compose_natural_messaging.cc.golden
 transitive_dependencies_compose_natural_messaging.h.golden
+transitive_dependencies_compose_natural_ostream.cc.golden
+transitive_dependencies_compose_natural_ostream.h.golden
 transitive_dependencies_compose_natural_types.cc.golden
 transitive_dependencies_compose_natural_types.h.golden
 transitive_dependencies_compose_type_conversions.cc.golden
@@ -862,6 +936,8 @@ transitive_dependencies_hlcpp_conversion.h.golden
 transitive_dependencies_markers.h.golden
 transitive_dependencies_natural_messaging.cc.golden
 transitive_dependencies_natural_messaging.h.golden
+transitive_dependencies_natural_ostream.cc.golden
+transitive_dependencies_natural_ostream.h.golden
 transitive_dependencies_natural_types.cc.golden
 transitive_dependencies_natural_types.h.golden
 transitive_dependencies_type_conversions.cc.golden
@@ -885,6 +961,8 @@ type_aliases_hlcpp_conversion.h.golden
 type_aliases_markers.h.golden
 type_aliases_natural_messaging.cc.golden
 type_aliases_natural_messaging.h.golden
+type_aliases_natural_ostream.cc.golden
+type_aliases_natural_ostream.h.golden
 type_aliases_natural_types.cc.golden
 type_aliases_natural_types.h.golden
 type_aliases_type_conversions.cc.golden
@@ -908,6 +986,8 @@ union_hlcpp_conversion.h.golden
 union_markers.h.golden
 union_natural_messaging.cc.golden
 union_natural_messaging.h.golden
+union_natural_ostream.cc.golden
+union_natural_ostream.h.golden
 union_natural_types.cc.golden
 union_natural_types.h.golden
 union_sandwich_common_types.cc.golden
@@ -923,6 +1003,8 @@ union_sandwich_hlcpp_conversion.h.golden
 union_sandwich_markers.h.golden
 union_sandwich_natural_messaging.cc.golden
 union_sandwich_natural_messaging.h.golden
+union_sandwich_natural_ostream.cc.golden
+union_sandwich_natural_ostream.h.golden
 union_sandwich_natural_types.cc.golden
 union_sandwich_natural_types.h.golden
 union_sandwich_type_conversions.cc.golden
@@ -954,6 +1036,8 @@ unknown_interactions_hlcpp_conversion.h.golden
 unknown_interactions_markers.h.golden
 unknown_interactions_natural_messaging.cc.golden
 unknown_interactions_natural_messaging.h.golden
+unknown_interactions_natural_ostream.cc.golden
+unknown_interactions_natural_ostream.h.golden
 unknown_interactions_natural_types.cc.golden
 unknown_interactions_natural_types.h.golden
 unknown_interactions_type_conversions.cc.golden
@@ -977,6 +1061,8 @@ vectors_hlcpp_conversion.h.golden
 vectors_markers.h.golden
 vectors_natural_messaging.cc.golden
 vectors_natural_messaging.h.golden
+vectors_natural_ostream.cc.golden
+vectors_natural_ostream.h.golden
 vectors_natural_types.cc.golden
 vectors_natural_types.h.golden
 vectors_type_conversions.cc.golden
@@ -1000,6 +1086,8 @@ versions_hlcpp_conversion.h.golden
 versions_markers.h.golden
 versions_natural_messaging.cc.golden
 versions_natural_messaging.h.golden
+versions_natural_ostream.cc.golden
+versions_natural_ostream.h.golden
 versions_natural_types.cc.golden
 versions_natural_types.h.golden
 versions_type_conversions.cc.golden

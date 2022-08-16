@@ -9,6 +9,7 @@
 #include <cinttypes>
 
 namespace test_consts {
+
 // |BitsType| is strict, hence is guaranteed to only contain
 // members defined in the FIDL schema when receiving it in a message.
 // Sending unknown members will fail at runtime.
@@ -102,6 +103,7 @@ enum class EnumType : int32_t {
 };
 
 }  // namespace test_consts
+
 template <>
 struct fidl::internal::DisplayError<::test_consts::EnumType> {
   static size_t Format(const ::test_consts::EnumType& value, char* destination, size_t capacity);

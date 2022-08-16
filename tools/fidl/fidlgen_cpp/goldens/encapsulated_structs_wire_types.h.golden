@@ -25,6 +25,7 @@
 namespace test_encapsulatedstructs {
 
 namespace wire {
+
 struct Int8Int32;
 
 struct Int16Int8;
@@ -80,6 +81,7 @@ struct NonInlineStructTestStruct {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -93,6 +95,7 @@ struct TopLevelStruct {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace wire
@@ -383,6 +386,7 @@ struct ::fidl::internal::WireCodingTraits<::test_encapsulatedstructs::wire::NonI
     internal::WireCheckPadding<uint64_t>(decoder, position + 8, 0xffffffff00000000ull);
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -443,6 +447,7 @@ struct ::fidl::internal::WireCodingTraits<::test_encapsulatedstructs::wire::TopL
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl

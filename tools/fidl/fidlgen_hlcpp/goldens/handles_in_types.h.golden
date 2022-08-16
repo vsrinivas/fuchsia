@@ -117,6 +117,7 @@ class TableWithHandle final {
 };
 
 using TableWithHandlePtr = ::std::unique_ptr<TableWithHandle>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -212,6 +213,7 @@ inline zx_status_t Clone(const ::test::handlesintypes::UnionWithHandle& value,
 }
 
 using UnionWithHandlePtr = ::std::unique_ptr<UnionWithHandle>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -246,11 +248,13 @@ inline zx_status_t Clone(const ::test::handlesintypes::HandlesInTypes& _value,
 }
 
 using HandlesInTypesPtr = ::std::unique_ptr<HandlesInTypes>;
+
 #endif  // __Fuchsia__
 
 }  // namespace handlesintypes
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::handlesintypes::obj_type> {
   static constexpr size_t inline_size_v2 = sizeof(::test::handlesintypes::obj_type);
@@ -304,6 +308,7 @@ struct Equality<::test::handlesintypes::TableWithHandle> {
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -362,6 +367,7 @@ struct Equality<::test::handlesintypes::UnionWithHandle> {
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -406,6 +412,7 @@ struct Equality<::test::handlesintypes::HandlesInTypes> {
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 //

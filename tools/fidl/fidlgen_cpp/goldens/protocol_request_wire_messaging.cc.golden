@@ -16,6 +16,7 @@
   fidl::internal::WireEventDispatcher<::test_protocolrequest::Child> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -37,11 +38,13 @@ void fidl::internal::WireServerDispatcher<::test_protocolrequest::Child>::Dispat
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
+
 void fidl::WireServer<::test_protocolrequest::Child>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_protocolrequest::Child>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -49,6 +52,7 @@ void fidl::WireServer<::test_protocolrequest::Child>::dispatch_message(
 #endif  // __Fuchsia__
 
 namespace test_protocolrequest {
+
 [[maybe_unused]] constexpr uint64_t kParent_GetChild_Ordinal = 881818649151440699lu;
 
 [[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kParent_GetChild_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
@@ -74,6 +78,7 @@ extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequestTable;
 extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequestRequestTable;
 #ifdef __Fuchsia__
 }  // namespace test_protocolrequest
+
 ::fidl::WireResult<::test_protocolrequest::Parent::GetChild>::WireResult(
     ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client,
     ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChild>* request, std::optional<zx::time> deadline) {
@@ -94,10 +99,12 @@ extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequestRequestT
   }
 }
 namespace test_protocolrequest {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolrequest
+
 ::fidl::WireUnownedResult<::test_protocolrequest::Parent::GetChild>::WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChild>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_protocolrequest::Parent::GetChild>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -129,10 +136,12 @@ namespace test_protocolrequest {
   }
 }
 namespace test_protocolrequest {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolrequest
+
 ::fidl::WireResult<::test_protocolrequest::Parent::GetChildRequest>::WireResult(
     ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client,
     ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChildRequest>* request, std::optional<zx::time> deadline) {
@@ -153,10 +162,12 @@ namespace test_protocolrequest {
   }
 }
 namespace test_protocolrequest {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolrequest
+
 ::fidl::WireUnownedResult<::test_protocolrequest::Parent::GetChildRequest>::WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChildRequest>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_protocolrequest::Parent::GetChildRequest>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -188,10 +199,12 @@ namespace test_protocolrequest {
   }
 }
 namespace test_protocolrequest {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolrequest
+
 ::fidl::WireResult<::test_protocolrequest::Parent::TakeChild>::WireResult(
     ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client,
     ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChild>* request) {
@@ -203,10 +216,12 @@ namespace test_protocolrequest {
   SetStatus(outgoing);
 }
 namespace test_protocolrequest {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolrequest
+
 ::fidl::WireUnownedResult<::test_protocolrequest::Parent::TakeChild>::WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChild>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_protocolrequest::Parent::TakeChild>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -225,10 +240,12 @@ namespace test_protocolrequest {
   SetStatus(outgoing);
 }
 namespace test_protocolrequest {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolrequest
+
 ::fidl::WireResult<::test_protocolrequest::Parent::TakeChildRequest>::WireResult(
     ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client,
     ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChildRequest>* request) {
@@ -240,10 +257,12 @@ namespace test_protocolrequest {
   SetStatus(outgoing);
 }
 namespace test_protocolrequest {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_protocolrequest
+
 ::fidl::WireUnownedResult<::test_protocolrequest::Parent::TakeChildRequest>::WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChildRequest>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_protocolrequest::Parent::TakeChildRequest>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -262,9 +281,11 @@ namespace test_protocolrequest {
   SetStatus(outgoing);
 }
 namespace test_protocolrequest {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_protocolrequest
+
 #ifdef __Fuchsia__
 
 ::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_protocolrequest::Parent>::TakeChild(::fidl::ClientEnd<::test_protocolrequest::Child>&& c) {
@@ -349,6 +370,7 @@ fidl::internal::WireWeakSyncClientImpl<::test_protocolrequest::Parent>::GetChild
         return ::fidl::WireResult<::test_protocolrequest::Parent::GetChildRequest>(::fidl::UnownedClientEnd<::test_protocolrequest::Parent>(_transport->get<::fidl::internal::ChannelTransport>()), &_request);
       });
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -359,6 +381,7 @@ fidl::internal::WireWeakSyncClientImpl<::test_protocolrequest::Parent>::GetChild
   fidl::internal::WireEventDispatcher<::test_protocolrequest::Parent> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -435,11 +458,13 @@ void fidl::internal::WireServerDispatcher<::test_protocolrequest::Parent>::Dispa
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
+
 void fidl::WireServer<::test_protocolrequest::Parent>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_protocolrequest::Parent>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -478,6 +503,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocolrequest::Parent::Get
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -516,6 +542,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_protocolrequest::Parent::Get
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 #endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChild>::_InitHeader() {
@@ -527,6 +554,7 @@ void ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetC
 void ::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_protocolrequest::kParent_GetChild_Ordinal, ::test_protocolrequest::kParent_GetChild_DynamicFlags);
 }
+
 #endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChildRequest>::_InitHeader() {
@@ -538,6 +566,7 @@ void ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetC
 void ::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_protocolrequest::kParent_GetChildRequest_Ordinal, ::test_protocolrequest::kParent_GetChildRequest_DynamicFlags);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -545,6 +574,7 @@ void ::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::Get
 void ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChild>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_protocolrequest::kParent_TakeChild_Ordinal, ::test_protocolrequest::kParent_TakeChild_DynamicFlags);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -552,6 +582,7 @@ void ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::Take
 void ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChildRequest>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_protocolrequest::kParent_TakeChildRequest_Ordinal, ::test_protocolrequest::kParent_TakeChildRequest_DynamicFlags);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

@@ -19,12 +19,14 @@ class SuperFooTopResponse;
 
 class super;
 using superHandle = ::fidl::InterfaceHandle<super>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
 class sub;
 using subHandle = ::fidl::InterfaceHandle<sub>;
+
 #endif  // __Fuchsia__
 
 class SuperFooRequest final {
@@ -75,6 +77,7 @@ namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_inheritance_SuperFooRequestTable;
 
 }  // namespace _internal
+
 class super_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage foo(::fidl::MessageEncoder* _encoder, ::std::string* s) {
@@ -91,6 +94,7 @@ namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
 
 }  // namespace _internal
+
 class super_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage foo(::fidl::MessageEncoder* _encoder, int64_t* y) {
@@ -104,6 +108,7 @@ class super_ResponseEncoder {
     return _encoder->GetMessage();
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -134,11 +139,13 @@ class sub_ResponseEncoder {
     return _encoder->GetMessage();
   }
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace inheritance
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::inheritance::SuperFooRequest>
     : public EncodableCodingTraits<::test::inheritance::SuperFooRequest, 16> {};
@@ -193,6 +200,7 @@ struct Equality<::test::inheritance::SuperFooTopResponse> {
 }  // namespace fidl
 namespace test {
 namespace inheritance {
+
 #ifdef __Fuchsia__
 
 using superPtr = ::fidl::InterfacePtr<super>;
@@ -204,9 +212,12 @@ using superSyncPtr = ::fidl::SynchronousInterfacePtr<super>;
 class super_SyncProxy;
 
 namespace internal {
+
 constexpr uint64_t ksuper_foo_Ordinal = 0x68a61c2a230db8b8lu;
+
 constexpr ::fidl::MessageDynamicFlags ksuper_foo_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -220,9 +231,12 @@ using subSyncPtr = ::fidl::SynchronousInterfacePtr<sub>;
 class sub_SyncProxy;
 
 namespace internal {
+
 constexpr uint64_t ksub_foo_Ordinal = 0x68a61c2a230db8b8lu;
+
 constexpr ::fidl::MessageDynamicFlags ksub_foo_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -308,6 +322,7 @@ class super_SyncProxy : public ::test::inheritance::super_Sync {
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<super>;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -393,6 +408,7 @@ class sub_SyncProxy : public ::test::inheritance::sub_Sync {
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<sub>;
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace inheritance

@@ -6,6 +6,7 @@
 #include <memory>
 
 namespace test_driveroneway {
+
 [[maybe_unused]] constexpr uint64_t kOneWay_Send_Ordinal = 7942965975761529343lu;
 
 [[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kOneWay_Send_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
@@ -14,6 +15,7 @@ extern "C" const fidl_type_t test_driveroneway_OneWaySendRequestTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_driveroneway
+
 ::fdf::WireUnownedResult<::test_driveroneway::OneWay::Send>::WireUnownedResult(::fdf::UnownedClientEnd<::test_driveroneway::OneWay> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>* request) {
   constexpr uint32_t buffer_size =
       ::fidl::MaxSizeInChannel<::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>, ::fidl::MessageDirection::kSending>();
@@ -31,10 +33,12 @@ extern "C" const fidl_type_t test_driveroneway_OneWaySendRequestTable;
   SetStatus(outgoing);
 }
 namespace test_driveroneway {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_driveroneway
+
 ::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_driveroneway::OneWay>::Send(const ::test_driveroneway::wire::Payload& payload) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send> _request_object{payload};
@@ -64,9 +68,11 @@ namespace test_driveroneway {
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage(), std::move(_options));
 }
 namespace test_driveroneway {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_driveroneway
+
 #ifdef __Fuchsia__
 
 #endif  // __Fuchsia__
@@ -107,11 +113,13 @@ void fidl::internal::WireServerDispatcher<::test_driveroneway::OneWay>::Dispatch
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
+
 void fdf::WireServer<::test_driveroneway::OneWay>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_driveroneway::OneWay>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>::_InitHeader() {

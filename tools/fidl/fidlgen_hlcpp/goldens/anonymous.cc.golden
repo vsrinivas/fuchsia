@@ -9,6 +9,7 @@
 //
 namespace test {
 namespace anonymous {
+
 #if (__cplusplus < 201703)
 constexpr const ::test::anonymous::Op Op::ADD = ::test::anonymous::Op(1u);
 constexpr const ::test::anonymous::Op Op::MUL = ::test::anonymous::Op(2u);
@@ -1200,9 +1201,11 @@ zx_status_t SomeProtocolSomeMethodTopResponse::Clone(SomeProtocolSomeMethodTopRe
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_anonymous_SomeProtocolSomeMethodRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_anonymous_SomeProtocolSomeMethodTopResponseTable;
 
 }  // namespace _internal
+
 SomeProtocol::~SomeProtocol() = default;
 
 const fidl_type_t* ::test::anonymous::SomeProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
@@ -1354,6 +1357,7 @@ zx_status_t SomeProtocol_SyncProxy::SomeMethod(::test::anonymous::UnionMember un
   *out_result = ::fidl::DecodeAs<::test::anonymous::SomeProtocol_SomeMethod_Result>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 }  // namespace anonymous

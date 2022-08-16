@@ -5,11 +5,13 @@
 #include <memory>
 
 namespace test_service {
+
 [[maybe_unused]] constexpr uint64_t kFirstProtocol_MethodOnFirst_Ordinal = 6352548393671797041lu;
 
 [[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kFirstProtocol_MethodOnFirst_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 #ifdef __Fuchsia__
 }  // namespace test_service
+
 ::fidl::WireResult<::test_service::FirstProtocol::MethodOnFirst>::WireResult(
     ::fidl::UnownedClientEnd<::test_service::FirstProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_service::FirstProtocol::MethodOnFirst>* request) {
@@ -21,10 +23,12 @@ namespace test_service {
   SetStatus(outgoing);
 }
 namespace test_service {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_service
+
 ::fidl::WireUnownedResult<::test_service::FirstProtocol::MethodOnFirst>::WireUnownedResult(::fidl::UnownedClientEnd<::test_service::FirstProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_service::FirstProtocol::MethodOnFirst>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_service::FirstProtocol::MethodOnFirst>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -43,9 +47,11 @@ namespace test_service {
   SetStatus(outgoing);
 }
 namespace test_service {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_service
+
 #ifdef __Fuchsia__
 
 ::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_service::FirstProtocol>::MethodOnFirst() {
@@ -68,6 +74,7 @@ namespace test_service {
       _allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -78,6 +85,7 @@ namespace test_service {
   fidl::internal::WireEventDispatcher<::test_service::FirstProtocol> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -112,11 +120,13 @@ void fidl::internal::WireServerDispatcher<::test_service::FirstProtocol>::Dispat
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
+
 void fidl::WireServer<::test_service::FirstProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_service::FirstProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalRequest<::test_service::FirstProtocol::MethodOnFirst>::_InitHeader() {
@@ -128,11 +138,13 @@ void ::fidl::internal::TransactionalRequest<::test_service::FirstProtocol::Metho
 #endif  // __Fuchsia__
 
 namespace test_service {
+
 [[maybe_unused]] constexpr uint64_t kSecondProtocol_MethodOnSecond_Ordinal = 8121179205110225988lu;
 
 [[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kSecondProtocol_MethodOnSecond_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 #ifdef __Fuchsia__
 }  // namespace test_service
+
 ::fidl::WireResult<::test_service::SecondProtocol::MethodOnSecond>::WireResult(
     ::fidl::UnownedClientEnd<::test_service::SecondProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_service::SecondProtocol::MethodOnSecond>* request) {
@@ -144,10 +156,12 @@ namespace test_service {
   SetStatus(outgoing);
 }
 namespace test_service {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_service
+
 ::fidl::WireUnownedResult<::test_service::SecondProtocol::MethodOnSecond>::WireUnownedResult(::fidl::UnownedClientEnd<::test_service::SecondProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_service::SecondProtocol::MethodOnSecond>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_service::SecondProtocol::MethodOnSecond>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -166,9 +180,11 @@ namespace test_service {
   SetStatus(outgoing);
 }
 namespace test_service {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_service
+
 #ifdef __Fuchsia__
 
 ::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_service::SecondProtocol>::MethodOnSecond() {
@@ -191,6 +207,7 @@ namespace test_service {
       _allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -201,6 +218,7 @@ namespace test_service {
   fidl::internal::WireEventDispatcher<::test_service::SecondProtocol> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -235,11 +253,13 @@ void fidl::internal::WireServerDispatcher<::test_service::SecondProtocol>::Dispa
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
+
 void fidl::WireServer<::test_service::SecondProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_service::SecondProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalRequest<::test_service::SecondProtocol::MethodOnSecond>::_InitHeader() {

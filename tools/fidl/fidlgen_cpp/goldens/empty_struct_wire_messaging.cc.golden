@@ -5,6 +5,7 @@
 #include <memory>
 
 namespace test_emptystruct {
+
 [[maybe_unused]] constexpr uint64_t kEmptyProtocol_Send_Ordinal = 1378773277029173000lu;
 
 [[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kEmptyProtocol_Send_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
@@ -26,6 +27,7 @@ extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveRequest
 extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
 #ifdef __Fuchsia__
 }  // namespace test_emptystruct
+
 ::fidl::WireResult<::test_emptystruct::EmptyProtocol::Send>::WireResult(
     ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::Send>* request) {
@@ -37,10 +39,12 @@ extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveTopResp
   SetStatus(outgoing);
 }
 namespace test_emptystruct {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_emptystruct
+
 ::fidl::WireUnownedResult<::test_emptystruct::EmptyProtocol::Send>::WireUnownedResult(::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::Send>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_emptystruct::EmptyProtocol::Send>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -59,10 +63,12 @@ namespace test_emptystruct {
   SetStatus(outgoing);
 }
 namespace test_emptystruct {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_emptystruct
+
 ::fidl::WireResult<::test_emptystruct::EmptyProtocol::SendAndReceive>::WireResult(
     ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>* request, std::optional<zx::time> deadline) {
@@ -83,10 +89,12 @@ namespace test_emptystruct {
   }
 }
 namespace test_emptystruct {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_emptystruct
+
 ::fidl::WireUnownedResult<::test_emptystruct::EmptyProtocol::SendAndReceive>::WireUnownedResult(::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_emptystruct::EmptyProtocol::SendAndReceive>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -118,9 +126,11 @@ namespace test_emptystruct {
   }
 }
 namespace test_emptystruct {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_emptystruct
+
 #ifdef __Fuchsia__
 
 ::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_emptystruct::EmptyProtocol>::Send(const ::test_emptystruct::wire::Empty& e) {
@@ -164,6 +174,7 @@ fidl::internal::WireWeakSyncClientImpl<::test_emptystruct::EmptyProtocol>::SendA
         return ::fidl::WireResult<::test_emptystruct::EmptyProtocol::SendAndReceive>(::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol>(_transport->get<::fidl::internal::ChannelTransport>()), &_request);
       });
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -195,6 +206,7 @@ fidl::internal::WireEventDispatcher<::test_emptystruct::EmptyProtocol>::Dispatch
       return ::fidl::Status::UnknownOrdinal();
   }
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -247,11 +259,13 @@ void fidl::internal::WireServerDispatcher<::test_emptystruct::EmptyProtocol>::Di
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
+
 void fidl::WireServer<::test_emptystruct::EmptyProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_emptystruct::EmptyProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -290,6 +304,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_emptystruct::EmptyProtocol::
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 #endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::Send>::_InitHeader() {

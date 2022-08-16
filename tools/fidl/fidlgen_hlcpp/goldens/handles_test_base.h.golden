@@ -7,6 +7,7 @@
 namespace test {
 namespace handles {
 namespace testing {
+
 class SomeProtocol_TestBase : public ::test::handles::SomeProtocol {
  public:
   virtual ~SomeProtocol_TestBase() {}

@@ -24,6 +24,7 @@
 namespace test_byteandbytes {
 
 namespace wire {
+
 struct ByteAndBytes;
 
 extern "C" const fidl_type_t test_byteandbytes_ByteAndBytesTable;

@@ -286,7 +286,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
  public:
   static constexpr bool kHasPayload = false;
 };
-namespace test_unknowninteractions {}  // namespace test_unknowninteractions
+namespace test_unknowninteractions {
+}  // namespace test_unknowninteractions
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWay> final : public ::fitx::result<::fidl::Error> {
  public:
@@ -309,6 +311,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   static constexpr bool kHasPayload = true;
   using Payload = ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse;
 };
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse> {
  public:
@@ -331,6 +334,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   static constexpr bool kHasPayload = true;
   using Payload = ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse;
 };
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse> {
  public:
@@ -353,6 +357,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   static constexpr bool kHasPayload = true;
   using Payload = ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableResponse;
 };
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableResponse> {
  public:
@@ -398,6 +403,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 };
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>> {
  public:
@@ -443,6 +449,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 };
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResponse> {
  public:
@@ -488,6 +495,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 };
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse> {
  public:
@@ -533,6 +541,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 };
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponse> {
  public:
@@ -562,6 +571,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResult::WithResponse({})}};
   }
 };
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay> final : public ::fitx::result<::fidl::Error> {
  public:
@@ -593,6 +603,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResult::WithResponse(std::move(m))}};
   }
 };
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResponse> {
  public:
@@ -624,6 +635,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult::WithResponse(std::move(m))}};
   }
 };
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse> {
  public:
@@ -655,6 +667,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     return DomainObject{{.result = ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResult::WithResponse(std::move(m))}};
   }
 };
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResponse> {
  public:
@@ -691,6 +704,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 };
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>> {
  public:
@@ -727,6 +741,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 };
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse> {
  public:
@@ -763,6 +778,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 };
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse> {
  public:
@@ -799,6 +815,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 };
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse> {
  public:
@@ -849,8 +866,10 @@ class ::fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInt
   ::fitx::result<::fidl::Error> FlexibleOneWay() const;
 };
 namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 }  // namespace test_unknowninteractions
+
 #ifdef __Fuchsia__
 
 template <>
@@ -876,6 +895,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_unknowninteractions::Unkno
       ::fidl::IncomingMessage& msg,
       internal::MessageStorageViewBase* storage_view) override;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -890,6 +910,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -904,6 +925,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -918,6 +940,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -932,6 +955,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -946,6 +970,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -960,6 +985,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -974,6 +1000,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -988,6 +1015,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1002,6 +1030,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1016,6 +1045,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1030,6 +1060,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1044,6 +1075,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1058,6 +1090,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1072,6 +1105,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1086,6 +1120,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1100,6 +1135,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1114,6 +1150,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1128,6 +1165,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -1392,6 +1430,7 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::Unk
   static const ::fidl::internal::MethodEntry* entries_end_;
   static const ::fidl::internal::UnknownInteractionHandlerEntry unknown_interaction_handler_entry_;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -1533,7 +1572,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
  public:
   static constexpr bool kHasPayload = false;
 };
-namespace test_unknowninteractions {}  // namespace test_unknowninteractions
+namespace test_unknowninteractions {
+}  // namespace test_unknowninteractions
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWay> final : public ::fitx::result<::fidl::Error> {
  public:
@@ -1556,6 +1597,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   static constexpr bool kHasPayload = true;
   using Payload = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse;
 };
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse> {
  public:
@@ -1578,6 +1620,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   static constexpr bool kHasPayload = true;
   using Payload = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse;
 };
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse> {
  public:
@@ -1600,6 +1643,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   static constexpr bool kHasPayload = true;
   using Payload = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponse;
 };
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponse> {
  public:
@@ -1645,6 +1689,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 };
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>> {
  public:
@@ -1690,6 +1735,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 };
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResponse> {
  public:
@@ -1735,6 +1781,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 };
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse> {
  public:
@@ -1780,6 +1827,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 };
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponse> {
  public:
@@ -1814,8 +1862,10 @@ class ::fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInt
   ::fitx::result<::fidl::Error> FlexibleOneWay() const;
 };
 namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 }  // namespace test_unknowninteractions
+
 #ifdef __Fuchsia__
 
 template <>
@@ -1841,6 +1891,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_unknowninteractions::Unkno
       ::fidl::IncomingMessage& msg,
       internal::MessageStorageViewBase* storage_view) override;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1855,6 +1906,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1869,6 +1921,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1883,6 +1936,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1897,6 +1951,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1911,6 +1966,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1925,6 +1981,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1939,6 +1996,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1953,6 +2011,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1967,6 +2026,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1981,6 +2041,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -2133,6 +2194,7 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::Unk
   static const ::fidl::internal::MethodEntry* entries_end_;
   static const ::fidl::internal::UnknownInteractionHandlerEntry unknown_interaction_handler_entry_;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -2274,7 +2336,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
  public:
   static constexpr bool kHasPayload = false;
 };
-namespace test_unknowninteractions {}  // namespace test_unknowninteractions
+namespace test_unknowninteractions {
+}  // namespace test_unknowninteractions
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWay> final : public ::fitx::result<::fidl::Error> {
  public:
@@ -2297,6 +2361,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   static constexpr bool kHasPayload = true;
   using Payload = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse;
 };
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse> {
  public:
@@ -2319,6 +2384,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   static constexpr bool kHasPayload = true;
   using Payload = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse;
 };
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse> {
  public:
@@ -2341,6 +2407,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_unknowninteractio
   static constexpr bool kHasPayload = true;
   using Payload = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponse;
 };
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable> final : public ::fitx::result<::fidl::Error, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponse> {
  public:
@@ -2386,6 +2453,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 };
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>> {
  public:
@@ -2431,6 +2499,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 };
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResponse> {
  public:
@@ -2476,6 +2545,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 };
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse> {
  public:
@@ -2521,6 +2591,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_unknowni
     }
   }
 };
+
 template <>
 class ::fdf::Result<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr> final : public ::fitx::result<::fidl::AnyErrorIn<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>, ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse> {
  public:
@@ -2553,8 +2624,10 @@ class ::fidl::internal::NaturalClientImpl<::test_unknowninteractions::UnknownInt
   ::fitx::result<::fidl::Error> StrictOneWay() const;
 };
 namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 }  // namespace test_unknowninteractions
+
 #ifdef __Fuchsia__
 
 template <>
@@ -2577,6 +2650,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_unknowninteractions::Unkno
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2591,6 +2665,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2605,6 +2680,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2619,6 +2695,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2633,6 +2710,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2647,6 +2725,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2661,6 +2740,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2675,6 +2755,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2689,6 +2770,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2703,6 +2785,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_unknowninteraction
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -2851,4 +2934,5 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::Unk
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__

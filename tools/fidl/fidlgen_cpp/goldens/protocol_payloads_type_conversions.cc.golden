@@ -632,6 +632,7 @@ std::unique_ptr<::test_protocolpayloads::MainProtocolOnImportWithErrorResult> Wi
   return ::fidl::WireEvent<::test_protocolpayloads::MainProtocol::OnAnonWithError>(
       WireNaturalConversionTraits<::test_protocolpayloads::wire::MainProtocolOnAnonWithErrorRequest, ::fitx::result<uint32_t, ::test_protocolpayloads::MainProtocolOnAnonWithErrorResponse>>::ToWire(arena, std::move(src)));
 }
+
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

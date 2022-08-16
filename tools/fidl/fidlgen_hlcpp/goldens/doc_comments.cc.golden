@@ -606,6 +606,7 @@ zx_status_t Interface_SyncProxy::Method() {
   const fidl_type_t* req_type = nullptr;
   return proxy_.Send(req_type, ::test::doccomments::Interface_RequestEncoder::Method(&_encoder));
 }
+
 #endif  // __Fuchsia__
 
 }  // namespace doccomments

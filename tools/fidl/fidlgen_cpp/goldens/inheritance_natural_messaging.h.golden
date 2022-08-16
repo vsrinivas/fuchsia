@@ -15,6 +15,7 @@
 namespace fidl {
 
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_inheritance::Super::Foo> {
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_inheritance::Super::Foo>>;
@@ -29,6 +30,7 @@ struct ::fidl::internal::NaturalMethodTypes<::test_inheritance::Super::Foo> {
 };
 namespace test_inheritance {
 __LOCAL extern "C" const fidl_type_t test_inheritance_SuperFooRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_inheritance_SuperFooTopResponseTable;
 
 #ifdef __Fuchsia__
@@ -47,7 +49,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_inheritance::Supe
   static constexpr bool kHasPayload = true;
   using Payload = ::test_inheritance::SuperFooTopResponse;
 };
-namespace test_inheritance {}  // namespace test_inheritance
+namespace test_inheritance {
+}  // namespace test_inheritance
+
 template <>
 class ::fidl::Result<::test_inheritance::Super::Foo> final : public ::fitx::result<::fidl::Error, ::test_inheritance::SuperFooTopResponse> {
  public:
@@ -64,9 +68,11 @@ class ::fidl::internal::NaturalClientImpl<::test_inheritance::Super> final : pub
   ::fidl::internal::NaturalThenable<::test_inheritance::Super::Foo> Foo(const ::fidl::Request<::test_inheritance::Super::Foo>& request) const;
 };
 namespace test_inheritance {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_inheritance
+
 #ifdef __Fuchsia__
 
 template <>
@@ -81,6 +87,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_inheritance::Super> final
         _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -118,6 +125,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_inheritance::Super> final 
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_inheritance::Super>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -133,6 +141,7 @@ class ::fidl::internal::NaturalEventSender<::test_inheritance::Super>
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -150,6 +159,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_inheritance::Super
   static constexpr bool kHasPayload = true;
   using Payload = ::test_inheritance::SuperFooRequest;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -196,6 +206,7 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_inheritance::Super> fina
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -226,6 +237,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_inheritance::Sub:
   static constexpr bool kHasPayload = true;
   using Payload = ::test_inheritance::SuperFooTopResponse;
 };
+
 template <>
 class ::fidl::Result<::test_inheritance::Sub::Foo> final : public ::fitx::result<::fidl::Error, ::test_inheritance::SuperFooTopResponse> {
  public:
@@ -241,6 +253,7 @@ class ::fidl::internal::NaturalClientImpl<::test_inheritance::Sub> final : publi
   using NaturalClientBase::NaturalClientBase;
   ::fidl::internal::NaturalThenable<::test_inheritance::Sub::Foo> Foo(const ::fidl::Request<::test_inheritance::Sub::Foo>& request) const;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -257,6 +270,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_inheritance::Sub> final
         _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -294,6 +308,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_inheritance::Sub> final : 
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_inheritance::Sub>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -309,6 +324,7 @@ class ::fidl::internal::NaturalEventSender<::test_inheritance::Sub>
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -326,6 +342,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_inheritance::Sub::
   static constexpr bool kHasPayload = true;
   using Payload = ::test_inheritance::SuperFooRequest;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -372,4 +389,5 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_inheritance::Sub> final 
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__

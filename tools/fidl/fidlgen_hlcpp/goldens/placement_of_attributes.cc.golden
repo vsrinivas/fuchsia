@@ -502,6 +502,7 @@ namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_placementofattributes_ExampleProtocolMethodRequestTable;
 
 }  // namespace _internal
+
 ExampleProtocol::~ExampleProtocol() = default;
 
 const fidl_type_t* ::test::placementofattributes::ExampleProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
@@ -610,6 +611,7 @@ zx_status_t ExampleProtocol_SyncProxy::Method(::test::exampleusing::Empty arg) {
   const fidl_type_t* req_type = &::test::placementofattributes::_internal::test_placementofattributes_ExampleProtocolMethodRequestTable;
   return proxy_.Send(req_type, ::test::placementofattributes::ExampleProtocol_RequestEncoder::Method(&_encoder, &arg));
 }
+
 #endif  // __Fuchsia__
 
 }  // namespace placementofattributes

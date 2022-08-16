@@ -17,6 +17,7 @@
 namespace fidl {
 
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> {
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>;
@@ -49,7 +50,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_foreigntypeinresp
   static constexpr bool kHasPayload = true;
   using Payload = ::test_middle::MiddleGetFooTopResponse;
 };
-namespace test_foreigntypeinresponseusedthroughcompose {}  // namespace test_foreigntypeinresponseusedthroughcompose
+namespace test_foreigntypeinresponseusedthroughcompose {
+}  // namespace test_foreigntypeinresponseusedthroughcompose
+
 template <>
 class ::fidl::Result<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> final : public ::fitx::result<::fidl::Error, ::test_middle::MiddleGetFooTopResponse> {
  public:
@@ -66,9 +69,11 @@ class ::fidl::internal::NaturalClientImpl<::test_foreigntypeinresponseusedthroug
   ::fidl::internal::NaturalThenable<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> GetFoo() const;
 };
 namespace test_foreigntypeinresponseusedthroughcompose {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_foreigntypeinresponseusedthroughcompose
+
 #ifdef __Fuchsia__
 
 template <>
@@ -83,6 +88,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_foreigntypeinresponseusedth
         _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -120,6 +126,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_foreigntypeinresponseusedt
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_foreigntypeinresponseusedthroughcompose::Top>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -135,6 +142,7 @@ class ::fidl::internal::NaturalEventSender<::test_foreigntypeinresponseusedthrou
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -149,6 +157,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_foreigntypeinrespo
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -195,4 +204,5 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_foreigntypeinresponseuse
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__

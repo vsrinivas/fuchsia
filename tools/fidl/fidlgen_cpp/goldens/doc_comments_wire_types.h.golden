@@ -26,9 +26,11 @@ namespace test_doccomments {
 
 namespace wire {
 using MyStrictBits = ::test_doccomments::MyStrictBits;
+
 using MyFlexibleBits = ::test_doccomments::MyFlexibleBits;
 
 using MyStrictEnum = ::test_doccomments::MyStrictEnum;
+
 using MyFlexibleEnum = ::test_doccomments::MyFlexibleEnum;
 
 struct Struct;
@@ -53,6 +55,7 @@ struct Struct {
 
 }  // namespace wire
 }  // namespace test_doccomments
+
 template <>
 class ::fidl::WireTableBuilder<::test_doccomments::wire::Table>;
 template <>
@@ -83,6 +86,7 @@ struct ::fidl::WireTableFrame<::test_doccomments::wire::Table> final {
 
 namespace test_doccomments {
 namespace wire {
+
 extern "C" const fidl_type_t test_doccomments_TableTable;
 
 /// table comment #1
@@ -169,6 +173,7 @@ class Table {
 };
 }  // namespace wire
 }  // namespace test_doccomments
+
 template <typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_doccomments::wire::Table, BuilderImpl> {
  public:
@@ -225,6 +230,7 @@ class ::fidl::WireTableExternalBuilder<::test_doccomments::wire::Table> final : 
 };
 namespace test_doccomments {
 namespace wire {
+
 inline ::fidl::WireTableBuilder<::test_doccomments::wire::Table> Table::Builder(::fidl::AnyArena& arena) {
   return ::fidl::WireTableBuilder<::test_doccomments::wire::Table>(arena);
 }

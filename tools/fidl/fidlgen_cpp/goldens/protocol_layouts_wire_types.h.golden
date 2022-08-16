@@ -26,6 +26,7 @@
 namespace test_protocollayouts {
 
 namespace wire {
+
 struct MainProtocolTwoWayImportWithErrorTopResponse;
 
 struct MainProtocolOnImportWithErrorRequest;
@@ -70,6 +71,7 @@ class MainProtocolOnAnonWithErrorResult;
 
 }  // namespace wire
 }  // namespace test_protocollayouts
+
 template <>
 class ::fidl::WireTableBuilder<::test_protocollayouts::wire::LocalTablePayload>;
 template <>
@@ -100,6 +102,7 @@ struct ::fidl::WireTableFrame<::test_protocollayouts::wire::LocalTablePayload> f
 
 namespace test_protocollayouts {
 namespace wire {
+
 extern "C" const fidl_type_t test_protocollayouts_LocalTablePayloadTable;
 
 class LocalTablePayload {
@@ -180,6 +183,7 @@ class LocalTablePayload {
 };
 }  // namespace wire
 }  // namespace test_protocollayouts
+
 template <typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_protocollayouts::wire::LocalTablePayload, BuilderImpl> {
  public:
@@ -233,6 +237,7 @@ class ::fidl::WireTableExternalBuilder<::test_protocollayouts::wire::LocalTableP
 };
 namespace test_protocollayouts {
 namespace wire {
+
 inline ::fidl::WireTableBuilder<::test_protocollayouts::wire::LocalTablePayload> LocalTablePayload::Builder(::fidl::AnyArena& arena) {
   return ::fidl::WireTableBuilder<::test_protocollayouts::wire::LocalTablePayload>(arena);
 }
@@ -242,6 +247,7 @@ inline ::fidl::WireTableExternalBuilder<::test_protocollayouts::wire::LocalTable
 
 }  // namespace wire
 }  // namespace test_protocollayouts
+
 template <>
 class ::fidl::WireTableBuilder<::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>;
 template <>
@@ -272,6 +278,7 @@ struct ::fidl::WireTableFrame<::test_protocollayouts::wire::MainProtocolOneWayAn
 
 namespace test_protocollayouts {
 namespace wire {
+
 extern "C" const fidl_type_t test_protocollayouts_MainProtocolOneWayAnonRequestTable;
 
 class MainProtocolOneWayAnonRequest {
@@ -352,6 +359,7 @@ class MainProtocolOneWayAnonRequest {
 };
 }  // namespace wire
 }  // namespace test_protocollayouts
+
 template <typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_protocollayouts::wire::MainProtocolOneWayAnonRequest, BuilderImpl> {
  public:
@@ -405,6 +413,7 @@ class ::fidl::WireTableExternalBuilder<::test_protocollayouts::wire::MainProtoco
 };
 namespace test_protocollayouts {
 namespace wire {
+
 inline ::fidl::WireTableBuilder<::test_protocollayouts::wire::MainProtocolOneWayAnonRequest> MainProtocolOneWayAnonRequest::Builder(::fidl::AnyArena& arena) {
   return ::fidl::WireTableBuilder<::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>(arena);
 }
@@ -414,6 +423,7 @@ inline ::fidl::WireTableExternalBuilder<::test_protocollayouts::wire::MainProtoc
 
 }  // namespace wire
 }  // namespace test_protocollayouts
+
 template <>
 class ::fidl::WireTableBuilder<::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>;
 template <>
@@ -444,6 +454,7 @@ struct ::fidl::WireTableFrame<::test_protocollayouts::wire::MainProtocolTwoWayAn
 
 namespace test_protocollayouts {
 namespace wire {
+
 extern "C" const fidl_type_t test_protocollayouts_MainProtocolTwoWayAnonResponseTable;
 
 class MainProtocolTwoWayAnonResponse {
@@ -524,6 +535,7 @@ class MainProtocolTwoWayAnonResponse {
 };
 }  // namespace wire
 }  // namespace test_protocollayouts
+
 template <typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse, BuilderImpl> {
  public:
@@ -577,6 +589,7 @@ class ::fidl::WireTableExternalBuilder<::test_protocollayouts::wire::MainProtoco
 };
 namespace test_protocollayouts {
 namespace wire {
+
 inline ::fidl::WireTableBuilder<::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse> MainProtocolTwoWayAnonResponse::Builder(::fidl::AnyArena& arena) {
   return ::fidl::WireTableBuilder<::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>(arena);
 }
@@ -586,6 +599,7 @@ inline ::fidl::WireTableExternalBuilder<::test_protocollayouts::wire::MainProtoc
 
 }  // namespace wire
 }  // namespace test_protocollayouts
+
 template <>
 class ::fidl::WireTableBuilder<::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest>;
 template <>
@@ -616,6 +630,7 @@ struct ::fidl::WireTableFrame<::test_protocollayouts::wire::MainProtocolTwoWayAn
 
 namespace test_protocollayouts {
 namespace wire {
+
 extern "C" const fidl_type_t test_protocollayouts_MainProtocolTwoWayAnonWithErrorRequestTable;
 
 class MainProtocolTwoWayAnonWithErrorRequest {
@@ -696,6 +711,7 @@ class MainProtocolTwoWayAnonWithErrorRequest {
 };
 }  // namespace wire
 }  // namespace test_protocollayouts
+
 template <typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest, BuilderImpl> {
  public:
@@ -749,6 +765,7 @@ class ::fidl::WireTableExternalBuilder<::test_protocollayouts::wire::MainProtoco
 };
 namespace test_protocollayouts {
 namespace wire {
+
 inline ::fidl::WireTableBuilder<::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest> MainProtocolTwoWayAnonWithErrorRequest::Builder(::fidl::AnyArena& arena) {
   return ::fidl::WireTableBuilder<::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest>(arena);
 }
@@ -758,6 +775,7 @@ inline ::fidl::WireTableExternalBuilder<::test_protocollayouts::wire::MainProtoc
 
 }  // namespace wire
 }  // namespace test_protocollayouts
+
 template <>
 class ::fidl::WireTableBuilder<::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>;
 template <>
@@ -788,6 +806,7 @@ struct ::fidl::WireTableFrame<::test_protocollayouts::wire::MainProtocolOnAnonWi
 
 namespace test_protocollayouts {
 namespace wire {
+
 extern "C" const fidl_type_t test_protocollayouts_MainProtocol_OnAnonWithError_ResponseTable;
 
 class MainProtocolOnAnonWithErrorResponse {
@@ -868,6 +887,7 @@ class MainProtocolOnAnonWithErrorResponse {
 };
 }  // namespace wire
 }  // namespace test_protocollayouts
+
 template <typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse, BuilderImpl> {
  public:
@@ -921,6 +941,7 @@ class ::fidl::WireTableExternalBuilder<::test_protocollayouts::wire::MainProtoco
 };
 namespace test_protocollayouts {
 namespace wire {
+
 inline ::fidl::WireTableBuilder<::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse> MainProtocolOnAnonWithErrorResponse::Builder(::fidl::AnyArena& arena) {
   return ::fidl::WireTableBuilder<::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>(arena);
 }

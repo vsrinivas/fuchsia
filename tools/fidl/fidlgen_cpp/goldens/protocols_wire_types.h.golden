@@ -140,6 +140,7 @@ struct WithErrorSyntaxHandleInResultResponse {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -151,6 +152,7 @@ struct ChannelProtocolTakeHandleRequest {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -162,6 +164,7 @@ struct ChannelProtocolMutateSocketRequest {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -173,6 +176,7 @@ struct ChannelProtocolMutateSocketTopResponse {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -184,6 +188,7 @@ struct HandleRightsProtocolNoResponseMethodRequest {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -195,6 +200,7 @@ struct HandleRightsProtocolResponseMethodRequest {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -206,6 +212,7 @@ struct HandleRightsProtocolResponseMethodTopResponse {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -217,6 +224,7 @@ struct HandleRightsProtocolAnEventRequest {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -228,6 +236,7 @@ struct WithProtocolEndsClientEndsRequest {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -239,6 +248,7 @@ struct WithProtocolEndsClientEndsTopResponse {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -250,6 +260,7 @@ struct WithProtocolEndsServerEndsRequest {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -261,6 +272,7 @@ struct WithProtocolEndsServerEndsTopResponse {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 extern "C" const fidl_type_t test_protocols_WithErrorSyntax_ResponseAsStruct_ResultTable;
@@ -570,6 +582,7 @@ class WithErrorSyntaxHandleInResultResult {
   FIDL_ALIGNDECL
   ::fidl::UntypedEnvelope envelope_;
 };
+
 #endif  // __Fuchsia__
 
 extern "C" const fidl_type_t test_protocols_TheUnionTable;
@@ -702,6 +715,7 @@ struct WithErrorSyntaxHandleInResultTopResponse {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodARequestTable;
@@ -781,6 +795,7 @@ struct ProtocolEnds {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -792,6 +807,7 @@ struct WithProtocolEndsStructContainingEndsRequest {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -803,6 +819,7 @@ struct WithProtocolEndsStructContainingEndsTopResponse {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 extern "C" const fidl_type_t test_protocols_ManyParametersFifteenRequestTable;
@@ -1564,6 +1581,7 @@ struct ::fidl::internal::WireCodingTraits<::test_protocols::wire::WithErrorSynta
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1620,6 +1638,7 @@ struct ::fidl::internal::WireCodingTraits<::test_protocols::wire::WithErrorSynta
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 // TODO(fxbug.dev/95833) Remove this.
@@ -1892,6 +1911,7 @@ struct ::fidl::internal::WireCodingTraits<::test_protocols::wire::ChannelProtoco
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1948,6 +1968,7 @@ struct ::fidl::internal::WireCodingTraits<::test_protocols::wire::ChannelProtoco
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2004,6 +2025,7 @@ struct ::fidl::internal::WireCodingTraits<::test_protocols::wire::ChannelProtoco
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 // TODO(fxbug.dev/95833) Remove this.
@@ -2319,6 +2341,7 @@ struct ::fidl::internal::WireCodingTraits<::test_protocols::wire::HandleRightsPr
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2375,6 +2398,7 @@ struct ::fidl::internal::WireCodingTraits<::test_protocols::wire::HandleRightsPr
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2431,6 +2455,7 @@ struct ::fidl::internal::WireCodingTraits<::test_protocols::wire::HandleRightsPr
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2487,6 +2512,7 @@ struct ::fidl::internal::WireCodingTraits<::test_protocols::wire::HandleRightsPr
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2555,6 +2581,7 @@ struct ::fidl::internal::WireCodingTraits<::test_protocols::wire::ProtocolEnds, 
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2611,6 +2638,7 @@ struct ::fidl::internal::WireCodingTraits<::test_protocols::wire::WithProtocolEn
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2667,6 +2695,7 @@ struct ::fidl::internal::WireCodingTraits<::test_protocols::wire::WithProtocolEn
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2723,6 +2752,7 @@ struct ::fidl::internal::WireCodingTraits<::test_protocols::wire::WithProtocolEn
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2779,6 +2809,7 @@ struct ::fidl::internal::WireCodingTraits<::test_protocols::wire::WithProtocolEn
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2835,6 +2866,7 @@ struct ::fidl::internal::WireCodingTraits<::test_protocols::wire::WithProtocolEn
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2891,6 +2923,7 @@ struct ::fidl::internal::WireCodingTraits<::test_protocols::wire::WithProtocolEn
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 // TODO(fxbug.dev/95833) Remove this.
@@ -3589,6 +3622,7 @@ struct ::fidl::internal::WireCodingTraits<::test_protocols::wire::WithErrorSynta
 template <bool IsRecursive>
 struct ::fidl::internal::WireCodingTraits<::test_protocols::wire::WithErrorSyntaxHandleInResultResult, ::fidl::internal::WireCodingConstraintEmpty, IsRecursive>
     : public ::fidl::internal::WireCodingTraits<::test_protocols::wire::WithErrorSyntaxHandleInResultResult, ::fidl::internal::WireCodingConstraintUnion<false>, IsRecursive> {};
+
 #endif  // __Fuchsia__
 
 template <>

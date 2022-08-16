@@ -3,8 +3,10 @@
 #include <fidl/test.anonymous/cpp/common_types.h>
 
 namespace test_anonymous {
+
 extern "C" const fidl_type_t test_anonymous_OpTable;
 }  // namespace test_anonymous
+
 size_t fidl::internal::DisplayError<::test_anonymous::Op>::Format(
     const ::test_anonymous::Op& value, char* destination, size_t capacity) {
   const char* name = [&]() -> const char* {
@@ -24,8 +26,10 @@ size_t fidl::internal::DisplayError<::test_anonymous::Op>::Format(
 }
 
 namespace test_anonymous {
+
 extern "C" const fidl_type_t test_anonymous_SomeProtocol_SomeMethod_ErrorTable;
 }  // namespace test_anonymous
+
 size_t fidl::internal::DisplayError<::test_anonymous::SomeProtocolSomeMethodError>::Format(
     const ::test_anonymous::SomeProtocolSomeMethodError& value, char* destination, size_t capacity) {
   const char* name = [&]() -> const char* {

@@ -24,6 +24,7 @@
 namespace test_table {
 
 namespace wire {
+
 class EmptyTable;
 
 class SimpleTable;
@@ -42,6 +43,7 @@ class SixtyFourOrdinalTable;
 
 }  // namespace wire
 }  // namespace test_table
+
 template <>
 class ::fidl::WireTableBuilder<::test_table::wire::EmptyTable>;
 template <>
@@ -71,6 +73,7 @@ struct ::fidl::WireTableFrame<::test_table::wire::EmptyTable> final {
 
 namespace test_table {
 namespace wire {
+
 extern "C" const fidl_type_t test_table_EmptyTableTable;
 
 class EmptyTable {
@@ -126,6 +129,7 @@ class EmptyTable {
 };
 }  // namespace wire
 }  // namespace test_table
+
 template <typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::EmptyTable, BuilderImpl> {
  public:
@@ -172,6 +176,7 @@ class ::fidl::WireTableExternalBuilder<::test_table::wire::EmptyTable> final : p
 };
 namespace test_table {
 namespace wire {
+
 inline ::fidl::WireTableBuilder<::test_table::wire::EmptyTable> EmptyTable::Builder(::fidl::AnyArena& arena) {
   return ::fidl::WireTableBuilder<::test_table::wire::EmptyTable>(arena);
 }
@@ -181,6 +186,7 @@ inline ::fidl::WireTableExternalBuilder<::test_table::wire::EmptyTable> EmptyTab
 
 }  // namespace wire
 }  // namespace test_table
+
 template <>
 class ::fidl::WireTableBuilder<::test_table::wire::SimpleTable>;
 template <>
@@ -215,6 +221,7 @@ struct ::fidl::WireTableFrame<::test_table::wire::SimpleTable> final {
 
 namespace test_table {
 namespace wire {
+
 extern "C" const fidl_type_t test_table_SimpleTableTable;
 
 class SimpleTable {
@@ -345,6 +352,7 @@ class SimpleTable {
 };
 }  // namespace wire
 }  // namespace test_table
+
 template <typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::SimpleTable, BuilderImpl> {
  public:
@@ -420,6 +428,7 @@ class ::fidl::WireTableExternalBuilder<::test_table::wire::SimpleTable> final : 
 };
 namespace test_table {
 namespace wire {
+
 inline ::fidl::WireTableBuilder<::test_table::wire::SimpleTable> SimpleTable::Builder(::fidl::AnyArena& arena) {
   return ::fidl::WireTableBuilder<::test_table::wire::SimpleTable>(arena);
 }
@@ -429,6 +438,7 @@ inline ::fidl::WireTableExternalBuilder<::test_table::wire::SimpleTable> SimpleT
 
 }  // namespace wire
 }  // namespace test_table
+
 template <>
 class ::fidl::WireTableBuilder<::test_table::wire::OlderSimpleTable>;
 template <>
@@ -459,6 +469,7 @@ struct ::fidl::WireTableFrame<::test_table::wire::OlderSimpleTable> final {
 
 namespace test_table {
 namespace wire {
+
 extern "C" const fidl_type_t test_table_OlderSimpleTableTable;
 
 class OlderSimpleTable {
@@ -552,6 +563,7 @@ class OlderSimpleTable {
 };
 }  // namespace wire
 }  // namespace test_table
+
 template <typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::OlderSimpleTable, BuilderImpl> {
  public:
@@ -613,6 +625,7 @@ class ::fidl::WireTableExternalBuilder<::test_table::wire::OlderSimpleTable> fin
 };
 namespace test_table {
 namespace wire {
+
 inline ::fidl::WireTableBuilder<::test_table::wire::OlderSimpleTable> OlderSimpleTable::Builder(::fidl::AnyArena& arena) {
   return ::fidl::WireTableBuilder<::test_table::wire::OlderSimpleTable>(arena);
 }
@@ -622,6 +635,7 @@ inline ::fidl::WireTableExternalBuilder<::test_table::wire::OlderSimpleTable> Ol
 
 }  // namespace wire
 }  // namespace test_table
+
 template <>
 class ::fidl::WireTableBuilder<::test_table::wire::NewerSimpleTable>;
 template <>
@@ -657,6 +671,7 @@ struct ::fidl::WireTableFrame<::test_table::wire::NewerSimpleTable> final {
 
 namespace test_table {
 namespace wire {
+
 extern "C" const fidl_type_t test_table_NewerSimpleTableTable;
 
 class NewerSimpleTable {
@@ -824,6 +839,7 @@ class NewerSimpleTable {
 };
 }  // namespace wire
 }  // namespace test_table
+
 template <typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::NewerSimpleTable, BuilderImpl> {
  public:
@@ -913,6 +929,7 @@ class ::fidl::WireTableExternalBuilder<::test_table::wire::NewerSimpleTable> fin
 };
 namespace test_table {
 namespace wire {
+
 inline ::fidl::WireTableBuilder<::test_table::wire::NewerSimpleTable> NewerSimpleTable::Builder(::fidl::AnyArena& arena) {
   return ::fidl::WireTableBuilder<::test_table::wire::NewerSimpleTable>(arena);
 }
@@ -922,6 +939,7 @@ inline ::fidl::WireTableExternalBuilder<::test_table::wire::NewerSimpleTable> Ne
 
 }  // namespace wire
 }  // namespace test_table
+
 template <>
 class ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>;
 template <>
@@ -954,6 +972,7 @@ struct ::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable> final {
 
 namespace test_table {
 namespace wire {
+
 extern "C" const fidl_type_t test_table_ReverseOrdinalTableTable;
 
 class ReverseOrdinalTable {
@@ -1121,6 +1140,7 @@ class ReverseOrdinalTable {
 };
 }  // namespace wire
 }  // namespace test_table
+
 template <typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::ReverseOrdinalTable, BuilderImpl> {
  public:
@@ -1210,6 +1230,7 @@ class ::fidl::WireTableExternalBuilder<::test_table::wire::ReverseOrdinalTable> 
 };
 namespace test_table {
 namespace wire {
+
 inline ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable> ReverseOrdinalTable::Builder(::fidl::AnyArena& arena) {
   return ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>(arena);
 }
@@ -1219,6 +1240,7 @@ inline ::fidl::WireTableExternalBuilder<::test_table::wire::ReverseOrdinalTable>
 
 }  // namespace wire
 }  // namespace test_table
+
 template <>
 class ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes>;
 template <>
@@ -1249,6 +1271,7 @@ struct ::fidl::WireTableFrame<::test_table::wire::TableWithAttributes> final {
 
 namespace test_table {
 namespace wire {
+
 extern "C" const fidl_type_t test_table_TableWithAttributesTable;
 
 class TableWithAttributes {
@@ -1342,6 +1365,7 @@ class TableWithAttributes {
 };
 }  // namespace wire
 }  // namespace test_table
+
 template <typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::TableWithAttributes, BuilderImpl> {
  public:
@@ -1403,6 +1427,7 @@ class ::fidl::WireTableExternalBuilder<::test_table::wire::TableWithAttributes> 
 };
 namespace test_table {
 namespace wire {
+
 inline ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes> TableWithAttributes::Builder(::fidl::AnyArena& arena) {
   return ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes>(arena);
 }
@@ -1412,6 +1437,7 @@ inline ::fidl::WireTableExternalBuilder<::test_table::wire::TableWithAttributes>
 
 }  // namespace wire
 }  // namespace test_table
+
 template <>
 class ::fidl::WireTableBuilder<::test_table::wire::ExtensionTable>;
 template <>
@@ -1441,6 +1467,7 @@ struct ::fidl::WireTableFrame<::test_table::wire::ExtensionTable> final {
 
 namespace test_table {
 namespace wire {
+
 extern "C" const fidl_type_t test_table_ExtensionTableTable;
 
 class ExtensionTable {
@@ -1496,6 +1523,7 @@ class ExtensionTable {
 };
 }  // namespace wire
 }  // namespace test_table
+
 template <typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::ExtensionTable, BuilderImpl> {
  public:
@@ -1542,6 +1570,7 @@ class ::fidl::WireTableExternalBuilder<::test_table::wire::ExtensionTable> final
 };
 namespace test_table {
 namespace wire {
+
 inline ::fidl::WireTableBuilder<::test_table::wire::ExtensionTable> ExtensionTable::Builder(::fidl::AnyArena& arena) {
   return ::fidl::WireTableBuilder<::test_table::wire::ExtensionTable>(arena);
 }
@@ -1551,6 +1580,7 @@ inline ::fidl::WireTableExternalBuilder<::test_table::wire::ExtensionTable> Exte
 
 }  // namespace wire
 }  // namespace test_table
+
 template <>
 class ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>;
 template <>
@@ -1644,6 +1674,7 @@ struct ::fidl::WireTableFrame<::test_table::wire::SixtyFourOrdinalTable> final {
 
 namespace test_table {
 namespace wire {
+
 extern "C" const fidl_type_t test_table_SixtyFourOrdinalTableTable;
 
 class SixtyFourOrdinalTable {
@@ -4068,6 +4099,7 @@ class SixtyFourOrdinalTable {
 };
 }  // namespace wire
 }  // namespace test_table
+
 template <typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::SixtyFourOrdinalTable, BuilderImpl> {
  public:
@@ -5011,6 +5043,7 @@ class ::fidl::WireTableExternalBuilder<::test_table::wire::SixtyFourOrdinalTable
 };
 namespace test_table {
 namespace wire {
+
 inline ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable> SixtyFourOrdinalTable::Builder(::fidl::AnyArena& arena) {
   return ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>(arena);
 }

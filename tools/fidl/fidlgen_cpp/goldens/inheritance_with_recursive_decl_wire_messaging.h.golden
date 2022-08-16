@@ -18,6 +18,7 @@
 #endif  // __Fuchsia__
 
 namespace test_inheritancewithrecursivedecl {
+
 class Parent;
 
 class Child;
@@ -25,18 +26,22 @@ class Child;
 __LOCAL extern "C" const fidl_type_t test_inheritancewithrecursivedecl_ParentFirstRequestTable;
 
 }  // namespace test_inheritancewithrecursivedecl
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_inheritancewithrecursivedecl::Parent::First> final {
   static constexpr uint64_t value = 3973163707930985819lu;
 };
 
 namespace test_inheritancewithrecursivedecl {
+
 }  // namespace test_inheritancewithrecursivedecl
+
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_inheritancewithrecursivedecl::Parent> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -57,6 +62,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_inheritancewithrecursivedec
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -122,6 +128,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 #endif  // __Fuchsia__
 
 namespace fidl {
@@ -179,10 +186,12 @@ struct TypeTraits<::fidl::WireRequest<::test_inheritancewithrecursivedecl::Paren
 };
 static_assert(sizeof(::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>) == TypeTraits<::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireRequest<::test_inheritancewithrecursivedecl::Parent::First>, request) == 0);
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::IncomingEventsHandleStorage<::test_inheritancewithrecursivedecl::Parent> final : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_inheritancewithrecursivedecl::Parent>> {
  public:
@@ -226,6 +235,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_inheritancewithrecursivedec
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };
+
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_inheritancewithrecursivedecl::Parent> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
@@ -319,6 +329,7 @@ class ::fidl::WireServer<::test_inheritancewithrecursivedecl::Parent> : public :
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl
@@ -326,22 +337,27 @@ namespace test_inheritancewithrecursivedecl {
 __LOCAL extern "C" const fidl_type_t test_inheritancewithrecursivedecl_ChildSecondRequestTable;
 
 }  // namespace test_inheritancewithrecursivedecl
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_inheritancewithrecursivedecl::Child::First> final {
   static constexpr uint64_t value = 3973163707930985819lu;
 };
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_inheritancewithrecursivedecl::Child::Second> final {
   static constexpr uint64_t value = 2545123272820824165lu;
 };
 
 namespace test_inheritancewithrecursivedecl {
+
 }  // namespace test_inheritancewithrecursivedecl
+
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_inheritancewithrecursivedecl::Child> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -362,6 +378,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_inheritancewithrecursivedec
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -427,6 +444,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -492,6 +510,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 #endif  // __Fuchsia__
 
 namespace fidl {
@@ -549,6 +568,7 @@ struct TypeTraits<::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child
 };
 static_assert(sizeof(::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>) == TypeTraits<::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::First>, request) == 0);
+
 #endif  // __Fuchsia__
 
 template <>
@@ -604,10 +624,12 @@ struct TypeTraits<::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child
 };
 static_assert(sizeof(::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>) == TypeTraits<::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>, request) == 0);
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::IncomingEventsHandleStorage<::test_inheritancewithrecursivedecl::Child> final : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_inheritancewithrecursivedecl::Child>> {
  public:
@@ -679,6 +701,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_inheritancewithrecursivedec
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };
+
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_inheritancewithrecursivedecl::Child> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
@@ -790,10 +813,12 @@ class ::fidl::WireServer<::test_inheritancewithrecursivedecl::Child> : public ::
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireWeakOnewayClientImpl<::test_inheritancewithrecursivedecl::Parent> : public ::fidl::internal::ClientImplBase {
  public:
@@ -829,9 +854,11 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_inheritancewithrecursivede
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl
+
 #ifdef __Fuchsia__
 template <>
 class ::fidl::internal::WireWeakEventSender<::test_inheritancewithrecursivedecl::Parent> : public ::fidl::internal::WeakEventSenderBase {
@@ -858,6 +885,7 @@ class ::fidl::internal::WireBufferEventSender<::test_inheritancewithrecursivedec
  public:
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -902,6 +930,7 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_inheritancewithrecursivede
  public:
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -930,4 +959,5 @@ class ::fidl::internal::WireBufferEventSender<::test_inheritancewithrecursivedec
  public:
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
+
 #endif  // __Fuchsia__

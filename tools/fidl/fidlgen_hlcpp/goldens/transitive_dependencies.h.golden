@@ -38,6 +38,7 @@ using BazPtr = ::std::unique_ptr<Baz>;
 }  // namespace transitivedependencies
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::transitivedependencies::Baz>
     : public EncodableCodingTraits<::test::transitivedependencies::Baz, 4> {};

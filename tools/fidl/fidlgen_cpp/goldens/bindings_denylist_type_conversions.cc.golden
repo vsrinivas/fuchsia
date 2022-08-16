@@ -473,6 +473,7 @@ std::unique_ptr<::test_bindingsdenylist::DenyEachBindingOnlyDenySyzkallerResult>
 ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> WireNaturalConversionTraits<::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>, ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>>::ToWire(fidl::AnyArena& arena, ::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> src) {
   return ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>();
 }
+
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

@@ -9,6 +9,7 @@
 //
 namespace test {
 namespace vectors {
+
 extern "C" const fidl_type_t test_vectors_ExampleUseOfVectorsTable;
 const fidl_type_t* ExampleUseOfVectors::FidlType = &test_vectors_ExampleUseOfVectorsTable;
 

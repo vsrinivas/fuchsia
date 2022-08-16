@@ -6,6 +6,7 @@
 namespace test {
 namespace emptystruct {
 namespace testing {
+
 class EmptyProtocol_TestBase : public ::test::emptystruct::EmptyProtocol {
  public:
   virtual ~EmptyProtocol_TestBase() {}

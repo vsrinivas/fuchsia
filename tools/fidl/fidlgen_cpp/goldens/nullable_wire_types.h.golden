@@ -26,6 +26,7 @@
 namespace test_nullable {
 
 namespace wire {
+
 struct StructWithNullableString;
 
 struct StructWithNullableVector;
@@ -57,6 +58,7 @@ struct StructWithNullableHandle {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 extern "C" const fidl_type_t test_nullable_SimpleProtocolAddTopResponseTable;
@@ -74,6 +76,7 @@ struct StructWithNullableProtocol {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -85,6 +88,7 @@ struct StructWithNullableRequest {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 extern "C" const fidl_type_t test_nullable_Int32WrapperTable;
@@ -356,6 +360,7 @@ struct ::fidl::internal::WireCodingTraits<::test_nullable::wire::StructWithNulla
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 // TODO(fxbug.dev/95833) Remove this.
@@ -518,6 +523,7 @@ struct ::fidl::internal::WireCodingTraits<::test_nullable::wire::StructWithNulla
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -574,6 +580,7 @@ struct ::fidl::internal::WireCodingTraits<::test_nullable::wire::StructWithNulla
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 // TODO(fxbug.dev/95833) Remove this.

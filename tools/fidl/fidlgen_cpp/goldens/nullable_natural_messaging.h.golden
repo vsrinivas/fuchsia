@@ -15,6 +15,7 @@
 namespace fidl {
 
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_nullable::SimpleProtocol::Add> {
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_nullable::SimpleProtocol::Add>>;
@@ -29,6 +30,7 @@ struct ::fidl::internal::NaturalMethodTypes<::test_nullable::SimpleProtocol::Add
 };
 namespace test_nullable {
 __LOCAL extern "C" const fidl_type_t test_nullable_SimpleProtocolAddRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_nullable_SimpleProtocolAddTopResponseTable;
 
 #ifdef __Fuchsia__
@@ -47,7 +49,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_nullable::SimpleP
   static constexpr bool kHasPayload = true;
   using Payload = ::test_nullable::SimpleProtocolAddTopResponse;
 };
-namespace test_nullable {}  // namespace test_nullable
+namespace test_nullable {
+}  // namespace test_nullable
+
 template <>
 class ::fidl::Result<::test_nullable::SimpleProtocol::Add> final : public ::fitx::result<::fidl::Error, ::test_nullable::SimpleProtocolAddTopResponse> {
  public:
@@ -64,9 +68,11 @@ class ::fidl::internal::NaturalClientImpl<::test_nullable::SimpleProtocol> final
   ::fidl::internal::NaturalThenable<::test_nullable::SimpleProtocol::Add> Add(const ::fidl::Request<::test_nullable::SimpleProtocol::Add>& request) const;
 };
 namespace test_nullable {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_nullable
+
 #ifdef __Fuchsia__
 
 template <>
@@ -81,6 +87,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_nullable::SimpleProtocol> f
         _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -118,6 +125,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_nullable::SimpleProtocol> 
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_nullable::SimpleProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -133,6 +141,7 @@ class ::fidl::internal::NaturalEventSender<::test_nullable::SimpleProtocol>
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -150,6 +159,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_nullable::SimplePr
   static constexpr bool kHasPayload = true;
   using Payload = ::test_nullable::SimpleProtocolAddRequest;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -196,4 +206,5 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_nullable::SimpleProtocol
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__

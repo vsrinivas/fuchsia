@@ -6,6 +6,7 @@
 namespace test {
 namespace nullable {
 namespace testing {
+
 class SimpleProtocol_TestBase : public ::test::nullable::SimpleProtocol {
  public:
   virtual ~SimpleProtocol_TestBase() {}

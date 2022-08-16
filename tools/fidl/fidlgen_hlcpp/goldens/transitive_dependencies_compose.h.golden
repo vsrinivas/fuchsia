@@ -17,6 +17,7 @@ namespace transitivedependenciescompose {
 
 class Top;
 using TopHandle = ::fidl::InterfaceHandle<Top>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -31,6 +32,7 @@ namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_bottom_BottomGetFooTopResponseTable;
 
 }  // namespace _internal
+
 class Top_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage GetFoo(::fidl::MessageEncoder* _encoder, ::test::bottom::Foo* foo) {
@@ -44,6 +46,7 @@ class Top_ResponseEncoder {
     return _encoder->GetMessage();
   }
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace transitivedependenciescompose
@@ -56,6 +59,7 @@ namespace fidl {
 }  // namespace fidl
 namespace test {
 namespace transitivedependenciescompose {
+
 #ifdef __Fuchsia__
 
 using TopPtr = ::fidl::InterfacePtr<Top>;
@@ -67,9 +71,12 @@ using TopSyncPtr = ::fidl::SynchronousInterfacePtr<Top>;
 class Top_SyncProxy;
 
 namespace internal {
+
 constexpr uint64_t kTop_GetFoo_Ordinal = 0x245770d9d719c667lu;
+
 constexpr ::fidl::MessageDynamicFlags kTop_GetFoo_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -155,6 +162,7 @@ class Top_SyncProxy : public ::test::transitivedependenciescompose::Top_Sync {
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<Top>;
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace transitivedependenciescompose

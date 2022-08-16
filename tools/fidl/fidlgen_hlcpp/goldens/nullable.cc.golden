@@ -9,6 +9,7 @@
 //
 namespace test {
 namespace nullable {
+
 extern "C" const fidl_type_t test_nullable_StructWithNullableStringTable;
 const fidl_type_t* StructWithNullableString::FidlType = &test_nullable_StructWithNullableStringTable;
 
@@ -94,6 +95,7 @@ zx_status_t StructWithNullableHandle::Clone(StructWithNullableHandle* _result) c
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 extern "C" const fidl_type_t test_nullable_SimpleProtocolAddRequestTable;
@@ -186,6 +188,7 @@ zx_status_t StructWithNullableProtocol::Clone(StructWithNullableProtocol* _resul
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -219,6 +222,7 @@ zx_status_t StructWithNullableRequest::Clone(StructWithNullableRequest* _result)
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 extern "C" const fidl_type_t test_nullable_Int32WrapperTable;
@@ -505,9 +509,11 @@ zx_status_t StructWithNullableUnion::Clone(StructWithNullableUnion* _result) con
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_nullable_SimpleProtocolAddRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_nullable_SimpleProtocolAddTopResponseTable;
 
 }  // namespace _internal
+
 SimpleProtocol::~SimpleProtocol() = default;
 
 const fidl_type_t* ::test::nullable::SimpleProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
@@ -659,6 +665,7 @@ zx_status_t SimpleProtocol_SyncProxy::Add(int32_t a, int32_t b, int32_t* out_sum
   *out_sum = ::fidl::DecodeAs<int32_t>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 }  // namespace nullable

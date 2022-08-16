@@ -24,6 +24,7 @@
 namespace test_vectors {
 
 namespace wire {
+
 struct ExampleUseOfVectors;
 
 extern "C" const fidl_type_t test_vectors_ExampleUseOfVectorsTable;

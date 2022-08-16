@@ -7,6 +7,7 @@
 namespace test {
 namespace errorsyntax {
 namespace testing {
+
 class ExampleUseOfErrorSyntax_TestBase : public ::test::errorsyntax::ExampleUseOfErrorSyntax {
  public:
   virtual ~ExampleUseOfErrorSyntax_TestBase() {}

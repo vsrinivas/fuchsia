@@ -6,6 +6,7 @@
 namespace test {
 namespace unknowninteractions {
 namespace testing {
+
 class UnknownInteractionsProtocol_TestBase : public ::test::unknowninteractions::UnknownInteractionsProtocol {
  public:
   virtual ~UnknownInteractionsProtocol_TestBase() {}

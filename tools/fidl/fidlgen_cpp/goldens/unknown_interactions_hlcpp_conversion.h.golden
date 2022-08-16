@@ -11,6 +11,7 @@
   namespace fidl {
 namespace internal {
 
+
   
     template<>
     struct NaturalToHLCPPTraits<fidl::ClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol>> {
@@ -6045,3 +6046,4 @@ namespace internal {
 
   }  // namespace internal
 }  // namespace fidl
+

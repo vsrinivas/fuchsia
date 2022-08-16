@@ -25,6 +25,7 @@ struct ::fidl::internal::NaturalMethodTypes<::test_drivertwoway::TwoWay::Add> {
 };
 namespace test_drivertwoway {
 __LOCAL extern "C" const fidl_type_t test_drivertwoway_TwoWayAddRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_drivertwoway_TwoWayAddTopResponseTable;
 #ifdef __Fuchsia__
 }  // namespace test_drivertwoway
@@ -42,7 +43,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_drivertwoway::Two
   static constexpr bool kHasPayload = true;
   using Payload = ::test_drivertwoway::TwoWayAddTopResponse;
 };
-namespace test_drivertwoway {}  // namespace test_drivertwoway
+namespace test_drivertwoway {
+}  // namespace test_drivertwoway
+
 template <>
 class ::fdf::Result<::test_drivertwoway::TwoWay::Add> final : public ::fitx::result<::fidl::Error, ::test_drivertwoway::TwoWayAddTopResponse> {
  public:
@@ -59,8 +62,10 @@ class ::fidl::internal::NaturalClientImpl<::test_drivertwoway::TwoWay> final : p
   ::fidl::internal::NaturalThenable<::test_drivertwoway::TwoWay::Add> Add(const ::fidl::Request<::test_drivertwoway::TwoWay::Add>& request) const;
 };
 namespace test_drivertwoway {
+
 #endif  // __Fuchsia__
 }  // namespace test_drivertwoway
+
 #ifdef __Fuchsia__
 
 template <>
@@ -83,6 +88,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_drivertwoway::TwoWay> fina
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_drivertwoway::TwoWay>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -100,6 +106,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_drivertwoway::TwoW
   static constexpr bool kHasPayload = true;
   using Payload = ::test_drivertwoway::TwoWayAddRequest;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -145,4 +152,5 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_drivertwoway::TwoWay> fi
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__

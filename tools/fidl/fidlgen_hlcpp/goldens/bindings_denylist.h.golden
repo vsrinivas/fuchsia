@@ -16,16 +16,19 @@ namespace bindingsdenylist {
 
 class OnlyLibfuzzerAndDeps;
 using OnlyLibfuzzerAndDepsHandle = ::fidl::InterfaceHandle<OnlyLibfuzzerAndDeps>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
 class OnlyCppAndDeps;
 using OnlyCppAndDepsHandle = ::fidl::InterfaceHandle<OnlyCppAndDeps>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 class OnlyHlcpp;
+
 #endif  // __Fuchsia__
 
 class DenyEachBindingOnlyDenyDartRequest;
@@ -72,12 +75,14 @@ class DenyEachBindingOnlyDenySyzkallerTopResponse;
 
 class DenyEachBinding;
 using DenyEachBindingHandle = ::fidl::InterfaceHandle<DenyEachBinding>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
 class Allowed;
 using AllowedHandle = ::fidl::InterfaceHandle<Allowed>;
+
 #endif  // __Fuchsia__
 
 class MemberOnlyAppearsInImportingLibrary;
@@ -88,6 +93,7 @@ class OnlyAppearsInImportingLibrary;
 
 class ImportsSameNameContext;
 using ImportsSameNameContextHandle = ::fidl::InterfaceHandle<ImportsSameNameContext>;
+
 #endif  // __Fuchsia__
 
 constexpr uint32_t AllBindings = 0u;
@@ -101,6 +107,7 @@ class OnlyLibfuzzerAndDeps_RequestEncoder {
 class OnlyLibfuzzerAndDeps_ResponseEncoder {
  public:
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -112,6 +119,7 @@ class OnlyCppAndDeps_RequestEncoder {
 class OnlyCppAndDeps_ResponseEncoder {
  public:
 };
+
 #endif  // __Fuchsia__
 
 class DenyEachBindingOnlyDenyDartRequest final {
@@ -1013,12 +1021,17 @@ using DenyEachBindingOnlyDenySyzkallerTopResponsePtr = ::std::unique_ptr<DenyEac
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
 
 }  // namespace _internal
+
 class DenyEachBinding_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage OnlyDenyDart(::fidl::MessageEncoder* _encoder, bool* a) {
@@ -1069,12 +1082,17 @@ class DenyEachBinding_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable;
 
 }  // namespace _internal
+
 class DenyEachBinding_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage OnlyDenyDart(::fidl::MessageEncoder* _encoder, ::test::bindingsdenylist::DenyEachBinding_OnlyDenyDart_Result* result) {
@@ -1128,6 +1146,7 @@ class DenyEachBinding_ResponseEncoder {
     return _encoder->GetMessage();
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1139,6 +1158,7 @@ class Allowed_RequestEncoder {
 class Allowed_ResponseEncoder {
  public:
 };
+
 #endif  // __Fuchsia__
 
 class MemberOnlyAppearsInImportingLibrary final {
@@ -1198,11 +1218,13 @@ class ImportsSameNameContext_RequestEncoder {
 class ImportsSameNameContext_ResponseEncoder {
  public:
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace bindingsdenylist
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::bindingsdenylist::DenyEachBindingOnlyDenyDartRequest>
     : public EncodableCodingTraits<::test::bindingsdenylist::DenyEachBindingOnlyDenyDartRequest, 1> {};
@@ -1884,6 +1906,7 @@ struct Equality<::test::bindingsdenylist::OnlyAppearsInImportingLibrary> {
 }  // namespace fidl
 namespace test {
 namespace bindingsdenylist {
+
 #ifdef __Fuchsia__
 
 using OnlyLibfuzzerAndDepsPtr = ::fidl::InterfacePtr<OnlyLibfuzzerAndDeps>;
@@ -1910,6 +1933,7 @@ class OnlyCppAndDeps_SyncProxy;
 
 #ifdef __Fuchsia__
 class OnlyHlcpp;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1923,17 +1947,28 @@ using DenyEachBindingSyncPtr = ::fidl::SynchronousInterfacePtr<DenyEachBinding>;
 class DenyEachBinding_SyncProxy;
 
 namespace internal {
+
 constexpr uint64_t kDenyEachBinding_OnlyDenyDart_Ordinal = 0x75384066a26d87d7lu;
+
 constexpr ::fidl::MessageDynamicFlags kDenyEachBinding_OnlyDenyDart_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kDenyEachBinding_OnlyDenyGo_Ordinal = 0x657655b981478d99lu;
+
 constexpr ::fidl::MessageDynamicFlags kDenyEachBinding_OnlyDenyGo_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal = 0x1e4f89c329617b1elu;
+
 constexpr ::fidl::MessageDynamicFlags kDenyEachBinding_OnlyDenyLibfuzzer_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kDenyEachBinding_OnlyDenyRust_Ordinal = 0x339f67244edd5cb6lu;
+
 constexpr ::fidl::MessageDynamicFlags kDenyEachBinding_OnlyDenyRust_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kDenyEachBinding_OnlyDenySyzkaller_Ordinal = 0x202ee614a749e98alu;
+
 constexpr ::fidl::MessageDynamicFlags kDenyEachBinding_OnlyDenySyzkaller_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1959,11 +1994,16 @@ using ImportsSameNameContextSyncPtr = ::fidl::SynchronousInterfacePtr<ImportsSam
 class ImportsSameNameContext_SyncProxy;
 
 namespace internal {
+
 constexpr uint64_t kImportsSameNameContext_Unattributed_Ordinal = 0x698380acfd29e8flu;
+
 constexpr ::fidl::MessageDynamicFlags kImportsSameNameContext_Unattributed_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal = 0x2874096c521236f8lu;
+
 constexpr ::fidl::MessageDynamicFlags kImportsSameNameContext_AlwaysAppearsInImportingLibrary_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2038,6 +2078,7 @@ class OnlyLibfuzzerAndDeps_SyncProxy : public ::test::bindingsdenylist::OnlyLibf
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<OnlyLibfuzzerAndDeps>;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2112,6 +2153,7 @@ class OnlyCppAndDeps_SyncProxy : public ::test::bindingsdenylist::OnlyCppAndDeps
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<OnlyCppAndDeps>;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2139,6 +2181,7 @@ class OnlyHlcpp::Handler final {
 
  private:
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2268,6 +2311,7 @@ class DenyEachBinding_SyncProxy : public ::test::bindingsdenylist::DenyEachBindi
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<DenyEachBinding>;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2342,6 +2386,7 @@ class Allowed_SyncProxy : public ::test::bindingsdenylist::Allowed_Sync {
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<Allowed>;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2432,6 +2477,7 @@ class ImportsSameNameContext_SyncProxy : public ::test::bindingsdenylist::Import
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<ImportsSameNameContext>;
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace bindingsdenylist

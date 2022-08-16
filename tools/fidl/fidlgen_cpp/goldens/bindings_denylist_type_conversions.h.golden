@@ -8,6 +8,7 @@
 #ifdef __Fuchsia__
 #include <fidl/test.bindingsdenylist/cpp/natural_messaging.h>
 #include <fidl/test.bindingsdenylist/cpp/wire_messaging.h>
+
 #endif  // __Fuchsia__
 #include <fidl/test.dependent/cpp/type_conversions.h>
 #include <lib/fidl/cpp/wire_natural_conversions.h>
@@ -600,6 +601,7 @@ template <>
 struct WireTypeForNaturalType<::fidl::Request<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>> {
   using type = ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary>;
 };
+
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

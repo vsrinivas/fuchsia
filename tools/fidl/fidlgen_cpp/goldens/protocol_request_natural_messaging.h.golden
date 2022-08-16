@@ -16,15 +16,18 @@ namespace fidl {
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::NaturalClientImpl<::test_protocolrequest::Child> final : public ::fidl::internal::NaturalClientBase {
  public:
   using NaturalClientBase::NaturalClientBase;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl
+
 #ifdef __Fuchsia__
 
 template <>
@@ -37,6 +40,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_protocolrequest::Child> fin
         _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -74,6 +78,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_protocolrequest::Child> fi
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocolrequest::Child>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -89,6 +94,7 @@ class ::fidl::internal::NaturalEventSender<::test_protocolrequest::Child>
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -121,6 +127,7 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_protocolrequest::Child> 
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -153,6 +160,7 @@ namespace test_protocolrequest {
 __LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentGetChildTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentGetChildRequestTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequestTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequestRequestTable;
@@ -173,7 +181,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocolrequest::
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocolrequest::ParentGetChildTopResponse;
 };
-namespace test_protocolrequest {}  // namespace test_protocolrequest
+namespace test_protocolrequest {
+}  // namespace test_protocolrequest
+
 template <>
 class ::fidl::Result<::test_protocolrequest::Parent::GetChild> final : public ::fitx::result<::fidl::Error, ::test_protocolrequest::ParentGetChildTopResponse> {
  public:
@@ -196,6 +206,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocolrequest::
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocolrequest::ParentGetChildRequestTopResponse;
 };
+
 template <>
 class ::fidl::Result<::test_protocolrequest::Parent::GetChildRequest> final : public ::fitx::result<::fidl::Error, ::test_protocolrequest::ParentGetChildRequestTopResponse> {
  public:
@@ -218,9 +229,11 @@ class ::fidl::internal::NaturalClientImpl<::test_protocolrequest::Parent> final 
   ::fitx::result<::fidl::Error> TakeChildRequest(::fidl::Request<::test_protocolrequest::Parent::TakeChildRequest> request) const;
 };
 namespace test_protocolrequest {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_protocolrequest
+
 #ifdef __Fuchsia__
 
 template <>
@@ -241,6 +254,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_protocolrequest::Parent> fi
         _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -278,6 +292,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_protocolrequest::Parent> f
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocolrequest::Parent>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -293,6 +308,7 @@ class ::fidl::internal::NaturalEventSender<::test_protocolrequest::Parent>
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -307,6 +323,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocolrequest::P
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -321,6 +338,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocolrequest::P
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -338,6 +356,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocolrequest::P
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocolrequest::ParentTakeChildRequest;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -355,6 +374,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocolrequest::P
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocolrequest::ParentTakeChildRequestRequest;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -425,4 +445,5 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_protocolrequest::Parent>
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__

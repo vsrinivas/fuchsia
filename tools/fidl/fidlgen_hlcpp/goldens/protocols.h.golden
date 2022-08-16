@@ -27,6 +27,7 @@ class WithAndWithoutRequestResponseOnWithResponseRequest;
 
 class WithAndWithoutRequestResponse;
 using WithAndWithoutRequestResponseHandle = ::fidl::InterfaceHandle<WithAndWithoutRequestResponse>;
+
 #endif  // __Fuchsia__
 
 enum class ErrorEnum : uint32_t {
@@ -70,6 +71,7 @@ class WithErrorSyntaxHandleInResultTopResponse;
 
 class WithErrorSyntax;
 using WithErrorSyntaxHandle = ::fidl::InterfaceHandle<WithErrorSyntax>;
+
 #endif  // __Fuchsia__
 
 class ChannelProtocolMethodARequest;
@@ -90,6 +92,7 @@ class ChannelProtocolMutateSocketTopResponse;
 
 class ChannelProtocol;
 using ChannelProtocolHandle = ::fidl::InterfaceHandle<ChannelProtocol>;
+
 #endif  // __Fuchsia__
 
 class SyscallProtocolMethodCRequest;
@@ -106,18 +109,21 @@ class TransitionalEventRequest;
 
 class Transitional;
 using TransitionalHandle = ::fidl::InterfaceHandle<Transitional>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
 class DiscoverableProtocol;
 using DiscoverableProtocolHandle = ::fidl::InterfaceHandle<DiscoverableProtocol>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
 class AnotherDiscoverableProtocol;
 using AnotherDiscoverableProtocolHandle = ::fidl::InterfaceHandle<AnotherDiscoverableProtocol>;
+
 #endif  // __Fuchsia__
 
 class HandleRightsProtocolNoResponseMethodRequest;
@@ -132,6 +138,7 @@ class HandleRightsProtocolAnEventRequest;
 
 class HandleRightsProtocol;
 using HandleRightsProtocolHandle = ::fidl::InterfaceHandle<HandleRightsProtocol>;
+
 #endif  // __Fuchsia__
 
 class ProtocolEnds;
@@ -152,6 +159,7 @@ class WithProtocolEndsStructContainingEndsTopResponse;
 
 class WithProtocolEnds;
 using WithProtocolEndsHandle = ::fidl::InterfaceHandle<WithProtocolEnds>;
+
 #endif  // __Fuchsia__
 
 class ManyParametersFifteenRequest;
@@ -160,6 +168,7 @@ class ManyParametersFifteenRequest;
 
 class ManyParameters;
 using ManyParametersHandle = ::fidl::InterfaceHandle<ManyParameters>;
+
 #endif  // __Fuchsia__
 
 class TheUnion;
@@ -172,6 +181,7 @@ class MethodWithUnionUnionMethodTopResponse;
 
 class MethodWithUnion;
 using MethodWithUnionHandle = ::fidl::InterfaceHandle<MethodWithUnion>;
+
 #endif  // __Fuchsia__
 
 class WithAndWithoutRequestResponseNoRequestWithResponseTopResponse final {
@@ -304,10 +314,13 @@ using WithAndWithoutRequestResponseOnWithResponseRequestPtr = ::std::unique_ptr<
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
 
 }  // namespace _internal
+
 class WithAndWithoutRequestResponse_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage NoRequestNoResponse(::fidl::MessageEncoder* _encoder) {
@@ -356,6 +369,7 @@ __LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestRespons
 __LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable;
 
 }  // namespace _internal
+
 class WithAndWithoutRequestResponse_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage NoRequestEmptyResponse(::fidl::MessageEncoder* _encoder) {
@@ -398,6 +412,7 @@ class WithAndWithoutRequestResponse_ResponseEncoder {
     return _encoder->GetMessage();
   }
 };
+
 #endif  // __Fuchsia__
 
 class WithErrorSyntax_ResponseAsStruct_Response final {
@@ -902,6 +917,7 @@ inline zx_status_t Clone(const ::test::protocols::WithErrorSyntax_HandleInResult
 }
 
 using WithErrorSyntax_HandleInResult_ResponsePtr = ::std::unique_ptr<WithErrorSyntax_HandleInResult_Response>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1012,6 +1028,7 @@ inline zx_status_t Clone(const ::test::protocols::WithErrorSyntax_HandleInResult
 }
 
 using WithErrorSyntax_HandleInResult_ResultPtr = ::std::unique_ptr<WithErrorSyntax_HandleInResult_Result>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1036,6 +1053,7 @@ inline zx_status_t Clone(const ::test::protocols::WithErrorSyntaxHandleInResultT
 }
 
 using WithErrorSyntaxHandleInResultTopResponsePtr = ::std::unique_ptr<WithErrorSyntaxHandleInResultTopResponse>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1057,11 +1075,15 @@ class WithErrorSyntax_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_protocols_WithErrorSyntaxResponseAsStructTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_WithErrorSyntaxErrorAsPrimitiveTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_WithErrorSyntaxErrorAsEnumTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
 
 }  // namespace _internal
+
 class WithErrorSyntax_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage ResponseAsStruct(::fidl::MessageEncoder* _encoder, ::test::protocols::WithErrorSyntax_ResponseAsStruct_Result* result) {
@@ -1105,6 +1127,7 @@ class WithErrorSyntax_ResponseEncoder {
     return _encoder->GetMessage();
   }
 };
+
 #endif  // __Fuchsia__
 
 class ChannelProtocolMethodARequest final {
@@ -1219,6 +1242,7 @@ inline zx_status_t Clone(const ::test::protocols::ChannelProtocolTakeHandleReque
 }
 
 using ChannelProtocolTakeHandleRequestPtr = ::std::unique_ptr<ChannelProtocolTakeHandleRequest>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1243,6 +1267,7 @@ inline zx_status_t Clone(const ::test::protocols::ChannelProtocolMutateSocketReq
 }
 
 using ChannelProtocolMutateSocketRequestPtr = ::std::unique_ptr<ChannelProtocolMutateSocketRequest>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1267,6 +1292,7 @@ inline zx_status_t Clone(const ::test::protocols::ChannelProtocolMutateSocketTop
 }
 
 using ChannelProtocolMutateSocketTopResponsePtr = ::std::unique_ptr<ChannelProtocolMutateSocketTopResponse>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1275,10 +1301,13 @@ namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodARequestTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodBRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolTakeHandleRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketRequestTable;
 
 }  // namespace _internal
+
 class ChannelProtocol_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage MethodA(::fidl::MessageEncoder* _encoder, int64_t* a, int64_t* b) {
@@ -1331,11 +1360,13 @@ class ChannelProtocol_RequestEncoder {
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolEventARequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodBTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketTopResponseTable;
 
 }  // namespace _internal
+
 class ChannelProtocol_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage EventA(::fidl::MessageEncoder* _encoder, int64_t* a, int64_t* b) {
@@ -1377,6 +1408,7 @@ class ChannelProtocol_ResponseEncoder {
     return _encoder->GetMessage();
   }
 };
+
 #endif  // __Fuchsia__
 
 class SyscallProtocolMethodCRequest final {
@@ -1490,9 +1522,11 @@ using TransitionalEventRequestPtr = ::std::unique_ptr<TransitionalEventRequest>;
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_protocols_TransitionalRequestRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_TransitionalOneWayRequestTable;
 
 }  // namespace _internal
+
 class Transitional_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage Request(::fidl::MessageEncoder* _encoder, int64_t* x) {
@@ -1520,6 +1554,7 @@ __LOCAL extern "C" const fidl_type_t test_protocols_TransitionalRequestTopRespon
 __LOCAL extern "C" const fidl_type_t test_protocols_TransitionalEventRequestTable;
 
 }  // namespace _internal
+
 class Transitional_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage Request(::fidl::MessageEncoder* _encoder, int64_t* y) {
@@ -1543,6 +1578,7 @@ class Transitional_ResponseEncoder {
     return _encoder->GetMessage();
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1557,6 +1593,7 @@ class DiscoverableProtocol_RequestEncoder {
 class DiscoverableProtocol_ResponseEncoder {
  public:
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1568,6 +1605,7 @@ class AnotherDiscoverableProtocol_RequestEncoder {
 class AnotherDiscoverableProtocol_ResponseEncoder {
  public:
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1592,6 +1630,7 @@ inline zx_status_t Clone(const ::test::protocols::HandleRightsProtocolNoResponse
 }
 
 using HandleRightsProtocolNoResponseMethodRequestPtr = ::std::unique_ptr<HandleRightsProtocolNoResponseMethodRequest>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1616,6 +1655,7 @@ inline zx_status_t Clone(const ::test::protocols::HandleRightsProtocolResponseMe
 }
 
 using HandleRightsProtocolResponseMethodRequestPtr = ::std::unique_ptr<HandleRightsProtocolResponseMethodRequest>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1640,6 +1680,7 @@ inline zx_status_t Clone(const ::test::protocols::HandleRightsProtocolResponseMe
 }
 
 using HandleRightsProtocolResponseMethodTopResponsePtr = ::std::unique_ptr<HandleRightsProtocolResponseMethodTopResponse>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1664,15 +1705,18 @@ inline zx_status_t Clone(const ::test::protocols::HandleRightsProtocolAnEventReq
 }
 
 using HandleRightsProtocolAnEventRequestPtr = ::std::unique_ptr<HandleRightsProtocolAnEventRequest>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolResponseMethodRequestTable;
 
 }  // namespace _internal
+
 class HandleRightsProtocol_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage NoResponseMethod(::fidl::MessageEncoder* _encoder, ::zx::socket* h) {
@@ -1703,9 +1747,11 @@ class HandleRightsProtocol_RequestEncoder {
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolAnEventRequestTable;
 
 }  // namespace _internal
+
 class HandleRightsProtocol_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage ResponseMethod(::fidl::MessageEncoder* _encoder, ::zx::socket* h) {
@@ -1735,6 +1781,7 @@ class HandleRightsProtocol_ResponseEncoder {
     return _encoder->GetMessage();
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1765,6 +1812,7 @@ inline zx_status_t Clone(const ::test::protocols::ProtocolEnds& _value,
 }
 
 using ProtocolEndsPtr = ::std::unique_ptr<ProtocolEnds>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1789,6 +1837,7 @@ inline zx_status_t Clone(const ::test::protocols::WithProtocolEndsClientEndsRequ
 }
 
 using WithProtocolEndsClientEndsRequestPtr = ::std::unique_ptr<WithProtocolEndsClientEndsRequest>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1813,6 +1862,7 @@ inline zx_status_t Clone(const ::test::protocols::WithProtocolEndsClientEndsTopR
 }
 
 using WithProtocolEndsClientEndsTopResponsePtr = ::std::unique_ptr<WithProtocolEndsClientEndsTopResponse>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1837,6 +1887,7 @@ inline zx_status_t Clone(const ::test::protocols::WithProtocolEndsServerEndsRequ
 }
 
 using WithProtocolEndsServerEndsRequestPtr = ::std::unique_ptr<WithProtocolEndsServerEndsRequest>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1861,6 +1912,7 @@ inline zx_status_t Clone(const ::test::protocols::WithProtocolEndsServerEndsTopR
 }
 
 using WithProtocolEndsServerEndsTopResponsePtr = ::std::unique_ptr<WithProtocolEndsServerEndsTopResponse>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1885,6 +1937,7 @@ inline zx_status_t Clone(const ::test::protocols::WithProtocolEndsStructContaini
 }
 
 using WithProtocolEndsStructContainingEndsRequestPtr = ::std::unique_ptr<WithProtocolEndsStructContainingEndsRequest>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1909,16 +1962,20 @@ inline zx_status_t Clone(const ::test::protocols::WithProtocolEndsStructContaini
 }
 
 using WithProtocolEndsStructContainingEndsTopResponsePtr = ::std::unique_ptr<WithProtocolEndsStructContainingEndsTopResponse>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsClientEndsRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsServerEndsRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
 
 }  // namespace _internal
+
 class WithProtocolEnds_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage ClientEnds(::fidl::MessageEncoder* _encoder, ::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol>* in) {
@@ -1957,10 +2014,13 @@ class WithProtocolEnds_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsClientEndsTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsServerEndsTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable;
 
 }  // namespace _internal
+
 class WithProtocolEnds_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage ClientEnds(::fidl::MessageEncoder* _encoder, ::fidl::InterfaceHandle<::test::protocols::DiscoverableProtocol>* out) {
@@ -2000,6 +2060,7 @@ class WithProtocolEnds_ResponseEncoder {
     return _encoder->GetMessage();
   }
 };
+
 #endif  // __Fuchsia__
 
 class ManyParametersFifteenRequest final {
@@ -2057,6 +2118,7 @@ namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_protocols_ManyParametersFifteenRequestTable;
 
 }  // namespace _internal
+
 class ManyParameters_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage Fifteen(::fidl::MessageEncoder* _encoder, bool* p1, bool* p2, bool* p3, bool* p4, bool* p5, bool* p6, bool* p7, bool* p8, bool* p9, bool* p10, bool* p11, bool* p12, bool* p13, bool* p14, bool* p15) {
@@ -2101,6 +2163,7 @@ class ManyParameters_RequestEncoder {
 class ManyParameters_ResponseEncoder {
  public:
 };
+
 #endif  // __Fuchsia__
 
 class TheUnion final {
@@ -2237,6 +2300,7 @@ namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodRequestTable;
 
 }  // namespace _internal
+
 class MethodWithUnion_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage UnionMethod(::fidl::MessageEncoder* _encoder, ::test::protocols::TheUnion* u) {
@@ -2253,6 +2317,7 @@ namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodTopResponseTable;
 
 }  // namespace _internal
+
 class MethodWithUnion_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage UnionMethod(::fidl::MessageEncoder* _encoder, ::std::unique_ptr<::test::protocols::TheUnion>* u) {
@@ -2266,11 +2331,13 @@ class MethodWithUnion_ResponseEncoder {
     return _encoder->GetMessage();
   }
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace protocols
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse>
     : public EncodableCodingTraits<::test::protocols::WithAndWithoutRequestResponseNoRequestWithResponseTopResponse, 16> {};
@@ -2790,6 +2857,7 @@ struct Equality<::test::protocols::WithErrorSyntax_HandleInResult_Response> {
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2851,6 +2919,7 @@ struct Equality<::test::protocols::WithErrorSyntax_HandleInResult_Result> {
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2880,6 +2949,7 @@ struct Equality<::test::protocols::WithErrorSyntaxHandleInResultTopResponse> {
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -3003,6 +3073,7 @@ struct Equality<::test::protocols::ChannelProtocolTakeHandleRequest> {
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3029,6 +3100,7 @@ struct Equality<::test::protocols::ChannelProtocolMutateSocketRequest> {
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3055,6 +3127,7 @@ struct Equality<::test::protocols::ChannelProtocolMutateSocketTopResponse> {
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -3194,6 +3267,7 @@ struct Equality<::test::protocols::HandleRightsProtocolNoResponseMethodRequest> 
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3220,6 +3294,7 @@ struct Equality<::test::protocols::HandleRightsProtocolResponseMethodRequest> {
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3246,6 +3321,7 @@ struct Equality<::test::protocols::HandleRightsProtocolResponseMethodTopResponse
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3272,6 +3348,7 @@ struct Equality<::test::protocols::HandleRightsProtocolAnEventRequest> {
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3307,6 +3384,7 @@ struct Equality<::test::protocols::ProtocolEnds> {
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3333,6 +3411,7 @@ struct Equality<::test::protocols::WithProtocolEndsClientEndsRequest> {
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3359,6 +3438,7 @@ struct Equality<::test::protocols::WithProtocolEndsClientEndsTopResponse> {
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3385,6 +3465,7 @@ struct Equality<::test::protocols::WithProtocolEndsServerEndsRequest> {
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3411,6 +3492,7 @@ struct Equality<::test::protocols::WithProtocolEndsServerEndsTopResponse> {
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3437,6 +3519,7 @@ struct Equality<::test::protocols::WithProtocolEndsStructContainingEndsRequest> 
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3463,6 +3546,7 @@ struct Equality<::test::protocols::WithProtocolEndsStructContainingEndsTopRespon
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -3640,6 +3724,7 @@ struct Equality<::test::protocols::MethodWithUnionUnionMethodTopResponse> {
 }  // namespace fidl
 namespace test {
 namespace protocols {
+
 #ifdef __Fuchsia__
 
 using WithAndWithoutRequestResponsePtr = ::fidl::InterfacePtr<WithAndWithoutRequestResponse>;
@@ -3651,23 +3736,40 @@ using WithAndWithoutRequestResponseSyncPtr = ::fidl::SynchronousInterfacePtr<Wit
 class WithAndWithoutRequestResponse_SyncProxy;
 
 namespace internal {
+
 constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal = 0x4b212a6c8c5f7bablu;
+
 constexpr ::fidl::MessageDynamicFlags kWithAndWithoutRequestResponse_NoRequestNoResponse_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal = 0x16a329d17f458668lu;
+
 constexpr ::fidl::MessageDynamicFlags kWithAndWithoutRequestResponse_NoRequestEmptyResponse_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal = 0x7d6b2fcf0e2a65bdlu;
+
 constexpr ::fidl::MessageDynamicFlags kWithAndWithoutRequestResponse_NoRequestWithResponse_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal = 0x65ab625138c50a77lu;
+
 constexpr ::fidl::MessageDynamicFlags kWithAndWithoutRequestResponse_WithRequestNoResponse_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal = 0x27ee4d2bd405df5flu;
+
 constexpr ::fidl::MessageDynamicFlags kWithAndWithoutRequestResponse_WithRequestEmptyResponse_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal = 0x590e91945d58f5b1lu;
+
 constexpr ::fidl::MessageDynamicFlags kWithAndWithoutRequestResponse_WithRequestWithResponse_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal = 0x4ae85a2b8d7c2e56lu;
+
 constexpr ::fidl::MessageDynamicFlags kWithAndWithoutRequestResponse_OnEmptyResponse_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kWithAndWithoutRequestResponse_OnWithResponse_Ordinal = 0x50a6f21a322f31a8lu;
+
 constexpr ::fidl::MessageDynamicFlags kWithAndWithoutRequestResponse_OnWithResponse_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3681,15 +3783,24 @@ using WithErrorSyntaxSyncPtr = ::fidl::SynchronousInterfacePtr<WithErrorSyntax>;
 class WithErrorSyntax_SyncProxy;
 
 namespace internal {
+
 constexpr uint64_t kWithErrorSyntax_ResponseAsStruct_Ordinal = 0x3b902a6d8d24693lu;
+
 constexpr ::fidl::MessageDynamicFlags kWithErrorSyntax_ResponseAsStruct_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kWithErrorSyntax_ErrorAsPrimitive_Ordinal = 0x602fd6bd920135e7lu;
+
 constexpr ::fidl::MessageDynamicFlags kWithErrorSyntax_ErrorAsPrimitive_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_Ordinal = 0x4c371e1673212f43lu;
+
 constexpr ::fidl::MessageDynamicFlags kWithErrorSyntax_ErrorAsEnum_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kWithErrorSyntax_HandleInResult_Ordinal = 0x13092c5b835b0cbflu;
+
 constexpr ::fidl::MessageDynamicFlags kWithErrorSyntax_HandleInResult_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3703,17 +3814,28 @@ using ChannelProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<ChannelProtocol>;
 class ChannelProtocol_SyncProxy;
 
 namespace internal {
+
 constexpr uint64_t kChannelProtocol_MethodA_Ordinal = 0x2bc8d7d32bc66ba2lu;
+
 constexpr ::fidl::MessageDynamicFlags kChannelProtocol_MethodA_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kChannelProtocol_EventA_Ordinal = 0x1ed0a220297145celu;
+
 constexpr ::fidl::MessageDynamicFlags kChannelProtocol_EventA_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kChannelProtocol_MethodB_Ordinal = 0x7b8dd3d6c741c9c6lu;
+
 constexpr ::fidl::MessageDynamicFlags kChannelProtocol_MethodB_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kChannelProtocol_TakeHandle_Ordinal = 0x836fa31201a0a65lu;
+
 constexpr ::fidl::MessageDynamicFlags kChannelProtocol_TakeHandle_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kChannelProtocol_MutateSocket_Ordinal = 0x66dbcccc06f7f14flu;
+
 constexpr ::fidl::MessageDynamicFlags kChannelProtocol_MutateSocket_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3727,13 +3849,20 @@ using TransitionalSyncPtr = ::fidl::SynchronousInterfacePtr<Transitional>;
 class Transitional_SyncProxy;
 
 namespace internal {
+
 constexpr uint64_t kTransitional_Request_Ordinal = 0x512cc1ba467fef08lu;
+
 constexpr ::fidl::MessageDynamicFlags kTransitional_Request_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kTransitional_OneWay_Ordinal = 0x3c2ee8512dc7f7e7lu;
+
 constexpr ::fidl::MessageDynamicFlags kTransitional_OneWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kTransitional_Event_Ordinal = 0x76113c4b4d484841lu;
+
 constexpr ::fidl::MessageDynamicFlags kTransitional_Event_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3747,9 +3876,12 @@ using DiscoverableProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<Discoverable
 class DiscoverableProtocol_SyncProxy;
 
 namespace internal {
+
 constexpr uint64_t kDiscoverableProtocol_Method_Ordinal = 0x2ff5ba3a2bd170eblu;
+
 constexpr ::fidl::MessageDynamicFlags kDiscoverableProtocol_Method_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3775,13 +3907,20 @@ using HandleRightsProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<HandleRights
 class HandleRightsProtocol_SyncProxy;
 
 namespace internal {
+
 constexpr uint64_t kHandleRightsProtocol_NoResponseMethod_Ordinal = 0x10078afd320d2bfdlu;
+
 constexpr ::fidl::MessageDynamicFlags kHandleRightsProtocol_NoResponseMethod_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kHandleRightsProtocol_ResponseMethod_Ordinal = 0x52a8f194ac143547lu;
+
 constexpr ::fidl::MessageDynamicFlags kHandleRightsProtocol_ResponseMethod_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kHandleRightsProtocol_AnEvent_Ordinal = 0x69dad41418eb133lu;
+
 constexpr ::fidl::MessageDynamicFlags kHandleRightsProtocol_AnEvent_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3795,13 +3934,20 @@ using WithProtocolEndsSyncPtr = ::fidl::SynchronousInterfacePtr<WithProtocolEnds
 class WithProtocolEnds_SyncProxy;
 
 namespace internal {
+
 constexpr uint64_t kWithProtocolEnds_ClientEnds_Ordinal = 0x51780563edb15042lu;
+
 constexpr ::fidl::MessageDynamicFlags kWithProtocolEnds_ClientEnds_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kWithProtocolEnds_ServerEnds_Ordinal = 0x70a02c2ba2228a33lu;
+
 constexpr ::fidl::MessageDynamicFlags kWithProtocolEnds_ServerEnds_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kWithProtocolEnds_StructContainingEnds_Ordinal = 0x3893f0baad26f5d5lu;
+
 constexpr ::fidl::MessageDynamicFlags kWithProtocolEnds_StructContainingEnds_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3815,9 +3961,12 @@ using ManyParametersSyncPtr = ::fidl::SynchronousInterfacePtr<ManyParameters>;
 class ManyParameters_SyncProxy;
 
 namespace internal {
+
 constexpr uint64_t kManyParameters_Fifteen_Ordinal = 0x59233bcecd338967lu;
+
 constexpr ::fidl::MessageDynamicFlags kManyParameters_Fifteen_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3831,9 +3980,12 @@ using MethodWithUnionSyncPtr = ::fidl::SynchronousInterfacePtr<MethodWithUnion>;
 class MethodWithUnion_SyncProxy;
 
 namespace internal {
+
 constexpr uint64_t kMethodWithUnion_UnionMethod_Ordinal = 0x393e7f5b2b821218lu;
+
 constexpr ::fidl::MessageDynamicFlags kMethodWithUnion_UnionMethod_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3980,6 +4132,7 @@ class WithAndWithoutRequestResponse_SyncProxy : public ::test::protocols::WithAn
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<WithAndWithoutRequestResponse>;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -4098,6 +4251,7 @@ class WithErrorSyntax_SyncProxy : public ::test::protocols::WithErrorSyntax_Sync
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<WithErrorSyntax>;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -4219,6 +4373,7 @@ class ChannelProtocol_SyncProxy : public ::test::protocols::ChannelProtocol_Sync
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<ChannelProtocol>;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -4318,6 +4473,7 @@ class Transitional_SyncProxy : public ::test::protocols::Transitional_Sync {
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<Transitional>;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -4401,6 +4557,7 @@ class DiscoverableProtocol_SyncProxy : public ::test::protocols::DiscoverablePro
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<DiscoverableProtocol>;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -4476,6 +4633,7 @@ class AnotherDiscoverableProtocol_SyncProxy : public ::test::protocols::AnotherD
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<AnotherDiscoverableProtocol>;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -4575,6 +4733,7 @@ class HandleRightsProtocol_SyncProxy : public ::test::protocols::HandleRightsPro
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<HandleRightsProtocol>;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -4682,6 +4841,7 @@ class WithProtocolEnds_SyncProxy : public ::test::protocols::WithProtocolEnds_Sy
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<WithProtocolEnds>;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -4764,6 +4924,7 @@ class ManyParameters_SyncProxy : public ::test::protocols::ManyParameters_Sync {
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<ManyParameters>;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -4849,6 +5010,7 @@ class MethodWithUnion_SyncProxy : public ::test::protocols::MethodWithUnion_Sync
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<MethodWithUnion>;
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace protocols

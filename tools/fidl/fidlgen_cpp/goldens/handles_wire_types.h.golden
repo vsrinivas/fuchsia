@@ -54,6 +54,7 @@
 namespace test_handles {
 
 namespace wire {
+
 struct Handles;
 
 struct FdfHandles;
@@ -133,6 +134,7 @@ struct Handles {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -148,6 +150,7 @@ struct FdfHandles {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace wire
@@ -340,6 +343,7 @@ struct ::fidl::internal::WireCodingTraits<::test_handles::wire::Handles, ::fidl:
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -404,6 +408,7 @@ struct ::fidl::internal::WireCodingTraits<::test_handles::wire::FdfHandles, ::fi
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl

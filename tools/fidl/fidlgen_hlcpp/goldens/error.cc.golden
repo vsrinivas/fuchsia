@@ -9,6 +9,7 @@
 //
 namespace test {
 namespace error {
+
 extern "C" const fidl_type_t test_error_ExampleFooRequestTable;
 const fidl_type_t* ExampleFooRequest::FidlType = &test_error_ExampleFooRequestTable;
 
@@ -298,9 +299,11 @@ zx_status_t ExampleFooTopResponse::Clone(ExampleFooTopResponse* _result) const {
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_error_ExampleFooRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_error_ExampleFooTopResponseTable;
 
 }  // namespace _internal
+
 Example::~Example() = default;
 
 const fidl_type_t* ::test::error::Example_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
@@ -452,6 +455,7 @@ zx_status_t Example_SyncProxy::foo(::std::string s, ::test::error::Example_foo_R
   *out_result = ::fidl::DecodeAs<::test::error::Example_foo_Result>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 }  // namespace error

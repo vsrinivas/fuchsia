@@ -18,16 +18,19 @@
 #endif  // __Fuchsia__
 
 namespace test_driverhandle {
+
 class DriverProtocol;
 
 class HandlesInProtocol;
 
 }  // namespace test_driverhandle
+
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_driverhandle::DriverProtocol> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -48,12 +51,14 @@ struct ::fidl::internal::WireServerDispatcher<::test_driverhandle::DriverProtoco
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 namespace fidl {
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_driverhandle::DriverProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
@@ -103,6 +108,7 @@ class ::fdf::WireServer<::test_driverhandle::DriverProtocol> : public ::fidl::in
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl
@@ -110,18 +116,22 @@ namespace test_driverhandle {
 __LOCAL extern "C" const fidl_type_t test_driverhandle_HandlesInProtocolSendHandlesRequestTable;
 
 }  // namespace test_driverhandle
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_driverhandle::HandlesInProtocol::SendHandles> final {
   static constexpr uint64_t value = 8904504160365833729lu;
 };
 
 namespace test_driverhandle {
+
 }  // namespace test_driverhandle
+
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_driverhandle::HandlesInProtocol> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -142,6 +152,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_driverhandle::HandlesInProt
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -209,6 +220,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 #endif  // __Fuchsia__
 
 namespace fidl {
@@ -266,6 +278,7 @@ struct TypeTraits<::fidl::WireRequest<::test_driverhandle::HandlesInProtocol::Se
 };
 static_assert(sizeof(::fidl::WireRequest<::test_driverhandle::HandlesInProtocol::SendHandles>) == TypeTraits<::fidl::WireRequest<::test_driverhandle::HandlesInProtocol::SendHandles>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireRequest<::test_driverhandle::HandlesInProtocol::SendHandles>, t) == 0);
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -283,6 +296,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_driverhandle::HandlesInProto
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };
+
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_driverhandle::HandlesInProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
@@ -344,6 +358,7 @@ class ::fdf::WireServer<::test_driverhandle::HandlesInProtocol> : public ::fidl:
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -377,6 +392,7 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_driverhandle::DriverProtoc
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -416,6 +432,7 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_driverhandle::HandlesInPro
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl

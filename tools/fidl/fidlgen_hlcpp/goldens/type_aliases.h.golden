@@ -63,11 +63,13 @@ inline zx_status_t Clone(const ::test::typealiases::ExampleOfUseOfAliases& _valu
 }
 
 using ExampleOfUseOfAliasesPtr = ::std::unique_ptr<ExampleOfUseOfAliases>;
+
 #endif  // __Fuchsia__
 
 }  // namespace typealiases
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::typealiases::obj_type> {
   static constexpr size_t inline_size_v2 = sizeof(::test::typealiases::obj_type);
@@ -143,6 +145,7 @@ struct Equality<::test::typealiases::ExampleOfUseOfAliases> {
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 //

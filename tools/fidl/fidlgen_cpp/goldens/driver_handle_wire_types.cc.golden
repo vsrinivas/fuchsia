@@ -6,18 +6,21 @@
 void ::test_driverhandle::wire::ClientEndWrapper::_CloseHandles() {
   value.reset();
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 void ::test_driverhandle::wire::ServerEndWrapper::_CloseHandles() {
   value.reset();
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 void ::test_driverhandle::wire::HandlesInProtocolSendHandlesRequest::_CloseHandles() {
   t._CloseHandles();
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

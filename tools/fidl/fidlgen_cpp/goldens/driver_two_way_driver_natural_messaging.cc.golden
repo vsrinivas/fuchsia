@@ -1,11 +1,13 @@
 #include <fidl/test.drivertwoway/cpp/driver/natural_messaging.h>
 #include <lib/fidl_driver/cpp/unknown_interactions.h>
 namespace test_drivertwoway {
+
 [[maybe_unused]] constexpr inline uint64_t kTwoWay_Add_Ordinal = 989730524426044687lu;
 
 [[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags kTwoWay_Add_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 #ifdef __Fuchsia__
 }  // namespace test_drivertwoway
+
 ::fidl::internal::NaturalThenable<::test_drivertwoway::TwoWay::Add>
 fidl::internal::NaturalClientImpl<::test_drivertwoway::TwoWay>::Add(const ::fidl::Request<::test_drivertwoway::TwoWay::Add>& request) const {
   auto _arena = fdf::Arena::Create(0, 'FIDL');
@@ -44,8 +46,10 @@ fidl::internal::NaturalClientImpl<::test_drivertwoway::TwoWay>::Add(const ::fidl
 }
 
 namespace test_drivertwoway {
+
 #endif  // __Fuchsia__
 }  // namespace test_drivertwoway
+
 #ifdef __Fuchsia__
 
 #endif  // __Fuchsia__
@@ -96,9 +100,11 @@ void fidl::internal::NaturalServerDispatcher<::test_drivertwoway::TwoWay>::Dispa
                                                                                     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
+
 void fdf::Server<::test_drivertwoway::TwoWay>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_drivertwoway::TwoWay>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__

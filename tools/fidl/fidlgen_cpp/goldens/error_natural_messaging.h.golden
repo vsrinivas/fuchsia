@@ -15,6 +15,7 @@
 namespace fidl {
 
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_error::Example::Foo> {
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_error::Example::Foo>>;
@@ -31,6 +32,7 @@ struct ::fidl::internal::NaturalMethodTypes<::test_error::Example::Foo> {
 };
 namespace test_error {
 __LOCAL extern "C" const fidl_type_t test_error_ExampleFooRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_error_ExampleFooTopResponseTable;
 
 #ifdef __Fuchsia__
@@ -72,7 +74,9 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_error::E
     }
   }
 };
-namespace test_error {}  // namespace test_error
+namespace test_error {
+}  // namespace test_error
+
 template <>
 class ::fidl::Result<::test_error::Example::Foo> final : public ::fitx::result<::fidl::AnyErrorIn<::test_error::Example::Foo>, ::test_error::ExampleFooResponse> {
  public:
@@ -89,9 +93,11 @@ class ::fidl::internal::NaturalClientImpl<::test_error::Example> final : public 
   ::fidl::internal::NaturalThenable<::test_error::Example::Foo> Foo(const ::fidl::Request<::test_error::Example::Foo>& request) const;
 };
 namespace test_error {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_error
+
 #ifdef __Fuchsia__
 
 template <>
@@ -106,6 +112,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_error::Example> final
         _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -143,6 +150,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_error::Example> final : pu
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_error::Example>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -158,6 +166,7 @@ class ::fidl::internal::NaturalEventSender<::test_error::Example>
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -175,6 +184,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_error::Example::Fo
   static constexpr bool kHasPayload = true;
   using Payload = ::test_error::ExampleFooRequest;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -221,4 +231,5 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_error::Example> final {
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__

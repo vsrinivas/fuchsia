@@ -9,6 +9,7 @@
 //
 namespace test {
 namespace driveroneway {
+
 extern "C" const fidl_type_t test_driveroneway_PayloadTable;
 const fidl_type_t* Payload::FidlType = &test_driveroneway_PayloadTable;
 

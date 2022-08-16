@@ -27,7 +27,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_doccomments::Interfa
  public:
   static constexpr bool kHasPayload = false;
 };
-namespace fidl {}  // namespace fidl
+namespace fidl {
+}  // namespace fidl
+
 template <>
 class ::fidl::internal::NaturalClientImpl<::test_doccomments::Interface> final : public ::fidl::internal::NaturalClientBase {
  public:
@@ -38,9 +40,11 @@ class ::fidl::internal::NaturalClientImpl<::test_doccomments::Interface> final :
   ::fitx::result<::fidl::Error> Method() const;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl
+
 #ifdef __Fuchsia__
 
 template <>
@@ -58,6 +62,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_doccomments::Interface> fin
         _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -106,6 +111,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_doccomments::Interface> fi
       ::fidl::IncomingMessage& msg,
       internal::MessageStorageViewBase* storage_view) override;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -131,6 +137,7 @@ class ::fidl::internal::NaturalEventSender<::test_doccomments::Interface>
   /// event comment #3
   ::fitx::result<::fidl::Error> OnEvent();
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -145,6 +152,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_doccomments::Inter
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -185,4 +193,5 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_doccomments::Interface> 
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__

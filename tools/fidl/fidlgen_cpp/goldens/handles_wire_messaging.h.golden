@@ -20,14 +20,17 @@
 #include <fidl/fdf/cpp/wire_messaging.h>
 
 namespace test_handles {
+
 class SomeProtocol;
 
 }  // namespace test_handles
+
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_handles::SomeProtocol> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -48,12 +51,14 @@ struct ::fidl::internal::WireServerDispatcher<::test_handles::SomeProtocol> fina
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 namespace fidl {
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::IncomingEventsHandleStorage<::test_handles::SomeProtocol> final : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_handles::SomeProtocol>> {
  public:
@@ -69,6 +74,7 @@ struct ::fidl::internal::IncomingEventsStorage<::test_handles::SomeProtocol> fin
   ::fidl::internal::InlineMessageBuffer<16> bytes_;
   ::fidl::internal::IncomingEventsHandleStorage<::test_handles::SomeProtocol> handles_storage_;
 };
+
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_handles::SomeProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
@@ -144,10 +150,12 @@ class ::fidl::WireServer<::test_handles::SomeProtocol> : public ::fidl::internal
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireWeakOnewayClientImpl<::test_handles::SomeProtocol> : public ::fidl::internal::ClientImplBase {
  public:
@@ -177,9 +185,11 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_handles::SomeProtocol> fin
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl
+
 #ifdef __Fuchsia__
 template <>
 class ::fidl::internal::WireWeakEventSender<::test_handles::SomeProtocol> : public ::fidl::internal::WeakEventSenderBase {
@@ -206,4 +216,5 @@ class ::fidl::internal::WireBufferEventSender<::test_handles::SomeProtocol>
  public:
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
+
 #endif  // __Fuchsia__

@@ -32,14 +32,17 @@ void fidl::internal::WireServerDispatcher<::test_driverhandle::DriverProtocol>::
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
+
 void fdf::WireServer<::test_driverhandle::DriverProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_driverhandle::DriverProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 namespace test_driverhandle {
+
 [[maybe_unused]] constexpr uint64_t kHandlesInProtocol_SendHandles_Ordinal = 8904504160365833729lu;
 
 [[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kHandlesInProtocol_SendHandles_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
@@ -48,6 +51,7 @@ extern "C" const fidl_type_t test_driverhandle_HandlesInProtocolSendHandlesReque
 
 #ifdef __Fuchsia__
 }  // namespace test_driverhandle
+
 ::fdf::WireUnownedResult<::test_driverhandle::HandlesInProtocol::SendHandles>::WireUnownedResult(::fdf::UnownedClientEnd<::test_driverhandle::HandlesInProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_driverhandle::HandlesInProtocol::SendHandles>* request) {
   constexpr uint32_t buffer_size =
       ::fidl::MaxSizeInChannel<::fidl::internal::TransactionalRequest<::test_driverhandle::HandlesInProtocol::SendHandles>, ::fidl::MessageDirection::kSending>();
@@ -65,10 +69,12 @@ extern "C" const fidl_type_t test_driverhandle_HandlesInProtocolSendHandlesReque
   SetStatus(outgoing);
 }
 namespace test_driverhandle {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_driverhandle
+
 ::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_driverhandle::HandlesInProtocol>::SendHandles(::test_driverhandle::wire::T t) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::internal::TransactionalRequest<::test_driverhandle::HandlesInProtocol::SendHandles> _request_object{t};
@@ -98,9 +104,11 @@ namespace test_driverhandle {
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage(), std::move(_options));
 }
 namespace test_driverhandle {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_driverhandle
+
 #ifdef __Fuchsia__
 
 #endif  // __Fuchsia__
@@ -141,11 +149,13 @@ void fidl::internal::WireServerDispatcher<::test_driverhandle::HandlesInProtocol
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
+
 void fdf::WireServer<::test_driverhandle::HandlesInProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_driverhandle::HandlesInProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -153,4 +163,5 @@ void fdf::WireServer<::test_driverhandle::HandlesInProtocol>::dispatch_message(
 void ::fidl::internal::TransactionalRequest<::test_driverhandle::HandlesInProtocol::SendHandles>::_InitHeader() {
   ::fidl::InitTxnHeader(&header, 0, ::test_driverhandle::kHandlesInProtocol_SendHandles_Ordinal, ::test_driverhandle::kHandlesInProtocol_SendHandles_DynamicFlags);
 }
+
 #endif  // __Fuchsia__

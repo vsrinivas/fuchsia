@@ -5,6 +5,7 @@
 #include <memory>
 
 namespace test_error {
+
 [[maybe_unused]] constexpr uint64_t kExample_foo_Ordinal = 1107623248440401476lu;
 
 [[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kExample_foo_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
@@ -14,6 +15,7 @@ extern "C" const fidl_type_t test_error_ExampleFooRequestTable;
 extern "C" const fidl_type_t test_error_ExampleFooTopResponseTable;
 #ifdef __Fuchsia__
 }  // namespace test_error
+
 ::fidl::WireResult<::test_error::Example::Foo>::WireResult(
     ::fidl::UnownedClientEnd<::test_error::Example> client,
     ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>* request, std::optional<zx::time> deadline) {
@@ -34,10 +36,12 @@ extern "C" const fidl_type_t test_error_ExampleFooTopResponseTable;
   }
 }
 namespace test_error {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_error
+
 ::fidl::WireUnownedResult<::test_error::Example::Foo>::WireUnownedResult(::fidl::UnownedClientEnd<::test_error::Example> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_error::Example::Foo>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -69,9 +73,11 @@ namespace test_error {
   }
 }
 namespace test_error {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_error
+
 #ifdef __Fuchsia__
 
 ::fidl::internal::WireThenable<::test_error::Example::Foo> fidl::internal::WireWeakAsyncClientImpl<::test_error::Example>::Foo(::fidl::StringView s) {
@@ -94,6 +100,7 @@ fidl::internal::WireWeakSyncClientImpl<::test_error::Example>::Foo(::fidl::Strin
         return ::fidl::WireResult<::test_error::Example::Foo>(::fidl::UnownedClientEnd<::test_error::Example>(_transport->get<::fidl::internal::ChannelTransport>()), &_request);
       });
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -104,6 +111,7 @@ fidl::internal::WireWeakSyncClientImpl<::test_error::Example>::Foo(::fidl::Strin
   fidl::internal::WireEventDispatcher<::test_error::Example> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -141,11 +149,13 @@ void fidl::internal::WireServerDispatcher<::test_error::Example>::Dispatch(::fid
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
+
 void fidl::WireServer<::test_error::Example>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_error::Example>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -210,6 +220,7 @@ void fidl::internal::WireBufferCompleterImpl<::test_error::Example::Foo>::ReplyS
 void fidl::internal::WireBufferCompleterImpl<::test_error::Example::Foo>::ReplyError(uint32_t error) {
   return MakeReply(::test_error::wire::ExampleFooResult::WithErr(std::move(error)));
 }
+
 #endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>::_InitHeader() {

@@ -5,6 +5,7 @@
 #include <memory>
 
 namespace test_placementofattributes {
+
 [[maybe_unused]] constexpr uint64_t kExampleProtocol_Method_Ordinal = 6023439637367187273lu;
 
 [[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kExampleProtocol_Method_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
@@ -12,6 +13,7 @@ namespace test_placementofattributes {
 extern "C" const fidl_type_t test_placementofattributes_ExampleProtocolMethodRequestTable;
 #ifdef __Fuchsia__
 }  // namespace test_placementofattributes
+
 ::fidl::WireResult<::test_placementofattributes::ExampleProtocol::Method>::WireResult(
     ::fidl::UnownedClientEnd<::test_placementofattributes::ExampleProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>* request) {
@@ -23,10 +25,12 @@ extern "C" const fidl_type_t test_placementofattributes_ExampleProtocolMethodReq
   SetStatus(outgoing);
 }
 namespace test_placementofattributes {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_placementofattributes
+
 ::fidl::WireUnownedResult<::test_placementofattributes::ExampleProtocol::Method>::WireUnownedResult(::fidl::UnownedClientEnd<::test_placementofattributes::ExampleProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_placementofattributes::ExampleProtocol::Method>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -45,9 +49,11 @@ namespace test_placementofattributes {
   SetStatus(outgoing);
 }
 namespace test_placementofattributes {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_placementofattributes
+
 #ifdef __Fuchsia__
 
 ::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_placementofattributes::ExampleProtocol>::Method(const ::test_exampleusing::wire::Empty& arg) {
@@ -70,6 +76,7 @@ namespace test_placementofattributes {
       _allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -80,6 +87,7 @@ namespace test_placementofattributes {
   fidl::internal::WireEventDispatcher<::test_placementofattributes::ExampleProtocol> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -117,11 +125,13 @@ void fidl::internal::WireServerDispatcher<::test_placementofattributes::ExampleP
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
+
 void fidl::WireServer<::test_placementofattributes::ExampleProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_placementofattributes::ExampleProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalRequest<::test_placementofattributes::ExampleProtocol::Method>::_InitHeader() {

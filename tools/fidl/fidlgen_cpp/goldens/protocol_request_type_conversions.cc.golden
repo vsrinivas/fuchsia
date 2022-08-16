@@ -108,6 +108,7 @@ namespace internal {
   return ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>(
       WireNaturalConversionTraits<::test_protocolrequest::wire::ParentGetChildRequestTopResponse, ::test_protocolrequest::ParentGetChildRequestTopResponse>::ToWire(arena, std::move(src)));
 }
+
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

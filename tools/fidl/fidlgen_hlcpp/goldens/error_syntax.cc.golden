@@ -9,6 +9,7 @@
 //
 namespace test {
 namespace errorsyntax {
+
 extern "C" const fidl_type_t test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
 const fidl_type_t* ExampleUseOfErrorSyntaxCallWhichMayFailRequest::FidlType = &test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
 
@@ -298,11 +299,15 @@ zx_status_t ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse::Clone(ExampleUse
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_errorsyntax_parent_ParentUsesErrorSyntaxComposedCallWhichMayFailRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_errorsyntax_parent_ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponseTable;
 
 }  // namespace _internal
+
 ExampleUseOfErrorSyntax::~ExampleUseOfErrorSyntax() = default;
 
 const fidl_type_t* ::test::errorsyntax::ExampleUseOfErrorSyntax_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
@@ -516,6 +521,7 @@ zx_status_t ExampleUseOfErrorSyntax_SyncProxy::CallWhichMayFail(::std::string s,
   *out_result = ::fidl::DecodeAs<::test::errorsyntax::ExampleUseOfErrorSyntax_CallWhichMayFail_Result>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 }  // namespace errorsyntax

@@ -18,23 +18,29 @@
 #endif  // __Fuchsia__
 
 namespace test_drivertwoway {
+
 class TwoWay;
 
 __LOCAL extern "C" const fidl_type_t test_drivertwoway_TwoWayAddRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_drivertwoway_TwoWayAddTopResponseTable;
 }  // namespace test_drivertwoway
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_drivertwoway::TwoWay::Add> final {
   static constexpr uint64_t value = 989730524426044687lu;
 };
 
 namespace test_drivertwoway {
+
 }  // namespace test_drivertwoway
+
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_drivertwoway::TwoWay> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -55,6 +61,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_drivertwoway::TwoWay> final
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -300,6 +307,7 @@ static_assert(sizeof(::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>) == 
 static_assert(offsetof(::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>, sum) == 0);
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>> final
     : public ::fidl::internal::DriverMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>>> {};
@@ -342,6 +350,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add> f
   ::fdf::Arena arena_;
   ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>> decoded_;
 };
+
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_drivertwoway::TwoWay> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
@@ -435,6 +444,7 @@ class ::fdf::WireServer<::test_drivertwoway::TwoWay> : public ::fidl::internal::
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -474,6 +484,7 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_drivertwoway::TwoWay> fina
   ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add> Add(uint16_t addend1, uint16_t addend2);
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl

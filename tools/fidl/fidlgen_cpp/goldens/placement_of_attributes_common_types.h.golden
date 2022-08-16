@@ -10,6 +10,7 @@
 #include <cinttypes>
 
 namespace test_placementofattributes {
+
 // |ExampleBits| is strict, hence is guaranteed to only contain
 // members defined in the FIDL schema when receiving it in a message.
 // Sending unknown members will fail at runtime.
@@ -98,6 +99,7 @@ enum class ExampleEnum : uint32_t {
 };
 
 }  // namespace test_placementofattributes
+
 template <>
 struct fidl::internal::DisplayError<::test_placementofattributes::ExampleEnum> {
   static size_t Format(const ::test_placementofattributes::ExampleEnum& value, char* destination, size_t capacity);

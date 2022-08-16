@@ -137,6 +137,7 @@ inline zx_status_t Clone(::test::enum_::MyEmptyFlexibleEnum value,
 }  // namespace enum_
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::enum_::MyStrictEnum> {
   static constexpr size_t inline_size_v2 = sizeof(::test::enum_::MyStrictEnum);

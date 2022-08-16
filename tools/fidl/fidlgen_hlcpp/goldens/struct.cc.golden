@@ -9,6 +9,7 @@
 //
 namespace test {
 namespace struct_ {
+
 extern "C" const fidl_type_t test_struct_SimpleTable;
 const fidl_type_t* Simple::FidlType = &test_struct_SimpleTable;
 

@@ -16,6 +16,7 @@
 namespace fidl {
 
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_protocollayouts::MainProtocol::TwoWayAnonComposed> {
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>>;
@@ -159,13 +160,17 @@ namespace test_protocollayouts {
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_imported_ComposedProtocolOneWayAnonComposedRequestTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedWithErrorRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_imported_ComposedProtocolTwoWayAnonComposedWithErrorTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_imported_ComposedProtocolOnAnonComposedRequestTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_imported_ComposedProtocolOnAnonComposedWithErrorRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_imported_ImportTablePayloadTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_imported_ImportUnionPayloadTable;
@@ -177,6 +182,7 @@ __LOCAL extern "C" const fidl_type_t test_protocollayouts_imported_ComposedProto
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_MainProtocolTwoWayImportWithErrorTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnImportWithErrorRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_LocalTablePayloadTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_LocalUnionPayloadTable;
@@ -184,11 +190,15 @@ __LOCAL extern "C" const fidl_type_t test_protocollayouts_LocalUnionPayloadTable
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_MainProtocolTwoWayLocalWithErrorTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnLocalWithErrorRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_MainProtocolOneWayAnonRequestTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_MainProtocolTwoWayAnonRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_MainProtocolTwoWayAnonResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_MainProtocolTwoWayAnonWithErrorRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_MainProtocolTwoWayAnonWithErrorTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnAnonRequestTable;
@@ -211,7 +221,8 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_protocollayouts::Mai
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts_imported::ComposedProtocolOnAnonComposedRequest;
 };
-namespace test_protocollayouts {}  // namespace test_protocollayouts
+namespace test_protocollayouts {
+}  // namespace test_protocollayouts
 
 template <>
 class ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonComposedWithError> final : public ::fitx::result<uint32_t, ::test_protocollayouts_imported::ComposedProtocolOnAnonComposedWithErrorResponse> {
@@ -249,7 +260,8 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_protocollay
     }
   }
 };
-namespace test_protocollayouts {}  // namespace test_protocollayouts
+namespace test_protocollayouts {
+}  // namespace test_protocollayouts
 
 template <>
 class ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposed> final : public ::test_protocollayouts_imported::ImportUnionPayload {
@@ -264,7 +276,8 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_protocollayouts::Mai
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts_imported::ImportUnionPayload;
 };
-namespace test_protocollayouts {}  // namespace test_protocollayouts
+namespace test_protocollayouts {
+}  // namespace test_protocollayouts
 
 template <>
 class ::fidl::Event<::test_protocollayouts::MainProtocol::OnNamedComposedWithError> final : public ::fitx::result<uint32_t, ::test_protocollayouts_imported::ImportTablePayload> {
@@ -302,7 +315,8 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_protocollay
     }
   }
 };
-namespace test_protocollayouts {}  // namespace test_protocollayouts
+namespace test_protocollayouts {
+}  // namespace test_protocollayouts
 
 template <>
 class ::fidl::Event<::test_protocollayouts::MainProtocol::OnImport> final : public ::test_protocollayouts_imported::ImportUnionPayload {
@@ -317,7 +331,8 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_protocollayouts::Mai
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts_imported::ImportUnionPayload;
 };
-namespace test_protocollayouts {}  // namespace test_protocollayouts
+namespace test_protocollayouts {
+}  // namespace test_protocollayouts
 
 template <>
 class ::fidl::Event<::test_protocollayouts::MainProtocol::OnImportWithError> final : public ::fitx::result<uint32_t, ::test_protocollayouts_imported::ImportTablePayload> {
@@ -355,7 +370,8 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_protocollay
     }
   }
 };
-namespace test_protocollayouts {}  // namespace test_protocollayouts
+namespace test_protocollayouts {
+}  // namespace test_protocollayouts
 
 template <>
 class ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocal> final : public ::test_protocollayouts::LocalUnionPayload {
@@ -370,7 +386,8 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_protocollayouts::Mai
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts::LocalUnionPayload;
 };
-namespace test_protocollayouts {}  // namespace test_protocollayouts
+namespace test_protocollayouts {
+}  // namespace test_protocollayouts
 
 template <>
 class ::fidl::Event<::test_protocollayouts::MainProtocol::OnLocalWithError> final : public ::fitx::result<uint32_t, ::test_protocollayouts::LocalTablePayload> {
@@ -408,7 +425,8 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_protocollay
     }
   }
 };
-namespace test_protocollayouts {}  // namespace test_protocollayouts
+namespace test_protocollayouts {
+}  // namespace test_protocollayouts
 
 template <>
 class ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnon> final : public ::test_protocollayouts::MainProtocolOnAnonRequest {
@@ -423,7 +441,8 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_protocollayouts::Mai
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts::MainProtocolOnAnonRequest;
 };
-namespace test_protocollayouts {}  // namespace test_protocollayouts
+namespace test_protocollayouts {
+}  // namespace test_protocollayouts
 
 template <>
 class ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError> final : public ::fitx::result<uint32_t, ::test_protocollayouts::MainProtocolOnAnonWithErrorResponse> {
@@ -461,7 +480,8 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Event<::test_protocollay
     }
   }
 };
-namespace test_protocollayouts {}  // namespace test_protocollayouts
+namespace test_protocollayouts {
+}  // namespace test_protocollayouts
 
 template <>
 class ::fidl::Response<::test_protocollayouts::MainProtocol::TwoWayAnonComposed> final : public ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedResponse {
@@ -476,7 +496,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocollayouts::
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedResponse;
 };
-namespace test_protocollayouts {}  // namespace test_protocollayouts
+namespace test_protocollayouts {
+}  // namespace test_protocollayouts
+
 template <>
 class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayAnonComposed> final : public ::fitx::result<::fidl::Error, ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedResponse> {
  public:
@@ -522,6 +544,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
     }
   }
 };
+
 template <>
 class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> final : public ::fitx::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>, ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedWithErrorResponse> {
  public:
@@ -544,6 +567,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocollayouts::
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts_imported::ImportTablePayload;
 };
+
 template <>
 class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayNamedComposed> final : public ::fitx::result<::fidl::Error, ::test_protocollayouts_imported::ImportTablePayload> {
  public:
@@ -589,6 +613,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
     }
   }
 };
+
 template <>
 class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError> final : public ::fitx::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>, ::test_protocollayouts_imported::ImportUnionPayload> {
  public:
@@ -611,6 +636,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocollayouts::
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts_imported::ImportTablePayload;
 };
+
 template <>
 class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayImport> final : public ::fitx::result<::fidl::Error, ::test_protocollayouts_imported::ImportTablePayload> {
  public:
@@ -656,6 +682,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
     }
   }
 };
+
 template <>
 class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayImportWithError> final : public ::fitx::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayImportWithError>, ::test_protocollayouts_imported::ImportUnionPayload> {
  public:
@@ -678,6 +705,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocollayouts::
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts::LocalTablePayload;
 };
+
 template <>
 class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayLocal> final : public ::fitx::result<::fidl::Error, ::test_protocollayouts::LocalTablePayload> {
  public:
@@ -723,6 +751,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
     }
   }
 };
+
 template <>
 class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayLocalWithError> final : public ::fitx::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>, ::test_protocollayouts::LocalUnionPayload> {
  public:
@@ -745,6 +774,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_protocollayouts::
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts::MainProtocolTwoWayAnonResponse;
 };
+
 template <>
 class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayAnon> final : public ::fitx::result<::fidl::Error, ::test_protocollayouts::MainProtocolTwoWayAnonResponse> {
  public:
@@ -790,6 +820,7 @@ class ::fidl::internal::NaturalMessageConverter<::fidl::Response<::test_protocol
     }
   }
 };
+
 template <>
 class ::fidl::Result<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> final : public ::fitx::result<::fidl::AnyErrorIn<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>, ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse> {
  public:
@@ -834,9 +865,11 @@ class ::fidl::internal::NaturalClientImpl<::test_protocollayouts::MainProtocol> 
   ::fitx::result<::fidl::Error> OneWayAnon(const ::fidl::Request<::test_protocollayouts::MainProtocol::OneWayAnon>& request) const;
 };
 namespace test_protocollayouts {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_protocollayouts
+
 #ifdef __Fuchsia__
 
 template <>
@@ -879,6 +912,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_protocollayouts::MainProtoc
         _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -939,6 +973,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_protocollayouts::MainProto
       ::fidl::IncomingMessage& msg,
       internal::MessageStorageViewBase* storage_view) override;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -994,6 +1029,7 @@ class ::fidl::internal::NaturalEventSender<::test_protocollayouts::MainProtocol>
 
   ::fitx::result<::fidl::Error> OnAnonWithError(const ::fidl::Event<::test_protocollayouts::MainProtocol::OnAnonWithError>& payload);
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1011,6 +1047,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocollayouts::M
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts_imported::ComposedProtocolOneWayAnonComposedRequest;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1028,6 +1065,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocollayouts::M
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedRequest;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1045,6 +1083,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocollayouts::M
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts_imported::ComposedProtocolTwoWayAnonComposedWithErrorRequest;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1062,6 +1101,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocollayouts::M
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts_imported::ImportTablePayload;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1079,6 +1119,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocollayouts::M
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts_imported::ImportUnionPayload;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1096,6 +1137,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocollayouts::M
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts_imported::ImportTablePayload;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1113,6 +1155,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocollayouts::M
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts_imported::ImportTablePayload;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1130,6 +1173,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocollayouts::M
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts_imported::ImportUnionPayload;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1147,6 +1191,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocollayouts::M
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts_imported::ImportTablePayload;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1164,6 +1209,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocollayouts::M
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts::LocalTablePayload;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1181,6 +1227,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocollayouts::M
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts::LocalUnionPayload;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1198,6 +1245,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocollayouts::M
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts::LocalTablePayload;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1215,6 +1263,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocollayouts::M
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts::MainProtocolOneWayAnonRequest;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1232,6 +1281,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocollayouts::M
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts::MainProtocolTwoWayAnonRequest;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1249,6 +1299,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_protocollayouts::M
   static constexpr bool kHasPayload = true;
   using Payload = ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorRequest;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -1446,4 +1497,5 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_protocollayouts::MainPro
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__

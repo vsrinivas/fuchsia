@@ -42,6 +42,7 @@ constexpr ::test::dependent::MyEnum ENUM_MEMBER = ::test::dependent::MyEnum::MEM
 }  // namespace importedconstvalues
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::importedconstvalues::MyStruct>
     : public EncodableCodingTraits<::test::importedconstvalues::MyStruct, 1> {};

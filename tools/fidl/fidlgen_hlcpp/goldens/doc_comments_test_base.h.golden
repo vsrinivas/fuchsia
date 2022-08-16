@@ -6,6 +6,7 @@
 namespace test {
 namespace doccomments {
 namespace testing {
+
 class Interface_TestBase : public ::test::doccomments::Interface {
  public:
   virtual ~Interface_TestBase() {}

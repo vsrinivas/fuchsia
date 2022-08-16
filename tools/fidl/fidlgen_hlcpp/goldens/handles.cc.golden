@@ -9,6 +9,7 @@
 //
 namespace test {
 namespace handles {
+
 #ifdef __Fuchsia__
 
 extern "C" const fidl_type_t test_handles_HandlesTable;
@@ -337,6 +338,7 @@ zx_status_t Handles::Clone(Handles* _result) const {
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 //
@@ -432,6 +434,7 @@ SomeProtocol_SyncProxy::SomeProtocol_SyncProxy(::zx::channel channel)
     : proxy_(::std::move(channel)) {}
 
 SomeProtocol_SyncProxy::~SomeProtocol_SyncProxy() = default;
+
 #endif  // __Fuchsia__
 
 }  // namespace handles

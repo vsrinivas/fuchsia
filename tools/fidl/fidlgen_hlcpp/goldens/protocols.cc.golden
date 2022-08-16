@@ -9,6 +9,7 @@
 //
 namespace test {
 namespace protocols {
+
 extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable;
 const fidl_type_t* WithAndWithoutRequestResponseNoRequestWithResponseTopResponse::FidlType = &test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable;
 
@@ -982,6 +983,7 @@ zx_status_t WithErrorSyntax_HandleInResult_Response::Clone(WithErrorSyntax_Handl
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1186,6 +1188,7 @@ void WithErrorSyntax_HandleInResult_Result::EnsureStorageInitialized(::fidl_xuni
     }
   }
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1216,6 +1219,7 @@ zx_status_t WithErrorSyntaxHandleInResultTopResponse::Clone(WithErrorSyntaxHandl
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodARequestTable;
@@ -1372,6 +1376,7 @@ zx_status_t ChannelProtocolTakeHandleRequest::Clone(ChannelProtocolTakeHandleReq
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1405,6 +1410,7 @@ zx_status_t ChannelProtocolMutateSocketRequest::Clone(ChannelProtocolMutateSocke
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1438,6 +1444,7 @@ zx_status_t ChannelProtocolMutateSocketTopResponse::Clone(ChannelProtocolMutateS
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 extern "C" const fidl_type_t test_protocols_SyscallProtocolMethodCRequestTable;
@@ -1611,6 +1618,7 @@ zx_status_t HandleRightsProtocolNoResponseMethodRequest::Clone(HandleRightsProto
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1644,6 +1652,7 @@ zx_status_t HandleRightsProtocolResponseMethodRequest::Clone(HandleRightsProtoco
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1677,6 +1686,7 @@ zx_status_t HandleRightsProtocolResponseMethodTopResponse::Clone(HandleRightsPro
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1710,6 +1720,7 @@ zx_status_t HandleRightsProtocolAnEventRequest::Clone(HandleRightsProtocolAnEven
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1770,6 +1781,7 @@ zx_status_t ProtocolEnds::Clone(ProtocolEnds* _result) const {
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1803,6 +1815,7 @@ zx_status_t WithProtocolEndsClientEndsRequest::Clone(WithProtocolEndsClientEndsR
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1836,6 +1849,7 @@ zx_status_t WithProtocolEndsClientEndsTopResponse::Clone(WithProtocolEndsClientE
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1869,6 +1883,7 @@ zx_status_t WithProtocolEndsServerEndsRequest::Clone(WithProtocolEndsServerEndsR
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1902,6 +1917,7 @@ zx_status_t WithProtocolEndsServerEndsTopResponse::Clone(WithProtocolEndsServerE
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1932,6 +1948,7 @@ zx_status_t WithProtocolEndsStructContainingEndsRequest::Clone(WithProtocolEndsS
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1962,6 +1979,7 @@ zx_status_t WithProtocolEndsStructContainingEndsTopResponse::Clone(WithProtocolE
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 extern "C" const fidl_type_t test_protocols_ManyParametersFifteenRequestTable;
@@ -2294,16 +2312,19 @@ zx_status_t MethodWithUnionUnionMethodTopResponse::Clone(MethodWithUnionUnionMet
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseRequestTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseRequestTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocols_WithAndWithoutRequestResponseOnWithResponseRequestTable;
 
 }  // namespace _internal
+
 WithAndWithoutRequestResponse::~WithAndWithoutRequestResponse() = default;
 
 const fidl_type_t* ::test::protocols::WithAndWithoutRequestResponse_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
@@ -2709,6 +2730,7 @@ zx_status_t WithAndWithoutRequestResponse_SyncProxy::WithRequestWithResponse(::s
   *out_ret = ::fidl::DecodeAs<::std::string>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2723,6 +2745,7 @@ __LOCAL extern "C" const fidl_type_t test_protocols_WithErrorSyntaxErrorAsEnumTo
 __LOCAL extern "C" const fidl_type_t test_protocols_WithErrorSyntaxHandleInResultTopResponseTable;
 
 }  // namespace _internal
+
 WithErrorSyntax::~WithErrorSyntax() = default;
 
 const fidl_type_t* ::test::protocols::WithErrorSyntax_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
@@ -3056,6 +3079,7 @@ zx_status_t WithErrorSyntax_SyncProxy::HandleInResult(::test::protocols::WithErr
   *out_result = ::fidl::DecodeAs<::test::protocols::WithErrorSyntax_HandleInResult_Result>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3064,14 +3088,19 @@ namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodARequestTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolEventARequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodBRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMethodBTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolTakeHandleRequestTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_ChannelProtocolMutateSocketTopResponseTable;
 
 }  // namespace _internal
+
 ChannelProtocol::~ChannelProtocol() = default;
 
 const fidl_type_t* ::test::protocols::ChannelProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
@@ -3386,18 +3415,22 @@ zx_status_t ChannelProtocol_SyncProxy::MutateSocket(::zx::socket a, ::zx::socket
   *out_b = ::fidl::DecodeAs<::zx::socket>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_protocols_TransitionalRequestRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_TransitionalRequestTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_TransitionalOneWayRequestTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocols_TransitionalEventRequestTable;
 
 }  // namespace _internal
+
 Transitional::~Transitional() = default;
 
 const fidl_type_t* ::test::protocols::Transitional_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
@@ -3591,6 +3624,7 @@ zx_status_t Transitional_SyncProxy::OneWay(int64_t x) {
   const fidl_type_t* req_type = &::test::protocols::_internal::test_protocols_TransitionalOneWayRequestTable;
   return proxy_.Send(req_type, ::test::protocols::Transitional_RequestEncoder::OneWay(&_encoder, &x));
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3703,6 +3737,7 @@ zx_status_t DiscoverableProtocol_SyncProxy::Method() {
   const fidl_type_t* req_type = nullptr;
   return proxy_.Send(req_type, ::test::protocols::DiscoverableProtocol_RequestEncoder::Method(&_encoder));
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3796,6 +3831,7 @@ AnotherDiscoverableProtocol_SyncProxy::AnotherDiscoverableProtocol_SyncProxy(::z
     : proxy_(::std::move(channel)) {}
 
 AnotherDiscoverableProtocol_SyncProxy::~AnotherDiscoverableProtocol_SyncProxy() = default;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -3804,11 +3840,13 @@ namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolNoResponseMethodRequestTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolResponseMethodRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolResponseMethodTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocols_HandleRightsProtocolAnEventRequestTable;
 
 }  // namespace _internal
+
 HandleRightsProtocol::~HandleRightsProtocol() = default;
 
 const fidl_type_t* ::test::protocols::HandleRightsProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
@@ -4002,19 +4040,26 @@ zx_status_t HandleRightsProtocol_SyncProxy::ResponseMethod(::zx::socket h, ::zx:
   *out_h = ::fidl::DecodeAs<::zx::socket>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsClientEndsRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsClientEndsTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsServerEndsRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsServerEndsTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEndsRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_WithProtocolEndsStructContainingEndsTopResponseTable;
 
 }  // namespace _internal
+
 WithProtocolEnds::~WithProtocolEnds() = default;
 
 const fidl_type_t* ::test::protocols::WithProtocolEnds_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
@@ -4290,6 +4335,7 @@ zx_status_t WithProtocolEnds_SyncProxy::StructContainingEnds(::test::protocols::
   *out_out = ::fidl::DecodeAs<::test::protocols::ProtocolEnds>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -4298,6 +4344,7 @@ namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_protocols_ManyParametersFifteenRequestTable;
 
 }  // namespace _internal
+
 ManyParameters::~ManyParameters() = default;
 
 const fidl_type_t* ::test::protocols::ManyParameters_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
@@ -4406,15 +4453,18 @@ zx_status_t ManyParameters_SyncProxy::Fifteen(bool p1, bool p2, bool p3, bool p4
   const fidl_type_t* req_type = &::test::protocols::_internal::test_protocols_ManyParametersFifteenRequestTable;
   return proxy_.Send(req_type, ::test::protocols::ManyParameters_RequestEncoder::Fifteen(&_encoder, &p1, &p2, &p3, &p4, &p5, &p6, &p7, &p8, &p9, &p10, &p11, &p12, &p13, &p14, &p15));
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocols_MethodWithUnionUnionMethodTopResponseTable;
 
 }  // namespace _internal
+
 MethodWithUnion::~MethodWithUnion() = default;
 
 const fidl_type_t* ::test::protocols::MethodWithUnion_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
@@ -4566,6 +4616,7 @@ zx_status_t MethodWithUnion_SyncProxy::UnionMethod(::test::protocols::TheUnion u
   *out_u = ::fidl::DecodeAs<::std::unique_ptr<::test::protocols::TheUnion>>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 }  // namespace protocols

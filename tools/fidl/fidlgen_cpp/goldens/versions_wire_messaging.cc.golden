@@ -16,6 +16,7 @@
   fidl::internal::WireEventDispatcher<::test_versions::OtherProtocol> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -37,11 +38,13 @@ void fidl::internal::WireServerDispatcher<::test_versions::OtherProtocol>::Dispa
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
+
 void fidl::WireServer<::test_versions::OtherProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_versions::OtherProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -49,11 +52,13 @@ void fidl::WireServer<::test_versions::OtherProtocol>::dispatch_message(
 #endif  // __Fuchsia__
 
 namespace test_versions {
+
 [[maybe_unused]] constexpr uint64_t kProtocol_Foo_Ordinal = 6231434419097198905lu;
 
 [[maybe_unused]] constexpr ::fidl::MessageDynamicFlags kProtocol_Foo_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 #ifdef __Fuchsia__
 }  // namespace test_versions
+
 ::fidl::WireResult<::test_versions::Protocol::Foo>::WireResult(
     ::fidl::UnownedClientEnd<::test_versions::Protocol> client,
     ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>* request) {
@@ -65,10 +70,12 @@ namespace test_versions {
   SetStatus(outgoing);
 }
 namespace test_versions {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace test_versions
+
 ::fidl::WireUnownedResult<::test_versions::Protocol::Foo>::WireUnownedResult(::fidl::UnownedClientEnd<::test_versions::Protocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_versions::Protocol::Foo>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -87,9 +94,11 @@ namespace test_versions {
   SetStatus(outgoing);
 }
 namespace test_versions {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_versions
+
 #ifdef __Fuchsia__
 
 ::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_versions::Protocol>::Foo() {
@@ -112,6 +121,7 @@ namespace test_versions {
       _allocation->data, _buffer_size, &_request);
   return _client_base()->SendOneWay(_request_message.GetOutgoingMessage());
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -122,6 +132,7 @@ namespace test_versions {
   fidl::internal::WireEventDispatcher<::test_versions::Protocol> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -156,11 +167,13 @@ void fidl::internal::WireServerDispatcher<::test_versions::Protocol>::Dispatch(:
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
+
 void fidl::WireServer<::test_versions::Protocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_versions::Protocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 void ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>::_InitHeader() {

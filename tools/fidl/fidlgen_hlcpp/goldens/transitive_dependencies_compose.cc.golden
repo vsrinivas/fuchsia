@@ -19,6 +19,7 @@ namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_bottom_BottomGetFooTopResponseTable;
 
 }  // namespace _internal
+
 Top::~Top() = default;
 
 const fidl_type_t* ::test::transitivedependenciescompose::Top_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
@@ -171,4 +172,5 @@ zx_status_t Top_SyncProxy::GetFoo(::test::bottom::Foo* out_foo) {
 }
 }  // namespace transitivedependenciescompose
 }  // namespace test
+
 #endif  // __Fuchsia__

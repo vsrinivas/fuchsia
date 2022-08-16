@@ -21,22 +21,27 @@
 #include <fidl/test.middle/cpp/wire_messaging.h>
 
 namespace test_foreigntypeinresponseusedthroughcompose {
+
 class Top;
 
 __LOCAL extern "C" const fidl_type_t test_middle_MiddleGetFooTopResponseTable;
 }  // namespace test_foreigntypeinresponseusedthroughcompose
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> final {
   static constexpr uint64_t value = 4619180266423108403lu;
 };
 
 namespace test_foreigntypeinresponseusedthroughcompose {
+
 }  // namespace test_foreigntypeinresponseusedthroughcompose
+
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_foreigntypeinresponseusedthroughcompose::Top> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -57,6 +62,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_foreigntypeinresponseusedth
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -270,6 +276,7 @@ static_assert(sizeof(::fidl::WireResponse<::test_foreigntypeinresponseusedthroug
 static_assert(offsetof(::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>, foo) == 0);
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>> final
     : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>> {
@@ -354,6 +361,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_foreigntypeinresponseusedth
  private:
   ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>> decoded_;
 };
+
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_foreigntypeinresponseusedthroughcompose::Top> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
@@ -484,10 +492,12 @@ class ::fidl::WireServer<::test_foreigntypeinresponseusedthroughcompose::Top> : 
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireWeakOnewayClientImpl<::test_foreigntypeinresponseusedthroughcompose::Top> : public ::fidl::internal::ClientImplBase {
  public:
@@ -525,9 +535,11 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_foreigntypeinresponseusedt
   ::fidl::WireResult<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> GetFoo();
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl
+
 #ifdef __Fuchsia__
 template <>
 class ::fidl::internal::WireWeakEventSender<::test_foreigntypeinresponseusedthroughcompose::Top> : public ::fidl::internal::WeakEventSenderBase {
@@ -554,4 +566,5 @@ class ::fidl::internal::WireBufferEventSender<::test_foreigntypeinresponseusedth
  public:
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
+
 #endif  // __Fuchsia__

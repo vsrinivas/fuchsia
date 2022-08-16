@@ -15,6 +15,7 @@
 
 namespace test {
 namespace service {
+
 FirstProtocol::~FirstProtocol() = default;
 
 const fidl_type_t* ::test::service::FirstProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
@@ -124,12 +125,14 @@ zx_status_t FirstProtocol_SyncProxy::MethodOnFirst() {
 }
 }  // namespace service
 }  // namespace test
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
 namespace test {
 namespace service {
+
 SecondProtocol::~SecondProtocol() = default;
 
 const fidl_type_t* ::test::service::SecondProtocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
@@ -239,4 +242,5 @@ zx_status_t SecondProtocol_SyncProxy::MethodOnSecond() {
 }
 }  // namespace service
 }  // namespace test
+
 #endif  // __Fuchsia__

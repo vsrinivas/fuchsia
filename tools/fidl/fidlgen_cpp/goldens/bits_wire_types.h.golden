@@ -25,8 +25,11 @@ namespace test_bits {
 
 namespace wire {
 using MyBits = ::test_bits::MyBits;
+
 using StrictBits = ::test_bits::StrictBits;
+
 using FlexibleBits = ::test_bits::FlexibleBits;
+
 using EmptyBits = ::test_bits::EmptyBits;
 
 }  // namespace wire

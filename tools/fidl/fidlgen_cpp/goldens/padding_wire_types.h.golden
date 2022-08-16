@@ -24,6 +24,7 @@
 namespace test_padding {
 
 namespace wire {
+
 struct Padding1ByteEnd;
 
 struct Padding2ByteEnd;

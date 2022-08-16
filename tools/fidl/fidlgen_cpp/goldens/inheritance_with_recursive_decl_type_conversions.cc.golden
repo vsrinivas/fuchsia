@@ -59,6 +59,7 @@ namespace internal {
   return ::fidl::WireRequest<::test_inheritancewithrecursivedecl::Child::Second>(
       WireNaturalConversionTraits<::test_inheritancewithrecursivedecl::wire::ChildSecondRequest, ::test_inheritancewithrecursivedecl::ChildSecondRequest>::ToWire(arena, std::move(src)));
 }
+
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

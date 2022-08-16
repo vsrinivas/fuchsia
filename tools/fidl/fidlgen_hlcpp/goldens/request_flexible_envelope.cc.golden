@@ -9,6 +9,7 @@
 //
 namespace test {
 namespace requestflexibleenvelope {
+
 extern "C" const fidl_type_t test_requestflexibleenvelope_FlexibleFooTable;
 const fidl_type_t* FlexibleFoo::FidlType = &test_requestflexibleenvelope_FlexibleFooTable;
 
@@ -553,11 +554,15 @@ zx_status_t ProtocolRequestFlexibleResponseStrictTopResponse::Clone(ProtocolRequ
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictTopResponseTable;
 
 }  // namespace _internal
+
 Protocol::~Protocol() = default;
 
 const fidl_type_t* ::test::requestflexibleenvelope::Protocol_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
@@ -771,6 +776,7 @@ zx_status_t Protocol_SyncProxy::RequestFlexibleResponseStrict(::test::requestfle
   *out_f = ::fidl::DecodeAs<::test::requestflexibleenvelope::StrictFoo>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 }  // namespace requestflexibleenvelope

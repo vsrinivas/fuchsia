@@ -24,6 +24,7 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse;
 
 class ExampleUseOfErrorSyntax;
 using ExampleUseOfErrorSyntaxHandle = ::fidl::InterfaceHandle<ExampleUseOfErrorSyntax>;
+
 #endif  // __Fuchsia__
 
 class ExampleUseOfErrorSyntaxCallWhichMayFailRequest final {
@@ -209,9 +210,11 @@ using ExampleUseOfErrorSyntaxCallWhichMayFailTopResponsePtr = ::std::unique_ptr<
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_errorsyntax_parent_ParentUsesErrorSyntaxComposedCallWhichMayFailRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailRequestTable;
 
 }  // namespace _internal
+
 class ExampleUseOfErrorSyntax_RequestEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage ComposedCallWhichMayFail(::fidl::MessageEncoder* _encoder, ::std::string* s) {
@@ -235,9 +238,11 @@ class ExampleUseOfErrorSyntax_RequestEncoder {
 };
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_errorsyntax_parent_ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_errorsyntax_ExampleUseOfErrorSyntaxCallWhichMayFailTopResponseTable;
 
 }  // namespace _internal
+
 class ExampleUseOfErrorSyntax_ResponseEncoder {
  public:
   static ::fidl::HLCPPOutgoingMessage ComposedCallWhichMayFail(::fidl::MessageEncoder* _encoder, ::test::errorsyntax::parent::ParentUsesErrorSyntax_ComposedCallWhichMayFail_Result* result) {
@@ -261,11 +266,13 @@ class ExampleUseOfErrorSyntax_ResponseEncoder {
     return _encoder->GetMessage();
   }
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace errorsyntax
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>
     : public EncodableCodingTraits<::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest, 16> {};
@@ -402,6 +409,7 @@ struct Equality<::test::errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailTopR
 }  // namespace fidl
 namespace test {
 namespace errorsyntax {
+
 #ifdef __Fuchsia__
 
 using ExampleUseOfErrorSyntaxPtr = ::fidl::InterfacePtr<ExampleUseOfErrorSyntax>;
@@ -413,11 +421,16 @@ using ExampleUseOfErrorSyntaxSyncPtr = ::fidl::SynchronousInterfacePtr<ExampleUs
 class ExampleUseOfErrorSyntax_SyncProxy;
 
 namespace internal {
+
 constexpr uint64_t kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal = 0x3179cf8f46814221lu;
+
 constexpr ::fidl::MessageDynamicFlags kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 constexpr uint64_t kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal = 0x3424ff83ce3004a2lu;
+
 constexpr ::fidl::MessageDynamicFlags kExampleUseOfErrorSyntax_CallWhichMayFail_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -514,6 +527,7 @@ class ExampleUseOfErrorSyntax_SyncProxy : public ::test::errorsyntax::ExampleUse
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<ExampleUseOfErrorSyntax>;
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace errorsyntax

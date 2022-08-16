@@ -8,6 +8,7 @@
 namespace test {
 namespace foreigntypeinresponseusedthroughcompose {
 namespace testing {
+
 class Top_TestBase : public ::test::foreigntypeinresponseusedthroughcompose::Top {
  public:
   virtual ~Top_TestBase() {}

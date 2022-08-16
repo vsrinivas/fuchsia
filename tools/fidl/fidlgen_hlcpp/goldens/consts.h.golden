@@ -124,6 +124,7 @@ constexpr uint32_t bitsPrimitiveTrue = ::test::consts::BitsType::true_;
 }  // namespace consts
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::consts::EnumType> {
   static constexpr size_t inline_size_v2 = sizeof(::test::consts::EnumType);

@@ -60,6 +60,7 @@ namespace internal {
   return ::fidl::WireResponse<::test_inheritance::Sub::Foo>(
       WireNaturalConversionTraits<::test_inheritance::wire::SuperFooTopResponse, ::test_inheritance::SuperFooTopResponse>::ToWire(arena, std::move(src)));
 }
+
 #endif  // __Fuchsia__
 }  // namespace internal
 }  // namespace fidl

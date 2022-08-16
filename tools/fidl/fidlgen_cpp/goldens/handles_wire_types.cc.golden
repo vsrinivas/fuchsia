@@ -39,6 +39,7 @@ void ::test_handles::wire::Handles::_CloseHandles() {
   some_protocol.reset();
   request_some_protocol.reset();
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -47,4 +48,5 @@ void ::test_handles::wire::FdfHandles::_CloseHandles() {
   client_end_driver.reset();
   server_end_driver.reset();
 }
+
 #endif  // __Fuchsia__

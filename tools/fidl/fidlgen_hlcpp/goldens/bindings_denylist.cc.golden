@@ -9,6 +9,7 @@
 //
 namespace test {
 namespace bindingsdenylist {
+
 extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
 const fidl_type_t* DenyEachBindingOnlyDenyDartRequest::FidlType = &test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
 
@@ -1566,6 +1567,7 @@ OnlyLibfuzzerAndDeps_SyncProxy::OnlyLibfuzzerAndDeps_SyncProxy(::zx::channel cha
     : proxy_(::std::move(channel)) {}
 
 OnlyLibfuzzerAndDeps_SyncProxy::~OnlyLibfuzzerAndDeps_SyncProxy() = default;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1658,23 +1660,34 @@ OnlyCppAndDeps_SyncProxy::OnlyCppAndDeps_SyncProxy(::zx::channel channel)
     : proxy_(::std::move(channel)) {}
 
 OnlyCppAndDeps_SyncProxy::~OnlyCppAndDeps_SyncProxy() = default;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
 namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyDartRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyDartTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyGoRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyGoTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyLibfuzzerTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyRustRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenyRustTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenySyzkallerTopResponseTable;
 
 }  // namespace _internal
+
 DenyEachBinding::~DenyEachBinding() = default;
 
 const fidl_type_t* ::test::bindingsdenylist::DenyEachBinding_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
@@ -2074,6 +2087,7 @@ zx_status_t DenyEachBinding_SyncProxy::OnlyDenySyzkaller(bool a, ::test::binding
   *out_result = ::fidl::DecodeAs<::test::bindingsdenylist::DenyEachBinding_OnlyDenySyzkaller_Result>(&decoder_, 0 + sizeof(fidl_message_header_t));
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2166,6 +2180,7 @@ Allowed_SyncProxy::Allowed_SyncProxy(::zx::channel channel)
     : proxy_(::std::move(channel)) {}
 
 Allowed_SyncProxy::~Allowed_SyncProxy() = default;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -2295,6 +2310,7 @@ zx_status_t ImportsSameNameContext_SyncProxy::AlwaysAppearsInImportingLibrary() 
   const fidl_type_t* req_type = nullptr;
   return proxy_.Send(req_type, ::test::bindingsdenylist::ImportsSameNameContext_RequestEncoder::AlwaysAppearsInImportingLibrary(&_encoder));
 }
+
 #endif  // __Fuchsia__
 
 }  // namespace bindingsdenylist

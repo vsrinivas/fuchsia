@@ -18,16 +18,19 @@
 #endif  // __Fuchsia__
 
 namespace test_protocolrequest {
+
 class Child;
 
 class Parent;
 
 }  // namespace test_protocolrequest
+
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_protocolrequest::Child> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -48,12 +51,14 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocolrequest::Child> fin
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 namespace fidl {
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::IncomingEventsHandleStorage<::test_protocolrequest::Child> final : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingEventsHandleStorage<::test_protocolrequest::Child>> {
  public:
@@ -69,6 +74,7 @@ struct ::fidl::internal::IncomingEventsStorage<::test_protocolrequest::Child> fi
   ::fidl::internal::InlineMessageBuffer<16> bytes_;
   ::fidl::internal::IncomingEventsHandleStorage<::test_protocolrequest::Child> handles_storage_;
 };
+
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_protocolrequest::Child> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
@@ -144,6 +150,7 @@ class ::fidl::WireServer<::test_protocolrequest::Child> : public ::fidl::interna
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl
@@ -151,35 +158,43 @@ namespace test_protocolrequest {
 __LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentGetChildTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentGetChildRequestTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequestTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequestRequestTable;
 
 }  // namespace test_protocolrequest
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_protocolrequest::Parent::GetChild> final {
   static constexpr uint64_t value = 881818649151440699lu;
 };
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_protocolrequest::Parent::GetChildRequest> final {
   static constexpr uint64_t value = 1096855814967598201lu;
 };
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_protocolrequest::Parent::TakeChild> final {
   static constexpr uint64_t value = 4470101341872267920lu;
 };
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_protocolrequest::Parent::TakeChildRequest> final {
   static constexpr uint64_t value = 2333981071306416007lu;
 };
 
 namespace test_protocolrequest {
+
 }  // namespace test_protocolrequest
+
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_protocolrequest::Parent> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -200,6 +215,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_protocolrequest::Parent> fi
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -234,6 +250,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
       internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 #ifdef __Fuchsia__
 
 template <>
@@ -297,6 +314,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -331,6 +349,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
       internal::WireDecoder* decoder, ::fidl::internal::WirePosition position, RecursionDepth<IsRecursive> recursion_depth) {
   }
 };
+
 #ifdef __Fuchsia__
 
 template <>
@@ -394,6 +413,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRespons
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -459,6 +479,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -524,6 +545,7 @@ struct ::fidl::internal::WireCodingTraits<::fidl::internal::TransactionalRequest
         decoder, position + sizeof(fidl_message_header_t), recursion_depth);
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -667,6 +689,7 @@ struct TypeTraits<::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>
 };
 static_assert(sizeof(::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>) == TypeTraits<::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>, c) == 0);
+
 #endif  // __Fuchsia__
 
 template <>
@@ -770,6 +793,7 @@ struct TypeTraits<::fidl::WireResponse<::test_protocolrequest::Parent::GetChildR
 };
 static_assert(sizeof(::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>) == TypeTraits<::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>, r) == 0);
+
 #endif  // __Fuchsia__
 
 template <>
@@ -825,6 +849,7 @@ struct TypeTraits<::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>
 };
 static_assert(sizeof(::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>) == TypeTraits<::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireRequest<::test_protocolrequest::Parent::TakeChild>, c) == 0);
+
 #endif  // __Fuchsia__
 
 template <>
@@ -880,10 +905,12 @@ struct TypeTraits<::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildR
 };
 static_assert(sizeof(::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>) == TypeTraits<::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>>::kPrimarySize);
 static_assert(offsetof(::fidl::WireRequest<::test_protocolrequest::Parent::TakeChildRequest>, r) == 0);
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild>> final
     : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild>>> {
@@ -1093,6 +1120,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolrequest::Parent::Ta
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };
+
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_protocolrequest::Parent> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
@@ -1314,10 +1342,12 @@ class ::fidl::WireServer<::test_protocolrequest::Parent> : public ::fidl::intern
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireWeakOnewayClientImpl<::test_protocolrequest::Child> : public ::fidl::internal::ClientImplBase {
  public:
@@ -1347,9 +1377,11 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_protocolrequest::Child> fi
   using WireWeakOnewayClientImpl::WireWeakOnewayClientImpl;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl
+
 #ifdef __Fuchsia__
 template <>
 class ::fidl::internal::WireWeakEventSender<::test_protocolrequest::Child> : public ::fidl::internal::WeakEventSenderBase {
@@ -1376,6 +1408,7 @@ class ::fidl::internal::WireBufferEventSender<::test_protocolrequest::Child>
  public:
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1436,6 +1469,7 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_protocolrequest::Parent> f
   // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
   ::fidl::WireResult<::test_protocolrequest::Parent::GetChildRequest> GetChildRequest();
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -1464,4 +1498,5 @@ class ::fidl::internal::WireBufferEventSender<::test_protocolrequest::Parent>
  public:
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
+
 #endif  // __Fuchsia__

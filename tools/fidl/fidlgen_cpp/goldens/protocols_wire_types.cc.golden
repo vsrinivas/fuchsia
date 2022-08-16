@@ -6,54 +6,63 @@
 void ::test_protocols::wire::WithErrorSyntaxHandleInResultResponse::_CloseHandles() {
   h.reset();
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 void ::test_protocols::wire::WithErrorSyntaxHandleInResultTopResponse::_CloseHandles() {
   result._CloseHandles();
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 void ::test_protocols::wire::ChannelProtocolTakeHandleRequest::_CloseHandles() {
   h.reset();
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 void ::test_protocols::wire::ChannelProtocolMutateSocketRequest::_CloseHandles() {
   a.reset();
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 void ::test_protocols::wire::ChannelProtocolMutateSocketTopResponse::_CloseHandles() {
   b.reset();
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 void ::test_protocols::wire::HandleRightsProtocolNoResponseMethodRequest::_CloseHandles() {
   h.reset();
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 void ::test_protocols::wire::HandleRightsProtocolResponseMethodRequest::_CloseHandles() {
   h.reset();
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 void ::test_protocols::wire::HandleRightsProtocolResponseMethodTopResponse::_CloseHandles() {
   h.reset();
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 void ::test_protocols::wire::HandleRightsProtocolAnEventRequest::_CloseHandles() {
   h.reset();
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -63,42 +72,49 @@ void ::test_protocols::wire::ProtocolEnds::_CloseHandles() {
   client_opt.reset();
   server_opt.reset();
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 void ::test_protocols::wire::WithProtocolEndsClientEndsRequest::_CloseHandles() {
   in.reset();
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 void ::test_protocols::wire::WithProtocolEndsClientEndsTopResponse::_CloseHandles() {
   out.reset();
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 void ::test_protocols::wire::WithProtocolEndsServerEndsRequest::_CloseHandles() {
   in.reset();
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 void ::test_protocols::wire::WithProtocolEndsServerEndsTopResponse::_CloseHandles() {
   out.reset();
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 void ::test_protocols::wire::WithProtocolEndsStructContainingEndsRequest::_CloseHandles() {
   in._CloseHandles();
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 void ::test_protocols::wire::WithProtocolEndsStructContainingEndsTopResponse::_CloseHandles() {
   out._CloseHandles();
 }
+
 #endif  // __Fuchsia__
 
 void ::test_protocols::wire::WithErrorSyntaxResponseAsStructResult::SizeAndOffsetAssertionHelper() {
@@ -163,6 +179,7 @@ void ::test_protocols::wire::WithErrorSyntaxHandleInResultResult::_CloseHandles(
       break;
   }
 }
+
 #endif  // __Fuchsia__
 
 auto ::test_protocols::wire::TheUnion::Which() const -> ::test_protocols::wire::TheUnion::Tag {

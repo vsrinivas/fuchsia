@@ -7,6 +7,7 @@
 namespace test {
 namespace bindingsdenylist {
 namespace testing {
+
 class OnlyLibfuzzerAndDeps_TestBase : public ::test::bindingsdenylist::OnlyLibfuzzerAndDeps {
  public:
   virtual ~OnlyLibfuzzerAndDeps_TestBase() {}

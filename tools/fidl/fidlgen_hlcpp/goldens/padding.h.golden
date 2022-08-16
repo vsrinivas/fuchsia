@@ -424,6 +424,7 @@ using Padding2ByteAlignmentLength6Ptr = ::std::unique_ptr<Padding2ByteAlignmentL
 }  // namespace padding
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::padding::Padding1ByteEnd>
     : public EncodableCodingTraits<::test::padding::Padding1ByteEnd, 4> {};

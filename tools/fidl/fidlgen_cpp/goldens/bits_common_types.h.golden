@@ -9,6 +9,7 @@
 #include <cinttypes>
 
 namespace test_bits {
+
 // |MyBits| is strict, hence is guaranteed to only contain
 // members defined in the FIDL schema when receiving it in a message.
 // Sending unknown members will fail at runtime.

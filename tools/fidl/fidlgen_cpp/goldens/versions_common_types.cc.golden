@@ -3,8 +3,10 @@
 #include <fidl/test.versions/cpp/common_types.h>
 
 namespace test_versions {
+
 extern "C" const fidl_type_t test_versions_EnumTable;
 }  // namespace test_versions
+
 size_t fidl::internal::DisplayError<::test_versions::Enum>::Format(
     const ::test_versions::Enum& value, char* destination, size_t capacity) {
   const char* name = [&]() -> const char* {

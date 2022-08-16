@@ -59,7 +59,7 @@ func ensureNamespace(arg interface{}) string {
 	// Update the current namespace variable
 	currentNamespace = namespace(newNamespace)
 
-	return strings.Join(lines, "\n")
+	return strings.Join(lines, "\n") + "\n"
 }
 
 // During template processing this holds the stack of namespaces.

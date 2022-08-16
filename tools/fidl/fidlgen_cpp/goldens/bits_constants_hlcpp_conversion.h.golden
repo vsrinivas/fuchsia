@@ -9,6 +9,7 @@
 
 namespace fidl {
 namespace internal {
+
 template <>
 struct NaturalToHLCPPTraits<::test_bitsconstants::BitsType> : public NaturalToHLCPPTraitsBits<::test_bitsconstants::BitsType, ::test::bitsconstants::BitsType, uint32_t> {};
 template <>

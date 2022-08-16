@@ -16,6 +16,7 @@ __LOCAL extern "C" const fidl_type_t test_driveroneway_OneWaySendRequestTable;
 
 #ifdef __Fuchsia__
 }  // namespace test_driveroneway
+
 template <>
 class ::fidl::internal::NaturalClientImpl<::test_driveroneway::OneWay> final : public ::fidl::internal::NaturalClientBase {
  public:
@@ -23,8 +24,10 @@ class ::fidl::internal::NaturalClientImpl<::test_driveroneway::OneWay> final : p
   ::fitx::result<::fidl::Error> Send(const ::fidl::Request<::test_driveroneway::OneWay::Send>& request) const;
 };
 namespace test_driveroneway {
+
 #endif  // __Fuchsia__
 }  // namespace test_driveroneway
+
 #ifdef __Fuchsia__
 
 template <>
@@ -47,6 +50,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_driveroneway::OneWay> fina
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_driveroneway::OneWay>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -64,6 +68,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_driveroneway::OneW
   static constexpr bool kHasPayload = true;
   using Payload = ::test_driveroneway::OneWaySendRequest;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -100,4 +105,5 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_driveroneway::OneWay> fi
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__

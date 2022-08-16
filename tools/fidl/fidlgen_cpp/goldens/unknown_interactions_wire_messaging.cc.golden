@@ -8,269 +8,367 @@
   
 
 namespace test_unknowninteractions {
+
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_StrictOneWay_Ordinal = 5652707722400962470lu;
+
 
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictOneWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_FlexibleOneWay_Ordinal = 583422011583300678lu;
+
 
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleOneWay_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_StrictTwoWay_Ordinal = 8308184097687583042lu;
+
 
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictTwoWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_StrictTwoWayFields_Ordinal = 3697260130745060067lu;
+
 
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictTwoWayFields_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsTopResponseTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_StrictTwoWayUnion_Ordinal = 2455165891480464557lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictTwoWayUnion_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionResponseTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_StrictTwoWayTable_Ordinal = 8389853739594228663lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictTwoWayTable_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTableResponseTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_StrictTwoWayErr_Ordinal = 7862264614495172967lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictTwoWayErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayErrTopResponseTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_StrictTwoWayFieldsErr_Ordinal = 2414673307948662059lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictTwoWayFieldsErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsErrTopResponseTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_StrictTwoWayUnionErr_Ordinal = 4988571416540160202lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictTwoWayUnionErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionErrTopResponseTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_StrictTwoWayTableErr_Ordinal = 5487292735562672344lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictTwoWayTableErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTableErrTopResponseTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_FlexibleTwoWay_Ordinal = 334879577560091516lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleTwoWay_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTopResponseTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_FlexibleTwoWayFields_Ordinal = 4257018954691721778lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleTwoWayFields_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsTopResponseTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_FlexibleTwoWayUnion_Ordinal = 4913460516188409782lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleTwoWayUnion_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionTopResponseTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_FlexibleTwoWayTable_Ordinal = 9171907422498283911lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleTwoWayTable_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableTopResponseTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_FlexibleTwoWayErr_Ordinal = 6999736795697216519lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleTwoWayErr_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayErrTopResponseTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Ordinal = 1093132337162001157lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsErrTopResponseTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Ordinal = 2410151523245950935lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleTwoWayUnionErr_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionErrTopResponseTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_FlexibleTwoWayTableErr_Ordinal = 7893309626427980786lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleTwoWayTableErr_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableErrTopResponseTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_StrictEvent_Ordinal = 685715276307386305lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictEvent_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_StrictEventFields_Ordinal = 8896208255987935026lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictEventFields_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventFieldsRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_StrictEventUnion_Ordinal = 3919175221694221274lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictEventUnion_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventUnionRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_StrictEventTable_Ordinal = 2711448698318579984lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictEventTable_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventTableRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_StrictEventErr_Ordinal = 4437558874343717997lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictEventErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventErrRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_StrictEventFieldsErr_Ordinal = 8268703922238340235lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictEventFieldsErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventFieldsErrRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_StrictEventUnionErr_Ordinal = 4681887988605004475lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictEventUnionErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventUnionErrRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_StrictEventTableErr_Ordinal = 7827903484869638218lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_StrictEventTableErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolStrictEventTableErrRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_FlexibleEvent_Ordinal = 7042257263728687206lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleEvent_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_FlexibleEventFields_Ordinal = 3613822014516746241lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleEventFields_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventFieldsRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_FlexibleEventUnion_Ordinal = 2499446536152409191lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleEventUnion_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventUnionRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_FlexibleEventTable_Ordinal = 5724881371349617120lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleEventTable_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventTableRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_FlexibleEventErr_Ordinal = 5465749747219019177lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleEventErr_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventErrRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_FlexibleEventFieldsErr_Ordinal = 1096356983683709514lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleEventFieldsErr_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventFieldsErrRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_FlexibleEventUnionErr_Ordinal = 906517230981154796lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleEventUnionErr_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventUnionErrRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsProtocol_FlexibleEventTableErr_Ordinal = 5605294921124359491lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsProtocol_FlexibleEventTableErr_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventTableErrRequestTable;
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>* request
@@ -282,11 +380,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     outgoing.Write(client.handle());
     SetStatus(outgoing);
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -304,11 +404,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     outgoing.Write(client_end.handle());
     SetStatus(outgoing);
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>* request
@@ -320,11 +422,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     outgoing.Write(client.handle());
     SetStatus(outgoing);
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -342,11 +446,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
     outgoing.Write(client_end.handle());
     SetStatus(outgoing);
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>* request, std::optional<zx::time> deadline
@@ -369,11 +475,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -405,11 +513,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>* request, std::optional<zx::time> deadline
@@ -432,11 +542,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -468,11 +580,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>* request, std::optional<zx::time> deadline
@@ -495,11 +609,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -531,11 +647,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>* request, std::optional<zx::time> deadline
@@ -558,11 +676,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -594,11 +714,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>* request, std::optional<zx::time> deadline
@@ -621,11 +743,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -657,11 +781,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>* request, std::optional<zx::time> deadline
@@ -684,11 +810,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -720,11 +848,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>* request, std::optional<zx::time> deadline
@@ -747,11 +877,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -783,11 +915,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>* request, std::optional<zx::time> deadline
@@ -810,11 +944,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -846,11 +982,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>* request, std::optional<zx::time> deadline
@@ -873,11 +1011,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -909,11 +1049,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>* request, std::optional<zx::time> deadline
@@ -936,11 +1078,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -972,11 +1116,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>* request, std::optional<zx::time> deadline
@@ -999,11 +1145,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -1035,11 +1183,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>* request, std::optional<zx::time> deadline
@@ -1062,11 +1212,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -1098,11 +1250,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>* request, std::optional<zx::time> deadline
@@ -1125,11 +1279,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -1161,11 +1317,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>* request, std::optional<zx::time> deadline
@@ -1188,11 +1346,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -1224,11 +1384,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>* request, std::optional<zx::time> deadline
@@ -1251,11 +1413,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -1287,11 +1451,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>* request, std::optional<zx::time> deadline
@@ -1314,11 +1480,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -1350,11 +1518,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 
   }  // namespace test_unknowninteractions
+
 #ifdef __Fuchsia__
 
   ::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictOneWay() {
@@ -1591,6 +1761,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
 }
   
 
+
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictTwoWay() {
     return _client_base()->MakeSyncCallWith(
@@ -1600,6 +1771,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
         });
   }
   
+
 
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictTwoWayFields() {
@@ -1611,6 +1783,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
   }
   
 
+
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictTwoWayUnion() {
     return _client_base()->MakeSyncCallWith(
@@ -1620,6 +1793,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
         });
   }
   
+
 
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictTwoWayTable() {
@@ -1631,6 +1805,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
   }
   
 
+
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictTwoWayErr() {
     return _client_base()->MakeSyncCallWith(
@@ -1640,6 +1815,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
         });
   }
   
+
 
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictTwoWayFieldsErr() {
@@ -1651,6 +1827,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
   }
   
 
+
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictTwoWayUnionErr() {
     return _client_base()->MakeSyncCallWith(
@@ -1660,6 +1837,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
         });
   }
   
+
 
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::StrictTwoWayTableErr() {
@@ -1671,6 +1849,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
   }
   
 
+
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleTwoWay() {
     return _client_base()->MakeSyncCallWith(
@@ -1680,6 +1859,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
         });
   }
   
+
 
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleTwoWayFields() {
@@ -1691,6 +1871,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
   }
   
 
+
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleTwoWayUnion() {
     return _client_base()->MakeSyncCallWith(
@@ -1700,6 +1881,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
         });
   }
   
+
 
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleTwoWayTable() {
@@ -1711,6 +1893,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
   }
   
 
+
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleTwoWayErr() {
     return _client_base()->MakeSyncCallWith(
@@ -1720,6 +1903,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
         });
   }
   
+
 
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleTwoWayFieldsErr() {
@@ -1731,6 +1915,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
   }
   
 
+
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleTwoWayUnionErr() {
     return _client_base()->MakeSyncCallWith(
@@ -1741,6 +1926,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
   }
   
 
+
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsProtocol>::FlexibleTwoWayTableErr() {
     return _client_base()->MakeSyncCallWith(
@@ -1749,7 +1935,9 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
           return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol>(_transport->get<::fidl::internal::ChannelTransport>()), &_request);
         });
   }
+
 #endif  // __Fuchsia__
+
 
 
 
@@ -1980,10 +2168,12 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
         return ::fidl::Status::UnknownOrdinal();
     }
   }
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsProtocol>::entries_[] = {
@@ -2214,17 +2404,21 @@ const ::fidl::internal::UnknownInteractionHandlerEntry fidl::internal::WireServe
 }
 
 
+
 void fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsProtocol>::Dispatch(::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>* impl, ::fidl::IncomingMessage&& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
   &unknown_interaction_handler_entry_);
 }
+
 void fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -2266,7 +2460,9 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -2308,7 +2504,9 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -2350,7 +2548,9 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -2392,7 +2592,9 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -2458,7 +2660,9 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>::ReplyError(int32_t error) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayErrResult::WithErr(std::move(error)));
   }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -2530,7 +2734,9 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolSt
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>::ReplyError(int32_t error) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayFieldsErrResult::WithErr(std::move(error)));
   }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -2598,7 +2804,9 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolSt
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>::ReplyError(int32_t error) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrResult::WithErr(std::move(error)));
   }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -2666,7 +2874,9 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolSt
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>::ReplyError(int32_t error) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResult::WithErr(std::move(error)));
   }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -2708,7 +2918,9 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -2756,7 +2968,9 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -2800,7 +3014,9 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -2844,7 +3060,9 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -2910,7 +3128,9 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>::ReplyError(int32_t error) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayErrResult::WithErr(std::move(error)));
   }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -2982,7 +3202,9 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFl
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>::ReplyError(int32_t error) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult::WithErr(std::move(error)));
   }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -3050,7 +3272,9 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFl
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>::ReplyError(int32_t error) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult::WithErr(std::move(error)));
   }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -3118,173 +3342,208 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFl
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>::ReplyError(int32_t error) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResult::WithErr(std::move(error)));
   }
+
 #endif  // __Fuchsia__
+
 
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictOneWay>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictOneWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictOneWay_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleOneWay>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleOneWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleOneWay_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWay_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWay_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayFields_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayFields_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayUnion_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayUnion_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayUnion_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayUnion_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayTable_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayTable_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayErr_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayErr_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayFieldsErr_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayFieldsErr_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayUnionErr_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayUnionErr_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayTableErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayTableErr_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayTableErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayTableErr_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWay_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWay_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayFields_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayFields_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayUnion_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayUnion_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayUnion_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayUnion_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayTable_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayTable_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayErr_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayErr_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayUnionErr_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayUnionErr_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayTableErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayTableErr_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayTableErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayTableErr_DynamicFlags);
   }
@@ -3292,6 +3551,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFl
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEvent>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEvent_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEvent_DynamicFlags);
     }
@@ -3299,6 +3559,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFl
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFields>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventFields_DynamicFlags);
     }
@@ -3306,6 +3567,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFl
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnion>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventUnion_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventUnion_DynamicFlags);
     }
@@ -3313,6 +3575,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFl
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTable>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventTable_DynamicFlags);
     }
@@ -3320,6 +3583,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFl
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventErr>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventErr_DynamicFlags);
     }
@@ -3327,6 +3591,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFl
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventFieldsErr>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventFieldsErr_DynamicFlags);
     }
@@ -3334,6 +3599,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFl
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventUnionErr>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventUnionErr_DynamicFlags);
     }
@@ -3341,6 +3607,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFl
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::StrictEventTableErr>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventTableErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEventTableErr_DynamicFlags);
     }
@@ -3348,6 +3615,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFl
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEvent>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEvent_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEvent_DynamicFlags);
     }
@@ -3355,6 +3623,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFl
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFields>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventFields_DynamicFlags);
     }
@@ -3362,6 +3631,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFl
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnion>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventUnion_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventUnion_DynamicFlags);
     }
@@ -3369,6 +3639,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFl
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTable>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventTable_DynamicFlags);
     }
@@ -3376,6 +3647,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFl
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventErr>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventErr_DynamicFlags);
     }
@@ -3383,6 +3655,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFl
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventFieldsErr_DynamicFlags);
     }
@@ -3390,6 +3663,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFl
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventUnionErr>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventUnionErr_DynamicFlags);
     }
@@ -3397,12 +3671,14 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsProtocolFl
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleEventTableErr>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventTableErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleEventTableErr_DynamicFlags);
     }
     
     
   
+
 
 #ifdef __Fuchsia__
 
@@ -4222,211 +4498,286 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
   return ::fidl::Status{_message};
 }
 
+
 #endif  // __Fuchsia__
 
 
   
 
 namespace test_unknowninteractions {
+
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsAjarProtocol_StrictOneWay_Ordinal = 956561744635167883lu;
+
 
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictOneWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsAjarProtocol_FlexibleOneWay_Ordinal = 2483093178939638607lu;
+
 
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_FlexibleOneWay_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsAjarProtocol_StrictTwoWay_Ordinal = 364341676962177080lu;
+
 
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictTwoWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsAjarProtocol_StrictTwoWayFields_Ordinal = 1821674633227946298lu;
+
 
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictTwoWayFields_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponseTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsAjarProtocol_StrictTwoWayUnion_Ordinal = 5870221221557233361lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictTwoWayUnion_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionResponseTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsAjarProtocol_StrictTwoWayTable_Ordinal = 8038805778859962068lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictTwoWayTable_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTableResponseTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Ordinal = 6577335136969723910lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictTwoWayErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponseTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_Ordinal = 595881957484758745lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrTopResponseTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_Ordinal = 3224530777258896533lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionErrTopResponseTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsAjarProtocol_StrictTwoWayTableErr_Ordinal = 3515589146717969463lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictTwoWayTableErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTableErrTopResponseTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsAjarProtocol_StrictEvent_Ordinal = 6927291151663612592lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictEvent_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsAjarProtocol_StrictEventFields_Ordinal = 5838220329633564521lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictEventFields_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventFieldsRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsAjarProtocol_StrictEventUnion_Ordinal = 6303151946645602671lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictEventUnion_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventUnionRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsAjarProtocol_StrictEventTable_Ordinal = 659277224687564957lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictEventTable_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventTableRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsAjarProtocol_StrictEventErr_Ordinal = 8168400161206646253lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictEventErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventErrRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsAjarProtocol_StrictEventFieldsErr_Ordinal = 4242995963205975993lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictEventFieldsErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventFieldsErrRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsAjarProtocol_StrictEventUnionErr_Ordinal = 48232470144455723lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictEventUnionErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventUnionErrRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsAjarProtocol_StrictEventTableErr_Ordinal = 7812263497101509638lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_StrictEventTableErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventTableErrRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsAjarProtocol_FlexibleEvent_Ordinal = 1281760452005010931lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_FlexibleEvent_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsAjarProtocol_FlexibleEventFields_Ordinal = 4298964238728681570lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_FlexibleEventFields_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventFieldsRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsAjarProtocol_FlexibleEventUnion_Ordinal = 8950943792372972717lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_FlexibleEventUnion_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventUnionRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsAjarProtocol_FlexibleEventTable_Ordinal = 705539350563403440lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_FlexibleEventTable_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventTableRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsAjarProtocol_FlexibleEventErr_Ordinal = 5746044819880601020lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_FlexibleEventErr_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventErrRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_Ordinal = 2496089713358680516lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsAjarProtocol_FlexibleEventUnionErr_Ordinal = 870945044986422912lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_FlexibleEventUnionErr_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsAjarProtocol_FlexibleEventTableErr_Ordinal = 7956124159916849703lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsAjarProtocol_FlexibleEventTableErr_DynamicFlags = ::fidl::MessageDynamicFlags::kFlexibleMethod;
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventTableErrRequestTable;
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>* request
@@ -4438,11 +4789,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     outgoing.Write(client.handle());
     SetStatus(outgoing);
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -4460,11 +4813,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     outgoing.Write(client_end.handle());
     SetStatus(outgoing);
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>* request
@@ -4476,11 +4831,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     outgoing.Write(client.handle());
     SetStatus(outgoing);
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -4498,11 +4855,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
     outgoing.Write(client_end.handle());
     SetStatus(outgoing);
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>* request, std::optional<zx::time> deadline
@@ -4525,11 +4884,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -4561,11 +4922,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>* request, std::optional<zx::time> deadline
@@ -4588,11 +4951,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -4624,11 +4989,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>* request, std::optional<zx::time> deadline
@@ -4651,11 +5018,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -4687,11 +5056,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>* request, std::optional<zx::time> deadline
@@ -4714,11 +5085,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -4750,11 +5123,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>* request, std::optional<zx::time> deadline
@@ -4777,11 +5152,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -4813,11 +5190,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>* request, std::optional<zx::time> deadline
@@ -4840,11 +5219,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -4876,11 +5257,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>* request, std::optional<zx::time> deadline
@@ -4903,11 +5286,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -4939,11 +5324,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>* request, std::optional<zx::time> deadline
@@ -4966,11 +5353,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -5002,11 +5391,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 
   }  // namespace test_unknowninteractions
+
 #ifdef __Fuchsia__
 
   ::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictOneWay() {
@@ -5147,6 +5538,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
 }
   
 
+
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictTwoWay() {
     return _client_base()->MakeSyncCallWith(
@@ -5156,6 +5548,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
         });
   }
   
+
 
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictTwoWayFields() {
@@ -5167,6 +5560,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
   }
   
 
+
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictTwoWayUnion() {
     return _client_base()->MakeSyncCallWith(
@@ -5176,6 +5570,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
         });
   }
   
+
 
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictTwoWayTable() {
@@ -5187,6 +5582,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
   }
   
 
+
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictTwoWayErr() {
     return _client_base()->MakeSyncCallWith(
@@ -5196,6 +5592,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
         });
   }
   
+
 
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictTwoWayFieldsErr() {
@@ -5207,6 +5604,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
   }
   
 
+
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictTwoWayUnionErr() {
     return _client_base()->MakeSyncCallWith(
@@ -5217,6 +5615,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
   }
   
 
+
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::StrictTwoWayTableErr() {
     return _client_base()->MakeSyncCallWith(
@@ -5225,7 +5624,9 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
           return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol>(_transport->get<::fidl::internal::ChannelTransport>()), &_request);
         });
   }
+
 #endif  // __Fuchsia__
+
 
 
 
@@ -5456,10 +5857,12 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
         return ::fidl::Status::UnknownOrdinal();
     }
   }
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::entries_[] = {
@@ -5600,17 +6003,21 @@ const ::fidl::internal::UnknownInteractionHandlerEntry fidl::internal::WireServe
 }
 
 
+
 void fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::Dispatch(::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>* impl, ::fidl::IncomingMessage&& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
   &unknown_interaction_handler_entry_);
 }
+
 void fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -5652,7 +6059,9 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -5694,7 +6103,9 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -5736,7 +6147,9 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -5778,7 +6191,9 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -5844,7 +6259,9 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>::ReplyError(int32_t error) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayErrResult::WithErr(std::move(error)));
   }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -5916,7 +6333,9 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtoc
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>::ReplyError(int32_t error) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResult::WithErr(std::move(error)));
   }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -5984,7 +6403,9 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtoc
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>::ReplyError(int32_t error) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResult::WithErr(std::move(error)));
   }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -6052,93 +6473,112 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtoc
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>::ReplyError(int32_t error) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResult::WithErr(std::move(error)));
   }
+
 #endif  // __Fuchsia__
+
 
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictOneWay>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictOneWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictOneWay_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleOneWay>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleOneWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleOneWay_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWay_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWay_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayFields_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayFields_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayUnion_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayUnion_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayUnion_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayUnion_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayTable_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayTable_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayErr_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayErr_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayTableErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayTableErr_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayTableErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayTableErr_DynamicFlags);
   }
@@ -6146,6 +6586,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtoc
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEvent>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEvent_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEvent_DynamicFlags);
     }
@@ -6153,6 +6594,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtoc
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFields>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventFields_DynamicFlags);
     }
@@ -6160,6 +6602,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtoc
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnion>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventUnion_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventUnion_DynamicFlags);
     }
@@ -6167,6 +6610,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtoc
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTable>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventTable_DynamicFlags);
     }
@@ -6174,6 +6618,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtoc
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventErr>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventErr_DynamicFlags);
     }
@@ -6181,6 +6626,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtoc
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventFieldsErr>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventFieldsErr_DynamicFlags);
     }
@@ -6188,6 +6634,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtoc
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventUnionErr>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventUnionErr_DynamicFlags);
     }
@@ -6195,6 +6642,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtoc
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictEventTableErr>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventTableErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEventTableErr_DynamicFlags);
     }
@@ -6202,6 +6650,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtoc
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEvent>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEvent_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEvent_DynamicFlags);
     }
@@ -6209,6 +6658,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtoc
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFields>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventFields_DynamicFlags);
     }
@@ -6216,6 +6666,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtoc
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnion>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventUnion_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventUnion_DynamicFlags);
     }
@@ -6223,6 +6674,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtoc
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTable>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventTable_DynamicFlags);
     }
@@ -6230,6 +6682,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtoc
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventErr>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventErr_DynamicFlags);
     }
@@ -6237,6 +6690,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtoc
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventFieldsErr>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_DynamicFlags);
     }
@@ -6244,6 +6698,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtoc
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventUnionErr>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventUnionErr_DynamicFlags);
     }
@@ -6251,12 +6706,14 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsAjarProtoc
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsAjarProtocol::FlexibleEventTableErr>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventTableErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleEventTableErr_DynamicFlags);
     }
     
     
   
+
 
 #ifdef __Fuchsia__
 
@@ -7076,143 +7533,193 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
   return ::fidl::Status{_message};
 }
 
+
 #endif  // __Fuchsia__
 
 
   
 
 namespace test_unknowninteractions {
+
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsClosedProtocol_StrictOneWay_Ordinal = 401526495318825508lu;
+
 
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictOneWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsClosedProtocol_StrictTwoWay_Ordinal = 6834828562275693047lu;
+
 
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictTwoWay_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsClosedProtocol_StrictTwoWayFields_Ordinal = 1379139029283639891lu;
+
 
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictTwoWayFields_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponseTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsClosedProtocol_StrictTwoWayUnion_Ordinal = 7544414847426850727lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictTwoWayUnion_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionResponseTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsClosedProtocol_StrictTwoWayTable_Ordinal = 7947328131967870853lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictTwoWayTable_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTableResponseTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Ordinal = 5738532966428790074lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictTwoWayErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponseTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_Ordinal = 802395819586836733lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrTopResponseTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_Ordinal = 925029359463709824lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionErrTopResponseTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsClosedProtocol_StrictTwoWayTableErr_Ordinal = 1260407702860823440lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictTwoWayTableErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTableErrTopResponseTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsClosedProtocol_StrictEvent_Ordinal = 760799297757210939lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictEvent_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsClosedProtocol_StrictEventFields_Ordinal = 6736355582617074292lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictEventFields_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventFieldsRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsClosedProtocol_StrictEventUnion_Ordinal = 4288682345454280036lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictEventUnion_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventUnionRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsClosedProtocol_StrictEventTable_Ordinal = 2871682464255309246lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictEventTable_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventTableRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsClosedProtocol_StrictEventErr_Ordinal = 1346864022452572673lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictEventErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventErrRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsClosedProtocol_StrictEventFieldsErr_Ordinal = 3248847528447859862lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictEventFieldsErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventFieldsErrRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsClosedProtocol_StrictEventUnionErr_Ordinal = 7912657362107850804lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictEventUnionErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
+
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventUnionErrRequestTable;
+
 
 [[maybe_unused]]
 constexpr uint64_t kUnknownInteractionsClosedProtocol_StrictEventTableErr_Ordinal = 5661281118329630458lu;
 
+
 [[maybe_unused]]
 constexpr ::fidl::MessageDynamicFlags kUnknownInteractionsClosedProtocol_StrictEventTableErr_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
+
 
 extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventTableErrRequestTable;
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>* request
@@ -7224,11 +7731,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
     outgoing.Write(client.handle());
     SetStatus(outgoing);
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -7246,11 +7755,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
     outgoing.Write(client_end.handle());
     SetStatus(outgoing);
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>* request, std::optional<zx::time> deadline
@@ -7273,11 +7784,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -7309,11 +7822,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>* request, std::optional<zx::time> deadline
@@ -7336,11 +7851,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -7372,11 +7889,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>* request, std::optional<zx::time> deadline
@@ -7399,11 +7918,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -7435,11 +7956,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>* request, std::optional<zx::time> deadline
@@ -7462,11 +7985,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -7498,11 +8023,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>* request, std::optional<zx::time> deadline
@@ -7525,11 +8052,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -7561,11 +8090,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>* request, std::optional<zx::time> deadline
@@ -7588,11 +8119,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -7624,11 +8157,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>* request, std::optional<zx::time> deadline
@@ -7651,11 +8186,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -7687,11 +8224,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client,
     ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>* request, std::optional<zx::time> deadline
@@ -7714,11 +8253,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
 }  // namespace test_unknowninteractions
+
 ::fidl::WireUnownedResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>::WireUnownedResult(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>* request) {
   constexpr uint32_t buffer_size = ::fidl::SyncClientMethodBufferSizeInChannel<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>();
   ::fitx::result<::fidl::Error, ::fidl::BufferSpan> allocation = allocator.TryAllocate(buffer_size);
@@ -7750,11 +8291,13 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
       ExtractValueFromDecoded(decoded_.pointer());
     }
 }namespace test_unknowninteractions {
+
 #endif  // __Fuchsia__
 
 
 
   }  // namespace test_unknowninteractions
+
 #ifdef __Fuchsia__
 
   ::fidl::Status fidl::internal::WireWeakOnewayClientImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictOneWay() {
@@ -7875,6 +8418,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
 }
   
 
+
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictTwoWay() {
     return _client_base()->MakeSyncCallWith(
@@ -7884,6 +8428,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
         });
   }
   
+
 
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictTwoWayFields() {
@@ -7895,6 +8440,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
   }
   
 
+
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictTwoWayUnion() {
     return _client_base()->MakeSyncCallWith(
@@ -7904,6 +8450,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
         });
   }
   
+
 
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictTwoWayTable() {
@@ -7915,6 +8462,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
   }
   
 
+
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictTwoWayErr() {
     return _client_base()->MakeSyncCallWith(
@@ -7924,6 +8472,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
         });
   }
   
+
 
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictTwoWayFieldsErr() {
@@ -7935,6 +8484,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
   }
   
 
+
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictTwoWayUnionErr() {
     return _client_base()->MakeSyncCallWith(
@@ -7945,6 +8495,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
   }
   
 
+
   ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>
   fidl::internal::WireWeakSyncClientImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::StrictTwoWayTableErr() {
     return _client_base()->MakeSyncCallWith(
@@ -7953,7 +8504,9 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
           return ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>(::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol>(_transport->get<::fidl::internal::ChannelTransport>()), &_request);
         });
   }
+
 #endif  // __Fuchsia__
+
 
 
 
@@ -8075,10 +8628,12 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
         return ::fidl::Status::UnknownOrdinal();
     }
   }
+
 #endif  // __Fuchsia__
 
 
 #ifdef __Fuchsia__
+
 
 
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::entries_[] = {
@@ -8194,17 +8749,21 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 }
 
 
+
 void fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::Dispatch(::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>* impl, ::fidl::IncomingMessage&& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
   &unknown_interaction_handler_entry_);
 }
+
 void fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -8246,7 +8805,9 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -8288,7 +8849,9 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -8330,7 +8893,9 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -8372,7 +8937,9 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   return _core()->SendReply(&_response_message.GetOutgoingMessage(),
                             ::fidl::internal::OutgoingTransportContext());
 }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -8438,7 +9005,9 @@ fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInter
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>::ReplyError(int32_t error) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayErrResult::WithErr(std::move(error)));
   }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -8510,7 +9079,9 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProt
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>::ReplyError(int32_t error) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResult::WithErr(std::move(error)));
   }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -8578,7 +9149,9 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProt
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>::ReplyError(int32_t error) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResult::WithErr(std::move(error)));
   }
+
 #endif  // __Fuchsia__
+
 
 
 #ifdef __Fuchsia__
@@ -8646,88 +9219,106 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProt
   fidl::internal::WireBufferCompleterImpl<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>::ReplyError(int32_t error) {
     return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResult::WithErr(std::move(error)));
   }
+
 #endif  // __Fuchsia__
+
 
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictOneWay>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictOneWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictOneWay_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWay_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWay_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWay_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayFields_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayFields_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayUnion_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayUnion_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayUnion_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayUnion_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayTable_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayTable_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayErr_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayErr_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayTableErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayTableErr_DynamicFlags);
   }
     
     
+
   void ::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>::_InitHeader() {
     ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayTableErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayTableErr_DynamicFlags);
   }
@@ -8735,6 +9326,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProt
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEvent>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEvent_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEvent_DynamicFlags);
     }
@@ -8742,6 +9334,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProt
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFields>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventFields_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventFields_DynamicFlags);
     }
@@ -8749,6 +9342,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProt
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnion>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventUnion_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventUnion_DynamicFlags);
     }
@@ -8756,6 +9350,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProt
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTable>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventTable_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventTable_DynamicFlags);
     }
@@ -8763,6 +9358,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProt
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventErr>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventErr_DynamicFlags);
     }
@@ -8770,6 +9366,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProt
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventFieldsErr>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventFieldsErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventFieldsErr_DynamicFlags);
     }
@@ -8777,6 +9374,7 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProt
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventUnionErr>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventUnionErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventUnionErr_DynamicFlags);
     }
@@ -8784,12 +9382,14 @@ return MakeReply(::test_unknowninteractions::wire::UnknownInteractionsClosedProt
     
     
     
+
     void ::fidl::internal::TransactionalEvent<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictEventTableErr>::_InitHeader() {
       ::fidl::InitTxnHeader(&header, 0, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventTableErr_Ordinal, ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEventTableErr_DynamicFlags);
     }
     
     
   
+
 
 #ifdef __Fuchsia__
 
@@ -9201,7 +9801,9 @@ fidl::Status fidl::internal::WireBufferEventSender<::test_unknowninteractions::U
   return ::fidl::Status{_message};
 }
 
+
 #endif  // __Fuchsia__
+
 
 
 

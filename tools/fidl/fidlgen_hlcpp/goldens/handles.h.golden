@@ -16,6 +16,7 @@ namespace handles {
 
 class SomeProtocol;
 using SomeProtocolHandle = ::fidl::InterfaceHandle<SomeProtocol>;
+
 #endif  // __Fuchsia__
 
 class Handles;
@@ -29,6 +30,7 @@ class SomeProtocol_RequestEncoder {
 class SomeProtocol_ResponseEncoder {
  public:
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -119,11 +121,13 @@ inline zx_status_t Clone(const ::test::handles::Handles& _value,
 }
 
 using HandlesPtr = ::std::unique_ptr<Handles>;
+
 #endif  // __Fuchsia__
 
 }  // namespace handles
 }  // namespace test
 namespace fidl {
+
 #ifdef __Fuchsia__
 
 template <>
@@ -247,6 +251,7 @@ struct Equality<::test::handles::Handles> {
     return true;
   }
 };
+
 #endif  // __Fuchsia__
 
 //
@@ -255,6 +260,7 @@ struct Equality<::test::handles::Handles> {
 }  // namespace fidl
 namespace test {
 namespace handles {
+
 #ifdef __Fuchsia__
 
 using SomeProtocolPtr = ::fidl::InterfacePtr<SomeProtocol>;
@@ -339,6 +345,7 @@ class SomeProtocol_SyncProxy : public ::test::handles::SomeProtocol_Sync {
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<SomeProtocol>;
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace handles

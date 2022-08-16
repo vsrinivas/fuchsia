@@ -15,6 +15,7 @@
 namespace fidl {
 
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::NaturalMethodTypes<::test_emptystruct::EmptyProtocol::SendAndReceive> {
   using Completer = fidl::Completer<::fidl::internal::NaturalCompleterBase<::test_emptystruct::EmptyProtocol::SendAndReceive>>;
@@ -31,7 +32,9 @@ namespace test_emptystruct {
 __LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendRequestTable;
 
 __LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolReceiveRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_emptystruct_EmptyProtocolSendAndReceiveTopResponseTable;
 
 #ifdef __Fuchsia__
@@ -50,7 +53,8 @@ struct ::fidl::internal::MessageTraits<::fidl::Event<::test_emptystruct::EmptyPr
   static constexpr bool kHasPayload = true;
   using Payload = ::test_emptystruct::EmptyProtocolReceiveRequest;
 };
-namespace test_emptystruct {}  // namespace test_emptystruct
+namespace test_emptystruct {
+}  // namespace test_emptystruct
 
 template <>
 class ::fidl::Response<::test_emptystruct::EmptyProtocol::SendAndReceive> final : public ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse {
@@ -65,7 +69,9 @@ struct ::fidl::internal::MessageTraits<::fidl::Response<::test_emptystruct::Empt
   static constexpr bool kHasPayload = true;
   using Payload = ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse;
 };
-namespace test_emptystruct {}  // namespace test_emptystruct
+namespace test_emptystruct {
+}  // namespace test_emptystruct
+
 template <>
 class ::fidl::Result<::test_emptystruct::EmptyProtocol::SendAndReceive> final : public ::fitx::result<::fidl::Error, ::test_emptystruct::EmptyProtocolSendAndReceiveTopResponse> {
  public:
@@ -84,9 +90,11 @@ class ::fidl::internal::NaturalClientImpl<::test_emptystruct::EmptyProtocol> fin
   ::fitx::result<::fidl::Error> Send(const ::fidl::Request<::test_emptystruct::EmptyProtocol::Send>& request) const;
 };
 namespace test_emptystruct {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_emptystruct
+
 #ifdef __Fuchsia__
 
 template <>
@@ -103,6 +111,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_emptystruct::EmptyProtocol>
         _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -145,6 +154,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_emptystruct::EmptyProtocol
       ::fidl::IncomingMessage& msg,
       internal::MessageStorageViewBase* storage_view) override;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -164,6 +174,7 @@ class ::fidl::internal::NaturalEventSender<::test_emptystruct::EmptyProtocol>
 
   ::fitx::result<::fidl::Error> Receive(const ::fidl::Event<::test_emptystruct::EmptyProtocol::Receive>& payload);
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -181,6 +192,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_emptystruct::Empty
   static constexpr bool kHasPayload = true;
   using Payload = ::test_emptystruct::EmptyProtocolSendRequest;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -198,6 +210,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_emptystruct::Empty
   static constexpr bool kHasPayload = true;
   using Payload = ::test_emptystruct::EmptyProtocolSendAndReceiveRequest;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -249,4 +262,5 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_emptystruct::EmptyProtoc
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__

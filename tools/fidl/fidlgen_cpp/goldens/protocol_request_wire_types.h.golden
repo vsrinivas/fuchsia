@@ -25,6 +25,7 @@
 namespace test_protocolrequest {
 
 namespace wire {
+
 struct ParentGetChildTopResponse;
 
 struct ParentGetChildRequestTopResponse;
@@ -42,6 +43,7 @@ struct ParentGetChildTopResponse {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -53,6 +55,7 @@ struct ParentGetChildRequestTopResponse {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -64,6 +67,7 @@ struct ParentTakeChildRequest {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -75,6 +79,7 @@ struct ParentTakeChildRequestRequest {
 
   void _CloseHandles();
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace wire
@@ -135,6 +140,7 @@ struct ::fidl::internal::WireCodingTraits<::test_protocolrequest::wire::ParentGe
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -191,6 +197,7 @@ struct ::fidl::internal::WireCodingTraits<::test_protocolrequest::wire::ParentGe
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -247,6 +254,7 @@ struct ::fidl::internal::WireCodingTraits<::test_protocolrequest::wire::ParentTa
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -303,6 +311,7 @@ struct ::fidl::internal::WireCodingTraits<::test_protocolrequest::wire::ParentTa
     }
   }
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl

@@ -38,6 +38,7 @@ using FooPtr = ::std::unique_ptr<Foo>;
 }  // namespace structdefaultvalueenumlibraryreference
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::structdefaultvalueenumlibraryreference::Foo>
     : public EncodableCodingTraits<::test::structdefaultvalueenumlibraryreference::Foo, 4> {};

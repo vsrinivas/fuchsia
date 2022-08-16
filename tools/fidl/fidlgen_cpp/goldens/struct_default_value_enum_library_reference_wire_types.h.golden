@@ -25,6 +25,7 @@
 namespace test_structdefaultvalueenumlibraryreference {
 
 namespace wire {
+
 struct Foo;
 
 extern "C" const fidl_type_t test_structdefaultvalueenumlibraryreference_FooTable;

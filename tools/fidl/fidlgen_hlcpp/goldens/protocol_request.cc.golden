@@ -9,6 +9,7 @@
 //
 namespace test {
 namespace protocolrequest {
+
 #ifdef __Fuchsia__
 
 extern "C" const fidl_type_t test_protocolrequest_ParentGetChildTopResponseTable;
@@ -40,6 +41,7 @@ zx_status_t ParentGetChildTopResponse::Clone(ParentGetChildTopResponse* _result)
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -73,6 +75,7 @@ zx_status_t ParentGetChildRequestTopResponse::Clone(ParentGetChildRequestTopResp
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -106,6 +109,7 @@ zx_status_t ParentTakeChildRequest::Clone(ParentTakeChildRequest* _result) const
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -139,6 +143,7 @@ zx_status_t ParentTakeChildRequestRequest::Clone(ParentTakeChildRequestRequest* 
     return _status;
   return ZX_OK;
 }
+
 #endif  // __Fuchsia__
 
 //
@@ -234,6 +239,7 @@ Child_SyncProxy::Child_SyncProxy(::zx::channel channel)
     : proxy_(::std::move(channel)) {}
 
 Child_SyncProxy::~Child_SyncProxy() = default;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -242,11 +248,13 @@ namespace _internal {
 __LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentGetChildTopResponseTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentGetChildRequestTopResponseTable;
+
 __LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequestTable;
 
 __LOCAL extern "C" const fidl_type_t test_protocolrequest_ParentTakeChildRequestRequestTable;
 
 }  // namespace _internal
+
 Parent::~Parent() = default;
 
 const fidl_type_t* ::test::protocolrequest::Parent_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
@@ -496,6 +504,7 @@ zx_status_t Parent_SyncProxy::TakeChildRequest(::fidl::InterfaceRequest<::test::
   const fidl_type_t* req_type = &::test::protocolrequest::_internal::test_protocolrequest_ParentTakeChildRequestRequestTable;
   return proxy_.Send(req_type, ::test::protocolrequest::Parent_RequestEncoder::TakeChildRequest(&_encoder, &r));
 }
+
 #endif  // __Fuchsia__
 
 }  // namespace protocolrequest

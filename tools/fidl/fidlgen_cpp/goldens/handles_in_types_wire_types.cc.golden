@@ -31,6 +31,7 @@ void ::test_handlesintypes::wire::HandlesInTypes::_CloseHandles() {
   table_with_handle._CloseHandles();
   union_with_handle._CloseHandles();
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -81,6 +82,7 @@ void ::test_handlesintypes::wire::UnionWithHandle::_CloseHandles() {
       break;
   }
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__

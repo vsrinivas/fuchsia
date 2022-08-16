@@ -3,8 +3,10 @@
 #include <fidl/test.doccomments/cpp/common_types.h>
 
 namespace test_doccomments {
+
 extern "C" const fidl_type_t test_doccomments_MyStrictEnumTable;
 }  // namespace test_doccomments
+
 size_t fidl::internal::DisplayError<::test_doccomments::MyStrictEnum>::Format(
     const ::test_doccomments::MyStrictEnum& value, char* destination, size_t capacity) {
   const char* name = [&]() -> const char* {
@@ -22,8 +24,10 @@ size_t fidl::internal::DisplayError<::test_doccomments::MyStrictEnum>::Format(
 }
 
 namespace test_doccomments {
+
 extern "C" const fidl_type_t test_doccomments_MyFlexibleEnumTable;
 }  // namespace test_doccomments
+
 size_t fidl::internal::DisplayError<::test_doccomments::MyFlexibleEnum>::Format(
     const ::test_doccomments::MyFlexibleEnum& value, char* destination, size_t capacity) {
   const char* name = [&]() -> const char* {

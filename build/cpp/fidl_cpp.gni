@@ -472,6 +472,17 @@ template("fidl_cpp_family") {
     },
 
     {
+      layer = "natural_ostream"
+      headers = [ "fidl/$library_name/cpp/natural_ostream.h" ]
+      sources = [ "fidl/$library_name/cpp/natural_ostream.cc" ]
+      public_deps = [ "//src/lib/fidl/cpp:natural_ostream" ]
+      layer_deps = [ "natural_types" ]
+      if (defined(invoker.contains_drivers) && invoker.contains_drivers) {
+        public_deps += [ "//sdk/lib/fidl_driver:fidl_driver_natural" ]
+      }
+    },
+
+    {
       layer = "type_conversions"
       headers = [ "fidl/$library_name/cpp/type_conversions.h" ]
       sources = [ "fidl/$library_name/cpp/type_conversions.cc" ]

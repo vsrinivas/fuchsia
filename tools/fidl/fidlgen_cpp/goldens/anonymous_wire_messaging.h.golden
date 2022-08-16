@@ -18,23 +18,29 @@
 #endif  // __Fuchsia__
 
 namespace test_anonymous {
+
 class SomeProtocol;
 
 __LOCAL extern "C" const fidl_type_t test_anonymous_SomeProtocolSomeMethodRequestTable;
+
 __LOCAL extern "C" const fidl_type_t test_anonymous_SomeProtocolSomeMethodTopResponseTable;
 }  // namespace test_anonymous
+
 template <>
 struct ::fidl::internal::WireOrdinal<::test_anonymous::SomeProtocol::SomeMethod> final {
   static constexpr uint64_t value = 2515914517457749720lu;
 };
 
 namespace test_anonymous {
+
 }  // namespace test_anonymous
+
 #ifdef __Fuchsia__
 
 template <>
 struct ::fidl::internal::ProtocolDetails<::test_anonymous::SomeProtocol> {
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -55,6 +61,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_anonymous::SomeProtocol> fi
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -307,6 +314,7 @@ static_assert(sizeof(::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMe
 static_assert(offsetof(::fidl::WireResponse<::test_anonymous::SomeProtocol::SomeMethod>, result) == 0);
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 struct ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_anonymous::SomeProtocol::SomeMethod>> final
     : public ::fidl::internal::ChannelHandleStorageBase<::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_anonymous::SomeProtocol::SomeMethod>>> {
@@ -391,6 +399,7 @@ class [[nodiscard]] ::fidl::WireUnownedResult<::test_anonymous::SomeProtocol::So
  private:
   ::fidl::DecodedValue<::fidl::internal::TransactionalResponse<::test_anonymous::SomeProtocol::SomeMethod>> decoded_;
 };
+
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_anonymous::SomeProtocol> : public ::fidl::internal::BaseEventHandlerInterface {
  public:
@@ -525,10 +534,12 @@ class ::fidl::WireServer<::test_anonymous::SomeProtocol> : public ::fidl::intern
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::WireWeakOnewayClientImpl<::test_anonymous::SomeProtocol> : public ::fidl::internal::ClientImplBase {
  public:
@@ -566,9 +577,11 @@ class ::fidl::internal::WireWeakSyncClientImpl<::test_anonymous::SomeProtocol> f
   ::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMethod> SomeMethod(::test_anonymous::wire::UnionMember union_member, ::test_anonymous::wire::TableMember table_member);
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl
+
 #ifdef __Fuchsia__
 template <>
 class ::fidl::internal::WireWeakEventSender<::test_anonymous::SomeProtocol> : public ::fidl::internal::WeakEventSenderBase {
@@ -595,4 +608,5 @@ class ::fidl::internal::WireBufferEventSender<::test_anonymous::SomeProtocol>
  public:
   using SyncEndpointBufferVeneer::SyncEndpointBufferVeneer;
 };
+
 #endif  // __Fuchsia__

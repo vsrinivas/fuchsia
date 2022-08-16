@@ -21,6 +21,7 @@ __LOCAL extern "C" const fidl_type_t test_placementofattributes_ExampleProtocolM
 
 #ifdef __Fuchsia__
 }  // namespace test_placementofattributes
+
 template <>
 class ::fidl::internal::NaturalClientImpl<::test_placementofattributes::ExampleProtocol> final : public ::fidl::internal::NaturalClientBase {
  public:
@@ -28,9 +29,11 @@ class ::fidl::internal::NaturalClientImpl<::test_placementofattributes::ExampleP
   ::fitx::result<::fidl::Error> Method(const ::fidl::Request<::test_placementofattributes::ExampleProtocol::Method>& request) const;
 };
 namespace test_placementofattributes {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_placementofattributes
+
 #ifdef __Fuchsia__
 
 template <>
@@ -45,6 +48,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_placementofattributes::Exam
         _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -82,6 +86,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_placementofattributes::Exa
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_placementofattributes::ExampleProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -97,6 +102,7 @@ class ::fidl::internal::NaturalEventSender<::test_placementofattributes::Example
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -114,6 +120,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_placementofattribu
   static constexpr bool kHasPayload = true;
   using Payload = ::test_placementofattributes::ExampleProtocolMethodRequest;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -151,4 +158,5 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_placementofattributes::E
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__

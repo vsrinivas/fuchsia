@@ -9,6 +9,7 @@
 #include <cinttypes>
 
 namespace test_doccomments {
+
 /// strict bits comment #1
 ///
 /// strict bits comment #2
@@ -205,6 +206,7 @@ enum class MyStrictEnum : uint32_t {
 };
 
 }  // namespace test_doccomments
+
 template <>
 struct fidl::internal::DisplayError<::test_doccomments::MyStrictEnum> {
   static size_t Format(const ::test_doccomments::MyStrictEnum& value, char* destination, size_t capacity);
@@ -255,6 +257,7 @@ constexpr const ::test_doccomments::MyFlexibleEnum MyFlexibleEnum::kBar =
     ::test_doccomments::MyFlexibleEnum(2u);
 
 }  // namespace test_doccomments
+
 template <>
 struct fidl::internal::DisplayError<::test_doccomments::MyFlexibleEnum> {
   static size_t Format(const ::test_doccomments::MyFlexibleEnum& value, char* destination, size_t capacity);

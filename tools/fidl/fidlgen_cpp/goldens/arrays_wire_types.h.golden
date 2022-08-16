@@ -24,6 +24,7 @@
 namespace test_arrays {
 
 namespace wire {
+
 struct StructSmallArray;
 
 struct StructLargeArray;
@@ -38,6 +39,7 @@ class UnionLargeArray;
 
 }  // namespace wire
 }  // namespace test_arrays
+
 template <>
 class ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray>;
 template <>
@@ -68,6 +70,7 @@ struct ::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray> final {
 
 namespace test_arrays {
 namespace wire {
+
 extern "C" const fidl_type_t test_arrays_TableSmallArrayTable;
 
 class TableSmallArray {
@@ -161,6 +164,7 @@ class TableSmallArray {
 };
 }  // namespace wire
 }  // namespace test_arrays
+
 template <typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_arrays::wire::TableSmallArray, BuilderImpl> {
  public:
@@ -222,6 +226,7 @@ class ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableSmallArray> fin
 };
 namespace test_arrays {
 namespace wire {
+
 inline ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray> TableSmallArray::Builder(::fidl::AnyArena& arena) {
   return ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray>(arena);
 }
@@ -231,6 +236,7 @@ inline ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableSmallArray> Ta
 
 }  // namespace wire
 }  // namespace test_arrays
+
 template <>
 class ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray>;
 template <>
@@ -261,6 +267,7 @@ struct ::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray> final {
 
 namespace test_arrays {
 namespace wire {
+
 extern "C" const fidl_type_t test_arrays_TableLargeArrayTable;
 
 class TableLargeArray {
@@ -354,6 +361,7 @@ class TableLargeArray {
 };
 }  // namespace wire
 }  // namespace test_arrays
+
 template <typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_arrays::wire::TableLargeArray, BuilderImpl> {
  public:
@@ -415,6 +423,7 @@ class ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableLargeArray> fin
 };
 namespace test_arrays {
 namespace wire {
+
 inline ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray> TableLargeArray::Builder(::fidl::AnyArena& arena) {
   return ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray>(arena);
 }

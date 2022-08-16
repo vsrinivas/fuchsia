@@ -26,9 +26,11 @@ namespace test_anonymous {
 
 namespace wire {
 using Flags = ::test_anonymous::Flags;
+
 using BitsMember = ::test_anonymous::BitsMember;
 
 using Op = ::test_anonymous::Op;
+
 using SomeProtocolSomeMethodError = ::test_anonymous::SomeProtocolSomeMethodError;
 
 struct OverrideTest;
@@ -67,6 +69,7 @@ struct SomeProtocolSomeMethodResponse {
 
 }  // namespace wire
 }  // namespace test_anonymous
+
 template <>
 class ::fidl::WireTableBuilder<::test_anonymous::wire::FunctionApplication>;
 template <>
@@ -100,6 +103,7 @@ struct ::fidl::WireTableFrame<::test_anonymous::wire::FunctionApplication> final
 
 namespace test_anonymous {
 namespace wire {
+
 extern "C" const fidl_type_t test_anonymous_FunctionApplicationTable;
 
 class FunctionApplication {
@@ -255,6 +259,7 @@ class FunctionApplication {
 };
 }  // namespace wire
 }  // namespace test_anonymous
+
 template <typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_anonymous::wire::FunctionApplication, BuilderImpl> {
  public:
@@ -337,6 +342,7 @@ class ::fidl::WireTableExternalBuilder<::test_anonymous::wire::FunctionApplicati
 };
 namespace test_anonymous {
 namespace wire {
+
 inline ::fidl::WireTableBuilder<::test_anonymous::wire::FunctionApplication> FunctionApplication::Builder(::fidl::AnyArena& arena) {
   return ::fidl::WireTableBuilder<::test_anonymous::wire::FunctionApplication>(arena);
 }
@@ -346,6 +352,7 @@ inline ::fidl::WireTableExternalBuilder<::test_anonymous::wire::FunctionApplicat
 
 }  // namespace wire
 }  // namespace test_anonymous
+
 template <>
 class ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember>;
 template <>
@@ -377,6 +384,7 @@ struct ::fidl::WireTableFrame<::test_anonymous::wire::TableMember> final {
 
 namespace test_anonymous {
 namespace wire {
+
 extern "C" const fidl_type_t test_anonymous_TableMemberTable;
 
 class TableMember {
@@ -471,6 +479,7 @@ class TableMember {
 };
 }  // namespace wire
 }  // namespace test_anonymous
+
 template <typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_anonymous::wire::TableMember, BuilderImpl> {
  public:
@@ -532,6 +541,7 @@ class ::fidl::WireTableExternalBuilder<::test_anonymous::wire::TableMember> fina
 };
 namespace test_anonymous {
 namespace wire {
+
 inline ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember> TableMember::Builder(::fidl::AnyArena& arena) {
   return ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember>(arena);
 }

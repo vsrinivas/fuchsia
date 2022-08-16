@@ -4,12 +4,14 @@
 #include <lib/fidl/cpp/wire/unknown_interactions.h>
 
 namespace test_inheritance {
+
 [[maybe_unused]] constexpr inline uint64_t ksuper_foo_Ordinal = 7540745593380780216lu;
 
 [[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags ksuper_foo_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
 #ifdef __Fuchsia__
 }  // namespace test_inheritance
+
 ::fidl::internal::NaturalThenable<::test_inheritance::Super::Foo>
 fidl::internal::NaturalClientImpl<::test_inheritance::Super>::Foo(const ::fidl::Request<::test_inheritance::Super::Foo>& request) const {
   return ::fidl::internal::NaturalThenable<::test_inheritance::Super::Foo>(
@@ -29,9 +31,11 @@ fidl::internal::NaturalClientImpl<::test_inheritance::Super>::Foo(const ::fidl::
 }
 
 namespace test_inheritance {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_inheritance
+
 #ifdef __Fuchsia__
 
 ::fidl::Result<::test_inheritance::Super::Foo>
@@ -56,6 +60,7 @@ fidl::internal::NaturalSyncClientImpl<::test_inheritance::Super>::Foo(const ::fi
   fidl::internal::NaturalEventDispatcher<::test_inheritance::Super> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -98,20 +103,24 @@ void fidl::internal::NaturalServerDispatcher<::test_inheritance::Super>::Dispatc
                                                                                   internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
+
 void fidl::Server<::test_inheritance::Super>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_inheritance::Super>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__
 
 namespace test_inheritance {
+
 [[maybe_unused]] constexpr inline uint64_t ksub_foo_Ordinal = 7540745593380780216lu;
 
 [[maybe_unused]] constexpr inline ::fidl::MessageDynamicFlags ksub_foo_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 
 #ifdef __Fuchsia__
 }  // namespace test_inheritance
+
 ::fidl::internal::NaturalThenable<::test_inheritance::Sub::Foo>
 fidl::internal::NaturalClientImpl<::test_inheritance::Sub>::Foo(const ::fidl::Request<::test_inheritance::Sub::Foo>& request) const {
   return ::fidl::internal::NaturalThenable<::test_inheritance::Sub::Foo>(
@@ -131,9 +140,11 @@ fidl::internal::NaturalClientImpl<::test_inheritance::Sub>::Foo(const ::fidl::Re
 }
 
 namespace test_inheritance {
+
 #endif  // __Fuchsia__
 
 }  // namespace test_inheritance
+
 #ifdef __Fuchsia__
 
 ::fidl::Result<::test_inheritance::Sub::Foo>
@@ -158,6 +169,7 @@ fidl::internal::NaturalSyncClientImpl<::test_inheritance::Sub>::Foo(const ::fidl
   fidl::internal::NaturalEventDispatcher<::test_inheritance::Sub> dispatcher{this};
   return HandleOneEventImpl_(client_end.channel(), event_storage.view(), dispatcher);
 }
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -200,9 +212,11 @@ void fidl::internal::NaturalServerDispatcher<::test_inheritance::Sub>::Dispatch(
                                                                                 internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
+
 void fidl::Server<::test_inheritance::Sub>::dispatch_message(
     ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_inheritance::Sub>::Dispatch(this, std::move(msg), storage_view, txn);
 }
+
 #endif  // __Fuchsia__

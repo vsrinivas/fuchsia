@@ -16,6 +16,7 @@ namespace fidl {
 
 #ifdef __Fuchsia__
 }  // namespace fidl
+
 template <>
 class ::fidl::internal::NaturalClientImpl<::test_service::FirstProtocol> final : public ::fidl::internal::NaturalClientBase {
  public:
@@ -23,9 +24,11 @@ class ::fidl::internal::NaturalClientImpl<::test_service::FirstProtocol> final :
   ::fitx::result<::fidl::Error> MethodOnFirst() const;
 };
 namespace fidl {
+
 #endif  // __Fuchsia__
 
 }  // namespace fidl
+
 #ifdef __Fuchsia__
 
 template <>
@@ -40,6 +43,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_service::FirstProtocol> fin
         _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -77,6 +81,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_service::FirstProtocol> fi
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_service::FirstProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -92,6 +97,7 @@ class ::fidl::internal::NaturalEventSender<::test_service::FirstProtocol>
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -106,6 +112,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_service::FirstProt
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -143,6 +150,7 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_service::FirstProtocol> 
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -153,6 +161,7 @@ class ::fidl::internal::NaturalClientImpl<::test_service::SecondProtocol> final 
   using NaturalClientBase::NaturalClientBase;
   ::fitx::result<::fidl::Error> MethodOnSecond() const;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -169,6 +178,7 @@ class ::fidl::internal::NaturalSyncClientImpl<::test_service::SecondProtocol> fi
         _transport().get<::fidl::internal::ChannelTransport>());
   }
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -206,6 +216,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_service::SecondProtocol> f
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_service::SecondProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -221,6 +232,7 @@ class ::fidl::internal::NaturalEventSender<::test_service::SecondProtocol>
  public:
   using SyncEndpointManagedVeneer::SyncEndpointManagedVeneer;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -235,6 +247,7 @@ struct ::fidl::internal::MessageTraits<::fidl::Request<::test_service::SecondPro
  public:
   static constexpr bool kHasPayload = false;
 };
+
 #endif  // __Fuchsia__
 
 template <>
@@ -272,4 +285,5 @@ struct ::fidl::internal::NaturalServerDispatcher<::test_service::SecondProtocol>
   static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
       ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
 };
+
 #endif  // __Fuchsia__

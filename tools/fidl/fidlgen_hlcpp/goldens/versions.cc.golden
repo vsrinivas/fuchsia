@@ -9,6 +9,7 @@
 //
 namespace test {
 namespace versions {
+
 #if (__cplusplus < 201703)
 constexpr const ::test::versions::Bits Bits::A = ::test::versions::Bits(1u);
 constexpr const ::test::versions::Bits Bits::kMask = ::test::versions::Bits(1u);
@@ -423,6 +424,7 @@ OtherProtocol_SyncProxy::OtherProtocol_SyncProxy(::zx::channel channel)
     : proxy_(::std::move(channel)) {}
 
 OtherProtocol_SyncProxy::~OtherProtocol_SyncProxy() = default;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -534,6 +536,7 @@ zx_status_t Protocol_SyncProxy::Foo() {
   const fidl_type_t* req_type = nullptr;
   return proxy_.Send(req_type, ::test::versions::Protocol_RequestEncoder::Foo(&_encoder));
 }
+
 #endif  // __Fuchsia__
 
 }  // namespace versions

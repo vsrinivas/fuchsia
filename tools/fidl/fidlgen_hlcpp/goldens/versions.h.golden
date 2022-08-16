@@ -150,16 +150,19 @@ class Union;
 
 class OtherProtocol;
 using OtherProtocolHandle = ::fidl::InterfaceHandle<OtherProtocol>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 
 class Protocol;
 using ProtocolHandle = ::fidl::InterfaceHandle<Protocol>;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 class Service;
+
 #endif  // __Fuchsia__
 
 constexpr uint32_t Const = 0u;
@@ -366,6 +369,7 @@ class OtherProtocol_RequestEncoder {
 class OtherProtocol_ResponseEncoder {
  public:
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -380,6 +384,7 @@ class Protocol_RequestEncoder {
 class Protocol_ResponseEncoder {
  public:
 };
+
 #endif  // __Fuchsia__
 
 constexpr bool ADDED_AT_HEAD = true;
@@ -387,6 +392,7 @@ constexpr bool ADDED_AT_HEAD = true;
 }  // namespace versions
 }  // namespace test
 namespace fidl {
+
 template <>
 struct CodingTraits<::test::versions::Bits> {
   static constexpr size_t inline_size_v2 = sizeof(::test::versions::Bits);
@@ -550,6 +556,7 @@ struct Equality<::test::versions::Union> {
 }  // namespace fidl
 namespace test {
 namespace versions {
+
 #ifdef __Fuchsia__
 
 using OtherProtocolPtr = ::fidl::InterfacePtr<OtherProtocol>;
@@ -573,13 +580,17 @@ using ProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<Protocol>;
 class Protocol_SyncProxy;
 
 namespace internal {
+
 constexpr uint64_t kProtocol_Foo_Ordinal = 0x567a8096af6e6139lu;
+
 constexpr ::fidl::MessageDynamicFlags kProtocol_Foo_DynamicFlags = ::fidl::MessageDynamicFlags::kStrictMethod;
 }  // namespace internal
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
 class Service;
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -654,6 +665,7 @@ class OtherProtocol_SyncProxy : public ::test::versions::OtherProtocol_Sync {
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<OtherProtocol>;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -736,6 +748,7 @@ class Protocol_SyncProxy : public ::test::versions::Protocol_Sync {
   ::fidl::internal::SynchronousProxy proxy_;
   friend class ::fidl::SynchronousInterfacePtr<Protocol>;
 };
+
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -778,6 +791,7 @@ class Service::Handler final {
  private:
   ::fidl::ServiceHandlerBase* const service_;
 };
+
 #endif  // __Fuchsia__
 
 }  // namespace versions
