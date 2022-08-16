@@ -11,7 +11,7 @@
    and update it over the course of its execution. This data can be snapshotted and inspected
    while the component is still running.
 
-   Inspect is commonly used to represent information about the working set and recent history 
+   Inspect is commonly used to represent information about the working set and recent history
    of a component to help during debugging.
 
    Component authors use Inspect by depending on a library in their language of choice (Rust, C++,
@@ -52,3 +52,18 @@
 
    Developers may write structured logs using the <code>tracing</code> crate macros in Rust
    or the <code>FX_SLOG</code> macro in C++.
+
+-
+  name: Persistence
+  team: Diagnostics
+  links:
+   Persistence documentation: /docs/reference/diagnostics/persistence
+  description: |
+    Persistence stores Inspect data and publishes it on the subsequent boot.
+
+    Sometimes Diagnostics data can't be exported from the device until it's
+    rebooted, for example, if there's a problem with networking. Persistence
+    writes selected Inspect data to disk and then publishes it back to Inspect
+    on the next boot.
+  related:
+   - Inspect

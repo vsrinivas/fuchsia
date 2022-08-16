@@ -255,7 +255,7 @@ specified otherwise in the format message.
 # Encoding "legacy" format messages
 
 Components that call [`LogSink.Connect`] are expected to pass a socket in "datagram" mode (as
-opposed to "streaming") and to write the ["legacy" wire format] into the it. This uses little endian
+opposed to "streaming") and to write the ["legacy" wire format] into it. This uses little endian
 integers and a mix of length-prefixed and null-terminated UTF-8 strings.
 
 [bitfield-diagram]: /docs/reference/platform-spec/diagnostics/bitfield-diagram.md
