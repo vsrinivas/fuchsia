@@ -361,7 +361,6 @@ group("cmx_allowlist") {
     "//src/modular/tests:basemgr-test_manifest_compile",
     "//src/modular/tests:inspect-basemgr-test_manifest_compile",
     "//src/modular/tests:inspect-session-test_manifest_compile",
-    "//src/modular/tests:module_with_fake_runner_component_manifest_compile",
     "//src/modular/tests:sessionctl-test_manifest_compile",
     "//src/modular/tests:sessionmgr-integration-test_manifest_compile",
     "//src/performance/trace:trace_component_manifest_compile",

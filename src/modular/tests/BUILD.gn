@@ -11,7 +11,6 @@ group("tests") {
   deps = [
     ":basemgr_v2_test",
     ":modular_integration_tests",
-    ":module_with_fake_runner",
     ":sessionmgr_v2_test",
     "modular_config",
     "//src/cobalt/bin/testing/mock_cobalt",
@@ -300,43 +299,6 @@ fuchsia_unittest_component("element-manager-test") {
   deps = [ ":element_manager_test" ]
 }
 
-executable("stories_share_session_runners_test") {
-  testonly = true
-
-  sources = [ "stories_share_session_runners_test.cc" ]
-
-  deps = [
-    ":module_with_fake_runner",
-    "//sdk/fidl/fuchsia.intl",
-    "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
-    "//sdk/lib/syslog/cpp",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
-  ]
-}
-
-fuchsia_unittest_component("stories-share-session-runners-test") {
-  manifest = "meta/stories_share_session_runners_test.cml"
-  deps = [ ":stories_share_session_runners_test" ]
-}
-
-executable("module_with_fake_runner_bin") {
-  testonly = true
-
-  output_name = "module_with_fake_runner"
-
-  sources = [ "module_with_fake_runner.cc" ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/lib/sys/cpp",
-    "//src/modular/lib/app_driver/cpp:module_driver",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-}
-
 executable("annotations_test") {
   testonly = true
 
@@ -396,12 +358,6 @@ fuchsia_component("basemgr-with-eager-children") {
 fuchsia_component("basemgr-with-critical-children") {
   manifest = "meta/basemgr_with_critical_children.cml"
   deps = [ "//src/modular/bin/basemgr:basemgr_bin" ]
-}
-
-fuchsia_package_with_single_component("module_with_fake_runner") {
-  testonly = true
-  manifest = "meta/module_with_fake_runner.cmx"
-  deps = [ ":module_with_fake_runner_bin" ]
 }
 
 fuchsia_test_package("basemgr_v2_test") {
@@ -489,7 +445,6 @@ fuchsia_test_package("modular_integration_tests") {
     ":session-shell-test",
     ":sessionctl-test",
     ":sessionmgr-integration-test",
-    ":stories-share-session-runners-test",
     ":story-shell-factory-test",
     ":story-shell-test",
   ]
