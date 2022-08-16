@@ -69,7 +69,7 @@ impl<FSC: Clone + FSConfig> FsEnvironment<FSC> {
         let volume_path = get_volume_path(&volume_guid).await;
         let node =
             connect_to_protocol_at_path::<fio::NodeMarker>(volume_path.to_str().unwrap()).unwrap();
-        let fs = Filesystem::from_node(node, config.clone());
+        let mut fs = Filesystem::from_node(node, config.clone());
         fs.format().await.unwrap();
 
         let instance = if fs.config().is_multi_volume() {
@@ -185,7 +185,7 @@ impl<FSC: 'static + FSConfig + Clone + Send + Sync> Environment for FsEnvironmen
                 connect_to_protocol_at_path::<fio::NodeMarker>(volume_path.to_str().unwrap())
                     .unwrap();
 
-            let fs = Filesystem::from_node(node, self.config.clone());
+            let mut fs = Filesystem::from_node(node, self.config.clone());
             fs.fsck().await.unwrap();
             let instance = if fs.config().is_multi_volume() {
                 let mut instance = fs.serve_multi_volume().await.unwrap();

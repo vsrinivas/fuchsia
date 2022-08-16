@@ -15,14 +15,13 @@ use {
     fidl_fuchsia_io as fio,
     fs_management::{
         filesystem::{ServingMultiVolumeFilesystem, ServingSingleVolumeFilesystem},
-        Blobfs, FSConfig, Fxfs, Minfs,
+        Blobfs, FSConfig, Fxfs, LegacyConfig, Minfs, Mode,
     },
     fuchsia_component::client::{
         connect_channel_to_protocol, connect_to_childs_protocol, open_childs_exposed_directory,
     },
     fuchsia_zircon as zx,
     std::{
-        ffi::CStr,
         path::Path,
         sync::{Arc, Once},
     },
@@ -89,7 +88,8 @@ struct FsmFilesystem<FSC: FSConfig + Send + Sync, BD: BlockDevice + Send> {
 
 impl<FSC: FSConfig + Send + Sync, BD: BlockDevice + Send> FsmFilesystem<FSC, BD> {
     pub async fn new(config: FSC, block_device: BD) -> Self {
-        let fs = fs_management::filesystem::Filesystem::from_node(block_device.get_node(), config);
+        let mut fs =
+            fs_management::filesystem::Filesystem::from_node(block_device.get_node(), config);
         fs.format().await.expect("Failed to format the filesystem");
         let serving_filesystem = if fs.config().is_multi_volume() {
             let mut serving_filesystem =
@@ -218,12 +218,8 @@ async fn create_fxfs<BDF: BlockDeviceFactory>(
 struct F2fs {}
 
 impl FSConfig for F2fs {
-    fn binary_path(&self) -> &CStr {
-        cstr!("/pkg/bin/f2fs")
-    }
-
-    fn generic_args(&self) -> Vec<&CStr> {
-        vec![]
+    fn mode(&self) -> Mode<'_> {
+        Mode::Legacy(LegacyConfig { binary_path: cstr!("/pkg/bin/f2fs"), ..Default::default() })
     }
 }
 

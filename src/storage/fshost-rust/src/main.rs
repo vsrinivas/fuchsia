@@ -4,10 +4,14 @@
 
 use {
     crate::environment::FshostEnvironment,
-    anyhow::{format_err, Result},
+    anyhow::{format_err, Error, Result},
     fidl::prelude::*,
-    fidl_fuchsia_fshost as fshost, fidl_fuchsia_io as fio,
+    fidl_fuchsia_fshost as fshost,
+    fidl_fuchsia_fxfs::{CryptManagementMarker, KeyPurpose},
+    fidl_fuchsia_io as fio,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_runtime::{take_startup_handle, HandleType},
+    fuchsia_zircon as zx,
     futures::channel::mpsc,
     vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
@@ -38,12 +42,19 @@ async fn main() -> Result<()> {
     let mut env = FshostEnvironment::new();
     let export = vfs::pseudo_directory! {
         "svc" => vfs::pseudo_directory! {
-            fshost::AdminMarker::PROTOCOL_NAME => service::fshost_admin(shutdown_tx),
+            fshost::AdminMarker::PROTOCOL_NAME => service::fshost_admin(shutdown_tx.clone()),
             fshost::BlockWatcherMarker::PROTOCOL_NAME =>
                 service::fshost_block_watcher(watcher),
         },
-        "blobfs" => remote_dir(env.blobfs_root()?),
+        "fs" => vfs::pseudo_directory! {
+            "blob" => remote_dir(env.blobfs_root()?),
+            "data" => remote_dir(env.data_root()?),
+        },
     };
+
+    let _ = service::handle_lifecycle_requests(shutdown_tx);
+
+    init_crypt_service().await?;
 
     let scope = ExecutionScope::new();
     export.open(
@@ -81,5 +92,38 @@ async fn main() -> Result<()> {
     shutdown_responder.close()?;
 
     log::info!("fshost terminated");
+    Ok(())
+}
+
+async fn init_crypt_service() -> Result<(), Error> {
+    let crypt_management = connect_to_protocol::<CryptManagementMarker>()?;
+    // TODO(fxbug.dev/94587): A hardware source should be used for keys.
+    crypt_management
+        .add_wrapping_key(
+            0,
+            &[
+                0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf,
+                0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d,
+                0x1e, 0x1f,
+            ],
+        )
+        .await?
+        .map_err(zx::Status::from_raw)?;
+    crypt_management
+        .add_wrapping_key(
+            1,
+            &[
+                0xff, 0xfe, 0xfd, 0xfc, 0xfb, 0xfa, 0xf9, 0xf8, 0xf7, 0xf6, 0xf5, 0xf4, 0xf3, 0xf2,
+                0xf1, 0xf0, 0xef, 0xee, 0xed, 0xec, 0xeb, 0xea, 0xe9, 0xe8, 0xe7, 0xe6, 0xe5, 0xe4,
+                0xe3, 0xe2, 0xe1, 0xe0,
+            ],
+        )
+        .await?
+        .map_err(zx::Status::from_raw)?;
+    crypt_management.set_active_key(KeyPurpose::Data, 0).await?.map_err(zx::Status::from_raw)?;
+    crypt_management
+        .set_active_key(KeyPurpose::Metadata, 1)
+        .await?
+        .map_err(zx::Status::from_raw)?;
     Ok(())
 }

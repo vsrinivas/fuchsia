@@ -55,7 +55,7 @@ impl BlobfsInstance {
         wait_for_device(&blobfs_block_path, Duration::from_secs(20)).unwrap();
 
         // Instantiate blobfs.
-        let blobfs = Blobfs::new(&blobfs_block_path).unwrap();
+        let mut blobfs = Blobfs::new(&blobfs_block_path).unwrap();
 
         // Check blobfs consistency.
         blobfs.fsck().await.unwrap();

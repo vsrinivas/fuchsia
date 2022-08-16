@@ -4,20 +4,28 @@
 
 use {
     crate::watcher,
-    fidl_fuchsia_fshost as fshost, fuchsia_zircon as zx,
-    futures::{channel::mpsc, StreamExt},
+    anyhow::Error,
+    fidl::endpoints::RequestStream,
+    fidl_fuchsia_fshost as fshost,
+    fidl_fuchsia_process_lifecycle::{LifecycleRequest, LifecycleRequestStream},
+    fuchsia_async as fasync,
+    fuchsia_runtime::HandleType,
+    fuchsia_zircon as zx,
+    futures::{channel::mpsc, StreamExt, TryStreamExt},
     std::sync::Arc,
     vfs::service,
 };
 
 pub enum FshostShutdownResponder {
     Admin(fshost::AdminShutdownResponder),
+    Lifecycle,
 }
 
 impl FshostShutdownResponder {
     pub fn close(self) -> Result<(), fidl::Error> {
         match self {
             FshostShutdownResponder::Admin(responder) => responder.send()?,
+            FshostShutdownResponder::Lifecycle => {}
         }
         Ok(())
     }
@@ -111,4 +119,22 @@ pub fn fshost_block_watcher(pauser: watcher::Watcher) -> Arc<service::Service> {
             }
         }
     })
+}
+
+pub fn handle_lifecycle_requests(
+    mut shutdown: mpsc::Sender<FshostShutdownResponder>,
+) -> Result<(), Error> {
+    if let Some(handle) = fuchsia_runtime::take_startup_handle(HandleType::Lifecycle.into()) {
+        let mut stream =
+            LifecycleRequestStream::from_channel(fasync::Channel::from_channel(handle.into())?);
+        fasync::Task::spawn(async move {
+            if let Ok(Some(LifecycleRequest::Stop { .. })) = stream.try_next().await {
+                shutdown.start_send(FshostShutdownResponder::Lifecycle).unwrap_or_else(|e| {
+                    log::error!("failed to send shutdown message. error: {:?}", e)
+                });
+            }
+        })
+        .detach();
+    }
+    Ok(())
 }

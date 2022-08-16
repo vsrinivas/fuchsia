@@ -6,8 +6,8 @@
 
 use {
     crate::{
-        error::{CommandError, KillError, QueryError, ServeError, ShutdownError},
-        launch_process, FSConfig,
+        error::{CommandError, KillError, QueryError, ShutdownError},
+        launch_process, FSConfig, Mode,
     },
     anyhow::{anyhow, bail, ensure, Error},
     cstr::cstr,
@@ -16,25 +16,38 @@ use {
         encoding::Decodable,
         endpoints::{create_endpoints, ClientEnd, ServerEnd},
     },
+    fidl_fuchsia_component::{self as fcomponent, RealmMarker},
+    fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_fs_startup::{CheckOptions, FormatOptions, StartOptions, StartupMarker},
     fidl_fuchsia_fxfs::MountOptions,
     fidl_fuchsia_io as fio,
     fuchsia_async::OnSignals,
     fuchsia_component::client::{
-        connect_to_childs_protocol, connect_to_named_protocol_at_dir_root,
+        connect_to_named_protocol_at_dir_root, connect_to_protocol,
         connect_to_protocol_at_dir_root, open_childs_exposed_directory,
     },
     fuchsia_runtime::{HandleInfo, HandleType},
-    fuchsia_zircon::{Channel, Handle, Process, Signals, Status, Task},
+    fuchsia_zircon::{AsHandleRef, Channel, Handle, Process, Signals, Status, Task},
     log::warn,
-    std::collections::HashMap,
+    std::{
+        collections::HashMap,
+        sync::{
+            atomic::{AtomicU64, Ordering},
+            Arc,
+        },
+    },
 };
 
 /// Asynchronously manages a block device for filesystem operations.
 pub struct Filesystem<FSC> {
     config: FSC,
     block_device: fio::NodeProxy,
+    component: Option<Arc<ComponentInstance>>,
 }
+
+// Used to disambiguate children in our component collection.
+const COLLECTION_NAME: &str = "fs-collection";
+static COLLECTION_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 impl<FSC: FSConfig> Filesystem<FSC> {
     pub fn config(&self) -> &FSC {
@@ -43,7 +56,7 @@ impl<FSC: FSConfig> Filesystem<FSC> {
 
     /// Creates a new `Filesystem` with the block device represented by `node_proxy`.
     pub fn from_node(node_proxy: fio::NodeProxy, config: FSC) -> Self {
-        Self { config, block_device: node_proxy }
+        Self { config, block_device: node_proxy, component: None }
     }
 
     /// Creates a new `Filesystem` from the block device at the given path.
@@ -65,6 +78,73 @@ impl<FSC: FSConfig> Filesystem<FSC> {
         Ok(block_device.into())
     }
 
+    async fn get_component_exposed_dir(&mut self) -> Result<fio::DirectoryProxy, Error> {
+        if let Some(component) = &self.component {
+            return open_childs_exposed_directory(
+                component.name(),
+                Some(COLLECTION_NAME.to_string()),
+            )
+            .await;
+        }
+
+        // Try and connect to a static child.
+        let mode = self.config.mode();
+        let component_name = mode.component_name().unwrap();
+        let realm_proxy = connect_to_protocol::<RealmMarker>()?;
+        let (directory_proxy, server_end) =
+            fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
+        match realm_proxy
+            .open_exposed_dir(
+                &mut fdecl::ChildRef { name: component_name.to_string(), collection: None },
+                server_end,
+            )
+            .await?
+        {
+            Ok(()) => return Ok(directory_proxy),
+            Err(e) => {
+                if e != fcomponent::Error::InstanceNotFound {
+                    return Err(anyhow!("open_exposed_dir failed: {:?}", e));
+                }
+            }
+        }
+
+        // We failed to connect to a static child, so we need to launch a component in our
+        // collection.  We need a unique name, so we pull in the process Koid here since it's
+        // possible for the same binary in a component to be launched multiple times and we don't
+        // want to collide with children created by other processes.
+        let name = format!(
+            "{}-{}-{}",
+            component_name,
+            fuchsia_runtime::process_self().get_koid().unwrap().raw_koid(),
+            COLLECTION_COUNTER.fetch_add(1, Ordering::Relaxed)
+        );
+
+        // Launch a new component in our collection.
+        realm_proxy
+            .create_child(
+                &mut fdecl::CollectionRef { name: COLLECTION_NAME.to_string() },
+                fdecl::Child {
+                    name: Some(name.clone()),
+                    url: Some(format!("#meta/{}.cm", component_name)),
+                    startup: Some(fdecl::StartupMode::Lazy),
+                    environment: None,
+                    ..fdecl::Child::EMPTY
+                },
+                fcomponent::CreateChildArgs::EMPTY,
+            )
+            .await?
+            .map_err(|e| anyhow!("create_child failed: {:?}", e))?;
+
+        let component = Arc::new(ComponentInstance(name));
+
+        let proxy =
+            open_childs_exposed_directory(component.name(), Some(COLLECTION_NAME.to_string()))
+                .await?;
+
+        self.component = Some(component);
+        Ok(proxy)
+    }
+
     /// Runs `mkfs`, which formats the filesystem onto the block device.
     ///
     /// Which flags are passed to the `mkfs` command are controlled by the config this `Filesystem`
@@ -75,31 +155,33 @@ impl<FSC: FSConfig> Filesystem<FSC> {
     /// # Errors
     ///
     /// Returns [`Err`] if the filesystem process failed to launch or returned a non-zero exit code.
-    pub async fn format(&self) -> Result<(), Error> {
-        if let Some(component_name) = self.config.component_name() {
-            let proxy =
-                connect_to_childs_protocol::<StartupMarker>(component_name.to_string(), None)
-                    .await?;
-            proxy
-                .format(self.get_block_handle()?.into(), &mut FormatOptions::new_empty())
-                .await?
-                .map_err(Status::from_raw)?;
-        } else {
-            // SpawnAction is not Send, so make sure it is dropped before any `await`s.
-            let process = {
-                let mut args = vec![self.config.binary_path(), cstr!("mkfs")];
-                args.append(&mut self.config.generic_args());
-                args.append(&mut self.config.format_args());
-                let actions = vec![
-                    // device handle is passed in as a PA_USER0 handle at argument 1
-                    SpawnAction::add_handle(
-                        HandleInfo::new(HandleType::User0, 1),
-                        self.get_block_handle()?,
-                    ),
-                ];
-                launch_process(&args, actions)?
-            };
-            wait_for_successful_exit(process).await?;
+    pub async fn format(&mut self) -> Result<(), Error> {
+        match self.config.mode() {
+            Mode::Component { .. } => {
+                let exposed_dir = self.get_component_exposed_dir().await?;
+                let proxy = connect_to_protocol_at_dir_root::<StartupMarker>(&exposed_dir)?;
+                proxy
+                    .format(self.get_block_handle()?.into(), &mut FormatOptions::new_empty())
+                    .await?
+                    .map_err(Status::from_raw)?;
+            }
+            Mode::Legacy(mut config) => {
+                // SpawnAction is not Send, so make sure it is dropped before any `await`s.
+                let process = {
+                    let mut args = vec![config.binary_path, cstr!("mkfs")];
+                    args.append(&mut config.generic_args);
+                    args.append(&mut config.format_args);
+                    let actions = vec![
+                        // device handle is passed in as a PA_USER0 handle at argument 1
+                        SpawnAction::add_handle(
+                            HandleInfo::new(HandleType::User0, 1),
+                            self.get_block_handle()?,
+                        ),
+                    ];
+                    launch_process(&args, actions)?
+                };
+                wait_for_successful_exit(process).await?;
+            }
         }
         Ok(())
     }
@@ -114,32 +196,34 @@ impl<FSC: FSConfig> Filesystem<FSC> {
     /// # Errors
     ///
     /// Returns [`Err`] if the filesystem process failed to launch or returned a non-zero exit code.
-    pub async fn fsck(&self) -> Result<(), Error> {
-        if let Some(component_name) = self.config.component_name() {
-            let proxy =
-                connect_to_childs_protocol::<StartupMarker>(component_name.to_string(), None)
-                    .await?;
-            let mut options = CheckOptions::new_empty();
-            options.crypt = self.config.crypt_client().map(|c| c.into());
-            proxy
-                .check(self.get_block_handle()?.into(), &mut options)
-                .await?
-                .map_err(Status::from_raw)?;
-        } else {
-            // SpawnAction is not Send, so make sure it is dropped before any `await`s.
-            let process = {
-                let mut args = vec![self.config.binary_path(), cstr!("fsck")];
-                args.append(&mut self.config.generic_args());
-                let actions = vec![
-                    // device handle is passed in as a PA_USER0 handle at argument 1
-                    SpawnAction::add_handle(
-                        HandleInfo::new(HandleType::User0, 1),
-                        self.get_block_handle()?,
-                    ),
-                ];
-                launch_process(&args, actions)?
-            };
-            wait_for_successful_exit(process).await?;
+    pub async fn fsck(&mut self) -> Result<(), Error> {
+        match self.config.mode() {
+            Mode::Component { .. } => {
+                let exposed_dir = self.get_component_exposed_dir().await?;
+                let proxy = connect_to_protocol_at_dir_root::<StartupMarker>(&exposed_dir)?;
+                let mut options = CheckOptions::new_empty();
+                options.crypt = self.config.crypt_client().map(|c| c.into());
+                proxy
+                    .check(self.get_block_handle()?.into(), &mut options)
+                    .await?
+                    .map_err(Status::from_raw)?;
+            }
+            Mode::Legacy(mut config) => {
+                // SpawnAction is not Send, so make sure it is dropped before any `await`s.
+                let process = {
+                    let mut args = vec![config.binary_path, cstr!("fsck")];
+                    args.append(&mut config.generic_args);
+                    let actions = vec![
+                        // device handle is passed in as a PA_USER0 handle at argument 1
+                        SpawnAction::add_handle(
+                            HandleInfo::new(HandleType::User0, 1),
+                            self.get_block_handle()?,
+                        ),
+                    ];
+                    launch_process(&args, actions)?
+                };
+                wait_for_successful_exit(process).await?;
+            }
         }
         Ok(())
     }
@@ -150,22 +234,18 @@ impl<FSC: FSConfig> Filesystem<FSC> {
     /// # Errors
     ///
     /// Returns [`Err`] if serving the filesystem failed.
-    pub async fn serve(&self) -> Result<ServingSingleVolumeFilesystem, Error> {
+    pub async fn serve(&mut self) -> Result<ServingSingleVolumeFilesystem, Error> {
         if self.config.is_multi_volume() {
             bail!("Can't serve a multivolume filesystem; use serve_multi_volume");
         }
-        // If the filesystem is a component, the startup service must be routed to this component.
-        // For now, only one filesystem instance is supported.
-        if let Some(component_name) = self.config.component_name() {
-            let proxy =
-                connect_to_childs_protocol::<StartupMarker>(component_name.to_string(), None)
-                    .await?;
+        if let Mode::Component { reuse_component_after_serving, .. } = self.config.mode() {
+            let exposed_dir = self.get_component_exposed_dir().await?;
+            let proxy = connect_to_protocol_at_dir_root::<StartupMarker>(&exposed_dir)?;
             proxy
                 .start(self.get_block_handle()?.into(), &mut StartOptions::new_empty())
                 .await?
                 .map_err(Status::from_raw)?;
 
-            let exposed_dir = open_childs_exposed_directory(component_name, None).await?;
             let (root_dir, server_end) = fidl::endpoints::create_endpoints::<fio::NodeMarker>()?;
             exposed_dir.open(
                 fio::OpenFlags::RIGHT_READABLE
@@ -175,33 +255,21 @@ impl<FSC: FSConfig> Filesystem<FSC> {
                 "root",
                 server_end,
             )?;
+            let component = self.component.clone();
+            if !reuse_component_after_serving {
+                self.component = None;
+            }
             Ok(ServingSingleVolumeFilesystem {
                 process: None,
+                _component: component,
                 exposed_dir,
                 root_dir: ClientEnd::<fio::DirectoryMarker>::new(root_dir.into_channel())
                     .into_proxy()?,
                 binding: None,
             })
         } else {
-            // do_serve is returning the outgoing directory for the process which is different from
-            // the exposed directory that would be returned by Realm's open_exposed_dir.  However,
-            // all the filesystems we currently support expose the services we care about via their
-            // root rather than via the usual /svc directory, so we can treat them as the same.
-            // This is fine for now since this mechanism of mounting filesystems will go away at
-            // some point.
-            let (process, export_root, root_dir) = self.do_serve().await?;
-            Ok(ServingSingleVolumeFilesystem {
-                process: Some(process),
-                exposed_dir: export_root,
-                root_dir,
-                binding: None,
-            })
+            self.serve_legacy().await
         }
-    }
-
-    // TODO(fxbug.dev//87511): Add an alias to help migrate an OOT user for an upcoming change.
-    pub async fn serve_legacy(&self) -> Result<ServingSingleVolumeFilesystem, Error> {
-        self.serve().await
     }
 
     /// Serves the filesystem on the block device and returns a [`ServingMultiVolumeFilesystem`]
@@ -211,36 +279,40 @@ impl<FSC: FSConfig> Filesystem<FSC> {
     /// # Errors
     ///
     /// Returns [`Err`] if serving the filesystem failed.
-    pub async fn serve_multi_volume(&self) -> Result<ServingMultiVolumeFilesystem, Error> {
+    pub async fn serve_multi_volume(&mut self) -> Result<ServingMultiVolumeFilesystem, Error> {
         if !self.config.is_multi_volume() {
             bail!("Can't serve_multi_volume a single-volume filesystem; use serve");
         }
-        if let Some(component_name) = self.config.component_name() {
-            let proxy =
-                connect_to_childs_protocol::<StartupMarker>(component_name.to_string(), None)
-                    .await?;
+        if let Mode::Component { .. } = self.config.mode() {
+            let exposed_dir = self.get_component_exposed_dir().await?;
+            let proxy = connect_to_protocol_at_dir_root::<StartupMarker>(&exposed_dir)?;
             proxy
                 .start(self.get_block_handle()?.into(), &mut StartOptions::new_empty())
                 .await?
                 .map_err(Status::from_raw)?;
 
-            let exposed_dir = open_childs_exposed_directory(component_name, None).await?;
-            Ok(ServingMultiVolumeFilesystem { exposed_dir, volumes: HashMap::default() })
+            Ok(ServingMultiVolumeFilesystem {
+                _component: self.component.clone(),
+                exposed_dir,
+                volumes: HashMap::default(),
+            })
         } else {
             bail!("Can't serve a multivolume filesystem which isn't componentized")
         }
     }
 
-    async fn do_serve(
-        &self,
-    ) -> Result<(Process, fio::DirectoryProxy, fio::DirectoryProxy), ServeError> {
+    // TODO(fxbug.dev/87511): This is temporarily public so that we can migrate an OOT user.
+    pub async fn serve_legacy(&self) -> Result<ServingSingleVolumeFilesystem, Error> {
         let (export_root, server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
+
+        let mode = self.config.mode();
+        let mut config = mode.into_legacy_config().unwrap();
 
         // SpawnAction is not Send, so make sure it is dropped before any `await`s.
         let process = {
-            let mut args = vec![self.config.binary_path(), cstr!("mount")];
-            args.append(&mut self.config.generic_args());
-            args.append(&mut self.config.mount_args());
+            let mut args = vec![config.binary_path, cstr!("mount")];
+            args.append(&mut config.generic_args);
+            args.append(&mut config.mount_args);
             let actions = vec![
                 // export root handle is passed in as a PA_DIRECTORY_REQUEST handle at argument 0
                 SpawnAction::add_handle(
@@ -268,7 +340,34 @@ impl<FSC: FSConfig> Filesystem<FSC> {
             server_end.into_channel().into(),
         )?;
         let _ = root_dir.describe().await?;
-        Ok((process, export_root, root_dir))
+
+        Ok(ServingSingleVolumeFilesystem {
+            process: Some(process),
+            _component: None,
+            exposed_dir: export_root,
+            root_dir,
+            binding: None,
+        })
+    }
+}
+
+// Destroys the child when dropped.
+struct ComponentInstance(/* name: */ String);
+
+impl ComponentInstance {
+    fn name(&self) -> &str {
+        &self.0
+    }
+}
+
+impl Drop for ComponentInstance {
+    fn drop(&mut self) {
+        if let Ok(realm_proxy) = connect_to_protocol::<RealmMarker>() {
+            let _ = realm_proxy.destroy_child(&mut fdecl::ChildRef {
+                name: self.0.clone(),
+                collection: Some(COLLECTION_NAME.to_string()),
+            });
+        }
     }
 }
 
@@ -307,6 +406,7 @@ pub type ServingFilesystem = ServingSingleVolumeFilesystem;
 pub struct ServingSingleVolumeFilesystem {
     // If the filesystem is running as a component, there will be no process.
     process: Option<Process>,
+    _component: Option<Arc<ComponentInstance>>,
     exposed_dir: fio::DirectoryProxy,
     root_dir: fio::DirectoryProxy,
 
@@ -424,6 +524,7 @@ impl Drop for ServingSingleVolumeFilesystem {
 /// Asynchronously manages a serving multivolume filesystem. Created from
 /// [`Filesystem::serve_multi_volume()`].
 pub struct ServingMultiVolumeFilesystem {
+    _component: Option<Arc<ComponentInstance>>,
     exposed_dir: fio::DirectoryProxy,
     volumes: HashMap<String, ServingVolume>,
 }
@@ -587,12 +688,11 @@ mod tests {
     use {
         super::*,
         crate::{BlobCompression, BlobEvictionPolicy, Blobfs, Factoryfs, Fxfs, Minfs},
-        fidl_fuchsia_io as fio, fuchsia_async as fasync, fuchsia_zircon as zx,
+        fidl_fuchsia_io as fio, fuchsia_async as fasync,
         fuchsia_zircon::HandleBased,
         ramdevice_client::RamdiskClient,
         std::{
             io::{Seek, Write},
-            sync::Arc,
             time::Duration,
         },
     };
@@ -621,7 +721,7 @@ mod tests {
             blob_compression: Some(BlobCompression::Uncompressed),
             blob_eviction_policy: Some(BlobEvictionPolicy::EvictImmediately),
         };
-        let blobfs = new_fs(&ramdisk, config);
+        let mut blobfs = new_fs(&ramdisk, config);
 
         blobfs.format().await.expect("failed to format blobfs");
         blobfs.fsck().await.expect("failed to fsck blobfs");
@@ -634,7 +734,7 @@ mod tests {
     async fn blobfs_format_fsck_success() {
         let block_size = 512;
         let ramdisk = ramdisk(block_size);
-        let blobfs = new_fs(&ramdisk, Blobfs::default());
+        let mut blobfs = new_fs(&ramdisk, Blobfs::default());
 
         blobfs.format().await.expect("failed to format blobfs");
         blobfs.fsck().await.expect("failed to fsck blobfs");
@@ -646,7 +746,7 @@ mod tests {
     async fn blobfs_format_fsck_error() {
         let block_size = 512;
         let ramdisk = ramdisk(block_size);
-        let blobfs = new_fs(&ramdisk, Blobfs::default());
+        let mut blobfs = new_fs(&ramdisk, Blobfs::default());
         blobfs.format().await.expect("failed to format blobfs");
         let device_channel = ramdisk.open().expect("failed to get channel to device");
 
@@ -668,7 +768,7 @@ mod tests {
     async fn blobfs_format_serve_write_query_restart_read_shutdown() {
         let block_size = 512;
         let ramdisk = ramdisk(block_size);
-        let blobfs = new_fs(&ramdisk, Blobfs::default());
+        let mut blobfs = new_fs(&ramdisk, Blobfs::default());
 
         blobfs.format().await.expect("failed to format blobfs");
 
@@ -744,7 +844,7 @@ mod tests {
         let merkle = "be901a14ec42ee0a8ee220eb119294cdd40d26d573139ee3d51e4430e7d08c28";
         let test_content = b"test content";
         let ramdisk = ramdisk(block_size);
-        let blobfs = new_fs(&ramdisk, Blobfs::default());
+        let mut blobfs = new_fs(&ramdisk, Blobfs::default());
 
         blobfs.format().await.expect("failed to format blobfs");
         let mut serving = blobfs.serve().await.expect("failed to serve blobfs");
@@ -774,7 +874,7 @@ mod tests {
         let block_size = 512;
         let ramdisk = ramdisk(block_size);
         let config = Minfs { verbose: true, readonly: true, fsck_after_every_transaction: true };
-        let minfs = new_fs(&ramdisk, config);
+        let mut minfs = new_fs(&ramdisk, config);
 
         minfs.format().await.expect("failed to format minfs");
         minfs.fsck().await.expect("failed to fsck minfs");
@@ -787,7 +887,7 @@ mod tests {
     async fn minfs_format_fsck_success() {
         let block_size = 8192;
         let ramdisk = ramdisk(block_size);
-        let minfs = new_fs(&ramdisk, Minfs::default());
+        let mut minfs = new_fs(&ramdisk, Minfs::default());
 
         minfs.format().await.expect("failed to format minfs");
         minfs.fsck().await.expect("failed to fsck minfs");
@@ -799,7 +899,7 @@ mod tests {
     async fn minfs_format_fsck_error() {
         let block_size = 8192;
         let ramdisk = ramdisk(block_size);
-        let minfs = new_fs(&ramdisk, Minfs::default());
+        let mut minfs = new_fs(&ramdisk, Minfs::default());
 
         minfs.format().await.expect("failed to format minfs");
 
@@ -832,7 +932,7 @@ mod tests {
     async fn minfs_format_serve_write_query_restart_read_shutdown() {
         let block_size = 8192;
         let ramdisk = ramdisk(block_size);
-        let minfs = new_fs(&ramdisk, Minfs::default());
+        let mut minfs = new_fs(&ramdisk, Minfs::default());
 
         minfs.format().await.expect("failed to format minfs");
         let serving = minfs.serve().await.expect("failed to serve minfs the first time");
@@ -900,7 +1000,7 @@ mod tests {
         let block_size = 8192;
         let test_content = b"test content";
         let ramdisk = ramdisk(block_size);
-        let minfs = new_fs(&ramdisk, Minfs::default());
+        let mut minfs = new_fs(&ramdisk, Minfs::default());
 
         minfs.format().await.expect("failed to format minfs");
         let mut serving = minfs.serve().await.expect("failed to serve minfs");
@@ -929,7 +1029,7 @@ mod tests {
         let block_size = 512;
         let ramdisk = ramdisk(block_size);
         let config = Factoryfs { verbose: true };
-        let factoryfs = new_fs(&ramdisk, config);
+        let mut factoryfs = new_fs(&ramdisk, config);
 
         factoryfs.format().await.expect("failed to format factoryfs");
         factoryfs.fsck().await.expect("failed to fsck factoryfs");
@@ -942,7 +1042,7 @@ mod tests {
     async fn factoryfs_format_fsck_success() {
         let block_size = 512;
         let ramdisk = ramdisk(block_size);
-        let factoryfs = new_fs(&ramdisk, Factoryfs::default());
+        let mut factoryfs = new_fs(&ramdisk, Factoryfs::default());
 
         factoryfs.format().await.expect("failed to format factoryfs");
         factoryfs.fsck().await.expect("failed to fsck factoryfs");
@@ -954,7 +1054,7 @@ mod tests {
     async fn factoryfs_format_serve_shutdown() {
         let block_size = 512;
         let ramdisk = ramdisk(block_size);
-        let factoryfs = new_fs(&ramdisk, Factoryfs::default());
+        let mut factoryfs = new_fs(&ramdisk, Factoryfs::default());
 
         factoryfs.format().await.expect("failed to format factoryfs");
         let serving = factoryfs.serve().await.expect("failed to serve factoryfs");
@@ -967,7 +1067,7 @@ mod tests {
     async fn factoryfs_bind_to_path() {
         let block_size = 512;
         let ramdisk = ramdisk(block_size);
-        let factoryfs = new_fs(&ramdisk, Factoryfs::default());
+        let mut factoryfs = new_fs(&ramdisk, Factoryfs::default());
 
         factoryfs.format().await.expect("failed to format factoryfs");
         {
@@ -985,11 +1085,6 @@ mod tests {
         std::fs::File::open("/test-factoryfs-path").expect_err("factoryfs path is still bound");
     }
 
-    #[link(name = "crypt_service", kind = "static")]
-    extern "C" {
-        fn get_crypt_service(channel: *const zx::Channel) -> zx::zx_status_t;
-    }
-
     // TODO(fxbug.dev/93066): Re-enable this test; it depends on Fxfs failing repeated calls to
     // Start.
     #[ignore]
@@ -997,15 +1092,7 @@ mod tests {
     async fn fxfs_shutdown_component_when_dropped() {
         let block_size = 512;
         let ramdisk = ramdisk(block_size);
-        let fxfs = new_fs(
-            &ramdisk,
-            Fxfs::with_crypt_client(Arc::new(|| {
-                let channel = Handle::invalid().into();
-                zx::Status::ok(unsafe { get_crypt_service(&channel) })
-                    .expect("get_crypt_service failed");
-                channel
-            })),
-        );
+        let mut fxfs = new_fs(&ramdisk, Fxfs::default());
 
         fxfs.format().await.expect("failed to format fxfs");
         {
@@ -1034,15 +1121,7 @@ mod tests {
     async fn fxfs_open_volume() {
         let block_size = 512;
         let ramdisk = ramdisk(block_size);
-        let fxfs = new_fs(
-            &ramdisk,
-            Fxfs::with_crypt_client(Arc::new(|| {
-                let channel = Handle::invalid().into();
-                zx::Status::ok(unsafe { get_crypt_service(&channel) })
-                    .expect("get_crypt_service failed");
-                channel
-            })),
-        );
+        let mut fxfs = new_fs(&ramdisk, Fxfs::default());
 
         fxfs.format().await.expect("failed to format fxfs");
 

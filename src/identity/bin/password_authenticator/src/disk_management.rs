@@ -326,13 +326,13 @@ impl DiskManager for DevDiskManager {
 
     async fn format_minfs(&self, block_dev: &Self::BlockDevice) -> Result<(), DiskError> {
         let node = block_dev.0.clone_as::<fio::NodeMarker>()?;
-        let minfs = Filesystem::from_node(node, fs::Minfs::default());
+        let mut minfs = Filesystem::from_node(node, fs::Minfs::default());
         minfs.format().await.map_err(DiskError::MinfsFormatError)?;
         Ok(())
     }
 
     async fn serve_minfs(&self, block_dev: Self::BlockDevice) -> Result<Self::Minfs, DiskError> {
-        let minfs = Filesystem::from_node(block_dev.0 .0, fs::Minfs::default());
+        let mut minfs = Filesystem::from_node(block_dev.0 .0, fs::Minfs::default());
         let serving_fs = minfs.serve().await.map_err(DiskError::MinfsServeError)?;
         Ok(DevMinfs { serving_fs })
     }

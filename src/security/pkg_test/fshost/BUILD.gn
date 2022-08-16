@@ -29,6 +29,7 @@ rustc_binary("fshost-binary") {
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/storage/bin/blobfs",
+    "//src/storage/bin/blobfs-component:blobfs_rust_fs_management",
     "//src/storage/testing/rust:storage-isolated-driver-manager",
     "//third_party/rust_crates:argh",
 

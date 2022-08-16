@@ -44,7 +44,7 @@ impl Test for BlobfsCheckerboard {
         tracing::info!("provided block device: {}", block_device);
         let dev = blackout_target::find_dev(&block_device).await?;
         tracing::info!("using equivalent block device: {}", dev);
-        let blobfs = Blobfs::new(&dev)?;
+        let mut blobfs = Blobfs::new(&dev)?;
 
         let mut rng = StdRng::seed_from_u64(seed);
 
@@ -81,7 +81,7 @@ impl Test for BlobfsCheckerboard {
         tracing::info!("provided block device: {}", block_device);
         let dev = blackout_target::find_dev(&block_device).await?;
         tracing::info!("using equivalent block device: {}", dev);
-        let blobfs = Blobfs::new(&dev)?;
+        let mut blobfs = Blobfs::new(&dev)?;
 
         let mut rng = StdRng::seed_from_u64(seed);
         let root = format!("/test-fs-root-{}", rng.gen::<u16>());
@@ -185,7 +185,7 @@ impl Test for BlobfsCheckerboard {
         tracing::info!("provided block device: {}", block_device);
         let dev = blackout_target::find_dev(&block_device).await?;
         tracing::info!("using equivalent block device: {}", dev);
-        let blobfs = Blobfs::new(&dev)?;
+        let mut blobfs = Blobfs::new(&dev)?;
 
         tracing::info!("verifying disk with fsck");
         blobfs.fsck().await.context("fsck failed")?;

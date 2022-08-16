@@ -97,13 +97,12 @@ impl Matchers {
         device: &mut dyn Device,
         env: &mut dyn Environment,
     ) -> Result<bool, Error> {
-        let topological_path = device.topological_path();
-        if let Some((path, &index)) = self
+        for (path, &index) in self
             .matched
-            .range::<str, _>((Bound::Unbounded, Bound::Excluded(topological_path)))
-            .next_back()
+            .range::<str, _>((Bound::Unbounded, Bound::Excluded(device.topological_path())))
+            .rev()
         {
-            if topological_path.starts_with(path) {
+            if device.topological_path().starts_with(path) {
                 if self.matchers[index].match_child(device, env, path).await? {
                     self.matched.insert(device.topological_path().to_string(), index);
                     return Ok(true);

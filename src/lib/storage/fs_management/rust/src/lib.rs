@@ -21,9 +21,7 @@ use {
 };
 
 // Re-export errors as public.
-pub use error::{
-    CommandError, KillError, LaunchProcessError, QueryError, ServeError, ShutdownError,
-};
+pub use error::{CommandError, KillError, LaunchProcessError, QueryError, ShutdownError};
 
 /// Constants for fuchsia.io/FilesystemInfo.fs_type
 /// Keep in sync with VFS_TYPE_* types in //zircon/system/public/zircon/device/vfs.h
@@ -36,6 +34,13 @@ pub mod vfs_type {
     pub const FXFS: u32 = 0x73667866;
     pub const F2FS: u32 = 0xfe694d21;
 }
+
+pub const BLOBFS_TYPE_GUID: [u8; 16] = [
+    0x0e, 0x38, 0x67, 0x29, 0x4c, 0x13, 0xbb, 0x4c, 0xb6, 0xda, 0x17, 0xe7, 0xce, 0x1c, 0xa4, 0x5d,
+];
+pub const DATA_TYPE_GUID: [u8; 16] = [
+    0x0c, 0x5f, 0x18, 0x08, 0x2d, 0x89, 0x8a, 0x42, 0xa7, 0x89, 0xdb, 0xee, 0xc8, 0xf5, 0x5e, 0x6a,
+];
 
 fn launch_process(
     args: &[&CStr],
@@ -58,31 +63,59 @@ fn launch_process(
     }
 }
 
-/// Describes the configuration for a particular native filesystem.
-pub trait FSConfig {
-    /// If the filesystem runs as a component, Returns the component name in which case the
-    /// binary_path, and the _args methods are not relevant.
-    fn component_name(&self) -> Option<&str> {
-        None
+pub enum Mode<'a> {
+    /// Run the filesystem as a legacy binary.
+    Legacy(LegacyConfig<'a>),
+
+    /// Run the filesystem as a component.
+    Component {
+        /// For static children, the name specifies the name of the child.  For dynamic children,
+        /// the component URL is "#meta/{component-name}.cm".  The library will attempt to connect
+        /// to a static child first, and if that fails, it will launch the filesystem within a
+        /// collection.
+        name: &'a str,
+
+        /// It should be possible to reuse components after serving them, but it's not universally
+        /// supported.
+        reuse_component_after_serving: bool,
+    },
+}
+
+impl<'a> Mode<'a> {
+    fn into_legacy_config(self) -> Option<LegacyConfig<'a>> {
+        match self {
+            Mode::Legacy(config) => Some(config),
+            _ => None,
+        }
     }
 
-    /// Path to the filesystem binary
-    fn binary_path(&self) -> &CStr;
+    fn component_name(&self) -> Option<&str> {
+        match self {
+            Mode::Component { name, .. } => Some(name),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct LegacyConfig<'a> {
+    /// Path to the binary.
+    pub binary_path: &'a CStr,
 
     /// Arguments passed to the binary for all subcommands
-    fn generic_args(&self) -> Vec<&CStr> {
-        vec![]
-    }
+    pub generic_args: Vec<&'a CStr>,
 
     /// Arguments passed to the binary for formatting
-    fn format_args(&self) -> Vec<&CStr> {
-        vec![]
-    }
+    pub format_args: Vec<&'a CStr>,
 
     /// Arguments passed to the binary for mounting
-    fn mount_args(&self) -> Vec<&CStr> {
-        vec![]
-    }
+    pub mount_args: Vec<&'a CStr>,
+}
+
+/// Describes the configuration for a particular filesystem.
+pub trait FSConfig {
+    /// Returns the mode in which to run this filesystem.
+    fn mode(&self) -> Mode<'_>;
 
     /// Returns a handle for the crypt service (if any).
     fn crypt_client(&self) -> Option<zx::Channel> {
@@ -153,45 +186,8 @@ impl Blobfs {
 }
 
 impl FSConfig for Blobfs {
-    fn binary_path(&self) -> &CStr {
-        cstr!("/pkg/bin/blobfs")
-    }
-    fn generic_args(&self) -> Vec<&CStr> {
-        let mut args = vec![];
-        if self.verbose {
-            args.push(cstr!("--verbose"));
-        }
-        args
-    }
-    fn format_args(&self) -> Vec<&CStr> {
-        let mut args = vec![];
-        if self.blob_deprecated_padded_format {
-            args.push(cstr!("--deprecated_padded_format"));
-        }
-        args
-    }
-    fn mount_args(&self) -> Vec<&CStr> {
-        let mut args = vec![];
-        if self.readonly {
-            args.push(cstr!("--readonly"));
-        }
-        if let Some(compression) = &self.blob_compression {
-            args.push(cstr!("--compression"));
-            args.push(match compression {
-                BlobCompression::ZSTD => cstr!("ZSTD"),
-                BlobCompression::ZSTDSeekable => cstr!("ZSTD_SEEKABLE"),
-                BlobCompression::ZSTDChunked => cstr!("ZSTD_CHUNKED"),
-                BlobCompression::Uncompressed => cstr!("UNCOMPRESSED"),
-            });
-        }
-        if let Some(eviction_policy) = &self.blob_eviction_policy {
-            args.push(cstr!("--eviction_policy"));
-            args.push(match eviction_policy {
-                BlobEvictionPolicy::NeverEvict => cstr!("NEVER_EVICT"),
-                BlobEvictionPolicy::EvictImmediately => cstr!("EVICT_IMMEDIATELY"),
-            })
-        }
-        args
+    fn mode(&self) -> Mode<'_> {
+        Mode::Component { name: "blobfs", reuse_component_after_serving: false }
     }
 }
 
@@ -220,25 +216,28 @@ impl Minfs {
 }
 
 impl FSConfig for Minfs {
-    fn binary_path(&self) -> &CStr {
-        cstr!("/pkg/bin/minfs")
-    }
-    fn generic_args(&self) -> Vec<&CStr> {
-        let mut args = vec![];
-        if self.verbose {
-            args.push(cstr!("--verbose"));
-        }
-        args
-    }
-    fn mount_args(&self) -> Vec<&CStr> {
-        let mut args = vec![];
-        if self.readonly {
-            args.push(cstr!("--readonly"));
-        }
-        if self.fsck_after_every_transaction {
-            args.push(cstr!("--fsck_after_every_transaction"));
-        }
-        args
+    fn mode(&self) -> Mode<'_> {
+        Mode::Legacy(LegacyConfig {
+            binary_path: cstr!("/pkg/bin/minfs"),
+            generic_args: {
+                let mut args = vec![];
+                if self.verbose {
+                    args.push(cstr!("--verbose"));
+                }
+                args
+            },
+            mount_args: {
+                let mut args = vec![];
+                if self.readonly {
+                    args.push(cstr!("--readonly"));
+                }
+                if self.fsck_after_every_transaction {
+                    args.push(cstr!("--fsck_after_every_transaction"));
+                }
+                args
+            },
+            ..Default::default()
+        })
     }
 }
 
@@ -246,46 +245,39 @@ type CryptClientFn = Arc<dyn Fn() -> zx::Channel + Send + Sync>;
 
 /// Fxfs Filesystem Configuration
 /// If fields are None or false, they will not be set in arguments.
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct Fxfs {
     pub verbose: bool,
     pub readonly: bool,
-    pub crypt_client_fn: CryptClientFn,
+
+    // This is only used by fsck.
+    pub crypt_client_fn: Option<CryptClientFn>,
 }
 
 impl Fxfs {
     pub fn with_crypt_client(crypt_client_fn: CryptClientFn) -> Self {
-        Fxfs { verbose: false, readonly: false, crypt_client_fn }
+        Fxfs { verbose: false, readonly: false, crypt_client_fn: Some(crypt_client_fn) }
     }
 
     /// Manages a block device at a given path using
     /// the default configuration.
-    pub fn new(
-        path: &str,
-        crypt_client_fn: CryptClientFn,
-    ) -> Result<filesystem::Filesystem<Self>, Error> {
-        filesystem::Filesystem::from_path(path, Self::with_crypt_client(crypt_client_fn))
+    pub fn new(path: &str) -> Result<filesystem::Filesystem<Self>, Error> {
+        filesystem::Filesystem::from_path(path, Self::default())
     }
 
     /// Manages a block device at a given channel using
     /// the default configuration.
-    pub fn from_channel(
-        channel: zx::Channel,
-        crypt_client_fn: CryptClientFn,
-    ) -> Result<filesystem::Filesystem<Self>, Error> {
-        filesystem::Filesystem::from_channel(channel, Self::with_crypt_client(crypt_client_fn))
+    pub fn from_channel(channel: zx::Channel) -> Result<filesystem::Filesystem<Self>, Error> {
+        filesystem::Filesystem::from_channel(channel, Self::default())
     }
 }
 
 impl FSConfig for Fxfs {
-    fn component_name(&self) -> Option<&str> {
-        Some("fxfs")
-    }
-    fn binary_path(&self) -> &CStr {
-        cstr!("")
+    fn mode(&self) -> Mode<'_> {
+        Mode::Component { name: "fxfs", reuse_component_after_serving: true }
     }
     fn crypt_client(&self) -> Option<zx::Channel> {
-        Some((self.crypt_client_fn)())
+        self.crypt_client_fn.as_ref().map(|f| f())
     }
     fn is_multi_volume(&self) -> bool {
         true
@@ -314,14 +306,17 @@ impl Factoryfs {
 }
 
 impl FSConfig for Factoryfs {
-    fn binary_path(&self) -> &CStr {
-        cstr!("/pkg/bin/factoryfs")
-    }
-    fn generic_args(&self) -> Vec<&CStr> {
-        let mut args = vec![];
-        if self.verbose {
-            args.push(cstr!("--verbose"));
-        }
-        args
+    fn mode(&self) -> Mode<'_> {
+        Mode::Legacy(LegacyConfig {
+            binary_path: cstr!("/pkg/bin/factoryfs"),
+            generic_args: {
+                let mut args = vec![];
+                if self.verbose {
+                    args.push(cstr!("--verbose"));
+                }
+                args
+            },
+            ..Default::default()
+        })
     }
 }

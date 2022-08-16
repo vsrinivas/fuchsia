@@ -72,7 +72,7 @@ impl BlobfsEnvironment {
         let volume_path = get_volume_path(&volume_guid).await;
 
         // Initialize blobfs on volume
-        let blobfs = Blobfs::new(volume_path.to_str().unwrap()).unwrap();
+        let mut blobfs = Blobfs::new(volume_path.to_str().unwrap()).unwrap();
         blobfs.format().await.unwrap();
 
         let seed = match args.seed {
@@ -210,7 +210,7 @@ impl Environment for BlobfsEnvironment {
             let volume_path = get_volume_path(&self.volume_guid).await;
 
             // Initialize blobfs on volume
-            let blobfs = Blobfs::new(volume_path.to_str().unwrap()).unwrap();
+            let mut blobfs = Blobfs::new(volume_path.to_str().unwrap()).unwrap();
 
             // Mount the blobfs volume
             blobfs.fsck().await.unwrap();
