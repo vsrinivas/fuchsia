@@ -56,12 +56,33 @@ impl<'a, Item> Unpin for TrySendFut<'a, Item> {}
 impl<'a, Item> Future for TrySendFut<'a, Item> {
     type Output = Result<(), Item>;
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        let recv_dropped = ready!(self.channel.poll_ready(cx)).is_err();
-        let item = self.item.take().expect("Cannot poll without Some item");
-        if recv_dropped {
-            Poll::Ready(Err(item))
-        } else {
-            Poll::Ready(self.channel.try_send(item).map_err(|e| e.into_inner()))
+        loop {
+            let ready = ready!(self.channel.poll_ready(cx));
+            // `self.item` cannot be `None` because it is initialized as `Some`,
+            // and the value is reinserted before continuing below.
+            let item = self.item.take().expect("Cannot poll without `Some` item");
+            match ready {
+                Err(e) => {
+                    // `mpsc::Sender::poll_ready` only errors on disconnection.
+                    assert!(e.is_disconnected(), "{}", e);
+                    return Poll::Ready(Err(item));
+                }
+                Ok(()) => {}
+            }
+            match self.channel.try_send(item) {
+                Ok(()) => return Poll::Ready(Ok(())),
+                Err(e) => {
+                    if e.is_disconnected() {
+                        return Poll::Ready(Err(e.into_inner()));
+                    } else {
+                        // We raced with a competing sender; reset `self.item`
+                        // and wait again.
+                        assert!(e.is_full(), "{}", e);
+                        self.item = Some(e.into_inner());
+                        continue;
+                    }
+                }
+            }
         }
     }
 }
