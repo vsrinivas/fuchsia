@@ -1,6 +1,19 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 {
-    include: [ "//src/connectivity/network/netstack/meta/netstack.shard.cmx" ],
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/netstack"
     },
+    "sandbox": {
+        "features": [
+            "isolated-cache-storage"
+        ],
+        "services": [
+            "fuchsia.stash.SecureStore"
+        ]
+    }
 }
