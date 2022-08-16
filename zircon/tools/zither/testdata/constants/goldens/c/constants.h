@@ -5,8 +5,8 @@
 // DO NOT EDIT.
 // Generated from FIDL library `zither.constants` by zither, a Fuchsia platform tool.
 
-// TODO(fxbug.dev/51002): Give a traditional header guard.
-#pragma once
+#ifndef ZITHER_CONSTANTS_CONSTANTS_H_
+#define ZITHER_CONSTANTS_CONSTANTS_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -121,3 +121,5 @@ extern "C" {
 #if defined(__cplusplus)
 }
 #endif
+
+#endif  // ZITHER_CONSTANTS_CONSTANTS_H_

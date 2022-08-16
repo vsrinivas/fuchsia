@@ -5,8 +5,8 @@
 // DO NOT EDIT.
 // Generated from FIDL library `zither.enums` by zither, a Fuchsia platform tool.
 
-// TODO(fxbug.dev/51002): Give a traditional header guard.
-#pragma once
+#ifndef ZITHER_ENUMS_ENUMS_H_
+#define ZITHER_ENUMS_ENUMS_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -125,3 +125,5 @@ typedef uint16_t zither_enums_enum_with_many_line_comment_t;
 #if defined(__cplusplus)
 }
 #endif
+
+#endif  // ZITHER_ENUMS_ENUMS_H_

@@ -28,6 +28,7 @@ func NewGenerator(formatter fidlgen.Formatter) *Generator {
 	gen := fidlgen.NewGenerator("CTemplates", templates, formatter, template.FuncMap{
 		"Append":               Append,
 		"PrimitiveTypeName":    PrimitiveTypeName,
+		"HeaderGuard":          HeaderGuard,
 		"ConstName":            ConstName,
 		"ConstValue":           ConstValue,
 		"EnumName":             EnumName,
@@ -82,6 +83,13 @@ func PrimitiveTypeName(typ fidlgen.PrimitiveSubtype) string {
 
 func nameParts(name fidlgen.Name) []string {
 	return append(name.LibraryName().Parts(), name.DeclarationName())
+}
+
+// HeaderGuard returns the header guard preprocessor variable for a given file.
+func HeaderGuard(summary zither.FileSummary) string {
+	nameParts := append(strings.Split(summary.Name, "."), "h")
+	parts := append(summary.Library.Parts(), nameParts...)
+	return fidlgen.ConstNameToAllCapsSnake(strings.Join(parts, "_")) + "_"
 }
 
 // ConstName returns the name of a generated C "constant".

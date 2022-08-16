@@ -5,8 +5,8 @@
 // DO NOT EDIT.
 // Generated from FIDL library `zither.multifile` by zither, a Fuchsia platform tool.
 
-// TODO(fxbug.dev/51002): Give a traditional header guard.
-#pragma once
+#ifndef ZITHER_MULTIFILE_B_H_
+#define ZITHER_MULTIFILE_B_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -26,3 +26,5 @@ typedef struct {
 #if defined(__cplusplus)
 }
 #endif
+
+#endif  // ZITHER_MULTIFILE_B_H_

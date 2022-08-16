@@ -7,8 +7,9 @@
 // DO NOT EDIT.
 // Generated from FIDL library `{{ .Library.String }}` by zither, a Fuchsia platform tool.
 
-// TODO(fxbug.dev/51002): Give a traditional header guard.
-#pragma once
+{{ $guard := HeaderGuard . }}
+#ifndef {{ $guard }}
+#define {{ $guard }}
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -47,5 +48,7 @@ extern "C" {
 #if defined(__cplusplus)
 }
 #endif
+
+#endif  // {{ $guard }}
 
 {{ end }}

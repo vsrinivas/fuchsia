@@ -5,8 +5,8 @@
 // DO NOT EDIT.
 // Generated from FIDL library `zither.structs` by zither, a Fuchsia platform tool.
 
-// TODO(fxbug.dev/51002): Give a traditional header guard.
-#pragma once
+#ifndef ZITHER_STRUCTS_STRUCTS_H_
+#define ZITHER_STRUCTS_STRUCTS_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -69,3 +69,5 @@ typedef struct {
 #if defined(__cplusplus)
 }
 #endif
+
+#endif  // ZITHER_STRUCTS_STRUCTS_H_

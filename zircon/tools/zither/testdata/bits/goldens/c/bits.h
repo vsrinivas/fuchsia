@@ -5,8 +5,8 @@
 // DO NOT EDIT.
 // Generated from FIDL library `zither.bits` by zither, a Fuchsia platform tool.
 
-// TODO(fxbug.dev/51002): Give a traditional header guard.
-#pragma once
+#ifndef ZITHER_BITS_BITS_H_
+#define ZITHER_BITS_BITS_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -92,3 +92,5 @@ typedef uint16_t zither_bits_bits_with_many_line_comment_t;
 #if defined(__cplusplus)
 }
 #endif
+
+#endif  // ZITHER_BITS_BITS_H_
