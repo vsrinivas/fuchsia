@@ -1810,13 +1810,15 @@ where
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::SetIpv6Only {
-                            value: _,
-                            responder,
+                            value, responder,
                         } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                            // TODO(https://fxbug.dev/21198): support dual-stack sockets.
+                            responder_send!(responder, &mut value.then_some(()).ok_or(fposix::Errno::Eopnotsupp));
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::GetIpv6Only { responder } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                            // TODO(https://fxbug.dev/21198): support dual-stack
+                            // sockets.
+                            responder_send!(responder, &mut Ok(true));
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::SetIpv6TrafficClass {
                             value: _,
@@ -1859,10 +1861,12 @@ where
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::SetIpv6MulticastLoopback {
-                            value: _,
-                            responder,
+                            value, responder,
                         } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                            // TODO(https://fxbug.dev/106865): add support for
+                            // looping back sent packets.
+                            responder_send!(responder, &mut (!value)
+                                .then_some(()).ok_or(fposix::Errno::Enoprotoopt));
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::GetIpv6MulticastLoopback {
                             responder,
