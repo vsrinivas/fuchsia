@@ -88,11 +88,12 @@ void ServiceInstanceResolver::ReceiveResource(const DnsResource& resource,
         instance_.set_srv_priority(resource.srv_.priority_);
         instance_.set_srv_weight(resource.srv_.weight_);
         port_ = resource.srv_.port_;
-        instance_.set_target(resource.srv_.target_.dotted_string_);
+        target_full_name_ = resource.srv_.target_.dotted_string_;
+        instance_.set_target(MdnsNames::HostNameFromFullName(target_full_name_));
       }
       break;
     case DnsType::kA:
-      if (instance_.has_target() && (resource.name_.dotted_string_ == instance_.target())) {
+      if (resource.name_.dotted_string_ == target_full_name_) {
         auto address = MdnsFidlUtil::CreateSocketAddressV4(
             inet::SocketAddress(resource.a_.address_.address_, port_));
         instance_.set_ipv4_endpoint(address);
@@ -105,7 +106,7 @@ void ServiceInstanceResolver::ReceiveResource(const DnsResource& resource,
       }
       break;
     case DnsType::kAaaa:
-      if (instance_.has_target() && (resource.name_.dotted_string_ == instance_.target())) {
+      if (resource.name_.dotted_string_ == target_full_name_) {
         auto address = MdnsFidlUtil::CreateSocketAddressV6(
             inet::SocketAddress(resource.aaaa_.address_.address_, port_));
         instance_.set_ipv6_endpoint(address);
@@ -118,7 +119,7 @@ void ServiceInstanceResolver::ReceiveResource(const DnsResource& resource,
       }
       break;
     case DnsType::kTxt:
-      if (instance_.has_target() && (resource.name_.dotted_string_ == instance_.target())) {
+      if (resource.name_.dotted_string_ == target_full_name_) {
         instance_.set_text(fidl::To<std::vector<std::string>>(resource.txt_.strings_));
         instance_.set_text_strings(fidl::Clone(resource.txt_.strings_));
       }

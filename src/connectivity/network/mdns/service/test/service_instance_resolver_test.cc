@@ -65,7 +65,6 @@ class InstanceResolverTest : public AgentTest {
   }
 };
 
-constexpr char kHostFullName[] = "test2host.local.";
 constexpr char kHostName[] = "test2host";
 constexpr char kServiceName[] = "_testservice._tcp.";
 constexpr char kInstanceName[] = "testinstance";
@@ -118,7 +117,7 @@ TEST_F(InstanceResolverTest, LocalInstance) {
   EXPECT_TRUE(callback_called);
   EXPECT_EQ(kServiceName, instance_from_callback.service());
   EXPECT_EQ(kInstanceName, instance_from_callback.instance());
-  EXPECT_EQ(kLocalHostFullName, instance_from_callback.target());
+  EXPECT_EQ(kLocalHostName, instance_from_callback.target());
   EXPECT_EQ(0, instance_from_callback.srv_priority());
   EXPECT_EQ(0, instance_from_callback.srv_weight());
   EXPECT_EQ(fidl::To<std::vector<fuchsia::net::SocketAddress>>(kSocketAddresses),
@@ -157,7 +156,7 @@ TEST_F(InstanceResolverTest, LocalProxyInstance) {
   EXPECT_TRUE(callback_called);
   EXPECT_EQ(kServiceName, instance_from_callback.service());
   EXPECT_EQ(kInstanceName, instance_from_callback.instance());
-  EXPECT_EQ(kHostFullName, instance_from_callback.target());
+  EXPECT_EQ(kHostName, instance_from_callback.target());
   EXPECT_EQ(0, instance_from_callback.srv_priority());
   EXPECT_EQ(0, instance_from_callback.srv_weight());
   EXPECT_EQ(fidl::To<std::vector<fuchsia::net::SocketAddress>>(kSocketAddresses),

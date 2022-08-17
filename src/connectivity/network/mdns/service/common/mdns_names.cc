@@ -115,6 +115,13 @@ std::string MdnsNames::HostFullName(const std::string& host_name) {
 }
 
 // static
+std::string MdnsNames::HostNameFromFullName(const std::string& host_full_name) {
+  FX_DCHECK(host_full_name.size() > kLocalDomainName.size());
+
+  return host_full_name.substr(0, host_full_name.size() - kLocalDomainName.size() - 1);
+}
+
+// static
 std::string MdnsNames::ServiceFullName(const std::string& service_name) {
   FX_DCHECK(IsValidServiceName(service_name));
 

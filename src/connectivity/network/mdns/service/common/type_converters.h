@@ -247,7 +247,7 @@ struct TypeConverter<fuchsia::net::mdns::ServiceInstance, mdns::ServiceInstance>
     result.set_instance(value.instance_name_);
     result.set_srv_priority(value.srv_priority_);
     result.set_srv_weight(value.srv_weight_);
-    result.set_target(mdns::MdnsNames::HostFullName(value.target_name_));
+    result.set_target(value.target_name_);
     result.set_addresses(fidl::To<std::vector<fuchsia::net::SocketAddress>>(value.addresses_));
     result.set_text_strings(value.text_);
 

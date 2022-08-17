@@ -201,7 +201,7 @@ TEST_F(InstanceRequestorTest, Response) {
                      sender_address);
 
   auto params = subscriber.ExpectInstanceDiscoveredCalled();
-  EXPECT_EQ(ServiceInstance(kServiceName, kInstanceName, kHostFullName,
+  EXPECT_EQ(ServiceInstance(kServiceName, kInstanceName, kHostName,
                             {inet::SocketAddress(sender_address.socket_address().address(), kPort)},
                             kText, 0, 0),
             *params);
@@ -238,7 +238,7 @@ TEST_F(InstanceRequestorTest, Change) {
                      sender_address);
 
   auto params = subscriber.ExpectInstanceDiscoveredCalled();
-  EXPECT_EQ(ServiceInstance(kServiceName, kInstanceName, kHostFullName,
+  EXPECT_EQ(ServiceInstance(kServiceName, kInstanceName, kHostName,
                             {inet::SocketAddress(sender_address.socket_address().address(), kPort)},
                             kText, 0, 0),
             *params);
@@ -250,7 +250,7 @@ TEST_F(InstanceRequestorTest, Change) {
                      sender_address);
 
   params = subscriber.ExpectInstanceChangedCalled();
-  EXPECT_EQ(ServiceInstance(kServiceName, kInstanceName, kHostFullName,
+  EXPECT_EQ(ServiceInstance(kServiceName, kInstanceName, kHostName,
                             {inet::SocketAddress(sender_address.socket_address().address(), kPort)},
                             kAltText, 0, 0),
             *params);
@@ -287,7 +287,7 @@ TEST_F(InstanceRequestorTest, Removal) {
                      sender_address);
 
   auto params = subscriber.ExpectInstanceDiscoveredCalled();
-  EXPECT_EQ(ServiceInstance(kServiceName, kInstanceName, kHostFullName,
+  EXPECT_EQ(ServiceInstance(kServiceName, kInstanceName, kHostName,
                             {inet::SocketAddress(sender_address.socket_address().address(), kPort)},
                             kText, 0, 0),
             *params);
@@ -358,7 +358,7 @@ TEST_F(InstanceRequestorTest, WirelessOnly) {
 
   auto params = subscriber.ExpectInstanceDiscoveredCalled();
   EXPECT_EQ(
-      ServiceInstance(kServiceName, kInstanceName, kHostFullName,
+      ServiceInstance(kServiceName, kInstanceName, kHostName,
                       {inet::SocketAddress(sender_address1.socket_address().address(), kPort)},
                       kText, 0, 0),
       *params);
@@ -402,7 +402,7 @@ TEST_F(InstanceRequestorTest, WiredOnly) {
 
   auto params = subscriber.ExpectInstanceDiscoveredCalled();
   EXPECT_EQ(
-      ServiceInstance(kServiceName, kInstanceName, kHostFullName,
+      ServiceInstance(kServiceName, kInstanceName, kHostName,
                       {inet::SocketAddress(sender_address1.socket_address().address(), kPort)},
                       kText, 0, 0),
       *params);
@@ -445,7 +445,7 @@ TEST_F(InstanceRequestorTest, V4Only) {
 
   auto params = subscriber.ExpectInstanceDiscoveredCalled();
   EXPECT_EQ(
-      ServiceInstance(kServiceName, kInstanceName, kHostFullName,
+      ServiceInstance(kServiceName, kInstanceName, kHostName,
                       {inet::SocketAddress(sender_address1.socket_address().address(), kPort)},
                       kText, 0, 0),
       *params);
@@ -488,7 +488,7 @@ TEST_F(InstanceRequestorTest, V6Only) {
 
   auto params = subscriber.ExpectInstanceDiscoveredCalled();
   EXPECT_EQ(
-      ServiceInstance(kServiceName, kInstanceName, kHostFullName,
+      ServiceInstance(kServiceName, kInstanceName, kHostName,
                       {inet::SocketAddress(sender_address1.socket_address().address(), kPort, 1)},
                       kText, 0, 0),
       *params);
@@ -524,9 +524,9 @@ TEST_F(InstanceRequestorTest, LocalInstance) {
       kFromLocalHost);
 
   auto params = subscriber.ExpectInstanceDiscoveredCalled();
-  EXPECT_EQ(ServiceInstance(kServiceName, kInstanceName, kLocalHostFullName,
-                            kSocketAddressesReversed, kText),
-            *params);
+  EXPECT_EQ(
+      ServiceInstance(kServiceName, kInstanceName, kLocalHostName, kSocketAddressesReversed, kText),
+      *params);
 
   // |OnChangeLocalServiceInstance| should do nothing if the instance doesn't change.
   under_test.OnChangeLocalServiceInstance(
@@ -539,8 +539,8 @@ TEST_F(InstanceRequestorTest, LocalInstance) {
       ServiceInstance(kServiceName, kInstanceName, kLocalHostName, kSocketAddresses, kAltText),
       false);
   params = subscriber.ExpectInstanceChangedCalled();
-  EXPECT_EQ(ServiceInstance(kServiceName, kInstanceName, kLocalHostFullName,
-                            kSocketAddressesReversed, kAltText),
+  EXPECT_EQ(ServiceInstance(kServiceName, kInstanceName, kLocalHostName, kSocketAddressesReversed,
+                            kAltText),
             *params);
   subscriber.ExpectNoOther();
 
@@ -586,7 +586,7 @@ TEST_F(InstanceRequestorTest, LocalProxyInstance) {
 
   auto params = subscriber.ExpectInstanceDiscoveredCalled();
   EXPECT_EQ(
-      ServiceInstance(kServiceName, kInstanceName, kHostFullName, kSocketAddressesReversed, kText),
+      ServiceInstance(kServiceName, kInstanceName, kHostName, kSocketAddressesReversed, kText),
       *params);
 
   // |OnChangeLocalServiceInstance| should do nothing if the instance doesn't change.
@@ -600,9 +600,9 @@ TEST_F(InstanceRequestorTest, LocalProxyInstance) {
       ServiceInstance(kServiceName, kInstanceName, kHostName, kSocketAddresses, kAltText),
       kFromLocalProxyHost);
   params = subscriber.ExpectInstanceChangedCalled();
-  EXPECT_EQ(ServiceInstance(kServiceName, kInstanceName, kHostFullName, kSocketAddressesReversed,
-                            kAltText),
-            *params);
+  EXPECT_EQ(
+      ServiceInstance(kServiceName, kInstanceName, kHostName, kSocketAddressesReversed, kAltText),
+      *params);
   subscriber.ExpectNoOther();
 
   // |OnRemoveLocalServiceInstance| should notify of a removal.

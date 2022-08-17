@@ -11,11 +11,6 @@
 #include "src/connectivity/network/mdns/service/common/mdns_names.h"
 
 namespace mdns {
-namespace {
-
-constexpr size_t kHostNameSuffixLength = 7;  // ".local."
-
-}  // namespace
 
 InstanceResponder::InstanceResponder(MdnsAgent::Owner* owner, std::string host_name,
                                      std::vector<inet::IpAddress> addresses,
@@ -32,7 +27,6 @@ InstanceResponder::InstanceResponder(MdnsAgent::Owner* owner, std::string host_n
   FX_DCHECK(host_name.empty() == addresses_.empty());
   instance_.service_name_ = service_name;
   instance_.instance_name_ = instance_name;
-  instance_.target_name_ = host_name;
 }
 
 InstanceResponder::~InstanceResponder() {}
@@ -49,10 +43,7 @@ void InstanceResponder::Start(const std::string& local_host_full_name) {
     is_from_proxy_ = true;
   }
 
-  if (!is_from_proxy_) {
-    instance_.target_name_ =
-        local_host_full_name.substr(0, sizeof(local_host_full_name) - kHostNameSuffixLength);
-  }
+  instance_.target_name_ = MdnsNames::HostNameFromFullName(host_full_name_);
 
   Reannounce();
 }
@@ -118,7 +109,7 @@ void InstanceResponder::OnLocalHostAddressesChanged() {
     return;
   }
 
-  UpdateInstanceAddresses(false);
+  UpdateInstanceAddresses();
   ChangeLocalServiceInstance(instance_, false);
 }
 
@@ -310,6 +301,7 @@ void InstanceResponder::SendPublication(const Mdns::Publication& publication,
   if (port_ != publication.port_) {
     changed = true;
     port_ = publication.port_;
+    UpdateInstanceAddresses();
   }
 
   if (instance_.text_ != publication.text_) {
@@ -330,8 +322,6 @@ void InstanceResponder::SendPublication(const Mdns::Publication& publication,
   if (!changed) {
     return;
   }
-
-  UpdateInstanceAddresses(from_proxy());
 
   if (instance_ready_) {
     ChangeLocalServiceInstance(instance_, from_proxy());
@@ -368,18 +358,23 @@ void InstanceResponder::IdleCheck(const std::string& subtype) {
   }
 }
 
-void InstanceResponder::UpdateInstanceAddresses(bool from_proxy) {
-  auto host_addresses = local_host_addresses();
+void InstanceResponder::UpdateInstanceAddresses() {
+  if (!port_.is_valid()) {
+    return;
+  }
+
   instance_.addresses_.clear();
-  if (!from_proxy) {
+
+  if (is_from_proxy_) {
+    for (auto addr : addresses_) {
+      instance_.addresses_.emplace_back(inet::SocketAddress(addr, port_, 0));
+    }
+  } else {
+    auto host_addresses = local_host_addresses();
     std::transform(host_addresses.begin(), host_addresses.end(),
                    std::back_inserter(instance_.addresses_), [this](const HostAddress& address) {
                      return inet::SocketAddress(address.address(), port_, address.interface_id());
                    });
-  } else {
-    for (auto addr : addresses_) {
-      instance_.addresses_.emplace_back(inet::SocketAddress(addr, port_, 0));
-    }
   }
 }
 

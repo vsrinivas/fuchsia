@@ -45,6 +45,7 @@ class ServiceInstanceResolver : public MdnsAgent {
   std::string instance_name_;
   std::string service_instance_;
   fuchsia::net::mdns::ServiceInstance instance_;
+  std::string target_full_name_;
   zx::time timeout_;
   Media media_;
   IpVersions ip_versions_;

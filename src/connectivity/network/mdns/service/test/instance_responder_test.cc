@@ -21,6 +21,8 @@ constexpr char kOtherServiceName[] = "_other._tcp.";
 constexpr char kInstanceName[] = "testinstance";
 constexpr char kHostName[] = "test2host";
 constexpr char kHostFullName[] = "test2host.local.";
+constexpr char kLocalHostNameLong[] = "testhostnamethatislong";
+constexpr char kLocalHostFullNameLong[] = "testhostnamethatislong.local.";
 const std::vector<inet::IpAddress> kAddresses{inet::IpAddress(192, 168, 1, 200),
                                               inet::IpAddress(192, 168, 1, 201)};
 const std::vector<inet::SocketAddress> kSocketAddresses{
@@ -28,6 +30,9 @@ const std::vector<inet::SocketAddress> kSocketAddresses{
 const std::vector<HostAddress> kHostAddresses{
     HostAddress(inet::IpAddress(192, 168, 1, 200), 1, zx::sec(450)),
     HostAddress(inet::IpAddress(192, 168, 1, 201), 1, zx::sec(450))};
+const std::vector<HostAddress> kAlternateHostAddresses{
+    HostAddress(inet::IpAddress(192, 168, 1, 202), 1, zx::sec(450)),
+    HostAddress(inet::IpAddress(192, 168, 1, 203), 1, zx::sec(450))};
 static constexpr size_t kMaxSenderAddresses = 64;
 constexpr uint32_t kInterfaceId = 1;
 
@@ -602,9 +607,10 @@ TEST_F(InstanceResponderTest, LocalServiceInstanceNotifications) {
   SetAgent(under_test);
   SetLocalHostAddresses(kHostAddresses);
 
-  // Normal startup.
-  under_test.Start(kLocalHostFullName);
-  ExpectAnnouncements();
+  // Normal startup. We use a long host name, because there was a bug that only happened when the
+  // host full name was greater than sizeof(std::string), which is 24 bytes.
+  under_test.Start(kLocalHostFullNameLong);
+  ExpectAnnouncements(Media::kBoth, IpVersions::kBoth, kLocalHostFullNameLong);
 
   ReplyAddress sender_address(
       inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
@@ -615,12 +621,41 @@ TEST_F(InstanceResponderTest, LocalServiceInstanceNotifications) {
                              sender_address);
   ExpectGetPublicationCall(PublicationCause::kQueryMulticastResponse, "",
                            {sender_address.socket_address()})(Mdns::Publication::Create(kPort));
-  ExpectPublication();
+  ExpectPublication(Media::kBoth, IpVersions::kBoth, kLocalHostFullNameLong);
   ExpectPostTaskForTime(zx::sec(60), zx::sec(60));  // idle cleanup
   ExpectNoOther();
 
   ExpectAddLocalServiceInstanceCall(
-      ServiceInstance(kServiceName, kInstanceName, kLocalHostFullName, kSocketAddresses), false);
+      ServiceInstance(kServiceName, kInstanceName, kLocalHostNameLong, kSocketAddresses), false);
+}
+
+// Tests that local service instance notifications are properly generated for proxy instances.
+TEST_F(InstanceResponderTest, LocalServiceInstanceNotificationsProxy) {
+  InstanceResponder under_test(this, kHostName, kAddresses, kServiceName, kInstanceName,
+                               Media::kBoth, IpVersions::kBoth, this);
+  SetAgent(under_test);
+  // Use alternate host addresses to test for regression of fxb/105871 fix.
+  SetLocalHostAddresses(kAlternateHostAddresses);
+
+  // Normal startup.
+  under_test.Start(kLocalHostFullName);
+  ExpectAnnouncements(Media::kBoth, IpVersions::kBoth, kHostFullName, kAddresses);
+
+  ReplyAddress sender_address(
+      inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
+      inet::IpAddress(192, 168, 1, 100), kInterfaceId, Media::kWired, IpVersions::kBoth);
+
+  under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
+                             ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth),
+                             sender_address);
+  ExpectGetPublicationCall(PublicationCause::kQueryMulticastResponse, "",
+                           {sender_address.socket_address()})(Mdns::Publication::Create(kPort));
+  ExpectPublication(Media::kBoth, IpVersions::kBoth, kHostFullName, kAddresses);
+  ExpectPostTaskForTime(zx::sec(60), zx::sec(60));  // idle cleanup
+  ExpectNoOther();
+
+  ExpectAddLocalServiceInstanceCall(
+      ServiceInstance(kServiceName, kInstanceName, kHostName, kSocketAddresses), true);
 }
 
 }  // namespace test

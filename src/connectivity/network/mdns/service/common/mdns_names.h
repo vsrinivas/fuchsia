@@ -19,6 +19,10 @@ struct MdnsNames {
   // "host.local." from "host".
   static std::string HostFullName(const std::string& host_name);
 
+  // Constructs a simple host name from a local host name. For example, produces
+  // "host" from "host.local.".
+  static std::string HostNameFromFullName(const std::string& host_full_name);
+
   // Constructs a local service name from a simple service name. For example,
   // produces "_foo._tcp.local." from "_foo._tcp.".
   static std::string ServiceFullName(const std::string& service_name);

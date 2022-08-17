@@ -32,8 +32,6 @@ InstanceRequestor::InstanceRequestor(MdnsAgent::Owner* owner, const std::string&
       include_local_proxies_(include_local_proxies),
       question_(std::make_shared<DnsQuestion>(service_full_name_, DnsType::kPtr)) {}
 
-InstanceRequestor::~InstanceRequestor() {}
-
 void InstanceRequestor::AddSubscriber(Mdns::Subscriber* subscriber) {
   subscribers_.insert(subscriber);
   if (started()) {
@@ -102,7 +100,7 @@ void InstanceRequestor::EndOfMessage() {
       continue;
     }
 
-    auto iter = target_infos_by_full_name_.find(instance_info.target_);
+    auto iter = target_infos_by_full_name_.find(instance_info.target_full_name_);
     FX_DCHECK(iter != target_infos_by_full_name_.end());
     TargetInfo& target_info = iter->second;
 
@@ -161,7 +159,7 @@ void InstanceRequestor::ReportAllDiscoveries(Mdns::Subscriber* subscriber) {
       continue;
     }
 
-    auto iter = target_infos_by_full_name_.find(instance_info.target_);
+    auto iter = target_infos_by_full_name_.find(instance_info.target_full_name_);
     FX_DCHECK(iter != target_infos_by_full_name_.end());
     TargetInfo& target_info = iter->second;
 
@@ -226,13 +224,15 @@ void InstanceRequestor::ReceiveSrvResource(const DnsResource& resource, MdnsReso
     return;
   }
 
-  if (instance_info->target_ != resource.srv_.target_.dotted_string_) {
-    instance_info->target_ = resource.srv_.target_.dotted_string_;
+  if (instance_info->target_.empty() ||
+      MdnsNames::HostFullName(instance_info->target_) != resource.srv_.target_.dotted_string_) {
+    instance_info->target_ = MdnsNames::HostNameFromFullName(resource.srv_.target_.dotted_string_);
+    instance_info->target_full_name_ = resource.srv_.target_.dotted_string_;
     instance_info->dirty_ = true;
 
-    if (target_infos_by_full_name_.find(instance_info->target_) ==
+    if (target_infos_by_full_name_.find(instance_info->target_full_name_) ==
         target_infos_by_full_name_.end()) {
-      target_infos_by_full_name_.emplace(instance_info->target_, TargetInfo{});
+      target_infos_by_full_name_.emplace(instance_info->target_full_name_, TargetInfo{});
     }
   }
 
@@ -357,15 +357,16 @@ void InstanceRequestor::OnAddLocalServiceInstance(const Mdns::ServiceInstance& i
       instance_infos_by_full_name_.insert(std::make_pair(instance_full_name, InstanceInfo()));
   auto& instance_info = instance_iter->second;
   instance_info.instance_name_ = instance.instance_name_;
-  instance_info.target_ = MdnsNames::HostFullName(instance.target_name_);
+  instance_info.target_ = instance.target_name_;
+  instance_info.target_full_name_ = MdnsNames::HostFullName(instance.target_name_);
   instance_info.port_ = instance.addresses_[0].port();
   instance_info.text_ = instance.text_;
   instance_info.srv_priority_ = instance.srv_priority_;
   instance_info.srv_weight_ = instance.srv_weight_;
   instance_info.new_ = inserted;
 
-  auto [target_iter, _] =
-      target_infos_by_full_name_.insert(std::make_pair(instance_info.target_, TargetInfo()));
+  auto [target_iter, _] = target_infos_by_full_name_.insert(
+      std::make_pair(instance_info.target_full_name_, TargetInfo()));
   auto& target_info = target_iter->second;
 
   std::copy(instance.addresses_.begin(), instance.addresses_.end(),
@@ -387,7 +388,8 @@ void InstanceRequestor::OnChangeLocalServiceInstance(const Mdns::ServiceInstance
 
   FX_DCHECK(!instance.addresses_.empty());
 
-  auto instance_full_name = MdnsNames::InstanceFullName(instance.instance_name_, service_name_);
+  auto instance_full_name =
+      MdnsNames::InstanceFullName(instance.instance_name_, instance.service_name_);
   auto iter = instance_infos_by_full_name_.find(instance_full_name);
   if (iter == instance_infos_by_full_name_.end()) {
     return;
@@ -395,8 +397,9 @@ void InstanceRequestor::OnChangeLocalServiceInstance(const Mdns::ServiceInstance
 
   auto& instance_info = iter->second;
   FX_DCHECK(instance_info.instance_name_ == instance.instance_name_);
-  if (instance_info.target_ != MdnsNames::HostFullName(instance.target_name_)) {
-    instance_info.target_ = MdnsNames::HostFullName(instance.target_name_);
+  if (instance_info.target_ != instance.target_name_) {
+    instance_info.target_ = instance.target_name_;
+    instance_info.target_full_name_ = MdnsNames::HostFullName(instance.target_name_);
     instance_info.dirty_ = true;
   }
 

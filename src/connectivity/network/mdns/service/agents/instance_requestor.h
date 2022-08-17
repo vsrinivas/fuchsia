@@ -25,7 +25,7 @@ class InstanceRequestor : public MdnsAgent {
   InstanceRequestor(MdnsAgent::Owner* owner, const std::string& service_name, Media media,
                     IpVersions ip_versions, bool include_local, bool include_local_proxies);
 
-  ~InstanceRequestor() override;
+  ~InstanceRequestor() override = default;
 
   // Adds the subscriber.
   void AddSubscriber(Mdns::Subscriber* subscriber);
@@ -55,6 +55,7 @@ class InstanceRequestor : public MdnsAgent {
   struct InstanceInfo {
     std::string instance_name_;
     std::string target_;
+    std::string target_full_name_;
     inet::IpPort port_;
     std::vector<std::vector<uint8_t>> text_;
     uint16_t srv_priority_ = 0;
