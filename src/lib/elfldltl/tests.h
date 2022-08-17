@@ -9,6 +9,7 @@
 #include <lib/elfldltl/layout.h>
 
 #include <functional>
+#include <sstream>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -93,5 +94,20 @@ class ExpectedSingleError {
 template <typename... Args>
 ExpectedSingleError(Args...)
     -> ExpectedSingleError<ExpectedSingleError<>::expected_t<std::decay_t<Args>>...>;
+
+constexpr auto ExpectOkDiagnostics() {
+  auto fail = [](std::string_view error, auto&&... args) {
+    std::stringstream os;
+    elfldltl::OstreamDiagnostics(os).FormatError(error, args...);
+    std::string message = os.str();
+    if (message.back() == '\n')
+      message.pop_back();
+    ADD_FAILURE("Expected no diagnostics, got \"%.*s\"", static_cast<int>(message.size()),
+                message.data());
+    return false;
+    ;
+  };
+  return elfldltl::Diagnostics(fail, elfldltl::DiagnosticsFlags{.extra_checking = true});
+}
 
 #endif  // SRC_LIB_ELFLDLTL_TESTS_H_

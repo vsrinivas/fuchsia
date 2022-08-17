@@ -38,6 +38,7 @@ zx_library("elfldltl") {
     "lib/elfldltl/self.h",
     "lib/elfldltl/static-pie-with-vdso.h",
     "lib/elfldltl/static-pie.h",
+    "lib/elfldltl/static-vector.h",
     "lib/elfldltl/symbol.h",
   ]
 
