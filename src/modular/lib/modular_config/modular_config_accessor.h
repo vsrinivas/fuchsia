@@ -9,6 +9,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <memory>
+#include <optional>
 
 #include <fbl/macros.h>
 
@@ -42,7 +43,7 @@ class ModularConfigAccessor {
     return sessionmgr_config().has_enable_cobalt() && sessionmgr_config().enable_cobalt();
   }
 
-  const fuchsia::modular::session::AppConfig& session_shell_app_config() const;
+  std::optional<fuchsia::modular::session::AppConfig> session_shell_app_config() const;
 
   // Returns the ModularConfig serialized as a JSON string.
   std::string GetConfigAsJsonString() const;

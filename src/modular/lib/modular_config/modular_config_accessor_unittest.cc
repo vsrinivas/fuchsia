@@ -36,7 +36,20 @@ TEST(ModularConfigAccessor, SessionShellAppConfigUsesFirstShell) {
   ASSERT_EQ(2u, accessor.config().basemgr_config().session_shell_map().size());
 
   // |session_shell_app_config| should return the first one.
-  EXPECT_EQ(kFirstSessionShellUrl, accessor.session_shell_app_config().url());
+  ASSERT_TRUE(accessor.session_shell_app_config().has_value());
+  EXPECT_EQ(kFirstSessionShellUrl, accessor.session_shell_app_config().value().url());
+}
+
+// Tests that |session_shell_app_config| returns no value when there is no shell configured.
+TEST(ModularConfigAccessor, SessionShellAppConfigEmptyShell) {
+  // Create a default config.
+  auto accessor = ModularConfigAccessor(modular::DefaultConfig());
+
+  // The config object should have no shells.
+  EXPECT_TRUE(accessor.config().basemgr_config().session_shell_map().empty());
+
+  // |session_shell_app_config| should not have a value.
+  EXPECT_FALSE(accessor.session_shell_app_config().has_value());
 }
 
 }  // namespace modular

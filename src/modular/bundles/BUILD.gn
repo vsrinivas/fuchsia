@@ -37,7 +37,6 @@ group("integration_testing") {
   public_deps = [
     ":framework",
     ":testing",
-    "//src/modular/bin/sessionmgr:dev_session_shell",
     "//src/modular/bin/sessionmgr/story_runner:dev_story_shell",
   ]
 }

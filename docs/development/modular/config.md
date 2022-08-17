@@ -46,7 +46,7 @@ ffx inspect show sessionmgr.cmx:root:config
     "use_session_shell_for_story_shell_factory": true,
     "session_shells": [
       {
-        "url": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
+        "url": "fuchsia-pkg://fuchsia.com/session_shell#meta/session_shell.cmx",
       }
     ]
   },
@@ -87,12 +87,11 @@ ffx inspect show sessionmgr.cmx:root:config
 ## Basemgr fields
 
 - `session_shells` **array** _(optional)_
-  - List of exactly one session shell containing the following
+  - List of zero or one session shell containing the following
     fields (is an Array type for backwards compatibility):
     - `url`: **string** _(required)_
       - The fuchsia component url for which session shell to use.
-  - **default**: A single session shell with the following properties:
-    - `url`: `fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_session_shell.cmx`
+  - **default**: An empty array. sessionmgr will not launch a session shell.
 - `story_shell_url`: **string** _(optional)_
   - The fuchsia component url for which story shell to use.
   - **default**: `fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx`

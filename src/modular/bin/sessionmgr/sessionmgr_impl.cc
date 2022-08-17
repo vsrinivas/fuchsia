@@ -155,6 +155,11 @@ void SessionmgrImpl::InitializeInternal(
   session_storage_ = std::make_unique<SessionStorage>();
   OnTerminate(Reset(&session_storage_));
 
+  auto session_shell_app_config = config_accessor_.session_shell_app_config();
+  session_shell_url_ = session_shell_app_config.has_value()
+                           ? std::make_optional(session_shell_app_config->url())
+                           : std::nullopt;
+
   InitializeSessionEnvironment(std::move(session_id), std::move(v2_services_for_sessionmgr));
 
   // Create |puppet_master_| before |agent_runner_| to ensure agents can use it when terminating.
@@ -162,13 +167,12 @@ void SessionmgrImpl::InitializeInternal(
   InitializeElementManager();
 
   InitializeStartupAgentLauncher();
-  InitializeAgentRunner(config_accessor_.session_shell_app_config().url());
+  InitializeAgentRunner();
   InitializeV2ModularAgents();
   InitializeStartupAgents();
 
-  InitializeSessionShell(CloneStruct(config_accessor_.session_shell_app_config()),
-                         std::move(view_token), std::move(view_creation_token),
-                         std::move(view_ref_pair));
+  InitializeSessionShell(std::move(session_shell_app_config), std::move(view_token),
+                         std::move(view_creation_token), std::move(view_ref_pair));
 
   executor_.schedule_task(
       GetPresentationProtocol()
@@ -347,7 +351,7 @@ void SessionmgrImpl::InitializeStartupAgentLauncher() {
   OnTerminate(Reset(&startup_agent_launcher_));
 }
 
-void SessionmgrImpl::InitializeAgentRunner(const std::string& session_shell_url) {
+void SessionmgrImpl::InitializeAgentRunner() {
   FX_DCHECK(startup_agent_launcher_);
 
   // Initialize the AgentRunner.
@@ -380,7 +384,9 @@ void SessionmgrImpl::InitializeAgentRunner(const std::string& session_shell_url)
 
   auto restart_session_on_agent_crash =
       config_accessor_.sessionmgr_config().restart_session_on_agent_crash();
-  restart_session_on_agent_crash.push_back(session_shell_url);
+  if (session_shell_url_.has_value()) {
+    restart_session_on_agent_crash.push_back(*session_shell_url_);
+  }
 
   agent_runner_.reset(new AgentRunner(
       &config_accessor_, agent_runner_launcher_.get(), startup_agent_launcher_.get(),
@@ -489,32 +495,59 @@ void SessionmgrImpl::ServeSvcFromV1SessionmgrDir(
 }
 
 void SessionmgrImpl::InitializeSessionShell(
-    fuchsia::modular::session::AppConfig session_shell_config,
+    std::optional<fuchsia::modular::session::AppConfig> session_shell_config,
     std::optional<fuchsia::ui::views::ViewToken> view_token,
     std::optional<fuchsia::ui::views::ViewCreationToken> view_creation_token,
     scenic::ViewRefPair view_ref_pair) {
-  FX_DCHECK(session_environment_);
-  FX_DCHECK(agent_runner_.get());
-  FX_DCHECK(puppet_master_impl_);
-
-  session_shell_url_ = session_shell_config.url();
-
-  ComponentContextInfo component_context_info{
-      agent_runner_.get(), config_accessor_.sessionmgr_config().session_agents()};
-  session_shell_component_context_impl_ = std::make_unique<ComponentContextImpl>(
-      component_context_info, session_shell_url_, session_shell_url_);
-  OnTerminate(Reset(&session_shell_component_context_impl_));
-
   // |service_list| enumerates which services are made available to the session
-  // shell.
-  auto service_list = std::make_unique<fuchsia::sys::ServiceList>();
-  for (const auto& service_name : agent_runner_->GetAgentServices()) {
-    service_list->names.push_back(service_name);
+  // and v2 components through /svc_from_v1_sessionmgr.
+  auto service_list = CreateSessionShellServiceList();
+
+  // Add all services provided to the session shell to svc_from_v1_sessionmgr.
+  for (const auto& service_name : service_list.names) {
+    fuchsia::sys::ServiceProviderPtr service_provider;
+    session_shell_services_.AddBinding(service_provider.NewRequest());
+    zx_status_t const status = svc_from_v1_sessionmgr_dir_.AddEntry(
+        service_name, std::make_unique<vfs::Service>(
+                          [service_provider = std::move(service_provider), service_name](
+                              zx::channel request, async_dispatcher_t* dispatcher) {
+                            service_provider->ConnectToService(service_name, std::move(request));
+                          }));
+    if (status != ZX_OK) {
+      FX_PLOGS(WARNING, status)
+          << "Could not add service_list handler to svc_from_v1_sessionmgr, for service name: "
+          << service_name;
+    }
   }
 
-  agent_runner_->PublishAgentServices(session_shell_url_, &session_shell_services_);
+  // The session shell URL is used as the client identity if there is a session shell configured,
+  // or sessionmgr's URL if not. If effect, when there is no session shell and a v2 component
+  // connects to a service exposed through fuchsia.modular.Agent, the server will see that
+  // the connection is coming from sessionmgr.
+  auto shell_services_requestor_url = session_shell_config.has_value()
+                                          ? session_shell_config->url()
+                                          : modular_config::kSessionmgrUrl;
+  agent_runner_->PublishAgentServices(shell_services_requestor_url, &session_shell_services_);
 
-  service_list->names.push_back(fuchsia::modular::SessionShellContext::Name_);
+  if (session_shell_config.has_value()) {
+    LaunchSessionShell(std::move(*session_shell_config), std::move(service_list),
+                       std::move(view_token), std::move(view_creation_token),
+                       std::move(view_ref_pair));
+  } else {
+    FX_LOGS(INFO) << "Session shell not configured, not launching.";
+  }
+}
+
+fuchsia::sys::ServiceList SessionmgrImpl::CreateSessionShellServiceList() {
+  FX_DCHECK(agent_runner_.get());
+
+  fuchsia::sys::ServiceList service_list;
+
+  for (const auto& service_name : agent_runner_->GetAgentServices()) {
+    service_list.names.push_back(service_name);
+  }
+
+  service_list.names.push_back(fuchsia::modular::SessionShellContext::Name_);
   session_shell_services_.AddService<fuchsia::modular::SessionShellContext>([this](auto request) {
     if (terminating_) {
       request.Close(ZX_ERR_UNAVAILABLE);
@@ -523,7 +556,7 @@ void SessionmgrImpl::InitializeSessionShell(
     session_shell_context_bindings_.AddBinding(this, std::move(request));
   });
 
-  service_list->names.push_back(fuchsia::modular::ComponentContext::Name_);
+  service_list.names.push_back(fuchsia::modular::ComponentContext::Name_);
   session_shell_services_.AddService<fuchsia::modular::ComponentContext>([this](auto request) {
     if (terminating_) {
       request.Close(ZX_ERR_UNAVAILABLE);
@@ -532,7 +565,7 @@ void SessionmgrImpl::InitializeSessionShell(
     session_shell_component_context_impl_->Connect(std::move(request));
   });
 
-  service_list->names.push_back(fuchsia::modular::PuppetMaster::Name_);
+  service_list.names.push_back(fuchsia::modular::PuppetMaster::Name_);
   session_shell_services_.AddService<fuchsia::modular::PuppetMaster>([this](auto request) {
     if (terminating_) {
       request.Close(ZX_ERR_UNAVAILABLE);
@@ -541,7 +574,7 @@ void SessionmgrImpl::InitializeSessionShell(
     puppet_master_impl_->Connect(std::move(request));
   });
 
-  service_list->names.push_back(fuchsia::element::Manager::Name_);
+  service_list.names.push_back(fuchsia::element::Manager::Name_);
   session_shell_services_.AddService<fuchsia::element::Manager>([this](auto request) {
     if (terminating_) {
       request.Close(ZX_ERR_UNAVAILABLE);
@@ -556,29 +589,30 @@ void SessionmgrImpl::InitializeSessionShell(
   {
     fuchsia::sys::ServiceProviderPtr session_shell_service_provider;
     session_shell_services_.AddBinding(session_shell_service_provider.NewRequest());
-    service_list->provider = std::move(session_shell_service_provider);
+    service_list.provider = std::move(session_shell_service_provider);
   }
 
-  for (const auto& service_name : service_list->names) {
-    fuchsia::sys::ServiceProviderPtr service_provider;
-    session_shell_services_.AddBinding(service_provider.NewRequest());
-    zx_status_t status = svc_from_v1_sessionmgr_dir_.AddEntry(
-        service_name, std::make_unique<vfs::Service>(
-                          [service_provider = std::move(service_provider), service_name](
-                              zx::channel request, async_dispatcher_t* dispatcher) {
-                            service_provider->ConnectToService(service_name, std::move(request));
-                          }));
+  return service_list;
+}
 
-    if (status != ZX_OK) {
-      FX_PLOGS(WARNING, status)
-          << "Could not add service_list handler to svc_from_v1_sessionmgr, for service name: "
-          << service_name;
-    }
-  }
+void SessionmgrImpl::LaunchSessionShell(
+    fuchsia::modular::session::AppConfig session_shell_config,
+    fuchsia::sys::ServiceList service_list, std::optional<fuchsia::ui::views::ViewToken> view_token,
+    std::optional<fuchsia::ui::views::ViewCreationToken> view_creation_token,
+    scenic::ViewRefPair view_ref_pair) {
+  FX_DCHECK(agent_runner_.get());
+  FX_DCHECK(session_environment_);
+  FX_DCHECK(session_shell_url_.has_value());
+
+  ComponentContextInfo const component_context_info{
+      agent_runner_.get(), config_accessor_.sessionmgr_config().session_agents()};
+  session_shell_component_context_impl_ = std::make_unique<ComponentContextImpl>(
+      component_context_info, *session_shell_url_, *session_shell_url_);
+  OnTerminate(Reset(&session_shell_component_context_impl_));
 
   auto session_shell_app = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
       session_environment_->GetLauncher(), std::move(session_shell_config),
-      /* data_origin = */ "", std::move(service_list));
+      /* data_origin = */ "", std::make_unique<fuchsia::sys::ServiceList>(std::move(service_list)));
 
   fuchsia::ui::app::ViewProviderPtr view_provider;
   session_shell_app->services().ConnectToService(view_provider.NewRequest());
@@ -586,13 +620,15 @@ void SessionmgrImpl::InitializeSessionShell(
     fuchsia::ui::app::CreateView2Args create_view_args;
     create_view_args.set_view_creation_token(std::move(*view_creation_token));
     view_provider->CreateView2(std::move(create_view_args));
-  } else {
+  } else if (view_token.has_value()) {
     view_provider->CreateViewWithViewRef(std::move((*view_token).value),
                                          std::move(view_ref_pair.control_ref),
                                          std::move(view_ref_pair.view_ref));
+  } else {
+    FX_LOGS(FATAL) << "LaunchSessionShell expects either a ViewCreationToken or ViewToken";
   }
 
-  agent_runner_->AddRunningAgent(session_shell_url_, std::move(session_shell_app));
+  agent_runner_->AddRunningAgent(*session_shell_url_, std::move(session_shell_app));
 }
 
 void SessionmgrImpl::Terminate(fit::function<void()> done) {
