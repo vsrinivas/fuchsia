@@ -23,6 +23,7 @@ group("lib") {
 group("tests") {
   testonly = true
   deps = [
+    "circuit:tests",
     "core:tests",
     "hoist:tests",
     "onet_test_util:tests",
