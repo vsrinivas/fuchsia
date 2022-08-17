@@ -738,7 +738,9 @@ pub mod fuchsia_update_config_optout {
                 match request {
                     OptOutRequest::Get { responder } => {
                         let value = *self.0.lock();
-                        responder.send(value).unwrap();
+                        if let Err(e) = responder.send(value) {
+                            eprintln!("fuchsia_update_config_optout::Mock::serve() failed to send a response, possibly because the client is shut down: {:?}", e);
+                        }
                     }
                 }
             }
