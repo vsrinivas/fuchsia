@@ -156,6 +156,7 @@ enum UdpCacheInvalidationReason {
     ConnectCalled,
     InterfaceDisabled,
     IPv6OnlyCalled,
+    BroadcastCalled,
 }
 
 enum ToAddrExpectation {
@@ -253,10 +254,14 @@ async fn execute_and_validate_preflights(
 }
 
 #[test_case("connect_called", UdpCacheInvalidationReason::ConnectCalled)]
-#[test_case("ipv6_only_called", UdpCacheInvalidationReason::IPv6OnlyCalled)]
 #[test_case("iface_disabled", UdpCacheInvalidationReason::InterfaceDisabled)]
+#[test_case("ipv6_only_called", UdpCacheInvalidationReason::IPv6OnlyCalled)]
+#[test_case("broadcast_called", UdpCacheInvalidationReason::BroadcastCalled)]
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_udp_send_msg_cache(test_name: &str, invalidation_reason: UdpCacheInvalidationReason) {
+async fn test_udp_send_msg_preflight_fidl(
+    test_name: &str,
+    invalidation_reason: UdpCacheInvalidationReason,
+) {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let net = sandbox.create_network("net").await.expect("failed to create network");
     let netstack = sandbox
@@ -392,6 +397,13 @@ async fn test_udp_send_msg_cache(test_name: &str, invalidation_reason: UdpCacheI
                 .await
                 .expect("set_ipv6_only fidl error")
                 .expect("failed to set ipv6 only");
+        }
+        UdpCacheInvalidationReason::BroadcastCalled => {
+            let () = proxy
+                .set_broadcast(true)
+                .await
+                .expect("set_so_broadcast fidl error")
+                .expect("failed to set so_broadcast");
         }
     }
 
@@ -548,7 +560,7 @@ async fn toggle_cmsg(
 #[test_case("so_timestamp_ns", CmsgType::SoTimestampNs)]
 #[test_case("so_timestamp", CmsgType::SoTimestamp)]
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_udp_recv_msg_cache(test_name: &str, cmsg_type: CmsgType) {
+async fn test_udp_recv_msg_postflight_fidl(test_name: &str, cmsg_type: CmsgType) {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let netstack = sandbox
         .create_netstack_realm::<Netstack2WithFastUdp, _>(format!("{}_netstack", test_name))

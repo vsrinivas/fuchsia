@@ -2282,9 +2282,11 @@ func (s *datagramSocketImpl) SetBindToDevice(ctx fidl.Context, value string) (so
 }
 
 func (s *datagramSocketImpl) SetBroadcast(ctx fidl.Context, value bool) (socket.BaseSocketSetBroadcastResult, error) {
-	// TODO(https://fxbug.dev/95986): Test synchronous semantics wrt packet sends.
 	s.blockUntilSocketDrained()
 	result, err := s.endpointWithSocket.SetBroadcast(ctx, value)
+	s.destinationCacheMu.Lock()
+	defer s.destinationCacheMu.Unlock()
+	s.destinationCacheMu.destinationCache.reset()
 	return result, err
 }
 

@@ -3522,6 +3522,94 @@ TEST_P(DatagramCachedSendSemanticsTest, Ipv6Only) {
       ValidateCachedSendSemantics<DatagramSendSemanticsIpv6OnlyInstance>(GetParam()));
 }
 
+class DatagramSendSemanticsSoBroadcastInstance : public DatagramSendSemanticsTestInstance {
+ public:
+  DatagramSendSemanticsSoBroadcastInstance(const SocketDomain& domain)
+      : DatagramSendSemanticsTestInstance(domain) {}
+
+  void SetUpInstance() override {
+    DatagramSendSemanticsTestInstance::SetUpInstance();
+    recv_addr_ = {
+        .sin_family = AF_INET,
+        .sin_addr =
+            {
+                .s_addr = htonl(INADDR_BROADCAST),
+            },
+    };
+    ASSERT_TRUE(recv_fd_ = fbl::unique_fd(socket(domain_.Get(), SOCK_DGRAM, 0))) << strerror(errno);
+
+    ASSERT_EQ(
+        bind(recv_fd_.get(), reinterpret_cast<const sockaddr*>(&recv_addr_), sizeof(recv_addr_)), 0)
+        << strerror(errno);
+
+    socklen_t addrlen = sizeof(recv_addr_);
+    ASSERT_EQ(getsockname(recv_fd_.get(), reinterpret_cast<sockaddr*>(&recv_addr_), &addrlen), 0)
+        << strerror(errno);
+    ASSERT_EQ(addrlen, sizeof(recv_addr_));
+
+    ASSERT_TRUE(send_fd_ = fbl::unique_fd(socket(domain_.Get(), SOCK_DGRAM, 0))) << strerror(errno);
+  }
+
+  void ToggleOn() {
+    constexpr int so_broadcast = 1;
+    EXPECT_EQ(
+        setsockopt(send_fd_.get(), SOL_SOCKET, SO_BROADCAST, &so_broadcast, sizeof(so_broadcast)),
+        0)
+        << strerror(errno);
+  }
+
+  void SendDatagram() {
+    ASSERT_EQ(sendto(send_fd_.get(), kBuf.data(), kBuf.size(), 0,
+                     reinterpret_cast<sockaddr*>(&recv_addr_), sizeof(recv_addr_)),
+              ssize_t(kBuf.size()))
+        << strerror(errno);
+  }
+
+  void ToggleOff() {
+    constexpr int so_broadcast = 0;
+    EXPECT_EQ(
+        setsockopt(send_fd_.get(), SOL_SOCKET, SO_BROADCAST, &so_broadcast, sizeof(so_broadcast)),
+        0)
+        << strerror(errno);
+  }
+
+  void ObserveOn() { ASSERT_NO_FATAL_FAILURE(RecvDatagramOn(recv_fd_.get())); }
+
+  void SendDatagramAndObserveOff() {
+    ASSERT_EQ(sendto(send_fd_.get(), kBuf.data(), kBuf.size(), 0,
+                     reinterpret_cast<sockaddr*>(&recv_addr_), sizeof(recv_addr_)),
+              -1);
+    EXPECT_EQ(errno, EACCES);
+  }
+
+  void TearDownInstance() override {
+    EXPECT_EQ(close(recv_fd_.release()), 0) << strerror(errno);
+    EXPECT_EQ(close(send_fd_.release()), 0) << strerror(errno);
+    ASSERT_NO_FATAL_FAILURE(DatagramSendSemanticsTestInstance::TearDownInstance());
+  }
+
+ private:
+  fbl::unique_fd recv_fd_;
+  fbl::unique_fd send_fd_;
+  sockaddr_in recv_addr_;
+};
+
+TEST_P(DatagramLinearizedSendSemanticsTest, SoBroadcast) {
+  if (GetParam().Get() != AF_INET) {
+    GTEST_SKIP() << "SO_BROADCAST can only be used on AF_INET sockets.";
+  }
+  ASSERT_NO_FATAL_FAILURE(
+      ValidateLinearizedSendSemantics<DatagramSendSemanticsSoBroadcastInstance>(GetParam()));
+}
+
+TEST_P(DatagramCachedSendSemanticsTest, SoBroadcast) {
+  if (GetParam().Get() != AF_INET) {
+    GTEST_SKIP() << "SO_BROADCAST can only be used on AF_INET sockets.";
+  }
+  ASSERT_NO_FATAL_FAILURE(
+      ValidateCachedSendSemantics<DatagramSendSemanticsSoBroadcastInstance>(GetParam()));
+}
+
 INSTANTIATE_TEST_SUITE_P(DatagramCachedSendSemanticsTests, DatagramCachedSendSemanticsTest,
                          testing::Values(SocketDomain::IPv4(), SocketDomain::IPv6()),
                          [](const auto info) {
