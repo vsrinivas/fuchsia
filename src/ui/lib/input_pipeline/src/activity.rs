@@ -19,7 +19,7 @@ use {
     },
 };
 
-const ACTIVITY_RATE_LIMIT: zx::Duration = zx::Duration::from_minutes(1);
+const ACTIVITY_RATE_LIMIT: zx::Duration = zx::Duration::from_seconds(1);
 
 type NotifyFn = Box<dyn Fn(&State, NotifierWatchStateResponder) -> bool>;
 type InteractionHangingGet = HangingGet<State, NotifierWatchStateResponder, NotifyFn>;
@@ -399,7 +399,7 @@ mod tests {
 
     #[fuchsia::test]
     fn activity_manager_rate_limits_activities_notifies_idle_state() -> Result<(), Error> {
-        let less_than_one_minute = zx::Duration::from_seconds(59);
+        let less_than_one_second = zx::Duration::from_millis(999);
         let mut executor = TestExecutor::new_with_fake_time().unwrap();
         executor.set_fake_time(fuchsia_async::Time::from_nanos(0));
 
@@ -420,20 +420,20 @@ mod tests {
         pin_mut!(report_fut);
         assert!(executor.run_until_stalled(&mut report_fut).is_ready());
 
-        // Skip ahead by less than one minute, since we rate-limit events
-        // within the same minute.
-        executor.set_fake_time(fuchsia_async::Time::after(less_than_one_minute));
+        // Skip ahead by less than one second, since we rate-limit events
+        // within the same second.
+        executor.set_fake_time(fuchsia_async::Time::after(less_than_one_second));
         assert_eq!(executor.wake_expired_timers(), false);
 
         // Send an activity. This should not replace the initial timer.
-        let report_fut = proxy.report_discrete_activity(less_than_one_minute.into_nanos());
+        let report_fut = proxy.report_discrete_activity(less_than_one_second.into_nanos());
         pin_mut!(report_fut);
         assert!(executor.run_until_stalled(&mut report_fut).is_ready());
 
         // Skip ahead by the remainder of the initial activity timeout.
         // Initial timer should fire, as the later activity within the same
-        // minute should have been dropped.
-        executor.set_fake_time(fuchsia_async::Time::after(ACTIVITY_TIMEOUT - less_than_one_minute));
+        // second should have been dropped.
+        executor.set_fake_time(fuchsia_async::Time::after(ACTIVITY_TIMEOUT - less_than_one_second));
         assert_eq!(executor.wake_expired_timers(), true);
 
         let watch_state_fut = watch_state_stream.next();
@@ -443,7 +443,7 @@ mod tests {
 
         // Skip ahead by less than one minute to the would-be timeout of the
         // later event, to make sure a second timer was never created.
-        executor.set_fake_time(fuchsia_async::Time::after(less_than_one_minute));
+        executor.set_fake_time(fuchsia_async::Time::after(less_than_one_second));
         assert_eq!(executor.wake_expired_timers(), false);
 
         Ok(())
@@ -451,7 +451,7 @@ mod tests {
 
     #[fuchsia::test]
     fn activity_manager_rate_limits_activities_notifies_active_state() -> Result<(), Error> {
-        let less_than_one_minute = zx::Duration::from_seconds(59);
+        let less_than_one_second = zx::Duration::from_millis(999);
         let mut executor = TestExecutor::new_with_fake_time().unwrap();
         executor.set_fake_time(fuchsia_async::Time::from_nanos(0));
 
@@ -474,18 +474,18 @@ mod tests {
 
         // Skip ahead by less than one minute, since we rate-limit events
         // within the same minute.
-        executor.set_fake_time(fuchsia_async::Time::after(less_than_one_minute));
+        executor.set_fake_time(fuchsia_async::Time::after(less_than_one_second));
         assert_eq!(executor.wake_expired_timers(), false);
 
         // Send an activity. This should not replace the initial timer.
-        let report_fut = proxy.report_discrete_activity(less_than_one_minute.into_nanos());
+        let report_fut = proxy.report_discrete_activity(less_than_one_second.into_nanos());
         pin_mut!(report_fut);
         assert!(executor.run_until_stalled(&mut report_fut).is_ready());
 
         // Skip ahead by the remainder of the initial activity timeout.
         // Initial timer should fire, as the later activity within the same
         // minute should have been dropped.
-        executor.set_fake_time(fuchsia_async::Time::after(ACTIVITY_TIMEOUT - less_than_one_minute));
+        executor.set_fake_time(fuchsia_async::Time::after(ACTIVITY_TIMEOUT - less_than_one_second));
         assert_eq!(executor.wake_expired_timers(), true);
 
         // State transitions to Idle.
