@@ -7,6 +7,7 @@
 
 #include <fidl/fuchsia.posix.socket.packet/cpp/wire_test_base.h>
 #include <fidl/fuchsia.posix.socket.raw/cpp/wire_test_base.h>
+#include <fidl/fuchsia.posix.socket/cpp/wire_test_base.h>
 
 #include <zxtest/zxtest.h>
 
@@ -46,6 +47,26 @@ class RawSocketServer final : public fidl::testing::WireTestBase<fuchsia_posix_s
   }
 
   void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+    completer.ReplySuccess();
+    completer.Close(ZX_OK);
+  }
+};
+
+class SynchronousDatagramSocketServer final
+    : public fidl::testing::WireTestBase<fuchsia_posix_socket::SynchronousDatagramSocket> {
+ public:
+  SynchronousDatagramSocketServer() = default;
+
+  void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) final {
+    ADD_FAILURE("unexpected message received: %s", name.c_str());
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  void Clone(CloneRequestView request, CloneCompleter::Sync& completer) final {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
     completer.ReplySuccess();
     completer.Close(ZX_OK);
   }

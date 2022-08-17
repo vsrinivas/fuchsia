@@ -14,8 +14,7 @@
 
 struct fdio;
 
-zx::status<fbl::RefPtr<fdio>> fdio_synchronous_datagram_socket_create(
-    zx::eventpair event, fidl::ClientEnd<fuchsia_posix_socket::SynchronousDatagramSocket> client);
+fbl::RefPtr<fdio> fdio_synchronous_datagram_socket_allocate();
 
 zx::status<fbl::RefPtr<fdio>> fdio_datagram_socket_create(
     zx::socket socket, fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> client,

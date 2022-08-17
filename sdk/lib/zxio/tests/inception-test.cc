@@ -510,3 +510,54 @@ TEST(CreateWithAllocator, RawSocket) {
 
   control_loop.Shutdown();
 }
+
+TEST(CreateWithAllocator, SynchronousDatagramSocket) {
+  zx::status socket_ends = fidl::CreateEndpoints<fuchsia_posix_socket::SynchronousDatagramSocket>();
+  ASSERT_OK(socket_ends.status_value());
+  auto [socket_client, socket_server] = std::move(socket_ends.value());
+
+  zx::eventpair event0, event1;
+  ASSERT_OK(zx::eventpair::create(0, &event0, &event1));
+
+  auto node_info = fuchsia_io::wire::NodeInfo::WithSynchronousDatagramSocket({
+      .event = std::move(event1),
+  });
+
+  auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {
+    if (type != ZXIO_OBJECT_TYPE_SYNCHRONOUS_DATAGRAM_SOCKET) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    *out_storage = new zxio_storage_t;
+    *out_context = *out_storage;
+    return ZX_OK;
+  };
+
+  async::Loop control_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  zxio_tests::SynchronousDatagramSocketServer server;
+  fidl::BindServer(control_loop.dispatcher(), std::move(socket_server), &server);
+  control_loop.StartThread("synchronous_datagram_socket_control_thread");
+
+  void* context = nullptr;
+  ASSERT_OK(
+      zxio_create_with_allocator(fidl::ClientEnd<fuchsia_io::Node>(socket_client.TakeChannel()),
+                                 node_info, allocator, &context));
+  ASSERT_NE(context, nullptr);
+
+  // The event in node_info should be consumed by zxio.
+  EXPECT_FALSE(node_info.synchronous_datagram_socket().event.is_valid());
+
+  std::unique_ptr<zxio_storage_t> storage(static_cast<zxio_storage_t*>(context));
+  zxio_t* zxio = &(storage->io);
+
+  // Closing the zxio object should close our eventpair's peer event.
+  zx_signals_t pending = 0;
+  ASSERT_EQ(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  EXPECT_NE(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
+
+  ASSERT_OK(zxio_close(zxio));
+
+  ASSERT_EQ(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  EXPECT_EQ(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
+
+  control_loop.Shutdown();
+}

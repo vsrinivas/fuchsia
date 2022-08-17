@@ -195,6 +195,11 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node, fio::wire
     case fio::wire::NodeInfo::Tag::kService: {
       return zxio_remote_init(storage, node.TakeChannel().release(), ZX_HANDLE_INVALID);
     }
+    case fio::wire::NodeInfo::Tag::kSynchronousDatagramSocket: {
+      return zxio_synchronous_datagram_socket_init(
+          storage, std::move(info.synchronous_datagram_socket().event),
+          fidl::ClientEnd<fuchsia_posix_socket::SynchronousDatagramSocket>(node.TakeChannel()));
+    }
     case fio::wire::NodeInfo::Tag::kTty: {
       fio::wire::Tty& tty = info.tty();
       zx::eventpair event = std::move(tty.event);

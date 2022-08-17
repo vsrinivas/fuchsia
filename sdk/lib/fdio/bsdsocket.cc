@@ -229,7 +229,6 @@ int socket(int domain, int type, int protocol) {
       if (response.has_invalid_tag()) {
         return ERRNO(EIO);
       }
-      zx::status<fdio_ptr> io_result;
       switch (response.Which()) {
         case fsocket::wire::ProviderDatagramSocketResponse::Tag::kDatagramSocket: {
           fidl::ClientEnd<fsocket::DatagramSocket>& control = response.datagram_socket();
@@ -247,9 +246,13 @@ int socket(int domain, int type, int protocol) {
           if (!response.has_rx_meta_buf_size()) {
             return ERROR(ZX_ERR_NOT_SUPPORTED);
           }
-          io_result =
+          zx::status<fdio_ptr> io_result =
               fdio_datagram_socket_create(std::move(response.socket()), std::move(control),
                                           response.tx_meta_buf_size(), response.rx_meta_buf_size());
+          if (io_result.is_error()) {
+            return ERROR(io_result.status_value());
+          }
+          io = io_result.value();
         } break;
         case fsocket::wire::ProviderDatagramSocketResponse::Tag::kSynchronousDatagramSocket: {
           fidl::ClientEnd<fsocket::SynchronousDatagramSocket>& control =
@@ -262,14 +265,17 @@ int socket(int domain, int type, int protocol) {
           if (!response.has_event()) {
             return ERROR(ZX_ERR_NOT_SUPPORTED);
           }
-          io_result = fdio_synchronous_datagram_socket_create(std::move(response.event()),
-                                                              std::move(control));
+          io = fdio_synchronous_datagram_socket_allocate();
+          if (io == nullptr) {
+            return ERROR(ZX_ERR_NO_MEMORY);
+          }
+          zx_status_t status = zxio::CreateSynchronousDatagramSocket(
+              &io->zxio_storage(), std::move(response.event()), std::move(control));
+          if (status != ZX_OK) {
+            return ERROR(status);
+          }
         } break;
       }
-      if (io_result.is_error()) {
-        return ERROR(io_result.status_value());
-      }
-      io = io_result.value();
     } break;
     case SOCK_RAW: {
       if (protocol == 0) {

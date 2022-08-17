@@ -70,6 +70,9 @@ static zx_status_t ZxioAllocator(zxio_object_type_t type, zxio_storage_t** out_s
     case ZXIO_OBJECT_TYPE_SERVICE:
       io = fbl::MakeRefCounted<fdio_internal::remote>();
       break;
+    case ZXIO_OBJECT_TYPE_SYNCHRONOUS_DATAGRAM_SOCKET:
+      io = fdio_synchronous_datagram_socket_allocate();
+      break;
     case ZXIO_OBJECT_TYPE_TTY:
       io = fbl::MakeRefCounted<fdio_internal::remote>();
       break;
@@ -123,12 +126,6 @@ zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node, fio::wire::No
   }
 
   switch (info.Which()) {
-    case fio::wire::NodeInfo::Tag::kSynchronousDatagramSocket: {
-      auto& socket = info.synchronous_datagram_socket();
-      return fdio_synchronous_datagram_socket_create(
-          std::move(socket.event),
-          fidl::ClientEnd<fsocket::SynchronousDatagramSocket>(node.TakeChannel()));
-    }
     case fio::wire::NodeInfo::Tag::kDatagramSocket: {
       auto& datagram_socket = info.datagram_socket();
       auto& socket = datagram_socket.socket;

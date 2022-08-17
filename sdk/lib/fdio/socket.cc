@@ -2726,18 +2726,8 @@ using raw_socket = network_socket_with_event<RawSocket>;
 
 }  // namespace fdio_internal
 
-zx::status<fdio_ptr> fdio_synchronous_datagram_socket_create(
-    zx::eventpair event, fidl::ClientEnd<fsocket::SynchronousDatagramSocket> client) {
-  fdio_ptr io = fbl::MakeRefCounted<fdio_internal::synchronous_datagram_socket>();
-  if (io == nullptr) {
-    return zx::error(ZX_ERR_NO_MEMORY);
-  }
-  zx_status_t status = zxio::CreateSynchronousDatagramSocket(&io->zxio_storage(), std::move(event),
-                                                             std::move(client));
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-  return zx::ok(io);
+fdio_ptr fdio_synchronous_datagram_socket_allocate() {
+  return fbl::MakeRefCounted<fdio_internal::synchronous_datagram_socket>();
 }
 
 fdio_ptr fdio_raw_socket_allocate() { return fbl::MakeRefCounted<fdio_internal::raw_socket>(); }

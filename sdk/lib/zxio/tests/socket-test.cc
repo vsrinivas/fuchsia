@@ -20,26 +20,6 @@
 
 namespace {
 
-class SynchronousDatagramSocketServer final
-    : public fidl::testing::WireTestBase<fuchsia_posix_socket::SynchronousDatagramSocket> {
- public:
-  SynchronousDatagramSocketServer() = default;
-
-  void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) final {
-    ADD_FAILURE("unexpected message received: %s", name.c_str());
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Clone(CloneRequestView request, CloneCompleter::Sync& completer) final {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) final {
-    completer.ReplySuccess();
-    completer.Close(ZX_OK);
-  }
-};
-
 class SynchronousDatagramSocketTest : public zxtest::Test {
  public:
   void SetUp() final {
@@ -76,7 +56,7 @@ class SynchronousDatagramSocketTest : public zxtest::Test {
   zxio_t* zxio_{nullptr};
   zx::eventpair event0_, event1_;
   fidl::ClientEnd<fuchsia_posix_socket::SynchronousDatagramSocket> client_end_;
-  SynchronousDatagramSocketServer server_;
+  zxio_tests::SynchronousDatagramSocketServer server_;
   async::Loop control_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
 };
 
