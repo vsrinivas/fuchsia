@@ -320,6 +320,11 @@ rustc_binary("bin") {
   ]
 
   sources = [ "src/main.rs" ]
+
+  # TODO(b/218546002): re-enable after OOM fix
+  if (select_variant + [ "lto" ] - [ "lto" ] != select_variant) {
+    disable_rbe = true
+  }
 }
 
 fuchsia_component("sl4f_comp") {
