@@ -241,6 +241,6 @@ fuchsia_structured_config_rust_lib("omaha-client-structured-config-lib") {
 }
 
 eager_package_config("empty_eager_package_config") {
-  key_config = "testdata/key_config.json"
+  key_config = "test_data/key_config.json"
   sources = []
 }
