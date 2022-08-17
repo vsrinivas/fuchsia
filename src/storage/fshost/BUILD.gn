@@ -4,9 +4,15 @@
 
 import("//build/components.gni")
 import("//build/dist/component_manifest_resources.gni")
+import("//build/dist/renamed_binary.gni")
 import("//build/test.gni")
 import("//src/storage/fshost/generated_fshost_config.gni")
 import("//tools/cmc/build/cmc.gni")
+
+declare_args() {
+  # If true, use the Rust version of fshost.
+  rust_fshost = false
+}
 
 group("tests") {
   testonly = true
@@ -488,7 +494,7 @@ cmc_merge("fshost.cml") {
     "meta/real_fshost.cml",
   ]
   if (!bootfs_only) {
-    if (data_filesystem_format == "fxfs") {
+    if (data_filesystem_format == "fxfs" || rust_fshost) {
       sources += [ "meta/fxfs_fshost.cml" ]
     } else if (data_filesystem_format == "f2fs") {
       sources += [ "meta/f2fs_fshost.cml" ]
@@ -515,9 +521,29 @@ fuchsia_structured_config_rust_lib("fshost_config_rust") {
   cm_label = ":fshost_manifest"
 }
 
-group("bootfs") {
+renamed_binary("fshost_rust") {
+  source = "$root_out_dir/fshost_rust"
+  source_deps = [ "//src/storage/fshost-rust" ]
+  dest = "bin/fshost"
+}
+
+fuchsia_component("fshost_rust_component") {
+  cm_label = ":fshost_manifest"
   deps = [
-    ":fshost",
-    ":fshost_manifest",
+    ":fshost_rust",
+    "//src/storage/fxfs:fxfs_component",
+    "//src/storage/fxfs-crypt",
+    "//src/storage/memfs:memfs_component",
   ]
+}
+
+group("bootfs") {
+  if (rust_fshost) {
+    deps = [ ":fshost_rust_component" ]
+  } else {
+    deps = [
+      ":fshost",
+      ":fshost_manifest",
+    ]
+  }
 }
