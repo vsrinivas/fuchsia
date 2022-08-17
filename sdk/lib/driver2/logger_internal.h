@@ -87,6 +87,11 @@ struct EncoderState {
     buffer.WriteKeyValue(value.key, value.value);
   }
 
+  // Encodes a string_view.
+  void Encode(KeyValue<const char*, std::string_view> value) {
+    buffer.WriteKeyValue(value.key, value.value);
+  }
+
   // Encodes a double floating point value
   void Encode(KeyValue<const char*, double> value) { buffer.WriteKeyValue(value.key, value.value); }
 
