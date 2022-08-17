@@ -87,9 +87,7 @@ const _FIDL_TRACE_BINDINGS_RUST: u32 = 6;
 {{ if eq $transport "Channel" -}}{{ template "ProtocolDeclaration" $protocol }}{{- end }}
 {{ end -}}
 {{ end -}}
-{{ range $service := .Services -}}
-{{ range $transport, $_ := .Transports -}}
-{{ if eq $transport "Channel" -}}{{ template "ServiceDeclaration" $service }}{{- end }}
+{{range (call .ServicesForTransport "Channel") -}}
+{{ template "ServiceDeclaration" . }}
 {{ end -}}
 {{ end -}}
-{{- end -}}

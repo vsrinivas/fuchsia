@@ -253,10 +253,11 @@ type Service struct {
 
 type ServiceMember struct {
 	fidlgen.ServiceMember
-	ProtocolType string
-	Name         string
-	CamelName    string
-	SnakeName    string
+	ProtocolType      string
+	Name              string
+	CamelName         string
+	SnakeName         string
+	ProtocolTransport string
 }
 
 type Root struct {
@@ -325,6 +326,27 @@ func (r *Root) findUnion(eci EncodedCompoundIdentifier) *Union {
 		}
 	}
 	return nil
+}
+
+// ServicesForTransport returns services containing exclusively protocol
+// members defined over the specified transport.
+func (r Root) ServicesForTransport() func(string) []Service {
+	return func(t string) []Service {
+		var ss []Service
+		for _, s := range r.Services {
+			allOk := true
+			for _, m := range s.Members {
+				if m.ProtocolTransport != t {
+					allOk = false
+					break
+				}
+			}
+			if allOk {
+				ss = append(ss, s)
+			}
+		}
+		return ss
+	}
 }
 
 var reservedWords = map[string]struct{}{
@@ -1104,11 +1126,12 @@ func (c *compiler) compileService(val fidlgen.Service) Service {
 
 	for _, v := range val.Members {
 		m := ServiceMember{
-			ServiceMember: v,
-			Name:          string(v.Name),
-			CamelName:     compileCamelIdentifier(v.Name),
-			SnakeName:     compileSnakeIdentifier(v.Name),
-			ProtocolType:  c.compileCamelCompoundIdentifier(v.Type.Identifier),
+			ServiceMember:     v,
+			Name:              string(v.Name),
+			CamelName:         compileCamelIdentifier(v.Name),
+			SnakeName:         compileSnakeIdentifier(v.Name),
+			ProtocolType:      c.compileCamelCompoundIdentifier(v.Type.Identifier),
+			ProtocolTransport: v.Type.ProtocolTransport,
 		}
 		r.Members = append(r.Members, m)
 	}
