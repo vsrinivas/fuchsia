@@ -140,9 +140,10 @@ class FakeBufferCollectionToken : public fuchsia::sysmem::testing::BufferCollect
 
 class FakeBufferCollection : public fuchsia::sysmem::testing::BufferCollection_TestBase {
  public:
-  FakeBufferCollection(FakeSysmem* owner, uint32_t id,
-                       std::unique_ptr<FakeSysmem::Expectations> expectations,
-                       bool dump_expectations);
+  FakeBufferCollection(
+      FakeSysmem* owner, uint32_t id,
+      std::optional<std::list<std::unique_ptr<FakeSysmem::Expectations>>> expectations,
+      bool dump_expectations);
 
   ~FakeBufferCollection() override;
 
@@ -177,9 +178,11 @@ class FakeBufferCollection : public fuchsia::sysmem::testing::BufferCollection_T
  private:
   void MaybeCompleteAllocation();
 
+  void ClearWaitCallbacks();
+
   FakeSysmem* owner_;
   uint32_t id_;
-  std::unique_ptr<FakeSysmem::Expectations> expectations_;
+  std::optional<std::list<std::unique_ptr<FakeSysmem::Expectations>>> expectations_;
   bool expected_ = true;
   bool dump_expectations_ = false;
   fidl::BindingSet<fuchsia::sysmem::BufferCollection> bindings_;

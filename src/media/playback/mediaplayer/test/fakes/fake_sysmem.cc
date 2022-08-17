@@ -14,6 +14,30 @@
 namespace media_player {
 namespace test {
 
+std::list<fuchsia::sysmem::BufferCollectionConstraints> Clone(
+    const std::list<fuchsia::sysmem::BufferCollectionConstraints>& value) {
+  std::list<fuchsia::sysmem::BufferCollectionConstraints> result;
+
+  for (auto& v : value) {
+    result.push_back(fidl::Clone(v));
+  }
+
+  return result;
+}
+
+std::list<std::unique_ptr<FakeSysmem::Expectations>> Clone(
+    const std::list<std::unique_ptr<FakeSysmem::Expectations>>& value) {
+  std::list<std::unique_ptr<FakeSysmem::Expectations>> result;
+
+  for (auto& v : value) {
+    result.push_back(std::make_unique<FakeSysmem::Expectations>(
+        FakeSysmem::Expectations{.constraints_ = Clone(v->constraints_),
+                                 .collection_info_ = fidl::Clone(v->collection_info_)}));
+  }
+
+  return result;
+}
+
 FakeSysmem::FakeSysmem() : dispatcher_(async_get_default_dispatcher()) {}
 
 FakeSysmem::~FakeSysmem() {}
@@ -24,11 +48,6 @@ bool FakeSysmem::expected() const {
   }
 
   if (!expected_) {
-    return false;
-  }
-
-  if (!expectations_.value().empty()) {
-    FX_LOGS(ERROR) << expectations_.value().size() << " expected collection(s) never bound";
     return false;
   }
 
@@ -101,14 +120,13 @@ void FakeSysmem::BindSharedCollection(
             return;
           }
 
-          FX_CHECK(expectations_.value().front());
           collection = std::make_unique<FakeBufferCollection>(
-              this, next_collection_id_++, std::move(expectations_.value().front()),
-              dump_expectations_);
-          expectations_.value().pop_front();
+              this, next_collection_id_++, Clone(expectations_.value()), dump_expectations_);
         } else {
-          collection = std::make_unique<FakeBufferCollection>(this, next_collection_id_++, nullptr,
-                                                              dump_expectations_);
+          collection = std::make_unique<FakeBufferCollection>(
+              this, next_collection_id_++,
+              std::optional<std::list<std::unique_ptr<FakeSysmem::Expectations>>>(),
+              dump_expectations_);
         }
 
         collection->Bind(std::move(buffer_collection_request));
@@ -178,9 +196,10 @@ void FakeBufferCollectionToken::NotImplemented_(const std::string& name) {
 ////////////////////////////////////////////////////////////////////////////////
 // FakeBufferCollection implementation.
 
-FakeBufferCollection::FakeBufferCollection(FakeSysmem* owner, uint32_t id,
-                                           std::unique_ptr<FakeSysmem::Expectations> expectations,
-                                           bool dump_expectations)
+FakeBufferCollection::FakeBufferCollection(
+    FakeSysmem* owner, uint32_t id,
+    std::optional<std::list<std::unique_ptr<FakeSysmem::Expectations>>> expectations,
+    bool dump_expectations)
     : owner_(owner),
       id_(id),
       expectations_(std::move(expectations)),
@@ -217,21 +236,33 @@ void FakeBufferCollection::SetConstraints(
     std::cerr << constraints << "\n";
   }
 
-  if (expectations_) {
+  if (!expectations_.has_value() || expectations_.value().empty()) {
+    return;
+  }
+
+  auto iter = expectations_.value().begin();
+  while (iter != expectations_.value().end()) {
+    auto& e = *iter;
+
     bool found = false;
-    for (auto iter = expectations_->constraints_.begin(); iter != expectations_->constraints_.end();
-         ++iter) {
-      if (fidl::Equals(constraints, *iter)) {
-        expectations_->constraints_.erase(iter);
+    for (auto i = e->constraints_.begin(); i != e->constraints_.end(); ++i) {
+      if (fidl::Equals(constraints, *i)) {
+        e->constraints_.erase(i);
         found = true;
         break;
       }
     }
 
-    if (!found) {
-      FX_LOGS(ERROR) << "SetConstraints: constraints not expected " << constraints;
-      expected_ = false;
+    if (found) {
+      ++iter;
+    } else {
+      iter = expectations_.value().erase(iter);
     }
+  }
+
+  if (expectations_.value().empty()) {
+    FX_LOGS(ERROR) << "No expectations match constraints " << constraints;
+    expected_ = false;
   }
 }
 
@@ -253,23 +284,45 @@ void FakeBufferCollection::MaybeCompleteAllocation() {
     return;
   }
 
-  if (expectations_ && !expectations_->constraints_.empty()) {
-    for (auto& constraints : expectations_->constraints_) {
-      FX_LOGS(ERROR) << "WaitForBuffersAllocated: constraints not received " << constraints;
-    }
-
-    expected_ = false;
+  // If no expectations were supplied in the constructor, we don't know how to answer
+  // |WaitForBuffersAllocated|.
+  if (!expectations_.has_value()) {
+    FX_LOGS(ERROR) << "Lacking expectations required to answer WaitForBuffersAllocated";
+    ClearWaitCallbacks();
+    return;
   }
+
+  // Remove expectations that still have unmatched constraints.
+  auto iter = expectations_.value().begin();
+  while (iter != expectations_.value().end()) {
+    if ((*iter)->constraints_.empty()) {
+      ++iter;
+    } else {
+      // Unused constraints remain.
+      iter = expectations_.value().erase(iter);
+    }
+  }
+
+  // Make sure only one expectation qualifies.
+  if (expectations_.value().size() != 1) {
+    FX_LOGS(ERROR) << expectations_.value().size()
+                   << " expectations have survived to answer WaitForBuffersAllocated";
+    ClearWaitCallbacks();
+    return;
+  }
+
+  auto& e = *expectations_.value().front();
 
   allocation_complete_ = true;
 
   while (!waiter_callbacks_.empty()) {
-    if (expectations_) {
-      waiter_callbacks_.back()(ZX_OK, fidl::Clone(expectations_->collection_info_));
-    } else {
-      FX_LOGS(ERROR) << "Lacking expectations required to answer WaitForBuffersAllocated";
-    }
+    waiter_callbacks_.back()(ZX_OK, fidl::Clone(e.collection_info_));
+    waiter_callbacks_.pop_back();
+  }
+}
 
+void FakeBufferCollection::ClearWaitCallbacks() {
+  while (!waiter_callbacks_.empty()) {
     waiter_callbacks_.pop_back();
   }
 }

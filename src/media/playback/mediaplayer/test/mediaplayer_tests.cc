@@ -123,108 +123,94 @@ class MediaPlayerTests : public gtest::TestWithEnvironmentFixture {
 std::list<std::unique_ptr<FakeSysmem::Expectations>>
 MediaPlayerTests::BlackImageSysmemExpectations() {
   std::list<std::unique_ptr<FakeSysmem::Expectations>> result;
-  result
-      .push_back(std::
-                     make_unique<FakeSysmem::Expectations>(
-                         FakeSysmem::Expectations{
-
-                             .constraints_ = {fuchsia::sysmem::BufferCollectionConstraints{
-                                                  .usage =
-                                                      {
-                                                          .cpu =
-                                                              fuchsia::sysmem::cpuUsageRead |
-                                                              fuchsia::sysmem::cpuUsageReadOften |
-                                                              fuchsia::sysmem::cpuUsageWrite |
-                                                              fuchsia::sysmem::cpuUsageWriteOften,
-                                                      },
-                                                  .min_buffer_count = 1,
-                                                  .has_buffer_memory_constraints = true,
-                                                  .buffer_memory_constraints =
-                                                      {
-                                                          .min_size_bytes = 16,
-                                                          .ram_domain_supported = true,
-                                                      },
-                                                  .image_format_constraints_count = 1,
-                                                  .image_format_constraints =
-                                                      {
-                                                          fuchsia::sysmem::
-                                                              ImageFormatConstraints{
-                                                                  .pixel_format =
-                                                                      {
-                                                                          .type = fuchsia::
-                                                                              sysmem::PixelFormatType::R8G8B8A8},
-                                                                  .color_spaces_count = 1,
-                                                                  .color_space =
-                                                                      {
-                                                                          fuchsia::sysmem::
-                                                                              ColorSpace{.type =
-                                                                                             fuchsia::
-                                                                                                 sysmem::ColorSpaceType::SRGB},
-                                                                      },
-                                                                  .required_min_coded_width = 2,
-                                                                  .required_max_coded_width = 2,
-                                                                  .required_min_coded_height = 2,
-                                                                  .required_max_coded_height = 2,
-                                                              },
-                                                      },
-                                              },
-                                              fuchsia::sysmem::BufferCollectionConstraints{
-                                                  .usage =
-                                                      {
-                                                          .cpu =
-                                                              fuchsia::sysmem::cpuUsageRead |
-                                                              fuchsia::sysmem::cpuUsageReadOften,
-                                                      },
-                                                  .has_buffer_memory_constraints = true,
-                                                  .buffer_memory_constraints =
-                                                      {
-                                                          .ram_domain_supported = true,
-                                                      },
-                                              }},
-                             .collection_info_ =
-                                 {
-                                     .buffer_count = 2,
-                                     .settings =
-                                         {
-                                             .buffer_settings =
-                                                 {
-                                                     .size_bytes = 128,
-                                                     .coherency_domain =
-                                                         fuchsia::sysmem::CoherencyDomain::RAM,
-                                                     .heap = fuchsia::sysmem::HeapType::SYSTEM_RAM,
-                                                 },
-                                             .has_image_format_constraints = true,
-                                             .image_format_constraints =
-                                                 {
-                                                     .pixel_format =
-                                                         {.type =
-                                                              fuchsia::sysmem::PixelFormatType::
-                                                                  R8G8B8A8},
-                                                     .color_spaces_count = 1,
-                                                     .color_space =
-                                                         {fuchsia::sysmem::ColorSpace{.type =
-                                                                                          fuchsia::sysmem::ColorSpaceType::SRGB}},
-                                                     .min_coded_width = 0,
-                                                     .max_coded_width = 16384,
-                                                     .min_coded_height = 0,
-                                                     .max_coded_height = 16384,
-                                                     .min_bytes_per_row = 4,
-                                                     .max_bytes_per_row = 4294967295,
-                                                     .bytes_per_row_divisor = 64,
-                                                     .start_offset_divisor = 4,
-                                                     .required_min_coded_width = 2,
-                                                     .required_max_coded_width = 2,
-                                                     .required_min_coded_height = 2,
-                                                     .required_max_coded_height = 2,
-                                                     .required_min_bytes_per_row = 4294967295,
-                                                     .required_max_bytes_per_row = 0,
-                                                 }},
-                                     .buffers =
-                                         {
-                                             fuchsia::sysmem::VmoBuffer{.vmo = CreateVmo(4096)},
-                                             fuchsia::sysmem::VmoBuffer{.vmo = CreateVmo(4096)},
-                                         },
-                                 }}));
+  result.push_back(
+      std::make_unique<FakeSysmem::Expectations>(FakeSysmem::Expectations{
+          .constraints_ =
+              {fuchsia::sysmem::BufferCollectionConstraints{
+                   .usage =
+                       {
+                           .cpu =
+                               fuchsia::sysmem::cpuUsageRead | fuchsia::sysmem::cpuUsageReadOften |
+                               fuchsia::sysmem::cpuUsageWrite | fuchsia::sysmem::cpuUsageWriteOften,
+                       },
+                   .min_buffer_count = 1,
+                   .has_buffer_memory_constraints = true,
+                   .buffer_memory_constraints =
+                       {
+                           .min_size_bytes = 16,
+                           .ram_domain_supported =
+                               true,
+                       },
+                   .image_format_constraints_count = 1,
+                   .image_format_constraints =
+                       {
+                           fuchsia::sysmem::ImageFormatConstraints{
+                               .pixel_format = {.type = fuchsia::sysmem::PixelFormatType::R8G8B8A8},
+                               .color_spaces_count = 1,
+                               .color_space =
+                                   {
+                                       fuchsia::sysmem::ColorSpace{
+                                           .type = fuchsia::sysmem::ColorSpaceType::SRGB},
+                                   },
+                               .required_min_coded_width = 2,
+                               .required_max_coded_width = 2,
+                               .required_min_coded_height = 2,
+                               .required_max_coded_height = 2,
+                           },
+                       },
+               },
+               fuchsia::sysmem::BufferCollectionConstraints{
+                   .usage =
+                       {
+                           .cpu =
+                               fuchsia::sysmem::cpuUsageRead | fuchsia::sysmem::cpuUsageReadOften,
+                       },
+                   .has_buffer_memory_constraints = true,
+                   .buffer_memory_constraints =
+                       {
+                           .ram_domain_supported = true,
+                       },
+               }},
+          .collection_info_ =
+              {
+                  .buffer_count = 2,
+                  .settings = {.buffer_settings =
+                                   {
+                                       .size_bytes = 128,
+                                       .coherency_domain = fuchsia::sysmem::CoherencyDomain::RAM,
+                                       .heap = fuchsia::sysmem::HeapType::SYSTEM_RAM,
+                                   },
+                               .has_image_format_constraints = true,
+                               .image_format_constraints =
+                                   {
+                                       .pixel_format =
+                                           {.type = fuchsia::sysmem::PixelFormatType::R8G8B8A8},
+                                       .color_spaces_count = 1,
+                                       .color_space =
+                                           {
+                                               fuchsia::sysmem::ColorSpace{
+                                                   .type = fuchsia::sysmem::ColorSpaceType::SRGB}},
+                                       .min_coded_width = 0,
+                                       .max_coded_width = 16384,
+                                       .min_coded_height = 0,
+                                       .max_coded_height = 16384,
+                                       .min_bytes_per_row = 4,
+                                       .max_bytes_per_row = 4294967295,
+                                       .bytes_per_row_divisor = 64,
+                                       .start_offset_divisor = 4,
+                                       .required_min_coded_width = 2,
+                                       .required_max_coded_width = 2,
+                                       .required_min_coded_height = 2,
+                                       .required_max_coded_height = 2,
+                                       .required_min_bytes_per_row = 4294967295,
+                                       .required_max_bytes_per_row = 0,
+                                   }},
+                  .buffers =
+                      {
+                          fuchsia::sysmem::VmoBuffer{.vmo = CreateVmo(4096)},
+                          fuchsia::sysmem::VmoBuffer{.vmo = CreateVmo(4096)},
+                      },
+              }}));
 
   return result;
 }
@@ -1127,10 +1113,7 @@ TEST_F(MediaPlayerTests, RegressionTestUS544) {
 // Regression test for QA-539.
 // Verifies that the player can play two files in a row.
 TEST_F(MediaPlayerTests, RegressionTestQA539) {
-  auto sysmem_expectations = BearSysmemExpectations();
-  // Expect the video image buffers to be allocated again.
-  sysmem_expectations.splice(sysmem_expectations.end(), BearVideoImageSysmemExpectations());
-  fake_sysmem_.SetExpectations(std::move(sysmem_expectations));
+  fake_sysmem_.SetExpectations(BearSysmemExpectations());
 
   CreateView();
   commands_.SetFile(kBearFilePath);
