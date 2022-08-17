@@ -112,27 +112,23 @@ class GpuDevice : public fidl::WireServer<DeviceType>,
       }
     }
 
-    auto endpoints = fidl::CreateEndpoints<fuchsia_gpu_magma::Primary>();
-    if (!endpoints.is_ok()) {
+    auto primary_endpoints = fidl::CreateEndpoints<fuchsia_gpu_magma::Primary>();
+    if (!primary_endpoints.is_ok()) {
       DLOG("Failed to create primary endpoints");
-      _completer.Close(endpoints.status_value());
+      _completer.Close(primary_endpoints.status_value());
       return;
     }
 
-    zx::channel server_notification_endpoint;
-    zx::channel client_notification_endpoint;
-    zx_status_t status =
-        zx::channel::create(0, &server_notification_endpoint, &client_notification_endpoint);
-    if (status != ZX_OK) {
-      DLOG("zx::channel::create failed");
-      _completer.Close(status);
+    auto notification_endpoints = fidl::CreateEndpoints<fuchsia_gpu_magma::Notification>();
+    if (!notification_endpoints.is_ok()) {
+      DLOG("Failed to create notification endpoints");
+      _completer.Close(notification_endpoints.status_value());
       return;
     }
-
     auto connection = MagmaSystemDevice::Open(
         this->magma_system_device_, request->client_id, std::move(thread_profile),
-        magma::PlatformHandle::Create(endpoints->server.channel().release()),
-        magma::PlatformHandle::Create(server_notification_endpoint.release()));
+        magma::PlatformHandle::Create(primary_endpoints->server.channel().release()),
+        magma::PlatformHandle::Create(notification_endpoints->server.channel().release()));
 
     if (!connection) {
       DLOG("MagmaSystemDevice::Open failed");
@@ -140,7 +136,8 @@ class GpuDevice : public fidl::WireServer<DeviceType>,
       return;
     }
 
-    _completer.Reply(std::move(endpoints->client), std::move(client_notification_endpoint));
+    _completer.Reply(std::move(primary_endpoints->client),
+                     std::move(notification_endpoints->client));
 
     this->magma_system_device_->StartConnectionThread(std::move(connection));
   }
@@ -155,7 +152,7 @@ class GpuDevice : public fidl::WireServer<DeviceType>,
         this->magma_system_device_, request->client_id,
         /*thread_profile*/ nullptr,
         magma::PlatformHandle::Create(request->primary_channel.channel().release()),
-        magma::PlatformHandle::Create(request->notification_channel.release()));
+        magma::PlatformHandle::Create(request->notification_channel.channel().release()));
 
     if (!connection) {
       DLOG("MagmaSystemDevice::Open failed");

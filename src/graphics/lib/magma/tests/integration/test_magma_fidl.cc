@@ -98,23 +98,21 @@ class TestMagmaFidl : public gtest::RealLoopFixture {
       max_inflight_messages_ = static_cast<uint32_t>(params >> 32);
     }
 
-    auto endpoints = fidl::CreateEndpoints<fuchsia_gpu_magma::Primary>();
-    ASSERT_TRUE(endpoints.is_ok());
+    auto primary_endpoints = fidl::CreateEndpoints<fuchsia_gpu_magma::Primary>();
+    ASSERT_TRUE(primary_endpoints.is_ok());
 
-    zx::channel client_notification_endpoint, server_notification_endpoint;
-    zx_status_t status =
-        zx::channel::create(0, &server_notification_endpoint, &client_notification_endpoint);
-    ASSERT_EQ(status, ZX_OK);
+    auto notification_endpoints = fidl::CreateEndpoints<fuchsia_gpu_magma::Notification>();
+    ASSERT_TRUE(notification_endpoints.is_ok());
 
     uint64_t client_id = 0xabcd;  // anything
-    auto wire_result = device_->Connect2(client_id, std::move(endpoints->server),
-                                         std::move(server_notification_endpoint));
+    auto wire_result = device_->Connect2(client_id, std::move(primary_endpoints->server),
+                                         std::move(notification_endpoints->server));
     ASSERT_TRUE(wire_result.ok());
 
-    primary_ = PrimaryClient(std::move(endpoints->client), dispatcher(), &async_handler_);
+    primary_ = PrimaryClient(std::move(primary_endpoints->client), dispatcher(), &async_handler_);
     ASSERT_TRUE(primary_.is_valid());
 
-    notification_channel_ = std::move(client_notification_endpoint);
+    notification_channel_ = std::move(notification_endpoints->client.channel());
   }
 
   void TearDown() override {}

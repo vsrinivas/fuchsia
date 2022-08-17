@@ -64,7 +64,7 @@ type IcdInfo = table {
 /// device and vendor IDs, and which client drivers are supported by the device's system driver.  
 /// To engage further with the device, clients may establish connections formed of channel pairs:
 /// a primary channel for making requests (see Primary protocol below), and a secondary channel
-/// for receiving notification messages.
+/// for receiving notification messages (see Notification protocol below).
 protocol Device {
     /// On success, returns a result either in a buffer or a simple value.
     Query(struct {
@@ -79,7 +79,7 @@ protocol Device {
         client_id uint64;
     }) -> (resource struct {
         primary_channel client_end:Primary;
-        notification_channel zx.handle:CHANNEL;
+        notification_channel client_end:Notification;
     });
 
     /// Creates a connection to the device comprised of two IPC channels.
@@ -89,7 +89,7 @@ protocol Device {
     Connect2(resource struct {
         client_id uint64;
         primary_channel server_end:Primary;
-        notification_channel zx.handle:CHANNEL;
+        notification_channel server_end:Notification;
     });
 };
 
@@ -410,6 +410,9 @@ protocol Primary {
         counters PerformanceCounterSet;
     });
 };
+
+/// This protocol is empty as the message contents are vendor specific.
+protocol Notification {};
 
 /// This protocol is implemented by ZX_PROTOCOL_GPU_PERFORMANCE_COUNTERS devices.
 protocol PerformanceCounterAccess {

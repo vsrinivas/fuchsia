@@ -20,19 +20,17 @@ class ZirconPlatformDeviceClient : public PlatformDeviceClient {
     if (!Query(MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS, nullptr, &inflight_params))
       return DRETP(nullptr, "Query(MAGMA_QUERY_MAXIMUM_INFLIGHT_PARAMS) failed");
 
-    auto endpoints = fidl::CreateEndpoints<fuchsia_gpu_magma::Primary>();
-    if (!endpoints.is_ok())
+    auto primary_endpoints = fidl::CreateEndpoints<fuchsia_gpu_magma::Primary>();
+    if (!primary_endpoints.is_ok())
       return DRETP(nullptr, "Failed to create primary endpoints");
 
-    zx::channel client_notification_endpoint, server_notification_endpoint;
-    zx_status_t status =
-        zx::channel::create(0, &server_notification_endpoint, &client_notification_endpoint);
-    if (status != ZX_OK)
-      return DRETP(nullptr, "zx::channel::create failed");
+    auto notification_endpoints = fidl::CreateEndpoints<fuchsia_gpu_magma::Notification>();
+    if (!notification_endpoints.is_ok())
+      return DRETP(nullptr, "Failed to create notification endpoints");
 
     auto result = fidl::WireCall(channel_)->Connect2(magma::PlatformThreadId().id(),
-                                                     std::move(endpoints->server),
-                                                     std::move(server_notification_endpoint));
+                                                     std::move(primary_endpoints->server),
+                                                     std::move(notification_endpoints->server));
 
     if (result.status() != ZX_OK)
       return DRETP(nullptr, "magma_DeviceConnect2 failed: %d", result.status());
@@ -40,9 +38,10 @@ class ZirconPlatformDeviceClient : public PlatformDeviceClient {
     uint64_t max_inflight_messages = magma::upper_32_bits(inflight_params);
     uint64_t max_inflight_bytes = magma::lower_32_bits(inflight_params) * 1024 * 1024;
 
-    return magma::PlatformConnectionClient::Create(endpoints->client.channel().release(),
-                                                   client_notification_endpoint.release(),
-                                                   max_inflight_messages, max_inflight_bytes);
+    return magma::PlatformConnectionClient::Create(
+        primary_endpoints->client.channel().release(),
+        notification_endpoints->client.channel().release(), max_inflight_messages,
+        max_inflight_bytes);
   }
 
   magma::Status Query(uint64_t query_id, magma_handle_t* result_buffer_out, uint64_t* result_out) {
