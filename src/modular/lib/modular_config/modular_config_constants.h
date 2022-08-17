@@ -61,6 +61,8 @@ constexpr char kInspectModulePath[] = "module_path";
 constexpr char kInspectConfig[] = "config";
 
 // Shell constants
+inline constexpr char kDefaultSessionShellUrl[] =
+    "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx";
 constexpr char kDefaultStoryShellUrl[] =
     "fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx";
 constexpr char kUrl[] = "url";

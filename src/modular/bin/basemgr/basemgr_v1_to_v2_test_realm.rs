@@ -28,7 +28,12 @@ async fn basemgr_v1_to_v2_test() -> Result<(), Error> {
             "startup.config" => read_only_static(r##"
 {
     "basemgr": {
-        "enable_cobalt": false
+        "enable_cobalt": false,
+        "session_shells": [
+            {
+                "url": "fuchsia-pkg://fuchsia.com/basemgr_unittests#meta/dev_session_shell.cmx"
+            }
+        ]
     },
     "sessionmgr": {
         "agent_service_index": [

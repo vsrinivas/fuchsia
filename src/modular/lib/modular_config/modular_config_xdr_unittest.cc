@@ -24,7 +24,12 @@ TEST(ModularConfigXdr, BasemgrWriteDefaultValues) {
   static constexpr auto kExpectedJson = R"({
       "enable_cobalt": true,
       "use_session_shell_for_story_shell_factory": false,
-      "session_shells": null,
+      "session_shells": [
+        {
+          "url": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
+          "args": []
+        }
+      ],
       "story_shell_url": "fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
     })";
   rapidjson::Document expected_json_doc;
@@ -50,7 +55,10 @@ TEST(ModularConfigXdr, BasemgrReadDefaultValues) {
   EXPECT_TRUE(read_config.enable_cobalt());
   EXPECT_FALSE(read_config.use_session_shell_for_story_shell_factory());
 
-  ASSERT_TRUE(read_config.session_shell_map().empty());
+  ASSERT_EQ(1u, read_config.session_shell_map().size());
+  EXPECT_EQ(modular_config::kDefaultSessionShellUrl, read_config.session_shell_map().at(0).name());
+  EXPECT_EQ(modular_config::kDefaultSessionShellUrl,
+            read_config.session_shell_map().at(0).config().app_config().url());
   EXPECT_EQ(modular_config::kDefaultStoryShellUrl, read_config.story_shell().app_config().url());
 }
 
@@ -258,7 +266,12 @@ TEST(ModularConfigXdr, ModularWriteDefaultValues) {
       "basemgr": {
         "enable_cobalt": true,
         "use_session_shell_for_story_shell_factory": false,
-        "session_shells": [],
+        "session_shells": [
+          {
+            "url": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
+            "args": []
+          }
+        ],
         "story_shell_url": "fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
       },
       "sessionmgr": {
@@ -293,7 +306,12 @@ TEST(ModularConfigXdr, ModularReadWriteValues) {
       "basemgr": {
         "enable_cobalt": false,
         "use_session_shell_for_story_shell_factory": false,
-        "session_shells": null,
+        "session_shells": [
+          {
+            "url": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
+            "args": []
+          }
+        ],
         "story_shell_url": "fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
       },
       "sessionmgr": {
@@ -352,7 +370,9 @@ TEST(ModularConfigXdr, ModularConfigReadDefaultValues) {
 
   ASSERT_TRUE(config.has_basemgr_config());
   EXPECT_TRUE(config.basemgr_config().enable_cobalt());
-  ASSERT_TRUE(config.basemgr_config().session_shell_map().empty());
+  ASSERT_EQ(1u, config.basemgr_config().session_shell_map().size());
+  EXPECT_EQ(modular_config::kDefaultSessionShellUrl,
+            config.basemgr_config().session_shell_map().at(0).name());
 
   ASSERT_TRUE(config.has_sessionmgr_config());
   EXPECT_TRUE(config.sessionmgr_config().enable_cobalt());

@@ -1,0 +1,18 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import("//src/modular/build/modular_config/modular_config.gni")
+
+# The simplest possible Modular session.
+group("simple") {
+  deps = [
+    ":modular_config",
+    "//src/modular/bin/sessionmgr:dev_session_shell",
+    "//src/modular/bin/sessionmgr/story_runner:dev_story_shell",
+  ]
+}
+
+modular_config("modular_config") {
+  config = "modular_config.json"
+  sdk_category = "partner"
+}

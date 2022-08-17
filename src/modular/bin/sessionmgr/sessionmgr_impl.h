@@ -86,22 +86,16 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void InitializeStartupAgentLauncher();
   void InitializeStartupAgents();
   void InitializeV2ModularAgents();
-  void InitializeAgentRunner();
+  void InitializeAgentRunner(const std::string& session_shell_url);
   void InitializeStoryProvider(fuchsia::modular::session::AppConfig story_shell_config,
                                PresentationProtocolPtr presentation_protocol,
                                bool use_session_shell_for_story_shell_factory,
                                bool present_mods_as_stories);
   void InitializeSessionShell(
-      std::optional<fuchsia::modular::session::AppConfig> session_shell_config,
+      fuchsia::modular::session::AppConfig session_shell_config,
       std::optional<fuchsia::ui::views::ViewToken> view_token,
       std::optional<fuchsia::ui::views::ViewCreationToken> view_creation_token,
       scenic::ViewRefPair view_ref_pair);
-  fuchsia::sys::ServiceList CreateSessionShellServiceList();
-  void LaunchSessionShell(fuchsia::modular::session::AppConfig session_shell_config,
-                          fuchsia::sys::ServiceList service_list,
-                          std::optional<fuchsia::ui::views::ViewToken> view_token,
-                          std::optional<fuchsia::ui::views::ViewCreationToken> view_creation_token,
-                          scenic::ViewRefPair view_ref_pair);
   void InitializePuppetMaster();
   void InitializeElementManager();
   void InitializeSessionCtl();
@@ -148,21 +142,11 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // running, closes the request.
   template <class Interface>
   void ConnectToSessionShellService(fidl::InterfaceRequest<Interface> request) {
-    // Connect to the service exposed by the v1 session shell component if available, or to
-    // the service in |v2_service_directory_| otherwise.
-    //
-    // It's expected that services provided by a v2 session shell are added to the session
-    // environment via /svc_for_v1_sessionmgr.
-    if (session_shell_url_.has_value()) {
-      auto services = agent_runner_->GetAgentOutgoingServices(*session_shell_url_);
-      if (!services) {
-        return;
-      }
-      services->ConnectToService(std::move(request));
-    } else {
-      FX_DCHECK(v2_service_directory_.has_value());
-      v2_service_directory_->Connect(std::move(request));
+    auto services = agent_runner_->GetAgentOutgoingServices(session_shell_url_);
+    if (!services) {
+      return;
     }
+    services->ConnectToService(std::move(request));
   }
 
   // The device-local unique identifier for this session. The uniqueness
@@ -189,7 +173,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   fidl::BindingSet<fuchsia::modular::internal::Sessionmgr> bindings_;
   component::ServiceProviderImpl session_shell_services_;
 
-  std::optional<std::string> session_shell_url_;
+  std::string session_shell_url_;
   fidl::BindingSet<fuchsia::modular::SessionShellContext> session_shell_context_bindings_;
   fidl::BindingSet<fuchsia::modular::SessionRestartController> session_restart_controller_bindings_;
 

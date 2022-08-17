@@ -113,7 +113,8 @@
             "type": "object",
             "properties": {
                 "url": {
-                    "$ref": "#/definitions/component_url"
+                    "$ref": "#/definitions/component_url",
+                    "default": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx"
                 }
             },
             "additionalProperties": true,

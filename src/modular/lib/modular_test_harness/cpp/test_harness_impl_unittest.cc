@@ -298,7 +298,7 @@ TEST_F(TestHarnessImplTest, ParseConfigFromString) {
   "basemgr": {
     "session_shells": [
       {
-        "url": "fuchsia-pkg://fuchsia.com/test_session_shell#meta/test_session_shell.cmx"
+        "url": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx"
       }
     ]
   },
@@ -323,7 +323,7 @@ TEST_F(TestHarnessImplTest, ParseConfigFromString) {
   RunLoopUntil([&] { return done; });
 
   ASSERT_EQ(1u, basemgr_config.session_shell_map().size());
-  EXPECT_EQ("fuchsia-pkg://fuchsia.com/test_session_shell#meta/test_session_shell.cmx",
+  EXPECT_EQ("fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
             basemgr_config.session_shell_map().at(0).config().app_config().url());
 }
 

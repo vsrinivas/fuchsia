@@ -13,7 +13,10 @@ void XdrSessionShellMapEntry(XdrContext* const xdr,
                              fuchsia::modular::session::SessionShellMapEntry* const data) {
   auto* config = data->mutable_config();
 
-  xdr->Field(modular_config::kUrl, config->mutable_app_config()->mutable_url());
+  // AppConfig
+  bool has_url = config->mutable_app_config()->has_url();
+  xdr->FieldWithDefault(modular_config::kUrl, config->mutable_app_config()->mutable_url(), has_url,
+                        std::string(modular_config::kDefaultSessionShellUrl));
 
   bool has_args = config->mutable_app_config()->has_args();
   xdr->FieldWithDefault(modular_config::kArgs, config->mutable_app_config()->mutable_args(),
@@ -52,6 +55,21 @@ void XdrV2ModularAgentsEntry(XdrContext* const xdr,
                              fuchsia::modular::session::V2ModularAgentsEntry* const data) {
   xdr->Field(modular_config::kServiceName, data->mutable_service_name());
   xdr->Field(modular_config::kAgentUrl, data->mutable_agent_url());
+}
+
+std::vector<fuchsia::modular::session::SessionShellMapEntry> GetDefaultSessionShellMap() {
+  fuchsia::modular::session::SessionShellConfig config;
+  config.mutable_app_config()->set_url(modular_config::kDefaultSessionShellUrl);
+  config.mutable_app_config()->set_args(std::vector<std::string>());
+
+  fuchsia::modular::session::SessionShellMapEntry map_entry;
+  map_entry.set_name(modular_config::kDefaultSessionShellUrl);
+  map_entry.set_config(std::move(config));
+
+  std::vector<fuchsia::modular::session::SessionShellMapEntry> session_shell_map(1);
+  session_shell_map.at(0) = std::move(map_entry);
+
+  return session_shell_map;
 }
 
 fuchsia::modular::session::BasemgrConfig GetDefaultBasemgrConfig() {
@@ -102,11 +120,16 @@ void XdrBasemgrConfig_v1(XdrContext* const xdr,
                         data->mutable_use_session_shell_for_story_shell_factory(),
                         has_use_session_shell_for_story_shell_factory, false);
 
-  std::vector<fuchsia::modular::session::SessionShellMapEntry> default_session_shell_map;
-  bool has_session_shell_map = data->has_session_shell_map();
+  // If no session shells are specified, a default session shell will be
+  // added to |data->session_shell_map|. Otherwise, the filter
+  // |XdrSessionShellMapEntry| will fill in individual fields of each session
+  // shell.
+  auto session_shell_config = GetDefaultSessionShellMap();
+  bool has_nonempty_session_shell_map =
+      data->has_session_shell_map() && !data->session_shell_map().empty();
   xdr->FieldWithDefault(modular_config::kSessionShells, data->mutable_session_shell_map(),
-                        XdrSessionShellMapEntry, has_session_shell_map,
-                        std::move(default_session_shell_map));
+                        XdrSessionShellMapEntry, has_nonempty_session_shell_map,
+                        std::move(session_shell_config));
 
   bool has_story_shell_url = false;
   if (data->has_story_shell()) {
