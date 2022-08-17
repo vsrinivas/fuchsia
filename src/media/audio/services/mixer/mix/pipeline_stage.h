@@ -20,6 +20,7 @@
 #include "src/media/audio/lib/clock/clock_synchronizer.h"
 #include "src/media/audio/lib/format2/fixed.h"
 #include "src/media/audio/lib/format2/format.h"
+#include "src/media/audio/lib/processing/sampler.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
 #include "src/media/audio/services/mixer/mix/packet_view.h"
@@ -81,6 +82,7 @@ class PipelineStage {
   struct AddSourceOptions {
     std::shared_ptr<ClockSynchronizer> clock_sync = nullptr;
     std::unordered_set<GainControlId> gain_ids = {};
+    Sampler::Type sampler_type = Sampler::Type::kDefault;
   };
   virtual void AddSource(PipelineStagePtr source, AddSourceOptions options)
       TA_REQ(thread()->checker()) = 0;
