@@ -189,7 +189,7 @@ func NewClient(
 	c.stats.PacketDiscardStats.InvalidPacketType.Init()
 	c.stats.PacketDiscardStats.InvalidTransProto.Init()
 	c.stats.PacketDiscardStats.InvalidPort.Init()
-	c.StoreInfo(&Info{
+	c.storeInfo(&Info{
 		NICID:          nicid,
 		LinkAddr:       linkAddr,
 		Acquisition:    acquisition,
@@ -204,12 +204,12 @@ func (c *Client) Info() Info {
 	return c.info.Load().(Info)
 }
 
-// StoreInfo updates the synchronized copy of the DHCP Info and if the client's
+// storeInfo updates the synchronized copy of the DHCP Info and if the client's
 // state changed, it will log it in the state recent history.
 //
 // Because of the size of Info, it is passed as a pointer to avoid an extra
 // unnecessary copy.
-func (c *Client) StoreInfo(info *Info) {
+func (c *Client) storeInfo(info *Info) {
 	c.stateRecentHistory.Push(info.State.String())
 	c.info.Store(*info)
 }
@@ -435,7 +435,7 @@ func (c *Client) Run(ctx context.Context) (rtn tcpip.AddressWithPrefix) {
 		}
 
 		// Synchronize info after attempt to acquire is complete.
-		c.StoreInfo(&info)
+		c.storeInfo(&info)
 
 		// RFC 2131 Section 4.4.5
 		// https://tools.ietf.org/html/rfc2131#section-4.4.5
@@ -492,7 +492,7 @@ func (c *Client) Run(ctx context.Context) (rtn tcpip.AddressWithPrefix) {
 		info.State = next
 
 		// Synchronize info after any state updates.
-		c.StoreInfo(&info)
+		c.storeInfo(&info)
 	}
 }
 
@@ -520,7 +520,7 @@ func (c *Client) updateInfo(info *Info, acquired tcpip.AddressWithPrefix, config
 	info.RebindTime = now.Add(config.RebindTime.Duration())
 	info.Config = *config
 	info.State = state
-	c.StoreInfo(info)
+	c.storeInfo(info)
 	return prevAssigned
 }
 
