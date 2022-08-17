@@ -29,26 +29,14 @@
             protocol: [ "fuchsia.sys2.EventSource" ],
         },
         {
-            event: "capability_requested",
-            from: "parent",
-            as: "publisher_requested",
-            filter: { name: "fuchsia.debugdata.Publisher" },
-        },
-        {
-            event: "started",
-            from: "parent",
-        },
-        {
-            event: "destroyed",
-            from: "parent",
-        },
-        {
-            event_stream_deprecated: "EventStream",
-            subscriptions: [
-                { event: "publisher_requested" },
-                { event: "started" },
-                { event: "destroyed" },
+            event_stream: [
+                "capability_requested_v2",
+                "destroyed_v2",
+                "started_v2",
             ],
+            from: "parent",
+            path: "/events/event_stream",
+            filter: { name: "fuchsia.debugdata.Publisher" },
         },
         {
             storage: "tmp",

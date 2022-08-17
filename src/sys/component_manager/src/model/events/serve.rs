@@ -25,8 +25,8 @@ use {
     futures::{lock::Mutex, FutureExt, StreamExt, TryStreamExt},
     measure_tape_for_events::Measurable,
     moniker::{
-        AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, ExtendedMoniker, RelativeMoniker,
-        RelativeMonikerBase,
+        AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, ExtendedMoniker,
+        RelativeMoniker, RelativeMonikerBase,
     },
     std::{collections::VecDeque, sync::Arc},
     tracing::{error, info, warn},
@@ -125,14 +125,21 @@ pub async fn serve_event_stream(
 /// of an event before passing it off to the component that is
 /// reading the event stream.
 fn get_scope_length(route: &[ComponentEventRoute]) -> usize {
-    // This is the wrong index, because it's operated on the unreversed vec.
-    route.len()
-        - route
-            .iter()
-            .enumerate()
-            .find(|(_, route)| route.scope.is_some())
-            .map(|(i, _)| i)
-            .unwrap_or(0)
+    // Length is the length of the scope (0 if no scope, 1 for the
+    // component after <root>)
+    let mut length = 0;
+    // Index is the current index in route +1 (since we want to exclude
+    // a component's parent from the moniker).
+    let mut index = 1;
+    for component in route {
+        // Set length to index, this is the most recent
+        // scope found in the route.
+        if component.scope.is_some() {
+            length = index;
+        }
+        index += 1;
+    }
+    length
 }
 
 /// Determines if an event from a specified absolute moniker
@@ -140,17 +147,14 @@ fn get_scope_length(route: &[ComponentEventRoute]) -> usize {
 fn is_moniker_valid_within_scope(moniker: &ExtendedMoniker, route: &[ComponentEventRoute]) -> bool {
     match moniker {
         ExtendedMoniker::ComponentInstance(instance) => {
-            let mut iter = route.iter().rev();
-            match iter.next() {
-                None => panic!("Event stream exited prematurely"),
-                Some(active_scope) => {
-                    validate_component_instance(instance, iter, active_scope.scope.clone())
-                        .unwrap_or(true) // If no rejection for a route, allow it.
-                }
-            }
+            validate_component_instance(instance, route.iter())
         }
         ExtendedMoniker::ComponentManager => false,
     }
+}
+
+fn get_child_moniker_name(moniker: &ChildMoniker) -> &str {
+    moniker.collection().unwrap_or(moniker.name())
 }
 
 /// Checks the specified instance against the specified route,
@@ -159,49 +163,67 @@ fn is_moniker_valid_within_scope(moniker: &ExtendedMoniker, route: &[ComponentEv
 /// or None if allowed because no route explicitly rejected it.
 fn validate_component_instance(
     instance: &AbsoluteMoniker,
-    iter: std::iter::Rev<std::slice::Iter<'_, ComponentEventRoute>>,
-    mut active_scope: Option<Vec<String>>,
-) -> Option<bool> {
-    let mut reject_by_route = false;
-    instance.path().iter().zip(iter.map(Some).chain(std::iter::repeat(None))).any(
-        |(part, maybe_route)| {
-            match (maybe_route, &active_scope) {
-                (Some(_), Some(scope)) if !scope.contains(&part.name().to_string()) => {
-                    // Reject due to scope mismatch.
-                    reject_by_route = true;
-                    true
+    mut iter: std::slice::Iter<'_, ComponentEventRoute>,
+) -> bool {
+    let path = instance.path();
+    let mut event_iter = path.iter();
+    // Component manager is an unnamed component which exists in route
+    // but not in the moniker (because it's not a named component).
+    // We take the first item from the iterator and get its scope
+    // to determine initial scoping and ensure that route
+    // and moniker are properly aligned to each other.
+    let mut active_scope = iter.next().unwrap().scope.clone();
+    for component in iter {
+        if let Some(event_part) = event_iter.next() {
+            match active_scope {
+                Some(ref scopes)
+                    if !scopes.contains(&get_child_moniker_name(&event_part).to_string()) =>
+                {
+                    // Reject due to scope mismatch
+                    return false;
                 }
-                (Some(route), Some(_)) => {
-                    active_scope = route.scope.clone();
-                    false
-                }
-                _ => {
-                    // Permission granted, hit end of route
-                    active_scope = None;
-                    true
-                }
+                _ => {}
             }
-        },
-    );
-    if reject_by_route || active_scope.is_some() {
-        return Some(false);
+            if event_part.name != component.component {
+                // Reject due to path mismatch
+                return false;
+            }
+            active_scope = component.scope.clone();
+        } else {
+            // Reject due to no more event parts
+            return false;
+        }
     }
-    None
+    match (active_scope, event_iter.next()) {
+        (Some(scopes), Some(event)) => {
+            if !scopes.contains(&get_child_moniker_name(&event).to_string()) {
+                // Reject due to scope mismatch
+                return false;
+            }
+        }
+        (Some(_), None) => {
+            // Reject due to no more event parts
+            return false;
+        }
+        _ => {}
+    }
+    // Reached end of scope.
+    true
 }
 
 /// Filters and downscopes an event by a route.
 /// Returns true if the event is allowed given the specified route,
 /// false otherwise.
-fn filter_event(event: &mut Event, route: &[ComponentEventRoute]) -> bool {
+fn filter_event(moniker: &mut ExtendedMoniker, route: &[ComponentEventRoute]) -> bool {
     let scope_length = get_scope_length(route);
-    if !is_moniker_valid_within_scope(&event.event.target_moniker, route) {
+    if !is_moniker_valid_within_scope(&moniker, &route[0..scope_length]) {
         return false;
     }
     // For scoped events, the apparent root (visible to the component)
     // starts at the last scope declaration which applies to this particular event.
     // Since this creates a relative rather than absolute moniker, where the base may be different
     // for each event, ambiguous component monikers are possible here.
-    if let ExtendedMoniker::ComponentInstance(instance) = &mut event.event.target_moniker {
+    if let ExtendedMoniker::ComponentInstance(instance) = moniker {
         let mut path = instance.path().clone();
         path.reverse();
         for _ in 0..scope_length {
@@ -215,10 +237,10 @@ fn filter_event(event: &mut Event, route: &[ComponentEventRoute]) -> bool {
 
 /// Validates and filters an event, returning true if the route is allowed,
 /// false otherwise. The scope of the event is filtered to the allowed route.
-fn validate_and_filter_event(event: &mut Event, route: &[ComponentEventRoute]) -> bool {
+fn validate_and_filter_event(moniker: &mut ExtendedMoniker, route: &[ComponentEventRoute]) -> bool {
     let needs_filter = route.iter().any(|component| component.scope.is_some());
     if needs_filter {
-        filter_event(event, route)
+        filter_event(moniker, route)
     } else {
         true
     }
@@ -281,15 +303,18 @@ async fn handle_get_next_request(
     }
 
     // Read events from the event stream
-    while let Some((mut event, Some(route))) = event_stream.next().await {
-        if !validate_and_filter_event(&mut event, &route) {
+    while let Some((mut event, Some(mut route))) = event_stream.next().await {
+        // The route comes in the wrong order, reverse it so that it is correct.
+        route.reverse();
+        if !validate_and_filter_event(&mut event.event.target_moniker, &route) {
             continue;
         }
         let event_type = event.event.event_type().to_string();
         let event_fidl_object = create_fidl_object_or_continue!(event);
         handle_event!(event_fidl_object, event_type);
-        while let Some(Some((mut event, Some(route)))) = event_stream.next().now_or_never() {
-            if !validate_and_filter_event(&mut event, &route) {
+        while let Some(Some((mut event, Some(mut route)))) = event_stream.next().now_or_never() {
+            route.reverse();
+            if !validate_and_filter_event(&mut event.event.target_moniker, &route) {
                 // Event failed verification, check for next event
                 continue;
             }
@@ -540,4 +565,171 @@ async fn create_event_fidl_object(event: Event) -> Result<fsys::Event, fidl::Err
     });
     let event_result = maybe_create_event_result(&event.event.result).await?;
     Ok(fsys::Event { header, event_result, ..fsys::Event::EMPTY })
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::model::events::serve::validate_and_filter_event;
+    use crate::model::events::serve::ComponentEventRoute;
+    use moniker::AbsoluteMoniker;
+    use moniker::AbsoluteMonikerBase;
+    use moniker::ChildMoniker;
+    use moniker::ExtendedMoniker;
+
+    // Route: /root(coll)
+    // Event: /root
+    // Output: (rejected)
+    #[test]
+    fn test_validate_and_filter_event_at_root() {
+        let mut moniker =
+            ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![ChildMoniker::new(
+                "root".to_string(),
+                Some("coll".to_string()),
+            )]));
+        let route = vec![
+            ComponentEventRoute { component: "<root>".to_string(), scope: None },
+            ComponentEventRoute {
+                component: "root".to_string(),
+                scope: Some(vec!["coll".to_string()]),
+            },
+        ];
+        assert!(!validate_and_filter_event(&mut moniker, &route));
+    }
+
+    // Test validate_and_filter_event
+
+    // Route: /<root>/core(test_manager)/test_manager
+    // Event: /
+    // Output: (rejected)
+    #[test]
+    fn test_validate_and_filter_event_empty_moniker() {
+        let mut event = ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![]));
+        let route = vec![
+            ComponentEventRoute { component: "<root>".to_string(), scope: None },
+            ComponentEventRoute {
+                component: "core".to_string(),
+                scope: Some(vec!["test_manager".to_string()]),
+            },
+            ComponentEventRoute { component: "test_manager".to_string(), scope: None },
+        ];
+        assert_eq!(validate_and_filter_event(&mut event, &route), false);
+    }
+
+    // Route: a(b)/b(c)/c
+    // Event: a/b/c
+    // Output: /
+    #[test]
+    fn test_validate_and_filter_event_moniker_root() {
+        let mut event = ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![
+            ChildMoniker::new("a".to_string(), None),
+            ChildMoniker::new("b".to_string(), None),
+            ChildMoniker::new("c".to_string(), None),
+        ]));
+        let route = vec![
+            ComponentEventRoute { component: "<root>".to_string(), scope: None },
+            ComponentEventRoute { component: "a".to_string(), scope: Some(vec!["b".to_string()]) },
+            ComponentEventRoute { component: "b".to_string(), scope: Some(vec!["c".to_string()]) },
+            ComponentEventRoute { component: "c".to_string(), scope: None },
+        ];
+        assert!(super::validate_and_filter_event(&mut event, &route));
+        assert_eq!(event, ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![])));
+    }
+
+    // Route: a(b)/b(c)/c
+    // Event: a/b/c/d
+    // Output: d
+    #[test]
+    fn test_validate_and_filter_event_moniker_children_scoped() {
+        let mut event = ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![
+            ChildMoniker::new("a".to_string(), None),
+            ChildMoniker::new("b".to_string(), None),
+            ChildMoniker::new("c".to_string(), None),
+            ChildMoniker::new("d".to_string(), None),
+        ]));
+        let route = vec![
+            ComponentEventRoute { component: "<root>".to_string(), scope: None },
+            ComponentEventRoute { component: "a".to_string(), scope: Some(vec!["b".to_string()]) },
+            ComponentEventRoute { component: "b".to_string(), scope: Some(vec!["c".to_string()]) },
+            ComponentEventRoute { component: "c".to_string(), scope: None },
+        ];
+        assert!(super::validate_and_filter_event(&mut event, &route));
+        assert_eq!(
+            event,
+            ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![ChildMoniker::new(
+                "d".to_string(),
+                None
+            ),]))
+        );
+    }
+
+    // Route: a(b)/b(c)/c
+    // Event: a
+    // Output: (rejected)
+    #[test]
+    fn test_validate_and_filter_event_moniker_above_root_rejected() {
+        let mut event =
+            ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![ChildMoniker::new(
+                "a".to_string(),
+                None,
+            )]));
+        let route = vec![
+            ComponentEventRoute { component: "<root>".to_string(), scope: None },
+            ComponentEventRoute { component: "a".to_string(), scope: Some(vec!["b".to_string()]) },
+            ComponentEventRoute { component: "b".to_string(), scope: Some(vec!["c".to_string()]) },
+            ComponentEventRoute { component: "c".to_string(), scope: None },
+        ];
+        assert!(!super::validate_and_filter_event(&mut event, &route));
+        assert_eq!(
+            event,
+            ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![ChildMoniker::new(
+                "a".to_string(),
+                None
+            ),]))
+        );
+    }
+
+    // Route: a/b(c)/c
+    // Event: f/i
+    // Output: (rejected)
+    #[test]
+    fn test_validate_and_filter_event_moniker_ambiguous() {
+        let mut event = ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![
+            ChildMoniker::new("f".to_string(), None),
+            ChildMoniker::new("i".to_string(), None),
+        ]));
+        let route = vec![
+            ComponentEventRoute { component: "<root>".to_string(), scope: None },
+            ComponentEventRoute { component: "a".to_string(), scope: None },
+            ComponentEventRoute { component: "b".to_string(), scope: Some(vec!["c".to_string()]) },
+            ComponentEventRoute { component: "c".to_string(), scope: None },
+        ];
+        assert!(!super::validate_and_filter_event(&mut event, &route));
+    }
+
+    // Route: /core(test_manager)/test_manager/test-id(test_wrapper)/test_wrapper(test_root)
+    // Event: /core/feedback
+    // Output: (rejected)
+    #[test]
+    fn test_validate_and_filter_event_moniker_root_rejected() {
+        let mut event = ExtendedMoniker::ComponentInstance(AbsoluteMoniker::new(vec![
+            ChildMoniker::new("core".to_string(), None),
+            ChildMoniker::new("feedback".to_string(), None),
+        ]));
+        let route = vec![
+            ComponentEventRoute { component: "<root>".to_string(), scope: None },
+            ComponentEventRoute {
+                component: "core".to_string(),
+                scope: Some(vec!["test_manager".to_string()]),
+            },
+            ComponentEventRoute {
+                component: "test_manager".to_string(),
+                scope: Some(vec!["test_wrapper".to_string()]),
+            },
+            ComponentEventRoute {
+                component: "test_wrapper".to_string(),
+                scope: Some(vec!["test_root".to_string()]),
+            },
+        ];
+        assert_eq!(super::validate_and_filter_event(&mut event, &route), false);
+    }
 }

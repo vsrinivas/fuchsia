@@ -16,13 +16,5 @@
             from: "parent",
             to: [ "#realm_builder" ],
         },
-        {
-            event_stream: [
-                "running_v2",
-                "started_v2",
-            ],
-            from: "parent",
-            to: "#realm_builder",
-        },
     ],
 }
