@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 
+#include "src/media/audio/services/mixer/fidl/reachability.h"
 #include "src/media/audio/services/mixer/mix/pipeline_stage.h"
 #include "src/media/audio/services/mixer/mix/thread.h"
 
@@ -90,9 +91,14 @@ PipelineStagePtr Node::pipeline_stage() const {
   return pipeline_stage_;
 }
 
-ThreadPtr Node::thread() const {
+ThreadPtr Node::pipeline_stage_thread() const {
   FX_CHECK(!is_meta_);
-  return thread_;
+  return pipeline_stage_thread_;
+}
+
+void Node::set_pipeline_stage_thread(ThreadPtr t) {
+  FX_CHECK(!is_meta_);
+  pipeline_stage_thread_ = t;
 }
 
 void Node::AddSource(NodePtr source) {
@@ -155,11 +161,21 @@ void Node::RemoveChildDest(NodePtr child_dest) {
 }
 
 fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdge(
-    GlobalTaskQueue& global_queue, NodePtr dest, NodePtr src) {
-  FX_CHECK(dest);
+    GlobalTaskQueue& global_queue, NodePtr src, NodePtr dest) {
   FX_CHECK(src);
+  FX_CHECK(dest);
 
-  // Create a src child if needed.
+  // If there already exists a path from dest -> src, then adding src -> dest would create a cycle.
+  if (ExistsPath(*dest, *src)) {
+    return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kCycle);
+  }
+
+  return CreateEdgeInner(global_queue, std::move(src), std::move(dest));
+}
+
+fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdgeInner(
+    GlobalTaskQueue& global_queue, NodePtr src, NodePtr dest) {
+  // Create a node in src->child_dests() if needed.
   if (src->is_meta_) {
     if (HasDestInChildren(src->child_dests(), dest)) {
       return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kAlreadyConnected);
@@ -168,15 +184,14 @@ fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdge(
     if (!child) {
       return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kSourceHasTooManyOutputs);
     }
-    auto result = CreateEdge(global_queue, dest, child);
-    if (!result.is_ok()) {
-      // On failure, unlink the child so it will be deleted when dropped.
-      src->RemoveChildDest(child);
+    auto result = CreateEdgeInner(global_queue, child, dest);
+    if (result.is_ok()) {
+      src->AddChildDest(child);
     }
     return result;
   }
 
-  // Create a dest child if needed.
+  // Create a node in dest->child_sources() if needed.
   if (dest->is_meta_) {
     if (HasSourceInChildren(dest->child_sources(), src)) {
       return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kAlreadyConnected);
@@ -185,50 +200,60 @@ fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdge(
     if (!child) {
       return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kDestHasTooManyInputs);
     }
-    auto result = CreateEdge(global_queue, child, src);
-    if (!result) {
-      // On failure, unlink the child so it will be deleted when dropped.
-      dest->RemoveChildSource(child);
+    auto result = CreateEdgeInner(global_queue, src, child);
+    if (result.is_ok()) {
+      dest->AddChildSource(child);
     }
     return result;
   }
 
-  if (src->dest() || HasNode(dest->sources(), src)) {
+  if (src->dest()) {
     return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kAlreadyConnected);
   }
-
   if (!dest->CanAcceptSource(src)) {
     return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
   }
-#if 0
-  // TODO(fxbug.dev/87651): implement
-  if (ExistsPathThroughSources(src, dest)) {
-      return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kCycle);
-  }
-#endif
+
+  // Since src->dest() is not set, src should not appear in dest->sources().
+  FX_CHECK(!HasNode(dest->sources(), src));
 
   dest->AddSource(src);
   src->SetDest(dest);
 
-  // TODO(fxbug.dev/87651): FX_CHECK that src->thread() is the detached thread
-  // TODO(fxbug.dev/87651): update src's thread to dest->thread()
+  // Since the source was not previously connected, it must be owned by the detached thread.
+  // This means we can move src to dest's thread.
+  FX_CHECK(src->pipeline_stage_thread()->id() == DetachedThread::kId);
+  src->set_pipeline_stage_thread(dest->pipeline_stage_thread());
 
-  global_queue.Push(dest->thread()->id(), [dest, src]() {
-    ScopedThreadChecker checker(dest->pipeline_stage()->thread()->checker());
-    // TODO(fxbug.dev/87651): Pass in `options`.
-    dest->pipeline_stage()->AddSource(src->pipeline_stage(), /*options=*/{});
-  });
+  // Save this now since we can't read Nodes from the mix threads.
+  const auto dest_stage_thread_id = dest->pipeline_stage_thread()->id();
+
+  // Update the PipelineStages asynchronously, on dest's thread.
+  global_queue.Push(dest_stage_thread_id,
+                    [dest_stage = dest->pipeline_stage(),  //
+                     src_stage = src->pipeline_stage(),    //
+                     dest_stage_thread_id]() {
+                      FX_CHECK(dest_stage->thread()->id() == dest_stage_thread_id)
+                          << dest_stage->thread()->id() << " != " << dest_stage_thread_id;
+                      FX_CHECK(src_stage->thread()->id() == DetachedThread::kId)
+                          << src_stage->thread()->id() << " != " << DetachedThread::kId;
+
+                      ScopedThreadChecker checker(dest_stage->thread()->checker());
+                      src_stage->set_thread(dest_stage->thread());
+                      // TODO(fxbug.dev/87651): Pass in `gain_ids`.
+                      dest_stage->AddSource(src_stage, /*options=*/{});
+                    });
 
   return fpromise::ok();
 }
 
 fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
-    GlobalTaskQueue& global_queue, NodePtr dest, NodePtr src) {
-  FX_CHECK(dest);
+    GlobalTaskQueue& global_queue, NodePtr src, NodePtr dest, DetachedThreadPtr detached_thread) {
   FX_CHECK(src);
+  FX_CHECK(dest);
 
   if (src->is_meta_) {
-    // Find src's destination child that connects to dest or to a child of dest.
+    // Find the node in src->child_dests() that connects to dest or a child of dest.
     NodePtr child;
     for (auto& c : src->child_dests_) {
       if (c->dest_ == dest || c->dest_->parent() == dest) {
@@ -239,20 +264,20 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
     if (!child) {
       return fpromise::error(fuchsia_audio_mixer::DeleteEdgeError::kEdgeNotFound);
     }
-    // Remove the edge child -> dest.
-    // If this succeeds, then also remove child from src.
-    const auto result = DeleteEdge(global_queue, dest, child);
-    if (result.is_ok()) {
-      src->RemoveChildDest(child);
-    }
-    return result;
+    // Remove the edge child -> dest. This MUST succeed because we've found a child that connects
+    // to dest. If this fails, there must be a bug in CreateEdge.
+    const auto result = DeleteEdge(global_queue, child, dest, detached_thread);
+    FX_CHECK(result.is_ok()) << "unexpected DeleteEdge(child, dest) failure with code "
+                             << static_cast<int>(result.error());
+    src->RemoveChildDest(child);
+    return fpromise::ok();
   }
 
   if (dest->is_meta_) {
-    // Find dest's source child that connects to src (which must be an ordinary node).
+    // Find the node in dest->child_sources() that connects to src (which must be an ordinary node).
     NodePtr child;
     for (auto& c : dest->child_sources_) {
-      if (std::find(c->sources_.begin(), c->sources_.end(), src) != c->sources_.end()) {
+      if (HasNode(c->sources_, src)) {
         child = c;
         break;
       }
@@ -260,30 +285,47 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
     if (!child) {
       return fpromise::error(fuchsia_audio_mixer::DeleteEdgeError::kEdgeNotFound);
     }
-    // Remove the edge src -> child.
-    // If this succeeds, then also remove child from dest.
-    auto result = DeleteEdge(global_queue, child, src);
-    if (result.is_ok()) {
-      dest->RemoveChildSource(child);
-    }
+    // Remove the edge src -> child. This MUST succeed because we've found a child that connects
+    // with src. If this fails, there must be a bug in CreateEdge.
+    auto result = DeleteEdge(global_queue, src, child, detached_thread);
+    FX_CHECK(result.is_ok()) << "unexpected DeleteEdge(src, child) failure with code "
+                             << static_cast<int>(result.error());
+    dest->RemoveChildSource(child);
     return result;
   }
 
   if (!HasNode(dest->sources_, src)) {
     return fpromise::error(fuchsia_audio_mixer::DeleteEdgeError::kEdgeNotFound);
   }
+
+  // If the backwards (dest -> src) link exists, the forwards (src -> dest) link must exist too.
   FX_CHECK(src->dest_ == dest);
 
   src->RemoveDest(dest);
   dest->RemoveSource(src);
 
-  // TODO(fxbug.dev/87651): FX_CHECK that src->thread() is dest->thread()
-  // TODO(fxbug.dev/87651): update src's thread to the detached thread
+  // Since the source was previously connected to dest, it must be owned by the same thread as dest.
+  // Since the source is now disconnected, it moves to the detached thread.
+  FX_CHECK(src->pipeline_stage_thread() == dest->pipeline_stage_thread());
+  src->set_pipeline_stage_thread(detached_thread);
 
-  global_queue.Push(dest->thread()->id(), [dest, src]() {
-    ScopedThreadChecker checker(dest->pipeline_stage()->thread()->checker());
-    dest->pipeline_stage()->RemoveSource(src->pipeline_stage());
-  });
+  // Save this for the closure since we can't read Nodes from the mix threads.
+  const auto dest_stage_thread_id = dest->pipeline_stage_thread()->id();
+
+  // The PipelineStages are updated asynchronously.
+  global_queue.Push(dest_stage_thread_id,
+                    [dest_stage = dest->pipeline_stage(),  //
+                     src_stage = src->pipeline_stage(),    //
+                     dest_stage_thread_id, detached_thread]() {
+                      FX_CHECK(dest_stage->thread()->id() == dest_stage_thread_id)
+                          << dest_stage->thread()->id() << " != " << dest_stage_thread_id;
+                      FX_CHECK(src_stage->thread()->id() == dest_stage_thread_id)
+                          << src_stage->thread()->id() << " != " << dest_stage_thread_id;
+
+                      ScopedThreadChecker checker(dest_stage->thread()->checker());
+                      src_stage->set_thread(detached_thread);
+                      dest_stage->RemoveSource(src_stage);
+                    });
 
   return fpromise::ok();
 }

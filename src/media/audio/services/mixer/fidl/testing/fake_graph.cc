@@ -7,48 +7,38 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
-#include "src/media/audio/services/mixer/mix/testing/defaults.h"
 
 namespace media_audio {
 
-namespace {
-PipelineStagePtr CreatePipelineStage() {
-  const Format format =
-      Format::CreateOrDie({fuchsia_mediastreams::wire::AudioSampleFormat::kFloat, 2, 48000});
-  return std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
-      .format = format,
-      .reference_clock_koid = DefaultClockKoid(),
-  });
-}
-}  // namespace
-
 FakeNode::FakeNode(FakeGraph& graph, NodeId id, bool is_meta, FakeNodePtr parent)
     : Node(std::string("Node") + std::to_string(id), is_meta,
-           is_meta ? nullptr : CreatePipelineStage(), parent),
+           is_meta ? nullptr
+                   : FakePipelineStage::Create({.name = "PipelineStage" + std::to_string(id)}),
+           parent),
       graph_(graph) {}
 
 NodePtr FakeNode::CreateNewChildSource() {
   if (on_create_new_child_source_) {
-    return (*on_create_new_child_source_)();
+    return on_create_new_child_source_();
   }
   return graph_.CreateOrdinaryNode(std::nullopt, shared_from_this());
 }
 
 NodePtr FakeNode::CreateNewChildDest() {
   if (on_create_new_child_dest_) {
-    return (*on_create_new_child_dest_)();
+    return on_create_new_child_dest_();
   }
   return graph_.CreateOrdinaryNode(std::nullopt, shared_from_this());
 }
 
 bool FakeNode::CanAcceptSource(NodePtr src) const {
   if (on_can_accept_source_) {
-    return (*on_can_accept_source_)(src);
+    return on_can_accept_source_(src);
   }
   return true;
 }
 
-FakeGraph::FakeGraph(Args args) {
+FakeGraph::FakeGraph(Args args) : default_thread_(args.default_thread) {
   // Create all meta nodes and their children.
   for (auto& [meta_id, meta_args] : args.meta_nodes) {
     auto meta = CreateMetaNode(meta_id);
@@ -73,15 +63,46 @@ FakeGraph::FakeGraph(Args args) {
     }
     src->SetDest(dest);
     dest->AddSource(src);
+    dest->pipeline_stage()->AddSource(src->pipeline_stage(), {});
+  }
+
+  // Create all unconnected nodes.
+  // Since so far we've created all connected ordinary nodes, and these are expected to be
+  // unconnected, none of these nodes should exist yet.
+  for (auto& n : args.unconnected_ordinary_nodes) {
+    FX_CHECK(nodes_.find(n) == nodes_.end()) << "node " << n << " already created";
+    CreateOrdinaryNode(n, nullptr);
+  }
+
+  // Assign to threads.
+  for (auto& [thread, node_ids] : args.threads) {
+    for (auto& n : node_ids) {
+      FX_CHECK(nodes_.find(n) != nodes_.end()) << "node " << n << " is not defined";
+      nodes_[n]->set_pipeline_stage_thread(thread);
+      nodes_[n]->fake_pipeline_stage()->set_thread(thread);
+    }
   }
 }
 
 FakeGraph::~FakeGraph() {
   for (auto [id, node] : nodes_) {
+    // Clear all shared_ptrs. This removes circular references so all FakeNodes can be deleted.
     node->sources_.clear();
     node->dest_ = nullptr;
     node->child_sources_.clear();
     node->child_dests_.clear();
+    // Clear closures that might have additional references.
+    node->on_create_new_child_source_ = nullptr;
+    node->on_create_new_child_dest_ = nullptr;
+    node->on_can_accept_source_ = nullptr;
+    // Also clear PipelineStage sources. This is necessary in certain error-case tests, such as
+    // tests that intentionally create cycles.
+    if (!node->is_meta()) {
+      auto stage = node->fake_pipeline_stage();
+      while (!stage->sources().empty()) {
+        stage->RemoveSource(*stage->sources().begin());
+      }
+    }
   }
 }
 
@@ -120,6 +141,8 @@ FakeNodePtr FakeGraph::CreateOrdinaryNode(std::optional<NodeId> id, FakeNodePtr 
 
   std::shared_ptr<FakeNode> node(new FakeNode(*this, *id, false, parent));
   nodes_[*id] = node;
+  node->set_pipeline_stage_thread(default_thread_);
+  node->fake_pipeline_stage()->set_thread(default_thread_);
   return node;
 }
 

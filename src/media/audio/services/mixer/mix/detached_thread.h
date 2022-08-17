@@ -26,10 +26,14 @@ class DetachedThread : public Thread {
  public:
   static DetachedThreadPtr Create();
 
+  // The value returned by `id()`.
+  // Since there is exactly one DetachedThread per graph, this is a unique identifier.
+  static inline constexpr ThreadId kId = kAnyThreadId;
+
   // Returns the thread's ID.
   // Since there is exactly one DetachedThread per graph, this is a unique identifier.
   // Safe to call from any thread.
-  ThreadId id() const override { return kAnyThreadId; }
+  ThreadId id() const override { return kId; }
 
   // Returns the thread's name. This is used for diagnostics only.
   // The name may not be a unique identifier.

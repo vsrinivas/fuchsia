@@ -75,6 +75,7 @@ executable("fidl_unittests") {
     "//src/media/audio/lib/processing:prebuilt_coefficient_tables",
     "//src/media/audio/services/common/testing",
     "//src/media/audio/services/mixer/fidl/testing",
+    "//src/media/audio/services/mixer/mix/testing",
     "//third_party/googletest:gmock",
   ]
 }

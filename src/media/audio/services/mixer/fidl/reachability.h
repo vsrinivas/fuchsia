@@ -29,7 +29,7 @@ namespace media_audio {
 //         B      C      D
 // ```
 //
-// There exists a path `A -> M`, `M -> B`, and `A -> B`.
+// There exists paths `A -> M`, `M -> B`, and `A -> B`.
 bool ExistsPath(const Node& src, const Node& dest);
 
 }  // namespace media_audio

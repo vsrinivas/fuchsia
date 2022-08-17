@@ -16,6 +16,8 @@ source_set("testing") {
   sources = [
     "defaults.cc",
     "defaults.h",
+    "fake_pipeline_stage.h",
+    "fake_thread.h",
     "test_fence.h",
   ]
 

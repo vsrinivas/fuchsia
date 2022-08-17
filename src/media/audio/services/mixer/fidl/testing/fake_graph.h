@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "src/media/audio/services/mixer/fidl/node.h"
+#include "src/media/audio/services/mixer/mix/testing/fake_pipeline_stage.h"
 
 namespace media_audio {
 
@@ -40,8 +41,16 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
 
   // Register a handler for `CanAcceptSource`.
   // The default handler always returns true.
-  void SetOnCreateNewChildSource(std::function<bool(NodePtr)> handler) {
+  void SetOnCreateCanAcceptSource(std::function<bool(NodePtr)> handler) {
     on_can_accept_source_ = std::move(handler);
+  }
+
+  // Allow anyone to set the thread.
+  using Node::set_pipeline_stage_thread;
+
+  // Our PipelineStage is always this type.
+  FakePipelineStagePtr fake_pipeline_stage() const {
+    return std::static_pointer_cast<FakePipelineStage>(pipeline_stage());
   }
 
  protected:
@@ -66,9 +75,9 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
   FakeNode(FakeGraph& graph, NodeId id, bool is_meta, FakeNodePtr parent);
 
   FakeGraph& graph_;
-  std::optional<std::function<NodePtr()>> on_create_new_child_source_;
-  std::optional<std::function<NodePtr()>> on_create_new_child_dest_;
-  std::optional<std::function<bool(NodePtr)>> on_can_accept_source_;
+  std::function<NodePtr()> on_create_new_child_source_;
+  std::function<NodePtr()> on_create_new_child_dest_;
+  std::function<bool(NodePtr)> on_can_accept_source_;
 };
 
 // This class makes it easy to create graphs of FakeNodes during tests. For example, the following
@@ -127,6 +136,18 @@ class FakeGraph {
     // Adjaceny list.
     // All nodes must be ordinary nodes (i.e. not a key of `meta_nodes`).
     std::vector<Edge> edges;
+
+    // Unconnected ordinary nodes.
+    // These must not be mentioned in `edges`.
+    std::unordered_set<NodeId> unconnected_ordinary_nodes;
+
+    // Assignment of nodes to threads.
+    // All nodes must be ordinary nodes (i.e. not a key of `meta_nodes`).
+    std::unordered_map<ThreadPtr, std::vector<NodeId>> threads;
+
+    // The default thread to use if not specified above.
+    // May be nullptr.
+    ThreadPtr default_thread;
   };
 
   explicit FakeGraph(Args args);
@@ -157,6 +178,7 @@ class FakeGraph {
   NodeId NextId();
 
   std::unordered_map<NodeId, FakeNodePtr> nodes_;
+  ThreadPtr default_thread_;
 };
 
 }  // namespace media_audio

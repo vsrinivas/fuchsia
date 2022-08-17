@@ -16,6 +16,7 @@
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/common/global_task_queue.h"
 #include "src/media/audio/services/mixer/fidl/ptr_decls.h"
+#include "src/media/audio/services/mixer/mix/detached_thread.h"
 #include "src/media/audio/services/mixer/mix/ptr_decls.h"
 
 namespace media_audio {
@@ -75,7 +76,7 @@ namespace media_audio {
 //   * The ordinary edges form a forest of pipeline trees
 //   * The union of ordinary edges and meta edges form a DAG of nodes
 //
-// For more discussion on these two structures, see ../README.md.
+// For more discussion on these two structures, see ../docs/index.md.
 //
 // # NODE CREATION AND DELETION
 //
@@ -121,9 +122,9 @@ class Node {
   // REQUIRED: !is_meta()
   PipelineStagePtr pipeline_stage() const;
 
-  // Returns the Thread which controls this node.
+  // Returns the Thread which controls this node's PipelineStage.
   // REQUIRED: !is_meta()
-  ThreadPtr thread() const;
+  ThreadPtr pipeline_stage_thread() const;
 
   // Creates an edge from src -> dest. If src and dest are both ordinary nodes,
   // this creates an ordinary edge. Otherwise, this creates a meta edge: src and
@@ -131,12 +132,12 @@ class Node {
   //
   // Returns an error if the edge is not allowed.
   static fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> CreateEdge(
-      GlobalTaskQueue& global_queue, NodePtr dest, NodePtr src);
+      GlobalTaskQueue& global_queue, NodePtr src, NodePtr dest);
 
   // Deletes the edge from src -> dest. This is the inverse of CreateEdge.
   // Returns an error if the edge does not exist.
   static fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> DeleteEdge(
-      GlobalTaskQueue& global_queue, NodePtr dest, NodePtr src);
+      GlobalTaskQueue& global_queue, NodePtr src, NodePtr dest, DetachedThreadPtr detached_thread);
 
  protected:
   // REQUIRES: `parent` outlives this node.
@@ -149,9 +150,12 @@ class Node {
   Node(Node&&) = delete;
   Node& operator=(Node&&) = delete;
 
-  // Sets the Node's current thread.
+  // Sets our view of the PipelineStage's current thread. This is the value returned by
+  // `pipeline_stage_thread()`, however it may differ from `pipeline_stage()->set_thread()`.
+  // Caller is responsible for updating the PipelineStage asynchronously as described in
+  // ../docs/execution_model.md.
   // REQUIRED: !is_meta()
-  void set_thread(ThreadPtr t);
+  void set_pipeline_stage_thread(ThreadPtr t);
 
   //
   // The following methods are implementation details of CreateEdge.
@@ -180,6 +184,9 @@ class Node {
   void AddChildSource(NodePtr child_source);
   void AddChildDest(NodePtr child_dest);
 
+  static fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> CreateEdgeInner(
+      GlobalTaskQueue& global_queue, NodePtr src, NodePtr dest);
+
   // Implementation of DeleteEdge.
   void RemoveSource(NodePtr source);
   void RemoveDest(NodePtr dest);
@@ -199,7 +206,7 @@ class Node {
   // Hence we have the invariant: a->HasSource(b) iff b->dest_ == a
   std::vector<NodePtr> sources_;
   NodePtr dest_;
-  ThreadPtr thread_;
+  ThreadPtr pipeline_stage_thread_;
 
   // If is_meta_.
   std::vector<NodePtr> child_sources_;
