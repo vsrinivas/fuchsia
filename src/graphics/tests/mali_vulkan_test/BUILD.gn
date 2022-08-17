@@ -36,9 +36,9 @@ fuchsia_component("mali_vulkan_test_cmp") {
 
 protected_libvulkan_envs = []
 
-# Filter out everything that's not astro or sherlock.
+# Filter out everything that's not astro, sherlock, or nelson.
 foreach(env, magma_libvulkan_hardware_envs) {
-  if (env == sherlock_env || env == astro_env) {
+  if (env == sherlock_env || env == astro_env || env == nelson_env) {
     protected_libvulkan_envs += [ env ]
   }
 }

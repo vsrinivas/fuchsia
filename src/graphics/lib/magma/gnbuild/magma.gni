@@ -57,6 +57,7 @@ arm_gpu_envs = [
   astro_env,
   sherlock_env,
   vim3_env,
+  nelson_env,
 ]
 
 # General hardware environments for magma tests to target.
