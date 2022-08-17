@@ -64,6 +64,9 @@ zx_status_t zxio_create_with_allocator(fidl::ClientEnd<fuchsia_io::Node> node,
     case fio::wire::NodeInfo::Tag::kPacketSocket:
       type = ZXIO_OBJECT_TYPE_PACKET_SOCKET;
       break;
+    case fio::wire::NodeInfo::Tag::kRawSocket:
+      type = ZXIO_OBJECT_TYPE_RAW_SOCKET;
+      break;
     case fio::wire::NodeInfo::Tag::kService:
       type = ZXIO_OBJECT_TYPE_SERVICE;
       break;

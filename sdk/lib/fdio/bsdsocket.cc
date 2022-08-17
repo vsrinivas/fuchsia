@@ -149,7 +149,7 @@ int socket(int domain, int type, int protocol) {
       return ERRNO(EPROTONOSUPPORT);
   }
 
-  zx::status<fdio_ptr> io;
+  fdio_ptr io;
   switch (type & kSockTypesMask) {
     case SOCK_STREAM:
       switch (protocol) {
@@ -178,7 +178,12 @@ int socket(int domain, int type, int protocol) {
           if (!response.has_socket()) {
             return ERROR(ZX_ERR_NOT_SUPPORTED);
           }
-          io = fdio_stream_socket_create(std::move(response.socket()), std::move(control));
+          zx::status<fdio_ptr> io_result =
+              fdio_stream_socket_create(std::move(response.socket()), std::move(control));
+          if (io_result.is_error()) {
+            return ERROR(io_result.status_value());
+          }
+          io = io_result.value();
         } break;
         default:
           return ERRNO(EPROTONOSUPPORT);
@@ -224,6 +229,7 @@ int socket(int domain, int type, int protocol) {
       if (response.has_invalid_tag()) {
         return ERRNO(EIO);
       }
+      zx::status<fdio_ptr> io_result;
       switch (response.Which()) {
         case fsocket::wire::ProviderDatagramSocketResponse::Tag::kDatagramSocket: {
           fidl::ClientEnd<fsocket::DatagramSocket>& control = response.datagram_socket();
@@ -241,7 +247,7 @@ int socket(int domain, int type, int protocol) {
           if (!response.has_rx_meta_buf_size()) {
             return ERROR(ZX_ERR_NOT_SUPPORTED);
           }
-          io =
+          io_result =
               fdio_datagram_socket_create(std::move(response.socket()), std::move(control),
                                           response.tx_meta_buf_size(), response.rx_meta_buf_size());
         } break;
@@ -256,10 +262,14 @@ int socket(int domain, int type, int protocol) {
           if (!response.has_event()) {
             return ERROR(ZX_ERR_NOT_SUPPORTED);
           }
-          io = fdio_synchronous_datagram_socket_create(std::move(response.event()),
-                                                       std::move(control));
+          io_result = fdio_synchronous_datagram_socket_create(std::move(response.event()),
+                                                              std::move(control));
         } break;
       }
+      if (io_result.is_error()) {
+        return ERROR(io_result.status_value());
+      }
+      io = io_result.value();
     } break;
     case SOCK_RAW: {
       if (protocol == 0) {
@@ -310,16 +320,21 @@ int socket(int domain, int type, int protocol) {
       if (!response.has_event()) {
         return ERROR(ZX_ERR_NOT_SUPPORTED);
       }
-      io = fdio_raw_socket_create(std::move(response.event()), std::move(control));
+      io = fdio_raw_socket_allocate();
+      if (io == nullptr) {
+        return ERROR(ZX_ERR_NO_MEMORY);
+      }
+      zx_status_t status = zxio::CreateRawSocket(&io->zxio_storage(), std::move(response.event()),
+                                                 std::move(control));
+      if (status != ZX_OK) {
+        return ERROR(status);
+      }
     } break;
     default:
       return ERRNO(EPROTONOSUPPORT);
   }
 
-  if (io.is_error()) {
-    return ERROR(io.status_value());
-  }
-  zx::status result = create_node(type, io.value());
+  zx::status result = create_node(type, io);
   if (result.is_error()) {
     return ERROR(result.error_value());
   }

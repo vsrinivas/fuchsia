@@ -187,6 +187,11 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node, fio::wire
           storage, std::move(info.packet_socket().event),
           fidl::ClientEnd<fuchsia_posix_socket_packet::Socket>(node.TakeChannel()));
     }
+    case fio::wire::NodeInfo::Tag::kRawSocket: {
+      return zxio_raw_socket_init(
+          storage, std::move(info.raw_socket().event),
+          fidl::ClientEnd<fuchsia_posix_socket_raw::Socket>(node.TakeChannel()));
+    }
     case fio::wire::NodeInfo::Tag::kService: {
       return zxio_remote_init(storage, node.TakeChannel().release(), ZX_HANDLE_INVALID);
     }

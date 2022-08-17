@@ -2740,19 +2740,7 @@ zx::status<fdio_ptr> fdio_synchronous_datagram_socket_create(
   return zx::ok(io);
 }
 
-zx::status<fdio_ptr> fdio_raw_socket_create(zx::eventpair event,
-                                            fidl::ClientEnd<frawsocket::Socket> client) {
-  fdio_ptr io = fbl::MakeRefCounted<fdio_internal::raw_socket>();
-  if (io == nullptr) {
-    return zx::error(ZX_ERR_NO_MEMORY);
-  }
-  zx_status_t status =
-      zxio::CreateRawSocket(&io->zxio_storage(), std::move(event), std::move(client));
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-  return zx::ok(io);
-}
+fdio_ptr fdio_raw_socket_allocate() { return fbl::MakeRefCounted<fdio_internal::raw_socket>(); }
 
 static zxio_datagram_socket_t& zxio_datagram_socket(zxio_t* io) {
   return *reinterpret_cast<zxio_datagram_socket_t*>(io);

@@ -24,8 +24,7 @@ zx::status<fbl::RefPtr<fdio>> fdio_datagram_socket_create(
 zx::status<fbl::RefPtr<fdio>> fdio_stream_socket_create(
     zx::socket socket, fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client);
 
-zx::status<fbl::RefPtr<fdio>> fdio_raw_socket_create(
-    zx::eventpair event, fidl::ClientEnd<fuchsia_posix_socket_raw::Socket> client);
+fbl::RefPtr<fdio> fdio_raw_socket_allocate();
 
 fbl::RefPtr<fdio> fdio_packet_socket_allocate();
 

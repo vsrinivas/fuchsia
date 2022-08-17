@@ -90,7 +90,7 @@ TEST(CreateWithAllocator, Vmo) {
   ASSERT_OK(zxio_close(io));
 }
 
-TEST(CreateWithInfo, Unsupported) {
+TEST(CreateWithAllocator, Unsupported) {
   auto node_ends = fidl::CreateEndpoints<fuchsia_io::Node>();
   ASSERT_OK(node_ends.status_value());
   auto [node_client, node_server] = std::move(node_ends.value());
@@ -137,7 +137,7 @@ class TestDirectoryServer final : public zxio_tests::TestDirectoryServerBase {
 
 }  // namespace
 
-TEST(CreateWithInfo, Directory) {
+TEST(CreateWithAllocator, Directory) {
   zx::status dir_ends = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_OK(dir_ends.status_value());
   auto [dir_client, dir_server] = std::move(dir_ends.value());
@@ -174,7 +174,7 @@ TEST(CreateWithInfo, Directory) {
   dir_control_loop.Shutdown();
 }
 
-TEST(CreateWithInfo, File) {
+TEST(CreateWithAllocator, File) {
   zx::status file_ends = fidl::CreateEndpoints<fuchsia_io::File>();
   ASSERT_OK(file_ends.status_value());
   auto [file_client, file_server] = std::move(file_ends.value());
@@ -240,7 +240,7 @@ class TestServiceNodeServer : public fidl::testing::WireTestBase<fuchsia_io::Nod
   }
 };
 
-TEST(CreateWithInfo, Service) {
+TEST(CreateWithAllocator, Service) {
   zx::status node_ends = fidl::CreateEndpoints<fuchsia_io::Node>();
   ASSERT_OK(node_ends.status_value());
   auto [node_client, node_server] = std::move(node_ends.value());
@@ -287,7 +287,7 @@ class TestTtyServer : public fidl::testing::WireTestBase<fuchsia_hardware_pty::D
   }
 };
 
-TEST(CreateWithInfo, Tty) {
+TEST(CreateWithAllocator, Tty) {
   zx::status node_ends = fidl::CreateEndpoints<fuchsia_io::Node>();
   ASSERT_OK(node_ends.status_value());
   auto [node_client, node_server] = std::move(node_ends.value());
@@ -337,7 +337,7 @@ TEST(CreateWithInfo, Tty) {
   tty_control_loop.Shutdown();
 }
 
-TEST(CreateWithInfo, Vmofile) {
+TEST(CreateWithAllocator, Vmofile) {
   zx::status file_ends = fidl::CreateEndpoints<fuchsia_io::File>();
   ASSERT_OK(file_ends.status_value());
   auto [file_client, file_server] = std::move(file_ends.value());
@@ -409,7 +409,7 @@ TEST(CreateWithInfo, Vmofile) {
   vmofile_control_loop.Shutdown();
 }
 
-TEST(CreateWithInfo, PacketSocket) {
+TEST(CreateWithAllocator, PacketSocket) {
   zx::status socket_ends = fidl::CreateEndpoints<fuchsia_posix_socket_packet::Socket>();
   ASSERT_OK(socket_ends.status_value());
   auto [socket_client, socket_server] = std::move(socket_ends.value());
@@ -443,6 +443,57 @@ TEST(CreateWithInfo, PacketSocket) {
 
   // The event in node_info should be consumed by zxio.
   EXPECT_FALSE(node_info.packet_socket().event.is_valid());
+
+  std::unique_ptr<zxio_storage_t> storage(static_cast<zxio_storage_t*>(context));
+  zxio_t* zxio = &(storage->io);
+
+  // Closing the zxio object should close our eventpair's peer event.
+  zx_signals_t pending = 0;
+  ASSERT_EQ(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  EXPECT_NE(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
+
+  ASSERT_OK(zxio_close(zxio));
+
+  ASSERT_EQ(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  EXPECT_EQ(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
+
+  control_loop.Shutdown();
+}
+
+TEST(CreateWithAllocator, RawSocket) {
+  zx::status socket_ends = fidl::CreateEndpoints<fuchsia_posix_socket_raw::Socket>();
+  ASSERT_OK(socket_ends.status_value());
+  auto [socket_client, socket_server] = std::move(socket_ends.value());
+
+  zx::eventpair event0, event1;
+  ASSERT_OK(zx::eventpair::create(0, &event0, &event1));
+
+  auto node_info = fuchsia_io::wire::NodeInfo::WithRawSocket({
+      .event = std::move(event1),
+  });
+
+  auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {
+    if (type != ZXIO_OBJECT_TYPE_RAW_SOCKET) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    *out_storage = new zxio_storage_t;
+    *out_context = *out_storage;
+    return ZX_OK;
+  };
+
+  async::Loop control_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  zxio_tests::RawSocketServer server;
+  fidl::BindServer(control_loop.dispatcher(), std::move(socket_server), &server);
+  control_loop.StartThread("raw_socket_control_thread");
+
+  void* context = nullptr;
+  ASSERT_OK(
+      zxio_create_with_allocator(fidl::ClientEnd<fuchsia_io::Node>(socket_client.TakeChannel()),
+                                 node_info, allocator, &context));
+  ASSERT_NE(context, nullptr);
+
+  // The event in node_info should be consumed by zxio.
+  EXPECT_FALSE(node_info.raw_socket().event.is_valid());
 
   std::unique_ptr<zxio_storage_t> storage(static_cast<zxio_storage_t*>(context));
   zxio_t* zxio = &(storage->io);

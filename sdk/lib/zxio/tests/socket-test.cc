@@ -304,25 +304,6 @@ TEST_F(DatagramSocketTest, CreateWithTypeWrapper) {
 
 namespace {
 
-class RawSocketServer final : public fidl::testing::WireTestBase<fuchsia_posix_socket_raw::Socket> {
- public:
-  RawSocketServer() = default;
-
-  void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) final {
-    ADD_FAILURE("unexpected message received: %s", name.c_str());
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Clone(CloneRequestView request, CloneCompleter::Sync& completer) final {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
-    completer.ReplySuccess();
-    completer.Close(ZX_OK);
-  }
-};
-
 class RawSocketTest : public zxtest::Test {
  public:
   void SetUp() final {
@@ -359,7 +340,7 @@ class RawSocketTest : public zxtest::Test {
   zxio_t* zxio_{nullptr};
   zx::eventpair event_client_, event_server_;
   fidl::ClientEnd<fuchsia_posix_socket_raw::Socket> client_end_;
-  RawSocketServer server_;
+  zxio_tests::RawSocketServer server_;
   async::Loop control_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
 };
 
