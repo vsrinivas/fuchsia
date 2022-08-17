@@ -2201,7 +2201,7 @@
   area: ['Developer']
   issue: ['99820']
   gerrit_change_id: ['677102']
-  status: 'Draft'
+  status: 'Accepted'
   reviewers: ['abarth@google.com', 'amituttam@google.com', 'dschuyler@google.com', 'maruel@google.com', 'sebmarchand@google.com', 'sethladd@google.com', 'yaar@google.com']
   submitted: '2022-05-06'
   reviewed: '2022-06-16'
