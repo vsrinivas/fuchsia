@@ -80,7 +80,7 @@ async fn do_start(
 
         // Find the runner to use.
         let runner = component.resolve_runner().await.map_err(|error| {
-            warn!(component=%component.abs_moniker, %error, "Failed to resolve runner");
+            warn!("Failed to resolve runner for `{}`. A runner must be registered in a component's environment before being referenced. https://fuchsia.dev/go/components/runners#register. {} ", component.abs_moniker, error);
             error
         })?;
 
