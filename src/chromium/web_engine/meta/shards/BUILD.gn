@@ -5,30 +5,30 @@
 import("//tools/cmc/build/expect_includes.gni")
 
 expect_includes("web_engine_base") {
-  includes = [ "web_engine_base.shard.cmx" ]
+  includes = [ "web_engine_base.shard.cml" ]
 }
 
 expect_includes("web_engine_view") {
   deps = [ ":web_engine_base" ]
-  includes = [ "web_engine_view.shard.cmx" ]
+  includes = [ "web_engine_view.shard.cml" ]
 }
 
 expect_includes("web_engine_feature_audio") {
   deps = [ ":web_engine_base" ]
-  includes = [ "web_engine_feature_audio.shard.cmx" ]
+  includes = [ "web_engine_feature_audio.shard.cml" ]
 }
 
 expect_includes("web_engine_feature_network") {
   deps = [ ":web_engine_base" ]
-  includes = [ "web_engine_feature_network.shard.cmx" ]
+  includes = [ "web_engine_feature_network.shard.cml" ]
 }
 
 expect_includes("web_engine_feature_vulkan") {
   deps = [ ":web_engine_base" ]
-  includes = [ "web_engine_feature_vulkan.shard.cmx" ]
+  includes = [ "web_engine_feature_vulkan.shard.cml" ]
 }
 
 expect_includes("web_engine_feature_hardware_video_decoder") {
   deps = [ ":web_engine_feature_vulkan" ]
-  includes = [ "web_engine_feature_hardware_video_decoder.shard.cmx" ]
+  includes = [ "web_engine_feature_hardware_video_decoder.shard.cml" ]
 }

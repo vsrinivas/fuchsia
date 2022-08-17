@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 {
     include: [
+        "//src/chromium/web_engine/meta/shards/web_engine_base.shard.cml",
+        "//src/chromium/web_engine/meta/shards/web_engine_feature_network.shard.cml",
+        "//src/chromium/web_engine/meta/shards/web_engine_view.shard.cml",
         "inspect/client.shard.cml",
         "syslog/client.shard.cml",
     ],

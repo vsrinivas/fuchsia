@@ -4,6 +4,10 @@
 {
     include: [
         "//sdk/lib/inspect/client.shard.cml",
+        "//src/chromium/web_engine/meta/shards/web_engine_base.shard.cml",
+        "//src/chromium/web_engine/meta/shards/web_engine_feature_network.shard.cml",
+        "//src/chromium/web_engine/meta/shards/web_engine_feature_vulkan.shard.cml",
+        "//src/chromium/web_engine/meta/shards/web_engine_view.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
         "sys/component/realm_builder.shard.cml",
         "sys/testing/system-test.shard.cml",
