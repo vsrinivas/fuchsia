@@ -12,6 +12,11 @@
             name: "input-helper",
             url: "#meta/input-helper.cm",
         },
+        {
+            // TODO(fxbug.dev/107054): Remove use of input-synthesis.
+            name: "input-synthesis",
+            url: "#meta/input-synthesis-component.cm",
+        },
     ],
     offer: [
         {
@@ -36,12 +41,18 @@
         {
             protocol: [ "fuchsia.input.injection.InputDeviceRegistry" ],
             from: "#input-pipeline",
-            to: [ "#input-helper" ],
+            to: [
+                "#input-helper",
+                "#input-synthesis",
+            ],
         },
         {
             protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
-            to: [ "#input-helper" ],
+            to: [
+                "#input-helper",
+                "#input-synthesis",
+            ],
         },
     ],
     expose: [
@@ -52,6 +63,14 @@
                 "fuchsia.ui.policy.DeviceListenerRegistry",
             ],
             from: "#input-pipeline",
+        },
+        {
+            // TODO(fxbug.dev/107054): Remove these.
+            protocol: [
+                "test.inputsynthesis.Mouse",
+                "test.inputsynthesis.Text",
+            ],
+            from: "#input-synthesis",
         },
         {
             protocol: [ "fuchsia.ui.test.input.Registry" ],

@@ -5,6 +5,7 @@
     include: [ "//src/ui/testing/ui_test_realm/meta/text_manager.shard.cml" ],
     children: [
         {
+            // TODO(fxbug.dev/107054): Remove use of input-synthesis.
             name: "input-synthesis",
             url: "#meta/input-synthesis-component.cm",
         },
@@ -70,6 +71,7 @@
             from: "#scene-manager",
         },
         {
+            // TODO(fxbug.dev/107054): Remove these.
             protocol: [
                 "test.inputsynthesis.Mouse",
                 "test.inputsynthesis.Text",

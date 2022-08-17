@@ -25,6 +25,7 @@ executable("bin") {
     "//sdk/fidl/fuchsia.ui.test.scene",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/ui/input-synthesis:test.inputsynthesis",
     "//src/ui/testing/ui_test_realm",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
