@@ -216,6 +216,9 @@ group("tests") {
     ":system_tests",
     "//src/testing/sl4f",
 
+    # The run-emu scripts depend on make-fuchsia-vol being compiled to work.
+    "//tools/make-fuchsia-vol($host_toolchain)",
+
     # TODO(fxbug.dev/104273) Re-enable these tests when they can be made blocking.
     #":workstation-release-reboot($host_toolchain)",
     #":workstation-release-reboot-longevity($host_toolchain)",
