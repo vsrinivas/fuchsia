@@ -28,8 +28,6 @@ triage_files = [
   "intl.triage",
   "memory.triage",
   "scenic.triage",
-  "stash.triage",
-  "stash_secure.triage",
   "sysmem.triage",
   "timekeeper.triage",
   "test_manager.triage",

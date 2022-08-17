@@ -55,7 +55,7 @@ TEST_F(PolicyCheckerTest, ReplaceAsExecPolicyPresent) {
   FuchsiaPkgUrl fp;
   fp.Parse("fuchsia-pkg://fuchsia.com/chromium#meta/chromium.cmx");
   EXPECT_TRUE(policy_checker.CheckDeprecatedAmbientReplaceAsExecutable(fp));
-  fp.Parse("fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx");
+  fp.Parse("fuchsia-pkg://fuchsia.com/stash#meta/foo.cmx");
   EXPECT_FALSE(policy_checker.CheckDeprecatedAmbientReplaceAsExecutable(fp));
 }
 
@@ -77,7 +77,7 @@ TEST_F(PolicyCheckerTest, ReplaceAsExecPolicyAbsent) {
   FuchsiaPkgUrl fp;
   fp.Parse("fuchsia-pkg://fuchsia.com/chromium#meta/chromium.cmx");
   EXPECT_FALSE(policy_checker.CheckDeprecatedAmbientReplaceAsExecutable(fp));
-  fp.Parse("fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx");
+  fp.Parse("fuchsia-pkg://fuchsia.com/stash#meta/foo.cmx");
   EXPECT_FALSE(policy_checker.CheckDeprecatedAmbientReplaceAsExecutable(fp));
 }
 
@@ -111,7 +111,7 @@ TEST_F(PolicyCheckerTest, HubPolicy) {
   EXPECT_TRUE(policy_checker.CheckHub(fp));
 
   // Check exclusion
-  fp.Parse("fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx");
+  fp.Parse("fuchsia-pkg://fuchsia.com/stash#meta/foo.cmx");
   EXPECT_FALSE(policy_checker.CheckHub(fp));
 }
 
@@ -362,7 +362,7 @@ TEST_F(PolicyCheckerTest, PackageResolverPolicy) {
   EXPECT_TRUE(policy_checker.CheckPackageResolver(fp));
 
   // Check exclusion
-  fp.Parse("fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx");
+  fp.Parse("fuchsia-pkg://fuchsia.com/stash#meta/foo.cmx");
   EXPECT_FALSE(policy_checker.CheckPackageResolver(fp));
 }
 
@@ -396,7 +396,7 @@ TEST_F(PolicyCheckerTest, PackageCachePolicy) {
   EXPECT_TRUE(policy_checker.CheckPackageCache(fp));
 
   // Check exclusion
-  fp.Parse("fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx");
+  fp.Parse("fuchsia-pkg://fuchsia.com/stash#meta/foo.cmx");
   EXPECT_FALSE(policy_checker.CheckPackageCache(fp));
 }
 
@@ -430,7 +430,7 @@ TEST_F(PolicyCheckerTest, PkgFsVersionsPolicy) {
   EXPECT_TRUE(policy_checker.CheckPkgFsVersions(fp));
 
   // Check exclusion
-  fp.Parse("fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx");
+  fp.Parse("fuchsia-pkg://fuchsia.com/stash#meta/foo.cmx");
   EXPECT_FALSE(policy_checker.CheckPkgFsVersions(fp));
 }
 
