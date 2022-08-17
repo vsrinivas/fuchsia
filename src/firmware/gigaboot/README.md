@@ -16,7 +16,7 @@ Gigaboot itself.
   (default: none).
 * `bootloader.fbres`: Sets the framebuffer resolution (e.g. `1024x768`; default: automatic).
 * `bootloader.default`: Sets the default boot choice in the boot menu; default is the first in the
-  list.  Possible values are `network`, `local` or `zedboot`.
+  list.  Possible values are `network`, `local`, `zedboot`, or `fastboot`.
 
 ## Fastboot support
 

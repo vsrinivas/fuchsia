@@ -440,7 +440,7 @@ BootAction get_boot_action(bool have_network, bool have_fb, bool* is_dfv2) {
   // 2. Boot menu.
   BootAction boot_action = main_boot_menu(have_network, have_fb, is_dfv2);
 
-  // 3. Commandline, options are "local", "zedboot", or "network".
+  // 3. Commandline, options are "local", "zedboot", "fastboot", or "network".
   if (boot_action == kBootActionDefault) {
     // If no commandline, default to network (TODO: Is this still needed?).
     const char* defboot = cmdline_get("bootloader.default", "network");
@@ -448,6 +448,8 @@ BootAction get_boot_action(bool have_network, bool have_fb, bool* is_dfv2) {
       return boot_action;
     } else if (strcmp(defboot, "zedboot") == 0) {
       return kBootActionSlotR;
+    } else if (strcmp(defboot, "fastboot") == 0) {
+      return kBootActionFastboot;
     } else if (strcmp(defboot, "network") == 0) {
       if (have_network) {
         return kBootActionNetboot;

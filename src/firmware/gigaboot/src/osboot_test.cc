@@ -221,6 +221,11 @@ TEST_F(GetBootActionTest, CommandlineNetworkRequiresNetwork) {
   EXPECT_EQ(kBootActionDefault, get_boot_action(false, true, nullptr));
 }
 
+TEST_F(GetBootActionTest, CommandlineFastboot) {
+  cmdline_set("bootloader.default", "fastboot");
+  EXPECT_EQ(kBootActionFastboot, get_boot_action(true, true, nullptr));
+}
+
 TEST_F(GetBootActionTest, CommandlineZedboot) {
   cmdline_set("bootloader.default", "zedboot");
   EXPECT_EQ(kBootActionSlotR, get_boot_action(true, true, nullptr));
