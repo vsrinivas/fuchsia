@@ -16,6 +16,7 @@
 #include <zxtest/zxtest.h>
 
 #include "sdk/lib/zxio/private.h"
+#include "sdk/lib/zxio/tests/test_socket_server.h"
 
 namespace {
 
@@ -396,26 +397,6 @@ TEST_F(RawSocketTest, CreateWithTypeWrapper) {
 
 namespace {
 
-class PacketSocketServer final
-    : public fidl::testing::WireTestBase<fuchsia_posix_socket_packet::Socket> {
- public:
-  PacketSocketServer() = default;
-
-  void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) final {
-    ADD_FAILURE("unexpected message received: %s", name.c_str());
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Clone(CloneRequestView request, CloneCompleter::Sync& completer) final {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
-    completer.ReplySuccess();
-    completer.Close(ZX_OK);
-  }
-};
-
 class PacketSocketTest : public zxtest::Test {
  public:
   void SetUp() final {
@@ -452,7 +433,7 @@ class PacketSocketTest : public zxtest::Test {
   zxio_t* zxio_{nullptr};
   zx::eventpair event_client_, event_server_;
   fidl::ClientEnd<fuchsia_posix_socket_packet::Socket> client_end_;
-  PacketSocketServer server_;
+  zxio_tests::PacketSocketServer server_;
   async::Loop control_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
 };
 

@@ -38,6 +38,7 @@ test("zxio") {
     "test_directory_server_base.h",
     "test_file_server_base.h",
     "test_node_server.h",
+    "test_socket_server.h",
     "tty-test.cc",
     "vmo-test.cc",
     "vmofile-test.cc",

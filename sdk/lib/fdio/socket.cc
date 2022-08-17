@@ -3900,16 +3900,6 @@ struct packet_socket : public socket_with_event<PacketSocket> {
 
 }  // namespace fdio_internal
 
-zx::status<fdio_ptr> fdio_packet_socket_create(zx::eventpair event,
-                                               fidl::ClientEnd<fpacketsocket::Socket> client) {
-  fdio_ptr io = fbl::MakeRefCounted<fdio_internal::packet_socket>();
-  if (io == nullptr) {
-    return zx::error(ZX_ERR_NO_MEMORY);
-  }
-  zx_status_t status =
-      zxio::CreatePacketSocket(&io->zxio_storage(), std::move(event), std::move(client));
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-  return zx::ok(io);
+fdio_ptr fdio_packet_socket_allocate() {
+  return fbl::MakeRefCounted<fdio_internal::packet_socket>();
 }

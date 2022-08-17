@@ -58,6 +58,9 @@ static zx_status_t ZxioAllocator(zxio_object_type_t type, zxio_storage_t** out_s
     case ZXIO_OBJECT_TYPE_FILE:
       io = fbl::MakeRefCounted<fdio_internal::remote>();
       break;
+    case ZXIO_OBJECT_TYPE_PACKET_SOCKET:
+      io = fdio_packet_socket_allocate();
+      break;
     case ZXIO_OBJECT_TYPE_PIPE:
       io = fbl::MakeRefCounted<fdio_internal::pipe>();
       break;
@@ -139,11 +142,6 @@ zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node, fio::wire::No
       auto& socket = info.raw_socket();
       return fdio_raw_socket_create(std::move(socket.event),
                                     fidl::ClientEnd<frawsocket::Socket>(node.TakeChannel()));
-    }
-    case fio::wire::NodeInfo::Tag::kPacketSocket: {
-      auto& socket = info.packet_socket();
-      return fdio_packet_socket_create(std::move(socket.event),
-                                       fidl::ClientEnd<fpacketsocket::Socket>(node.TakeChannel()));
     }
     default:
       return zx::error(ZX_ERR_NOT_SUPPORTED);

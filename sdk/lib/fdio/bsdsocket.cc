@@ -10,6 +10,7 @@
 #include <ifaddrs.h>
 #include <lib/fdio/io.h>
 #include <lib/fit/defer.h>
+#include <lib/zxio/cpp/create_with_type.h>
 #include <netdb.h>
 #include <poll.h>
 #include <sys/socket.h>
@@ -113,12 +114,16 @@ int socket(int domain, int type, int protocol) {
       if (!response.has_event()) {
         return ERROR(ZX_ERR_NOT_SUPPORTED);
       }
-      zx::status io_result =
-          fdio_packet_socket_create(std::move(response.event()), std::move(control));
-      if (io_result.is_error()) {
-        return ERROR(io_result.status_value());
+      fdio_ptr io = fdio_packet_socket_allocate();
+      if (io == nullptr) {
+        return ERROR(ZX_ERR_NO_MEMORY);
       }
-      zx::status create_node_result = create_node(type, io_result.value());
+      zx_status_t status = zxio::CreatePacketSocket(
+          &io->zxio_storage(), std::move(response.event()), std::move(control));
+      if (status != ZX_OK) {
+        return ERROR(status);
+      }
+      zx::status create_node_result = create_node(type, io);
       if (create_node_result.is_error()) {
         return ERROR(create_node_result.error_value());
       }
