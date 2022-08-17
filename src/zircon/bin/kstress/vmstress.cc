@@ -1143,19 +1143,18 @@ class MultiVmoTestInstance : public TestInstance {
       do {
         // Get the latest VMO size, since using a cached value could get out of sync since we
         // intentionally may call resize from multiple threads concurrently.
-        zx_info_vmo_t vmo_info{};
-        zx_status_t get_info_status =
-            vmo.get_info(ZX_INFO_VMO, &vmo_info, sizeof(vmo_info), nullptr, nullptr);
-        ZX_ASSERT(get_info_status == ZX_OK);
-        if (packet.page_request.offset >= vmo_info.size_bytes) {
+        uint64_t vmo_size;
+        zx_status_t get_size_status = vmo.get_size(&vmo_size);
+        ZX_ASSERT(get_size_status == ZX_OK);
+        if (packet.page_request.offset >= vmo_size) {
           // No need to supply since the requested range has been seen to be entirely outside the
           // VMO after the request was created by the kernel.
           result = ZX_OK;
           break;
         }
-        ZX_ASSERT(packet.page_request.offset < vmo_info.size_bytes);
+        ZX_ASSERT(packet.page_request.offset < vmo_size);
         uint64_t supply_length =
-            std::min(packet.page_request.length, vmo_info.size_bytes - packet.page_request.offset);
+            std::min(packet.page_request.length, vmo_size - packet.page_request.offset);
         result = pager.supply_pages(vmo, packet.page_request.offset, supply_length, aux_vmo, 0);
         // If the underlying VMO was resized then its possible the supply destination is now out of
         // range. This is okay and we can try again if necessary to supply the pages that aren't
