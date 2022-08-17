@@ -2,10 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::collections::{HashMap, HashSet};
+
+use crate::trace;
+use anyhow::Error;
+use fuchsia_async as fasync;
+use fuchsia_syslog::{fx_log_debug, fx_log_err, fx_log_warn};
+use fuchsia_trace as ftrace;
+use futures::StreamExt;
+
 use crate::agent::earcons::agent::CommonEarconsParams;
 use crate::agent::earcons::sound_ids::{VOLUME_CHANGED_SOUND_ID, VOLUME_MAX_SOUND_ID};
 use crate::agent::earcons::utils::{connect_to_sound_player, play_sound};
-use crate::audio::types::{AudioInfo, AudioSettingSource, AudioStream, AudioStreamType};
+use crate::audio::types::{
+    AudioInfo, AudioSettingSource, AudioStream, AudioStreamType, SetAudioStream,
+};
 use crate::audio::{create_default_modified_counters, ModifiedCounters};
 use crate::base::{SettingInfo, SettingType};
 use crate::event;
@@ -13,11 +24,6 @@ use crate::handler::base::{Payload, Request};
 use crate::message::base::Audience;
 use crate::message::receptor::extract_payload;
 use crate::service;
-use anyhow::Error;
-use fuchsia_async as fasync;
-use fuchsia_syslog::{fx_log_debug, fx_log_warn};
-use futures::StreamExt;
-use std::collections::{HashMap, HashSet};
 
 /// The `VolumeChangeHandler` takes care of the earcons functionality on volume change.
 pub(super) struct VolumeChangeHandler {
@@ -25,6 +31,7 @@ pub(super) struct VolumeChangeHandler {
     last_user_volumes: HashMap<AudioStreamType, f32>,
     modified_counters: ModifiedCounters,
     publisher: event::Publisher,
+    messenger: service::message::Messenger,
 }
 
 /// The maximum volume level.
@@ -74,6 +81,7 @@ impl VolumeChangeHandler {
                 last_user_volumes,
                 modified_counters: create_default_modified_counters(),
                 publisher,
+                messenger: messenger.clone(),
             };
 
             let listen_receptor = messenger
@@ -173,7 +181,29 @@ impl VolumeChangeHandler {
             // the source should be AudioSettingSource::SystemWithFeedback. An example
             // of a system change is when the volume is reset after night mode deactivates.
             if last_user_volume != None && change_source != Some(AudioSettingSource::System) {
-                self.play_volume_sound(new_user_volume);
+                let id = ftrace::Id::new();
+                trace!(id, "volume_change_handler set background");
+                let mut receptor = self
+                    .messenger
+                    .message(
+                        Payload::Request(Request::SetVolume(
+                            vec![SetAudioStream {
+                                stream_type: AudioStreamType::Background,
+                                source: AudioSettingSource::System,
+                                user_volume_level: Some(new_user_volume),
+                                user_volume_muted: None,
+                            }],
+                            id,
+                        ))
+                        .into(),
+                        Audience::Address(service::Address::Handler(SettingType::Audio)),
+                    )
+                    .send();
+                if let Ok((_payload, _)) = receptor.next_payload().await {
+                    self.play_volume_sound(new_user_volume);
+                } else {
+                    fx_log_err!("Failed to play sound after waiting for message response");
+                }
             }
 
             let _ = self.last_user_volumes.insert(stream_type, new_user_volume);
@@ -265,13 +295,16 @@ impl VolumeChangeHandler {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::sync::Arc;
+
+    use futures::lock::Mutex;
+
     use crate::audio::default_audio_info;
     use crate::message::base::MessengerType;
     use crate::message::MessageHubUtil;
     use crate::service_context::ServiceContext;
-    use futures::lock::Mutex;
-    use std::sync::Arc;
+
+    use super::*;
 
     fn fake_values() -> (
         [AudioStream; 5], // fake_streams
@@ -300,6 +333,7 @@ mod tests {
         let (fake_streams, old_timestamps, new_timestamps, expected_changed_streams) =
             fake_values();
         let delegate = service::MessageHub::create_hub();
+        let (messenger, _) = delegate.create(MessengerType::Unbound).await.expect("messenger");
         let publisher = event::Publisher::create(&delegate, MessengerType::Unbound).await;
         let last_user_volumes: HashMap<_, _> =
             [(AudioStreamType::Media, 1.0), (AudioStreamType::Interruption, 0.5)].into();
@@ -313,6 +347,7 @@ mod tests {
             last_user_volumes,
             modified_counters: old_timestamps,
             publisher,
+            messenger,
         };
         let changed_streams = handler.calculate_changed_streams(fake_streams, new_timestamps);
         assert_eq!(changed_streams, expected_changed_streams);

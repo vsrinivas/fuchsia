@@ -31,6 +31,18 @@ const CHANGED_MEDIA_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
     ..AudioStreamSettings::EMPTY
 };
 
+// Stream settings when background is changed to match Media.
+const CHANGED_MEDIA_BACKGROUND_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
+    stream: Some(AudioRenderUsage::Background),
+    source: Some(AudioStreamSettingSource::System),
+    user_volume: Some(Volume {
+        level: Some(CHANGED_VOLUME_LEVEL),
+        muted: Some(CHANGED_VOLUME_UNMUTED),
+        ..Volume::EMPTY
+    }),
+    ..AudioStreamSettings::EMPTY
+};
+
 const CHANGED_VOLUME_LEVEL_2: f32 = 0.8;
 const MAX_VOLUME_LEVEL: f32 = 1.0;
 const CHANGED_VOLUME_UNMUTED: bool = false;
@@ -41,6 +53,18 @@ const VOLUME_EARCON_ID: u32 = 1;
 const CHANGED_MEDIA_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStreamSettings {
     stream: Some(fidl_fuchsia_media::AudioRenderUsage::Media),
     source: Some(AudioStreamSettingSource::User),
+    user_volume: Some(Volume {
+        level: Some(MAX_VOLUME_LEVEL),
+        muted: Some(CHANGED_VOLUME_UNMUTED),
+        ..Volume::EMPTY
+    }),
+    ..AudioStreamSettings::EMPTY
+};
+
+// Stream settings when background is changed to match Media for max volume.
+const CHANGED_MEDIA_BACKGROUND_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStreamSettings {
+    stream: Some(fidl_fuchsia_media::AudioRenderUsage::Background),
+    source: Some(AudioStreamSettingSource::System),
     user_volume: Some(Volume {
         level: Some(MAX_VOLUME_LEVEL),
         muted: Some(CHANGED_VOLUME_UNMUTED),
@@ -83,12 +107,37 @@ const CHANGED_INTERRUPTION_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStrea
     ..AudioStreamSettings::EMPTY
 };
 
+// Stream settings when background is changed to match Interruption for max volume.
+const CHANGED_INTERRUPTION_BACKGROUND_STREAM_SETTINGS_MAX: AudioStreamSettings =
+    AudioStreamSettings {
+        stream: Some(fidl_fuchsia_media::AudioRenderUsage::Background),
+        source: Some(AudioStreamSettingSource::System),
+        user_volume: Some(Volume {
+            level: Some(MAX_VOLUME_LEVEL),
+            muted: Some(CHANGED_VOLUME_UNMUTED),
+            ..Volume::EMPTY
+        }),
+        ..AudioStreamSettings::EMPTY
+    };
+
 const CHANGED_INTERRUPTION_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
     stream: Some(fidl_fuchsia_media::AudioRenderUsage::Interruption),
     source: Some(AudioStreamSettingSource::User),
     user_volume: Some(Volume {
         level: Some(CHANGED_VOLUME_LEVEL_2),
         muted: Some(CHANGED_VOLUME_MUTED),
+        ..Volume::EMPTY
+    }),
+    ..AudioStreamSettings::EMPTY
+};
+
+// Stream settings when background is changed to match Interruption.
+const CHANGED_INTERRUPTION_BACKGROUND_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
+    stream: Some(fidl_fuchsia_media::AudioRenderUsage::Background),
+    source: Some(AudioStreamSettingSource::System),
+    user_volume: Some(Volume {
+        level: Some(CHANGED_VOLUME_LEVEL_2),
+        muted: Some(CHANGED_VOLUME_UNMUTED),
         ..Volume::EMPTY
     }),
     ..AudioStreamSettings::EMPTY
@@ -124,6 +173,22 @@ async fn set_volume(proxy: &AudioProxy, streams: Vec<AudioStreamSettings>) {
 
 async fn verify_earcon(receiver: &mut SoundEventReceiver, id: u32, usage: AudioRenderUsage) {
     assert_eq!(receiver.next().await.unwrap(), (id, usage));
+}
+
+// Verifies that the settings for the given target_usage matches the expected_settings when
+// a watch is performed on the proxy.
+async fn verify_volume(
+    proxy: &AudioProxy,
+    target_usage: AudioRenderUsage,
+    expected_settings: AudioStreamSettings,
+) {
+    let audio_settings = proxy.watch().await.expect("watch complete");
+    let target_stream_res = audio_settings.streams.expect("streams exist");
+    let target_stream = target_stream_res
+        .iter()
+        .find(|stream| stream.stream == Some(target_usage))
+        .expect("stream found");
+    assert_eq!(target_stream, &expected_settings);
 }
 
 // Test to ensure that when the volume changes, the SoundPlayer receives requests to play the sounds
@@ -257,4 +322,57 @@ async fn test_earcons_on_multiple_channel_change() {
     // pipeline.
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
     verify_earcon(&mut sound_event_receiver, VOLUME_EARCON_ID, AudioRenderUsage::Background).await;
+}
+
+// Test to ensure that when the media stream changes, the settings service matches the background
+// stream to match the level.
+#[fuchsia::test]
+async fn test_media_background_matching() {
+    let volume_change_earcons_test = VolumeChangeEarconsTest::create();
+    let instance = volume_change_earcons_test.create_realm().await.expect("setting up test realm");
+    let audio_proxy = VolumeChangeEarconsTest::connect_to_audio_marker(&instance);
+
+    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
+    verify_volume(
+        &audio_proxy,
+        AudioRenderUsage::Background,
+        CHANGED_MEDIA_BACKGROUND_STREAM_SETTINGS,
+    )
+    .await;
+
+    set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX]).await;
+    verify_volume(
+        &audio_proxy,
+        AudioRenderUsage::Background,
+        CHANGED_MEDIA_BACKGROUND_STREAM_SETTINGS_MAX,
+    )
+    .await;
+}
+
+// Test to ensure that when the interruption stream changes, the settings service matches
+// the background stream to match the level.
+#[fuchsia::test]
+async fn test_interruption_background_matching() {
+    let volume_change_earcons_test = VolumeChangeEarconsTest::create();
+    let instance = volume_change_earcons_test.create_realm().await.expect("setting up test realm");
+    let audio_proxy = VolumeChangeEarconsTest::connect_to_audio_marker(&instance);
+
+    // Test that the volume-changed sound gets played on the soundplayer for interruption
+    // and the volume is matched on the background.
+    set_volume(&audio_proxy, vec![CHANGED_INTERRUPTION_STREAM_SETTINGS]).await;
+    verify_volume(
+        &audio_proxy,
+        AudioRenderUsage::Background,
+        CHANGED_INTERRUPTION_BACKGROUND_STREAM_SETTINGS,
+    )
+    .await;
+
+    // Test that the volume-max sound gets played on the soundplayer for interruption.
+    set_volume(&audio_proxy, vec![CHANGED_INTERRUPTION_STREAM_SETTINGS_MAX]).await;
+    verify_volume(
+        &audio_proxy,
+        AudioRenderUsage::Background,
+        CHANGED_INTERRUPTION_BACKGROUND_STREAM_SETTINGS_MAX,
+    )
+    .await;
 }
