@@ -8,6 +8,7 @@
 #include <gtest/gtest.h>
 
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
+#include "src/ui/lib/escher/test/common/gtest_escher.h"
 #include "src/ui/lib/escher/test/common/gtest_vulkan.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_util.h"
@@ -20,6 +21,12 @@ namespace test {
 using PoseBufferTest = VkSessionTest;
 
 VK_TEST_F(PoseBufferTest, Validation) {
+  // TODO(fxbug.dev/107082): This test uses AllocateExportableMemory() to allocate
+  // non-dedicated exportable images; this approach is not supported on FEMU
+  // (goldfish-vulkan) since the driver cannot determine which sysmem heap to use
+  // based on only the memoryType.
+  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
+
   const ResourceId invalid_id = 0;
   const ResourceId scene_id = 1;
   const ResourceId camera_id = 2;

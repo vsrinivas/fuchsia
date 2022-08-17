@@ -400,6 +400,12 @@ TEST_F(ScenicPixelTest, StereoCamera) {
 // different color, then uses a pose buffer to point the camera at different
 // faces, using the colors to verify the pose buffer is working as expected.
 TEST_F(ScenicPixelTest, PoseBuffer) {
+  // TODO(fxbug.dev/107082): This test uses AllocateExportableMemory() to allocate
+  // non-dedicated exportable images; this approach is not supported on FEMU
+  // (goldfish-vulkan) since the driver cannot determine which sysmem heap to use
+  // based on only the memoryType.
+  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
+
   auto test_session = SetUpTestSession();
   scenic::Session* const session = &test_session->session;
   const auto [display_width, display_height] = test_session->display_dimensions;

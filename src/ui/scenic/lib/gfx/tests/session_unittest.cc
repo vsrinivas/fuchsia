@@ -7,6 +7,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/ui/lib/escher/test/common/gtest_escher.h"
 #include "src/ui/lib/escher/test/common/gtest_vulkan.h"
 #include "src/ui/scenic/lib/gfx/engine/scene_graph.h"
 #include "src/ui/scenic/lib/gfx/resources/buffer.h"
@@ -97,6 +98,12 @@ TEST_F(SessionTest, Labeling) {
 using BufferSessionTest = VkSessionTest;
 
 VK_TEST_F(BufferSessionTest, BufferAliasing) {
+  // TODO(fxbug.dev/107082): This test uses AllocateExportableMemory() to allocate
+  // non-dedicated exportable images; this approach is not supported on FEMU
+  // (goldfish-vulkan) since the driver cannot determine which sysmem heap to use
+  // based on only the memoryType.
+  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
+
   const size_t kVmoSize = 1024;
   const size_t kOffset = 512;
 
