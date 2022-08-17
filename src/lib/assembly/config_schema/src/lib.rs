@@ -24,9 +24,10 @@ pub struct PartialImageAssemblyConfig {
     #[serde(default)]
     pub system: Vec<PathBuf>,
 
-    /// The packages that are in the base package list, which is added
-    /// to the base package (data/static_packages). These packages get
-    /// updated by flashing and OTAing, and cannot be garbage collected.
+    /// The packages that are in the base package list, excluding drivers,
+    /// which are to be added to the base package (data/static_packages).
+    /// These packages get updated by flashing and OTAing, and cannot
+    /// be garbage collected.
     #[serde(default)]
     pub base: Vec<PathBuf>,
 
@@ -144,9 +145,10 @@ pub struct ImageAssemblyConfig {
     #[serde(default)]
     pub system: Vec<PathBuf>,
 
-    /// The packages that are in the base package list, which is added
-    /// to the base package (data/static_packages). These packages get
-    /// updated by flashing and OTAing, and cannot be garbage collected.
+    /// The packages that are in the base package list, excluding drivers
+    /// which are added to the base package (data/static_packages).
+    /// These packages get updated by flashing and OTAing, and cannot
+    /// be garbage collected.
     #[serde(default)]
     pub base: Vec<PathBuf>,
 

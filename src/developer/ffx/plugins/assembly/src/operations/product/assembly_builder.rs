@@ -110,7 +110,8 @@ impl ImageAssemblyConfigBuilder {
         bundle: AssemblyInputBundle,
     ) -> Result<()> {
         let bundle_path = bundle_path.as_ref();
-        let AssemblyInputBundle { image_assembly: bundle, config_data, blobs: _ } = bundle;
+        let AssemblyInputBundle { image_assembly: bundle, config_data, blobs: _, base_drivers: _ } =
+            bundle;
 
         Self::add_bundle_packages(bundle_path, &bundle.base, &mut self.base)?;
         Self::add_bundle_packages(bundle_path, &bundle.cache, &mut self.cache)?;
@@ -580,6 +581,7 @@ mod tests {
                     destination: "dest/file/path".into(),
                 }],
             },
+            base_drivers: Vec::default(),
             config_data: BTreeMap::default(),
             blobs: Vec::default(),
         }
@@ -729,6 +731,7 @@ mod tests {
                 qemu_kernel: Some("kernel/qemu/path".into()),
                 ..assembly_config_schema::PartialImageAssemblyConfig::default()
             },
+            base_drivers: Vec::default(),
             config_data: BTreeMap::default(),
             blobs: Vec::default(),
         };
@@ -796,6 +799,7 @@ mod tests {
             },
             config_data: BTreeMap::default(),
             blobs: Vec::default(),
+            base_drivers: Vec::default(),
         };
         let mut builder = ImageAssemblyConfigBuilder::default();
         builder.add_parsed_bundle(outdir.path().join("minimum_bundle"), minimum_bundle).unwrap();

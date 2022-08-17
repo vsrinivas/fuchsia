@@ -265,6 +265,20 @@ pub struct AssemblyInputBundle {
     /// assembly, as the package manifests contain the same information.
     #[serde(default)]
     pub blobs: Vec<Utf8PathBuf>,
+
+    /// Configuration of driver packages. Driver packages should not be listed
+    /// in the base package list and will be included automatically.
+    #[serde(default)]
+    pub base_drivers: Vec<DriverDetails>,
+}
+
+#[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
+pub struct DriverDetails {
+    /// The package containing the driver.
+    pub package: Utf8PathBuf,
+
+    /// The driver components within the package, e.g. meta/foo.cm.
+    pub components: Vec<Utf8PathBuf>,
 }
 
 #[cfg(test)]
