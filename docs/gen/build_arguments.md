@@ -98,6 +98,13 @@ Core shards that are required for including appmgr in a product.
 
 From //src/sys/appmgr/core_shards.gni:7
 
+### arm_sdk_tools
+If true, then the arm64 host tools are included in the SDK.
+
+**Current value (from the default):** `false`
+
+From //src/developer/ffx/plugins/emulator/emu_companion.gni:9
+
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
 options (before the `ASAN_OPTIONS` environment variable is read at
@@ -2959,7 +2966,7 @@ From //build/go/go_build.gni:22
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/gopher/.gocache"`
 
 From //build/go/go_build.gni:18
 
@@ -5672,6 +5679,13 @@ ignore warnings.
 
 From //build/rust/config.gni:49
 
+### rust_fshost
+If true, use the Rust version of fshost.
+
+**Current value (from the default):** `false`
+
+From //src/storage/fshost/BUILD.gn:14
+
 ### rust_incremental
 Enable incremental rust compilation. Takes a path to the directory to use
 as the cache.
@@ -6276,7 +6290,7 @@ From //build/security.gni:209
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"thinlto-cache"`
+**Current value (from the default):** `"gopher/thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
