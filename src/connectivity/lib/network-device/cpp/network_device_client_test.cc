@@ -821,6 +821,67 @@ TEST_F(NetDeviceTest, CancelsWaitOnTeardown) {
   RunLoopUntilIdle();
 }
 
+struct SessionConfigTestCase {
+  std::string name;
+  uint32_t max_buffer_length;
+  uint32_t alignment;
+  uint64_t expected_buffer_stride;
+};
+
+SessionConfigTestCase config_test_cases[] = {
+    {
+        .name = "DefaultBufferSizeWithDefaultAlignment",
+        .max_buffer_length = NetworkDeviceClient::kDefaultBufferLength,
+        .alignment = 1,
+        .expected_buffer_stride = uint64_t{NetworkDeviceClient::kDefaultBufferLength},
+    },
+    {
+        .name = "BufferSizeIsMultipleOfAlignment",
+        .max_buffer_length = 256,
+        .alignment = 8,
+        .expected_buffer_stride = uint64_t{256},
+    },
+    {
+        .name = "AlignUpWhenBufferSizeIsNotMultipleOfAlignment",
+        .max_buffer_length = 64 + 112,
+        .alignment = 64,
+        .expected_buffer_stride = uint64_t{64 + 128},
+    },
+    {
+        .name = "BufferSizeSmallerThanAlignment",
+        .max_buffer_length = 64,
+        .alignment = 128,
+        .expected_buffer_stride = uint64_t{128},
+    },
+};
+
+class SessionConfigTest : public testing::TestWithParam<SessionConfigTestCase> {};
+
+TEST_P(SessionConfigTest, AlignsBufferStrideUp) {
+  const auto params = GetParam();
+  auto config = NetworkDeviceClient::DefaultSessionConfig({
+      // These values are copied from the default network tun device.
+      .min_descriptor_length = 0,
+      .descriptor_version = 0,
+      .rx_depth = 255,
+      .tx_depth = 255,
+      .buffer_alignment = params.alignment,
+      .max_buffer_length = params.max_buffer_length,
+      .min_rx_buffer_length = 0,
+      .min_tx_buffer_length = 0,
+      .min_tx_buffer_head = 0,
+      .min_tx_buffer_tail = 0,
+      .max_buffer_parts = 255,
+  });
+  EXPECT_EQ(config.buffer_stride, params.expected_buffer_stride);
+}
+
+INSTANTIATE_TEST_SUITE_P(SessionConfigSuite, SessionConfigTest,
+                         testing::ValuesIn<SessionConfigTestCase>(config_test_cases),
+                         [](const testing::TestParamInfo<SessionConfigTest::ParamType>& info) {
+                           return info.param.name;
+                         });
+
 class GetPortsTest : public NetDeviceTest, public testing::WithParamInterface<size_t> {};
 
 TEST_P(GetPortsTest, GetPortsWithPortCount) {

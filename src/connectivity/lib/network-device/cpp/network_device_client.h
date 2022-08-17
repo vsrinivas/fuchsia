@@ -104,6 +104,8 @@ class NetworkDeviceClient : public internal::DeviceEventHandlerProxy<NetworkDevi
   class BufferData;
   class StatusWatchHandle;
 
+  // The buffer length used by `DefaultSessionConfig`.
+  static constexpr uint32_t kDefaultBufferLength = 2048;
   // Creates a default session configuration with the given device information.
   static SessionConfig DefaultSessionConfig(const DeviceInfo& dev_info);
   // Creates a client that will bind to `handle` using `dispatcher`.

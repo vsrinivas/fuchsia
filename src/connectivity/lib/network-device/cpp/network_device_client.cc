@@ -19,8 +19,6 @@ namespace network {
 namespace client {
 
 namespace {
-// The buffer length used by `DefaultSessionConfig`.
-constexpr uint32_t kDefaultBufferLength = 2048;
 // The maximum FIFO depth that this client can handle.
 // Set to the maximum number of `uint16`s that a zx FIFO can hold.
 constexpr uint64_t kMaxDepth = ZX_PAGE_SIZE / sizeof(uint16_t);
@@ -128,23 +126,19 @@ NetworkDeviceClient::~NetworkDeviceClient() = default;
 
 SessionConfig NetworkDeviceClient::DefaultSessionConfig(const DeviceInfo& dev_info) {
   const uint32_t buffer_length = std::min(kDefaultBufferLength, dev_info.max_buffer_length);
-  SessionConfig config = {
+  // This allows us to align up without a conditional, as explained here:
+  // https://stackoverflow.com/a/9194117
+  const uint64_t buffer_stride =
+      ((buffer_length + dev_info.buffer_alignment - 1) / dev_info.buffer_alignment) *
+      dev_info.buffer_alignment;
+  return {
       .buffer_length = buffer_length,
-      .buffer_stride = buffer_length,
+      .buffer_stride = buffer_stride,
       .descriptor_length = sizeof(buffer_descriptor_t),
       .rx_descriptor_count = dev_info.rx_depth,
       .tx_descriptor_count = dev_info.tx_depth,
       .options = netdev::wire::SessionFlags::kPrimary,
   };
-  if (config.buffer_stride % dev_info.buffer_alignment != 0) {
-    // align back:
-    config.buffer_stride -= (config.buffer_stride % dev_info.buffer_alignment);
-    // align up if we have space:
-    if (config.buffer_stride + dev_info.buffer_alignment <= dev_info.max_buffer_length) {
-      config.buffer_stride += dev_info.buffer_alignment;
-    }
-  }
-  return config;
 }
 
 void NetworkDeviceClient::OpenSession(const std::string& name,
