@@ -15,6 +15,7 @@
             protocol: "fuchsia.camera3.DeviceWatcher",
             from: "#camera_device_watcher",
             to: [ "#setui_service" ],
+            dependency: "weak_for_migration",
         },
     ],
 }
