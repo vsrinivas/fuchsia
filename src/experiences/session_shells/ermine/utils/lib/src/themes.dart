@@ -29,8 +29,6 @@ class AppTheme {
         disabledColor: FuchsiaColors.grey03,
         // Used for error signals and messages.
         errorColor: FuchsiaColors.red02,
-        // Used by Switch
-        toggleableActiveColor: FuchsiaColors.green02,
         // Used by ElevatedButton in QuickSettings.
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
@@ -44,6 +42,29 @@ class AppTheme {
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
           ),
+        ),
+        // Used by Switch.
+        switchTheme: SwitchThemeData(
+          thumbColor: MaterialStateProperty.resolveWith<Color?>(
+              (Set<MaterialState> states) {
+            if (states.contains(MaterialState.disabled)) {
+              return null;
+            }
+            if (states.contains(MaterialState.selected)) {
+              return FuchsiaColors.green02;
+            }
+            return null;
+          }),
+          trackColor: MaterialStateProperty.resolveWith<Color?>(
+              (Set<MaterialState> states) {
+            if (states.contains(MaterialState.disabled)) {
+              return null;
+            }
+            if (states.contains(MaterialState.selected)) {
+              return FuchsiaColors.green02;
+            }
+            return null;
+          }),
         ),
         // Used by OutlinedButton in QuickSettings.
         outlinedButtonTheme: OutlinedButtonThemeData(
@@ -121,8 +142,6 @@ class AppTheme {
         disabledColor: FuchsiaColors.grey01,
         // Used for error signals and messages.
         errorColor: FuchsiaColors.red04,
-        // Used by Switch.
-        toggleableActiveColor: FuchsiaColors.green04,
         // Used by ElevatedButton in QuickSettings.
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
@@ -136,6 +155,29 @@ class AppTheme {
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
           ),
+        ),
+        // Used by Switch.
+        switchTheme: SwitchThemeData(
+          thumbColor: MaterialStateProperty.resolveWith<Color?>(
+              (Set<MaterialState> states) {
+            if (states.contains(MaterialState.disabled)) {
+              return null;
+            }
+            if (states.contains(MaterialState.selected)) {
+              return FuchsiaColors.green04;
+            }
+            return null;
+          }),
+          trackColor: MaterialStateProperty.resolveWith<Color?>(
+              (Set<MaterialState> states) {
+            if (states.contains(MaterialState.disabled)) {
+              return null;
+            }
+            if (states.contains(MaterialState.selected)) {
+              return FuchsiaColors.green04;
+            }
+            return null;
+          }),
         ),
         // Used by OutlinedButton in QuickSettings.
         outlinedButtonTheme: OutlinedButtonThemeData(
