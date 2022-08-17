@@ -58,8 +58,10 @@
             "is_emu": true
         },
         "deps": [
-            "images.json"
+            "images.json",
+            "repo_AEMU"
         ],
+        "pkg_repo": "repo_AEMU",
         "timeout_secs": 0,
         "summary": {
             "tests": null

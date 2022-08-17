@@ -246,14 +246,14 @@ func execute(ctx context.Context, flags testsharderFlags, m buildModules) error 
 		if len(pkgRepos) < 1 {
 			return errors.New("build did not generate a package repository")
 		}
-		pkgRepoPath := pkgRepos[0].Path
-		if _, err := os.Stat(pkgRepoPath); errors.Is(err, os.ErrNotExist) {
-			logger.Warningf(ctx, "package repository %s does not exist, not creating per-shard package repos", pkgRepoPath)
+		absPkgRepoPath := filepath.Join(flags.buildDir, pkgRepos[0].Path)
+		if _, err := os.Stat(absPkgRepoPath); errors.Is(err, os.ErrNotExist) {
+			logger.Warningf(ctx, "package repository %s does not exist, not creating per-shard package repos", absPkgRepoPath)
 		} else if err != nil {
 			return err
 		} else {
 			for _, s := range shards {
-				if err := s.CreatePackageRepo(flags.buildDir, pkgRepoPath, flags.cacheTestPackages || flags.hermeticDeps); err != nil {
+				if err := s.CreatePackageRepo(flags.buildDir, pkgRepos[0].Path, flags.cacheTestPackages || flags.hermeticDeps); err != nil {
 					return err
 				}
 			}
