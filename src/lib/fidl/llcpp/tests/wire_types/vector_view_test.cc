@@ -93,3 +93,79 @@ TEST(VectorView, Mutations) {
   EXPECT_EQ(vec[0], 4);
   EXPECT_EQ(vec[1], 5);
 }
+
+TEST(VectorView, CopyFromStdVector) {
+  fidl::Arena arena;
+  std::vector<int32_t> vec{1, 2, 3};
+  fidl::VectorView vv{arena, vec};
+  vec[0] = 0;
+  vec[1] = 0;
+  vec[2] = 0;
+  EXPECT_EQ(vv.count(), 3ULL);
+  EXPECT_EQ(vv[0], 1);
+  EXPECT_EQ(vv[1], 2);
+  EXPECT_EQ(vv[2], 3);
+}
+
+TEST(VectorView, CopyFromStdSpan) {
+  fidl::Arena arena;
+  std::vector<int32_t> vec{1, 2, 3};
+  cpp20::span<int32_t> span{vec};
+  fidl::VectorView vv{arena, span};
+  vec[0] = 0;
+  vec[1] = 0;
+  vec[2] = 0;
+  EXPECT_EQ(vv.count(), 3ULL);
+  EXPECT_EQ(vv[0], 1);
+  EXPECT_EQ(vv[1], 2);
+  EXPECT_EQ(vv[2], 3);
+}
+
+TEST(VectorView, CopyFromConstStdSpan) {
+  fidl::Arena arena;
+  std::vector<int32_t> vec{1, 2, 3};
+  cpp20::span<const int32_t> span{vec};
+  fidl::VectorView vv{arena, span};
+  vec[0] = 0;
+  vec[1] = 0;
+  vec[2] = 0;
+  EXPECT_EQ(vv.count(), 3ULL);
+  EXPECT_EQ(vv[0], 1);
+  EXPECT_EQ(vv[1], 2);
+  EXPECT_EQ(vv[2], 3);
+}
+
+TEST(VectorView, CopyFromIterators) {
+  fidl::Arena arena;
+  std::vector<int32_t> vec{1, 2, 3};
+  cpp20::span<int32_t> span{vec};
+  fidl::VectorView<int32_t> vv{arena, span.begin(), span.end()};
+  vec[0] = 0;
+  vec[1] = 0;
+  vec[2] = 0;
+  EXPECT_EQ(vv.count(), 3ULL);
+  EXPECT_EQ(vv[0], 1);
+  EXPECT_EQ(vv[1], 2);
+  EXPECT_EQ(vv[2], 3);
+}
+
+TEST(VectorView, CopyFromConstIterators) {
+  fidl::Arena arena;
+  std::vector<int32_t> vec{1, 2, 3};
+  cpp20::span<const int32_t> span{vec};
+  fidl::VectorView<int32_t> vv{arena, span.begin(), span.end()};
+  vec[0] = 0;
+  vec[1] = 0;
+  vec[2] = 0;
+  EXPECT_EQ(vv.count(), 3ULL);
+  EXPECT_EQ(vv[0], 1);
+  EXPECT_EQ(vv[1], 2);
+  EXPECT_EQ(vv[2], 3);
+}
+
+#if 0
+TEST(VectorView, BadIterators) {
+  fidl::Arena arena;
+  fidl::VectorView<int32_t> vv{arena, 1, 2};
+}
+#endif

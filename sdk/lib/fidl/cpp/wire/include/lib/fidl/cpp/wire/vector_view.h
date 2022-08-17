@@ -6,7 +6,7 @@
 #define LIB_FIDL_CPP_WIRE_INCLUDE_LIB_FIDL_CPP_WIRE_VECTOR_VIEW_H_
 
 #include <lib/fidl/cpp/wire/arena.h>
-#include <lib/fidl/walker.h>
+#include <lib/stdcompat/span.h>
 #include <zircon/fidl.h>
 
 #include <algorithm>
@@ -37,6 +37,7 @@ namespace fidl {
 //
 template <typename T>
 class VectorView {
+ private:
   template <typename>
   friend class VectorView;
 
@@ -54,11 +55,35 @@ class VectorView {
   }
   VectorView(std::nullptr_t data, size_t count) {}
 
-  // Allocates a vector using an arena and copies the data from the supplied std::vector.
-  VectorView(AnyArena& allocator, std::vector<T>& vector)
-      : count_(vector.size()), data_(allocator.AllocateVector<T>(vector.size())) {
-    std::copy(vector.begin(), vector.end(), data_);
+  // Allocates a vector using an arena and copies the data from the supplied iterators.
+  // The iterator must satisfy the random_access_iterator concept.
+  //
+  // Example:
+  //
+  //     fidl::Arena arena;
+  //     std::vector<int32_t> vec(...);
+  //     // Copy contents of |vec| into |arena|, and return a view of the copies content.
+  //     fidl::VectorView<int32_t> vv(arena, vec.begin(), vec.end());
+  //
+  template <typename InputIterator>
+  VectorView(AnyArena& arena, InputIterator first, InputIterator last)
+      : count_(last - first), data_(arena.AllocateVector<T>(count_)) {
+    using Traits = std::iterator_traits<InputIterator>;
+    constexpr bool kIsIterator = has_difference_type<Traits>::value;
+    static_assert(
+        kIsIterator,
+        "|InputIterator| is not an iterator. "
+        "Ensure that the last two arguments to this constructor are random access iterators.");
+    std::copy(first, last, data_);
   }
+
+  // Allocates a vector using an arena and copies the data from the supplied |span|.
+  VectorView(AnyArena& arena, cpp20::span<const T> span)
+      : VectorView(arena, span.begin(), span.end()) {}
+
+  // Allocates a vector using an arena and copies the data from the supplied |std::vector|.
+  VectorView(AnyArena& arena, const std::vector<T>& vector)
+      : VectorView(arena, cpp20::span(vector)) {}
 
   template <typename U>
   VectorView(VectorView<U>&& other) {
@@ -131,10 +156,22 @@ class VectorView {
   VectorView(T* data, size_t count) : count_(count), data_(data) {}
 
  private:
+  template <class I>
+  struct has_difference_type {
+    template <class U>
+    static std::false_type test(...);
+    template <class U>
+    static std::true_type test(std::void_t<typename U::difference_type>* = 0);
+    static const bool value = decltype(test<I>(0))::value;
+  };
+
   friend ::LayoutChecker;
   size_t count_ = 0;
   T* data_ = nullptr;
 };
+
+template <typename T>
+VectorView(fidl::AnyArena&, cpp20::span<T>) -> VectorView<T>;
 
 }  // namespace fidl
 
