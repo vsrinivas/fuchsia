@@ -6,6 +6,12 @@
 
 namespace fuzzing {
 
+OptionsPtr MakeOptions() {
+  auto options = std::make_shared<Options>();
+  AddDefaults(options.get());
+  return options;
+}
+
 Options CopyOptions(const Options& options) {
   Options copy;
 #define FUCHSIA_FUZZER_OPTION(type, option, Option, default_value) \
@@ -18,10 +24,13 @@ Options CopyOptions(const Options& options) {
   return copy;
 }
 
-OptionsPtr MakeOptions() {
-  auto options = std::make_shared<Options>();
-  AddDefaults(options.get());
-  return options;
+void SetOptions(Options* options, const Options& overrides) {
+#define FUCHSIA_FUZZER_OPTION(type, option, Option, default_value) \
+  if (overrides.has_##option()) {                                  \
+    options->set_##option(overrides.option());                     \
+  }
+#include "src/sys/fuzzing/common/options.inc"
+#undef FUCHSIA_FUZZER_OPTION
 }
 
 void AddDefaults(Options* options) {

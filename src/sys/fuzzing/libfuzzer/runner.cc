@@ -116,11 +116,7 @@ LibFuzzerRunner::LibFuzzerRunner(ExecutorPtr executor)
   CreateDirectory(kLiveCorpusPath);
 }
 
-void LibFuzzerRunner::OverrideDefaults(Options* options) {
-  if (!options->has_detect_exits()) {
-    options->set_detect_exits(true);
-  }
-}
+void LibFuzzerRunner::OverrideDefaults(Options* options) { options->set_detect_exits(true); }
 
 ///////////////////////////////////////////////////////////////
 // Corpus-related methods.

@@ -292,8 +292,7 @@ ZxPromise<> Process::Connect(fidl::InterfaceHandle<CoverageDataCollector> collec
 }
 
 void Process::Configure(Options options) {
-  AddDefaults(&options);
-  options_ = std::move(options);
+  SetOptions(&options_, options);
 
   // Configure allocator purging.
   // TODO(fxbug.dev/85284): Add integration tests that produce these and following logs.

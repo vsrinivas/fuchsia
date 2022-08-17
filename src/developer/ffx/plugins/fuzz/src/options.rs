@@ -32,28 +32,6 @@ pub const NAMES: &[&str] = &[
     "debug",
 ];
 
-/// Add defaults values to an `Options` struct.
-pub fn add_defaults(options: &mut fuzz::Options) {
-    options.runs = options.runs.or(Some(0));
-    options.max_total_time = options.max_total_time.or(Some(0));
-    options.seed = options.seed.or(Some(0));
-    options.max_input_size = options.max_input_size.or(Some(1 * BYTES_PER_MB));
-    options.mutation_depth = options.mutation_depth.or(Some(5));
-    options.dictionary_level = options.dictionary_level.or(Some(0));
-    options.detect_exits = options.detect_exits.or(Some(false));
-    options.detect_leaks = options.detect_leaks.or(Some(false));
-    options.run_limit = options.run_limit.or(Some(20 * NANOS_PER_MINUTE));
-    options.malloc_limit = options.malloc_limit.or(Some(2 * BYTES_PER_GB));
-    options.oom_limit = options.oom_limit.or(Some(2 * BYTES_PER_GB));
-    options.purge_interval = options.purge_interval.or(Some(1 * NANOS_PER_SECOND));
-    options.malloc_exitcode = options.malloc_exitcode.or(Some(2000));
-    options.death_exitcode = options.death_exitcode.or(Some(2001));
-    options.leak_exitcode = options.leak_exitcode.or(Some(2002));
-    options.oom_exitcode = options.oom_exitcode.or(Some(2003));
-    options.pulse_interval = options.pulse_interval.or(Some(20 * NANOS_PER_SECOND));
-    options.debug = options.debug.or(Some(false));
-}
-
 /// Returns a field of `options` based on its name.
 pub fn get(options: &fuzz::Options, name: &str) -> Result<String> {
     match name {
@@ -327,32 +305,36 @@ fn parse_size(value: &str) -> Result<u64> {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod test_fixtures {
     use super::*;
 
-    #[test]
-    fn test_add_defaults() -> Result<()> {
-        let mut fuzz_options = fuzz::Options::EMPTY;
-        add_defaults(&mut fuzz_options);
-        assert_eq!(fuzz_options.runs, Some(0));
-        assert_eq!(fuzz_options.max_total_time, Some(0));
-        assert_eq!(fuzz_options.seed, Some(0));
-        assert_eq!(fuzz_options.max_input_size, Some(1 * BYTES_PER_MB));
-        assert_eq!(fuzz_options.mutation_depth, Some(5));
-        assert_eq!(fuzz_options.dictionary_level, Some(0));
-        assert_eq!(fuzz_options.detect_exits, Some(false));
-        assert_eq!(fuzz_options.detect_leaks, Some(false));
-        assert_eq!(fuzz_options.run_limit, Some(20 * NANOS_PER_MINUTE));
-        assert_eq!(fuzz_options.malloc_limit, Some(2 * BYTES_PER_GB));
-        assert_eq!(fuzz_options.oom_limit, Some(2 * BYTES_PER_GB));
-        assert_eq!(fuzz_options.purge_interval, Some(1 * NANOS_PER_SECOND));
-        assert_eq!(fuzz_options.malloc_exitcode, Some(2000));
-        assert_eq!(fuzz_options.death_exitcode, Some(2001));
-        assert_eq!(fuzz_options.leak_exitcode, Some(2002));
-        assert_eq!(fuzz_options.oom_exitcode, Some(2003));
-        assert_eq!(fuzz_options.pulse_interval, Some(20 * NANOS_PER_SECOND));
-        Ok(())
+    /// Add defaults values to an `Options` struct.
+    pub fn add_defaults(options: &mut fuzz::Options) {
+        options.runs = options.runs.or(Some(0));
+        options.max_total_time = options.max_total_time.or(Some(0));
+        options.seed = options.seed.or(Some(0));
+        options.max_input_size = options.max_input_size.or(Some(1 * BYTES_PER_MB));
+        options.mutation_depth = options.mutation_depth.or(Some(5));
+        options.dictionary_level = options.dictionary_level.or(Some(0));
+        options.detect_exits = options.detect_exits.or(Some(false));
+        options.detect_leaks = options.detect_leaks.or(Some(false));
+        options.run_limit = options.run_limit.or(Some(20 * NANOS_PER_MINUTE));
+        options.malloc_limit = options.malloc_limit.or(Some(2 * BYTES_PER_GB));
+        options.oom_limit = options.oom_limit.or(Some(2 * BYTES_PER_GB));
+        options.purge_interval = options.purge_interval.or(Some(1 * NANOS_PER_SECOND));
+        options.malloc_exitcode = options.malloc_exitcode.or(Some(2000));
+        options.death_exitcode = options.death_exitcode.or(Some(2001));
+        options.leak_exitcode = options.leak_exitcode.or(Some(2002));
+        options.oom_exitcode = options.oom_exitcode.or(Some(2003));
+        options.pulse_interval = options.pulse_interval.or(Some(20 * NANOS_PER_SECOND));
+        options.debug = options.debug.or(Some(false));
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::test_fixtures::add_defaults;
+    use super::*;
 
     #[test]
     fn test_format_duration() -> Result<()> {

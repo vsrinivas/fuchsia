@@ -62,7 +62,6 @@ class ProcessTest : public AsyncTest {
       options->set_malloc_limit(0);
       options->set_purge_interval(0);
     }
-    AddDefaults(options.get());
     return options;
   }
 

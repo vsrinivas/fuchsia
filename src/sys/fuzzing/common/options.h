@@ -21,13 +21,16 @@ using ::fuchsia::fuzzer::Options;
 #include "src/sys/fuzzing/common/options.inc"
 #undef FUCHSIA_FUZZER_OPTION
 
+// Aliases to simplify passing around the shared options.
+using OptionsPtr = std::shared_ptr<Options>;
+OptionsPtr MakeOptions();
+
 // Provides the ability to copy Options, as the FIDL-generated struct implicitly deletes the
 // copy-constructor.
 Options CopyOptions(const Options& options);
 
-// Aliases to simplify passing around the shared options.
-using OptionsPtr = std::shared_ptr<Options>;
-OptionsPtr MakeOptions();
+// Applies any set values in |overrides| to the given set of |options|.
+void SetOptions(Options* options, const Options& overrides);
 
 // Sets any missing options to their default values.
 void AddDefaults(Options* options);

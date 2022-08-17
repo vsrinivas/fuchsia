@@ -31,7 +31,6 @@ void ControllerImpl::Bind(fidl::InterfaceRequest<Controller> request) {
 
 void ControllerImpl::SetRunner(RunnerPtr runner) {
   runner_ = std::move(runner);
-
   runner_->OverrideDefaults(options_.get());
   initialized_ = false;
 }
@@ -66,9 +65,7 @@ void ControllerImpl::Finish() {
 // FIDL methods.
 
 void ControllerImpl::Configure(Options options, ConfigureCallback callback) {
-  *options_ = std::move(options);
-  runner_->OverrideDefaults(options_.get());
-  AddDefaults(options_.get());
+  SetOptions(options_.get(), options);
   if (options_->seed() == kDefaultSeed) {
     options_->set_seed(static_cast<uint32_t>(zx::ticks::now().get()));
   }

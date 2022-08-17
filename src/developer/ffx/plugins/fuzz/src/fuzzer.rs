@@ -62,9 +62,8 @@ impl<O: OutputSink> Fuzzer<O> {
     ///   * `name` is provided but does not match a known option.
     ///
     pub async fn get<S: AsRef<str>>(&self, name: Option<S>) -> Result<()> {
-        let mut fuzz_options =
+        let fuzz_options =
             self.proxy.get_options().await.context(fidl_name("GetOptions failed"))?;
-        options::add_defaults(&mut fuzz_options);
         match name {
             Some(name) => {
                 let name = name.as_ref();
@@ -101,8 +100,7 @@ impl<O: OutputSink> Fuzzer<O> {
     pub async fn set<S: AsRef<str>>(&self, name: S, value: S) -> Result<()> {
         let name = name.as_ref();
         let value = value.as_ref();
-        let mut fuzz_options = self.proxy.get_options().await.context(fidl_name("GetOptions"))?;
-        options::add_defaults(&mut fuzz_options);
+        let mut fuzz_options = fuzz::Options::EMPTY;
         // TODO(fxbug.dev/90015): Add flag to read options from a JSON file.
         options::set(&mut fuzz_options, name, value)?;
         let response = self.proxy.configure(fuzz_options).await.context(fidl_name("Configure"))?;
@@ -357,26 +355,15 @@ impl<O: OutputSink> Fuzzer<O> {
     }
 
     async fn set_bounds<S: AsRef<str>>(&self, runs: Option<S>, time: Option<S>) -> Result<()> {
-        let mut fuzz_options = self.proxy.get_options().await.context(fidl_name("GetOptions"))?;
-        match runs {
-            Some(runs) => {
-                options::set(&mut fuzz_options, "runs", runs.as_ref())
-                    .context("failed to set 'runs'")?;
-            }
-            None => {
-                fuzz_options.runs = None;
-            }
-        };
-        match time {
-            Some(time) => {
-                options::set(&mut fuzz_options, "max_total_time", time.as_ref())
-                    .context("failed to set 'max_total_time'")?;
-            }
-            None => {
-                fuzz_options.max_total_time = None;
-            }
-        };
-        options::add_defaults(&mut fuzz_options);
+        let mut fuzz_options = fuzz::Options::EMPTY;
+        if let Some(runs) = runs {
+            options::set(&mut fuzz_options, "runs", runs.as_ref())
+                .context("failed to set 'runs'")?;
+        }
+        if let Some(time) = time {
+            options::set(&mut fuzz_options, "max_total_time", time.as_ref())
+                .context("failed to set 'max_total_time'")?;
+        }
         self.writer.println("Configuring fuzzer...");
         let response = self.proxy.configure(fuzz_options).await.context(fidl_name("Configure"))?;
         map_zx_response(response).context(fidl_name("Configure"))?;
@@ -442,6 +429,7 @@ pub mod test_fixtures {
         crate::diagnostics::test_fixtures::send_log_entry,
         crate::diagnostics::Forwarder,
         crate::input::Input,
+        crate::options::test_fixtures::add_defaults,
         crate::util::test_fixtures::{create_task, Test, TEST_URL},
         crate::writer::test_fixtures::BufferSink,
         anyhow::{anyhow, Context as _, Result},
@@ -508,10 +496,12 @@ pub mod test_fixtures {
         /// Creates a fake fuzzer that can serve `fuchsia.fuzzer.Controller`.
         pub fn new() -> Self {
             let status = fuzz::Status { running: Some(false), ..fuzz::Status::EMPTY };
+            let mut options = fuzz::Options::EMPTY;
+            add_defaults(&mut options);
             Self {
                 corpus_type: Rc::new(RefCell::new(fuzz::Corpus::Seed)),
                 input_to_send: Rc::new(RefCell::new(Vec::new())),
-                options: Rc::new(RefCell::new(fuzz::Options::EMPTY)),
+                options: Rc::new(RefCell::new(options)),
                 received_input: Rc::new(RefCell::new(Vec::new())),
                 result: Rc::new(RefCell::new(FuzzResult::NoErrors)),
                 status: Rc::new(RefCell::new(status)),
@@ -566,7 +556,8 @@ pub mod test_fixtures {
         }
 
         /// Sets the options to return via FIDL responses.
-        pub fn set_options(&self, options: fuzz::Options) {
+        pub fn set_options(&self, mut options: fuzz::Options) {
+            add_defaults(&mut options);
             let mut options_mut = self.options.borrow_mut();
             *options_mut = options;
         }
@@ -743,6 +734,7 @@ mod tests {
         super::{get_prefix, get_run_result, get_try_result, Fuzzer},
         crate::input::test_fixtures::verify_saved,
         crate::options,
+        crate::options::test_fixtures::add_defaults,
         crate::util::digest_path,
         crate::util::test_fixtures::Test,
         crate::writer::test_fixtures::BufferSink,
@@ -753,9 +745,11 @@ mod tests {
     #[fuchsia::test]
     async fn test_get_one() -> Result<()> {
         let mut test = Test::try_new()?;
-        let (_fake, fuzzer, _task) = perform_test_setup(&test)?;
+        let (fake, fuzzer, _task) = perform_test_setup(&test)?;
+        let options = fuzz::Options { runs: Some(123), ..fuzz::Options::EMPTY };
+        fake.set_options(options);
         fuzzer.get(Some("runs".to_string())).await?;
-        test.output_matches("runs: 0");
+        test.output_matches("runs: 123");
         assert!(fuzzer.get(Some("nonsense".to_string())).await.is_err());
         test.verify_output()
     }
@@ -874,7 +868,7 @@ mod tests {
             test.output_matches("Configuring fuzzer...");
             test.output_matches("Running fuzzer...");
             let mut expected = fuzz::Options::EMPTY;
-            options::add_defaults(&mut expected);
+            add_defaults(&mut expected);
             if let Some(runs) = runs {
                 options::set(&mut expected, "runs", &runs)?;
             }
@@ -954,7 +948,6 @@ mod tests {
         test.output_matches(format!("Minimized input written to '{}'", artifact.to_string_lossy()));
         let actual = fake.get_options();
         let mut expected = fuzz::Options::EMPTY;
-        options::add_defaults(&mut expected);
         options::set(&mut expected, "runs", runs)?;
         options::set(&mut expected, "max_total_time", time)?;
         assert_eq!(actual.runs, expected.runs);
