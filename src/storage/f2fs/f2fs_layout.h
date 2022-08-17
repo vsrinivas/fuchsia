@@ -85,7 +85,7 @@ struct GlobalParameters {
   int32_t fd = 0;
   char *device_name = nullptr;
   std::string extension_list;
-} __attribute__((packed));
+};
 
 struct Superblock {
   uint32_t magic = 0;                  // Magic Number
