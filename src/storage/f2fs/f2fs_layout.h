@@ -299,7 +299,9 @@ struct SitEntry {
 
 constexpr uint32_t kSitEntryPerBlock = kPageSize / sizeof(SitEntry);
 constexpr uint32_t kMaxSitBitmapSize =
-    1 << (32 - kDefaultLogBlocksPerSegment) / kSitEntryPerBlock / kBitsPerByte;
+    (safemath::CheckLsh<uint32_t>(1, (32 - kDefaultLogBlocksPerSegment)) / kSitEntryPerBlock /
+     kBitsPerByte)
+        .ValueOrDie();
 
 inline uint16_t GetSitVblocks(const SitEntry &raw_sit) {
   return LeToCpu(raw_sit.vblocks) & kSitVblocksMask;

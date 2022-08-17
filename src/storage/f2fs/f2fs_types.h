@@ -42,22 +42,21 @@ inline uint32_t CpuToLe(uint32_t x) { return x; }
 inline uint64_t CpuToLe(uint64_t x) { return x; }
 #endif
 
-constexpr size_t kPageSize = 4096;
-constexpr size_t kBitsPerByte = 8;
-constexpr size_t kPageCacheShift = 12;
-constexpr size_t kF2fsSuperMagic = 0xF2F52010;
-constexpr size_t kCrcPolyLe = 0xedb88320;
+constexpr uint32_t kPageSize = 4096;
+constexpr uint32_t kBitsPerByte = 8;
+constexpr uint32_t kPageCacheShift = 12;
+constexpr uint32_t kF2fsSuperMagic = 0xF2F52010;
+constexpr uint32_t kCrcPolyLe = 0xedb88320;
 constexpr auto kWriteTimeOut = std::chrono::seconds(60);
 
-constexpr size_t kRead = 0x0;
-constexpr size_t kWrite = 0x1;
-constexpr size_t kFlush = 0x2;
-constexpr size_t kFua = 0x4;
-constexpr size_t kDiscard = 0x08;
-constexpr size_t kSync = 0x10;
-constexpr size_t kReadSync = (kRead | kSync);
-constexpr size_t kWriteSync = (kWrite | kSync);
-constexpr size_t kWriteFlushFua = (kWrite | kSync | kFlush | kFua);
+constexpr uint32_t kRead = 0x0;
+constexpr uint32_t kWrite = 0x1;
+constexpr uint32_t kFlush = 0x2;
+constexpr uint32_t kFua = 0x4;
+constexpr uint32_t kSync = 0x10;
+constexpr uint32_t kReadSync = (kRead | kSync);
+constexpr uint32_t kWriteSync = (kWrite | kSync);
+constexpr uint32_t kWriteFlushFua = (kWrite | kSync | kFlush | kFua);
 
 }  // namespace f2fs
 
