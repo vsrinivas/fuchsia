@@ -271,7 +271,7 @@ mod private {
         /// Constructs a `NonZeroOrMaxU32`.
         ///
         /// Returns `None` if `t` is 0 or `u32::MAX`.
-        pub fn new(t: u32) -> Option<NonZeroOrMaxU32> {
+        pub const fn new(t: u32) -> Option<NonZeroOrMaxU32> {
             if t == 0 || t == u32::MAX {
                 return None;
             }

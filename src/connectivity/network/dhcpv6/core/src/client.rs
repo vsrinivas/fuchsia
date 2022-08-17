@@ -3226,6 +3226,7 @@ impl<R: Rng> ClientStateMachine<R> {
 #[cfg(test)]
 pub(crate) mod testconsts {
     use net_declare::std_ip_v6;
+    use packet_formats_dhcp::v6;
     use std::net::Ipv6Addr;
 
     pub(crate) const INFINITY: u32 = u32::MAX;
@@ -3249,6 +3250,15 @@ pub(crate) mod testconsts {
         std_ip_v6!("::ffff:c00a:456"),
         std_ip_v6!("::ffff:c00a:789"),
     ];
+
+    pub(crate) const T1: v6::NonZeroOrMaxU32 =
+        const_unwrap::const_unwrap_option(v6::NonZeroOrMaxU32::new(30));
+    pub(crate) const T2: v6::NonZeroOrMaxU32 =
+        const_unwrap::const_unwrap_option(v6::NonZeroOrMaxU32::new(70));
+    pub(crate) const PREFERRED_LIFETIME: v6::NonZeroOrMaxU32 =
+        const_unwrap::const_unwrap_option(v6::NonZeroOrMaxU32::new(40));
+    pub(crate) const VALID_LIFETIME: v6::NonZeroOrMaxU32 =
+        const_unwrap::const_unwrap_option(v6::NonZeroOrMaxU32::new(80));
 }
 
 #[cfg(test)]
@@ -3399,45 +3409,19 @@ pub(crate) mod testutil {
     }
 
     impl TestIdentityAssociation {
-        /// Creates a `TestIdentityAssociation` with finite values for
-        /// lifetimes.
-        pub(crate) fn new_nonzero_finite(
-            address: Ipv6Addr,
-            preferred_lifetime: v6::NonZeroOrMaxU32,
-            valid_lifetime: v6::NonZeroOrMaxU32,
-            t1: v6::NonZeroOrMaxU32,
-            t2: v6::NonZeroOrMaxU32,
-        ) -> TestIdentityAssociation {
-            TestIdentityAssociation {
-                address,
-                preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                    preferred_lifetime,
-                )),
-                valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                    valid_lifetime,
-                )),
-                t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(t1)),
-                t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(t2)),
-            }
-        }
-
         /// Creates a `TestIdentityAssociation` with default valid values for
         /// lifetimes.
         pub(crate) fn new_default(address: Ipv6Addr) -> TestIdentityAssociation {
             TestIdentityAssociation {
                 address,
                 preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                    v6::NonZeroOrMaxU32::new(100).expect("should succeed"),
+                    PREFERRED_LIFETIME,
                 )),
                 valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                    v6::NonZeroOrMaxU32::new(120).expect("should succeed"),
+                    VALID_LIFETIME,
                 )),
-                t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                    v6::NonZeroOrMaxU32::new(60).expect("should succeed"),
-                )),
-                t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                    v6::NonZeroOrMaxU32::new(90).expect("should succeed"),
-                )),
+                t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(T1)),
+                t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(T2)),
             }
         }
     }
@@ -4211,7 +4195,12 @@ mod tests {
             v6::DhcpOption::ServerId(&SERVER_ID[0]),
             v6::DhcpOption::Preference(ADVERTISE_MAX_PREFERENCE),
             v6::DhcpOption::SolMaxRt(*VALID_MAX_SOLICIT_TIMEOUT_RANGE.end()),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &iana_options)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                v6::IAID::new(0),
+                T1.get(),
+                T2.get(),
+                &iana_options,
+            )),
             v6::DhcpOption::DnsServers(&DNS_SERVERS),
             opt,
         ];
@@ -4238,8 +4227,8 @@ mod tests {
         let options = [
             v6::DhcpOption::ClientId(&CLIENT_ID),
             v6::DhcpOption::ServerId(&SERVER_ID[0]),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(iaid, 60, 60, &iana_options)),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(iaid, 60, 60, &iana_options)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(iaid, T1.get(), T2.get(), &iana_options)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(iaid, T1.get(), T2.get(), &iana_options)),
         ];
         let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, [0, 1, 2], &options);
         let mut buf = vec![0; builder.bytes_len()];
@@ -4323,7 +4312,7 @@ mod tests {
     #[test_case(
         v6::MessageType::Reply,
         ExchangeType::ReplyToInformationRequest,
-        v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &[]));
+        v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), T1.get(),T2.get(), &[]));
         "reply_to_information_request_ia_na"
     )]
     #[test_case(
@@ -4378,7 +4367,12 @@ mod tests {
             v6::DhcpOption::ClientId(&CLIENT_ID),
             v6::DhcpOption::ServerId(&SERVER_ID[0]),
             v6::DhcpOption::Preference(42),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &iana_options)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                v6::IAID::new(0),
+                T1.get(),
+                T2.get(),
+                &iana_options,
+            )),
         ];
         let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
             &client;
@@ -4402,7 +4396,12 @@ mod tests {
             v6::DhcpOption::ClientId(&CLIENT_ID),
             v6::DhcpOption::ServerId(&SERVER_ID[0]),
             v6::DhcpOption::Preference(255),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &iana_options)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                v6::IAID::new(0),
+                T1.get(),
+                T2.get(),
+                &iana_options,
+            )),
         ];
         let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
             &client;
@@ -4442,15 +4441,15 @@ mod tests {
     }
 
     // T1 and T2 are non-zero and T1 > T2, the client should ignore this IA_NA option.
-    #[test_case(60, 30, true)]
-    #[test_case(INFINITY, 30, true)]
+    #[test_case(T2.get() + 1, T2.get(), true)]
+    #[test_case(INFINITY, T2.get(), true)]
     // T1 > T2, but T2 is zero, the client should process this IA_NA option.
-    #[test_case(60, 0, false)]
+    #[test_case(T1.get(), 0, false)]
     // T1 is zero, the client should process this IA_NA option.
-    #[test_case(0, 30, false)]
+    #[test_case(0, T2.get(), false)]
     // T1 <= T2, the client should process this IA_NA option.
-    #[test_case(60, 90, false)]
-    #[test_case(60, INFINITY, false)]
+    #[test_case(T1.get(), T2.get(), false)]
+    #[test_case(T1.get(), INFINITY, false)]
     #[test_case(INFINITY, INFINITY, false)]
     fn receive_advertise_with_invalid_iana(t1: u32, t2: u32, ignore_iana: bool) {
         let transaction_id = [0, 1, 2];
@@ -4464,23 +4463,17 @@ mod tests {
             time,
         );
 
-        let preferred_lifetime = 10;
-        let valid_lifetime = 20;
         let ia = IdentityAssociation {
             address: CONFIGURED_ADDRESSES[0],
             preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                v6::NonZeroOrMaxU32::new(preferred_lifetime)
-                    .expect("should succeed for non-zero or u32::MAX values"),
+                PREFERRED_LIFETIME,
             )),
-            valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                v6::NonZeroOrMaxU32::new(valid_lifetime)
-                    .expect("should succeed for non-zero or u32::MAX values"),
-            )),
+            valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(VALID_LIFETIME)),
         };
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
             ia.address,
-            preferred_lifetime,
-            valid_lifetime,
+            PREFERRED_LIFETIME.get(),
+            VALID_LIFETIME.get(),
             &[],
         ))];
         let options = [
@@ -4577,7 +4570,12 @@ mod tests {
         let options = [
             v6::DhcpOption::ClientId(&CLIENT_ID),
             v6::DhcpOption::ServerId(&SERVER_ID[0]),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &iana_options)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                v6::IAID::new(0),
+                T1.get(),
+                T2.get(),
+                &iana_options,
+            )),
         ];
         let builder =
             v6::MessageBuilder::new(v6::MessageType::Advertise, *transaction_id, &options);
@@ -4691,7 +4689,12 @@ mod tests {
         let options = [
             v6::DhcpOption::ServerId(&SERVER_ID[0]),
             v6::DhcpOption::ClientId(&CLIENT_ID),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &[])),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                v6::IAID::new(0),
+                T1.get(),
+                T2.get(),
+                &[],
+            )),
             v6::DhcpOption::StatusCode(v6::ErrorStatusCode::UnspecFail.into(), ""),
         ];
         let request_transaction_id = transaction_id.unwrap();
@@ -4724,7 +4727,12 @@ mod tests {
         let options = [
             v6::DhcpOption::ServerId(&SERVER_ID[0]),
             v6::DhcpOption::ClientId(&CLIENT_ID),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &[])),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                v6::IAID::new(0),
+                T1.get(),
+                T2.get(),
+                &[],
+            )),
             v6::DhcpOption::StatusCode(v6::ErrorStatusCode::NotOnLink.into(), ""),
         ];
         let request_transaction_id = transaction_id.unwrap();
@@ -4763,7 +4771,12 @@ mod tests {
         let options = [
             v6::DhcpOption::ServerId(&SERVER_ID[0]),
             v6::DhcpOption::ClientId(&CLIENT_ID),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &[])),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                v6::IAID::new(0),
+                T1.get(),
+                T2.get(),
+                &[],
+            )),
             v6::DhcpOption::StatusCode(v6::ErrorStatusCode::NoAddrsAvail.into(), ""),
         ];
         let builder =
@@ -4801,7 +4814,12 @@ mod tests {
         let options = [
             v6::DhcpOption::ServerId(&SERVER_ID[1]),
             v6::DhcpOption::ClientId(&CLIENT_ID),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &iana_options)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                v6::IAID::new(0),
+                T1.get(),
+                T2.get(),
+                &iana_options,
+            )),
         ];
         let builder =
             v6::MessageBuilder::new(v6::MessageType::Reply, transaction_id.unwrap(), &options);
@@ -4864,23 +4882,29 @@ mod tests {
         // client should request the IAs without specifying any addresses in
         // subsequent messages.
         let iana_options1 = [v6::DhcpOption::StatusCode(v6::ErrorStatusCode::NotOnLink.into(), "")];
-        let preferred_lifetime_value = 60;
-        let valid_lifetime_value = 90;
         let iana_options2 = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
             CONFIGURED_ADDRESSES[1],
-            preferred_lifetime_value,
-            valid_lifetime_value,
+            PREFERRED_LIFETIME.get(),
+            VALID_LIFETIME.get(),
             &[],
         ))];
-        let t1 = 90;
-        let t2 = 120;
         let iaid1 = v6::IAID::new(0);
         let iaid2 = v6::IAID::new(1);
         let options = [
             v6::DhcpOption::ServerId(&SERVER_ID[0]),
             v6::DhcpOption::ClientId(&CLIENT_ID),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(iaid1, t1, t2, &iana_options1)),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(iaid2, t1, t2, &iana_options2)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                iaid1,
+                T1.get(),
+                T2.get(),
+                &iana_options1,
+            )),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                iaid2,
+                T1.get(),
+                T2.get(),
+                &iana_options2,
+            )),
         ];
         let builder =
             v6::MessageBuilder::new(v6::MessageType::Reply, transaction_id.unwrap(), &options);
@@ -4901,12 +4925,10 @@ mod tests {
                     IdentityAssociation {
                         address: CONFIGURED_ADDRESSES[1],
                         preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                            v6::NonZeroOrMaxU32::new(preferred_lifetime_value)
-                                .expect("should succeed for non-zero or u32::MAX values"),
+                            PREFERRED_LIFETIME,
                         )),
                         valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                            v6::NonZeroOrMaxU32::new(valid_lifetime_value)
-                                .expect("should succeed for non-zero or u32::MAX values"),
+                            VALID_LIFETIME,
                         )),
                     },
                     None,
@@ -4922,22 +4944,22 @@ mod tests {
                 solicit_max_rt: _,
             }) if server_id[..] == SERVER_ID[0] &&
                   addresses == expected_addresses);
-        let expected_t1 = Duration::from_secs(t1.into());
         assert_matches!(
             &actions[..],
             [
                 Action::CancelTimer(ClientTimerType::Retransmission),
                 Action::ScheduleTimer(ClientTimerType::Renew, t1)
             ]
-            if *t1 == expected_t1
+            if *t1 == Duration::from_secs(T1.get().into())
         );
         assert!(transaction_id.is_none());
     }
 
-    #[test_case(0, 60, true)]
-    #[test_case(60, 0, false)]
+    #[test_case(0, VALID_LIFETIME.get(), true)]
+    #[test_case(PREFERRED_LIFETIME.get(), 0, false)]
+    #[test_case(VALID_LIFETIME.get() + 1, VALID_LIFETIME.get(), false)]
     #[test_case(0, 0, false)]
-    #[test_case(30, 60, true)]
+    #[test_case(PREFERRED_LIFETIME.get(), VALID_LIFETIME.get(), true)]
     fn requesting_receive_reply_with_invalid_ia_lifetimes(
         preferred_lifetime: u32,
         valid_lifetime: u32,
@@ -4975,7 +4997,12 @@ mod tests {
         let options = [
             v6::DhcpOption::ServerId(&SERVER_ID[0]),
             v6::DhcpOption::ClientId(&CLIENT_ID),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &iana_options)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                v6::IAID::new(0),
+                T1.get(),
+                T2.get(),
+                &iana_options,
+            )),
         ];
         let builder =
             v6::MessageBuilder::new(v6::MessageType::Reply, transaction_id.unwrap(), &options);
@@ -5177,7 +5204,12 @@ mod tests {
         let options = [
             v6::DhcpOption::ClientId(&CLIENT_ID),
             v6::DhcpOption::ServerId(&SERVER_ID[0]),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &iana_options)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                v6::IAID::new(0),
+                T1.get(),
+                T2.get(),
+                &iana_options,
+            )),
         ];
         let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
@@ -5209,7 +5241,12 @@ mod tests {
         let options = [
             v6::DhcpOption::ClientId(&CLIENT_ID),
             v6::DhcpOption::ServerId(&SERVER_ID[1]),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &iana_options)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                v6::IAID::new(0),
+                T1.get(),
+                T2.get(),
+                &iana_options,
+            )),
         ];
         let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
@@ -5365,28 +5402,14 @@ mod tests {
     // Test 4-msg exchange for address assignment.
     #[test]
     fn assign_addresses() {
-        let t1_secs = 50;
-        let t1 = v6::NonZeroOrMaxU32::new(t1_secs).expect("50 is non-zero or u32::MAX");
-        let t2 = v6::NonZeroOrMaxU32::new(80).expect("80 is non-zero or u32::MAX");
         let (client, actions) = testutil::assign_addresses_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            vec![
-                TestIdentityAssociation::new_nonzero_finite(
-                    CONFIGURED_ADDRESSES[0],
-                    v6::NonZeroOrMaxU32::new(100).expect("100 is non-zero or u32::MAX"),
-                    v6::NonZeroOrMaxU32::new(120).expect("120 is non-zero or u32::MAX"),
-                    t1,
-                    t2,
-                ),
-                TestIdentityAssociation::new_nonzero_finite(
-                    CONFIGURED_ADDRESSES[1],
-                    v6::NonZeroOrMaxU32::new(150).expect("150 is non-zero or u32::MAX"),
-                    v6::NonZeroOrMaxU32::new(180).expect("180 is non-zero or u32::MAX"),
-                    t1,
-                    t2,
-                ),
-            ],
+            CONFIGURED_ADDRESSES[0..2]
+                .iter()
+                .copied()
+                .map(TestIdentityAssociation::new_default)
+                .collect(),
             &[],
             StepRng::new(std::u64::MAX / 2, 0),
             Instant::now(),
@@ -5409,24 +5432,16 @@ mod tests {
             [
                 Action::CancelTimer(ClientTimerType::Retransmission),
                 Action::ScheduleTimer(ClientTimerType::Renew, t1)
-            ] if *t1 == Duration::from_secs(t1_secs.into())
+            ] if *t1 == Duration::from_secs(T1.get().into())
         );
     }
 
     #[test]
     fn address_assigned_get_dns_servers() {
-        let t1_secs = 70;
-        let t1 = v6::NonZeroOrMaxU32::new(t1_secs).expect("70 is non-zero or u32::MAX");
         let (client, actions) = testutil::assign_addresses_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            vec![TestIdentityAssociation::new_nonzero_finite(
-                CONFIGURED_ADDRESSES[0],
-                v6::NonZeroOrMaxU32::new(100).expect("100 is non-zero or u32::MAX"),
-                v6::NonZeroOrMaxU32::new(120).expect("120 is non-zero or u32::MAX"),
-                t1,
-                v6::NonZeroOrMaxU32::new(90).expect("90 is non-zero or u32::MAX"),
-            )],
+            vec![TestIdentityAssociation::new_default(CONFIGURED_ADDRESSES[0])],
             &DNS_SERVERS,
             StepRng::new(std::u64::MAX / 2, 0),
             Instant::now(),
@@ -5438,7 +5453,7 @@ mod tests {
                 Action::UpdateDnsServers(dns_servers),
                 Action::ScheduleTimer(ClientTimerType::Renew, t1)
             ] if dns_servers[..] == DNS_SERVERS &&
-                 *t1 == Duration::from_secs(t1_secs.into())
+                 *t1 == Duration::from_secs(T1.get().into())
         );
         assert_eq!(client.get_dns_servers()[..], DNS_SERVERS);
     }
@@ -5489,7 +5504,12 @@ mod tests {
         ))];
         let options = [
             v6::DhcpOption::ClientId(&CLIENT_ID),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 30, 45, &iana_options)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                v6::IAID::new(0),
+                T1.get(),
+                T2.get(),
+                &iana_options,
+            )),
             v6::DhcpOption::SolMaxRt(received_sol_max_rt),
         ];
         let request_transaction_id = transaction_id.unwrap();
@@ -5519,7 +5539,12 @@ mod tests {
         let options = [
             v6::DhcpOption::ServerId(&SERVER_ID[0]),
             v6::DhcpOption::ClientId(&MISMATCHED_CLIENT_ID),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 30, 45, &iana_options)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                v6::IAID::new(0),
+                T1.get(),
+                T2.get(),
+                &iana_options,
+            )),
             v6::DhcpOption::SolMaxRt(received_sol_max_rt),
         ];
         let builder =
@@ -5548,7 +5573,12 @@ mod tests {
         let options = [
             v6::DhcpOption::ServerId(&SERVER_ID[0]),
             v6::DhcpOption::ClientId(&CLIENT_ID),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 30, 45, &iana_options)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                v6::IAID::new(0),
+                T1.get(),
+                T2.get(),
+                &iana_options,
+            )),
             v6::DhcpOption::SolMaxRt(received_sol_max_rt),
         ];
         let builder =
@@ -5572,26 +5602,14 @@ mod tests {
 
     #[test]
     fn send_renew() {
-        let t1 = v6::NonZeroOrMaxU32::new(30).expect("30 is not zero or u32::MAX");
-        let t2 = v6::NonZeroOrMaxU32::new(70).expect("70 is not zero or u32::MAX");
-        let preferred_lifetime = v6::NonZeroOrMaxU32::new(80).expect("80 is not zero or u32::MAX");
-        let valid_lifetime = v6::NonZeroOrMaxU32::new(110).expect("110 is not zero or u32::MAX");
         let _client = testutil::send_renew_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
             CONFIGURED_ADDRESSES[0..2]
                 .into_iter()
-                .map(|&addr| {
-                    TestIdentityAssociation::new_nonzero_finite(
-                        addr,
-                        preferred_lifetime,
-                        valid_lifetime,
-                        t1,
-                        t2,
-                    )
-                })
+                .map(|&addr| TestIdentityAssociation::new_default(addr))
                 .collect(),
-            t1,
+            T1,
             StepRng::new(std::u64::MAX / 2, 0),
             Instant::now(),
         );
@@ -5603,17 +5621,9 @@ mod tests {
             CLIENT_ID,
             SERVER_ID[0],
             vec![TestIdentityAssociation {
-                address: CONFIGURED_ADDRESSES[0],
-                preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                    v6::NonZeroOrMaxU32::new(100)
-                        .expect("should succeed for non-zero or u32::MAX values"),
-                )),
-                valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                    v6::NonZeroOrMaxU32::new(120)
-                        .expect("should succeed for non-zero or u32::MAX values"),
-                )),
                 t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Infinity),
                 t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Infinity),
+                ..TestIdentityAssociation::new_default(CONFIGURED_ADDRESSES[0])
             }],
             &[],
             StepRng::new(std::u64::MAX / 2, 0),
@@ -5637,28 +5647,16 @@ mod tests {
 
     #[test]
     fn retransmit_renew() {
-        let t1 = v6::NonZeroOrMaxU32::new(70).expect("70 is not zero or u32::MAX");
-        let t2 = v6::NonZeroOrMaxU32::new(90).expect("90 is not zero or u32::MAX");
-        let preferred_lifetime = v6::NonZeroOrMaxU32::new(90).expect("90 is not zero or u32::MAX");
-        let valid_lifetime = v6::NonZeroOrMaxU32::new(120).expect("120 is not zero or u32::MAX");
         let addresses_to_assign = CONFIGURED_ADDRESSES[0..2]
             .into_iter()
-            .map(|&addr| {
-                TestIdentityAssociation::new_nonzero_finite(
-                    addr,
-                    preferred_lifetime,
-                    valid_lifetime,
-                    t1,
-                    t2,
-                )
-            })
+            .map(|&addr| TestIdentityAssociation::new_default(addr))
             .collect::<Vec<_>>();
         let time = Instant::now();
         let mut client = testutil::send_renew_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
             addresses_to_assign.clone(),
-            t1,
+            T1,
             StepRng::new(std::u64::MAX / 2, 0),
             time,
         );
@@ -5875,25 +5873,7 @@ mod tests {
         let (mut client, _actions) = testutil::assign_addresses_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            vec![TestIdentityAssociation {
-                address: CONFIGURED_ADDRESSES[0],
-                preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                    v6::NonZeroOrMaxU32::new(100)
-                        .expect("should succeed for non-zero or u32::MAX values"),
-                )),
-                valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                    v6::NonZeroOrMaxU32::new(120)
-                        .expect("should succeed for non-zero or u32::MAX values"),
-                )),
-                t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                    v6::NonZeroOrMaxU32::new(60)
-                        .expect("should succeed for non-zero or u32::MAX values"),
-                )),
-                t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                    v6::NonZeroOrMaxU32::new(90)
-                        .expect("should succeed for non-zero or u32::MAX values"),
-                )),
-            }],
+            vec![TestIdentityAssociation::new_default(CONFIGURED_ADDRESSES[0])],
             &[],
             StepRng::new(std::u64::MAX / 2, 0),
             time,
@@ -5907,19 +5887,12 @@ mod tests {
     #[test]
     #[should_panic(expected = "received unexpected refresh timeout")]
     fn renewing_refresh_timeout_is_unreachable() {
-        let t1 = v6::NonZeroOrMaxU32::new(40).expect("40 is non-zero or u32::MAX");
         let time = Instant::now();
         let mut client = testutil::send_renew_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            vec![TestIdentityAssociation::new_nonzero_finite(
-                CONFIGURED_ADDRESSES[0],
-                v6::NonZeroOrMaxU32::new(50).expect("50 is non-zero or u32::MAX"),
-                v6::NonZeroOrMaxU32::new(80).expect("80 is non-zero or u32::MAX"),
-                t1,
-                v6::NonZeroOrMaxU32::new(60).expect("60 is non-zero or u32::MAX"),
-            )],
-            t1,
+            vec![TestIdentityAssociation::new_default(CONFIGURED_ADDRESSES[0])],
+            T1,
             StepRng::new(std::u64::MAX / 2, 0),
             time,
         );
@@ -6214,13 +6187,9 @@ mod tests {
         let ia = IdentityAssociation {
             address,
             preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                v6::NonZeroOrMaxU32::new(60)
-                    .expect("should succeed for non-zero or u32::MAX values"),
+                PREFERRED_LIFETIME,
             )),
-            valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                v6::NonZeroOrMaxU32::new(90)
-                    .expect("should succeed for non-zero or u32::MAX values"),
-            )),
+            valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(VALID_LIFETIME)),
         };
         let non_conf_ia_opt = NonConfiguredIa::new(ia, configured_address);
         assert_eq!(non_conf_ia_opt.is_some(), expect_ia_is_some);

@@ -21,6 +21,7 @@ rustc_library("core") {
   ]
   test_deps = [
     "//src/connectivity/lib/net-declare",
+    "//src/lib/const-unwrap",
     "//third_party/rust_crates:test-case",
   ]
 
