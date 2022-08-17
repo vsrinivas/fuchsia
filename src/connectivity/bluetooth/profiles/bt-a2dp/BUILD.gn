@@ -62,10 +62,10 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.power.battery:fuchsia.power.battery_rust",
     "//src/connectivity/bluetooth/lib/async-helpers:async-test-helpers",
     "//src/connectivity/bluetooth/testing/test-battery-manager",
-    "//src/lib/mundane",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:futures-test",
     "//third_party/rust_crates:hex",
+    "//third_party/rust_crates:sha2",
   ]
 
   sources = [
@@ -185,7 +185,6 @@ rustc_test("encoding_integration_bin") {
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/mundane",
     "//src/lib/test_util",
     "//src/lib/trace/rust:trace",
     "//src/lib/trace/rust:trace-provider",
@@ -202,6 +201,7 @@ rustc_test("encoding_integration_bin") {
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:sha2",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tracing",
   ]

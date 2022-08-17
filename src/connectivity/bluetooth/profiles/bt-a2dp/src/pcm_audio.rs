@@ -54,7 +54,7 @@ mod tests {
 
     use fidl_fuchsia_media::{AudioChannelId, AudioPcmMode};
     use hex;
-    use mundane::hash::{Digest, Hasher, Sha256};
+    use sha2::{Digest as _, Sha256};
 
     #[test]
     fn saw_wave_matches_hash() {
@@ -74,7 +74,7 @@ mod tests {
             /*frame_count=*/ 50000,
         );
 
-        let actual_digest = hex::encode(Sha256::hash(&pcm_audio.buffer).bytes());
+        let actual_digest = hex::encode(Sha256::digest(&pcm_audio.buffer));
         assert_eq!(&actual_digest, GOLDEN_DIGEST);
     }
 }

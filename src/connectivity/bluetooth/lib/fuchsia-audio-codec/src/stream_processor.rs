@@ -738,7 +738,7 @@ mod tests {
     use futures::{io::AsyncWriteExt, Future, FutureExt};
     use futures_test::task::new_count_waker;
     use hex;
-    use mundane::hash::{Digest, Hasher, Sha256};
+    use sha2::{Digest as _, Sha256};
     use std::fs::File;
     use std::io::{Read, Write};
 
@@ -799,7 +799,7 @@ mod tests {
             file.write_all(&bytes)?;
             hasher.update(&bytes);
 
-            let digest = hasher.finish().bytes();
+            let digest: [u8; 32] = hasher.finalize().into();
             if self.expected_digest.bytes != digest {
                 return Err(format_err!(
                     "Expected {}; got {}",

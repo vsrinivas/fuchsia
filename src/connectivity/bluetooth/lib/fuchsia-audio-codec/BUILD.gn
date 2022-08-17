@@ -27,12 +27,12 @@ rustc_library("fuchsia-audio-codec") {
   test_deps = [
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
-    "//src/lib/mundane",
     "//src/lib/testing/fixture",
     "//src/media/stream_processors/test:stream_processor_test_lib",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:futures-test",
     "//third_party/rust_crates:hex",
+    "//third_party/rust_crates:sha2",
   ]
 
   sources = [
