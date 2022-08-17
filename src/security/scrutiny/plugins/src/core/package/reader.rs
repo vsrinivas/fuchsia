@@ -16,6 +16,7 @@ use {
     fuchsia_url::AbsolutePackageUrl,
     scrutiny_utils::{
         artifact::ArtifactReader,
+        io::ReadSeek,
         key_value::parse_key_value,
         package::{open_update_package, read_content_blob, META_CONTENTS_PATH},
     },
@@ -23,8 +24,7 @@ use {
     std::{
         collections::HashSet,
         ffi::OsStr,
-        fs::read,
-        io::Cursor,
+        fs::File,
         path::{Path, PathBuf},
         str::{self, FromStr},
     },
@@ -99,19 +99,19 @@ impl PackageReader for PackagesFromUpdateReader {
         let pkg_hash = pkg_url
             .hash()
             .ok_or_else(|| anyhow!("Cannot read package definition without package hash"))?;
-        let meta_far_contents =
-            self.blob_reader
-                .read_bytes(&Path::new(&format!("{}", pkg_hash)))
-                .with_context(|| format!("Failed to read meta.far blob for package {}", pkg_url))?;
-        read_package_definition(pkg_url, meta_far_contents)
+        let meta_far = self
+            .blob_reader
+            .open(&Path::new(&format!("{}", pkg_hash)))
+            .with_context(|| format!("Failed to open meta.far blob for package {}", pkg_url))?;
+        read_package_definition(pkg_url, meta_far)
     }
 
     fn read_update_package_definition(&mut self) -> Result<PartialPackageDefinition> {
         self.deps.insert(self.update_package_path.clone());
-        let update_package_contents = read(&self.update_package_path).with_context(|| {
-            format!("Failed to read update package: {:?}", self.update_package_path)
+        let update_package = File::open(&self.update_package_path).with_context(|| {
+            format!("Failed to open update package: {:?}", self.update_package_path)
         })?;
-        read_partial_package_definition(update_package_contents)
+        read_partial_package_definition(update_package)
     }
 
     /// Reads the raw config-data package definition and converts it into a
@@ -127,17 +127,16 @@ impl PackageReader for PackagesFromUpdateReader {
 
 pub fn read_package_definition(
     pkg_url: &AbsolutePackageUrl,
-    data: Vec<u8>,
+    data: impl ReadSeek,
 ) -> Result<PackageDefinition> {
     let partial = read_partial_package_definition(data)
         .with_context(|| format!("Failed to construct package definition for {:?}", pkg_url))?;
     Ok(PackageDefinition::new(pkg_url.clone(), partial))
 }
 
-pub fn read_partial_package_definition(data: Vec<u8>) -> Result<PartialPackageDefinition> {
-    let meta_far_cursor = Cursor::new(data);
-    let mut far_reader = FarReader::new(meta_far_cursor)
-        .context("Failed to construct meta.far reader for package")?;
+pub fn read_partial_package_definition(rs: impl ReadSeek) -> Result<PartialPackageDefinition> {
+    let mut far_reader =
+        FarReader::new(rs).context("Failed to construct meta.far reader for package")?;
 
     let mut pkg_def = PartialPackageDefinition::default();
 

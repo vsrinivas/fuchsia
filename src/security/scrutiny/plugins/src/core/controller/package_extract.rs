@@ -19,7 +19,7 @@ use {
     serde_json::{json, value::Value},
     std::{
         fs::{self, File},
-        io::{Cursor, Write},
+        io::Write,
         path::{Path, PathBuf},
         sync::Arc,
     },
@@ -123,11 +123,10 @@ impl DataController for PackageExtractController {
                 create_dir_all(&output_path).context("Failed to create output directory")?;
 
                 let merkle_string = format!("{}", package.merkle);
-                let pkg_buffer = artifact_reader
-                    .read_bytes(Path::new(&merkle_string))
+                let blob = artifact_reader
+                    .open(Path::new(&merkle_string))
                     .context("Failed to read package from blobfs archive(s)")?;
-                let mut cursor = Cursor::new(pkg_buffer);
-                let mut far = FarReader::new(&mut cursor)?;
+                let mut far = FarReader::new(blob)?;
 
                 let pkg_files: Vec<String> = far.list().map(|e| e.path().to_string()).collect();
                 // Extract all the far meta files.
@@ -147,9 +146,9 @@ impl DataController for PackageExtractController {
                 // Extract all the contents of the package.
                 for (file_name, file_merkle) in package.contents.iter() {
                     let merkle_string = format!("{}", file_merkle);
-                    let mut blob_buffer = artifact_reader
-                        .read_bytes(Path::new(&merkle_string))
-                        .context("Failed to read package content blob from blobfs archive(s)")?;
+                    let mut blob = artifact_reader
+                        .open(Path::new(&merkle_string))
+                        .context("Failed to read package from blobfs archive(s)")?;
 
                     let file_path = output_path.join(file_name);
                     if let Some(parent_dir) = file_path.as_path().parent() {
@@ -158,8 +157,9 @@ impl DataController for PackageExtractController {
                     }
                     let mut packaged_file = create_file(&file_path)
                         .context("Failed to create package contents file")?;
-                    write_file(&file_path, &mut packaged_file, &mut blob_buffer)
-                        .context("Failed to write package contents file")?;
+                    std::io::copy(&mut blob, &mut packaged_file).map_err(|err| {
+                        anyhow!("Failed to write file at {:?}: {}", file_path, err)
+                    })?;
                 }
                 return Ok(json!({"status": "ok"}));
             }

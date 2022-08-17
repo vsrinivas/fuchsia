@@ -22,7 +22,6 @@ use {
     },
     std::{
         collections::{HashMap, HashSet},
-        io::Cursor,
         path::{Path, PathBuf},
         str::{from_utf8, FromStr},
         sync::Arc,
@@ -87,24 +86,23 @@ fn collect_static_pkgs(
 
     // Read system image package and verify its merkle.
     let system_image_path = Path::new(system_image_merkle_string);
-    let system_image_pkg_buffer =
-        artifact_reader.read_bytes(&Path::new(system_image_path)).map_err(|err| ErrorWithDeps {
+    let mut system_image_pkg =
+        artifact_reader.open(&Path::new(system_image_path)).map_err(|err| ErrorWithDeps {
             deps: artifact_reader.get_deps(),
             error: StaticPkgsError::FailedToReadSystemImage {
                 system_image_path: system_image_path.to_path_buf(),
                 io_error: err.to_string(),
             },
         })?;
-    let computed_system_image_merkle =
-        MerkleTree::from_reader(Cursor::new(&system_image_pkg_buffer))
-            .map_err(|err| ErrorWithDeps {
-                deps: artifact_reader.get_deps(),
-                error: StaticPkgsError::FailedToReadSystemImage {
-                    system_image_path: system_image_path.to_path_buf(),
-                    io_error: err.to_string(),
-                },
-            })?
-            .root();
+    let computed_system_image_merkle = MerkleTree::from_reader(&mut system_image_pkg)
+        .map_err(|err| ErrorWithDeps {
+            deps: artifact_reader.get_deps(),
+            error: StaticPkgsError::FailedToReadSystemImage {
+                system_image_path: system_image_path.to_path_buf(),
+                io_error: err.to_string(),
+            },
+        })?
+        .root();
     if computed_system_image_merkle != system_image_merkle {
         return Err(ErrorWithDeps {
             deps: artifact_reader.get_deps(),
@@ -116,14 +114,20 @@ fn collect_static_pkgs(
     }
 
     // Parse system image.
-    let mut system_image_far =
-        FarReader::new(Cursor::new(&system_image_pkg_buffer)).map_err(|err| ErrorWithDeps {
-            deps: artifact_reader.get_deps(),
-            error: StaticPkgsError::FailedToParseSystemImage {
-                system_image_path: system_image_path.to_path_buf(),
-                parse_error: err.to_string(),
-            },
-        })?;
+    system_image_pkg.rewind().map_err(|err| ErrorWithDeps {
+        deps: artifact_reader.get_deps(),
+        error: StaticPkgsError::FailedToParseSystemImage {
+            system_image_path: system_image_path.to_path_buf(),
+            parse_error: err.to_string(),
+        },
+    })?;
+    let mut system_image_far = FarReader::new(system_image_pkg).map_err(|err| ErrorWithDeps {
+        deps: artifact_reader.get_deps(),
+        error: StaticPkgsError::FailedToParseSystemImage {
+            system_image_path: system_image_path.to_path_buf(),
+            parse_error: err.to_string(),
+        },
+    })?;
 
     // Extract "data/static_packages" hash from "meta/contents" file.
     let system_image_data_contents = parse_key_value(
@@ -174,15 +178,14 @@ fn collect_static_pkgs(
     let static_pkgs_path = Path::new(static_pkgs_merkle_string);
 
     // Read static packages index, check its merkle, and parse it.
-    let static_pkgs_buffer =
-        artifact_reader.read_bytes(static_pkgs_path).map_err(|err| ErrorWithDeps {
-            deps: artifact_reader.get_deps(),
-            error: StaticPkgsError::FailedToReadStaticPkgs {
-                static_pkgs_path: static_pkgs_path.to_path_buf(),
-                io_error: err.to_string(),
-            },
-        })?;
-    let computed_static_pkgs_merkle = MerkleTree::from_reader(Cursor::new(&static_pkgs_buffer))
+    let mut static_pkgs = artifact_reader.open(static_pkgs_path).map_err(|err| ErrorWithDeps {
+        deps: artifact_reader.get_deps(),
+        error: StaticPkgsError::FailedToReadStaticPkgs {
+            static_pkgs_path: static_pkgs_path.to_path_buf(),
+            io_error: err.to_string(),
+        },
+    })?;
+    let computed_static_pkgs_merkle = MerkleTree::from_reader(&mut static_pkgs)
         .map_err(|err| ErrorWithDeps {
             deps: artifact_reader.get_deps(),
             error: StaticPkgsError::FailedToReadStaticPkgs {
@@ -200,14 +203,23 @@ fn collect_static_pkgs(
             },
         });
     }
-    let static_pkgs_contents = from_utf8(&static_pkgs_buffer).map_err(|err| ErrorWithDeps {
+    static_pkgs.rewind().map_err(|err| ErrorWithDeps {
         deps: artifact_reader.get_deps(),
         error: StaticPkgsError::FailedToParseStaticPkgs {
             static_pkgs_path: static_pkgs_path.to_path_buf(),
             parse_error: err.to_string(),
         },
     })?;
-    let static_pkgs = parse_key_value(static_pkgs_contents).map_err(|err| ErrorWithDeps {
+    let mut static_pkgs_contents = String::new();
+    static_pkgs.read_to_string(&mut static_pkgs_contents).map_err(|err| ErrorWithDeps {
+        deps: artifact_reader.get_deps(),
+        error: StaticPkgsError::FailedToParseStaticPkgs {
+            static_pkgs_path: static_pkgs_path.to_path_buf(),
+            parse_error: err.to_string(),
+        },
+    })?;
+
+    let static_pkgs = parse_key_value(&static_pkgs_contents).map_err(|err| ErrorWithDeps {
         deps: artifact_reader.get_deps(),
         error: StaticPkgsError::FailedToParseStaticPkgs {
             static_pkgs_path: static_pkgs_path.to_path_buf(),

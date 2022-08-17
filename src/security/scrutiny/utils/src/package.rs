@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{artifact::ArtifactReader, key_value::parse_key_value},
+    crate::{artifact::ArtifactReader, io::ReadSeek, key_value::parse_key_value},
     anyhow::{anyhow, Context, Result},
     fuchsia_archive::Utf8Reader,
     fuchsia_merkle::{Hash, MerkleTree},
@@ -16,7 +16,6 @@ use {
         collections::HashMap,
         fmt,
         fs::File,
-        io::Cursor,
         path::Path,
         str::{from_utf8, FromStr},
     },
@@ -28,7 +27,7 @@ pub static META_CONTENTS_PATH: &str = "meta/contents";
 pub fn open_update_package<P: AsRef<Path>>(
     update_package_path: P,
     artifact_reader: &mut Box<dyn ArtifactReader>,
-) -> Result<Utf8Reader<Cursor<Vec<u8>>>> {
+) -> Result<Utf8Reader<Box<dyn ReadSeek>>> {
     let update_package_path = update_package_path.as_ref();
     let mut update_package_file = File::open(update_package_path).with_context(|| {
         format!("Failed to open update package meta.far at {:?}", update_package_path)
@@ -42,14 +41,13 @@ pub fn open_update_package<P: AsRef<Path>>(
         })?
         .root()
         .to_string();
-    let far_contents =
-        artifact_reader.read_bytes(&Path::new(&update_package_merkle)).with_context(|| {
-            format!(
-                "Failed to load update package meta.far at {:?} from artifact archives",
-                update_package_path
-            )
-        })?;
-    Utf8Reader::new(Cursor::new(far_contents)).with_context(|| {
+    let far = artifact_reader.open(&Path::new(&update_package_merkle)).with_context(|| {
+        format!(
+            "Failed to open update package meta.far at {:?} from artifact archives",
+            update_package_path
+        )
+    })?;
+    Utf8Reader::new(far).with_context(|| {
         format!(
             "Failed to initialize far reader for update package at {:?} with merkle root {}",
             update_package_path, update_package_merkle
@@ -58,7 +56,7 @@ pub fn open_update_package<P: AsRef<Path>>(
 }
 
 pub fn read_content_blob(
-    far_reader: &mut Utf8Reader<Cursor<Vec<u8>>>,
+    far_reader: &mut Utf8Reader<impl ReadSeek>,
     artifact_reader: &mut Box<dyn ArtifactReader>,
     path: &str,
 ) -> Result<Vec<u8>> {
