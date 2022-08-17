@@ -43,6 +43,9 @@ using zxio_synchronous_datagram_socket_t = struct zxio_synchronous_datagram_sock
   fidl::WireSyncClient<fuchsia_posix_socket::SynchronousDatagramSocket> client;
 };
 
+static_assert(sizeof(zxio_synchronous_datagram_socket_t) <= sizeof(zxio_storage_t),
+              "zxio_synchronous_datagram_socket_t must fit inside zxio_storage_t.");
+
 // datagram socket (channel backed) --------------------------------------------
 
 // A |zxio_t| backend that uses a fuchsia.posix.socket.DatagramSocket object.
@@ -53,6 +56,9 @@ using zxio_datagram_socket_t = struct zxio_datagram_socket {
 
   fidl::WireSyncClient<fuchsia_posix_socket::DatagramSocket> client;
 };
+
+static_assert(sizeof(zxio_datagram_socket_t) <= sizeof(zxio_storage_t),
+              "zxio_datagram_socket_t must fit inside zxio_storage_t.");
 
 // stream socket (channel backed) --------------------------------------------
 
@@ -65,6 +71,9 @@ using zxio_stream_socket_t = struct zxio_stream_socket {
   fidl::WireSyncClient<fuchsia_posix_socket::StreamSocket> client;
 };
 
+static_assert(sizeof(zxio_stream_socket_t) <= sizeof(zxio_storage_t),
+              "zxio_stream_socket_t must fit inside zxio_storage_t.");
+
 // raw socket (channel backed) -------------------------------------------------
 
 // A |zxio_t| backend that uses a fuchsia.posix.socket.raw.Socket object.
@@ -74,6 +83,9 @@ using zxio_raw_socket_t = struct zxio_raw_socket {
   fidl::WireSyncClient<fuchsia_posix_socket_raw::Socket> client;
 };
 
+static_assert(sizeof(zxio_raw_socket_t) <= sizeof(zxio_storage_t),
+              "zxio_raw_socket_t must fit inside zxio_storage_t.");
+
 // packet socket (channel backed) ----------------------------------------------
 
 // A |zxio_t| backend that uses a fuchsia.posix.socket.packet.Socket object.
@@ -82,6 +94,9 @@ using zxio_packet_socket_t = struct zxio_packet_socket {
   zx::eventpair event;
   fidl::WireSyncClient<fuchsia_posix_socket_packet::Socket> client;
 };
+
+static_assert(sizeof(zxio_packet_socket_t) <= sizeof(zxio_storage_t),
+              "zxio_packet_socket_t must fit inside zxio_storage_t.");
 
 // Allocates storage for a zxio_t object of a given type.
 //
