@@ -45,7 +45,7 @@ use crate::{
     error::{ExistsError, LocalAddressError, ZonedAddressError},
     ip::{
         icmp::IcmpIpExt,
-        socket::{IpSock, IpSockCreationError, IpSockSendError},
+        socket::{IpSockCreationError, IpSockSendError},
         BufferIpTransportContext, BufferTransportIpContext, IpDeviceId, IpExt, IpTransportContext,
         TransportIpContext, TransportReceiveError,
     },
@@ -106,14 +106,12 @@ impl UdpStateBuilder {
 }
 
 /// Convenience alias to make names shorter.
-type UdpBoundSocketMap<I, D> = BoundSocketMap<IpPortSpec<I, D>, Udp<I, D, IpSock<I, D>>>;
+type UdpBoundSocketMap<I, D> = BoundSocketMap<IpPortSpec<I, D>, Udp<I, D>>;
 
 /// A collection of UDP sockets.
 #[derive(Derivative)]
 #[derivative(Default(bound = ""))]
-pub struct UdpSockets<I: Ip + IpExt, D: IpDeviceId>(
-    DatagramSockets<IpPortSpec<I, D>, Udp<I, D, IpSock<I, D>>>,
-);
+pub struct UdpSockets<I: Ip + IpExt, D: IpDeviceId>(DatagramSockets<IpPortSpec<I, D>, Udp<I, D>>);
 
 /// The state associated with the UDP protocol.
 ///
@@ -130,7 +128,7 @@ impl<I: IpExt, D: IpDeviceId> Default for UdpState<I, D> {
 }
 
 /// Uninstantiatable type for implementing PosixSocketMapSpec.
-struct Udp<I, D, S>(PhantomData<(I, D, S)>, Never);
+struct Udp<I, D>(PhantomData<(I, D)>, Never);
 
 /// Produces an iterator over eligible receiving socket addresses.
 fn iter_receiving_addrs<I: Ip, D: IpDeviceId>(
@@ -333,15 +331,15 @@ pub(crate) fn check_posix_sharing<A: SocketMapAddrSpec, P: PosixSocketStateSpec>
     }
 }
 
-impl<I: Ip, D: IpDeviceId, S> PosixSocketStateSpec for Udp<I, D, S> {
+impl<I: IpExt, D: IpDeviceId> PosixSocketStateSpec for Udp<I, D> {
     type ListenerId = UdpListenerId<I>;
     type ConnId = UdpConnId<I>;
 
     type ListenerState = ListenerState<I::Addr, D>;
-    type ConnState = ConnState<I::Addr, D, S>;
+    type ConnState = ConnState<I, D>;
 }
 
-impl<I: Ip, D: IpDeviceId, S> PosixConflictPolicy<IpPortSpec<I, D>> for Udp<I, D, S> {
+impl<I: IpExt, D: IpDeviceId> PosixConflictPolicy<IpPortSpec<I, D>> for Udp<I, D> {
     fn check_posix_sharing(
         new_sharing: PosixSharingOptions,
         addr: AddrVec<IpPortSpec<I, D>>,
@@ -351,7 +349,7 @@ impl<I: Ip, D: IpDeviceId, S> PosixConflictPolicy<IpPortSpec<I, D>> for Udp<I, D
     }
 }
 
-impl<I: IpExt, D: IpDeviceId, S> DatagramSocketSpec for Udp<I, D, S> {
+impl<I: IpExt, D: IpDeviceId> DatagramSocketSpec for Udp<I, D> {
     type UnboundId = UdpUnboundId<I>;
     type UnboundSharingState = PosixSharingOptions;
 }
@@ -540,9 +538,7 @@ fn try_alloc_listen_port<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateCon
     None
 }
 
-impl<I: IpExt, D: IpDeviceId> PortAllocImpl
-    for BoundSocketMap<IpPortSpec<I, D>, Udp<I, D, IpSock<I, D>>>
-{
+impl<I: IpExt, D: IpDeviceId> PortAllocImpl for BoundSocketMap<IpPortSpec<I, D>, Udp<I, D>> {
     const EPHEMERAL_RANGE: RangeInclusive<u16> = 49152..=65535;
     const TABLE_SIZE: NonZeroUsize = nonzero!(20usize);
     type Id = ProtocolFlowId<I::Addr>;
@@ -788,7 +784,7 @@ impl<I: Ip> From<UdpConnId<I>> for UdpSocketId<I> {
     }
 }
 
-impl<I: IpExt, D: IpDeviceId> From<UdpSocketId<I>> for DatagramSocketId<Udp<I, D, IpSock<I, D>>> {
+impl<I: IpExt, D: IpDeviceId> From<UdpSocketId<I>> for DatagramSocketId<Udp<I, D>> {
     fn from(id: UdpSocketId<I>) -> Self {
         match id {
             UdpSocketId::Unbound(id) => Self::Unbound(id),
@@ -1138,7 +1134,7 @@ pub fn send_udp_conn_to<
 ) -> Result<(), (B, UdpSendError)> {
     let ((local_ip, local_port), device) = sync_ctx.with_sockets(|state| {
         let UdpSockets(DatagramSockets { bound, unbound: _, lazy_port_alloc: _ }) = state;
-        let (_, _, addr): &(ConnState<_, _, _>, PosixSharingOptions, _) =
+        let (_, _, addr): &(ConnState<_, _>, PosixSharingOptions, _) =
             bound.conns().get_by_id(&conn).expect("no such connection");
         let ConnAddr { ip: ConnIpAddr { local, remote: _ }, device } = *addr;
 
@@ -1255,11 +1251,7 @@ pub fn send_udp_listener<
 }
 
 impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>
-    DatagramStateContext<
-        IpPortSpec<I, SC::DeviceId>,
-        C,
-        Udp<I, SC::DeviceId, IpSock<I, SC::DeviceId>>,
-    > for SC
+    DatagramStateContext<IpPortSpec<I, SC::DeviceId>, C, Udp<I, SC::DeviceId>> for SC
 {
     fn join_multicast_group(
         &mut self,
@@ -1285,12 +1277,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>
 
     fn with_sockets<
         O,
-        F: FnOnce(
-            &DatagramSockets<
-                IpPortSpec<I, SC::DeviceId>,
-                Udp<I, SC::DeviceId, IpSock<I, SC::DeviceId>>,
-            >,
-        ) -> O,
+        F: FnOnce(&DatagramSockets<IpPortSpec<I, SC::DeviceId>, Udp<I, SC::DeviceId>>) -> O,
     >(
         &self,
         cb: F,
@@ -1300,12 +1287,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>>
 
     fn with_sockets_mut<
         O,
-        F: FnOnce(
-            &mut DatagramSockets<
-                IpPortSpec<I, SC::DeviceId>,
-                Udp<I, SC::DeviceId, IpSock<I, SC::DeviceId>>,
-            >,
-        ) -> O,
+        F: FnOnce(&mut DatagramSockets<IpPortSpec<I, SC::DeviceId>, Udp<I, SC::DeviceId>>) -> O,
     >(
         &mut self,
         cb: F,
@@ -1525,7 +1507,7 @@ pub fn set_bound_udp_device<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpState
                 (device, Either::Left(addr.as_ref().into_iter()))
             }
             UdpBoundId::Connected(id) => {
-                let (_, _, addr): &(ConnState<_, _, _>, PosixSharingOptions, _) = bound
+                let (_, _, addr): &(ConnState<_, _>, PosixSharingOptions, _) = bound
                     .conns()
                     .get_by_id(&id)
                     .unwrap_or_else(|| panic!("invalid conn ID {:?}", id));
@@ -1587,7 +1569,7 @@ pub fn get_udp_bound_device<I: IpExt, SC: UdpStateContext<I, C>, C: UdpStateNonS
                     *device
                 }
                 UdpBoundId::Connected(id) => {
-                    let (_, _, addr): &(ConnState<_, _, _>, PosixSharingOptions, _) =
+                    let (_, _, addr): &(ConnState<_, _>, PosixSharingOptions, _) =
                         bound.conns().get_by_id(&id).expect("UDP connected socket not found");
                     let ConnAddr { device, ip: _ } = addr;
                     *device
@@ -1654,7 +1636,7 @@ pub fn get_udp_posix_reuse_port<
                     sharing
                 }
                 UdpBoundId::Connected(id) => {
-                    let (_, sharing, _): &(ConnState<_, _, _>, _, ConnAddr<_, _, _, _>) =
+                    let (_, sharing, _): &(ConnState<_, _>, _, ConnAddr<_, _, _, _>) =
                         bound.conns().get_by_id(&id).expect("conneted UDP socket not found");
                     sharing
                 }
@@ -1821,7 +1803,7 @@ pub fn reconnect_udp<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext
             let UdpSockets(DatagramSockets { bound, unbound: _, lazy_port_alloc: _ }) = state;
             let entry = bound.conns_mut().entry(&id).expect("Invalid UDP conn ID");
             let (_, _, ConnAddr { ip: ConnIpAddr { local, remote: _ }, device }): (
-                ConnState<_, _, _>,
+                ConnState<_, _>,
                 PosixSharingOptions,
                 _,
             ) = *entry.get();
@@ -1860,7 +1842,7 @@ pub fn reconnect_udp<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext
             let conn = bound
                 .conns_mut()
                 .try_insert(original_addr, ConnState { multicast_memberships, socket }, sharing)
-                .unwrap_or_else(|(e, _, _): (_, ConnState<_, _, _>, PosixSharingOptions)| {
+                .unwrap_or_else(|(e, _, _): (_, ConnState<_, _>, PosixSharingOptions)| {
                     unreachable!("reinserting just-removed connected socket failed: {:?}", e)
                 });
             (e, conn)

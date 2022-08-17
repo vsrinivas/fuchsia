@@ -18,7 +18,7 @@ use net_types::{
 use crate::{
     algorithm::{PortAlloc, PortAllocImpl, ProtocolFlowId},
     data_structures::{id_map::IdMap, socketmap::Tagged},
-    ip::{IpDeviceId, IpExt},
+    ip::{socket::IpSock, IpDeviceId, IpExt},
     socket::{
         address::{ConnAddr, ConnIpAddr, IpPortSpec},
         AddrVec, Bound, BoundSocketMap, ListenerAddr, SocketMapAddrSpec, SocketMapAddrStateSpec,
@@ -54,9 +54,9 @@ pub(crate) struct ListenerState<A: Eq + Hash, D: Hash + Eq> {
 }
 
 #[derive(Debug)]
-pub(crate) struct ConnState<A: Eq + Hash, D: Eq + Hash, S> {
-    pub(crate) socket: S,
-    pub(crate) multicast_memberships: MulticastMemberships<A, D>,
+pub(crate) struct ConnState<I: IpExt, D: Eq + Hash> {
+    pub(crate) socket: IpSock<I, D>,
+    pub(crate) multicast_memberships: MulticastMemberships<I::Addr, D>,
 }
 
 impl<I: IpExt, D: IpDeviceId, S: DatagramSocketSpec> DatagramSockets<IpPortSpec<I, D>, S>
@@ -265,8 +265,7 @@ pub(crate) fn remove_conn<
     A: SocketMapAddrSpec,
     C: DatagramStateNonSyncContext<A::IpVersion>,
     SC: DatagramStateContext<A, C, S>,
-    CS,
-    S: DatagramSocketSpec<ConnState = ConnState<A::IpAddr, A::DeviceId, CS>>
+    S: DatagramSocketSpec<ConnState = ConnState<A::IpVersion, A::DeviceId>>
         + SocketMapConflictPolicy<
             ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
             <S as SocketMapStateSpec>::ConnSharingState,
@@ -281,6 +280,7 @@ where
     Bound<S>: Tagged<AddrVec<A>>,
     BoundSocketMap<A, S>: PortAllocImpl,
     S::ConnAddrState: SocketMapAddrStateSpec<Id = S::ConnId, SharingState = S::ConnSharingState>,
+    A::IpVersion: IpExt,
 {
     let (ConnState { socket: _, multicast_memberships }, addr) =
         sync_ctx.with_sockets_mut(|state| {
@@ -379,10 +379,9 @@ pub(crate) fn set_multicast_membership<
     A: SocketMapAddrSpec,
     C: DatagramStateNonSyncContext<A::IpVersion>,
     SC: DatagramStateContext<A, C, S>,
-    CS,
     S: DatagramSocketSpec<
             ListenerState = ListenerState<A::IpAddr, A::DeviceId>,
-            ConnState = ConnState<A::IpAddr, A::DeviceId, CS>,
+            ConnState = ConnState<A::IpVersion, A::DeviceId>,
         > + SocketMapConflictPolicy<
             ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
             <S as SocketMapStateSpec>::ListenerSharingState,
@@ -406,6 +405,7 @@ where
     S::ListenerAddrState:
         SocketMapAddrStateSpec<Id = S::ListenerId, SharingState = S::ListenerSharingState>,
     S::ConnAddrState: SocketMapAddrStateSpec<Id = S::ConnId, SharingState = S::ConnSharingState>,
+    A::IpVersion: IpExt,
 {
     let id = id.into();
     let interface = pick_matching_interface(sync_ctx, interface)?;
@@ -427,11 +427,8 @@ where
                 device
             }
             DatagramSocketId::Connected(id) => {
-                let (_, _, ConnAddr { ip: _, device }): &(
-                    ConnState<_, _, _>,
-                    S::ConnSharingState,
-                    _,
-                ) = bound.conns().get_by_id(&id).expect("Connected socket not found");
+                let (_, _, ConnAddr { ip: _, device }): &(ConnState<_, _>, S::ConnSharingState, _) =
+                    bound.conns().get_by_id(&id).expect("Connected socket not found");
                 device
             }
         };
