@@ -24,6 +24,7 @@
         {
             protocol: [
                 "fuchsia.net.debug.Interfaces",
+                "fuchsia.net.dhcpv6.ClientProvider",
                 "fuchsia.net.interfaces.State",
             ],
         },

@@ -22,7 +22,10 @@ use fidl_fuchsia_posix_socket as fposix_socket;
 use fuchsia_zircon as zx;
 use futures::StreamExt as _;
 use net_declare::{fidl_ip_v4, fidl_ip_v6, fidl_mac, fidl_socket_addr, fidl_subnet};
-use netstack_testing_common::realms::{KnownServiceProvider, Netstack2, TestSandboxExt as _};
+use netstack_testing_common::{
+    packets,
+    realms::{KnownServiceProvider, Netstack2, TestSandboxExt as _},
+};
 use netstack_testing_macros::variants_test;
 use packet::ParsablePacket as _;
 use std::convert::TryInto as _;
@@ -42,7 +45,11 @@ const DEFAULT_IPV6_TARGET_SUBNET: fnet::Subnet = fidl_subnet!("3080::2/64");
 const DEFAULT_IPV6_LINK_LOCAL_TARGET_SUBNET: fnet::Subnet = fidl_subnet!("fe80::1/64");
 const DEFAULT_IPV4_SOURCE_SUBNET: fnet::Subnet = fidl_subnet!("192.168.254.1/16");
 const DEFAULT_IPV6_SOURCE_SUBNET: fnet::Subnet = fidl_subnet!("3080::1/64");
-const DEFAULT_IPV6_LINK_LOCAL_SOURCE_SUBNET: fnet::Subnet = fidl_subnet!("fe80::2/64");
+const DEFAULT_IPV6_LINK_LOCAL_SOURCE_ADDR: fnet::Ipv6Address = fidl_ip_v6!("fe80::2");
+const DEFAULT_IPV6_LINK_LOCAL_SOURCE_SUBNET: fnet::Subnet = fnet::Subnet {
+    addr: fnet::IpAddress::Ipv6(DEFAULT_IPV6_LINK_LOCAL_SOURCE_ADDR),
+    prefix_len: 64,
+};
 
 const DURATION_FIVE_MINUTES: zx::Duration = zx::Duration::from_minutes(5);
 const MINIMUM_TIMEOUT: zx::Duration = zx::Duration::from_nanos(1);
@@ -2018,4 +2025,65 @@ async fn leave_unjoined_multicast_group<E: netemul::Endpoint>(
             .expect("leave_multicast_group failed"),
         Err(fntr::Error::AddressNotAvailable)
     );
+}
+
+#[test_case(true; "stateful")]
+#[test_case(false; "stateless")]
+#[fuchsia_async::run_singlethreaded(test)]
+async fn start_dhcpv6_client(stateful: bool) {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let network = sandbox.create_network("network").await.expect("failed to create network");
+    let fake_ep = network.create_fake_endpoint().expect("failed to create fake endpoint");
+    let realm = create_netstack_realm("start_dhcpv6_client", &sandbox)
+        .expect("failed to create netstack realm");
+
+    let network_test_realm = realm
+        .connect_to_protocol::<fntr::ControllerMarker>()
+        .expect("failed to connect to network test realm controller");
+
+    network_test_realm
+        .start_hermetic_network_realm(fntr::Netstack::V2)
+        .await
+        .expect("start_hermetic_network_realm failed")
+        .expect("start_hermetic_network_realm error");
+
+    let interface = join_network_with_hermetic_netstack::<netemul::NetworkDevice>(
+        &realm,
+        &network,
+        &network_test_realm,
+        INTERFACE1_NAME,
+        INTERFACE1_MAC_ADDRESS,
+        DEFAULT_IPV6_LINK_LOCAL_SOURCE_SUBNET,
+    )
+    .await;
+
+    network_test_realm
+        .start_dhcpv6_client(fntr::ControllerStartDhcpv6ClientRequest {
+            interface_id: Some(interface.id()),
+            address: Some(DEFAULT_IPV6_LINK_LOCAL_SOURCE_ADDR),
+            stateful: Some(stateful),
+            request_dns_servers: Some(false),
+            ..fntr::ControllerStartDhcpv6ClientRequest::EMPTY
+        })
+        .await
+        .expect("FIDL error")
+        .expect("start DHCPv6 client");
+
+    let want_msg_type = if stateful {
+        packet_formats_dhcp::v6::MessageType::Solicit
+    } else {
+        packet_formats_dhcp::v6::MessageType::InformationRequest
+    };
+    fake_ep
+        .frame_stream()
+        .filter_map(|r| {
+            let (data, _dropped) = r.expect("frame stream error");
+            futures::future::ready(
+                packets::parse_dhcpv6(data.as_slice())
+                    .and_then(|msg| (msg.msg_type() == want_msg_type).then_some(())),
+            )
+        })
+        .next()
+        .await
+        .expect("frame stream terminated unexpectedly");
 }

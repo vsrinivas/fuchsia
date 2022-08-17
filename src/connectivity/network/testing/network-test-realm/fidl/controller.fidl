@@ -242,4 +242,27 @@ protocol Controller {
         address fuchsia.net.IpAddress;
         interface_id fuchsia.net.interface_id;
     }) -> (struct {}) error Error;
+
+    /// Starts a DHCPv6 client with the provided parameters.
+    ///
+    /// + request `interface_id` the interface to start this DHCPv6 client on.
+    ///     Required.
+    /// + request `address` the link-local address this DHCPv6 client should
+    ///     use when communicating with servers. Required.
+    /// + request `stateful` start the client in stateful mode. Required.
+    /// + request `request_dns_servers` whether the client should request DNS
+    ///     servers. Interpreted as false if not present.
+    /// * error `HERMETIC_NETWORK_REALM_NOT_RUNNING` if there is no running
+    ///     hermetic network realm.
+    /// * error `INTERNAL` for internal errors, including failure to connect
+    ///     to hermetic network realm services.
+    /// * error `INVALID_ARGUMENTS` if any required parameters are omitted.
+    /// * error `ALREADY_EXISTS` if there is a client running on the interface
+    ///     identified by `interface_id` already.
+    StartDhcpv6Client(table {
+        1: interface_id fuchsia.net.interface_id;
+        2: address fuchsia.net.Ipv6Address;
+        3: stateful bool;
+        4: request_dns_servers bool;
+    }) -> (struct {}) error Error;
 };

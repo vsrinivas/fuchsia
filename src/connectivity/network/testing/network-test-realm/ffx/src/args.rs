@@ -41,6 +41,7 @@ pub enum Subcommand {
     StartStub(StartStub),
     StopHermeticNetworkRealm(StopHermeticNetworkRealm),
     StopStub(StopStub),
+    Dhcpv6Client(Dhcpv6Client),
 }
 
 #[derive(argh::FromArgs, Debug, PartialEq)]
@@ -161,6 +162,43 @@ pub struct PollUdp {
     #[argh(positional)]
     /// the number of attempts to make
     pub num_retries: u16,
+}
+
+#[derive(argh::FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "dhcpv6-client")]
+/// DHCPv6 client commands.
+pub struct Dhcpv6Client {
+    #[argh(subcommand)]
+    pub subcommand: Dhcpv6ClientSubcommand,
+}
+
+#[derive(argh::FromArgs, Debug, PartialEq)]
+#[argh(subcommand)]
+pub enum Dhcpv6ClientSubcommand {
+    Start(Dhcpv6ClientStart),
+}
+
+#[derive(argh::FromArgs, Debug, PartialEq)]
+#[argh(subcommand, name = "start")]
+/// Start a DHCPv6 client.
+pub struct Dhcpv6ClientStart {
+    #[argh(positional)]
+    /// the interface to run the DHCPv6 client on
+    pub interface_id: u64,
+
+    #[argh(positional)]
+    /// the link-local address the DHCPv6 client uses to communicate with servers
+    pub address: fnet_ext::Ipv6Address,
+
+    #[argh(option)]
+    /// whether the DHCPv6 client should run in stateful or stateless mode
+    pub stateful: bool,
+
+    #[argh(switch)]
+    /// request DNS servers configuration from servers
+    pub request_dns_servers: bool,
+    // TODO(https://fxbug.dev/48867): Add configuration for Rapid Commit.
+    // TODO(https://fxbug.dev/105427): Add configuration for acquiring temporary addresses.
 }
 
 fn parse_netstack_type(value: &str) -> Result<fntr::Netstack, String> {

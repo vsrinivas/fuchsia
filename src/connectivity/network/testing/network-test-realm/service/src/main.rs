@@ -12,6 +12,8 @@ use fidl_fuchsia_hardware_network as fhwnet;
 use fidl_fuchsia_io as fio;
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_debug as fnet_debug;
+use fidl_fuchsia_net_dhcpv6 as fnet_dhcpv6;
+use fidl_fuchsia_net_dhcpv6_ext as fnet_dhcpv6_ext;
 use fidl_fuchsia_net_ext as fnet_ext;
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
@@ -985,6 +987,12 @@ struct Controller {
     /// left. Note that the lifetime of Ipv6 multicast memberships (those added
     /// via the `join_multicast_group` method) are tied to this field.
     multicast_v6_socket: Option<socket2::Socket>,
+
+    /// Stream of DHCPv6 client watcher events.
+    dhcpv6_client_stream_map: async_utils::stream::StreamMap<
+        u64,
+        futures::stream::BoxStream<'static, (u64, Result<fnet_dhcpv6_ext::WatchItem, fidl::Error>)>,
+    >,
 }
 
 impl Controller {
@@ -994,6 +1002,7 @@ impl Controller {
             hermetic_network_connector: None,
             multicast_v4_socket: None,
             multicast_v6_socket: None,
+            dhcpv6_client_stream_map: async_utils::stream::StreamMap::empty(),
         }
     }
 
@@ -1070,6 +1079,22 @@ impl Controller {
             }
             fntr::ControllerRequest::LeaveMulticastGroup { address, interface_id, responder } => {
                 let mut result = self.leave_multicast_group(address, interface_id).await;
+                responder.send(&mut result)?;
+            }
+            fntr::ControllerRequest::StartDhcpv6Client {
+                payload:
+                    fntr::ControllerStartDhcpv6ClientRequest {
+                        interface_id,
+                        address,
+                        stateful,
+                        request_dns_servers,
+                        ..
+                    },
+                responder,
+            } => {
+                let mut result = self
+                    .start_dhcpv6_client(interface_id, address, stateful, request_dns_servers)
+                    .await;
                 responder.send(&mut result)?;
             }
         }
@@ -1172,6 +1197,77 @@ impl Controller {
                 fntr::Error::Internal
             }
         })
+    }
+
+    async fn start_dhcpv6_client(
+        &mut self,
+        interface_id: Option<u64>,
+        address: Option<fnet::Ipv6Address>,
+        stateful: Option<bool>,
+        request_dns_servers: Option<bool>,
+    ) -> Result<(), fntr::Error> {
+        let interface_id = interface_id.ok_or(fntr::Error::InvalidArguments)?;
+        let address = address.ok_or(fntr::Error::InvalidArguments)?;
+        let stateful = stateful.ok_or(fntr::Error::InvalidArguments)?;
+        if self.dhcpv6_client_stream_map.contains_key(&interface_id) {
+            return Err(fntr::Error::AlreadyExists);
+        }
+        let hermetic_network_connector = self
+            .hermetic_network_connector
+            .as_ref()
+            .ok_or(fntr::Error::HermeticNetworkRealmNotRunning)?;
+
+        let client_provider = hermetic_network_connector
+            .connect_to_protocol::<fnet_dhcpv6::ClientProviderMarker>()?;
+        let (client_proxy, client_server_end) =
+            fidl::endpoints::create_proxy::<fnet_dhcpv6::ClientMarker>().map_err(|e| {
+                error!("failed to create DHCPv6 Client proxy and server end: {}", e);
+                fntr::Error::Internal
+            })?;
+        client_provider
+            .new_client(
+                fnet_dhcpv6::NewClientParams {
+                    interface_id: Some(interface_id),
+                    address: Some(fnet::Ipv6SocketAddress {
+                        address: address,
+                        port: fnet_dhcpv6::DEFAULT_CLIENT_PORT,
+                        zone_index: interface_id,
+                    }),
+                    config: Some(fnet_dhcpv6::ClientConfig {
+                        information_config: (!stateful
+                            || (stateful && request_dns_servers.is_some()))
+                        .then(|| fnet_dhcpv6::InformationConfig {
+                            dns_servers: request_dns_servers,
+                            ..fnet_dhcpv6::InformationConfig::EMPTY
+                        }),
+                        non_temporary_address_config: stateful.then(|| {
+                            fnet_dhcpv6::AddressConfig {
+                                address_count: Some(1),
+                                ..fnet_dhcpv6::AddressConfig::EMPTY
+                            }
+                        }),
+                        ..fnet_dhcpv6::ClientConfig::EMPTY
+                    }),
+                    ..fnet_dhcpv6::NewClientParams::EMPTY
+                },
+                client_server_end,
+            )
+            .map_err(|e| {
+                error!("failed to start DHCPv6 client: {}", e);
+                fntr::Error::Internal
+            })?;
+        if let Some(_) = self.dhcpv6_client_stream_map.insert(
+            interface_id,
+            Box::pin(
+                fnet_dhcpv6_ext::into_watch_stream(client_proxy).map(move |v| (interface_id, v)),
+            ),
+        ) {
+            unreachable!(
+                "already verified that no DHCPv6 client is running on interface {}",
+                interface_id
+            );
+        }
+        Ok(())
     }
 
     /// Starts a test stub within the hermetic-network realm.
@@ -1498,18 +1594,49 @@ async fn main() -> Result<(), Error> {
 
     let mut requests = fs.fuse().flatten_unordered();
 
-    while let Some(controller_request) = requests.next().await {
-        futures::future::ready(controller_request)
-            .and_then(|req| controller.handle_request(req))
-            .await
-            .unwrap_or_else(|e| {
-                if !fidl::Error::is_closed(&e) {
-                    error!("handle_request failed: {:?}", e);
-                } else {
-                    warn!("handle_request closed: {:?}", e);
-                }
-            });
+    enum Event {
+        ControllerRequest(Option<Result<fntr::ControllerRequest, fidl::Error>>),
+        Dhcpv6ClientWatchItem(Option<(u64, Result<fnet_dhcpv6_ext::WatchItem, fidl::Error>)>),
     }
 
-    unreachable!("Stopped serving requests");
+    loop {
+        let event = futures::select! {
+            request_item = requests.next() => {
+                Event::ControllerRequest(request_item)
+            }
+            dhcpv6_client_watch_item = controller.dhcpv6_client_stream_map.next() => {
+                Event::Dhcpv6ClientWatchItem(dhcpv6_client_watch_item)
+            }
+        };
+        match event {
+            Event::ControllerRequest(controller_request) => {
+                let controller_request = controller_request.expect("stopped serving requests");
+                match futures::future::ready(controller_request)
+                    .and_then(|req| controller.handle_request(req))
+                    .await
+                {
+                    Ok(()) => {}
+                    Err(e) => {
+                        if !fidl::Error::is_closed(&e) {
+                            error!("handle_request failed: {:?}", e);
+                        } else {
+                            warn!("handle_request closed: {:?}", e);
+                        }
+                    }
+                }
+            }
+            Event::Dhcpv6ClientWatchItem(opt) => {
+                let (interface_id, watch_item): (u64, _) =
+                    opt.expect("DHCPv6 client streams must not terminate");
+                match watch_item {
+                    Ok(event) => {
+                        error!("handling of DHCPv6 client events is unimplemented: {:?}", event);
+                    }
+                    Err(e) => {
+                        error!("DHCPv6 client on interface {} error: {}", interface_id, e);
+                    }
+                }
+            }
+        }
+    }
 }

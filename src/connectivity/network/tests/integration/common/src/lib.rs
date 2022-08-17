@@ -9,6 +9,7 @@
 pub mod constants;
 pub mod devices;
 pub mod interfaces;
+pub mod packets;
 pub mod ping;
 #[macro_use]
 pub mod realms;

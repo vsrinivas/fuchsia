@@ -96,6 +96,10 @@
             from: "#netstack",
         },
         {
+            protocol: [ "fuchsia.net.dhcpv6.ClientProvider" ],
+            from: "#dhcpv6-client",
+        },
+        {
             // Enables the Network Test Realm controller to add and remove
             // components in the "stubs" collection.
             protocol: [ "fuchsia.component.Realm" ],

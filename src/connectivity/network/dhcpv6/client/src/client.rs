@@ -13,8 +13,9 @@ use {
     fidl_fuchsia_net as fnet,
     fidl_fuchsia_net_dhcpv6::{
         AddressConfig, ClientConfig, ClientMarker, ClientRequest, ClientRequestStream,
-        ClientWatchServersResponder, InformationConfig, NewClientParams,
-        RELAY_AGENT_AND_SERVER_LINK_LOCAL_MULTICAST_ADDRESS, RELAY_AGENT_AND_SERVER_PORT,
+        ClientWatchAddressResponder, ClientWatchServersResponder, InformationConfig,
+        NewClientParams, RELAY_AGENT_AND_SERVER_LINK_LOCAL_MULTICAST_ADDRESS,
+        RELAY_AGENT_AND_SERVER_PORT,
     },
     fidl_fuchsia_net_ext as fnetext, fidl_fuchsia_net_name as fnetname, fuchsia_async as fasync,
     fuchsia_zircon as zx,
@@ -78,6 +79,8 @@ pub(crate) struct Client<S: for<'a> AsyncSocket<'a>> {
     last_observed_dns_hash: u64,
     /// Stores a responder to send DNS server updates.
     dns_responder: Option<ClientWatchServersResponder>,
+    /// Stores a responder to send acquired addresses.
+    address_responder: Option<ClientWatchAddressResponder>,
     /// Maintains the state for the client.
     state_machine: dhcpv6_core::client::ClientStateMachine<StdRng>,
     /// The socket used to communicate with DHCPv6 servers.
@@ -220,6 +223,7 @@ impl<S: for<'a> AsyncSocket<'a>> Client<S> {
             // so initialize this field with a hash of an empty list.
             last_observed_dns_hash: hash(&Vec::<Ipv6Addr>::new()),
             dns_responder: None,
+            address_responder: None,
         };
         let () = client.run_actions(actions).await?;
         Ok(client)
@@ -403,10 +407,16 @@ impl<S: for<'a> AsyncSocket<'a>> Client<S> {
                     Ok(())
                 }
             },
-            // TODO(https://fxbug.dev/72701) Implement the address watcher.
-            ClientRequest::WatchAddress { responder: _ } => {
-                Err(ClientError::Unimplemented("WatchAddress".to_string()))
-            }
+            ClientRequest::WatchAddress { responder } => match self.address_responder.take() {
+                // The responder will be dropped and cause the channel to be closed.
+                Some::<ClientWatchAddressResponder>(_) => Err(ClientError::DoubleWatch),
+                None => {
+                    // TODO(https://fxbug.dev/72701): Implement the address watcher.
+                    warn!("WatchAddress call will block forever as it is unimplemented");
+                    self.address_responder = Some(responder);
+                    Ok(())
+                }
+            },
             // TODO(https://fxbug.dev/72702) Implement Shutdown.
             ClientRequest::Shutdown { responder: _ } => {
                 Err(ClientError::Unimplemented("Shutdown".to_string()))

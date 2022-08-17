@@ -130,6 +130,27 @@ async fn handle_command(
         ntr_args::Subcommand::StopStub(ntr_args::StopStub {}) => {
             (controller.stop_stub().await, "stop_stub")
         }
+        ntr_args::Subcommand::Dhcpv6Client(ntr_args::Dhcpv6Client { subcommand }) => {
+            match subcommand {
+                ntr_args::Dhcpv6ClientSubcommand::Start(ntr_args::Dhcpv6ClientStart {
+                    interface_id,
+                    address,
+                    stateful,
+                    request_dns_servers,
+                }) => (
+                    controller
+                        .start_dhcpv6_client(fntr::ControllerStartDhcpv6ClientRequest {
+                            interface_id: Some(interface_id),
+                            address: Some(address.into()),
+                            stateful: Some(stateful),
+                            request_dns_servers: Some(request_dns_servers),
+                            ..fntr::ControllerStartDhcpv6ClientRequest::EMPTY
+                        })
+                        .await,
+                    "start_dhcpv6_client",
+                ),
+            }
+        }
     };
 
     result
@@ -140,9 +161,10 @@ async fn handle_command(
 #[cfg(test)]
 mod test {
     use super::*;
+    use assert_matches::assert_matches;
     use fidl_fuchsia_net as fnet;
     use futures::TryStreamExt as _;
-    use net_declare::{fidl_ip, fidl_mac};
+    use net_declare::{fidl_ip, fidl_mac, std_ip_v6};
 
     const COMPONENT_URL: &'static str =
         "fuchsia-pkg://fuchsia.com/fake-component#meta/fake-component.cm";
@@ -349,6 +371,38 @@ mod test {
                     .expect("expected request of type StopStub")
                     .send(&mut Ok(()))
                     .expect("failed to send StopStub response");
+            },
+        )
+        .await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn dhcpv6_client_start() {
+        const IPV6_ADDRESS: fnet_ext::Ipv6Address = fnet_ext::Ipv6Address(std_ip_v6!("fe80::1"));
+        net_test_realm_command_test(
+            ntr_args::Subcommand::Dhcpv6Client(ntr_args::Dhcpv6Client {
+                subcommand: ntr_args::Dhcpv6ClientSubcommand::Start(ntr_args::Dhcpv6ClientStart {
+                    interface_id: INTERFACE_ID,
+                    address: IPV6_ADDRESS,
+                    stateful: true,
+                    request_dns_servers: true,
+                }),
+            }),
+            |request| {
+                let (request, responder) = request
+                    .into_start_dhcpv6_client()
+                    .expect("expected request of type StartDhcpv6Client");
+                assert_matches!(
+                    request,
+                    fntr::ControllerStartDhcpv6ClientRequest {
+                        interface_id: Some(interface_id),
+                        address: Some(addr),
+                        stateful: Some(true),
+                        request_dns_servers: Some(true),
+                        ..
+                    } if interface_id == INTERFACE_ID && addr == IPV6_ADDRESS.into()
+                );
+                responder.send(&mut Ok(())).expect("failed to send StartDhcpv6Client response");
             },
         )
         .await;

@@ -26,6 +26,7 @@ rustc_test("network-test-realm") {
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/lib/net-types",
     "//src/connectivity/lib/packet-formats",
+    "//src/connectivity/lib/packet-formats-dhcp",
     "//src/connectivity/network/testing/netemul/rust:lib",
     "//src/connectivity/network/testing/network-test-realm/fidl:fuchsia.net.test.realm_rust",
     "//src/connectivity/network/testing/network-test-realm/service:network_test_realm",

@@ -23,6 +23,7 @@ ffx_plugin("ffx_net_test_realm") {
     "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
     "//src/connectivity/lib/net-declare",
     "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:futures",
   ]
   args_sources = [ "src/args.rs" ]
