@@ -34,7 +34,7 @@ namespace usb {
 
 namespace audio_fidl = fuchsia_hardware_audio;
 
-static constexpr uint32_t MAX_OUTSTANDING_REQ = 3;
+static constexpr uint32_t MAX_OUTSTANDING_REQ = 6;
 
 UsbAudioStream::UsbAudioStream(UsbAudioDevice* parent, std::unique_ptr<UsbAudioStreamInterface> ifc)
     : UsbAudioStreamBase(parent->zxdev()),
