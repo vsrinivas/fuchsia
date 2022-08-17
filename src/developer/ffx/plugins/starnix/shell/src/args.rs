@@ -15,4 +15,12 @@ use {argh::FromArgs, ffx_core::ffx_command};
     description = "Start a shell inside starnix"
 )]
 
-pub struct ShellStarnixCommand {}
+pub struct ShellStarnixCommand {
+    /// the URL of the shell component to connect to.
+    #[argh(
+        option,
+        short = 'u',
+        default = "String::from(\"fuchsia-pkg://fuchsia.com/starnix_android#meta/sh.cm\")"
+    )]
+    pub url: String,
+}

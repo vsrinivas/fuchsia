@@ -64,8 +64,7 @@ type ShellParams = resource table {
     /// A socket handle that will be connected to the shell's standard error. Optional.
     3: standard_err zx.handle:SOCKET;
 
-    /// The URL of the shell component to launch. If not present, the `Manager` will choose a
-    /// default shell component and launch it in the appropriate galaxy. Optional.
+    /// The URL of the shell component to launch. Required.
     4: url fuchsia.url.Url;
 };
 

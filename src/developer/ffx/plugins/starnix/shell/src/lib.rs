@@ -20,7 +20,10 @@ use {
     "starnix_enabled",
     ManagerProxy = "core/starnix_manager:expose:fuchsia.starnix.developer.Manager"
 )]
-pub async fn shell_starnix(manager_proxy: ManagerProxy, _shell: ShellStarnixCommand) -> Result<()> {
+pub async fn shell_starnix(
+    manager_proxy: ManagerProxy,
+    command: ShellStarnixCommand,
+) -> Result<()> {
     let (controller_proxy, controller_server_end) = create_proxy::<ShellControllerMarker>()?;
     let (sin, cin) =
         fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create stdin socket")?;
@@ -79,6 +82,7 @@ pub async fn shell_starnix(manager_proxy: ManagerProxy, _shell: ShellStarnixComm
         standard_in: Some(sin.into()),
         standard_out: Some(sout.into()),
         standard_err: Some(serr.into()),
+        url: Some(command.url),
         ..ShellParams::EMPTY
     };
 

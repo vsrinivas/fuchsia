@@ -80,8 +80,8 @@ async fn start_shell(
         ..fcomponent::CreateChildArgs::EMPTY
     };
 
-    create_child_component("fuchsia-pkg://fuchsia.com/starnix_android#meta/sh.cm".to_string(), args)
-        .await
+    let url = params.url.ok_or(anyhow!("No shell URL specified"))?;
+    create_child_component(url, args).await
 }
 
 /// Connects `bridge_socket` to the vsocket at `port` in the specified galaxy.
