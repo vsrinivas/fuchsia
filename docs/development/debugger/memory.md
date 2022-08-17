@@ -39,11 +39,11 @@ address:
       * From the name in this example, you can tell the address is in a stack allocated by pthreads.
 
 ```none {:.devsite-disable-click-to-copy}
-          Start              End   Size  Name
-      0x1000000   0x7ffffffff000   127T  proc:3109
-      0x1000000   0x7ffffffff000   127T    root
-  0x10b7f104000    0x10b7f305000     2M      useralloc
-  0x10b7f105000    0x10b7f305000     2M        pthread_t:0x10c4ea38b00
+          Start              End   Size  Koid    Offset  Com.Pgs  Name
+      0x1000000   0x7ffffffff000   127T                           proc:3109
+      0x1000000   0x7ffffffff000   127T                             root
+  0x10b7f104000    0x10b7f305000     2M                               useralloc
+  0x10b7f105000    0x10b7f305000     2M  3824       0x0        2        pthread_t:0x10c4ea38b00
 ```
 
 The following are relevant VMO names that could be included in output from the `aspace` command:
@@ -61,6 +61,16 @@ The following are relevant VMO names that could be included in output from the `
   * `vdso/stable`: The built-in library that implements the stable system calls.
   * `blob-*`: Mapped library coming from blobfs. The `libs` command can tell you the library name
     for that address.
+
+To see more information about a VMO, use the command `handle -k <koid>`
+
+The "Cmt.Pgs" column shows the number of committed pages (not bytes) in that memory region in the
+mapped VMO. This can be surprising for memory mapped files like blobs and other shared VMOs.
+
+If a VMO is a child (as in the case of mapped blobs), the original data will be present in the
+parent VMO but the child VMO that is actually mapped will indirectly reference this data. The only
+pages in the child that will count as committed are those that are duplicated due to copy-on-write.
+This is why blobs and other files that are not modified will have a 0 committed page count.
 
 ## `mem-analyze`: Dumps memory, trying to interpret pointers.
 

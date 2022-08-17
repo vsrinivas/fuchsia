@@ -33,6 +33,18 @@ void FillVmoInfo(const zx_info_vmo_t& source, debug_ipc::InfoHandleVmo& dest) {
   dest.committed_change_events = source.committed_change_events;
 }
 
+debug_ipc::AddressRegion MapToAddressRegion(const zx_info_maps& map) {
+  debug_ipc::AddressRegion region;
+  region.name = map.name;
+  region.base = map.base;
+  region.size = map.size;
+  region.depth = map.depth;
+  region.vmo_koid = map.u.mapping.vmo_koid;
+  region.vmo_offset = map.u.mapping.vmo_offset;
+  region.committed_pages = map.u.mapping.committed_pages;
+  return region;
+}
+
 }  // namespace
 
 ZirconProcessHandle::ZirconProcessHandle(zx::process p)
@@ -131,17 +143,14 @@ std::vector<debug_ipc::AddressRegion> ZirconProcessHandle::GetAddressSpace(uint6
       if (address < entry.base)
         continue;
       if (address <= (entry.base + entry.size))
-        regions.push_back({entry.name, entry.base, entry.size, entry.depth});
+        regions.push_back(MapToAddressRegion(entry));
     }
   } else {
     // Get all regions.
     size_t ix = 0;
     regions.resize(map.size());
     for (const auto& entry : map) {
-      regions[ix].name = entry.name;
-      regions[ix].base = entry.base;
-      regions[ix].size = entry.size;
-      regions[ix].depth = entry.depth;
+      regions[ix] = MapToAddressRegion(entry);
       ++ix;
     }
   }

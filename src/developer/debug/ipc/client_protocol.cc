@@ -129,6 +129,12 @@ bool Deserialize(MessageReader* reader, AddressRegion* region) {
     return false;
   if (!reader->ReadUint64(&region->depth))
     return false;
+  if (!reader->ReadUint64(&region->vmo_koid))
+    return false;
+  if (!reader->ReadUint64(&region->vmo_offset))
+    return false;
+  if (!reader->ReadUint64(&region->committed_pages))
+    return false;
   return true;
 }
 

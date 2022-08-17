@@ -371,9 +371,12 @@ struct Module {
 
 struct AddressRegion {
   std::string name;
-  uint64_t base;
-  uint64_t size;
-  uint64_t depth;
+  uint64_t base = 0;
+  uint64_t size = 0;
+  uint64_t depth = 0;
+  uint64_t vmo_koid = 0;
+  uint64_t vmo_offset = 0;
+  uint64_t committed_pages = 0;
 };
 
 // LoadInfoHandleTable -----------------------------------------------------------------------------

@@ -31,6 +31,25 @@ const char kAspaceHelp[] =
   You can pass a single address and it will show all the regions that
   contain it.
 
+  In addition to the address range, the output shows the koid of the VMO mapped
+  to that location, the starting offset it was mapped at, and the number of
+  committed pages in that region.
+
+  Tip: To see more information about a VMO, use "handle -k <koid>".
+
+Committed pages
+
+  The "Cmt.Pgs" column shows the number of committed pages (not bytes) in that
+  memory region in the mapped VMO. This can be surprising for memory mapped
+  files like blobs and other shared VMOs.
+
+  If a VMO is a child (as in the case of mapped blobs), the original data will
+  be present in the parent VMO but the child VMO that is actually mapped will
+  indirectly reference this data. The only pages in the child that will count as
+  committed are those that are duplicated due to copy-on-write. This is why
+  blobs and other files that are not modified will have a 0 committed page
+  count.
+
 Examples
 
   aspace
@@ -59,7 +78,8 @@ std::string PrintRegionName(uint64_t depth, const std::string& name) {
   return std::string(depth * 2, ' ') + name;
 }
 
-void OnAspaceComplete(const Err& err, std::vector<debug_ipc::AddressRegion> map) {
+void OnAspaceComplete(const Err& err, std::vector<debug_ipc::AddressRegion> map,
+                      bool print_totals) {
   Console* console = Console::get();
   if (err.has_error()) {
     console->Output(err);
@@ -71,17 +91,41 @@ void OnAspaceComplete(const Err& err, std::vector<debug_ipc::AddressRegion> map)
     return;
   }
 
+  uint64_t total_mapped = 0;
+  uint64_t total_committed = 0;
+
   std::vector<std::vector<std::string>> rows;
   for (const auto& region : map) {
+    // Only show VMO information for regions which have a VMO koid. Regions with no VMO will be
+    // VMARs and showing offset and committed pages is misleading.
+    bool has_koid = region.vmo_koid != 0;
     rows.push_back(std::vector<std::string>{
         to_hex_string(region.base), to_hex_string(region.base + region.size),
-        PrintRegionSize(region.size), PrintRegionName(region.depth, region.name)});
+        PrintRegionSize(region.size), has_koid ? std::to_string(region.vmo_koid) : std::string(),
+        has_koid ? to_hex_string(region.vmo_offset) : std::string(),
+        has_koid ? std::to_string(region.committed_pages) : std::string(),
+        PrintRegionName(region.depth, region.name)});
+
+    if (has_koid) {
+      total_mapped += region.size;
+      total_committed += region.committed_pages;
+    }
   }
 
   OutputBuffer out;
   FormatTable({ColSpec(Align::kRight, 0, "Start", 2), ColSpec(Align::kRight, 0, "End", 2),
-               ColSpec(Align::kRight, 0, "Size", 2), ColSpec(Align::kLeft, 0, "Name", 1)},
+               ColSpec(Align::kRight, 0, "Size", 1), ColSpec(Align::kRight, 0, "Koid", 1),
+               ColSpec(Align::kRight, 0, "Offset", 1), ColSpec(Align::kRight, 0, "Cmt.Pgs", 1),
+               ColSpec(Align::kLeft, 0, "Name", 1)},
               rows, &out);
+
+  if (print_totals) {
+    out.Append("\n");
+    out.Append(Syntax::kHeading, "Total mapped bytes: ");
+    out.Append(std::to_string(total_mapped));
+    out.Append(Syntax::kHeading, "    Total committed pages: ");
+    out.Append(std::to_string(total_committed));
+  }
 
   console->Output(out);
 }
@@ -91,10 +135,12 @@ Err RunVerbAspace(ConsoleContext* context, const Command& cmd) {
   if (Err err = cmd.ValidateNouns({Noun::kProcess}); err.has_error())
     return err;
 
+  bool print_totals = true;
   uint64_t address = 0;
   if (cmd.args().size() == 1) {
     if (Err err = ReadUint64Arg(cmd, 0, "address", &address); err.has_error())
       return err;
+    print_totals = false;  // Adding up totals for a subregion is misleading.
   } else if (cmd.args().size() > 1) {
     return Err(ErrType::kInput, "\"aspace\" takes zero or one parameter.");
   }
@@ -102,7 +148,10 @@ Err RunVerbAspace(ConsoleContext* context, const Command& cmd) {
   if (Err err = AssertRunningTarget(context, "aspace", cmd.target()); err.has_error())
     return err;
 
-  cmd.target()->GetProcess()->GetAspace(address, &OnAspaceComplete);
+  cmd.target()->GetProcess()->GetAspace(
+      address, [print_totals](const Err& err, std::vector<debug_ipc::AddressRegion> map) {
+        OnAspaceComplete(err, map, print_totals);
+      });
   return Err();
 }
 

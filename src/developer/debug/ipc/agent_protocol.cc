@@ -177,6 +177,9 @@ void Serialize(const AddressRegion& region, MessageWriter* writer) {
   writer->WriteUint64(region.base);
   writer->WriteUint64(region.size);
   writer->WriteUint64(region.depth);
+  writer->WriteUint64(region.vmo_koid);
+  writer->WriteUint64(region.vmo_offset);
+  writer->WriteUint64(region.committed_pages);
 }
 
 void Serialize(const BreakpointStats& stats, MessageWriter* writer) {
