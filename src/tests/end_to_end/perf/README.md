@@ -42,9 +42,6 @@ This directory contains the following performance tests:
     [Inspect] operations, such as creating and deleting nodes and updating
     properties.
 
-*   `touch_input_latency_benchmarks_test` - Measures the latency of
-    handling touch input events.
-
 You can view the test results from CI builds in [Chromeperf][chromeperf].
 
 <!-- Reference links -->

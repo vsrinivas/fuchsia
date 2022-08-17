@@ -199,29 +199,3 @@ class PerfTestHelper {
     expect(result.exitCode, equals(0));
   }
 }
-
-final _log = Logger('TouchInputLatencyMetricsProcessor');
-
-// Custom MetricsProcessor for input latency tests that rely on trace events
-// tagged with the "touch-input-test" category.
-List<TestCaseResults> touchInputLatencyMetricsProcessor(
-    Model model, Map<String, dynamic> extraArgs) {
-  final inputLatency = getArgValuesFromEvents<num>(
-          filterEventsTyped<InstantEvent>(getAllEvents(model),
-              category: 'touch-input-test', name: 'input_latency'),
-          'elapsed_time')
-      .map((t) => t.toDouble())
-      .toList();
-
-  if (inputLatency.length != 1) {
-    throw ArgumentError("touch-input-test didn't log an elapsed time.");
-  }
-
-  _log.info('Elapsed time: ${inputLatency.first} ns.');
-
-  final List<TestCaseResults> testCaseResults = [
-    TestCaseResults('touch_input_latency', Unit.nanoseconds, inputLatency)
-  ];
-
-  return testCaseResults;
-}

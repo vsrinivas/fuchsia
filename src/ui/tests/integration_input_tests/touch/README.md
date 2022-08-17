@@ -18,28 +18,6 @@ To see extra logs:
 $ fx test --min-severity-logs=DEBUG touch-input-test -- --verbose=2
 ```
 
-## Run the perf test
-
-In order to report metrics into the performance dashboards, this test is
-run as part of a performance test. The performance test uses the E2E
-testing framework (to post-process the metrics data).
-
-You can run the performance test manually as follows:
-
-```shell
-$ fx set <product>.<arch> --with //src/tests/end_to_end/perf:touch_input_test
-$ fx build
-$ fx run-e2e-tests touch_input_latency_benchmarks_test
-```
-
-## Performance tracking
-
-This test suite uses the
-[Fuchsia tracing system](https://fuchsia.dev/fuchsia-src/concepts/tracing) to
-collect metrics.
-
-TODO(fxbug.dev/50245): Add description about how trace metrics are tracked in CQ.
-
 ### Add trace metrics to the test
 
 This test suite uses the category `touch-input-test` to log trace events. Any new categories added
