@@ -7,28 +7,46 @@ import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 
-rustc_test("bin") {
-  name = "volume_change_earcons_integration_test"
+rustc_library("common") {
+  testonly = true
   edition = "2021"
-  source_root = "src/volume_change_earcons_tests.rs"
+  source_root = "src/common.rs"
   sources = [
     "src/common.rs",
     "src/mock_audio_core_service.rs",
+    "src/mock_discovery.rs",
+    "src/mock_input_device_registry.rs",
     "src/mock_sound_player_service.rs",
-    "src/volume_change_earcons_tests.rs",
   ]
+
   deps = [
     "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
+    "//sdk/fidl/fuchsia.media.sessions2:fuchsia.media.sessions2_rust",
     "//sdk/fidl/fuchsia.media.sounds:fuchsia.media.sounds_rust",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
+    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy_rust",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-component-test",
     "//src/settings/service/integration_tests/utils",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+  ]
+
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
+}
+
+rustc_test("bin") {
+  name = "volume_change_earcons_integration_test"
+  edition = "2021"
+  source_root = "src/volume_change_earcons_tests.rs"
+  sources = [ "src/volume_change_earcons_tests.rs" ]
+  deps = [
+    ":common",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
+    "//src/lib/fuchsia",
   ]
 
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
@@ -51,6 +69,7 @@ fuchsia_test_package("volume_change_earcons_integration_test_pkg") {
   ]
 
   # test_media_sounds_system_source is expected to panic and emit Error logs.
+  # BluetoothHandler is expected to setup failed.
   test_specs = {
     log_settings = {
       max_severity = "ERROR"
@@ -68,7 +87,56 @@ config_data("tests_config") {
   ]
 }
 
+# Tests with input device registry.
+rustc_test("bin_with_input") {
+  name = "earcons_with_input_integration_test"
+  edition = "2021"
+  source_root = "src/earcons_with_input_device_registry_tests.rs"
+  sources = [ "src/earcons_with_input_device_registry_tests.rs" ]
+  deps = [
+    ":common",
+    "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
+    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy_rust",
+    "//src/lib/fuchsia",
+    "//src/settings/service/integration_tests/utils",
+    "//third_party/rust_crates:futures",
+  ]
+
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
+}
+
+fuchsia_component("earcons_with_input_integration_test") {
+  testonly = true
+  manifest = "meta/earcons_with_input_integration_test.cml"
+  deps = [ ":bin_with_input" ]
+}
+
+fuchsia_test_package("earcons_with_input_integration_test_pkg") {
+  package_name = "earcons_with_input_integration_test"
+  test_components = [ ":earcons_with_input_integration_test" ]
+  deps = [
+    ":earcons_with_input_integration_test",
+    ":with_input_tests_config",
+    "//src/settings/service:setui_service_v2",
+    "//src/sys/stash:pkg",
+  ]
+}
+
+config_data("with_input_tests_config") {
+  for_pkg = "earcons_with_input_integration_test_pkg"
+  sources = [
+    "testdata/interface_configuration.json",
+    "testdata/volume-changed.wav",
+    "testdata/volume-max.wav",
+    "testdata/with_media_button/agent_configuration.json",
+  ]
+}
+
 group("volume_change_earcons_tests") {
   testonly = true
-  public_deps = [ ":volume_change_earcons_integration_test_pkg" ]
+  public_deps = [
+    ":earcons_with_input_integration_test_pkg",
+    ":volume_change_earcons_integration_test_pkg",
+  ]
 }

@@ -274,7 +274,6 @@ rustc_library("lib") {
     "src/tests/storage_agent_tests.rs",
     "src/tests/stream_volume_tests.rs",
     "src/tests/test_failure_utils.rs",
-    "src/tests/volume_change_earcons_tests.rs",
     "src/trace.rs",
   ]
 

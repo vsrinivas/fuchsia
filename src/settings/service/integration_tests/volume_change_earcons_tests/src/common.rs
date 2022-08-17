@@ -3,56 +3,73 @@
 // found in the LICENSE file.
 
 use crate::mock_audio_core_service::audio_core_service_mock;
-use crate::mock_sound_player_service::{sound_player_service_mock, SoundEventSender};
+use crate::mock_discovery::discovery_service_mock;
+use crate::mock_input_device_registry::{
+    input_device_registry_mock, ButtonEventReceiver, ButtonEventSender,
+};
+use crate::mock_sound_player_service::{
+    sound_player_service_mock, SoundEventReceiver, SoundEventSender,
+};
 use anyhow::Error;
 use fidl::endpoints::DiscoverableProtocolMarker;
 use fidl_fuchsia_media::AudioCoreMarker;
+use fidl_fuchsia_media::AudioRenderUsage;
+use fidl_fuchsia_media_sessions2::DiscoveryMarker;
 use fidl_fuchsia_media_sounds::PlayerMarker;
-use fidl_fuchsia_settings::{AudioMarker, AudioProxy};
+use fidl_fuchsia_settings::{AudioMarker, AudioProxy, AudioSettings, AudioStreamSettings};
+use fidl_fuchsia_ui_policy::DeviceListenerRegistryMarker;
 use fuchsia_component_test::{Capability, LocalComponentHandles, Ref, Route};
 use fuchsia_component_test::{ChildOptions, RealmBuilder, RealmInstance};
 use futures::lock::Mutex;
+use futures::StreamExt;
 use std::collections::HashMap;
 use std::sync::Arc;
 use utils;
 
-pub(crate) const DEFAULT_VOLUME_LEVEL: f32 = 0.5;
-pub(crate) const DEFAULT_VOLUME_MUTED: bool = false;
+mod mock_audio_core_service;
+mod mock_discovery;
+mod mock_input_device_registry;
+mod mock_sound_player_service;
+
+pub const DEFAULT_VOLUME_LEVEL: f32 = 0.5;
+pub const DEFAULT_VOLUME_MUTED: bool = false;
 
 const COMPONENT_URL: &str = "#meta/setui_service.cm";
 
-pub(crate) struct VolumeChangeEarconsTest {
+pub struct VolumeChangeEarconsTest {
     /// Represents the number of times the sound has been played in total. First u32 represents the
     /// sound id, and the second u32 is the number of times.
     play_counts: Arc<Mutex<HashMap<u32, u32>>>,
 
     /// The listeners to notify that a sound was played.
     sound_played_listeners: Arc<Mutex<Vec<SoundEventSender>>>,
+
+    /// The listeners to notify that a media button was clicked.
+    media_button_listener: Option<Arc<Mutex<ButtonEventSender>>>,
 }
 
 impl VolumeChangeEarconsTest {
-    pub(crate) fn create() -> Self {
+    pub fn create() -> Self {
         Self {
             play_counts: Arc::new(Mutex::new(HashMap::new())),
             sound_played_listeners: Arc::new(Mutex::new(Vec::new())),
+            media_button_listener: None,
         }
     }
 
-    pub(crate) fn sound_played_listeners(&self) -> Arc<Mutex<Vec<SoundEventSender>>> {
-        self.sound_played_listeners.clone()
+    pub fn play_counts(&self) -> Arc<Mutex<HashMap<u32, u32>>> {
+        Arc::clone(&self.play_counts)
     }
 
-    pub(crate) async fn create_realm(&self) -> Result<RealmInstance, Error> {
-        let builder = RealmBuilder::new().await?;
-        // Add setui_service as child of the realm builder.
-        let setui_service =
-            builder.add_child("setui_service", COMPONENT_URL, ChildOptions::new()).await?;
-        let info = utils::SettingsRealmInfo {
-            builder,
-            settings: &setui_service,
-            has_config_data: true,
-            capabilities: vec![AudioMarker::PROTOCOL_NAME],
-        };
+    pub fn sound_played_listeners(&self) -> Arc<Mutex<Vec<SoundEventSender>>> {
+        Arc::clone(&self.sound_played_listeners)
+    }
+
+    pub fn media_button_listener(&self) -> Option<Arc<Mutex<ButtonEventSender>>> {
+        self.media_button_listener.clone()
+    }
+
+    async fn add_common_basic(&self, info: &utils::SettingsRealmInfo<'_>) -> Result<(), Error> {
         // Add basic Settings service realm information.
         utils::create_realm_basic(&info).await?;
 
@@ -73,13 +90,13 @@ impl VolumeChangeEarconsTest {
                     .capability(Capability::protocol_by_name(AudioCoreMarker::PROTOCOL_NAME))
                     .from(&audio_service)
                     .to(Ref::parent())
-                    .to(&setui_service),
+                    .to(info.settings),
             )
             .await?;
 
         // Add mock sound player service.
-        let play_counts = self.play_counts.clone();
-        let sound_played_listeners = self.sound_played_listeners.clone();
+        let play_counts = Arc::clone(&self.play_counts);
+        let sound_played_listeners = Arc::clone(&self.sound_played_listeners);
         let sound_player = info
             .builder
             .add_local_child(
@@ -87,8 +104,8 @@ impl VolumeChangeEarconsTest {
                 move |handles: LocalComponentHandles| {
                     Box::pin(sound_player_service_mock(
                         handles,
-                        play_counts.clone(),
-                        sound_played_listeners.clone(),
+                        Arc::clone(&play_counts),
+                        Arc::clone(&sound_played_listeners),
                     ))
                 },
                 ChildOptions::new().eager(),
@@ -102,7 +119,28 @@ impl VolumeChangeEarconsTest {
                     .capability(Capability::protocol_by_name(PlayerMarker::PROTOCOL_NAME))
                     .from(&sound_player)
                     .to(Ref::parent())
-                    .to(&setui_service),
+                    .to(info.settings),
+            )
+            .await?;
+
+        // Add mock discovery service.
+        let discovery_service = info
+            .builder
+            .add_local_child(
+                "discovery_service",
+                move |handles: LocalComponentHandles| Box::pin(discovery_service_mock(handles)),
+                ChildOptions::new().eager(),
+            )
+            .await?;
+
+        // Route the mock discovery service through the parent realm to setui_service.
+        info.builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name(DiscoveryMarker::PROTOCOL_NAME))
+                    .from(&discovery_service)
+                    .to(Ref::parent())
+                    .to(info.settings),
             )
             .await?;
 
@@ -117,14 +155,143 @@ impl VolumeChangeEarconsTest {
             )
             .await?;
 
+        Ok(())
+    }
+
+    pub async fn create_realm_without_input_device_registry(&self) -> Result<RealmInstance, Error> {
+        let builder = RealmBuilder::new().await?;
+        // Add setui_service as child of the realm builder.
+        let setui_service =
+            builder.add_child("setui_service", COMPONENT_URL, ChildOptions::new()).await?;
+        let info = utils::SettingsRealmInfo {
+            builder,
+            settings: &setui_service,
+            has_config_data: true,
+            capabilities: vec![AudioMarker::PROTOCOL_NAME],
+        };
+
+        self.add_common_basic(&info).await?;
+
         let instance = info.builder.build().await?;
         Ok(instance)
     }
 
-    pub(crate) fn connect_to_audio_marker(instance: &RealmInstance) -> AudioProxy {
+    pub async fn create_realm_with_input_device_registry(
+        &mut self,
+        media_button_sender: ButtonEventSender,
+    ) -> Result<RealmInstance, Error> {
+        let builder = RealmBuilder::new().await?;
+        // Add setui_service as child of the realm builder.
+        let setui_service =
+            builder.add_child("setui_service", COMPONENT_URL, ChildOptions::new()).await?;
+        let info = utils::SettingsRealmInfo {
+            builder,
+            settings: &setui_service,
+            has_config_data: true,
+            capabilities: vec![AudioMarker::PROTOCOL_NAME],
+        };
+
+        self.add_common_basic(&info).await?;
+
+        self.media_button_listener = Some(Arc::new(Mutex::new(media_button_sender)));
+        let media_button_listener = self.media_button_listener.clone().unwrap();
+        let input_device_registry = info
+            .builder
+            .add_local_child(
+                "input_device_registry",
+                move |handles: LocalComponentHandles| {
+                    Box::pin(input_device_registry_mock(
+                        handles,
+                        Arc::clone(&media_button_listener),
+                    ))
+                },
+                ChildOptions::new().eager(),
+            )
+            .await?;
+        info.builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name(
+                        DeviceListenerRegistryMarker::PROTOCOL_NAME,
+                    ))
+                    .from(&input_device_registry)
+                    .to(&setui_service),
+            )
+            .await?;
+
+        // Provide LogSink to print out logs of the audio core component for debugging purposes.
+        info.builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                    .from(Ref::parent())
+                    .to(&input_device_registry),
+            )
+            .await?;
+
+        let instance = info.builder.build().await?;
+        Ok(instance)
+    }
+
+    pub fn connect_to_audio_marker(instance: &RealmInstance) -> AudioProxy {
         return instance
             .root
             .connect_to_protocol_at_exposed_dir::<AudioMarker>()
             .expect("connecting to Audio");
+    }
+
+    // Creates a listener to notify when a sound is played.
+    pub async fn create_sound_played_listener(
+        test_instance: &VolumeChangeEarconsTest,
+    ) -> SoundEventReceiver {
+        let (sound_played_sender, sound_played_receiver) =
+            futures::channel::mpsc::channel::<(u32, AudioRenderUsage)>(0);
+        test_instance.sound_played_listeners().lock().await.push(sound_played_sender);
+
+        sound_played_receiver
+    }
+
+    pub async fn set_volume(proxy: &AudioProxy, streams: Vec<AudioStreamSettings>) {
+        let mut audio_settings = AudioSettings::EMPTY;
+        audio_settings.streams = Some(streams);
+        proxy.set(audio_settings).await.expect("set completed").expect("set successful");
+    }
+
+    pub async fn verify_earcon(
+        receiver: &mut SoundEventReceiver,
+        id: u32,
+        usage: AudioRenderUsage,
+    ) {
+        assert_eq!(receiver.next().await.unwrap(), (id, usage));
+    }
+
+    // Verifies that the settings for the given target_usage matches the expected_settings when
+    // a watch is performed on the proxy.
+    pub async fn verify_volume(
+        proxy: &AudioProxy,
+        target_usage: AudioRenderUsage,
+        expected_settings: AudioStreamSettings,
+    ) {
+        let audio_settings = proxy.watch().await.expect("watch complete");
+        let target_stream_res = audio_settings.streams.expect("streams exist");
+        let target_stream = target_stream_res
+            .iter()
+            .find(|stream| stream.stream == Some(target_usage))
+            .expect("stream found");
+        assert_eq!(target_stream, &expected_settings);
+    }
+
+    // Creates a listener to notify when a media button is clicked.
+    pub async fn create_media_button_listener(
+        test_instance: &VolumeChangeEarconsTest,
+    ) -> ButtonEventReceiver {
+        let (media_button_sender, media_button_receiver) = futures::channel::mpsc::channel(0);
+        *test_instance
+            .media_button_listener()
+            .expect("media_button_listener exists")
+            .lock()
+            .await = media_button_sender;
+
+        media_button_receiver
     }
 }

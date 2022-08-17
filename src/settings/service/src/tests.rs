@@ -69,4 +69,3 @@ mod setting_proxy_tests;
 mod storage_agent_tests;
 mod stream_volume_tests;
 mod test_failure_utils;
-mod volume_change_earcons_tests;
