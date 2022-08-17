@@ -1,0 +1,62 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/config.gni")
+import("//build/rust/rustc_test.gni")
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":activity-manager-test",
+    "//src/ui/testing/test_ui_stack:test-ui-stack-flavors",
+  ]
+}
+
+rustc_test("activity_manager_test") {
+  edition = "2021"
+  deps = [
+    "//sdk/fidl/fuchsia.input.interaction:fuchsia.input.interaction_rust",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
+    "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_rust",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_rust",
+    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_rust",
+    "//sdk/fidl/fuchsia.vulkan.loader:fuchsia.vulkan.loader_rust",
+    "//src/lib/async-utils",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component-test",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:test-case",
+  ]
+
+  sources = [
+    "src/lib.rs",
+    "src/main.rs",
+  ]
+}
+
+fuchsia_component("activity-manager-test-component") {
+  testonly = true
+  manifest = "meta/activity-manager-test.cml"
+  deps = [ ":activity_manager_test" ]
+}
+
+fuchsia_test_package("activity-manager-test") {
+  test_components = [ ":activity-manager-test-component" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+    environments = [
+      {
+        dimensions = {
+          # Ensure the device has Vulkan.
+          device_type = "AEMU"
+        }
+      },
+    ]
+  }
+}

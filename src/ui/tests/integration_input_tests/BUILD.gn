@@ -10,6 +10,7 @@ group("integration_input_tests") {
   testonly = true
 
   deps = [
+    "activity:tests",
     "factory-reset-handler:tests",
     "focus:tests",
     "media-buttons:tests",
