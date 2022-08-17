@@ -1,0 +1,29 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// TODO (https://fxbug.dev/106734) Verify that this manifest work with the test.
+{
+    include: [
+        "//src/media/codec/factory/meta/include_codecfactory.shard.cml",
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "sys/testing/system-test.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/use_aac_decoder_test",
+    },
+    use: [
+        {
+            protocol: [ "fuchsia.mediacodec.CodecFactory" ],
+            from: "#codec-factory",
+        },
+        {
+            protocol: [
+                "fuchsia.sys.Environment",
+                "fuchsia.sysinfo.SysInfo",
+                "fuchsia.sysmem.Allocator",
+            ],
+        },
+    ],
+}

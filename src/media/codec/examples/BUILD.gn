@@ -589,14 +589,6 @@ fuchsia_unittest_package("use_vp9_decoder_secure_input_output_test") {
 # Tests that don't run on CQ yet.
 #
 
-fuchsia_unittest_package("use_aac_decoder_test") {
-  manifest = "use_media_decoder/meta/use_aac_decoder_test.cmx"
-  deps = [
-    ":adts_audio_resource",
-    "//src/media/codec/examples/use_media_decoder:use_aac_decoder_test",
-  ]
-}
-
 fuchsia_component("vp9_conformance_http_test_component") {
   testonly = true
   manifest = "use_media_decoder/meta/vp9_decoder_conformance_http.cml"
