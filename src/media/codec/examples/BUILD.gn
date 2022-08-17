@@ -28,7 +28,6 @@ fuchsia_shell_package("encode-file") {
 
 fuchsia_shell_package("use_media_decoder") {
   testonly = true
-  manifest = "use_media_decoder/meta/use_media_decoder.cmx"
   deps = [ "//src/media/codec/examples/use_media_decoder" ]
 }
 
