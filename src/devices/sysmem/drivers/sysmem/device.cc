@@ -6,8 +6,6 @@
 
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <fidl/fuchsia.sysmem2/cpp/wire.h>
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
-#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <fuchsia/sysmem/c/banjo.h>
 #include <inttypes.h>
 #include <lib/async/dispatcher.h>
@@ -609,12 +607,6 @@ zx_status_t Device::Bind() {
     allocators_[fuchsia_sysmem2::wire::HeapType::kAmlogicSecure] = std::move(amlogic_allocator);
   }
 
-  ddk::PBusProtocolClient pbus;
-  status = ddk::PBusProtocolClient::CreateFromDevice(parent_, &pbus);
-  if (status != ZX_OK) {
-    zxlogf(INFO, "ZX_PROTOCOL_PBUS not available: %d", status);
-  }
-
   sync_completion_t completion;
   async::PostTask(loop_.dispatcher(), [this, &completion] {
     // After this point, all operations must happen on the loop thread.
@@ -631,25 +623,6 @@ zx_status_t Device::Bind() {
     return status;
   }
 
-  if (pbus.is_valid()) {
-    // Register the sysmem protocol with the platform bus.
-    //
-    // This is essentially the in-proc version of
-    // fuchsia.sysmem.DriverConnector.
-    //
-    // We should only pbus_register_protocol() if device_add() succeeded, but if
-    // pbus_register_protocol() fails, we should remove the device without it
-    // ever being visible.
-    // TODO(fxbug.dev/33536) Remove this after all clients have switched to using composite
-    // protocol.
-    status = pbus.RegisterProtocol(ZX_PROTOCOL_SYSMEM,
-                                   reinterpret_cast<uint8_t*>(&in_proc_sysmem_protocol_),
-                                   sizeof(in_proc_sysmem_protocol_));
-    if (status != ZX_OK) {
-      DdkAsyncRemove();
-      return status;
-    }
-  }
   zxlogf(INFO, "sysmem finished initialization");
 
   return ZX_OK;

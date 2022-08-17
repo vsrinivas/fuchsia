@@ -5,7 +5,6 @@
 #include "device.h"
 
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
-#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
@@ -28,43 +27,6 @@
 
 namespace sysmem_driver {
 namespace {
-class FakePBus : public ddk::PBusProtocol<FakePBus, ddk::base_protocol> {
- public:
-  FakePBus() {}
-  const pbus_protocol_ops_t* ops() const { return &pbus_protocol_ops_; }
-  zx_status_t PBusDeviceAdd(const pbus_dev_t* dev) { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t PBusProtocolDeviceAdd(uint32_t proto_id, const pbus_dev_t* dev) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  zx_status_t PBusRegisterProtocol(uint32_t proto_id, const uint8_t* protocol,
-                                   size_t protocol_size) {
-    registered_proto_id_ = proto_id;
-    return ZX_OK;
-  }
-  zx_status_t PBusGetBoardInfo(pdev_board_info_t* out_info) { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t PBusSetBoardInfo(const pbus_board_info_t* info) { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t PBusSetBootloaderInfo(const pbus_bootloader_info_t* info) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  zx_status_t PBusCompositeDeviceAdd(const pbus_dev_t* dev,
-                                     /* const device_fragment_t* */ uint64_t fragments_list,
-                                     size_t fragments_count, const char* primary_fragment) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  zx_status_t PBusAddComposite(const pbus_dev_t* dev,
-                               /* const device_fragment_t* */ uint64_t fragments_list,
-                               size_t fragments_count, const char* primary_fragment) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  zx_status_t PBusRegisterSysSuspendCallback(const pbus_sys_suspend_t* suspend_cbin) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  uint32_t registered_proto_id() const { return registered_proto_id_; }
-
- private:
-  uint32_t registered_proto_id_ = 0;
-};
 
 TEST(Device, OverrideCommandLine) {
   sysmem_driver::Driver sysmem_ctx;
@@ -261,19 +223,6 @@ class FakeDdkSysmem : public zxtest::Test {
   fake_pdev::FakePDev pdev_;
 
   async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
-};
-
-class FakeDdkSysmemPbus : public FakeDdkSysmem {
- public:
-  void SetUp() override {
-    pdev_.UseFakeBti();
-    fake_parent_->AddProtocol(ZX_PROTOCOL_PBUS, pbus_.ops(), &pbus_);
-    fake_parent_->AddProtocol(ZX_PROTOCOL_PDEV, pdev_.proto()->ops, pdev_.proto()->ctx);
-    EXPECT_EQ(sysmem_->Bind(), ZX_OK);
-  }
-
- protected:
-  FakePBus pbus_;
 };
 
 TEST_F(FakeDdkSysmem, TearDownLoop) {
@@ -512,8 +461,6 @@ TEST_F(FakeDdkSysmem, AuxBufferLeak) {
       break;
   }
 }
-
-TEST_F(FakeDdkSysmemPbus, Register) { EXPECT_EQ(ZX_PROTOCOL_SYSMEM, pbus_.registered_proto_id()); }
 
 }  // namespace
 }  // namespace sysmem_driver

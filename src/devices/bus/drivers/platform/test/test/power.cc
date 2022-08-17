@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <fuchsia/hardware/power/c/banjo.h>
 #include <fuchsia/hardware/powerimpl/cpp/banjo.h>
@@ -31,7 +30,6 @@ class TestPowerDevice : public DeviceType,
   explicit TestPowerDevice(zx_device_t* parent) : DeviceType(parent) {}
 
   zx_status_t Create(std::unique_ptr<TestPowerDevice>* out);
-  zx_status_t Init();
 
   // Methods required by the ddk mixins
   void DdkRelease();
@@ -60,26 +58,6 @@ class TestPowerDevice : public DeviceType,
   bool enabled_[4] = {false, false, false, false};
 };
 
-zx_status_t TestPowerDevice::Init() {
-  pbus_protocol_t pbus;
-  auto status = device_get_protocol(parent(), ZX_PROTOCOL_PBUS, &pbus);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: ZX_PROTOCOL_PBUS not available %d", __func__, status);
-    return status;
-  }
-  power_impl_protocol_t power_proto = {
-      .ops = &power_impl_protocol_ops_,
-      .ctx = this,
-  };
-  status = pbus_register_protocol(&pbus, ZX_PROTOCOL_POWER_IMPL,
-                                  reinterpret_cast<uint8_t*>(&power_proto), sizeof(power_proto));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s pbus_register_protocol failed %d", __func__, status);
-    return status;
-  }
-  return ZX_OK;
-}
-
 zx_status_t TestPowerDevice::Create(zx_device_t* parent) {
   auto dev = std::make_unique<TestPowerDevice>(parent);
   pdev_protocol_t pdev;
@@ -99,9 +77,9 @@ zx_status_t TestPowerDevice::Create(zx_device_t* parent) {
     return status;
   }
   // devmgr is now in charge of dev.
-  auto ptr = dev.release();
+  __UNUSED auto ptr = dev.release();
 
-  return ptr->Init();
+  return ZX_OK;
 }
 
 void TestPowerDevice::DdkRelease() { delete this; }

@@ -94,7 +94,7 @@ zx_status_t TestBoard::PowerInit() {
   power_dev.pid = PDEV_PID_PBUS_TEST;
   power_dev.did = PDEV_DID_TEST_POWER;
 
-  zx_status_t status = pbus_.ProtocolDeviceAdd(ZX_PROTOCOL_POWER_IMPL, &power_dev);
+  zx_status_t status = pbus_.DeviceAdd(&power_dev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d", __FUNCTION__, status);
     return status;

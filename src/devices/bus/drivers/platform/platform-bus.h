@@ -12,8 +12,6 @@
 #include <fuchsia/hardware/iommu/cpp/banjo.h>
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
-#include <fuchsia/hardware/powerimpl/cpp/banjo.h>
-#include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
@@ -135,8 +133,6 @@ class PlatformBus : public PlatformBusType,
   std::optional<ddk::ClockImplProtocolClient> clock_;
   std::optional<ddk::GpioImplProtocolClient> gpio_;
   std::optional<ddk::IommuProtocolClient> iommu_;
-  std::optional<ddk::PowerImplProtocolClient> power_;
-  std::optional<ddk::SysmemProtocolClient> sysmem_;
 
   // Completion used by WaitProtocol().
   sync_completion_t proto_completion_ __TA_GUARDED(proto_completion_mutex_);
