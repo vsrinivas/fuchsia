@@ -1,0 +1,10 @@
+fuchsia.fidl_microbenchmarks: LibFIDL/fidl_validate_string/1025/WallTime
+fuchsia.fidl_microbenchmarks: LibFIDL/fidl_validate_string/16385/WallTime
+fuchsia.fidl_microbenchmarks: LibFIDL/fidl_validate_string/258/WallTime
+fuchsia.fidl_microbenchmarks: LibFIDL/fidl_validate_string/4098/WallTime
+fuchsia.fidl_microbenchmarks: LibFIDL/fidl_validate_string/65536/WallTime
+fuchsia.fidl_microbenchmarks: LibFIDL/fidl_validate_string/ASCII/1025/WallTime
+fuchsia.fidl_microbenchmarks: LibFIDL/fidl_validate_string/ASCII/16385/WallTime
+fuchsia.fidl_microbenchmarks: LibFIDL/fidl_validate_string/ASCII/258/WallTime
+fuchsia.fidl_microbenchmarks: LibFIDL/fidl_validate_string/ASCII/4098/WallTime
+fuchsia.fidl_microbenchmarks: LibFIDL/fidl_validate_string/ASCII/65536/WallTime

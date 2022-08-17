@@ -23,7 +23,8 @@ String tmpPerfResultsJson(String benchmarkBinary) {
 // It is believed that benchmarks converge to different means in different
 // process runs (and reboots). Since each of these benchmarks are currently
 // fast to run (a few secs), run the binary several times for more stability.
-void runPerftestFidlBenchmark(String benchmarkBinary) {
+void runPerftestFidlBenchmark(
+    String benchmarkBinary, String expectedMetricNamesFile) {
   final resultsFile = tmpPerfResultsJson(benchmarkBinary);
   _tests.add(() {
     test(benchmarkBinary, () async {
@@ -39,7 +40,8 @@ void runPerftestFidlBenchmark(String benchmarkBinary) {
             'results_fidl_microbenchmarks_process$process',
             'fuchsiaperf_full.json'));
       }
-      await helper.processResultsSummarized(resultsFiles);
+      await helper.processResultsSummarized(resultsFiles,
+          expectedMetricNamesFile: expectedMetricNamesFile);
     }, timeout: Timeout.none);
   });
 }
@@ -47,28 +49,39 @@ void runPerftestFidlBenchmark(String benchmarkBinary) {
 void main(List<String> args) {
   enableLoggingOutput();
 
-  runPerftestFidlBenchmark('cpp_fidl_microbenchmarks');
-  runPerftestFidlBenchmark('hlcpp_fidl_microbenchmarks');
-  runPerftestFidlBenchmark('lib_fidl_microbenchmarks');
-  runPerftestFidlBenchmark('llcpp_fidl_microbenchmarks');
-  runPerftestFidlBenchmark('driver_cpp_fidl_microbenchmarks');
-  runPerftestFidlBenchmark('driver_llcpp_fidl_microbenchmarks');
-  runPerftestFidlBenchmark('walker_fidl_microbenchmarks');
-  runPerftestFidlBenchmark('reference_fidl_microbenchmarks');
+  runPerftestFidlBenchmark(
+      'cpp_fidl_microbenchmarks', 'fuchsia.fidl_microbenchmarks.cpp.txt');
+  runPerftestFidlBenchmark(
+      'hlcpp_fidl_microbenchmarks', 'fuchsia.fidl_microbenchmarks.hlcpp.txt');
+  runPerftestFidlBenchmark(
+      'lib_fidl_microbenchmarks', 'fuchsia.fidl_microbenchmarks.libfidl.txt');
+  runPerftestFidlBenchmark(
+      'llcpp_fidl_microbenchmarks', 'fuchsia.fidl_microbenchmarks.llcpp.txt');
+  runPerftestFidlBenchmark('driver_cpp_fidl_microbenchmarks',
+      'fuchsia.fidl_microbenchmarks.driver_cpp.txt');
+  runPerftestFidlBenchmark('driver_llcpp_fidl_microbenchmarks',
+      'fuchsia.fidl_microbenchmarks.driver_llcpp.txt');
+  runPerftestFidlBenchmark(
+      'walker_fidl_microbenchmarks', 'fuchsia.fidl_microbenchmarks.walker.txt');
+  runPerftestFidlBenchmark('reference_fidl_microbenchmarks',
+      'fuchsia.fidl_microbenchmarks.reference.txt');
 
   _tests
     ..add(() {
       test('go_fidl_microbenchmarks', () async {
         final helper = await PerfTestHelper.make();
-        await helper.runTestCommand((resultsFile) =>
-            '/bin/go_fidl_microbenchmarks --out_file $resultsFile');
+        await helper.runTestCommand(
+            (resultsFile) =>
+                '/bin/go_fidl_microbenchmarks --out_file $resultsFile',
+            expectedMetricNamesFile: 'fuchsia.fidl_microbenchmarks.go.txt');
       }, timeout: Timeout.none);
     })
     ..add(() {
       test('rust_fidl_microbenchmarks', () async {
         final helper = await PerfTestHelper.make();
         await helper.runTestCommand(
-            (resultsFile) => '/bin/rust_fidl_microbenchmarks $resultsFile');
+            (resultsFile) => '/bin/rust_fidl_microbenchmarks $resultsFile',
+            expectedMetricNamesFile: 'fuchsia.fidl_microbenchmarks.rust.txt');
       }, timeout: Timeout.none);
     })
     ..add(() {
@@ -77,7 +90,8 @@ void main(List<String> args) {
         await helper.runTestComponent(
             packageName: 'dart-fidl-benchmarks',
             componentName: 'dart-fidl-benchmarks.cm',
-            commandArgs: '');
+            commandArgs: '',
+            expectedMetricNamesFile: 'fuchsia.fidl_microbenchmarks.dart.txt');
       }, timeout: Timeout.none);
     });
 

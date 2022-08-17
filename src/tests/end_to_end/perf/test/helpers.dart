@@ -114,7 +114,8 @@ class PerfTestHelper {
   // filename is for the results file that the command will write its
   // results to, in fuchsiaperf.json format.
   Future<void> runTestCommand(
-      String Function(String resultsFilename) getCommand) async {
+      String Function(String resultsFilename) getCommand,
+      {String expectedMetricNamesFile}) async {
     // Make a filename that is very likely to be unique.  Using a
     // unique filename should not be strictly necessary, but it should
     // avoid potential problems.  We do not expect performance tests
@@ -129,7 +130,8 @@ class PerfTestHelper {
     try {
       final File localResultsFile = await storage.dumpFile(
           resultsFile, 'results', 'fuchsiaperf_full.json');
-      await processResultsSummarized([localResultsFile]);
+      await processResultsSummarized([localResultsFile],
+          expectedMetricNamesFile: expectedMetricNamesFile);
     } finally {
       // Clean up: remove the temporary file.
       final result = await sl4fDriver.ssh.run('rm -f $resultsFile');
