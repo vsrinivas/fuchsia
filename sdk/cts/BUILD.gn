@@ -72,7 +72,6 @@ group("cts") {
     ":idk_dep_goldens",
     ":plasa",
     ":test_manifest",
-    ":verify_idk_deps",
     "examples:tests",
     "tests",
   ]
@@ -130,4 +129,11 @@ group("idk_dep_goldens") {
 group("verify_idk_deps") {
   testonly = true
   deps = idk_verify_ct
+}
+
+# Tests that we want to run in an FYI builder.
+# We do not want failures from these tests to break the tree.
+group("fyi") {
+  testonly = true
+  deps = [ ":verify_idk_deps" ]
 }
