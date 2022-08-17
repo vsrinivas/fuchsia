@@ -337,7 +337,7 @@ impl ViewAssistant for InstallerViewAssistant {
             self.prev_state = self.menu_state_machine.get_state();
             match self.menu_state_machine.get_state() {
                 MenuState::SelectInstall | MenuState::SelectDisk | MenuState::Warning => {
-                    println!(
+                    tracing::info!(
                         "installer: {:?}, proceeding to next screen",
                         self.menu_state_machine.get_state()
                     );
@@ -346,9 +346,9 @@ impl ViewAssistant for InstallerViewAssistant {
                         make_message(InstallerMessages::MenuEnter),
                     );
                 }
-                MenuState::Progress => println!("Install in progress"),
+                MenuState::Progress => tracing::info!("Install in progress"),
                 MenuState::Error => {
-                    println!(
+                    tracing::info!(
                         "install failed :(. Old state: {:?} Error message: {}",
                         old_state,
                         self.menu_state_machine.get_error_msg()
@@ -606,7 +606,7 @@ async fn get_installation_paths(app_sender: AppSender, view_key: ViewKey) -> Res
 async fn setup_installation_paths(app_sender: AppSender, view_key: ViewKey) {
     match get_installation_paths(app_sender.clone(), view_key).await {
         Ok(_install_source) => {
-            println!("Found installer & block devices ");
+            tracing::info!("Found installer & block devices ");
         }
         Err(e) => {
             // Send error
@@ -614,7 +614,7 @@ async fn setup_installation_paths(app_sender: AppSender, view_key: ViewKey) {
                 MessageTarget::View(view_key),
                 make_message(InstallerMessages::Error(e.to_string())),
             );
-            println!("ERROR getting install target: {}", e);
+            tracing::info!("ERROR getting install target: {}", e);
         }
     };
 }
@@ -658,7 +658,7 @@ async fn do_install(
     let bootloader_type = installation_paths.bootloader_type.unwrap();
 
     // TODO(fxbug.dev/100712): Remove this once flake is resolved.
-    println!(
+    tracing::info!(
         "Installing to {} ({}), source {} ({})",
         install_target.topo_path,
         install_target.class_path,
@@ -669,7 +669,7 @@ async fn do_install(
     let (paver, data_sink) =
         paver_connect(&install_target.class_path).context("Could not contact paver")?;
 
-    println!("Wiping old partition tables...");
+    tracing::info!("Wiping old partition tables...");
     app_sender.clone().queue_message(
         MessageTarget::View(view_key),
         make_message(InstallerMessages::ProgressUpdate(String::from(
@@ -677,7 +677,7 @@ async fn do_install(
         ))),
     );
     data_sink.wipe_partition_tables().await?;
-    println!("Initializing Fuchsia partition tables...");
+    tracing::info!("Initializing Fuchsia partition tables...");
     app_sender.clone().queue_message(
         MessageTarget::View(view_key),
         make_message(InstallerMessages::ProgressUpdate(String::from(
@@ -685,7 +685,7 @@ async fn do_install(
         ))),
     );
     data_sink.initialize_partition_tables().await?;
-    println!("Success.");
+    tracing::info!("Success.");
 
     app_sender.clone().queue_message(
         MessageTarget::View(view_key),
@@ -714,16 +714,16 @@ async fn do_install(
         print!("{:?}... ", part);
         io::stdout().flush()?;
         if let Err(e) = part.pave(&data_sink).await {
-            println!("Failed ({:?})", e);
+            tracing::info!("Failed ({:?})", e);
         } else {
-            println!("OK");
+            tracing::info!("OK");
             if part.is_ab() {
                 print!("{:?} [-B]... ", part);
                 io::stdout().flush()?;
                 if part.pave_b(&data_sink).await.is_err() {
-                    println!("Failed");
+                    tracing::info!("Failed");
                 } else {
-                    println!("OK");
+                    tracing::info!("OK");
                 }
             }
         }
@@ -776,7 +776,7 @@ async fn check_is_interactive() -> Result<bool, Error> {
         .context("Connecting to boot arguments service")?;
     let automated =
         proxy.get_bool("installer.non-interactive", false).await.context("Getting bool")?;
-    println!(
+    tracing::info!(
         "workstation installer: {}doing automated install.",
         if automated { "" } else { "not " }
     );
@@ -811,8 +811,9 @@ async fn wait_for_install_disk() -> Result<(), Error> {
     Err(anyhow!("Didn't find an install disk"))
 }
 
+#[fuchsia::main]
 fn main() -> Result<(), Error> {
-    println!("workstation installer: started.");
+    tracing::info!("workstation installer: started.");
 
     // Before we give control to carnelian, wait until a display driver is bound.
     let (display_result, interactive_result) =
@@ -830,7 +831,7 @@ fn main() -> Result<(), Error> {
         90 => DisplayRotation::Deg270,
         270 => DisplayRotation::Deg90,
         val => {
-            eprintln!("Invalid display_rotation {}, defaulting to 0 degrees", val);
+            tracing::error!("Invalid display_rotation {}, defaulting to 0 degrees", val);
             DisplayRotation::Deg0
         }
     };

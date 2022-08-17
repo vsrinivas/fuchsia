@@ -64,7 +64,7 @@ pub async fn get_bootloader_type() -> Result<BootloaderType, Error> {
     let (status, bootloader) =
         proxy.get_bootloader_vendor().await.context("Getting bootloader vendor")?;
     if let Some(bootloader) = bootloader {
-        println!("Bootloader vendor = {}", bootloader);
+        tracing::info!("Bootloader vendor = {}", bootloader);
         if bootloader == "coreboot" {
             Ok(BootloaderType::Coreboot)
         } else {
