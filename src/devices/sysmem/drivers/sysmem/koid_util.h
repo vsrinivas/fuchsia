@@ -5,13 +5,16 @@
 #ifndef SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_KOID_UTIL_H_
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_KOID_UTIL_H_
 
+#include <lib/fpromise/result.h>
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
 
+#include <vector>
+
 namespace sysmem_driver {
 
-zx_status_t get_channel_koids(const zx::channel& this_end, zx_koid_t* this_end_koid,
-                              zx_koid_t* that_end_koid);
+zx_status_t get_handle_koids(const zx::object_base& this_end, zx_koid_t* this_end_koid,
+                             zx_koid_t* that_end_koid, zx_obj_type_t type);
 
 }  // namespace sysmem_driver
 

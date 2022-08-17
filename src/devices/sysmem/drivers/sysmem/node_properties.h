@@ -7,6 +7,7 @@
 
 #include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <lib/fit/function.h>
+#include <lib/zx/eventpair.h>
 #include <stdint.h>
 
 #include <memory>
@@ -91,7 +92,7 @@ class LogicalBufferCollection;
 // Things that can change when transmuting from BufferCollectionToken to BufferCollection, from
 // BufferCollectionToken to OrphanedNode, or from BufferCollection to OrphanedNode, should generally
 // go in Node.  Things that don't change when transmuting go in NodeProperties.
-class NodeProperties {
+class NodeProperties : public std::enable_shared_from_this<NodeProperties> {
  public:
   // We keep pointers to NodeProperties around, so no copying or moving.
   NodeProperties(const NodeProperties& to_copy) = delete;
@@ -135,9 +136,13 @@ class NodeProperties {
       fit::function<NodeFilterResult(const NodeProperties&)> node_filter =
           fit::function<NodeFilterResult(const NodeProperties&)>());
 
+  std::vector<NodeProperties*> DepthFirstPreOrder(
+      fit::function<NodeFilterResult(const NodeProperties&)> node_filter);
+
   NodeProperties* parent() const;
   Node* node() const;
   uint32_t child_count() const;
+  NodeProperties& child(uint32_t which) const;
 
   ClientDebugInfo& client_debug_info();
   const ClientDebugInfo& client_debug_info() const;
@@ -159,8 +164,9 @@ class NodeProperties {
 
   void SetNode(fbl::RefPtr<Node> node);
 
-  // These counts are for the current NodeProperties + any current children of the current
-  // NodeProperties.  For LogicalBufferCollection::root_, these counts are for the whole tree.
+  // These counts are for the current NodeProperties + any current children (direct and indirect) of
+  // the current NodeProperties.  For LogicalBufferCollection::root_, these counts are for the whole
+  // tree.
   //
   // TODO(fxbug.dev/71454): Limit node_count() of root_, but instead of failing root_ when limit
   // reached, prune a sub-tree selected to prefer more-nested over less nested, and larger node
@@ -174,6 +180,8 @@ class NodeProperties {
 
   // For debugging.
   void LogConstraints(Location location);
+
+  const char* node_type_name() const;
 
  private:
   friend class LogicalBufferCollection;
@@ -194,7 +202,8 @@ class NodeProperties {
   // We use shared_ptr<> instead of unique_ptr<> here only so that Node can keep a std::weak_ptr<>.
   // The only non-transient ownership of NodeProperties is by the tree at
   // LogicalBufferCollection::root_.
-  std::unordered_map<NodeProperties*, std::shared_ptr<NodeProperties>> children_;
+  using Children = std::vector<std::shared_ptr<NodeProperties>>;
+  Children children_;
 
   ClientDebugInfo client_debug_info_{};
 
@@ -227,8 +236,9 @@ class NodeProperties {
   std::optional<TableHolder<fuchsia_sysmem2::wire::BufferCollectionConstraints>>
       buffer_collection_constraints_;
 
-  // These counts are for the current NodeProperties + any current children of the current
-  // NodeProperties.  For LogicalBufferCollection::root_, these counts are for the whole tree.
+  // These counts are for the current NodeProperties + any current children (direct and indirect) of
+  // the current NodeProperties.  For LogicalBufferCollection::root_, these counts are for the whole
+  // tree.
   uint32_t node_count_ = 0;
   uint32_t connected_client_count_ = 0;
   uint32_t buffer_collection_count_ = 0;

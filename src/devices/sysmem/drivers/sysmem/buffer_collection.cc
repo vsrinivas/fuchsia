@@ -13,6 +13,8 @@
 
 #include "buffer_collection_token.h"
 #include "fbl/ref_ptr.h"
+#include "lib/zx/channel.h"
+#include "lib/zx/object.h"
 #include "logical_buffer_collection.h"
 #include "macros.h"
 #include "node_properties.h"
@@ -46,13 +48,15 @@ const uint32_t kMaxClientVmoRights =
 
 // static
 BufferCollection& BufferCollection::EmplaceInTree(
-    fbl::RefPtr<LogicalBufferCollection> logical_buffer_collection, BufferCollectionToken* token) {
+    fbl::RefPtr<LogicalBufferCollection> logical_buffer_collection, BufferCollectionToken* token,
+    zx::unowned_channel server_end) {
   // The token is passed in as a pointer because this method deletes token, but the caller must
   // provide non-nullptr token.
   ZX_DEBUG_ASSERT(token);
   // This conversion from unique_ptr<> to RefPtr<> will go away once we move BufferCollection to
   // LLCPP FIDL server binding.
-  fbl::RefPtr<Node> node(fbl::AdoptRef(new BufferCollection(logical_buffer_collection, *token)));
+  fbl::RefPtr<Node> node(fbl::AdoptRef(
+      new BufferCollection(logical_buffer_collection, *token, std::move(server_end))));
   BufferCollection* buffer_collection_ptr = static_cast<BufferCollection*>(node.get());
   // This also deletes token.
   token->node_properties().SetNode(std::move(node));
@@ -64,60 +68,37 @@ BufferCollection::~BufferCollection() {
                  "logical_buffer_collection", &logical_buffer_collection());
 }
 
-void BufferCollection::CloseChannel(zx_status_t epitaph) {
-  // This essentially converts the OnUnboundFn semantic of getting called regardless of channel-fail
-  // vs. server-driven-fail into the more typical semantic where error_handler_ only gets called
-  // on channel-fail but not on server-driven-fail.
-  error_handler_ = {};
-  if (server_binding_)
+void BufferCollection::CloseServerBinding(zx_status_t epitaph) {
+  if (server_binding_) {
     server_binding_->Close(epitaph);
+  }
   server_binding_ = {};
 }
 
-void BufferCollection::Bind(zx::channel channel) {
-  zx_info_handle_basic_t info;
-  zx_status_t status =
-      channel.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-  if (status == ZX_OK) {
-    inspect_node_.CreateUint("channel_koid", info.koid, &properties_);
-  }
-  server_binding_ = fidl::BindServer(
-      logical_buffer_collection().parent_device()->dispatcher(), std::move(channel), this,
-      [this, this_ref = fbl::RefPtr<BufferCollection>(this)](
-          BufferCollection* collection, fidl::UnbindInfo info,
-          fidl::ServerEnd<fuchsia_sysmem::BufferCollection> channel) {
-        // We need to keep a refptr to this class, since the unbind happens asynchronously and
-        // can run after the parent closes a handle to this class.
-        if (error_handler_) {
-          zx_status_t status = info.status();
-          if (async_failure_result_ && info.reason() == fidl::Reason::kClose) {
-            // On kClose the error is always ZX_OK, so report the real error to
-            // LogicalBufferCollection if the close was caused by FailAsync or FailSync.
-            status = *async_failure_result_;
-          }
-          error_handler_(status);
-        }
-        // *this can be destroyed by ~this_ref here
-      });
+void BufferCollection::BindInternal(zx::channel collection_request,
+                                    ErrorHandlerWrapper error_handler_wrapper) {
+  server_binding_ =
+      fidl::BindServer(parent_device()->dispatcher(), std::move(collection_request), this,
+                       [error_handler_wrapper = std::move(error_handler_wrapper)](
+                           BufferCollection* collection, fidl::UnbindInfo info,
+                           fidl::ServerEnd<fuchsia_sysmem::BufferCollection> channel) {
+                         error_handler_wrapper(info);
+                       });
 }
 
 void BufferCollection::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {
-  // This isn't real churn.  As a temporary measure, we need to count churn despite there not being
-  // any, since more real churn is coming soon, and we need to test the mitigation of that churn.
-  //
-  // TODO(fxbug.dev/33670): Remove this fake churn count once we're creating real churn from tests
-  // using new messages.  Also consider making TableSet::CountChurn() private.
-  table_set_.CountChurn();
+  SyncImplV1(request, completer);
+}
 
-  table_set_.MitigateChurn();
-
-  completer.Reply();
+void BufferCollection::DeprecatedSync(DeprecatedSyncRequestView request,
+                                      DeprecatedSyncCompleter::Sync& completer) {
+  SyncImplV1(request, completer);
 }
 
 void BufferCollection::SetConstraintsAuxBuffers(
     SetConstraintsAuxBuffersRequestView request,
     SetConstraintsAuxBuffersCompleter::Sync& completer) {
-  table_set_.MitigateChurn();
+  table_set().MitigateChurn();
   if (is_set_constraints_aux_buffers_seen_) {
     FailSync(FROM_HERE, completer, ZX_ERR_NOT_SUPPORTED,
              "SetConstraintsAuxBuffers() can be called only once.");
@@ -135,7 +116,7 @@ void BufferCollection::SetConstraintsAuxBuffers(
     return;
   }
   ZX_DEBUG_ASSERT(!constraints_aux_buffers_);
-  constraints_aux_buffers_.emplace(table_set_, std::move(request->constraints));
+  constraints_aux_buffers_.emplace(table_set(), std::move(request->constraints));
   // LogicalBufferCollection doesn't care about "clear aux buffers" constraints until the last
   // SetConstraints(), so done for now.
 }
@@ -144,7 +125,7 @@ void BufferCollection::SetConstraints(SetConstraintsRequestView request,
                                       SetConstraintsCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "BufferCollection::SetConstraints", "this", this,
                  "logical_buffer_collection", &logical_buffer_collection());
-  table_set_.MitigateChurn();
+  table_set().MitigateChurn();
   std::optional<fuchsia_sysmem::wire::BufferCollectionConstraints> local_constraints(
       std::move(request->constraints));
   if (is_set_constraints_seen_) {
@@ -177,7 +158,7 @@ void BufferCollection::SetConstraints(SetConstraintsRequestView request,
   ZX_DEBUG_ASSERT(request->has_constraints == !!local_constraints);
   {  // scope result
     auto result = sysmem::V2CopyFromV1BufferCollectionConstraints(
-        table_set_.allocator(), local_constraints ? &local_constraints.value() : nullptr,
+        table_set().allocator(), local_constraints ? &local_constraints.value() : nullptr,
         constraints_aux_buffers_ ? &(**constraints_aux_buffers_) : nullptr);
     if (!result.is_ok()) {
       FailSync(FROM_HERE, completer, ZX_ERR_INVALID_ARGS,
@@ -185,7 +166,7 @@ void BufferCollection::SetConstraints(SetConstraintsRequestView request,
       return;
     }
     ZX_DEBUG_ASSERT(!result.value().IsEmpty() || !local_constraints);
-    node_properties().SetBufferCollectionConstraints(TableHolder(table_set_, result.take_value()));
+    node_properties().SetBufferCollectionConstraints(TableHolder(table_set(), result.take_value()));
   }  // ~result
 
   // No longer needed.
@@ -209,7 +190,7 @@ void BufferCollection::WaitForBuffersAllocated(WaitForBuffersAllocatedRequestVie
                                                WaitForBuffersAllocatedCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "BufferCollection::WaitForBuffersAllocated", "this", this,
                  "logical_buffer_collection", &logical_buffer_collection());
-  table_set_.MitigateChurn();
+  table_set().MitigateChurn();
   if (is_done_) {
     FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
              "BufferCollectionToken::WaitForBuffersAllocated() when already is_done_");
@@ -227,7 +208,7 @@ void BufferCollection::WaitForBuffersAllocated(WaitForBuffersAllocatedRequestVie
 
 void BufferCollection::CheckBuffersAllocated(CheckBuffersAllocatedRequestView request,
                                              CheckBuffersAllocatedCompleter::Sync& completer) {
-  table_set_.MitigateChurn();
+  table_set().MitigateChurn();
   if (is_done_) {
     FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
              "BufferCollectionToken::CheckBuffersAllocated() when "
@@ -247,7 +228,7 @@ void BufferCollection::GetAuxBuffers(GetAuxBuffersRequestView request,
                                      GetAuxBuffersCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "BufferCollection::GetAuxBuffers", "this", this,
                  "logical_buffer_collection", &logical_buffer_collection());
-  table_set_.MitigateChurn();
+  table_set().MitigateChurn();
   if (!logical_allocation_result_) {
     FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
              "GetAuxBuffers() called before allocation complete.");
@@ -275,7 +256,7 @@ void BufferCollection::AttachToken(AttachTokenRequestView request,
                                    AttachTokenCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "BufferCollection::AttachToken", "this", this, "logical_buffer_collection",
                  &logical_buffer_collection());
-  table_set_.MitigateChurn();
+  table_set().MitigateChurn();
   if (is_done_) {
     // This is Close() followed by AttachToken(), which is not permitted and causes the
     // BufferCollection to fail.
@@ -317,7 +298,7 @@ void BufferCollection::AttachLifetimeTracking(AttachLifetimeTrackingRequestView 
                                               AttachLifetimeTrackingCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "BufferCollection::AttachLifetimeTracking", "this", this,
                  "logical_buffer_collection", &logical_buffer_collection());
-  table_set_.MitigateChurn();
+  table_set().MitigateChurn();
   if (is_done_) {
     // This is Close() followed by AttachLifetimeTracking() which is not permitted and causes the
     // BufferCollection to fail.
@@ -331,94 +312,40 @@ void BufferCollection::AttachLifetimeTracking(AttachLifetimeTrackingRequestView 
   MaybeFlushPendingLifetimeTracking();
 }
 
-void BufferCollection::CloseSingleBuffer(CloseSingleBufferRequestView request,
-                                         CloseSingleBufferCompleter::Sync& completer) {
-  table_set_.MitigateChurn();
-  if (is_done_) {
-    FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
-             "BufferCollectionToken::CloseSingleBuffer() when already is_done_");
-    return;
-  }
-  // FailAsync() instead of returning a failure, mainly because FailAsync()
-  // prints a message that's more obvious than the generic _dispatch() failure
-  // would.
-  FailSync(FROM_HERE, completer, ZX_ERR_NOT_SUPPORTED, "CloseSingleBuffer() not yet implemented");
-}
-
-void BufferCollection::AllocateSingleBuffer(AllocateSingleBufferRequestView request,
-                                            AllocateSingleBufferCompleter::Sync& completer) {
-  table_set_.MitigateChurn();
-  if (is_done_) {
-    FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
-             "BufferCollectionToken::AllocateSingleBuffer() when already "
-             "is_done_");
-    return;
-  }
-  FailSync(FROM_HERE, completer, ZX_ERR_NOT_SUPPORTED,
-           "AllocateSingleBuffer() not yet implemented");
-}
-
-void BufferCollection::WaitForSingleBufferAllocated(
-    WaitForSingleBufferAllocatedRequestView request,
-    WaitForSingleBufferAllocatedCompleter::Sync& completer) {
-  table_set_.MitigateChurn();
-  if (is_done_) {
-    FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
-             "BufferCollectionToken::WaitForSingleBufferAllocated() when "
-             "already is_done_");
-    return;
-  }
-  FailSync(FROM_HERE, completer, ZX_ERR_NOT_SUPPORTED,
-           "WaitForSingleBufferAllocated() not yet implemented");
-}
-
-void BufferCollection::CheckSingleBufferAllocated(
-    CheckSingleBufferAllocatedRequestView request,
-    CheckSingleBufferAllocatedCompleter::Sync& completer) {
-  table_set_.MitigateChurn();
-  if (is_done_) {
-    FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
-             "BufferCollectionToken::CheckSingleBufferAllocated() when "
-             "already is_done_");
-    return;
-  }
-  FailSync(FROM_HERE, completer, ZX_ERR_NOT_SUPPORTED,
-           "CheckSingleBufferAllocated() not yet implemented");
-}
 
 void BufferCollection::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
-  table_set_.MitigateChurn();
-  if (is_done_) {
-    FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
-             "BufferCollection::Close() when already closed.");
-    return;
-  }
-  // We still want to enforce that the client doesn't send any other messages
-  // between Close() and closing the channel, so we just set is_done_ here and
-  // do a FailAsync() if is_done_ is seen to be set while handling any other
-  // message.
-  is_done_ = true;
+  CloseImplV1(request, completer);
+}
+
+void BufferCollection::DeprecatedClose(DeprecatedCloseRequestView request,
+                                       DeprecatedCloseCompleter::Sync& completer) {
+  CloseImplV1(request, completer);
 }
 
 void BufferCollection::SetName(SetNameRequestView request, SetNameCompleter::Sync& completer) {
-  table_set_.MitigateChurn();
-  logical_buffer_collection().SetName(request->priority,
-                                      std::string(request->name.begin(), request->name.end()));
+  SetNameImplV1(request, completer);
+}
+
+void BufferCollection::DeprecatedSetName(DeprecatedSetNameRequestView request,
+                                         DeprecatedSetNameCompleter::Sync& completer) {
+  SetNameImplV1(request, completer);
 }
 
 void BufferCollection::SetDebugClientInfo(SetDebugClientInfoRequestView request,
                                           SetDebugClientInfoCompleter::Sync& completer) {
-  table_set_.MitigateChurn();
-  SetDebugClientInfoInternal(std::string(request->name.begin(), request->name.end()), request->id);
+  SetDebugClientInfoImplV1(request, completer);
 }
 
-void BufferCollection::SetDebugClientInfoInternal(std::string name, uint64_t id) {
-  node_properties().client_debug_info().name = std::move(name);
-  node_properties().client_debug_info().id = id;
-  debug_id_property_ =
-      inspect_node_.CreateUint("debug_id", node_properties().client_debug_info().id);
-  debug_name_property_ =
-      inspect_node_.CreateString("debug_name", node_properties().client_debug_info().name);
+void BufferCollection::DeprecatedSetDebugClientInfo(
+    DeprecatedSetDebugClientInfoRequestView request,
+    DeprecatedSetDebugClientInfoCompleter::Sync& completer) {
+  SetDebugClientInfoImplV1(request, completer);
+}
+
+void BufferCollection::SetDebugTimeoutLogDeadline(
+    SetDebugTimeoutLogDeadlineRequestView request,
+    SetDebugTimeoutLogDeadlineCompleter::Sync& completer) {
+  SetDebugTimeoutLogDeadlineImplV1(request, completer);
 }
 
 void BufferCollection::FailAsync(Location location, zx_status_t status, const char* format, ...) {
@@ -452,7 +379,7 @@ fpromise::result<fuchsia_sysmem2::wire::BufferCollectionInfo>
 BufferCollection::CloneResultForSendingV2(
     const fuchsia_sysmem2::wire::BufferCollectionInfo& buffer_collection_info) {
   auto clone_result =
-      sysmem::V2CloneBufferCollectionInfo(table_set_.allocator(), buffer_collection_info,
+      sysmem::V2CloneBufferCollectionInfo(table_set().allocator(), buffer_collection_info,
                                           GetClientVmoRights(), GetClientAuxVmoRights());
   if (!clone_result.is_ok()) {
     FailAsync(FROM_HERE, clone_result.error(),
@@ -542,16 +469,14 @@ const fuchsia_sysmem2::wire::BufferCollectionConstraints& BufferCollection::cons
 
 fuchsia_sysmem2::wire::BufferCollectionConstraints BufferCollection::CloneConstraints() {
   ZX_DEBUG_ASSERT(has_constraints());
-  return sysmem::V2CloneBufferCollectionConstraints(table_set_.allocator(), constraints());
+  return sysmem::V2CloneBufferCollectionConstraints(table_set().allocator(), constraints());
 }
-
-bool BufferCollection::is_done() const { return is_done_; }
 
 BufferCollection::BufferCollection(
     fbl::RefPtr<LogicalBufferCollection> logical_buffer_collection_param,
-    const BufferCollectionToken& token)
-    : Node(std::move(logical_buffer_collection_param), &token.node_properties()),
-      table_set_(logical_buffer_collection().table_set()) {
+    const BufferCollectionToken& token, zx::unowned_channel server_end)
+    : Node(std::move(logical_buffer_collection_param), &token.node_properties(),
+           std::move(server_end)) {
   TRACE_DURATION("gfx", "BufferCollection::BufferCollection", "this", this,
                  "logical_buffer_collection", &this->logical_buffer_collection());
   ZX_DEBUG_ASSERT(shared_logical_buffer_collection());
@@ -649,8 +574,6 @@ void BufferCollection::MaybeFlushPendingLifetimeTracking() {
 
 bool BufferCollection::ReadyForAllocation() { return has_constraints(); }
 
-void BufferCollection::Fail(zx_status_t epitaph) { CloseChannel(epitaph); }
-
 BufferCollectionToken* BufferCollection::buffer_collection_token() { return nullptr; }
 
 const BufferCollectionToken* BufferCollection::buffer_collection_token() const { return nullptr; }
@@ -663,6 +586,10 @@ OrphanedNode* BufferCollection::orphaned_node() { return nullptr; }
 
 const OrphanedNode* BufferCollection::orphaned_node() const { return nullptr; }
 
-bool BufferCollection::is_connected() const { return true; }
+bool BufferCollection::is_connected_type() const { return true; }
+
+bool BufferCollection::is_currently_connected() const { return server_binding_.has_value(); }
+
+const char* BufferCollection::node_type_string() const { return "collection"; }
 
 }  // namespace sysmem_driver

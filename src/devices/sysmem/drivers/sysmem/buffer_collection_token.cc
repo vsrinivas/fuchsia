@@ -7,11 +7,14 @@
 #include <lib/ddk/trace/event.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fidl/cpp/wire/server.h>
+#include <lib/zx/channel.h>
 #include <zircon/errors.h>
+#include <zircon/types.h>
 
+#include "device.h"
+#include "koid_util.h"
+#include "node.h"
 #include "node_properties.h"
-#include "src/devices/sysmem/drivers/sysmem/device.h"
-#include "src/devices/sysmem/drivers/sysmem/node.h"
 
 namespace sysmem_driver {
 
@@ -24,58 +27,36 @@ BufferCollectionToken::~BufferCollectionToken() {
   // of value in the tracked set of values).
 
   // It's fine if server_koid() is ZX_KOID_INVALID - no effect in that case.
-  parent_device_->UntrackToken(this);
+  parent_device()->UntrackToken(this);
 }
 
-void BufferCollectionToken::CloseChannel(zx_status_t epitaph) {
-  // This essentially converts the OnUnboundFn semantic of getting called regardless of channel-fail
-  // vs. server-driven-fail into the more typical semantic where error_handler_ only gets called
-  // on channel-fail but not on server-driven-fail.
-  error_handler_ = {};
-  if (server_binding_)
+void BufferCollectionToken::CloseServerBinding(zx_status_t epitaph) {
+  if (server_binding_) {
     server_binding_->Close(epitaph);
+  }
   server_binding_ = {};
-  parent_device_->UntrackToken(this);
+  parent_device()->UntrackToken(this);
 }
 
 // static
 BufferCollectionToken& BufferCollectionToken::EmplaceInTree(
-    Device* parent_device, fbl::RefPtr<LogicalBufferCollection> logical_buffer_collection,
-    NodeProperties* new_node_properties) {
-  auto token = fbl::AdoptRef(new BufferCollectionToken(
-      parent_device, std::move(logical_buffer_collection), new_node_properties));
+    fbl::RefPtr<LogicalBufferCollection> logical_buffer_collection,
+    NodeProperties* new_node_properties, zx::unowned_channel server_end) {
+  auto token = fbl::AdoptRef(new BufferCollectionToken(std::move(logical_buffer_collection),
+                                                       new_node_properties, std::move(server_end)));
   auto token_ptr = token.get();
   new_node_properties->SetNode(token);
   return *token_ptr;
 }
 
-void BufferCollectionToken::Bind(
-    fidl::ServerEnd<fuchsia_sysmem::BufferCollectionToken> token_request) {
-  zx_info_handle_basic_t info;
-  zx_status_t status =
-      token_request.channel().get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-  if (status == ZX_OK) {
-    inspect_node_.CreateUint("channel_koid", info.koid, &properties_);
-  }
+void BufferCollectionToken::BindInternal(zx::channel token_request,
+                                         ErrorHandlerWrapper error_handler_wrapper) {
   server_binding_ =
-      fidl::BindServer(parent_device_->dispatcher(), std::move(token_request), this,
-                       [this, this_ref = fbl::RefPtr<BufferCollectionToken>(this)](
+      fidl::BindServer(parent_device()->dispatcher(), std::move(token_request), this,
+                       [error_handler_wrapper = std::move(error_handler_wrapper)](
                            BufferCollectionToken* token, fidl::UnbindInfo info,
                            fidl::ServerEnd<fuchsia_sysmem::BufferCollectionToken> channel) {
-                         // We need to keep a refptr to this class, since the unbind happens
-                         // asynchronously and can run after the parent closes a handle to this
-                         // class.
-                         if (error_handler_) {
-                           zx_status_t status = info.status();
-                           if (async_failure_result_ && info.reason() == fidl::Reason::kClose) {
-                             // On kClose the error is always ZX_OK, so report the real error to
-                             // LogicalBufferCollection if the close was caused by FailAsync or
-                             // FailSync.
-                             status = *async_failure_result_;
-                           }
-                           error_handler_(status);
-                         }
-                         // *this can be destroyed by ~this_ref here
+                         error_handler_wrapper(info);
                        });
 }
 
@@ -83,7 +64,7 @@ void BufferCollectionToken::DuplicateSync(DuplicateSyncRequestView request,
                                           DuplicateSyncCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "BufferCollectionToken::DuplicateSync", "this", this,
                  "logical_buffer_collection", &logical_buffer_collection());
-  table_set_.MitigateChurn();
+  table_set().MitigateChurn();
   if (is_done_) {
     // Probably a Close() followed by DuplicateSync(), which is illegal and
     // causes the whole LogicalBufferCollection to fail.
@@ -103,7 +84,8 @@ void BufferCollectionToken::DuplicateSync(DuplicateSyncRequestView request,
 
     NodeProperties* new_node_properties = node_properties().NewChild(&logical_buffer_collection());
     if (rights_attenuation_mask != ZX_RIGHT_SAME_RIGHTS) {
-      new_node_properties->rights_attenuation_mask() &= uint32_t(rights_attenuation_mask);
+      new_node_properties->rights_attenuation_mask() &=
+          static_cast<uint32_t>(rights_attenuation_mask);
     }
     logical_buffer_collection().CreateBufferCollectionToken(shared_logical_buffer_collection(),
                                                             new_node_properties,
@@ -120,7 +102,7 @@ void BufferCollectionToken::Duplicate(DuplicateRequestView request,
                                       DuplicateCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "BufferCollectionToken::Duplicate", "this", this,
                  "logical_buffer_collection", &logical_buffer_collection());
-  table_set_.MitigateChurn();
+  table_set().MitigateChurn();
   if (is_done_) {
     // Probably a Close() followed by Duplicate(), which is illegal and
     // causes the whole LogicalBufferCollection to fail.
@@ -143,48 +125,32 @@ void BufferCollectionToken::Duplicate(DuplicateRequestView request,
 }
 
 void BufferCollectionToken::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {
-  table_set_.MitigateChurn();
-  TRACE_DURATION("gfx", "BufferCollectionToken::Sync", "this", this, "logical_buffer_collection",
-                 &logical_buffer_collection());
-  if (is_done_) {
-    // Probably a Close() followed by Sync(), which is illegal and
-    // causes the whole LogicalBufferCollection to fail.
-    FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
-             "BufferCollectionToken::Sync() attempted when is_done_");
-    return;
-  }
-  completer.Reply();
+  SyncImplV1(request, completer);
+}
+
+void BufferCollectionToken::DeprecatedSync(DeprecatedSyncRequestView request,
+                                           DeprecatedSyncCompleter::Sync& completer) {
+  SyncImplV1(request, completer);
 }
 
 // Clean token close without causing LogicalBufferCollection failure.
 void BufferCollectionToken::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
-  table_set_.MitigateChurn();
-  if (is_done_ || buffer_collection_request_) {
-    FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
-             "BufferCollectionToken::Close() when already is_done_ || "
-             "buffer_collection_request_");
-    // We're failing async - no need to try to fail sync.
-    return;
-  }
-  // We don't need to do anything else here because we want to enforce that
-  // no other messages are sent between Close() and channel close.  So we
-  // check for that as messages potentially arive and handle close via the
-  // error handler after the client has closed the channel.
-  is_done_ = true;
+  TokenCloseImplV1(request, completer);
 }
 
-void BufferCollectionToken::SetServerKoid(zx_koid_t server_koid) {
-  ZX_DEBUG_ASSERT(server_koid_ == ZX_KOID_INVALID);
-  ZX_DEBUG_ASSERT(server_koid != ZX_KOID_INVALID);
-  server_koid_ = server_koid;
-  parent_device_->TrackToken(this);
-  if (parent_device_->TryRemoveKoidFromUnfoundTokenList(server_koid_)) {
-    was_unfound_token_ = true;
-    // LogicalBufferCollection will print an error, since it might have useful client information
-  }
+void BufferCollectionToken::DeprecatedClose(DeprecatedCloseRequestView request,
+                                            DeprecatedCloseCompleter::Sync& completer) {
+  TokenCloseImplV1(request, completer);
 }
 
-zx_koid_t BufferCollectionToken::server_koid() { return server_koid_; }
+void BufferCollectionToken::OnServerKoid() {
+  ZX_DEBUG_ASSERT(has_server_koid());
+  parent_device()->TrackToken(this);
+  if (parent_device()->TryRemoveKoidFromUnfoundTokenList(server_koid())) {
+    set_unfound_node();
+    // LogicalBufferCollection will print an error, since it might have useful client information.
+  }
+}
 
 bool BufferCollectionToken::is_done() { return is_done_; }
 
@@ -203,41 +169,36 @@ zx::channel BufferCollectionToken::TakeBufferCollectionRequest() {
   return std::move(buffer_collection_request_);
 }
 
-void BufferCollectionToken::SetName(SetNameRequestView request, SetNameCompleter::Sync&) {
-  table_set_.MitigateChurn();
-  logical_buffer_collection().SetName(request->priority,
-                                      std::string(request->name.begin(), request->name.end()));
+void BufferCollectionToken::SetName(SetNameRequestView request, SetNameCompleter::Sync& completer) {
+  SetNameImplV1(request, completer);
+}
+
+void BufferCollectionToken::DeprecatedSetName(DeprecatedSetNameRequestView request,
+                                              DeprecatedSetNameCompleter::Sync& completer) {
+  SetNameImplV1(request, completer);
 }
 
 void BufferCollectionToken::SetDebugClientInfo(SetDebugClientInfoRequestView request,
-                                               SetDebugClientInfoCompleter::Sync&) {
-  table_set_.MitigateChurn();
-  SetDebugClientInfoInternal(std::string(request->name.begin(), request->name.end()), request->id);
+                                               SetDebugClientInfoCompleter::Sync& completer) {
+  SetDebugClientInfoImplV1(request, completer);
 }
 
-void BufferCollectionToken::SetDebugClientInfoInternal(std::string name, uint64_t id) {
-  node_properties().client_debug_info().name = std::move(name);
-  node_properties().client_debug_info().id = id;
-  debug_id_property_ =
-      inspect_node_.CreateUint("debug_id", node_properties().client_debug_info().id);
-  debug_name_property_ =
-      inspect_node_.CreateString("debug_name", node_properties().client_debug_info().name);
-  if (was_unfound_token_) {
-    // Output the debug info now that we have it, since we previously said bad things about this
-    // token's server_koid not being found when it should have been, but at that time we didn't have
-    // the debug info.
-    //
-    // This is not a failure here, but the message provides debug info for a failure that previously
-    // occurred.
-    logical_buffer_collection().LogClientError(FROM_HERE, &node_properties(),
-                                               "Got debug info for token %ld", server_koid_);
-  }
+void BufferCollectionToken::DeprecatedSetDebugClientInfo(
+    DeprecatedSetDebugClientInfoRequestView request,
+    DeprecatedSetDebugClientInfoCompleter::Sync& completer) {
+  SetDebugClientInfoImplV1(request, completer);
 }
 
 void BufferCollectionToken::SetDebugTimeoutLogDeadline(
-    SetDebugTimeoutLogDeadlineRequestView request, SetDebugTimeoutLogDeadlineCompleter::Sync&) {
-  table_set_.MitigateChurn();
-  logical_buffer_collection().SetDebugTimeoutLogDeadline(request->deadline);
+    SetDebugTimeoutLogDeadlineRequestView request,
+    SetDebugTimeoutLogDeadlineCompleter::Sync& completer) {
+  SetDebugTimeoutLogDeadlineImplV1(request, completer);
+}
+
+void BufferCollectionToken::DeprecatedSetDebugTimeoutLogDeadline(
+    DeprecatedSetDebugTimeoutLogDeadlineRequestView request,
+    DeprecatedSetDebugTimeoutLogDeadlineCompleter::Sync& completer) {
+  SetDebugTimeoutLogDeadlineImplV1(request, completer);
 }
 
 void BufferCollectionToken::SetDispensable(SetDispensableRequestView request,
@@ -253,17 +214,22 @@ void BufferCollectionToken::SetDispensableInternal() {
 }
 
 BufferCollectionToken::BufferCollectionToken(
-    Device* parent_device, fbl::RefPtr<LogicalBufferCollection> logical_buffer_collection_param,
-    NodeProperties* new_node_properties)
-    : Node(std::move(logical_buffer_collection_param), new_node_properties),
-      LoggingMixin("BufferCollectionToken"),
-      parent_device_(parent_device),
-      table_set_(logical_buffer_collection().table_set()) {
+    fbl::RefPtr<LogicalBufferCollection> logical_buffer_collection_param,
+    NodeProperties* new_node_properties, zx::unowned_channel server_end)
+    : Node(std::move(logical_buffer_collection_param), new_node_properties, std::move(server_end)),
+      LoggingMixin("BufferCollectionToken") {
   TRACE_DURATION("gfx", "BufferCollectionToken::BufferCollectionToken", "this", this,
                  "logical_buffer_collection", &logical_buffer_collection());
-  ZX_DEBUG_ASSERT(parent_device_);
   inspect_node_ =
       logical_buffer_collection().inspect_node().CreateChild(CreateUniqueName("token-"));
+  if (create_status() != ZX_OK) {
+    // Node::Node() failed and maybe !has_server_koid().
+    return;
+  }
+  // Node::Node filled this out (or didn't and status() reflected that, which was already checked
+  // above).
+  ZX_DEBUG_ASSERT(has_server_koid());
+  OnServerKoid();
 }
 
 void BufferCollectionToken::FailAsync(Location location, zx_status_t status, const char* format,
@@ -282,25 +248,11 @@ void BufferCollectionToken::FailAsync(Location location, zx_status_t status, con
   server_binding_ = {};
 }
 
-template <typename Completer>
-void BufferCollectionToken::FailSync(Location location, Completer& completer, zx_status_t status,
-                                     const char* format, ...) {
-  va_list args;
-  va_start(args, format);
-  logical_buffer_collection().VLogClientError(location, &node_properties(), format, args);
-  va_end(args);
-
-  completer.Close(status);
-  async_failure_result_ = status;
-}
-
 bool BufferCollectionToken::ReadyForAllocation() { return false; }
 
 void BufferCollectionToken::OnBuffersAllocated(const AllocationResult& allocation_result) {
   ZX_PANIC("Unexpected call to BufferCollectionToken::OnBuffersAllocated()");
 }
-
-void BufferCollectionToken::Fail(zx_status_t epitaph) { CloseChannel(epitaph); }
 
 BufferCollectionToken* BufferCollectionToken::buffer_collection_token() { return this; }
 
@@ -314,6 +266,10 @@ OrphanedNode* BufferCollectionToken::orphaned_node() { return nullptr; }
 
 const OrphanedNode* BufferCollectionToken::orphaned_node() const { return nullptr; }
 
-bool BufferCollectionToken::is_connected() const { return true; }
+bool BufferCollectionToken::is_connected_type() const { return true; }
+
+bool BufferCollectionToken::is_currently_connected() const { return server_binding_.has_value(); }
+
+const char* BufferCollectionToken::node_type_string() const { return "token"; }
 
 }  // namespace sysmem_driver

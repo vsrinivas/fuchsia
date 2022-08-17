@@ -879,8 +879,7 @@ bool CodecClient::ConfigurePortBufferCollection(
   // This borrows buffer_collection during
   // the call.
   if (!WaitForSysmemBuffersAllocated(is_output, &buffer_collection, &buffer_collection_info)) {
-    FX_LOGS(FATAL) << "WaitForSysmemBuffer"
-                      "sAllocated failed";
+    FX_LOGS(FATAL) << "WaitForSysmemBuffersAllocated failed";
     return false;
   }
 

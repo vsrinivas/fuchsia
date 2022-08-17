@@ -11,6 +11,7 @@
 
 #include <list>
 
+#include "lib/zx/channel.h"
 #include "logging.h"
 #include "logical_buffer_collection.h"
 #include "node.h"
@@ -24,37 +25,37 @@ class BufferCollection : public Node, public fidl::WireServer<fuchsia_sysmem::Bu
   // Create() that does what EmplaceInTree() currently does).  The returned reference is valid while
   // this Node is in the tree under root_.
   static BufferCollection& EmplaceInTree(
-      fbl::RefPtr<LogicalBufferCollection> logical_buffer_collection, BufferCollectionToken* token);
+      fbl::RefPtr<LogicalBufferCollection> logical_buffer_collection, BufferCollectionToken* token,
+      zx::unowned_channel server_end);
   ~BufferCollection() override;
 
-  void SetErrorHandler(fit::function<void(zx_status_t)> error_handler) {
-    error_handler_ = std::move(error_handler);
-  }
-  void Bind(zx::channel channel);
+  // FIDL "compose Node" "interface" (identical among BufferCollection, BufferCollectionToken)
+  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override;
+  void DeprecatedSync(DeprecatedSyncRequestView request,
+                      DeprecatedSyncCompleter::Sync& completer) override;
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override;
+  void DeprecatedClose(DeprecatedCloseRequestView request,
+                       DeprecatedCloseCompleter::Sync& completer) override;
+  void SetName(SetNameRequestView request, SetNameCompleter::Sync& completer) override;
+  void DeprecatedSetName(DeprecatedSetNameRequestView request,
+                         DeprecatedSetNameCompleter::Sync& completer) override;
+  void SetDebugClientInfo(SetDebugClientInfoRequestView request,
+                          SetDebugClientInfoCompleter::Sync& completer) override;
+  void DeprecatedSetDebugClientInfo(
+      DeprecatedSetDebugClientInfoRequestView request,
+      DeprecatedSetDebugClientInfoCompleter::Sync& completer) override;
+  void SetDebugTimeoutLogDeadline(SetDebugTimeoutLogDeadlineRequestView request,
+                                  SetDebugTimeoutLogDeadlineCompleter::Sync& completer) override;
 
   //
-  // fuchsia.sysmem.BufferCollection interface methods
+  // fuchsia.sysmem.BufferCollection interface methods (see also "compose Node" methods above)
   //
-  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override;
   void SetConstraints(SetConstraintsRequestView request,
                       SetConstraintsCompleter::Sync& completer) override;
   void WaitForBuffersAllocated(WaitForBuffersAllocatedRequestView request,
                                WaitForBuffersAllocatedCompleter::Sync& completer) override;
   void CheckBuffersAllocated(CheckBuffersAllocatedRequestView request,
                              CheckBuffersAllocatedCompleter::Sync& completer) override;
-  void CloseSingleBuffer(CloseSingleBufferRequestView request,
-                         CloseSingleBufferCompleter::Sync& completer) override;
-  void AllocateSingleBuffer(AllocateSingleBufferRequestView request,
-                            AllocateSingleBufferCompleter::Sync& completer) override;
-  void WaitForSingleBufferAllocated(
-      WaitForSingleBufferAllocatedRequestView request,
-      WaitForSingleBufferAllocatedCompleter::Sync& completer) override;
-  void CheckSingleBufferAllocated(CheckSingleBufferAllocatedRequestView request,
-                                  CheckSingleBufferAllocatedCompleter::Sync& completer) override;
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override;
-  void SetName(SetNameRequestView request, SetNameCompleter::Sync& completer) override;
-  void SetDebugClientInfo(SetDebugClientInfoRequestView request,
-                          SetDebugClientInfoCompleter::Sync& completer) override;
   void SetConstraintsAuxBuffers(SetConstraintsAuxBuffersRequestView request,
                                 SetConstraintsAuxBuffersCompleter::Sync& completer) override;
   void GetAuxBuffers(GetAuxBuffersRequestView request,
@@ -78,31 +79,32 @@ class BufferCollection : public Node, public fidl::WireServer<fuchsia_sysmem::Bu
 
   fbl::RefPtr<LogicalBufferCollection> logical_buffer_collection_shared();
 
-  bool is_done() const;
-
   bool should_propagate_failure_to_parent_node() const;
 
   // Node interface
   bool ReadyForAllocation() override;
   void OnBuffersAllocated(const AllocationResult& allocation_result) override;
-  void Fail(zx_status_t epitaph) override;
   BufferCollectionToken* buffer_collection_token() override;
   const BufferCollectionToken* buffer_collection_token() const override;
   BufferCollection* buffer_collection() override;
   const BufferCollection* buffer_collection() const override;
   OrphanedNode* orphaned_node() override;
   const OrphanedNode* orphaned_node() const override;
-  bool is_connected() const override;
+  bool is_connected_type() const override;
+  bool is_currently_connected() const override;
+  const char* node_type_string() const override;
+
+ protected:
+  void BindInternal(zx::channel collection_request,
+                    ErrorHandlerWrapper error_handler_wrapper) override;
 
  private:
   friend class FidlServer;
 
   explicit BufferCollection(fbl::RefPtr<LogicalBufferCollection> logical_buffer_collection,
-                            const BufferCollectionToken& token);
+                            const BufferCollectionToken& token, zx::unowned_channel server_end);
 
-  void CloseChannel(zx_status_t epitaph);
-
-  void SetDebugClientInfoInternal(std::string name, uint64_t id);
+  void CloseServerBinding(zx_status_t epitaph) override;
 
   // The rights attenuation mask driven by usage, so that read-only usage
   // doesn't get write, etc.
@@ -130,12 +132,6 @@ class BufferCollection : public Node, public fidl::WireServer<fuchsia_sysmem::Bu
 
   static const fuchsia_sysmem_BufferCollection_ops_t kOps;
 
-  std::optional<zx_status_t> async_failure_result_;
-  fit::function<void(zx_status_t)> error_handler_;
-
-  // Cached from LogicalBufferCollection.
-  TableSet& table_set_;
-
   // Temporarily holds fuchsia.sysmem.BufferCollectionConstraintsAuxBuffers until SetConstraints()
   // arrives.
   std::optional<TableHolder<fuchsia_sysmem::wire::BufferCollectionConstraintsAuxBuffers>>
@@ -160,11 +156,6 @@ class BufferCollection : public Node, public fidl::WireServer<fuchsia_sysmem::Bu
     uint32_t buffers_remaining;
   };
   std::vector<PendingLifetimeTracking> pending_lifetime_tracking_;
-
-  inspect::Node inspect_node_;
-  inspect::UintProperty debug_id_property_;
-  inspect::StringProperty debug_name_property_;
-  inspect::ValueList properties_;
 };
 
 }  // namespace sysmem_driver

@@ -29,11 +29,6 @@
         "name": "fuchsia.sysmem/Allocator"
     },
     {
-        "declaration": "(uint64 buffer_index)",
-        "kind": "protocol/member",
-        "name": "fuchsia.sysmem/BufferCollection.AllocateSingleBuffer"
-    },
-    {
         "declaration": "(zx/handle:EVENTPAIR server_end,uint32 buffers_remaining)",
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollection.AttachLifetimeTracking"
@@ -49,19 +44,29 @@
         "name": "fuchsia.sysmem/BufferCollection.CheckBuffersAllocated"
     },
     {
-        "declaration": "(uint64 buffer_index)",
-        "kind": "protocol/member",
-        "name": "fuchsia.sysmem/BufferCollection.CheckSingleBufferAllocated"
-    },
-    {
         "declaration": "()",
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollection.Close"
     },
     {
-        "declaration": "(uint64 buffer_index)",
+        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/BufferCollection.CloseSingleBuffer"
+        "name": "fuchsia.sysmem/BufferCollection.DeprecatedClose"
+    },
+    {
+        "declaration": "(string:64 name,uint64 id)",
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/BufferCollection.DeprecatedSetDebugClientInfo"
+    },
+    {
+        "declaration": "(uint32 priority,string:64 name)",
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/BufferCollection.DeprecatedSetName"
+    },
+    {
+        "declaration": "() -> ()",
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/BufferCollection.DeprecatedSync"
     },
     {
         "declaration": "() -> (int32 status,fuchsia.sysmem/BufferCollectionInfo_2 buffer_collection_info_aux_buffers)",
@@ -84,6 +89,11 @@
         "name": "fuchsia.sysmem/BufferCollection.SetDebugClientInfo"
     },
     {
+        "declaration": "(int64 deadline)",
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/BufferCollection.SetDebugTimeoutLogDeadline"
+    },
+    {
         "declaration": "(uint32 priority,string:64 name)",
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollection.SetName"
@@ -97,11 +107,6 @@
         "declaration": "() -> (int32 status,fuchsia.sysmem/BufferCollectionInfo_2 buffer_collection_info)",
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollection.WaitForBuffersAllocated"
-    },
-    {
-        "declaration": "(uint64 buffer_index) -> (int32 status,fuchsia.sysmem/SingleBufferInfo buffer_info)",
-        "kind": "protocol/member",
-        "name": "fuchsia.sysmem/BufferCollection.WaitForSingleBufferAllocated"
     },
     {
         "kind": "protocol",
@@ -225,6 +230,31 @@
         "declaration": "()",
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollectionToken.Close"
+    },
+    {
+        "declaration": "()",
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/BufferCollectionToken.DeprecatedClose"
+    },
+    {
+        "declaration": "(string:64 name,uint64 id)",
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/BufferCollectionToken.DeprecatedSetDebugClientInfo"
+    },
+    {
+        "declaration": "(int64 deadline)",
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/BufferCollectionToken.DeprecatedSetDebugTimeoutLogDeadline"
+    },
+    {
+        "declaration": "(uint32 priority,string:64 name)",
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/BufferCollectionToken.DeprecatedSetName"
+    },
+    {
+        "declaration": "() -> ()",
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/BufferCollectionToken.DeprecatedSync"
     },
     {
         "declaration": "(uint32 rights_attenuation_mask,server_end:fuchsia.sysmem/BufferCollectionToken token_request)",
@@ -1049,6 +1079,12 @@
         "value": "32"
     },
     {
+        "declaration": "int32",
+        "kind": "const",
+        "name": "fuchsia.sysmem/MAX_COUNT_CREATE_CHILDREN",
+        "value": "64"
+    },
+    {
         "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/MAX_COUNT_DUPLICATES",
@@ -1071,6 +1107,35 @@
         "kind": "const",
         "name": "fuchsia.sysmem/MAX_RANGES_COUNT",
         "value": "128"
+    },
+    {
+        "declaration": "()",
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/Node.Close"
+    },
+    {
+        "declaration": "(string:64 name,uint64 id)",
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/Node.SetDebugClientInfo"
+    },
+    {
+        "declaration": "(int64 deadline)",
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/Node.SetDebugTimeoutLogDeadline"
+    },
+    {
+        "declaration": "(uint32 priority,string:64 name)",
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/Node.SetName"
+    },
+    {
+        "declaration": "() -> ()",
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/Node.Sync"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.sysmem/Node"
     },
     {
         "declaration": "fuchsia.sysmem/FormatModifier",

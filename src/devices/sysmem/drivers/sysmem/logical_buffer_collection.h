@@ -25,7 +25,6 @@
 #include "allocation_result.h"
 #include "device.h"
 #include "logging.h"
-#include "node.h"
 #include "node_properties.h"
 #include "table_set.h"
 
@@ -34,6 +33,7 @@ namespace sysmem_driver {
 class BufferCollectionToken;
 class BufferCollection;
 class MemoryAllocator;
+class Node;
 
 // This class can be used to hold an inspect snapshot of one set of constraints taken from a client
 // at a particular point in time.
@@ -192,7 +192,7 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
                       const char* format, ...) __PRINTFLIKE(5, 6);
   void FailNode(NodeProperties* member_node, zx_status_t epitaph);
 
-  static void LogInfo(Location location, const char* format, ...);
+  void LogInfo(Location location, const char* format, ...) const;
   static void LogErrorStatic(Location location, const ClientDebugInfo* client_debug_info,
                              const char* format, ...) __PRINTFLIKE(3, 4);
 
@@ -322,8 +322,6 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   // kDoNotPropagate Node as its root-most Node.
   std::vector<NodeProperties*> NodesOfPrunedSubtreeEligibleForLogicalAllocation(
       NodeProperties& subtree);
-
-  void LogTreeForDebugOnly(NodeProperties* node);
 
   // For NodeProperties:
   void AddCountsForNode(const Node& node);
@@ -530,6 +528,12 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
 
   void LogConstraints(Location location, NodeProperties* node_properties,
                       const fuchsia_sysmem2::wire::BufferCollectionConstraints& constraints) const;
+  void LogPrunedSubTree(NodeProperties* subtree);
+  void LogNodeConstraints(std::vector<NodeProperties*> nodes);
+
+  // subtree must remain alive >= returned filter
+  fit::function<NodeFilterResult(const NodeProperties&)> PrunedSubtreeFilter(
+      NodeProperties& subtree, fit::function<bool(const NodeProperties&)> visit_keep) const;
 
   Device* parent_device_ = nullptr;
 

@@ -4,6 +4,8 @@
 
 #include "orphaned_node.h"
 
+#include <lib/zx/channel.h>
+
 #include <fbl/ref_ptr.h>
 
 #include "logical_buffer_collection.h"
@@ -24,10 +26,6 @@ OrphanedNode& OrphanedNode::EmplaceInTree(
 
 bool OrphanedNode::ReadyForAllocation() { return true; }
 
-void OrphanedNode::Fail(zx_status_t epitaph) {
-  // nothing to do here
-}
-
 void OrphanedNode::OnBuffersAllocated(const AllocationResult& allocation_result) {
   node_properties().SetBuffersLogicallyAllocated();
   // nothing else to do here
@@ -45,10 +43,24 @@ OrphanedNode* OrphanedNode::orphaned_node() { return this; }
 
 const OrphanedNode* OrphanedNode::orphaned_node() const { return this; }
 
-bool OrphanedNode::is_connected() const { return false; }
+bool OrphanedNode::is_connected_type() const { return false; }
+
+bool OrphanedNode::is_currently_connected() const { return false; }
+
+const char* OrphanedNode::node_type_string() const { return "orphaned"; }
 
 OrphanedNode::OrphanedNode(fbl::RefPtr<LogicalBufferCollection> logical_buffer_collection,
                            NodeProperties* node_properties)
-    : Node(std::move(logical_buffer_collection), node_properties) {}
+    : Node(std::move(logical_buffer_collection), node_properties, zx::unowned_channel{}) {
+  ZX_DEBUG_ASSERT(create_status() == ZX_OK);
+}
+
+void OrphanedNode::BindInternal(zx::channel server_end, ErrorHandlerWrapper error_handler_wrapper) {
+  ZX_PANIC("OrphanedNode::BindInternal() called\n");
+}
+
+void OrphanedNode::CloseServerBinding(zx_status_t epitaph) {
+  // NOP
+}
 
 }  // namespace sysmem_driver

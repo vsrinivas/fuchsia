@@ -27,7 +27,6 @@ class OrphanedNode : public Node {
   // Node interface
   bool ReadyForAllocation() override;
 
-  void Fail(zx_status_t epitaph) override;
   void OnBuffersAllocated(const AllocationResult& allocation_result) override;
   BufferCollectionToken* buffer_collection_token() override;
   const BufferCollectionToken* buffer_collection_token() const override;
@@ -35,11 +34,21 @@ class OrphanedNode : public Node {
   const BufferCollection* buffer_collection() const override;
   OrphanedNode* orphaned_node() override;
   const OrphanedNode* orphaned_node() const override;
-  bool is_connected() const override;
+  bool is_connected_type() const override;
+  bool is_currently_connected() const override;
+  const char* node_type_string() const override;
+
+ protected:
+  // OrphanedNode::Bind() will never happen; panics.
+  void BindInternal(zx::channel server_end, ErrorHandlerWrapper error_handler_wrapper) override;
+  // NOP
+  void CloseServerBinding(zx_status_t epitaph) override;
 
  private:
   OrphanedNode(fbl::RefPtr<LogicalBufferCollection> logical_buffer_collection,
                NodeProperties* node_properties);
+  void SetErrorHandler(fit::function<void(zx_status_t)> error_handler) = delete;
+  bool is_done() const = delete;
 };
 
 }  // namespace sysmem_driver

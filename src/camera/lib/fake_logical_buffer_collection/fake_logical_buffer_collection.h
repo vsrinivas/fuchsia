@@ -37,12 +37,6 @@ class FakeLogicalBufferCollection : public fuchsia::sysmem::BufferCollection {
 
   // These functions are here for the class to compile, but we do not use them:
   void CheckBuffersAllocated(fit::function<void(int32_t)> callback) {}
-  void CloseSingleBuffer(uint64_t buffer_index) {}
-  void AllocateSingleBuffer(uint64_t buffer_index) {}
-  void WaitForSingleBufferAllocated(
-      uint64_t buffer_index,
-      fit::function<void(int32_t, fuchsia::sysmem::SingleBufferInfo)> callback) {}
-  void CheckSingleBufferAllocated(uint64_t buffer_index) {}
   void Sync(fit::function<void()> callback) {}
 
  private:

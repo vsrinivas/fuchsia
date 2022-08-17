@@ -4,12 +4,17 @@
 
 #include "node_properties.h"
 
+#include <fidl/fuchsia.sysmem2/cpp/wire.h>
+#include <lib/zx/event.h>
+#include <lib/zx/eventpair.h>
 #include <zircon/assert.h>
+#include <zircon/types.h>
 
 #include <vector>
 
-#include "fidl/fuchsia.sysmem2/cpp/wire.h"
+#include "koid_util.h"
 #include "logical_buffer_collection.h"
+#include "node.h"
 
 namespace sysmem_driver {
 
@@ -36,8 +41,7 @@ NodeProperties* NodeProperties::NewChild(LogicalBufferCollection* logical_buffer
   auto result = std::unique_ptr<NodeProperties>(new NodeProperties(logical_buffer_collection));
   auto result_ptr = result.get();
   // The parent Node owns the child Node.
-  const auto& [child_iter, inserted] = this->children_.emplace(result_ptr, std::move(result));
-  ZX_DEBUG_ASSERT(inserted);
+  this->children_.emplace_back(std::move(result));
   result_ptr->parent_ = this;
   // Set later with SetNode().
   ZX_DEBUG_ASSERT(!result_ptr->node_);
@@ -78,7 +82,16 @@ void NodeProperties::RemoveFromTreeAndDelete() {
     // quicker to track down.
     auto local_parent = parent_;
     parent_ = nullptr;
-    local_parent->children_.erase(this);
+    auto shared_this = this->shared_from_this();
+    Children::iterator iter;
+    // typically called to remove last child, so search from end of vector
+    for (iter = local_parent->children_.end() - 1;; --iter) {
+      if (*iter == shared_this) {
+        break;
+      }
+      ZX_DEBUG_ASSERT(iter != local_parent->children_.begin());
+    }
+    local_parent->children_.erase(iter);
   } else {
     logical_buffer_collection_->DeleteRoot();
   }
@@ -101,18 +114,51 @@ std::vector<NodeProperties*> NodeProperties::BreadthFirstOrder(
   }
   for (uint32_t i = 0; i < iterate_children_tmp.size(); ++i) {
     NodeProperties* node = iterate_children_tmp[i];
-    for (auto& [child_ptr, unused] : node->children_) {
+    for (auto& child_shared : node->children_) {
       NodeFilterResult child_result;
       if (node_filter) {
-        child_result = node_filter(*child_ptr);
+        child_result = node_filter(*child_shared);
       }
       if (child_result.keep_node) {
-        result.push_back(child_ptr);
+        result.push_back(child_shared.get());
       }
       if (child_result.iterate_children) {
-        iterate_children_tmp.push_back(child_ptr);
+        iterate_children_tmp.push_back(child_shared.get());
       }
     }
+  }
+  return result;
+}
+
+std::vector<NodeProperties*> NodeProperties::DepthFirstPreOrder(
+    fit::function<NodeFilterResult(const NodeProperties&)> node_filter) {
+  std::vector<NodeProperties*> result;
+  struct StackLevel {
+    NodeProperties* node_properties = nullptr;
+    uint32_t next_child = 0;
+    NodeFilterResult filter_result = {};
+  };
+  // This vector used as a stack will be on the heap, so avoids stack overflow of the thread stack.
+  std::vector<StackLevel> stack;
+  stack.emplace_back(
+      StackLevel{.node_properties = this, .next_child = 0, .filter_result = node_filter(*this)});
+  while (!stack.empty()) {
+    auto& cur = stack.back();
+    if (cur.next_child == 0 && cur.filter_result.keep_node) {
+      result.emplace_back(cur.node_properties);
+    }
+    if (!cur.filter_result.iterate_children) {
+      stack.pop_back();
+      continue;
+    }
+    if (cur.next_child == cur.node_properties->child_count()) {
+      stack.pop_back();
+      continue;
+    }
+    auto* child = cur.node_properties->children_[cur.next_child].get();
+    ++cur.next_child;
+    stack.push_back(StackLevel{
+        .node_properties = child, .next_child = 0, .filter_result = node_filter(*child)});
   }
   return result;
 }
@@ -128,6 +174,8 @@ Node* NodeProperties::node() const {
 }
 
 uint32_t NodeProperties::child_count() const { return children_.size(); }
+
+NodeProperties& NodeProperties::child(uint32_t which) const { return *children_[which]; }
 
 ClientDebugInfo& NodeProperties::client_debug_info() { return client_debug_info_; }
 
@@ -204,5 +252,7 @@ void NodeProperties::LogConstraints(Location location) {
   }
   logical_buffer_collection_->LogConstraints(location, this, *buffer_collection_constraints());
 }
+
+const char* NodeProperties::node_type_name() const { return node()->node_type_string(); }
 
 }  // namespace sysmem_driver

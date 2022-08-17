@@ -7,6 +7,148 @@ using zx;
 
 const MAX_COUNT_DUPLICATES uint32 = 64;
 
+/// Actually creating this many children isn't recommended in most typical
+/// scenarios, but isn't prevented, for testing reasons, and just in case an
+/// unusual scenario needs it.  Mitigation of potentially high time complexity
+/// in sysmem will limit the actual number of group child combinations
+/// considered in aggregation attempts to a separate maximum that is not
+/// settable via these protocols.  The maximum number of total nodes in a sysmem
+/// token tree is limited to a separate maximum that is not settable via these
+/// protocols.
+@available(added=9)
+const MAX_COUNT_CREATE_CHILDREN int32 = 64;
+
+// A protocol mixin for all nodes in the tree established by
+// BufferCollectionToken creation and BufferCollectionTokenGroup creation,
+// including BufferCollectionToken(s) which have since been converted to a
+// BufferCollection channel.
+@available(added=9)
+protocol Node {
+    // Sync()
+    //
+    /// Ensure that previous messages, including Duplicate() messages on a
+    /// token, collection, or group, have been received server side.
+    ///
+    /// Calling BufferCollectionToken.Sync() on a token that isn't/wasn't a
+    /// valid sysmem token risks the Sync() hanging forever.  See
+    /// ValidateBufferCollectionToken() for one way to mitigate the possibility
+    /// of a hostile/fake BufferCollectionToken at the cost of one round trip.
+    /// Another way is to pass the token to BindSharedCollection(), which also
+    /// validates the token as part of exchanging it for a BufferCollection
+    /// channel, and BufferCollection Sync() can then be used.
+    ///
+    /// After a Sync(), it's then safe to send the client end of token_request
+    /// to another participant knowing the server will recognize the token when
+    /// it's sent into BindSharedCollection() by the other participant.
+    ///
+    /// Other options include waiting for each token.Duplicate() to complete
+    /// individually (using separate call to token.Sync() after each), or
+    /// calling Sync() on BufferCollection after the token has been turned in
+    /// via BindSharedCollection().
+    ///
+    /// Another way to mitigate is to avoid calling Sync() on the token, and
+    /// instead later deal with potential failure of BufferCollection.Sync() if
+    /// the original token was invalid.  This option can be preferable from a
+    /// performance point of view, but requires client code to delay sending
+    /// tokens duplicated from this token until after client code has converted
+    /// the duplicating token to a BufferCollection and received successful
+    /// response from BufferCollection.Sync() (or received
+    /// OnDuplicatedTokensKnownByServer()).
+    ///
+    /// Prefer using BufferCollection.Sync() instead, when feasible (see above).
+    /// When BufferCollection.Sync() isn't feasible, the caller must already
+    /// know that this token is/was valid, or BufferCollectionToken.Sync() may
+    /// hang forever.  See ValidateBufferCollectionToken() to check token
+    /// validity first if the token isn't already known to be (is/was) valid.
+    @available(added=9)
+    Sync() -> ();
+
+    // Close()
+    //
+    /// On a BufferCollectionToken channel:
+    ///
+    /// Normally a participant will convert a BufferCollectionToken into a
+    /// BufferCollection view, but a particpant is also free to Close() the
+    /// token (and then close the channel immediately or shortly later in
+    /// response to server closing its end), which avoids causing logical buffer
+    /// collection failure.  Normally an unexpected token channel close will
+    /// cause logical buffer collection failure (the only exceptions being
+    /// certain cases involving AttachToken() or SetDispensable()).
+    ///
+    /// On a BufferCollection channel:
+    ///
+    /// By default the server handles unexpected failure of a BufferCollection
+    /// by failing the whole logical buffer collection.  Partly this is to
+    /// expedite closing VMO handles to reclaim memory when any participant
+    /// fails.  If a participant would like to cleanly close a BufferCollection
+    /// view without causing logical buffer collection failure, the participant
+    /// can send Close() before closing the client end of the BufferCollection
+    /// channel.  If this is the last BufferCollection view, the logical buffer
+    /// collection will still go away.  The Close() can occur before or after
+    /// SetConstraints().  If before SetConstraints(), the buffer collection
+    /// won't require constraints from this node in order to allocate.  If
+    /// after SetConstraints(), the constraints are retained and aggregated
+    /// along with any subsequent logical allocation(s), despite the lack of
+    /// channel connection.
+    ///
+    /// On a BufferCollectionTokenGroup channel:
+    ///
+    /// By default, unexpected failure of a BufferCollectionTokenGroup will
+    /// trigger failure of the logical BufferCollectionTokenGroup and will
+    /// propagate failure to its parent.  To close a BufferCollectionTokenGroup
+    /// channel without failing the logical group or propagating failure, send
+    /// Close() before closing the channel client endpoint.
+    ///
+    /// If Close() occurs before AllChildrenPresent(), the logical buffer
+    /// collection will still fail despite the Close() (because sysmem can't be
+    /// sure whether all relevant children were created, so it's ambiguous
+    /// whether all relevant constraints will be provided to sysmem).  If
+    /// Close() occurs after AllChildrenPresent(), the children and all their
+    /// constraints remain intact (just as they would if the
+    /// BufferCollectionTokenGroup channel had remained open), and the close
+    /// doesn't trigger or propagate failure.
+    @available(added=9)
+    Close();
+
+    /// Set a name for VMOs in this buffer collection. The name may be truncated
+    /// shorter. The name only affects VMOs allocated after it's set - this call
+    /// does not rename existing VMOs. If multiple clients set different names
+    /// then the larger priority value will win.
+    @available(added=9)
+    SetName(struct {
+        priority uint32;
+        name string:64;
+    });
+
+    /// Set information about the current client that can be used by sysmem to
+    /// help debug leaking memory and hangs waiting for constraints. |name| can
+    /// be an arbitrary string, but the current process name (see
+    /// fsl::GetCurrentProcessName()) is a good default. |id| can be an
+    /// arbitrary id, but the current process ID (see
+    /// fsl::GetCurrentProcessKoid()) is a good default.
+    ///
+    /// By default (unless overriden by this message or using
+    /// Allocator.SetDebugClientInfo()), a Node will copy info from its
+    /// parent Node at the time the child Node is created.  While this can be
+    /// better than nothing, it's often better for each participant to use
+    /// Node.SetDebugClientInfo() or Allocator.SetDebugClientInfo() to keep the
+    /// info directly relevant to the current client.
+    @available(added=9)
+    SetDebugClientInfo(struct {
+        name string:64;
+        id uint64;
+    });
+
+    /// Sysmem logs a warning if not all clients have set constraints 5 seconds
+    /// after creating a collection. Clients can call this method to change
+    /// when the log is printed. If multiple client set the deadline, it's
+    /// unspecified which deadline will take effect.
+    @available(added=9)
+    SetDebugTimeoutLogDeadline(struct {
+        deadline zx.time;
+    });
+};
+
 /// A BufferCollectionToken is not a BufferCollection, but rather a way to
 /// identify a potential shared BufferCollection prior to the BufferCollection
 /// being allocated.
@@ -15,13 +157,76 @@ const MAX_COUNT_DUPLICATES uint32 = 64;
 /// (pair) because this way we can detect error conditions like a participant
 /// dying mid-create.
 protocol BufferCollectionToken {
+    @available(added=9)
+    compose Node;
+
+    // See Node for non-deprecated equivalents.  Re-building existing code will
+    // use the Node equivalents instead.  These ordinals will eventually not be
+    // recognized by sysmem.
+    @available(added=7, deprecated=8, removed=9)
+    Sync() -> ();
+    // Still handled, for clients that haven't been re-built yet.
+    @available(added=9)
+    @selector("Sync")
+    DeprecatedSync() -> ();
+
+    @available(added=7, deprecated=8, removed=9)
+    Close();
+    // Still handled, for clients that haven't been re-built yet.
+    @available(added=9)
+    @selector("Close")
+    DeprecatedClose();
+
+    @available(added=7, deprecated=8, removed=9)
+    SetName(struct {
+        priority uint32;
+        name string:64;
+    });
+    // Still handled, for clients that haven't been re-built yet.
+    @available(added=9)
+    @selector("SetName")
+    DeprecatedSetName(struct {
+        priority uint32;
+        name string:64;
+    });
+
+    @available(added=7, deprecated=8, removed=9)
+    SetDebugClientInfo(struct {
+        name string:64;
+        id uint64;
+    });
+    // Still handled, for clients that haven't been re-built yet.
+    @available(added=9)
+    @selector("SetDebugClientInfo")
+    DeprecatedSetDebugClientInfo(struct {
+        name string:64;
+        id uint64;
+    });
+
+    @available(added=7, deprecated=8, removed=9)
+    SetDebugTimeoutLogDeadline(struct {
+        deadline zx.time;
+    });
+    // Still handled, for clients that haven't been re-built yet.
+    @available(added=9)
+    @selector("SetDebugTimeoutLogDeadline")
+    DeprecatedSetDebugTimeoutLogDeadline(struct {
+        deadline zx.time;
+    });
+
     /// This method can be used to add more participants prior to creating a
     /// shared BufferCollection. A new token will be returned for each entry in
     /// the `rights_attenuation_masks` array. The return value is the client
     /// ends of each new participant token.
     ///
-    /// In contrast to Duplicate(), no Sync() is needed after calling this
-    /// method.
+    /// If the calling token may not actually be a valid token at all due to
+    /// a potentially hostile/untrusted provider of the token, consider using
+    /// ValidateBufferCollectionToken() first instead of potentially getting
+    /// stuck indefinitely if DuplicateSync() never responds due to the calling
+    /// token not being a real token.
+    ///
+    /// In contrast to Duplicate(), no Sync() (see "protocol Node") is needed
+    /// after calling this method.
     ///
     /// All tokens must be turned in via BindSharedCollection() or Close() for a
     /// BufferCollection to be successfully created.
@@ -85,71 +290,8 @@ protocol BufferCollectionToken {
         token_request server_end:BufferCollectionToken;
     });
 
-    /// Ensure that previous Duplicate() messages have been received server side,
-    /// so that it's safe to send the client end of token_request to another
-    /// participant knowing the server will recognize the token when it's sent
-    /// into BindSharedCollection by the other participant.
-    ///
-    /// Other options include waiting for each Duplicate() to complete
-    /// individually (using separate call to BufferCollectionToken.Sync() after
-    /// each), or calling Sync() on BufferCollection after this token has
-    /// been turned in via BindSharedCollection().
-    ///
-    /// Calling BufferCollectionToken.Sync() on a token that isn't/wasn't a
-    /// valid sysmem token risks the Sync() hanging forever.  See
-    /// ValidateBufferCollectionToken() for one way to mitigate the possibility
-    /// of a hostile/fake BufferCollectionToken at the cost of one round trip.
-    ///
-    /// Another way to mitigate is to avoid calling Sync() on the token, and
-    /// instead later deal with potential failure of BufferCollection.Sync() if
-    /// the original token was invalid.  This option can be preferable from a
-    /// performance point of view, but requires client code to delay sending
-    /// tokens duplicated from this token until after client code has converted
-    /// this token to a BufferCollection and received successful response from
-    /// BufferCollection.Sync() (or received OnDuplicatedTokensKnownByServer()).
-    ///
-    /// Prefer using BufferCollection.Sync() instead, when feasible (see above).
-    /// When BufferCollection.Sync() isn't feasible, the caller must already
-    /// know that this token is/was valid, or BufferCollectionToken.Sync() may
-    /// hang forever.  See ValidateBufferCollectionToken() to check token
-    /// validity first if the token isn't already known to be (is/was) valid.
-    Sync() -> ();
-
-    /// Normally a participant will convert the token into a BufferCollection
-    /// view, but a particpant is also free to Close() the token (and then close
-    /// the channel immediately or shortly later in response to server closing
-    /// its end), which avoids causing logical buffer collection failure.
-    /// Normally an unexpected token channel close will cause
-    /// logical buffer collection failure.
-    Close();
-
-    /// Set a name for VMOs in this buffer collection. The name may be truncated shorter. The name
-    /// only affects VMOs allocated after it's set - this call does not rename existing VMOs. If
-    /// multiple clients set different names then the larger priority value will win.
-    SetName(struct {
-        priority uint32;
-        name string:64;
-    });
-
-    /// Set information about the current client that can be used by sysmem to
-    /// help debug leaking memory and hangs waiting for constraints. |name| can
-    /// be an arbitrary string, but the current process name (see
-    /// fsl::GetCurrentProcessName()) is a good default. |id| can be an arbitrary
-    /// id, but the current process ID (see fsl::GetCurrentProcessKoid()) is a
-    /// good default.
-    SetDebugClientInfo(struct {
-        name string:64;
-        id uint64;
-    });
-
-    /// Sysmem logs a warning if not all clients have set constraints 5 seconds
-    /// after creating a collection. Clients can call this method to change
-    /// when the log is printed. If multiple client set the deadline, it's
-    /// unspecified which deadline will take effect.
-    SetDebugTimeoutLogDeadline(struct {
-        deadline zx.time;
-    });
-
+    // SetDispensable()
+    //
     /// A dispensable token can fail after buffers are logically allocated
     /// without causing failure of its parent (if any).
     ///
@@ -223,17 +365,56 @@ protocol BufferCollectionToken {
 /// avoiding allocation overlap (in time).
 @for_deprecated_c_bindings
 protocol BufferCollection {
-    /// See comments on BufferCollectionToken::Sync().
+    @available(added=9)
+    compose Node;
+
+    // See Node for non-deprecated equivalents.  Re-building existing code will
+    // use the Node equivalents instead.  These ordinals will eventually not be
+    // recognized by sysmem.
+    @available(added=7, deprecated=8, removed=9)
     Sync() -> ();
+    @available(added=9)
+    @selector("Sync")
+    DeprecatedSync() -> ();
+
+    @available(added=7, deprecated=8, removed=9)
+    Close();
+    @available(added=9)
+    @selector("Close")
+    DeprecatedClose();
+
+    @available(added=7, deprecated=8, removed=9)
+    SetName(struct {
+        priority uint32;
+        name string:64;
+    });
+    @available(added=9)
+    @selector("SetName")
+    DeprecatedSetName(struct {
+        priority uint32;
+        name string:64;
+    });
+
+    @available(added=7, deprecated=8, removed=9)
+    SetDebugClientInfo(struct {
+        name string:64;
+        id uint64;
+    });
+    @available(added=9)
+    @selector("SetDebugClientInfo")
+    DeprecatedSetDebugClientInfo(struct {
+        name string:64;
+        id uint64;
+    });
 
     /// Provide BufferCollectionConstraints to the logical BufferCollection.
     ///
     /// A participant may only call SetConstraints() once.
     ///
     /// Sometimes the initiator is a participant only in the sense of wanting to
-    /// keep an eye on success/failure to populate with buffers, and zx.status on
-    /// failure.  In that case, `has_constraints` can be false, and `constraints`
-    /// will be ignored.
+    /// keep an eye on success/failure to populate with buffers, and zx.status
+    /// on failure.  In that case, `has_constraints` can be false, and
+    /// `constraints` will be ignored.
     ///
     /// VMO handles will not be provided to the client that sends null
     /// constraints - that can be intentional for an initiator that doesn't need
@@ -266,8 +447,8 @@ protocol BufferCollection {
     /// The following must occur before buffers will be allocated:
     ///   * All BufferCollectionToken(s) of the logical BufferCollectionToken
     ///     must be turned in via BindSharedCollection().
-    ///   * All BufferCollection(s) of the logical BufferCollection must have had
-    ///     SetConstraints() sent to them.
+    ///   * All BufferCollection(s) of the logical BufferCollection must have
+    ///     had SetConstraints() sent to them.
     ///
     /// Returns `ZX_OK` if successful.
     /// Returns `ZX_ERR_NO_MEMORY` if the request is valid but cannot be
@@ -291,94 +472,45 @@ protocol BufferCollection {
         status zx.status;
     });
 
-    /// The CloseBuffer() doesn't immediately force all VMO handles to that
-    /// buffer to close, but it does close any handle held by sysmem, and does
-    /// notify all participants of the desire to close the buffer at which point
-    /// each participant that's listening may close their handle to the buffer.
-    ///
-    /// Only a particpant with write can do this.  Coordination among multiple
-    /// participants with write is outside of the scope of this interface.
-    ///
-    /// `buffer_index` indicates which buffer to close.  If the buffer is already
-    /// closed this has no effect (idempotent).
-    CloseSingleBuffer(struct {
-        buffer_index uint64;
-    });
-
-    /// This allocates a new buffer that is consistent with the most recent call
-    /// to SetConstraints(), if possible.  If not possible, this indicates the
-    /// failure via OnNewBufferAllocated().
-    ///
-    /// Only a participant with write can do this.  Coordination among multiple
-    /// participants with write is outside the scope of this interface.
-    ///
-    /// The participant is (intentionally) never informed of other participant's
-    /// constraints.
+    @available(added=7, deprecated=8, removed=9)
     AllocateSingleBuffer(struct {
         buffer_index uint64;
     });
-
-    /// Completes when AllocateBuffer is done.  Callers who wish to avoid
-    /// blocking a thread while waiting can use OnAllocateSingleBufferDone()
-    /// instead.
+    @available(added=7, deprecated=8, removed=9)
+    CloseSingleBuffer(struct {
+        buffer_index uint64;
+    });
+    @available(added=7, deprecated=8, removed=9)
     WaitForSingleBufferAllocated(struct {
         buffer_index uint64;
     }) -> (resource struct {
         status zx.status;
         buffer_info SingleBufferInfo;
     });
-
-    /// A participant can use this message to have sysmem verify that this
-    /// buffer_index exists.  This message is intentionally ignored by the
-    /// server if the buffer_index _does_ exist.  In that case, the client will
-    /// see OnAllocateSingleBufferDone() soon with status == `ZX_OK` (if the
-    /// client hasn't already seen that message).  If on the other hand the
-    /// buffer_index does not exist, this message causes the server to send
-    /// OnAllocateSingleBufferDone() with status == `ZX_ERR_NOT_FOUND`.  A
-    /// particpant will typically use this when the participant receives a new
-    /// buffer_index that the participant doesn't yet know about, to ensure that
-    /// the participant won't be waiting forever for the
-    /// OnAllocateSingleBufferDone() message regarding this buffer_index.
+    @available(added=7, deprecated=8, removed=9)
     CheckSingleBufferAllocated(struct {
         buffer_index uint64;
     });
 
-    /// The server handles unexpected failure of a BufferCollection by failing
-    /// the whole logical buffer collection.  Partly this is to expedite closing
-    /// VMO handles.  If a participant would like to cleanly close a
-    /// BufferCollection view without causing logical buffer collection failure,
-    /// the participant can send Close() before closing the client end of the
-    /// BufferCollection channel.  If this is the last BufferCollection view, the
-    /// logical buffer collection will still go away.
-    Close();
-
-    /// Set a name for VMOs in this buffer collection. The name may be truncated shorter. The name
-    /// only affects VMOs allocated after it's set - this call does not rename existing VMOs. If
-    /// multiple clients set different names then the larger priority value will win.
-    SetName(struct {
-        priority uint32;
-        name string:64;
-    });
-
-    /// See BufferCollectionToken.SetClientDebugInfo.
-    SetDebugClientInfo(struct {
-        name string:64;
-        id uint64;
-    });
-
+    /// Deprecated
+    ///
     /// Optionally sent before SetConstraints() to set constraints related to
     /// clear (not encrypted, not in protected/secure memory) aux buffers.  This
     /// is only valid when sent before SetConstraints().  Invalid settings may
     /// not result in channel closure until SetConstraints() is received by
     /// sysmem.
+    @available(added=7, deprecated=9)
     SetConstraintsAuxBuffers(struct {
         constraints BufferCollectionConstraintsAuxBuffers;
     });
 
+    /// Deprecated
+    ///
     /// Allows getting any aux buffers allocated after using
     /// SetConstraintsAuxBuffers().
     ///
-    /// Sending this message is not permitted until WaitForBuffersAllocated() completes.
+    /// Sending this message is not permitted until WaitForBuffersAllocated()
+    /// completes.
     ///
     /// On failure, status will be a failing status and
     /// buffer_collection_info_aux_buffers won't be filled out, and won't have
@@ -397,6 +529,7 @@ protocol BufferCollection {
     /// It's legal for a participant that set
     /// "allow_clear_aux_buffers_for_secure" false to call GetAuxBuffers(), in
     /// which case buffer[0].vmo will not be set.
+    @available(added=7, deprecated=9)
     GetAuxBuffers() -> (resource struct {
         status zx.status;
         buffer_collection_info_aux_buffers BufferCollectionInfo_2;

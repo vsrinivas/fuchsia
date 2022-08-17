@@ -50,6 +50,7 @@ using DdkDeviceType =
 class Driver;
 class BufferCollectionToken;
 class LogicalBufferCollection;
+class Node;
 
 struct Settings {
   // Maximum size of a single allocation. Mainly useful for unit tests.
@@ -106,9 +107,9 @@ class Device final : public DdkDeviceType,
   [[nodiscard]] uint32_t pdev_device_info_pid();
 
   // Track/untrack the token by the koid of the server end of its FIDL
-  // channel.  TrackToken() is only allowed after token->SerServerKoid().
-  // UntrackToken() is allowed even if there was never a
-  // token->SetServerKoid() (in which case it's a nop).
+  // channel.  TrackToken() is only allowed after/during token->OnServerKoid().
+  // UntrackToken() is allowed even if there was never a token->OnServerKoid()
+  // (in which case it's a nop).
   //
   // While tracked, a token can be found with FindTokenByServerChannelKoid().
   void TrackToken(BufferCollectionToken* token);

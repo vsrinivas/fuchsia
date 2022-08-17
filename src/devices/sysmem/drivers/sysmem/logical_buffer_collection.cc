@@ -9,8 +9,10 @@
 #include <lib/ddk/trace/event.h>
 #include <lib/fidl/cpp/wire/arena.h>
 #include <lib/fit/defer.h>
+#include <lib/fpromise/result.h>
 #include <lib/image-format/image_format.h>
 #include <lib/sysmem-version/sysmem-version.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/clock.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
@@ -22,15 +24,17 @@
 #include <vector>
 
 #include <fbl/algorithm.h>
+#include <fbl/ref_ptr.h>
+#include <fbl/string.h>
 #include <fbl/string_printf.h>
 
 #include "buffer_collection.h"
 #include "buffer_collection_token.h"
 #include "device.h"
 #include "koid_util.h"
+#include "logging.h"
 #include "macros.h"
 #include "orphaned_node.h"
-#include "src/devices/sysmem/drivers/sysmem/logging.h"
 #include "usage_pixel_format_cost.h"
 #include "utils.h"
 
@@ -245,7 +249,7 @@ void LogicalBufferCollection::Create(zx::channel buffer_collection_token_request
       fbl::AdoptRef<LogicalBufferCollection>(new LogicalBufferCollection(parent_device));
   // The existence of a channel-owned BufferCollectionToken adds a
   // fbl::RefPtr<> ref to LogicalBufferCollection.
-  LogInfo(FROM_HERE, "LogicalBufferCollection::Create()");
+  logical_buffer_collection->LogInfo(FROM_HERE, "LogicalBufferCollection::Create()");
   logical_buffer_collection->root_ = NodeProperties::NewRoot(logical_buffer_collection.get());
   logical_buffer_collection->CreateBufferCollectionToken(
       logical_buffer_collection, logical_buffer_collection->root_.get(),
@@ -280,8 +284,8 @@ void LogicalBufferCollection::BindSharedCollection(Device* parent_device,
 
   zx_koid_t token_client_koid;
   zx_koid_t token_server_koid;
-  zx_status_t status =
-      get_channel_koids(buffer_collection_token, &token_client_koid, &token_server_koid);
+  zx_status_t status = get_handle_koids(buffer_collection_token, &token_client_koid,
+                                        &token_server_koid, ZX_OBJ_TYPE_CHANNEL);
   if (status != ZX_OK) {
     LogErrorStatic(FROM_HERE, client_debug_info, "Failed to get channel koids");
     // ~buffer_collection_token
@@ -334,7 +338,8 @@ void LogicalBufferCollection::CreateBufferCollectionToken(
     fbl::RefPtr<LogicalBufferCollection> self, NodeProperties* new_node_properties,
     fidl::ServerEnd<fuchsia_sysmem::BufferCollectionToken> token_request) {
   ZX_DEBUG_ASSERT(token_request);
-  auto& token = BufferCollectionToken::EmplaceInTree(parent_device_, self, new_node_properties);
+  auto& token = BufferCollectionToken::EmplaceInTree(self, new_node_properties,
+                                                     zx::unowned_channel(token_request.channel()));
   token.SetErrorHandler([this, &token](zx_status_t status) {
     // Clean close from FIDL channel point of view is ZX_ERR_PEER_CLOSED,
     // and ZX_OK is never passed to the error handler.
@@ -419,28 +424,23 @@ void LogicalBufferCollection::CreateBufferCollectionToken(
     }
   });
 
-  zx_koid_t server_koid;
-  zx_koid_t client_koid;
-  zx_status_t status = get_channel_koids(token_request.channel(), &server_koid, &client_koid);
-  if (status != ZX_OK) {
-    LogAndFailNode(FROM_HERE, new_node_properties, status,
-                   "get_channel_koids() failed - status: %d", status);
-    // ~token
+  if (token.create_status() != ZX_OK) {
+    LogAndFailNode(FROM_HERE, &token.node_properties(), token.create_status(),
+                   "token.status() failed - create_status: %d", token.create_status());
     return;
   }
-  token.SetServerKoid(server_koid);
-  if (token.was_unfound_token()) {
+
+  if (token.was_unfound_node()) {
     // No failure triggered by this, but a helpful debug message on how to avoid a previous failure.
     LogClientError(FROM_HERE, new_node_properties,
                    "BufferCollectionToken.Duplicate() received for creating token with server koid"
                    "%ld after BindSharedCollection() previously received attempting to use same"
                    "token.  Client sequence should be Duplicate(), Sync(), BindSharedCollection()."
                    "Missing Sync()?",
-                   server_koid);
+                   token.server_koid());
   }
 
-  LogInfo(FROM_HERE, "CreateBufferCollectionToken() - server_koid: %lu", token.server_koid());
-  token.Bind(std::move(token_request));
+  token.Bind(token_request.TakeChannel());
 }
 
 void LogicalBufferCollection::AttachLifetimeTracking(zx::eventpair server_end,
@@ -628,7 +628,7 @@ void LogErrorInternal(Location location, const char* format, ...) {
 }
 }  // namespace
 
-void LogicalBufferCollection::LogInfo(Location location, const char* format, ...) {
+void LogicalBufferCollection::LogInfo(Location location, const char* format, ...) const {
   va_list args;
   va_start(args, format);
   zxlogvf(DEBUG, location.file(), location.line(), format, args);
@@ -673,8 +673,6 @@ void LogicalBufferCollection::VLogClient(bool is_error, Location location,
   } else {
     LogInfo(location, "%s", formatted.c_str());
   }
-
-  va_end(args);
 }
 
 void LogicalBufferCollection::LogClientInfo(Location location,
@@ -774,10 +772,10 @@ void LogicalBufferCollection::MaybeAllocate() {
     // relevant other nodes.  The cost of enumeration could be reduced, but it should be good enough
     // given the expected participant counts.
     while (true) {
-    fresh_failure_domains:;
       auto failure_domains = FailureDomainSubtrees();
       // To get more detailed log output, we fail smaller trees first.
-      for (int32_t i = failure_domains.size() - 1; i >= 0; --i) {
+      int32_t i;
+      for (i = failure_domains.size() - 1; i >= 0; --i) {
         auto node_properties = failure_domains[i];
         if (node_properties->connected_client_count() == 0) {
           bool is_root = (node_properties == root_.get());
@@ -802,13 +800,15 @@ void LogicalBufferCollection::MaybeAllocate() {
           if (is_root) {
             return;
           }
-          // Not "continue" because we're nested within a for loop.
-          goto fresh_failure_domains;
+          ZX_DEBUG_ASSERT(i >= 0);
+          break;
         }
       }
-      // Processed all failure domains and found zero that needed to fail due to zero
-      // connected_client_count().
-      break;
+      if (i < 0) {
+        // Processed all failure domains and found zero that needed to fail due to zero
+        // connected_client_count().
+        break;
+      }
     }
 
     // We may have failed the root.  The caller is keeping "this" alive, so we can still check
@@ -824,6 +824,7 @@ void LogicalBufferCollection::MaybeAllocate() {
       // nothing to do
       return;
     }
+
     for (auto eligible_subtree : eligible_subtrees) {
       // It's possible to fail a sub-tree mid-way through processing sub-trees; in that case we're
       // fine to continue with the next sub-tree since failure of one sub-tree in the list doesn't
@@ -849,7 +850,9 @@ void LogicalBufferCollection::MaybeAllocate() {
         continue;
       }
 
-      // We know all the nodes of this sub-tree are ready to attempt allocation.
+      // We know all the nodes of this sub-tree are ready to attempt allocation.  Every path from
+      // here down will have done something.
+      did_something = true;
 
       ZX_DEBUG_ASSERT((!is_allocate_attempted_) == (eligible_subtree == root_.get()));
       ZX_DEBUG_ASSERT(is_allocate_attempted_ || eligible_subtrees.size() == 1);
@@ -1162,19 +1165,20 @@ void LogicalBufferCollection::TryLateLogicalAllocation(std::vector<NodePropertie
   fidl::OutgoingMessage& new_linear_buffer_collection_info =
       linearized_late_logical_allocation_buffer_collection_info->GetOutgoingMessage();
   if (!original_linear_buffer_collection_info.ok()) {
-    LOG(ERROR, "original error: %s",
-        original_linear_buffer_collection_info.FormatDescription().c_str());
+    LogError(FROM_HERE, "original error: %s",
+             original_linear_buffer_collection_info.FormatDescription().c_str());
   }
   if (!new_linear_buffer_collection_info.ok()) {
-    LOG(ERROR, "new error: %s", new_linear_buffer_collection_info.FormatDescription().c_str());
+    LogError(FROM_HERE, "new error: %s",
+             new_linear_buffer_collection_info.FormatDescription().c_str());
   }
   ZX_DEBUG_ASSERT(original_linear_buffer_collection_info.ok());
   ZX_DEBUG_ASSERT(new_linear_buffer_collection_info.ok());
   ZX_DEBUG_ASSERT(original_linear_buffer_collection_info.handle_actual() == 0);
   ZX_DEBUG_ASSERT(new_linear_buffer_collection_info.handle_actual() == 0);
   if (!original_linear_buffer_collection_info.BytesMatch(new_linear_buffer_collection_info)) {
-    LOG(WARNING,
-        "original_linear_buffer_collection_info.BytesMatch(new_linear_buffer_collection_info)");
+    LogInfo(FROM_HERE,
+            "original_linear_buffer_collection_info.BytesMatch(new_linear_buffer_collection_info)");
     LogDiffsBufferCollectionInfo(**buffer_collection_info_before_population_,
                                  unpopulated_buffer_collection_info);
     SetFailedLateLogicalAllocationResult(nodes[0], ZX_ERR_NOT_SUPPORTED);
@@ -1281,7 +1285,8 @@ void LogicalBufferCollection::BindSharedCollectionInternal(BufferCollectionToken
   // deletes the token.
   //
   // ~BufferCollectionToken calls UntrackTokenKoid().
-  auto& collection = BufferCollection::EmplaceInTree(self, token);
+  auto& collection =
+      BufferCollection::EmplaceInTree(self, token, zx::unowned_channel(buffer_collection_request));
   token = nullptr;
   collection.SetErrorHandler([this, &collection](zx_status_t status) {
     // status passed to an error handler is never ZX_OK.  Clean close is
@@ -1370,6 +1375,13 @@ void LogicalBufferCollection::BindSharedCollectionInternal(BufferCollectionToken
     // ~self may delete "this"
     return;
   });
+
+  if (collection.create_status() != ZX_OK) {
+    LogAndFailNode(FROM_HERE, &collection.node_properties(), collection.create_status(),
+                   "token.status() failed - create_status: %d", collection.create_status());
+    return;
+  }
+
   collection.Bind(std::move(buffer_collection_request));
   // ~self
 }
@@ -1442,31 +1454,35 @@ std::vector<NodeProperties*>
 LogicalBufferCollection::NodesOfPrunedSubtreeEligibleForLogicalAllocation(NodeProperties& subtree) {
   ZX_DEBUG_ASSERT(!subtree.buffers_logically_allocated());
   ZX_DEBUG_ASSERT((&subtree == root_.get()) || subtree.parent()->buffers_logically_allocated());
-  return subtree.BreadthFirstOrder([&subtree](const NodeProperties& node_properties) {
+  // Don't do anything during visit of each pruned subtree node, just keep all the pruned subtree
+  // nodes in the returned.
+  return subtree.BreadthFirstOrder(
+      PrunedSubtreeFilter(subtree, [](const NodeProperties& node_properties) { return true; }));
+}
+
+fit::function<NodeFilterResult(const NodeProperties&)> LogicalBufferCollection::PrunedSubtreeFilter(
+    NodeProperties& subtree, fit::function<bool(const NodeProperties&)> visit_keep) const {
+  return [&subtree, visit_keep = std::move(visit_keep)](const NodeProperties& node_properties) {
     bool in_subtree = false;
     bool iterate_children = true;
     for (const NodeProperties* iter = &node_properties; iter; iter = iter->parent()) {
       if (iter == &subtree) {
+        ZX_DEBUG_ASSERT(iterate_children);
         in_subtree = true;
         break;
       }
       if (iter->error_propagation_mode() == ErrorPropagationMode::kDoNotPropagate) {
+        ZX_DEBUG_ASSERT(!in_subtree);
         iterate_children = false;
         break;
       }
     }
-    return NodeFilterResult{.keep_node = in_subtree, .iterate_children = iterate_children};
-  });
-}
-
-void LogicalBufferCollection::LogTreeForDebugOnly(NodeProperties* node) {
-  LOG(INFO, "node: 0x%p", node);
-  LOG(INFO, "node->error_propagation_mode(): %u", node->error_propagation_mode());
-  LOG(INFO, "node->buffers_logically_allocated(): %u", node->buffers_logically_allocated());
-  for (auto& [child_ptr, child_smart_ptr] : node->children_) {
-    LOG(INFO, "child: 0x%p", child_ptr);
-    LogTreeForDebugOnly(child_ptr);
-  }
+    bool keep_node = false;
+    if (in_subtree) {
+      keep_node = visit_keep(node_properties);
+    }
+    return NodeFilterResult{.keep_node = keep_node, .iterate_children = iterate_children};
+  };
 }
 
 fpromise::result<fuchsia_sysmem2::wire::BufferCollectionConstraints, void>
@@ -3041,7 +3057,7 @@ LogicalBufferCollection::TrackedParentVmo::~TrackedParentVmo() {
 }
 
 zx_status_t LogicalBufferCollection::TrackedParentVmo::StartWait(async_dispatcher_t* dispatcher) {
-  LogInfo(FROM_HERE, "LogicalBufferCollection::TrackedParentVmo::StartWait()");
+  buffer_collection_->LogInfo(FROM_HERE, "LogicalBufferCollection::TrackedParentVmo::StartWait()");
   // The current thread is the dispatcher thread.
   ZX_DEBUG_ASSERT(!waiting_);
   zx_status_t status = zero_children_wait_.Begin(dispatcher);
@@ -3075,7 +3091,8 @@ void LogicalBufferCollection::TrackedParentVmo::OnZeroChildren(async_dispatcher_
                                                                const zx_packet_signal_t* signal) {
   TRACE_DURATION("gfx", "LogicalBufferCollection::TrackedParentVmo::OnZeroChildren",
                  "buffer_collection", buffer_collection_.get(), "child_koid", child_koid_);
-  LogInfo(FROM_HERE, "LogicalBufferCollection::TrackedParentVmo::OnZeroChildren()");
+  buffer_collection_->LogInfo(FROM_HERE,
+                              "LogicalBufferCollection::TrackedParentVmo::OnZeroChildren()");
   ZX_DEBUG_ASSERT(waiting_);
   waiting_ = false;
   if (status == ZX_ERR_CANCELED) {
@@ -3104,7 +3121,7 @@ void LogicalBufferCollection::AdjustRelevantNodeCounts(
     const Node& node, fit::function<void(uint32_t& count)> visitor) {
   for (NodeProperties* iter = &node.node_properties(); iter; iter = iter->parent()) {
     visitor(iter->node_count_);
-    if (node.is_connected()) {
+    if (node.is_connected_type()) {
       visitor(iter->connected_client_count_);
     }
     if (node.buffer_collection()) {
@@ -3210,6 +3227,12 @@ std::vector<const BufferCollection*> LogicalBufferCollection::collection_views()
 void LogicalBufferCollection::LogConstraints(
     Location location, NodeProperties* node_properties,
     const fuchsia_sysmem2::wire::BufferCollectionConstraints& constraints) const {
+  if (!node_properties) {
+    LogInfo(FROM_HERE, "Constraints (aggregated / previously chosen):");
+  } else {
+    LogInfo(FROM_HERE, "Constraints - NodeProperties: %p", node_properties);
+  }
+
   const fuchsia_sysmem2::wire::BufferCollectionConstraints& c = constraints;
 
   LOG_UINT32_FIELD(FROM_HERE, c, min_buffer_count);
@@ -3261,6 +3284,38 @@ void LogicalBufferCollection::LogConstraints(
     LOG_UINT32_FIELD(FROM_HERE, ifc, required_max_coded_height);
     LOG_UINT32_FIELD(FROM_HERE, ifc, required_min_bytes_per_row);
     LOG_UINT32_FIELD(FROM_HERE, ifc, required_max_bytes_per_row);
+  }
+}
+
+void LogicalBufferCollection::LogPrunedSubTree(NodeProperties* subtree) {
+  static_cast<void>(subtree->DepthFirstPreOrder(
+      PrunedSubtreeFilter(*subtree, [this, subtree](const NodeProperties& node_properties) {
+        uint32_t depth = 0;
+        for (auto iter = &node_properties; iter != subtree; iter = iter->parent()) {
+          ++depth;
+        }
+        std::string indent;
+        for (uint32_t i = 0; i < depth; ++i) {
+          indent += "  ";
+        }
+        LogInfo(FROM_HERE, "%sNodeProperties: %p (%s) has_constraints: %u ready: %u name: %s",
+                indent.c_str(), &node_properties, node_properties.node_type_name(),
+                node_properties.has_constraints(), node_properties.node()->ReadyForAllocation(),
+                node_properties.client_debug_info().name.c_str());
+        // No need to keep the nodes in a list; we've alread done what we need to do during the
+        // visit.
+        return false;
+      })));
+}
+
+void LogicalBufferCollection::LogNodeConstraints(std::vector<NodeProperties*> nodes) {
+  for (auto node : nodes) {
+    LogInfo(FROM_HERE, "Constraints for NodeProperties: %p (%s)", node, node->node_type_name());
+    if (!node->buffer_collection_constraints()) {
+      LogInfo(FROM_HERE, "No constraints in node: %p (%s)", node, node->node_type_name());
+    } else {
+      LogConstraints(FROM_HERE, node, *node->buffer_collection_constraints());
+    }
   }
 }
 

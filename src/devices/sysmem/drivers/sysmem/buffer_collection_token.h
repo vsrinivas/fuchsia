@@ -7,6 +7,8 @@
 
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
 
+#include "device.h"
+#include "lib/zx/channel.h"
 #include "logging.h"
 #include "logical_buffer_collection.h"
 #include "node.h"
@@ -24,85 +26,90 @@ class BufferCollectionToken : public Node,
   // The returned reference is owned by new_node_properties, which in turn is owned by
   // logical_buffer_collection->root_.
   static BufferCollectionToken& EmplaceInTree(
-      Device* parent_device, fbl::RefPtr<LogicalBufferCollection> logical_buffer_collection,
-      NodeProperties* new_node_properties);
+      fbl::RefPtr<LogicalBufferCollection> logical_buffer_collection,
+      NodeProperties* new_node_properties, zx::unowned_channel server_end);
 
-  void SetErrorHandler(fit::function<void(zx_status_t)> error_handler) {
-    error_handler_ = std::move(error_handler);
-  }
-  void Bind(fidl::ServerEnd<fuchsia_sysmem::BufferCollectionToken> token_request);
+  // FIDL "compose Node" "interface" (identical among BufferCollection, BufferCollectionToken)
+  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override;
+  void DeprecatedSync(DeprecatedSyncRequestView request,
+                      DeprecatedSyncCompleter::Sync& completer) override;
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override;
+  void DeprecatedClose(DeprecatedCloseRequestView request,
+                       DeprecatedCloseCompleter::Sync& completer) override;
+  void SetName(SetNameRequestView request, SetNameCompleter::Sync& completer) override;
+  void DeprecatedSetName(DeprecatedSetNameRequestView request,
+                         DeprecatedSetNameCompleter::Sync& completer) override;
+  void SetDebugClientInfo(SetDebugClientInfoRequestView request,
+                          SetDebugClientInfoCompleter::Sync& completer) override;
+  void DeprecatedSetDebugClientInfo(
+      DeprecatedSetDebugClientInfoRequestView request,
+      DeprecatedSetDebugClientInfoCompleter::Sync& completer) override;
+  void SetDebugTimeoutLogDeadline(SetDebugTimeoutLogDeadlineRequestView request,
+                                  SetDebugTimeoutLogDeadlineCompleter::Sync& completer) override;
+  void DeprecatedSetDebugTimeoutLogDeadline(
+      DeprecatedSetDebugTimeoutLogDeadlineRequestView request,
+      DeprecatedSetDebugTimeoutLogDeadlineCompleter::Sync& completer) override;
 
+  //
+  // fuchsia.sysmem.BufferCollectionToken interface methods (see also "compose Node" methods above)
+  //
   void DuplicateSync(DuplicateSyncRequestView request,
                      DuplicateSyncCompleter::Sync& completer) override;
   void Duplicate(DuplicateRequestView request, DuplicateCompleter::Sync& completer) override;
-  void Sync(SyncRequestView request, SyncCompleter::Sync& completer) override;
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override;
-  void SetName(SetNameRequestView request, SetNameCompleter::Sync& completer) override;
-  void SetDebugClientInfo(SetDebugClientInfoRequestView request,
-                          SetDebugClientInfoCompleter::Sync& completer) override;
-  void SetDebugTimeoutLogDeadline(SetDebugTimeoutLogDeadlineRequestView request,
-                                  SetDebugTimeoutLogDeadlineCompleter::Sync& completer) override;
   void SetDispensable(SetDispensableRequestView request,
                       SetDispensableCompleter::Sync& completer) override;
 
-  void SetDebugClientInfoInternal(std::string name, uint64_t id);
+  template <class Request, class CompleterSync>
+  void TokenCloseImplV1(Request request, CompleterSync& completer) {
+    // BufferCollectionToken has one additional error case we want to check, so check before calling
+    // Node::CloseImpl().
+    table_set().MitigateChurn();
+    if (buffer_collection_request_) {
+      FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
+               "BufferCollectionToken::Close() when buffer_collection_request_");
+      // We're failing async - no need to try to fail sync.
+      return;
+    }
+    CloseImplV1(request, completer);
+  }
 
-  void SetServerKoid(zx_koid_t server_koid);
-  zx_koid_t server_koid();
+  void OnServerKoid();
 
   void SetDispensableInternal();
 
   bool is_done();
 
-  bool was_unfound_token() const { return was_unfound_token_; }
-
   void SetBufferCollectionRequest(zx::channel buffer_collection_request);
 
   zx::channel TakeBufferCollectionRequest();
 
-  void CloseChannel(zx_status_t epitaph);
+  void CloseServerBinding(zx_status_t epitaph) override;
 
   // Node interface
   bool ReadyForAllocation() override;
   void OnBuffersAllocated(const AllocationResult& allocation_result) override;
-  void Fail(zx_status_t epitaph) override;
   BufferCollectionToken* buffer_collection_token() override;
   const BufferCollectionToken* buffer_collection_token() const override;
   BufferCollection* buffer_collection() override;
   const BufferCollection* buffer_collection() const override;
   OrphanedNode* orphaned_node() override;
   const OrphanedNode* orphaned_node() const override;
-  bool is_connected() const override;
+  bool is_connected_type() const override;
+  bool is_currently_connected() const override;
+  const char* node_type_string() const override;
+
+ protected:
+  void BindInternal(zx::channel token_request, ErrorHandlerWrapper error_handler_wrapper) override;
 
  private:
   friend class FidlServer;
 
-  BufferCollectionToken(Device* parent_device, fbl::RefPtr<LogicalBufferCollection> parent,
-                        NodeProperties* new_node_properties);
+  BufferCollectionToken(fbl::RefPtr<LogicalBufferCollection> parent,
+                        NodeProperties* new_node_properties, zx::unowned_channel server_end);
 
   void FailAsync(Location location, zx_status_t status, const char* format, ...);
 
-  template <typename Completer>
-  void FailSync(Location location, Completer& completer, zx_status_t status, const char* format,
-                ...);
-
-  Device* parent_device_ = nullptr;
-
-  // Cached from parent_.
-  TableSet& table_set_;
-
   std::optional<zx_status_t> async_failure_result_;
-  fit::function<void(zx_status_t)> error_handler_;
-
-  zx_koid_t server_koid_ = ZX_KOID_INVALID;
-
-  // Becomes true on the first Close() or BindSharedCollection().  This being
-  // true means a channel close is not fatal to the LogicalBufferCollection.
-  // However, if the client sends a redundant Close(), that is fatal to the
-  // BufferCollectionToken and fatal to the LogicalBufferCollection.
-  bool is_done_ = false;
-
-  bool was_unfound_token_ = false;
 
   std::optional<fidl::ServerBindingRef<fuchsia_sysmem::BufferCollectionToken>> server_binding_;
 

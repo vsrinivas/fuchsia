@@ -14,7 +14,10 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
+#include <lib/fidl/cpp/wire/arena.h>
 #include <lib/fidl/cpp/wire/channel.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
+#include <lib/fit/defer.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/clock.h>
@@ -29,13 +32,19 @@
 #include <zircon/pixelformat.h>
 #include <zircon/rights.h>
 #include <zircon/syscalls.h>
+#include <zircon/syscalls/object.h>
+#include <zircon/system/public/zircon/syscalls.h>
+#include <zircon/time.h>
 #include <zircon/types.h>
 
+#include <cstdint>
 #include <limits>
 #include <map>
+#include <memory>
 #include <random>
 #include <string>
 #include <thread>
+#include <variant>
 #include <vector>
 
 #include <fbl/algorithm.h>
@@ -50,6 +59,11 @@
 const char* kSysmemDevicePath = "/dev/class/sysmem/000";
 
 namespace {
+
+using Token = fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken>;
+using Collection = fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>;
+using SharedToken = std::shared_ptr<Token>;
+using SharedCollection = std::shared_ptr<Collection>;
 
 // This test observer is used to get the name of the current test to send to sysmem to identify the
 // client.
@@ -239,18 +253,23 @@ make_single_participant_collection() {
   return zx::ok(std::move(collection));
 }
 
-std::vector<fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>> create_clients(
-    uint32_t client_count) {
-  std::vector<fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>> result;
-
+fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken> create_initial_token() {
   auto allocator = connect_to_sysmem_service();
-
   auto token_endpoints_0 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
   ZX_ASSERT(token_endpoints_0.is_ok());
   auto [token_client_0, token_server_0] = std::move(*token_endpoints_0);
   ZX_ASSERT(allocator->AllocateSharedCollection(std::move(token_server_0)).ok());
-  auto next_token = fidl::BindSyncClient(std::move(token_client_0));
+  auto token = fidl::BindSyncClient(std::move(token_client_0));
+  auto wire_result = token->Sync();
+  ZX_ASSERT(wire_result.ok());
+  return token;
+}
 
+std::vector<fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>> create_clients(
+    uint32_t client_count) {
+  std::vector<fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>> result;
+  auto next_token = create_initial_token();
+  auto allocator = connect_to_sysmem_service();
   for (uint32_t i = 0; i < client_count; ++i) {
     auto cur_token = std::move(next_token);
     if (i < client_count - 1) {

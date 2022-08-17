@@ -954,6 +954,7 @@ uint32_t Device::pdev_device_info_pid() {
 
 void Device::TrackToken(BufferCollectionToken* token) {
   std::lock_guard checker(*loop_checker_);
+  ZX_DEBUG_ASSERT(token->has_server_koid());
   zx_koid_t server_koid = token->server_koid();
   ZX_DEBUG_ASSERT(server_koid != ZX_KOID_INVALID);
   ZX_DEBUG_ASSERT(tokens_by_koid_.find(server_koid) == tokens_by_koid_.end());
@@ -962,16 +963,15 @@ void Device::TrackToken(BufferCollectionToken* token) {
 
 void Device::UntrackToken(BufferCollectionToken* token) {
   std::lock_guard checker(*loop_checker_);
-  zx_koid_t server_koid = token->server_koid();
-  if (server_koid == ZX_KOID_INVALID) {
+  if (!token->has_server_koid()) {
     // The caller is allowed to un-track a token that never saw
-    // SetServerKoid().
+    // OnServerKoid().
     return;
   }
   // This is intentionally idempotent, to allow un-tracking from
   // BufferCollectionToken::CloseChannel() as well as from
   // ~BufferCollectionToken().
-  tokens_by_koid_.erase(server_koid);
+  tokens_by_koid_.erase(token->server_koid());
 }
 
 bool Device::TryRemoveKoidFromUnfoundTokenList(zx_koid_t token_server_koid) {
