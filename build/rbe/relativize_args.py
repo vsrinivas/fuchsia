@@ -19,6 +19,12 @@ import subprocess
 import sys
 from typing import Callable, Sequence
 
+_SCRIPT_BASENAME = os.path.basename(__file__)
+
+
+def msg(text: str):
+    print(f"[{_SCRIPT_BASENAME}] {text}")
+
 
 def split_transform_join(
         token: str, sep: str, transform: Callable[[str], str]) -> str:
@@ -57,10 +63,10 @@ def relativize_path(arg: str, start: str) -> str:
     Returns:
       possibly transformed arg with relative paths.
     """
-    assert os.path.isabs(start)
+    assert start == '.' or os.path.isabs(start)
     # Handle known compiler flags like -I/abs/path, -L/abs/path
     # Such flags are fused to their arguments without a delimiter.
-    for flag in {"-I", "-L", "-isystem"}:
+    for flag in ("-I", "-L", "-isystem"):
         if arg.startswith(flag):
             suffix = arg.lstrip(flag)
             return flag + relativize_path(suffix, start=start)
@@ -79,18 +85,18 @@ def relativize_command(command: Sequence[str],
     Returns:
       command using relative paths
     """
-    substituted_command = []
+    relativized_command = []
     # Subprocess calls do not work for commands that start with VAR=VALUE
     # environment variables, which is remedied by prefixing with 'env'.
     if command and "=" in command[0]:
-        substituted_command += ["/usr/bin/env"]
+        relativized_command += ["/usr/bin/env"]
 
-    substituted_command += [
+    relativized_command += [
         lexically_rewrite_token(tok, lambda x: relativize_path(x, working_dir))
         for tok in command
     ]
 
-    return substituted_command
+    return relativized_command
 
 
 def main_arg_parser() -> argparse.ArgumentParser:
@@ -134,12 +140,13 @@ def main(argv: Sequence[str]) -> None:
     parser = main_arg_parser()
     args = parser.parse_args(argv)
 
-    substituted_command = relativize_command(
-        command=args.command, working_dir=args.cwd)
+    command = args.command
+    relativized_command = relativize_command(
+        command=command, working_dir=args.cwd)
 
+    cmd_str = " ".join(relativized_command)
     if args.verbose or args.dry_run:
-        cmd_str = " ".join(substituted_command)
-        print(f"=== substituted command: {cmd_str}")
+        msg(f"Relativized command: {cmd_str}")
 
     if args.dry_run:
         return 0
@@ -147,8 +154,11 @@ def main(argv: Sequence[str]) -> None:
     if not args.enable:
         return subprocess.call(command)
 
-    return subprocess.call(substituted_command)
+    exit_code = subprocess.call(relativized_command)
+    if exit_code != 0:
+        msg(f"*** Relativized command failed (exit={exit_code}): {cmd_str}")
+    return exit_code
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+    sys.exit(main(sys.argv[1:]))
