@@ -49,6 +49,8 @@ class BufferCollectionToken : public Node,
   void DeprecatedSetDebugTimeoutLogDeadline(
       DeprecatedSetDebugTimeoutLogDeadlineRequestView request,
       DeprecatedSetDebugTimeoutLogDeadlineCompleter::Sync& completer) override;
+  void SetVerboseLogging(SetVerboseLoggingRequestView request,
+                         SetVerboseLoggingCompleter::Sync& completer) override;
 
   //
   // fuchsia.sysmem.BufferCollectionToken interface methods (see also "compose Node" methods above)

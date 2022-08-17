@@ -312,6 +312,10 @@ void BufferCollection::AttachLifetimeTracking(AttachLifetimeTrackingRequestView 
   MaybeFlushPendingLifetimeTracking();
 }
 
+void BufferCollection::SetVerboseLogging(SetVerboseLoggingRequestView request,
+                                         SetVerboseLoggingCompleter::Sync& completer) {
+  SetVerboseLoggingImplV1(request, completer);
+}
 
 void BufferCollection::Close(CloseRequestView request, CloseCompleter::Sync& completer) {
   CloseImplV1(request, completer);

@@ -99,6 +99,11 @@
         "name": "fuchsia.sysmem/BufferCollection.SetName"
     },
     {
+        "declaration": "()",
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/BufferCollection.SetVerboseLogging"
+    },
+    {
         "declaration": "() -> ()",
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollection.Sync"
@@ -285,6 +290,11 @@
         "declaration": "(uint32 priority,string:64 name)",
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollectionToken.SetName"
+    },
+    {
+        "declaration": "()",
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/BufferCollectionToken.SetVerboseLogging"
     },
     {
         "declaration": "() -> ()",
@@ -1127,6 +1137,11 @@
         "declaration": "(uint32 priority,string:64 name)",
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/Node.SetName"
+    },
+    {
+        "declaration": "()",
+        "kind": "protocol/member",
+        "name": "fuchsia.sysmem/Node.SetVerboseLogging"
     },
     {
         "declaration": "() -> ()",

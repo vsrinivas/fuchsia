@@ -213,6 +213,11 @@ void BufferCollectionToken::SetDispensableInternal() {
   }
 }
 
+void BufferCollectionToken::SetVerboseLogging(SetVerboseLoggingRequestView request,
+                                              SetVerboseLoggingCompleter::Sync& completer) {
+  SetVerboseLoggingImplV1(request, completer);
+}
+
 BufferCollectionToken::BufferCollectionToken(
     fbl::RefPtr<LogicalBufferCollection> logical_buffer_collection_param,
     NodeProperties* new_node_properties, zx::unowned_channel server_end)

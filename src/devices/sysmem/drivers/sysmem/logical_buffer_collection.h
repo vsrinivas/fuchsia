@@ -91,6 +91,7 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
 
   void SetName(uint32_t priority, std::string name);
   void SetDebugTimeoutLogDeadline(int64_t deadline);
+  void SetVerboseLogging();
 
   uint64_t CreateDispensableOrdinal();
 
@@ -117,6 +118,8 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   }
 
   inspect::Node& inspect_node() { return inspect_node_; }
+
+  bool is_verbose_logging() const { return is_verbose_logging_; }
 
  private:
   friend class NodeProperties;
@@ -646,6 +649,8 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
   ParentVmoMap parent_vmos_;
   async::TaskMethod<LogicalBufferCollection, &LogicalBufferCollection::CreationTimedOut>
       creation_timer_{this};
+
+  bool is_verbose_logging_ = false;
 };
 
 }  // namespace sysmem_driver

@@ -46,6 +46,8 @@ class BufferCollection : public Node, public fidl::WireServer<fuchsia_sysmem::Bu
       DeprecatedSetDebugClientInfoCompleter::Sync& completer) override;
   void SetDebugTimeoutLogDeadline(SetDebugTimeoutLogDeadlineRequestView request,
                                   SetDebugTimeoutLogDeadlineCompleter::Sync& completer) override;
+  void SetVerboseLogging(SetVerboseLoggingRequestView request,
+                         SetVerboseLoggingCompleter::Sync& completer) override;
 
   //
   // fuchsia.sysmem.BufferCollection interface methods (see also "compose Node" methods above)

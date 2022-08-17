@@ -488,6 +488,11 @@ void LogicalBufferCollection::SetDebugTimeoutLogDeadline(int64_t deadline) {
   ZX_ASSERT(status == ZX_OK);
 }
 
+void LogicalBufferCollection::SetVerboseLogging() {
+  is_verbose_logging_ = true;
+  LogInfo(FROM_HERE, "SetVerboseLogging()");
+}
+
 uint64_t LogicalBufferCollection::CreateDispensableOrdinal() { return next_dispensable_ordinal_++; }
 
 AllocationResult LogicalBufferCollection::allocation_result() {
@@ -631,7 +636,11 @@ void LogErrorInternal(Location location, const char* format, ...) {
 void LogicalBufferCollection::LogInfo(Location location, const char* format, ...) const {
   va_list args;
   va_start(args, format);
-  zxlogvf(DEBUG, location.file(), location.line(), format, args);
+  if (is_verbose_logging()) {
+    zxlogvf(INFO, location.file(), location.line(), format, args);
+  } else {
+    zxlogvf(DEBUG, location.file(), location.line(), format, args);
+  }
   va_end(args);
 }
 
@@ -848,6 +857,16 @@ void LogicalBufferCollection::MaybeAllocate() {
       if (found_not_ready_node) {
         // next sub-tree
         continue;
+      }
+
+      if (is_verbose_logging()) {
+        // All constraints, including NodeProperties* to ID the node.  Logged only once per subtree.
+        LogInfo(FROM_HERE, "pruned subtree - node constraints:");
+        LogNodeConstraints(nodes);
+        // Log after constraints also, mainly to make the tree view easier to reference in the log
+        // since the constraints log info can be a bit long.
+        LogInfo(FROM_HERE, "pruned subtree (including all group children):");
+        LogPrunedSubTree(eligible_subtree);
       }
 
       // We know all the nodes of this sub-tree are ready to attempt allocation.  Every path from
@@ -1105,6 +1124,12 @@ void LogicalBufferCollection::TryLateLogicalAllocation(std::vector<NodePropertie
     existing_constraints.set_need_clear_aux_buffers_for_secure(true);
   }
   existing_constraints.set_allow_clear_aux_buffers_for_secure(true);
+
+  if (is_verbose_logging()) {
+    LogInfo(FROM_HERE, "constraints from initial allocation:");
+    LogConstraints(FROM_HERE, nullptr, existing_constraints);
+  }
+
   // We could make this temp NodeProperties entirely stack-based, but we'd rather enforce that
   // NodeProperties is always tracked with std::unique_ptr<NodeProperties>.
   auto tmp_node = NodeProperties::NewTemporary(this, std::move(existing_constraints),

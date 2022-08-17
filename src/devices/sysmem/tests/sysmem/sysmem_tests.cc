@@ -296,8 +296,67 @@ std::vector<fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>> create_clien
     }
     result.emplace_back(std::move(collection_client));
   }
-
   return result;
+}
+
+fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken> create_token_under_token(
+    fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken>& token_a) {
+  auto token_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
+  ZX_ASSERT(token_endpoints.is_ok());
+  auto [token_b_client, token_b_server] = std::move(*token_endpoints);
+  auto duplicate_result = token_a->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_b_server));
+  ZX_ASSERT(duplicate_result.ok());
+  auto token_b = fidl::BindSyncClient(std::move(token_b_client));
+  auto sync_result = token_b->Sync();
+  ZX_ASSERT(sync_result.ok());
+  return token_b;
+}
+
+void check_token_alive(fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken>& token) {
+  constexpr uint32_t kIterations = 1;
+  for (uint32_t i = 0; i < kIterations; ++i) {
+    zx::nanosleep(zx::deadline_after(zx::usec(500)));
+    auto sync_result = token->Sync();
+    ZX_ASSERT(sync_result.ok());
+  }
+}
+
+fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> convert_token_to_collection(
+    fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken> token) {
+  auto allocator = connect_to_sysmem_service();
+  auto collection_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
+  ZX_ASSERT(collection_endpoints.is_ok());
+  auto [collection_client, collection_server] = std::move(*collection_endpoints);
+  auto result =
+      allocator->BindSharedCollection(token.TakeClientEnd(), std::move(collection_server));
+  ZX_ASSERT(result.ok());
+  return fidl::BindSyncClient(std::move(collection_client));
+}
+
+void set_picky_constraints(fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>& collection,
+                           uint32_t exact_buffer_size) {
+  ZX_ASSERT(exact_buffer_size % zx_system_get_page_size() == 0);
+  fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
+  constraints.usage.cpu =
+      fuchsia_sysmem::wire::kCpuUsageReadOften | fuchsia_sysmem::wire::kCpuUsageWriteOften;
+  constraints.min_buffer_count_for_camping = 1;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints = fuchsia_sysmem::wire::BufferMemoryConstraints{
+      .min_size_bytes = exact_buffer_size,
+      // Allow a max that's just large enough to accommodate the size implied
+      // by the min frame size and PixelFormat.
+      .max_size_bytes = exact_buffer_size,
+      .physically_contiguous_required = false,
+      .secure_required = false,
+      .ram_domain_supported = false,
+      .cpu_domain_supported = true,
+      .inaccessible_domain_supported = false,
+      .heap_permitted_count = 0,
+      .heap_permitted = {},
+  };
+  constraints.image_format_constraints_count = 0;
+  auto result = collection->SetConstraints(true, std::move(constraints));
+  ZX_ASSERT(result.ok());
 }
 
 const std::string& GetBoardName() {
@@ -4417,6 +4476,45 @@ TEST(Sysmem, SetDispensable) {
 
     // next variant, if any
   }
+}
+
+TEST(Sysmem, SetVerboseLogging) {
+  // Verbose logging shouldn't have any observable effect via the sysmem protocols, so this test
+  // mainly just checks that having verbose logging enabled for a failed allocation doesn't crash
+  // sysmem.  In addition, the log output during this test can be manually checked to make sure it's
+  // significantly more verbose as intended.
+
+  auto root_token = create_initial_token();
+  auto set_verbose_result = root_token->SetVerboseLogging();
+  ASSERT_TRUE(set_verbose_result.ok());
+  auto child_token = create_token_under_token(root_token);
+  auto child2_token = create_token_under_token(child_token);
+  check_token_alive(child_token);
+  check_token_alive(child2_token);
+  const uint32_t kCompatibleSize = zx_system_get_page_size();
+  const uint32_t kIncompatibleSize = 2 * zx_system_get_page_size();
+  auto root = convert_token_to_collection(std::move(root_token));
+  auto child = convert_token_to_collection(std::move(child_token));
+  auto child2 = convert_token_to_collection(std::move(child2_token));
+  set_picky_constraints(root, kCompatibleSize);
+  set_picky_constraints(child, kIncompatibleSize);
+  auto set_result =
+      child2->SetConstraints(false, fuchsia_sysmem::wire::BufferCollectionConstraints{});
+  ASSERT_TRUE(set_result.ok());
+  auto root_result = root->WaitForBuffersAllocated();
+  ASSERT_TRUE(!root_result.ok() && root_result.error().status() == ZX_ERR_PEER_CLOSED ||
+              root_result.ok() && root_result->status == ZX_ERR_NOT_SUPPORTED);
+  auto child_result = child->WaitForBuffersAllocated();
+  ASSERT_TRUE(!child_result.ok() && child_result.error().status() == ZX_ERR_PEER_CLOSED ||
+              child_result.ok() && child_result->status == ZX_ERR_NOT_SUPPORTED);
+  auto child2_result = child2->WaitForBuffersAllocated();
+  ASSERT_TRUE(!child2_result.ok() && child2_result.error().status() == ZX_ERR_PEER_CLOSED ||
+              child2_result.ok() && child2_result->status == ZX_ERR_NOT_SUPPORTED);
+
+  // Make sure sysmem is still alive.
+  auto check_token = create_initial_token();
+  auto sync_result = check_token->Sync();
+  ASSERT_TRUE(sync_result.ok());
 }
 
 int main(int argc, char** argv) {

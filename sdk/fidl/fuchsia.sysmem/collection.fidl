@@ -127,12 +127,21 @@ protocol Node {
     /// arbitrary id, but the current process ID (see
     /// fsl::GetCurrentProcessKoid()) is a good default.
     ///
+    /// Also used when verbose logging is enabled (see SetVerboseLogging()) to
+    /// indicate which client is closing their channel first, leading to
+    /// sub-tree failure (which can be normal if the purpose of the sub-tree is
+    /// over, but if happening earlier than expected, the
+    /// client-channel-specific name can help diagnose where the failure is
+    /// first coming from, from sysmem's point of view).
+    ///
     /// By default (unless overriden by this message or using
     /// Allocator.SetDebugClientInfo()), a Node will copy info from its
     /// parent Node at the time the child Node is created.  While this can be
     /// better than nothing, it's often better for each participant to use
     /// Node.SetDebugClientInfo() or Allocator.SetDebugClientInfo() to keep the
-    /// info directly relevant to the current client.
+    /// info directly relevant to the current client.  Also, SetVerboseLogging()
+    /// can be used to help disambiguate if a Node is suspected of having info
+    /// that was copied from its parent.
     @available(added=9)
     SetDebugClientInfo(struct {
         name string:64;
@@ -147,6 +156,39 @@ protocol Node {
     SetDebugTimeoutLogDeadline(struct {
         deadline zx.time;
     });
+
+    // SetVerboseLogging()
+    //
+    /// Verbose logging includes constraints set via SetConstraints() from each
+    /// client along with info set via SetDebugClientInfo() and the structure of
+    /// the tree of Node(s).
+    ///
+    /// Normally sysmem prints only a single line complaint when aggregation
+    /// fails, with just the specific detailed reason that aggregation failed,
+    /// with minimal context.  While this is often enough to diagnose a problem
+    /// if only a small change was made and the system had been working before
+    /// the small change, it's often not particularly helpful for getting a new
+    /// buffer collection to work for the first time.  Especially with more
+    /// complex trees of nodes, involving things like AttachToken(),
+    /// SetDispensable(), BufferCollectionTokenGroup nodes, and associated
+    /// sub-trees of nodes, verbose logging may help in diagnosing what the tree
+    /// looks like and why it's failing a logical allocation, or why a tree or
+    /// sub-tree is failing sooner than expected.
+    ///
+    /// The intent of the extra logging is to be acceptable from a performance
+    /// point of view, if only enabled on a low number of buffer collections.
+    /// If we're not tracking down a bug, we shouldn't send this message.
+    ///
+    /// If too many participants leave verbose logging enabled, we may end up
+    /// needing to require that system-wide sysmem verbose logging be permitted
+    /// via some other setting, to avoid sysmem spamming the log too much due to
+    /// this message.
+    ///
+    /// This may be a NOP for some nodes due to intentional policy associated
+    /// with the node, if we don't trust a node enough to let it turn on verbose
+    /// logging.
+    @available(added=9)
+    SetVerboseLogging();
 };
 
 /// A BufferCollectionToken is not a BufferCollection, but rather a way to

@@ -201,6 +201,17 @@ class Node : public fbl::RefCounted<Node> {
     logical_buffer_collection().SetDebugTimeoutLogDeadline(request->deadline);
   }
 
+  template <class SetVerboseLoggingRequestView, class SetVerboseLoggingCompleterSync>
+  void SetVerboseLoggingImplV1(SetVerboseLoggingRequestView request,
+                               SetVerboseLoggingCompleterSync& completer) {
+    table_set().MitigateChurn();
+    if (is_done_) {
+      FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE, "SetVerboseLogging() after Close()");
+      return;
+    }
+    logical_buffer_collection_->SetVerboseLogging();
+  }
+
   void CloseChannel(zx_status_t epitaph);
 
   virtual void CloseServerBinding(zx_status_t epitaph) = 0;
