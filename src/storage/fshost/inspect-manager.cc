@@ -164,7 +164,24 @@ void FshostInspectManager::FillFileTreeSizes(fidl::ClientEnd<fio::Directory> cur
 }
 
 void FshostInspectManager::LogMigrationStatus(zx_status_t status) {
-  migration_status_ = inspector_.GetRoot().CreateInt("migration_status", status);
+  if (!migration_status_node_) {
+    migration_status_node_ = inspector_.GetRoot().CreateChild("migration_status");
+  }
+  switch (status) {
+    case ZX_OK: {
+      migration_status_ = migration_status_node_->CreateInt("success", 1);
+      break;
+    }
+    case ZX_ERR_NO_SPACE: {
+      migration_status_ = migration_status_node_->CreateInt("out_of_space", 1);
+      break;
+    }
+    default: {
+      FX_LOGS(ERROR) << "Migration failed with status: " << status;
+      migration_status_ = migration_status_node_->CreateInt("other_error", 1);
+      break;
+    }
+  }
 }
 
 void FshostInspectManager::LogCorruption(fs_management::DiskFormat format) {

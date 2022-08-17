@@ -431,6 +431,30 @@
             "metric_id": 70,
             "metric_type": "IntHistogram",
             "selector": "bootstrap/fshost:root/minfs/fs.opstats/write:latency"
+        },
+        {
+            "event_codes": [
+                0
+            ],
+            "metric_id": 9005,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/fshost:root/migration_status:success"
+        },
+        {
+            "event_codes": [
+                1
+            ],
+            "metric_id": 9005,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/fshost:root/migration_status:out_of_space"
+        },
+        {
+            "event_codes": [
+                2
+            ],
+            "metric_id": 9005,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/fshost:root/migration_status:other_error"
         }
     ],
     "poll_rate_sec": 600,
