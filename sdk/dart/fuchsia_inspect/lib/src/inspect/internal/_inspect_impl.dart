@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'package:fuchsia_services/services.dart';
-import 'package:fuchsia_services/src/dart_vm.dart';
 import 'package:fuchsia_vfs/vfs.dart';
 import 'package:meta/meta.dart';
 import 'package:zircon/zircon.dart';

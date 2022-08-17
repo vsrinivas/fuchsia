@@ -635,6 +635,10 @@
           "name": "src/component_context.dart",
           "type": "ExportDirectiveImpl"
         },
+        "src/dart_vm.dart": {
+          "name": "src/dart_vm.dart",
+          "type": "ExportDirectiveImpl"
+        },
         "src/incoming.dart": {
           "name": "src/incoming.dart",
           "type": "ExportDirectiveImpl"
