@@ -16,7 +16,7 @@ rustc_test("fuchsia_component_test_tests_bin") {
   deps = [
     "..:fuchsia-component-test",
     "//examples/components/routing/fidl:echo_rust",
-    "//examples/components/services:fuchsia.examples.services_rust",
+    "//examples/components/services/fidl:fuchsia.examples.services_rust",
     "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
     "//sdk/fidl/fuchsia.component.test:fuchsia.component.test_rust",

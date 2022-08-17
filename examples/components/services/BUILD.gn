@@ -3,8 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/fidl/fidl.gni")
-import("//build/rust/rustc_binary.gni")
 
 group("services") {
   testonly = true
@@ -16,75 +14,17 @@ group("tests") {
   deps = [ ":service-examples" ]
 }
 
-fidl("fuchsia.examples.services") {
-  sources = [ "test.fidl" ]
-}
-
-rustc_test("branch-bin") {
-  edition = "2021"
-  deps = [
-    ":fuchsia.examples.services_rust",
-    "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
-    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia",
-    "//src/lib/fuchsia-component",
-    "//src/lib/fuchsia-fs",
-    "//third_party/rust_crates:tracing",
-  ]
-  sources = [ "src/branch.rs" ]
-  source_root = "src/branch.rs"
-}
-
-rustc_binary("provider-bin") {
-  edition = "2021"
-  output_name = "provider_bin"
-  deps = [
-    ":fuchsia.examples.services_rust",
-    "//src/lib/fuchsia",
-    "//src/lib/fuchsia-component",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:tracing",
-  ]
-  sources = [ "src/provider.rs" ]
-  source_root = "src/provider.rs"
-}
-
 fuchsia_component("services-cmp") {
   testonly = true
   component_name = "services"
   manifest = "meta/services.cml"
 }
 
-fuchsia_component("branch-cmp") {
-  testonly = true
-  component_name = "branch"
-  manifest = "meta/branch.cml"
-  deps = [ ":branch-bin" ]
-}
-
-fuchsia_component("provider-a-cmp") {
-  testonly = true
-  component_name = "provider-a"
-  manifest = "meta/provider-a.cml"
-  deps = [ ":provider-bin" ]
-}
-
-fuchsia_component("provider-b-cmp") {
-  testonly = true
-  component_name = "provider-b"
-  manifest = "meta/provider-b.cml"
-  deps = [ ":provider-bin" ]
-}
-
-# Run with `fx test service-examples`.
 fuchsia_test_package("service-examples") {
   test_components = [ ":services-cmp" ]
   deps = [
-    ":branch-cmp",
-    ":provider-a-cmp",
-    ":provider-b-cmp",
+    "rust:branch-cmp",
+    "rust:provider-a-cmp",
+    "rust:provider-b-cmp",
   ]
 }

@@ -1,0 +1,59 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_test("branch-bin") {
+  edition = "2021"
+  deps = [
+    "//examples/components/services/fidl:fuchsia.examples.services_rust",
+    "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-fs",
+    "//third_party/rust_crates:tracing",
+  ]
+  sources = [ "src/branch.rs" ]
+  source_root = "src/branch.rs"
+}
+
+rustc_binary("provider-bin") {
+  edition = "2021"
+  output_name = "provider_bin"
+  deps = [
+    "//examples/components/services/fidl:fuchsia.examples.services_rust",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
+  ]
+  sources = [ "src/provider.rs" ]
+  source_root = "src/provider.rs"
+}
+
+fuchsia_component("branch-cmp") {
+  testonly = true
+  component_name = "branch"
+  manifest = "meta/branch.cml"
+  deps = [ ":branch-bin" ]
+}
+
+fuchsia_component("provider-a-cmp") {
+  testonly = true
+  component_name = "provider-a"
+  manifest = "meta/provider-a.cml"
+  deps = [ ":provider-bin" ]
+}
+
+fuchsia_component("provider-b-cmp") {
+  testonly = true
+  component_name = "provider-b"
+  manifest = "meta/provider-b.cml"
+  deps = [ ":provider-bin" ]
+}

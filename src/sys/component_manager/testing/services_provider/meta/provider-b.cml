@@ -1,0 +1,29 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/services_provider_test",
+
+        // format is [<owner_name>, <inital_balance_cents>]
+        args: [
+            "B",
+            "42",
+        ],
+    },
+    capabilities: [
+        { service: "fuchsia.examples.services.BankAccount" },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+        {
+            service: "fuchsia.examples.services.BankAccount",
+            from: "self",
+        },
+    ],
+}
