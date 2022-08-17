@@ -30,7 +30,7 @@ std::shared_ptr<SilencePaddingStage> MakeSilencePaddingStage(
   auto stage = std::make_shared<SilencePaddingStage>(
       kFormat, DefaultClockKoid(), silence_frame_count, round_down_fractional_frames);
   if (source) {
-    stage->AddSource(source, {});
+    stage->AddSource(source, /*options=*/{});
   }
   stage->UpdatePresentationTimeToFracFrame(DefaultPresentationTimeToFracFrame(kFormat));
   return stage;

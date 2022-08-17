@@ -21,7 +21,7 @@ namespace media_audio {
 class ProducerStage : public PipelineStage {
  public:
   // Implements `PipelineStage`.
-  void AddSource(PipelineStagePtr source, std::unordered_set<GainControlId> gain_ids) final {
+  void AddSource(PipelineStagePtr source, AddSourceOptions options) final {
     FX_CHECK(false) << "ProducerStage should not have a source";
   }
   void RemoveSource(PipelineStagePtr source) final {

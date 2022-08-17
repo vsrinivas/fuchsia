@@ -9,6 +9,7 @@
 #include <lib/zx/time.h>
 
 #include <atomic>
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -16,6 +17,7 @@
 
 #include <ffl/string.h>
 
+#include "src/media/audio/lib/clock/clock_synchronizer.h"
 #include "src/media/audio/lib/format2/fixed.h"
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
@@ -76,7 +78,11 @@ class PipelineStage {
   // Adds a source stream.
   //
   // Required: caller must verify that `source` produces a stream with a compatible format.
-  virtual void AddSource(PipelineStagePtr source, std::unordered_set<GainControlId> gain_ids)
+  struct AddSourceOptions {
+    std::shared_ptr<ClockSynchronizer> clock_sync = nullptr;
+    std::unordered_set<GainControlId> gain_ids = {};
+  };
+  virtual void AddSource(PipelineStagePtr source, AddSourceOptions options)
       TA_REQ(thread()->checker()) = 0;
 
   // Removes a source stream.

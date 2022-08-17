@@ -35,8 +35,8 @@ class CustomStage : public PipelineStage {
               zx_koid_t reference_clock_koid);
 
   // Implements `PipelineStage`.
-  void AddSource(PipelineStagePtr source, std::unordered_set<GainControlId> gain_ids) final {
-    source_.AddSource(std::move(source), std::move(gain_ids));
+  void AddSource(PipelineStagePtr source, AddSourceOptions options) final {
+    source_.AddSource(std::move(source), std::move(options));
   }
   void RemoveSource(PipelineStagePtr source) final { source_.RemoveSource(std::move(source)); }
   void UpdatePresentationTimeToFracFrame(std::optional<TimelineFunction> f) final {

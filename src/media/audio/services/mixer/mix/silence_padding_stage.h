@@ -96,14 +96,15 @@ class SilencePaddingStage : public PipelineStage {
         silence_buffer_(silence_frame_count_ * format.bytes_per_frame(), 0) {}
 
   // Implements `PipelineStage`.
-  void AddSource(PipelineStagePtr source, std::unordered_set<GainControlId> gain_ids) final {
+  void AddSource(PipelineStagePtr source, AddSourceOptions options) final {
     FX_CHECK(!source_) << "SilencePaddingStage does not support multiple sources";
     FX_CHECK(source) << "SilencePaddingStage cannot add null source";
     FX_CHECK(source->format() == format())
         << "SilencePaddingStage format does not match with source format";
-    FX_CHECK(gain_ids.empty());
     FX_CHECK(source->reference_clock_koid() == reference_clock_koid())
         << "SilencePaddingStage clock does not match with source clock";
+    FX_CHECK(options.gain_ids.empty());
+    FX_CHECK(!options.clock_sync);
     source_ = std::move(source);
   }
   void RemoveSource(PipelineStagePtr source) final {

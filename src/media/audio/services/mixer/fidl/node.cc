@@ -215,8 +215,8 @@ fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdge(
 
   global_queue.Push(dest->thread()->id(), [dest, src]() {
     ScopedThreadChecker checker(dest->pipeline_stage()->thread()->checker());
-    // TODO(fxbug.dev/87651): Pass in `gain_ids`.
-    dest->pipeline_stage()->AddSource(src->pipeline_stage(), {});
+    // TODO(fxbug.dev/87651): Pass in `options`.
+    dest->pipeline_stage()->AddSource(src->pipeline_stage(), /*options=*/{});
   });
 
   return fpromise::ok();

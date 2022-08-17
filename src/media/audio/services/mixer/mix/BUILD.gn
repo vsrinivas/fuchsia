@@ -50,6 +50,7 @@ source_set("mix") {
   ]
 
   public_deps = [
+    "//src/media/audio/lib/clock",
     "//src/media/audio/lib/processing",
     "//src/media/audio/services/common",
     "//src/media/audio/services/mixer/common",

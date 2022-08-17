@@ -49,7 +49,7 @@ class FakeStage : public PipelineStage {
         packets_(std::move(packets)) {}
 
   // TODO(fxbug.dev/87651): Use this instead of the constructor.
-  void AddSource(PipelineStagePtr source, std::unordered_set<GainControlId> gain_ids) override {}
+  void AddSource(PipelineStagePtr source, AddSourceOptions options) override {}
   void RemoveSource(PipelineStagePtr source) override {}
   void UpdatePresentationTimeToFracFrame(std::optional<TimelineFunction> f) override {
     set_presentation_time_to_frac_frame(f);
@@ -124,7 +124,7 @@ class PassthroughStage : public PipelineStage {
       : PipelineStage("PassthroughStage", source->format(), DefaultClockKoid()), source_(source) {}
 
   // TODO(fxbug.dev/87651): Use this instead of the constructor.
-  void AddSource(PipelineStagePtr source, std::unordered_set<GainControlId> gain_ids) override {}
+  void AddSource(PipelineStagePtr source, AddSourceOptions options) override {}
   void RemoveSource(PipelineStagePtr source) override {}
   void UpdatePresentationTimeToFracFrame(std::optional<TimelineFunction> f) override {
     set_presentation_time_to_frac_frame(f);

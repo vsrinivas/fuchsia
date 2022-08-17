@@ -195,7 +195,7 @@ PipelineStagePtr MakeCustomStage(ProcessorConfiguration config, PipelineStagePtr
   PipelineStagePtr custom_stage = std::make_shared<CustomStage>(config, DefaultClockKoid());
   custom_stage->set_thread(DetachedThread::Create());
   ScopedThreadChecker checker(custom_stage->thread()->checker());
-  custom_stage->AddSource(std::move(source_stage), {});
+  custom_stage->AddSource(std::move(source_stage), /*options=*/{});
   custom_stage->UpdatePresentationTimeToFracFrame(
       DefaultPresentationTimeToFracFrame(custom_stage->format()));
   return custom_stage;
