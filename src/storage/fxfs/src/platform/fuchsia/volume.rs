@@ -16,7 +16,7 @@ use {
             directory::FxDirectory,
             file::FxFile,
             node::{FxNode, GetResult, NodeCache},
-            pager::Pager,
+            pager::{Pager, PagerExecutor},
             vmo_data_buffer::VmoDataBuffer,
         },
         serialized_types::LATEST_VERSION,
@@ -61,7 +61,7 @@ impl FxVolume {
         Ok(Self {
             cache: NodeCache::new(),
             store,
-            pager: Pager::new()?,
+            pager: Pager::new(PagerExecutor::global_instance())?,
             executor: fasync::EHandle::local(),
             flush_task: Mutex::new(None),
             fs_id,
@@ -118,7 +118,7 @@ impl FxVolume {
         if let Err(e) = sync_status {
             error!(error = e.as_value(), "Failed to sync filesystem; data may be lost");
         }
-        self.pager.terminate().await;
+        self.pager.terminate();
     }
 
     /// Attempts to get a node from the node cache. If the node wasn't present in the cache, loads
