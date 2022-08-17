@@ -44,6 +44,8 @@ pub enum OmahaResponse {
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct ResponseAndMetadata {
+    // Note: Keep this struct up-to-date with responseAndMetadata within
+    // omaha_tool/omaha.go.
     pub response: OmahaResponse,
     pub merkle: Hash,
     pub check_assertion: UpdateCheckAssertion,
@@ -306,10 +308,15 @@ pub async fn handle_omaha_request(
                     }
                 }
 
-                assert_eq!(
-                    app.get("cohort").and_then(|v| v.as_str()),
-                    expected.cohort_assertion.as_deref()
-                );
+                if let Some(cohort_assertion) = &expected.cohort_assertion {
+                    assert_eq!(
+                        app.get("cohort")
+                            .expect("expected cohort")
+                            .as_str()
+                            .expect("cohort is string"),
+                        cohort_assertion
+                    );
+                }
 
                 let updatecheck = match expected.response {
                     OmahaResponse::Update => json!({

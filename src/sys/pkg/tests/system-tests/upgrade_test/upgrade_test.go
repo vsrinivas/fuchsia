@@ -59,6 +59,8 @@ func TestOTA(t *testing.T) {
 	l.SetFlags(logger.Ldate | logger.Ltime | logger.LUTC | logger.Lshortfile)
 	ctx = logger.WithLogger(ctx, l)
 
+	defer c.installerConfig.Shutdown(ctx)
+
 	if err := doTest(ctx); err != nil {
 		logger.Errorf(ctx, "test failed: %v", err)
 		if e := errutil.HandleError(ctx, c.deviceConfig.SerialSocketPath, err); e != nil {
