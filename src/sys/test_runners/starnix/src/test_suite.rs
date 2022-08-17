@@ -21,6 +21,29 @@ use {
 /// The name of the collection in which the starnix runner is instantiated.
 const RUNNERS_COLLECTION: &str = "runners";
 
+/// Replace the arguments in `program` with `test_arguments`, which were provided to the test
+/// framework directly.
+fn replace_program_args(test_arguments: Vec<String>, program: &mut fdata::Dictionary) {
+    const ARGS_KEY: &str = "args";
+    if test_arguments.is_empty() {
+        return;
+    }
+
+    let new_args = fdata::DictionaryEntry {
+        key: ARGS_KEY.to_string(),
+        value: Some(Box::new(fdata::DictionaryValue::StrVec(test_arguments))),
+    };
+    if let Some(entries) = &mut program.entries {
+        if let Some(index) = entries.iter().position(|entry| entry.key == ARGS_KEY) {
+            entries.remove(index);
+        }
+        entries.push(new_args);
+    } else {
+        let entries = vec![new_args];
+        program.entries = Some(entries);
+    };
+}
+
 /// Handles a single `ftest::SuiteRequestStream`.
 ///
 /// # Parameters
@@ -40,12 +63,19 @@ pub async fn handle_suite_requests(
                 let stream = iterator.into_stream()?;
                 handle_case_iterator(test_url, stream).await?;
             }
-            ftest::SuiteRequest::Run { tests, options: _options, listener, .. } => {
+            ftest::SuiteRequest::Run { tests, options, listener, .. } => {
                 let namespace = namespace.clone();
-                let program = program.clone();
+                let mut program = program.clone();
                 let runner_name = format!("starnix-runner-{}", rand::thread_rng().gen::<u64>());
                 let (starnix_runner, realm) =
                     instantiate_runner_in_realm(&namespace, &runner_name, test_url).await?;
+
+                if let Some(test_args) = options.arguments {
+                    if let Some(program) = &mut program {
+                        replace_program_args(test_args, program);
+                    }
+                }
+
                 run_test_cases(
                     tests,
                     test_url,
