@@ -1,0 +1,10 @@
+{
+    "short_description": "Driver Framework compat runtime integration test root driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "DriverFramework",
+        "Test"
+    ]
+}

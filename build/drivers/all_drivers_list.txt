@@ -239,6 +239,8 @@
 //src/devices/tests/sysdev:sysdev-driver
 //src/devices/tests/v2/compat-globals/leaf:driver
 //src/devices/tests/v2/compat-globals/root:driver
+//src/devices/tests/v2/compat-runtime:root-driver
+//src/devices/tests/v2/compat-runtime:v1-driver
 //src/devices/tests/v2/compat/leaf:driver
 //src/devices/tests/v2/compat/root:driver
 //src/devices/tests/v2/composite:leaf_driver

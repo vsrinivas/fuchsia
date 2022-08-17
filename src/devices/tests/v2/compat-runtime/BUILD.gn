@@ -1,0 +1,141 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/drivers.gni")
+import("//build/rust/rustc_test.gni")
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":compat-runtime-test",
+    ":compat-runtime-v1-bind_test",
+  ]
+}
+
+group("drivers") {
+  testonly = true
+  deps = [
+    ":root",
+    ":v1",
+  ]
+}
+
+fidl("fuchsia.compat.runtime.test") {
+  testonly = true
+  sources = [ "compat.runtime.test.fidl" ]
+}
+
+driver_bind_rules("root-bind") {
+  disable_autobind = true
+  bind_output = "root.bindbc"
+}
+
+fuchsia_driver("root-driver") {
+  testonly = true
+  output_name = "compat-runtime-root"
+  sources = [ "root-driver.cc" ]
+  deps = [
+    ":fuchsia.compat.runtime.test_driver",
+    ":root-bind",
+    "//sdk/lib/driver2:llcpp",
+    "//src/devices/bind/fuchsia.test:fuchsia.test_cpp",
+    "//src/devices/lib/compat",
+    "//src/devices/lib/driver:driver_runtime",
+    "//src/lib/ddk",
+    "//zircon/system/ulib/async:async-cpp",
+  ]
+}
+
+fuchsia_driver_component("root") {
+  testonly = true
+  manifest = "meta/root.cml"
+  deps = [ ":root-driver" ]
+  info = "root-info.json"
+}
+
+driver_bind_rules("compat-runtime-v1-bind") {
+  rules = "v1.bind"
+  bind_output = "v1.bindbc"
+  header_output = "v1.bind.h"
+  tests = "v1.bind-tests.json"
+  deps = [ "//src/devices/bind/fuchsia.test" ]
+}
+
+fuchsia_driver("v1-driver") {
+  testonly = true
+  output_name = "compat-runtime-v1"
+  sources = [ "v1-driver.cc" ]
+  deps = [
+    ":compat-runtime-v1-bind",
+    ":fuchsia.compat.runtime.test_cpp_wire",
+    ":fuchsia.compat.runtime.test_driver",
+    "//sdk/lib/driver2:llcpp",
+    "//src/devices/bind/fuchsia.test:fuchsia.test_cpp",
+    "//src/devices/lib/driver",
+    "//src/devices/lib/driver:driver_runtime",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+fuchsia_driver_component("v1") {
+  testonly = true
+  colocate = true
+  default_dispatcher_opts = [ "allow_sync_calls" ]
+  deps = [
+    ":v1-driver",
+    "//src/devices/misc/drivers/compat:driver",
+  ]
+  info = "v1-info.json"
+}
+
+rustc_test("bin") {
+  edition = "2021"
+  testonly = true
+  output_name = "compat-runtime-bin"
+  source_root = "test.rs"
+  sources = [ "test.rs" ]
+  deps = [
+    ":fuchsia.compat.runtime.test_rust",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_rust",
+    "//sdk/lib/device-watcher/rust",
+    "//sdk/lib/driver_test_realm/realm_builder/rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component-test",
+    "//third_party/rust_crates:anyhow",
+  ]
+}
+
+cmc_merge("realm.cml") {
+  sources = [
+    "//sdk/lib/driver_test_realm/meta/driver_test_realm.cml",
+    "meta/realm.shard.cml",
+  ]
+}
+
+fuchsia_test_component("realm") {
+  manifest = "${target_out_dir}/realm.cml"
+  restricted_features = [ "dynamic_offers" ]
+  manifest_deps = [ ":realm.cml" ]
+}
+
+fuchsia_unittest_package("compat-runtime-test") {
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+  deps = [
+    ":bin",
+    ":realm",
+    ":root",
+    ":v1",
+    "//src/devices/bin/driver_host2:component",
+  ]
+}

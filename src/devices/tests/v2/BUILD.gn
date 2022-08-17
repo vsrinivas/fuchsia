@@ -7,6 +7,7 @@ group("tests") {
   deps = [
     "compat:tests",
     "compat-globals:tests",
+    "compat-runtime:tests",
     "composite:tests",
     "ddk-init-test:tests",
     "devfs_exporter:tests",
@@ -25,6 +26,7 @@ group("drivers") {
   deps = [
     "compat:drivers",
     "compat-globals:drivers",
+    "compat-runtime:drivers",
     "composite:leaf",
     "composite:root",
     "ddk-init-test:drivers",

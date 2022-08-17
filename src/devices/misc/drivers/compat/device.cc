@@ -744,4 +744,28 @@ zx_status_t Device::AddComposite(const char* name, const composite_device_desc_t
   return ZX_OK;
 }
 
+zx_status_t Device::ConnectRuntime(const char* protocol_name, fdf::Channel request) {
+  auto endpoints = fidl::CreateEndpoints<fuchsia_driver_framework::RuntimeConnector>();
+  if (endpoints.is_error()) {
+    return endpoints.status_value();
+  }
+  zx_status_t status = ConnectFragmentFidl(
+      "default", fidl::DiscoverableProtocolName<fuchsia_driver_framework::RuntimeConnector>,
+      endpoints->server.TakeChannel());
+  if (status != ZX_OK) {
+    FDF_LOG(ERROR, "Error connecting to RuntimeConnector protocol: %s",
+            zx_status_get_string(status));
+    return status;
+  }
+  auto result =
+      fidl::WireCall(endpoints->client)
+          ->Connect(fidl::StringView::FromExternal(protocol_name),
+                    fuchsia_driver_framework::wire::RuntimeProtocolServerEnd{request.release()});
+  if (result.status() != ZX_OK) {
+    FDF_LOG(ERROR, "Error calling RuntimeConnector::Connect fidl: %s", result.status_string());
+    return result.status();
+  }
+  return ZX_OK;
+}
+
 }  // namespace compat

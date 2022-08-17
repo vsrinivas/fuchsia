@@ -245,6 +245,11 @@ __EXPORT zx_status_t device_connect_fragment_fidl_protocol(zx_device_t* device,
   return device->ConnectFragmentFidl(fragment_name, protocol_name, zx::channel(request));
 }
 
+__EXPORT zx_status_t device_service_connect(zx_device_t* dev, const char* service_name,
+                                            fdf_handle_t channel) {
+  return dev->ConnectRuntime(service_name, fdf::Channel(channel));
+}
+
 __EXPORT async_dispatcher_t* device_get_dispatcher(zx_device_t* dev) {
   return dev->driver()->dispatcher();
 }
