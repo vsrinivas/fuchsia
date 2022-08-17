@@ -7,3 +7,6 @@ pub mod encode_v2;
 pub mod error;
 mod instruction_encoder;
 mod symbol_table_encoder;
+
+#[cfg(test)]
+mod bytecode_checker;
