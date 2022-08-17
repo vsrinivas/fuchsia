@@ -5,10 +5,6 @@
 #include <iostream>
 
 int main() {
-  // TODO(fxb/106529): Remove after bug is fixed.
-  for (int i = 0; i < 50; i++) {
-    std::cout << "Placeholder statement" << std::endl;
-  }
-  std::cout << "Hello, World!" << std::endl;
+  std::cout << "Hello, World!\n";
   return 0;
 }
