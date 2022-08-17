@@ -6,7 +6,7 @@ library fuchsia.ui.activity.control;
 
 using fuchsia.ui.activity;
 
-// TODO(fxbug.dev/38334): Remove this transitional interface.
+// TODO(fxbug.dev/103843): Remove this interface.
 /// The Control protocol can be used to override the activity state of the
 /// Activity Service (fuchsia.ui.activity).
 ///
@@ -25,6 +25,9 @@ protocol Control {
     ///
     /// Typically, state transitions should occur minutes apart (e.g.
     /// transition from ACTIVE to IDLE after 15 minutes of inactivity).
+    @available(
+            deprecated=9,
+            note="Unsupported, instead report activity via `fuchsia.input.interaction.observation.Aggregator`")
     SetState(struct {
         state fuchsia.ui.activity.State;
     });

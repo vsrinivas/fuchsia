@@ -5,6 +5,7 @@ library fuchsia.ui.activity;
 
 using zx;
 
+// TODO(fxbug.dev/103843): Remove this interface.
 /// The Provider protocol offers a subscription interface through
 /// which clients can watch for changes in the system's activity state.
 @discoverable
@@ -13,11 +14,13 @@ protocol Provider {
     /// The server will always invoke listener.OnStateChanged at least once with
     /// the initial state, and after that invoke listener.OnStateChanged
     /// whenever the system's state changes.
+    @available(deprecated=9, note="Instead, use `fuchsia.input.interaction.Notifier`")
     WatchState(resource struct {
         listener client_end:Listener;
     });
 };
 
+// TODO(fxbug.dev/103843): Remove this interface.
 /// The Listener protocol subscribes to changes in the system's activity
 /// state. Clients which care about the activity state of the system are
 /// expected to implement this protocol and subscribe via Provider.WatchState.
@@ -25,6 +28,7 @@ protocol Listener {
     /// Callback that is invoked whenever the system state changes.
     /// The Listener is expected to acknowledge each call explicitly and will
     /// not receive new state until this acknowledgement is done.
+    @available(deprecated=9, note="Instead, use `fuchsia.input.interaction.Notifier`")
     OnStateChanged(struct {
         state State;
         transition_time zx.time;
