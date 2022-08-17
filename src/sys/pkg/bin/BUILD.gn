@@ -19,6 +19,7 @@ group("bin") {
 group("tests") {
   testonly = true
   public_deps = [
+    "fake-system-update-committer:tests",
     "grand-swd-binary:tests",
     "multi-universal-tool:tests",
     "omaha-client:tests",
