@@ -11,7 +11,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -22,7 +21,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/far/go"
+	far "go.fuchsia.dev/fuchsia/src/sys/pkg/lib/far/go"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/merkle"
 )
 
@@ -89,7 +88,9 @@ func merkleFor(b []byte) (build.MerkleRoot, error) {
 
 // Extract the meta.far to the `outputDir`, and write package manifests.
 // `$outputDir/package.manifest` contains:
-//     $PKG_NAME.$PKG_VERSION=$outputDir/meta.far
+//
+//	$PKG_NAME.$PKG_VERSION=$outputDir/meta.far
+//
 // `package_manifest.json` contains a package output manifest as built by `pm
 // build -outut-package-manifest`.
 func writeMetadataAndManifest(cfg *build.Config, pkgArchive *far.Reader, outputDir string) error {
@@ -143,12 +144,12 @@ func writeMetadataAndManifest(cfg *build.Config, pkgArchive *far.Reader, outputD
 	}
 
 	// Write meta.far
-	if err := ioutil.WriteFile(filepath.Join(outputDir, metaFar), pkgMetaBytes, 0666); err != nil {
+	if err := os.WriteFile(filepath.Join(outputDir, metaFar), pkgMetaBytes, 0666); err != nil {
 		return err
 	}
 
 	// Write meta.far.merkle
-	if err := ioutil.WriteFile(filepath.Join(outputDir, metaFar+".merkle"), []byte(pkgMetaMerkle.String()), 0666); err != nil {
+	if err := os.WriteFile(filepath.Join(outputDir, metaFar+".merkle"), []byte(pkgMetaMerkle.String()), 0666); err != nil {
 		return err
 	}
 
@@ -177,7 +178,7 @@ func writeMetadataAndManifest(cfg *build.Config, pkgArchive *far.Reader, outputD
 	if err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(filepath.Join(outputDir, "package_manifest.json"), content, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(outputDir, "package_manifest.json"), content, 0644); err != nil {
 		return err
 	}
 
@@ -186,7 +187,7 @@ func writeMetadataAndManifest(cfg *build.Config, pkgArchive *far.Reader, outputD
 	for _, blob := range blobs {
 		fmt.Fprintf(&buf, "%s=%s\n", blob.Merkle, blob.SourcePath)
 	}
-	if err := ioutil.WriteFile(filepath.Join(outputDir, "blobs.manifest"), buf.Bytes(), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(outputDir, "blobs.manifest"), buf.Bytes(), 0644); err != nil {
 		return err
 	}
 

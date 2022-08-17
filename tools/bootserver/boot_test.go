@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -49,7 +48,7 @@ func TestDownloadImagesToDir(t *testing.T) {
 		if img.Name == "noArgsImage" {
 			t.Errorf("downloaded an image with no args")
 		}
-		content, err := ioutil.ReadFile(filepath.Join(tmpDir, img.Name))
+		content, err := os.ReadFile(filepath.Join(tmpDir, img.Name))
 		if err != nil {
 			t.Fatalf("failed to read file: %v", err)
 		}

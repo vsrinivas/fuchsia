@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
 package main
@@ -10,7 +11,6 @@ import (
 	"bytes"
 	"crypto/rand"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math/big"
 	"os"
@@ -150,7 +150,7 @@ func testToFile(t *testing.T, tag, expected string) {
 
 	var fileout []byte
 	res := tryWithBackoff(t, func() bool {
-		fileout, err = ioutil.ReadFile(name)
+		fileout, err = os.ReadFile(name)
 		if err != nil {
 			t.Fatal(err)
 		}

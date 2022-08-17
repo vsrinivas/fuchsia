@@ -11,7 +11,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"strconv"
@@ -417,7 +416,7 @@ func (c *Client) RemoteFileExists(ctx context.Context, path string) (bool, error
 	var stderr bytes.Buffer
 	cmd := []string{"PATH=''", "test", "-e", path}
 
-	if err := c.Run(ctx, cmd, ioutil.Discard, &stderr); err != nil {
+	if err := c.Run(ctx, cmd, io.Discard, &stderr); err != nil {
 		if e, ok := err.(*ssh.ExitError); ok {
 			if e.ExitStatus() == 1 {
 				return false, nil

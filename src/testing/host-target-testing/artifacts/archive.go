@@ -9,7 +9,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -100,7 +99,7 @@ func (a *Archive) list(ctx context.Context, buildID string) ([]string, error) {
 // directly to `dst`. Otherwise, `dst` should be the directory under which to
 // download the artifacts.
 func (a *Archive) download(ctx context.Context, buildID string, fromRoot bool, dst string, srcs []string) error {
-	tmpDir, err := ioutil.TempDir("", "download")
+	tmpDir, err := os.MkdirTemp("", "download")
 	if err != nil {
 		return err
 	}
@@ -135,13 +134,13 @@ func (a *Archive) download(ctx context.Context, buildID string, fromRoot bool, d
 			return nil
 		}
 
-		tmpFile, err := ioutil.TempFile(tmpDir, "srcs-file")
+		tmpFile, err := os.CreateTemp(tmpDir, "srcs-file")
 		if err != nil {
 			return err
 		}
 		tmpFile.Close()
 		srcsFile = tmpFile.Name()
-		if err := ioutil.WriteFile(srcsFile, []byte(strings.Join(filesToDownload, "\n")), 0755); err != nil {
+		if err := os.WriteFile(srcsFile, []byte(strings.Join(filesToDownload, "\n")), 0755); err != nil {
 			return fmt.Errorf("failed to write srcs-file: %w", err)
 		}
 	} else {

@@ -10,7 +10,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net"
 	"os"
@@ -264,7 +263,7 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	// The QEMU command needs to be invoked within an empty directory, as QEMU
 	// will attempt to pick up files from its working directory, one notable
 	// culprit being multiboot.bin. This can result in strange behavior.
-	workdir, err := ioutil.TempDir("", "qemu-working-dir")
+	workdir, err := os.MkdirTemp("", "qemu-working-dir")
 	if err != nil {
 		return err
 	}
@@ -292,7 +291,7 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 			return fmt.Errorf("missing authorized keys")
 		}
 		tmpFile := filepath.Join(workdir, "authorized_keys")
-		if err := ioutil.WriteFile(tmpFile, authorizedKeys, os.ModePerm); err != nil {
+		if err := os.WriteFile(tmpFile, authorizedKeys, os.ModePerm); err != nil {
 			return fmt.Errorf("could not write authorized keys to file: %w", err)
 		}
 		if err := embedZBIWithKey(ctx, &zirconA, t.config.ZBITool, tmpFile); err != nil {
@@ -478,7 +477,7 @@ func normalizeFile(path string) (string, error) {
 }
 
 func overwriteFileWithCopy(path string) error {
-	tmpfile, err := ioutil.TempFile(filepath.Dir(path), "botanist")
+	tmpfile, err := os.CreateTemp(filepath.Dir(path), "botanist")
 	if err != nil {
 		return err
 	}

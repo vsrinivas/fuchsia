@@ -6,7 +6,7 @@ package codelinks
 
 import (
 	"context"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -100,7 +100,7 @@ func TestAnalyzer(t *testing.T) {
 			analyzer := analyzer{checkoutDir: checkoutDir}
 
 			contents := []byte(strings.Join(test.lines, "\n") + "\n")
-			if err := ioutil.WriteFile(filepath.Join(checkoutDir, path), contents, 0o600); err != nil {
+			if err := os.WriteFile(filepath.Join(checkoutDir, path), contents, 0o600); err != nil {
 				t.Fatal(err)
 			}
 

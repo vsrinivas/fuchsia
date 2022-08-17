@@ -6,10 +6,11 @@
 package clangdoc
 
 import (
-	"gopkg.in/yaml.v2"
-	"io/ioutil"
 	"log"
+	"os"
 	"strings"
+
+	"gopkg.in/yaml.v2"
 )
 
 type Location struct {
@@ -250,7 +251,7 @@ func LoadRecord(dir string, rec Reference) *RecordInfo {
 	}
 
 	filename := dir + "/" + recname + ".yaml"
-	content, err := ioutil.ReadFile(filename)
+	content, err := os.ReadFile(filename)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -277,7 +278,7 @@ func LoadRecord(dir string, rec Reference) *RecordInfo {
 // siblings of it, while all other namespaces store their children nested inside.
 func LoadNamespace(dir string, child_ns_dir string) *NamespaceInfo {
 	filename := dir + "/index.yaml"
-	content, err := ioutil.ReadFile(filename)
+	content, err := os.ReadFile(filename)
 	if err != nil {
 		log.Fatal(err)
 	}

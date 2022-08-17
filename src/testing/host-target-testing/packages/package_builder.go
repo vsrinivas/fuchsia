@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -31,7 +30,7 @@ type PackageBuilder struct {
 }
 
 func parsePackageJSON(path string) (string, string, error) {
-	jsonData, err := ioutil.ReadFile(path)
+	jsonData, err := os.ReadFile(path)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to read file at %s: %w", path, err)
 	}
@@ -50,7 +49,7 @@ func NewPackageBuilder(name string, version string, repository string) (*Package
 	}
 
 	// Create temporary directory to store any additions that come in.
-	tempDir, err := ioutil.TempDir("", "pm-temp-resource")
+	tempDir, err := os.MkdirTemp("", "pm-temp-resource")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp directory: %w", err)
 	}
@@ -99,7 +98,7 @@ func (p *PackageBuilder) AddResource(path string, contents io.Reader) error {
 	if _, ok := p.Contents[path]; ok {
 		return fmt.Errorf("a resource already exists at path %q", path)
 	}
-	data, err := ioutil.ReadAll(contents)
+	data, err := io.ReadAll(contents)
 	if err != nil {
 		return fmt.Errorf("failed to read file: %w", err)
 	}
@@ -107,7 +106,7 @@ func (p *PackageBuilder) AddResource(path string, contents io.Reader) error {
 	if err := os.MkdirAll(filepath.Dir(tempPath), os.ModePerm); err != nil {
 		return fmt.Errorf("failed to create parent directories for %q: %w", tempPath, err)
 	}
-	if err = ioutil.WriteFile(tempPath, data, 0644); err != nil {
+	if err = os.WriteFile(tempPath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write data to %q: %w", tempPath, err)
 	}
 	p.Contents[path] = tempPath
@@ -155,7 +154,7 @@ func (p *PackageBuilder) Publish(ctx context.Context, pkgRepo *Repository) (stri
 		return "", "", fmt.Errorf("failed to open repository at %q. %w", pkgRepo.Dir, err)
 	}
 	// Create Config.
-	dir, err := ioutil.TempDir("", "pm-temp-config")
+	dir, err := os.MkdirTemp("", "pm-temp-config")
 	if err != nil {
 		return "", "", fmt.Errorf("failed to create temp directory for the config: %w", err)
 	}
@@ -225,7 +224,7 @@ func (p *PackageBuilder) Publish(ctx context.Context, pkgRepo *Repository) (stri
 	}
 
 	outputManifestPath := path.Join(cfg.OutputDir, "package_manifest.json")
-	if err := ioutil.WriteFile(outputManifestPath, content, os.ModePerm); err != nil {
+	if err := os.WriteFile(outputManifestPath, content, os.ModePerm); err != nil {
 		return "", "", fmt.Errorf("failed to write manifest JSON to %q: %w", outputManifestPath, err)
 	}
 

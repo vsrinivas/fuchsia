@@ -5,7 +5,6 @@
 package main
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"os/signal"
@@ -26,11 +25,11 @@ func main() {
 	stderrDataPath := myPath + ".stderr.testdata"
 	stdoutDataPath := myPath + ".stdout.testdata"
 
-	stderrData, err := ioutil.ReadFile(stderrDataPath)
+	stderrData, err := os.ReadFile(stderrDataPath)
 	if err != nil {
 		log.Fatalf("Failed to read file %s with error %v", stderrDataPath, err)
 	}
-	stdoutData, err := ioutil.ReadFile(stdoutDataPath)
+	stdoutData, err := os.ReadFile(stdoutDataPath)
 	if err != nil {
 		log.Fatalf("Failed to read file %s with error %v", stdoutDataPath, err)
 	}

@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -58,12 +57,12 @@ func (s *memSink) doesPathExist(ctx context.Context, prefix string) (bool, error
 }
 
 func TestParseFlags(t *testing.T) {
-	dir, err := ioutil.TempDir("", "bundle_fetcher_dir")
+	dir, err := os.MkdirTemp("", "bundle_fetcher_dir")
 	if err != nil {
 		t.Fatalf("unable to create temp dir")
 	}
 	tmpfn := filepath.Join(dir, "tmpfile")
-	if err := ioutil.WriteFile(tmpfn, []byte("hello world"), 0644); err != nil {
+	if err := os.WriteFile(tmpfn, []byte("hello world"), 0644); err != nil {
 		t.Fatalf("unable to create temp file")
 	}
 	defer os.RemoveAll(dir)

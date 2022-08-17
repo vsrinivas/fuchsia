@@ -13,7 +13,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
@@ -181,7 +180,7 @@ func (q *QemuLauncher) Prepare() (returnErr error) {
 
 	// Create a tmpdir to store files we need
 	if q.TmpDir == "" {
-		tmpDir, err := ioutil.TempDir("", "clusterfuchsia-qemu-")
+		tmpDir, err := os.MkdirTemp("", "clusterfuchsia-qemu-")
 		if err != nil {
 			return fmt.Errorf("Error creating tempdir: %s", err)
 		}

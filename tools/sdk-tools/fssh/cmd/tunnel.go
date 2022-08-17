@@ -8,7 +8,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -263,7 +262,7 @@ func getCachedRemoteHost(ctx context.Context, dataPath string) string {
 	if !sdkcommon.FileExists(path) {
 		return ""
 	}
-	contents, err := ioutil.ReadFile(path)
+	contents, err := os.ReadFile(path)
 	if err != nil {
 		logger.Debugf(ctx, "Error reading cached remote-host file %q: %s", path, err)
 	}

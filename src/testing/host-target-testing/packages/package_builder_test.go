@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -44,7 +43,7 @@ func createTestPackage(t *testing.T, dir string) (*Repository, string) {
 
 	// Grab the merkle of the config's package manifest.
 	manifestDir := filepath.Join(config.OutputDir, "package_manifest.json")
-	manifest, err := ioutil.ReadFile(manifestDir)
+	manifest, err := os.ReadFile(manifestDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -130,7 +129,7 @@ func TestAddResource(t *testing.T) {
 	if !ok {
 		t.Fatalf("Test resource %s failed to be added.", newResource)
 	}
-	newData, err := ioutil.ReadFile(path)
+	newData, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("Failed to read contents of %s. %s", newResource, err)
 	}

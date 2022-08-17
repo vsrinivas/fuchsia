@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -67,7 +66,7 @@ func TestReadSummary(t *testing.T) {
 			t.Fatalf("failed to marshal summary: %s", err)
 		}
 		summaryFile := filepath.Join(tempDir, fmt.Sprintf("summary%d.json", i))
-		if err := ioutil.WriteFile(summaryFile, summaryBytes, os.ModePerm); err != nil {
+		if err := os.WriteFile(summaryFile, summaryBytes, os.ModePerm); err != nil {
 			t.Fatalf("failed to write summary file: %s", err)
 		}
 		if i > 0 {
@@ -103,11 +102,11 @@ const validModule = "1696251c"
 // getLLVMProfdata returns the path to a mock tool which prints the provided output.
 func getLLVMProfdata(t *testing.T, filepath string, output string, wantErr bool) string {
 	if wantErr {
-		if err := ioutil.WriteFile(filepath, []byte("#!/bin/bash\nexit 1"), os.ModePerm); err != nil {
+		if err := os.WriteFile(filepath, []byte("#!/bin/bash\nexit 1"), os.ModePerm); err != nil {
 			t.Fatalf("failed to write mock llvm-profdata tool: %s", err)
 		}
 	} else {
-		if err := ioutil.WriteFile(filepath, []byte(fmt.Sprintf("#!/bin/bash\necho \"%s\"", output)), os.ModePerm); err != nil {
+		if err := os.WriteFile(filepath, []byte(fmt.Sprintf("#!/bin/bash\necho \"%s\"", output)), os.ModePerm); err != nil {
 			t.Fatalf("failed to write mock llvm-profdata tool: %s", err)
 		}
 	}

@@ -5,7 +5,7 @@
 package artifactory
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -49,7 +49,7 @@ func TestProductBundleUploads(t *testing.T) {
 }`)
 	dir := t.TempDir()
 	productBundlePath := filepath.Join(dir, "product_bundle.json")
-	if err := ioutil.WriteFile(productBundlePath, productBundleData, 0o600); err != nil {
+	if err := os.WriteFile(productBundlePath, productBundleData, 0o600); err != nil {
 		t.Fatalf("failed to write to fake product_bundle.json file: %v", err)
 	}
 

@@ -11,7 +11,7 @@ import (
 	"context"
 	"flag"
 	"io"
-	"io/ioutil"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
@@ -29,7 +29,7 @@ var hostDir = map[string]string{"arm64": "host_arm64", "amd64": "host_x64"}[runt
 
 func testDataDir() string {
 	base := filepath.Join("..", "..", "..", "..")
-	c, err := ioutil.ReadFile(filepath.Join(base, ".fx-build-dir"))
+	c, err := os.ReadFile(filepath.Join(base, ".fx-build-dir"))
 	if err != nil {
 		return ""
 	}
@@ -38,8 +38,8 @@ func testDataDir() string {
 
 // TestDataDir is the location to test data files.
 //
-//  - In "go test" mode, it's relative to this directory.
-//  - In "fx test" mode, it's relative to the build directory (out/default).
+//   - In "go test" mode, it's relative to this directory.
+//   - In "fx test" mode, it's relative to the build directory (out/default).
 var TestDataDir = flag.String("test_data_dir", testDataDir(), "Path to test_data/; only used in GN build")
 
 // DefaultNodename is the default nodename given to an target with the default

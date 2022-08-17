@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -30,7 +29,7 @@ func TestRawPrinter(t *testing.T) {
 	args := []string{"--session=" + sessionSpecPath, "--quiet", "--log-file=test.log"}
 	runCommandWithOutputToFile(t, filepath.Join(outDir, "cpuperf_print"), args, &got)
 
-	want, err := ioutil.ReadFile(filepath.Join(testDataDir, "raw-expected-output.txt"))
+	want, err := os.ReadFile(filepath.Join(testDataDir, "raw-expected-output.txt"))
 	if err != nil {
 		t.Error(err)
 	}

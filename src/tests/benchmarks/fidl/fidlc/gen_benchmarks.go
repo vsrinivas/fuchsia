@@ -10,7 +10,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"strings"
@@ -199,7 +198,7 @@ func main() {
 	}
 
 	outputFile := os.Args[1]
-	if err := ioutil.WriteFile(outputFile, buffer.Bytes(), 0644); err != nil {
+	if err := os.WriteFile(outputFile, buffer.Bytes(), 0644); err != nil {
 		log.Fatal(err)
 	}
 }

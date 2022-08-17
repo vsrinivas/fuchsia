@@ -7,7 +7,7 @@ package zbi
 import (
 	"bytes"
 	"context"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -24,7 +24,7 @@ file="${@: -1}"
 cat "$file"
 `
 	name := filepath.Join(t.TempDir(), "zbi.sh")
-	if err := ioutil.WriteFile(name, []byte(contents), 0o700); err != nil {
+	if err := os.WriteFile(name, []byte(contents), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	return name

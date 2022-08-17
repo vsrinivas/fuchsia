@@ -5,14 +5,14 @@
 package build
 
 import (
-	"io/ioutil"
+	"os"
 	"strings"
 )
 
 // LoadPackageManifests accepts the path to a newline-delimited list of package manifests and
 // returns the paths as a list of strings.
 func LoadPackageManifests(packageManifestsLocation string) ([]string, error) {
-	b, err := ioutil.ReadFile(packageManifestsLocation)
+	b, err := os.ReadFile(packageManifestsLocation)
 	if err != nil {
 		return nil, err
 	}

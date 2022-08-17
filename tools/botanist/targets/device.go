@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
@@ -71,7 +70,7 @@ type NetworkProperties struct {
 
 // LoadDeviceConfigs unmarshalls a slice of device configs from a given file.
 func LoadDeviceConfigs(path string) ([]DeviceConfig, error) {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read device properties file %q", path)
 	}
@@ -346,7 +345,7 @@ func (t *DeviceTarget) ramBoot(ctx context.Context, images []*bootserver.Image) 
 }
 
 func (t *DeviceTarget) writePubKey() (string, error) {
-	pubkey, err := ioutil.TempFile("", "pubkey*")
+	pubkey, err := os.CreateTemp("", "pubkey*")
 	if err != nil {
 		return "", err
 	}
@@ -416,7 +415,7 @@ func parseOutSigners(keyPaths []string) ([]ssh.Signer, error) {
 	}
 	var keys [][]byte
 	for _, keyPath := range keyPaths {
-		p, err := ioutil.ReadFile(keyPath)
+		p, err := os.ReadFile(keyPath)
 		if err != nil {
 			return nil, fmt.Errorf("could not read SSH key file %q: %w", keyPath, err)
 		}

@@ -6,7 +6,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -384,7 +383,7 @@ func writeDisk(disk string, partitions partitionLayout, diskInfo diskInfo, sizes
 
 	root := fatfs.RootDirectory()
 
-	tf, err := ioutil.TempFile("", "gsetup-boot")
+	tf, err := os.CreateTemp("", "gsetup-boot")
 	if err != nil {
 		log.Fatal(err)
 	}

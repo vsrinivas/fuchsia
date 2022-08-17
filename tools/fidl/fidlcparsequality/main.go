@@ -9,7 +9,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"os/exec"
 	"regexp"
@@ -121,7 +121,7 @@ type fidlcResult struct {
 type fidlcRunner string
 
 func (path fidlcRunner) run(content []byte) fidlcResult {
-	tmpfile, err := ioutil.TempFile("", "example")
+	tmpfile, err := os.CreateTemp("", "example")
 	if err != nil {
 		panic(err)
 	}
@@ -142,7 +142,7 @@ func (path fidlcRunner) run(content []byte) fidlcResult {
 	if err := cmd.Start(); err != nil {
 		panic(err)
 	}
-	stderrData, err := ioutil.ReadAll(stderr)
+	stderrData, err := io.ReadAll(stderr)
 	if err != nil {
 		panic(err)
 	}

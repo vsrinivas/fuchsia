@@ -14,7 +14,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -102,7 +101,7 @@ func New(path, blobsDir string) (*Repo, error) {
 }
 
 func (r *Repo) EncryptWith(path string) error {
-	keyBytes, err := ioutil.ReadFile(path)
+	keyBytes, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
@@ -253,7 +252,7 @@ func (r *Repo) AddBlob(root string, rd io.Reader) (string, int64, error) {
 	}
 
 	var tree merkle.Tree
-	f, err := ioutil.TempFile(r.blobsDir, "blob")
+	f, err := os.CreateTemp(r.blobsDir, "blob")
 	if err != nil {
 		return "", 0, err
 	}
@@ -438,14 +437,14 @@ func (r *Repo) stagedFilesPath() string {
 // not produce a consistent snapshot file for the root json manifest. This
 // method implements that production.
 func (r *Repo) fixupRootConsistentSnapshot() error {
-	b, err := ioutil.ReadFile(filepath.Join(r.path, "repository", "root.json"))
+	b, err := os.ReadFile(filepath.Join(r.path, "repository", "root.json"))
 	if err != nil {
 		return err
 	}
 	sum512 := sha512.Sum512(b)
 	rootSnap := filepath.Join(r.path, "repository", fmt.Sprintf("%x.root.json", sum512))
 	if _, err := os.Stat(rootSnap); os.IsNotExist(err) {
-		if err := ioutil.WriteFile(rootSnap, b, 0666); err != nil {
+		if err := os.WriteFile(rootSnap, b, 0666); err != nil {
 			return err
 		}
 	}
@@ -463,7 +462,7 @@ func linkOrCopy(srcPath, dstPath string) error {
 		}
 		defer s.Close()
 
-		d, err := ioutil.TempFile(filepath.Dir(dstPath), filepath.Base(dstPath))
+		d, err := os.CreateTemp(filepath.Dir(dstPath), filepath.Base(dstPath))
 		if err != nil {
 			return err
 		}

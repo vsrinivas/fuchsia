@@ -10,7 +10,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"strings"
@@ -33,8 +32,10 @@ const (
 )
 
 // Firmware arguments have variable names based on their type e.g.:
-//   --firmware=<file>
-//   --firmware-foo=<file>
+//
+//	--firmware=<file>
+//	--firmware-foo=<file>
+//
 // The flag package doesn't support anything like this, so we have to do a  bit
 // of extra work to find any of these args and add them to the list.
 type firmwareArg struct {
@@ -409,7 +410,7 @@ func execute(ctx context.Context, cmdlineArgs []string) error {
 
 	var authorizedKeys []byte
 	if authorizedKeysFile != "" {
-		authorizedKeys, err = ioutil.ReadFile(authorizedKeysFile)
+		authorizedKeys, err = os.ReadFile(authorizedKeysFile)
 		if err != nil {
 			return fmt.Errorf("could not read SSH key file %q: %v", authorizedKeysFile, err)
 		}

@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"go/format"
-	"io/ioutil"
 	"log"
 	"os"
 	"text/template"
@@ -39,7 +38,7 @@ func main() {
 		log.Fatalf("Failed to parse template: %s", err)
 	}
 
-	jsonFile, err := ioutil.ReadFile(jsonTemplatePath)
+	jsonFile, err := os.ReadFile(jsonTemplatePath)
 	if err != nil {
 		log.Fatalf("Failed to read JSON file at %s: %s", jsonTemplatePath, err)
 	}
@@ -61,7 +60,7 @@ func main() {
 		log.Fatalf("Failed to format source: %s%s", err, b.String())
 	}
 
-	if err := ioutil.WriteFile(destinationPath, src, 0644); err != nil {
+	if err := os.WriteFile(destinationPath, src, 0644); err != nil {
 		log.Fatalf("Failed to write destination file: %s: %s", destinationPath, err)
 	}
 }

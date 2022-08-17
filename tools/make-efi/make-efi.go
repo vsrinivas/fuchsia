@@ -9,7 +9,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -86,7 +85,7 @@ func main() {
 	if *efiBootloader != "" {
 		dstSrc["EFI/BOOT/BOOTX64.EFI"] = *efiBootloader
 
-		tf, err := ioutil.TempFile("", "gsetup-boot")
+		tf, err := os.CreateTemp("", "gsetup-boot")
 		if err != nil {
 			log.Fatal(err)
 		}

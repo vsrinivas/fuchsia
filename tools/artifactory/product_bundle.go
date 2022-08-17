@@ -7,7 +7,7 @@ package artifactory
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path"
 	"path/filepath"
 
@@ -61,7 +61,7 @@ type Image struct {
 // the relative paths used by artifactory.
 func updateProductManifest(buildDir, productBundlePath, packageNamespaceDir, blobNamespaceDir, imageNamespaceDir string) ([]byte, error) {
 	productBundleAbsPath := filepath.Join(buildDir, productBundlePath)
-	data, err := ioutil.ReadFile(productBundleAbsPath)
+	data, err := os.ReadFile(productBundleAbsPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read product bundle: %w", err)
 	}

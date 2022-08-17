@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -293,7 +292,7 @@ func (root Root) GetLibrary(name fidlgen.EncodedLibraryIdentifier) *fidlgen.Libr
 
 // Generates code using the specified template.
 func GenerateFidl(templatePath string, ir fidlgen.Root, outputBase *string, options Options) error {
-	returnBytes, err := ioutil.ReadFile(templatePath)
+	returnBytes, err := os.ReadFile(templatePath)
 	if err != nil {
 		log.Fatalf("Error reading from %s: %v", templatePath, err)
 	}

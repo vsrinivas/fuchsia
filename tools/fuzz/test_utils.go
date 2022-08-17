@@ -9,7 +9,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"strings"
@@ -25,7 +24,7 @@ func expectPathAbsent(t *testing.T, path string) {
 }
 
 func getTempdir(t *testing.T) string {
-	tmpDir, err := ioutil.TempDir("", "clusterfuchsia_test")
+	tmpDir, err := os.MkdirTemp("", "clusterfuchsia_test")
 
 	if err != nil {
 		t.Fatalf("error creating temp dir: %s", err)
@@ -36,7 +35,7 @@ func getTempdir(t *testing.T) string {
 
 // Must be cleaned up by caller
 func createTempfileWithContents(t *testing.T, contents string, extension string) string {
-	file, err := ioutil.TempFile("", "*."+extension)
+	file, err := os.CreateTemp("", "*."+extension)
 	if err != nil {
 		t.Fatalf("error creating tempfile: %s", err)
 	}
@@ -84,7 +83,7 @@ func touchRandomFile(t *testing.T, path string) {
 	if _, err := rand.Read(contents); err != nil {
 		t.Fatalf("Error getting random contents: %s", err)
 	}
-	if err := ioutil.WriteFile(path, contents, 0o600); err != nil {
+	if err := os.WriteFile(path, contents, 0o600); err != nil {
 		t.Fatalf("Error touching file %q: %s", path, err)
 	}
 }

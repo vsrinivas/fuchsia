@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -157,7 +156,7 @@ func resultSinkCtx() (*ResultSinkContext, error) {
 	if !ok {
 		return nil, fmt.Errorf("LUCI_CONTEXT is not specified")
 	}
-	content, err := ioutil.ReadFile(v)
+	content, err := os.ReadFile(v)
 	if err != nil {
 		return nil, err
 	}

@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -218,7 +217,7 @@ func (u *OmahaUpdater) Update(ctx context.Context, c client) error {
 
 	logger.Infof(ctx, "source update package merkle for %q is %q", u.updatePackageURL, pkg.Merkle())
 
-	tempDir, err := ioutil.TempDir("", "update-pkg-expand")
+	tempDir, err := os.MkdirTemp("", "update-pkg-expand")
 	if err != nil {
 		return fmt.Errorf("unable to create temp directory: %w", err)
 	}
@@ -229,7 +228,7 @@ func (u *OmahaUpdater) Update(ctx context.Context, c client) error {
 	}
 
 	// Create a ZBI with the omaha_url argument.
-	destZbi, err := ioutil.TempFile("", "omaha_argument.zbi")
+	destZbi, err := os.CreateTemp("", "omaha_argument.zbi")
 	if err != nil {
 		return fmt.Errorf("failed to create temp file: %w", err)
 	}

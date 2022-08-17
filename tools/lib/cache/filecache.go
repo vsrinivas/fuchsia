@@ -110,7 +110,7 @@ func LoadFileCache(path string) (*FileCache, error) {
 		return nil, err
 	}
 	storeDir := getStoreDir(cache.dir)
-	files, err := ioutil.ReadDir(storeDir)
+	files, err := os.ReadDir(storeDir)
 	if err != nil {
 		return nil, err
 	}
@@ -175,7 +175,7 @@ func (fc *FileCache) Update(ctx context.Context) {
 			// By sleeping for 32 milliseconds we make the ReadDir call about 30 times a
 			// second.
 			time.Sleep(waitBeforeReadDir * time.Millisecond)
-			files, err := ioutil.ReadDir(storeDir)
+			files, err := os.ReadDir(storeDir)
 			if err == nil {
 				atomic.StoreUint64(&fc.curSize, uint64(len(files)))
 			}
@@ -220,6 +220,10 @@ func (fc *FileCache) cullFiles() {
 	// If the directory suddenly deleted or something else causes the ReadDir to
 	// fail then we can set our count to zero. Some other operation will then
 	// soon fail in a context where errors can be handled better.
+	//
+	// NB: this uses ioutil.ReadDir rather than os.ReadDir because we use
+	// ModTime below, which isn't exposed in the os.DirEntry returned by the
+	// latter.
 	files, _ := ioutil.ReadDir(getStoreDir(fc.dir))
 	// It could turn out we guessed wrong and no files need to be collected. Just
 	// return in this case.

@@ -6,7 +6,6 @@ package golden
 
 import (
 	"flag"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -57,13 +56,13 @@ func TestPatternsMatchExamples(t *testing.T) {
 	}
 
 	for _, patternFilePath := range patternFilesPath {
-		patternFile, err := ioutil.ReadFile(patternFilePath)
+		patternFile, err := os.ReadFile(patternFilePath)
 		if err != nil {
 			t.Errorf("%v, got %v", t.Name(), err)
 		}
 		exampleFilePath := strings.Replace(patternFilePath, ".lic", ".txt", -1)
 		exampleFilePath = strings.Replace(exampleFilePath, "patterns", "examples", -1)
-		exampleFile, err := ioutil.ReadFile(exampleFilePath)
+		exampleFile, err := os.ReadFile(exampleFilePath)
 		if err != nil {
 			t.Errorf("%v, got %v", t.Name(), err)
 		}

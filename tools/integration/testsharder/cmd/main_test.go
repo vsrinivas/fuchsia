@@ -9,7 +9,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -34,11 +33,11 @@ const testListPath = "fake-test-list.json"
 // TestExecute runs golden tests for the execute() function.
 //
 // To add a new test case:
-//   1. Add an entry to the `testCases` slice here.
-//   2. Run `tools/integration/testsharder/update_goldens.sh` to generate the new
-//      golden file.
-//   3. Add the new golden file as a dependency of the test executable in
-//      testsharder's BUILD.gn file.
+//  1. Add an entry to the `testCases` slice here.
+//  2. Run `tools/integration/testsharder/update_goldens.sh` to generate the new
+//     golden file.
+//  3. Add the new golden file as a dependency of the test executable in
+//     testsharder's BUILD.gn file.
 func TestExecute(t *testing.T) {
 	ctx := context.Background()
 
@@ -466,7 +465,7 @@ func writeTempJSONFile(t *testing.T, obj interface{}) string {
 
 func writeTempFile(t *testing.T, contents string) string {
 	path := filepath.Join(t.TempDir(), "temp.txt")
-	if err := ioutil.WriteFile(path, []byte(contents), 0o600); err != nil {
+	if err := os.WriteFile(path, []byte(contents), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	return path

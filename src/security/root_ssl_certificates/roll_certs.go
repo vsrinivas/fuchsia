@@ -14,7 +14,6 @@ import (
 	"encoding/hex"
 	"flag"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -45,7 +44,7 @@ func updateBundle() {
 		log.Fatal(err)
 	}
 	defer response.Body.Close()
-	certdata, err := ioutil.ReadAll(response.Body)
+	certdata, err := io.ReadAll(response.Body)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -76,7 +75,7 @@ func updateBundle() {
 		log.Fatal(err)
 	}
 
-	if err := ioutil.WriteFile("third_party/cert/certdata.txt", certdata, 0644); err != nil {
+	if err := os.WriteFile("third_party/cert/certdata.txt", certdata, 0644); err != nil {
 		log.Fatal(err)
 	}
 
@@ -85,7 +84,7 @@ func updateBundle() {
 	// We need to be in the same directory as the "certdata.txt" file because
 	// "convert_mozilla_certdata.go" assumes it's in PWD.
 	out := run("third_party/cert", "go", "run", "../convert_mozilla_certdata/convert_mozilla_certdata.go")
-	if err := ioutil.WriteFile("third_party/cert/cert.pem", out, 0644); err != nil {
+	if err := os.WriteFile("third_party/cert/cert.pem", out, 0644); err != nil {
 		log.Fatal(err)
 	}
 }

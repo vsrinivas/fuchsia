@@ -6,7 +6,6 @@ package synckeys
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -18,7 +17,7 @@ import (
 )
 
 func TestProcessLocalFuchsiaKeys(t *testing.T) {
-	emptyDir, err := ioutil.TempDir(t.TempDir(), "fssh-test-")
+	emptyDir, err := os.MkdirTemp(t.TempDir(), "fssh-test-")
 	if err != nil {
 		t.Fatalf("could not create temporary folder: %s", err)
 	}
@@ -54,7 +53,7 @@ func TestProcessLocalFuchsiaKeys(t *testing.T) {
 
 func TestGenerateFuchsiaKeys(t *testing.T) {
 	tempDir := t.TempDir()
-	localDir, err := ioutil.TempDir(tempDir, "fssh-test-")
+	localDir, err := os.MkdirTemp(tempDir, "fssh-test-")
 	if err != nil {
 		t.Fatalf("could not create temporary folder %s: %s", localDir, err)
 	}
@@ -65,7 +64,7 @@ func TestGenerateFuchsiaKeys(t *testing.T) {
 		t.Fatalf("could not create temporary folder %s: %s", localSSHDir, err)
 	}
 
-	remoteDir, err := ioutil.TempDir(tempDir, "fssh-test-")
+	remoteDir, err := os.MkdirTemp(tempDir, "fssh-test-")
 	if err != nil {
 		t.Fatalf("could not create temporary folder: %s", err)
 	}
@@ -111,7 +110,7 @@ func TestGenerateFuchsiaKeys(t *testing.T) {
 }
 
 func TestProcessRemoteFuchsiaKeys(t *testing.T) {
-	emptyDir, err := ioutil.TempDir(t.TempDir(), "fssh-test-")
+	emptyDir, err := os.MkdirTemp(t.TempDir(), "fssh-test-")
 	if err != nil {
 		t.Fatalf("could not create temporary folder: %s", err)
 	}
@@ -151,13 +150,13 @@ func TestProcessRemoteFuchsiaKeys(t *testing.T) {
 
 func TestCheckLocalFuchsiaKeys(t *testing.T) {
 	tempDir := t.TempDir()
-	failingKeyCheckTestDir, err := ioutil.TempDir(tempDir, "fssh-key-check-test-")
+	failingKeyCheckTestDir, err := os.MkdirTemp(tempDir, "fssh-key-check-test-")
 	if err != nil {
 		t.Fatalf("could not create temporary folder: %s", err)
 	}
 	defer os.RemoveAll(failingKeyCheckTestDir)
 
-	passingKeyCheckTestDir, err := ioutil.TempDir(tempDir, "fssh-key-check-test-")
+	passingKeyCheckTestDir, err := os.MkdirTemp(tempDir, "fssh-key-check-test-")
 	if err != nil {
 		t.Fatalf("could not create temporary folder: %s", err)
 	}
@@ -201,7 +200,7 @@ func TestCheckLocalFuchsiaKeys(t *testing.T) {
 
 func TestGenerateLocalKeys(t *testing.T) {
 	// Test setup
-	tempDir, err := ioutil.TempDir(t.TempDir(), "fssh-gen-key-test-")
+	tempDir, err := os.MkdirTemp(t.TempDir(), "fssh-gen-key-test-")
 	if err != nil {
 		t.Fatalf("could not create temporary folder: %s", err)
 	}
@@ -318,7 +317,7 @@ func TestFilesHaveSameContents(t *testing.T) {
 }
 
 func writeTempFile(dir string, contents []string) (path string, err error) {
-	f, err := ioutil.TempFile(dir, "fssh-test-")
+	f, err := os.CreateTemp(dir, "fssh-test-")
 	if err != nil {
 		return "", fmt.Errorf("could not create temp testing file %s: %s", f.Name(), err)
 	}

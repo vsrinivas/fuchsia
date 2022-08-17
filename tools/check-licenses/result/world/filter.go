@@ -7,7 +7,7 @@ package world
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -82,7 +82,7 @@ func (w *World) FilterExtraProjects(filepaths []string) ([]string, error) {
 		}
 		defer f.Close()
 
-		content, err := ioutil.ReadAll(f)
+		content, err := io.ReadAll(f)
 		if err != nil {
 			return filepaths, err
 		}

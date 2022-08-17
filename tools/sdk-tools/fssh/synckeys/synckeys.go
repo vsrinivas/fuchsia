@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"os/user"
@@ -162,7 +161,7 @@ func processRemoteFuchsiaKeys(ctx context.Context, runCommand runner, hostname s
 	for _, filename := range fuchsiaKeyFilenames {
 		paths = append(paths, filepath.Join(sshDir, filename))
 	}
-	tempKeyDir, err := ioutil.TempDir(os.TempDir(), "fssh-temp-remote-keys-")
+	tempKeyDir, err := os.MkdirTemp(os.TempDir(), "fssh-temp-remote-keys-")
 	if err != nil {
 		return nil, fmt.Errorf("could not create local temporary folder for remote SSH keys: %w", err)
 	}
@@ -297,7 +296,7 @@ func generatePublicKeyfile(ctx context.Context, runCommand runner, privateKeyPat
 		return fmt.Errorf("could not run %q : %w", sshKeygenExecName, err)
 	}
 	// Write authorized key file
-	if err = ioutil.WriteFile(dst, []byte(authorizedKeyFileContents), 0400); err != nil {
+	if err = os.WriteFile(dst, []byte(authorizedKeyFileContents), 0400); err != nil {
 		return fmt.Errorf("could not write authorized key file %q : %w", dst, err)
 	}
 	return nil
@@ -322,11 +321,11 @@ func sameFuchsiaKeys(ctx context.Context, dir1 string, dir2 string) (bool, error
 // Checks that the 2 files have the same contents.
 // The comparison is line based and empty lines are ignored.
 func filesHaveSameContents(ctx context.Context, path1 string, path2 string) (bool, error) {
-	contents1, err := ioutil.ReadFile(path1)
+	contents1, err := os.ReadFile(path1)
 	if err != nil {
 		return false, fmt.Errorf("could not open file %q: %w'", path1, err)
 	}
-	contents2, err := ioutil.ReadFile(path2)
+	contents2, err := os.ReadFile(path2)
 	if err != nil {
 		return false, fmt.Errorf("could not open file %q: %w'", path2, err)
 	}
@@ -410,7 +409,7 @@ func runCommand(ctx context.Context, execName string, args []string) (string, er
 }
 
 // findOnPath finds a executable with the name `execName` in the directories
-/// specified by the PATH environment variable.
+// specified by the PATH environment variable.
 func findOnPath(execName string) (string, error) {
 	path, err := exec.LookPath(execName)
 	if err != nil {

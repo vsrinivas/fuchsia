@@ -6,7 +6,6 @@ package build
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,7 +25,7 @@ func makeTestManifestFile(t *testing.T) (string, map[string]string) {
 	}
 	// Write some junk.
 	out += "\na\n"
-	if err := ioutil.WriteFile(p, []byte(out), 0o600); err != nil {
+	if err := os.WriteFile(p, []byte(out), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	return p, wantPaths
@@ -139,7 +138,7 @@ func makeTestManifest(t *testing.T, entries []manifestEntry) (string, string) {
 		if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 			t.Fatal(err)
 		}
-		if err := ioutil.WriteFile(path, []byte(entry.contents), 0o600); err != nil {
+		if err := os.WriteFile(path, []byte(entry.contents), 0o600); err != nil {
 			t.Fatal(err)
 		}
 		if _, err := fmt.Fprintf(manifest, "%s=%s\n", entry.packagePath, path); err != nil {

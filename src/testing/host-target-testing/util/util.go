@@ -13,7 +13,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"os/exec"
@@ -160,7 +159,7 @@ func AtomicallyWriteFile(path string, mode os.FileMode, writeFileFunc func(*os.F
 	dir := filepath.Dir(path)
 	basename := filepath.Base(path)
 
-	tmpfile, err := ioutil.TempFile(dir, basename)
+	tmpfile, err := os.CreateTemp(dir, basename)
 	if err != nil {
 		return err
 	}

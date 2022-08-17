@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -247,7 +246,7 @@ func transferImages(ctx context.Context, t tftp.Client, imgs []Image, cmdlineArg
 
 	// This is needed because imgs from GCS are compressed and we cannot get the correct size of the uncompressed images, so we have to download them first.
 	// TODO(ihuh): We should enable this step as a command line option.
-	workdir, err := ioutil.TempDir("", "working-dir")
+	workdir, err := os.MkdirTemp("", "working-dir")
 	if err != nil {
 		return false, err
 	}

@@ -9,7 +9,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
@@ -260,7 +259,7 @@ func (cmd *cmdRecord) Execute(_ context.Context, f *flag.FlagSet,
 	// Zedmon: Include additional zedmon trace data file in HTML output.
 	if doZedmon {
 		zFilename := "zedmon-" + prefix + ".json"
-		err = ioutil.WriteFile(zFilename, zData, 0644)
+		err = os.WriteFile(zFilename, zData, 0644)
 		if err != nil {
 			fmt.Printf("Failed to write zedmon trace to file")
 			err = convertWithGenerator(generatorPath, outputFilename, title, jsonFilename)

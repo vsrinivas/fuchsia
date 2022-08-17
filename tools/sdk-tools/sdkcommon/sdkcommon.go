@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"os"
 	"os/exec"
@@ -235,7 +235,9 @@ func (sdk SDKProperties) GetSDKVersion() string {
 }
 
 // GetSDKDataPath returns the path to the directory for storing SDK related data,
-//  or empty if not set.
+//
+//	or empty if not set.
+//
 // Use sdkcommon.New() to create an initialized SDKProperties struct.
 func (sdk SDKProperties) GetSDKDataPath() string {
 	return sdk.dataPath
@@ -249,7 +251,7 @@ func readSDKVersion(manifestFilePath string) (string, error) {
 		return "", err
 	}
 	defer manifestFile.Close()
-	data, err := ioutil.ReadAll(manifestFile)
+	data, err := io.ReadAll(manifestFile)
 	if err != nil {
 		return "", err
 	}
@@ -611,7 +613,7 @@ func checkSSHConfig(sdk SDKProperties) error {
 	// If the public and private key pair exist, and the sshconfig
 	// file is up to date, then our work here is done, return success.
 	if FileExists(authFile) && FileExists(keyFile) && FileExists(sshConfigFile) {
-		config, err := ioutil.ReadFile(sshConfigFile)
+		config, err := os.ReadFile(sshConfigFile)
 		if err == nil {
 			if strings.Contains(string(config), sshConfigTag) {
 				return nil

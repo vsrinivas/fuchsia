@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 
 	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
@@ -39,13 +39,13 @@ func main() {
 	var inputBytes []byte
 	var err error
 	if *inputPath != "" {
-		inputBytes, err = ioutil.ReadFile(*inputPath)
+		inputBytes, err = os.ReadFile(*inputPath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error reading input path %s: %s\n", *inputPath, err)
 			os.Exit(1)
 		}
 	} else {
-		inputBytes, err = ioutil.ReadAll(os.Stdin)
+		inputBytes, err = io.ReadAll(os.Stdin)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error reading input: %s\n", err)
 			os.Exit(1)

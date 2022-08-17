@@ -5,11 +5,12 @@
 package docgen
 
 import (
-	"go.fuchsia.dev/fuchsia/tools/cppdocgen/clangdoc"
-	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 	"unicode"
+
+	"go.fuchsia.dev/fuchsia/tools/cppdocgen/clangdoc"
 )
 
 type Define struct {
@@ -196,7 +197,7 @@ func ParseHeader(h string, filename string) (vals HeaderValues) {
 }
 
 func ReadHeader(name string) HeaderValues {
-	content, err := ioutil.ReadFile(name)
+	content, err := os.ReadFile(name)
 	if err != nil {
 		log.Fatal(err)
 	}

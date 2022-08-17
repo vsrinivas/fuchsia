@@ -7,7 +7,6 @@ package publish
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -29,7 +28,7 @@ func TestPublishArchive(t *testing.T) {
 
 	build.BuildTestPackage(cfg)
 	name := filepath.Join(t.TempDir(), "testpackage-0")
-	if err := ioutil.WriteFile(name, nil, 0o600); err != nil {
+	if err := os.WriteFile(name, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if err := build.Archive(cfg, name); err != nil {
@@ -83,7 +82,7 @@ func TestPublishListOfPackages(t *testing.T) {
 	outputManifestPath := filepath.Join(cfg.OutputDir, "package_manifest.json")
 	packagesListPath := filepath.Join(cfg.OutputDir, "packages.list")
 
-	if err := ioutil.WriteFile(packagesListPath, []byte(outputManifestPath+"\n"), 0600); err != nil {
+	if err := os.WriteFile(packagesListPath, []byte(outputManifestPath+"\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -144,7 +143,7 @@ func TestPublishValidatesPackageName(t *testing.T) {
 	outputManifestPath := filepath.Join(cfg.OutputDir, "package_manifest.json")
 	packagesListPath := filepath.Join(cfg.OutputDir, "packages.list")
 
-	if err := ioutil.WriteFile(packagesListPath, []byte(outputManifestPath+"\n"), 0600); err != nil {
+	if err := os.WriteFile(packagesListPath, []byte(outputManifestPath+"\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -175,7 +174,7 @@ func mustRelativePath(t *testing.T, p string) string {
 }
 
 func readDepfile(t *testing.T, depfilePath string) (string, []string) {
-	b, err := ioutil.ReadFile(depfilePath)
+	b, err := os.ReadFile(depfilePath)
 	if err != nil {
 		t.Fatal(err)
 	}

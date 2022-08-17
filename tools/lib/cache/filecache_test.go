@@ -8,8 +8,8 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
-	"io/ioutil"
 	"math/rand"
+	"os"
 	"runtime"
 	"sync"
 	"sync/atomic"
@@ -122,7 +122,7 @@ func (c *cacheFuzzer) checkRead(t *testing.T, readTime float64, filecache *FileC
 		defer c.wg.Done()
 		defer ref.Close()
 		sleepRand(readTime)
-		data, err := ioutil.ReadFile(ref.String())
+		data, err := os.ReadFile(ref.String())
 		if err != nil {
 			t.Errorf("could not read file: %v", err)
 		}

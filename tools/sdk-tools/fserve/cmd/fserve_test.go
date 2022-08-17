@@ -9,7 +9,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -572,7 +571,7 @@ func TestPrepareFromArchive(t *testing.T) {
 	archiveDir := t.TempDir()
 	data := []byte("This is a test file")
 	for i := 0; i < 3; i++ {
-		if err := ioutil.WriteFile(filepath.Join(archiveDir, fmt.Sprintf("file%d.txt", i)), data, 0o600); err != nil {
+		if err := os.WriteFile(filepath.Join(archiveDir, fmt.Sprintf("file%d.txt", i)), data, 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -641,7 +640,7 @@ func TestCopyDir(t *testing.T) {
 	// build the files only src
 	data := []byte("This is a test file")
 	for i := 0; i < 3; i++ {
-		if err := ioutil.WriteFile(filepath.Join(filesOnly, fmt.Sprintf("file%d.txt", i)), data, 0o600); err != nil {
+		if err := os.WriteFile(filepath.Join(filesOnly, fmt.Sprintf("file%d.txt", i)), data, 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -661,7 +660,7 @@ func TestCopyDir(t *testing.T) {
 			t.Fatal(err)
 		}
 		for j := 0; j < 3; j++ {
-			if err := ioutil.WriteFile(filepath.Join(dirsWithFiles, dirName, fmt.Sprintf("file%d.txt", j)), data, 0o600); err != nil {
+			if err := os.WriteFile(filepath.Join(dirsWithFiles, dirName, fmt.Sprintf("file%d.txt", j)), data, 0o600); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -673,11 +672,11 @@ func TestCopyDir(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err := ioutil.WriteFile(filepath.Join(mixedDir, fmt.Sprintf("file%d.txt", i)), data, 0o600); err != nil {
+		if err := os.WriteFile(filepath.Join(mixedDir, fmt.Sprintf("file%d.txt", i)), data, 0o600); err != nil {
 			t.Fatal(err)
 		}
 		for j := 0; j < 3; j++ {
-			if err := ioutil.WriteFile(filepath.Join(mixedDir, dirName, fmt.Sprintf("file%d.txt", j)), data, 0o600); err != nil {
+			if err := os.WriteFile(filepath.Join(mixedDir, dirName, fmt.Sprintf("file%d.txt", j)), data, 0o600); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -1221,7 +1220,6 @@ The method "helperCommandForFServe" replaces exec.Command and runs
 this test inplace of the command.
 
 This approach to mocking out executables is  based on  exec_test.go.
-
 */
 func TestFakeFServe(t *testing.T) {
 	t.Helper()

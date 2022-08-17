@@ -11,7 +11,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -440,7 +439,7 @@ func (r *RunCommand) runPreflights(ctx context.Context) error {
 	if botfilePath == "" {
 		return nil
 	}
-	data, err := ioutil.ReadFile(botfilePath)
+	data, err := os.ReadFile(botfilePath)
 	if err != nil {
 		return err
 	}
@@ -501,7 +500,7 @@ func (r *RunCommand) createTestbedConfig(targetSlice []target) (string, error) {
 		return "", err
 	}
 
-	f, err := ioutil.TempFile("", "testbed_config")
+	f, err := os.CreateTemp("", "testbed_config")
 	if err != nil {
 		return "", err
 	}
@@ -721,7 +720,7 @@ func (r *RunCommand) deriveTargetsFromFile(ctx context.Context) ([]target, error
 		SSHKey:  r.sshKey,
 	}
 
-	data, err := ioutil.ReadFile(r.configFile)
+	data, err := os.ReadFile(r.configFile)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", constants.ReadConfigFileErrorMsg, err)
 	}

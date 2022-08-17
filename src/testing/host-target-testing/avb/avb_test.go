@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -19,7 +19,7 @@ import (
 func createScript(t *testing.T) string {
 	name := filepath.Join(t.TempDir(), "avbtool.sh")
 	contents := "#!/bin/bash\necho \"$0 $@\"\n"
-	if err := ioutil.WriteFile(name, []byte(contents), 0o700); err != nil {
+	if err := os.WriteFile(name, []byte(contents), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	return name
@@ -44,11 +44,11 @@ func TestNoProperties(t *testing.T) {
 	avbtoolScript := createScript(t)
 	dir := t.TempDir()
 	avbKey := filepath.Join(dir, "avbkey")
-	if err := ioutil.WriteFile(avbKey, nil, 0o600); err != nil {
+	if err := os.WriteFile(avbKey, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	avbMetadata := filepath.Join(dir, "avbmetadata")
-	if err := ioutil.WriteFile(avbMetadata, nil, 0o600); err != nil {
+	if err := os.WriteFile(avbMetadata, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	var output bytes.Buffer
@@ -108,11 +108,11 @@ func TestProperties(t *testing.T) {
 	avbtoolScript := createScript(t)
 	dir := t.TempDir()
 	avbKey := filepath.Join(dir, "avbkey")
-	if err := ioutil.WriteFile(avbKey, nil, 0o600); err != nil {
+	if err := os.WriteFile(avbKey, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	avbMetadata := filepath.Join(dir, "avbmetadata")
-	if err := ioutil.WriteFile(avbMetadata, nil, 0o600); err != nil {
+	if err := os.WriteFile(avbMetadata, nil, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	var output bytes.Buffer
@@ -125,7 +125,7 @@ func TestProperties(t *testing.T) {
 	propFile2 := filepath.Join(dir, "prop2")
 	propFile3 := filepath.Join(dir, "prop3")
 	for _, p := range []string{propFile1, propFile2, propFile3} {
-		if err := ioutil.WriteFile(p, nil, 0o600); err != nil {
+		if err := os.WriteFile(p, nil, 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}

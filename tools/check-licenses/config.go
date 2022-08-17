@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"regexp"
@@ -53,7 +52,7 @@ type CheckLicensesConfig struct {
 }
 
 func NewCheckLicensesConfig(path string) (*CheckLicensesConfig, error) {
-	b, err := ioutil.ReadFile(path)
+	b, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to read config file [%v]: %w\n", path, err)
 	}

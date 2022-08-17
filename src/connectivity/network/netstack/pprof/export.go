@@ -9,7 +9,7 @@ package pprof
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"runtime/pprof"
@@ -78,7 +78,7 @@ func Setup(path string) (component.Node, func() error, error) {
 				}
 				mapDir.mu.Unlock()
 
-				if err := ioutil.WriteFile(filepath.Join(path, filename), b, os.ModePerm); err != nil {
+				if err := os.WriteFile(filepath.Join(path, filename), b, os.ModePerm); err != nil {
 					return err
 				}
 			}
@@ -113,7 +113,7 @@ func mapDirFromPath(path string) (*mapDirectory, error) {
 		if err != nil {
 			return nil, err
 		}
-		b, err := ioutil.ReadAll(f)
+		b, err := io.ReadAll(f)
 		if err != nil {
 			return nil, err
 		}

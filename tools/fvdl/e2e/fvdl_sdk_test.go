@@ -5,7 +5,7 @@ package e2e
 
 import (
 	"context"
-	"io/ioutil"
+	"io"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -24,7 +24,7 @@ func readLatestVersion(ctx context.Context, t *testing.T) string {
 	if err != nil {
 		t.Fatalf("Cannot create cloud storage reader: err %s", err)
 	}
-	version, err := ioutil.ReadAll(rc)
+	version, err := io.ReadAll(rc)
 	rc.Close()
 	if err != nil {
 		t.Fatalf("Cannot read from cloud storage: err %s", err)

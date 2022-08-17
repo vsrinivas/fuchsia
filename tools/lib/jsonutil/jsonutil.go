@@ -6,7 +6,7 @@ package jsonutil
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"os"
 )
 
 // WriteToFile writes data as JSON into a file.
@@ -15,12 +15,12 @@ func WriteToFile(path string, v interface{}) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(path, raw, 0o600)
+	return os.WriteFile(path, raw, 0o600)
 }
 
 // ReadFromFile reads data as JSON from a file.
 func ReadFromFile(path string, v interface{}) error {
-	raw, err := ioutil.ReadFile(path)
+	raw, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}

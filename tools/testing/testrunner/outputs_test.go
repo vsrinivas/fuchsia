@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -203,7 +202,7 @@ func TestRecordingOfOutputs(t *testing.T) {
 		if err := os.MkdirAll(dir, 0o700); err != nil {
 			t.Fatalf("failed to make directory %q for outputs: %v", dir, err)
 		}
-		if err := ioutil.WriteFile(path, []byte(content), 0o400); err != nil {
+		if err := os.WriteFile(path, []byte(content), 0o400); err != nil {
 			t.Fatalf("failed to write contents %q to file %q: %v", content, name, err)
 		}
 	}
@@ -249,7 +248,7 @@ ok 2 test_b (10ms)
 	outDirContents := make(map[string]string)
 	for name := range expectedContents {
 		path := filepath.Join(outDir, name)
-		b, err := ioutil.ReadFile(path)
+		b, err := os.ReadFile(path)
 		if err != nil {
 			t.Errorf("failed to read file %q in out dir: %v", path, err)
 		}

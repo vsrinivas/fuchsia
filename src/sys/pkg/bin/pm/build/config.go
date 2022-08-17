@@ -7,7 +7,6 @@ package build
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -53,7 +52,7 @@ func NewConfig() *Config {
 // temporary directory as a parent of the returned config.OutputDir and
 // config.TempDir. Callers should remove this directory.
 func TestConfig() *Config {
-	d, err := ioutil.TempDir("", "pm-test")
+	d, err := os.MkdirTemp("", "pm-test")
 	if err != nil {
 		panic(err)
 	}
@@ -190,7 +189,7 @@ func (c *Config) BlobInfo() ([]PackageBlobInfo, error) {
 	// blob for a package, targets need to know which unnamed blob is the
 	// meta FAR.
 	{
-		merkleBytes, err := ioutil.ReadFile(c.MetaFARMerkle())
+		merkleBytes, err := os.ReadFile(c.MetaFARMerkle())
 		if err != nil {
 			return nil, err
 		}

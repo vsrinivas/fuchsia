@@ -5,7 +5,6 @@
 package build
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -69,7 +68,7 @@ func TestLoadTestList(t *testing.T) {
 		},
 	}
 	testListPath := filepath.Join(t.TempDir(), "test-list.json")
-	ioutil.WriteFile(testListPath, []byte(manifest), os.ModePerm)
+	os.WriteFile(testListPath, []byte(manifest), os.ModePerm)
 	testListEntries, err := LoadTestList(testListPath)
 	if err != nil {
 		t.Fatalf("error loading test list: %s", err)
@@ -98,7 +97,7 @@ func TestLoadTestListVersionMismatch(t *testing.T) {
 	  ]
 	}`
 	testListPath := filepath.Join(t.TempDir(), "test-list.json")
-	ioutil.WriteFile(testListPath, []byte(manifest), os.ModePerm)
+	os.WriteFile(testListPath, []byte(manifest), os.ModePerm)
 	_, err := LoadTestList(testListPath)
 	if err == nil {
 		t.Fatalf("expected an error loading an unknown schema_id")
@@ -127,7 +126,7 @@ func TestLoadTestListVersionMissing(t *testing.T) {
 	  ]
 	}`
 	testListPath := filepath.Join(t.TempDir(), "test-list.json")
-	ioutil.WriteFile(testListPath, []byte(manifest), os.ModePerm)
+	os.WriteFile(testListPath, []byte(manifest), os.ModePerm)
 	_, err := LoadTestList(testListPath)
 	if err == nil {
 		t.Fatalf("expected an error loading a missing schema_id")

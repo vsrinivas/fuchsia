@@ -8,12 +8,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/build"
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/far/go"
+	far "go.fuchsia.dev/fuchsia/src/sys/pkg/lib/far/go"
 )
 
 type FileData []byte
@@ -78,7 +78,7 @@ func (p *Package) ReadFile(ctx context.Context, path string) ([]byte, error) {
 		return nil, err
 	}
 
-	return ioutil.ReadAll(r)
+	return io.ReadAll(r)
 }
 
 func (p *Package) Expand(ctx context.Context, dir string) error {
@@ -91,7 +91,7 @@ func (p *Package) Expand(ctx context.Context, dir string) error {
 		if err := os.MkdirAll(filepath.Dir(realPath), 0755); err != nil {
 			return fmt.Errorf("could not create parent directories for %s, %w", realPath, err)
 		}
-		if err = ioutil.WriteFile(realPath, data, 0644); err != nil {
+		if err = os.WriteFile(realPath, data, 0644); err != nil {
 			return fmt.Errorf("could not export %s to %s. %w", path, realPath, err)
 		}
 	}
@@ -116,7 +116,7 @@ func (p *Package) Expand(ctx context.Context, dir string) error {
 		if err := os.MkdirAll(filepath.Dir(realPath), 0755); err != nil {
 			return fmt.Errorf("could not create parent directories for %s, %w", realPath, err)
 		}
-		if err = ioutil.WriteFile(realPath, data, 0644); err != nil {
+		if err = os.WriteFile(realPath, data, 0644); err != nil {
 			fmt.Errorf("failed to write file %s. %w", realPath, err)
 		}
 	}

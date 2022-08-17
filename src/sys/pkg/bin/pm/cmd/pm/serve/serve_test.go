@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -81,7 +81,7 @@ func TestServer(t *testing.T) {
 	repoDir := t.TempDir()
 	manifestListPath := filepath.Join(cfg.OutputDir, "pkg-manifests.list")
 	pkgManifestPath := filepath.Join(cfg.OutputDir, "package_manifest.json")
-	if err := ioutil.WriteFile(manifestListPath, []byte(pkgManifestPath+"\n"), 0o600); err != nil {
+	if err := os.WriteFile(manifestListPath, []byte(pkgManifestPath+"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -143,7 +143,7 @@ func TestServer(t *testing.T) {
 			return
 		}
 
-		got, err := ioutil.ReadAll(res.Body)
+		got, err := io.ReadAll(res.Body)
 		if err != nil {
 			t.Error(err)
 			return
@@ -165,7 +165,7 @@ func TestServer(t *testing.T) {
 			return
 		}
 
-		got, err := ioutil.ReadAll(res.Body)
+		got, err := io.ReadAll(res.Body)
 		if err != nil {
 			t.Error(err)
 			return
@@ -224,12 +224,12 @@ func TestServer(t *testing.T) {
 				continue
 			}
 
-			want, err := ioutil.ReadFile(filepath.Join(repoDir, "repository", path))
+			want, err := os.ReadFile(filepath.Join(repoDir, "repository", path))
 			if err != nil {
 				t.Error(err)
 				continue
 			}
-			got, err := ioutil.ReadAll(res.Body)
+			got, err := io.ReadAll(res.Body)
 			if err != nil {
 				t.Error(err)
 				continue
@@ -277,7 +277,7 @@ func TestServer(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		got, err := ioutil.ReadFile(portFile)
+		got, err := os.ReadFile(portFile)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -304,7 +304,7 @@ func TestServerV2(t *testing.T) {
 	repoDir := t.TempDir()
 	manifestListPath := filepath.Join(cfg.OutputDir, "pkg-manifests.list")
 	pkgManifestPath := filepath.Join(cfg.OutputDir, "package_manifest.json")
-	if err := ioutil.WriteFile(manifestListPath, []byte(pkgManifestPath+"\n"), 0o600); err != nil {
+	if err := os.WriteFile(manifestListPath, []byte(pkgManifestPath+"\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -536,14 +536,14 @@ func TestServeAutoIncremental(t *testing.T) {
 	// The package ABI revision is required.
 	cfg.PkgABIRevision = 1
 
-	portFileDir, err := ioutil.TempDir("", "pm-serve-test-port-file-dir")
+	portFileDir, err := os.MkdirTemp("", "pm-serve-test-port-file-dir")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(portFileDir)
 	portFile := fmt.Sprintf("%s/%s", portFileDir, "port-file")
 
-	repoDir, err := ioutil.TempDir("", "pm-serve-test-repo")
+	repoDir, err := os.MkdirTemp("", "pm-serve-test-repo")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -551,7 +551,7 @@ func TestServeAutoIncremental(t *testing.T) {
 
 	manifestListPath := filepath.Join(cfg.OutputDir, "pkg-manifests.list")
 	pkgManifestPath := filepath.Join(cfg.OutputDir, "package_manifest.json")
-	if err := ioutil.WriteFile(manifestListPath, []byte(pkgManifestPath+"\n"), 0644); err != nil {
+	if err := os.WriteFile(manifestListPath, []byte(pkgManifestPath+"\n"), 0644); err != nil {
 		t.Fatal(err)
 	}
 

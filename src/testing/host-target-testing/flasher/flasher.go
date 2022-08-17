@@ -7,7 +7,6 @@ package flasher
 import (
 	"context"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 
@@ -70,7 +69,7 @@ func (p *BuildFlasher) Flash(ctx context.Context) error {
 
 	// Write out the public key's authorized keys.
 	if p.sshPublicKey != nil {
-		authorizedKeys, err := ioutil.TempFile("", "")
+		authorizedKeys, err := os.CreateTemp("", "")
 		if err != nil {
 			return err
 		}

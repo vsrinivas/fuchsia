@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 
@@ -40,7 +39,7 @@ func (z *ZBITool) MakeImageArgsZbi(ctx context.Context, destPath string, imageAr
 		return err
 	}
 
-	imageArgsFile, err := ioutil.TempFile("", "")
+	imageArgsFile, err := os.CreateTemp("", "")
 	if err != nil {
 		return err
 	}

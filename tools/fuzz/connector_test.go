@@ -5,7 +5,6 @@
 package fuzz
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -124,7 +123,7 @@ func TestSSHGet(t *testing.T) {
 		t.Fatalf("error getting file: %s", err)
 	}
 
-	got, err := ioutil.ReadFile(path.Join(tmpDir, testFile.name))
+	got, err := os.ReadFile(path.Join(tmpDir, testFile.name))
 	if err != nil {
 		t.Fatalf("error reading fetched file: %s", err)
 	}
@@ -168,7 +167,7 @@ func TestSSHPut(t *testing.T) {
 	tmpFile := path.Join(tmpDir, "testfile")
 	fileContents := "test file contents"
 
-	if err := ioutil.WriteFile(tmpFile, []byte(fileContents), 0o600); err != nil {
+	if err := os.WriteFile(tmpFile, []byte(fileContents), 0o600); err != nil {
 		t.Fatalf("error writing local file: %s", err)
 	}
 
@@ -203,7 +202,7 @@ func TestSSHGetGlob(t *testing.T) {
 	}
 
 	for _, testFile := range testFiles {
-		got, err := ioutil.ReadFile(path.Join(tmpDir, filepath.Base(testFile.name)))
+		got, err := os.ReadFile(path.Join(tmpDir, filepath.Base(testFile.name)))
 		if err != nil {
 			t.Fatalf("error reading fetched file: %s", err)
 		}
@@ -229,7 +228,7 @@ func TestSSHPutGlob(t *testing.T) {
 
 	for _, testFile := range testFiles {
 		tmpFile := path.Join(tmpDir, testFile.name)
-		if err := ioutil.WriteFile(tmpFile, []byte(testFile.content), 0o600); err != nil {
+		if err := os.WriteFile(tmpFile, []byte(testFile.content), 0o600); err != nil {
 			t.Fatalf("error writing local file: %s", err)
 		}
 	}
@@ -278,7 +277,7 @@ func TestSSHGetDir(t *testing.T) {
 
 	for _, testFile := range testFiles {
 		relPath := strings.TrimPrefix(testFile.name, path.Dir(srcDir))
-		got, err := ioutil.ReadFile(path.Join(tmpDir, relPath))
+		got, err := os.ReadFile(path.Join(tmpDir, relPath))
 		if err != nil {
 			t.Fatalf("error reading fetched file: %s", err)
 		}
@@ -300,7 +299,7 @@ func TestSSHGetDir(t *testing.T) {
 
 	for _, testFile := range testFiles {
 		relName := strings.TrimPrefix(testFile.name, path.Dir(srcDir))
-		got, err := ioutil.ReadFile(path.Join(tmpDir, relName))
+		got, err := os.ReadFile(path.Join(tmpDir, relName))
 
 		if !strings.HasPrefix(testFile.name, srcDir) {
 			if err == nil {
@@ -342,7 +341,7 @@ func TestSSHPutDir(t *testing.T) {
 
 	for _, testFile := range testFiles {
 		tmpFile := path.Join(tmpDir, testFile.name)
-		if err := ioutil.WriteFile(tmpFile, []byte(testFile.content), 0o600); err != nil {
+		if err := os.WriteFile(tmpFile, []byte(testFile.content), 0o600); err != nil {
 			t.Fatalf("error writing local file: %s", err)
 		}
 	}

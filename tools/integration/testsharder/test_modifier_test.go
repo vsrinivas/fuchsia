@@ -7,7 +7,6 @@ package testsharder
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -157,7 +156,7 @@ func TestAffectedModifiers(t *testing.T) {
 // be cleaned up automatically.
 func mkTempFile(t *testing.T, content string) string {
 	name := filepath.Join(t.TempDir(), "foo")
-	if err := ioutil.WriteFile(name, []byte(content), 0o600); err != nil {
+	if err := os.WriteFile(name, []byte(content), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	return name

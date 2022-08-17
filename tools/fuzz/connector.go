@@ -11,7 +11,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"path"
@@ -87,7 +86,7 @@ func (c *SSHConnector) Connect() error {
 	}
 
 	glog.Info("SSH: connecting...")
-	key, err := ioutil.ReadFile(c.Key)
+	key, err := os.ReadFile(c.Key)
 	if err != nil {
 		return fmt.Errorf("error reading ssh key: %s", err)
 	}
@@ -367,7 +366,7 @@ func writeSSHPrivateKeyFile(key *rsa.PrivateKey, path string) error {
 		Bytes: x509.MarshalPKCS1PrivateKey(key),
 	})
 
-	if err := ioutil.WriteFile(path, pemData, 0o600); err != nil {
+	if err := os.WriteFile(path, pemData, 0o600); err != nil {
 		return fmt.Errorf("error writing private key file: %s", err)
 	}
 
@@ -381,7 +380,7 @@ func writeSSHPublicKeyFile(key *rsa.PrivateKey, path string) error {
 		return fmt.Errorf("error generating public key: %s", err)
 	}
 	pubKeyData := ssh.MarshalAuthorizedKey(pubKey)
-	if err := ioutil.WriteFile(path, pubKeyData, 0o644); err != nil {
+	if err := os.WriteFile(path, pubKeyData, 0o644); err != nil {
 		return fmt.Errorf("error writing public key: %s", err)
 	}
 

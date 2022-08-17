@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -241,7 +240,7 @@ func NewPackageServer(ctx context.Context, repoPath, remoteRepoURL, remoteBlobUR
 	logger.Debugf(ctx, "creating package server serving from %s", repoPath)
 
 	// Create HTTP handlers for the package server.
-	rootJsonBytes, err := ioutil.ReadFile(filepath.Join(repoPath, "repository", "root.json"))
+	rootJsonBytes, err := os.ReadFile(filepath.Join(repoPath, "repository", "root.json"))
 	if err != nil {
 		return nil, err
 	}

@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -28,7 +27,7 @@ The summary contains a synthetic test for each supported failure mode.
 }
 
 func loadSwarmingTaskSummary(path string) (*tefmocheck.SwarmingTaskSummary, error) {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read swarming task summary file %q", path)
 	}
@@ -47,7 +46,7 @@ func loadTestSummary(path string) (*runtests.TestSummary, error) {
 	if path == "" {
 		return &runtests.TestSummary{}, nil
 	}
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read test summary file %q", path)
 	}
@@ -96,7 +95,7 @@ func main() {
 
 	var serialLogs [][]byte
 	for _, serialLogPath := range serialLogPaths {
-		serialLog, err := ioutil.ReadFile(serialLogPath)
+		serialLog, err := os.ReadFile(serialLogPath)
 		if err != nil {
 			log.Fatalf("failed to read serial log from %s: %e", serialLogPath, err)
 		}
@@ -106,7 +105,7 @@ func main() {
 	var swarmingOutput []byte
 	var swarmingOutputPerTest []tefmocheck.TestLog
 	if *swarmingOutputPath != "" {
-		swarmingOutput, err = ioutil.ReadFile(*swarmingOutputPath)
+		swarmingOutput, err = os.ReadFile(*swarmingOutputPath)
 		if err != nil {
 			log.Fatalf("failed to read swarming output from %s: %e", *swarmingOutputPath, err)
 		}
@@ -147,7 +146,7 @@ func main() {
 
 	var syslogs [][]byte
 	for _, syslogPath := range syslogPaths {
-		syslog, err := ioutil.ReadFile(syslogPath)
+		syslog, err := os.ReadFile(syslogPath)
 		if err != nil {
 			log.Fatalf("failed to read syslog from %s: %e", syslogPath, err)
 		}

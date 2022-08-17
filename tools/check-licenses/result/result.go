@@ -9,7 +9,6 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -171,7 +170,7 @@ func writeFile(path string, data []byte) error {
 }
 
 func compressGZ(path string) error {
-	d, err := ioutil.ReadFile(path)
+	d, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}

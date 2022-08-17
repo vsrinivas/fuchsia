@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -62,7 +61,7 @@ func (a *analyzer) Analyze(ctx context.Context, path string) ([]*staticanalysis.
 		return nil, nil
 	}
 
-	contents, err := ioutil.ReadFile(outputPath)
+	contents, err := os.ReadFile(outputPath)
 	if err != nil {
 		return nil, err
 	}

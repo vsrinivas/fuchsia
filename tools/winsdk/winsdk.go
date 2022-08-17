@@ -38,7 +38,6 @@ import (
 	"hash"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -455,7 +454,7 @@ func buildFileList(vsPath, vcToolsPath, vcrtVersion string) ([]packedFile, error
 }
 
 func addEnvSetup(files *[]packedFile, vcToolsPath string) (string, error) {
-	tmpDir, err := ioutil.TempDir(os.TempDir(), "winsdk*")
+	tmpDir, err := os.MkdirTemp(os.TempDir(), "winsdk*")
 	if err != nil {
 		return "", err
 	}
@@ -761,7 +760,7 @@ func generageSDKDir(files []packedFile, envDir string) error {
 }
 
 func generateSDKArchive(files []packedFile, envDir string) (string, error) {
-	outputFile, err := ioutil.TempFile("", "sdkpack.zip")
+	outputFile, err := os.CreateTemp("", "sdkpack.zip")
 	if err != nil {
 		return outputFile.Name(), err
 	}

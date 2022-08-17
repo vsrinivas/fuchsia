@@ -6,7 +6,7 @@ package file
 
 import (
 	"bytes"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -14,7 +14,7 @@ import (
 func TestFileCreatedSuccessfully(t *testing.T) {
 	setup(t)
 	filename := filepath.Join(t.TempDir(), "success.txt")
-	if err := ioutil.WriteFile(filename, []byte("Example Text"), 0600); err != nil {
+	if err := os.WriteFile(filename, []byte("Example Text"), 0600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -48,7 +48,7 @@ func TestReplacements(t *testing.T) {
 	expected := []byte("left quote: \" right quote: \"")
 
 	filename := filepath.Join(t.TempDir(), "replacement.txt")
-	if err := ioutil.WriteFile(filename, []byte("left quote: “ right quote: ”"), 0600); err != nil {
+	if err := os.WriteFile(filename, []byte("left quote: “ right quote: ”"), 0600); err != nil {
 		t.Fatal(err)
 	}
 

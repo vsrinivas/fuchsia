@@ -6,7 +6,6 @@
 package environment
 
 import (
-	"io/ioutil"
 	"os"
 )
 
@@ -71,7 +70,7 @@ func ensure(e environment, isolated bool) (func(), error) {
 	}
 
 	if !ok || isolated {
-		tmp, err := ioutil.TempDir("", "wt")
+		tmp, err := os.MkdirTemp("", "wt")
 		if err != nil {
 			return nil, err
 		}

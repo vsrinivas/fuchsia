@@ -11,7 +11,6 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
@@ -79,9 +78,9 @@ func mainImpl() error {
 			return err
 		}
 		if bytes.Equal(b, emptyLibBytes) {
-			return ioutil.WriteFile(*out, []byte{}, 0644)
+			return os.WriteFile(*out, []byte{}, 0644)
 		}
 	}
 
-	return ioutil.WriteFile(*out, b, 0644)
+	return os.WriteFile(*out, b, 0644)
 }

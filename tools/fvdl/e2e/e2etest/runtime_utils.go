@@ -9,7 +9,6 @@ import (
 	"compress/gzip"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 )
@@ -108,7 +107,7 @@ func GenerateFakeArgsFile(destFile string) error {
 	fakeData := []byte(`import("//products/fvdl_e2e_test.gni")
 import("//vendor/google/boards/qemu-x64.gni")
 `)
-	return ioutil.WriteFile(destFile, fakeData, 0o755)
+	return os.WriteFile(destFile, fakeData, 0o755)
 }
 
 // GenerateFakeImagesJson creates a fake images.json build output to destFile.
@@ -147,5 +146,5 @@ func GenerateFakeImagesJson(destFile string) error {
 		}
 	]
 `)
-	return ioutil.WriteFile(destFile, fakeData, 0o755)
+	return os.WriteFile(destFile, fakeData, 0o755)
 }

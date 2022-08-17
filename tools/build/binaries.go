@@ -7,7 +7,7 @@ package build
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -79,7 +79,7 @@ func (binary Binary) ELFBuildID(buildDir string) (string, error) {
 		f, err := os.Open(p)
 		if err == nil {
 			defer f.Close()
-			content, err := ioutil.ReadAll(f)
+			content, err := io.ReadAll(f)
 			if err != nil {
 				return "", fmt.Errorf("failed to read binary's build ID file: %w", err)
 			}

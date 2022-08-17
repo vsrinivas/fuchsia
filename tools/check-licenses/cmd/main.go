@@ -9,7 +9,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -213,7 +212,7 @@ func getLogWriters(logLevel int, outDir string) (io.Writer, error) {
 	if logLevel == 0 {
 		// Default: logLevel == 0
 		// Discard all non-error logs.
-		logTargets = append(logTargets, ioutil.Discard)
+		logTargets = append(logTargets, io.Discard)
 	} else {
 		if logLevel == 1 && outDir != "" {
 			// logLevel == 1

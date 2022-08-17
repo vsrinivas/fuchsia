@@ -8,7 +8,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -109,5 +108,5 @@ func writeJSONPB(pb proto.Message, path string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(path, b, 0o644)
+	return os.WriteFile(path, b, 0o644)
 }

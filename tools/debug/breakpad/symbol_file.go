@@ -8,13 +8,12 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"strings"
 )
 
 // ParseSymbolFile reads a breakpad symbol file.
 func ParseSymbolFile(r io.Reader) (*SymbolFile, error) {
-	bytes, err := ioutil.ReadAll(r)
+	bytes, err := io.ReadAll(r)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read symbol file: %v", err)
 	}

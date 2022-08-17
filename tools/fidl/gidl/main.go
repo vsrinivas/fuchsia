@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"sort"
@@ -168,7 +167,7 @@ func parseGidlIr(filename string) gidlir.All {
 }
 
 func parseFidlJSONIr(filename string) fidlgen.Root {
-	bytes, err := ioutil.ReadFile(filename)
+	bytes, err := os.ReadFile(filename)
 	if err != nil {
 		panic(err)
 	}
@@ -257,7 +256,7 @@ func main() {
 		// The fuzzer corpus manifest must always be written so that the build
 		// system tries to rebuild the package. The individual files within the
 		// corpus aren't tracked by the build system.
-		err = ioutil.WriteFile(*flags.Out, mainFile, 0666)
+		err = os.WriteFile(*flags.Out, mainFile, 0666)
 	} else {
 		err = fidlgen.WriteFileIfChanged(*flags.Out, mainFile)
 	}

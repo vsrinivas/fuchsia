@@ -12,7 +12,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -182,7 +181,7 @@ func UnpackFrom(path string, distroParams DistributionParams) (*Distribution, er
 		emulator_file = "femu.tar.gz"
 	}
 	archivePath := filepath.Join(path, "emulator", emulator_file)
-	unpackedPath, err := ioutil.TempDir("", "emulator-distro")
+	unpackedPath, err := os.MkdirTemp("", "emulator-distro")
 	if err != nil {
 		return nil, err
 	}
@@ -415,7 +414,7 @@ func (d *Distribution) ResizeRawImage(imageName, hostPathFvmBinary string) (stri
 
 	resizedPath, err := func() (string, error) {
 		// Don't want a tempfile, just a safe name. Close the file object as soon as is safe.
-		f, err := ioutil.TempFile("", "resized_fvm.*.blk")
+		f, err := os.CreateTemp("", "resized_fvm.*.blk")
 		if err != nil {
 			return "", err
 		}
@@ -466,7 +465,7 @@ func (d *Distribution) findImageByName(name, typ string) (*build.Image, error) {
 
 func tempFilePath(dir, template string) (string, error) {
 	// Don't want a tempfile, just a safe name. Close the file object as soon as is safe.
-	f, err := ioutil.TempFile(dir, template)
+	f, err := os.CreateTemp(dir, template)
 	if err != nil {
 		return "", err
 	}
@@ -481,12 +480,12 @@ func tempFilePath(dir, template string) (string, error) {
 // where the serial port has been disabled. The following modifications are
 // made to the emulator invocation compared with Create()/Start():
 //
-//  - amalgamate the given ZBI into a larger one that includes an additional
-//    entry of a script which includes commands to run.
-//  - that script mounts a disk created on the host in /tmp, and runs the
-//    given command with output redirected to a file also on the /tmp disk
-//  - the script triggers shutdown of the machine
-//  - after emulator shutdown, the log file is extracted and returned.
+//   - amalgamate the given ZBI into a larger one that includes an additional
+//     entry of a script which includes commands to run.
+//   - that script mounts a disk created on the host in /tmp, and runs the
+//     given command with output redirected to a file also on the /tmp disk
+//   - the script triggers shutdown of the machine
+//   - after emulator shutdown, the log file is extracted and returned.
 //
 // In order to achieve this, here we need to create the host minfs
 // file system, write the commands to run, build the augmented .zbi to
@@ -496,7 +495,7 @@ func (d *Distribution) RunNonInteractive(
 	toRun, hostPathMinfsBinary, hostPathZbiBinary string,
 	fvd *fvdpb.VirtualDevice,
 ) (string, string, error) {
-	root, err := ioutil.TempDir("", "qemu")
+	root, err := os.MkdirTemp("", "qemu")
 	if err != nil {
 		return "", "", err
 	}
@@ -526,7 +525,7 @@ umount /mnt/testdata-fs
 dm poweroff
 `
 	runcmds := filepath.Join(root, "runcmds.txt")
-	if err := ioutil.WriteFile(runcmds, []byte(script), 0666); err != nil {
+	if err := os.WriteFile(runcmds, []byte(script), 0666); err != nil {
 		return "", "", err
 	}
 	// Make a minfs filesystem to mount in the target.
@@ -606,11 +605,11 @@ dm poweroff
 		}
 	}
 
-	retLog, err := ioutil.ReadFile(log)
+	retLog, err := os.ReadFile(log)
 	if err != nil {
 		return "", "", err
 	}
-	retErr, err := ioutil.ReadFile(logerr)
+	retErr, err := os.ReadFile(logerr)
 	if err != nil {
 		return "", "", err
 	}
@@ -625,7 +624,7 @@ func (d *Distribution) loadBuildInfo() (*buildInfo, error) {
 	var buildinfo buildInfo
 
 	path := filepath.Join(d.testDataDir, "emulator", "buildinfo.ini")
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("read %q: %w", path, err)
 	}

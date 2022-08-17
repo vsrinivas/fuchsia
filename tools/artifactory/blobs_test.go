@@ -5,7 +5,6 @@
 package artifactory
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,7 +23,7 @@ func createBuildDir(t *testing.T, files map[string]string, manifests []string) (
 		if err := os.MkdirAll(filepath.Join(dir, filepath.Dir(filename)), 0o700); err != nil {
 			t.Fatal(err)
 		}
-		if err := ioutil.WriteFile(filepath.Join(dir, filename), []byte(data), 0o600); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, filename), []byte(data), 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -32,7 +31,7 @@ func createBuildDir(t *testing.T, files map[string]string, manifests []string) (
 	// write the newline-delimited file that is produced by a ninja target
 	newlineLocation := "manifests.list"
 	manifestPaths := strings.Join(manifests[:], "\n")
-	if err := ioutil.WriteFile(filepath.Join(dir, newlineLocation), []byte(manifestPaths), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, newlineLocation), []byte(manifestPaths), 0o600); err != nil {
 		t.Fatal(err)
 	}
 

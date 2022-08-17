@@ -9,7 +9,6 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -63,7 +62,7 @@ func create(t *testing.T, files []string) string {
 		if err := os.MkdirAll(filepath.Dir(absPath), os.ModePerm); err != nil {
 			t.Fatal(err)
 		}
-		if err := ioutil.WriteFile(absPath, []byte(path+"\n"), 0o600); err != nil {
+		if err := os.WriteFile(absPath, []byte(path+"\n"), 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}

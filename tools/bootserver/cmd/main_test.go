@@ -7,7 +7,7 @@ package main
 import (
 	"context"
 	"io"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -110,7 +110,7 @@ func TestPopulateReaders(t *testing.T) {
 			}
 
 			for _, i := range test.existingImageIndexes {
-				if err := ioutil.WriteFile(testImgs[i].Path, []byte("data"), 0o700); err != nil {
+				if err := os.WriteFile(testImgs[i].Path, []byte("data"), 0o700); err != nil {
 					t.Fatal(err)
 				}
 			}

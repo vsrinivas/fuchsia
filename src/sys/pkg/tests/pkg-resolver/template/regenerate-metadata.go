@@ -8,7 +8,6 @@ package main
 
 import (
 	"encoding/json"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -43,7 +42,7 @@ func loadKeys(repo *tuf.Repo, role string, path string) {
 }
 
 func main() {
-	tempdir, err := ioutil.TempDir(".", "")
+	tempdir, err := os.MkdirTemp(".", "")
 	if err != nil {
 		log.Fatal(err)
 	}

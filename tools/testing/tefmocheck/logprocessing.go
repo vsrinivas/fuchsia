@@ -7,7 +7,6 @@ package tefmocheck
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -37,7 +36,7 @@ func SplitTestLogs(logBytes []byte, logBaseName, outDir string, testNames []stri
 			if err := os.MkdirAll(filepath.Dir(destPath), 0o766); err != nil {
 				return err
 			}
-			if err := ioutil.WriteFile(destPath, testLog.Bytes, 0o666); err != nil {
+			if err := os.WriteFile(destPath, testLog.Bytes, 0o666); err != nil {
 				return err
 			}
 			testLog.FilePath = destPath

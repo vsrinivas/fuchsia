@@ -6,7 +6,7 @@
 package testhelper
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -51,7 +51,7 @@ func (t *MockTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 		StatusCode: 200,
 		Request:    req,
 		Header:     http.Header{},
-		Body:       ioutil.NopCloser(strings.NewReader(body)),
+		Body:       io.NopCloser(strings.NewReader(body)),
 	}
 	return resp, nil
 }

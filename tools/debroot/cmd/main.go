@@ -14,7 +14,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -159,7 +158,7 @@ func downloadPackageList(config *Config, depends bool) ([]Lock, error) {
 			}
 			defer r.Body.Close()
 
-			b, err := ioutil.ReadAll(r.Body)
+			b, err := io.ReadAll(r.Body)
 			if err != nil {
 				return nil, err
 			}
@@ -204,7 +203,7 @@ func downloadPackageList(config *Config, depends bool) ([]Lock, error) {
 					defer r.Body.Close()
 					fmt.Printf("\n")
 
-					buf, err := ioutil.ReadAll(r.Body)
+					buf, err := io.ReadAll(r.Body)
 					if err != nil {
 						return nil, fmt.Errorf("failed to read packages file: %v", err)
 					}
@@ -432,7 +431,7 @@ func installSysroot(list []Lock, installDir, debsCache string) error {
 			}
 			defer r.Body.Close()
 
-			buf, err := ioutil.ReadAll(r.Body)
+			buf, err := io.ReadAll(r.Body)
 			if err != nil {
 				return err
 			}
@@ -442,7 +441,7 @@ func installSysroot(list []Lock, installDir, debsCache string) error {
 				return fmt.Errorf("%s: checksum doesn't match", filename)
 			}
 
-			if err := ioutil.WriteFile(deb, buf, 0644); err != nil {
+			if err := os.WriteFile(deb, buf, 0644); err != nil {
 				return err
 			}
 		}
@@ -482,7 +481,7 @@ func installSysroot(list []Lock, installDir, debsCache string) error {
 	}
 
 	// Prune /usr/share, leave only pkgconfig files.
-	files, err := ioutil.ReadDir(filepath.Join(installDir, "usr", "share"))
+	files, err := os.ReadDir(filepath.Join(installDir, "usr", "share"))
 	if err != nil {
 		return err
 	}
@@ -551,7 +550,7 @@ func installSysroot(list []Lock, installDir, debsCache string) error {
 			}
 			update := false
 			if info.Mode().IsRegular() && filepath.Ext(path) == ".h" {
-				content, err := ioutil.ReadFile(path)
+				content, err := os.ReadFile(path)
 				if err != nil {
 					return err
 				}
@@ -565,7 +564,7 @@ func installSysroot(list []Lock, installDir, debsCache string) error {
 				}
 				if update {
 					fmt.Printf("Updating %s...\n", path)
-					if err := ioutil.WriteFile(path, content, info.Mode()); err != nil {
+					if err := os.WriteFile(path, content, info.Mode()); err != nil {
 						return err
 					}
 				}
@@ -625,13 +624,13 @@ func installSysroot(list []Lock, installDir, debsCache string) error {
 			return err
 		}
 		for _, path := range matches {
-			read, err := ioutil.ReadFile(path)
+			read, err := os.ReadFile(path)
 			if err != nil {
 				return err
 			}
 			sub := regexp.MustCompile(`(/usr)?/lib/[a-z0-9_]+-linux-gnu[a-z0-9]*/`)
 			contents := sub.ReplaceAllString(string(read), "")
-			if err := ioutil.WriteFile(path, []byte(contents), 0644); err != nil {
+			if err := os.WriteFile(path, []byte(contents), 0644); err != nil {
 				return err
 			}
 		}
@@ -665,7 +664,7 @@ func (c *updateCmd) SetFlags(f *flag.FlagSet) {
 }
 
 func (c *updateCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	d, err := ioutil.ReadFile(c.config)
+	d, err := os.ReadFile(c.config)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to read config: %v\n", err)
 		return subcommands.ExitFailure
@@ -703,7 +702,7 @@ func (c *updateCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{}
 		return subcommands.ExitFailure
 	}
 
-	if err := ioutil.WriteFile(c.lockfile, l, 0666); err != nil {
+	if err := os.WriteFile(c.lockfile, l, 0666); err != nil {
 		fmt.Fprintf(os.Stderr, "failed to write lockfile: %v\n", err)
 		return subcommands.ExitFailure
 	}
@@ -736,7 +735,7 @@ func (c *installCmd) Execute(_ context.Context, f *flag.FlagSet, _ ...interface{
 	}
 	lockfile := f.Args()[0]
 
-	d, err := ioutil.ReadFile(lockfile)
+	d, err := os.ReadFile(lockfile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "failed to read lockfile: %v\n", err)
 		return subcommands.ExitFailure

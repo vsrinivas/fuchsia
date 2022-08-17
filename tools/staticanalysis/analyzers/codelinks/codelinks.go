@@ -7,7 +7,7 @@ package codelinks
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -52,7 +52,7 @@ func (a *analyzer) Analyze(_ context.Context, path string) ([]*staticanalysis.Fi
 		return nil, nil
 	}
 
-	b, err := ioutil.ReadFile(filepath.Join(a.checkoutDir, path))
+	b, err := os.ReadFile(filepath.Join(a.checkoutDir, path))
 	if err != nil {
 		return nil, err
 	}

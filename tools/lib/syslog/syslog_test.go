@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"io/ioutil"
 	"os"
 	"runtime/pprof"
 	"sync"
@@ -220,7 +219,7 @@ func TestStream(t *testing.T) {
 		go func() {
 			// Read output so that the syslogger doesn't get blocked on writing
 			// the "syslog stream interrupted" message.
-			ioutil.ReadAll(streamOutput)
+			io.ReadAll(streamOutput)
 		}()
 
 		client.mockRunErrs <- sshutil.ConnectionError{}

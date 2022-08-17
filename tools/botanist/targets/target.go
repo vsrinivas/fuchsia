@@ -13,7 +13,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -233,7 +232,7 @@ func (t *target) sshClient(addr *net.IPAddr) (*sshutil.Client, error) {
 		return nil, errors.New("SSHClient() failed; no ssh keys provided")
 	}
 
-	p, err := ioutil.ReadFile(t.sshKeys[0])
+	p, err := os.ReadFile(t.sshKeys[0])
 	if err != nil {
 		return nil, err
 	}

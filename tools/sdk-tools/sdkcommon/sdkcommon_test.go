@@ -7,7 +7,7 @@ package sdkcommon
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -488,13 +488,13 @@ func TestCheckSSHConfigExistingFiles(t *testing.T) {
 	if err := os.MkdirAll(sshDir, 0o700); err != nil {
 		t.Fatal(err)
 	}
-	if err := ioutil.WriteFile(authFile, data, 0o600); err != nil {
+	if err := os.WriteFile(authFile, data, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := ioutil.WriteFile(keyFile, data, 0o600); err != nil {
+	if err := os.WriteFile(keyFile, data, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := ioutil.WriteFile(sshConfigFile, []byte(sshConfigTag), 0o600); err != nil {
+	if err := os.WriteFile(sshConfigFile, []byte(sshConfigTag), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
@@ -503,21 +503,21 @@ func TestCheckSSHConfigExistingFiles(t *testing.T) {
 	}
 
 	// Make sure they have not changed
-	content, err := ioutil.ReadFile(authFile)
+	content, err := os.ReadFile(authFile)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if string(content) != string(data) {
 		t.Fatalf("Expected test auth file to contain [%v], but contains [%v]", string(data), string(content))
 	}
-	content, err = ioutil.ReadFile(keyFile)
+	content, err = os.ReadFile(keyFile)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if string(content) != string(data) {
 		t.Fatalf("Expected test key file to contain [%v], but contains [%v]", string(data), string(content))
 	}
-	content, err = ioutil.ReadFile(sshConfigFile)
+	content, err = os.ReadFile(sshConfigFile)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1194,7 +1194,7 @@ func TestWriteTempFile(t *testing.T) {
 		if err != nil {
 			t.Errorf("WriteTempFile(%v): got unexpected error %s", test.content, err)
 		}
-		dat, err := ioutil.ReadFile(path)
+		dat, err := os.ReadFile(path)
 		if err != nil {
 			t.Errorf("Error reading temp file: %s", err)
 		}
@@ -1673,7 +1673,7 @@ func fakeSFTP(args []string, stdin *os.File) {
 		expectedSFTPInput = fmt.Sprintf("put %v %v", expectedSrc, expectedDst)
 	}
 
-	inputToSFTP, err := ioutil.ReadAll(stdin)
+	inputToSFTP, err := io.ReadAll(stdin)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "got error converting stdin to string: %v", err)
 		os.Exit(1)

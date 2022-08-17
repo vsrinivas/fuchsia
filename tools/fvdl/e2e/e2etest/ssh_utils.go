@@ -6,17 +6,17 @@ package e2etest
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 )
 
 // CreateSSHKeyPairFiles creates a private-public and authorized_key files. The files are written to the following locations:
-//  {base}/.fx-ssh-path
-//  {base}/.ssh/fuchsia_ed25519
-//  {base}/.ssh/fuchsia_ed25519.pub
-//  {base}/.ssh/fuchsia_authorized_keys
+//
+//	{base}/.fx-ssh-path
+//	{base}/.ssh/fuchsia_ed25519
+//	{base}/.ssh/fuchsia_ed25519.pub
+//	{base}/.ssh/fuchsia_authorized_keys
 //
 // This simulates in-tree ssh setup.
 func CreateSSHKeyPairFiles(base string) error {
@@ -49,13 +49,13 @@ func CreateSSHKeyPairFiles(base string) error {
 	if err := removeIfExists(authKey); err != nil {
 		return err
 	}
-	if err := ioutil.WriteFile(authKey, []byte(output), 0o644); err != nil {
+	if err := os.WriteFile(authKey, []byte(output), 0o644); err != nil {
 		return err
 	}
 
 	// Create .fx-ssh-path file
 	data := []byte(fmt.Sprintf("%s\n%s\n", privateKey, authKey))
-	if err := ioutil.WriteFile(filepath.Join(base, ".fx-ssh-path"), data, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(base, ".fx-ssh-path"), data, 0o644); err != nil {
 		return err
 	}
 	fmt.Printf("[test info] wrote file %s\n with content\n%s\n", filepath.Join(base, ".fx-ssh-path"), data)

@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -86,7 +85,7 @@ func TestEndToEnd(t *testing.T) {
 	glog.Info(out)
 
 	tmpFile := path.Join(dir, "autoexec.bat")
-	if err := ioutil.WriteFile(tmpFile, []byte("something"), 0o600); err != nil {
+	if err := os.WriteFile(tmpFile, []byte("something"), 0o600); err != nil {
 		t.Fatalf("error creating tempfile: %s", err)
 	}
 
@@ -138,7 +137,7 @@ func TestEndToEnd(t *testing.T) {
 		t.Fatalf("artifact path not properly rewritten: %q", artifactPath)
 	}
 
-	artifactData, err := ioutil.ReadFile(artifactPath)
+	artifactData, err := os.ReadFile(artifactPath)
 	if err != nil {
 		t.Fatalf("error reading fetched artifact file: %s", err)
 	}
@@ -153,7 +152,7 @@ func TestEndToEnd(t *testing.T) {
 	reproFileContents := make([]byte, 12)
 	binary.LittleEndian.PutUint64(reproFileContents, 2)
 	binary.LittleEndian.PutUint32(reproFileContents[8:], 0x41414141)
-	if err := ioutil.WriteFile(reproFile, reproFileContents, 0o600); err != nil {
+	if err := os.WriteFile(reproFile, reproFileContents, 0o600); err != nil {
 		t.Fatalf("error creating repro file: %s", err)
 	}
 	runCommand(t, "put_data", "-handle", handle, "-fuzzer", "example-fuzzers/overflow_fuzzer",
@@ -183,7 +182,7 @@ func TestEndToEnd(t *testing.T) {
 		"example-fuzzers/overflow_fuzzer")
 	binary.LittleEndian.PutUint64(reproFileContents, 8)
 	binary.LittleEndian.PutUint32(reproFileContents[8:], 0x41414141)
-	if err := ioutil.WriteFile(reproFile, reproFileContents, 0o600); err != nil {
+	if err := os.WriteFile(reproFile, reproFileContents, 0o600); err != nil {
 		t.Fatalf("error creating repro file: %s", err)
 	}
 	runCommand(t, "put_data", "-handle", handle, "-fuzzer", "example-fuzzers/overflow_fuzzer",
@@ -199,7 +198,7 @@ func TestEndToEnd(t *testing.T) {
 	// Test put/get
 	testFile := path.Join(dir, "test_file")
 	testFileContents := []byte("test file contents!")
-	if err := ioutil.WriteFile(testFile, testFileContents, 0o600); err != nil {
+	if err := os.WriteFile(testFile, testFileContents, 0o600); err != nil {
 		t.Fatalf("error creating test file: %s", err)
 	}
 	out = runCommand(t, "put_data", "-handle", handle, "-fuzzer", fuzzer,
@@ -211,7 +210,7 @@ func TestEndToEnd(t *testing.T) {
 		"-src", "data/test_file", "-dst", dir)
 	glog.Info(out)
 
-	retrievedContents, err := ioutil.ReadFile(testFile)
+	retrievedContents, err := os.ReadFile(testFile)
 	if err != nil {
 		t.Fatalf("error reading fetched test file: %s", err)
 	}
@@ -227,7 +226,7 @@ func TestEndToEnd(t *testing.T) {
 	}
 	for j := 0; j < 2000; j++ {
 		corpusPath := path.Join(corpusDir, fmt.Sprintf("corpus-%d", j))
-		if err := ioutil.WriteFile(corpusPath, []byte(fmt.Sprintf("%d", j)), 0o600); err != nil {
+		if err := os.WriteFile(corpusPath, []byte(fmt.Sprintf("%d", j)), 0o600); err != nil {
 			t.Fatalf("error creating local corpus file: %s", err)
 		}
 	}

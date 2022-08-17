@@ -6,7 +6,6 @@ package osmisc
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -70,7 +69,7 @@ func TestDirIsEmpty(t *testing.T) {
 		t.Fatalf("directory should be empty")
 	}
 
-	if err := ioutil.WriteFile(filepath.Join(tmpDir, "file.txt"), []byte("content"), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, "file.txt"), []byte("content"), 0o600); err != nil {
 		t.Fatal(err.Error())
 	}
 
@@ -126,7 +125,7 @@ func TestCopyDir(t *testing.T) {
 				t.Fatalf("failed to create path %q: %v", path, err)
 			}
 		} else {
-			if err := ioutil.WriteFile(path, []byte(contents), 0o400); err != nil {
+			if err := os.WriteFile(path, []byte(contents), 0o400); err != nil {
 				t.Fatalf("failed to write contents to src %q: %v", path, err)
 			}
 		}
@@ -171,12 +170,12 @@ func TestCopyDir(t *testing.T) {
 		}
 
 		if !srcInfo.IsDir() {
-			srcContents, err := ioutil.ReadFile(srcPath)
+			srcContents, err := os.ReadFile(srcPath)
 			if err != nil {
 				t.Fatalf("failed to read src %q: %v", srcPath, err)
 			}
 
-			dstContents, err := ioutil.ReadFile(dstPath)
+			dstContents, err := os.ReadFile(dstPath)
 			if err != nil {
 				t.Fatalf("failed to read dst %q: %v", dstPath, err)
 			}

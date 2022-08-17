@@ -11,7 +11,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/url"
@@ -156,7 +155,7 @@ func setupAndExecute(ctx context.Context, flags testrunnerFlags) error {
 	testOutDir := filepath.Join(os.Getenv(constants.TestOutDirEnvKey), flags.outDir)
 	if testOutDir == "" {
 		var err error
-		testOutDir, err = ioutil.TempDir("", "testrunner")
+		testOutDir, err = os.MkdirTemp("", "testrunner")
 		if err != nil {
 			return fmt.Errorf("failed to create a test output directory")
 		}
@@ -238,7 +237,7 @@ func validateTest(test testsharder.Test) error {
 }
 
 func loadTests(path string) ([]testsharder.Test, error) {
-	bytes, err := ioutil.ReadFile(path)
+	bytes, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read %q: %w", path, err)
 	}
@@ -584,7 +583,7 @@ func runAndOutputTests(
 		// task, a test that doesn't properly clean up its processes could still be
 		// writing to the out dir as we try to upload the contents with the swarming
 		// task outputs which will result in the swarming bot failing with BOT_DIED.
-		tmpOutDir, err := ioutil.TempDir("", "")
+		tmpOutDir, err := os.MkdirTemp("", "")
 		if err != nil {
 			return err
 		}

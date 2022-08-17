@@ -7,7 +7,7 @@ package testsharder
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/build"
@@ -45,7 +45,7 @@ type TestModifier struct {
 
 // LoadTestModifiers loads a set of test modifiers from a json manifest.
 func LoadTestModifiers(manifestPath string) ([]TestModifier, error) {
-	bytes, err := ioutil.ReadFile(manifestPath)
+	bytes, err := os.ReadFile(manifestPath)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func LoadTestModifiers(manifestPath string) ([]TestModifier, error) {
 // maxAttempts will be applied to any test that is not multiplied.
 // Tests will be considered for multiplication only if num affected tests <= multiplyThreshold.
 func AffectedModifiers(testSpecs []build.TestSpec, affectedTestsPath string, maxAttempts, multiplyThreshold int) ([]TestModifier, error) {
-	affectedTestBytes, err := ioutil.ReadFile(affectedTestsPath)
+	affectedTestBytes, err := os.ReadFile(affectedTestsPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read affectedTestsPath (%s): %w", affectedTestsPath, err)
 	}

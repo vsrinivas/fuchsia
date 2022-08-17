@@ -7,7 +7,7 @@ package fuzz
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 	"path"
 	"testing"
 )
@@ -52,7 +52,7 @@ func (b *mockBuild) enableQemu(t *testing.T, fakeType string) (tmpDir string) {
 
 	qemuPath := path.Join(tmpDir, fakeType)
 
-	if err := ioutil.WriteFile(qemuPath, nil, 0644); err != nil {
+	if err := os.WriteFile(qemuPath, nil, 0644); err != nil {
 		t.Fatalf("error writing local file: %s", err)
 	}
 

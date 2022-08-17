@@ -11,7 +11,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -64,7 +63,7 @@ func Run(cfg *build.Config, args []string) error {
 		if err != nil {
 			return fmt.Errorf("failed to build dep file: %s", err)
 		}
-		if err := ioutil.WriteFile(cfg.MetaFAR()+".d", content, 0644); err != nil {
+		if err := os.WriteFile(cfg.MetaFAR()+".d", content, 0644); err != nil {
 			return err
 		}
 	}
@@ -83,7 +82,7 @@ func Run(cfg *build.Config, args []string) error {
 		if err != nil {
 			return err
 		}
-		if err := ioutil.WriteFile(filepath.Join(cfg.OutputDir, "blobs.json"), content, 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(cfg.OutputDir, "blobs.json"), content, 0644); err != nil {
 			return err
 		}
 	}
@@ -93,7 +92,7 @@ func Run(cfg *build.Config, args []string) error {
 		for _, blob := range blobs {
 			fmt.Fprintf(&buf, "%s=%s\n", blob.Merkle.String(), blob.SourcePath)
 		}
-		if err := ioutil.WriteFile(filepath.Join(cfg.OutputDir, "blobs.manifest"), buf.Bytes(), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(cfg.OutputDir, "blobs.manifest"), buf.Bytes(), 0644); err != nil {
 			return err
 		}
 	}
@@ -107,7 +106,7 @@ func Run(cfg *build.Config, args []string) error {
 		if err != nil {
 			return err
 		}
-		if err := ioutil.WriteFile(*pkgManifestPath, content, 0644); err != nil {
+		if err := os.WriteFile(*pkgManifestPath, content, 0644); err != nil {
 			return err
 		}
 	}

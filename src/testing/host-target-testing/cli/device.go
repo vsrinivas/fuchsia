@@ -8,7 +8,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"time"
@@ -77,7 +76,7 @@ func (c *DeviceConfig) SSHPrivateKey() (ssh.Signer, error) {
 			return nil, fmt.Errorf("ssh private key cannot be empty")
 		}
 
-		key, err := ioutil.ReadFile(c.sshKeyFile)
+		key, err := os.ReadFile(c.sshKeyFile)
 		if err != nil {
 			return nil, err
 		}

@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"math"
 	"net"
 	"os"
@@ -202,7 +201,7 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 		}
 		// Create a new temporary directory within TMPDIR and mount it as /tmp.
 		// TMPDIR should always be set in infrastructure.
-		tmpDir, err := ioutil.TempDir("", "")
+		tmpDir, err := os.MkdirTemp("", "")
 		if err != nil {
 			testResult.FailReason = err.Error()
 			return testResult, nil
@@ -253,7 +252,7 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 				SerialSocket string `json:"serial_socket"`
 				SSHKey       string `json:"ssh_key"`
 			}
-			b, err := ioutil.ReadFile(testbedConfigPath)
+			b, err := os.ReadFile(testbedConfigPath)
 			if err != nil {
 				testResult.FailReason = err.Error()
 				return testResult, nil
@@ -560,7 +559,7 @@ func (t *FFXTester) processTestResult(runResult *ffxutil.TestRunResult, testsByU
 				// TODO(ihuh): The stderr log may contain unsymbolized logs.
 				// Consider symbolizing them within ffx or testrunner.
 				if metadata.ArtifactType == ffxutil.StderrType {
-					stderrBytes, err := ioutil.ReadFile(filepath.Join(testCaseArtifactDir, artifact))
+					stderrBytes, err := os.ReadFile(filepath.Join(testCaseArtifactDir, artifact))
 					if err != nil {
 						failReason = fmt.Sprintf("failed to read stderr for test case %s: %s", testCase.Name, err)
 					} else {
@@ -774,7 +773,7 @@ func (t *FFXTester) RunSnapshot(ctx context.Context, snapshotFile string) error 
 }
 
 func sshToTarget(ctx context.Context, addr net.IPAddr, sshKeyFile string) (*sshutil.Client, error) {
-	key, err := ioutil.ReadFile(sshKeyFile)
+	key, err := os.ReadFile(sshKeyFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read SSH key file: %w", err)
 	}

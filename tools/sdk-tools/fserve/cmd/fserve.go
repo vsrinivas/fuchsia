@@ -13,7 +13,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -782,7 +781,7 @@ func processArchiveTarball(ctx context.Context, packageDir string, archiveFile s
 		return fmt.Errorf("could not checksum file %v: %v", archiveFile, err)
 	}
 	if sdkcommon.FileExists(checksumFile) {
-		content, err := ioutil.ReadFile(checksumFile)
+		content, err := os.ReadFile(checksumFile)
 		if err != nil {
 			log.Warningf("Could not read checksum file %v: %v\n", checksumFile, err)
 			isDifferent = true
@@ -999,7 +998,7 @@ func copyDir(ctx context.Context, srcDir string, destDir string) error {
 	}
 
 	// Process the contents of srcDir
-	contents, err := ioutil.ReadDir(srcDir)
+	contents, err := os.ReadDir(srcDir)
 	if err != nil {
 		return err
 	}

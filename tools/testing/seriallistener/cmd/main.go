@@ -12,7 +12,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"time"
@@ -77,7 +76,7 @@ func main() {
 
 	socketPath := os.Getenv(constants.SerialSocketEnvKey)
 
-	stdout := ioutil.Discard
+	stdout := io.Discard
 	if redirectStdout {
 		stdout = os.Stdout
 	}

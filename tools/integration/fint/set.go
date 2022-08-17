@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -330,7 +329,7 @@ func genArgs(staticSpec *fintpb.Static, contextSpec *fintpb.Context) ([]string, 
 	if staticSpec.EnableGoCache {
 		vars["gocache_dir"] = filepath.Join(contextSpec.CacheDir, "go_cache")
 	} else if staticSpec.UseTemporaryGoCache {
-		dir, err := ioutil.TempDir("", "go_cache")
+		dir, err := os.MkdirTemp("", "go_cache")
 		if err != nil {
 			return nil, err
 		}

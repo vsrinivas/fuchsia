@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -38,7 +37,7 @@ func TestPackage(cfg *Config) {
 	if err != nil {
 		panic(err)
 	}
-	if err := ioutil.WriteFile(pkgJSON, b, os.ModePerm); err != nil {
+	if err := os.WriteFile(pkgJSON, b, os.ModePerm); err != nil {
 		panic(err)
 	}
 
@@ -108,7 +107,7 @@ func BuildTestPackage(cfg *Config) {
 	if err != nil {
 		panic(err)
 	}
-	if err := ioutil.WriteFile(outputManifestPath, content, os.ModePerm); err != nil {
+	if err := os.WriteFile(outputManifestPath, content, os.ModePerm); err != nil {
 		panic(err)
 	}
 }

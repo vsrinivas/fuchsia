@@ -5,7 +5,7 @@
 package file
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 )
 
@@ -53,7 +53,7 @@ func NewFile(path string, ft FileType) (*File, error) {
 	}
 
 	if readFile {
-		content, err = ioutil.ReadFile(path)
+		content, err = os.ReadFile(path)
 		if err != nil {
 			return nil, err
 		}

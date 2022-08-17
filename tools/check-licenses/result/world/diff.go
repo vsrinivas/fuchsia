@@ -4,9 +4,7 @@
 
 package world
 
-import (
-	"io/ioutil"
-)
+import "os"
 
 // DiffInfo combines some header information along with the content of
 // the NOTICE file that we are diffing against.
@@ -20,7 +18,7 @@ type DiffInfo struct {
 func (w *World) SetDiffInfo() error {
 	path := Config.DiffNotice
 	diffHeader := []string{"Diffing local workspace against " + path}
-	diffTarget, err := ioutil.ReadFile(path)
+	diffTarget, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}

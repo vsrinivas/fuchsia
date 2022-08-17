@@ -6,7 +6,6 @@ package file
 
 import (
 	"bytes"
-	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -33,7 +32,7 @@ func setUp(t *testing.T) (string, []byte, *rand.Rand) {
 		t.Fatal(err)
 	}
 	name := filepath.Join(t.TempDir(), "file_test")
-	if err := ioutil.WriteFile(name, buf, 0o600); err != nil {
+	if err := os.WriteFile(name, buf, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	return name, buf, r

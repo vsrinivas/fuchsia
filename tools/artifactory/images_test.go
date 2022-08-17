@@ -6,7 +6,7 @@ package artifactory
 
 import (
 	"archive/tar"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -37,7 +37,7 @@ func TestImageUploads(t *testing.T) {
 	dir := t.TempDir()
 	name := filepath.Join(dir, "disk.raw")
 	content := []byte("Hello World!")
-	if err := ioutil.WriteFile(name, content, 0o600); err != nil {
+	if err := os.WriteFile(name, content, 0o600); err != nil {
 		t.Fatalf("failed to write to fake disk.raw file: %s", err)
 	}
 	m := &mockModules{

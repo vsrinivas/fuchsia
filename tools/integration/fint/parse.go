@@ -5,7 +5,7 @@
 package fint
 
 import (
-	"io/ioutil"
+	"os"
 
 	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
 
@@ -14,7 +14,7 @@ import (
 
 // ReadStatic deserializes a Static proto from a textproto file.
 func ReadStatic(path string) (*fintpb.Static, error) {
-	bytes, err := ioutil.ReadFile(path)
+	bytes, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
@@ -27,7 +27,7 @@ func ReadStatic(path string) (*fintpb.Static, error) {
 
 // ReadContext deserializes a Context proto from a textproto file.
 func ReadContext(path string) (*fintpb.Context, error) {
-	bytes, err := ioutil.ReadFile(path)
+	bytes, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}

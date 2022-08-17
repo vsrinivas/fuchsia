@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -136,7 +135,7 @@ func (b *ArtifactsBuild) GetPackageRepository(ctx context.Context, fetchMode Blo
 	}
 
 	blobsManifest := filepath.Join(packagesDir, "all_blobs.json")
-	blobsData, err := ioutil.ReadFile(blobsManifest)
+	blobsData, err := os.ReadFile(blobsManifest)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read blobs manifest: %w", err)
 	}
@@ -480,7 +479,7 @@ func (b *OmahaBuild) GetPaver(ctx context.Context) (paver.Paver, error) {
 	}
 
 	// Create a ZBI with the omaha_url argument.
-	tempDir, err := ioutil.TempDir("", "")
+	tempDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp directory: %w", err)
 	}
@@ -528,7 +527,7 @@ func (b *OmahaBuild) GetFlasher(ctx context.Context) (flasher.Flasher, error) {
 		return nil, err
 	}
 	// Create a ZBI with the omaha_url argument.
-	tempDir, err := ioutil.TempDir("", "")
+	tempDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return nil, fmt.Errorf("failed to create temp directory: %w", err)
 	}
@@ -570,7 +569,7 @@ func (b *OmahaBuild) GetFlasher(ctx context.Context) (flasher.Flasher, error) {
 		return nil, err
 	}
 
-	content, err := ioutil.ReadFile(flashManifest)
+	content, err := os.ReadFile(flashManifest)
 	if err != nil {
 		return nil, err
 	}

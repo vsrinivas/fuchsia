@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"reflect"
 	"sort"
@@ -1042,7 +1042,7 @@ func TestWithTargetDuration(t *testing.T) {
 }
 
 func depsFile(t *testing.T, buildDir string, deps ...string) string {
-	depsFile, err := ioutil.TempFile(buildDir, "deps")
+	depsFile, err := os.CreateTemp(buildDir, "deps")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1052,7 +1052,7 @@ func depsFile(t *testing.T, buildDir string, deps ...string) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ioutil.WriteFile(name, b, 0o400); err != nil {
+	if err := os.WriteFile(name, b, 0o400); err != nil {
 		t.Fatal(err)
 	}
 	return filepath.Base(name)

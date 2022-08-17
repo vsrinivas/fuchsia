@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -33,7 +33,7 @@ Lorum Ipsum Dolor`),
 
 func TestFlutter(t *testing.T) {
 	path := filepath.Join(*testDataDir, "example_flutter")
-	content, err := ioutil.ReadFile(path)
+	content, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,7 +47,7 @@ func TestFlutter(t *testing.T) {
 
 func TestChromium(t *testing.T) {
 	path := filepath.Join(*testDataDir, "example_chromium")
-	content, err := ioutil.ReadFile(path)
+	content, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -61,7 +61,7 @@ func TestChromium(t *testing.T) {
 }
 func TestGoogle(t *testing.T) {
 	path := filepath.Join(*testDataDir, "example_google")
-	content, err := ioutil.ReadFile(path)
+	content, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}

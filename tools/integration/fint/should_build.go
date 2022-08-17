@@ -7,7 +7,6 @@ package fint
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -128,7 +127,7 @@ func shouldBuild(
 		Files:       formatFilePaths(changedFiles),
 	}
 
-	analyzeDir, err := ioutil.TempDir("", "gn-analyze")
+	analyzeDir, err := os.MkdirTemp("", "gn-analyze")
 	if err != nil {
 		return false, err
 	}

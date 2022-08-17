@@ -8,8 +8,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 )
 
@@ -61,7 +61,7 @@ func (f Flags) FidlAmendments() Amendments {
 		return amendments
 	}
 
-	bytes, err := ioutil.ReadFile(*f.amendPath)
+	bytes, err := os.ReadFile(*f.amendPath)
 	if err != nil {
 		log.Fatalf("Error reading from %s: %v", *f.amendPath, err)
 	}

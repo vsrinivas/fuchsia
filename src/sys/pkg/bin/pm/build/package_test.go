@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -104,7 +103,7 @@ func createBuildDir(t *testing.T, files map[string]string) string {
 		if err := os.MkdirAll(filepath.Join(dir, filepath.Dir(filename)), 0o700); err != nil {
 			t.Fatal(err)
 		}
-		if err := ioutil.WriteFile(filepath.Join(dir, filename), []byte(data), 0o600); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, filename), []byte(data), 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -205,7 +204,7 @@ func TestUpdate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	buf, err := ioutil.ReadAll(f)
+	buf, err := io.ReadAll(f)
 	f.Close()
 	if err != nil {
 		t.Fatal(err)

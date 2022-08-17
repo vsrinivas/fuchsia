@@ -6,7 +6,7 @@ package main
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -37,7 +37,7 @@ func TestLoadTestSummaryPassesInputSummaryThrough(t *testing.T) {
 // that will be cleaned up automatically.
 func mkTempFile(t *testing.T, content []byte) string {
 	name := filepath.Join(t.TempDir(), "tefmocheck-cmd-test")
-	if err := ioutil.WriteFile(name, content, 0o600); err != nil {
+	if err := os.WriteFile(name, content, 0o600); err != nil {
 		t.Fatal(err)
 	}
 	return name

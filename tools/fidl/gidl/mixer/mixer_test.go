@@ -8,8 +8,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"math"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -23,7 +23,7 @@ var hostDir = map[string]string{"arm64": "host_arm64", "amd64": "host_x64"}[runt
 
 func getTestDataDir() string {
 	base := filepath.Join("..", "..", "..", "..")
-	c, err := ioutil.ReadFile(filepath.Join(base, ".fx-build-dir"))
+	c, err := os.ReadFile(filepath.Join(base, ".fx-build-dir"))
 	if err != nil {
 		return ""
 	}
@@ -34,7 +34,7 @@ var testDataDir = flag.String("test_data_dir", getTestDataDir(), "Path to golden
 
 func testSchema(t *testing.T) Schema {
 	path := filepath.Join(*testDataDir, "mixer.test.fidl.json")
-	bytes, err := ioutil.ReadFile(path)
+	bytes, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("please \"fx build %s/test_data/gidl/mixer.test.fidl.json\" first then \"go test\" again", hostDir)
 	}

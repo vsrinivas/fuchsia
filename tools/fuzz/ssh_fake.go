@@ -7,7 +7,6 @@ package fuzz
 import (
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"path"
@@ -49,7 +48,7 @@ func serveSSH(connCh chan<- *SSHConnector, errCh chan<- error, fakeFs *fakeSftp,
 
 	defer close(errCh)
 
-	dir, err := ioutil.TempDir("", "clusterfuchsia_test")
+	dir, err := os.MkdirTemp("", "clusterfuchsia_test")
 	if err != nil {
 		errCh <- fmt.Errorf("error creating temp dir: %s", err)
 		return

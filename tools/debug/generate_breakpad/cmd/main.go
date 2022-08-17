@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -103,7 +102,7 @@ func isBuildIDDir(ctx context.Context, dir string, contents []os.FileInfo) bool 
 		// Now that we know the directory name was a 2 digit hex value, it's safe
 		// to assume its most likely a .build-id directory and we can check to see
 		// if it contains the sorts of files we expect
-		files, err := ioutil.ReadDir(filepath.Join(dir, info.Name()))
+		files, err := os.ReadDir(filepath.Join(dir, info.Name()))
 		if err != nil {
 			logger.Tracef(ctx, "%s couldn't read directory: %v", info.Name(), err)
 			return false

@@ -13,7 +13,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -437,7 +436,7 @@ func TestLogToWriterWhenSocketCloses(t *testing.T) {
 		t.Fatal(err)
 	}
 	expectedMsg := fmt.Sprintf("[0][gtag1, gtag2, local_tag] INFO: %s\n", fmt.Sprintf(format, 10))
-	content, err := ioutil.ReadFile(f.Name())
+	content, err := os.ReadFile(f.Name())
 	os.Stderr = old
 	if err != nil {
 		t.Fatal(err)

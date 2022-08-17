@@ -6,7 +6,6 @@ package cli
 
 import (
 	"flag"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -41,7 +40,7 @@ func (c *ArchiveConfig) OutputDir() (string, func(), error) {
 
 	// Otherwise create a tempdir, and return a cleanup function that
 	// deletes the tempdir when called.
-	outputDir, err := ioutil.TempDir("", "system-tests")
+	outputDir, err := os.MkdirTemp("", "system-tests")
 	if err != nil {
 		return "", func() {}, err
 	}

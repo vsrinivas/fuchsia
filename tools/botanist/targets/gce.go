@@ -14,7 +14,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
@@ -48,7 +47,7 @@ type gceSerial struct {
 
 func newGCESerial(pkeyPath, username, endpoint string) (*gceSerial, error) {
 	// Load the pkey and use it to dial the GCE serial port.
-	data, err := ioutil.ReadFile(pkeyPath)
+	data, err := os.ReadFile(pkeyPath)
 	if err != nil {
 		return nil, err
 	}
@@ -273,7 +272,7 @@ func (g *GCETarget) provisionSSHKey(ctx context.Context) error {
 	}
 	time.Sleep(2 * time.Minute)
 	logger.Infof(g.loggerCtx, "provisioning SSH key over serial")
-	p, err := ioutil.ReadFile(g.pubkeyPath)
+	p, err := os.ReadFile(g.pubkeyPath)
 	if err != nil {
 		return err
 	}
@@ -374,7 +373,7 @@ func generatePrivateKey() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	f, err := ioutil.TempFile("", "gce_pkey")
+	f, err := os.CreateTemp("", "gce_pkey")
 	if err != nil {
 		return "", err
 	}
@@ -393,7 +392,7 @@ func generatePublicKey(pkeyFile string) (string, error) {
 	if pkeyFile == "" {
 		return "", errors.New("no private key file provided")
 	}
-	data, err := ioutil.ReadFile(pkeyFile)
+	data, err := os.ReadFile(pkeyFile)
 	if err != nil {
 		return "", err
 	}
@@ -406,7 +405,7 @@ func generatePublicKey(pkeyFile string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	f, err := ioutil.TempFile("", "gce_pubkey")
+	f, err := os.CreateTemp("", "gce_pubkey")
 	if err != nil {
 		return "", err
 	}

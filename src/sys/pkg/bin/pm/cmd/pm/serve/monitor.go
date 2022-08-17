@@ -7,8 +7,8 @@ package serve
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
+	"os"
 	"sync"
 	"time"
 
@@ -227,7 +227,7 @@ func readMetadata(path string) (*Metadata, error) {
 }
 
 func readMetadataAttempt(path string) (*Metadata, error) {
-	contents, err := ioutil.ReadFile(path)
+	contents, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read %q: %w", path, err)
 	}

@@ -6,7 +6,7 @@ package license
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -67,7 +67,7 @@ func (a Order) Less(i, j int) bool { return a[i].Name < a[j].Name }
 // NewPattern returns a Pattern object with the regex pattern loaded from the .lic folder.
 // Some preprocessing is done to the pattern (e.g. removing code comment characters).
 func NewPattern(path string) (*Pattern, error) {
-	bytes, err := ioutil.ReadFile(path)
+	bytes, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}

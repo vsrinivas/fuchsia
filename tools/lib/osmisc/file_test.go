@@ -6,7 +6,6 @@ package osmisc
 
 import (
 	"bytes"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -16,7 +15,7 @@ func TestCopyFile(t *testing.T) {
 	tmpdir := t.TempDir()
 	src := filepath.Join(tmpdir, "src")
 	in := []byte("written to src")
-	if err := ioutil.WriteFile(src, in, 0o400); err != nil {
+	if err := os.WriteFile(src, in, 0o400); err != nil {
 		t.Fatalf("failed to write contents to src: %v", err)
 	}
 
@@ -27,7 +26,7 @@ func TestCopyFile(t *testing.T) {
 			t.Fatalf("failed to copy file: %v", err)
 		}
 
-		out, err := ioutil.ReadFile(dest)
+		out, err := os.ReadFile(dest)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -67,7 +66,7 @@ func TestCreateFile(t *testing.T) {
 	if err := f.Close(); err != nil {
 		t.Fatalf("failed to close file: %v", err)
 	}
-	if b, err := ioutil.ReadFile(path); err != nil {
+	if b, err := os.ReadFile(path); err != nil {
 		t.Fatalf("failed to read file: %v", err)
 	} else if bytes.Compare(b, contents) != 0 {
 		t.Fatalf("unexpected contents: got %s, expected %s", b, contents)
@@ -78,7 +77,7 @@ func TestFileExists(t *testing.T) {
 	tmpdir := t.TempDir()
 	fA := filepath.Join(tmpdir, "fileA.txt")
 	fB := filepath.Join(tmpdir, "fileB.txt")
-	if err := ioutil.WriteFile(fB, []byte("content"), 0o600); err != nil {
+	if err := os.WriteFile(fB, []byte("content"), 0o600); err != nil {
 		t.Fatalf("failed to write to %s", fB)
 	}
 

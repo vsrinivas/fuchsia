@@ -8,10 +8,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math"
 	"net/http"
+	"os"
 
 	tuf_data "github.com/theupdateframework/go-tuf/data"
 
@@ -82,7 +82,7 @@ func (c *ConfigServer) parseConfig(repoUrl string) (Config, error) {
 	}
 
 	if c.encryptionKey != "" {
-		keyBytes, err := ioutil.ReadFile(c.encryptionKey)
+		keyBytes, err := os.ReadFile(c.encryptionKey)
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -7,7 +7,6 @@ package generator
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -80,7 +79,7 @@ type generator struct {
 // emitted on out. On the first encountered error, the generator will emit the error on
 // errs, delete the output directory, and exit.
 func (g *generator) run(in <-chan elflib.BinaryFileRef, out chan<- string, errs chan<- error) {
-	outdir, err := ioutil.TempDir("", "breakpad")
+	outdir, err := os.MkdirTemp("", "breakpad")
 	if err != nil {
 		errs <- err
 		return

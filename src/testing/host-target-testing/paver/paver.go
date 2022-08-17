@@ -7,7 +7,6 @@ package paver
 import (
 	"context"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -111,7 +110,7 @@ func (p *BuildPaver) PaveWithOptions(ctx context.Context, deviceName string, opt
 
 	// Write out the public key's authorized keys.
 	if p.sshPublicKey != nil && options.Mode != ZedbootOnly {
-		authorizedKeys, err := ioutil.TempFile("", "")
+		authorizedKeys, err := os.CreateTemp("", "")
 		if err != nil {
 			return err
 		}

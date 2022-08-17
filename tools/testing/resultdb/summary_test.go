@@ -6,7 +6,6 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -124,7 +123,7 @@ func createTestDetailWithTestCase(testCase int, outputRoot string) *runtests.Tes
 		for _, f := range []string{"outputfile1", "outputfile2", "case/outputfile1", "case/outputfile2"} {
 			outputfile := filepath.Join(outputRoot, f)
 			os.MkdirAll(filepath.Dir(outputfile), os.ModePerm)
-			ioutil.WriteFile(outputfile, []byte("output"), os.ModePerm)
+			os.WriteFile(outputfile, []byte("output"), os.ModePerm)
 		}
 	}
 	for i := 0; i < testCase; i++ {

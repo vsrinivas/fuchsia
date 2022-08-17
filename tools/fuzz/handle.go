@@ -7,7 +7,6 @@ package fuzz
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"reflect"
 )
@@ -46,7 +45,7 @@ type annotatedHandleData struct {
 
 // NewHandle allocates a new handle for use. It will persist until explicitly Released.
 func NewHandle() (Handle, error) {
-	tmpFile, err := ioutil.TempFile("", "undercoat_*.handle")
+	tmpFile, err := os.CreateTemp("", "undercoat_*.handle")
 	if err != nil {
 		return "", fmt.Errorf("error allocating tempfile: %s", err)
 	}
@@ -169,7 +168,7 @@ func (h Handle) SetData(data HandleData) error {
 	}
 
 	// Persist immediately
-	if err := ioutil.WriteFile(string(h), jsonData, 0600); err != nil {
+	if err := os.WriteFile(string(h), jsonData, 0600); err != nil {
 		return fmt.Errorf("error writing handle: %s", err)
 	}
 
@@ -183,7 +182,7 @@ func (h Handle) Release() {
 }
 
 func (h Handle) loadFromDisk() (*annotatedHandleData, error) {
-	jsonData, err := ioutil.ReadFile(string(h))
+	jsonData, err := os.ReadFile(string(h))
 	if err != nil {
 		return nil, fmt.Errorf("error opening file: %s", err)
 	}

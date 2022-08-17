@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -335,7 +334,7 @@ func Run(cfg *build.Config, args []string) error {
 			deps[i] = strconv.Quote(str)
 		}
 		depString := strings.Join(deps, " ")
-		if err := ioutil.WriteFile(*depfilePath, []byte(fmt.Sprintf("%s: %s\n", timestampPath, depString)), 0644); err != nil {
+		if err := os.WriteFile(*depfilePath, []byte(fmt.Sprintf("%s: %s\n", timestampPath, depString)), 0644); err != nil {
 			return err
 		}
 	}

@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"io/ioutil"
 	"net"
 	"os"
 	"time"
@@ -53,7 +52,7 @@ func (s *Server) Run(ctx context.Context, listener net.Listener) error {
 
 	var auxOutput *os.File
 	if s.AuxiliaryOutput == "" {
-		f, err := ioutil.TempFile("", "tools-serial-aux-output")
+		f, err := os.CreateTemp("", "tools-serial-aux-output")
 		if err != nil {
 			return err
 		}

@@ -15,7 +15,6 @@ import (
 	"image/gif"
 	"image/jpeg"
 	"image/png"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -203,7 +202,7 @@ func (c *recordScreenCmd) run(ctx context.Context) error {
 		}
 
 		if c.format == "png" {
-			err := ioutil.WriteFile(fpath, b, 0644)
+			err := os.WriteFile(fpath, b, 0644)
 			if err != nil {
 				return fmt.Errorf("error while writing file: %v", err)
 			}

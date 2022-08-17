@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"net"
 	"os"
@@ -36,7 +35,7 @@ func newSigner(maybeKeyFile string) (ssh.Signer, error) {
 	} else {
 		keyFile = maybeKeyFile
 	}
-	key, err := ioutil.ReadFile(keyFile)
+	key, err := os.ReadFile(keyFile)
 	if err != nil {
 		return nil, err
 	}

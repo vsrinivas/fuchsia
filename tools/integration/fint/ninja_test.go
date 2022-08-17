@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -826,7 +825,7 @@ func TestNinjaGraph(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.Remove(path)
-	fileContentsBytes, err := ioutil.ReadFile(path)
+	fileContentsBytes, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -852,7 +851,7 @@ func TestNinjaCompdb(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.Remove(path)
-	fileContentsBytes, err := ioutil.ReadFile(path)
+	fileContentsBytes, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatal(err)
 	}

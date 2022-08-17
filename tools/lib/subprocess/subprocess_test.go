@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -79,7 +78,7 @@ func TestRun(t *testing.T) {
 			// By checking that `start` is printed before canceling the context and checking
 			// that `finished` is printed after, we can assert that the cleanup() function
 			// was run before the script exited.
-			if err := ioutil.WriteFile(script, []byte(
+			if err := os.WriteFile(script, []byte(
 				`#!/bin/bash
 				cleanup() {
 					echo "finished"; exit 1
@@ -137,7 +136,7 @@ func TestRun(t *testing.T) {
 			// gets killed if it can't clean up and exit in time. In this test, `finished`
 			// should not be in the output because the process would have been killed before
 			// it could run cleanup().
-			if err := ioutil.WriteFile(script, []byte(
+			if err := os.WriteFile(script, []byte(
 				`#!/bin/bash
                                 cleanup() {
 					echo "finished"; exit 1

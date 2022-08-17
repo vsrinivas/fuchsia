@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -35,7 +34,7 @@ type packageEntry struct {
 	Tags      []string
 }
 
-//TODO(kevinwells) "_" is not allowed in package names, but some existing package names contain it.
+// TODO(kevinwells) "_" is not allowed in package names, but some existing package names contain it.
 var rePackageEntry = regexp.MustCompile("^" +
 	"([a-z0-9._/-]+)" + // Package name and version
 	"(?:#([^=]+))?" + // Optional tags
@@ -202,7 +201,7 @@ func Run(cfg *build.Config, args []string) error {
 		return err
 	}
 
-	if err := ioutil.WriteFile(config.outputPath, data, 0644); err != nil {
+	if err := os.WriteFile(config.outputPath, data, 0644); err != nil {
 		return err
 	}
 

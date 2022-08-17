@@ -9,8 +9,8 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -808,7 +808,7 @@ func TestRunAndOutputTests(t *testing.T) {
 				t.Errorf("test results diff (-want +got): %s", diff)
 			}
 			for path, want := range tc.expectedOutputs {
-				got, err := ioutil.ReadFile(filepath.Join(resultsDir, path))
+				got, err := os.ReadFile(filepath.Join(resultsDir, path))
 				if err != nil {
 					t.Errorf("Error reading expected output file %q: %s", path, err)
 					continue
@@ -824,7 +824,7 @@ func TestRunAndOutputTests(t *testing.T) {
 // mkdtemp creates a new temporary directory within t.TempDir.
 func mkdtemp(t *testing.T, pattern string) string {
 	t.Helper()
-	dir, err := ioutil.TempDir(t.TempDir(), pattern)
+	dir, err := os.MkdirTemp(t.TempDir(), pattern)
 	if err != nil {
 		t.Fatal(err)
 	}

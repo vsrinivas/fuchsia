@@ -10,11 +10,9 @@ import (
 	"context"
 	"crypto/rand"
 	"io"
-	"path/filepath"
-
-	"io/ioutil"
 	"net"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
@@ -87,7 +85,7 @@ func TestServerAuxOutput(t *testing.T) {
 	if _, err := aux.Seek(0, io.SeekStart); err != nil {
 		t.Fatal(err)
 	}
-	gotBuf, err := ioutil.ReadAll(aux)
+	gotBuf, err := io.ReadAll(aux)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -248,7 +246,7 @@ func TestServerSerialClosing(t *testing.T) {
 	serial.Close()
 
 	// the connection should get closed
-	io.Copy(ioutil.Discard, c)
+	io.Copy(io.Discard, c)
 
 	// the server should exit cleanly
 	<-serverDone

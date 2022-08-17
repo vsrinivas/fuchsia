@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -49,7 +48,7 @@ func (f *MockFFXInstance) Test(_ context.Context, testList build.TestList, outDi
 		if err := os.Mkdir(filepath.Join(outDir, relTestDir), os.ModePerm); err != nil {
 			return nil, err
 		}
-		if err := ioutil.WriteFile(filepath.Join(outDir, relTestDir, "report.txt"), []byte("stdio"), os.ModePerm); err != nil {
+		if err := os.WriteFile(filepath.Join(outDir, relTestDir, "report.txt"), []byte("stdio"), os.ModePerm); err != nil {
 			return nil, err
 		}
 		suite := suiteEntry{fmt.Sprintf("summary%d.json", i)}
@@ -77,7 +76,7 @@ func (f *MockFFXInstance) Test(_ context.Context, testList build.TestList, outDi
 		if err != nil {
 			return nil, err
 		}
-		if err := ioutil.WriteFile(summaryFile, summaryBytes, os.ModePerm); err != nil {
+		if err := os.WriteFile(summaryFile, summaryBytes, os.ModePerm); err != nil {
 			return nil, err
 		}
 		suites = append(suites, suite)
@@ -87,7 +86,7 @@ func (f *MockFFXInstance) Test(_ context.Context, testList build.TestList, outDi
 	if err := os.MkdirAll(filepath.Join(outDir, runArtifactDir, debugDir), os.ModePerm); err != nil {
 		return nil, err
 	}
-	if err := ioutil.WriteFile(filepath.Join(outDir, runArtifactDir, debugDir, "kernel.profraw"), []byte("data"), os.ModePerm); err != nil {
+	if err := os.WriteFile(filepath.Join(outDir, runArtifactDir, debugDir, "kernel.profraw"), []byte("data"), os.ModePerm); err != nil {
 		return nil, err
 	}
 
@@ -106,7 +105,7 @@ func (f *MockFFXInstance) Test(_ context.Context, testList build.TestList, outDi
 	if err != nil {
 		return nil, err
 	}
-	if err := ioutil.WriteFile(filepath.Join(outDir, runSummaryFilename), runResultBytes, os.ModePerm); err != nil {
+	if err := os.WriteFile(filepath.Join(outDir, runSummaryFilename), runResultBytes, os.ModePerm); err != nil {
 		return nil, err
 	}
 	return runResult, nil

@@ -5,7 +5,6 @@
 package packages
 
 import (
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -42,7 +41,7 @@ func TestExpand(t *testing.T) {
 			}
 			if !info.IsDir() {
 				relativePath := strings.Replace(path, expandDir+"/", "", 1)
-				expandedData[relativePath], err = ioutil.ReadFile(path)
+				expandedData[relativePath], err = os.ReadFile(path)
 				if err != nil {
 					t.Fatalf("Could not read file %s. %s", path, err)
 				}

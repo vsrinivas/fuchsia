@@ -6,7 +6,6 @@ package tefmocheck
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -56,7 +55,7 @@ func RunChecks(checks []FailureModeCheck, to *TestingOutputs, outputsDir string)
 			debugText := fmt.Sprintf(
 				"This is a synthetic test that was produced by the tefmocheck tool during post-processing of test results. See https://fuchsia.googlesource.com/fuchsia/+/HEAD/tools/testing/tefmocheck/README.md\n%s",
 				check.DebugText())
-			if err := ioutil.WriteFile(outputFileAbsPath, []byte(debugText), 0o666); err != nil {
+			if err := os.WriteFile(outputFileAbsPath, []byte(debugText), 0o666); err != nil {
 				return nil, err
 			}
 		}

@@ -13,7 +13,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -406,7 +405,7 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 
 	tempDir := saveTemps
 	if saveTemps == "" {
-		tempDir, err = ioutil.TempDir(saveTemps, "covargs")
+		tempDir, err = os.MkdirTemp(saveTemps, "covargs")
 		if err != nil {
 			return fmt.Errorf("cannot create temporary dir: %w", err)
 		}
@@ -542,7 +541,7 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 	}
 
 	// Write the malformed modules to a file in order to keep track of the tests affected by fxbug.dev/74189.
-	if err := ioutil.WriteFile(filepath.Join(tempDir, "malformed_binaries.txt"), []byte(strings.Join(malformed, "\n")), os.ModePerm); err != nil {
+	if err := os.WriteFile(filepath.Join(tempDir, "malformed_binaries.txt"), []byte(strings.Join(malformed, "\n")), os.ModePerm); err != nil {
 		return fmt.Errorf("failed to write malformed binaries to a file: %w", err)
 	}
 
@@ -632,7 +631,7 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 		}
 
 		coverageFilename := filepath.Join(tempDir, "coverage.json")
-		if err := ioutil.WriteFile(coverageFilename, b.Bytes(), 0644); err != nil {
+		if err := os.WriteFile(coverageFilename, b.Bytes(), 0644); err != nil {
 			return fmt.Errorf("writing coverage %q: %w", coverageFilename, err)
 		}
 

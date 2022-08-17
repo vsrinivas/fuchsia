@@ -5,7 +5,7 @@
 package build
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 )
@@ -13,7 +13,7 @@ import (
 func TestGetBuildID(t *testing.T) {
 	tempDir := t.TempDir()
 	buildIDFile := filepath.Join(tempDir, "buildid")
-	if err := ioutil.WriteFile(buildIDFile, []byte("abcd"), 0o600); err != nil {
+	if err := os.WriteFile(buildIDFile, []byte("abcd"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 

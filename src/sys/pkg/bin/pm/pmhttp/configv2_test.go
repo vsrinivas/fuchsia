@@ -7,8 +7,8 @@ package pmhttp
 import (
 	"encoding/json"
 	"errors"
-	"io/ioutil"
 	"math"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -39,7 +39,7 @@ func TestConfigV2(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	rootBytes, err := ioutil.ReadFile(filepath.Join(repoDir, "repository", "root.json"))
+	rootBytes, err := os.ReadFile(filepath.Join(repoDir, "repository", "root.json"))
 	if err != nil {
 		t.Fatal(err)
 	}

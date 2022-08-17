@@ -9,7 +9,7 @@ import (
 	"compress/gzip"
 	"container/heap"
 	"flag"
-	"io/ioutil"
+	"io"
 	"os"
 	"reflect"
 	"sort"
@@ -529,9 +529,9 @@ func readAndUnzip(b *testing.B, path string) *gzip.Reader {
 }
 
 func BenchmarkParse(b *testing.B) {
-	data, err := ioutil.ReadAll(readAndUnzip(b, *testNinjalog))
+	data, err := io.ReadAll(readAndUnzip(b, *testNinjalog))
 	if err != nil {
-		b.Fatalf("ioutil.ReadAll(readAnUnzip(b, %s)) got error: %v", *testNinjalog, err)
+		b.Fatalf("io.ReadAll(readAnUnzip(b, %s)) got error: %v", *testNinjalog, err)
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -585,9 +585,9 @@ func BenchmarkToTraces(b *testing.B) {
 }
 
 func BenchmarkDedupFlowToTraces(b *testing.B) {
-	data, err := ioutil.ReadAll(readAndUnzip(b, *testNinjalog))
+	data, err := io.ReadAll(readAndUnzip(b, *testNinjalog))
 	if err != nil {
-		b.Fatalf("ioutil.ReadAll(readAnUnzip(b, %s)) got error: %v", *testNinjalog, err)
+		b.Fatalf("io.ReadAll(readAnUnzip(b, %s)) got error: %v", *testNinjalog, err)
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {

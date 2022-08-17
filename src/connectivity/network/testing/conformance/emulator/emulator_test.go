@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
@@ -99,7 +98,7 @@ func TestEmulatorWorksWithFfx(t *testing.T) {
 
 	pubKeyData := ssh.MarshalAuthorizedKey(pubKey)
 	pubKeyFilepath := filepath.Join(tempDir, "authorized_keys")
-	if err := ioutil.WriteFile(pubKeyFilepath, pubKeyData, PUBLIC_KEY_PERMISSIONS); err != nil {
+	if err := os.WriteFile(pubKeyFilepath, pubKeyData, PUBLIC_KEY_PERMISSIONS); err != nil {
 		t.Fatal(err)
 	}
 

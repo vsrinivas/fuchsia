@@ -6,7 +6,6 @@ package artifacts
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -18,11 +17,11 @@ func TestDownload(t *testing.T) {
 	// The expected command will be something like `artifacts cp -build <id> -src <src> -dst <dst> -srcs-file <srcs-file>`.
 	// Make a mock script to copy src to dst. If src doesn't exist, create it so that a retry of the command will succeed.
 	mockArtifactsScript := filepath.Join(tmpDir, "artifacts")
-	if err := ioutil.WriteFile(mockArtifactsScript, []byte("#!/bin/bash\ncp -r $5 $7 || (echo contents > $5 && exit 1)"), os.ModePerm); err != nil {
+	if err := os.WriteFile(mockArtifactsScript, []byte("#!/bin/bash\ncp -r $5 $7 || (echo contents > $5 && exit 1)"), os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
 	mockArtifactsWithSrcsFileScript := filepath.Join(tmpDir, "artifacts_retry_srcsfile")
-	if err := ioutil.WriteFile(mockArtifactsWithSrcsFileScript, []byte("#!/bin/bash\nmkdir $7;srcs=$(cat $9);cp $srcs $7 || (for src in $srcs; do echo contents > $src; done && exit 1)"), os.ModePerm); err != nil {
+	if err := os.WriteFile(mockArtifactsWithSrcsFileScript, []byte("#!/bin/bash\nmkdir $7;srcs=$(cat $9);cp $srcs $7 || (for src in $srcs; do echo contents > $src; done && exit 1)"), os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
 	srcDir := filepath.Join(tmpDir, "src_dir")
@@ -30,7 +29,7 @@ func TestDownload(t *testing.T) {
 		t.Fatal(err)
 	}
 	srcFile := filepath.Join(srcDir, "src_file")
-	if err := ioutil.WriteFile(srcFile, []byte("src"), os.ModePerm); err != nil {
+	if err := os.WriteFile(srcFile, []byte("src"), os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
 
@@ -91,7 +90,7 @@ func TestDownload(t *testing.T) {
 				t.Fatal(err)
 			}
 			for expectedFile, expectedContents := range test.expectedFiles {
-				data, err := ioutil.ReadFile(filepath.Join(tmpDstDir, expectedFile))
+				data, err := os.ReadFile(filepath.Join(tmpDstDir, expectedFile))
 				if err != nil {
 					t.Error(err)
 				}

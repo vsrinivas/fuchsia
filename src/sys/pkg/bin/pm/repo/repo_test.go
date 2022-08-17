@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -88,7 +87,7 @@ func TestInitRepoWithCreate_existing_directory(t *testing.T) {
 }
 func TestInitRepoWithCreate_file_at_target_path(t *testing.T) {
 	repoPath := filepath.Join(t.TempDir(), "publish-test-repo")
-	if err := ioutil.WriteFile(repoPath, []byte("foo"), 0o600); err != nil {
+	if err := os.WriteFile(repoPath, []byte("foo"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := New(repoPath, t.TempDir()); err == nil {
@@ -150,7 +149,7 @@ func TestAddPackage(t *testing.T) {
 
 	// Check for rolejsons and consistent snapshots:
 	for _, rolejson := range roleJsons {
-		_, err := ioutil.ReadFile(filepath.Join(repoDir, "repository", rolejson))
+		_, err := os.ReadFile(filepath.Join(repoDir, "repository", rolejson))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -252,7 +251,7 @@ func TestAddBlob(t *testing.T) {
 	}
 
 	blobPath := filepath.Join(blobsDir, res)
-	b, err := ioutil.ReadFile(blobPath)
+	b, err := os.ReadFile(blobPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -292,7 +291,7 @@ func TestLinkOrCopy(t *testing.T) {
 
 	t.Run("hardlinking", func(t *testing.T) {
 		dstPath := filepath.Join(t.TempDir(), "dest-file")
-		if err := ioutil.WriteFile(srcPath, []byte(srcContent), 0o600); err != nil {
+		if err := os.WriteFile(srcPath, []byte(srcContent), 0o600); err != nil {
 			t.Fatal(err)
 		}
 
@@ -300,7 +299,7 @@ func TestLinkOrCopy(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		dstBytes, err := ioutil.ReadFile(dstPath)
+		dstBytes, err := os.ReadFile(dstPath)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -316,7 +315,7 @@ func TestLinkOrCopy(t *testing.T) {
 		oldLink, link = link, func(s, d string) error { return &os.LinkError{"", "", "", fmt.Errorf("stub error")} }
 		defer func() { link = oldLink }()
 
-		if err := ioutil.WriteFile(srcPath, []byte(srcContent), 0o600); err != nil {
+		if err := os.WriteFile(srcPath, []byte(srcContent), 0o600); err != nil {
 			t.Fatal(err)
 		}
 
@@ -324,7 +323,7 @@ func TestLinkOrCopy(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		dstBytes, err := ioutil.ReadFile(dstPath)
+		dstBytes, err := os.ReadFile(dstPath)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -337,11 +336,11 @@ func TestLinkOrCopy(t *testing.T) {
 }
 
 func copyFile(src string, dest string) error {
-	b, err := ioutil.ReadFile(src)
+	b, err := os.ReadFile(src)
 	if err != nil {
 		return fmt.Errorf("ReadFile: failed to read file %s, err: %w", src, err)
 	}
-	if err := ioutil.WriteFile(dest, b, 0o600); err != nil {
+	if err := os.WriteFile(dest, b, 0o600); err != nil {
 		return fmt.Errorf("WriteFile: failed to write file %s, err: %w", dest, err)
 	}
 	return nil
@@ -412,7 +411,7 @@ func TestLoadExistingRepo(t *testing.T) {
 
 	// Check for rolejsons and consistent snapshots:
 	for _, rolejson := range roleJsons {
-		bytes, err := ioutil.ReadFile(filepath.Join(newRepoDir, "repository", rolejson))
+		bytes, err := os.ReadFile(filepath.Join(newRepoDir, "repository", rolejson))
 		if err != nil {
 			t.Fatal(err)
 		}

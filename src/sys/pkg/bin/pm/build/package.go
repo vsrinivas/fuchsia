@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -18,7 +17,7 @@ import (
 	"sync"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
-	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/far/go"
+	far "go.fuchsia.dev/fuchsia/src/sys/pkg/lib/far/go"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/merkle"
 )
 
@@ -65,7 +64,7 @@ type packageManifestMaybeRelative struct {
 // LoadPackageManifest parses the package manifest for a particular package,
 // resolving file-relative blob source paths before returning if needed.
 func LoadPackageManifest(packageManifestPath string) (*PackageManifest, error) {
-	fileContents, err := ioutil.ReadFile(packageManifestPath)
+	fileContents, err := os.ReadFile(packageManifestPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read %s: %w", packageManifestPath, err)
 	}
@@ -223,7 +222,7 @@ func Update(cfg *Config) error {
 
 	manifest.Paths["meta/contents"] = contentsPath
 
-	return ioutil.WriteFile(contentsPath,
+	return os.WriteFile(contentsPath,
 		[]byte(contents.String()), os.ModePerm)
 }
 
@@ -239,7 +238,7 @@ func writeABIRevision(cfg *Config, manifest *Manifest) error {
 	binary.LittleEndian.PutUint64(b, cfg.PkgABIRevision)
 
 	path := filepath.Join(abiDir, "abi-revision")
-	if err := ioutil.WriteFile(path, b, os.ModePerm); err != nil {
+	if err := os.WriteFile(path, b, os.ModePerm); err != nil {
 		return err
 	}
 
@@ -309,7 +308,7 @@ func Seal(cfg *Config) (string, error) {
 	if _, err := tree.ReadFrom(archive); err != nil {
 		return "", err
 	}
-	if err := ioutil.WriteFile(cfg.MetaFARMerkle(), []byte(fmt.Sprintf("%x", tree.Root())), os.ModePerm); err != nil {
+	if err := os.WriteFile(cfg.MetaFARMerkle(), []byte(fmt.Sprintf("%x", tree.Root())), os.ModePerm); err != nil {
 		return "", err
 	}
 	return cfg.MetaFAR(), archive.Close()
@@ -318,7 +317,7 @@ func Seal(cfg *Config) (string, error) {
 // Read the build-time subpackage data and output files and generate the
 // "subpackages" meta file
 func writeSubpackagesMeta(cfg *Config, subpackagesPath string) error {
-	content, err := ioutil.ReadFile(subpackagesPath)
+	content, err := os.ReadFile(subpackagesPath)
 	if err != nil {
 		return fmt.Errorf("the -subpackages file (%s) could not be read: %s", subpackagesPath, err)
 	}
@@ -338,7 +337,7 @@ func writeSubpackagesMeta(cfg *Config, subpackagesPath string) error {
 		} else if subpackage.MetaPackageFile == nil {
 			return fmt.Errorf("format error in the -subpackages file (%s): a subpackage entry requires either a 'name' or a 'meta_package_file'", subpackagesPath)
 		} else {
-			content, err := ioutil.ReadFile(*subpackage.MetaPackageFile)
+			content, err := os.ReadFile(*subpackage.MetaPackageFile)
 			if err != nil {
 				return fmt.Errorf("a subpackage meta package file (%s) could not be read: %s", *subpackage.MetaPackageFile, err)
 			}
@@ -348,7 +347,7 @@ func writeSubpackagesMeta(cfg *Config, subpackagesPath string) error {
 			}
 			name = &packageMeta.Name
 		}
-		content, err := ioutil.ReadFile(subpackage.MerkleFile)
+		content, err := os.ReadFile(subpackage.MerkleFile)
 		if err != nil {
 			return fmt.Errorf("a subpackage meta package file (%s) could not be read: %s", *subpackage.MetaPackageFile, err)
 		}
@@ -366,7 +365,7 @@ func writeSubpackagesMeta(cfg *Config, subpackagesPath string) error {
 		subpackages_dir := filepath.Join(cfg.OutputDir, "meta", "fuchsia.pkg")
 		os.MkdirAll(subpackages_dir, os.ModePerm)
 		subpackagesFilePath := filepath.Join(subpackages_dir, "subpackages")
-		if err := ioutil.WriteFile(subpackagesFilePath, content, 0644); err != nil {
+		if err := os.WriteFile(subpackagesFilePath, content, 0644); err != nil {
 			return err
 		}
 

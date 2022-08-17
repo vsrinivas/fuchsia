@@ -7,7 +7,6 @@ package targets
 import (
 	"crypto/x509"
 	"encoding/pem"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -22,7 +21,7 @@ func TestGeneratePrivateKey(t *testing.T) {
 	defer os.Remove(path)
 
 	// Load the pkey and ensure that it's in the right format.
-	b, err := ioutil.ReadFile(path)
+	b, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("ReadFile(%s) failed: got %s, want <nil> error", path, err)
 	}
@@ -49,7 +48,7 @@ func TestGeneratePublicKey(t *testing.T) {
 	defer os.Remove(path)
 
 	// Load the public key and ensure that it's in the right format.
-	b, err := ioutil.ReadFile(path)
+	b, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("ReadFile(%s) failed: got %s, want <nil> error", path, err)
 	}

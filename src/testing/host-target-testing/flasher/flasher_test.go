@@ -9,7 +9,7 @@ import (
 	"context"
 	"crypto/rand"
 	"crypto/rsa"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -35,7 +35,7 @@ func generatePublicKey(t *testing.T) ssh.PublicKey {
 func createScript(t *testing.T) string {
 	contents := "#!/bin/sh\necho \"$0 $@\"\n"
 	name := filepath.Join(t.TempDir(), "ffx.sh")
-	if err := ioutil.WriteFile(name, []byte(contents), 0o700); err != nil {
+	if err := os.WriteFile(name, []byte(contents), 0o700); err != nil {
 		t.Fatal(err)
 	}
 	return name

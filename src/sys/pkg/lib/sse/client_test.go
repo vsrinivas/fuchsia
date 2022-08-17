@@ -6,13 +6,13 @@ package sse
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"testing"
 )
 
 func TestClient_ReadEvent(t *testing.T) {
-	body := ioutil.NopCloser(bytes.NewReader([]byte("data: example\n\n")))
+	body := io.NopCloser(bytes.NewReader([]byte("data: example\n\n")))
 	c, err := New(&http.Response{
 		Header:        http.Header{"Content-Type": []string{"text/event-stream"}},
 		ContentLength: -1,

@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -130,7 +129,7 @@ func NewLocalFuchsiaBuild() (Build, error) {
 	}
 
 	fxBuildDir := filepath.Join(fuchsiaDir, ".fx-build-dir")
-	contents, err := ioutil.ReadFile(fxBuildDir)
+	contents, err := os.ReadFile(fxBuildDir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read %q: %s", fxBuildDir, err)
 	}
@@ -224,7 +223,7 @@ func (b *BaseBuild) LoadFuzzers() error {
 
 	glog.Infof("Loading fuzzers from %q", jsonPath)
 
-	jsonBlob, err := ioutil.ReadFile(jsonPath)
+	jsonBlob, err := os.ReadFile(jsonPath)
 	if err != nil {
 		return fmt.Errorf("failed to read %q: %s", jsonPath, err)
 	}

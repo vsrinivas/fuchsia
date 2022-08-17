@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,7 +19,7 @@ import (
 func TestFFXInstance(t *testing.T) {
 	tmpDir := t.TempDir()
 	ffxPath := filepath.Join(tmpDir, "ffx")
-	if err := ioutil.WriteFile(ffxPath, []byte("#!/bin/bash\necho $@"), os.ModePerm); err != nil {
+	if err := os.WriteFile(ffxPath, []byte("#!/bin/bash\necho $@"), os.ModePerm); err != nil {
 		t.Fatal("failed to write mock ffx tool")
 	}
 	ffx, _ := NewFFXInstance(ffxPath, tmpDir, []string{}, "target", filepath.Join(tmpDir, "sshKey"), filepath.Join(tmpDir, "out"))
@@ -57,7 +56,7 @@ func TestFFXInstance(t *testing.T) {
 	if err := os.MkdirAll(testOutputDir, os.ModePerm); err != nil {
 		t.Errorf("failed to create test outputs dir: %s", err)
 	}
-	if err := ioutil.WriteFile(filepath.Join(testOutputDir, runSummaryFilename), []byte("{}"), os.ModePerm); err != nil {
+	if err := os.WriteFile(filepath.Join(testOutputDir, runSummaryFilename), []byte("{}"), os.ModePerm); err != nil {
 		t.Errorf("failed to write run_summary.json: %s", err)
 	}
 	_, err := ffx.Test(ctx, build.TestList{}, outDir)
@@ -72,7 +71,7 @@ func TestFFXInstance(t *testing.T) {
 	)
 
 	// Snapshot expects a file to be written to tmpDir/snapshotZipName which it will move to tmpDir/new_snapshot.zip.
-	if err := ioutil.WriteFile(filepath.Join(tmpDir, snapshotZipName), []byte("snapshot"), os.ModePerm); err != nil {
+	if err := os.WriteFile(filepath.Join(tmpDir, snapshotZipName), []byte("snapshot"), os.ModePerm); err != nil {
 		t.Errorf("failed to write snapshot")
 	}
 	assertRunsExpectedCmd(ffx.Snapshot(ctx, tmpDir, "new_snapshot.zip"), stdout, ffx.ConfigPath, "--target target target snapshot --dir "+tmpDir)

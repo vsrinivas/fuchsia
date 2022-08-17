@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"runtime/pprof"
 	"strings"
@@ -41,7 +40,7 @@ func HandleError(ctx context.Context, serialSocketPath string, err error) error 
 	defer serial.Close()
 
 	// Discard any of the output from the serial port.
-	go io.Copy(ioutil.Discard, serial)
+	go io.Copy(io.Discard, serial)
 
 	if err := printSyslogs(ctx, serial); err != nil {
 		return err

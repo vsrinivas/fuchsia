@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"regexp"
@@ -137,17 +136,17 @@ func hlcppGen(m *measurer.Measurer, targetMts []*measurer.MeasuringTape,
 }
 
 func writeFile(path string, data []byte) {
-	if err := ioutil.WriteFile(path, data, 0644); err != nil {
+	if err := os.WriteFile(path, data, 0644); err != nil {
 		panic(err)
 	}
 }
 
 func verifyMeasureTape(expectedH, expectedCc []byte) {
-	actualH, err := ioutil.ReadFile(*outH)
+	actualH, err := os.ReadFile(*outH)
 	if err != nil {
 		panic(err)
 	}
-	actualCc, err := ioutil.ReadFile(*outCc)
+	actualCc, err := os.ReadFile(*outCc)
 	if err != nil {
 		panic(err)
 	}

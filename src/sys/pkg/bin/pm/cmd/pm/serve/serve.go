@@ -8,7 +8,6 @@ import (
 	"compress/gzip"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
@@ -181,7 +180,7 @@ func Run(cfg *build.Config, args []string, addrChan chan string) error {
 	switch *configVersion {
 	case 1:
 		cs := pmhttp.NewConfigServer(func() []byte {
-			b, err := ioutil.ReadFile(filepath.Join(*repoServeDir, "root.json"))
+			b, err := os.ReadFile(filepath.Join(*repoServeDir, "root.json"))
 			if err != nil {
 				log.Printf("%s", err)
 			}
@@ -190,7 +189,7 @@ func Run(cfg *build.Config, args []string, addrChan chan string) error {
 		mux.Handle("/config.json", cs)
 	case 2:
 		cs := pmhttp.NewConfigServerV2(func() []byte {
-			b, err := ioutil.ReadFile(filepath.Join(*repoServeDir, "root.json"))
+			b, err := os.ReadFile(filepath.Join(*repoServeDir, "root.json"))
 			if err != nil {
 				log.Printf("%s", err)
 			}
@@ -241,7 +240,7 @@ func Run(cfg *build.Config, args []string, addrChan chan string) error {
 			return fmt.Errorf("error splitting addr into host and port %s: %s", addr, err)
 		}
 		portFileTmp := fmt.Sprintf("%s.tmp", *portFile)
-		if err := ioutil.WriteFile(portFileTmp, []byte(port), 0644); err != nil {
+		if err := os.WriteFile(portFileTmp, []byte(port), 0644); err != nil {
 			return fmt.Errorf("error creating tmp port file %s: %s", portFileTmp, err)
 		}
 		if err := os.Rename(portFileTmp, *portFile); err != nil {

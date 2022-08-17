@@ -7,7 +7,7 @@ package build
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 	"regexp"
 	"sort"
 	"strings"
@@ -61,7 +61,7 @@ func anyMatchRegexp(tags []string, re *regexp.Regexp) bool {
 // LoadSnapshot reads and verifies a JSON formatted Snapshot from the provided
 // path.
 func LoadSnapshot(path string) (Snapshot, error) {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return Snapshot{}, err
 	}

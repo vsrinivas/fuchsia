@@ -7,7 +7,7 @@ package build
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"os"
 )
 
 // PackageBlobInfo contains metadata for a single blob in a package
@@ -27,7 +27,7 @@ type PackageBlobInfo struct {
 
 // LoadBlobs attempts to read and parse a blobs manifest from the given path
 func LoadBlobs(path string) ([]PackageBlobInfo, error) {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
