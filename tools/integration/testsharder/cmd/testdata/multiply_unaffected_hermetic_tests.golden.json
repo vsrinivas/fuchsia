@@ -3,14 +3,15 @@
         "name": "AEMU",
         "tests": [
             {
-                "name": "fuchsia-pkg://fuchsia.com/unaffected-nonhermetic-test#meta/unaffected-nonhermetic-test.cm",
-                "package_url": "fuchsia-pkg://fuchsia.com/unaffected-nonhermetic-test#meta/unaffected-nonhermetic-test.cm",
+                "name": "fuchsia-pkg://fuchsia.com/affected-nonhermetic-test#meta/affected-nonhermetic-test.cm",
+                "package_url": "fuchsia-pkg://fuchsia.com/affected-nonhermetic-test#meta/affected-nonhermetic-test.cm",
                 "path": "",
-                "label": "//src/something:unaffected-nonhermetic-test(//build/toolchain/fuchsia:x64)",
+                "label": "//src/something:affected-nonhermetic-test(//build/toolchain/fuchsia:x64)",
                 "os": "fuchsia",
                 "cpu": "x64",
                 "log_settings": {},
                 "runs": 1,
+                "affected": true,
                 "tags": [
                     {
                         "key": "hermetic",

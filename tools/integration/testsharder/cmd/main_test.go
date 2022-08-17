@@ -257,19 +257,40 @@ func TestExecute(t *testing.T) {
 			},
 		},
 		{
+			name: "run all tests if no affected tests",
+			flags: testsharderFlags{
+				skipUnaffected: true,
+			},
+			testSpecs: []build.TestSpec{
+				fuchsiaTestSpec("affected-hermetic-test"),
+				fuchsiaTestSpec("unaffected-hermetic-test"),
+				fuchsiaTestSpec("affected-nonhermetic-test"),
+				fuchsiaTestSpec("unaffected-nonhermetic-test"),
+			},
+			testList: []build.TestListEntry{
+				testListEntry("affected-hermetic-test", true),
+				testListEntry("unaffected-hermetic-test", true),
+				testListEntry("affected-nonhermetic-test", false),
+				testListEntry("unaffected-nonhermetic-test", false),
+			},
+		},
+		{
 			name: "multiply unaffected hermetic tests",
 			flags: testsharderFlags{
 				skipUnaffected: true,
 			},
 			testSpecs: []build.TestSpec{
 				fuchsiaTestSpec("unaffected-hermetic-test"),
-				fuchsiaTestSpec("unaffected-nonhermetic-test"),
+				fuchsiaTestSpec("affected-nonhermetic-test"),
 				fuchsiaTestSpec("unaffected-hermetic-multiplied-test"),
 			},
 			testList: []build.TestListEntry{
 				testListEntry("unaffected-hermetic-test", true),
-				testListEntry("unaffected-nonhermetic-test", false),
+				testListEntry("affected-nonhermetic-test", false),
 				testListEntry("unaffected-hermetic-multiplied-test", true),
+			},
+			affectedTests: []string{
+				fuchsiaTestSpec("affected-nonhermetic-test").Name,
 			},
 			modifiers: []testsharder.TestModifier{
 				{

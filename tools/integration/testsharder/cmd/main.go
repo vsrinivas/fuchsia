@@ -167,7 +167,17 @@ func execute(ctx context.Context, flags testsharderFlags, m buildModules) error 
 		if err != nil {
 			return err
 		}
+		if len(affectedModifiers) == 0 {
+			// If there are no affected tests, that means we weren't
+			// able to determine which tests were affected so we should
+			// run all tests.
+			flags.skipUnaffected = false
+		}
 		modifiers = append(modifiers, affectedModifiers...)
+	} else {
+		// If no affected-tests file was provided, we don't know which tests
+		// were affected, so run all tests.
+		flags.skipUnaffected = false
 	}
 
 	shards, err = testsharder.ApplyModifiers(shards, modifiers)
