@@ -22,6 +22,7 @@
 #include <zircon/threads.h>
 #include <zircon/types.h>
 
+#include <safemath/checked_math.h>
 #include <src/lib/chunked-compression/chunked-decompressor.h>
 
 #include "src/storage/blobfs/compression/decompressor.h"
@@ -65,12 +66,27 @@ zx_status_t DecompressFull(const fzl::OwnedVmoMapper& decompressed_mapper,
                                   compressed_mapper.start(), compressed_length);
 }
 
+bool RangeInBounds(const fzl::OwnedVmoMapper& mapper,
+                   const fuchsia_blobfs_internal::wire::Range range) {
+  uint64_t end;
+  return (safemath::CheckAdd(range.offset, range.size).AssignIfValid(&end) && end <= mapper.size());
+}
+
 // The actual handling of a request on the fifo.
 void HandleFifo(const fzl::OwnedVmoMapper& compressed_mapper,
                 const fzl::OwnedVmoMapper& decompressed_mapper,
                 const fuchsia_blobfs_internal::wire::DecompressRequest* request,
                 fuchsia_blobfs_internal::wire::DecompressResponse* response) {
   TRACE_DURATION("decompressor", "HandleFifo", "length", request->decompressed.size);
+
+  if (!RangeInBounds(decompressed_mapper, request->decompressed) ||
+      !RangeInBounds(compressed_mapper, request->compressed)) {
+    FX_LOGS(ERROR) << "Requested vmo ranges fall outside the mapped vmo.";
+    response->status = ZX_ERR_OUT_OF_RANGE;
+    response->size = 0;
+    return;
+  }
+
   size_t bytes_decompressed = 0;
   switch (request->algorithm) {
     case fuchsia_blobfs_internal::wire::CompressionAlgorithm::kChunkedPartial:

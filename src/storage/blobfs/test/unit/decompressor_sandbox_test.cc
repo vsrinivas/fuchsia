@@ -228,5 +228,16 @@ TEST_F(DecompressorSandboxTest, NonzeroOffsetsForFullDecompression) {
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, response.status);
 }
 
+// Rejects outright attempts at accessing outside the mapped vmo range.
+TEST_F(DecompressorSandboxTest, BadVmoRange) {
+  wire::DecompressRequest request = {
+      {1, kMapSize},
+      {0, kDataSize},
+      fuchsia_blobfs_internal::wire::CompressionAlgorithm::kChunkedPartial};
+  wire::DecompressResponse response;
+  SendRequest(&request, &response);
+  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, response.status);
+}
+
 }  // namespace
 }  // namespace blobfs
