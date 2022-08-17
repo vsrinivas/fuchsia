@@ -13,4 +13,8 @@ use {argh::FromArgs, ffx_core::ffx_command};
     description = "Bridge from host adb to adbd running inside starnix"
 )]
 
-pub struct AdbStarnixCommand {}
+pub struct AdbStarnixCommand {
+    /// the galaxy in which to connect to adb
+    #[argh(option, short = 'g', default = "String::from(\"starbionic\")")]
+    pub galaxy: String,
+}

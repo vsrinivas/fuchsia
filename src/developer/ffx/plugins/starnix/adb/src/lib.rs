@@ -35,10 +35,7 @@ async fn serve_adb_connection(mut stream: TcpStream, bridge_socket: fidl::Socket
     "starnix_enabled",
     ManagerProxy = "core/starnix_manager:expose:fuchsia.starnix.developer.Manager"
 )]
-pub async fn adb_starnix(
-    manager_proxy: ManagerProxy,
-    _adb_command: AdbStarnixCommand,
-) -> Result<()> {
+pub async fn adb_starnix(manager_proxy: ManagerProxy, command: AdbStarnixCommand) -> Result<()> {
     println!("adb_starnix - listening");
 
     let mut signals = Signals::new(&[SIGINT]).unwrap();
@@ -65,7 +62,7 @@ pub async fn adb_starnix(
             fidl::Socket::create(fidl::SocketOpts::STREAM).context("failed to create socket")?;
 
         manager_proxy
-            .vsock_connect("starbionic", ADB_DEFAULT_PORT, sbridge)
+            .vsock_connect(&command.galaxy, ADB_DEFAULT_PORT, sbridge)
             .map_err(|e| anyhow!("Error connecting to adbd: {:?}", e))?;
 
         fasync::Task::spawn(async move {
