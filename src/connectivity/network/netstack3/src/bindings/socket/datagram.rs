@@ -1841,19 +1841,19 @@ where
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::SetIpv6UnicastHops {
-                            value: _,
-                            responder,
+                            value: _, responder,
                         } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                            // TODO(https://fxbug.dev/107084): Implement this.
+                            responder_send!(responder, &mut Err(fposix::Errno::Enoprotoopt));
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::GetIpv6UnicastHops { responder } => {
                             responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::SetIpv6MulticastHops {
-                            value: _,
-                            responder,
+                            value: _, responder,
                         } => {
-                            responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                            // TODO(https://fxbug.dev/107084): Implement this.
+                            responder_send!(responder, &mut Err(fposix::Errno::Enoprotoopt));
                         }
                         fposix_socket::SynchronousDatagramSocketRequest::GetIpv6MulticastHops {
                             responder,
