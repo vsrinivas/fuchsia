@@ -474,6 +474,12 @@ impl AsyncQuicStreamWriter {
                 }
                 let n = match io.conn.stream_send(id, &bytes[sent..], fin) {
                     Ok(n) => n,
+                    Err(quiche::Error::InvalidStreamState(_)) => {
+                        // We're writing to a stream that hasn't been written yet. Could be we know
+                        // the stream will be established by the other end but due to some raciness
+                        // that hasn't happened yet. Time to block!
+                        return io.stream_send.pending(ctx, id);
+                    }
                     Err(quiche::Error::Done) => {
                         io.conn_send.ready();
                         return io.stream_send_init.pending(ctx, id);
@@ -553,18 +559,16 @@ impl AsyncQuicStreamReader {
             return Ok((to_drain, self.observed_closed && self.buffered.is_empty()));
         }
 
-        let mut io_lock = MutexTicket::new(&self.conn.io);
-
         let (n, fin) = loop {
+            let mut io = self.conn.io.lock().await;
             let got = {
-                let mut io = io_lock.lock().await;
                 io.conn_send.ready();
                 match io.conn.stream_recv(self.id, bytes) {
                     Ok((n, fin)) => {
                         self.ready = true;
                         Some(Ok((n, fin)))
                     }
-                    Err(quiche::Error::Done) => {
+                    Err(quiche::Error::StreamReset(_)) | Err(quiche::Error::Done) => {
                         self.ready = true;
                         let finished = io.conn.stream_finished(self.id);
                         if finished {
@@ -596,11 +600,9 @@ impl AsyncQuicStreamReader {
             if let Some(got) = got {
                 break got?;
             } else {
-                let mut thru = false;
+                let mut io = Some(io);
                 poll_fn(|ctx| {
-                    if !thru {
-                        let mut io = ready!(io_lock.poll(ctx));
-                        thru = true;
+                    if let Some(mut io) = io.take() {
                         io.stream_recv.pending(ctx, self.id)
                     } else {
                         Poll::Ready(())
@@ -753,12 +755,7 @@ mod test_util {
     }
 
     /// Generate a test connection pair, that automatically forwards packets from client to server.
-    pub async fn run_client_server<
-        F: 'static + Sync + Clone + Send + FnOnce(Arc<AsyncConnection>, Arc<AsyncConnection>) -> Fut,
-        Fut: 'static + Send + Future<Output = ()>,
-    >(
-        f: F,
-    ) {
+    pub async fn get_client_server() -> (Arc<AsyncConnection>, Arc<AsyncConnection>, Task<()>) {
         let scid: Vec<u8> = rand::thread_rng()
             .sample_iter(&rand::distributions::Standard)
             .take(quiche::MAX_CONN_ID_LEN)
@@ -784,9 +781,20 @@ mod test_util {
             direct_packets(client.clone(), server.clone()),
             direct_packets(server.clone(), client.clone()),
         );
-        let _1 = Task::spawn(async move {
+        let task = Task::spawn(async move {
             forward.await.unwrap();
         });
+        (client, server, task)
+    }
+
+    /// Generate a test connection pair, that automatically forwards packets from client to server.
+    pub async fn run_client_server<
+        F: 'static + Sync + Clone + Send + FnOnce(Arc<AsyncConnection>, Arc<AsyncConnection>) -> Fut,
+        Fut: 'static + Send + Future<Output = ()>,
+    >(
+        f: F,
+    ) {
+        let (client, server, _1) = get_client_server().await;
         f(client, server).await;
     }
 }
@@ -794,8 +802,10 @@ mod test_util {
 #[cfg(test)]
 mod test {
 
-    use super::test_util::run_client_server;
+    use super::test_util::{get_client_server, run_client_server};
     use super::StreamProperties;
+    use fuchsia_async::Task;
+    use futures::future::{join, join_all};
 
     #[fuchsia::test]
     async fn simple_send() {
@@ -863,5 +873,83 @@ mod test {
             .await;
         })
         .await
+    }
+
+    #[fuchsia::test]
+    async fn torture_test() {
+        let mut plumbing_tasks = Vec::with_capacity(100);
+        let mut loop_a_tasks = Vec::with_capacity(100);
+        let mut loop_b_tasks = Vec::with_capacity(100);
+        let mut loop_c_tasks = Vec::with_capacity(100);
+        let mut test_tasks = Vec::with_capacity(100);
+
+        for _ in 0..100 {
+            let (client, server, task) = get_client_server().await;
+            plumbing_tasks.push(task);
+
+            let (mut client_writer_a, mut client_reader_a) = client.alloc_bidi();
+            let (mut server_writer, mut server_reader) = server.bind_id(client_writer_a.id());
+            loop_a_tasks.push(Task::spawn(async move {
+                let mut buf = [0; 256];
+                loop {
+                    let (size, fin) = server_reader.read(&mut buf).await.unwrap();
+                    if size > 0 {
+                        server_writer.send(&buf[..size], fin).await.unwrap();
+                    }
+                    if fin {
+                        break;
+                    }
+                }
+            }));
+
+            let (mut client_writer_b, mut client_reader_b) = client.alloc_bidi();
+            let (mut server_writer, mut server_reader) = server.bind_id(client_writer_b.id());
+            loop_b_tasks.push(Task::spawn(async move {
+                let mut buf = [0; 256];
+                loop {
+                    let (size, fin) = server_reader.read(&mut buf).await.unwrap();
+                    if size > 0 {
+                        server_writer.send(&buf[..size], fin).await.unwrap();
+                    }
+                    if fin {
+                        break;
+                    }
+                }
+            }));
+
+            loop_c_tasks.push(Task::spawn(async move {
+                let mut buf = [0; 256];
+                loop {
+                    let (size, fin) = client_reader_a.read(&mut buf).await.unwrap();
+                    if size > 0 {
+                        client_writer_b.send(&buf[..size], fin).await.unwrap();
+                    }
+                    if fin {
+                        break;
+                    }
+                }
+            }));
+
+            test_tasks.push(async move {
+                let send = async move {
+                    for i in 0..65536u64 {
+                        client_writer_a.send(&i.to_le_bytes(), i == 65535).await.unwrap();
+                    }
+                };
+
+                let recv = async move {
+                    let mut buf = [0; 8];
+
+                    for i in 0..65536u64 {
+                        assert_eq!(i == 65535, client_reader_b.read_exact(&mut buf).await.unwrap());
+                        assert_eq!(i, u64::from_le_bytes(buf.clone()));
+                    }
+                };
+
+                join(send, recv).await;
+            })
+        }
+
+        join_all(test_tasks).await;
     }
 }
