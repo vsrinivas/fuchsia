@@ -1107,10 +1107,8 @@ void UsbAudioStream::QueueRequestLocked() {
     }
   }
 
-  // Should send this out on the next frame number available. This is either sequentially the next
-  // frame number or if we've missed a few frames, the value of the next valid frame.
-  usb_frame_num_ = std::max(usb_frame_num_++, usb_get_current_frame(&parent_.usb_proto()));
-  req->header.frame = usb_frame_num_;
+  // Schedule this packet to be sent out on the next frame.
+  req->header.frame = ++usb_frame_num_;
   req->header.length = todo;
   usb_request_complete_callback_t complete = {
       .callback = UsbAudioStream::RequestCompleteCallback,
