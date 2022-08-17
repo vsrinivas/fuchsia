@@ -124,6 +124,7 @@ zx_status_t Tas58xx::Start() {
 }
 
 zx_status_t Tas58xx::Reset() {
+  zx_status_t status = ZX_OK;
   // From the reference manual:
   // "9.5.3.1 Startup Procedures
   // 1. Configure ADR/FAULT pin with proper settings for I2C device address.
@@ -154,7 +155,7 @@ zx_status_t Tas58xx::Reset() {
         {kRegReset, kRegResetRegsAndModulesCtrl},
     };
     for (auto& i : kDefaultsStart) {
-      auto status = WriteReg(i[0], i[1]);
+      status = WriteReg(i[0], i[1]);
       if (status != ZX_OK) {
         zxlogf(ERROR, "Failed to write I2C register 0x%02X", i[0]);
         return status;
@@ -177,15 +178,18 @@ zx_status_t Tas58xx::Reset() {
       {kRegSelectBook, 0x00},
       {kRegClearFault, kRegClearFaultBitsAnalog}};
   for (auto& i : kDefaultsEnd) {
-    auto status = WriteReg(i[0], i[1]);
+    status = WriteReg(i[0], i[1]);
     if (status != ZX_OK) {
       zxlogf(ERROR, "Failed to write I2C register 0x%02X", i[0]);
       return status;
     }
   }
   constexpr float kDefaultGainDb = -30.f;
-  SetGainState({.gain = kDefaultGainDb, .muted = true});
-  return ZX_OK;
+  status = SetGain(kDefaultGainDb);
+  if (status != ZX_OK) {
+    return status;
+  }
+  return SetMute(true);
 }
 
 void Tas58xx::ScheduleFaultPolling() {
@@ -293,12 +297,34 @@ void Tas58xx::SignalProcessingConnect(
 }
 
 void Tas58xx::GetElements(signal_fidl::SignalProcessing::GetElementsCallback callback) {
-  signal_fidl::Element pe1;
-  pe1.set_id(kAglPeId);
-  pe1.set_type(signal_fidl::ElementType::AUTOMATIC_GAIN_LIMITER);
-  signal_fidl::Element pe2;
-  pe2.set_id(kEqPeId);
-  pe2.set_type(signal_fidl::ElementType::EQUALIZER);
+  std::vector<signal_fidl::Element> pes;
+  {
+    signal_fidl::Element pe;
+    pe.set_id(kAglPeId);
+    pe.set_type(signal_fidl::ElementType::AUTOMATIC_GAIN_LIMITER);
+    pe.set_can_disable(true);
+    pes.emplace_back(std::move(pe));
+  }
+  {
+    signal_fidl::Element pe;
+    pe.set_id(kGainPeId);
+    pe.set_type(signal_fidl::ElementType::GAIN);
+    pe.set_can_disable(true);
+    signal_fidl::Gain gain;
+    gain.set_type(signal_fidl::GainType::DECIBELS);
+    gain.set_min_gain(kMinGain);
+    gain.set_max_gain(kMaxGain);
+    gain.set_min_gain_step(kGainStep);
+    pe.set_type_specific(signal_fidl::TypeSpecificElement::WithGain(std::move(gain)));
+    pes.emplace_back(std::move(pe));
+  }
+  {
+    signal_fidl::Element pe;
+    pe.set_id(kMutePeId);
+    pe.set_type(signal_fidl::ElementType::MUTE);
+    pe.set_can_disable(true);
+    pes.emplace_back(std::move(pe));
+  }
 
   signal_fidl::Equalizer equalizer_parameters;
 
@@ -319,14 +345,15 @@ void Tas58xx::GetElements(signal_fidl::SignalProcessing::GetElementsCallback cal
   equalizer_parameters.set_min_gain_db(kEqualizerMinGainDb);
   equalizer_parameters.set_max_gain_db(kEqualizerMaxGainDb);
 
-  pe2.set_type_specific(
+  signal_fidl::Element pe_eq;
+  pe_eq.set_id(kEqPeId);
+  pe_eq.set_type(signal_fidl::ElementType::EQUALIZER);
+  pe_eq.set_type_specific(
       signal_fidl::TypeSpecificElement::WithEqualizer(std::move(equalizer_parameters)));
 
-  std::vector<signal_fidl::Element> pes;
-  pes.emplace_back(std::move(pe1));
   // Only advertise the EQ support for 1 channel configurations.
   if (number_of_channels_ == 1 || metadata_.bridged) {
-    pes.emplace_back(std::move(pe2));
+    pes.emplace_back(std::move(pe_eq));
   }
   signal_fidl::Reader_GetElements_Response response(std::move(pes));
   signal_fidl::Reader_GetElements_Result result;
@@ -405,7 +432,7 @@ zx_status_t Tas58xx::SetEqualizerElement(signal_fidl::ElementState state) {
   }
 
   if (equalizer_callback_.has_value()) {
-    SendWatchReply(std::move(equalizer_callback_.value()));
+    SendEqualizerWatchReply(std::move(equalizer_callback_.value()));
     equalizer_callback_.reset();
     last_equalizer_update_reported_ = true;
   } else {
@@ -414,10 +441,10 @@ zx_status_t Tas58xx::SetEqualizerElement(signal_fidl::ElementState state) {
   return ZX_OK;
 }
 
-void Tas58xx::SetAutomaticGainControlElement(signal_fidl::ElementState state) {
+zx_status_t Tas58xx::SetAutomaticGainLimiterElement(signal_fidl::ElementState state) {
   // If enabled is not present, then perform no operation, we keep the current state.
   if (!state.has_enabled()) {
-    return;
+    return ZX_OK;
   }
   bool enable_agl = state.enabled();
 
@@ -495,44 +522,127 @@ void Tas58xx::SetAutomaticGainControlElement(signal_fidl::ElementState state) {
   // Report the time at which AGL was enabled. This along with the brownout protection driver trace
   // will let us calculate the total latency.
   TRACE_DURATION_END("tas58xx", "SetAgl", "timestamp", zx::clock::get_monotonic().get());
+  return ZX_OK;
+}
+
+zx_status_t Tas58xx::SetGainElement(signal_fidl::ElementState state) {
+  bool has_valid_gain_specific_state = state.has_type_specific() &&
+                                       state.type_specific().is_gain() &&
+                                       state.type_specific().gain().has_gain();
+  if (state.has_enabled()) {
+    gain_enabled_ = state.enabled();
+  }
+
+  if (has_valid_gain_specific_state) {
+    gain_state_.gain = state.type_specific().gain().gain();
+  }
+
+  if (state.has_enabled() || has_valid_gain_specific_state) {
+    zx_status_t status = SetGain(gain_enabled_ ? gain_state_.gain : 0.0f);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
+  if (gain_callback_.has_value()) {
+    SendGainWatchReply(std::move(gain_callback_.value()));
+    gain_callback_.reset();
+    last_gain_update_reported_ = true;
+  } else {
+    last_gain_update_reported_ = false;
+  }
+  return ZX_OK;
+}
+
+zx_status_t Tas58xx::SetMuteElement(signal_fidl::ElementState state) {
+  if (state.has_enabled()) {
+    gain_state_.muted = state.enabled();
+    zx_status_t status = SetMute(gain_state_.muted);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+
+  if (mute_callback_.has_value()) {
+    SendMuteWatchReply(std::move(mute_callback_.value()));
+    mute_callback_.reset();
+    last_mute_update_reported_ = true;
+  } else {
+    last_mute_update_reported_ = false;
+  }
+
+  return ZX_OK;
 }
 
 void Tas58xx::WatchElementState(uint64_t processing_element_id,
                                 signal_fidl::SignalProcessing::WatchElementStateCallback callback) {
-  if (processing_element_id == kAglPeId) {
-    if (!last_reported_agl_.has_value() || last_reported_agl_.value() != last_agl_) {
-      signal_fidl::ElementState state;
-      state.set_enabled(last_agl_);
-      callback(std::move(state));
-      last_reported_agl_.emplace(last_agl_);
-    } else {
-      if (agl_callback_.has_value()) {
-        zxlogf(WARNING,
-               "Watch request for process element id (%lu) when watch is still in progress",
-               processing_element_id);
+  switch (processing_element_id) {
+    case kAglPeId:
+      if (!last_reported_agl_.has_value() || last_reported_agl_.value() != last_agl_) {
+        signal_fidl::ElementState state;
+        state.set_enabled(last_agl_);
+        callback(std::move(state));
+        last_reported_agl_.emplace(last_agl_);
       } else {
-        agl_callback_.emplace(std::move(callback));
+        if (agl_callback_.has_value()) {
+          zxlogf(WARNING,
+                 "Watch request for process element id (%lu) when watch is still in progress",
+                 processing_element_id);
+        } else {
+          agl_callback_.emplace(std::move(callback));
+        }
       }
-    }
-  } else if (processing_element_id == kEqPeId) {
-    if (!last_equalizer_update_reported_) {
-      SendWatchReply(std::move(callback));
-      last_equalizer_update_reported_ = true;
-    } else {
-      if (equalizer_callback_.has_value()) {
-        zxlogf(WARNING,
-               "Watch request for process element id (%lu) when watch is still in progress",
-               processing_element_id);
+      break;
+    case kEqPeId:
+      if (!last_equalizer_update_reported_) {
+        SendEqualizerWatchReply(std::move(callback));
+        last_equalizer_update_reported_ = true;
       } else {
-        equalizer_callback_.emplace(std::move(callback));
+        if (equalizer_callback_.has_value()) {
+          zxlogf(WARNING,
+                 "Watch request for process element id (%lu) when watch is still in progress",
+                 processing_element_id);
+        } else {
+          equalizer_callback_.emplace(std::move(callback));
+        }
       }
-    }
-  } else {
-    zxlogf(ERROR, "Unknown process element id (%lu) for watch", processing_element_id);
+      break;
+    case kGainPeId:
+      if (!last_gain_update_reported_) {
+        SendGainWatchReply(std::move(callback));
+        last_gain_update_reported_ = true;
+      } else {
+        if (gain_callback_.has_value()) {
+          zxlogf(WARNING,
+                 "Watch request for process element id (%lu) when watch is still in progress",
+                 processing_element_id);
+        } else {
+          gain_callback_.emplace(std::move(callback));
+        }
+      }
+      break;
+    case kMutePeId:
+      if (!last_mute_update_reported_) {
+        SendMuteWatchReply(std::move(callback));
+        last_mute_update_reported_ = true;
+      } else {
+        if (mute_callback_.has_value()) {
+          zxlogf(WARNING,
+                 "Watch request for process element id (%lu) when watch is still in progress",
+                 processing_element_id);
+        } else {
+          mute_callback_.emplace(std::move(callback));
+        }
+      }
+      break;
+    default:
+      zxlogf(ERROR, "Unknown process element id (%lu) for watch", processing_element_id);
+      break;
   }
 }
 
-void Tas58xx::SendWatchReply(signal_fidl::SignalProcessing::WatchElementStateCallback callback) {
+void Tas58xx::SendEqualizerWatchReply(
+    signal_fidl::SignalProcessing::WatchElementStateCallback callback) {
   signal_fidl::ElementState state;
   signal_fidl::EqualizerElementState equalizer_state;
   std::vector<signal_fidl::EqualizerBandState> bands_state;
@@ -554,13 +664,43 @@ void Tas58xx::SendWatchReply(signal_fidl::SignalProcessing::WatchElementStateCal
   callback(std::move(state));
 }
 
-void Tas58xx::GetTopologies(signal_fidl::SignalProcessing::GetTopologiesCallback callback) {
-  signal_fidl::EdgePair edge;
-  edge.processing_element_id_from = kAglPeId;
-  edge.processing_element_id_to = kAglPeId;
+void Tas58xx::SendGainWatchReply(
+    signal_fidl::SignalProcessing::WatchElementStateCallback callback) {
+  signal_fidl::ElementState state;
+  signal_fidl::GainElementState gain_state;
+  gain_state.set_gain(gain_state_.gain);
+  state.set_type_specific(signal_fidl::TypeSpecificElementState::WithGain(std::move(gain_state)));
+  state.set_enabled(gain_enabled_);
+  callback(std::move(state));
+}
 
+void Tas58xx::SendMuteWatchReply(
+    signal_fidl::SignalProcessing::WatchElementStateCallback callback) {
+  signal_fidl::ElementState state;
+  state.set_enabled(gain_state_.muted);
+  callback(std::move(state));
+}
+
+void Tas58xx::GetTopologies(signal_fidl::SignalProcessing::GetTopologiesCallback callback) {
   std::vector<signal_fidl::EdgePair> edges;
-  edges.emplace_back(edge);
+  {
+    signal_fidl::EdgePair edge;
+    edge.processing_element_id_from = kEqPeId;
+    edge.processing_element_id_to = kGainPeId;
+    edges.emplace_back(edge);
+  }
+  {
+    signal_fidl::EdgePair edge;
+    edge.processing_element_id_from = kGainPeId;
+    edge.processing_element_id_to = kMutePeId;
+    edges.emplace_back(edge);
+  }
+  {
+    signal_fidl::EdgePair edge;
+    edge.processing_element_id_from = kMutePeId;
+    edge.processing_element_id_to = kAglPeId;
+    edges.emplace_back(edge);
+  }
 
   signal_fidl::Topology topology;
   topology.set_id(kTopologyId);
@@ -587,20 +727,30 @@ void Tas58xx::SetTopology(uint64_t topology_id,
 
 void Tas58xx::SetElementState(uint64_t processing_element_id, signal_fidl::ElementState state,
                               signal_fidl::SignalProcessing::SetElementStateCallback callback) {
-  if (processing_element_id == kEqPeId) {
-    zx_status_t status = SetEqualizerElement(std::move(state));
-    if (status != ZX_OK) {
-      callback(signal_fidl::SignalProcessing_SetElementState_Result::WithErr(std::move(status)));
-    } else {
-      callback(signal_fidl::SignalProcessing_SetElementState_Result::WithResponse(
-          signal_fidl::SignalProcessing_SetElementState_Response()));
-    }
-  } else if (processing_element_id == kAglPeId) {
-    SetAutomaticGainControlElement(std::move(state));
+  zx_status_t status = ZX_OK;
+  switch (processing_element_id) {
+    case kEqPeId:
+      status = SetEqualizerElement(std::move(state));
+      break;
+    case kAglPeId:
+      status = SetAutomaticGainLimiterElement(std::move(state));
+      break;
+    case kGainPeId:
+      status = SetGainElement(std::move(state));
+      break;
+    case kMutePeId:
+      status = SetMuteElement(std::move(state));
+      break;
+    default:
+      status = ZX_ERR_INVALID_ARGS;
+      break;
+  }
+
+  if (status != ZX_OK) {
+    callback(signal_fidl::SignalProcessing_SetElementState_Result::WithErr(std::move(status)));
+  } else {
     callback(signal_fidl::SignalProcessing_SetElementState_Result::WithResponse(
         signal_fidl::SignalProcessing_SetElementState_Response()));
-  } else {
-    callback(signal_fidl::SignalProcessing_SetElementState_Result::WithErr(ZX_ERR_INVALID_ARGS));
   }
 }
 
@@ -664,6 +814,26 @@ zx::status<CodecFormatInfo> Tas58xx::SetDaiFormat(const DaiFormat& format) {
   CodecFormatInfo info = {};
   info.set_turn_on_delay(zx::msec(5).get());
   return zx::ok(std::move(info));
+}
+
+zx_status_t Tas58xx::SetGain(float gain) {
+  float clamped_gain = std::clamp(gain, kMinGain, kMaxGain);
+  uint8_t gain_reg = static_cast<uint8_t>(48 - clamped_gain * 2);
+  zx_status_t status = WriteReg(kRegDigitalVol, gain_reg);
+  if (status != ZX_OK) {
+    return status;
+  }
+  gain_state_.gain = clamped_gain;
+  return ZX_OK;
+}
+
+zx_status_t Tas58xx::SetMute(bool mute) {
+  zx_status_t status = UpdateReg(kRegDeviceCtrl2, 0x08, mute ? 0x08 : 0x00);
+  if (status != ZX_OK) {
+    return status;
+  }
+  gain_state_.muted = mute;
+  return ZX_OK;
 }
 
 GainFormat Tas58xx::GetGainFormat() {
@@ -891,7 +1061,7 @@ zx_status_t Tas58xx::WriteReg(uint8_t reg, uint8_t value) {
   uint8_t write_buf[2];
   write_buf[0] = reg;
   write_buf[1] = value;
-//#define TRACE_I2C
+// #define TRACE_I2C
 #ifdef TRACE_I2C
   printf("Writing register 0x%02X to value 0x%02X\n", reg, value);
 #endif

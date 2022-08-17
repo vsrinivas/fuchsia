@@ -74,6 +74,8 @@ class Tas58xx : public SimpleCodecServer,
   uint64_t GetTopologyId() { return kTopologyId; }
   uint64_t GetAglPeId() { return kAglPeId; }
   uint64_t GetEqPeId() { return kEqPeId; }
+  uint64_t GetGainPeId() { return kGainPeId; }
+  uint64_t GetMutePeId() { return kMutePeId; }
   virtual bool BackgroundFaultPollingIsEnabled() {
     return true;  // Unit test can override to disable.
   }
@@ -85,6 +87,8 @@ class Tas58xx : public SimpleCodecServer,
   static constexpr float kGainStep = 0.5;
   static constexpr uint64_t kAglPeId = 1;
   static constexpr uint64_t kEqPeId = 2;
+  static constexpr uint64_t kGainPeId = 3;
+  static constexpr uint64_t kMutePeId = 4;
   static constexpr uint64_t kTopologyId = 1;
   static constexpr size_t kEqualizerNumberOfBands = 5;
   static constexpr uint32_t kEqualizerMinFrequency = 100;
@@ -98,10 +102,20 @@ class Tas58xx : public SimpleCodecServer,
   zx_status_t WriteRegs(uint8_t* regs, size_t count);
   zx_status_t ReadReg(uint8_t reg, uint8_t* value);
   zx_status_t UpdateReg(uint8_t reg, uint8_t mask, uint8_t value);
+  zx_status_t SetGain(float gain);
+  zx_status_t SetMute(bool mute);
   zx_status_t SetEqualizerElement(fuchsia::hardware::audio::signalprocessing::ElementState state);
-  void SetAutomaticGainControlElement(
+  zx_status_t SetAutomaticGainLimiterElement(
       fuchsia::hardware::audio::signalprocessing::ElementState state);
-  void SendWatchReply(
+  zx_status_t SetGainElement(fuchsia::hardware::audio::signalprocessing::ElementState state);
+  zx_status_t SetMuteElement(fuchsia::hardware::audio::signalprocessing::ElementState state);
+  void SendEqualizerWatchReply(
+      fuchsia::hardware::audio::signalprocessing::SignalProcessing::WatchElementStateCallback
+          callback);
+  void SendGainWatchReply(
+      fuchsia::hardware::audio::signalprocessing::SignalProcessing::WatchElementStateCallback
+          callback);
+  void SendMuteWatchReply(
       fuchsia::hardware::audio::signalprocessing::SignalProcessing::WatchElementStateCallback
           callback);
 
@@ -146,6 +160,19 @@ class Tas58xx : public SimpleCodecServer,
       fuchsia::hardware::audio::signalprocessing::SignalProcessing::WatchElementStateCallback>
       equalizer_callback_;
   bool last_equalizer_update_reported_ = false;
+
+  // Gain.
+  bool gain_enabled_ = true;
+  std::optional<
+      fuchsia::hardware::audio::signalprocessing::SignalProcessing::WatchElementStateCallback>
+      gain_callback_;
+  bool last_gain_update_reported_ = false;
+
+  // Mute.
+  std::optional<
+      fuchsia::hardware::audio::signalprocessing::SignalProcessing::WatchElementStateCallback>
+      mute_callback_;
+  bool last_mute_update_reported_ = false;
 };
 }  // namespace audio
 

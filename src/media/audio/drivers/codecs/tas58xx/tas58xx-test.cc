@@ -27,6 +27,11 @@ namespace audio {
 namespace audio_fidl = ::fuchsia::hardware::audio;
 namespace signal_fidl = ::fuchsia::hardware::audio::signalprocessing;
 
+static constexpr uint64_t kAglPeIndex = 0;
+static constexpr uint64_t kGainPeIndex = 1;
+static constexpr uint64_t kMutePeIndex = 2;
+static constexpr uint64_t kEqualizerPeIndex = 3;
+
 struct Tas58xxCodec : public Tas58xx {
   explicit Tas58xxCodec(zx_device_t* parent, ddk::I2cChannel i2c,
                         ddk::GpioProtocolClient gpio_fault)
@@ -36,6 +41,8 @@ struct Tas58xxCodec : public Tas58xx {
   uint64_t GetTopologyId() { return Tas58xx::GetTopologyId(); }
   uint64_t GetAglPeId() { return Tas58xx::GetAglPeId(); }
   uint64_t GetEqPeId() { return Tas58xx::GetEqPeId(); }
+  uint64_t GetGainPeId() { return Tas58xx::GetGainPeId(); }
+  uint64_t GetMutePeId() { return Tas58xx::GetMutePeId(); }
   void PeriodicPollFaults() { Tas58xx::PeriodicPollFaults(); }
   zx_status_t SetBand(bool enabled, size_t index, uint32_t frequency, float Q, float gain_db) {
     return Tas58xx::SetBand(enabled, index, frequency, Q, gain_db);
@@ -280,7 +287,7 @@ TEST_F(Tas58xxTest, CheckState) {
   EXPECT_EQ(format.value().gain_step, 0.5);
 }
 
-TEST_F(Tas58xxTest, SetGain) {
+TEST_F(Tas58xxTest, SetGainDeprecated) {
   {
     mock_i2c_
         .ExpectWriteStop({0x4c, 0x48})  // digital vol -12dB.
@@ -345,6 +352,7 @@ TEST_F(Tas58xxTest, SetAglSignalProcessing) {
   }
 }
 
+// Tests that don't use SimpleCodec and make signal processing calls on their own.
 class Tas58xxSignalProcessingTest : public zxtest::Test {
  public:
   Tas58xxSignalProcessingTest() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
@@ -373,28 +381,26 @@ class Tas58xxSignalProcessingTest : public zxtest::Test {
     ASSERT_NOT_NULL(child_dev);
     codec_ = child_dev->GetDeviceContext<Tas58xxCodec>();
     codec_proto_ = codec_->GetProto();
-    codec_client_.SetProtocol(&codec_proto_);
+    ddk::CodecProtocolClient proto_client(&codec_proto_);
 
-    ddk::CodecProtocolClient codec_proto2(&codec_proto_);
-    zx::channel channel_remote, channel_local;
-    zx::channel::create(0, &channel_local, &channel_remote);
-    ddk::CodecProtocolClient proto_client;
-    codec_proto2.Connect(std::move(channel_remote));
-    audio_fidl::CodecSyncPtr codec_client;
-    codec_client.Bind(std::move(channel_local));
+    fidl::InterfaceHandle<audio_fidl::Codec> codec_handle;
+    fidl::InterfaceRequest<audio_fidl::Codec> codec_request = codec_handle.NewRequest();
+    ASSERT_OK(proto_client.Connect(codec_request.TakeChannel()));
+
+    codec_client_ = codec_handle.BindSync();
 
     fidl::InterfaceHandle<signal_fidl::SignalProcessing> signal_processing_handle;
     fidl::InterfaceRequest<signal_fidl::SignalProcessing> signal_processing_request =
         signal_processing_handle.NewRequest();
-    codec_client->SignalProcessingConnect(std::move(signal_processing_request));
+    codec_client_->SignalProcessingConnect(std::move(signal_processing_request));
     signal_processing_client_ = signal_processing_handle.BindSync();
   }
   void TearDown() override { mock_i2c_.VerifyAndClear(); }
 
  protected:
+  fidl::SynchronousInterfacePtr<audio_fidl::Codec> codec_client_;
   fidl::SynchronousInterfacePtr<signal_fidl::SignalProcessing> signal_processing_client_;
   mock_i2c::MockI2c mock_i2c_;
-  SimpleCodecClient codec_client_;
   Tas58xxCodec* codec_;
 
  private:
@@ -404,20 +410,35 @@ class Tas58xxSignalProcessingTest : public zxtest::Test {
 };
 
 TEST_F(Tas58xxSignalProcessingTest, GetTopologySignalProcessing) {
-  // We should get one topology with an AGL processing element.
   signal_fidl::Reader_GetTopologies_Result result;
   ASSERT_OK(signal_processing_client_->GetTopologies(&result));
   ASSERT_FALSE(result.is_err());
   ASSERT_EQ(result.response().topologies.size(), 1);
   ASSERT_EQ(result.response().topologies[0].id(), codec_->GetTopologyId());
-  ASSERT_EQ(result.response().topologies[0].processing_elements_edge_pairs().size(), 1);
+  ASSERT_EQ(result.response().topologies[0].processing_elements_edge_pairs().size(), 3);
   ASSERT_EQ(result.response()
                 .topologies[0]
                 .processing_elements_edge_pairs()[0]
                 .processing_element_id_from,
-            codec_->GetAglPeId());
+            codec_->GetEqPeId());
   ASSERT_EQ(
       result.response().topologies[0].processing_elements_edge_pairs()[0].processing_element_id_to,
+      codec_->GetGainPeId());
+  ASSERT_EQ(result.response()
+                .topologies[0]
+                .processing_elements_edge_pairs()[1]
+                .processing_element_id_from,
+            codec_->GetGainPeId());
+  ASSERT_EQ(
+      result.response().topologies[0].processing_elements_edge_pairs()[1].processing_element_id_to,
+      codec_->GetMutePeId());
+  ASSERT_EQ(result.response()
+                .topologies[0]
+                .processing_elements_edge_pairs()[2]
+                .processing_element_id_from,
+            codec_->GetMutePeId());
+  ASSERT_EQ(
+      result.response().topologies[0].processing_elements_edge_pairs()[2].processing_element_id_to,
       codec_->GetAglPeId());
 
   // Set the only topology must work.
@@ -490,15 +511,162 @@ TEST(Tas58xxSignalProcessingTest, SignalProcessingConnectTooManyConnections) {
   mock_i2c.VerifyAndClear();
 }
 
-TEST_F(Tas58xxSignalProcessingTest, WatchAgl) {
-  // We should get 2 PEs one AGL and one EQUALIZER.
+TEST_F(Tas58xxSignalProcessingTest, SetGain) {
   signal_fidl::Reader_GetElements_Result result;
   ASSERT_OK(signal_processing_client_->GetElements(&result));
   ASSERT_FALSE(result.is_err());
-  ASSERT_EQ(result.response().processing_elements.size(), 2);
-  ASSERT_EQ(result.response().processing_elements[0].type(),
+  ASSERT_GT(result.response().processing_elements.size(), kGainPeIndex);
+  ASSERT_EQ(result.response().processing_elements[kGainPeIndex].type(),
+            signal_fidl::ElementType::GAIN);
+
+  // Set valid gain.
+  {
+    mock_i2c_.ExpectWriteStop({0x4c, 0x48});  // digital vol -12dB.
+
+    signal_fidl::SignalProcessing_SetElementState_Result state_result;
+    signal_fidl::ElementState state;
+    state.set_enabled(true);
+    signal_fidl::GainElementState gain_control;
+    gain_control.set_gain(-12.0f);
+    auto control_params = signal_fidl::TypeSpecificElementState::WithGain(std::move(gain_control));
+    state.set_type_specific(std::move(control_params));
+    ASSERT_OK(signal_processing_client_->SetElementState(
+        result.response().processing_elements[kGainPeIndex].id(), std::move(state), &state_result));
+    ASSERT_FALSE(state_result.is_err());
+
+    signal_fidl::ElementState state_received;
+    signal_processing_client_->WatchElementState(
+        result.response().processing_elements[kGainPeIndex].id(), &state_received);
+    ASSERT_TRUE(state_received.has_enabled());
+    ASSERT_TRUE(state_received.enabled());
+    ASSERT_TRUE(state_received.has_type_specific());
+    ASSERT_TRUE(state_received.type_specific().is_gain());
+    ASSERT_TRUE(state_received.type_specific().gain().has_gain());
+    ASSERT_EQ(state_received.type_specific().gain().gain(), -12.0f);
+  }
+
+  // If no gain and no enable/disable state is provided, then there should be no change and
+  // no I2C transaction.
+  {
+    signal_fidl::SignalProcessing_SetElementState_Result state_result;
+    signal_fidl::ElementState state;
+    ASSERT_OK(signal_processing_client_->SetElementState(
+        result.response().processing_elements[kGainPeIndex].id(), std::move(state), &state_result));
+    ASSERT_FALSE(state_result.is_err());
+  }
+
+  // Disable gain.
+  {
+    mock_i2c_.ExpectWriteStop({0x4c, 0x30});  // digital vol 0dB, disable Gain.
+
+    signal_fidl::SignalProcessing_SetElementState_Result state_result;
+    signal_fidl::ElementState state;
+    state.set_enabled(false);
+    ASSERT_OK(signal_processing_client_->SetElementState(
+        result.response().processing_elements[kGainPeIndex].id(), std::move(state), &state_result));
+    ASSERT_FALSE(state_result.is_err());
+
+    signal_fidl::ElementState state_received;
+    signal_processing_client_->WatchElementState(
+        result.response().processing_elements[kGainPeIndex].id(), &state_received);
+    ASSERT_TRUE(state_received.has_enabled());
+    ASSERT_FALSE(state_received.enabled());
+    ASSERT_TRUE(state_received.has_type_specific());
+    ASSERT_TRUE(state_received.type_specific().is_gain());
+    ASSERT_TRUE(state_received.type_specific().gain().has_gain());
+    ASSERT_EQ(state_received.type_specific().gain().gain(), 0.0f);  // Effectively disables gain.
+  }
+
+  // Disable gain but provide a gain value, still effectively disables gain (0dB).
+  {
+    mock_i2c_.ExpectWriteStop({0x4c, 0x30});  // digital vol 0dB, disable Gain.
+
+    signal_fidl::SignalProcessing_SetElementState_Result state_result;
+    signal_fidl::ElementState state;
+    state.set_enabled(false);
+    signal_fidl::GainElementState gain_control;
+    gain_control.set_gain(-12.0f);
+    auto control_params = signal_fidl::TypeSpecificElementState::WithGain(std::move(gain_control));
+    state.set_type_specific(std::move(control_params));
+    ASSERT_OK(signal_processing_client_->SetElementState(
+        result.response().processing_elements[kGainPeIndex].id(), std::move(state), &state_result));
+    ASSERT_FALSE(state_result.is_err());
+
+    signal_fidl::ElementState state_received;
+    signal_processing_client_->WatchElementState(
+        result.response().processing_elements[kGainPeIndex].id(), &state_received);
+    ASSERT_TRUE(state_received.has_enabled());
+    ASSERT_FALSE(state_received.enabled());
+    ASSERT_TRUE(state_received.has_type_specific());
+    ASSERT_TRUE(state_received.type_specific().is_gain());
+    ASSERT_TRUE(state_received.type_specific().gain().has_gain());
+    ASSERT_EQ(state_received.type_specific().gain().gain(), 0.0f);  // Effectively disables gain.
+  }
+}
+
+TEST_F(Tas58xxSignalProcessingTest, SetMute) {
+  signal_fidl::Reader_GetElements_Result result;
+  ASSERT_OK(signal_processing_client_->GetElements(&result));
+  ASSERT_FALSE(result.is_err());
+  ASSERT_GT(result.response().processing_elements.size(), kMutePeIndex);
+  ASSERT_EQ(result.response().processing_elements[kMutePeIndex].type(),
+            signal_fidl::ElementType::MUTE);
+
+  // Enable muted state.
+  {
+    mock_i2c_.ExpectWrite({0x03}).ExpectReadStop({0x00}).ExpectWriteStop(
+        {0x03, 0x08});  // Muted = true.
+
+    signal_fidl::SignalProcessing_SetElementState_Result state_result;
+    signal_fidl::ElementState state;
+    state.set_enabled(true);
+    ASSERT_OK(signal_processing_client_->SetElementState(
+        result.response().processing_elements[kMutePeIndex].id(), std::move(state), &state_result));
+    ASSERT_FALSE(state_result.is_err());
+
+    signal_fidl::ElementState state_received;
+    signal_processing_client_->WatchElementState(
+        result.response().processing_elements[kMutePeIndex].id(), &state_received);
+    ASSERT_TRUE(state_received.has_enabled());
+    ASSERT_TRUE(state_received.enabled());
+  }
+
+  // If no enable/disable is provided, then there should be no change and no I2C transaction.
+  {
+    signal_fidl::SignalProcessing_SetElementState_Result state_result;
+    signal_fidl::ElementState state;
+    ASSERT_OK(signal_processing_client_->SetElementState(
+        result.response().processing_elements[kMutePeIndex].id(), std::move(state), &state_result));
+    ASSERT_FALSE(state_result.is_err());
+  }
+
+  // Disable muted state.
+  {
+    mock_i2c_.ExpectWrite({0x03}).ExpectReadStop({0x00}).ExpectWriteStop(
+        {0x03, 0x00});  // Muted = false.
+
+    signal_fidl::SignalProcessing_SetElementState_Result state_result;
+    signal_fidl::ElementState state;
+    state.set_enabled(false);
+    ASSERT_OK(signal_processing_client_->SetElementState(
+        result.response().processing_elements[kMutePeIndex].id(), std::move(state), &state_result));
+    ASSERT_FALSE(state_result.is_err());
+
+    signal_fidl::ElementState state_received;
+    signal_processing_client_->WatchElementState(
+        result.response().processing_elements[kMutePeIndex].id(), &state_received);
+    ASSERT_TRUE(state_received.has_enabled());
+    ASSERT_FALSE(state_received.enabled());
+  }
+}
+
+TEST_F(Tas58xxSignalProcessingTest, WatchAgl) {
+  signal_fidl::Reader_GetElements_Result result;
+  ASSERT_OK(signal_processing_client_->GetElements(&result));
+  ASSERT_FALSE(result.is_err());
+  ASSERT_GT(result.response().processing_elements.size(), kAglPeIndex);
+  ASSERT_EQ(result.response().processing_elements[kAglPeIndex].type(),
             signal_fidl::ElementType::AUTOMATIC_GAIN_LIMITER);
-  ASSERT_EQ(result.response().processing_elements[1].type(), signal_fidl::ElementType::EQUALIZER);
 
   // AGL enabled.
   {
@@ -510,16 +678,16 @@ TEST_F(Tas58xxSignalProcessingTest, WatchAgl) {
         .ExpectWriteStop({0x7f, 0x00});                   // book 0.
 
     // Control with enabled = true.
-    signal_fidl::SignalProcessing_SetElementState_Result result_enable;
+    signal_fidl::SignalProcessing_SetElementState_Result state_result;
     signal_fidl::ElementState state;
     state.set_enabled(true);
     ASSERT_OK(signal_processing_client_->SetElementState(
-        result.response().processing_elements[0].id(), std::move(state), &result_enable));
-    ASSERT_FALSE(result_enable.is_err());
+        result.response().processing_elements[kAglPeIndex].id(), std::move(state), &state_result));
+    ASSERT_FALSE(state_result.is_err());
 
     signal_fidl::ElementState state_received;
-    signal_processing_client_->WatchElementState(result.response().processing_elements[0].id(),
-                                                 &state_received);
+    signal_processing_client_->WatchElementState(
+        result.response().processing_elements[kAglPeIndex].id(), &state_received);
     ASSERT_TRUE(state_received.has_enabled());
     ASSERT_TRUE(state_received.enabled());
   }
@@ -538,26 +706,24 @@ TEST_F(Tas58xxSignalProcessingTest, WatchAgl) {
     signal_fidl::ElementState state;
     state.set_enabled(false);
     ASSERT_OK(signal_processing_client_->SetElementState(
-        result.response().processing_elements[0].id(), std::move(state), &state_result));
+        result.response().processing_elements[kAglPeIndex].id(), std::move(state), &state_result));
     ASSERT_FALSE(state_result.is_err());
 
     signal_fidl::ElementState state_received;
-    signal_processing_client_->WatchElementState(result.response().processing_elements[0].id(),
-                                                 &state_received);
+    signal_processing_client_->WatchElementState(
+        result.response().processing_elements[kAglPeIndex].id(), &state_received);
     ASSERT_TRUE(state_received.has_enabled());
     ASSERT_FALSE(state_received.enabled());
   }
 }
 
 TEST_F(Tas58xxSignalProcessingTest, WatchAglUpdates) {
-  // We should get 2 PEs one AGL and one EQUALIZER.
   signal_fidl::Reader_GetElements_Result result;
   ASSERT_OK(signal_processing_client_->GetElements(&result));
   ASSERT_FALSE(result.is_err());
-  ASSERT_EQ(result.response().processing_elements.size(), 2);
-  ASSERT_EQ(result.response().processing_elements[0].type(),
+  ASSERT_GT(result.response().processing_elements.size(), kAglPeIndex);
+  ASSERT_EQ(result.response().processing_elements[kAglPeIndex].type(),
             signal_fidl::ElementType::AUTOMATIC_GAIN_LIMITER);
-  ASSERT_EQ(result.response().processing_elements[1].type(), signal_fidl::ElementType::EQUALIZER);
 
   // A Watch after a SetPE disable must reply since the PE state changed.
   {
@@ -573,12 +739,12 @@ TEST_F(Tas58xxSignalProcessingTest, WatchAglUpdates) {
     signal_fidl::ElementState state;
     state.set_enabled(true);
     ASSERT_OK(signal_processing_client_->SetElementState(
-        result.response().processing_elements[0].id(), std::move(state), &state_result));
+        result.response().processing_elements[kAglPeIndex].id(), std::move(state), &state_result));
     ASSERT_FALSE(state_result.is_err());
 
     signal_fidl::ElementState state_received;
-    signal_processing_client_->WatchElementState(result.response().processing_elements[0].id(),
-                                                 &state_received);
+    signal_processing_client_->WatchElementState(
+        result.response().processing_elements[kAglPeIndex].id(), &state_received);
     ASSERT_TRUE(state_received.has_enabled());
     ASSERT_TRUE(state_received.enabled());
   }
@@ -594,8 +760,8 @@ TEST_F(Tas58xxSignalProcessingTest, WatchAglUpdates) {
 
     std::thread th([&]() {
       signal_fidl::ElementState state_received;
-      signal_processing_client_->WatchElementState(result.response().processing_elements[0].id(),
-                                                   &state_received);
+      signal_processing_client_->WatchElementState(
+          result.response().processing_elements[kAglPeIndex].id(), &state_received);
       ASSERT_TRUE(state_received.has_enabled());
       ASSERT_FALSE(state_received.enabled());
     });
@@ -609,7 +775,7 @@ TEST_F(Tas58xxSignalProcessingTest, WatchAglUpdates) {
     signal_fidl::ElementState state;
     state.set_enabled(false);
     ASSERT_OK(signal_processing_client_->SetElementState(
-        result.response().processing_elements[0].id(), std::move(state), &state_result));
+        result.response().processing_elements[kAglPeIndex].id(), std::move(state), &state_result));
     ASSERT_FALSE(state_result.is_err());
 
     th.join();
@@ -630,30 +796,28 @@ TEST_F(Tas58xxSignalProcessingTest, WatchAglUpdates) {
     signal_fidl::ElementState state;
     state.set_enabled(true);
     ASSERT_OK(signal_processing_client_->SetElementState(
-        result.response().processing_elements[0].id(), std::move(state), &state_result));
+        result.response().processing_elements[kAglPeIndex].id(), std::move(state), &state_result));
     ASSERT_FALSE(state_result.is_err());
 
     signal_fidl::ElementState state_received;
-    signal_processing_client_->WatchElementState(result.response().processing_elements[0].id(),
-                                                 &state_received);
+    signal_processing_client_->WatchElementState(
+        result.response().processing_elements[kAglPeIndex].id(), &state_received);
     ASSERT_TRUE(state_received.has_enabled());
     ASSERT_TRUE(state_received.enabled());
   }
 }
 
 TEST_F(Tas58xxSignalProcessingTest, WatchEqualizer) {
-  // We should get 2 PEs one AGL and one EQUALIZER.
   signal_fidl::Reader_GetElements_Result result;
   ASSERT_OK(signal_processing_client_->GetElements(&result));
   ASSERT_FALSE(result.is_err());
-  ASSERT_EQ(result.response().processing_elements.size(), 2);
-  ASSERT_EQ(result.response().processing_elements[0].type(),
-            signal_fidl::ElementType::AUTOMATIC_GAIN_LIMITER);
-  ASSERT_EQ(result.response().processing_elements[1].type(), signal_fidl::ElementType::EQUALIZER);
+  ASSERT_GT(result.response().processing_elements.size(), kEqualizerPeIndex);
+  ASSERT_EQ(result.response().processing_elements[kEqualizerPeIndex].type(),
+            signal_fidl::ElementType::EQUALIZER);
 
   signal_fidl::ElementState state_received;
-  signal_processing_client_->WatchElementState(result.response().processing_elements[1].id(),
-                                               &state_received);
+  signal_processing_client_->WatchElementState(
+      result.response().processing_elements[kEqualizerPeIndex].id(), &state_received);
   ASSERT_TRUE(state_received.has_enabled());
   ASSERT_TRUE(state_received.enabled());
   ASSERT_TRUE(state_received.has_type_specific());
@@ -707,18 +871,16 @@ TEST_F(Tas58xxSignalProcessingTest, WatchEqualizer) {
 }
 
 TEST_F(Tas58xxSignalProcessingTest, WatchEqualizerUpdates) {
-  // We should get 2 PEs one AGL and one EQUALIZER.
   signal_fidl::Reader_GetElements_Result result;
   ASSERT_OK(signal_processing_client_->GetElements(&result));
   ASSERT_FALSE(result.is_err());
-  ASSERT_EQ(result.response().processing_elements.size(), 2);
-  ASSERT_EQ(result.response().processing_elements[0].type(),
-            signal_fidl::ElementType::AUTOMATIC_GAIN_LIMITER);
-  ASSERT_EQ(result.response().processing_elements[1].type(), signal_fidl::ElementType::EQUALIZER);
+  ASSERT_GT(result.response().processing_elements.size(), kEqualizerPeIndex);
+  ASSERT_EQ(result.response().processing_elements[kEqualizerPeIndex].type(),
+            signal_fidl::ElementType::EQUALIZER);
 
   signal_fidl::ElementState state_received;
-  signal_processing_client_->WatchElementState(result.response().processing_elements[1].id(),
-                                               &state_received);
+  signal_processing_client_->WatchElementState(
+      result.response().processing_elements[kEqualizerPeIndex].id(), &state_received);
   ASSERT_TRUE(state_received.has_enabled());
   ASSERT_TRUE(state_received.enabled());
   ASSERT_TRUE(state_received.has_type_specific());
@@ -729,16 +891,17 @@ TEST_F(Tas58xxSignalProcessingTest, WatchEqualizerUpdates) {
   {
     // Control the EQ by disable the whole processing element.
     mock_i2c_.ExpectWriteStop({0x66, 0x07});  // Enable bypass EQ.
-    signal_fidl::SignalProcessing_SetElementState_Result result_enable;
+    signal_fidl::SignalProcessing_SetElementState_Result state_result;
     signal_fidl::ElementState control;
     control.set_enabled(false);
     ASSERT_OK(signal_processing_client_->SetElementState(
-        result.response().processing_elements[1].id(), std::move(control), &result_enable));
-    ASSERT_FALSE(result_enable.is_err());
+        result.response().processing_elements[kEqualizerPeIndex].id(), std::move(control),
+        &state_result));
+    ASSERT_FALSE(state_result.is_err());
 
     signal_fidl::ElementState state_received;
-    signal_processing_client_->WatchElementState(result.response().processing_elements[1].id(),
-                                                 &state_received);
+    signal_processing_client_->WatchElementState(
+        result.response().processing_elements[kEqualizerPeIndex].id(), &state_received);
     ASSERT_TRUE(state_received.has_enabled());
     ASSERT_FALSE(state_received.enabled());
   }
@@ -747,8 +910,8 @@ TEST_F(Tas58xxSignalProcessingTest, WatchEqualizerUpdates) {
   {
     std::thread th([&]() {
       signal_fidl::ElementState state_received;
-      signal_processing_client_->WatchElementState(result.response().processing_elements[1].id(),
-                                                   &state_received);
+      signal_processing_client_->WatchElementState(
+          result.response().processing_elements[kEqualizerPeIndex].id(), &state_received);
       ASSERT_TRUE(state_received.has_enabled());
       ASSERT_FALSE(state_received.enabled());
     });
@@ -758,36 +921,56 @@ TEST_F(Tas58xxSignalProcessingTest, WatchEqualizerUpdates) {
 
     // Control the EQ by disable the whole processing element.
     mock_i2c_.ExpectWriteStop({0x66, 0x07});  // Enable bypass EQ.
-    signal_fidl::SignalProcessing_SetElementState_Result result_enable;
+    signal_fidl::SignalProcessing_SetElementState_Result state_result;
     signal_fidl::ElementState control;
     control.set_enabled(false);
     ASSERT_OK(signal_processing_client_->SetElementState(
-        result.response().processing_elements[1].id(), std::move(control), &result_enable));
-    ASSERT_FALSE(result_enable.is_err());
+        result.response().processing_elements[kEqualizerPeIndex].id(), std::move(control),
+        &state_result));
+    ASSERT_FALSE(state_result.is_err());
 
     th.join();
   }
 }
 
 TEST_F(Tas58xxSignalProcessingTest, SetEqualizerBandDisabled) {
-  // We should get 2 PEs, one with AGL and one with EQ support and its parameters.
   signal_fidl::Reader_GetElements_Result result;
   ASSERT_OK(signal_processing_client_->GetElements(&result));
   ASSERT_FALSE(result.is_err());
-  ASSERT_EQ(result.response().processing_elements.size(), 2);
-  ASSERT_EQ(result.response().processing_elements[1].type(), signal_fidl::ElementType::EQUALIZER);
-  ASSERT_EQ(result.response().processing_elements[1].type_specific().equalizer().min_frequency(),
+  ASSERT_GT(result.response().processing_elements.size(), kEqualizerPeIndex);
+  ASSERT_EQ(result.response().processing_elements[kEqualizerPeIndex].type(),
+            signal_fidl::ElementType::EQUALIZER);
+  ASSERT_EQ(result.response()
+                .processing_elements[kEqualizerPeIndex]
+                .type_specific()
+                .equalizer()
+                .min_frequency(),
             100);
-  ASSERT_EQ(result.response().processing_elements[1].type_specific().equalizer().max_frequency(),
+  ASSERT_EQ(result.response()
+                .processing_elements[kEqualizerPeIndex]
+                .type_specific()
+                .equalizer()
+                .max_frequency(),
             20'000);
-  ASSERT_EQ(result.response().processing_elements[1].type_specific().equalizer().min_gain_db(),
+  ASSERT_EQ(result.response()
+                .processing_elements[kEqualizerPeIndex]
+                .type_specific()
+                .equalizer()
+                .min_gain_db(),
             -5.f);
-  ASSERT_EQ(result.response().processing_elements[1].type_specific().equalizer().max_gain_db(),
+  ASSERT_EQ(result.response()
+                .processing_elements[kEqualizerPeIndex]
+                .type_specific()
+                .equalizer()
+                .max_gain_db(),
             5.f);
-  ASSERT_EQ(
-      result.response().processing_elements[1].type_specific().equalizer().supported_controls(),
-      signal_fidl::EqualizerSupportedControls::SUPPORTS_TYPE_PEAK |
-          signal_fidl::EqualizerSupportedControls::CAN_CONTROL_FREQUENCY);
+  ASSERT_EQ(result.response()
+                .processing_elements[kEqualizerPeIndex]
+                .type_specific()
+                .equalizer()
+                .supported_controls(),
+            signal_fidl::EqualizerSupportedControls::SUPPORTS_TYPE_PEAK |
+                signal_fidl::EqualizerSupportedControls::CAN_CONTROL_FREQUENCY);
 
   // Control the EQ by disable the first band.
 
@@ -809,13 +992,13 @@ TEST_F(Tas58xxSignalProcessingTest, SetEqualizerBandDisabled) {
       .ExpectWriteStop({0x7f, 0x00});              // book 0.
 
   // Now we send the EQ control disabling the first band.
-  signal_fidl::SignalProcessing_SetElementState_Result result_enable;
+  signal_fidl::SignalProcessing_SetElementState_Result state_result;
   signal_fidl::ElementState control;
   control.set_enabled(true);
   std::vector<signal_fidl::EqualizerBandState> bands_control;
   signal_fidl::EqualizerBandState band_control;
   auto band_id = result.response()
-                     .processing_elements[1]
+                     .processing_elements[kEqualizerPeIndex]
                      .type_specific()
                      .equalizer()
                      .bands()[0]  // We control the band at index 0.
@@ -828,17 +1011,18 @@ TEST_F(Tas58xxSignalProcessingTest, SetEqualizerBandDisabled) {
   auto control_params = signal_fidl::TypeSpecificElementState::WithEqualizer(std::move(eq_control));
   control.set_type_specific(std::move(control_params));
   ASSERT_OK(signal_processing_client_->SetElementState(
-      result.response().processing_elements[1].id(), std::move(control), &result_enable));
-  ASSERT_FALSE(result_enable.is_err());
+      result.response().processing_elements[kEqualizerPeIndex].id(), std::move(control),
+      &state_result));
+  ASSERT_FALSE(state_result.is_err());
 }
 
 TEST_F(Tas58xxSignalProcessingTest, SetEqualizerDifferentRequests) {
-  // We should get 2 PEs, one with AGL and one with EQ support.
   signal_fidl::Reader_GetElements_Result result;
   ASSERT_OK(signal_processing_client_->GetElements(&result));
   ASSERT_FALSE(result.is_err());
-  ASSERT_EQ(result.response().processing_elements.size(), 2);
-  ASSERT_EQ(result.response().processing_elements[1].type(), signal_fidl::ElementType::EQUALIZER);
+  ASSERT_GT(result.response().processing_elements.size(), kEqualizerPeIndex);
+  ASSERT_EQ(result.response().processing_elements[kEqualizerPeIndex].type(),
+            signal_fidl::ElementType::EQUALIZER);
 
   // 1. Band does not have an enabled field. The processing element does, but not the band.
   {
@@ -858,13 +1042,13 @@ TEST_F(Tas58xxSignalProcessingTest, SetEqualizerDifferentRequests) {
              0,    0,    0, 0, 0, 0, 0, 0, 0, 0})    // 0x08, 0, 0, 0 = gain 0.dB (factor 1.0).
         .ExpectWriteStop({0x00, 0x00})               // page 0.
         .ExpectWriteStop({0x7f, 0x00});              // book 0.
-    signal_fidl::SignalProcessing_SetElementState_Result result_enable;
+    signal_fidl::SignalProcessing_SetElementState_Result state_result;
     signal_fidl::ElementState control;
     control.set_enabled(true);
     std::vector<signal_fidl::EqualizerBandState> bands_control;
     signal_fidl::EqualizerBandState band_control;
     auto band_id = result.response()
-                       .processing_elements[1]
+                       .processing_elements[kEqualizerPeIndex]
                        .type_specific()
                        .equalizer()
                        .bands()[0]  // First band (index 0).
@@ -877,14 +1061,15 @@ TEST_F(Tas58xxSignalProcessingTest, SetEqualizerDifferentRequests) {
         signal_fidl::TypeSpecificElementState::WithEqualizer(std::move(eq_control));
     control.set_type_specific(std::move(control_params));
     ASSERT_OK(signal_processing_client_->SetElementState(
-        result.response().processing_elements[1].id(), std::move(control), &result_enable));
-    ASSERT_FALSE(result_enable.is_err());
+        result.response().processing_elements[kEqualizerPeIndex].id(), std::move(control),
+        &state_result));
+    ASSERT_FALSE(state_result.is_err());
   }
 
   // 2. Control a band with bad request. Band has a bad id.
   {
     mock_i2c_.ExpectWriteStop({0x66, 0x06});  // Disable bypass EQ since PE is enabled.
-    signal_fidl::SignalProcessing_SetElementState_Result result_enable;
+    signal_fidl::SignalProcessing_SetElementState_Result state_result;
     signal_fidl::ElementState control;
     control.set_enabled(true);
     std::vector<signal_fidl::EqualizerBandState> bands_control;
@@ -898,20 +1083,21 @@ TEST_F(Tas58xxSignalProcessingTest, SetEqualizerDifferentRequests) {
         signal_fidl::TypeSpecificElementState::WithEqualizer(std::move(eq_control));
     control.set_type_specific(std::move(control_params));
     ASSERT_OK(signal_processing_client_->SetElementState(
-        result.response().processing_elements[1].id(), std::move(control), &result_enable));
-    ASSERT_TRUE(result_enable.is_err());
+        result.response().processing_elements[kEqualizerPeIndex].id(), std::move(control),
+        &state_result));
+    ASSERT_TRUE(state_result.is_err());
   }
 
   // 3. Control a band with bad request. Band control requests an unsupported frequency.
   {
     mock_i2c_.ExpectWriteStop({0x66, 0x06});  // Disable bypass EQ since PE is enabled.
-    signal_fidl::SignalProcessing_SetElementState_Result result_enable;
+    signal_fidl::SignalProcessing_SetElementState_Result state_result;
     signal_fidl::ElementState control;
     control.set_enabled(true);
     std::vector<signal_fidl::EqualizerBandState> bands_control;
     signal_fidl::EqualizerBandState band_control;
     auto band_id = result.response()
-                       .processing_elements[1]
+                       .processing_elements[kEqualizerPeIndex]
                        .type_specific()
                        .equalizer()
                        .bands()[0]  // First band (index 0).
@@ -926,18 +1112,19 @@ TEST_F(Tas58xxSignalProcessingTest, SetEqualizerDifferentRequests) {
         signal_fidl::TypeSpecificElementState::WithEqualizer(std::move(eq_control));
     control.set_type_specific(std::move(control_params));
     ASSERT_OK(signal_processing_client_->SetElementState(
-        result.response().processing_elements[1].id(), std::move(control), &result_enable));
-    ASSERT_TRUE(result_enable.is_err());
+        result.response().processing_elements[kEqualizerPeIndex].id(), std::move(control),
+        &state_result));
+    ASSERT_TRUE(state_result.is_err());
   }
 }
 
 TEST_F(Tas58xxSignalProcessingTest, SetEqualizerBandEnabledWithCodecStarted) {
-  // We should get 2 PEs, one with AGL and one with EQ support.
   signal_fidl::Reader_GetElements_Result result;
   ASSERT_OK(signal_processing_client_->GetElements(&result));
   ASSERT_FALSE(result.is_err());
-  ASSERT_EQ(result.response().processing_elements.size(), 2);
-  ASSERT_EQ(result.response().processing_elements[1].type(), signal_fidl::ElementType::EQUALIZER);
+  ASSERT_GT(result.response().processing_elements.size(), kEqualizerPeIndex);
+  ASSERT_EQ(result.response().processing_elements[kEqualizerPeIndex].type(),
+            signal_fidl::ElementType::EQUALIZER);
 
   // We expect the start to first go to HiZ then to play mode.
   mock_i2c_.ExpectWrite({0x03}).ExpectReadStop({0x00}).ExpectWriteStop({0x03, 0x02});
@@ -968,16 +1155,17 @@ TEST_F(Tas58xxSignalProcessingTest, SetEqualizerBandEnabledWithCodecStarted) {
       .ExpectWriteStop({0x03, 0x03});  // Codec is stated, now go back to play mode.
 
   // Start the codec.
-  ASSERT_OK(codec_client_.Start());
+  int64_t out_start_time = 0;
+  ASSERT_OK(codec_client_->Start(&out_start_time));
 
   // Control the band.
-  signal_fidl::SignalProcessing_SetElementState_Result result_enable;
+  signal_fidl::SignalProcessing_SetElementState_Result state_result;
   signal_fidl::ElementState control;
   control.set_enabled(true);
   std::vector<signal_fidl::EqualizerBandState> bands_control;
   signal_fidl::EqualizerBandState band_control;
   auto band_id = result.response()
-                     .processing_elements[1]
+                     .processing_elements[kEqualizerPeIndex]
                      .type_specific()
                      .equalizer()
                      .bands()[0]  // First band (index 0).
@@ -991,17 +1179,18 @@ TEST_F(Tas58xxSignalProcessingTest, SetEqualizerBandEnabledWithCodecStarted) {
   auto control_params = signal_fidl::TypeSpecificElementState::WithEqualizer(std::move(eq_control));
   control.set_type_specific(std::move(control_params));
   ASSERT_OK(signal_processing_client_->SetElementState(
-      result.response().processing_elements[1].id(), std::move(control), &result_enable));
-  ASSERT_FALSE(result_enable.is_err());
+      result.response().processing_elements[kEqualizerPeIndex].id(), std::move(control),
+      &state_result));
+  ASSERT_FALSE(state_result.is_err());
 }
 
 TEST_F(Tas58xxSignalProcessingTest, SetEqualizer2BandsEnabled) {
-  // We should get 2 PEs, one with AGL and one with EQ support.
   signal_fidl::Reader_GetElements_Result result;
   ASSERT_OK(signal_processing_client_->GetElements(&result));
   ASSERT_FALSE(result.is_err());
-  ASSERT_EQ(result.response().processing_elements.size(), 2);
-  ASSERT_EQ(result.response().processing_elements[1].type(), signal_fidl::ElementType::EQUALIZER);
+  ASSERT_GT(result.response().processing_elements.size(), kEqualizerPeIndex);
+  ASSERT_EQ(result.response().processing_elements[kEqualizerPeIndex].type(),
+            signal_fidl::ElementType::EQUALIZER);
 
   // For band 1.
   mock_i2c_
@@ -1044,13 +1233,13 @@ TEST_F(Tas58xxSignalProcessingTest, SetEqualizer2BandsEnabled) {
 
   // Control the first band.
   {
-    signal_fidl::SignalProcessing_SetElementState_Result result_enable;
+    signal_fidl::SignalProcessing_SetElementState_Result state_result;
     signal_fidl::ElementState control;
     control.set_enabled(true);
     std::vector<signal_fidl::EqualizerBandState> bands_control;
     signal_fidl::EqualizerBandState band_control;
     auto band_id = result.response()
-                       .processing_elements[1]
+                       .processing_elements[kEqualizerPeIndex]
                        .type_specific()
                        .equalizer()
                        .bands()[0]  // First band (index 0).
@@ -1066,19 +1255,20 @@ TEST_F(Tas58xxSignalProcessingTest, SetEqualizer2BandsEnabled) {
 
     control.set_type_specific(std::move(control_params));
     ASSERT_OK(signal_processing_client_->SetElementState(
-        result.response().processing_elements[1].id(), std::move(control), &result_enable));
-    ASSERT_FALSE(result_enable.is_err());
+        result.response().processing_elements[kEqualizerPeIndex].id(), std::move(control),
+        &state_result));
+    ASSERT_FALSE(state_result.is_err());
   }
 
   // Control the second band.
   {
-    signal_fidl::SignalProcessing_SetElementState_Result result_enable;
+    signal_fidl::SignalProcessing_SetElementState_Result state_result;
     signal_fidl::ElementState control;
     control.set_enabled(true);
     std::vector<signal_fidl::EqualizerBandState> bands_control;
     signal_fidl::EqualizerBandState band_control;
     auto band_id = result.response()
-                       .processing_elements[1]
+                       .processing_elements[kEqualizerPeIndex]
                        .type_specific()
                        .equalizer()
                        .bands()[4]  // Second band (we choose the index 4).
@@ -1095,18 +1285,19 @@ TEST_F(Tas58xxSignalProcessingTest, SetEqualizer2BandsEnabled) {
 
     control.set_type_specific(std::move(control_params));
     ASSERT_OK(signal_processing_client_->SetElementState(
-        result.response().processing_elements[1].id(), std::move(control), &result_enable));
-    ASSERT_FALSE(result_enable.is_err());
+        result.response().processing_elements[kEqualizerPeIndex].id(), std::move(control),
+        &state_result));
+    ASSERT_FALSE(state_result.is_err());
   }
 }
 
 TEST_F(Tas58xxSignalProcessingTest, SetEqualizerOverflows) {
-  // We should get 2 PEs, one with AGL and one with EQ support.
   signal_fidl::Reader_GetElements_Result result;
   ASSERT_OK(signal_processing_client_->GetElements(&result));
   ASSERT_FALSE(result.is_err());
-  ASSERT_EQ(result.response().processing_elements.size(), 2);
-  ASSERT_EQ(result.response().processing_elements[1].type(), signal_fidl::ElementType::EQUALIZER);
+  ASSERT_GT(result.response().processing_elements.size(), kEqualizerPeIndex);
+  ASSERT_EQ(result.response().processing_elements[kEqualizerPeIndex].type(),
+            signal_fidl::ElementType::EQUALIZER);
 
   // Band setup 1.
   mock_i2c_
@@ -1153,24 +1344,25 @@ TEST_F(Tas58xxSignalProcessingTest, SetEqualizerOverflows) {
 }
 
 TEST_F(Tas58xxSignalProcessingTest, SetEqualizerElementDisabled) {
-  // We should get 2 PEs, one with AGL and one with EQ support and its parameters.
   signal_fidl::Reader_GetElements_Result result;
   ASSERT_OK(signal_processing_client_->GetElements(&result));
   ASSERT_FALSE(result.is_err());
-  ASSERT_EQ(result.response().processing_elements.size(), 2);
-  ASSERT_EQ(result.response().processing_elements[1].type(), signal_fidl::ElementType::EQUALIZER);
+  ASSERT_GT(result.response().processing_elements.size(), kEqualizerPeIndex);
+  ASSERT_EQ(result.response().processing_elements[kEqualizerPeIndex].type(),
+            signal_fidl::ElementType::EQUALIZER);
 
   // 1. Control the EQ by disable the whole processing element.
   mock_i2c_.ExpectWriteStop({0x66, 0x07});  // Enable bypass EQ.
 
   // Now we send the EQ control disabling the processing element.
   {
-    signal_fidl::SignalProcessing_SetElementState_Result result_enable;
+    signal_fidl::SignalProcessing_SetElementState_Result state_result;
     signal_fidl::ElementState control;
     control.set_enabled(false);
     ASSERT_OK(signal_processing_client_->SetElementState(
-        result.response().processing_elements[1].id(), std::move(control), &result_enable));
-    ASSERT_FALSE(result_enable.is_err());
+        result.response().processing_elements[kEqualizerPeIndex].id(), std::move(control),
+        &state_result));
+    ASSERT_FALSE(state_result.is_err());
   }
 
   // 2. Control the EQ by disable the whole processing element, still include configuration for a
@@ -1195,13 +1387,13 @@ TEST_F(Tas58xxSignalProcessingTest, SetEqualizerElementDisabled) {
 
   // Now we send the EQ control disabling the processing element.
   {
-    signal_fidl::SignalProcessing_SetElementState_Result result_enable;
+    signal_fidl::SignalProcessing_SetElementState_Result state_result;
     signal_fidl::ElementState control;
     control.set_enabled(false);
     std::vector<signal_fidl::EqualizerBandState> bands_control;
     signal_fidl::EqualizerBandState band_control;
     auto band_id = result.response()
-                       .processing_elements[1]
+                       .processing_elements[kEqualizerPeIndex]
                        .type_specific()
                        .equalizer()
                        .bands()[0]  // First band (index 0).
@@ -1216,8 +1408,9 @@ TEST_F(Tas58xxSignalProcessingTest, SetEqualizerElementDisabled) {
         signal_fidl::TypeSpecificElementState::WithEqualizer(std::move(eq_control));
     control.set_type_specific(std::move(control_params));
     ASSERT_OK(signal_processing_client_->SetElementState(
-        result.response().processing_elements[1].id(), std::move(control), &result_enable));
-    ASSERT_FALSE(result_enable.is_err());
+        result.response().processing_elements[kEqualizerPeIndex].id(), std::move(control),
+        &state_result));
+    ASSERT_FALSE(state_result.is_err());
   }
 }
 
