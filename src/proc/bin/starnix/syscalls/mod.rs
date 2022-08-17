@@ -4,9 +4,15 @@
 
 pub mod decls;
 mod syscall_result;
-pub mod system;
 pub mod table;
 
 pub use syscall_result::*;
 
+// Here we reexport common items needed for syscall implementations. This way you can quickly get
+// most things you need by importing crate::syscalls::*.
+pub(crate) use crate::logging::{not_implemented, strace};
 pub use crate::task::CurrentTask;
+pub use crate::types::*;
+
+mod misc;
+mod time;

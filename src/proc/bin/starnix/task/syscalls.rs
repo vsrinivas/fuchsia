@@ -12,11 +12,9 @@ use zerocopy::AsBytes;
 
 use crate::auth::{Credentials, SecureBits};
 use crate::execution::*;
-use crate::logging::{not_implemented, strace};
 use crate::mm::*;
 use crate::syscalls::*;
 use crate::task::*;
-use crate::types::*;
 
 pub fn sys_clone(
     current_task: &CurrentTask,

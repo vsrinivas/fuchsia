@@ -10,7 +10,6 @@ use crate::fs::*;
 use crate::logging::*;
 use crate::mm::*;
 use crate::syscalls::*;
-use crate::types::*;
 use crate::vmex_resource::VMEX_RESOURCE;
 
 fn mmap_prot_to_vm_opt(prot: u32) -> zx::VmarFlags {

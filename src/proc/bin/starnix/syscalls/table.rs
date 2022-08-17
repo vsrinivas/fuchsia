@@ -5,14 +5,8 @@
 use paste::paste;
 use zerocopy::{AsBytes, FromBytes};
 
-use crate::fs::socket::syscalls::*;
-use crate::fs::syscalls::*;
 use crate::fs::FdNumber;
-use crate::mm::syscalls::*;
-use crate::signals::syscalls::*;
-use crate::syscalls::system::*;
 use crate::syscalls::{CurrentTask, SyscallResult};
-use crate::task::syscalls::*;
 use crate::types::*;
 
 macro_rules! syscall_match {
@@ -49,6 +43,14 @@ pub fn dispatch_syscall(
     syscall_number: u64,
     args: (u64, u64, u64, u64, u64, u64),
 ) -> Result<SyscallResult, Errno> {
+    use crate::fs::socket::syscalls::*;
+    use crate::fs::syscalls::*;
+    use crate::mm::syscalls::*;
+    use crate::signals::syscalls::*;
+    use crate::syscalls::misc::*;
+    use crate::syscalls::time::*;
+    use crate::task::syscalls::*;
+
     syscall_match! {
         current_task; syscall_number; args;
         accept4[4],
@@ -230,75 +232,6 @@ pub fn dispatch_syscall(
     }
 }
 
-trait FromSyscallArg {
-    fn from_arg(arg: u64) -> Self;
-}
-impl FromSyscallArg for i32 {
-    fn from_arg(arg: u64) -> i32 {
-        arg as i32
-    }
-}
-impl FromSyscallArg for u32 {
-    fn from_arg(arg: u64) -> u32 {
-        arg as u32
-    }
-}
-impl FromSyscallArg for usize {
-    fn from_arg(arg: u64) -> usize {
-        arg as usize
-    }
-}
-impl FromSyscallArg for i64 {
-    fn from_arg(arg: u64) -> i64 {
-        arg as i64
-    }
-}
-impl FromSyscallArg for u64 {
-    fn from_arg(arg: u64) -> u64 {
-        arg
-    }
-}
-impl FromSyscallArg for UserAddress {
-    fn from_arg(arg: u64) -> UserAddress {
-        UserAddress::from(arg)
-    }
-}
-
-impl<T: AsBytes + FromBytes> FromSyscallArg for UserRef<T> {
-    fn from_arg(arg: u64) -> UserRef<T> {
-        UserRef::<T>::new(UserAddress::from(arg))
-    }
-}
-
-impl FromSyscallArg for UserCString {
-    fn from_arg(arg: u64) -> UserCString {
-        UserCString::new(UserAddress::from(arg))
-    }
-}
-
-impl FromSyscallArg for FdNumber {
-    fn from_arg(arg: u64) -> FdNumber {
-        FdNumber::from_raw(arg as i32)
-    }
-}
-
-impl FromSyscallArg for FileMode {
-    fn from_arg(arg: u64) -> FileMode {
-        FileMode::from_bits(arg as u32)
-    }
-}
-
-impl FromSyscallArg for DeviceType {
-    fn from_arg(arg: u64) -> DeviceType {
-        DeviceType::from_bits(arg)
-    }
-}
-
-impl FromSyscallArg for UncheckedSignal {
-    fn from_arg(arg: u64) -> UncheckedSignal {
-        UncheckedSignal::new(arg)
-    }
-}
 trait IntoSyscallArg<T> {
     fn into_arg(self) -> T;
 }
@@ -308,5 +241,34 @@ where
 {
     fn into_arg(self) -> T {
         T::from_arg(self)
+    }
+}
+trait FromSyscallArg {
+    fn from_arg(arg: u64) -> Self;
+}
+macro_rules! impl_from_syscall_arg {
+    { for $ty:ty: $arg:ident => $($body:tt)* } => {
+        impl FromSyscallArg for $ty {
+            fn from_arg($arg: u64) -> Self { $($body)* }
+        }
+    }
+}
+
+impl_from_syscall_arg! { for i32: arg => arg as Self }
+impl_from_syscall_arg! { for i64: arg => arg as Self }
+impl_from_syscall_arg! { for u32: arg => arg as Self }
+impl_from_syscall_arg! { for usize: arg => arg as Self }
+impl_from_syscall_arg! { for u64: arg => arg as Self }
+impl_from_syscall_arg! { for UserAddress: arg => Self::from(arg) }
+impl_from_syscall_arg! { for UserCString: arg => Self::new(arg.into_arg()) }
+
+impl_from_syscall_arg! { for FdNumber: arg => Self::from_raw(arg as i32) }
+impl_from_syscall_arg! { for FileMode: arg => Self::from_bits(arg as u32) }
+impl_from_syscall_arg! { for DeviceType: arg => Self::from_bits(arg) }
+impl_from_syscall_arg! { for UncheckedSignal: arg => Self::new(arg) }
+
+impl<T: AsBytes + FromBytes> FromSyscallArg for UserRef<T> {
+    fn from_arg(arg: u64) -> UserRef<T> {
+        UserRef::<T>::new(UserAddress::from(arg))
     }
 }

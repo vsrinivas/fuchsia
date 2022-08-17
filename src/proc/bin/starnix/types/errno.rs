@@ -262,6 +262,7 @@ macro_rules! from_status_like_fdio {
         from_status_like_fdio!($status, "")
     }};
     ($status:ident, $context:expr) => {{
+        use fuchsia_zircon as zx;
         match $status {
             zx::Status::NOT_FOUND => errno!(ENOENT, $context),
             zx::Status::NO_MEMORY => errno!(ENOMEM, $context),
