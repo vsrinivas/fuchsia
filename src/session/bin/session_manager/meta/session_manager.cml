@@ -418,22 +418,13 @@
             to: [ "#session" ],
         },
         {
-            directory: "dev-backlight",
-            from: "parent",
-            to: "#session",
-        },
-        {
-            directory: "dev-power-sensor",
-            from: "parent",
-            to: "#session",
-        },
-        {
-            directory: "dev-temperature",
-            from: "parent",
-            to: "#session",
-        },
-        {
-            directory: "dev-thermal",
+            directory: [
+                "dev-backlight",
+                "dev-light",
+                "dev-power-sensor",
+                "dev-temperature",
+                "dev-thermal",
+            ],
             from: "parent",
             to: "#session",
         },

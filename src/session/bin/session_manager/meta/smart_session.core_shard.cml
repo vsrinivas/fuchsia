@@ -211,6 +211,13 @@
         {
             directory: "dev",
             from: "parent",
+            as: "dev-light",
+            to: "#session-manager",
+            subdir: "class/light",
+        },
+        {
+            directory: "dev",
+            from: "parent",
             as: "dev-class-radar",
             to: "#session-manager",
             subdir: "class/radar",
