@@ -38,7 +38,7 @@ use crate::{
     algorithm::{PortAllocImpl, ProtocolFlowId},
     context::{CounterContext, InstantContext, RngContext},
     data_structures::{
-        id_map::Entry as IdMapEntry,
+        id_map::{Entry as IdMapEntry, OccupiedEntry as IdMapOccupied},
         id_map_collection::IdMapCollectionKey,
         socketmap::{IterShadows as _, SocketMap, Tagged as _},
     },
@@ -2013,26 +2013,41 @@ pub fn listen_udp<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I,
     // Re-borrow the state mutably.
     sync_ctx.with_sockets_mut(
         |UdpSockets(DatagramSockets { unbound, bound, lazy_port_alloc: _ })| {
-            let mut unbound_entry = match unbound.entry(id.into()) {
+            let unbound_entry = match unbound.entry(id.into()) {
                 IdMapEntry::Vacant(_) => panic!("unbound ID {:?} is invalid", id),
                 IdMapEntry::Occupied(o) => o,
             };
 
-            let UnboundSocketState { device: _, sharing, multicast_memberships } =
-                unbound_entry.get_mut();
+            /// Wrapper for an occupied entry that implements Into::into by
+            /// removing from the entry.
+            struct TakeMemberships<'a, A: IpAddress, D, S>(IdMapOccupied<'a, usize, UnboundSocketState<A, D, S>>, );
+
+            impl<'a, A: IpAddress, D: Hash + Eq, S> From<TakeMemberships<'a, A, D, S>> for ListenerState<A, D> {
+                fn from(TakeMemberships(entry): TakeMemberships<'a, A, D, S>) -> Self {
+                    let UnboundSocketState {device: _, sharing: _, multicast_memberships} = entry.remove();
+                    ListenerState {multicast_memberships}
+                }
+            }
+
+            let UnboundSocketState { device: _, sharing, multicast_memberships: _ } =
+                unbound_entry.get();
+                let sharing = *sharing;
             match bound
                 .listeners_mut()
                 .try_insert(
                     ListenerAddr { ip: ListenerIpAddr { addr, identifier: port }, device },
-                    ListenerState { multicast_memberships: core::mem::take(multicast_memberships) },
-                    *sharing,
+                    // Passing TakeMemberships defers removal of unbound_entry
+                    // until try_insert is known to be able to succeed.
+                    TakeMemberships(unbound_entry),
+                    sharing,
                 )
                 .map_err(|(e, state, _sharing): (_, _, PosixSharingOptions)| (e, state))
             {
                 Ok(listener) => Ok(listener),
-                Err((e, ListenerState { multicast_memberships: returned_memberships })) => {
-                    let _: InsertError = e;
-                    *multicast_memberships = returned_memberships;
+                Err((e, TakeMemberships(entry))) => {
+                    // Drop the occupied entry, leaving it in the unbound socket
+                    // IdMap.
+                    let _: (InsertError, IdMapOccupied<'_, _, _>) = (e, entry);
                     Err(LocalAddressError::AddressInUse)
                 }
             }
@@ -4626,6 +4641,38 @@ mod tests {
 
         let _: UdpConnInfo<_> = remove_udp_conn(&mut sync_ctx, &mut non_sync_ctx, conn);
         assert_eq!(sync_ctx.get_ref().multicast_memberships, HashMap::default());
+    }
+
+    #[ip_test]
+    #[should_panic(expected = "unbound")]
+    fn test_listen_udp_removes_unbound<I: Ip + TestIpExt>()
+    where
+        DummySyncCtx<I>: DummySyncCtxBound<I>,
+    {
+        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            DummyCtx::with_sync_ctx(DummySyncCtx::<I>::default());
+        let local_ip = local_ip::<I>();
+        let unbound = create_udp_unbound(&mut sync_ctx);
+
+        let _: UdpListenerId<_> = listen_udp::<I, _, _>(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            unbound,
+            Some(ZonedAddr::Unzoned(local_ip)),
+            NonZeroU16::new(100),
+        )
+        .expect("listen_udp failed");
+
+        // Attempting to create a new listener from the same unbound ID should
+        // panic since the unbound socket ID is now invalid.
+        let _: UdpListenerId<_> = listen_udp::<I, _, _>(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            unbound,
+            Some(ZonedAddr::Unzoned(local_ip)),
+            NonZeroU16::new(200),
+        )
+        .expect("listen_udp failed");
     }
 
     #[ip_test]

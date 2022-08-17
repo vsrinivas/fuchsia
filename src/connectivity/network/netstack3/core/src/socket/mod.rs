@@ -316,12 +316,12 @@ pub(crate) trait SocketTypeStateMut<'a> {
         id: &Self::Id,
     ) -> Option<(&'a mut Self::State, &'a Self::SharingState, &'a Self::Addr)>;
 
-    fn try_insert(
+    fn try_insert<S: Into<Self::State>>(
         self,
         addr: Self::Addr,
-        state: Self::State,
+        state: S,
         sharing_state: Self::SharingState,
-    ) -> Result<Self::Id, (InsertError, Self::State, Self::SharingState)>;
+    ) -> Result<Self::Id, (InsertError, S, Self::SharingState)>;
 
     fn entry(self, id: &Self::Id) -> Option<Self::Entry>;
 
@@ -449,12 +449,12 @@ where
             .map(|(state, tag_state, addr)| (state, &*tag_state, &*addr))
     }
 
-    fn try_insert(
+    fn try_insert<St: Into<Self::State>>(
         self,
         socket_addr: Self::Addr,
-        state: Self::State,
+        state: St,
         tag_state: Self::SharingState,
-    ) -> Result<Self::Id, (InsertError, Self::State, Self::SharingState)> {
+    ) -> Result<Self::Id, (InsertError, St, Self::SharingState)> {
         let Self(id_to_sock, addr_to_state, _) = self;
         match S::check_for_conflicts(&tag_state, &socket_addr, &addr_to_state) {
             Err(e) => return Err((e, state, tag_state)),
@@ -472,7 +472,7 @@ where
                     };
                     match AddrState::try_get_dest(bound, &tag_state) {
                         Ok(v) => {
-                            let index = id_to_sock.push((state, tag_state, socket_addr));
+                            let index = id_to_sock.push((state.into(), tag_state, socket_addr));
                             v.push(index.into());
                             Ok(index)
                         }
@@ -482,7 +482,7 @@ where
                 Ok(id.into())
             }
             Entry::Vacant(v) => {
-                let index = id_to_sock.push((state, tag_state, socket_addr));
+                let index = id_to_sock.push((state.into(), tag_state, socket_addr));
                 let (_state, tag_state, _addr): &(Self::State, _, Self::Addr) =
                     id_to_sock.get(index).unwrap();
                 v.insert(Convert::to_bound(AddrState::new(tag_state, index.into())));
@@ -967,7 +967,7 @@ mod tests {
 
         let addr = CONN_ADDR;
 
-        let id = bound.conns_mut().try_insert(addr, 0, 'v').unwrap();
+        let id = bound.conns_mut().try_insert(addr, 0u16, 'v').unwrap();
         assert_eq!(bound.conns().get_by_id(&id), Some(&(0, 'v', addr)));
         assert_eq!(bound.conns().get_by_addr(&addr), Some(&Multiple('v', vec![id])));
 
@@ -1004,10 +1004,10 @@ mod tests {
         });
 
         for addr in listener_addrs.iter().cloned() {
-            let _: Listener = bound.listeners_mut().try_insert(addr, 1, 'a').unwrap();
+            let _: Listener = bound.listeners_mut().try_insert(addr, 1u8, 'a').unwrap();
         }
         for addr in conn_addrs.iter().cloned() {
-            let _: Conn = bound.conns_mut().try_insert(addr, 1, 'a').unwrap();
+            let _: Conn = bound.conns_mut().try_insert(addr, 1u16, 'a').unwrap();
         }
         let expected_addrs = listener_addrs
             .into_iter()
@@ -1061,9 +1061,9 @@ mod tests {
             },
         };
 
-        let _id = bound.listeners_mut().try_insert(addr, 0, 'a').unwrap();
+        let _id = bound.listeners_mut().try_insert(addr, 0u8, 'a').unwrap();
         assert_eq!(
-            bound.conns_mut().try_insert(shadows_addr, 0, 'b'),
+            bound.conns_mut().try_insert(shadows_addr, 0u16, 'b'),
             Err((InsertError::ShadowAddrExists, 0, 'b'))
         );
     }
@@ -1088,8 +1088,8 @@ mod tests {
         let mut bound = FakeBoundSocketMap::default();
         let addr = CONN_ADDR;
 
-        let a = bound.conns_mut().try_insert(addr, 0, 'x').unwrap();
-        let b = bound.conns_mut().try_insert(addr, 0, 'x').unwrap();
+        let a = bound.conns_mut().try_insert(addr, 0u16, 'x').unwrap();
+        let b = bound.conns_mut().try_insert(addr, 0u16, 'x').unwrap();
         assert_ne!(a, b);
 
         assert_eq!(bound.conns_mut().remove(&a), Some((0, 'x', addr)));
@@ -1113,8 +1113,8 @@ mod tests {
             device: None,
         };
 
-        let first = bound.listeners_mut().try_insert(first_addr, 0, 'a').unwrap();
-        let second = bound.listeners_mut().try_insert(second_addr, 0, 'b').unwrap();
+        let first = bound.listeners_mut().try_insert(first_addr, 0u8, 'a').unwrap();
+        let second = bound.listeners_mut().try_insert(second_addr, 0u8, 'b').unwrap();
 
         // Moving from (1, "aaa") to (1, None) should fail since it is shadowed
         // by (1, "yyy"), and vise versa.
@@ -1133,7 +1133,7 @@ mod tests {
         let mut map = FakeBoundSocketMap::default();
         let addr = LISTENER_ADDR;
         let listener_id =
-            map.listeners_mut().try_insert(addr.clone(), 0, 'x').expect("failed to insert");
+            map.listeners_mut().try_insert(addr.clone(), 0u8, 'x').expect("failed to insert");
         let (val, _, _) =
             map.listeners_mut().get_by_id_mut(&listener_id).expect("failed to get listener");
         *val = 2;
@@ -1145,7 +1145,8 @@ mod tests {
     fn get_conn_by_id_mut() {
         let mut map = FakeBoundSocketMap::default();
         let addr = CONN_ADDR;
-        let conn_id = map.conns_mut().try_insert(addr.clone(), 0, 'a').expect("failed to insert");
+        let conn_id =
+            map.conns_mut().try_insert(addr.clone(), 0u16, 'a').expect("failed to insert");
         let (val, _, _) = map.conns_mut().get_by_id_mut(&conn_id).expect("failed to get conn");
         *val = 2;
 
@@ -1156,7 +1157,8 @@ mod tests {
     fn nonexistent_conn_entry() {
         let mut map = FakeBoundSocketMap::default();
         let addr = CONN_ADDR;
-        let conn_id = map.conns_mut().try_insert(addr.clone(), 0, 'a').expect("failed to insert");
+        let conn_id =
+            map.conns_mut().try_insert(addr.clone(), 0u16, 'a').expect("failed to insert");
         assert_matches!(map.conns_mut().remove(&conn_id), Some((0, 'a', CONN_ADDR)));
 
         assert!(map.conns_mut().entry(&conn_id).is_none());
