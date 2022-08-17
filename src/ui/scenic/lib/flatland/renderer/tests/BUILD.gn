@@ -4,14 +4,6 @@
 
 import("//build/board.gni")
 
-config("renderer_test_config") {
-  defines = []
-  if (board_name == "astro" || board_name == "sherlock" ||
-      board_name == "vim3") {
-    defines += [ "PLATFORM_AMLOGIC" ]
-  }
-}
-
 group("tests") {
   testonly = true
 
@@ -48,9 +40,8 @@ executable("unittests") {
     "//src/ui/scenic/lib/flatland/renderer",
     "//src/ui/scenic/lib/screen_capture",
     "//src/ui/scenic/lib/utils",
+    "//third_party/googletest:gmock",
   ]
-
-  public_configs = [ ":renderer_test_config" ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

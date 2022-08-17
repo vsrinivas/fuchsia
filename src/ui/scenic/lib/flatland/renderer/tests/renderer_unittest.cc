@@ -18,6 +18,7 @@
 #include "src/ui/scenic/lib/flatland/renderer/tests/common.h"
 #include "src/ui/scenic/lib/flatland/renderer/vk_renderer.h"
 // TODO(fxbug.dev/97242): Remove dependency on screen_capture.
+#include "gmock/gmock.h"
 #include "src/ui/scenic/lib/screen_capture/screen_capture.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 
@@ -1652,6 +1653,13 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
       });
 }
 
+// Partial ordering, true if it's true for all components.
+bool operator<=(const glm::tvec4<int, glm::packed_highp>& a,
+                const glm::tvec4<int, glm::packed_highp>& b) {
+  return a.x <= b.x && a.y <= b.y && a.z <= b.z && a.w <= b.w;
+}
+
+MATCHER_P2(InRange, low, high, "") { return low <= arg && arg <= high; }
 // Tests the multiply color for images, which can also affect transparency.
 // Render two overlapping rectangles, a red opaque one covered slightly by
 // a green transparent one with an alpha of 0.5. These values are set not
@@ -1757,34 +1765,28 @@ VK_TEST_F(VulkanRendererTest, MultiplyColorTest) {
         uint8_t linear_vals[num_bytes];
         sRGBtoLinear(vmo_host, linear_vals, num_bytes);
 
-// The sRGB values are different on different platforms and so the uncompressed values
-// will likewise be different. Specifically, it is the AMLOGIC platforms (astro, sherlock,
-// vim3) that have a different compressed value. So we define different uncompressed linear
-// rgb values to depending on whether or not we are running on AMLOGIC.
-#ifdef PLATFORM_AMLOGIC
-        const uint32_t kCompVal = 128;
-#else
-        const uint32_t kCompVal = 126;
-#endif
+        // Different platforms have slightly different sRGB<->linear conversions, so use fuzzy
+        // matching. Intel Gen value:
+        constexpr uint32_t kCompLow = 126;
+        // ARM Mali value:
+        constexpr uint32_t kCompHigh = 128;
+        const auto kLowValue = glm::ivec4(0, kCompLow, kCompLow, 255);
+        const auto kHighValue = glm::ivec4(0, kCompHigh, kCompHigh, 255);
 
         // Make sure the pixels are in the right order give that we rotated
         // the rectangle.
         EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 6, 3), glm::ivec4(0, 0, 255, 255));
         EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 6, 4), glm::ivec4(0, 0, 255, 255));
-        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 7, 3),
-                  glm::ivec4(0, kCompVal, kCompVal, 255));
-        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 7, 4),
-                  glm::ivec4(0, kCompVal, kCompVal, 255));
-        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 8, 3),
-                  glm::ivec4(0, kCompVal, kCompVal, 255));
-        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 8, 4),
-                  glm::ivec4(0, kCompVal, kCompVal, 255));
-        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 9, 3),
-                  glm::ivec4(0, kCompVal, kCompVal, 255));
-        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 9, 4),
-                  glm::ivec4(0, kCompVal, kCompVal, 255));
-        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 10, 3), glm::ivec4(0, kCompVal, 0, 128));
-        EXPECT_EQ(GetPixel(linear_vals, kTargetWidth, 10, 4), glm::ivec4(0, kCompVal, 0, 128));
+        EXPECT_THAT(GetPixel(linear_vals, kTargetWidth, 7, 3), InRange(kLowValue, kHighValue));
+        EXPECT_THAT(GetPixel(linear_vals, kTargetWidth, 7, 4), InRange(kLowValue, kHighValue));
+        EXPECT_THAT(GetPixel(linear_vals, kTargetWidth, 8, 3), InRange(kLowValue, kHighValue));
+        EXPECT_THAT(GetPixel(linear_vals, kTargetWidth, 8, 4), InRange(kLowValue, kHighValue));
+        EXPECT_THAT(GetPixel(linear_vals, kTargetWidth, 9, 3), InRange(kLowValue, kHighValue));
+        EXPECT_THAT(GetPixel(linear_vals, kTargetWidth, 9, 4), InRange(kLowValue, kHighValue));
+        EXPECT_THAT(GetPixel(linear_vals, kTargetWidth, 10, 3),
+                    InRange(glm::ivec4(0, kCompLow, 0, 128), glm::ivec4(0, kCompHigh, 0, 128)));
+        EXPECT_THAT(GetPixel(linear_vals, kTargetWidth, 10, 4),
+                    InRange(glm::ivec4(0, kCompLow, 0, 128), glm::ivec4(0, kCompHigh, 0, 128)));
 
         // Make sure the remaining pixels are black.
         CHECK_BLACK_PIXELS(vmo_host, kTargetWidth, kTargetHeight, 10U);
