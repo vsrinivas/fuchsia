@@ -8,18 +8,20 @@
 
 use crate::{DeviceConfig, EmulatorConfiguration, GuestConfig, PortMapping, VirtualCpu};
 use anyhow::{anyhow, Result};
-use sdk_metadata::{ProductBundleV1, VirtualDeviceV1};
-use std::path::PathBuf;
 
 /// - `data_root` is a path to a directory. When working in-tree it's the path
 ///   to build output dir; when using the SDK it's the path to the downloaded
 ///   images directory.
 pub fn convert_bundle_to_configs(
-    product_bundle: &ProductBundleV1,
-    virtual_device: &VirtualDeviceV1,
-    data_root: &PathBuf,
+    bundle: pbms::VirtualDeviceProduct,
 ) -> Result<EmulatorConfiguration> {
     let mut emulator_configuration: EmulatorConfiguration = EmulatorConfiguration::default();
+
+    // There is currently one device and one version of the spec. When that
+    // changes this will need to be expanded.
+    let virtual_device = match &bundle.virtual_devices()[0] {
+        sdk_metadata::VirtualDevice::VirtualDeviceV1(v) => v,
+    };
 
     // Map the product and device specifications to the Device, and Guest configs.
     emulator_configuration.device = DeviceConfig {
@@ -35,6 +37,7 @@ pub fn convert_bundle_to_configs(
         storage: virtual_device.hardware.storage.clone(),
     };
 
+    let data_root = bundle.images_dir();
     if let Some(template) = &virtual_device.start_up_args_template {
         emulator_configuration.runtime.template = data_root.join(&template);
     }
@@ -48,7 +51,7 @@ pub fn convert_bundle_to_configs(
         }
     }
 
-    if let Some(emu) = &product_bundle.manifests.emu {
+    if let Some(emu) = &bundle.emu_manifest() {
         emulator_configuration.guest = GuestConfig {
             // TODO(fxbug.dev/88908): Eventually we'll need to support multiple disk_images.
             fvm_image: if !emu.disk_images.is_empty() {
@@ -62,7 +65,7 @@ pub fn convert_bundle_to_configs(
     } else {
         return Err(anyhow!(
             "The Product Bundle specified by {} does not contain any Emulator Manifests.",
-            &product_bundle.name
+            &bundle.name()
         ));
     }
     Ok(emulator_configuration)
@@ -76,7 +79,9 @@ mod tests {
         AudioDevice, AudioModel, CpuArchitecture, DataAmount, DataUnits, ElementType, EmuManifest,
         InputDevice, Manifests, PointingDevice, Screen, ScreenUnits,
     };
+    use sdk_metadata::{ProductBundleV1, VirtualDeviceV1};
     use std::collections::HashMap;
+    use std::path::PathBuf;
 
     #[test]
     fn test_convert_bundle_to_configs() -> Result<()> {
@@ -117,7 +122,12 @@ mod tests {
         let sdk_root = PathBuf::from("/some/sdk-root");
 
         // Run the conversion, then assert everything in the config matches the manifest data.
-        let config = convert_bundle_to_configs(&pb, &device, &sdk_root)?;
+        let bundle = pbms::VirtualDeviceProduct::from_parts(
+            pb.to_owned(),
+            vec![sdk_metadata::VirtualDevice::VirtualDeviceV1(device.to_owned())],
+            sdk_root.to_owned(),
+        );
+        let config = convert_bundle_to_configs(bundle)?;
         assert_eq!(config.device.audio, device.hardware.audio);
         assert_eq!(config.device.cpu.architecture, device.hardware.cpu.arch);
         assert_eq!(config.device.memory, device.hardware.memory);
@@ -162,7 +172,12 @@ mod tests {
         ports.insert("debug".to_string(), 2345);
         device.ports = Some(ports);
 
-        let mut config = convert_bundle_to_configs(&pb, &device, &sdk_root)?;
+        let bundle = pbms::VirtualDeviceProduct::from_parts(
+            pb.to_owned(),
+            vec![sdk_metadata::VirtualDevice::VirtualDeviceV1(device.to_owned())],
+            sdk_root.to_owned(),
+        );
+        let mut config = convert_bundle_to_configs(bundle)?;
 
         // Verify that all of the new values are loaded and match the new manifest data.
         assert_eq!(config.device.audio, device.hardware.audio);

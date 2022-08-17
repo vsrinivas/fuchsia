@@ -47,6 +47,7 @@ if (is_host) {
       "src/lib.rs",
       "src/pbms.rs",
       "src/repo_info.rs",
+      "src/virtual_device_product.rs",
     ]
   }
 

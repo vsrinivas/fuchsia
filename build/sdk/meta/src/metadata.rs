@@ -71,6 +71,13 @@ pub enum Metadata {
     VirtualDeviceV1(VirtualDeviceV1),
 }
 
+/// Versioned virtual device specification container.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(untagged)]
+pub enum VirtualDevice {
+    VirtualDeviceV1(VirtualDeviceV1),
+}
+
 impl Metadata {
     /// Returns metadata entry name.
     pub fn name(&self) -> &str {

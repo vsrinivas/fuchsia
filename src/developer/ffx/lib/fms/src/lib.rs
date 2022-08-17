@@ -9,7 +9,7 @@
 use {
     anyhow::{bail, Context, Result},
     glob::glob,
-    sdk_metadata::{from_reader, Metadata, ProductBundleV1, VirtualDeviceV1},
+    sdk_metadata::{from_reader, Metadata, ProductBundleV1, VirtualDevice},
     std::{
         collections::HashMap,
         ffi::OsStr,
@@ -185,26 +185,31 @@ pub fn find_product_bundle<'a>(
     }
 }
 
-/// Retrieve a virtual device specification from a given Entries set.
+/// Retrieve a set of virtual device specifications.
 ///
 /// `fms_name_list` is a list of fms_name strings to search for. The list may
 ///     contain both physical and virtual specs. The first virtual device spec
 ///     is returned.
 ///
 /// Errors if no suitable Virtual Device Specification is found.
-pub fn find_virtual_device<'a>(
-    fms_entries: &'a Entries,
+pub fn find_virtual_devices(
+    fms_entries: &Entries,
     fms_name_list: &[String],
-) -> Result<&'a VirtualDeviceV1> {
+) -> Result<Vec<VirtualDevice>> {
+    let mut v = vec![];
     for fms_name in fms_name_list {
-        if let Some(found) = fms_entries.entry(fms_name) {
-            match found {
-                Metadata::VirtualDeviceV1(device) => return Ok(device),
-                _ => (),
+        match fms_entries.entry(fms_name) {
+            Some(Metadata::VirtualDeviceV1(device)) => {
+                v.push(VirtualDevice::VirtualDeviceV1(device.to_owned()))
             }
+            Some(_) => tracing::debug!("FMS name {:?} is not a known virtual device", fms_name),
+            None => bail!("FMS name {:?} was not found", fms_name),
         }
     }
-    bail!("No virtual device specification was found in {:?}.", fms_name_list);
+    if v.is_empty() {
+        bail!("No virtual device specification was found in {:?}.", fms_name_list);
+    }
+    Ok(v)
 }
 
 #[cfg(test)]
@@ -292,7 +297,7 @@ mod tests {
     }
 
     #[test]
-    fn test_find_virtual_device() {
+    fn test_find_virtual_devices() {
         let mut entries = Entries::new();
         entries
             .add_json(&mut BufReader::new(
@@ -311,8 +316,10 @@ mod tests {
             .expect("add metadata");
         let pbm =
             find_product_bundle(&entries, &Some("generic-x64".to_string())).expect("entry found");
-        let device = find_virtual_device(&entries, &pbm.device_refs).expect("entry found");
-        assert_eq!(device.name, "virtual-arm64");
+        let device = find_virtual_devices(&entries, &pbm.device_refs).expect("entry found");
+        match &device[0] {
+            VirtualDevice::VirtualDeviceV1(d) => assert_eq!(d.name, "virtual-arm64"),
+        }
     }
 
     #[test]

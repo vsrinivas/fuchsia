@@ -16,7 +16,6 @@ use ffx_emulator_config::{
     NetworkingMode, OperatingSystem,
 };
 use ffx_emulator_start_args::StartCommand;
-use fms;
 use futures::executor::block_on;
 use port_picker::{is_free_tcp_port, pick_unused_port};
 use std::{collections::hash_map::DefaultHasher, env, hash::Hasher, path::PathBuf, time::Duration};
@@ -26,27 +25,21 @@ pub(crate) async fn make_configs(
     cmd: &StartCommand,
     ffx_config: &FfxConfigWrapper,
 ) -> Result<EmulatorConfiguration> {
-    // This function already provides a more useful error message than we can. No context needed.
-    let product_url = pbms::select_product_bundle(&cmd.product_bundle).await?;
-    let name = product_url.fragment().expect("Product name is required.");
-
-    let fms_entries = pbms::fms_entries_from(&product_url).await.context("get fms entries")?;
-    let product_bundle = fms::find_product_bundle(&fms_entries, &Some(name.to_string()))
-        .context("problem with product_bundle")?;
-    let virtual_device = fms::find_virtual_device(&fms_entries, &product_bundle.device_refs)
-        .context("problem with virtual device")?;
+    let bundle: pbms::VirtualDeviceProduct = pbms::VirtualDeviceProduct::new(&cmd.product_bundle)
+        .await
+        .context("creating VirtualDeviceProduct")?;
     if cmd.verbose {
         println!(
             "Found PBM {:?}, device_refs {:?}, virtual_device {:?}.",
-            product_bundle.name, product_bundle.device_refs, virtual_device,
+            bundle.name(),
+            bundle.device_refs(),
+            bundle.virtual_devices()[0],
         );
     }
 
-    let data_root = pbms::get_images_dir(&product_url).await.context("images dir")?;
-
     // Apply the values from the manifest to an emulation configuration.
-    let mut emu_config = convert_bundle_to_configs(product_bundle, virtual_device, &data_root)
-        .context("problem with convert_bundle_to_configs")?;
+    let mut emu_config =
+        convert_bundle_to_configs(bundle).context("problem with convert_bundle_to_configs")?;
 
     // HostConfig values that come from the OS environment.
     emu_config.host.os = std::env::consts::OS.to_string().into();

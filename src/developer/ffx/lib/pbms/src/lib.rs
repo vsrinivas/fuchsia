@@ -36,11 +36,15 @@ use {
     std::path::{Path, PathBuf},
 };
 
-pub use crate::pbms::{fetch_data_for_product_bundle_v1, get_product_dir, get_storage_dir};
+pub use crate::{
+    pbms::{fetch_data_for_product_bundle_v1, get_product_dir, get_storage_dir},
+    virtual_device_product::VirtualDeviceProduct,
+};
 
 mod gcs;
 mod pbms;
 mod repo_info;
+mod virtual_device_product;
 
 /// For each non-local URL in ffx CONFIG_METADATA, fetch updated info.
 pub async fn update_metadata_all<F>(output_dir: &Path, progress: &mut F) -> Result<()>
