@@ -14,8 +14,6 @@ group("intl_services") {
   public_deps = [
     ":component",
     ":component_small",
-    ":legacy_component",
-    ":legacy_component_small",
     ":pkg",
     ":pkg_small",
     ":tests",
@@ -23,10 +21,7 @@ group("intl_services") {
 }
 
 group("small") {
-  deps = [
-    ":pkg_small",
-    "config:small",
-  ]
+  deps = [ ":pkg_small" ]
 }
 
 group("tests") {
@@ -62,15 +57,6 @@ executable("intl_services_bin") {
   ]
 }
 
-fuchsia_component("legacy_component") {
-  component_name = "intl_services"
-  manifest = "meta/intl_services.cmx"
-  deps = [
-    ":intl_services_bin",
-    "//src/intl:icudtl",
-  ]
-}
-
 fuchsia_component("component") {
   component_name = "intl"
   manifest = "meta/intl.cml"
@@ -82,10 +68,7 @@ fuchsia_component("component") {
 
 fuchsia_package("pkg") {
   package_name = "intl_services"
-  deps = [
-    ":component",
-    ":legacy_component",
-  ]
+  deps = [ ":component" ]
 }
 
 # The a11y_manager and intl_services binaries have been fused together for
@@ -94,15 +77,6 @@ renamed_binary("renamed_a11y_manager") {
   source = "$root_out_dir/a11y_manager"
   source_deps = [ "//src/ui/a11y/bin/a11y_manager:bin" ]
   dest = "bin/intl_services"
-}
-
-fuchsia_component("legacy_component_small") {
-  component_name = "intl_services"
-  manifest = "meta/intl_services.cmx"
-  deps = [
-    ":renamed_a11y_manager",
-    "//src/intl:icudtl",
-  ]
 }
 
 fuchsia_component("component_small") {
@@ -116,10 +90,7 @@ fuchsia_component("component_small") {
 
 fuchsia_package("pkg_small") {
   package_name = "intl-services-small"
-  deps = [
-    ":component_small",
-    ":legacy_component_small",
-  ]
+  deps = [ ":component_small" ]
 }
 
 core_shard("intl_services_shard") {

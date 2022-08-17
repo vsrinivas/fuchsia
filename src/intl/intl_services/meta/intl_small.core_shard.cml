@@ -7,6 +7,7 @@
         {
             name: "intl",
             url: "fuchsia-pkg://fuchsia.com/intl-services-small#meta/intl.cm",
+            environment: "#core-env",
         },
     ],
 }
