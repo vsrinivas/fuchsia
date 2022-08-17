@@ -13,7 +13,6 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fit/function.h>
-#include <lib/fpromise/promise.h>
 #include <lib/sys/inspect/cpp/component.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
@@ -88,9 +87,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void InitializeV2ModularAgents();
   void InitializeAgentRunner(const std::string& session_shell_url);
   void InitializeStoryProvider(fuchsia::modular::session::AppConfig story_shell_config,
-                               PresentationProtocolPtr presentation_protocol,
-                               bool use_session_shell_for_story_shell_factory,
-                               bool present_mods_as_stories);
+                               bool use_session_shell_for_story_shell_factory);
   void InitializeSessionShell(
       fuchsia::modular::session::AppConfig session_shell_config,
       std::optional<fuchsia::ui::views::ViewToken> view_token,
@@ -135,8 +132,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // execution steps are stored in on_terminate_cbs_.
   void TerminateRecurse(int i);
 
-  // Returns the presentation protocol exposed by the session shell.
-  fpromise::promise<PresentationProtocolPtr> GetPresentationProtocol();
+  void ConnectSessionShellToStoryProvider();
 
   // Connects to service Interface from the session shell. If the shell is not
   // running, closes the request.
@@ -213,10 +209,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // executed.
   fit::function<void()> terminate_done_;
 
-  // Holds requests to the StoryProvider protocol until |story_provider_impl_| is created.
-  std::vector<fidl::InterfaceRequest<fuchsia::modular::StoryProvider>>
-      pending_story_provider_requests_;
-
   struct UIHandlers {
     fuchsia::modular::SessionShellPtr session_shell;
     fuchsia::element::GraphicalPresenterPtr graphical_presenter;
@@ -226,8 +218,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   UIHandlers ui_handlers_;
 
   OperationQueue operation_queue_;
-
-  async::Executor executor_;
 
   // Set to |true| when sessionmgr starts its terminating sequence;  this flag
   // can be used to determine whether to reject vending FIDL services.

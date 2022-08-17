@@ -81,8 +81,6 @@ class AsyncHolder : public AsyncHolderBase {
 
   void reset(Impl* const impl) { impl_.reset(impl); }
 
-  explicit operator bool() const { return !!impl_; }
-
   // Must not be used to invoke Impl::Teardown().
   Impl* operator->() {
     FX_DCHECK(impl_.get());

@@ -124,11 +124,6 @@ type SessionmgrConfig = table {
     /// If set to true, disables any automatic agent restarts when an agent is
     /// observed to have crashed.
    12: disable_agent_restart_on_crash bool;
-
-    /// If set to true, module views are presented to the session shell as
-    /// story shell views through GraphicalPresenter protocol, if available.
-    @available(added=9)
-   14: present_mods_as_stories bool;
 };
 
 /// Used to pass around configuration references to apps such as base shell,

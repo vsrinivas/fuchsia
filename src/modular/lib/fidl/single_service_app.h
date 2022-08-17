@@ -7,7 +7,6 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
-#include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
@@ -24,10 +23,13 @@ namespace modular {
 // used as an Impl class of AppDriver.
 class ViewApp : private fuchsia::ui::app::ViewProvider {
  public:
-  explicit ViewApp(sys::ComponentContext* const component_context)
-      : component_context_(component_context) {
+  ViewApp(sys::ComponentContext* const component_context)
+      : component_context_(component_context), view_provider_binding_(this) {
     component_context_->outgoing()->AddPublicService<fuchsia::ui::app::ViewProvider>(
-        view_provider_bindings_.GetHandler(this));
+        [this](fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
+          FX_DCHECK(!view_provider_binding_.is_bound());
+          view_provider_binding_.Bind(std::move(request));
+        });
   }
 
   ~ViewApp() override = default;
@@ -38,8 +40,18 @@ class ViewApp : private fuchsia::ui::app::ViewProvider {
   sys::ComponentContext* component_context() const { return component_context_; }
 
  private:
+  // |ViewProvider| -- Derived classes should override these methods.
+  void CreateView(zx::eventpair view_handle,
+                  fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services,
+                  fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> outgoing_services) override {
+  }
+
+  void CreateViewWithViewRef(zx::eventpair view_handle,
+                             fuchsia::ui::views::ViewRefControl view_ref_control,
+                             fuchsia::ui::views::ViewRef view_ref) override {}
+
   sys::ComponentContext* const component_context_;
-  fidl::BindingSet<fuchsia::ui::app::ViewProvider> view_provider_bindings_;
+  fidl::Binding<fuchsia::ui::app::ViewProvider> view_provider_binding_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ViewApp);
 };
@@ -49,7 +61,7 @@ class ViewApp : private fuchsia::ui::app::ViewProvider {
 template <class Service>
 class SingleServiceApp : public ViewApp, protected Service {
  public:
-  explicit SingleServiceApp(sys::ComponentContext* const start_context)
+  SingleServiceApp(sys::ComponentContext* const start_context)
       : ViewApp(start_context), service_binding_(this) {
     // The 'template' is required here because AddPublicService is a dependent
     // template name.

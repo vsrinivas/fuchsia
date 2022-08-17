@@ -47,7 +47,6 @@ constexpr char kStartupAgents[] = "startup_agents";
 constexpr char kSessionAgents[] = "session_agents";
 constexpr char kRestartSessionOnAgentCrash[] = "restart_session_on_agent_crash";
 constexpr char kDisableAgentRestartOnCrash[] = "disable_agent_restart_on_crash";
-constexpr char kPresentModsAsStories[] = "present_mods_as_stories";
 
 // Inspect property constants
 constexpr char kInspectModuleSource[] = "module_source";

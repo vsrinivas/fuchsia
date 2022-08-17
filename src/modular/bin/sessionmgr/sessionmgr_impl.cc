@@ -11,7 +11,6 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/fpromise/bridge.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
@@ -94,7 +93,6 @@ SessionmgrImpl::SessionmgrImpl(sys::ComponentContext* const component_context,
       inspect_root_node_(std::move(node_object)),
       story_provider_impl_("StoryProviderImpl"),
       agent_runner_("AgentRunner"),
-      executor_(async_get_default_dispatcher()),
       weak_ptr_factory_(this) {
   sessionmgr_context_->outgoing()->AddPublicService<fuchsia::modular::internal::Sessionmgr>(
       [this](fidl::InterfaceRequest<fuchsia::modular::internal::Sessionmgr> request) {
@@ -170,82 +168,52 @@ void SessionmgrImpl::InitializeInternal(
                          std::move(view_token), std::move(view_creation_token),
                          std::move(view_ref_pair));
 
-  executor_.schedule_task(
-      GetPresentationProtocol()
-          .and_then([this, svc_from_v1_sessionmgr = std::move(svc_from_v1_sessionmgr)](
-                        PresentationProtocolPtr& presentation_protocol) mutable {
-            // We create |story_provider_impl_| after |agent_runner_| so
-            // story_provider_impl_ is terminated before agent_runner_, which will cause
-            // all modules to be terminated before agents are terminated. Agents must
-            // outlive the stories which contain modules that are connected to those
-            // agents.
-            InitializeStoryProvider(CloneStruct(config_accessor_.story_shell_app_config()),
-                                    std::move(presentation_protocol),
-                                    config_accessor_.use_session_shell_for_story_shell_factory(),
-                                    config_accessor_.sessionmgr_config().present_mods_as_stories());
+  // We create |story_provider_impl_| after |agent_runner_| so
+  // story_provider_impl_ is terminated before agent_runner_, which will cause
+  // all modules to be terminated before agents are terminated. Agents must
+  // outlive the stories which contain modules that are connected to those
+  // agents.
+  InitializeStoryProvider(CloneStruct(config_accessor_.story_shell_app_config()),
+                          config_accessor_.use_session_shell_for_story_shell_factory());
+  ConnectSessionShellToStoryProvider();
 
-            InitializeSessionCtl();
+  InitializeSessionCtl();
 
-            ServeSvcFromV1SessionmgrDir(std::move(svc_from_v1_sessionmgr));
+  ServeSvcFromV1SessionmgrDir(std::move(svc_from_v1_sessionmgr));
 
-            LogLifetimeEvent(
-                cobalt_registry::ModularLifetimeEventsMigratedMetricDimensionEventType::
-                    BootedToSessionMgr);
-          })
-          .or_else(
-              [] { FX_LOGS(FATAL) << "Failed to determine session shell presentation protocol"; }));
+  LogLifetimeEvent(
+      cobalt_registry::ModularLifetimeEventsMigratedMetricDimensionEventType::BootedToSessionMgr);
 }
 
-// Returns a promise for the presentation protocol served by the session shell.
-//
-// This method connects to both possible protocols, fuchsia.modular.SessionShell,
-// and fuchsia.element.GraphicalPresenter, waits for one of the connections to
-// return an error, then returns a pointer to the other one.
-//
-// Note that it's possible for both connections to fail. In this case, the method
-// will return the first one that hasn't failed, and subsequent code that uses
-// the pointer will fail.
-//
-// The session shell is expected to expose only one of these protocols. If it exposes both,
-// this method will never return.
-fpromise::promise<PresentationProtocolPtr> SessionmgrImpl::GetPresentationProtocol() {
-  fpromise::bridge<PresentationProtocolPtr> bridge;
-
-  auto completer =
-      std::make_shared<fpromise::completer<PresentationProtocolPtr>>(std::move(bridge.completer));
-
+void SessionmgrImpl::ConnectSessionShellToStoryProvider() {
   // If connecting to the SessionShell errors out, use the GraphicalPresenter
   ui_handlers_.session_shell.set_error_handler(
-      [weak_this = weak_ptr_factory_.GetWeakPtr(), completer](zx_status_t status) mutable {
+      [weak_this = weak_ptr_factory_.GetWeakPtr()](zx_status_t status) mutable {
         if (!weak_this) {
           return;
         }
-        FX_PLOGS(INFO, status) << "Failed to connect to fuchsia.modular.SessionShell, using "
-                                  "fuchsia.element.GraphicalPresenter";
-        if (completer && weak_this->ui_handlers_.graphical_presenter) {
-          completer->complete_ok(
+        FX_PLOGS(INFO, status) << "Failed to connect to SessionShell, using GraphicalPresenter";
+        if (weak_this->story_provider_impl_.get() && weak_this->ui_handlers_.graphical_presenter) {
+          weak_this->story_provider_impl_.get()->SetPresentationProtocol(
               PresentationProtocolPtr{std::move(weak_this->ui_handlers_.graphical_presenter)});
         }
       });
 
   // If connecting to the GraphicalPresenter errors out, use the SessionShell
   ui_handlers_.graphical_presenter.set_error_handler(
-      [weak_this = weak_ptr_factory_.GetWeakPtr(), completer](zx_status_t status) mutable {
+      [weak_this = weak_ptr_factory_.GetWeakPtr()](zx_status_t status) mutable {
         if (!weak_this) {
           return;
         }
-        FX_PLOGS(INFO, status) << "Failed to connect to fuchsia.element.GraphicalPresenter, using "
-                                  "fuchsia.modular.SessionShell";
-        if (completer && weak_this->ui_handlers_.session_shell) {
-          completer->complete_ok(
+        FX_PLOGS(INFO, status) << "Failed to connect to GraphicalPresenter, using SessionShell";
+        if (weak_this->story_provider_impl_.get() && weak_this->ui_handlers_.session_shell) {
+          weak_this->story_provider_impl_.get()->SetPresentationProtocol(
               PresentationProtocolPtr{std::move(weak_this->ui_handlers_.session_shell)});
         }
       });
 
   ConnectToSessionShellService(ui_handlers_.session_shell.NewRequest());
   ConnectToSessionShellService(ui_handlers_.graphical_presenter.NewRequest());
-
-  return bridge.consumer.promise();
 }
 
 // Create an environment in which to launch story shells and mods. Note that agents cannot be
@@ -422,8 +390,7 @@ void SessionmgrImpl::InitializeStartupAgents() {
 
 void SessionmgrImpl::InitializeStoryProvider(
     fuchsia::modular::session::AppConfig story_shell_config,
-    PresentationProtocolPtr presentation_protocol, bool use_session_shell_for_story_shell_factory,
-    bool present_mods_as_stories) {
+    bool use_session_shell_for_story_shell_factory) {
   FX_DCHECK(agent_runner_.get());
   FX_DCHECK(session_environment_);
   FX_DCHECK(session_storage_);
@@ -437,18 +404,13 @@ void SessionmgrImpl::InitializeStoryProvider(
     ConnectToSessionShellService(story_shell_factory_ptr.NewRequest());
   }
 
-  ComponentContextInfo const component_context_info{
+  ComponentContextInfo component_context_info{
       agent_runner_.get(), config_accessor_.sessionmgr_config().session_agents()};
   story_provider_impl_.reset(new StoryProviderImpl(
       session_environment_.get(), session_storage_.get(), std::move(story_shell_config),
-      std::move(story_shell_factory_ptr), std::move(presentation_protocol), present_mods_as_stories,
-      component_context_info, startup_agent_launcher_.get(), &inspect_root_node_));
+      std::move(story_shell_factory_ptr), component_context_info, startup_agent_launcher_.get(),
+      &inspect_root_node_));
   OnTerminate(Teardown(kStoryProviderTimeout, "StoryProvider", &story_provider_impl_));
-
-  for (auto& request : pending_story_provider_requests_) {
-    story_provider_impl_->Connect(std::move(request));
-  }
-  pending_story_provider_requests_.clear();
 }
 
 void SessionmgrImpl::InitializePuppetMaster() {
@@ -615,11 +577,7 @@ void SessionmgrImpl::GetPresentation(
 
 void SessionmgrImpl::GetStoryProvider(
     fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) {
-  if (!story_provider_impl_) {
-    pending_story_provider_requests_.push_back(std::move(request));
-  } else {
-    story_provider_impl_->Connect(std::move(request));
-  }
+  story_provider_impl_->Connect(std::move(request));
 }
 
 void SessionmgrImpl::Logout() { Restart(); }

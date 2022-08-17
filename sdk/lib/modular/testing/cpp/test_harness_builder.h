@@ -157,19 +157,7 @@ class TestHarnessBuilder final {
   TestHarnessBuilder& AddServiceFromServiceDirectory(
       const std::string& service_name, std::shared_ptr<sys::ServiceDirectory> services);
 
-  // Enables creating story shells through StoryShellFactory exposed by the session shell
-  // instead of creating separate story shell components.
-  //
-  // This sets the `basemgr.use_session_shell_for_story_shell_factory` configuration
-  // option to true.
   TestHarnessBuilder& UseSessionShellForStoryShellFactory();
-
-  // Enables presenting module views to the session shell as story shell views through
-  // the GraphicalPresenter protocol, rather than as surface views to a story shell.
-  //
-  // This sets the `sessionmgr.present_mods_as_stories` configuration option
-  // to true.
-  TestHarnessBuilder& SetPresentModsAsStories();
 
   // Make the templated service from |services| available in the test
   // harness environment. |services| and the service are both kept alive for the

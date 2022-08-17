@@ -376,8 +376,7 @@ TEST_F(ModularConfigReaderTest, ConfigToJsonString) {
         "agent_service_index": [],
         "v2_modular_agents": [],
         "restart_session_on_agent_crash": [],
-        "disable_agent_restart_on_crash": false,
-        "present_mods_as_stories": false
+        "disable_agent_restart_on_crash": false
       }
     })";
   rapidjson::Document expected_json_doc;

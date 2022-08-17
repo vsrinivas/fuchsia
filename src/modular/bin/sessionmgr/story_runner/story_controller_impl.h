@@ -54,7 +54,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
  public:
   StoryControllerImpl(std::string story_id, SessionStorage* session_storage,
                       StoryStorage* story_storage, StoryProviderImpl* story_provider_impl,
-                      inspect::Node* story_inspect_node, bool present_mods_as_stories);
+                      inspect::Node* story_inspect_node);
   ~StoryControllerImpl() override;
 
   // Called by StoryProviderImpl.
@@ -158,7 +158,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
 
   // A module's story shell-related information that we pend until we are able
   // to pass it off to the story shell.
-  struct ModViewInfo {
+  struct PendingViewForStoryShell {
     std::vector<std::string> module_path;
     fuchsia::modular::ViewConnection view_connection;
     fuchsia::modular::SurfaceInfo2 surface_info;
@@ -176,8 +176,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
                 AnnotateCallback callback) override;
 
   // Communicates with SessionShell.
-  void MaybeStartStoryShell();
-  void PresentModView(ModViewInfo mod_view);
+  void StartStoryShell();
   void DetachView(fit::function<void()> done);
 
   // Called whenever |story_storage_| sees an updated ModuleData from another
@@ -188,7 +187,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   void SetRuntimeState(fuchsia::modular::StoryState new_state);
   void NotifyStoryWatchers();
   void NotifyOneStoryWatcher(fuchsia::modular::StoryWatcher* watcher);
-  void ProcessPendingModViews();
+  void ProcessPendingStoryShellViews();
 
   bool IsExternalModule(const std::vector<std::string>& module_path);
 
@@ -222,9 +221,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
 
   inspect::Node* story_inspect_node_;  // Not owned.
 
-  // When set, mod views are presented as story views.
-  bool present_mods_as_stories_;
-
   // Implements the primary service provided here:
   // fuchsia::modular::StoryController.
   fidl::BindingSet<fuchsia::modular::StoryController> bindings_;
@@ -245,10 +241,10 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   std::set<fidl::StringPtr> connected_views_;
 
   // Since story shell cannot display views whose parents are not yet displayed,
-  // |pending_mod_views_| holds the view of a non-embedded running
+  // |pending_story_shell_views_| holds the view of a non-embedded running
   // module (identified by its serialized module path) until its parent is
   // connected to story shell.
-  std::map<std::string, ModViewInfo> pending_mod_views_;
+  std::map<std::string, PendingViewForStoryShell> pending_story_shell_views_;
 
   std::vector<std::unique_ptr<RunningModInfo>> running_mod_infos_;
 

@@ -41,12 +41,6 @@ namespace modular {
 using PresentationProtocolPtr = std::variant<std::monostate, fuchsia::modular::SessionShellPtr,
                                              fuchsia::element::GraphicalPresenterPtr>;
 
-struct AttachOrPresentViewParams {
-  std::string story_id;
-  std::optional<fuchsia::ui::views::ViewHolderToken> view_holder_token;
-  std::optional<fuchsia::ui::views::ViewRef> view_ref;
-};
-
 // StoryControllerImpl has a circular dependency on StoryProviderImpl.
 class StoryControllerImpl;
 
@@ -55,7 +49,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
   StoryProviderImpl(Environment* session_environment, SessionStorage* session_storage,
                     fuchsia::modular::session::AppConfig story_shell_config,
                     fuchsia::modular::StoryShellFactoryPtr story_shell_factory,
-                    PresentationProtocolPtr presentation_protocol, bool present_mods_as_stories,
                     ComponentContextInfo component_context_info,
                     AgentServicesFactory* agent_services_factory, inspect::Node* root_node);
 
@@ -65,6 +58,10 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
 
   // Used when the session shell is swapped.
   void StopAllStories(fit::function<void()> callback);
+
+  // The presentation protocol to send story views to.
+  // TODO(fxbug.dev/60620): This should be moved to a constructor argument
+  void SetPresentationProtocol(PresentationProtocolPtr presentation_protocol);
 
   // Stops serving the fuchsia::modular::StoryProvider interface and stops all
   // stories.
@@ -93,7 +90,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
 
   // Called by StoryControllerImpl.
   std::unique_ptr<AsyncHolderBase> StartStoryShell(
-      std::string story_id,
+      std::string story_id, fuchsia::ui::views::ViewToken view_token,
       fidl::InterfaceRequest<fuchsia::modular::StoryShell> story_shell_request);
 
   // Called by StoryControllerImpl.
@@ -109,7 +106,8 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
 
   // Called by StoryControllerImpl. Sends a token for the view of the story identified by
   // |story_id| to the current session shell or graphical presenter
-  void AttachOrPresentView(AttachOrPresentViewParams params);
+  void AttachOrPresentView(std::string story_id,
+                           fuchsia::ui::views::ViewHolderToken view_holder_token);
 
   // Called by StoryControllerImpl. Notifies the current session shell or graphical presenter
   // that the view of the story identified by |story_id| is about to close.
@@ -121,14 +119,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
 
   // Called by StoryProviderImpl when the StoryState changes.
   void NotifyStoryStateChange(std::string story_id);
-
-  bool is_session_shell_presentation() const {
-    return std::holds_alternative<fuchsia::modular::SessionShellPtr>(presentation_protocol_);
-  }
-
-  bool is_graphical_presenter_presentation() const {
-    return std::holds_alternative<fuchsia::element::GraphicalPresenterPtr>(presentation_protocol_);
-  }
 
  private:
   // |fuchsia::modular::StoryProvider|
@@ -159,18 +149,17 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
                            fuchsia::modular::StoryState story_state);
 
   void MaybeLoadStoryShell();
-  void AttachOrPresentStoryShellView(std::string story_id);
 
   // Called through AttachOrPresentView and send a token for the
   // view of the story identified by |story_id| to the current session shell.
-  void AttachView(AttachOrPresentViewParams params);
+  void AttachView(std::string story_id, fuchsia::ui::views::ViewHolderToken view_holder_token);
 
   // Called through AttachOrPresentView and notifies the current
   // session shell that the view of the story identified by |story_id| is about
   // to close.
   void DetachView(std::string story_id, fit::function<void()> done);
 
-  void PresentView(AttachOrPresentViewParams params);
+  void PresentView(std::string story_id, fuchsia::ui::views::ViewHolderToken view_holder_token);
   void DismissView(std::string story_id, fit::function<void()> done);
 
   Environment* const session_environment_;  // Not owned.
@@ -192,11 +181,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
   // Used to manufacture new StoryShells if not launching a new component for
   // every requested StoryShell instance.
   fuchsia::modular::StoryShellFactoryPtr story_shell_factory_;
-
-  PresentationProtocolPtr presentation_protocol_;
-
-  // When set, mod views are presented as story views.
-  bool present_mods_as_stories_;
 
   // The story controllers of the currently active stories, indexed by their
   // story IDs.
@@ -252,12 +236,22 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
 
   fxl::WeakPtrFactory<StoryProviderImpl> weak_factory_;
 
+  PresentationProtocolPtr presentation_protocol_;
+
   // The key for this map is the story id
   std::unordered_map<std::string, std::vector<fuchsia::element::ViewControllerPtr>>
       view_controllers_;
   std::unordered_map<std::string, std::unique_ptr<AnnotationControllerImpl>>
       annotation_controllers_;
   std::unordered_map<std::string, std::vector<fit::function<void()>>> dismiss_callbacks_;
+
+  // Container for arguments to AttachOrPresentView that occurred before a presentation protocol
+  // was selected.
+  struct PendingAttachOrPresentViewCall {
+    std::string story_id;
+    fuchsia::ui::views::ViewHolderToken view_holder_token;
+  };
+  std::vector<PendingAttachOrPresentViewCall> pending_attach_or_present_view_calls;
 
   // Operations implemented here.
   class LoadStoryRuntimeCall;

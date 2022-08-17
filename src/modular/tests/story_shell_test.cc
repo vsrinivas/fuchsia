@@ -16,7 +16,6 @@
 #include <gmock/gmock.h>
 
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/modular/lib/modular_test_harness/cpp/fake_graphical_presenter.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_module.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_session_shell.h"
 #include "src/modular/lib/modular_test_harness/cpp/fake_story_shell.h"
@@ -94,7 +93,6 @@ class StoryShellTest : public modular_testing::TestHarnessFixture {
                intercepted_modules_.push_back(
                    {std::move(startup_info), std::move(intercepted_component)});
              }});
-
     builder.BuildAndRun(test_harness());
 
     fuchsia::modular::testing::ModularService request;
@@ -229,74 +227,6 @@ TEST_F(StoryShellTest, GetsCorrectViewRef) {
                          sizeof(seen_view_info), nullptr, nullptr);
   zx_info_handle_basic_t mod_view_info;
   zx_status_t mod_view_status =
-      zx_object_get_info(view_ref_module->view_ref().reference.get(), ZX_INFO_HANDLE_BASIC,
-                         &mod_view_info, sizeof(mod_view_info), nullptr, nullptr);
-  EXPECT_EQ(mod_view_status, ZX_OK);
-  EXPECT_EQ(seen_view_status, ZX_OK);
-
-  EXPECT_EQ(mod_view_info.koid, seen_view_info.koid);
-}
-
-TEST_F(StoryShellTest, PresentModsAsStoriesGetCorrectViewRef) {
-  modular_testing::TestHarnessBuilder builder;
-  auto fake_graphical_presenter =
-      modular_testing::FakeGraphicalPresenter::CreateWithDefaultOptions();
-  auto view_ref_module = ViewRefModule::CreateWithDefaultOptions();
-
-  bool have_seen_view_ref = false;
-  fuchsia::ui::views::ViewRef seen_view_ref;
-  fake_graphical_presenter->set_on_present_view(
-      [&](fuchsia::element::ViewSpec view_spec,
-          fidl::InterfaceHandle<fuchsia::element::AnnotationController> annotation_controller) {
-        ASSERT_TRUE(view_spec.has_view_ref());
-        seen_view_ref = fidl::Clone(view_spec.view_ref());
-        have_seen_view_ref = true;
-      });
-
-  story_shell_.set_on_add_surface([&](fuchsia::modular::ViewConnection view_connection,
-                                      fuchsia::modular::SurfaceInfo2 surface_info) {
-    FAIL() << "Mod should have been presented to GraphicalPresenter.";
-  });
-
-  fake_module_url_ = modular_testing::TestHarnessBuilder::GenerateFakeUrl("module");
-  builder.InterceptComponent(
-      {.url = fake_module_url_,
-       .launch_handler = [this](
-                             fuchsia::sys::StartupInfo startup_info,
-                             fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent>
-                                 intercepted_component) {
-         intercepted_modules_.emplace_back(std::move(startup_info),
-                                           std::move(intercepted_component));
-       }});
-
-  builder.InterceptStoryShell(story_shell_.BuildInterceptOptions());
-  builder.InterceptSessionShell(fake_graphical_presenter->BuildInterceptOptions());
-  builder.InterceptComponent(view_ref_module->BuildInterceptOptions());
-  builder.SetPresentModsAsStories();
-
-  // Create the test harness.
-  builder.BuildAndRun(test_harness());
-
-  fuchsia::modular::testing::ModularService request;
-  request.set_puppet_master(puppet_master_.NewRequest());
-  test_harness()->ConnectToModularService(std::move(request));
-
-  // Wait for our session shell to start.
-  RunLoopUntil([&] { return fake_graphical_presenter->is_running(); });
-
-  AddModToStoryWithUrl("story1", "mod1", "", view_ref_module->url());
-
-  // Wait for the story shell to be notified of the new modules.
-  RunLoopUntil([&] { return have_seen_view_ref; });
-  RunLoopUntil([&] { return view_ref_module->has_created_view(); });
-
-  // Get info about the |view_ref|.
-  zx_info_handle_basic_t seen_view_info;
-  zx_status_t const seen_view_status =
-      zx_object_get_info(seen_view_ref.reference.get(), ZX_INFO_HANDLE_BASIC, &seen_view_info,
-                         sizeof(seen_view_info), nullptr, nullptr);
-  zx_info_handle_basic_t mod_view_info;
-  zx_status_t const mod_view_status =
       zx_object_get_info(view_ref_module->view_ref().reference.get(), ZX_INFO_HANDLE_BASIC,
                          &mod_view_info, sizeof(mod_view_info), nullptr, nullptr);
   EXPECT_EQ(mod_view_status, ZX_OK);
