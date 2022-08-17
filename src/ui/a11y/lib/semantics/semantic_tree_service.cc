@@ -32,12 +32,11 @@ constexpr std::string::size_type kIndentSize = 4;
 SemanticTreeService::SemanticTreeService(
     std::unique_ptr<::a11y::SemanticTree> tree, zx_koid_t(koid),
     fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
-    vfs::PseudoDir* debug_dir, CloseChannelCallback error_callback)
+    CloseChannelCallback error_callback)
     : tree_(std::move(tree)),
       close_channel_callback_(std::move(error_callback)),
       koid_(koid),
       semantic_listener_(std::move(semantic_listener)),
-      debug_dir_(debug_dir),
       semantic_tree_factory_(
           std::make_unique<fxl::WeakPtrFactory<::a11y::SemanticTree>>(tree_.get())) {
   tree_->set_action_handler([this](uint32_t node_id,
@@ -51,14 +50,9 @@ SemanticTreeService::SemanticTreeService(
              fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback) {
         this->PerformHitTesting(local_point, std::move(callback));
       });
-  debug_file_name_ = std::to_string(koid_);
-  InitializeDebugEntry();
 }
 
-SemanticTreeService::~SemanticTreeService() {
-  RemoveDebugEntry();
-  semantic_tree_factory_->InvalidateWeakPtrs();
-}
+SemanticTreeService::~SemanticTreeService() { semantic_tree_factory_->InvalidateWeakPtrs(); }
 
 void SemanticTreeService::PerformAccessibilityAction(
     uint32_t node_id, fuchsia::accessibility::semantics::Action action,
@@ -113,39 +107,6 @@ void SemanticTreeService::DeleteSemanticNodes(std::vector<uint32_t> node_ids) {
   }
 }
 
-void SemanticTreeService::InitializeDebugEntry() {
-  if (debug_dir_) {
-    // Add Semantic Tree log file in Hub-Debug directory.
-    debug_dir_->AddEntry(
-        debug_file_name_,
-        std::make_unique<vfs::PseudoFile>(
-            kMaxDebugFileSize, [this](std::vector<uint8_t>* output, size_t max_file_size) {
-              std::string buffer = tree_->ToString();
-              FX_VLOGS(1) << "Semantic Tree:" << std::endl << buffer;
-
-              size_t len = buffer.length();
-              if (len > max_file_size) {
-                FX_LOGS(WARNING) << "Semantic Tree log file (" << std::to_string(koid_)
-                                 << ") size is:" << len
-                                 << " which is more than max size:" << kMaxDebugFileSize;
-                len = kMaxDebugFileSize;
-              }
-              output->resize(len);
-              std::copy(buffer.begin(), buffer.begin() + len, output->begin());
-              return ZX_OK;
-            }));
-  }
-}
-
-void SemanticTreeService::RemoveDebugEntry() {
-  FX_DCHECK(debug_dir_);
-  if (debug_dir_) {
-    // Remove Semantic Tree log file in the Hub-Debug directory.
-    debug_dir_->RemoveEntry(debug_file_name_);
-  }
-
-}  // namespace a11y
-
 void SemanticTreeService::PerformHitTesting(
     ::fuchsia::math::PointF local_point,
     fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback) {
@@ -181,14 +142,13 @@ void SemanticTreeService::SendSemanticEvent(
 
 std::unique_ptr<SemanticTreeService> SemanticTreeServiceFactory::NewService(
     zx_koid_t koid, fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
-    vfs::PseudoDir* debug_dir, SemanticTreeService::CloseChannelCallback close_channel_callback,
+    SemanticTreeService::CloseChannelCallback close_channel_callback,
     SemanticTree::SemanticsEventCallback semantics_event_callback) {
   auto inspect_name = "semantic_tree_" + std::to_string(koid);
   auto tree_ptr = std::make_unique<SemanticTree>(inspect_node_.CreateChild(inspect_name));
   tree_ptr->set_semantics_event_callback(std::move(semantics_event_callback));
-  auto semantic_tree =
-      std::make_unique<SemanticTreeService>(std::move(tree_ptr), koid, std::move(semantic_listener),
-                                            debug_dir, std::move(close_channel_callback));
+  auto semantic_tree = std::make_unique<SemanticTreeService>(
+      std::move(tree_ptr), koid, std::move(semantic_listener), std::move(close_channel_callback));
   return semantic_tree;
 }
 

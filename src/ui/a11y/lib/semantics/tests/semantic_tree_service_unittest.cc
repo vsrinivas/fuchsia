@@ -11,7 +11,6 @@
 #include <lib/fdio/fd.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/zx/event.h>
 
 #include <vector>
@@ -113,7 +112,7 @@ class SemanticTreeServiceTest : public gtest::TestLoopFixture {
     tree_ptr_ = tree.get();
     semantic_tree_ = std::make_unique<a11y::SemanticTreeService>(
         std::move(tree), koid_, fuchsia::accessibility::semantics::SemanticListenerPtr() /*unused*/,
-        debug_dir(), std::move(close_channel_callback));
+        std::move(close_channel_callback));
     semantic_tree_->EnableSemanticsUpdates(true);
   }
 
@@ -132,31 +131,6 @@ class SemanticTreeServiceTest : public gtest::TestLoopFixture {
     }
     EXPECT_TRUE(tree_ptr_->Update(std::move(updates)));
     tree_ptr_->ClearMockStatus();
-  }
-
-  vfs::PseudoDir* debug_dir() { return context_provider_.context()->outgoing()->debug_dir(); }
-
-  int OpenAsFD(vfs::internal::Node* node, async_dispatcher_t* dispatcher) {
-    zx::channel local, remote;
-    EXPECT_EQ(ZX_OK, zx::channel::create(0, &local, &remote));
-    EXPECT_EQ(ZX_OK,
-              node->Serve(fuchsia::io::OpenFlags::RIGHT_READABLE, std::move(remote), dispatcher));
-    int fd = -1;
-    EXPECT_EQ(ZX_OK, fdio_fd_create(local.release(), &fd));
-    return fd;
-  }
-
-  char* ReadFile(vfs::internal::Node* node, int length, char* buffer) {
-    EXPECT_LE(length, kMaxLogBufferSize);
-    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-    loop.StartThread("ReadingDebugFile");
-
-    int fd = OpenAsFD(node, loop.dispatcher());
-    EXPECT_LE(0, fd);
-
-    memset(buffer, 0, kMaxLogBufferSize);
-    EXPECT_EQ(length, pread(fd, buffer, length, 0));
-    return buffer;
   }
 
   sys::testing::ComponentContextProvider context_provider_;
@@ -228,35 +202,6 @@ TEST_F(SemanticTreeServiceTest, EnableSemanticsUpdatesClearsTreeOnDisable) {
   semantic_tree_->EnableSemanticsUpdates(false);
 
   EXPECT_EQ(semantic_tree_->Get()->Size(), 0u);
-}
-
-TEST_F(SemanticTreeServiceTest, LogsSemanticTree) {
-  auto updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
-  semantic_tree_->UpdateSemanticNodes(std::move(updates));
-  semantic_tree_->CommitUpdates([]() {});
-  const std::string expected_semantic_tree_odd =
-      "ID: 0 Label:Node-0 Location: no location Transform: no transform Role: no role Action: no "
-      "actions\n"
-      "    ID: 1 Label:Node-1 Location: no location Transform: no transform Role: no role Action: "
-      "no actions\n"
-      "        ID: 3 Label:Node-3 Location: no location Transform: no transform Role: no role "
-      "Action: no actions\n"
-      "        ID: 4 Label:Node-4 Location: no location Transform: no transform Role: no role "
-      "Action: no actions\n"
-      "    ID: 2 Label:Node-2 Location: no location Transform: no transform Role: no role Action: "
-      "no actions\n"
-      "        ID: 5 Label:Node-5 Location: no location Transform: no transform Role: no role "
-      "Action: no actions\n"
-      "        ID: 6 Label:Node-6 Location: no location Transform: no transform Role: no role "
-      "Action: no actions\n";
-
-  vfs::internal::Node* node;
-  EXPECT_EQ(ZX_OK, debug_dir()->Lookup(std::to_string(semantic_tree_->view_ref_koid()), &node));
-
-  char buffer[kMaxLogBufferSize];
-  ReadFile(node, expected_semantic_tree_odd.size(), buffer);
-
-  EXPECT_EQ(expected_semantic_tree_odd, buffer);
 }
 
 TEST_F(SemanticTreeServiceTest, SemanticEventsAreSentToTheTree) {

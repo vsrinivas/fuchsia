@@ -9,7 +9,6 @@
 #include <lib/fdio/fd.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/zx/event.h>
 
 #include <optional>
@@ -59,8 +58,7 @@ class ViewWrapperTest : public gtest::TestLoopFixture {
 
     fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener_ptr;
     auto tree_service = semantic_tree_service_factory_->NewService(
-        koid_, std::move(semantic_listener_ptr),
-        context_provider_.context()->outgoing()->debug_dir(), [](zx_status_t status) {},
+        koid_, std::move(semantic_listener_ptr), [](zx_status_t status) {},
         [](a11y::SemanticsEventInfo event_info) {});
     tree_service_ = tree_service.get();
 
@@ -77,8 +75,6 @@ class ViewWrapperTest : public gtest::TestLoopFixture {
 
     view_wrapper_->EnableSemanticUpdates(true);
   }
-
-  vfs::PseudoDir* debug_dir() { return context_provider_.context()->outgoing()->debug_dir(); }
 
  protected:
   sys::testing::ComponentContextProvider context_provider_;

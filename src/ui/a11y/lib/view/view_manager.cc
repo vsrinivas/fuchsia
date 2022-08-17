@@ -21,7 +21,7 @@ ViewManager::ViewManager(std::unique_ptr<SemanticTreeServiceFactory> factory,
                          std::unique_ptr<ViewInjectorFactoryInterface> view_injector_factory,
                          std::unique_ptr<SemanticsEventManager> semantics_event_manager,
                          std::shared_ptr<AccessibilityViewInterface> a11y_view,
-                         sys::ComponentContext* context, vfs::PseudoDir* debug_dir)
+                         sys::ComponentContext* context)
     : factory_(std::move(factory)),
       view_semantics_factory_(std::move(view_semantics_factory)),
       annotation_view_factory_(std::move(annotation_view_factory)),
@@ -29,8 +29,7 @@ ViewManager::ViewManager(std::unique_ptr<SemanticTreeServiceFactory> factory,
       semantics_event_manager_(std::move(semantics_event_manager)),
       a11y_view_(std::move(a11y_view)),
       virtualkeyboard_listener_binding_(this),
-      context_(context),
-      debug_dir_(debug_dir) {}
+      context_(context) {}
 
 ViewManager::~ViewManager() {
   for (auto& iterator : wait_map_) {
@@ -75,8 +74,8 @@ void ViewManager::RegisterViewForSemantics(
   });
 
   auto service =
-      factory_->NewService(koid, std::move(semantic_listener), debug_dir_,
-                           std::move(close_channel_callback), std::move(semantics_event_callback));
+      factory_->NewService(koid, std::move(semantic_listener), std::move(close_channel_callback),
+                           std::move(semantics_event_callback));
 
   // As part of the registration, client should get notified about the current Semantics Manager
   // enable settings.

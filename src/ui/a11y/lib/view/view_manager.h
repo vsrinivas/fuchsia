@@ -10,7 +10,6 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/vfs/cpp/pseudo_file.h>
 #include <zircon/types.h>
 
 #include <memory>
@@ -46,7 +45,7 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
                        std::unique_ptr<ViewInjectorFactoryInterface> view_injector_factory,
                        std::unique_ptr<SemanticsEventManager> semantics_event_manager,
                        std::shared_ptr<AccessibilityViewInterface> a11y_view,
-                       sys::ComponentContext* context, vfs::PseudoDir* debug_dir);
+                       sys::ComponentContext* context);
   ~ViewManager() override;
 
   // Function to Enable/Disable Semantics Manager.
@@ -191,8 +190,6 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
   std::pair<zx_koid_t, bool> virtualkeyboard_visibility_;
 
   sys::ComponentContext* context_;
-
-  vfs::PseudoDir* const debug_dir_;
 };
 }  // namespace a11y
 

@@ -9,7 +9,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/vfs/cpp/pseudo_dir.h>
 
 #include <gtest/gtest.h>
 
@@ -62,8 +61,7 @@ class AppUnitTest : public gtest::TestLoopFixture {
                       std::unique_ptr<MockAnnotationViewFactory>(mock_annotation_view_factory_),
                       std::make_unique<MockViewInjectorFactory>(),
                       std::make_unique<MockSemanticsEventManager>(),
-                      std::make_unique<MockAccessibilityView>(), context_provider_.context(),
-                      context_->outgoing()->debug_dir()),
+                      std::make_unique<MockAccessibilityView>(), context_provider_.context()),
         tts_manager_(context_),
         color_transform_manager_(context_),
         mock_semantic_provider_(&view_manager_),
@@ -211,11 +209,6 @@ TEST_F(AppUnitTest, UpdateNodeToSemanticsManager) {
   auto created_node = view_manager_.GetSemanticNode(mock_semantic_provider_.koid(), 0u);
   EXPECT_TRUE(created_node);
   EXPECT_EQ(created_node->attributes().label(), "Label A");
-
-  // Check that the committed node is present in the logs
-  vfs::PseudoDir* debug_dir = context_->outgoing()->debug_dir();
-  vfs::internal::Node* test_node;
-  EXPECT_EQ(ZX_OK, debug_dir->Lookup(std::to_string(mock_semantic_provider_.koid()), &test_node));
 }
 
 // This test makes sure that services implemented by the Tts manager are

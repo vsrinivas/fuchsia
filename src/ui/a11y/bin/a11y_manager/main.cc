@@ -65,8 +65,7 @@ int run_a11y_manager(int argc, const char** argv) {
         std::make_unique<a11y::A11yViewSemanticsFactory>(),
         std::make_unique<a11y::AnnotationViewFactory>(),
         std::make_unique<a11y::ViewInjectorFactory>(),
-        std::make_unique<a11y::A11ySemanticsEventManager>(), a11y_view, context.get(),
-        context->outgoing()->debug_dir());
+        std::make_unique<a11y::A11ySemanticsEventManager>(), a11y_view, context.get());
 
     app = std::make_unique<a11y_manager::App>(
         context.get(), view_manager.get(), &tts_manager, &color_transform_manager,

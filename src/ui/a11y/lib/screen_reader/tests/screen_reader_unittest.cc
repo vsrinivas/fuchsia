@@ -106,7 +106,7 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
         std::move(factory_), std::make_unique<MockViewSemanticsFactory>(),
         std::make_unique<MockAnnotationViewFactory>(), std::make_unique<MockViewInjectorFactory>(),
         std::make_unique<MockSemanticsEventManager>(), std::make_shared<MockAccessibilityView>(),
-        context_provider_->context(), context_provider_->context()->outgoing()->debug_dir());
+        context_provider_->context());
     context_ = std::make_unique<MockScreenReaderContext>();
     context_ptr_ = context_.get();
     a11y_focus_manager_ptr_ = context_ptr_->mock_a11y_focus_manager_ptr();

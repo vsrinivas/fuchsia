@@ -11,7 +11,6 @@
 #include <lib/fdio/fd.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/zx/event.h>
 
 #include <map>
@@ -72,7 +71,7 @@ class ViewManagerTest : public gtest::TestLoopFixture {
         std::move(tree_service_factory_), std::move(view_semantics_factory),
         std::move(annotation_view_factory), std::move(view_injector_factory),
         std::make_unique<MockSemanticsEventManager>(), std::move(accessibility_view),
-        context_provider_.context(), debug_dir());
+        context_provider_.context());
     view_manager_->SetAnnotationsEnabled(true);
 
     semantic_provider_ =
@@ -80,8 +79,6 @@ class ViewManagerTest : public gtest::TestLoopFixture {
 
     RunLoopUntilIdle();
   }
-
-  vfs::PseudoDir* debug_dir() { return context_provider_.context()->outgoing()->debug_dir(); }
 
   void AddNodeToTree(uint32_t node_id, std::string label,
                      std::vector<uint32_t> child_ids = std::vector<uint32_t>()) {
@@ -141,29 +138,6 @@ TEST_F(ViewManagerTest, ClosesChannel) {
   RunLoopUntilIdle();
 
   EXPECT_FALSE(view_manager_->ViewHasSemantics(semantic_provider_->koid()));
-}
-
-// Tests that log file is removed when semantic tree service entry is removed from semantics
-// manager.
-TEST_F(ViewManagerTest, LogFileRemoved) {
-  view_manager_->SetSemanticsEnabled(true);
-  RunLoopUntilIdle();
-
-  std::string debug_file = std::to_string(semantic_provider_->koid());
-  {
-    vfs::internal::Node* node;
-    EXPECT_EQ(ZX_OK, debug_dir()->Lookup(debug_file, &node));
-  }
-
-  // Forces the client to disconnect.
-  semantic_provider_->SendEventPairSignal();
-  RunLoopUntilIdle();
-
-  // Check Log File is removed.
-  {
-    vfs::internal::Node* node;
-    EXPECT_EQ(ZX_ERR_NOT_FOUND, debug_dir()->Lookup(debug_file, &node));
-  }
 }
 
 TEST_F(ViewManagerTest, SemanticsSourceViewHasSemantics) {

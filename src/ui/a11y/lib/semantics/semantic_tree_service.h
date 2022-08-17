@@ -12,7 +12,6 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/vfs/cpp/pseudo_file.h>
 
 #include <unordered_map>
 #include <unordered_set>
@@ -32,7 +31,7 @@ class SemanticTreeService : public fuchsia::accessibility::semantics::SemanticTr
 
   SemanticTreeService(std::unique_ptr<::a11y::SemanticTree> tree, zx_koid_t koid,
                       fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
-                      vfs::PseudoDir* debug_dir, CloseChannelCallback callback);
+                      CloseChannelCallback callback);
 
   ~SemanticTreeService() override;
 
@@ -81,13 +80,6 @@ class SemanticTreeService : public fuchsia::accessibility::semantics::SemanticTr
       ::fuchsia::math::PointF local_point,
       fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback);
 
-  // Function to create per view log files under debug directory for
-  // debugging semantic tree.
-  void InitializeDebugEntry();
-
-  // Function to remove per view Log files under debug directory.
-  void RemoveDebugEntry();
-
   // The Semantic Tree data structure owned by this service. Semantic providers
   // typically modify the state of this tree via calls to Update(), Delete() and
   // Commit(), while semantic consumers only query the tree state via Get().
@@ -109,11 +101,7 @@ class SemanticTreeService : public fuchsia::accessibility::semantics::SemanticTr
   // Client-end channel of the fidl service to perform actions on the semantic provider.
   fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener_;
 
-  vfs::PseudoDir* const debug_dir_;
   bool semantic_updates_enabled_ = false;
-
-  // File name of the log file under debug directory.
-  std::string debug_file_name_;
 
   // Note: must be the last element on this class to ensure that it is the last to be destructed.
   std::unique_ptr<fxl::WeakPtrFactory<::a11y::SemanticTree>> semantic_tree_factory_;
@@ -129,7 +117,7 @@ class SemanticTreeServiceFactory {
 
   virtual std::unique_ptr<SemanticTreeService> NewService(
       zx_koid_t koid, fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
-      vfs::PseudoDir* debug_dir, SemanticTreeService::CloseChannelCallback close_channel_callback,
+      SemanticTreeService::CloseChannelCallback close_channel_callback,
       SemanticTree::SemanticsEventCallback semantics_event_callback);
 
  private:

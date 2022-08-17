@@ -20,7 +20,6 @@ class MockSemanticTreeServiceFactory : public a11y::SemanticTreeServiceFactory {
 
   std::unique_ptr<a11y::SemanticTreeService> NewService(
       zx_koid_t koid, fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener,
-      vfs::PseudoDir* debug_dir,
       a11y::SemanticTreeService::CloseChannelCallback close_channel_callback,
       a11y::SemanticTree::SemanticsEventCallback semantics_event_callback) override;
 

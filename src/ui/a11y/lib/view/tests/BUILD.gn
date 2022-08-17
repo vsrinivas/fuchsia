@@ -38,7 +38,6 @@ executable("view_tests") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/vfs/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/json_parser",
