@@ -20,13 +20,18 @@ go_library("make-fuchsia-vol_lib") {
   ]
 }
 
-go_binary("make-fuchsia-vol") {
-  gopackage = "make-fuchsia-vol"
-
-  deps = [ ":make-fuchsia-vol_lib" ]
-}
-
 if (is_host) {
+  go_binary("make-fuchsia-vol") {
+    gopackage = "make-fuchsia-vol"
+
+    deps = [ ":make-fuchsia-vol_lib" ]  # make-fuchsia-vol uses these tools to
+                                        # build the fuchsia image.
+    non_go_deps = [
+      "//src/storage/bin/fvm",
+      "//zircon/third_party/uapp/mkfs-msdosfs",
+    ]
+  }
+
   go_test("make-fuchsia-vol-tests") {
     gopackages = [ "make-fuchsia-vol" ]
     deps = [ ":make-fuchsia-vol_lib" ]
@@ -34,7 +39,7 @@ if (is_host) {
 }
 
 install_host_tools("host") {
-  deps = [ ":make-fuchsia-vol" ]
+  deps = [ ":make-fuchsia-vol($host_toolchain)" ]
   outputs = [ "make-fuchsia-vol" ]
 }
 
