@@ -93,7 +93,7 @@ toc:
   #     path: /docs/reference/diagnostics/consumers/system-monitor.md
 
   - title: "Fuchsia Diagnostics Persistence Service"
-    path: "/docs/reference/diagnostics/persistence.md"
+    path: /docs/reference/diagnostics/persistence.md
 
   - title: "Local and development"
     section:
