@@ -338,6 +338,8 @@ def GetPartitions(build_dir, images_file, target_images):
   Returns:
     a list of |Partition| objects to be written to the disk.
   """
+  use_signed_images = False
+
   images = {}
   if images_file == '':
     images_file = os.path.join(build_dir, 'images.json')
@@ -346,6 +348,8 @@ def GetPartitions(build_dir, images_file, target_images):
       images_list = json.load(f)
       for image in images_list:
         images[make_unique_name(image['name'], image['type'])] = image
+        if image['type'] == 'zbi.signed':
+          use_signed_images = True
   except IOError as err:
     logging.critical('Failed to find image manifest. Have you run `fx build`?', exc_info=err)
     return []
@@ -355,6 +359,10 @@ def GetPartitions(build_dir, images_file, target_images):
   for image in target_images:
     if image.unique_name() not in images:
       logging.debug("Skipping image that wasn't built: {}".format(image.unique_name()))
+      continue
+
+    if use_signed_images and image.type == 'zbi':
+      logging.debug("Skipping unsigned image: {}".format(image.unique_name()))
       continue
 
     for part_type in image.guids:
