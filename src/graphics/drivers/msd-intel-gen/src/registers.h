@@ -7,6 +7,7 @@
 
 #include <vector>
 
+#include "device_id.h"
 #include "hwreg/bitfields.h"
 #include "magma_util/macros.h"
 #include "magma_util/register_io.h"
@@ -173,16 +174,12 @@ class ActiveHeadPointer {
 };
 
 // from intel-gfx-prm-osrc-kbl-vol02c-commandreference-registers-part1.pdf p.81
-class AllEngineFault {
+class AllEngineFault : public hwreg::RegisterBase<AllEngineFault, uint32_t> {
  public:
-  static constexpr uint32_t kOffset = 0x4094;
-  static constexpr uint32_t kValid = 1;
-  static constexpr uint32_t kEngineShift = 12;
-  static constexpr uint32_t kEngineMask = 0x7;
-  static constexpr uint32_t kSrcShift = 3;
-  static constexpr uint32_t kSrcMask = 0xFF;
-  static constexpr uint32_t kTypeShift = 1;
-  static constexpr uint32_t kTypeMask = 0x3;
+  DEF_FIELD(14, 12, engine);
+  DEF_FIELD(10, 3, src);
+  DEF_FIELD(2, 1, type);
+  DEF_BIT(0, valid);
 
   enum Engine {
     RCS = 0,
@@ -192,15 +189,13 @@ class AllEngineFault {
     BLT = 4,
   };
 
-  static uint32_t read(magma::RegisterIo* reg_io) { return reg_io->Read32(kOffset); }
-  static void clear(magma::RegisterIo* reg_io) { reg_io->Write32(0, kOffset); }
+  static auto GetAddr(uint32_t device_id) {
+    if (DeviceId::is_gen12(device_id))
+      return hwreg::RegisterAddr<AllEngineFault>(0xCEC4);
 
-  static bool valid(uint32_t val) { return val & kValid; }
-  static Engine engine(uint32_t val) {
-    return static_cast<Engine>((val >> kEngineShift) & kEngineMask);
+    DASSERT(DeviceId::is_gen9(device_id));
+    return hwreg::RegisterAddr<AllEngineFault>(0x4094);
   }
-  static uint8_t src(uint32_t val) { return (val >> kSrcShift) & kSrcMask; }
-  static uint8_t type(uint32_t val) { return (val >> kTypeShift) & kTypeMask; }
 };
 
 // from intel-gfx-prm-osrc-bdw-vol02c-commandreference-registers_4.pdf p.446

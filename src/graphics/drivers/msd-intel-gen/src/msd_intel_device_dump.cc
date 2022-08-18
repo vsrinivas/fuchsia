@@ -9,6 +9,15 @@
 #include "msd_intel_device.h"
 #include "registers.h"
 
+namespace {
+
+constexpr uint8_t to_uint8(uint32_t val) {
+  DASSERT((val & ~0xFF) == 0);
+  return val & 0xFF;
+}
+
+}  // namespace
+
 void MsdIntelDevice::Dump(DumpState* dump_out) {
   dump_out->render_cs.sequence_number =
       render_engine_cs()->hardware_status_page()->read_sequence_number();
@@ -19,7 +28,9 @@ void MsdIntelDevice::Dump(DumpState* dump_out) {
       video_command_streamer()->hardware_status_page()->read_sequence_number();
   dump_out->video_cs.active_head_pointer = video_command_streamer_->GetActiveHeadPointer();
 
-  DumpFault(dump_out, registers::AllEngineFault::read(register_io_.get()));
+  DumpFault(
+      dump_out,
+      registers::AllEngineFault::GetAddr(device_id_).ReadFrom(register_io_.get()).reg_value());
 
   dump_out->fault_gpu_address = kInvalidGpuAddr;
   dump_out->global = false;
@@ -27,13 +38,17 @@ void MsdIntelDevice::Dump(DumpState* dump_out) {
     DumpFaultAddress(dump_out, register_io_.get());
 }
 
+// static
 void MsdIntelDevice::DumpFault(DumpState* dump_out, uint32_t fault) {
-  dump_out->fault_present = registers::AllEngineFault::valid(fault);
-  dump_out->fault_engine = registers::AllEngineFault::engine(fault);
-  dump_out->fault_src = registers::AllEngineFault::src(fault);
-  dump_out->fault_type = registers::AllEngineFault::type(fault);
+  constexpr uint32_t kFakeAddr = 0;  // can't read/write registers in this static method
+  auto fault_reg = hwreg::RegisterAddr<registers::AllEngineFault>(kFakeAddr).FromValue(fault);
+  dump_out->fault_present = fault_reg.valid();
+  dump_out->fault_engine = to_uint8(fault_reg.engine());
+  dump_out->fault_src = to_uint8(fault_reg.src());
+  dump_out->fault_type = to_uint8(fault_reg.type());
 }
 
+// static
 void MsdIntelDevice::DumpFaultAddress(DumpState* dump_out, magma::RegisterIo* register_io) {
   uint64_t val = registers::FaultTlbReadData::read(register_io);
   dump_out->fault_gpu_address = registers::FaultTlbReadData::addr(val);

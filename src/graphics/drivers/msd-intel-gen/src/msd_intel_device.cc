@@ -201,7 +201,10 @@ bool MsdIntelDevice::BaseInit(void* device_handle) {
     return DRETF(false, "failed to create bus mapper");
 
   // Clear faults
-  registers::AllEngineFault::clear(register_io_.get());
+  registers::AllEngineFault::GetAddr(device_id_)
+      .FromValue(0)
+      .set_valid(0)
+      .WriteTo(register_io_.get());
 
   QuerySliceInfo(&subslice_total_, &eu_total_);
 
@@ -309,7 +312,10 @@ bool MsdIntelDevice::EngineReset(EngineCommandStreamer* engine) {
 
   InitEngine(engine);
 
-  registers::AllEngineFault::clear(register_io_.get());
+  registers::AllEngineFault::GetAddr(device_id_)
+      .FromValue(0)
+      .set_valid(0)
+      .WriteTo(register_io_.get());
 
   if (engine->id() == RENDER_COMMAND_STREAMER) {
     if (!RenderInitBatch())
@@ -580,9 +586,9 @@ magma::Status MsdIntelDevice::ProcessInterrupts(uint64_t interrupt_time_ns,
     }
   }
 
-  uint32_t fault = registers::AllEngineFault::read(register_io_.get());
+  auto fault_reg = registers::AllEngineFault::GetAddr(device_id_).ReadFrom(register_io_.get());
 
-  if (registers::AllEngineFault::valid(fault)) {
+  if (fault_reg.valid()) {
     std::vector<std::string> dump;
     DumpToString(dump);
     MAGMA_LOG(WARNING, "GPU fault detected\n");
@@ -590,7 +596,7 @@ magma::Status MsdIntelDevice::ProcessInterrupts(uint64_t interrupt_time_ns,
       MAGMA_LOG(WARNING, "%s", str.c_str());
     }
 
-    switch (registers::AllEngineFault::engine(fault)) {
+    switch (fault_reg.engine()) {
       case registers::AllEngineFault::RCS:
         EngineReset(render_engine_cs());
         break;
