@@ -11,6 +11,7 @@
 
 #include <ktl/move.h>
 #include <ktl/unique_ptr.h>
+#include <vm/pinned_vm_object.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
@@ -22,8 +23,8 @@ namespace hypervisor {
 // portion of guest physical memory for faster access.
 class GuestPtr {
  public:
-  GuestPtr(fbl::RefPtr<VmMapping> mapping, zx_vaddr_t offset)
-      : mapping_(ktl::move(mapping)), offset_(offset) {}
+  GuestPtr(fbl::RefPtr<VmMapping> mapping, PinnedVmObject&& pinned_vmo, zx_vaddr_t offset)
+      : mapping_(ktl::move(mapping)), pinned_vmo_(ktl::move(pinned_vmo)), offset_(offset) {}
   ~GuestPtr() { reset(); }
 
   GuestPtr() = default;
@@ -37,6 +38,7 @@ class GuestPtr {
       mapping_->Destroy();
       mapping_.reset();
     }
+    pinned_vmo_.reset();
   }
 
   template <typename T>
@@ -49,6 +51,7 @@ class GuestPtr {
 
  private:
   fbl::RefPtr<VmMapping> mapping_;
+  PinnedVmObject pinned_vmo_;
   zx_vaddr_t offset_;
 };
 

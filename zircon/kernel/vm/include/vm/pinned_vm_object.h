@@ -24,12 +24,12 @@ class PinnedVmObject {
   size_t offset() const { return offset_; }
   size_t size() const { return size_; }
 
+  void reset();
+
  private:
   fbl::RefPtr<VmObject> vmo_;
   size_t offset_;
   size_t size_;
-
-  void Unpin();
 
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(PinnedVmObject);
 };

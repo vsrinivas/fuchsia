@@ -41,7 +41,7 @@ zx_status_t PinnedVmObject::Create(fbl::RefPtr<VmObject> vmo, size_t offset, siz
   return ZX_OK;
 }
 
-void PinnedVmObject::Unpin() {
+void PinnedVmObject::reset() {
   if (vmo_) {
     vmo_->Unpin(offset_, size_);
     vmo_.reset();
@@ -53,11 +53,11 @@ PinnedVmObject::PinnedVmObject() = default;
 PinnedVmObject::PinnedVmObject(PinnedVmObject&&) noexcept = default;
 
 PinnedVmObject& PinnedVmObject::operator=(PinnedVmObject&& pinned) noexcept {
-  Unpin();
+  reset();
   vmo_ = ktl::move(pinned.vmo_);
   offset_ = pinned.offset_;
   size_ = pinned.size_;
   return *this;
 }
 
-PinnedVmObject::~PinnedVmObject() { Unpin(); }
+PinnedVmObject::~PinnedVmObject() { reset(); }

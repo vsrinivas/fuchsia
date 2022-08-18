@@ -198,8 +198,17 @@ zx::status<GuestPtr> GuestPhysicalAddressSpace::CreateGuestPtr(zx_gpaddr_t guest
     vmo = guest_mapping->vmo_locked();
   }
 
+  // Pin the range of the guest VMO to ensure the user cannot manipulate it to cause our kernel
+  // mapping to become invalidate and generate faults.
+  PinnedVmObject pinned_vmo;
+  zx_status_t status = PinnedVmObject::Create(vmo, mapping_object_offset + intra_mapping_offset,
+                                              mapping_len, true, &pinned_vmo);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+
   fbl::RefPtr<VmMapping> host_mapping;
-  zx_status_t status = VmAspace::kernel_aspace()->RootVmar()->CreateVmMapping(
+  status = VmAspace::kernel_aspace()->RootVmar()->CreateVmMapping(
       /* mapping_offset */ 0, mapping_len,
       /* align_pow2 */ false,
       /* vmar_flags */ 0, vmo, mapping_object_offset + intra_mapping_offset, kGuestMmuFlags, name,
@@ -213,7 +222,7 @@ zx::status<GuestPtr> GuestPhysicalAddressSpace::CreateGuestPtr(zx_gpaddr_t guest
     return zx::error(status);
   }
 
-  return zx::ok(GuestPtr(ktl::move(host_mapping), guest_paddr - begin));
+  return zx::ok(GuestPtr(ktl::move(host_mapping), ktl::move(pinned_vmo), guest_paddr - begin));
 }
 
 fbl::RefPtr<VmMapping> GuestPhysicalAddressSpace::FindMapping(zx_gpaddr_t guest_paddr) const {
