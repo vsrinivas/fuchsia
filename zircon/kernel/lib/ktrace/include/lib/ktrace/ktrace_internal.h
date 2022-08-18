@@ -11,6 +11,7 @@
 #include <lib/fit/function.h>
 #include <lib/user_copy/user_ptr.h>
 #include <lib/zircon-internal/ktrace.h>
+#include <lib/zx/status.h>
 #include <stdint.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -112,6 +113,46 @@ class KTraceState {
   static inline bool tag_enabled(uint32_t tag, uint32_t mask) { return (mask & tag) != 0; }
 
   inline bool tag_enabled(uint32_t tag) const { return tag_enabled(tag, grpmask()); }
+
+  // Temporary (fxbug.dev/98176): A small wrapper for writing a single
+  // FXT-in-KTrace record.
+  //
+  // We allow the calling code to specify a KTrace group and event type for the
+  // benefit of ktrace_provider's processing during the transition to full FXT.
+  // The computed record size from the header passed by libfxt and the rest of
+  // the KTrace tag are combined to create the tag for the KTrace reservation,
+  // which is then used as a buffer for the FXT writing.
+  //
+  // This wrapper is used for writing a single FXT record, and should be
+  // discarded after the write is complete. For writing multiple records, create
+  // a separate instance for each record.
+  class FxtCompatWriter {
+   public:
+    FxtCompatWriter(KTraceState& ks, uint32_t tag) : ks_(ks), tag_(tag) {}
+
+    class Reservation {
+     public:
+      Reservation(uint64_t* ptr, uint64_t ktrace_header)
+          : ptr_(ptr), ktrace_header_(ktrace_header) {}
+
+      void WriteWord(uint64_t word);
+      void WriteBytes(const void* bytes, size_t num_bytes);
+      void Commit();
+
+     private:
+      uint64_t* ptr_{nullptr};
+      size_t word_offset_{1};
+      uint64_t ktrace_header_{0};
+    };
+
+    zx::status<Reservation> Reserve(uint64_t header);
+
+   private:
+    KTraceState& ks_;
+    const uint32_t tag_;
+  };
+
+  inline FxtCompatWriter make_fxt_writer(uint32_t tag) { return FxtCompatWriter(*this, tag); }
 
  private:
   // A small RAII helper which makes sure that we don't mess up our
@@ -230,6 +271,9 @@ class KTraceState {
   // Reserve KTRACE_LEN(tag) bytes of contiguous space in the buffer, if
   // possible.
   PendingCommit Reserve(uint32_t tag);
+  // Reserve the specified number of bytes in the buffer, if possible, without
+  // the PendingCommit wrapper.
+  void* ReserveRaw(uint32_t num_bytes);
 
   inline void DisableGroupMask() {
     grpmask_and_inflight_writes_.fetch_and(kInflightWritesMask, ktl::memory_order_release);

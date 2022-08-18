@@ -144,6 +144,14 @@ bool Importer::Import(Reader& reader) {
         continue;
       }
 
+      if (KTRACE_GROUP(record->tag) & KTRACE_GRP_FXT) {
+        size_t fxt_record_size = KTRACE_LEN(record->tag) - sizeof(uint64_t);
+        const char* fxt_record = reinterpret_cast<const char*>(record) + sizeof(uint64_t);
+        void* dst = trace_context_alloc_record(context_, fxt_record_size);
+        memcpy(dst, fxt_record, fxt_record_size);
+        continue;
+      }
+
       if (!ImportRecord(record, KTRACE_LEN(record->tag))) {
         FX_VLOGS(5) << "Skipped ktrace record, tag=0x" << std::hex << record->tag;
       }

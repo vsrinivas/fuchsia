@@ -590,6 +590,13 @@ inline WordSize EventContentWords(EventType eventType) {
   }
 }
 
+inline WordSize TotalPayloadSize() { return WordSize(0); }
+
+template <typename First, typename... Rest>
+inline WordSize TotalPayloadSize(const First& first, const Rest&... rest) {
+  return first.PayloadSize() + TotalPayloadSize(rest...);
+}
+
 template <typename Writer, internal::EnableIfWriter<Writer> = 0, RefType thread_type,
           RefType name_type, RefType category_type, ArgumentType... arg_types, RefType... ref_types>
 void WriteEventRecord(typename internal::WriterTraits<Writer>::Reservation& res,
@@ -613,12 +620,8 @@ uint64_t MakeEventHeader(fxt::EventType eventType, const ThreadRef<thread_type>&
                          const Argument<arg_types, ref_types>&... args) {
   const WordSize content_size = fxt::internal::EventContentWords(eventType);
   WordSize record_size = WordSize::FromBytes(sizeof(RecordHeader)) + WordSize(1) +
-                         thread_ref.PayloadSize() + category_ref.PayloadSize() +
-                         name_ref.PayloadSize() + content_size;
-  WordSize word_sizes[] = {args.PayloadSize()...};
-  for (auto i : word_sizes) {
-    record_size += i;
-  }
+                         TotalPayloadSize(thread_ref, category_ref, name_ref) + content_size +
+                         TotalPayloadSize(args...);
   return MakeHeader(RecordType::kEvent, record_size) |
          EventRecordFields::EventType::Make(ToUnderlyingType(eventType)) |
          EventRecordFields::ArgumentCount::Make(sizeof...(args)) |
@@ -905,12 +908,8 @@ zx_status_t WriteUserspaceObjectRecord(Writer* writer, uintptr_t pointer,
                                        const StringRef<name_type>& name_arg,
                                        const Argument<arg_types, ref_types>&... args) {
   WordSize record_size = WordSize(1) /*header*/ + WordSize(1) /*pointer*/ +
-                         thread_arg.PayloadSize() + name_arg.PayloadSize();
+                         internal::TotalPayloadSize(thread_arg, name_arg, args...);
 
-  WordSize arg_sizes[] = {args.PayloadSize()...};
-  for (auto i : arg_sizes) {
-    record_size += i;
-  }
   uint64_t header =
       MakeHeader(RecordType::kUserspaceObject, record_size) |
       fxt::UserspaceObjectRecordFields::ProcessThreadRef::Make(thread_arg.HeaderEntry()) |
@@ -941,13 +940,8 @@ template <typename Writer, internal::EnableIfWriter<Writer> = 0, RefType name_ty
 zx_status_t WriteKernelObjectRecord(Writer* writer, zx_koid_t koid, zx_obj_type_t obj_type,
                                     const StringRef<name_type>& name_arg,
                                     const Argument<arg_types, ref_types>&... args) {
-  WordSize record_size = WordSize(1) /*header*/ + WordSize(1) /*koid*/ + name_arg.PayloadSize() +
-                         name_arg.PayloadSize();
-
-  WordSize arg_sizes[] = {args.PayloadSize()...};
-  for (auto i : arg_sizes) {
-    record_size += i;
-  }
+  WordSize record_size =
+      WordSize(1) /*header*/ + WordSize(1) /*koid*/ + internal::TotalPayloadSize(name_arg, args...);
   uint64_t header = MakeHeader(RecordType::kKernelObject, record_size) |
                     fxt::KernelObjectRecordFields::ObjectType::Make(obj_type) |
                     fxt::KernelObjectRecordFields::NameStringRef::Make(name_arg.HeaderEntry()) |
@@ -1041,14 +1035,10 @@ zx_status_t WriteLargeBlobRecordWithMetadata(Writer* writer, uint64_t timestamp,
                                              const void* data, size_t num_bytes,
                                              const Argument<arg_types, ref_types>&... args) {
   WordSize record_size = WordSize(1) /*header*/ + WordSize(1) /*metadata word*/ +
-                         WordSize(1) /*timestamp*/ + category_ref.PayloadSize() +
-                         name_ref.PayloadSize() + thread_ref.PayloadSize() +
-                         /*blob size*/ WordSize(1) + WordSize::FromBytes(num_bytes);
-
-  WordSize arg_sizes[] = {args.PayloadSize()...};
-  for (auto i : arg_sizes) {
-    record_size += i;
-  }
+                         WordSize(1) /*timestamp*/ +
+                         internal::TotalPayloadSize(category_ref, name_ref, thread_ref) +
+                         /*blob size*/ WordSize(1) + WordSize::FromBytes(num_bytes) +
+                         internal::TotalPayloadSize(args...);
   uint64_t header =
       MakeLargeHeader(LargeRecordType::kBlob, record_size) |
       fxt::LargeBlobFields::BlobFormat::Make(ToUnderlyingType(LargeBlobFormat::kMetadata));
@@ -1088,7 +1078,7 @@ zx_status_t WriteLargeBlobRecordWithNoMetadata(Writer* writer,
                                                const StringRef<name_type>& name_ref,
                                                const void* data, size_t num_bytes) {
   WordSize record_size = /*header*/ WordSize(1) + /*blob header*/ WordSize(1) +
-                         category_ref.PayloadSize() + name_ref.PayloadSize() +
+                         internal::TotalPayloadSize(category_ref, name_ref) +
                          /*blob size*/ WordSize(1) + WordSize::FromBytes(num_bytes);
 
   uint64_t header =

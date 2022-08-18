@@ -768,6 +768,68 @@ class TestKTraceState : public ::internal::KTraceState {
     END_TEST;
   }
 
+  static bool FxtCompatWriterTest() {
+    BEGIN_TEST;
+
+    constexpr uint32_t kAllGroups = KTRACE_GRP_ALL;
+
+    // Create a small trace buffer and initialize it.
+    TestKTraceState state;
+    ASSERT_TRUE(state.Init(kDefaultBufferSize, kAllGroups));
+
+    // Immediately after initialization, ktrace will write two metadata records
+    // expressing the version of the trace buffer format, as well as the
+    // resolution of the timestamps in the trace.  Make sure that the offset
+    // reflects this.
+    uint32_t expected_offset = sizeof(ktrace_rec_32b_t) * 2;
+    ASSERT_TRUE(state.CheckExpectedOffset(expected_offset));
+
+    // This test works with the FxtCompatWriter and Reservation objects directly
+    // rather than using the libfxt functions. Here we build a valid string
+    // record in a convoluted way to cover various methods that libfxt uses to
+    // write bytes.
+    constexpr uint64_t fxt_header = 0x0000'0026'0001'0062;
+
+    auto wrapper = state.make_fxt_writer(KTRACE_TAG(0x1, 0x1, 0));
+    auto reservation = wrapper.Reserve(fxt_header);
+    ASSERT_OK(reservation.status_value());
+    reservation->WriteWord(0x6867'6665'6463'6261);
+    reservation->WriteBytes("0123456789ABCDEF", 16);
+    reservation->WriteBytes("remaining data", 14);
+    reservation->Commit();
+
+    auto record_checker = [&](const ktrace_header_t* hdr) {
+      BEGIN_TEST;
+
+      ASSERT_NONNULL(hdr);
+
+      EXPECT_EQ(KTRACE_GROUP(hdr->tag), 0x1u | KTRACE_GRP_FXT);
+      // KTrace length field should be computed from the FXT header.
+      ASSERT_EQ(KTRACE_LEN(hdr->tag), 7 * sizeof(uint64_t));
+
+      const char* fxt_start = reinterpret_cast<const char*>(hdr) + sizeof(uint64_t);
+
+      EXPECT_EQ(0, memcmp(fxt_start,
+                          "\x62\x00\x01\x00\x26\x00\x00\x00"
+                          "abcdefgh"
+                          "01234567"
+                          "89ABCDEF"
+                          "remainin"
+                          "g data\0\0",
+                          6 * sizeof(uint64_t)));
+
+      END_TEST;
+    };
+
+    ASSERT_OK(state.Stop());
+
+    uint32_t enumerated_records = 0;
+    state.TestAllRecords(enumerated_records, record_checker);
+    EXPECT_EQ(1u, enumerated_records);
+
+    END_TEST;
+  }
+
  private:
   //////////////////////////////////////////////////////////////////////////////
   //
@@ -948,4 +1010,5 @@ UNITTEST("saturation", ktrace_tests::TestKTraceState::SaturationTest)
 UNITTEST("rewind", ktrace_tests::TestKTraceState::RewindTest)
 UNITTEST("state check", ktrace_tests::TestKTraceState::StateCheckTest)
 UNITTEST("circular", ktrace_tests::TestKTraceState::CircularWriteTest)
+UNITTEST("fxt compat writer", ktrace_tests::TestKTraceState::FxtCompatWriterTest)
 UNITTEST_END_TESTCASE(ktrace_tests, "ktrace", "KTrace tests")

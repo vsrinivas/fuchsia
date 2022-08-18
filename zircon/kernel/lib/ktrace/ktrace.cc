@@ -6,6 +6,7 @@
 
 #include <debug.h>
 #include <lib/boot-options/boot-options.h>
+#include <lib/fxt/fields.h>
 #include <lib/ktrace.h>
 #include <lib/ktrace/string_ref.h>
 #include <lib/syscalls/zx-syscall-numbers.h>
@@ -565,13 +566,22 @@ zx_status_t KTraceState::AllocBuffer() {
 }
 
 KTraceState::PendingCommit KTraceState::Reserve(uint32_t tag) {
+  void* ptr = ReserveRaw(KTRACE_LEN(tag));
+  if (ptr != nullptr) {
+    return {ptr, tag};
+  } else {
+    return nullptr;
+  }
+}
+
+void* KTraceState::ReserveRaw(uint32_t num_bytes) {
   constexpr uint32_t kUncommitedRecordTag = 0;
   auto Commit = [](void* ptr, uint32_t tag) -> void {
     ktl::atomic_ref(*static_cast<uint32_t*>(ptr)).store(tag, ktl::memory_order_release);
   };
 
-  const uint32_t amt = KTRACE_LEN(tag);
-  DEBUG_ASSERT(amt >= sizeof(uint32_t));
+  DEBUG_ASSERT(num_bytes >= sizeof(uint32_t));
+  DEBUG_ASSERT(num_bytes % sizeof(uint64_t) == 0);
 
   Guard<SpinLock, IrqSave> write_guard{&write_lock_};
   if (!bufsize_) {
@@ -583,7 +593,7 @@ KTraceState::PendingCommit KTraceState::Reserve(uint32_t tag) {
     const size_t space = bufsize_ - wr_;
 
     // if there is not enough space, we are done.
-    if (space < amt) {
+    if (space < num_bytes) {
       return nullptr;
     }
 
@@ -592,12 +602,12 @@ KTraceState::PendingCommit KTraceState::Reserve(uint32_t tag) {
     // payload has not been fully committed yet.
     void* ptr = buffer_ + wr_;
     Commit(ptr, kUncommitedRecordTag);
-    wr_ += amt;
-    return {ptr, tag};
+    wr_ += num_bytes;
+    return ptr;
   } else {
     // If there is not enough space in this circular buffer to hold our message,
     // don't even try.  Just give up.
-    if (amt > circular_size_) {
+    if (num_bytes > circular_size_) {
       return nullptr;
     }
 
@@ -610,7 +620,7 @@ KTraceState::PendingCommit KTraceState::Reserve(uint32_t tag) {
       // skipped, in addition to our actual record.
       const uint32_t wr_offset = PtrToCircularOffset(wr_);
       const uint32_t contiguous_space = bufsize_ - wr_offset;
-      const uint32_t to_reserve = ktl::min(contiguous_space, amt);
+      const uint32_t to_reserve = ktl::min(contiguous_space, num_bytes);
       DEBUG_ASSERT((to_reserve > 0) && ((to_reserve & 0x7) == 0));
 
       // Do we have the space for our reservation?  If not, then
@@ -652,15 +662,65 @@ KTraceState::PendingCommit KTraceState::Reserve(uint32_t tag) {
       // space in the buffer, then try the allocation again.
       void* ptr = buffer_ + wr_offset;
       wr_ += to_reserve;
-      if (amt == to_reserve) {
+      if (num_bytes == to_reserve) {
         Commit(ptr, kUncommitedRecordTag);
-        return {ptr, tag};
+        return ptr;
       } else {
-        DEBUG_ASSERT(amt > to_reserve);
+        DEBUG_ASSERT(num_bytes > to_reserve);
         Commit(ptr, KTRACE_TAG(0u, 0u, to_reserve));
       }
     }
   }
+}
+
+zx::status<KTraceState::FxtCompatWriter::Reservation> KTraceState::FxtCompatWriter::Reserve(
+    uint64_t header) {
+  // Combine the record size from the provided FXT header with the rest of the
+  // KTrace tag.
+  uint32_t fxt_words = fxt::RecordFields::RecordSize::Get<uint32_t>(header);
+
+  // KTrace size field is 4 bits, making a maximum of 15 words, and one word is
+  // used for the KTrace header, so we can only fit a maximum of 14 words of
+  // FXT.
+  if (fxt_words > 14) {
+    return zx::error(ZX_ERR_OUT_OF_RANGE);
+  }
+
+  void* ptr = ks_.ReserveRaw((fxt_words + 1) * sizeof(uint64_t));
+  if (ptr == nullptr) {
+    return zx::error(ZX_ERR_NO_RESOURCES);
+  }
+
+  // Combine the size from the FXT header with the rest of the previously
+  // provided ktrace header. Additionally, set KTRACE_GRP_FXT bit.
+  uint64_t ktrace_header = (tag_ & ~0xF) | (fxt_words + 1) | KTRACE_GRP_TO_MASK(KTRACE_GRP_FXT);
+
+  KTraceState::FxtCompatWriter::Reservation reservation{reinterpret_cast<uint64_t*>(ptr),
+                                                        ktrace_header};
+  // Immediately write the FXT header. The KTrace header will be written on
+  // commit to finalize the record.
+  reservation.WriteWord(header);
+
+  return zx::ok(reservation);
+}
+
+void KTraceState::FxtCompatWriter::Reservation::WriteWord(uint64_t word) {
+  DEBUG_ASSERT(word_offset_ < (ktrace_header_ & 0xF));
+  *(ptr_ + word_offset_) = word;
+  word_offset_++;
+}
+
+void KTraceState::FxtCompatWriter::Reservation::WriteBytes(const void* bytes, size_t num_bytes) {
+  size_t num_words = (num_bytes + 7) / 8;
+  DEBUG_ASSERT(word_offset_ + num_words - 1 < (ktrace_header_ & 0xF));
+  // Write 0 to the last word to cover any padding bytes.
+  *(ptr_ + (word_offset_ + num_words - 1)) = 0;
+  memcpy(static_cast<void*>(ptr_ + word_offset_), bytes, num_bytes);
+  word_offset_ += num_words;
+}
+
+void KTraceState::FxtCompatWriter::Reservation::Commit() {
+  ktl::atomic_ref(*ptr_).store(ktrace_header_, ktl::memory_order_release);
 }
 
 // Instantiate used versions of |KTraceState::WriteRecord|.

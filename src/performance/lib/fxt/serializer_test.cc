@@ -682,6 +682,34 @@ TEST(Serializer, KernelObjectRecord) {
   EXPECT_EQ(bytes[2], uint64_t{0x0000'0000'4321'0019});
 }
 
+TEST(Serializer, KernelObjectRecordInlineNames) {
+  fxt::StringRef name("name");
+  fxt::StringRef arg_name("arg");
+  zx_koid_t koid = 0xDEADBEEF;
+  zx_obj_type_t obj_type = ZX_OBJ_TYPE_CHANNEL;
+
+  FakeWriter writer;
+  EXPECT_EQ(ZX_OK, fxt::WriteKernelObjectRecord(&writer, koid, obj_type, name,
+                                                fxt::Argument(arg_name, false)));
+  // 1 word for the header, 1 for the pointer, 1 for the argument
+  EXPECT_EQ(writer.bytes.size(), fxt::WordSize(5).SizeInBytes());
+  uint64_t* bytes = reinterpret_cast<uint64_t*>(writer.bytes.data());
+  uint64_t header = bytes[0];
+  // Record type is 7
+  EXPECT_EQ(header & 0x0000'0000'0000'000F, uint64_t{0x0000'0000'0000'0007});
+  // Size
+  EXPECT_EQ(header & 0x0000'0000'0000'FFF0, uint64_t{0x0000'0000'0000'0050});
+  // Obj type
+  EXPECT_EQ(header & 0x0000'0000'00FF'0000, uint64_t{0x0000'0000'0004'0000});
+  // Name Ref
+  EXPECT_EQ(header & 0x0000'00FF'FF00'0000, uint64_t{0x0000'0080'0400'0000});
+  EXPECT_EQ(bytes[1], koid);
+  EXPECT_EQ(bytes[2], uint64_t{0x0000'0000'656d'616e});
+  // Argument (true)
+  EXPECT_EQ(bytes[3], uint64_t{0x0000'0000'8003'0029});
+  EXPECT_EQ(bytes[4], uint64_t{0x0000'0000'0067'7261});
+}
+
 TEST(Serializer, ContextSwitchRecord) {
   uint64_t event_time = 0xAABB'CCDD'EEFF'0011;
   uint8_t cpu_number = 0xBB;

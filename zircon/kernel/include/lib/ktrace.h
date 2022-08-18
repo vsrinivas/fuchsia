@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_LIB_KTRACE_H_
 #define ZIRCON_KERNEL_INCLUDE_LIB_KTRACE_H_
 
+#include <lib/fxt/serializer.h>
 #include <lib/ktrace/ktrace_internal.h>
 #include <lib/ktrace/string_ref.h>
 #include <lib/zircon-internal/ktrace.h>
@@ -281,6 +282,18 @@ inline void ktrace_name(uint32_t tag, uint32_t id, uint32_t arg, const char* nam
 
 inline ssize_t ktrace_read_user(user_out_ptr<void> ptr, uint32_t off, size_t len) {
   return KTRACE_STATE.ReadUser(ptr, off, len);
+}
+
+template <fxt::RefType name_type, fxt::ArgumentType... arg_types, fxt::RefType... ref_types>
+inline zx_status_t fxt_kernel_object(uint32_t tag, bool always, zx_koid_t koid,
+                                     zx_obj_type_t obj_type,
+                                     const fxt::StringRef<name_type>& name_arg,
+                                     const fxt::Argument<arg_types, ref_types>&... args) {
+  if (always || unlikely(ktrace_enabled(tag))) {
+    auto writer = KTRACE_STATE.make_fxt_writer(tag);
+    return fxt::WriteKernelObjectRecord(&writer, koid, obj_type, name_arg, args...);
+  }
+  return ZX_OK;
 }
 
 zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr);

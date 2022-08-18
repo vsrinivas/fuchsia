@@ -21,7 +21,10 @@ zx_library("ktrace") {
     "//zircon/system/ulib/zircon-internal",
   ]
 
-  public_deps = [ ":suppress-warning" ]
+  public_deps = [
+    ":suppress-warning",
+    "//src/performance/lib/fxt:headers",
+  ]
 }
 
 group("suppress-warning") {
@@ -40,6 +43,7 @@ config("suppress-warning.config") {
     "//src/lib/elfldltl/*",
     "//src/lib/llvm-profdata/*",
     "//src/lib/zbitl/*",
+    "//src/performance/lib/fxt/*",
     "//third_party/zstd/*",
     "//zircon/kernel/*",
     "//zircon/system/ulib/*",
