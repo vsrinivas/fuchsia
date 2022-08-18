@@ -222,8 +222,16 @@ template <typename Msg, typename... KeyValuePairs>
 struct LogValue {
   constexpr LogValue(Msg msg, syslog_backend::Tuplet<KeyValuePairs...> kvps)
       : msg(msg), kvps(kvps) {}
-  void LogNew(::syslog::LogSeverity severity, const char* file, unsigned int line,
-              const char* condition) const {
+  // FIXME(fxbug.dev/106574): With hwasan, or asan without stack-to-heap promotion for
+  // detecting use-after-returns, we can encounter a stack overflow in blobfs when bringing
+  // up one of the drivers needed for networking. This largely has to do with the LogBuffer
+  // which is 32kB and inlining can cause 4 of them to be allocated in a single frame. Without
+  // hwasan/asan, stack coloring can merge these to use the same stack space, but hwasan/asan
+  // both prevent this. It's still desirable to not have such a large object on the stack, so
+  // until we come up with a better API for using this or figure out sanitizers and stack coloring,
+  // we can temporarily work around the stack overflow by disabling inlining for this function.
+  __attribute__((__noinline__)) void LogNew(::syslog::LogSeverity severity, const char* file,
+                                            unsigned int line, const char* condition) const {
     syslog_backend::LogBuffer buffer;
     syslog_backend::BeginRecord(&buffer, severity, file, line, msg, condition);
     // https://bugs.llvm.org/show_bug.cgi?id=41093 -- Clang loses constexpr
