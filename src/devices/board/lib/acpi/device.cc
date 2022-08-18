@@ -712,7 +712,7 @@ zx::status<> Device::AddDevice(const char* name, cpp20::span<zx_device_prop_t> p
       .proto_id = ZX_PROTOCOL_ACPI,
       .fidl_protocol_offers = offers.data(),
       .fidl_protocol_offer_count = offers.size(),
-      .flags = flags | DEVICE_ADD_MUST_ISOLATE,
+      .flags = flags | DEVICE_ADD_MUST_ISOLATE | DEVICE_ADD_ALLOW_MULTI_COMPOSITE,
       .outgoing_dir_channel = outgoing->release(),
   };
 

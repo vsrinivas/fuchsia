@@ -96,7 +96,7 @@ zx_device_prop_t pci_device_props[] = {
   auto fidl_dev_unowned = fidl_dev.release();
 
   const zx_bind_inst_t pci_fragment_match[] = {
-      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
+      BI_ABORT_IF(NE, BIND_FIDL_PROTOCOL, ZX_FIDL_PROTOCOL_PCI),
       BI_ABORT_IF(NE, BIND_PCI_VID, device->vendor_id()),
       BI_ABORT_IF(NE, BIND_PCI_DID, device->device_id()),
       BI_ABORT_IF(NE, BIND_PCI_CLASS, device->class_id()),
@@ -156,7 +156,7 @@ zx_device_prop_t pci_device_props[] = {
   };
 
   char composite_name[ZX_DEVICE_NAME_MAX];
-  snprintf(composite_name, sizeof(composite_name), "pci-%s", device->config()->addr());
+  snprintf(composite_name, sizeof(composite_name), "pci-%s-fidl", device->config()->addr());
   status = fidl_dev_unowned->DdkAddComposite(composite_name, &composite_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "[%s] Failed to create pci fidl composite: %s", device->config()->addr(),
