@@ -13,7 +13,7 @@ use {
     std::{
         collections::HashMap,
         path::{Path, PathBuf},
-        sync::{Mutex, Once},
+        sync::Mutex,
         time::{Duration, Instant},
     },
     tempfile::NamedTempFile,
@@ -28,8 +28,6 @@ struct CacheItem {
 }
 
 type Cache = RwLock<HashMap<Option<PathBuf>, CacheItem>>;
-
-static INIT: Once = Once::new();
 
 lazy_static::lazy_static! {
     static ref ENV_FILE: Mutex<Option<PathBuf>> = Mutex::default();
@@ -55,10 +53,10 @@ impl TestEnv {
     async fn new(_guard: async_lock::MutexGuardArc<()>) -> Result<Self> {
         let env_file = NamedTempFile::new().context("tmp access failed")?;
         let user_file = NamedTempFile::new().context("tmp access failed")?;
-        Environment::init_env_file(env_file.path()).context("initializing env file")?;
+        Environment::init_env_file(env_file.path()).await.context("initializing env file")?;
 
         // Point the user config at a temporary file.
-        let mut env = Environment::load(env_file.path()).context("opening env file")?;
+        let mut env = Environment::load(env_file.path()).await.context("opening env file")?;
         env.set_user(Some(user_file.path()));
         env.save().await.context("saving env file")?;
 
@@ -101,16 +99,17 @@ impl Drop for TestEnv {
 
 /// Initialize the configuration. Only the first call in a process runtime takes effect, so users must
 /// call this early with the required values, such as in main() in the ffx binary.
-pub fn init(runtime: &[String], runtime_overrides: Option<String>, env: PathBuf) -> Result<()> {
-    let mut ret = Ok(());
-
-    // If it's already been initialize, just fail silently. This will allow a setup method to be
-    // called by unit tests over and over again without issue.
-    INIT.call_once(|| {
-        ret = init_impl(runtime, runtime_overrides, env);
-    });
-
-    ret
+pub async fn init(
+    runtime: &[String],
+    runtime_overrides: Option<String>,
+    env: PathBuf,
+) -> Result<()> {
+    // explode if we ever try to overwrite the global configuration
+    assert!(
+        init_impl(runtime, runtime_overrides, env).await?.is_none(),
+        "Tried to re-initialize the global configuration outside of a test!"
+    );
+    Ok(())
 }
 
 /// When running tests we usually just want to initialize a blank slate configuration, so
@@ -123,7 +122,7 @@ pub async fn test_init() -> Result<TestEnv> {
     let env = TestEnv::new(TEST_LOCK.lock_arc().await).await?;
 
     // force an overwrite of the configuration setup
-    init_impl(&[], None, env.env_file.path().to_owned())?;
+    init_impl(&[], None, env.env_file.path().to_owned()).await?;
     // force clearing the cache as well
     invalidate().await;
 
@@ -136,7 +135,13 @@ pub async fn invalidate() {
     CACHE.write().await.clear();
 }
 
-fn init_impl(runtime: &[String], runtime_overrides: Option<String>, env: PathBuf) -> Result<()> {
+/// Actual implementation of initializing the global environment. Returns the previously set env
+/// file, if there is one, or an error if something actionable went wrong.
+async fn init_impl(
+    runtime: &[String],
+    runtime_overrides: Option<String>,
+    env: PathBuf,
+) -> Result<Option<PathBuf>> {
     let mut populated_runtime = Value::Null;
     runtime.iter().chain(&runtime_overrides).try_for_each(|r| {
         if let Some(v) = populate_runtime_config(&Some(r.clone()))? {
@@ -153,10 +158,9 @@ fn init_impl(runtime: &[String], runtime_overrides: Option<String>, env: PathBuf
 
     if !env.is_file() {
         tracing::debug!("initializing environment {}", env.display());
-        Environment::init_env_file(&env)?;
+        Environment::init_env_file(&env).await?;
     }
-    ENV_FILE.lock().unwrap().replace(env);
-    Ok(())
+    Ok(ENV_FILE.lock().unwrap().replace(env))
 }
 
 fn is_cache_item_expired(item: &CacheItem, now: Instant) -> bool {
@@ -200,7 +204,7 @@ async fn load_config_with_instant(
                         "Tried to load from config cache with no environment configured.",
                     )?;
 
-                    let env = match Environment::load(&env_path) {
+                    let env = match Environment::load(&env_path).await {
                         Ok(env) => env,
                         Err(err) => {
                             tracing::error!(

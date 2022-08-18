@@ -166,7 +166,7 @@ impl<'a> ConfigQuery<'a> {
         let config = load_config(build_dir.as_deref()).await?;
         let mut write_guard = config.write().await;
         write_guard.set(key, level, value)?;
-        write_guard.save()
+        write_guard.save().await
     }
 
     /// Remove the value at the queried location.
@@ -176,7 +176,7 @@ impl<'a> ConfigQuery<'a> {
         let config = load_config(build_dir.as_deref()).await?;
         let mut write_guard = config.write().await;
         write_guard.remove(key, level)?;
-        write_guard.save()
+        write_guard.save().await
     }
 
     /// Add this value at the queried location as an array item, converting the location to an array
@@ -203,7 +203,7 @@ impl<'a> ConfigQuery<'a> {
             write_guard.set(key, level, value)?
         };
 
-        write_guard.save()
+        write_guard.save().await
     }
     /// Returns the build directory if this query is for a level that might include the build directory,
     /// and a build directory is configured or given (even if it's configured to default).

@@ -10,6 +10,7 @@ use {
     crate::ConfigLevel,
     anyhow::{bail, Context, Result},
     config_macros::include_default,
+    futures::{stream::FuturesUnordered, StreamExt},
     serde::de::DeserializeOwned,
     serde_json::{Map, Value},
     std::{
@@ -89,13 +90,13 @@ fn write_json<W: Write>(file: Option<W>, value: Option<&Value>) -> Result<()> {
 
 /// Atomically write to the file by creating a temporary file and passing it
 /// to the closure, and atomically rename it to the destination file.
-fn with_writer<F>(path: Option<&Path>, f: F) -> Result<()>
+async fn with_writer<F>(path: Option<&Path>, f: F) -> Result<()>
 where
     F: FnOnce(Option<BufWriter<&mut tempfile::NamedTempFile>>) -> Result<()>,
 {
     if let Some(path) = path {
         let path = Path::new(path);
-        let _lockfile = Lockfile::lock_for(path, std::time::Duration::from_secs(2)).map_err(|e| {
+        let _lockfile = Lockfile::lock_for(path, std::time::Duration::from_secs(2)).await.map_err(|e| {
             error!("Failed to create a lockfile for {path}. Check that {lockpath} doesn't exist and can be written to. Ownership information: {owner:#?}", path=path.display(), lockpath=e.lock_path.display(), owner=e.owner);
             e
         })?;
@@ -156,7 +157,7 @@ impl ConfigFile {
         nested_remove(&mut self.contents, key, &key_vec[1..])
     }
 
-    fn save(&mut self) -> Result<()> {
+    async fn save(&mut self) -> Result<()> {
         // FIXME(81502): There is a race between the ffx CLI and the daemon service
         // in updating the config. We can lose changes if both try to change the
         // config at the same time. We can reduce the rate of races by only writing
@@ -166,6 +167,7 @@ impl ConfigFile {
             with_writer(self.path.as_deref(), |writer| {
                 write_json(writer, Some(&Value::Object(self.contents.clone())))
             })
+            .await
         } else {
             Ok(())
         }
@@ -223,12 +225,16 @@ impl Config {
         Ok(())
     }
 
-    pub(crate) fn save(&mut self) -> Result<()> {
+    pub(crate) async fn save(&mut self) -> Result<()> {
         let files = [&mut self.global, &mut self.build, &mut self.user];
         // Try to save all files and only fail out if any of them fail afterwards (with the first error). This hopefully mitigates
         // any weird partial-save issues, though there's no way to eliminate them altogether (short of filesystem
         // transactions)
-        files.into_iter().filter_map(|file| file.as_mut()).map(ConfigFile::save).collect()
+        FuturesUnordered::from_iter(
+            files.into_iter().filter_map(|file| file.as_mut()).map(ConfigFile::save),
+        )
+        .fold(Ok(()), |res, i| async { res.and_then(|_| i) })
+        .await
     }
 
     pub fn get_level(&self, level: ConfigLevel) -> Option<&ConfigMap> {

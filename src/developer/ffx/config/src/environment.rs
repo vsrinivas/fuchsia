@@ -41,11 +41,11 @@ impl Environment {
         Self { path, ..Self::default() }
     }
 
-    pub fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
+    pub async fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
         let path = path.as_ref().to_owned();
 
         // Grab the lock because we're reading from the environment file.
-        let lockfile = Self::lock_env(&path)?;
+        let lockfile = Self::lock_env(&path).await?;
         Self::load_with_lock(lockfile, path)
     }
 
@@ -55,11 +55,11 @@ impl Environment {
     /// error is encountered while processing the files.
     ///
     /// Used to implement diagnostics for `ffx doctor`.
-    pub fn check_locks(
+    pub async fn check_locks(
         path: &Path,
     ) -> Result<Vec<(PathBuf, Result<PathBuf, LockfileCreateError>)>> {
         let path = path.to_owned();
-        let (lock_path, env) = match Self::lock_env(&path) {
+        let (lock_path, env) = match Self::lock_env(&path).await {
             Ok(lockfile) => {
                 (lockfile.path().to_owned(), Self::load_with_lock(lockfile, path.clone())?)
             }
@@ -69,15 +69,15 @@ impl Environment {
         let mut checked = vec![(path, Ok(lock_path))];
 
         if let Some(user) = env.files.user {
-            let res = Lockfile::lock_for(&user, Duration::from_secs(1));
+            let res = Lockfile::lock_for(&user, Duration::from_secs(1)).await;
             checked.push((user, res.map(|lock| lock.path().to_owned())));
         }
         if let Some(global) = env.files.global {
-            let res = Lockfile::lock_for(&global, Duration::from_secs(1));
+            let res = Lockfile::lock_for(&global, Duration::from_secs(1)).await;
             checked.push((global, res.map(|lock| lock.path().to_owned())));
         }
         for (_, build) in env.files.build.unwrap_or_default() {
-            let res = Lockfile::lock_for(&build, Duration::from_secs(1));
+            let res = Lockfile::lock_for(&build, Duration::from_secs(1)).await;
             checked.push((build, res.map(|lock| lock.path().to_owned())));
         }
 
@@ -93,7 +93,7 @@ impl Environment {
                 let mut tmp = tempfile::NamedTempFile::new_in(parent)?;
 
                 // Grab the lock because we're writing to the environment file.
-                let _e = Self::lock_env(path)?;
+                let _e = Self::lock_env(path).await?;
                 serde_json::to_writer_pretty(&mut tmp, &self.files)
                     .context("writing environment to disk")?;
 
@@ -117,8 +117,8 @@ impl Environment {
         Ok(Self { path: Some(path), files })
     }
 
-    fn lock_env(path: &Path) -> Result<Lockfile, LockfileCreateError> {
-        Lockfile::lock_for(path, Duration::from_secs(2)).map_err(|e| {
+    async fn lock_env(path: &Path) -> Result<Lockfile, LockfileCreateError> {
+        Lockfile::lock_for(path, Duration::from_secs(2)).await.map_err(|e| {
             error!("Failed to create a lockfile for environment file {path}. Check that {lockpath} doesn't exist and can be written to. Ownership information: {owner:#?}", path=path.display(), lockpath=e.lock_path.display(), owner=e.owner);
             e
         })
@@ -206,8 +206,8 @@ impl Environment {
         )
     }
 
-    pub fn init_env_file(path: &Path) -> Result<()> {
-        let _e = Self::lock_env(path)?;
+    pub async fn init_env_file(path: &Path) -> Result<()> {
+        let _e = Self::lock_env(path).await?;
         let mut f = OpenOptions::new()
             .read(true)
             .write(true)
@@ -307,7 +307,7 @@ mod test {
         tmp_path.flush().unwrap();
 
         // Load the environment back in, and make sure it's correct.
-        let env_load = Environment::load(tmp_path.path()).unwrap();
+        let env_load = Environment::load(tmp_path.path()).await.unwrap();
         assert_eq!(env, env_load.files);
 
         // Remove the file to prevent a spurious success
@@ -334,14 +334,17 @@ mod test {
 
         assert!(!env_path.is_file(), "Environment file shouldn't exist yet");
         Environment::init_env_file(&env_path)
+            .await
             .expect("Should be able to initialize the environment file");
-        let mut env = Environment::load(&env_path).expect("Should be able to load the environment");
+        let mut env =
+            Environment::load(&env_path).await.expect("Should be able to load the environment");
 
         env.check(&ConfigLevel::Build, Some(&build_dir_path))
             .await
             .expect("Setting build level environment to automatic path should work");
 
         if let Some(build_configs) = Environment::load(&env_path)
+            .await
             .expect("should be able to load the test-configured env-file.")
             .files
             .build
@@ -376,6 +379,7 @@ mod test {
             .expect("Setting build level environment to automatic path should work");
 
         if let Some(build_configs) = Environment::load(&env_path)
+            .await
             .expect("should be able to load the manually configured env-file.")
             .files
             .build

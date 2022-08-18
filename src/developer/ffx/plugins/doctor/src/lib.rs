@@ -800,7 +800,7 @@ async fn doctor_summary<W: Write>(
     if let Some(env_file) = ffx_config::env_file() {
         main_node = ledger.add_node("Config Lock Files", LedgerMode::Automatic)?;
 
-        for (file, locked) in ffx_config::environment::Environment::check_locks(&env_file)? {
+        for (file, locked) in ffx_config::environment::Environment::check_locks(&env_file).await? {
             let (outcome, description) = match locked {
                 Err(LockfileCreateError { error, lock_path, owner: None, .. }) if error.kind() == ErrorKind::AlreadyExists=> (
                     LedgerOutcome::Failure,

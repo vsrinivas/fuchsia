@@ -15,6 +15,7 @@ if (is_host) {
       "macro:config-macros",
       "//src/developer/ffx/lib/errors:lib",
       "//src/lib/analytics/rust:lib",
+      "//src/lib/fuchsia-async",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
       "//third_party/rust_crates:async-lock",

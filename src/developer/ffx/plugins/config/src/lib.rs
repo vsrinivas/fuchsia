@@ -121,7 +121,7 @@ async fn exec_env_set<W: Write + Sync>(
 
 async fn exec_env<W: Write + Sync>(env_command: &EnvCommand, mut writer: W) -> Result<()> {
     let file = env_file().ok_or(anyhow!("Could not find environment file"))?;
-    let mut env = Environment::load(&file)?;
+    let mut env = Environment::load(&file).await?;
     match &env_command.access {
         Some(a) => match a {
             EnvAccessCommand::Set(s) => exec_env_set(writer, &mut env, s).await,
@@ -163,7 +163,7 @@ mod test {
         let cmd =
             EnvSetCommand { file: "test.json".into(), level: ConfigLevel::User, build_dir: None };
         exec_env_set(writer, &mut env, &cmd).await?;
-        let result = Environment::load(&tmp_file)?;
+        let result = Environment::load(&tmp_file).await?;
         assert_eq!(cmd.file, result.get_user().unwrap());
         Ok(())
     }

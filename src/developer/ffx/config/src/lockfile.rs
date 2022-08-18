@@ -114,7 +114,7 @@ impl Lockfile {
     ///
     /// If unable to lock within the constraints, will return the error from the last attempt. It will
     /// try with an increasing sleep between attempts up to `timeout`.
-    pub fn lock(lock_path: &Path, timeout: Duration) -> Result<Self, LockfileCreateError> {
+    pub async fn lock(lock_path: &Path, timeout: Duration) -> Result<Self, LockfileCreateError> {
         let end_time = Instant::now() + timeout;
         let mut sleep_time = 10;
         loop {
@@ -123,7 +123,7 @@ impl Lockfile {
                 Ok(lockfile) => return Ok(lockfile),
                 Err(e) if Instant::now() > end_time => return Err(e),
                 _ => {
-                    std::thread::sleep(Duration::from_millis(sleep_time));
+                    fuchsia_async::Timer::new(Duration::from_millis(sleep_time)).await;
                     // next time, retry with a longer wait, but not exponential, and not
                     // longer than it'll take to finish out the timeout.
                     let max_wait = end_time
@@ -141,14 +141,14 @@ impl Lockfile {
     /// Creates a lockfile at `filename`.lock if possible, retrying until it succeeds or times out.
     ///
     /// See [`Lockfile::lock`] for more details.
-    pub fn lock_for(filename: &Path, timeout: Duration) -> Result<Self, LockfileCreateError> {
+    pub async fn lock_for(filename: &Path, timeout: Duration) -> Result<Self, LockfileCreateError> {
         let mut lock_path = filename.to_owned();
         let filename = lock_path.file_name().map_or(".lock".to_string(), |name| {
             format!("{filename}.lock", filename = name.to_string_lossy())
         });
 
         lock_path.set_file_name(&filename);
-        Self::lock(&lock_path, timeout)
+        Self::lock(&lock_path, timeout).await
     }
 
     /// Internal function used by both [`Self::unlock`] and [`Self::drop`]

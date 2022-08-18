@@ -143,7 +143,7 @@ where
 
 async fn check_config_files(level: &ConfigLevel, build_dir: Option<&Path>) -> Result<()> {
     let e = env_file().ok_or_else(|| anyhow!("Could not find environment file"))?;
-    let mut environment = Environment::load(&e)?;
+    let mut environment = Environment::load(&e).await?;
     environment.check(level, build_dir).await
 }
 
