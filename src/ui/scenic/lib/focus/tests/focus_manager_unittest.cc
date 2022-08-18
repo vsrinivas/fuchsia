@@ -492,6 +492,85 @@ TEST_F(FocusChainTest, RegisterBeforeSceneSetup_ShouldReturnEmptyFocusChain) {
   EXPECT_TRUE(last_received_chain_.empty());
 }
 
+// A (AutoFocus B)  A (AutoFocus B)
+// |                |
+// B       ->       C
+//                  |
+//                  B
+// In this case a View is inserted between A and B, where B is auto focused by A. Normally this
+// would cause focus to revert to A as its place in the ViewTree is disturbed, but since A has its
+// auto focus set to B focus get returned to B. We now have a situation where the focus chain has
+// changed, but focus has not. Observe listeners being updated/not updated accordingly.
+TEST_F(FocusChainTest, FocusChainChangedButNotFocus) {
+  // Create ViewRefs.
+  std::shared_ptr<const fuchsia::ui::views::ViewRef> view_ref_A;
+  std::shared_ptr<const fuchsia::ui::views::ViewRef> view_ref_B;
+  std::shared_ptr<const fuchsia::ui::views::ViewRef> view_ref_C;
+  {
+    auto [_, view_ref] = scenic::ViewRefPair::New();
+    view_ref_A = std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_ref));
+  }
+  {
+    auto [_, view_ref] = scenic::ViewRefPair::New();
+    view_ref_B = std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_ref));
+  }
+  {
+    auto [_, view_ref] = scenic::ViewRefPair::New();
+    view_ref_C = std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_ref));
+  }
+
+  const zx_koid_t koid_A = utils::ExtractKoid(*view_ref_A);
+  const zx_koid_t koid_B = utils::ExtractKoid(*view_ref_B);
+  const zx_koid_t koid_C = utils::ExtractKoid(*view_ref_C);
+
+  // Initialize focus manager.
+  int legacy_focus_change_count = 0;
+  FocusManager focus_manager(inspect::Node(), [&](auto...) { legacy_focus_change_count++; });
+  RegisterFocusListener(focus_manager);
+  fuchsia::ui::views::ViewRefFocusedPtr vrf;
+  focus_manager.RegisterViewRefFocused(koid_B, vrf.NewRequest());
+  int view_ref_focused_count = 0;
+  vrf->Watch([&view_ref_focused_count](auto) { view_ref_focused_count++; });
+  focus_manager.SetAutoFocus(koid_A, koid_B);
+  RunLoopUntilIdle();
+  EXPECT_EQ(num_focus_chains_received_, 1u);
+
+  // Scene 1.
+  auto snapshot = std::make_shared<view_tree::Snapshot>();
+  {
+    snapshot->root = koid_A;
+    auto& view_tree = snapshot->view_tree;
+    view_tree[koid_A] =
+        ViewNode{.parent = ZX_KOID_INVALID, .children = {koid_B}, .view_ref = view_ref_A};
+    view_tree[koid_B] = ViewNode{.parent = koid_A, .view_ref = view_ref_B};
+  }
+  focus_manager.OnNewViewTreeSnapshot(snapshot);
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(num_focus_chains_received_, 2u);
+  EXPECT_THAT(last_received_chain_, testing::ElementsAre(koid_A, koid_B));
+  EXPECT_EQ(legacy_focus_change_count, 1);
+  EXPECT_EQ(view_ref_focused_count, 1);
+
+  // Scene 2.
+  snapshot = std::make_shared<view_tree::Snapshot>();
+  {
+    snapshot->root = koid_A;
+    auto& view_tree = snapshot->view_tree;
+    view_tree[koid_A] =
+        ViewNode{.parent = ZX_KOID_INVALID, .children = {koid_C}, .view_ref = view_ref_A};
+    view_tree[koid_C] = ViewNode{.parent = koid_A, .children = {koid_B}, .view_ref = view_ref_C};
+    view_tree[koid_B] = ViewNode{.parent = koid_C, .view_ref = view_ref_B};
+  }
+  focus_manager.OnNewViewTreeSnapshot(snapshot);
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(num_focus_chains_received_, 3u);
+  EXPECT_THAT(last_received_chain_, testing::ElementsAre(koid_A, koid_C, koid_B));
+  EXPECT_EQ(legacy_focus_change_count, 1);
+  EXPECT_EQ(view_ref_focused_count, 1);
+}
+
 // Topology:
 //      A
 //    /   \

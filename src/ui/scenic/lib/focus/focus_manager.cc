@@ -132,6 +132,9 @@ void FocusManager::DispatchFocusChain() const {
 }
 
 void FocusManager::DispatchFocusEvents(zx_koid_t old_focus, zx_koid_t new_focus) {
+  if (old_focus == new_focus)
+    return;
+
   // Send over fuchsia.ui.scenic.SessionListener ("GFX").
   legacy_focus_listener_(old_focus, new_focus);
 
