@@ -5157,14 +5157,8 @@ void VmCowPages::RangeChangeUpdateLocked(uint64_t offset, uint64_t len, RangeCha
 // refcount is still >= 1.  This can be running concurrently with VmCowPages::fbl_recycle(), but
 // we know that ~VmCowPagesContainer won't run until after this call is over because the caller
 // holds a refcount tally on the container.
-bool VmCowPages::RemovePageForEviction(vm_page_t* page, uint64_t offset,
-                                       EvictionHintAction hint_action) {
+bool VmCowPages::RemovePageForEviction(vm_page_t* page, uint64_t offset) {
   Guard<CriticalMutex> guard{&lock_};
-
-  // Without a page source to bring the page back in we cannot even think about eviction.
-  if (!can_evict_locked()) {
-    return false;
-  }
 
   // Check this page is still a part of this VMO.
   const VmPageOrMarker* page_or_marker = page_list_.Lookup(offset);
@@ -5172,10 +5166,29 @@ bool VmCowPages::RemovePageForEviction(vm_page_t* page, uint64_t offset,
     return false;
   }
 
-  // Pinned pages could be in use by DMA so we cannot safely evict them.
-  if (page->object.pin_count != 0) {
+  // We shouldn't have been asked to evict a pinned page.
+  ASSERT(page->object.pin_count == 0);
+
+  // Ignore any hints, we were asked directly to evict.
+  return RemovePageForEvictionLocked(page, offset, EvictionHintAction::Ignore);
+}
+
+bool VmCowPages::RemovePageForEvictionLocked(vm_page_t* page, uint64_t offset,
+                                             EvictionHintAction hint_action) {
+  // Without a page source to bring the page back in we cannot even think about eviction.
+  if (!can_evict_locked()) {
     return false;
   }
+
+  // We can assume this page is in the VMO.
+#if (DEBUG_ASSERT_IMPLEMENTED)
+  {
+    const VmPageOrMarker* page_or_marker = page_list_.Lookup(offset);
+    DEBUG_ASSERT(page_or_marker);
+    DEBUG_ASSERT(page_or_marker->IsPage());
+    DEBUG_ASSERT(page_or_marker->Page() == page);
+  }
+#endif
 
   DEBUG_ASSERT(is_page_dirty_tracked(page));
 
@@ -5218,6 +5231,30 @@ bool VmCowPages::RemovePageForEviction(vm_page_t* page, uint64_t offset,
   VMO_FRUGAL_VALIDATION_ASSERT(DebugValidateVmoPageBorrowingLocked());
   // |page| is now owned by the caller.
   return true;
+}
+
+bool VmCowPages::ReclaimPage(vm_page_t* page, uint64_t offset, EvictionHintAction hint_action) {
+  Guard<CriticalMutex> guard{&lock_};
+
+  // Check this page is still a part of this VMO.
+  const VmPageOrMarker* page_or_marker = page_list_.Lookup(offset);
+  if (!page_or_marker || !page_or_marker->IsPage() || page_or_marker->Page() != page) {
+    return false;
+  }
+
+  // Pinned pages could be in use by DMA so we cannot safely reclaim them.
+  if (page->object.pin_count != 0) {
+    return false;
+  }
+
+  // See if we can reclaim by eviction.
+  if (can_evict_locked()) {
+    return RemovePageForEvictionLocked(page, offset, hint_action);
+  }
+  // No other reclamation strategies, so to avoid this page remaining in a reclamation list we
+  // simulate an access.
+  UpdateOnAccessLocked(page, VMM_PF_FLAG_SW_FAULT);
+  return false;
 }
 
 void VmCowPages::SwapPageLocked(uint64_t offset, vm_page_t* old_page, vm_page_t* new_page) {
@@ -6207,12 +6244,11 @@ VmCowPagesContainer::~VmCowPagesContainer() {
   }
 }
 
-bool VmCowPagesContainer::RemovePageForEviction(vm_page_t* page, uint64_t offset,
-                                                VmCowPages::EvictionHintAction hint_action) {
+bool VmCowPagesContainer::RemovePageForEviction(vm_page_t* page, uint64_t offset) {
   // While the caller must have a ref on VmCowPagesContainer, the caller doesn't need to have a ref
   // on VmCowPages, for RemovePageForEviction() in particular.
   DEBUG_ASSERT(ref_count_debug() >= 1);
-  return cow().RemovePageForEviction(page, offset, hint_action);
+  return cow().RemovePageForEviction(page, offset);
 }
 
 zx_status_t VmCowPagesContainer::ReplacePage(vm_page_t* before_page, uint64_t offset,

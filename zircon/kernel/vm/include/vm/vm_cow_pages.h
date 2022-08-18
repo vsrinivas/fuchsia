@@ -482,17 +482,19 @@ class VmCowPages final
     Ignore,
   };
 
-  // Asks the VMO to attempt to evict the specified page. This returns true if the page was
-  // actually from this VMO and was successfully evicted, at which point the caller now has
-  // ownership of the page. Otherwise eviction is allowed to fail for any reason, specifically
-  // if the page is considered in use, or the VMO has no way to recreate the page then eviction
-  // will fail. Although eviction may fail for any reason, if it does the caller is able to assume
-  // that either the page was not from this vmo, or that the page is not in any evictable page queue
-  // (such as the pager_backed_ queue).
+  // Asks the VMO to attempt to reclaim the specified page. This returns true if the page was both
+  // actually from this VMO, and was successfully reclaimed, at which point the caller now has
+  // ownership of the page. Although reclamation is allowed to fail for any reason there, are some
+  // guarantees provided
+  // 1. If the page was not from this VMO (or not at the specified offset) then nothing about the
+  //    page or this VMO will be modified.
+  // 2. If the page is from this VMO and offset (and was not reclaimed) then the page will have been
+  //    removed from any candidate reclamation lists (such as the DontNeed pager backed list).
+  // The effect of (2) is that the caller can assume in the case of reclamation failure it will not
+  // keep finding this page as a reclamation candidate and infinitely retry it.
+  //
   // |hint_action| indicates whether the |always_need| eviction hint should be respected or ignored.
-  // If this page is not evicted as a result of the hint, the caller can assume that the page has
-  // been moved out from the evictable page queue(s) into the active queue(s).
-  bool RemovePageForEviction(vm_page_t* page, uint64_t offset, EvictionHintAction hint_action);
+  bool ReclaimPage(vm_page_t* page, uint64_t offset, EvictionHintAction hint_action);
 
   // Swap an old page for a new page.  The old page must be at offset.  The new page must be in
   // ALLOC state.  On return, the old_page is owned by the caller.  Typically the caller will
@@ -1167,6 +1169,16 @@ class VmCowPages final
     return ReplacePageLocked(before_page, offset, with_loaned, after_page, page_request);
   }
 
+  // Internal helper for performing reclamation via eviction on pager backed VMOs.
+  // Assumes that the page is owned by this VMO at the specified offset.
+  bool RemovePageForEvictionLocked(vm_page_t* page, uint64_t offset, EvictionHintAction hint_action)
+      TA_REQ(lock_);
+
+  // Eviction wrapper that exists to be called from the VmCowPagesContainer. Unlike ReclaimPage this
+  // wrapper can assume it just needs to evict, and has no requirements on updating any reclamation
+  // lists.
+  bool RemovePageForEviction(vm_page_t* page, uint64_t offset);
+
   // magic value
   fbl::Canary<fbl::magic("VMCP")> canary_;
 
@@ -1401,8 +1413,7 @@ class VmCowPagesContainer : public fbl::RefCountedUpgradeable<VmCowPagesContaine
   // concurrent VmCowPages::fbl_recycle() on a different thread and despite VmCowPages refcount_
   // potentially being 0.  The VmCowPagesContainer ref held by the caller keeps the actual
   // VmCowPages object alive during this call.
-  bool RemovePageForEviction(vm_page_t* page, uint64_t offset,
-                             VmCowPages::EvictionHintAction hint_action);
+  bool RemovePageForEviction(vm_page_t* page, uint64_t offset);
 
   zx_status_t ReplacePage(vm_page_t* before_page, uint64_t offset, bool with_loaned,
                           vm_page_t** after_page, LazyPageRequest* page_request);

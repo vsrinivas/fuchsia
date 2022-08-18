@@ -241,10 +241,7 @@ zx_status_t PhysicalPageProvider::WaitOnEvent(Event* event) {
           }
 
           if (needs_evict) {
-            // We specify EvictionHintAction::Follow, but a page will never be both borrowed and
-            // ALWAYS_NEED, so Follow doesn't actually matter here.
-            bool evict_result = cow_container->RemovePageForEviction(
-                page, vmo_backlink.offset, VmCowPages::EvictionHintAction::Follow);
+            bool evict_result = cow_container->RemovePageForEviction(page, vmo_backlink.offset);
             if (!evict_result) {
               // We must have raced and this page has already become free, or is currently in a
               // stack ownership somewhere else on the way to becoming free. For the second case we

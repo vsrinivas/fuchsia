@@ -1478,8 +1478,8 @@ static bool vmo_eviction_hints_test() {
   EXPECT_EQ(0u, queue);
 
   // Evicting the page should fail.
-  ASSERT_FALSE(vmo->DebugGetCowPages()->RemovePageForEviction(
-      page, 0, VmCowPages::EvictionHintAction::Follow));
+  ASSERT_FALSE(
+      vmo->DebugGetCowPages()->ReclaimPage(page, 0, VmCowPages::EvictionHintAction::Follow));
 
   // Hint that the page is not needed again.
   ASSERT_OK(vmo->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::DontNeed));
@@ -1492,8 +1492,8 @@ static bool vmo_eviction_hints_test() {
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDontNeed(page));
 
   // We should still not be able to evict the page, the AlwaysNeed hint is sticky.
-  ASSERT_FALSE(vmo->DebugGetCowPages()->RemovePageForEviction(
-      page, 0, VmCowPages::EvictionHintAction::Follow));
+  ASSERT_FALSE(
+      vmo->DebugGetCowPages()->ReclaimPage(page, 0, VmCowPages::EvictionHintAction::Follow));
 
   // Accessing the page should move it out of the DontNeed queue.
   EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedDontNeed(page));
@@ -1512,12 +1512,12 @@ static bool vmo_eviction_hints_test() {
   EXPECT_EQ(0u, queue);
 
   // We should still not be able to evict the page, the AlwaysNeed hint is sticky.
-  ASSERT_FALSE(vmo->DebugGetCowPages()->RemovePageForEviction(
-      page, 0, VmCowPages::EvictionHintAction::Follow));
+  ASSERT_FALSE(
+      vmo->DebugGetCowPages()->ReclaimPage(page, 0, VmCowPages::EvictionHintAction::Follow));
 
   // We should be able to evict the page when told to override the hint.
-  ASSERT_TRUE(vmo->DebugGetCowPages()->RemovePageForEviction(
-      page, 0, VmCowPages::EvictionHintAction::Ignore));
+  ASSERT_TRUE(
+      vmo->DebugGetCowPages()->ReclaimPage(page, 0, VmCowPages::EvictionHintAction::Ignore));
 
   pmm_free_page(page);
 
@@ -1632,8 +1632,8 @@ static bool vmo_eviction_hints_clone_test() {
   EXPECT_EQ(0u, queue);
 
   // Evicting the page should fail.
-  ASSERT_FALSE(vmo->DebugGetCowPages()->RemovePageForEviction(
-      pages[0], 0, VmCowPages::EvictionHintAction::Follow));
+  ASSERT_FALSE(
+      vmo->DebugGetCowPages()->ReclaimPage(pages[0], 0, VmCowPages::EvictionHintAction::Follow));
 
   // Hinting should also work via a clone of a clone.
   fbl::RefPtr<VmObject> clone2;
@@ -1660,8 +1660,8 @@ static bool vmo_eviction_hints_clone_test() {
   EXPECT_EQ(0u, queue);
 
   // Evicting the page should fail.
-  ASSERT_FALSE(vmo->DebugGetCowPages()->RemovePageForEviction(
-      pages[0], 0, VmCowPages::EvictionHintAction::Follow));
+  ASSERT_FALSE(
+      vmo->DebugGetCowPages()->ReclaimPage(pages[0], 0, VmCowPages::EvictionHintAction::Follow));
 
   // Verify that hinting still works via the parent VMO.
   // Hint that the page is not needed again.
@@ -1754,18 +1754,18 @@ static bool vmo_eviction_test() {
   ASSERT_EQ(ZX_OK, status);
 
   // Shouldn't be able to evict pages from the wrong VMO.
-  ASSERT_FALSE(vmo->DebugGetCowPages()->RemovePageForEviction(
-      page2, 0, VmCowPages::EvictionHintAction::Follow));
-  ASSERT_FALSE(vmo2->DebugGetCowPages()->RemovePageForEviction(
-      page, 0, VmCowPages::EvictionHintAction::Follow));
+  ASSERT_FALSE(
+      vmo->DebugGetCowPages()->ReclaimPage(page2, 0, VmCowPages::EvictionHintAction::Follow));
+  ASSERT_FALSE(
+      vmo2->DebugGetCowPages()->ReclaimPage(page, 0, VmCowPages::EvictionHintAction::Follow));
 
-  // We stack-own loaned pages from RemovePageForEviction() to pmm_free_page().
+  // We stack-own loaned pages from ReclaimPage() to pmm_free_page().
   __UNINITIALIZED StackOwnedLoanedPagesInterval raii_interval;
 
   // Eviction should actually drop the number of committed pages.
   EXPECT_EQ(1u, vmo2->AttributedPages());
-  ASSERT_TRUE(vmo2->DebugGetCowPages()->RemovePageForEviction(
-      page2, 0, VmCowPages::EvictionHintAction::Follow));
+  ASSERT_TRUE(
+      vmo2->DebugGetCowPages()->ReclaimPage(page2, 0, VmCowPages::EvictionHintAction::Follow));
   EXPECT_EQ(0u, vmo2->AttributedPages());
   pmm_free_page(page2);
   EXPECT_GT(vmo2->EvictionEventCount(), 0u);
@@ -1773,8 +1773,8 @@ static bool vmo_eviction_test() {
   // Pinned pages should not be evictable.
   status = vmo->CommitRangePinned(0, PAGE_SIZE, false);
   EXPECT_EQ(ZX_OK, status);
-  ASSERT_FALSE(vmo->DebugGetCowPages()->RemovePageForEviction(
-      page, 0, VmCowPages::EvictionHintAction::Follow));
+  ASSERT_FALSE(
+      vmo->DebugGetCowPages()->ReclaimPage(page, 0, VmCowPages::EvictionHintAction::Follow));
   vmo->Unpin(0, PAGE_SIZE);
 
   END_TEST;
@@ -2293,12 +2293,12 @@ static bool vmo_attribution_evict_test() {
   uint64_t expected_gen_count = 2;
   EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, 1u));
 
-  // We stack-own loaned pages from RemovePageForEviction() to pmm_free_page().
+  // We stack-own loaned pages from ReclaimPage() to pmm_free_page().
   __UNINITIALIZED StackOwnedLoanedPagesInterval raii_interval;
 
   // Evicting the page should increment the generation count.
-  ASSERT_TRUE(vmo->DebugGetCowPages()->RemovePageForEviction(
-      page, 0, VmCowPages::EvictionHintAction::Follow));
+  ASSERT_TRUE(
+      vmo->DebugGetCowPages()->ReclaimPage(page, 0, VmCowPages::EvictionHintAction::Follow));
   pmm_free_page(page);
   ++expected_gen_count;
   EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count, 0u));
@@ -3118,8 +3118,8 @@ static bool vmo_dirty_pages_test() {
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
 
   // Should not be able to evict a dirty page.
-  ASSERT_FALSE(vmo->DebugGetCowPages()->RemovePageForEviction(
-      page, 0, VmCowPages::EvictionHintAction::Follow));
+  ASSERT_FALSE(
+      vmo->DebugGetCowPages()->ReclaimPage(page, 0, VmCowPages::EvictionHintAction::Follow));
 
   // Accessing the page again should not move the page out of the dirty queue.
   EXPECT_OK(vmo->GetPageBlocking(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr));
@@ -3149,8 +3149,8 @@ static bool vmo_dirty_pages_writeback_test() {
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
 
   // Should not be able to evict a dirty page.
-  ASSERT_FALSE(vmo->DebugGetCowPages()->RemovePageForEviction(
-      page, 0, VmCowPages::EvictionHintAction::Follow));
+  ASSERT_FALSE(
+      vmo->DebugGetCowPages()->ReclaimPage(page, 0, VmCowPages::EvictionHintAction::Follow));
 
   // Begin writeback on the page. This should still keep the page in the dirty queue.
   ASSERT_OK(vmo->WritebackBegin(0, PAGE_SIZE));
@@ -3158,8 +3158,8 @@ static bool vmo_dirty_pages_writeback_test() {
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
 
   // Should not be able to evict a dirty page.
-  ASSERT_FALSE(vmo->DebugGetCowPages()->RemovePageForEviction(
-      page, 0, VmCowPages::EvictionHintAction::Follow));
+  ASSERT_FALSE(
+      vmo->DebugGetCowPages()->ReclaimPage(page, 0, VmCowPages::EvictionHintAction::Follow));
 
   // Accessing the page should not move the page out of the dirty queue either.
   ASSERT_OK(vmo->GetPageBlocking(0, VMM_PF_FLAG_SW_FAULT, nullptr, nullptr, nullptr));
@@ -3167,8 +3167,8 @@ static bool vmo_dirty_pages_writeback_test() {
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
 
   // Should not be able to evict a dirty page.
-  ASSERT_FALSE(vmo->DebugGetCowPages()->RemovePageForEviction(
-      page, 0, VmCowPages::EvictionHintAction::Follow));
+  ASSERT_FALSE(
+      vmo->DebugGetCowPages()->ReclaimPage(page, 0, VmCowPages::EvictionHintAction::Follow));
 
   // End writeback on the page. This should finally move the page out of the dirty queue.
   ASSERT_OK(vmo->WritebackEnd(0, PAGE_SIZE));
@@ -3194,8 +3194,8 @@ static bool vmo_dirty_pages_writeback_test() {
   EXPECT_EQ(0u, queue);
 
   // We should now be able to evict the page.
-  ASSERT_TRUE(vmo->DebugGetCowPages()->RemovePageForEviction(
-      page, 0, VmCowPages::EvictionHintAction::Follow));
+  ASSERT_TRUE(
+      vmo->DebugGetCowPages()->ReclaimPage(page, 0, VmCowPages::EvictionHintAction::Follow));
 
   END_TEST;
 }
@@ -3226,8 +3226,8 @@ static bool vmo_dirty_pages_with_hints_test() {
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
 
   // Should not be able to evict a dirty page.
-  ASSERT_FALSE(vmo->DebugGetCowPages()->RemovePageForEviction(
-      page, 0, VmCowPages::EvictionHintAction::Follow));
+  ASSERT_FALSE(
+      vmo->DebugGetCowPages()->ReclaimPage(page, 0, VmCowPages::EvictionHintAction::Follow));
 
   // Hint AlwaysNeed on the page. It should remain in the dirty queue.
   ASSERT_OK(vmo->HintRange(0, PAGE_SIZE, VmObject::EvictionHint::AlwaysNeed));
@@ -3243,15 +3243,15 @@ static bool vmo_dirty_pages_with_hints_test() {
   EXPECT_EQ(0u, queue);
 
   // Eviction should fail still because we hinted AlwaysNeed previously.
-  ASSERT_FALSE(vmo->DebugGetCowPages()->RemovePageForEviction(
-      page, 0, VmCowPages::EvictionHintAction::Follow));
+  ASSERT_FALSE(
+      vmo->DebugGetCowPages()->ReclaimPage(page, 0, VmCowPages::EvictionHintAction::Follow));
   EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBacked(page, &queue));
   EXPECT_EQ(0u, queue);
 
   // Eviction should succeed if we ignore the hint.
-  ASSERT_TRUE(vmo->DebugGetCowPages()->RemovePageForEviction(
-      page, 0, VmCowPages::EvictionHintAction::Ignore));
+  ASSERT_TRUE(
+      vmo->DebugGetCowPages()->ReclaimPage(page, 0, VmCowPages::EvictionHintAction::Ignore));
 
   // Reset the vmo and retry some of the same actions as before, this time dirtying
   // the page *after* hinting.
@@ -3276,8 +3276,8 @@ static bool vmo_dirty_pages_with_hints_test() {
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
 
   // Should not be able to evict a dirty page.
-  ASSERT_FALSE(vmo->DebugGetCowPages()->RemovePageForEviction(
-      page, 0, VmCowPages::EvictionHintAction::Follow));
+  ASSERT_FALSE(
+      vmo->DebugGetCowPages()->ReclaimPage(page, 0, VmCowPages::EvictionHintAction::Follow));
 
   END_TEST;
 }
