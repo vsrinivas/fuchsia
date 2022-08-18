@@ -233,6 +233,7 @@ class PipeDeviceTest : public zxtest::Test {
         "sysmem-fidl");
 
     auto dut = std::make_unique<PipeDevice>(fake_root_.get(), std::move(acpi_client.value()));
+    ASSERT_OK(dut->ConnectToSysmem());
     ASSERT_OK(dut->Bind());
     dut_ = dut.release();
 

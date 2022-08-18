@@ -80,7 +80,13 @@ zx_status_t PipeDevice::Create(void* ctx, zx_device_t* device) {
     return acpi.status_value();
   }
   auto pipe_device = std::make_unique<goldfish::PipeDevice>(device, std::move(acpi.value()));
-  zx_status_t status = pipe_device->Bind();
+  zx_status_t status = pipe_device->ConnectToSysmem();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to connect to sysmem fidl: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  status = pipe_device->Bind();
   if (status != ZX_OK) {
     return status;
   }
@@ -115,15 +121,7 @@ zx_status_t PipeDevice::Create(void* ctx, zx_device_t* device) {
 }
 
 PipeDevice::PipeDevice(zx_device_t* parent, acpi::Client client)
-    : DeviceType(parent), acpi_fidl_(std::move(client)) {
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_sysmem::Sysmem>();
-  ZX_DEBUG_ASSERT(endpoints.is_ok());
-  zx_status_t status = device_connect_fragment_fidl_protocol(
-      parent, "sysmem-fidl", fidl::DiscoverableProtocolName<fuchsia_hardware_sysmem::Sysmem>,
-      endpoints->server.TakeChannel().release());
-  ZX_DEBUG_ASSERT(status == ZX_OK);
-  sysmem_ = fidl::BindSyncClient(std::move(endpoints->client));
-}
+    : DeviceType(parent), acpi_fidl_(std::move(client)) {}
 
 PipeDevice::~PipeDevice() {
   if (irq_.is_valid()) {
@@ -364,6 +362,21 @@ int PipeDevice::IrqHandler() {
   }
 
   return 0;
+}
+
+zx_status_t PipeDevice::ConnectToSysmem() {
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_sysmem::Sysmem>();
+  if (endpoints.is_error()) {
+    return endpoints.error_value();
+  }
+  zx_status_t status = device_connect_fragment_fidl_protocol(
+      parent(), "sysmem-fidl", fidl::DiscoverableProtocolName<fuchsia_hardware_sysmem::Sysmem>,
+      endpoints->server.TakeChannel().release());
+  if (status != ZX_OK) {
+    return status;
+  }
+  sysmem_ = fidl::BindSyncClient(std::move(endpoints->client));
+  return ZX_OK;
 }
 
 PipeDevice::Pipe::Pipe(zx_paddr_t paddr, zx::pmt pmt, zx::event pipe_event)

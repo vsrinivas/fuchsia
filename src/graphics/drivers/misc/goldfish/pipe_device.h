@@ -61,6 +61,9 @@ class PipeDevice : public DeviceType {
 
   int IrqHandler();
 
+  // Connect to the sysmem fidl protocol.
+  zx_status_t ConnectToSysmem();
+
  private:
   struct Pipe {
     Pipe(zx_paddr_t paddr, zx::pmt pmt, zx::event pipe_event);
