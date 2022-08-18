@@ -3,54 +3,23 @@
 # found in the LICENSE file.
 import("//build/images/args.gni")
 import("//build/images/custom_signing.gni")
+import("//build/images/paths.gni")
 
 if (bootfs_only) {
   # bootfs_only builds don't need installer images.
   group("installer_images") {
   }
 } else {
-  cgpt_path = "$root_build_dir/host-tools/cgpt"
-  fvm_path = "$root_build_dir/obj/build/images/fuchsia/fuchsia/fvm.sparse.blk"
-  zbi_path = "$root_build_dir/fuchsia.zbi"
-  zedboot_path = "$root_build_dir/zedboot.zbi"
-  recovery_installer_path = "$root_build_dir/obj/build/images/recovery/recovery-installer/recovery-installer.zbi"
-
   input_partition_labels = [
-    "//build/images/fuchsia:fuchsia.copy_zbi",
-    "//build/images/fuchsia:fuchsia.image_assembler",
-    "//build/images/zedboot:zedboot.copy_zbi",
-    "//build/images/recovery:recovery-installer.image_assembler",
+    labels.images,
+    recovery_label,
+    "//build/images/recovery",
+    "//build/images/flash",
   ]
-
-  input_partition_paths = [
-    cgpt_path,
-    fvm_path,
-    zbi_path,
-    zedboot_path,
-    recovery_installer_path,
-  ]
-
-  if (custom_signing_script != "" || use_vboot) {
-    zbi_signed_path = "$root_build_dir/fuchsia.zbi.signed"
-    zedboot_signed_path = "$root_build_dir/zedboot.zbi.signed"
-    recovery_installer_signed_path = "$root_build_dir/obj/build/images/recovery/recovery-installer/recovery-installer.zbi.signed"
-    input_partition_labels += [
-      "//build/images/fuchsia:fuchsia.copy_zbi_signed",
-      "//build/images/zedboot:zedboot.copy_zbi_signed",
-    ]
-
-    input_partition_paths += [
-      zbi_signed_path,
-      zedboot_signed_path,
-      recovery_installer_signed_path,
-    ]
-  }
 
   # To avoid a circular dependency, collect image-related metadata into a JSON file with the same
   # format as the one produced by //:images (which $target_name cannot depend on), but only for the
   # input partitions.
-  # TODO(fxbug.dev/91796): Have //build/images:default-images depend on installer_image and
-  # system_image to prevent this.
   input_images_json = "installer_images_json"
   input_images_json_file =
       get_label_info(":$input_images_json", "target_gen_dir") + "/images.json"
@@ -81,15 +50,24 @@ if (bootfs_only) {
     ]
 
     # this pulls in all the image dependencies we need.
-    deps = [
-      ":$input_images_json",
-      "//build/images/archive:paver-script",
-      "//tools/vboot_reference:cgpt_host",
+    deps = input_partition_labels + [
+             ":$input_images_json",
+             "//build/images/archive:paver-script",
+             "//tools/vboot_reference:cgpt_host",
+           ]
+
+    inputs = [
+      "$root_build_dir/host-tools/cgpt",
+      files.fvm_sparse,
+      files.final_zbi,
+      files.recovery_zbi,
+      files.installer_zbi,
+      input_images_json_file,
     ]
 
-    deps += input_partition_labels
-
-    inputs = input_partition_paths + [ input_images_json_file ]
+    if (defined(files.esp)) {
+      inputs += [ files.esp ]
+    }
 
     metadata = {
       images = [
