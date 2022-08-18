@@ -350,6 +350,17 @@ class VmPageList final {
     ForEveryPageInRange<NodeCheck::CleanupEmpty>(this, per_page_fn, start_offset, end_offset);
   }
 
+  // Similar to RemovePages but also takes a |per_gap_fn| callback to allow for iterating over any
+  // gaps encountered as well. This can be used when the intent is to modify the underlying pages
+  // and/or gaps, while checking any intermediate data structures to potentially free ones that are
+  // no longer needed.
+  template <typename P, typename G>
+  zx_status_t RemovePagesAndIterateGaps(P per_page_fn, G per_gap_fn, uint64_t start_offset,
+                                        uint64_t end_offset) {
+    return ForEveryPageAndGapInRange<NodeCheck::CleanupEmpty>(this, per_page_fn, per_gap_fn,
+                                                              start_offset, end_offset);
+  }
+
   // Returns true if there are no pages or markers in the page list.
   bool IsEmpty() const;
 
@@ -482,7 +493,8 @@ class VmPageList final {
     return ZX_OK;
   }
 
-  template <typename S, typename PAGE_FUNC, typename GAP_FUNC>
+  template <NodeCheck NODE_CHECK = NodeCheck::Skip, typename S, typename PAGE_FUNC,
+            typename GAP_FUNC>
   static zx_status_t ForEveryPageAndGapInRange(S self, PAGE_FUNC per_page_func,
                                                GAP_FUNC per_gap_func, uint64_t start_offset,
                                                uint64_t end_offset) {
@@ -504,7 +516,8 @@ class VmPageList final {
       return status;
     };
 
-    zx_status_t status = ForEveryPageInRange(self, per_page_wrapper_fn, start_offset, end_offset);
+    zx_status_t status =
+        ForEveryPageInRange<NODE_CHECK>(self, per_page_wrapper_fn, start_offset, end_offset);
     if (status != ZX_OK) {
       return status;
     }
