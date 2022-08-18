@@ -955,7 +955,7 @@ mod tests {
             ($test_fut:ident) => {
                 let $test_fut = async {
                     select! {
-                        () = client_fut => panic!("test client returned unexpectly"),
+                        () = client_fut => panic!("test client returned unexpectedly"),
                         r = client_proxy.watch_servers() => r,
                     }
                 };
