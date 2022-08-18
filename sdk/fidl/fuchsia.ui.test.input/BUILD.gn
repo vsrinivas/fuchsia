@@ -8,6 +8,7 @@ fidl("fuchsia.ui.test.input") {
   sdk_category = "partner"
 
   sources = [
+    "overview.fidl",
     "registry.fidl",
     "touch.fidl",
   ]

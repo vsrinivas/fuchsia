@@ -1,0 +1,30 @@
+[
+    {
+        "declaration": "(fuchsia.ui.test.scene/ControllerAttachClientViewRequest payload) -> (uint64 view_ref_koid)",
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.test.scene/Controller.AttachClientView"
+    },
+    {
+        "declaration": "(server_end:fuchsia.ui.observation.geometry/ViewTreeWatcher watcher) -> ()",
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.test.scene/Controller.RegisterViewTreeWatcher"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.test.scene/Controller"
+    },
+    {
+        "declaration": "fuchsia.ui.app/ViewProvider",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.scene/ControllerAttachClientViewRequest.view_provider"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.test.scene/ControllerAttachClientViewRequest",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.ui.test.scene"
+    }
+]

@@ -1,0 +1,43 @@
+[
+    {
+        "declaration": "(fuchsia.ui.test.input/RegistryRegisterTouchScreenRequest payload) -> ()",
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.test.input/Registry.RegisterTouchScreen"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.test.input/Registry"
+    },
+    {
+        "declaration": "server_end:fuchsia.ui.test.input/TouchScreen",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/RegistryRegisterTouchScreenRequest.device"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.test.input/RegistryRegisterTouchScreenRequest",
+        "resourceness": "resource"
+    },
+    {
+        "declaration": "(fuchsia.ui.test.input/TouchScreenSimulateTapRequest payload) -> ()",
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.test.input/TouchScreen.SimulateTap"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.test.input/TouchScreen"
+    },
+    {
+        "declaration": "fuchsia.math/Vec",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/TouchScreenSimulateTapRequest.tap_location"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.test.input/TouchScreenSimulateTapRequest"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.ui.test.input"
+    }
+]

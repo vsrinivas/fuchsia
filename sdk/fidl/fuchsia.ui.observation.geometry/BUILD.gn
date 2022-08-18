@@ -8,7 +8,10 @@ import("//tools/fidl/measure-tape/measure_tape.gni")
 fidl("fuchsia.ui.observation.geometry") {
   sdk_category = "partner"
 
-  sources = [ "watcher.fidl" ]
+  sources = [
+    "overview.fidl",
+    "watcher.fidl",
+  ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.math",
