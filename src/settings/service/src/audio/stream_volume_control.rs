@@ -57,7 +57,6 @@ impl Drop for StreamVolumeControl {
     }
 }
 
-// TODO(fxbug.dev/37777): Listen for volume changes from Volume Control.
 impl StreamVolumeControl {
     pub(crate) async fn create(
         id: ftrace::Id,
@@ -193,8 +192,6 @@ impl StreamVolumeControl {
 
         trace!(id, "setup listener");
 
-        // TODO(fxbug.dev/37777): Update |stored_stream| in StreamVolumeControl and send a
-        // notification when we receive an update.
         let (exit_tx, mut exit_rx) = futures::channel::mpsc::unbounded::<()>();
         let publisher_clone = self.publisher.clone();
         let mut volume_events = vol_control_proxy.take_event_stream();
