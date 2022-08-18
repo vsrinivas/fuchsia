@@ -191,8 +191,8 @@ class Imx227Device : public DeviceType,
   // Ranges between -20C and 80C
   fpromise::result<int32_t, zx_status_t> GetTemperature();
 
-  bool is_streaming_;
-  uint32_t current_mode_;
+  bool is_streaming_ = false;
+  uint32_t current_mode_ = 0;
 
   // Timing data
   fpromise::result<uint32_t, zx_status_t> GetLinesPerSecond();
