@@ -542,6 +542,7 @@ class VmCowPages final
   // Calls DebugValidatePageSplitsLocked on this and every parent in the chain, returning true if
   // all return true.  Also calls DebugValidateBacklinksLocked() on every node in the hierarchy.
   bool DebugValidatePageSplitsHierarchyLocked() const TA_REQ(lock_);
+  bool DebugValidateSupplyZeroOffsetLocked() const TA_REQ(lock_);
 
   // VMO_FRUGAL_VALIDATION
   bool DebugValidateVmoPageBorrowingLocked() const TA_REQ(lock_);

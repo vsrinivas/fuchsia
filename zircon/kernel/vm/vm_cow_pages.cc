@@ -1946,6 +1946,7 @@ zx_status_t VmCowPages::PrepareForWriteLocked(uint64_t offset, uint64_t len,
     DEBUG_ASSERT(status == ZX_OK);
 
     *dirty_len_out = dirty_len;
+    VMO_VALIDATION_ASSERT(DebugValidateSupplyZeroOffsetLocked());
     return ZX_OK;
   }
 
@@ -2095,6 +2096,8 @@ zx_status_t VmCowPages::PrepareForWriteLocked(uint64_t offset, uint64_t len,
   DEBUG_ASSERT(pages_to_dirty_len == 0 || start_offset + pages_to_dirty_len <= end_offset);
 
   *dirty_len_out = dirty_len;
+
+  VMO_VALIDATION_ASSERT(DebugValidateSupplyZeroOffsetLocked());
 
   // No pages need to transition to Dirty.
   if (pages_to_dirty_len == 0) {
@@ -3331,6 +3334,7 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
       start, end);
 
   VMO_VALIDATION_ASSERT(DebugValidatePageSplitsHierarchyLocked());
+  VMO_VALIDATION_ASSERT(DebugValidateSupplyZeroOffsetLocked());
   VMO_FRUGAL_VALIDATION_ASSERT(DebugValidateVmoPageBorrowingLocked());
   return status;
 }
@@ -4000,6 +4004,7 @@ zx_status_t VmCowPages::ResizeLocked(uint64_t s) {
   IncrementHierarchyGenerationCountLocked();
 
   VMO_VALIDATION_ASSERT(DebugValidatePageSplitsHierarchyLocked());
+  VMO_VALIDATION_ASSERT(DebugValidateSupplyZeroOffsetLocked());
   VMO_FRUGAL_VALIDATION_ASSERT(DebugValidateVmoPageBorrowingLocked());
   return ZX_OK;
 }
@@ -4551,6 +4556,7 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len, list_nod
           FreePagesLocked(&freed_list, /*freeing_owned_pages=*/true);
         }
       }
+      VMO_VALIDATION_ASSERT(DebugValidateSupplyZeroOffsetLocked());
     });
 
     // Install zero pages in gaps starting at supply_zero_offset_.
@@ -4617,6 +4623,7 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len, list_nod
 
   // We don't expect a failure from the traversal.
   DEBUG_ASSERT(status == ZX_OK);
+  VMO_VALIDATION_ASSERT(DebugValidateSupplyZeroOffsetLocked());
   return status;
 }
 
@@ -4648,6 +4655,8 @@ void VmCowPages::TryAdvanceSupplyZeroOffsetLocked(uint64_t start_offset, uint64_
     // This will also update awaiting_clean_zero_range_end_ if required.
     UpdateSupplyZeroOffsetLocked(new_zero_offset);
   }
+
+  VMO_VALIDATION_ASSERT(DebugValidateSupplyZeroOffsetLocked());
 }
 
 zx_status_t VmCowPages::EnumerateDirtyRangesLocked(uint64_t offset, uint64_t len,
@@ -4781,6 +4790,7 @@ zx_status_t VmCowPages::EnumerateDirtyRangesLocked(uint64_t offset, uint64_t len
     }
   }
 
+  VMO_VALIDATION_ASSERT(DebugValidateSupplyZeroOffsetLocked());
   return ZX_OK;
 }
 
@@ -4877,6 +4887,7 @@ zx_status_t VmCowPages::WritebackBeginLocked(uint64_t offset, uint64_t len) {
   // have their write permission removed, so this is a no-op for them.
   RangeChangeUpdateLocked(start_offset, end_offset - start_offset, RangeChangeOp::RemoveWrite);
 
+  VMO_VALIDATION_ASSERT(DebugValidateSupplyZeroOffsetLocked());
   return ZX_OK;
 }
 
@@ -4994,6 +5005,7 @@ zx_status_t VmCowPages::WritebackEndLocked(uint64_t offset, uint64_t len) {
     DEBUG_ASSERT(status == ZX_OK);
   }
 
+  VMO_VALIDATION_ASSERT(DebugValidateSupplyZeroOffsetLocked());
   return ZX_OK;
 }
 
@@ -5749,6 +5761,55 @@ bool VmCowPages::DebugValidateVmoPageBorrowingLocked() const {
     dprintf(INFO, "DebugValidateVmoPageBorrowingLocked() failing - slice: %d\n", is_slice_locked());
   }
   return result;
+}
+
+bool VmCowPages::DebugValidateSupplyZeroOffsetLocked() const {
+  if (supply_zero_offset_ == UINT64_MAX) {
+    return true;
+  }
+  if (!is_source_preserving_page_content_locked()) {
+    dprintf(INFO, "supply_zero_offset_=%zu for non pager backed vmo\n", supply_zero_offset_);
+    return false;
+  }
+  if (supply_zero_offset_ > size_) {
+    dprintf(INFO, "supply_zero_offset_=%zu larger than size=%zu\n", supply_zero_offset_, size_);
+    return false;
+  }
+  if (awaiting_clean_zero_range_end_ != 0 &&
+      supply_zero_offset_ >= awaiting_clean_zero_range_end_) {
+    dprintf(INFO, "supply_zero_offset_=%zu larger than awaiting_clean_zero_range_end_=%zu\n",
+            supply_zero_offset_, awaiting_clean_zero_range_end_);
+    return false;
+  }
+
+  zx_status_t status = page_list_.ForEveryPageInRange(
+      [supply_zero_offset = supply_zero_offset_](const VmPageOrMarker* p, uint64_t off) {
+        if (p->IsMarker()) {
+          dprintf(INFO, "found marker at offset %zu (supply_zero_offset_=%zu)\n", off,
+                  supply_zero_offset);
+          return ZX_ERR_BAD_STATE;
+        }
+        vm_page_t* page = p->Page();
+        if (!is_page_dirty_tracked(page)) {
+          dprintf(INFO, "page at offset %zu not dirty tracked (supply_zero_offset_=%zu)\n", off,
+                  supply_zero_offset);
+          return ZX_ERR_BAD_STATE;
+        }
+        if (is_page_clean(page)) {
+          dprintf(INFO, "page at offset %zu clean (supply_zero_offset_=%zu)\n", off,
+                  supply_zero_offset);
+          return ZX_ERR_BAD_STATE;
+        }
+        if (page->is_loaned()) {
+          dprintf(INFO, "page at offset %zu loaned (supply_zero_offset_=%zu)\n", off,
+                  supply_zero_offset);
+          return ZX_ERR_BAD_STATE;
+        }
+        return ZX_ERR_NEXT;
+      },
+      supply_zero_offset_, size_);
+
+  return status == ZX_OK;
 }
 
 bool VmCowPages::IsLockRangeValidLocked(uint64_t offset, uint64_t len) const {
