@@ -16,12 +16,16 @@
 
 #include <ddktl/device.h>
 
+#include "tas5720-inspect.h"
+
 namespace audio {
 
 class Tas5720 : public SimpleCodecServer {
  public:
   explicit Tas5720(zx_device_t* device, ddk::I2cChannel i2c)
-      : SimpleCodecServer(device), i2c_(std::move(i2c)) {}
+      : SimpleCodecServer(device),
+        inspect_reporter_(Tas5720Inspect(inspect(), "tas5720")),
+        i2c_(std::move(i2c)) {}
   virtual ~Tas5720() = default;
 
   // Implementation for SimpleCodecServer.
@@ -39,11 +43,21 @@ class Tas5720 : public SimpleCodecServer {
   GainFormat GetGainFormat() override;
   GainState GetGainState() override;
   void SetGainState(GainState state) override;
+  virtual bool PeriodicFaultPollingDisabledForTests() {
+    return false;  // Unit test can override to disable.
+  }
+  void PollFaults(bool is_periodic);  // Unit test can invoke this directly.
 
  private:
   static constexpr float kMaxGain = 24.f + 0.f;        // Max digital + analog.
   static constexpr float kMinGain = -(103.5f + 7.1f);  // Min digital + analog.
   static constexpr float kGainStep = .5f;
+
+  static constexpr zx::duration poll_interval_ = zx::sec(20);
+  bool codec_initialized_ = false;    // Set true on initialization success.
+  bool report_clock_faults_ = false;  // True only while codec is started.
+  void ScheduleFaultPolling();
+  Tas5720Inspect inspect_reporter_;
 
   bool ValidGain(float gain);
   virtual zx_status_t SetGain(float gain);  // virtual for unit testing.

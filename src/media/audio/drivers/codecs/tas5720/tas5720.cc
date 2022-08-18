@@ -4,6 +4,7 @@
 
 #include "tas5720.h"
 
+#include <lib/async/cpp/task.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/zx/time.h>
@@ -45,6 +46,7 @@ constexpr uint8_t kRegDigitalControl1     = 0x02;
 constexpr uint8_t kRegDigitalControl2     = 0x03;
 constexpr uint8_t kRegVolumeControl       = 0x04;
 constexpr uint8_t kRegAnalogControl       = 0x06;
+constexpr uint8_t kRegFaultCfgErrStatus   = 0x08;
 constexpr uint8_t kRegDigitalClipper2     = 0x10;
 constexpr uint8_t kRegDigitalClipper1     = 0x11;
 // clang-format on
@@ -106,6 +108,43 @@ zx_status_t Tas5720::SetRateAndFormat() {
   return WriteReg(kRegDigitalControl1, ((rate_ == 96000) ? 0x08 : 0) | 0x40 | (i2s_ ? 4 : 5));
 }
 
+void Tas5720::ScheduleFaultPolling() {
+  if (PeriodicFaultPollingDisabledForTests())
+    return;
+
+  async::PostDelayedTask(
+      dispatcher(), [this]() { PollFaults(/*is_periodic=*/true); }, poll_interval_);
+}
+
+void Tas5720::PollFaults(bool is_periodic) {
+  // NOTE:  we don't poll the GPIO pin for FAULT because there are some
+  // technical difficulties if the FAULT signal is shared between multiple
+  // codecs, as may be done in a multi-channel design.  Even if we polled it,
+  // we would have to be prepared for the idea that this particular codec
+  // has no fault even if we see FAULT driven active.  If the difficulties
+  // could be worked out, there would be a slight optimization possible
+  // to avoid any I2C operations if FAULT is inactive.
+
+  if (codec_initialized_) {
+    zx::time time_now = zx::clock::get_monotonic();
+    uint8_t error_mask = report_clock_faults_ ? 0x0F : 0x07;
+    uint8_t error_bits;
+    auto status = ReadReg(kRegFaultCfgErrStatus, &error_bits);
+    if (status != ZX_OK) {
+      zxlogf(INFO, "Poll I2C fault");
+      inspect_reporter_.ReportI2CError(time_now);
+    } else if (error_bits & error_mask) {
+      zxlogf(INFO, "Poll codec fault: %02X", error_bits & error_mask);
+      inspect_reporter_.ReportFault(time_now, error_bits & error_mask);
+    } else {
+      inspect_reporter_.ReportFaultFree(time_now);
+    }
+  }
+
+  if (is_periodic)
+    ScheduleFaultPolling();
+}
+
 zx_status_t Tas5720::Shutdown() { return Stop(); }
 
 zx_status_t Tas5720::Reinitialize() {
@@ -163,6 +202,8 @@ zx::status<DriverIds> Tas5720::Initialize() {
   if (status != ZX_OK) {
     return zx::error(status);
   }
+  codec_initialized_ = true;
+  ScheduleFaultPolling();
   return zx::ok(DriverIds{
       .vendor_id = PDEV_VID_TI,
       .device_id = PDEV_DID_TI_TAS5720,
@@ -197,13 +238,20 @@ Info Tas5720::GetInfo() {
 }
 
 zx_status_t Tas5720::Stop() {
+  PollFaults(/*is_periodic=*/false);  // Report any faults before stopping.
+
   uint8_t r;
   auto status = ReadReg(kRegPowerControl, &r);
   if (status != ZX_OK) {
     return status;
   }
   r = static_cast<uint8_t>(r & ~(0x01));  // SPK_SDZ enter shutdown.
-  return WriteReg(kRegPowerControl, r);
+  status = WriteReg(kRegPowerControl, r);
+  if (status != ZX_OK) {
+    return status;
+  }
+  report_clock_faults_ = false;  // Only if stop was successful.
+  return ZX_OK;
 }
 
 zx_status_t Tas5720::Start() {
@@ -213,7 +261,12 @@ zx_status_t Tas5720::Start() {
     return status;
   }
   r = static_cast<uint8_t>(r | 0x01);  // SPK_SDZ exit shutdown.
-  return WriteReg(kRegPowerControl, r);
+  status = WriteReg(kRegPowerControl, r);
+  if (status != ZX_OK) {
+    return status;
+  }
+  report_clock_faults_ = true;  // Only if start was successful.
+  return ZX_OK;
 }
 
 DaiSupportedFormats Tas5720::GetDaiFormats() { return kSupportedDaiFormats; }

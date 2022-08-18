@@ -19,11 +19,15 @@ fuchsia_driver("tas5720-driver") {
   output_name = "tas5720"
   defines = [ "_ALL_SOURCE" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
-  sources = [ "tas5720.cc" ]
+  sources = [
+    "tas5720-inspect.cc",
+    "tas5720.cc",
+  ]
   deps = [
     ":ti_tas5720-bind",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
+    "//sdk/lib/sys/inspect/cpp",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
@@ -49,6 +53,7 @@ test("tas5720-test-bin") {
   defines = [ "_ALL_SOURCE" ]
   output_name = "tas5720-test"
   sources = [
+    "tas5720-inspect.cc",
     "tas5720-test.cc",
     "tas5720.cc",
   ]
@@ -58,6 +63,8 @@ test("tas5720-test-bin") {
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp_mock",
     "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_cpp_wire",
+    "//sdk/lib/inspect/testing/cpp:zxtest",
+    "//sdk/lib/sys/inspect/cpp",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/testing/mock-ddk",

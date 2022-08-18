@@ -8,11 +8,13 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/ddk/metadata.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/mock-i2c/mock-i2c.h>
 #include <lib/simple-codec/simple-codec-client.h>
 #include <lib/simple-codec/simple-codec-helper.h>
 #include <lib/sync/completion.h>
 
+#include <sdk/lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <zxtest/zxtest.h>
 
 #include "src/devices/testing/mock-ddk/mock-device.h"
@@ -31,7 +33,7 @@ audio::DaiFormat GetDefaultDaiFormat() {
   };
 }
 
-struct Tas5720Test : public zxtest::Test {
+struct Tas5720Test : public inspect::InspectTestHelper, public zxtest::Test {
   void SetUp() override {
     // Reset by the TAS driver initialization.
     mock_i2c_.ExpectWrite({0x01})
@@ -79,6 +81,9 @@ struct Tas5720Codec : public Tas5720 {
   explicit Tas5720Codec(zx_device_t* parent, ddk::I2cChannel i2c)
       : Tas5720(parent, std::move(i2c)) {}
   codec_protocol_t GetProto() { return {&this->codec_protocol_ops_, this}; }
+  inspect::Inspector& inspect() { return Tas5720::inspect(); }
+  void PollFaults(bool is_periodic) { return Tas5720::PollFaults(is_periodic); }
+  bool PeriodicFaultPollingDisabledForTests() override { return true; }
 };
 
 TEST_F(Tas5720Test, CodecInitGood) {
@@ -91,6 +96,7 @@ TEST_F(Tas5720Test, CodecInitGood) {
   ASSERT_NOT_NULL(child_dev);
 
   // Shutdown.
+  mock_i2c_.ExpectWrite({0x08}).ExpectReadStop({0x00});
   mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});
 
   child_dev->ReleaseOp();
@@ -146,6 +152,7 @@ TEST_F(Tas5720Test, CodecGetInfo) {
   ASSERT_EQ(info->product_name.compare("TAS5720"), 0);
 
   // Shutdown.
+  mock_i2c_.ExpectWrite({0x08}).ExpectReadStop({0x00});
   mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});
 
   child_dev->ReleaseOp();
@@ -159,12 +166,16 @@ TEST_F(Tas5720Test, CodecReset) {
 
   // We complete all i2c mock setup before executing server methods in a different thread.
   // Reset by the call to Reset.
-  mock_i2c_.ExpectWrite({0x01})
+  mock_i2c_.ExpectWrite({0x08})
+      .ExpectReadStop({0x00})  // Poll for faults (part of reset).
+      .ExpectWrite({0x01})
       .ExpectReadStop({0xff})
       .ExpectWriteStop({0x01, 0xfe})  // Enter shutdown (part of reset).
       .ExpectWrite({0x01})
       .ExpectReadStop({0xfe})
       .ExpectWriteStop({0x01, 0xff})  // Exit shutdown (part of reset).
+      .ExpectWrite({0x08})
+      .ExpectReadStop({0x00})  // Poll for faults (part of stop).
       .ExpectWrite({0x01})
       .ExpectReadStop({0xff})
       .ExpectWriteStop({0x01, 0xfe})  // Enter shutdown (part of stop).
@@ -182,6 +193,7 @@ TEST_F(Tas5720Test, CodecReset) {
       .ExpectReadStop({0x80})
       .ExpectWriteStop({0x03, 0x90});  // Muted.
 
+  mock_i2c_.ExpectWrite({0x08}).ExpectReadStop({0x00});
   mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});  // Shutdown.
 
   ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas5720Codec>(fake_parent.get(), GetI2cClient()));
@@ -216,6 +228,7 @@ TEST_F(Tas5720Test, CodecBridgedMode) {
   { client.SetBridgedMode(false); }
 
   // Shutdown.
+  mock_i2c_.ExpectWrite({0x08}).ExpectReadStop({0x00});
   mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});
 
   child_dev->ReleaseOp();
@@ -251,6 +264,7 @@ TEST_F(Tas5720Test, CodecDaiFormat) {
   mock_i2c_.ExpectWrite({0x03}).ExpectReadStop({0xff});
   mock_i2c_.ExpectWriteStop({0x03, 0xfc});  // Set slot to 0.
 
+  mock_i2c_.ExpectWrite({0x08}).ExpectReadStop({0x00});
   mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});  // Shutdown.
 
   // Check getting DAI formats.
@@ -354,6 +368,7 @@ TEST_F(Tas5720Test, CodecGain) {
       .ExpectReadStop({0xff})
       .ExpectWriteStop({0x03, 0xef});  // Not muted.
 
+  mock_i2c_.ExpectWrite({0x08}).ExpectReadStop({0x00});
   mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});  // Shutdown.
 
   client.SetGainState({
@@ -394,6 +409,7 @@ TEST_F(Tas5720Test, CodecPlugState) {
   client.SetProtocol(&codec_proto);
 
   // Shutdown.
+  mock_i2c_.ExpectWrite({0x08}).ExpectReadStop({0x00});
   mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});
 
   child_dev->ReleaseOp();
@@ -445,10 +461,153 @@ TEST(Tas5720Test, InstanceCount) {
   ASSERT_NOT_NULL(child_dev);
 
   // Shutdown.
+  mock_i2c.ExpectWrite({0x08}).ExpectReadStop({0x00});
   mock_i2c.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});
 
   child_dev->ReleaseOp();
   mock_i2c.VerifyAndClear();
+}
+
+TEST_F(Tas5720Test, FaultNotSeen) {
+  auto fake_parent = MockDevice::FakeRootParent();
+  uint32_t instance_count = 0;
+  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
+
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas5720Codec>(fake_parent.get(), GetI2cClient()));
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<Tas5720Codec>();
+
+  mock_i2c_.ExpectWrite({0x08}).ExpectReadStop({0x00});
+  codec->PollFaults(/*periodic=*/false);
+
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(codec->inspect().DuplicateVmo()));
+  auto* fault_root = hierarchy().GetByPath({"tas5720"});
+  ASSERT_TRUE(fault_root);
+  auto& faults = fault_root->children();
+  ASSERT_EQ(faults.size(), 1);
+  ASSERT_NO_FATAL_FAILURE(
+      CheckProperty(faults[0].node(), "state", inspect::StringPropertyValue("No fault")));
+
+  // Shutdown.
+  mock_i2c_.ExpectWrite({0x08}).ExpectReadStop({0x00});
+  mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});
+
+  child_dev->ReleaseOp();
+  mock_i2c_.VerifyAndClear();
+}
+
+TEST_F(Tas5720Test, FaultPollI2CError) {
+  auto fake_parent = MockDevice::FakeRootParent();
+  uint32_t instance_count = 0;
+  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
+
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas5720Codec>(fake_parent.get(), GetI2cClient()));
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<Tas5720Codec>();
+
+  // Repeat I2C timeout 3 times.
+  mock_i2c_.ExpectWrite({0x08}).ExpectReadStop({0xFF}, ZX_ERR_TIMED_OUT);
+  mock_i2c_.ExpectWrite({0x08}).ExpectReadStop({0xFF}, ZX_ERR_TIMED_OUT);
+  mock_i2c_.ExpectWrite({0x08}).ExpectReadStop({0xFF}, ZX_ERR_TIMED_OUT);
+  codec->PollFaults(/*periodic=*/false);
+
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(codec->inspect().DuplicateVmo()));
+  auto* fault_root = hierarchy().GetByPath({"tas5720"});
+  ASSERT_TRUE(fault_root);
+  auto& faults = fault_root->children();
+  ASSERT_EQ(faults.size(), 1);
+  ASSERT_NO_FATAL_FAILURE(
+      CheckProperty(faults[0].node(), "state", inspect::StringPropertyValue("I2C error")));
+
+  // Shutdown.
+  mock_i2c_.ExpectWrite({0x08}).ExpectReadStop({0x00});
+  mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});
+
+  child_dev->ReleaseOp();
+  mock_i2c_.VerifyAndClear();
+}
+
+TEST_F(Tas5720Test, FaultPollClockFault) {
+  auto fake_parent = MockDevice::FakeRootParent();
+  uint32_t instance_count = 0;
+  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
+
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas5720Codec>(fake_parent.get(), GetI2cClient()));
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<Tas5720Codec>();
+
+  mock_i2c_.ExpectWrite({0x08}).ExpectReadStop({0x08});
+  codec->PollFaults(/*periodic=*/false);
+
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(codec->inspect().DuplicateVmo()));
+  auto* fault_root = hierarchy().GetByPath({"tas5720"});
+  ASSERT_TRUE(fault_root);
+  auto& faults = fault_root->children();
+  ASSERT_EQ(faults.size(), 1);
+  ASSERT_NO_FATAL_FAILURE(CheckProperty(faults[0].node(), "state",
+                                        inspect::StringPropertyValue("SAIF clock error, 08")));
+
+  // Shutdown.
+  mock_i2c_.ExpectWrite({0x08}).ExpectReadStop({0x00});
+  mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});
+
+  child_dev->ReleaseOp();
+  mock_i2c_.VerifyAndClear();
+}
+
+// Trigger 20 "events" -- ten faults, each of which then goes away.
+// This should result in the 10 most recent events being reported,
+// and the 10 oldest being dropped.  Don't bother verifying the
+// event details, just check the timestamps to verify that
+// the first half are dropped.
+TEST_F(Tas5720Test, FaultsAgeOut) {
+  auto fake_parent = MockDevice::FakeRootParent();
+  uint32_t instance_count = 0;
+  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
+
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas5720Codec>(fake_parent.get(), GetI2cClient()));
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<Tas5720Codec>();
+
+  zx_time_t time_threshold = 0;
+
+  for (int fault_count = 0; fault_count < 10; fault_count++) {
+    if (fault_count == 5)
+      time_threshold = zx_clock_get_monotonic();
+
+    // Detect fault
+    mock_i2c_.ExpectWrite({0x08}).ExpectReadStop({0x08});
+    codec->PollFaults(/*periodic=*/false);
+
+    // Fault goes away
+    mock_i2c_.ExpectWrite({0x08}).ExpectReadStop({0x00});
+    codec->PollFaults(/*periodic=*/false);
+  }
+
+  // We should have ten events seen, and all of them should be
+  // timestamped after time_threshold.
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(codec->inspect().DuplicateVmo()));
+  auto* fault_root = hierarchy().GetByPath({"tas5720"});
+  ASSERT_TRUE(fault_root);
+  auto& faults = fault_root->children();
+  ASSERT_EQ(faults.size(), 10);
+  for (int event_count = 0; event_count < 10; event_count++) {
+    const auto* first_seen_property =
+        faults[event_count].node().get_property<inspect::IntPropertyValue>("first_seen");
+    ASSERT_TRUE(first_seen_property);
+    ASSERT_GT(first_seen_property->value(), time_threshold);
+  }
+
+  // Shutdown.
+  mock_i2c_.ExpectWrite({0x08}).ExpectReadStop({0x00});
+  mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});
+
+  child_dev->ReleaseOp();
+  mock_i2c_.VerifyAndClear();
 }
 
 }  // namespace audio
