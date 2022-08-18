@@ -358,7 +358,7 @@ remote_cc_command=(
 
 if test "$dry_run" = 1
 then
-  echo "[$script: skipped]:" "${remote_cc_command[@]}"
+  msg "skipped: ${remote_cc_command[@]}"
   exit
 fi
 

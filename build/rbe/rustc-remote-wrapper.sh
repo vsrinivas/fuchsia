@@ -50,6 +50,7 @@ Options:
     effect, and is removed from the executed command.
   --verbose|-v: print debug information, including details about uploads.
   --dry-run: print remote execution command without executing (remote only).
+  --save-temps: preserve temporary files
 
   --project-root: location of source tree which also encompasses outputs
       and prebuilt tools, forwarded to --exec-root in the reclient tools.
@@ -105,6 +106,7 @@ local_only=0
 trace=0
 dry_run=0
 verbose=0
+save_temps=0
 compare=0
 project_root="$default_project_root"
 rewrapper_options=()
@@ -132,6 +134,7 @@ do
     --local) local_only=1 ;;
     --fsatrace) trace=1 ;;
     --verbose|-v) verbose=1 ;;
+    --save-temps) save_temps=1 ;;
     --compare) compare=1 ;;
     --check-determinism) check_determinism=1 ;;
     --project-root=*) project_root="$optarg" ;;
@@ -232,7 +235,7 @@ rust_lld_remote=()
 # Remove these temporary files on exit.
 cleanup_files=()
 function cleanup() {
-  rm -f "${cleanup_files[@]}"
+  test "$save_temps" != 0 || rm -f "${cleanup_files[@]}"
 }
 trap cleanup EXIT
 
