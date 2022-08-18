@@ -5,7 +5,6 @@
 #include "src/virtualization/lib/grpc/grpc_vsock_server.h"
 
 #include <lib/fdio/fd.h>
-#include <lib/fpromise/bridge.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
@@ -25,23 +24,19 @@ void GrpcVsockServerBuilder::AddListenPort(uint32_t vsock_port) {
   listeners_.push_back({vsock_port, server_->NewBinding()});
 }
 
-fpromise::promise<std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<Listener>>, zx_status_t>
+zx::status<std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<Listener>>>
 GrpcVsockServerBuilder::Build() {
   if (listeners_.size() > 1) {
     std::unordered_set<uint32_t> ports;
     for (auto& listener : listeners_) {
       if (!ports.insert(listener.port).second) {
-        return fpromise::make_result_promise<
-            std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<Listener>>, zx_status_t>(
-            fpromise::error(ZX_ERR_ALREADY_BOUND));
+        return zx::error(ZX_ERR_ALREADY_BOUND);
       }
     }
   }
 
   server_->SetServerImpl(builder_->BuildAndStart());
-  return fpromise::make_result_promise<
-      std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<Listener>>, zx_status_t>(
-      fpromise::ok(std::make_pair(std::move(server_), std::move(listeners_))));
+  return zx::ok(std::make_pair(std::move(server_), std::move(listeners_)));
 }
 
 // This method is registered as a FIDL callback for all of our vsock port

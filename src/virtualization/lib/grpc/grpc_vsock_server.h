@@ -8,7 +8,7 @@
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_handle.h>
-#include <lib/fpromise/promise.h>
+#include <lib/zx/status.h>
 
 #include <grpc++/grpc++.h>
 
@@ -62,9 +62,8 @@ class GrpcVsockServerBuilder {
   // requests on the sockets.
   //
   // It is safe to free the builder immediately after a call to |Build|.
-  fpromise::promise<
-      std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<::fuchsia::virtualization::Listener>>,
-      zx_status_t>
+  zx::status<
+      std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<::fuchsia::virtualization::Listener>>>
   Build();
 
  private:

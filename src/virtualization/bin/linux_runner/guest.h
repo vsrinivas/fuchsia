@@ -66,10 +66,9 @@ class Guest : public vm_tools::StartupListener::Service,
   void RetryContainerStartup() { CreateContainer(); }
 
  private:
-  fpromise::promise<> Start();
-  fpromise::promise<
-      std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<::fuchsia::virtualization::Listener>>,
-      zx_status_t>
+  zx::status<> Start();
+  zx::status<
+      std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<::fuchsia::virtualization::Listener>>>
   StartGrpcServer();
   void StartGuest(std::vector<fuchsia::virtualization::Listener> vsock_listeners);
   void MountExtrasPartition();

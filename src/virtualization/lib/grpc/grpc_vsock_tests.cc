@@ -59,23 +59,14 @@ TEST_F(GrpcVsockTest, Echo) {
   TestEchoServer server_impl;
   server_builder.AddListenPort(kTestServicePort);
   server_builder.RegisterService(&server_impl);
-  fpromise::result<std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<Listener>>, zx_status_t>
-      result_promise;
-  auto p = server_builder.Build().then(
-      [&result_promise](
-          fpromise::result<std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<Listener>>,
-                           zx_status_t>& r) mutable { result_promise = std::move(r); });
-  executor()->schedule_task(std::move(p));
-  RunLoopUntilIdle();
+  auto result = server_builder.Build();
 
   // Verify the server was started.
-  ASSERT_FALSE(result_promise.is_pending());
-  ASSERT_FALSE(result_promise.is_error());
-  ASSERT_TRUE(result_promise.is_ok());
-  auto result = result_promise.take_value();
+  ASSERT_FALSE(result.is_error());
+  ASSERT_TRUE(result.is_ok());
 
-  auto server = std::move(result.first);
-  auto listeners = std::move(result.second);
+  auto server = std::move(result->first);
+  auto listeners = std::move(result->second);
 
   ASSERT_TRUE(server != nullptr);
   ASSERT_EQ(listeners.size(), 1ul);

@@ -137,7 +137,10 @@ Guest::Guest(sys::ComponentContext* context, GuestConfig config, GuestInfoCallba
       config_(config),
       callback_(std::move(callback)),
       guest_manager_(std::move(guest_manager)) {
-  executor_.schedule_task(Start());
+  auto result = Start();
+  if (!result.is_ok()) {
+    FX_PLOGS(ERROR, result.status_value()) << "Failed to start guest";
+  }
 }
 
 Guest::~Guest() {
@@ -147,23 +150,18 @@ Guest::~Guest() {
   }
 }
 
-fpromise::promise<> Guest::Start() {
+zx::status<> Guest::Start() {
   TRACE_DURATION("linux_runner", "Guest::Start");
-  return StartGrpcServer()
-      .and_then(
-          [this](std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<Listener>>& args) mutable
-          -> fpromise::result<void, zx_status_t> {
-            grpc_server_ = std::move(args.first);
-            StartGuest(std::move(args.second));
-            return fpromise::ok();
-          })
-      .or_else([](const zx_status_t& status) {
-        FX_LOGS(ERROR) << "Failed to start guest: " << status;
-        return fpromise::ok();
-      });
+  auto result = StartGrpcServer();
+  if (!result.is_ok()) {
+    return result.take_error();
+  }
+  grpc_server_ = std::move(result->first);
+  StartGuest(std::move(result->second));
+  return zx::ok();
 }
 
-fpromise::promise<std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<Listener>>, zx_status_t>
+zx::status<std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<Listener>>>
 Guest::StartGrpcServer() {
   TRACE_DURATION("linux_runner", "Guest::StartGrpcServer");
   fuchsia::virtualization::HostVsockEndpointPtr socket_endpoint;

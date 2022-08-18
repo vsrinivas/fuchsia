@@ -639,18 +639,12 @@ zx_status_t TerminaEnclosedGuest::SetupVsockServices(zx::time deadline,
   builder.AddListenPort(kTerminaStartupListenerPort);
   builder.RegisterService(this);
 
-  std::vector<Listener> listeners;
-  executor_.schedule_task(builder.Build().and_then(
-      [this, &listeners](
-          std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<Listener>>& args) mutable {
-        server_ = std::move(args.first);
-        listeners = std::move(args.second);
-        return fpromise::ok();
-      }));
-  if (!RunLoopUntil([this] { return server_ != nullptr; }, deadline)) {
-    return ZX_ERR_TIMED_OUT;
+  auto result = builder.Build();
+  if (!result.is_ok()) {
+    return result.status_value();
   }
-
+  server_ = std::move(result->first);
+  std::vector<Listener> listeners = std::move(result->second);
   for (auto& listener : listeners) {
     guest_launch_info.config.mutable_vsock_listeners()->push_back(std::move(listener));
   }
