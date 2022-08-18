@@ -392,7 +392,7 @@ pub async fn handle_accessibility_view_registry_request_stream(
                 ..
             } => {
                 let mut scene_manager = scene_manager.lock().await;
-                let r = scene_manager.insert_a11y_view(a11y_view_token);
+                let r = scene_manager.insert_a11y_view(a11y_view_token).await;
 
                 let _ = match r {
                     Ok(mut result) => {

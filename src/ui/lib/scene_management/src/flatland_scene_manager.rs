@@ -283,7 +283,7 @@ impl SceneManager for FlatlandSceneManager {
         }
     }
 
-    fn insert_a11y_view(
+    async fn insert_a11y_view(
         &mut self,
         _a11y_view_holder_token: ui_views::ViewHolderToken,
     ) -> Result<ui_views::ViewHolderToken, Error> {

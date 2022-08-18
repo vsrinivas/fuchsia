@@ -43,22 +43,42 @@ using component_testing::Route;
 
 constexpr auto kViewProvider = "view-provider";
 
+std::vector<ui_testing::UITestRealm::Config> UIConfigurationsToTest() {
+  std::vector<ui_testing::UITestRealm::Config> configs;
+
+  // GFX x root presenter
+  {
+    ui_testing::UITestRealm::Config config;
+    config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER;
+    config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
+    configs.push_back(config);
+  }
+
+  // GFX x scene manager
+  {
+    ui_testing::UITestRealm::Config config;
+    config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER;
+    config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
+    configs.push_back(config);
+  }
+
+  return configs;
+}
+
 // This test fixture exercises the interactions between scenic, the scene owner,
 // and a client view with respect to focus.
 //
 // The test uses the following components: scenic, root presnter, and a local
 // mock component that provides a test client view.
-class FocusInputTest : public gtest::RealLoopFixture {
+class FocusInputTest : public gtest::RealLoopFixture,
+                       public testing::WithParamInterface<ui_testing::UITestRealm::Config> {
  protected:
   FocusInputTest() = default;
   ~FocusInputTest() override = default;
 
   void SetUp() override {
     FX_LOGS(INFO) << "Setting up test case";
-    ui_testing::UITestRealm::Config config;
-    config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER;
-    config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
-    ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(std::move(config));
+    ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(GetParam());
 
     // Build realm.
     FX_LOGS(INFO) << "Building realm";
@@ -100,10 +120,13 @@ class FocusInputTest : public gtest::RealLoopFixture {
   std::unique_ptr<ui_testing::TestView> test_view_;
 };
 
+INSTANTIATE_TEST_SUITE_P(FocusInputTestWithParams, FocusInputTest,
+                         ::testing::ValuesIn(UIConfigurationsToTest()));
+
 // This test exercises the focus contract with the scene owner: the view offered to the
 // scene owner will have focus transferred to it. The test itself offers such a view to
 // the scene owner (`test_view`).
-TEST_F(FocusInputTest, TestView_ReceivesFocusTransfer_FromSceneOwner) {
+TEST_P(FocusInputTest, TestView_ReceivesFocusTransfer_FromSceneOwner) {
   EXPECT_FALSE(ui_test_manager()->ClientViewIsFocused());
 
   // Create a test view, and attach to the scene.
@@ -118,7 +141,7 @@ TEST_F(FocusInputTest, TestView_ReceivesFocusTransfer_FromSceneOwner) {
 // It does not set up a scene; these "early" listeners should observe an empty focus chain.
 // NOTE. This test does not use test.focus.ResponseListener. There's not a client that listens to
 // ViewRefFocused.
-TEST_F(FocusInputTest, SimultaneousCallsTo_FocusChainListenerRegistry) {
+TEST_P(FocusInputTest, SimultaneousCallsTo_FocusChainListenerRegistry) {
   // This implements the FocusChainListener class. Its purpose is to test that focus events
   // are actually sent out to the listeners.
   class FocusChainListenerImpl : public fuchsia::ui::focus::FocusChainListener {

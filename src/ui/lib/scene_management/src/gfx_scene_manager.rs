@@ -20,13 +20,13 @@ use {
     fidl_fuchsia_ui_gfx as ui_gfx, fidl_fuchsia_ui_scenic as ui_scenic,
     fidl_fuchsia_ui_views as ui_views, fuchsia_async as fasync, fuchsia_scenic as scenic,
     fuchsia_scenic,
-    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
+    fuchsia_syslog::{fx_log_err, fx_log_warn},
     futures::channel::mpsc::unbounded,
     futures::channel::oneshot,
     futures::TryStreamExt,
     input_pipeline::Size,
     parking_lot::Mutex,
-    std::sync::{Arc, Weak},
+    std::sync::Arc,
 };
 
 pub type FocuserPtr = Arc<ui_views::FocuserProxy>;
@@ -138,10 +138,6 @@ pub struct GfxSceneManager {
     /// Holds the view holder [`scenic::EntityNode`] (if `set_root_view` has been called).
     client_root_view_holder_node: Option<scenic::EntityNode>,
 
-    /// Holds a duplicate ref to the view added in `set_root_view`.
-    /// We need this so that if the a11y view is inserted we'll re-focus this view afterwards.
-    client_root_view_ref: Option<ui_views::ViewRef>,
-
     /// Supports callers of fuchsia.ui.pointerinjector.configuration.setup.WatchViewport(), allowing
     /// each invocation to subscribe to changes in the viewport region.
     viewport_hanging_get: Arc<Mutex<InjectorViewportHangingGet>>,
@@ -197,15 +193,18 @@ impl SceneManager for GfxSceneManager {
                 Err(anyhow::anyhow!("Flatland token passed to GfxSceneManager.set_root_view"))
             }
         }?;
-        self.client_root_view_ref = match view_ref {
+
+        match view_ref {
             None => Err(anyhow::anyhow!("GfxSceneManager.set_root_view requires ViewRef")),
-            _ => Ok(view_ref),
-        }?;
+            Some(client_root_view_ref) => {
+                self.add_view(view_holder_token, Some("root".to_string()));
+                GfxSceneManager::request_present(&self.a11y_proxy_presentation_sender);
 
-        self.add_view(view_holder_token, Some("root".to_string()));
-        GfxSceneManager::request_present(&self.a11y_proxy_presentation_sender);
+                self.request_auto_focus(client_root_view_ref).await;
 
-        Ok(())
+                Ok(())
+            }
+        }
     }
 
     async fn set_root_view_deprecated(
@@ -224,9 +223,8 @@ impl SceneManager for GfxSceneManager {
         // - The first copy will be returned to the caller.
         // - The second copy will be stored, and used to re-focus the root view if insertion
         //   of the a11y view breaks the focus chain.
-        let viewref_dup = fuchsia_scenic::duplicate_view_ref(&viewref_pair.view_ref)?;
-        self.client_root_view_ref =
-            Some(fuchsia_scenic::duplicate_view_ref(&viewref_pair.view_ref)?);
+        let viewref_to_return = fuchsia_scenic::duplicate_view_ref(&viewref_pair.view_ref)?;
+        let view_ref_for_focuser = fuchsia_scenic::duplicate_view_ref(&viewref_pair.view_ref)?;
 
         view_provider.create_view_with_view_ref(
             token_pair.view_token.value,
@@ -237,7 +235,9 @@ impl SceneManager for GfxSceneManager {
         self.add_view(token_pair.view_holder_token, Some("root".to_string()));
         GfxSceneManager::request_present(&self.a11y_proxy_presentation_sender);
 
-        Ok(viewref_dup)
+        self.request_auto_focus(view_ref_for_focuser).await;
+
+        Ok(viewref_to_return)
     }
 
     fn request_focus(
@@ -276,7 +276,7 @@ impl SceneManager for GfxSceneManager {
     /// # Parameters
     /// - `a11y_view_ref`: The view ref of the a11y view.
     /// - `a11y_view_holder_token`: The token used to create the a11y view holder.
-    fn insert_a11y_view(
+    async fn insert_a11y_view(
         &mut self,
         a11y_view_holder_token: ui_views::ViewHolderToken,
     ) -> Result<ui_views::ViewHolderToken, Error> {
@@ -292,6 +292,9 @@ impl SceneManager for GfxSceneManager {
                     (self.display_metrics.height_in_pips(), self.display_metrics.width_in_pips())
                 }
             },
+            // View should not be focusable, to ensure that focus returns to the
+            // root if insertion of the a11y view breaks the scene connectivity.
+            false,
             None,
             None,
             None,
@@ -309,8 +312,6 @@ impl SceneManager for GfxSceneManager {
         // Save the proxy ViewRef so that we can observe when the view is attached to the scene.
         let proxy_token_pair = scenic::ViewTokenPair::new()?;
         let a11y_proxy_view_ref_pair = scenic::ViewRefPair::new()?;
-        let a11y_proxy_view_ref =
-            fuchsia_scenic::duplicate_view_ref(&a11y_proxy_view_ref_pair.view_ref)?;
         self.a11y_proxy_view = scenic::View::new3(
             self.a11y_proxy_session.clone(),
             proxy_token_pair.view_token,
@@ -326,25 +327,6 @@ impl SceneManager for GfxSceneManager {
 
         GfxSceneManager::request_present(&self.pointerinjector_presentation_sender);
         GfxSceneManager::request_present(&self.a11y_proxy_presentation_sender);
-
-        // If the root view was already set, inserting the a11y view will have broken the focus
-        // chain. In this case, we need to re-focus the root view.
-        let view_ref_installed = Arc::downgrade(&self.view_ref_installed);
-        let focuser = Arc::downgrade(&self.focuser);
-        if let Some(ref client_root_view_ref) = self.client_root_view_ref {
-            let client_root_view_ref_dup =
-                fuchsia_scenic::duplicate_view_ref(&client_root_view_ref)?;
-            fasync::Task::local(async move {
-                GfxSceneManager::focus_client_root_view(
-                    view_ref_installed,
-                    focuser,
-                    client_root_view_ref_dup,
-                    a11y_proxy_view_ref,
-                )
-                .await;
-            })
-            .detach();
-        }
 
         Ok(proxy_token_pair.view_holder_token)
     }
@@ -511,6 +493,9 @@ impl GfxSceneManager {
             &session,
             root_view_token_pair.view_holder_token,
             (display_metrics.width_in_pixels() as f32, display_metrics.height_in_pixels() as f32),
+            // View should not be focusable, to ensure that focus returns to the
+            // root if insertion of the a11y view breaks the scene connectivity.
+            false,
             None,
             None,
             None,
@@ -539,6 +524,9 @@ impl GfxSceneManager {
                 false => (display_metrics.width_in_pips(), display_metrics.height_in_pips()),
                 true => (display_metrics.height_in_pips(), display_metrics.width_in_pips()),
             },
+            // View should not be focusable, to ensure that focus returns to the
+            // root if insertion of the a11y view breaks the scene connectivity.
+            false,
             Some(display_metrics.pixels_per_pip()),
             Some(display_rotation as f32),
             Some(pointerinjector_translation),
@@ -568,6 +556,9 @@ impl GfxSceneManager {
                 false => (display_metrics.width_in_pips(), display_metrics.height_in_pips()),
                 true => (display_metrics.height_in_pips(), display_metrics.width_in_pips()),
             },
+            // View should not be focusable, to ensure that focus returns to the
+            // root if insertion of the a11y view breaks the scene connectivity.
+            false,
             None,
             None,
             None,
@@ -649,7 +640,6 @@ impl GfxSceneManager {
             a11y_proxy_session,
             a11y_proxy_presentation_sender: a11y_proxy_sender,
             client_root_view_holder_node: None,
-            client_root_view_ref: None,
             viewport_hanging_get,
             viewport_publisher: viewport_publisher,
             context_view_ref,
@@ -810,6 +800,7 @@ impl GfxSceneManager {
     /// # Parameters
     /// - `session`: The scenic session in which to create the view holder.
     /// - `dimensions`: The dimensions of the view's bounding box.
+    /// - `is_focusable`: Indicates whether the child view should be able to receive focus.
     /// - `view_holder_token`: The view holder token used to create the view holder.
     /// - `scale`, `rotation`, `translation`: Used to adjust the view holder's transform.
     /// - `name`: The debug name of the view holder.
@@ -817,6 +808,7 @@ impl GfxSceneManager {
         session: &scenic::SessionPtr,
         view_holder_token: ui_views::ViewHolderToken,
         dimensions: (f32, f32),
+        is_focusable: bool,
         scale: Option<f32>,
         rotation: Option<f32>,
         translation: Option<(f32, f32)>,
@@ -830,7 +822,7 @@ impl GfxSceneManager {
                 max: ui_gfx::Vec3 { x: dimensions.0, y: dimensions.1, z: 0.0 },
             },
             downward_input: true,
-            focus_change: true,
+            focus_change: is_focusable,
             inset_from_min: ui_gfx::Vec3 { x: 0.0, y: 0.0, z: 0.0 },
             inset_from_max: ui_gfx::Vec3 { x: 0.0, y: 0.0, z: 0.0 },
         };
@@ -869,6 +861,7 @@ impl GfxSceneManager {
                     (self.display_metrics.height_in_pips(), self.display_metrics.width_in_pips())
                 }
             },
+            true,
             None,
             None,
             None,
@@ -883,33 +876,23 @@ impl GfxSceneManager {
         self.client_root_view_holder_node = Some(view_holder_node);
     }
 
-    /// Sets focus on the root view if it exists.
-    async fn focus_client_root_view(
-        weak_view_ref_installed: Weak<ui_views::ViewRefInstalledProxy>,
-        weak_focuser: Weak<ui_views::FocuserProxy>,
-        mut client_root_view_ref: ui_views::ViewRef,
-        mut proxy_view_ref: ui_views::ViewRef,
-    ) {
-        if let Some(view_ref_installed) = weak_view_ref_installed.upgrade() {
-            let watch_result = view_ref_installed.watch(&mut proxy_view_ref).await;
-            match watch_result {
-                // Handle fidl::Errors.
-                Err(e) => fx_log_warn!("Failed with err: {}", e),
-                // Handle ui_views::ViewRefInstalledError.
-                Ok(Err(value)) => fx_log_warn!("Failed with err: {:?}", value),
-                Ok(_) => {
-                    // Now set focus on the view_ref.
-                    if let Some(focuser) = weak_focuser.upgrade() {
-                        let focus_result = focuser.request_focus(&mut client_root_view_ref).await;
-                        match focus_result {
-                            Ok(_) => fx_log_info!("Refocused client view"),
-                            Err(e) => fx_log_warn!("Failed with err: {:?}", e),
-                        }
-                    } else {
-                        fx_log_warn!("Failed to upgrade weak manager");
-                    }
-                }
-            }
+    /// Ensures that the specified view receives focus if the focus ever returns to the root.
+    ///
+    /// # Parameters
+    /// - `view_ref`: The ViewRef of the view to which the root view should automatically transfer
+    /// focus.
+    async fn request_auto_focus(&mut self, view_ref: ui_views::ViewRef) {
+        let auto_focus_result = self
+            .focuser
+            .set_auto_focus(ui_views::FocuserSetAutoFocusRequest {
+                view_ref: Some(view_ref),
+                ..ui_views::FocuserSetAutoFocusRequest::EMPTY
+            })
+            .await;
+        match auto_focus_result {
+            Err(e) => fx_log_warn!("Request focus failed with err: {}", e),
+            Ok(Err(value)) => fx_log_warn!("Request focus failed with err: {:?}", value),
+            Ok(_) => {}
         }
     }
 

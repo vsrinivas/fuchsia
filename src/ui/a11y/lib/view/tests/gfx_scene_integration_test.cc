@@ -217,7 +217,9 @@ TEST_P(ClientAttachesFirst, SceneReconnectedAndClientRefocused) {
   // Attach the client view.
   ui_test_manager_->InitializeScene();
   FX_LOGS(INFO) << "Waiting for client view to render";
-  RunLoopUntil([this] { return ui_test_manager_->ClientViewIsRendering(); });
+  RunLoopUntil([this] {
+    return ui_test_manager_->ClientViewIsRendering() && ui_test_manager_->ClientViewIsFocused();
+  });
 
   // Connect to the semantics manager service, which prompts a11y manager to
   // start.
@@ -232,7 +234,8 @@ TEST_P(ClientAttachesFirst, SceneReconnectedAndClientRefocused) {
   EXPECT_FALSE(ui_test_manager_->ViewIsRendering(a11y_view_registry_proxy_->a11y_view_ref_koid()));
 
   // Pass the a11y view request through to the scene owner, and wait until the
-  // a11y view and client view are both attached to the scene.
+  // a11y view and client view are both attached to the scene and the client
+  // view is re-focused.
   a11y_view_registry_proxy_->PassCreateRequestToSceneOwner();
   FX_LOGS(INFO) << "Waiting for a11y and client views to render";
   RunLoopUntil([this] {
@@ -283,10 +286,9 @@ TEST_F(A11yViewAttachesFirstTest, A11yViewAttachesFirst) {
   FX_LOGS(INFO) << "Waiting for a11y and client views to render";
   RunLoopUntil([this] {
     return ui_test_manager_->ClientViewIsRendering() &&
-           ui_test_manager_->ViewIsRendering(a11y_view_registry_proxy_->a11y_view_ref_koid());
+           ui_test_manager_->ViewIsRendering(a11y_view_registry_proxy_->a11y_view_ref_koid()) &&
+           ui_test_manager_->ClientViewIsFocused();
   });
-
-  // TODO(fxbug.dev/101085): Verify that client view is focused.
 }
 
 }  // namespace

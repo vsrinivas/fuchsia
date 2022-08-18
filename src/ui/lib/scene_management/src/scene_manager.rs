@@ -120,7 +120,7 @@ pub trait SceneManager: Send {
     /// # Errors
     /// Returns an error if the a11y view holder or proxy view could not be created or added to the
     /// scene.
-    fn insert_a11y_view(
+    async fn insert_a11y_view(
         &mut self,
         a11y_view_holder_token: ui_views::ViewHolderToken,
     ) -> Result<ui_views::ViewHolderToken, Error>;
