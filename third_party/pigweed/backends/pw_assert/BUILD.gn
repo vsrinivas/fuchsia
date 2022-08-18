@@ -1,0 +1,24 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build_overrides/pigweed.gni")
+
+config("backend_config") {
+  include_dirs = [ "public_overrides" ]
+  visibility = [ ":*" ]
+}
+
+source_set("pw_assert") {
+  public_configs = [ ":backend_config" ]
+  public = [ "public_overrides/pw_assert_backend/check_backend.h" ]
+  sources = [ "assert.cc" ]
+  deps = [ "$dir_pw_assert:facade" ]
+}
+
+# The assert backend deps that might cause circular dependencies, since pw_assert is so ubiquitous.
+# pw_assert backends must provide their own "impl" target that collects their actual dependencies.
+# The backend "impl" group may be empty if everything can go directly in the backend target without
+# causing circular dependencies.
+source_set("pw_assert.impl") {
+}
