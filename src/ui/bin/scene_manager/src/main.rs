@@ -26,6 +26,7 @@ use {
         ColorAdjustmentHandlerRequest, ColorAdjustmentHandlerRequestStream,
     },
     fidl_fuchsia_ui_composition as flatland, fidl_fuchsia_ui_display_color as color,
+    fidl_fuchsia_ui_focus::FocusChainProviderRequestStream,
     fidl_fuchsia_ui_input_config::FeaturesRequestStream as InputConfigFeaturesRequestStream,
     fidl_fuchsia_ui_policy::{
         DeviceListenerRegistryRequestStream as MediaButtonsListenerRegistryRequestStream,
@@ -59,6 +60,7 @@ enum ExposedServices {
     DisplayBacklight(DisplayBacklightRequestStream),
     FactoryResetCountdown(FactoryResetCountdownRequestStream),
     FactoryReset(FactoryResetDeviceRequestStream),
+    FocusChainProvider(FocusChainProviderRequestStream),
     InputConfigFeatures(InputConfigFeaturesRequestStream),
     InputDeviceRegistry(InputDeviceRegistryRequestStream),
     SceneManager(SceneManagerRequestStream),
@@ -91,6 +93,7 @@ async fn inner_main() -> Result<(), Error> {
         .add_fidl_service(ExposedServices::DisplayBacklight)
         .add_fidl_service(ExposedServices::FactoryResetCountdown)
         .add_fidl_service(ExposedServices::FactoryReset)
+        .add_fidl_service(ExposedServices::FocusChainProvider)
         .add_fidl_service(ExposedServices::InputConfigFeatures)
         .add_fidl_service(ExposedServices::InputDeviceRegistry)
         .add_fidl_service(ExposedServices::SceneManager)
@@ -225,6 +228,9 @@ async fn inner_main() -> Result<(), Error> {
         gfx_scene_manager
     };
 
+    let (focus_chain_publisher, focus_chain_stream_handler) =
+        focus_chain_provider::make_publisher_and_stream_handler();
+
     // Create a node under root to hang all input pipeline inspect data off of.
     let inspect_node =
         Rc::new(inspect::component::inspector().root().create_child("input_pipeline"));
@@ -241,6 +247,7 @@ async fn inner_main() -> Result<(), Error> {
         icu_data_loader,
         &inspect_node.clone(),
         display_ownership,
+        focus_chain_publisher,
     )
     .await
     {
@@ -272,6 +279,9 @@ async fn inner_main() -> Result<(), Error> {
                 handle_display_backlight_request_stream(request_stream, Arc::clone(&scene_manager)),
             )
             .detach(),
+            ExposedServices::FocusChainProvider(request_stream) => {
+                focus_chain_stream_handler.handle_request_stream(request_stream).detach();
+            }
             ExposedServices::SceneManager(request_stream) => {
                 fasync::Task::local(handle_scene_manager_request_stream(
                     request_stream,

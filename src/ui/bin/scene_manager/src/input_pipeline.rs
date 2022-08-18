@@ -12,7 +12,9 @@ use {
     fidl_fuchsia_ui_input_config::FeaturesRequestStream as InputConfigFeaturesRequestStream,
     fidl_fuchsia_ui_pointerinjector_configuration::SetupProxy,
     fidl_fuchsia_ui_policy::DeviceListenerRegistryRequestStream,
-    fidl_fuchsia_ui_shortcut as ui_shortcut, fuchsia_async as fasync,
+    fidl_fuchsia_ui_shortcut as ui_shortcut,
+    focus_chain_provider::FocusChainProviderPublisher,
+    fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_inspect as inspect,
     fuchsia_syslog::{fx_log_err, fx_log_warn},
@@ -47,6 +49,7 @@ use {
 /// - `input_device_registry_request_stream_receiver`: A receiving end of a MPSC channel for
 ///   `InputDeviceRegistry` messages.
 /// - `node`: The inspect node to insert individual inspect handler nodes into.
+/// - `focus_chain_publisher`: Forwards focus chain changes to downstream watchers.
 pub async fn handle_input(
     // If this is false, it means we're using the legacy Scenic Gfx API, instead of the
     // new Flatland API.
@@ -70,6 +73,7 @@ pub async fn handle_input(
     icu_data_loader: icu_data::Loader,
     node: &inspect::Node,
     display_ownership_event: zx::Event,
+    focus_chain_publisher: FocusChainProviderPublisher,
 ) -> Result<InputPipeline, Error> {
     let factory_reset_handler = FactoryResetHandler::new();
     let media_buttons_handler = MediaButtonsHandler::new();
@@ -88,6 +92,7 @@ pub async fn handle_input(
             display_ownership_event,
             factory_reset_handler.clone(),
             media_buttons_handler.clone(),
+            focus_chain_publisher,
         )
         .await,
     )
@@ -202,6 +207,7 @@ async fn build_input_pipeline_assembly(
     display_ownership_event: zx::Event,
     factory_reset_handler: Rc<FactoryResetHandler>,
     media_buttons_handler: Rc<MediaButtonsHandler>,
+    focus_chain_publisher: FocusChainProviderPublisher,
 ) -> InputPipelineAssembly {
     let mut assembly = InputPipelineAssembly::new();
     let (sender, mut receiver) = futures::channel::mpsc::channel(0);
@@ -278,7 +284,7 @@ async fn build_input_pipeline_assembly(
 
         // Forward focus.
         // This requires `fuchsia.ui.focus.FocusChainListenerRegistry`
-        assembly = assembly.add_focus_listener();
+        assembly = assembly.add_focus_listener(focus_chain_publisher);
     }
 
     {
