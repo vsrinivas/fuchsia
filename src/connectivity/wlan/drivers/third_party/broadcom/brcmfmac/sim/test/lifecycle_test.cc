@@ -88,6 +88,17 @@ TEST(LifecycleTest, StartWithSmeChannel) {
   auto [local, _remote] = make_channel();
   zx_handle_t test_mlme_channel = local.get();
 
+  // check that create iface fails when we don't provide role and mlme_channel
+  fidl::Arena create_fail_arena;
+  auto builder_create_fail =
+      fuchsia_wlan_wlanphyimpl::wire::WlanphyImplCreateIfaceRequest::Builder(create_fail_arena);
+  auto result_create_fail =
+      client_.sync().buffer(test_arena_)->CreateIface(builder_create_fail.Build());
+  EXPECT_TRUE(result_create_fail.ok());
+  ASSERT_TRUE(result_create_fail->is_error());
+  ASSERT_EQ(result_create_fail->error_value(), ZX_ERR_INVALID_ARGS);
+
+  // create iface successfully
   fidl::Arena create_arena;
   auto builder_create =
       fuchsia_wlan_wlanphyimpl::wire::WlanphyImplCreateIfaceRequest::Builder(create_arena);
@@ -98,6 +109,19 @@ TEST(LifecycleTest, StartWithSmeChannel) {
   ASSERT_FALSE(result_create->is_error());
   uint16_t iface_id = result_create->value()->iface_id();
   EXPECT_EQ(dev_mgr->DeviceCountByProtocolId(ZX_PROTOCOL_WLAN_FULLMAC_IMPL), 1u);
+
+  // check that creating another client interface fails with ZX_ERR_NO_RESOURCES
+  auto [local_again, _remote_again] = make_channel();
+  fidl::Arena create_arena_again;
+  auto builder_create_again =
+      fuchsia_wlan_wlanphyimpl::wire::WlanphyImplCreateIfaceRequest::Builder(create_arena_again);
+  builder_create_again.role(fuchsia_wlan_common::wire::WlanMacRole::kClient);
+  builder_create_again.mlme_channel(std::move(local_again));
+  auto result_create_again =
+      client_.sync().buffer(test_arena_)->CreateIface(builder_create_again.Build());
+  EXPECT_TRUE(result_create_again.ok());
+  ASSERT_TRUE(result_create_again->is_error());
+  ASSERT_EQ(result_create_again->error_value(), ZX_ERR_NO_RESOURCES);
 
   // Simulate start call from Fuchsia's generic wlanif-impl driver.
   auto iface = dev_mgr->FindLatestByProtocolId(ZX_PROTOCOL_WLAN_FULLMAC_IMPL);
@@ -116,6 +140,18 @@ TEST(LifecycleTest, StartWithSmeChannel) {
   status = iface_ops->start(ctx, &ifc_ops, &mlme_channel);
   EXPECT_EQ(status, ZX_ERR_ALREADY_BOUND);
   EXPECT_EQ(mlme_channel, ZX_HANDLE_INVALID);
+
+  // check that without specifying iface id, destroy iface fails
+  fidl::Arena destroy_fail_arena;
+  auto builder_destroy_fail =
+      fuchsia_wlan_wlanphyimpl::wire::WlanphyImplDestroyIfaceRequest::Builder(destroy_fail_arena);
+  auto result_destroy_fail =
+      client_.sync().buffer(test_arena_)->DestroyIface(builder_destroy_fail.Build());
+  EXPECT_TRUE(result_destroy_fail.ok());
+  ASSERT_TRUE(result_destroy_fail->is_error());
+  ASSERT_EQ(result_destroy_fail->error_value(), ZX_ERR_INVALID_ARGS);
+
+  // Now actually destroy the iface
   fidl::Arena destroy_arena;
   auto builder_destroy =
       fuchsia_wlan_wlanphyimpl::wire::WlanphyImplDestroyIfaceRequest::Builder(destroy_arena);

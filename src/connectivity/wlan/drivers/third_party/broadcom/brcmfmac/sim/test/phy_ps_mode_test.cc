@@ -76,6 +76,30 @@ zx_status_t PhyPsModeTest::SetPsModeInFirmware(const wlanphy_ps_mode_t* ps_mode)
   return brcmf_set_ps_mode(sim->drvr, ps_mode);
 }
 
+TEST_F(PhyPsModeTest, SetPsModeIncorrect) {
+  Init();
+  CreateInterface();
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLANPHY_IMPL), 1u);
+  EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLAN_FULLMAC_IMPL), 1u);
+
+  // Get the country code and verify that it is set to WW.
+  uint32_t fw_ps_mode;
+  GetPsModeFromFirmware(&fw_ps_mode);
+  ASSERT_EQ(fw_ps_mode, (uint32_t)PM_OFF);
+
+  // Set PS mode but without passing any PS mode to set and verify
+  // that it FAILS
+  fidl::Arena fidl_arena;
+  auto builder = fuchsia_wlan_wlanphyimpl::wire::WlanphyImplSetPsModeRequest::Builder(fidl_arena);
+  auto result = client_.sync().buffer(test_arena_)->SetPsMode(builder.Build());
+  EXPECT_TRUE(result.ok());
+  zx_status_t status = result->is_error() ? result->error_value() : ZX_OK;
+
+  ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
+
+  DeleteInterface();
+}
+
 // Test setting PS Mode to invalid and valid values.
 TEST_F(PhyPsModeTest, SetPsMode) {
   const auto valid_ps_mode = fuchsia_wlan_common::wire::PowerSaveType::kPsModeBalanced;
