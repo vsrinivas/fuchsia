@@ -415,3 +415,7 @@ protocol Device {
         requested_state uint8;
     }) -> (struct {}) error Status;
 };
+
+service Service {
+    device client_end:Device;
+};
