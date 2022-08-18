@@ -47,7 +47,7 @@ class MissingInputError(Exception):
         elif self.stamp:
             input = "verification file path"
         return_str = f"The {input} appears to be missing:\n{self.missing}\n"
-        if not self.is_tar:
+        if not (self.is_tar or self.stamp):
             return_str += (
                 f"Please consult with sdk-dev@fuchsia.dev to"
                 f" locate and resolve this missing golden file.\n")
