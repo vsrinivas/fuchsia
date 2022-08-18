@@ -727,20 +727,20 @@
                 },
                 {
                     // system-update-configurator is not present in all products.
-                    using_node: "/core/omaha-client-service",
+                    using_node: "/core/system-update-checker",
                     capability: "fuchsia.update.config.OptOut",
                     error: {
                         error: {
                             analyzer_model_error: {
                                 routing_error: {
                                     use_from_parent_not_found: {
-                                        moniker: "/core/omaha-client-service",
+                                        moniker: "/core/system-update-checker",
                                         capability_id: "fuchsia.update.config.OptOut",
                                     },
                                 },
                             },
                         },
-                        message: "A `use from parent` declaration was found at `/core/omaha-client-service` for `fuchsia.update.config.OptOut`, but no matching `offer` declaration was found in the parent",
+                        message: "A `use from parent` declaration was found at `/core/system-update-checker` for `fuchsia.update.config.OptOut`, but no matching `offer` declaration was found in the parent",
                     },
                 },
 

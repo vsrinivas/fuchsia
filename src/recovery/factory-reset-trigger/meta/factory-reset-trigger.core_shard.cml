@@ -22,7 +22,7 @@
         },
         {
             protocol: "fuchsia.update.channel.Provider",
-            from: "#omaha-client-service",
+            from: "#system-update-checker",
             to: "#factory-reset-trigger",
         },
         {

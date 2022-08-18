@@ -435,8 +435,8 @@
                 target_monikers: [
                     "/core/build-info",
                     "/core/feedback",
-                    "/core/omaha-client-service",
                     "/core/sshd-host",
+                    "/core/system-update-checker",
                     "/core/system-updater",
 
                     // TODO(fxbug.dev/91934): Once we can define test realms out of tree
@@ -648,7 +648,6 @@
                 "/core/appmgr",
                 "/core/audio_core",
                 "/core/network/netstack",
-                "/core/omaha-client-service",
                 "/core/setui_service",
                 "/core/sysmem_connector",
                 "/core/system-update-checker",
