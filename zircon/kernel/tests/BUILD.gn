@@ -106,6 +106,7 @@ if (toolchain_environment == "kernel") {
       "uart_tests.cc",
       "userboot_tests.cc",
       "variant_tests.cc",
+      "wait_queue_ordering_tests.cc",
     ]
     deps = [
       "//zircon/kernel/lib/arch",

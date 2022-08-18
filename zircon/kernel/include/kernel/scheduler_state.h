@@ -196,6 +196,7 @@ class SchedulerState {
 
   // Allow tests to modify our state.
   friend class LoadBalancerTest;
+  friend struct WaitQueueOrderingTests;
 
   // TODO(eieio): Remove these once all of the members accessed by Thread are
   // moved to accessors.

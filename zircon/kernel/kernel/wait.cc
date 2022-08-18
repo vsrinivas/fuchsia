@@ -105,9 +105,12 @@ Thread* WaitQueueCollection::Peek(zx_time_t signed_now) {
   // it, then there are no deadline threads in the collection, and the front of
   // the queue is the proper choice.
   Thread& front = threads_.front();
-  const uint64_t front_key = front.wait_queue_state().blocked_threads_tree_sort_key_;
+  auto IsFair = [](const Thread& t) -> bool {
+    const uint64_t key = t.wait_queue_state().blocked_threads_tree_sort_key_;
+    return (key & kFairThreadSortKeyBit) != 0;
+  };
 
-  if ((front_key & kFairThreadSortKeyBit) != 0) {
+  if (IsFair(front)) {
     // Front of the queue is a fair thread, which means that there are no
     // deadline threads in the queue.  This thread is our best choice.
     return &front;
@@ -121,14 +124,14 @@ Thread* WaitQueueCollection::Peek(zx_time_t signed_now) {
   // better to simply do the search every time?
   DEBUG_ASSERT(signed_now >= 0);
   const uint64_t now = static_cast<uint64_t>(signed_now);
-  if (front_key > now) {
+  if (front.wait_queue_state().blocked_threads_tree_sort_key_ > now) {
     return &front;
   }
 
   // Actually search the tree for the deadline thread with the smallest relative
   // deadline which is in the future relative to now.
   auto best_deadline = threads_.upper_bound({now, 0});
-  if (best_deadline.IsValid()) {
+  if (best_deadline.IsValid() && !IsFair(*best_deadline)) {
     return &*best_deadline;
   }
 
