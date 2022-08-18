@@ -51,10 +51,10 @@ static bool AllPagesMatch(VmObject* vmo, F pred, uint64_t offset, uint64_t len) 
   return status == ZX_OK ? pred_matches : false;
 }
 
-static bool PagesInAnyUnswappableQueue(VmObject* vmo, uint64_t offset, uint64_t len) {
+static bool PagesInAnyAnonymousQueue(VmObject* vmo, uint64_t offset, uint64_t len) {
   return AllPagesMatch(
-      vmo, [](const vm_page_t* p) { return pmm_page_queues()->DebugPageIsAnyUnswappable(p); },
-      offset, len);
+      vmo, [](const vm_page_t* p) { return pmm_page_queues()->DebugPageIsAnyAnonymous(p); }, offset,
+      len);
 }
 
 static bool PagesInWiredQueue(VmObject* vmo, uint64_t offset, uint64_t len) {
@@ -78,7 +78,7 @@ static bool vmo_commit_test() {
   ASSERT_EQ(ZX_OK, ret, "committing vm object\n");
   EXPECT_EQ(ROUNDUP_PAGE_SIZE(alloc_size), PAGE_SIZE * vmo->AttributedPages(),
             "committing vm object\n");
-  EXPECT_TRUE(PagesInAnyUnswappableQueue(vmo.get(), 0, alloc_size));
+  EXPECT_TRUE(PagesInAnyAnonymousQueue(vmo.get(), 0, alloc_size));
   END_TEST;
 }
 
@@ -119,7 +119,7 @@ static bool vmo_pin_test() {
     EXPECT_EQ(ZX_ERR_BAD_STATE, status, "decommitting pinned range\n");
 
     vmo->Unpin(PAGE_SIZE, 3 * PAGE_SIZE);
-    EXPECT_TRUE(PagesInAnyUnswappableQueue(vmo.get(), PAGE_SIZE, 3 * PAGE_SIZE));
+    EXPECT_TRUE(PagesInAnyAnonymousQueue(vmo.get(), PAGE_SIZE, 3 * PAGE_SIZE));
 
     status = vmo->DecommitRange(PAGE_SIZE, 3 * PAGE_SIZE);
     EXPECT_EQ(ZX_OK, status, "decommitting unpinned range\n");
@@ -190,7 +190,7 @@ static bool vmo_pin_contiguous_test() {
     }
 
     vmo->Unpin(PAGE_SIZE, 3 * PAGE_SIZE);
-    EXPECT_TRUE(PagesInAnyUnswappableQueue(vmo.get(), PAGE_SIZE, 3 * PAGE_SIZE));
+    EXPECT_TRUE(PagesInAnyAnonymousQueue(vmo.get(), PAGE_SIZE, 3 * PAGE_SIZE));
 
     status = vmo->DecommitRange(PAGE_SIZE, 3 * PAGE_SIZE);
     if (!is_loaning_enabled) {
@@ -250,7 +250,7 @@ static bool vmo_multiple_pin_test() {
 
     vmo->Unpin(0, alloc_size);
     EXPECT_TRUE(PagesInWiredQueue(vmo.get(), PAGE_SIZE, 4 * PAGE_SIZE));
-    EXPECT_TRUE(PagesInAnyUnswappableQueue(vmo.get(), 5 * PAGE_SIZE, alloc_size - 5 * PAGE_SIZE));
+    EXPECT_TRUE(PagesInAnyAnonymousQueue(vmo.get(), 5 * PAGE_SIZE, alloc_size - 5 * PAGE_SIZE));
     status = vmo->DecommitRange(PAGE_SIZE, 4 * PAGE_SIZE);
     EXPECT_EQ(ZX_ERR_BAD_STATE, status, "decommitting pinned range\n");
     status = vmo->DecommitRange(5 * PAGE_SIZE, alloc_size - 5 * PAGE_SIZE);
@@ -316,7 +316,7 @@ static bool vmo_multiple_pin_contiguous_test() {
 
     vmo->Unpin(0, alloc_size);
     EXPECT_TRUE(PagesInWiredQueue(vmo.get(), PAGE_SIZE, 4 * PAGE_SIZE));
-    EXPECT_TRUE(PagesInAnyUnswappableQueue(vmo.get(), 5 * PAGE_SIZE, alloc_size - 5 * PAGE_SIZE));
+    EXPECT_TRUE(PagesInAnyAnonymousQueue(vmo.get(), 5 * PAGE_SIZE, alloc_size - 5 * PAGE_SIZE));
     status = vmo->DecommitRange(PAGE_SIZE, 4 * PAGE_SIZE);
     if (!is_ppb_enabled) {
       EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, status, "decommitting pinned range\n");

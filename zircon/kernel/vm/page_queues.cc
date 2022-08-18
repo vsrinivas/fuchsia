@@ -770,15 +770,15 @@ void PageQueues::MoveToWired(vm_page_t* page) {
   MoveToQueueLocked(page, PageQueueWired);
 }
 
-void PageQueues::SetUnswappable(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
+void PageQueues::SetAnonymous(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
   Guard<CriticalMutex> guard{&lock_};
   DEBUG_ASSERT(object);
-  SetQueueBacklinkLocked(page, object, page_offset, PageQueueUnswappable);
+  SetQueueBacklinkLocked(page, object, page_offset, PageQueueAnonymous);
 }
 
-void PageQueues::MoveToUnswappable(vm_page_t* page) {
+void PageQueues::MoveToAnonymous(vm_page_t* page) {
   Guard<CriticalMutex> guard{&lock_};
-  MoveToQueueLocked(page, PageQueueUnswappable);
+  MoveToQueueLocked(page, PageQueueAnonymous);
 }
 
 void PageQueues::SetPagerBacked(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
@@ -808,14 +808,14 @@ void PageQueues::MoveToPagerBackedDirty(vm_page_t* page) {
   MoveToQueueLocked(page, PageQueuePagerBackedDirty);
 }
 
-void PageQueues::SetUnswappableZeroFork(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
+void PageQueues::SetAnonymousZeroFork(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
   Guard<CriticalMutex> guard{&lock_};
-  SetQueueBacklinkLocked(page, object, page_offset, PageQueueUnswappableZeroFork);
+  SetQueueBacklinkLocked(page, object, page_offset, PageQueueAnonymousZeroFork);
 }
 
-void PageQueues::MoveToUnswappableZeroFork(vm_page_t* page) {
+void PageQueues::MoveToAnonymousZeroFork(vm_page_t* page) {
   Guard<CriticalMutex> guard{&lock_};
-  MoveToQueueLocked(page, PageQueueUnswappableZeroFork);
+  MoveToQueueLocked(page, PageQueueAnonymousZeroFork);
 }
 
 void PageQueues::ChangeObjectOffset(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
@@ -958,10 +958,10 @@ PageQueues::Counts PageQueues::QueueCounts() const {
   }
   counts.pager_backed_dont_need =
       page_queue_counts_[PageQueuePagerBackedDontNeed].load(ktl::memory_order_relaxed);
-  counts.unswappable = page_queue_counts_[PageQueueUnswappable].load(ktl::memory_order_relaxed);
+  counts.anonymous = page_queue_counts_[PageQueueAnonymous].load(ktl::memory_order_relaxed);
   counts.wired = page_queue_counts_[PageQueueWired].load(ktl::memory_order_relaxed);
-  counts.unswappable_zero_fork =
-      page_queue_counts_[PageQueueUnswappableZeroFork].load(ktl::memory_order_relaxed);
+  counts.anonymous_zero_fork =
+      page_queue_counts_[PageQueueAnonymousZeroFork].load(ktl::memory_order_relaxed);
   return counts;
 }
 
@@ -986,28 +986,28 @@ bool PageQueues::DebugPageIsPagerBackedDirty(const vm_page_t* page) const {
          PageQueuePagerBackedDirty;
 }
 
-bool PageQueues::DebugPageIsUnswappable(const vm_page_t* page) const {
-  return page->object.get_page_queue_ref().load(ktl::memory_order_relaxed) == PageQueueUnswappable;
+bool PageQueues::DebugPageIsAnonymous(const vm_page_t* page) const {
+  return page->object.get_page_queue_ref().load(ktl::memory_order_relaxed) == PageQueueAnonymous;
 }
 
 bool PageQueues::DebugPageIsWired(const vm_page_t* page) const {
   return page->object.get_page_queue_ref().load(ktl::memory_order_relaxed) == PageQueueWired;
 }
 
-bool PageQueues::DebugPageIsUnswappableZeroFork(const vm_page_t* page) const {
+bool PageQueues::DebugPageIsAnonymousZeroFork(const vm_page_t* page) const {
   return page->object.get_page_queue_ref().load(ktl::memory_order_relaxed) ==
-         PageQueueUnswappableZeroFork;
+         PageQueueAnonymousZeroFork;
 }
 
-bool PageQueues::DebugPageIsAnyUnswappable(const vm_page_t* page) const {
-  return DebugPageIsUnswappable(page) || DebugPageIsUnswappableZeroFork(page);
+bool PageQueues::DebugPageIsAnyAnonymous(const vm_page_t* page) const {
+  return DebugPageIsAnonymous(page) || DebugPageIsAnonymousZeroFork(page);
 }
 
-ktl::optional<PageQueues::VmoBacklink> PageQueues::PopUnswappableZeroFork() {
+ktl::optional<PageQueues::VmoBacklink> PageQueues::PopAnonymousZeroFork() {
   Guard<CriticalMutex> guard{&lock_};
 
   vm_page_t* page =
-      list_peek_tail_type(&page_queues_[PageQueueUnswappableZeroFork], vm_page_t, queue_node);
+      list_peek_tail_type(&page_queues_[PageQueueAnonymousZeroFork], vm_page_t, queue_node);
   if (!page) {
     return ktl::nullopt;
   }
@@ -1015,7 +1015,7 @@ ktl::optional<PageQueues::VmoBacklink> PageQueues::PopUnswappableZeroFork() {
   VmCowPages* cow = reinterpret_cast<VmCowPages*>(page->object.get_object());
   uint64_t page_offset = page->object.get_page_offset();
   DEBUG_ASSERT(cow);
-  MoveToQueueLocked(page, PageQueueUnswappable);
+  MoveToQueueLocked(page, PageQueueAnonymous);
 
   // We may be racing with destruction of VMO. As we currently hold our lock we know that our
   // back pointer is correct in so far as the VmCowPages has not yet had completed running its

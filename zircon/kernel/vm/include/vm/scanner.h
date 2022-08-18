@@ -23,7 +23,7 @@ void scanner_push_disable_count();
 void scanner_pop_disable_count();
 
 // Attempts to scan for, and dedupe, zero pages. Page candidates are pulled from the
-// unswappable_zero_fork page queue. It will consider up to `limit` candidates, and return the
+// anonymous_zero_fork page queue. It will consider up to `limit` candidates, and return the
 // number of pages actually deduped.
 // This is expected to be used internally by the scanner thread, but is exposed for testing,
 // debugging and other code to use.

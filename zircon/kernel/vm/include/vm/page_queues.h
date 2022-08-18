@@ -107,20 +107,20 @@ class PageQueues {
   // removing the page completely from the queues.
 
   void SetWired(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
-  void SetUnswappable(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
+  void SetAnonymous(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
   void SetPagerBacked(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
   void SetPagerBackedDirty(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
-  void SetUnswappableZeroFork(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
+  void SetAnonymousZeroFork(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
 
   // All Move operations change the queue that a page is considered to be in, but do not change the
   // object or offset backlink information. The page must currently be in a valid page queue.
 
   void MoveToWired(vm_page_t* page);
-  void MoveToUnswappable(vm_page_t* page);
+  void MoveToAnonymous(vm_page_t* page);
   void MoveToPagerBacked(vm_page_t* page);
   void MoveToPagerBackedDontNeed(vm_page_t* page);
   void MoveToPagerBackedDirty(vm_page_t* page);
-  void MoveToUnswappableZeroFork(vm_page_t* page);
+  void MoveToAnonymousZeroFork(vm_page_t* page);
 
   // Changes the backlink information for a page and should only be called by the page owner under
   // its lock (that is the VMO lock). The page must currently be in a valid page queue.
@@ -183,11 +183,11 @@ class PageQueues {
     uint64_t offset = 0;
   };
 
-  // Moves a page from from the unswappable zero fork queue into the unswappable queue and returns
+  // Moves a page from from the anonymous zero fork queue into the anonymous queue and returns
   // the backlink information. If the zero fork queue is empty then a nullopt is returned, otherwise
   // if it has_value the vmo field may be null to indicate that the vmo is running its destructor
   // (see VmoBacklink for more details).
-  ktl::optional<VmoBacklink> PopUnswappableZeroFork();
+  ktl::optional<VmoBacklink> PopAnonymousZeroFork();
 
   // Looks at the pager_backed queues and returns backlink information of the first page found. The
   // queues themselves are walked from the current LRU queue up to the queue that is at most
@@ -232,15 +232,15 @@ class PageQueues {
   struct Counts {
     ktl::array<size_t, kNumPagerBacked> pager_backed = {0};
     size_t pager_backed_dont_need = 0;
-    size_t unswappable = 0;
+    size_t anonymous = 0;
     size_t wired = 0;
-    size_t unswappable_zero_fork = 0;
+    size_t anonymous_zero_fork = 0;
 
     bool operator==(const Counts& other) const {
       return pager_backed == other.pager_backed &&
              pager_backed_dont_need == other.pager_backed_dont_need &&
-             unswappable == other.unswappable && wired == other.wired &&
-             unswappable_zero_fork == other.unswappable_zero_fork;
+             anonymous == other.anonymous && wired == other.wired &&
+             anonymous_zero_fork == other.anonymous_zero_fork;
     }
     bool operator!=(const Counts& other) const { return !(*this == other); }
   };
@@ -282,9 +282,9 @@ class PageQueues {
   bool DebugPageIsPagerBacked(const vm_page_t* page, size_t* queue = nullptr) const;
   bool DebugPageIsPagerBackedDontNeed(const vm_page_t* page) const;
   bool DebugPageIsPagerBackedDirty(const vm_page_t* page) const;
-  bool DebugPageIsUnswappable(const vm_page_t* page) const;
-  bool DebugPageIsUnswappableZeroFork(const vm_page_t* page) const;
-  bool DebugPageIsAnyUnswappable(const vm_page_t* page) const;
+  bool DebugPageIsAnonymous(const vm_page_t* page) const;
+  bool DebugPageIsAnonymousZeroFork(const vm_page_t* page) const;
+  bool DebugPageIsAnyAnonymous(const vm_page_t* page) const;
   bool DebugPageIsWired(const vm_page_t* page) const;
 
   // These methods are public so that the scanner can call. Once the scanner is an object that can
@@ -320,9 +320,9 @@ class PageQueues {
   // Specifies the indices for both the page_queues_ and the page_queue_counts_
   enum PageQueue : uint8_t {
     PageQueueNone = 0,
-    PageQueueUnswappable,
+    PageQueueAnonymous,
     PageQueueWired,
-    PageQueueUnswappableZeroFork,
+    PageQueueAnonymousZeroFork,
     PageQueuePagerBackedDirty,
     PageQueuePagerBackedDontNeed,
     PageQueuePagerBackedBase,

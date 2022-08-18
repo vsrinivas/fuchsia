@@ -795,15 +795,15 @@ static bool pq_add_remove() {
 
   pq.Remove(&test_page);
   EXPECT_FALSE(pq.DebugPageIsWired(&test_page));
-  EXPECT_FALSE(pq.DebugPageIsUnswappable(&test_page));
+  EXPECT_FALSE(pq.DebugPageIsAnonymous(&test_page));
   EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0}, 0, 0, 0, 0}));
 
-  pq.SetUnswappable(&test_page, vmo->DebugGetCowPages().get(), 0);
-  EXPECT_TRUE(pq.DebugPageIsUnswappable(&test_page));
+  pq.SetAnonymous(&test_page, vmo->DebugGetCowPages().get(), 0);
+  EXPECT_TRUE(pq.DebugPageIsAnonymous(&test_page));
   EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0}, 0, 1, 0, 0}));
 
   pq.Remove(&test_page);
-  EXPECT_FALSE(pq.DebugPageIsUnswappable(&test_page));
+  EXPECT_FALSE(pq.DebugPageIsAnonymous(&test_page));
   EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0}, 0, 0, 0, 0}));
 
   // Pretend we have some kind of pointer to a VmObjectPaged (this will never get dereferenced)
@@ -837,13 +837,13 @@ static bool pq_move_queues() {
   EXPECT_TRUE(pq.DebugPageIsWired(&test_page));
   EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0}, 0, 0, 1, 0}));
 
-  pq.MoveToUnswappable(&test_page);
+  pq.MoveToAnonymous(&test_page);
   EXPECT_FALSE(pq.DebugPageIsWired(&test_page));
-  EXPECT_TRUE(pq.DebugPageIsUnswappable(&test_page));
+  EXPECT_TRUE(pq.DebugPageIsAnonymous(&test_page));
   EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0}, 0, 1, 0, 0}));
 
   pq.MoveToPagerBacked(&test_page);
-  EXPECT_FALSE(pq.DebugPageIsUnswappable(&test_page));
+  EXPECT_FALSE(pq.DebugPageIsAnonymous(&test_page));
   EXPECT_TRUE(pq.DebugPageIsPagerBacked(&test_page));
   EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{1, 0, 0, 0}, 0, 0, 0, 0}));
 
@@ -894,12 +894,12 @@ static bool pq_move_self_queue() {
   pq.Remove(&test_page);
   EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0}, 0, 0, 0, 0}));
 
-  pq.SetUnswappable(&test_page, vmo->DebugGetCowPages().get(), 0);
-  EXPECT_TRUE(pq.DebugPageIsUnswappable(&test_page));
+  pq.SetAnonymous(&test_page, vmo->DebugGetCowPages().get(), 0);
+  EXPECT_TRUE(pq.DebugPageIsAnonymous(&test_page));
   EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0}, 0, 1, 0, 0}));
 
-  pq.MoveToUnswappable(&test_page);
-  EXPECT_TRUE(pq.DebugPageIsUnswappable(&test_page));
+  pq.MoveToAnonymous(&test_page);
+  EXPECT_TRUE(pq.DebugPageIsAnonymous(&test_page));
   EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0}, 0, 1, 0, 0}));
 
   pq.Remove(&test_page);

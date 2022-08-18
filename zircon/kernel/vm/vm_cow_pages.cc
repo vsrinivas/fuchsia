@@ -2534,7 +2534,7 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
     // anyway.
     if (p == vm_get_zero_page() && !is_source_preserving_page_content_locked() &&
         can_decommit_zero_pages_locked() && !(pf_flags & VMM_PF_FLAG_SW_FAULT)) {
-      pmm_page_queues()->MoveToUnswappableZeroFork(res_page);
+      pmm_page_queues()->MoveToAnonymousZeroFork(res_page);
     }
 
     // This is the only path where we can allocate a new page without being a clone (clones are
@@ -3346,7 +3346,7 @@ void VmCowPages::MoveToNotWiredLocked(vm_page_t* page, uint64_t offset) {
       pmm_page_queues()->MoveToPagerBackedDirty(page);
     }
   } else {
-    pmm_page_queues()->MoveToUnswappable(page);
+    pmm_page_queues()->MoveToAnonymous(page);
   }
 }
 
@@ -3363,7 +3363,7 @@ void VmCowPages::SetNotWiredLocked(vm_page_t* page, uint64_t offset) {
       pmm_page_queues()->SetPagerBackedDirty(page, this, offset);
     }
   } else {
-    pmm_page_queues()->SetUnswappable(page, this, offset);
+    pmm_page_queues()->SetAnonymous(page, this, offset);
   }
 }
 

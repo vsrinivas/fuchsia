@@ -86,7 +86,7 @@ void scanner_print_stats() {
   }
   printf("[SCAN]: Found %lu user-pager backed pages in DontNeed queue\n",
          queue_counts.pager_backed_dont_need);
-  printf("[SCAN]: Found %lu zero forked pages\n", queue_counts.unswappable_zero_fork);
+  printf("[SCAN]: Found %lu zero forked pages\n", queue_counts.anonymous_zero_fork);
 
   VmCowPages::DiscardablePageCounts counts = VmCowPages::DebugDiscardablePageCounts();
   printf("[SCAN]: Found %lu locked pages in discardable vmos\n", counts.locked);
@@ -295,7 +295,7 @@ uint64_t scanner_do_zero_scan(uint64_t limit) {
   zero_scan_requests.Add(1);
   for (considered = 0; considered < limit; considered++) {
     if (ktl::optional<PageQueues::VmoBacklink> backlink =
-            pmm_page_queues()->PopUnswappableZeroFork()) {
+            pmm_page_queues()->PopAnonymousZeroFork()) {
       if (!backlink->cow) {
         continue;
       }
