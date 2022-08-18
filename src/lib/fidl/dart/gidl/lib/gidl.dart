@@ -52,10 +52,10 @@ T _decode<T, I extends Iterable<T>>(fidl.WireFormat wireFormat,
   BytesBuilder messageBytesBuilder = BytesBuilder(copy: false)
     ..add(Uint8List(fidl.kMessageHeaderSize))
     ..add(bytes);
-  ByteData messageBytes = ByteData.view(
-      messageBytesBuilder.toBytes().buffer, 0, messageBytesBuilder.length);
   // Mark that the message contains wire format v2 bytes.
-  messageBytes.setUint8(4, 2);
+  ByteData messageBytes = ByteData.view(
+      messageBytesBuilder.toBytes().buffer, 0, messageBytesBuilder.length)
+    ..setUint8(4, 2);
   fidl.IncomingMessage message =
       fidl.IncomingMessage(messageBytes, handleInfos);
   fidl.MemberType member = fidl.MemberType(
