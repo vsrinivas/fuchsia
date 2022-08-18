@@ -51,7 +51,7 @@ bool _isNullOrEmpty(String str) => str == null || str.isEmpty;
 ///
 /// Example of how to use this package:
 ///
-///   Logger.onRecord.listen((r) => print('${r.level}: ${r.message}'));
+///   Logger.root.onRecord.listen((r) => print('${r.level}: ${r.message}'));
 ///   ...
 ///   final sl4fClient = Sl4f.fromEnvironment();
 ///   await sl4Client.startServer();
