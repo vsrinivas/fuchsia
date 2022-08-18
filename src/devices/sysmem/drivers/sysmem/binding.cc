@@ -46,24 +46,33 @@ zx_status_t sysmem_bind(void* driver_ctx, zx_device_t* parent_device) {
     return status;
   }
 
+  // The device has bound successfully so it is owned by the DDK now.
+  auto device_ptr = device.release();
+
+  // Create a second device to serve the Banjo protocol. This is necessary
+  // so the banjo and FIDL devices can both be children of one device.
+  // This will be removed when all sysmem clients are migrated to FIDL.
+  auto banjo_device = std::make_unique<BanjoDevice>(device_ptr->zxdev(), device_ptr);
+  status = banjo_device->Bind();
+  if (status != ZX_OK) {
+    DRIVER_ERROR("Bind() failed for Banjo device: %s\n", zx_status_get_string(status));
+    return status;
+  }
+  __UNUSED auto ptr2 = banjo_device.release();
+
   // Create a second device to serve the FIDL protocol. This is temporary while
   // we migrate sysmem clients from Banjo to FIDL. It is a child of the sysmem
   // device so that the parent is guaranteed to outlive it.
   async_dispatcher_t* dispatcher =
       fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_get_current_dispatcher());
-  auto fidl_device = std::make_unique<FidlDevice>(device.get()->zxdev(), device.get(), dispatcher);
-
-  // For now at least, there's only one sysmem device and it isn't ever
-  // removed, so just release() the pointer so it lives as long as this
-  // devhost process.
-  __UNUSED auto ptr = device.release();
+  auto fidl_device = std::make_unique<FidlDevice>(device_ptr->zxdev(), device_ptr, dispatcher);
 
   status = fidl_device->Bind();
   if (status != ZX_OK) {
     DRIVER_ERROR("Bind() failed for FIDL device: %s\n", zx_status_get_string(status));
     return status;
   }
-  __UNUSED auto ptr2 = fidl_device.release();
+  __UNUSED auto ptr3 = fidl_device.release();
 
   return ZX_OK;
 }

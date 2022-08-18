@@ -316,6 +316,27 @@ class FidlDevice : public DdkFidlDeviceType {
   component::OutgoingDirectory outgoing_;
 };
 
+class BanjoDevice;
+
+using DdkBanjoDeviceType = ddk::Device<BanjoDevice>;
+
+class BanjoDevice : public DdkBanjoDeviceType,
+                    public ddk::SysmemProtocol<BanjoDevice, ddk::base_protocol> {
+ public:
+  BanjoDevice(zx_device_t* parent, sysmem_driver::Device* sysmem_device);
+
+  zx_status_t Bind();
+  void DdkRelease() { delete this; }
+
+  [[nodiscard]] zx_status_t SysmemConnect(zx::channel allocator_request);
+  [[nodiscard]] zx_status_t SysmemRegisterHeap(uint64_t heap, zx::channel heap_connection);
+  [[nodiscard]] zx_status_t SysmemRegisterSecureMem(zx::channel tee_connection);
+  [[nodiscard]] zx_status_t SysmemUnregisterSecureMem();
+
+ private:
+  sysmem_driver::Device* sysmem_device_;
+};
+
 }  // namespace sysmem_driver
 
 #endif  // SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_DEVICE_H_

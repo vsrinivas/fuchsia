@@ -616,7 +616,7 @@ zx_status_t Device::Bind() {
   sync_completion_wait_deadline(&completion, ZX_TIME_INFINITE);
 
   status = DdkAdd(ddk::DeviceAddArgs("sysmem")
-                      .set_flags(DEVICE_ADD_ALLOW_MULTI_COMPOSITE)
+                      .set_flags(DEVICE_ADD_NON_BINDABLE)
                       .set_inspect_vmo(inspector_.DuplicateVmo()));
   if (status != ZX_OK) {
     DRIVER_ERROR("Failed to bind device");
@@ -1107,6 +1107,32 @@ void FidlDevice::UnregisterSecureMem(UnregisterSecureMemRequestView request,
   } else {
     completer.ReplyError(status);
   }
+}
+
+BanjoDevice::BanjoDevice(zx_device_t* parent, sysmem_driver::Device* sysmem_device)
+    : DdkBanjoDeviceType(parent), sysmem_device_(sysmem_device) {
+  ZX_DEBUG_ASSERT(parent_);
+  ZX_DEBUG_ASSERT(sysmem_device_);
+}
+
+zx_status_t BanjoDevice::Bind() {
+  return DdkAdd(ddk::DeviceAddArgs("sysmem-banjo").set_flags(DEVICE_ADD_ALLOW_MULTI_COMPOSITE));
+}
+
+zx_status_t BanjoDevice::SysmemConnect(zx::channel allocator_request) {
+  return sysmem_device_->SysmemConnect(std::move(allocator_request));
+}
+
+zx_status_t BanjoDevice::SysmemRegisterHeap(uint64_t heap, zx::channel heap_connection) {
+  return sysmem_device_->SysmemRegisterHeap(heap, std::move(heap_connection));
+}
+
+zx_status_t BanjoDevice::SysmemRegisterSecureMem(zx::channel tee_connection) {
+  return sysmem_device_->SysmemRegisterSecureMem(std::move(tee_connection));
+}
+
+zx_status_t BanjoDevice::SysmemUnregisterSecureMem() {
+  return sysmem_device_->SysmemUnregisterSecureMem();
 }
 
 }  // namespace sysmem_driver
