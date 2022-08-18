@@ -202,6 +202,7 @@ impl gesture_arena::MatchedContender for MatchedContender {
                         pressed_buttons: HashSet::from_iter(
                             self.pressed_event.pressed_buttons.clone(),
                         ),
+                        is_precision_scroll: None,
                     },
                 },
                 gesture_arena::MouseEvent {
@@ -220,6 +221,7 @@ impl gesture_arena::MatchedContender for MatchedContender {
                         pressed_buttons: HashSet::from_iter(
                             self.released_event.pressed_buttons.clone(),
                         ),
+                        is_precision_scroll: None,
                     },
                 },
             ],
@@ -817,6 +819,7 @@ mod tests {
                         phase: MousePhase::Down,
                         affected_buttons: hashset! {0},
                         pressed_buttons: hashset! {0},
+                        is_precision_scroll: None,
                     },
                 },
                 gesture_arena::MouseEvent {
@@ -831,6 +834,7 @@ mod tests {
                         phase: MousePhase::Up,
                         affected_buttons: hashset! {0},
                         pressed_buttons: hashset! {},
+                        is_precision_scroll: None,
                     },
                 }
             ]
@@ -877,6 +881,7 @@ mod tests {
                         phase: MousePhase::Down,
                         affected_buttons: hashset! {0},
                         pressed_buttons: hashset! {0},
+                        is_precision_scroll: None,
                     },
                 },
                 gesture_arena::MouseEvent {
@@ -891,6 +896,7 @@ mod tests {
                         phase: MousePhase::Up,
                         affected_buttons: hashset! {0},
                         pressed_buttons: hashset! {},
+                        is_precision_scroll: None,
                     },
                 }
             ]

@@ -19,6 +19,15 @@ use {
 
 pub type MouseButton = u8;
 
+/// Flag to indicate the scroll event is from device reporting precision delta.
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum PrecisionScroll {
+    /// Touchpad and some mouse able to report precision delta.
+    Yes,
+    /// Tick based mouse wheel.
+    No,
+}
+
 /// A [`MouseLocation`] represents the mouse pointer location at the time of a pointer event.
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub enum MouseLocation {
@@ -101,6 +110,9 @@ pub struct MouseEvent {
     /// The mouse wheel rotated delta in horizontal.
     pub wheel_delta_h: Option<WheelDelta>,
 
+    /// The mouse device reports precision scroll delta.
+    pub is_precision_scroll: Option<PrecisionScroll>,
+
     /// The phase of the [`buttons`] associated with this input event.
     pub phase: MousePhase,
 
@@ -125,6 +137,7 @@ impl MouseEvent {
         phase: MousePhase,
         affected_buttons: HashSet<MouseButton>,
         pressed_buttons: HashSet<MouseButton>,
+        is_precision_scroll: Option<PrecisionScroll>,
     ) -> MouseEvent {
         MouseEvent {
             location,
@@ -133,6 +146,7 @@ impl MouseEvent {
             phase,
             affected_buttons,
             pressed_buttons,
+            is_precision_scroll,
         }
     }
 }
@@ -449,6 +463,10 @@ fn send_mouse_event(
             phase,
             affected_buttons,
             pressed_buttons,
+            match phase {
+                MousePhase::Wheel => Some(PrecisionScroll::No),
+                _ => None,
+            },
         )),
         device_descriptor: device_descriptor.clone(),
         event_time,
@@ -609,6 +627,7 @@ mod tests {
             location,
             None, /* wheel_delta_v */
             None, /* wheel_delta_h */
+            None, /* is_precision_scroll */
             MousePhase::Move,
             HashSet::new(),
             HashSet::new(),
@@ -643,6 +662,7 @@ mod tests {
             MouseLocation::Relative(Default::default()),
             None, /* wheel_delta_v */
             None, /* wheel_delta_h */
+            None, /* is_precision_scroll */
             MousePhase::Down,
             HashSet::from_iter(vec![mouse_button].into_iter()),
             HashSet::from_iter(vec![mouse_button].into_iter()),
@@ -686,6 +706,7 @@ mod tests {
                 MouseLocation::Relative(Default::default()),
                 None, /* wheel_delta_v */
                 None, /* wheel_delta_h */
+                None, /* is_precision_scroll */
                 MousePhase::Down,
                 HashSet::from_iter(vec![mouse_button].into_iter()),
                 HashSet::from_iter(vec![mouse_button].into_iter()),
@@ -696,6 +717,7 @@ mod tests {
                 location,
                 None, /* wheel_delta_v */
                 None, /* wheel_delta_h */
+                None, /* is_precision_scroll */
                 MousePhase::Move,
                 HashSet::from_iter(vec![mouse_button].into_iter()),
                 HashSet::from_iter(vec![mouse_button].into_iter()),
@@ -739,6 +761,7 @@ mod tests {
                 MouseLocation::Relative(Default::default()),
                 None, /* wheel_delta_v */
                 None, /* wheel_delta_h */
+                None, /* is_precision_scroll */
                 MousePhase::Down,
                 HashSet::from_iter(vec![button].into_iter()),
                 HashSet::from_iter(vec![button].into_iter()),
@@ -749,6 +772,7 @@ mod tests {
                 MouseLocation::Relative(Default::default()),
                 None, /* wheel_delta_v */
                 None, /* wheel_delta_h */
+                None, /* is_precision_scroll */
                 MousePhase::Up,
                 HashSet::from_iter(vec![button].into_iter()),
                 HashSet::new(),
@@ -800,6 +824,7 @@ mod tests {
                 MouseLocation::Relative(Default::default()),
                 None, /* wheel_delta_v */
                 None, /* wheel_delta_h */
+                None, /* is_precision_scroll */
                 MousePhase::Down,
                 HashSet::from_iter(vec![button].into_iter()),
                 HashSet::from_iter(vec![button].into_iter()),
@@ -810,6 +835,7 @@ mod tests {
                 location,
                 None, /* wheel_delta_v */
                 None, /* wheel_delta_h */
+                None, /* is_precision_scroll */
                 MousePhase::Move,
                 HashSet::from_iter(vec![button].into_iter()),
                 HashSet::from_iter(vec![button].into_iter()),
@@ -820,6 +846,7 @@ mod tests {
                 MouseLocation::Relative(Default::default()),
                 None, /* wheel_delta_v */
                 None, /* wheel_delta_h */
+                None, /* is_precision_scroll */
                 MousePhase::Up,
                 HashSet::from_iter(vec![button].into_iter()),
                 HashSet::new(),
@@ -880,6 +907,7 @@ mod tests {
                 MouseLocation::Relative(Default::default()),
                 None, /* wheel_delta_v */
                 None, /* wheel_delta_h */
+                None, /* is_precision_scroll */
                 MousePhase::Down,
                 HashSet::from_iter(vec![button].into_iter()),
                 HashSet::from_iter(vec![button].into_iter()),
@@ -890,6 +918,7 @@ mod tests {
                 location,
                 None, /* wheel_delta_v */
                 None, /* wheel_delta_h */
+                None, /* is_precision_scroll */
                 MousePhase::Move,
                 HashSet::from_iter(vec![button].into_iter()),
                 HashSet::from_iter(vec![button].into_iter()),
@@ -900,6 +929,7 @@ mod tests {
                 MouseLocation::Relative(Default::default()),
                 None, /* wheel_delta_v */
                 None, /* wheel_delta_h */
+                None, /* is_precision_scroll */
                 MousePhase::Up,
                 HashSet::from_iter(vec![button].into_iter()),
                 HashSet::new(),
@@ -934,6 +964,7 @@ mod tests {
             location,
             None, /* wheel_delta_v */
             None, /* wheel_delta_h */
+            None, /* is_precision_scroll */
             MousePhase::Move,
             HashSet::new(),
             HashSet::new(),
@@ -983,6 +1014,7 @@ mod tests {
             expected_location,
             None, /* wheel_delta_v */
             None, /* wheel_delta_h */
+            None, /* is_precision_scroll */
             MousePhase::Move,
             HashSet::new(),
             HashSet::new(),
@@ -1028,6 +1060,7 @@ mod tests {
                 MouseLocation::Relative(Default::default()),
                 None, /* wheel_delta_v */
                 None, /* wheel_delta_h */
+                None, /* is_precision_scroll */
                 MousePhase::Down,
                 HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
                 HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
@@ -1038,6 +1071,7 @@ mod tests {
                 MouseLocation::Relative(Default::default()),
                 None, /* wheel_delta_v */
                 None, /* wheel_delta_h */
+                None, /* is_precision_scroll */
                 MousePhase::Down,
                 HashSet::from_iter(vec![SECONDARY_BUTTON].into_iter()),
                 HashSet::from_iter(vec![PRIMARY_BUTTON, SECONDARY_BUTTON].into_iter()),
@@ -1105,6 +1139,7 @@ mod tests {
                 MouseLocation::Relative(Default::default()),
                 None, /* wheel_delta_v */
                 None, /* wheel_delta_h */
+                None, /* is_precision_scroll */
                 MousePhase::Down,
                 HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
                 HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
@@ -1115,6 +1150,7 @@ mod tests {
                 MouseLocation::Relative(Default::default()),
                 None, /* wheel_delta_v */
                 None, /* wheel_delta_h */
+                None, /* is_precision_scroll */
                 MousePhase::Down,
                 HashSet::from_iter(vec![SECONDARY_BUTTON].into_iter()),
                 HashSet::from_iter(vec![PRIMARY_BUTTON, SECONDARY_BUTTON].into_iter()),
@@ -1125,6 +1161,7 @@ mod tests {
                 MouseLocation::Relative(Default::default()),
                 None, /* wheel_delta_v */
                 None, /* wheel_delta_h */
+                None, /* is_precision_scroll */
                 MousePhase::Up,
                 HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
                 HashSet::from_iter(vec![SECONDARY_BUTTON].into_iter()),
@@ -1135,6 +1172,7 @@ mod tests {
                 MouseLocation::Relative(Default::default()),
                 None, /* wheel_delta_v */
                 None, /* wheel_delta_h */
+                None, /* is_precision_scroll */
                 MousePhase::Up,
                 HashSet::from_iter(vec![SECONDARY_BUTTON].into_iter()),
                 HashSet::new(),
@@ -1178,6 +1216,7 @@ mod tests {
                 MouseLocation::Relative(Default::default()),
                 wheel_delta_ticks(1),
                 None,
+                Some(PrecisionScroll::No),
                 MousePhase::Wheel,
                 HashSet::new(),
                 HashSet::new(),
@@ -1188,6 +1227,7 @@ mod tests {
                 MouseLocation::Relative(Default::default()),
                 None,
                 wheel_delta_ticks(1),
+                Some(PrecisionScroll::No),
                 MousePhase::Wheel,
                 HashSet::new(),
                 HashSet::new(),
@@ -1247,6 +1287,7 @@ mod tests {
                 MouseLocation::Relative(Default::default()),
                 None, /* wheel_delta_v */
                 None, /* wheel_delta_h */
+                None, /* is_precision_scroll */
                 MousePhase::Down,
                 HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
                 HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
@@ -1257,6 +1298,7 @@ mod tests {
                 MouseLocation::Relative(Default::default()),
                 wheel_delta_ticks(1),
                 None,
+                Some(PrecisionScroll::No),
                 MousePhase::Wheel,
                 HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
                 HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
@@ -1267,6 +1309,7 @@ mod tests {
                 MouseLocation::Relative(Default::default()),
                 None, /* wheel_delta_v */
                 None, /* wheel_delta_h */
+                None, /* is_precision_scroll */
                 MousePhase::Up,
                 HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
                 HashSet::new(),
@@ -1277,6 +1320,7 @@ mod tests {
                 MouseLocation::Relative(Default::default()),
                 wheel_delta_ticks(1),
                 None,
+                Some(PrecisionScroll::No),
                 MousePhase::Wheel,
                 HashSet::new(),
                 HashSet::new(),
@@ -1329,6 +1373,7 @@ mod tests {
                 MouseLocation::Relative(Default::default()),
                 None, /* wheel_delta_v */
                 None, /* wheel_delta_h */
+                None, /* is_precision_scroll */
                 MousePhase::Down,
                 HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
                 HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
@@ -1339,6 +1384,7 @@ mod tests {
                 MouseLocation::Relative(Default::default()),
                 wheel_delta_ticks(1),
                 None,
+                Some(PrecisionScroll::No),
                 MousePhase::Wheel,
                 HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
                 HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
@@ -1349,6 +1395,7 @@ mod tests {
                 MouseLocation::Relative(Default::default()),
                 wheel_delta_ticks(1),
                 None,
+                Some(PrecisionScroll::No),
                 MousePhase::Wheel,
                 HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
                 HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
@@ -1359,6 +1406,7 @@ mod tests {
                 MouseLocation::Relative(Default::default()),
                 None, /* wheel_delta_v */
                 None, /* wheel_delta_h */
+                None, /* is_precision_scroll */
                 MousePhase::Up,
                 HashSet::from_iter(vec![PRIMARY_BUTTON].into_iter()),
                 HashSet::new(),
@@ -1369,6 +1417,7 @@ mod tests {
                 MouseLocation::Relative(Default::default()),
                 wheel_delta_ticks(1),
                 None,
+                Some(PrecisionScroll::No),
                 MousePhase::Wheel,
                 HashSet::new(),
                 HashSet::new(),

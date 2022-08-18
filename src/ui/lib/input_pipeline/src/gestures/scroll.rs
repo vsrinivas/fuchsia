@@ -556,6 +556,7 @@ fn touchpad_event_to_mouse_scroll_event(
             mouse_binding::MousePhase::Wheel,
             /* affected_buttons= */ hashset! {},
             /* pressed_buttons= */ hashset! {},
+            Some(mouse_binding::PrecisionScroll::Yes),
         ),
     }
 }
@@ -936,6 +937,7 @@ mod tests {
                         mouse_binding::MousePhase::Wheel,
                         /* affected_buttons= */ hashset! {},
                         /* pressed_buttons= */ hashset! {},
+                        /* is_precision_scroll= */ Some(mouse_binding::PrecisionScroll::Yes),
                     ),
                 },
                 // Finger move to wrong direction, expect no scroll delta.
@@ -951,6 +953,7 @@ mod tests {
                         mouse_binding::MousePhase::Wheel,
                         /* affected_buttons= */ hashset! {},
                         /* pressed_buttons= */ hashset! {},
+                        /* is_precision_scroll= */ Some(mouse_binding::PrecisionScroll::Yes),
                     ),
                 },
                 MouseEvent {
@@ -965,6 +968,7 @@ mod tests {
                         mouse_binding::MousePhase::Wheel,
                         /* affected_buttons= */ hashset! {},
                         /* pressed_buttons= */ hashset! {},
+                        /* is_precision_scroll= */ Some(mouse_binding::PrecisionScroll::Yes),
                     ),
                 },
             ]
@@ -1100,6 +1104,7 @@ mod tests {
                             phase: mouse_binding::MousePhase::Wheel,
                             affected_buttons: hashset! {},
                             pressed_buttons: hashset! {},
+                            is_precision_scroll: Some(mouse_binding::PrecisionScroll::Yes),
                         },
                     }
                 );

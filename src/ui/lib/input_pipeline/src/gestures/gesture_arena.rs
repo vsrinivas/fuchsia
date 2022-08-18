@@ -748,6 +748,7 @@ mod tests {
                     phase: mouse_binding::MousePhase::Move,
                     affected_buttons: hashset! {},
                     pressed_buttons: hashset! {},
+                    is_precision_scroll: None,
                 }),
                 device_descriptor: make_mouse_descriptor(),
                 event_time: zx::Time::ZERO,
@@ -1602,6 +1603,7 @@ mod tests {
                                 phase: mouse_binding::MousePhase::Down,
                                 affected_buttons: hashset! { PRIMARY_BUTTON },
                                 pressed_buttons: hashset! { PRIMARY_BUTTON },
+                                is_precision_scroll: None,
                             },
                         },
                         MouseEvent {
@@ -1618,6 +1620,7 @@ mod tests {
                                 phase: mouse_binding::MousePhase::Up,
                                 affected_buttons: hashset! { PRIMARY_BUTTON },
                                 pressed_buttons: hashset! {},
+                                is_precision_scroll: None,
                             },
                         },
                     ],
@@ -1932,6 +1935,7 @@ mod tests {
                         phase: mouse_binding::MousePhase::Move,
                         affected_buttons: hashset! {},
                         pressed_buttons: hashset! {},
+                        is_precision_scroll: None,
                     },
                 }),
                 winner.clone().into(),
@@ -2032,6 +2036,7 @@ mod tests {
                     phase: mouse_binding::MousePhase::Move,
                     affected_buttons: hashset! {},
                     pressed_buttons: hashset! {},
+                    is_precision_scroll: None,
                 },
             };
             winner.set_next_result(ProcessNewEventResult::EndGesture(
@@ -2067,6 +2072,7 @@ mod tests {
                 phase: mouse_binding::MousePhase::Move,
                 affected_buttons: hashset! {},
                 pressed_buttons: hashset! {},
+                is_precision_scroll: None,
             },
         }); "with_mouse_event")]
         #[test_case(None; "without_mouse_event")]
@@ -2100,6 +2106,7 @@ mod tests {
                     phase: mouse_binding::MousePhase::Move,
                     affected_buttons: hashset! {},
                     pressed_buttons: hashset! {},
+                    is_precision_scroll: None,
                 },
             };
             winner.set_next_result(ProcessNewEventResult::EndGesture(

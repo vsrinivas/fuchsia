@@ -88,6 +88,7 @@ impl From<RelativeMouseEvent> for input_device::InputEvent {
                 phase: relative_mouse_event.phase.into(),
                 affected_buttons: relative_mouse_event.affected_buttons,
                 pressed_buttons: relative_mouse_event.pressed_buttons,
+                is_precision_scroll: None,
             }),
             device_descriptor: input_device::InputDeviceDescriptor::Mouse(
                 relative_mouse_event.mouse_descriptor,
@@ -434,6 +435,7 @@ mod tests {
             phase: mouse_binding::MousePhase::Down,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
+            is_precision_scroll: None,
         });
         assert_eq!(
             handler.handle_unhandled_input_event(event.clone()).await.as_slice(),
@@ -454,6 +456,7 @@ mod tests {
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {},
             pressed_buttons: hashset! {},
+            is_precision_scroll: None,
         });
         assert_eq!(
             handler.handle_unhandled_input_event(event.clone()).await.as_slice(),
@@ -471,6 +474,7 @@ mod tests {
             phase: mouse_binding::MousePhase::Down,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
+            is_precision_scroll: None,
         });
         let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
@@ -482,6 +486,7 @@ mod tests {
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
+            is_precision_scroll: None,
         });
 
         // Intermediate values verified by
@@ -501,6 +506,7 @@ mod tests {
             phase: mouse_binding::MousePhase::Down,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
+            is_precision_scroll: None,
         });
         let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
@@ -512,6 +518,7 @@ mod tests {
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
+            is_precision_scroll: None,
         });
         let button_up_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Default::default()),
@@ -520,6 +527,7 @@ mod tests {
             phase: mouse_binding::MousePhase::Up,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {},
+            is_precision_scroll: None,
         });
 
         // Intermediate values verified by
@@ -554,6 +562,7 @@ mod tests {
             phase: mouse_binding::MousePhase::Down,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
+            is_precision_scroll: None,
         });
         let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
@@ -565,6 +574,7 @@ mod tests {
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
+            is_precision_scroll: None,
         });
 
         // Intermediate values verified by
@@ -586,6 +596,7 @@ mod tests {
             phase: mouse_binding::MousePhase::Down,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
+            is_precision_scroll: None,
         });
         let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
@@ -597,6 +608,7 @@ mod tests {
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
+            is_precision_scroll: None,
         });
         let button_up_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Default::default()),
@@ -605,6 +617,7 @@ mod tests {
             phase: mouse_binding::MousePhase::Up,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {},
+            is_precision_scroll: None,
         });
 
         // Intermediate values verified by
@@ -628,6 +641,7 @@ mod tests {
             phase: mouse_binding::MousePhase::Down,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
+            is_precision_scroll: None,
         });
         let first_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
@@ -639,6 +653,7 @@ mod tests {
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
+            is_precision_scroll: None,
         });
         let second_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
@@ -650,6 +665,7 @@ mod tests {
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
+            is_precision_scroll: None,
         });
 
         // Intermediate values verified by
@@ -681,6 +697,7 @@ mod tests {
             phase: mouse_binding::MousePhase::Down,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
+            is_precision_scroll: None,
         });
         let first_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
@@ -692,6 +709,7 @@ mod tests {
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
+            is_precision_scroll: None,
         });
         let second_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
@@ -703,6 +721,7 @@ mod tests {
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
+            is_precision_scroll: None,
         });
         let third_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
@@ -714,6 +733,7 @@ mod tests {
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
+            is_precision_scroll: None,
         });
 
         // Intermediate values verified by
@@ -745,6 +765,7 @@ mod tests {
             phase: mouse_binding::MousePhase::Down,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
+            is_precision_scroll: None,
         });
         let first_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
@@ -756,6 +777,7 @@ mod tests {
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
+            is_precision_scroll: None,
         });
         let second_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
@@ -767,6 +789,7 @@ mod tests {
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
+            is_precision_scroll: None,
         });
 
         // Intermediate values verified by
@@ -790,6 +813,7 @@ mod tests {
             phase: mouse_binding::MousePhase::Wheel,
             affected_buttons: hashset! {},
             pressed_buttons: hashset! {},
+            is_precision_scroll: None,
         });
 
         assert_eq!(
@@ -809,6 +833,7 @@ mod tests {
             phase: mouse_binding::MousePhase::Down,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
+            is_precision_scroll: None,
         });
         let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
@@ -820,6 +845,7 @@ mod tests {
             phase: mouse_binding::MousePhase::Move,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
+            is_precision_scroll: None,
         });
         let wheel_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Default::default()),
@@ -828,6 +854,7 @@ mod tests {
             phase: mouse_binding::MousePhase::Wheel,
             affected_buttons: hashset! {0},
             pressed_buttons: hashset! {0},
+            is_precision_scroll: None,
         });
 
         // Intermediate values verified by

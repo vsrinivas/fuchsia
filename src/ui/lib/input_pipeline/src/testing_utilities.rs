@@ -345,6 +345,7 @@ pub fn create_mouse_input_report(
 /// - `location`: The mouse location to report in the event.
 /// - `wheel_delta_v`: The wheel delta in vertical.
 /// - `wheel_delta_h`: The wheel delta in horizontal.
+/// - `is_precision_scroll`: the wheel event has precision scroll delta.
 /// - `phase`: The phase of the buttons in the event.
 /// - `buttons`: The buttons to report in the event.
 /// - `event_time`: The time of event.
@@ -353,6 +354,7 @@ pub fn create_mouse_event_with_handled(
     location: mouse_binding::MouseLocation,
     wheel_delta_v: Option<mouse_binding::WheelDelta>,
     wheel_delta_h: Option<mouse_binding::WheelDelta>,
+    is_precision_scroll: Option<mouse_binding::PrecisionScroll>,
     phase: mouse_binding::MousePhase,
     affected_buttons: HashSet<mouse_binding::MouseButton>,
     pressed_buttons: HashSet<mouse_binding::MouseButton>,
@@ -368,6 +370,7 @@ pub fn create_mouse_event_with_handled(
             phase,
             affected_buttons,
             pressed_buttons,
+            is_precision_scroll,
         )),
         device_descriptor: device_descriptor.clone(),
         event_time,
@@ -380,6 +383,9 @@ pub fn create_mouse_event_with_handled(
 ///
 /// # Parameters
 /// - `location`: The mouse location to report in the event.
+/// - `wheel_delta_v`: The wheel delta in vertical.
+/// - `wheel_delta_h`: The wheel delta in horizontal.
+/// - `is_precision_scroll`: the wheel event has precision scroll delta.
 /// - `phase`: The phase of the buttons in the event.
 /// - `buttons`: The buttons to report in the event.
 /// - `event_time`: The time of event.
@@ -388,6 +394,7 @@ pub fn create_mouse_event(
     location: mouse_binding::MouseLocation,
     wheel_delta_v: Option<mouse_binding::WheelDelta>,
     wheel_delta_h: Option<mouse_binding::WheelDelta>,
+    is_precision_scroll: Option<mouse_binding::PrecisionScroll>,
     phase: mouse_binding::MousePhase,
     affected_buttons: HashSet<mouse_binding::MouseButton>,
     pressed_buttons: HashSet<mouse_binding::MouseButton>,
@@ -398,6 +405,7 @@ pub fn create_mouse_event(
         location,
         wheel_delta_v,
         wheel_delta_h,
+        is_precision_scroll,
         phase,
         affected_buttons,
         pressed_buttons,
@@ -416,14 +424,20 @@ pub fn create_mouse_event(
 /// - `relative_motion`: The relative motion fopr the event.
 /// - `wheel_delta_v`: The wheel delta in vertical.
 /// - `wheel_delta_h`: The wheel delta in horizontal.
+/// - `wheel_delta_v_physical_pixel`: The wheel delta in vertical in physical pixel.
+/// - `wheel_delta_h_physical_pixel`: The wheel delta in horizontal in physical pixel.
+/// - `is_precision_scroll`: the wheel event has precision scroll delta.
 /// - `event_time`: The time in nanoseconds when the event was first recorded.
-pub fn create_mouse_pointer_sample_event(
+pub fn create_mouse_pointer_sample_event_with_wheel_physical_pixel(
     phase: pointerinjector::EventPhase,
     buttons: Vec<mouse_binding::MouseButton>,
     position: crate::utils::Position,
     relative_motion: Option<[f32; 2]>,
     wheel_delta_v: Option<i64>,
     wheel_delta_h: Option<i64>,
+    wheel_delta_v_physical_pixel: Option<f64>,
+    wheel_delta_h_physical_pixel: Option<f64>,
+    is_precision_scroll: Option<bool>,
     event_time: zx::Time,
 ) -> pointerinjector::Event {
     let pointer_sample = pointerinjector::PointerSample {
@@ -432,6 +446,9 @@ pub fn create_mouse_pointer_sample_event(
         position_in_viewport: Some([position.x, position.y]),
         scroll_v: wheel_delta_v,
         scroll_h: wheel_delta_h,
+        scroll_v_physical_pixel: wheel_delta_v_physical_pixel,
+        scroll_h_physical_pixel: wheel_delta_h_physical_pixel,
+        is_precision_scroll,
         pressed_buttons: Some(buttons),
         relative_motion,
         ..pointerinjector::PointerSample::EMPTY
@@ -443,6 +460,41 @@ pub fn create_mouse_pointer_sample_event(
         data: Some(data),
         ..pointerinjector::Event::EMPTY
     }
+}
+
+/// Creates a [`pointerinjector::Event`] representing a mouse event.
+///
+/// # Parameters
+/// - `phase`: The phase of the touch contact.
+/// - `contact`: The touch contact to create the event for.
+/// - `position`: The position of the contact in the viewport space.
+/// - `relative_motion`: The relative motion fopr the event.
+/// - `wheel_delta_v`: The wheel delta in vertical.
+/// - `wheel_delta_h`: The wheel delta in horizontal.
+/// - `is_precision_scroll`: the wheel event has precision scroll delta.
+/// - `event_time`: The time in nanoseconds when the event was first recorded.
+pub fn create_mouse_pointer_sample_event(
+    phase: pointerinjector::EventPhase,
+    buttons: Vec<mouse_binding::MouseButton>,
+    position: crate::utils::Position,
+    relative_motion: Option<[f32; 2]>,
+    wheel_delta_v: Option<i64>,
+    wheel_delta_h: Option<i64>,
+    is_precision_scroll: Option<bool>,
+    event_time: zx::Time,
+) -> pointerinjector::Event {
+    create_mouse_pointer_sample_event_with_wheel_physical_pixel(
+        phase,
+        buttons,
+        position,
+        relative_motion,
+        wheel_delta_v,
+        wheel_delta_h,
+        None,
+        None,
+        is_precision_scroll,
+        event_time,
+    )
 }
 
 /// Creates a [`fidl_input_report::InputReport`] with a touch report.

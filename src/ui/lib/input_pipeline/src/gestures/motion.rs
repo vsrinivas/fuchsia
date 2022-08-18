@@ -183,6 +183,7 @@ fn touchpad_event_to_mouse_motion_event(
             mouse_binding::MousePhase::Move,
             /* affected_buttons= */ hashset! {},
             /* pressed_buttons= */ hashset! {},
+            /* is_precision_scroll= */ None,
         ),
     }
 }
@@ -383,6 +384,7 @@ mod tests {
                     mouse_binding::MousePhase::Move,
                     /* affected_buttons= */ hashset! {},
                     /* pressed_buttons= */ hashset! {},
+                    /* is_precision_scroll= */ None,
                 ),
             },]
         );
@@ -471,6 +473,7 @@ mod tests {
                             phase: mouse_binding::MousePhase::Move,
                             affected_buttons: hashset! {},
                             pressed_buttons: hashset! {},
+                            is_precision_scroll: None,
                         },
                     }
                 );
@@ -513,6 +516,7 @@ mod tests {
                             phase: mouse_binding::MousePhase::Move,
                             affected_buttons: hashset! {},
                             pressed_buttons: hashset! {},
+                            is_precision_scroll: None,
                         },
                     }
                 );
@@ -552,6 +556,7 @@ mod tests {
                             phase: mouse_binding::MousePhase::Move,
                             affected_buttons: hashset! {},
                             pressed_buttons: hashset! {},
+                            is_precision_scroll: None,
                         },
                     }
                 );

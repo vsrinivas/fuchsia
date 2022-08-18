@@ -648,6 +648,7 @@ mod tests {
                 mouse_binding::MousePhase::Move,
                 HashSet::new(),
                 HashSet::new(),
+                None, /* is_precision_scroll */
             )),
             device_descriptor: input_device::InputDeviceDescriptor::Mouse(
                 mouse_binding::MouseDeviceDescriptor {

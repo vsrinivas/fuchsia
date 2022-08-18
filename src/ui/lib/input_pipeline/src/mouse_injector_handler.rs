@@ -548,6 +548,31 @@ impl MouseInjectorHandler {
                 }) => Some(tick),
                 _ => None,
             },
+            scroll_v_physical_pixel: match mouse_event.wheel_delta_v {
+                Some(mouse_binding::WheelDelta { physical_pixel: Some(pixel), .. }) => {
+                    Some(pixel.into())
+                }
+                _ => None,
+            },
+            scroll_h_physical_pixel: match mouse_event.wheel_delta_h {
+                Some(mouse_binding::WheelDelta { physical_pixel: Some(pixel), .. }) => {
+                    Some(pixel.into())
+                }
+                _ => None,
+            },
+            is_precision_scroll: match mouse_event.phase {
+                mouse_binding::MousePhase::Wheel => match mouse_event.is_precision_scroll {
+                    Some(mouse_binding::PrecisionScroll::Yes) => Some(true),
+                    Some(mouse_binding::PrecisionScroll::No) => Some(false),
+                    None => {
+                        fx_log_err!(
+                            "mouse wheel event does not have value in is_precision_scroll."
+                        );
+                        None
+                    }
+                },
+                _ => None,
+            },
             pressed_buttons: Some(Vec::from_iter(mouse_event.pressed_buttons.iter().cloned())),
             relative_motion,
             ..pointerinjector::PointerSample::EMPTY
@@ -616,11 +641,13 @@ mod tests {
         crate::testing_utilities::{
             assert_handler_ignores_input_event_sequence, create_mouse_event,
             create_mouse_event_with_handled, create_mouse_pointer_sample_event,
-            create_touch_contact, create_touch_screen_event_with_handled,
+            create_mouse_pointer_sample_event_with_wheel_physical_pixel, create_touch_contact,
+            create_touch_screen_event_with_handled,
         },
         crate::touch_binding,
         assert_matches::assert_matches,
-        fidl_fuchsia_input_report as fidl_input_report, fuchsia_async as fasync,
+        fidl_fuchsia_input_report as fidl_input_report,
+        fidl_fuchsia_ui_pointerinjector as pointerinjector, fuchsia_async as fasync,
         fuchsia_zircon as zx,
         futures::{channel::mpsc, StreamExt},
         maplit::hashmap,
@@ -833,6 +860,7 @@ mod tests {
             }),
             None, /* wheel_delta_v */
             None, /* wheel_delta_h */
+            None, /* is_precision_scroll */
             mouse_binding::MousePhase::Move,
             HashSet::new(),
             HashSet::new(),
@@ -855,6 +883,7 @@ mod tests {
             relative_motion,
             None, /*wheel_delta_v*/
             None, /*wheel_delta_h*/
+            None, /*is_precision_scroll*/
             time,
         )
     }
@@ -983,10 +1012,20 @@ mod tests {
         assert_eq!(mouse_handler.mutable_state.borrow().viewport, Some(expected_viewport));
     }
 
-    fn wheel_delta_ticks(delta: i64) -> Option<mouse_binding::WheelDelta> {
+    fn wheel_delta_ticks(
+        ticks: i64,
+        physical_pixel: Option<f32>,
+    ) -> Option<mouse_binding::WheelDelta> {
         Some(mouse_binding::WheelDelta {
-            raw_data: mouse_binding::RawWheelDelta::Ticks(delta),
-            physical_pixel: None,
+            raw_data: mouse_binding::RawWheelDelta::Ticks(ticks),
+            physical_pixel,
+        })
+    }
+
+    fn wheel_delta_mm(mm: f32, physical_pixel: Option<f32>) -> Option<mouse_binding::WheelDelta> {
+        Some(mouse_binding::WheelDelta {
+            raw_data: mouse_binding::RawWheelDelta::Millimeters(mm),
+            physical_pixel,
         })
     }
 
@@ -1049,6 +1088,7 @@ mod tests {
             move_location,
             None, /* wheel_delta_v */
             None, /* wheel_delta_h */
+            None, /* is_precision_scroll */
             mouse_binding::MousePhase::Move,
             HashSet::new(),
             HashSet::new(),
@@ -1066,6 +1106,7 @@ mod tests {
                 None, /*relative_motion*/
                 None, /*wheel_delta_v*/
                 None, /*wheel_delta_h*/
+                None, /*is_precision_scroll*/
                 event_time,
             ),
             create_mouse_pointer_sample_event(
@@ -1075,6 +1116,7 @@ mod tests {
                 Some(expected_relative_motion),
                 None, /*wheel_delta_v*/
                 None, /*wheel_delta_h*/
+                None, /*is_precision_scroll*/
                 event_time,
             ),
         ];
@@ -1178,6 +1220,7 @@ mod tests {
             cursor_location,
             None, /* wheel_delta_v */
             None, /* wheel_delta_h */
+            None, /* is_precision_scroll */
             mouse_binding::MousePhase::Move,
             HashSet::new(),
             HashSet::new(),
@@ -1196,6 +1239,7 @@ mod tests {
                 None, /*relative_motion*/
                 None, /*wheel_delta_v*/
                 None, /*wheel_delta_h*/
+                None, /*is_precision_scroll*/
                 event_time,
             ),
             create_mouse_pointer_sample_event(
@@ -1205,6 +1249,7 @@ mod tests {
                 None, /*relative_motion*/
                 None, /*wheel_delta_v*/
                 None, /*wheel_delta_h*/
+                None, /*is_precision_scroll*/
                 event_time,
             ),
         ];
@@ -1292,6 +1337,7 @@ mod tests {
             cursor_location,
             None, /* wheel_delta_v */
             None, /* wheel_delta_h */
+            None, /* is_precision_scroll */
             phase,
             HashSet::from_iter(affected_buttons.clone()),
             HashSet::from_iter(pressed_buttons.clone()),
@@ -1310,6 +1356,7 @@ mod tests {
                 None, /*relative_motion*/
                 None, /*wheel_delta_v*/
                 None, /*wheel_delta_h*/
+                None, /*is_precision_scroll*/
                 event_time,
             ),
             create_mouse_pointer_sample_event(
@@ -1319,6 +1366,7 @@ mod tests {
                 None, /*relative_motion*/
                 None, /*wheel_delta_v*/
                 None, /*wheel_delta_h*/
+                None, /*is_precision_scroll*/
                 event_time,
             ),
         ];
@@ -1397,6 +1445,7 @@ mod tests {
             cursor_location,
             None, /* wheel_delta_v */
             None, /* wheel_delta_h */
+            None, /* is_precision_scroll */
             mouse_binding::MousePhase::Down,
             HashSet::from_iter(vec![1]),
             HashSet::from_iter(vec![1]),
@@ -1408,6 +1457,7 @@ mod tests {
             cursor_location,
             None, /* wheel_delta_v */
             None, /* wheel_delta_h */
+            None, /* is_precision_scroll */
             mouse_binding::MousePhase::Up,
             HashSet::from_iter(vec![1]),
             HashSet::new(),
@@ -1448,6 +1498,7 @@ mod tests {
                     None, /*relative_motion*/
                     None, /*wheel_delta_v*/
                     None, /*wheel_delta_h*/
+                    None, /*is_precision_scroll*/
                     event_time1,
                 ),
                 create_mouse_pointer_sample_event(
@@ -1457,6 +1508,7 @@ mod tests {
                     None, /*relative_motion*/
                     None, /*wheel_delta_v*/
                     None, /*wheel_delta_h*/
+                    None, /*is_precision_scroll*/
                     event_time1,
                 )
             ])
@@ -1473,6 +1525,7 @@ mod tests {
                 None, /*relative_motion*/
                 None, /*wheel_delta_v*/
                 None, /*wheel_delta_h*/
+                None, /*is_precision_scroll*/
                 event_time2,
             )])
         );
@@ -1537,6 +1590,7 @@ mod tests {
             cursor_location,
             None, /* wheel_delta_v */
             None, /* wheel_delta_h */
+            None, /* is_precision_scroll */
             mouse_binding::MousePhase::Down,
             HashSet::from_iter(vec![1]),
             HashSet::from_iter(vec![1]),
@@ -1547,6 +1601,7 @@ mod tests {
             cursor_location,
             None, /* wheel_delta_v */
             None, /* wheel_delta_h */
+            None, /* is_precision_scroll */
             mouse_binding::MousePhase::Down,
             HashSet::from_iter(vec![2]),
             HashSet::from_iter(vec![1, 2]),
@@ -1557,6 +1612,7 @@ mod tests {
             cursor_location,
             None, /* wheel_delta_v */
             None, /* wheel_delta_h */
+            None, /* is_precision_scroll */
             mouse_binding::MousePhase::Up,
             HashSet::from_iter(vec![1]),
             HashSet::from_iter(vec![2]),
@@ -1567,6 +1623,7 @@ mod tests {
             cursor_location,
             None, /* wheel_delta_v */
             None, /* wheel_delta_h */
+            None, /* is_precision_scroll */
             mouse_binding::MousePhase::Up,
             HashSet::from_iter(vec![2]),
             HashSet::new(),
@@ -1611,6 +1668,7 @@ mod tests {
                     None, /*relative_motion*/
                     None, /*wheel_delta_v*/
                     None, /*wheel_delta_h*/
+                    None, /*is_precision_scroll*/
                     event_time1,
                 ),
                 create_mouse_pointer_sample_event(
@@ -1620,6 +1678,7 @@ mod tests {
                     None, /*relative_motion*/
                     None, /*wheel_delta_v*/
                     None, /*wheel_delta_h*/
+                    None, /*is_precision_scroll*/
                     event_time1,
                 )
             ])
@@ -1675,6 +1734,7 @@ mod tests {
                 None, /*relative_motion*/
                 None, /*wheel_delta_v*/
                 None, /*wheel_delta_h*/
+                None, /*is_precision_scroll*/
                 event_time3,
             )])
         );
@@ -1690,6 +1750,7 @@ mod tests {
                 None, /*relative_motion*/
                 None, /*wheel_delta_v*/
                 None, /*wheel_delta_h*/
+                None, /*is_precision_scroll*/
                 event_time4,
             )])
         );
@@ -1746,6 +1807,7 @@ mod tests {
             mouse_binding::MouseLocation::Absolute(Position { x: 0.0, y: 0.0 }),
             None, /* wheel_delta_v */
             None, /* wheel_delta_h */
+            None, /* is_precision_scroll */
             mouse_binding::MousePhase::Down,
             HashSet::from_iter(vec![1]),
             HashSet::from_iter(vec![1]),
@@ -1762,6 +1824,7 @@ mod tests {
             }),
             None, /* wheel_delta_v */
             None, /* wheel_delta_h */
+            None, /* is_precision_scroll */
             mouse_binding::MousePhase::Move,
             HashSet::from_iter(vec![1]),
             HashSet::from_iter(vec![1]),
@@ -1775,6 +1838,7 @@ mod tests {
             }),
             None, /* wheel_delta_v */
             None, /* wheel_delta_h */
+            None, /* is_precision_scroll */
             mouse_binding::MousePhase::Up,
             HashSet::from_iter(vec![1]),
             HashSet::from_iter(vec![]),
@@ -1812,6 +1876,7 @@ mod tests {
                     None, /*relative_motion*/
                     None, /*wheel_delta_v*/
                     None, /*wheel_delta_h*/
+                    None, /*is_precision_scroll*/
                     event_time1,
                 ),
                 create_mouse_pointer_sample_event(
@@ -1821,6 +1886,7 @@ mod tests {
                     None, /*relative_motion*/
                     None, /*wheel_delta_v*/
                     None, /*wheel_delta_h*/
+                    None, /*is_precision_scroll*/
                     event_time1,
                 )
             ])
@@ -1848,6 +1914,7 @@ mod tests {
                 Some(expected_relative_motion),
                 None, /*wheel_delta_v*/
                 None, /*wheel_delta_h*/
+                None, /*is_precision_scroll*/
                 event_time2,
             )])
         );
@@ -1874,6 +1941,7 @@ mod tests {
                 None, /*relative_motion*/
                 None, /*wheel_delta_v*/
                 None, /*wheel_delta_h*/
+                None, /*is_precision_scroll*/
                 event_time3,
             )])
         );
@@ -1932,6 +2000,7 @@ mod tests {
             cursor_location,
             None, /* wheel_delta_v */
             None, /* wheel_delta_h */
+            None, /* is_precision_scroll */
             mouse_binding::MousePhase::Move,
             HashSet::new(),
             HashSet::new(),
@@ -1952,9 +2021,162 @@ mod tests {
         assert!(receiver.next().await.is_none());
     }
 
+    fn zero_relative_location() -> mouse_binding::MouseLocation {
+        mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+            counts: Position { x: 0.0, y: 0.0 },
+            millimeters: Position { x: 0.0, y: 0.0 },
+        })
+    }
+
+    #[test_case(
+        create_mouse_event(
+            zero_relative_location(),
+            wheel_delta_ticks(1, None),               /*wheel_delta_v*/
+            None,                                     /*wheel_delta_h*/
+            Some(mouse_binding::PrecisionScroll::No), /*is_precision_scroll*/
+            mouse_binding::MousePhase::Wheel,
+            HashSet::new(),
+            HashSet::new(),
+            zx::Time::ZERO,
+            &DESCRIPTOR,
+        ),
+        create_mouse_pointer_sample_event(
+            pointerinjector::EventPhase::Change,
+            vec![],
+            Position { x: 50.0, y: 50.0 },
+            None,    /*relative_motion*/
+            Some(1), /*wheel_delta_v*/
+            None,    /*wheel_delta_h*/
+            Some(false), /*is_precision_scroll*/
+            zx::Time::ZERO,
+        ); "v tick scroll"
+    )]
+    #[test_case(
+        create_mouse_event(
+            zero_relative_location(),
+            None,                                     /*wheel_delta_v*/
+            wheel_delta_ticks(1, None),               /*wheel_delta_h*/
+            Some(mouse_binding::PrecisionScroll::No), /*is_precision_scroll*/
+            mouse_binding::MousePhase::Wheel,
+            HashSet::new(),
+            HashSet::new(),
+            zx::Time::ZERO,
+            &DESCRIPTOR,
+        ),
+        create_mouse_pointer_sample_event(
+            pointerinjector::EventPhase::Change,
+            vec![],
+            Position { x: 50.0, y: 50.0 },
+            None,    /*relative_motion*/
+            None,    /*wheel_delta_v*/
+            Some(1), /*wheel_delta_h*/
+            Some(false), /*is_precision_scroll*/
+            zx::Time::ZERO,
+        ); "h tick scroll"
+    )]
+    #[test_case(
+        create_mouse_event(
+            zero_relative_location(),
+            wheel_delta_ticks(1, Some(120.0)),        /*wheel_delta_v*/
+            None,                                     /*wheel_delta_h*/
+            Some(mouse_binding::PrecisionScroll::No), /*is_precision_scroll*/
+            mouse_binding::MousePhase::Wheel,
+            HashSet::new(),
+            HashSet::new(),
+            zx::Time::ZERO,
+            &DESCRIPTOR,
+        ),
+        create_mouse_pointer_sample_event_with_wheel_physical_pixel(
+            pointerinjector::EventPhase::Change,
+            vec![],
+            Position { x: 50.0, y: 50.0 },
+            None,        /*relative_motion*/
+            Some(1),     /*wheel_delta_v*/
+            None,        /*wheel_delta_h*/
+            Some(120.0), /*wheel_delta_v_physical_pixel*/
+            None,        /*wheel_delta_h_physical_pixel*/
+            Some(false), /*is_precision_scroll*/
+            zx::Time::ZERO,
+        ); "v tick scroll with physical pixel"
+    )]
+    #[test_case(
+        create_mouse_event(
+            zero_relative_location(),
+            None,                                     /*wheel_delta_v*/
+            wheel_delta_ticks(1, Some(120.0)),        /*wheel_delta_h*/
+            Some(mouse_binding::PrecisionScroll::No), /*is_precision_scroll*/
+            mouse_binding::MousePhase::Wheel,
+            HashSet::new(),
+            HashSet::new(),
+            zx::Time::ZERO,
+            &DESCRIPTOR,
+        ),
+        create_mouse_pointer_sample_event_with_wheel_physical_pixel(
+            pointerinjector::EventPhase::Change,
+            vec![],
+            Position { x: 50.0, y: 50.0 },
+            None,        /*relative_motion*/
+            None,        /*wheel_delta_v*/
+            Some(1),     /*wheel_delta_h*/
+            None,        /*wheel_delta_v_physical_pixel*/
+            Some(120.0), /*wheel_delta_h_physical_pixel*/
+            Some(false), /*is_precision_scroll*/
+            zx::Time::ZERO,
+        ); "h tick scroll with physical pixel"
+    )]
+    #[test_case(
+        create_mouse_event(
+            zero_relative_location(),
+            wheel_delta_mm(1.0, Some(120.0)),          /*wheel_delta_v*/
+            None,                                      /*wheel_delta_h*/
+            Some(mouse_binding::PrecisionScroll::Yes), /*is_precision_scroll*/
+            mouse_binding::MousePhase::Wheel,
+            HashSet::new(),
+            HashSet::new(),
+            zx::Time::ZERO,
+            &DESCRIPTOR,
+        ),
+        create_mouse_pointer_sample_event_with_wheel_physical_pixel(
+            pointerinjector::EventPhase::Change,
+            vec![],
+            Position { x: 50.0, y: 50.0 },
+            None,        /*relative_motion*/
+            None,        /*wheel_delta_v*/
+            None,        /*wheel_delta_h*/
+            Some(120.0), /*wheel_delta_v_physical_pixel*/
+            None,        /*wheel_delta_h_physical_pixel*/
+            Some(true),  /*is_precision_scroll*/
+            zx::Time::ZERO,
+        ); "v mm scroll with physical pixel"
+    )]
+    #[test_case(
+        create_mouse_event(
+            zero_relative_location(),
+            None,                                      /*wheel_delta_v*/
+            wheel_delta_mm(1.0, Some(120.0)),          /*wheel_delta_h*/
+            Some(mouse_binding::PrecisionScroll::Yes), /*is_precision_scroll*/
+            mouse_binding::MousePhase::Wheel,
+            HashSet::new(),
+            HashSet::new(),
+            zx::Time::ZERO,
+            &DESCRIPTOR,
+        ),
+        create_mouse_pointer_sample_event_with_wheel_physical_pixel(
+            pointerinjector::EventPhase::Change,
+            vec![],
+            Position { x: 50.0, y: 50.0 },
+            None,        /*relative_motion*/
+            None,        /*wheel_delta_v*/
+            None,        /*wheel_delta_h*/
+            None,        /*wheel_delta_v_physical_pixel*/
+            Some(120.0), /*wheel_delta_h_physical_pixel*/
+            Some(true),  /*is_precision_scroll*/
+            zx::Time::ZERO,
+        ); "h mm scroll with physical pixel"
+    )]
     /// Test simple scroll in vertical and horizontal.
     #[fuchsia::test(allow_stalls = false)]
-    async fn scroll() {
+    async fn scroll(event: input_device::InputEvent, want_event: pointerinjector::Event) {
         // Set up fidl streams.
         let (aggregator_proxy, aggregator_request_stream) =
             fidl::endpoints::create_proxy_and_stream::<interaction_observation::AggregatorMarker>()
@@ -1992,86 +2214,38 @@ mod tests {
             injector_stream_sender,
         );
 
-        let event_time1 = zx::Time::get_monotonic();
-        let event_time2 = event_time1.add(fuchsia_zircon::Duration::from_micros(1));
+        let event_time = zx::Time::get_monotonic();
+
+        let event = input_device::InputEvent { event_time, ..event };
+
+        let want_event =
+            pointerinjector::Event { timestamp: Some(event_time.into_nanos()), ..want_event };
 
         let aggregator_fut = handle_aggregator_request_stream(
             aggregator_request_stream,
-            vec![event_time1.into_nanos(), event_time2.into_nanos()],
+            vec![event.event_time.into_nanos()],
         );
 
         // Run all futures until the handler future completes.
         let _registry_task = fasync::Task::local(registry_fut);
         let _aggregator_task = fasync::Task::local(aggregator_fut);
 
-        let zero_location =
-            mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
-                counts: Position { x: 0.0, y: 0.0 },
-                millimeters: Position { x: 0.0, y: 0.0 },
-            });
-        let expected_position = Position { x: 50.0, y: 50.0 };
-        let wheel_v_event = create_mouse_event(
-            zero_location,
-            wheel_delta_ticks(1),
-            None,
-            mouse_binding::MousePhase::Wheel,
-            HashSet::new(),
-            HashSet::new(),
-            event_time1,
-            &DESCRIPTOR,
+        mouse_handler.clone().handle_input_event(event).await;
+        let got_events =
+            injector_stream_receiver.next().await.map(|events| events.concat()).unwrap();
+        pretty_assertions::assert_eq!(got_events.len(), 2);
+        assert_matches!(
+            got_events[0],
+            pointerinjector::Event {
+                data: Some(pointerinjector::Data::PointerSample(pointerinjector::PointerSample {
+                    phase: Some(pointerinjector::EventPhase::Add),
+                    ..
+                })),
+                ..
+            }
         );
 
-        let wheel_h_event = create_mouse_event(
-            zero_location,
-            None,
-            wheel_delta_ticks(1),
-            mouse_binding::MousePhase::Wheel,
-            HashSet::new(),
-            HashSet::new(),
-            event_time2,
-            &DESCRIPTOR,
-        );
-
-        // Handle event 1 vertical scroll.
-        mouse_handler.clone().handle_input_event(wheel_v_event).await;
-        assert_eq!(
-            injector_stream_receiver.next().await.map(|events| events.concat()),
-            Some(vec![
-                create_mouse_pointer_sample_event(
-                    pointerinjector::EventPhase::Add,
-                    vec![],
-                    expected_position,
-                    None,    /*relative_motion*/
-                    Some(1), /*wheel_delta_v*/
-                    None,    /*wheel_delta_h*/
-                    event_time1,
-                ),
-                create_mouse_pointer_sample_event(
-                    pointerinjector::EventPhase::Change,
-                    vec![],
-                    expected_position,
-                    None,    /*relative_motion*/
-                    Some(1), /*wheel_delta_v*/
-                    None,    /*wheel_delta_h*/
-                    event_time1,
-                ),
-            ])
-        );
-
-        // Handle event 2 horizontal scroll.
-        mouse_handler.clone().handle_input_event(wheel_h_event).await;
-        assert_eq!(
-            injector_stream_receiver.next().await.map(|events| events.concat()),
-            Some(vec![create_mouse_pointer_sample_event(
-                pointerinjector::EventPhase::Change,
-                vec![],
-                expected_position,
-                None,    /*relative_motion*/
-                None,    /*wheel_delta_v*/
-                Some(1), /*wheel_delta_h*/
-                event_time2,
-            )])
-        );
+        pretty_assertions::assert_eq!(got_events[1], want_event);
     }
 
     /// Test button down -> scroll -> button up -> continue scroll.
@@ -2142,8 +2316,9 @@ mod tests {
 
         let down_event = create_mouse_event(
             zero_location,
-            None,
-            None,
+            None, /* wheel_delta_v */
+            None, /* wheel_delta_h */
+            None, /* is_precision_scroll */
             mouse_binding::MousePhase::Down,
             HashSet::from_iter(vec![1]),
             HashSet::from_iter(vec![1]),
@@ -2153,8 +2328,9 @@ mod tests {
 
         let wheel_event = create_mouse_event(
             zero_location,
-            wheel_delta_ticks(1),
-            None,
+            wheel_delta_ticks(1, None),               /* wheel_delta_v */
+            None,                                     /* wheel_delta_h */
+            Some(mouse_binding::PrecisionScroll::No), /* is_precision_scroll */
             mouse_binding::MousePhase::Wheel,
             HashSet::from_iter(vec![1]),
             HashSet::from_iter(vec![1]),
@@ -2166,6 +2342,7 @@ mod tests {
             zero_location,
             None,
             None,
+            None, /* is_precision_scroll */
             mouse_binding::MousePhase::Up,
             HashSet::from_iter(vec![1]),
             HashSet::new(),
@@ -2175,8 +2352,9 @@ mod tests {
 
         let continue_wheel_event = create_mouse_event(
             zero_location,
-            wheel_delta_ticks(1),
-            None,
+            wheel_delta_ticks(1, None),               /* wheel_delta_v */
+            None,                                     /* wheel_delta_h */
+            Some(mouse_binding::PrecisionScroll::No), /* is_precision_scroll */
             mouse_binding::MousePhase::Wheel,
             HashSet::new(),
             HashSet::new(),
@@ -2196,6 +2374,7 @@ mod tests {
                     None, /*relative_motion*/
                     None, /*wheel_delta_v*/
                     None, /*wheel_delta_h*/
+                    None, /*is_precision_scroll*/
                     event_time1,
                 ),
                 create_mouse_pointer_sample_event(
@@ -2205,6 +2384,7 @@ mod tests {
                     None, /*relative_motion*/
                     None, /*wheel_delta_v*/
                     None, /*wheel_delta_h*/
+                    None, /*is_precision_scroll*/
                     event_time1,
                 ),
             ])
@@ -2218,9 +2398,10 @@ mod tests {
                 pointerinjector::EventPhase::Change,
                 vec![1],
                 expected_position,
-                None,    /*relative_motion*/
-                Some(1), /*wheel_delta_v*/
-                None,    /*wheel_delta_h*/
+                None,        /*relative_motion*/
+                Some(1),     /*wheel_delta_v*/
+                None,        /*wheel_delta_h*/
+                Some(false), /*is_precision_scroll*/
                 event_time2,
             )])
         );
@@ -2236,6 +2417,7 @@ mod tests {
                 None, /*relative_motion*/
                 None, /*wheel_delta_v*/
                 None, /*wheel_delta_h*/
+                None, /*is_precision_scroll*/
                 event_time3,
             )])
         );
@@ -2248,9 +2430,10 @@ mod tests {
                 pointerinjector::EventPhase::Change,
                 vec![],
                 expected_position,
-                None,    /*relative_motion*/
-                Some(1), /*wheel_delta_v*/
-                None,    /*wheel_delta_h*/
+                None,        /*relative_motion*/
+                Some(1),     /*wheel_delta_v*/
+                None,        /*wheel_delta_h*/
+                Some(false), /*is_precision_scroll*/
                 event_time4,
             )])
         );
@@ -2381,8 +2564,9 @@ mod tests {
         let zero_position = Position { x: 0.0, y: 0.0 };
         let event1 = create_mouse_event(
             mouse_binding::MouseLocation::Absolute(zero_position),
-            None,
-            None,
+            None, /* wheel_delta_v */
+            None, /* wheel_delta_h */
+            None, /* is_precision_scroll */
             mouse_binding::MousePhase::Down,
             HashSet::new(),
             HashSet::new(),
@@ -2403,6 +2587,7 @@ mod tests {
                     None, /*relative_motion*/
                     None, /*wheel_delta_v*/
                     None, /*wheel_delta_h*/
+                    None, /*is_precision_scroll*/
                     event_time1,
                 ),
                 create_expected_pointerinjector_mouse_change_sample_event(

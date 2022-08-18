@@ -250,6 +250,7 @@ fn make_mouse_event(
             phase,
             affected_buttons,
             pressed_buttons,
+            /* is_precision_scroll= */ None,
         ),
     }
 }
@@ -451,6 +452,7 @@ mod tests {
                         mouse_binding::MousePhase::Down,
                         /* affected_buttons= */ hashset! {1},
                         /* pressed_buttons= */ hashset! {1},
+                        /* is_precision_scroll= */ None,
                     ),
                 },
                 MouseEvent {
@@ -465,6 +467,7 @@ mod tests {
                         mouse_binding::MousePhase::Move,
                         /* affected_buttons= */ hashset! {},
                         /* pressed_buttons= */ hashset! {1},
+                        /* is_precision_scroll= */ None,
                     ),
                 },
             ]
@@ -504,6 +507,7 @@ mod tests {
                             phase: mouse_binding::MousePhase::Up,
                             affected_buttons: hashset! {1},
                             pressed_buttons: hashset! {},
+                            is_precision_scroll: None,
                         },
                     }
                 );
@@ -577,6 +581,7 @@ mod tests {
                             phase: mouse_binding::MousePhase::Move,
                             affected_buttons: hashset! {},
                             pressed_buttons: hashset! {1},
+                            is_precision_scroll: None,
                         },
                     }
                 );
