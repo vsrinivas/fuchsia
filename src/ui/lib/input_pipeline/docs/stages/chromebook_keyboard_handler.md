@@ -1,14 +1,7 @@
 # input_pipeline > Chromebook keyboard handler
 
-In contrast to most "standard" PC laptop keyboards in which the top row keys are
-dedicated to "function keys" such as F1, F2 etc., Chromebook keyboards have a
-top row of "action" keys.
-
-These keys invoke a specific action, such as the "Navigate back"
-command in the browser, or actions to change screen brightness or play and
-pause media.  The keyboard hardware reports these keys as function keys, F1 to
-F10. But the physical keyboard layout dictates that these keys should be treated
-as action keys by default.
+See the unit tests in `chromebook_keyboard_handler.rs` for the detailed
+description of the behaviors that this handler implements.
 
 This handler ensures that the keyboard behavior on Chromebooks running Fuchsia
 matches the keyboard layout on the computer.  It translates the internal
@@ -20,6 +13,23 @@ to any external keyboards attached to the machine. External keyboards should
 behave in the expected way.  For this reason, the key remapping only applies
 to certain vendor ID and product ID combinations.
 
+Since this handler remaps hardware key events, it should be hooked into the
+input pipeline as soon as possible. This way the later pipeline handers can
+deliberate based on the remapped hardware key codes, and we avoid handling
+keymaps and key states again.
+
+## Action and function keys
+
+In contrast to most "standard" PC laptop keyboards in which the top row keys are
+dedicated to "function keys" such as F1, F2 etc., Chromebook keyboards have a
+top row of "action" keys.
+
+These keys invoke a specific action, such as the "Navigate back"
+command in the browser, or actions to change screen brightness or play and
+pause media.  The keyboard hardware reports these keys as function keys, F1 to
+F10. But the physical keyboard layout dictates that these keys should be treated
+as action keys by default.
+
 Since the top keyboard row is by default occupied by action keys, we must also
 provide a different way to get the function key behavior as well. This is done
 by actuating the top row of the keyboard together with the Search key (the key
@@ -29,10 +39,19 @@ if the user presses Search+"Navigate back".  Similarly, all the other top row
 keys are modified into respective function keys when used in a chord with
 Search.
 
-Since this handler remaps hardware key events, it should be hooked into the
-input pipeline as soon as possible. This way the later pipeline handers can
-deliberate based on the remapped hardware key codes, and we avoid handling
-keymaps and key states again.
+## Extended keys
 
-See the unit tests in `chromebook_keyboard_handler.rs` for the detailed
-description of the behaviors that this handler implements.
+Chromebook keyboards have an unique way of getting the effects of the Home,
+End, PgUp, PgDn, Insert and delete keys (a.k.a extended keys). Their effect
+is obtained by using the Search key as a modifier in a key chord.
+
+The following key chords are defined:
+
+* Search+Left: Home
+* Search+Right: End
+* Search+Up: PgUp
+* Search+Down: PgDn
+* Search+.: Insert
+* Search+Backspace: Delete
+
+The above chords matche the chord behavior on internal keyboards on ChromeOS.

@@ -37,21 +37,35 @@ const PRODUCT_ID: u32 = 0x10003;
 //// The Chromebook "Search" key is reported as left meta.
 const SEARCH_KEY: Key = Key::LeftMeta;
 
+#[derive(Debug)]
+struct KeyPair {
+    /// The emitted key without actuated Search key.
+    without_search: Key,
+    /// The emitted key with actuated Search key.
+    with_search: Key,
+}
+
 lazy_static! {
-    // Map key is the original key code produced by the keyboard. Map value is
-    // the remapped key when the "SEARCH" key is active pressed.
-    static ref REMAPPED_KEYS: std::collections::HashMap<Key, Key> = hashmap! {
-        Key::F1 => Key::AcBack,
-        Key::F2 => Key::AcRefresh,
-        Key::F3 => Key::AcFullScreenView,
-        Key::F4 => Key::AcSelectTaskApplication,
-        Key::F5 => Key::BrightnessDown,
-        Key::F6 => Key::BrightnessUp,
-        Key::F7 => Key::PlayPause,
-        Key::F8 => Key::Mute,
-        Key::F9 => Key::VolumeDown,
-        Key::F10 => Key::VolumeUp,
-        // PgUp, PgDn, Insert, Delete, End, Home.
+    // Map key is the original key code produced by the keyboard.  The map value
+    // are the possible remapped keys, depending on whether Search key is
+    // actuated.
+    static ref REMAPPED_KEYS: std::collections::HashMap<Key, KeyPair> = hashmap! {
+        Key::F1 => KeyPair{ without_search: Key::AcBack, with_search: Key::F1 },
+        Key::F2 => KeyPair{ without_search: Key::AcRefresh, with_search: Key::F2},
+        Key::F3 => KeyPair{ without_search: Key::AcFullScreenView, with_search: Key::F3 },
+        Key::F4 => KeyPair{ without_search: Key::AcSelectTaskApplication, with_search:  Key::F4 },
+        Key::F5 => KeyPair{ without_search: Key::BrightnessDown, with_search: Key::F5 },
+        Key::F6 => KeyPair{ without_search: Key::BrightnessUp, with_search: Key::F6 },
+        Key::F7 => KeyPair{ without_search: Key::PlayPause, with_search: Key::F7 },
+        Key::F8 => KeyPair{ without_search: Key::Mute, with_search: Key::F8 },
+        Key::F9 => KeyPair{ without_search: Key::VolumeDown, with_search: Key::F9 },
+        Key::F10 => KeyPair{ without_search: Key::VolumeUp, with_search: Key::F10 },
+        Key::Left => KeyPair{ without_search: Key::Left, with_search: Key::Home },
+        Key::Right => KeyPair{ without_search: Key::Right, with_search: Key::End },
+        Key::Up => KeyPair{ without_search: Key::Up, with_search: Key::PageUp },
+        Key::Down => KeyPair{ without_search: Key::Down, with_search: Key::PageDown },
+        Key::Dot => KeyPair{ without_search: Key::Dot, with_search: Key::Insert },
+        Key::Backspace => KeyPair{ without_search: Key::Backspace, with_search: Key::Delete },
     };
 }
 
@@ -160,6 +174,30 @@ impl ChromebookKeyboardHandler {
         self.state.borrow_mut().regular_keys_pressed = value;
     }
 
+    fn synthesize_input_events<'a, I: Iterator<Item = &'a Key>>(
+        self: &Rc<Self>,
+        event: KeyboardEvent,
+        event_type: KeyEventType,
+        descriptor: KeyboardDeviceDescriptor,
+        event_time: zx::Time,
+        trace_id: Option<ftrace::Id>,
+        keys: I,
+        mapfn: fn(&KeyPair) -> Key,
+    ) -> Vec<InputEvent> {
+        keys.map(|key| {
+            mapfn(REMAPPED_KEYS.get(key).expect("released_key must be in REMAPPED_KEYS"))
+        })
+        .map(|key| {
+            into_unhandled_input_event(
+                event.clone().into_with_key(key).into_with_event_type(event_type),
+                descriptor.clone(),
+                self.next_event_time(event_time),
+                trace_id,
+            )
+        })
+        .collect()
+    }
+
     /// Remaps hardware events.
     fn process_keyboard_event(
         self: &Rc<Self>,
@@ -171,13 +209,13 @@ impl ChromebookKeyboardHandler {
         // Remapping happens when search key is *not* actuated. The keyboard
         // sends the F1 key code, but we must convert it by default to AcBack,
         // for example.
-        let pass_keys_unchanged = self.is_search_key_actuated();
+        let is_search_key_actuated = self.is_search_key_actuated();
 
         let key = event.get_key();
         let event_type_folded = event.get_event_type_folded();
         let event_type = event.get_event_type();
 
-        match pass_keys_unchanged {
+        match is_search_key_actuated {
             true => {
                 // If the meta key is released, turn the remapping off, but also flip remapping of
                 // any currently active keys.
@@ -186,35 +224,24 @@ impl ChromebookKeyboardHandler {
                     let keys_to_release = self.get_ordered_keys();
 
                     // No more remapping: flip any active keys to non-remapped, and continue.
-                    let mut new_events = vec![];
-                    for released_key in keys_to_release.iter().rev() {
-                        new_events.push(into_unhandled_input_event(
-                            event
-                                // Cloned to ensure unrelated fields are propagated. Most of
-                                // the other fields should anyways be set to None this early
-                                // in the input pipeline.
-                                .clone()
-                                .into_with_key(*released_key)
-                                .into_with_event_type(KeyEventType::Released),
-                            device_descriptor.clone(),
-                            self.next_event_time(event_time),
-                            None,
-                        ));
-                    }
-                    for released_key in keys_to_release.iter() {
-                        let remapped_key = REMAPPED_KEYS
-                            .get(released_key)
-                            .expect("released_key must be in REMAPPED_KEYS");
-                        new_events.push(into_unhandled_input_event(
-                            event
-                                .clone()
-                                .into_with_key(*remapped_key)
-                                .into_with_event_type(KeyEventType::Pressed),
-                            device_descriptor.clone(),
-                            self.next_event_time(event_time),
-                            None,
-                        ));
-                    }
+                    let mut new_events = self.synthesize_input_events(
+                        event.clone(),
+                        KeyEventType::Released,
+                        device_descriptor.clone(),
+                        event_time,
+                        None,
+                        keys_to_release.iter().rev(),
+                        |kp: &KeyPair| kp.with_search,
+                    );
+                    new_events.append(&mut self.synthesize_input_events(
+                        event.clone(),
+                        KeyEventType::Pressed,
+                        device_descriptor.clone(),
+                        event_time,
+                        None,
+                        keys_to_release.iter(),
+                        |kp: &KeyPair| kp.without_search,
+                    ));
 
                     // The Search key serves a dual purpose: it is a "silent" modifier for
                     // action keys, and it also can serve as a left Meta key if pressed on
@@ -262,32 +289,24 @@ impl ChromebookKeyboardHandler {
                     // Used to synthesize new events.
                     let keys_to_release = self.get_ordered_keys();
 
-                    let mut new_events = vec![];
-                    for released_key in keys_to_release.iter().rev() {
-                        let remapped_key = REMAPPED_KEYS
-                            .get(released_key)
-                            .expect("released_key must be in REMAPPED_KEYS");
-                        new_events.push(into_unhandled_input_event(
-                            event
-                                .clone()
-                                .into_with_key(*remapped_key)
-                                .into_with_event_type(KeyEventType::Released),
-                            device_descriptor.clone(),
-                            self.next_event_time(event_time),
-                            None,
-                        ));
-                    }
-                    for released_key in keys_to_release.iter() {
-                        new_events.push(into_unhandled_input_event(
-                            event
-                                .clone()
-                                .into_with_key(*released_key)
-                                .into_with_event_type(KeyEventType::Pressed),
-                            device_descriptor.clone(),
-                            self.next_event_time(event_time),
-                            None,
-                        ));
-                    }
+                    let mut new_events = self.synthesize_input_events(
+                        event.clone(),
+                        KeyEventType::Released,
+                        device_descriptor.clone(),
+                        event_time,
+                        None,
+                        keys_to_release.iter().rev(),
+                        |kp: &KeyPair| kp.without_search,
+                    );
+                    new_events.append(&mut self.synthesize_input_events(
+                        event.clone(),
+                        KeyEventType::Pressed,
+                        device_descriptor.clone(),
+                        event_time,
+                        None,
+                        keys_to_release.iter(),
+                        |kp: &KeyPair| kp.with_search,
+                    ));
 
                     self.set_search_key_actuated(true);
                     if !keys_to_release.is_empty() {
@@ -300,9 +319,14 @@ impl ChromebookKeyboardHandler {
 
         self.update_key_state(event_type, key);
         let maybe_remapped_key = REMAPPED_KEYS.get(&key);
-        let return_events = if let Some(remapped_key) = maybe_remapped_key && !pass_keys_unchanged {
+        let return_events = if let Some(remapped_keypair) = maybe_remapped_key {
+            let key = if is_search_key_actuated {
+                remapped_keypair.with_search
+            } else {
+                remapped_keypair.without_search
+            };
             vec![into_unhandled_input_event(
-                event.into_with_key(*remapped_key),
+                event.into_with_key(key),
                 device_descriptor,
                 self.next_event_time(event_time),
                 trace_id,
@@ -312,15 +336,28 @@ impl ChromebookKeyboardHandler {
             // If this is the first non-remapped keypress after SEARCH_KEY actuation, we must emit
             // the modifier before the key itself, because now we know that the user's intent was
             // to use a modifier, not to remap action keys into function keys.
-            if maybe_remapped_key.is_none() && self.is_search_key_actuated() &&
-                !self.has_other_key_events() && event_type == KeyEventType::Pressed {
-                let new_event = event.clone().into_with_key(SEARCH_KEY).into_with_event_type(KeyEventType::Pressed);
+            if self.is_search_key_actuated()
+                && !self.has_other_key_events()
+                && event_type == KeyEventType::Pressed
+            {
+                let new_event = event
+                    .clone()
+                    .into_with_key(SEARCH_KEY)
+                    .into_with_event_type(KeyEventType::Pressed);
                 events.push(into_unhandled_input_event(
-                        new_event, device_descriptor.clone(), self.next_event_time(event_time), None));
+                    new_event,
+                    device_descriptor.clone(),
+                    self.next_event_time(event_time),
+                    None,
+                ));
                 self.set_regular_keys_pressed(true);
             }
             events.push(into_unhandled_input_event(
-                    event, device_descriptor, self.next_event_time(event_time), trace_id));
+                event,
+                device_descriptor,
+                self.next_event_time(event_time),
+                trace_id,
+            ));
             //
             // Set "non-remapped-key".
             events
@@ -328,7 +365,7 @@ impl ChromebookKeyboardHandler {
 
         // Remember that there were keypresses other than SEARCH_KEY after
         // SEARCH_KEY was actuated.
-        if event_type == KeyEventType::Pressed && key != SEARCH_KEY && pass_keys_unchanged {
+        if event_type == KeyEventType::Pressed && key != SEARCH_KEY && is_search_key_actuated {
             self.set_other_key_events(true);
         }
 
@@ -427,7 +464,7 @@ mod tests {
     }
 
     // Basic tests: ensure that function key codes are normally converted into
-    // action key codes on the built-in keyboard.
+    // action key codes on the built-in keyboard. Other action keys are not.
     #[test_case(Key::F1, Key::AcBack; "convert F1")]
     #[test_case(Key::F2, Key::AcRefresh; "convert F2")]
     #[test_case(Key::F3, Key::AcFullScreenView; "convert F3")]
@@ -439,6 +476,12 @@ mod tests {
     #[test_case(Key::F9, Key::VolumeDown; "convert F9")]
     #[test_case(Key::F10, Key::VolumeUp; "convert F10")]
     #[test_case(Key::A, Key::A; "do not convert A")]
+    #[test_case(Key::Up, Key::Up; "do not convert Up")]
+    #[test_case(Key::Down, Key::Down; "do not convert Down")]
+    #[test_case(Key::Left, Key::Left; "do not convert Left")]
+    #[test_case(Key::Right, Key::Right; "do not convert Right")]
+    #[test_case(Key::Dot, Key::Dot; "do not convert Dot")]
+    #[test_case(Key::Backspace, Key::Backspace; "do not convert Backspace")]
     #[fuchsia::test]
     async fn conversion_matching_keyboard(input_key: Key, output_key: Key) {
         let handler = ChromebookKeyboardHandler::new();
@@ -543,6 +586,56 @@ mod tests {
             &MATCHING_KEYBOARD_DESCRIPTOR,
             Handled::No,
             vec![(Key::F1, KeyEventType::Pressed), (Key::F1, KeyEventType::Released)],
+        );
+        pretty_assertions::assert_eq!(expected, actual);
+    }
+
+    // When a remappable key (e.g. F1) is pressed with the Search key, the effect
+    // is as if the action key only is pressed.
+    //
+    // SEARCH_KEY[in]  ___/"""""""""""\___
+    // F1[in]          ______/""""\_______
+    //
+    // SEARCH_KEY[out] ___________________
+    // F1[out]         ______/""""\_______
+    //
+    // Similar tests are ran on all other convertible keys.
+    #[test_case(Key::F1, Key::F1; "do not convert F1")]
+    #[test_case(Key::F2, Key::F2; "do not convert F2")]
+    #[test_case(Key::F3, Key::F3; "do not convert F3")]
+    #[test_case(Key::F4, Key::F4; "do not convert F4")]
+    #[test_case(Key::F5, Key::F5; "do not convert F5")]
+    #[test_case(Key::F6, Key::F6; "do not convert F6")]
+    #[test_case(Key::F7, Key::F7; "do not convert F7")]
+    #[test_case(Key::F8, Key::F8; "do not convert F8")]
+    #[test_case(Key::F9, Key::F9; "do not convert F9")]
+    #[test_case(Key::F10, Key::F10; "do not convert F10")]
+    #[test_case(Key::Up, Key::PageUp; "convert Up")]
+    #[test_case(Key::Down, Key::PageDown; "convert Down")]
+    #[test_case(Key::Left, Key::Home; "convert Left")]
+    #[test_case(Key::Right, Key::End; "convert Right")]
+    #[test_case(Key::Dot, Key::Insert; "convert Dot")]
+    #[test_case(Key::Backspace, Key::Delete; "convert Backspace")]
+    #[fuchsia::test]
+    async fn with_search_key_pressed(input_key: Key, output_key: Key) {
+        let handler = ChromebookKeyboardHandler::new();
+        let input = new_key_sequence(
+            zx::Time::from_nanos(42),
+            &MATCHING_KEYBOARD_DESCRIPTOR,
+            Handled::No,
+            vec![
+                (SEARCH_KEY, KeyEventType::Pressed),
+                (input_key, KeyEventType::Pressed),
+                (input_key, KeyEventType::Released),
+                (SEARCH_KEY, KeyEventType::Released),
+            ],
+        );
+        let actual = run_all_events(&handler, input).await;
+        let expected = new_key_sequence(
+            zx::Time::from_nanos(43),
+            &MATCHING_KEYBOARD_DESCRIPTOR,
+            Handled::No,
+            vec![(output_key, KeyEventType::Pressed), (output_key, KeyEventType::Released)],
         );
         pretty_assertions::assert_eq!(expected, actual);
     }
