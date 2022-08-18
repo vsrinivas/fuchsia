@@ -125,7 +125,7 @@ void ExceptionHandler::Handle(zx::exception exception, const zx_exception_info_t
   // Releases the exception if it is still valid.
   auto release_exception = [shared_exception, info] {
     if (shared_exception->is_valid()) {
-      LogError("Exception handler may be un, releasing exception to kernel", info);
+      LogError("Exception handler may be unresponsive, releasing exception to kernel", info);
       shared_exception->reset();
     }
   };
