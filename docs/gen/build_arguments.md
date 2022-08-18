@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1761
+From //build/config/BUILDCONFIG.gn:1765
 
 ### allow_legacy_data_partition_names
 Set to true to enable legacy data partition names.
@@ -97,13 +97,6 @@ Core shards that are required for including appmgr in a product.
 **Current value (from the default):** `["//src/sys/appmgr:appmgr_core_shard"]`
 
 From //src/sys/appmgr/core_shards.gni:7
-
-### arm_sdk_tools
-If true, then the arm64 host tools are included in the SDK.
-
-**Current value (from the default):** `false`
-
-From //src/developer/ffx/plugins/emulator/emu_companion.gni:9
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -1070,9 +1063,9 @@ From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.
 
 ### crashpad_http_transport_impl
 
-**Current value (from the default):** `"socket"`
+**Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:19](https://fuchsia.googlesource.com/third_party/crashpad/+/e69b93db8303d1cb2bd0e987802849089014eb98/util/net/tls.gni#19)
+From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/e69b93db8303d1cb2bd0e987802849089014eb98/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
@@ -2406,7 +2399,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1508
+From //build/config/BUILDCONFIG.gn:1512
 
 ### extra_vbmeta_descriptors
 Additional VBMeta Descriptors to add to the vbmeta image during assembly.
@@ -2966,7 +2959,7 @@ From //build/go/go_build.gni:22
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/gopher/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/dartlang/.gocache"`
 
 From //build/go/go_build.gni:18
 
@@ -3548,7 +3541,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1328
+From //build/config/BUILDCONFIG.gn:1332
 
 ### launch_basemgr_on_boot
 Indicates whether to start basemgr.cmx on boot.
@@ -5988,7 +5981,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1751
+From //build/config/BUILDCONFIG.gn:1755
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -5997,7 +5990,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1756
+From //build/config/BUILDCONFIG.gn:1760
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -6047,7 +6040,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1554
+From //build/config/BUILDCONFIG.gn:1558
 
 ### size_checker_input
 The input to the size checker.
@@ -6290,7 +6283,7 @@ From //build/security.gni:209
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"gopher/thinlto-cache"`
+**Current value (from the default):** `"dartlang/thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
@@ -6372,7 +6365,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1538
+From //build/config/BUILDCONFIG.gn:1542
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -6545,7 +6538,7 @@ VkInstances or VkDevice will fail.
 This argument will affect all vulkan_{executable/test} build targets.
 
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
 From //src/lib/vulkan/build/config.gni:40
 
