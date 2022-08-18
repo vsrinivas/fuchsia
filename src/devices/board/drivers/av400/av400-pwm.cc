@@ -36,7 +36,18 @@ static const pbus_mmio_t pwm_mmios[] = {
 };
 
 static const pwm_id_t pwm_ids[] = {
-    {A5_PWM_A}, {A5_PWM_B}, {A5_PWM_C}, {A5_PWM_D}, {A5_PWM_E}, {A5_PWM_F}, {A5_PWM_G}, {A5_PWM_H},
+    {A5_PWM_A},
+    {A5_PWM_B},
+    {A5_PWM_C},
+    {A5_PWM_D},
+    // PWM_E drives the regulator for the EE voltage rail.
+    // Marked as false, so we don't try to turn off it.
+    {A5_PWM_E, /* init = */ false},
+    // PWM_F drives the regulator for the CPU voltage rail.
+    // Marked as false, so we don't try to turn off it.
+    {A5_PWM_F, /* init = */ false},
+    {A5_PWM_G},
+    {A5_PWM_H},
 };
 
 static const pbus_metadata_t pwm_metadata[] = {

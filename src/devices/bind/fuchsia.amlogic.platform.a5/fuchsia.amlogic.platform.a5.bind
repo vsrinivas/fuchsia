@@ -138,3 +138,7 @@ uint GPIOZ_PIN_ID {
     PIN_14 = 96,
     PIN_15 = 97,
 };
+
+uint POWER_DOMAIN {
+  ARM_CORE = 0,
+};

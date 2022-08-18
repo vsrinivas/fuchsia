@@ -19,6 +19,7 @@
 
 #include <ddktl/device.h>
 #include <soc/aml-a311d/a311d-power.h>
+#include <soc/aml-a5/a5-power.h>
 #include <soc/aml-common/aml-power.h>
 #include <soc/aml-s905d2/s905d2-power.h>
 #include <soc/aml-s905d3/s905d3-power.h>
@@ -35,6 +36,7 @@ class AmlPower : public AmlPowerType, public ddk::PowerImplProtocol<AmlPower, dd
 
  public:
   // Constructor for Astro.
+  // Constructor for A5.
   AmlPower(zx_device_t* parent, ddk::PwmProtocolClient big_cluster_pwm,
            const std::vector<aml_voltage_table_t> voltage_table, voltage_pwm_period_ns_t pwm_period)
       : AmlPowerType(parent),
@@ -106,6 +108,7 @@ class AmlPower : public AmlPowerType, public ddk::PowerImplProtocol<AmlPower, dd
   static constexpr uint32_t kBigClusterDomain = 0;
   static constexpr uint32_t kLittleClusterDomain = 1;
 
+  static_assert(kBigClusterDomain == static_cast<uint32_t>(A5PowerDomains::kArmCore));
   static_assert(kBigClusterDomain == static_cast<uint32_t>(S905d2PowerDomains::kArmCore));
   static_assert(kBigClusterDomain == static_cast<uint32_t>(S905d3PowerDomains::kArmCore));
   static_assert(kBigClusterDomain == static_cast<uint32_t>(T931PowerDomains::kArmCoreBig));

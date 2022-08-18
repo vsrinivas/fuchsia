@@ -173,6 +173,11 @@ TEST_F(DeviceEnumerationTest, Av400Test) {
       "aml-usb-crg-phy-v2",
       "xhci/xhci",
 
+      // Power Device.
+      "aml-power-impl-composite/power-impl",
+      "composite-pd-armcore",
+      "composite-pd-armcore/power-0",
+
       // Thermal
       "sys/platform/05:07:a/thermal",
       "class/thermal/000",

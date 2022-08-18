@@ -474,6 +474,20 @@ zx_status_t AmlPower::Create(void* ctx, zx_device_t* parent) {
       power_impl_device =
           std::make_unique<AmlPower>(parent, first_cluster_vreg, second_cluster_vreg);
       break;
+    case PDEV_PID_AMLOGIC_A5:
+      first_cluster_pwm = ddk::PwmProtocolClient(parent, "pwm-f");
+      st = InitPwmProtocolClient(first_cluster_pwm);
+      if (st != ZX_OK) {
+        zxlogf(ERROR, "Failed to initialize Cluster PWM Client: %s", zx_status_get_string(st));
+        return st;
+      }
+      if (!first_cluster_pwm.is_valid() || !voltage_table.is_ok() || !pwm_period.is_ok()) {
+        zxlogf(ERROR, "Invalid args. A5 requires first cluster pwm, voltage table, and pwm period");
+        return ZX_ERR_INTERNAL;
+      }
+      power_impl_device = std::make_unique<AmlPower>(
+          parent, first_cluster_pwm, std::move(*voltage_table), *(pwm_period.value().get()));
+      break;
     default:
       zxlogf(ERROR, "Unsupported device pid = %u", device_info.pid);
       return ZX_ERR_NOT_SUPPORTED;

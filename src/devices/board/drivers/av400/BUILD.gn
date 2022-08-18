@@ -92,6 +92,23 @@ driver_bind_rules("av400-tee-bind") {
   ]
 }
 
+driver_bind_rules("av400-power-regulator-bind") {
+  rules = "bind/av400-power-regulator.bind"
+  header_output = "av400-power-regulator-bind.h"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.a5",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.pwm",
+  ]
+}
+
+driver_bind_rules("av400-power-domain-bind") {
+  rules = "bind/av400-power-domain.bind"
+  header_output = "av400-power-domain-bind.h"
+  deps = [ "//src/devices/bind/fuchsia.power" ]
+}
+
 fuchsia_driver("av400-driver") {
   output_name = "av400"
   configs += [
@@ -105,6 +122,7 @@ fuchsia_driver("av400-driver") {
     "av400-eth.cc",
     "av400-gpio.cc",
     "av400-i2c.cc",
+    "av400-power.cc",
     "av400-pwm.cc",
     "av400-registers.cc",
     "av400-rtc.cc",
@@ -120,6 +138,8 @@ fuchsia_driver("av400-driver") {
     ":audio-tas5707-stereo-bind_header",
     ":av400-bind",
     ":av400-emmc-bind_header",
+    ":av400-power-domain-bind_header",
+    ":av400-power-regulator-bind_header",
     ":av400-sdio-bind_header",
     ":av400-tee-bind_header",
     ":pwm_init_bind_header",
