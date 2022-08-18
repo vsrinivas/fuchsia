@@ -11,25 +11,25 @@ use {fidl_fuchsia_io as fio, fidl_fuchsia_mem::Buffer, fuchsia_zircon::VmoChildO
 #[derive(Debug, Error)]
 #[allow(missing_docs)]
 pub enum OpenImageError {
-    #[error("while opening the file {image:?}")]
-    OpenFile {
-        image: Image,
+    #[error("while opening the file path {path:?}")]
+    OpenPath {
+        path: String,
         #[source]
         err: fuchsia_fs::node::OpenError,
     },
 
-    #[error("while calling get_backing_memory for {image:?}")]
+    #[error("while calling get_backing_memory for {path:?}")]
     FidlGetBackingMemory {
-        image: Image,
+        path: String,
         #[source]
         err: fidl::Error,
     },
 
-    #[error("while obtaining vmo of file for {image:?}: {status}")]
-    GetBackingMemory { image: Image, status: Status },
+    #[error("while obtaining vmo of file for {path:?}: {status}")]
+    GetBackingMemory { path: String, status: Status },
 
-    #[error("while converting vmo to a resizable vmo for {image:?}: {status}")]
-    CloneBuffer { image: Image, status: Status },
+    #[error("while converting vmo to a resizable vmo for {path:?}: {status}")]
+    CloneBuffer { path: String, status: Status },
 }
 
 /// An identifier for an image type which corresponds to the file's name without
@@ -180,25 +180,34 @@ impl ImageClass {
 }
 
 #[cfg(target_os = "fuchsia")]
+/// Opens the given `image` as a resizable VMO buffer and return the buffer on success.
 pub(crate) async fn open(
     proxy: &fio::DirectoryProxy,
     image: &Image,
 ) -> Result<Buffer, OpenImageError> {
-    let file =
-        fuchsia_fs::directory::open_file(proxy, &image.name(), fio::OpenFlags::RIGHT_READABLE)
-            .await
-            .map_err(|err| OpenImageError::OpenFile { image: image.clone(), err })?;
+    open_from_path(proxy, &image.name()).await
+}
+
+#[cfg(target_os = "fuchsia")]
+/// Opens the given `path` as a resizable VMO buffer and return the buffer on success.
+pub(crate) async fn open_from_path(
+    proxy: &fio::DirectoryProxy,
+    path: &str,
+) -> Result<Buffer, OpenImageError> {
+    let file = fuchsia_fs::directory::open_file(proxy, path, fio::OpenFlags::RIGHT_READABLE)
+        .await
+        .map_err(|err| OpenImageError::OpenPath { path: path.to_string(), err })?;
 
     let vmo = file
         .get_backing_memory(fio::VmoFlags::READ)
         .await
-        .map_err(|err| OpenImageError::FidlGetBackingMemory { image: image.clone(), err })?
+        .map_err(|err| OpenImageError::FidlGetBackingMemory { path: path.to_string(), err })?
         .map_err(Status::from_raw)
-        .map_err(|status| OpenImageError::GetBackingMemory { image: image.clone(), status })?;
+        .map_err(|status| OpenImageError::GetBackingMemory { path: path.to_string(), status })?;
 
     let size = vmo
         .get_content_size()
-        .map_err(|status| OpenImageError::GetBackingMemory { image: image.clone(), status })?;
+        .map_err(|status| OpenImageError::GetBackingMemory { path: path.to_string(), status })?;
 
     // The paver service requires VMOs that are resizable, and blobfs does not give out resizable
     // VMOs. Fortunately, a copy-on-write child clone of the vmo can be made resizable.
@@ -208,7 +217,7 @@ pub(crate) async fn open(
             0,
             size,
         )
-        .map_err(|status| OpenImageError::CloneBuffer { image: image.clone(), status })?;
+        .map_err(|status| OpenImageError::CloneBuffer { path: path.to_string(), status })?;
 
     Ok(Buffer { vmo, size })
 }
@@ -359,7 +368,7 @@ mod tests {
     async fn open_missing_image_fails() {
         assert_matches!(
             TestUpdatePackage::new().open_image(&Image::new(ImageType::Zbi, None)).await,
-            Err(OpenImageError::OpenFile {
+            Err(OpenImageError::OpenPath {
                 err: fuchsia_fs::node::OpenError::OpenError(Status::NOT_FOUND),
                 ..
             })

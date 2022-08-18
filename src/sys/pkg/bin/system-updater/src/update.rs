@@ -24,11 +24,11 @@ use {
     futures::{prelude::*, stream::FusedStream},
     parking_lot::Mutex,
     sha2::{Digest, Sha256},
-    std::{pin::Pin, sync::Arc, time::Duration},
+    std::{collections::HashSet, pin::Pin, sync::Arc, time::Duration},
     thiserror::Error,
     update_package::{
-        Image, ImagePackagesSlots, ImageType, ResolveImagesError, UpdateMode, UpdatePackage,
-        VerifyError,
+        Image, ImagePackagesSlots, ImageType, ResolveImagesError, UpdateImagePackage, UpdateMode,
+        UpdatePackage, VerifyError,
     },
 };
 
@@ -101,6 +101,9 @@ enum PrepareError {
     #[error("while verifying board name")]
     VerifyBoard(#[source] anyhow::Error),
 
+    #[error("while verifying images to write")]
+    VerifyImages(#[source] update_package::VerifyError),
+
     #[error("while verifying update package name")]
     VerifyName(#[source] update_package::VerifyNameError),
 
@@ -127,8 +130,14 @@ impl PrepareError {
 /// Error encountered in the Stage state.
 #[derive(Debug, Error)]
 enum StageError {
+    #[error("while attempting to open the image")]
+    OpenImageError(#[source] update_package::OpenImageError),
+
     #[error("while persisting target boot slot")]
     PaverFlush(#[source] anyhow::Error),
+
+    #[error("while resolving an image package")]
+    Resolve(#[source] ResolveError),
 
     #[error("while determining which images to write")]
     ResolveImages(#[source] ResolveImagesError),
@@ -142,8 +151,12 @@ enum StageError {
 
 impl StageError {
     fn reason(&self) -> StageFailureReason {
-        // TODO: when we resolve the images in the new update flow, add a condition for OutOfSpace.
-        StageFailureReason::Internal
+        match self {
+            Self::Resolve(ResolveError::Error(fidl_fuchsia_pkg_ext::ResolveError::NoSpace, _)) => {
+                StageFailureReason::OutOfSpace
+            }
+            _ => StageFailureReason::Internal,
+        }
     }
 }
 
@@ -368,6 +381,110 @@ impl ImagesToWrite {
     fn new() -> Self {
         ImagesToWrite { fuchsia: BootSlot::new(), recovery: BootSlot::new(), firmware: vec![] }
     }
+
+    fn is_empty(&self) -> bool {
+        self.fuchsia.is_empty() && self.recovery.is_empty() && self.firmware.is_empty()
+    }
+
+    fn get_url_hashes(&self) -> HashSet<fuchsia_hash::Hash> {
+        let mut hashes = HashSet::new();
+        hashes.extend(&mut self.fuchsia.get_url_hashes().iter());
+
+        hashes.extend(&mut self.recovery.get_url_hashes().iter());
+
+        for firmware_hash in self.firmware.iter().filter_map(|(_, url)| url.package_url().hash()) {
+            hashes.insert(firmware_hash);
+        }
+
+        hashes
+    }
+
+    fn get_urls(&self) -> HashSet<AbsolutePackageUrl> {
+        let mut package_urls = HashSet::new();
+        for (_, absolute_component_url) in &self.firmware {
+            package_urls.insert(absolute_component_url.package_url().to_owned());
+        }
+
+        package_urls.extend(self.fuchsia.get_urls());
+        package_urls.extend(self.recovery.get_urls());
+
+        package_urls
+    }
+
+    fn print_list(&self) -> Vec<String> {
+        if self.is_empty() {
+            return vec!["ImagesToWrite is empty".to_string()];
+        }
+
+        let mut image_list = vec![];
+        for (filename, _) in &self.firmware {
+            image_list.push(filename.to_string());
+        }
+
+        for fuchsia_file in &self.fuchsia.print_names() {
+            image_list.push(format!("Fuchsia{fuchsia_file}"));
+        }
+        for recovery_file in &self.recovery.print_names() {
+            image_list.push(format!("Recovery{recovery_file}"));
+        }
+
+        image_list
+    }
+
+    async fn write(
+        &self,
+        pkg_resolver: &PackageResolverProxy,
+        desired_config: paver::NonCurrentConfiguration,
+        data_sink: &DataSinkProxy,
+    ) -> Result<(), StageError> {
+        let package_urls = self.get_urls();
+
+        let url_directory_map = resolver::resolve_image_packages(pkg_resolver, package_urls.iter())
+            .await
+            .map_err(StageError::Resolve)?;
+
+        for (filename, absolute_component_url) in &self.firmware {
+            let package_url = absolute_component_url.package_url();
+            let resource = absolute_component_url.resource();
+            let proxy = &url_directory_map[package_url];
+            let image = Image::new(ImageType::Firmware, Some(filename));
+            write_image(proxy, resource, &image, data_sink, desired_config).await?;
+        }
+
+        if let Some(zbi) = &self.fuchsia.zbi {
+            let package_url = zbi.package_url();
+            let resource = zbi.resource();
+            let proxy = &url_directory_map[package_url];
+            let image = Image::new(ImageType::Zbi, None);
+            write_image(&proxy, resource, &image, data_sink, desired_config).await?;
+        }
+
+        if let Some(vbmeta) = &self.fuchsia.vbmeta {
+            let package_url = vbmeta.package_url();
+            let proxy = &url_directory_map[&package_url];
+            let image = Image::new(ImageType::FuchsiaVbmeta, None);
+            let resource = vbmeta.resource();
+            write_image(proxy, resource, &image, data_sink, desired_config).await?;
+        }
+
+        if let Some(zbi) = &self.recovery.zbi {
+            let package_url = zbi.package_url();
+            let proxy = &url_directory_map[&package_url];
+            let image = Image::new(ImageType::Recovery, None);
+            let resource = zbi.resource();
+            write_image(proxy, resource, &image, data_sink, desired_config).await?;
+        }
+
+        if let Some(vbmeta) = &self.recovery.vbmeta {
+            let package_url = vbmeta.package_url();
+            let proxy = &url_directory_map[&package_url];
+            let image = Image::new(ImageType::RecoveryVbmeta, None);
+            let resource = vbmeta.resource();
+            write_image(proxy, resource, &image, data_sink, desired_config).await?;
+        }
+
+        Ok(())
+    }
 }
 
 struct BootSlot {
@@ -389,6 +506,51 @@ impl BootSlot {
         self.vbmeta = vbmeta;
         self
     }
+
+    fn is_empty(&self) -> bool {
+        matches!(self, BootSlot { zbi: None, vbmeta: None })
+    }
+
+    fn print_names(&self) -> Vec<String> {
+        let mut image_names = vec![];
+        if self.zbi.is_some() {
+            image_names.push("Zbi".to_string());
+        }
+        if self.vbmeta.is_some() {
+            image_names.push("Vbmeta".to_string());
+        }
+
+        image_names
+    }
+
+    fn get_url_hashes(&self) -> HashSet<fuchsia_hash::Hash> {
+        let mut hashes = HashSet::new();
+
+        if let Some(zbi) = &self.zbi {
+            if let Some(zbi_hash) = zbi.package_url().hash() {
+                hashes.insert(zbi_hash);
+            }
+        }
+
+        if let Some(vbmeta) = &self.vbmeta {
+            if let Some(vbmeta_hash) = vbmeta.package_url().hash() {
+                hashes.insert(vbmeta_hash);
+            }
+        }
+
+        hashes
+    }
+
+    fn get_urls(&self) -> HashSet<AbsolutePackageUrl> {
+        let mut urls = HashSet::new();
+        if let Some(zbi) = &self.zbi {
+            urls.insert(zbi.package_url().to_owned());
+        }
+        if let Some(vbmeta) = &self.vbmeta {
+            urls.insert(vbmeta.package_url().to_owned());
+        }
+        urls
+    }
 }
 
 struct Attempt<'a> {
@@ -406,17 +568,15 @@ impl<'a> Attempt<'a> {
         // Prepare
         let state = state::Prepare::enter(co).await;
 
-        let (update_pkg, mode, packages_to_fetch, _images_to_write, current_configuration) =
+        let (update_pkg, mode, packages_to_fetch, images_to_write, current_configuration) =
             match self.prepare(target_version).await {
                 Ok((
                     update_pkg,
                     mode,
                     packages_to_fetch,
-                    _images_to_write,
+                    images_to_write,
                     current_configuration,
-                )) => {
-                    (update_pkg, mode, packages_to_fetch, _images_to_write, current_configuration)
-                }
+                )) => (update_pkg, mode, packages_to_fetch, images_to_write, current_configuration),
                 Err(e) => {
                     state.fail(co, e.reason()).await;
                     bail!(e);
@@ -433,15 +593,24 @@ impl<'a> Attempt<'a> {
             .await;
         *phase = metrics::Phase::ImageWrite;
 
-        let () =
-            match self.stage_images(co, &mut state, &update_pkg, mode, current_configuration).await
-            {
-                Ok(()) => (),
-                Err(e) => {
-                    state.fail(co, e.reason()).await;
-                    bail!(e);
-                }
-            };
+        let () = match self
+            .stage_images(
+                co,
+                &mut state,
+                &update_pkg,
+                mode,
+                current_configuration,
+                images_to_write,
+                &packages_to_fetch,
+            )
+            .await
+        {
+            Ok(()) => (),
+            Err(e) => {
+                state.fail(co, e.reason()).await;
+                bail!(e);
+            }
+        };
 
         // Fetch packages
         let mut state = state.enter_fetch(co).await;
@@ -486,7 +655,7 @@ impl<'a> Attempt<'a> {
             UpdatePackage,
             UpdateMode,
             Vec<AbsolutePackageUrl>,
-            ImagesToWrite,
+            Option<ImagesToWrite>,
             paver::CurrentConfiguration,
         ),
         PrepareError,
@@ -547,31 +716,16 @@ impl<'a> Attempt<'a> {
 
         let () = validate_epoch(SOURCE_EPOCH_RAW, &update_pkg).await?;
 
-        let () = replace_retained_packages(
-            packages_to_fetch
-                .iter()
-                .filter_map(|url| url.hash())
-                .chain(self.config.update_url.hash()),
-            &self.env.retained_packages,
-        )
-        .await
-        .unwrap_or_else(|e| {
-            fx_log_err!(
-                "unable to replace retained packages set before gc in preparation \
-                 for fetching packages listed in update package: {:#}",
-                anyhow!(e)
-            )
-        });
-
-        if let Err(e) = gc(&self.env.space_manager).await {
-            fx_log_err!("unable to gc packages: {:#}", anyhow!(e));
-        }
-
         let mut images_to_write = ImagesToWrite::new();
 
         if let Ok(image_package_manifest) = update_pkg.image_packages().await {
             let manifest: ImagePackagesSlots = image_package_manifest.into();
+
+            manifest.verify(mode).map_err(PrepareError::VerifyImages)?;
+
             if let Some(fuchsia) = manifest.fuchsia() {
+                target_version.zbi_hash = fuchsia.zbi().hash().to_string();
+
                 // Determine if the fuchsia zbi has changed in this update. If an error is raised, do not fail the update.
                 match asset_to_write(
                     fuchsia.zbi(),
@@ -591,6 +745,7 @@ impl<'a> Attempt<'a> {
                 };
 
                 if let Some(vbmeta_image) = fuchsia.vbmeta() {
+                    target_version.vbmeta_hash = vbmeta_image.hash().to_string();
                     // Determine if the vbmeta has changed in this update. If an error is raised, do not fail the update.
                     match asset_to_write(
                         vbmeta_image,
@@ -611,31 +766,38 @@ impl<'a> Attempt<'a> {
                 }
             }
 
-            if let Some(recovery) = manifest.recovery() {
-                match recovery_to_write(recovery.zbi(), &self.env.data_sink, Asset::Kernel).await {
-                    Ok(url) => images_to_write.recovery.set_zbi(url),
-                    Err(e) => {
-                        fx_log_err!(
-                            "Error while determining whether to write the recovery zbi image, assume update is needed: {:#}", anyhow!(e));
-                        images_to_write.recovery.set_zbi(Some(recovery.zbi().url().to_owned()))
-                    }
-                };
-
-                if let Some(vbmeta_image) = recovery.vbmeta() {
-                    // Determine if the vbmeta has changed in this update. If an error is raised, do not fail the update.
-                    match recovery_to_write(
-                        vbmeta_image,
-                        &self.env.data_sink,
-                        Asset::VerifiedBootMetadata,
-                    )
-                    .await
+            // Only check these images if we have to.
+            if self.config.should_write_recovery {
+                if let Some(recovery) = manifest.recovery() {
+                    match recovery_to_write(recovery.zbi(), &self.env.data_sink, Asset::Kernel)
+                        .await
                     {
-                        Ok(url) => images_to_write.recovery.set_vbmeta(url),
+                        Ok(url) => images_to_write.recovery.set_zbi(url),
                         Err(e) => {
-                            fx_log_err!("Error while determining whether to write the recovery vbmeta image, assume update is needed: {:#}", anyhow!(e));
-                            images_to_write.recovery.set_vbmeta(Some(vbmeta_image.url().to_owned()))
+                            fx_log_err!(
+                                "Error while determining whether to write the recovery zbi image, assume update is needed: {:#}", anyhow!(e));
+                            images_to_write.recovery.set_zbi(Some(recovery.zbi().url().to_owned()))
                         }
                     };
+
+                    if let Some(vbmeta_image) = recovery.vbmeta() {
+                        // Determine if the vbmeta has changed in this update. If an error is raised, do not fail the update.
+                        match recovery_to_write(
+                            vbmeta_image,
+                            &self.env.data_sink,
+                            Asset::VerifiedBootMetadata,
+                        )
+                        .await
+                        {
+                            Ok(url) => images_to_write.recovery.set_vbmeta(url),
+                            Err(e) => {
+                                fx_log_err!("Error while determining whether to write the recovery vbmeta image, assume update is needed: {:#}", anyhow!(e));
+                                images_to_write
+                                    .recovery
+                                    .set_vbmeta(Some(vbmeta_image.url().to_owned()))
+                            }
+                        };
+                    }
                 }
             }
 
@@ -660,9 +822,17 @@ impl<'a> Attempt<'a> {
                     }
                 }
             }
+
+            return Ok((
+                update_pkg,
+                mode,
+                packages_to_fetch,
+                Some(images_to_write),
+                current_config,
+            ));
         }
 
-        Ok((update_pkg, mode, packages_to_fetch, images_to_write, current_config))
+        Ok((update_pkg, mode, packages_to_fetch, None, current_config))
     }
 
     /// Pave the various raw images (zbi, firmware, vbmeta) for fuchsia and/or recovery.
@@ -673,7 +843,74 @@ impl<'a> Attempt<'a> {
         update_pkg: &UpdatePackage,
         mode: UpdateMode,
         current_configuration: paver::CurrentConfiguration,
+        images_to_write: Option<ImagesToWrite>,
+        packages_to_fetch: &[AbsolutePackageUrl],
     ) -> Result<(), StageError> {
+        if let Some(images_to_write) = images_to_write {
+            if images_to_write.is_empty() {
+                // This is possible if the images for the update were on one of the partitions already
+                // and written during State::Prepare.
+                //
+                // This is a separate block so that we avoid unnecessarily replacing the retained index
+                // and garbage collecting.
+                fx_log_info!("Images have already been written!");
+
+                // Be sure to persist those images that were written during State::Prepare!
+                paver::paver_flush_data_sink(&self.env.data_sink)
+                    .await
+                    .map_err(StageError::PaverFlush)?;
+
+                state.add_progress(co, 1).await;
+                return Ok(());
+            }
+
+            let () = replace_retained_packages(
+                packages_to_fetch
+                    .iter()
+                    .filter_map(|url| url.hash())
+                    .chain(images_to_write.get_url_hashes())
+                    .chain(self.config.update_url.hash()),
+                &self.env.retained_packages,
+            )
+            .await
+            .unwrap_or_else(|e| {
+                fx_log_err!(
+                    "unable to replace retained packages set before gc in preparation \
+                        for fetching image packages listed in update package: {:#}",
+                    anyhow!(e)
+                )
+            });
+
+            if let Err(e) = gc(&self.env.space_manager).await {
+                fx_log_err!(
+                    "unable to gc packages in preparation to write image packages: {:#}",
+                    anyhow!(e)
+                );
+            }
+
+            fx_log_info!("Images to write: {:?}", images_to_write.print_list());
+            let desired_config = current_configuration.to_non_current_configuration();
+            fx_log_info!("Targeting configuration: {:?}", desired_config);
+
+            write_image_packages(
+                images_to_write,
+                &self.env.pkg_resolver,
+                desired_config,
+                &self.env.data_sink,
+                self.config.update_url.hash(),
+                &self.env.retained_packages,
+                &self.env.space_manager,
+            )
+            .await?;
+
+            paver::paver_flush_data_sink(&self.env.data_sink)
+                .await
+                .map_err(StageError::PaverFlush)?;
+
+            state.add_progress(co, 1).await;
+            return Ok(());
+        }
+
         let image_list = [
             ImageType::Bootloader,
             ImageType::Firmware,
@@ -699,7 +936,7 @@ impl<'a> Attempt<'a> {
                 }
             }
         });
-        fx_log_info!("Images to write: {:?}", images);
+        fx_log_info!("Images to write via legacy path: {:?}", images);
         let desired_config = current_configuration.to_non_current_configuration();
         fx_log_info!("Targeting configuration: {:?}", desired_config);
 
@@ -721,6 +958,28 @@ impl<'a> Attempt<'a> {
         packages_to_fetch: Vec<AbsolutePackageUrl>,
         mode: UpdateMode,
     ) -> Result<Vec<fio::DirectoryProxy>, FetchError> {
+        // Remove ImagesToWrite from the retained_index.
+        // GC to remove the ImagesToWrite from blobfs.
+        let () = replace_retained_packages(
+            packages_to_fetch
+                .iter()
+                .filter_map(|url| url.hash())
+                .chain(self.config.update_url.hash()),
+            &self.env.retained_packages,
+        )
+        .await
+        .unwrap_or_else(|e| {
+            fx_log_err!(
+                "unable to replace retained packages set before gc in preparation \
+                 for fetching packages listed in update package: {:#}",
+                anyhow!(e)
+            )
+        });
+
+        if let Err(e) = gc(&self.env.space_manager).await {
+            fx_log_err!("unable to gc packages during Fetch state: {:#}", anyhow!(e));
+        }
+
         let mut packages = Vec::with_capacity(packages_to_fetch.len());
 
         let package_dir_futs =
@@ -788,6 +1047,20 @@ where
             .await
             .context("while writing images")?;
     }
+    Ok(())
+}
+
+async fn write_image(
+    proxy: &UpdateImagePackage,
+    path: &str,
+    image: &Image,
+    data_sink: &DataSinkProxy,
+    desired_config: paver::NonCurrentConfiguration,
+) -> Result<(), StageError> {
+    let buffer = proxy.open_image(path).await.map_err(StageError::OpenImageError)?;
+    paver::write_image_buffer(data_sink, buffer, &image, desired_config)
+        .await
+        .map_err(StageError::Write)?;
     Ok(())
 }
 
@@ -965,6 +1238,48 @@ async fn gc(space_manager: &SpaceManagerProxy) -> Result<(), Error> {
         .context("while performing gc call")?
         .map_err(|e| anyhow!("garbage collection responded with {:?}", e))?;
     Ok(())
+}
+
+// Resolve and write the image packages to their appropriate partitions,
+// incorporating an increasingly aggressive GC and retry strategy.
+async fn write_image_packages(
+    images_to_write: ImagesToWrite,
+    pkg_resolver: &PackageResolverProxy,
+    desired_config: paver::NonCurrentConfiguration,
+    data_sink: &DataSinkProxy,
+    update_pkg_hash: Option<Hash>,
+    retained_packages: &RetainedPackagesProxy,
+    space_manager: &SpaceManagerProxy,
+) -> Result<(), StageError> {
+    match images_to_write.write(pkg_resolver, desired_config, data_sink).await {
+        Ok(()) => return Ok(()),
+        Err(StageError::Resolve(ResolveError::Error(
+            fidl_fuchsia_pkg_ext::ResolveError::NoSpace,
+            _,
+        ))) => {}
+        Err(e) => return Err(e),
+    };
+
+    let mut hashes = images_to_write.get_url_hashes();
+    if let Some(update_pkg_hash) = update_pkg_hash {
+        hashes.insert(update_pkg_hash);
+    }
+
+    let () = replace_retained_packages(hashes, retained_packages).await.unwrap_or_else(|e| {
+        fx_log_err!(
+            "while resolving image packages, unable to minimize retained packages set before \
+                    second gc attempt: {:#}",
+            anyhow!(e)
+        )
+    });
+    if let Err(e) = gc(space_manager).await {
+        fx_log_err!(
+            "unable to gc base packages before second image package write retry: {:#}",
+            anyhow!(e)
+        );
+    }
+
+    images_to_write.write(pkg_resolver, desired_config, data_sink).await
 }
 
 /// Resolve the update package, incorporating an increasingly aggressive GC and retry strategy.

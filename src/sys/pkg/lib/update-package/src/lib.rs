@@ -37,6 +37,25 @@ pub use crate::{
 
 use {fidl_fuchsia_io as fio, fuchsia_hash::Hash, fuchsia_url::AbsolutePackageUrl};
 
+/// An open handle to an image package.
+#[cfg(target_os = "fuchsia")]
+pub struct UpdateImagePackage {
+    proxy: fio::DirectoryProxy,
+}
+
+#[cfg(target_os = "fuchsia")]
+impl UpdateImagePackage {
+    /// Creates a new [`UpdateImagePackage`] with a given proxy.
+    pub fn new(proxy: fio::DirectoryProxy) -> Self {
+        Self { proxy }
+    }
+
+    /// Opens the image at given `path` as a resizable VMO buffer.
+    pub async fn open_image(&self, path: &str) -> Result<fidl_fuchsia_mem::Buffer, OpenImageError> {
+        image::open_from_path(&self.proxy, path).await
+    }
+}
+
 /// An open handle to an "update" package.
 #[derive(Debug)]
 pub struct UpdatePackage {

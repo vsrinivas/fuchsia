@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #![cfg(test)]
+
 use {
     self::SystemUpdaterInteraction::*,
     anyhow::{anyhow, Context as _, Error},
@@ -16,7 +17,9 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
+    fuchsia_hash::Hash,
     fuchsia_pkg_testing::{make_epoch_json, make_packages_json},
+    fuchsia_url::AbsoluteComponentUrl,
     fuchsia_zircon::Status,
     futures::prelude::*,
     mock_paver::{hooks as mphooks, MockPaverService, MockPaverServiceBuilder, PaverEvent},
@@ -30,6 +33,7 @@ use {
         fs::{create_dir, File},
         io::Write,
         path::PathBuf,
+        str::FromStr,
         sync::Arc,
     },
     tempfile::TempDir,
@@ -49,6 +53,43 @@ mod retained_packages;
 mod update_package;
 mod writes_firmware;
 mod writes_images;
+
+const EMPTY_HASH: &str = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+const MATCHING_HASH: &str = "e0705e68b0468289858b543f8a57f375a3b4f46391a72f94a28d82d6a3dacaa7";
+
+pub fn make_images_json_zbi() -> String {
+    serde_json::to_string(
+        &::update_package::ImagePackagesManifest::builder()
+            .fuchsia_package(
+                ::update_package::ImageMetadata::new(
+                    0,
+                    Hash::from_str(EMPTY_HASH).unwrap(),
+                    image_package_resource_url("update-images-fuchsia", 9, "zbi"),
+                ),
+                None,
+            )
+            .clone()
+            .build(),
+    )
+    .unwrap()
+}
+
+pub fn make_images_json_recovery() -> String {
+    serde_json::to_string(
+        &::update_package::ImagePackagesManifest::builder()
+            .recovery_package(
+                ::update_package::ImageMetadata::new(
+                    0,
+                    Hash::from_str(EMPTY_HASH).unwrap(),
+                    image_package_resource_url("update-images-recovery", 9, "zbi"),
+                ),
+                None,
+            )
+            .clone()
+            .build(),
+    )
+    .unwrap()
+}
 
 // A set of tags for interactions the system updater has with external services.
 // We aren't tracking Cobalt interactions, since those may arrive out of order,
@@ -839,4 +880,20 @@ fn force_recovery_json() -> String {
       }
     })
     .to_string()
+}
+
+fn image_package_resource_url(name: &str, hash: u8, resource: &str) -> AbsoluteComponentUrl {
+    format!("fuchsia-pkg://fuchsia.com/{name}/0?hash={}#{resource}", hashstr(hash)).parse().unwrap()
+}
+
+fn image_package_url_to_string(name: &str, hash: u8) -> String {
+    format!("fuchsia-pkg://fuchsia.com/{name}/0?hash={}", hashstr(hash)).parse().unwrap()
+}
+
+fn hash(n: u8) -> Hash {
+    Hash::from([n; 32])
+}
+
+fn hashstr(n: u8) -> String {
+    hash(n).to_string()
 }

@@ -13,7 +13,7 @@ use {
 };
 
 #[fasync::run_singlethreaded(test)]
-async fn progress_reporting_fetch_multiple_packages() {
+async fn progress_reporting_fetch_multiple_packages_v1() {
     let env = TestEnv::builder().build().await;
 
     let pkg1_url = pinned_pkg_url!("package1/0", "aa");
@@ -97,6 +97,90 @@ async fn progress_reporting_fetch_multiple_packages() {
 }
 
 #[fasync::run_singlethreaded(test)]
+async fn progress_reporting_fetch_multiple_packages() {
+    let env = TestEnv::builder().build().await;
+
+    let pkg1_url = pinned_pkg_url!("package1/0", "aa");
+    let pkg2_url = pinned_pkg_url!("package2/0", "bb");
+    let pkg3_url = pinned_pkg_url!("package3/0", "cc");
+
+    let update_pkg = env
+        .resolver
+        .package("update", UPDATE_HASH)
+        .add_file("packages.json", make_packages_json([pkg1_url, pkg2_url, pkg3_url]))
+        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("images.json", make_images_json_zbi());
+    let pkg1 = env.resolver.package("package1", merkle_str!("aa"));
+    let pkg2 = env.resolver.package("package2", merkle_str!("bb"));
+    let pkg3 = env.resolver.package("package3", merkle_str!("cc"));
+
+    // We need to block all the resolves so that we can assert Fetch progress
+    // is emitted for each pkg fetch. Otherwise, the Fetch state updates could merge
+    // into one Fetch state.
+    let handle_update_pkg = env.resolver.url(UPDATE_PKG_URL).block_once();
+    let handle_pkg1 = env.resolver.url(pkg1_url).block_once();
+    let handle_pkg2 = env.resolver.url(pkg2_url).block_once();
+    let handle_pkg3 = env.resolver.url(pkg3_url).block_once();
+
+    // Start the system update.
+    let mut attempt = env.start_update().await.unwrap();
+
+    assert_eq!(attempt.next().await.unwrap().unwrap(), State::Prepare);
+
+    let info = UpdateInfo::builder().download_size(0).build();
+    handle_update_pkg.resolve(&update_pkg).await;
+    assert_eq!(attempt.next().await.unwrap().unwrap().id(), StateId::Stage);
+    assert_eq!(attempt.next().await.unwrap().unwrap().id(), StateId::Stage);
+
+    assert_eq!(
+        attempt.next().await.unwrap().unwrap(),
+        State::Fetch(
+            UpdateInfoAndProgress::builder()
+                .info(info.clone())
+                .progress(Progress::builder().fraction_completed(0.25).bytes_downloaded(0).build())
+                .build()
+        )
+    );
+
+    handle_pkg1.resolve(&pkg1).await;
+    assert_eq!(
+        attempt.next().await.unwrap().unwrap(),
+        State::Fetch(
+            UpdateInfoAndProgress::builder()
+                .info(info.clone())
+                .progress(Progress::builder().fraction_completed(0.5).bytes_downloaded(0).build())
+                .build()
+        )
+    );
+
+    handle_pkg2.resolve(&pkg2).await;
+    assert_eq!(
+        attempt.next().await.unwrap().unwrap(),
+        State::Fetch(
+            UpdateInfoAndProgress::builder()
+                .info(info.clone())
+                .progress(Progress::builder().fraction_completed(0.75).bytes_downloaded(0).build())
+                .build()
+        )
+    );
+
+    handle_pkg3.resolve(&pkg3).await;
+    assert_eq!(
+        attempt.next().await.unwrap().unwrap(),
+        State::Fetch(
+            UpdateInfoAndProgress::builder()
+                .info(info.clone())
+                .progress(Progress::builder().fraction_completed(1.0).bytes_downloaded(0).build())
+                .build()
+        )
+    );
+
+    // In this test, we are testing Fetch updates. Let's assert the Fetch
+    // phase is over.
+    assert_eq!(attempt.next().await.unwrap().unwrap().id(), StateId::Commit);
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn monitor_fails_when_no_update_running() {
     let env = TestEnv::builder().build().await;
 
@@ -107,7 +191,7 @@ async fn monitor_fails_when_no_update_running() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn monitor_connects_to_existing_attempt() {
+async fn monitor_connects_to_existing_attempt_v1() {
     let env = TestEnv::builder().build().await;
 
     let update_pkg = env
@@ -152,7 +236,52 @@ async fn monitor_connects_to_existing_attempt() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn succeed_additional_start_requests_when_compatible() {
+async fn monitor_connects_to_existing_attempt() {
+    let env = TestEnv::builder().build().await;
+
+    let update_pkg = env
+        .resolver
+        .package("update", UPDATE_HASH)
+        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("packages.json", make_packages_json([]))
+        .add_file("images.json", make_images_json_zbi());
+
+    // Block the update pkg resolve to ensure the update attempt is still in
+    // in progress when we try to attach a monitor.
+    let handle_update_pkg = env.resolver.url(UPDATE_PKG_URL).block_once();
+
+    // Start the system update.
+    let attempt0 = env.start_update().await.unwrap();
+
+    // Attach monitor.
+    let attempt1 =
+        monitor_update(Some(attempt0.attempt_id()), &env.installer_proxy()).await.unwrap().unwrap();
+
+    // Now that we attached both monitors to the current attempt, we can unblock the
+    // resolve and resume the update attempt.
+    handle_update_pkg.resolve(&update_pkg).await;
+    let monitor0_events: Vec<State> = attempt0.map(|res| res.unwrap()).collect().await;
+    let monitor1_events: Vec<State> = attempt1.map(|res| res.unwrap()).collect().await;
+
+    // Since we wait until the update attempt is over to read from monitor1 events,
+    // we should expect that the events in monitor1 merged.
+    assert_eq!(monitor1_events.len(), 6);
+
+    // While the number of events are different, the ordering should still be the same.
+    let expected_order = [
+        StateId::Prepare,
+        StateId::Stage,
+        StateId::Fetch,
+        StateId::Commit,
+        StateId::WaitToReboot,
+        StateId::Reboot,
+    ];
+    assert_success_monitor_states(monitor0_events, &expected_order);
+    assert_success_monitor_states(monitor1_events, &expected_order);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn succeed_additional_start_requests_when_compatible_v1() {
     let env = TestEnv::builder().build().await;
 
     let update_pkg = env
@@ -205,13 +334,140 @@ async fn succeed_additional_start_requests_when_compatible() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn fail_additional_start_requests_when_not_compatible() {
+async fn succeed_additional_start_requests_when_compatible() {
+    let env = TestEnv::builder().build().await;
+
+    let update_pkg = env
+        .resolver
+        .package("update", UPDATE_HASH)
+        .add_file("packages.json", make_packages_json([]))
+        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("images.json", make_images_json_zbi());
+
+    // Block the update pkg resolve to ensure the update attempt is still in
+    // in progress when we try to attach a monitor.
+    let handle_update_pkg = env.resolver.url(UPDATE_PKG_URL).block_once();
+
+    // Start the system update, making 2 start_update requests. The second start_update request
+    // is essentially just a monitor_update request in this case.
+    let attempt0 = env.start_update().await.unwrap();
+    let attempt1 = env
+        .start_update_with_options(
+            UPDATE_PKG_URL,
+            Options {
+                initiator: Initiator::User,
+                allow_attach_to_existing_attempt: true,
+                should_write_recovery: true,
+            },
+        )
+        .await
+        .unwrap();
+
+    // Now that we attached both monitors to the current attempt, we can unblock the
+    // resolve and resume the update attempt.
+    handle_update_pkg.resolve(&update_pkg).await;
+    let monitor0_events: Vec<State> = attempt0.map(|res| res.unwrap()).collect().await;
+    let monitor1_events: Vec<State> = attempt1.map(|res| res.unwrap()).collect().await;
+
+    // Since we waited for the update attempt to complete before reading from monitor1,
+    // the events in monitor1 should have merged.
+    assert_eq!(monitor1_events.len(), 6);
+
+    // While the number of events are different, the ordering should still be the same.
+    let expected_order = [
+        StateId::Prepare,
+        StateId::Stage,
+        StateId::Fetch,
+        StateId::Commit,
+        StateId::WaitToReboot,
+        StateId::Reboot,
+    ];
+    assert_success_monitor_states(monitor0_events, &expected_order);
+    assert_success_monitor_states(monitor1_events, &expected_order);
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn fail_additional_start_requests_when_not_compatible_v1() {
     let env = TestEnv::builder().build().await;
 
     env.resolver
         .package("update", UPDATE_HASH)
         .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake zbi");
+
+    // Block the update pkg resolve to ensure the update attempt is still in
+    // in progress when we try to make additional start_update requests.
+    let _handle_update_pkg = env.resolver.url(UPDATE_PKG_URL).block_once();
+
+    // Start the system update.
+    let installer_proxy = env.installer_proxy();
+    let compatible_url = UPDATE_PKG_URL;
+    let compatible_options = Options {
+        initiator: Initiator::User,
+        allow_attach_to_existing_attempt: true,
+        should_write_recovery: true,
+    };
+    let _attempt =
+        env.start_update_with_options(compatible_url, compatible_options.clone()).await.unwrap();
+
+    // Define incompatible options and url.
+    let incompatible_options0 = Options {
+        initiator: Initiator::User,
+        allow_attach_to_existing_attempt: true,
+        should_write_recovery: false,
+    };
+    let incompatible_options1 = Options {
+        initiator: Initiator::User,
+        allow_attach_to_existing_attempt: false,
+        should_write_recovery: true,
+    };
+    let incompatible_url = "fuchsia-pkg://fuchsia.com/different-url";
+
+    // Show that start_update requests fail with AlreadyInProgress errors.
+    assert_matches!(
+        env.start_update_with_options(compatible_url, incompatible_options0)
+            .await
+            .map(|_| ())
+            .unwrap_err(),
+        UpdateAttemptError::InstallInProgress
+    );
+    assert_matches!(
+        env.start_update_with_options(compatible_url, incompatible_options1)
+            .await
+            .map(|_| ())
+            .unwrap_err(),
+        UpdateAttemptError::InstallInProgress
+    );
+    assert_matches!(
+        env.start_update_with_options(incompatible_url, compatible_options.clone())
+            .await
+            .map(|_| ())
+            .unwrap_err(),
+        UpdateAttemptError::InstallInProgress
+    );
+    let (_, server_end) = fidl::endpoints::create_endpoints().unwrap();
+    assert_matches!(
+        start_update(
+            &compatible_url.parse().unwrap(),
+            compatible_options,
+            &installer_proxy,
+            Some(server_end)
+        )
+        .await
+        .map(|_| ())
+        .unwrap_err(),
+        UpdateAttemptError::InstallInProgress
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn fail_additional_start_requests_when_not_compatible() {
+    let env = TestEnv::builder().build().await;
+
+    env.resolver
+        .package("update", UPDATE_HASH)
+        .add_file("packages.json", make_packages_json([]))
+        .add_file("images.json", make_images_json_zbi());
 
     // Block the update pkg resolve to ensure the update attempt is still in
     // in progress when we try to make additional start_update requests.

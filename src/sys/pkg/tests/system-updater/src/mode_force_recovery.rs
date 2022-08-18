@@ -9,7 +9,7 @@ use {
 };
 
 #[fasync::run_singlethreaded(test)]
-async fn writes_recovery_and_force_reboots_into_it() {
+async fn writes_recovery_and_force_reboots_into_it_v1() {
     let env = TestEnv::builder().build().await;
 
     env.resolver
@@ -52,8 +52,6 @@ async fn writes_recovery_and_force_reboots_into_it() {
             }),
             Paver(PaverEvent::BootManagerFlush),
             PackageResolve(UPDATE_PKG_URL.to_string()),
-            ReplaceRetainedPackages(vec![]),
-            Gc,
             Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::Recovery,
                 asset: paver::Asset::Kernel,
@@ -65,6 +63,70 @@ async fn writes_recovery_and_force_reboots_into_it() {
                 payload: b"the recovery vbmeta".to_vec(),
             }),
             Paver(PaverEvent::DataSinkFlush),
+            ReplaceRetainedPackages(vec![]),
+            Gc,
+            Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: paver::Configuration::A
+            }),
+            Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: paver::Configuration::B
+            }),
+            Paver(PaverEvent::BootManagerFlush),
+            Reboot,
+        ]
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn writes_recovery_and_force_reboots_into_it() {
+    let env = TestEnv::builder().build().await;
+
+    env.resolver
+        .register_package("update", "upd4t3")
+        .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
+        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("update-mode", &force_recovery_json())
+        .add_file("images.json", make_images_json_recovery());
+
+    env.run_update().await.expect("run system updater");
+
+    assert_eq!(
+        env.get_ota_metrics().await,
+        OtaMetrics {
+            initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
+                as u32,
+            phase: metrics::OtaResultAttemptsMetricDimensionPhase::SuccessPendingReboot as u32,
+            status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Success as u32,
+            target: "".into(),
+        }
+    );
+
+    assert_eq!(
+        env.take_interactions(),
+        vec![
+            Paver(PaverEvent::QueryCurrentConfiguration),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::VerifiedBootMetadata
+            }),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::Kernel
+            }),
+            Paver(PaverEvent::QueryCurrentConfiguration),
+            Paver(PaverEvent::QueryConfigurationStatus { configuration: paver::Configuration::A }),
+            Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: paver::Configuration::B
+            }),
+            Paver(PaverEvent::BootManagerFlush),
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::Recovery,
+                asset: paver::Asset::Kernel,
+            }),
+            Paver(PaverEvent::DataSinkFlush),
+            ReplaceRetainedPackages(vec![]),
+            Gc,
             Paver(PaverEvent::SetConfigurationUnbootable {
                 configuration: paver::Configuration::A
             }),
@@ -124,7 +186,7 @@ async fn reboots_regardless_of_reboot_controller() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn rejects_zbi() {
+async fn rejects_zbi_v1() {
     let env = TestEnv::builder().build().await;
 
     env.resolver
@@ -157,8 +219,43 @@ async fn rejects_zbi() {
             }),
             Paver(PaverEvent::BootManagerFlush),
             PackageResolve(UPDATE_PKG_URL.to_string()),
-            ReplaceRetainedPackages(vec![]),
-            Gc
+        ]
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn rejects_zbi() {
+    let env = TestEnv::builder().build().await;
+
+    env.resolver
+        .register_package("update", "upd4t3")
+        .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
+        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("images.json", make_images_json_zbi())
+        .add_file("update-mode", &force_recovery_json());
+
+    let result = env.run_update().await;
+    assert!(result.is_err(), "system updater succeeded when it should fail");
+
+    assert_eq!(
+        env.take_interactions(),
+        vec![
+            Paver(PaverEvent::QueryCurrentConfiguration),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::VerifiedBootMetadata
+            }),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::Kernel
+            }),
+            Paver(PaverEvent::QueryCurrentConfiguration),
+            Paver(PaverEvent::QueryConfigurationStatus { configuration: paver::Configuration::A }),
+            Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: paver::Configuration::B
+            }),
+            Paver(PaverEvent::BootManagerFlush),
+            PackageResolve(UPDATE_PKG_URL.to_string()),
         ]
     );
 }

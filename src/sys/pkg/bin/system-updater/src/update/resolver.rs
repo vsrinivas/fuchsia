@@ -7,8 +7,9 @@ use {
     fidl_fuchsia_pkg::{self as fpkg, PackageResolverProxy},
     fuchsia_url::AbsolutePackageUrl,
     futures::prelude::*,
+    std::collections::HashMap,
     thiserror::Error,
-    update_package::UpdatePackage,
+    update_package::{UpdateImagePackage, UpdatePackage},
 };
 
 const CONCURRENT_PACKAGE_RESOLVES: usize = 5;
@@ -50,6 +51,26 @@ where
         .buffer_unordered(CONCURRENT_PACKAGE_RESOLVES)
 }
 
+/// Resolves each package URL through the package resolver with some concurrency, returning a mapping of the package urls to the resolved image package directories.
+pub(super) async fn resolve_image_packages<'a, I>(
+    pkg_resolver: &'a PackageResolverProxy,
+    urls: I,
+) -> Result<HashMap<AbsolutePackageUrl, UpdateImagePackage>, ResolveError>
+where
+    I: 'a + Iterator<Item = &'a AbsolutePackageUrl>,
+{
+    stream::iter(urls)
+        .map(move |url| async move {
+            Result::<_, ResolveError>::Ok((
+                url.clone(),
+                UpdateImagePackage::new(resolve_package(pkg_resolver, url).await?),
+            ))
+        })
+        .buffer_unordered(CONCURRENT_PACKAGE_RESOLVES)
+        .try_collect()
+        .await
+}
+
 async fn resolve_package(
     pkg_resolver: &PackageResolverProxy,
     url: &AbsolutePackageUrl,
@@ -61,6 +82,5 @@ async fn resolve_package(
 
     let _: fpkg::ResolutionContext =
         res.map_err(|raw| ResolveError::Error(raw.into(), url.clone()))?;
-
     Ok(dir)
 }
