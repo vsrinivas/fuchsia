@@ -49,7 +49,6 @@ group("cmx_allowlist") {
     "//examples/fuzzers/rust:toy_example_raw_bytes_component_manifest_compile",
     "//examples/fuzzers/rust:toy_example_same_name_component_manifest_compile",
     "//examples/fuzzers/rust:toy_example_with_main_component_manifest_compile",
-    "//sdk/lib/modular/testing/cpp:modular_testing_cpp_tests_component_manifest_compile",
     "//sdk/lib/sys/cpp/testing/environment_delegating_runner:environment_delegating_runner_component_manifest_compile",
     "//src/camera/bin/camera-gym:camera_gym_auto_manifest_compile",
     "//src/camera/bin/camera-gym:camera_gym_manual_manifest_compile",

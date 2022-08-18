@@ -3,10 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/cpp/sdk_source_set.gni")
-import("//build/fidl/fidl.gni")
-import("//build/testing/environments.gni")
-
-import("//build/components.gni")
 
 sdk_source_set("cpp") {
   testonly = true
@@ -38,39 +34,4 @@ sdk_source_set("cpp") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
-}
-
-fidl("fuchsia.modular.test.harness") {
-  sources = [ "test_harness_builder.test.fidl" ]
-}
-
-executable("modular_testing_cpp_tests_bin") {
-  testonly = true
-  sources = [
-    "fake_agent_test.cc",
-    "fake_component_test.cc",
-    "test_harness_builder_test.cc",
-    "test_harness_launcher_test.cc",
-  ]
-
-  deps = [
-    ":fuchsia.modular.test.harness",
-    "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/lib/modular/testing/cpp",
-    "//sdk/lib/modular/testing/cpp:fuchsia.modular.test.harness",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
-    "//sdk/lib/sys/cpp/testing:unit",
-    "//src/lib/fsl",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
-    "//third_party/googletest:gmock",
-    "//third_party/rapidjson",
-  ]
-}
-
-fuchsia_unittest_package("modular_testing_cpp_tests") {
-  manifest = "meta/modular_testing_cpp_tests_bin.cmx"
-  deps = [ ":modular_testing_cpp_tests_bin" ]
 }
