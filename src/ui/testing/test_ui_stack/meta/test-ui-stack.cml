@@ -26,7 +26,7 @@
                 "fuchsia.ui.shortcut.Manager",
                 "fuchsia.ui.shortcut.Registry",
                 "fuchsia.ui.test.input.Registry",
-                "fuchsia.ui.test.scene.Provider",
+                "fuchsia.ui.test.scene.Controller",
 
                 // TODO(fxbug.dev/107054): Remove these.
                 "test.inputsynthesis.Mouse",
@@ -67,7 +67,7 @@
                 "fuchsia.ui.shortcut.Manager",
                 "fuchsia.ui.shortcut.Registry",
                 "fuchsia.ui.test.input.Registry",
-                "fuchsia.ui.test.scene.Provider",
+                "fuchsia.ui.test.scene.Controller",
 
                 // TODO(fxbug.dev/107054): Remove these.
                 // Clients of test-ui-stack should use fuchsia.ui.test.input

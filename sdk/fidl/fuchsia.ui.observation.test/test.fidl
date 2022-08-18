@@ -18,8 +18,8 @@ protocol Registry {
     /// Sets up a channel for receiving global view geometry.
     ///
     /// This method may be called multiple times to obtain multiple geometry
-    /// observers, if necesary. However, typical test usage is to obtain just
-    /// one geometry observer in the test component.
+    /// `ViewTreeWatcher`s, if necesary. However, typical test usage is to
+    /// obtain just one geometry `ViewTreeWatcher` in the test component.
     ///
     /// Flow control. The caller is allowed at most one in-flight call at a
     /// time. Subsequent calls must wait until the acknowledgment returns.
@@ -27,7 +27,7 @@ protocol Registry {
     ///
     /// Client can freely disconnect this `Registry` endpoint after this method
     /// returns.
-    RegisterGlobalGeometryProvider(resource struct {
-        provider server_end:fuchsia.ui.observation.geometry.Provider;
+    RegisterGlobalViewTreeWatcher(resource struct {
+        watcher server_end:fuchsia.ui.observation.geometry.ViewTreeWatcher;
     }) -> ();
 };

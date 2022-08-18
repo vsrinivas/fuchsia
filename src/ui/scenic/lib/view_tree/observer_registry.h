@@ -22,10 +22,10 @@ class Registry : public fuchsia::ui::observation::test::Registry {
   // Sets up forwarding of geometry requests to the geometry provider manager.
   Registry(std::shared_ptr<view_tree::GeometryProvider> geometry_provider);
 
-  // |fuchsia.ui.observation.test.Registry.RegisterGlobalGeometryProvider|.
-  void RegisterGlobalGeometryProvider(
-      fidl::InterfaceRequest<fuchsia::ui::observation::geometry::Provider> request,
-      Registry::RegisterGlobalGeometryProviderCallback callback) override;
+  // |fuchsia.ui.observation.test.Registry.RegisterGlobalViewTreeWatcher|.
+  void RegisterGlobalViewTreeWatcher(
+      fidl::InterfaceRequest<fuchsia::ui::observation::geometry::ViewTreeWatcher> request,
+      Registry::RegisterGlobalViewTreeWatcherCallback callback) override;
 
   void Publish(sys::ComponentContext* app_context);
 
