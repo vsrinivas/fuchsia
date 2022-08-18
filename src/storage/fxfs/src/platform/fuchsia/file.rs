@@ -337,10 +337,6 @@ impl FxNode for FxFile {
         // NOP
     }
 
-    fn try_into_directory_entry(self: Arc<Self>) -> Option<Arc<dyn DirectoryEntry>> {
-        Some(self)
-    }
-
     fn open_count_add_one(&self) {
         let old = self.open_count.fetch_add(1, Ordering::Relaxed);
         assert!(old != PURGED && old != PURGED - 1);

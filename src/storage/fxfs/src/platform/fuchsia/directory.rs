@@ -290,10 +290,6 @@ impl FxNode for FxDirectory {
         }
     }
 
-    fn try_into_directory_entry(self: Arc<Self>) -> Option<Arc<dyn DirectoryEntry>> {
-        Some(self)
-    }
-
     fn open_count_add_one(&self) {}
 
     fn open_count_sub_one(&self) {}
