@@ -1,0 +1,64 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    collections: [
+        {
+            name: "escher-examples",
+
+            // The examples come from universe package set, so we have to set
+            // the resolver to the full resolver, instead of the base resolver.
+            environment: "#core-env",
+            durability: "transient",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#escher-examples",
+        },
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            from: "#trace_manager",
+            to: "#escher-examples",
+            source_availability: "unknown",
+        },
+        {
+            protocol: "fuchsia.sysmem.Allocator",
+            from: "#sysmem_connector",
+            to: "#escher-examples",
+        },
+        {
+            protocol: "fuchsia.vulkan.loader.Loader",
+            from: "#vulkan_loader",
+            to: "#escher-examples",
+        },
+        {
+            storage: "cache",
+            from: "self",
+            to: "#escher-examples",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-display-controller",
+            to: "#escher-examples",
+            subdir: "class/display-controller",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-input",
+            to: "#escher-examples",
+            subdir: "class/input",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-input-report",
+            to: "#escher-examples",
+            subdir: "class/input-report",
+        },
+    ],
+}
