@@ -364,13 +364,6 @@ def main():
                 '=' + dist,
             ]).check_returncode()
 
-    go_list_args = [go_tool, 'list', '-json', '-deps']
-    if args.is_test:
-        go_list_args += ['-test']
-    go_list_args += [args.package]
-    output = subprocess.check_output(
-        go_list_args, env=env, cwd=gopath_src, text=True)
-
     return 0
 
 
