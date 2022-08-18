@@ -553,7 +553,7 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
     screen_capture_importers.push_back(screen_capture_buffer_collection_importer);
 
     // Capture flatland_manager since the primary display may not have been initialized yet.
-    screen_capture_manager_ = std::make_shared<screen_capture::ScreenCaptureManager>(
+    screen_capture_manager_ = std::make_unique<screen_capture::ScreenCaptureManager>(
         flatland_engine_, flatland_renderer, flatland_manager_,
         std::move(screen_capture_importers));
 

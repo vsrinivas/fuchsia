@@ -115,6 +115,7 @@ fuchsia::sysmem::AllocatorSyncPtr CreateSysmemAllocatorSyncPtr(
 }
 
 SysmemTokens CreateSysmemTokens(fuchsia::sysmem::Allocator_Sync* sysmem_allocator) {
+  FX_DCHECK(sysmem_allocator);
   fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
   zx_status_t status = sysmem_allocator->AllocateSharedCollection(local_token.NewRequest());
   FX_DCHECK(status == ZX_OK);

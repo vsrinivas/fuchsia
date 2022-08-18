@@ -194,6 +194,7 @@
             protocol: [
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.composition.internal.ScreenCapture",
                 "fuchsia.ui.composition.ScreenCapture",
                 "fuchsia.ui.composition.Screenshot",
                 "fuchsia.ui.display.internal.DisplayPower",

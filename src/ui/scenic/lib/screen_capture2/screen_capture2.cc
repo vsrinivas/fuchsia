@@ -7,6 +7,7 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 
 #include <optional>
 #include <utility>
@@ -110,6 +111,7 @@ void ScreenCapture::Configure(ScreenCaptureConfig args, ConfigureCallback callba
 }
 
 void ScreenCapture::GetNextFrame(ScreenCapture::GetNextFrameCallback callback) {
+  TRACE_DURATION("gfx", "GetNextFrame");
   if (current_callback_ != std::nullopt) {
     FX_LOGS(WARNING) << "ScreenCapture::GetNextFrame: GetNextFrame already in progress. Wait for "
                         "it to return before calling again.";
@@ -123,6 +125,7 @@ void ScreenCapture::GetNextFrame(ScreenCapture::GetNextFrameCallback callback) {
 }
 
 void ScreenCapture::MaybeRenderFrame() {
+  TRACE_DURATION("gfx", "MaybeRenderFrame");
   if (render_frame_in_progress_) {
     return;
   }
@@ -179,6 +182,7 @@ void ScreenCapture::MaybeRenderFrame() {
 }
 
 void ScreenCapture::HandleRender(uint32_t buffer_index, uint64_t timestamp) {
+  TRACE_DURATION("gfx", "HandleRender");
   zx::eventpair buffer_release_client_token;
   zx::eventpair buffer_release_server_token;
   zx::eventpair::create(0, &buffer_release_server_token, &buffer_release_client_token);
@@ -214,6 +218,7 @@ void ScreenCapture::HandleRender(uint32_t buffer_index, uint64_t timestamp) {
 }
 
 void ScreenCapture::HandleBufferRelease(uint32_t buffer_index) {
+  TRACE_DURATION("gfx", "HandleBufferRelease", "buffer_index", buffer_index);
   buffer_server_tokens_.erase(buffer_index);
   if (available_buffers_.empty() && (current_callback_ != std::nullopt)) {
     available_buffers_.push_front(buffer_index);
