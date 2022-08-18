@@ -20,12 +20,6 @@ tests = [
   "routes",
 ]
 
-# TODO(https://fxbug.dev/106480): Flaky test disabled on coverage.
-# Please fix the flake and remove the condition below.
-if (!is_coverage) {
-  tests += [ "filter" ]
-}
-
 foreach(test, tests) {
   name = "netstack-${test}-fidl-test"
   fuchsia_test_component(name) {
@@ -34,10 +28,27 @@ foreach(test, tests) {
   }
 }
 
+filter_tests = [
+  "nat",
+  "tcp",
+  "udp",
+]
+
+foreach(test, filter_tests) {
+  name = "netstack-${test}-filter-fidl-test"
+  fuchsia_test_component(name) {
+    manifest = "meta/netstack-${test}-filter-fidl-test.cml"
+    deps = [ "filter/${test}" ]
+  }
+}
+
 fuchsia_test_package("netstack-fidl-tests") {
   test_components = []
   foreach(test, tests) {
     test_components += [ ":netstack-${test}-fidl-test" ]
+  }
+  foreach(test, filter_tests) {
+    test_components += [ ":netstack-${test}-filter-fidl-test" ]
   }
 
   deps = [

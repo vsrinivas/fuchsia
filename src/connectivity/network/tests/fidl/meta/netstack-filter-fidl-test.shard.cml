@@ -7,7 +7,4 @@
         "//src/sys/test_runners/rust/default.shard.cml",
         "syslog/client.shard.cml",
     ],
-    program: {
-        binary: "bin/netstack_filter_fidl_test",
-    },
 }
