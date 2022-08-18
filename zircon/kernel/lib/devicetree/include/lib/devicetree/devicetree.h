@@ -11,6 +11,7 @@
 #include <zircon/types.h>
 
 #include <cstdint>
+#include <optional>
 #include <string_view>
 #include <type_traits>
 
@@ -134,23 +135,32 @@ class PropertyValue {
   ByteView AsBytes() const { return bytes_; }
 
   // Note that the spec requires this to be a NUL-terminated string.
-  std::string_view AsString() const {
-    ZX_ASSERT(!bytes_.empty());
-    ZX_ASSERT(bytes_.back() == '\0');
+  std::optional<std::string_view> AsString() const {
+    if (bytes_.empty() || bytes_.back() != '\0') {
+      return std::nullopt;
+    }
     // Exclude NUL terminator from factoring into the string_view's size.
-    return {reinterpret_cast<const char*>(bytes_.data()), bytes_.size() - 1};
+    return std::string_view{reinterpret_cast<const char*>(bytes_.data()), bytes_.size() - 1};
   }
 
-  StringList<> AsStringList() const { return StringList<>{AsString()}; }
+  std::optional<StringList<>> AsStringList() const {
+    auto string = AsString();
+    if (string == std::nullopt) {
+      return std::nullopt;
+    }
+    return StringList<>{*string};
+  }
 
-  uint32_t AsUint32() const;
+  std::optional<uint32_t> AsUint32() const;
 
-  uint64_t AsUint64() const;
+  std::optional<uint64_t> AsUint64() const;
 
   // A value without size represents a Boolean property whose truthiness is a
   // function of the nature of the property's name and its presence in the tree.
-  bool AsBool() const {
-    ZX_ASSERT(bytes_.empty());
+  std::optional<bool> AsBool() const {
+    if (!bytes_.empty()) {
+      return std::nullopt;
+    }
     return true;
   }
 

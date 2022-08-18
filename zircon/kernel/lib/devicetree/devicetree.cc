@@ -93,13 +93,17 @@ PropertyBlockContents ReadPropertyBlock(ByteView bytes) {
 
 }  // namespace
 
-uint32_t PropertyValue::AsUint32() const {
-  ZX_ASSERT(bytes_.size() == sizeof(uint32_t));
+std::optional<uint32_t> PropertyValue::AsUint32() const {
+  if (bytes_.size() != sizeof(uint32_t)) {
+    return std::nullopt;
+  }
   return ReadBigEndianUint32(bytes_).value;
 }
 
-uint64_t PropertyValue::AsUint64() const {
-  ZX_ASSERT(bytes_.size() == sizeof(uint64_t));
+std::optional<uint64_t> PropertyValue::AsUint64() const {
+  if (bytes_.size() != sizeof(uint64_t)) {
+    return std::nullopt;
+  }
   return ReadBigEndianUint64(bytes_).value;
 }
 

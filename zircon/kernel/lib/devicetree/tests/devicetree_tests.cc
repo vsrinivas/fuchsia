@@ -260,10 +260,10 @@ TEST(DevicetreeTest, PropertiesAreTranslated) {
 
         auto prop1 = *props.begin();
         EXPECT_STREQ("a1", prop1.name);
-        EXPECT_TRUE(prop1.value.AsBool());
+        EXPECT_TRUE(prop1.value.AsBool().value());
         auto prop2 = *std::next(props.begin());
         EXPECT_STREQ("a2", prop2.name);
-        EXPECT_STREQ("root", prop2.value.AsString());
+        EXPECT_STREQ("root", *prop2.value.AsString());
         break;
       }
       case 2: {  // B
@@ -295,10 +295,10 @@ TEST(DevicetreeTest, PropertiesAreTranslated) {
 
         auto prop1 = *props.begin();
         EXPECT_STREQ("c1", prop1.name);
-        EXPECT_STREQ("hello", prop1.value.AsString());
+        EXPECT_STREQ("hello", *prop1.value.AsString());
         auto prop2 = *std::next(props.begin());
         EXPECT_STREQ("c2", prop2.name);
-        EXPECT_STREQ("world", prop2.value.AsString());
+        EXPECT_STREQ("world", *prop2.value.AsString());
         break;
       }
       case 4: {  // D
