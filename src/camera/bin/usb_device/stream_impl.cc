@@ -373,10 +373,21 @@ void StreamImpl::StopStreaming() {
   streaming_ = false;
   stream_->Stop();
 
-  // Wait until frames drain.
-  // TODO(ernesthua) - The right thing to do here is to wait until the stream Stop request has
-  // completed. This is signaled by the stream token being PEER_CLOSED. (See ConnectToStream above.)
-  zx_nanosleep(zx_deadline_after(ZX_MSEC(400)));
+  stream_ = nullptr;
+
+  // Wait until Stop request completed/frames drain (PEER_CLOSED is signalled on the stream_token_).
+  zx_signals_t peer_closed_signal = ZX_EVENTPAIR_PEER_CLOSED;
+  zx_signals_t observed;
+  auto status = zx_object_wait_one(stream_token_.get(), peer_closed_signal,
+                                   zx_deadline_after(ZX_MSEC(3000)), &observed);
+  if (status == ZX_OK) {
+    ZX_ASSERT(observed == ZX_EVENTPAIR_PEER_CLOSED);
+  } else if (status == ZX_ERR_TIMED_OUT) {
+    FX_LOGS(ERROR) << "Timed out waiting for stream Stop request to complete!";
+  } else {
+    FX_LOGS(ERROR) << "Saw unexpected error while waiting for stream Stop request to complete: "
+                   << status;
+  }
 }
 
 void StreamImpl::AllocatorBindSharedCollection(
