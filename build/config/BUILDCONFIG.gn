@@ -1009,6 +1009,7 @@ foreach(_target_type,
         }
         _args = []
         _args = _args_substituted
+        inputs += [ _response_file_path ]
       }
 
       # If the action is either setting that it doesn't have hermetic_deps, or
