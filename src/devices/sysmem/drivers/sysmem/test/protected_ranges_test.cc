@@ -105,7 +105,7 @@ class ProtectedRangesTest : public zxtest::Test, public protected_ranges::Protec
     upper_bitmap_.resize(paddr_size_, false);
     lower_refcounts_.resize(paddr_size_, 0);
     lower_used_bitmap_.resize(paddr_size_, false);
-    protected_ranges_.emplace(this);
+    protected_ranges_.emplace(this, /*disable_dynamic=*/false);
     CheckInterOpInvariants();
   }
 

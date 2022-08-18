@@ -40,6 +40,7 @@ class MemoryAllocator {
       // Avoid requiring unrelated tests to implement.
       ZX_PANIC("protected_ranges_core_control() not implemented by subclass");
     }
+    virtual bool protected_ranges_disable_dynamic() const { return false; }
   };
 
   explicit MemoryAllocator(TableSet& table_set, fuchsia_sysmem2::wire::HeapProperties properties);

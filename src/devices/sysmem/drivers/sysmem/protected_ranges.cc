@@ -248,14 +248,18 @@ Range AlignRequestedRange(const Range& range, uint64_t alignment) {
 
 namespace protected_ranges {
 
-ProtectedRanges::ProtectedRanges(ProtectedRangesControl* ranges_control)
+ProtectedRanges::ProtectedRanges(ProtectedRangesControl* ranges_control, bool disable_dynamic)
     : ranges_control_(ranges_control) {
   ZX_DEBUG_ASSERT(ranges_control_);
   is_dynamic_ = ranges_control_->IsDynamic();
-  max_range_count_ = ranges_control_->MaxRangeCount();
-  ZX_DEBUG_ASSERT(max_range_count_ >= 1);
-  is_mod_available_ = ranges_control_->HasModProtectedRange();
+  if (disable_dynamic) {
+    LOG(INFO, "disable_dynamic");
+    is_dynamic_ = false;
+  }
   if (is_dynamic_) {
+    max_range_count_ = ranges_control_->MaxRangeCount();
+    ZX_DEBUG_ASSERT(max_range_count_ >= 1);
+    is_mod_available_ = ranges_control_->HasModProtectedRange();
     max_logical_range_count_ = is_mod_available_ ? max_range_count_ - 1 : max_range_count_ - 2;
   } else {
     max_logical_range_count_ = 1;

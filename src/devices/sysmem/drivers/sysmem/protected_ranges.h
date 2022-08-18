@@ -230,8 +230,14 @@ class ProtectedRangesCoreControl {
   // is allowed.  False means only one call to AddRange() is allowed, and no other calls to
   // AddRange(), DelRange(), ModRage() will happen.
   virtual bool IsDynamic() = 0;
+
+  // If !IsDynamic(), assumed to be 1.
   virtual uint64_t MaxRangeCount() = 0;
+
+  // Still called even if !IsDynamic().
   virtual uint64_t GetRangeGranularity() = 0;
+
+  // Only called if IsDynamic().
   virtual bool HasModProtectedRange() = 0;
 
   // AddProtectedRange (required)
@@ -246,6 +252,8 @@ class ProtectedRangesCoreControl {
   // existing ranges must remain continuously usable during this call.
   //
   // Outside of tests, this will pin the range and HW-protect the range.
+  //
+  // Only called once if IsDynamic().
   virtual void AddProtectedRange(const Range& range) = 0;
 
   // DelProtectedRange (required)
@@ -266,6 +274,8 @@ class ProtectedRangesCoreControl {
   //
   // Outside of tests, this will HW-deprotect the range and un-pin.  Other ranges may still protect
   // some of the pages, in which case those pages will still have non-zero pin_count.
+  //
+  // Never called if !IsDynamic().
   virtual void DelProtectedRange(const Range& range) = 0;
 
   // ModProtectedRange
@@ -299,6 +309,8 @@ class ProtectedRangesCoreControl {
   //
   // Outside of tests, this will pin the new range, modify the HW protection, and un-pin the old
   // range.
+  //
+  // Never called if !IsDynamic() (or !HasModProtectedRange()).
   virtual void ModProtectedRange(const Range& old_range, const Range& new_range) {
     // If this actually runs, it means the sub-class is returning true from HasModProtectedRange()
     // despite not overriding ModRange().
@@ -323,6 +335,8 @@ class ProtectedRangesCoreControl {
   // downstream of a decoder, for example.  As long as we have actual zeroing of a protected
   // sub-range, let's just use that, since it's more rigorously actually logically zero and also
   // prevents any potential for mixing bits across collections.
+  //
+  // Never called if !IsDynamic() (at least for now).
   virtual void ZeroProtectedSubRange(bool is_covering_range_explicit, const Range& range) = 0;
 };
 
@@ -420,7 +434,7 @@ class ProtectedRanges {
  public:
   using Ranges = std::multiset<Range, CompareRangeByBegin>;
 
-  explicit ProtectedRanges(ProtectedRangesControl* ranges_control);
+  explicit ProtectedRanges(ProtectedRangesControl* ranges_control, bool disable_dynamic);
   ~ProtectedRanges();
 
   uint64_t max_logical_ranges();
@@ -773,7 +787,8 @@ class ProtectedRanges {
   // itself will remove the single added range.
   bool is_dynamic_ = false;
 
-  // This (absolute) max applies to ranges_ (at all times), not to required_ranges_.
+  // This (absolute) max applies to ranges_ (at all times), not to required_ranges_.  If
+  // !is_dynamic_, this stays 0.
   uint64_t max_range_count_ = 0;
 
   // If true, we can use ModProtectedRange().  If false, ModProtectedRange() can't be used and will
@@ -781,10 +796,11 @@ class ProtectedRanges {
   bool is_mod_available_ = false;
 
   // This (logical) max applies to ranges_ (while outside transient transitions), not to
-  // required_ranges_.
+  // required_ranges_.  If !is_dynamic_ (as set by end of constructor), this is set to 1.
   uint64_t max_logical_range_count_ = 0;
 
-  // The alignment requirement for ranges.
+  // The alignment requirement for ranges.  The range_granularity_ is still queried from
+  // ranges_control_ even if !ranges_control_->IsDynamic().
   uint64_t range_granularity_ = 0;
 };
 

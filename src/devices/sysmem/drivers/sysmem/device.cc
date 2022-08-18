@@ -20,7 +20,9 @@
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 
+#include <algorithm>
 #include <memory>
+#include <string>
 #include <thread>
 
 #include <fbl/string_printf.h>
@@ -237,6 +239,41 @@ zx_status_t Device::OverrideSizeFromCommandLine(const char* name, int64_t* memor
   }
   *memory_size = override_size;
   return ZX_OK;
+}
+
+zx::status<std::string> Device::GetFromCommandLine(const char* name) {
+  char arg[32];
+  auto status = device_get_variable(parent(), name, arg, sizeof(arg), nullptr);
+  if (status == ZX_ERR_NOT_FOUND) {
+    return zx::error(status);
+  }
+  if (status != ZX_OK) {
+    LOG(ERROR, "device_get_variable() failed - status: %d", status);
+    return zx::error(status);
+  }
+  if (strlen(arg) == 0) {
+    LOG(ERROR, "strlen(arg) == 0");
+    return zx::error(ZX_ERR_INTERNAL);
+  }
+  return zx::ok(std::string(arg, strlen(arg)));
+}
+
+zx::status<bool> Device::GetBoolFromCommandLine(const char* name, bool default_value) {
+  auto result = GetFromCommandLine(name);
+  if (!result.is_ok()) {
+    if (result.error_value() == ZX_ERR_NOT_FOUND) {
+      return zx::ok(default_value);
+    }
+    return zx::error(result.error_value());
+  }
+  std::string str = *result;
+  std::transform(str.begin(), str.end(), str.begin(), ::tolower);
+  if (str == "true" || str == "1") {
+    return zx::ok(true);
+  } else if (str == "false" || str == "0") {
+    return zx::ok(false);
+  }
+  return zx::error(ZX_ERR_INVALID_ARGS);
 }
 
 zx_status_t Device::GetContiguousGuardParameters(uint64_t* guard_bytes_out,
@@ -504,6 +541,13 @@ zx_status_t Device::Bind() {
     protected_memory_size = metadata.protected_memory_size;
     contiguous_memory_size = metadata.contiguous_memory_size;
   }
+
+  const char* kDisableDynamicRanges = "driver.sysmem.protected_ranges.disable_dynamic";
+  zx::status<bool> protected_ranges_disable_dynamic = GetBoolFromCommandLine(kDisableDynamicRanges, false);
+  if (protected_ranges_disable_dynamic.is_error()) {
+    return protected_ranges_disable_dynamic.status_value();
+  }
+  cmdline_protected_ranges_disable_dynamic_ = protected_ranges_disable_dynamic.value();
 
   status =
       OverrideSizeFromCommandLine("driver.sysmem.protected_memory_size", &protected_memory_size);

@@ -594,7 +594,7 @@ void ContiguousPooledMemoryAllocator::set_ready() {
   if (!is_always_cpu_accessible_) {
     protected_ranges_control_.emplace(this);
     if (is_ever_cpu_accessible_) {
-      protected_ranges_.emplace(&*protected_ranges_control_);
+      protected_ranges_.emplace(&*protected_ranges_control_, parent_device_->protected_ranges_disable_dynamic());
       SetupUnusedPages();
     }
   }
