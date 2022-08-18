@@ -1,0 +1,10 @@
+{
+    ec_or_nr: false,
+    call_waiting_or_three_way_calling: false,
+    cli_presentation_capability: false,
+    voice_recognition_activation: false,
+    remote_volume_control: false,
+    wide_band_speech: false,
+    enhanced_voice_recognition: false,
+    enhanced_voice_recognition_with_text: false,
+}

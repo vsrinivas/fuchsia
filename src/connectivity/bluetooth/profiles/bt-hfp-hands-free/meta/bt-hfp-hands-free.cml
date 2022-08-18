@@ -13,4 +13,14 @@
             from: "parent",
         },
     ],
+    config: {
+        ec_or_nr: { type: "bool" },
+        call_waiting_or_three_way_calling: { type: "bool" },
+        cli_presentation_capability: { type: "bool" },
+        voice_recognition_activation: { type: "bool" },
+        remote_volume_control: { type: "bool" },
+        wide_band_speech: { type: "bool" },
+        enhanced_voice_recognition: { type: "bool" },
+        enhanced_voice_recognition_with_text: { type: "bool" },
+    },
 }

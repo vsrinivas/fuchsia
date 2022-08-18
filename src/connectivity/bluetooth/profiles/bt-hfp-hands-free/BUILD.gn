@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
@@ -11,6 +12,7 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
+    ":hfp_hands_free_profile_config",
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr_rust",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/connectivity/bluetooth/lib/profile-client",
@@ -40,14 +42,30 @@ rustc_binary("bin") {
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
-fuchsia_component("component") {
+fuchsia_component_manifest("manifest") {
   component_name = "bt-hfp-hands-free"
-  deps = [ ":bin" ]
   manifest = "meta/bt-hfp-hands-free.cml"
 }
 
+fuchsia_component("component") {
+  cm_label = ":manifest"
+  deps = [ ":bin" ]
+}
+
+fuchsia_structured_config_rust_lib("hfp_hands_free_profile_config") {
+  cm_label = ":manifest"
+}
+
+fuchsia_structured_config_values("default_config_values") {
+  cm_label = ":manifest"
+  values_source = "config/default.json5"
+}
+
 fuchsia_package("bt-hfp-hands-free") {
-  deps = [ ":component" ]
+  deps = [
+    ":component",
+    ":default_config_values",
+  ]
 }
 
 fuchsia_unittest_package("bt-hfp-hands-free-tests") {
