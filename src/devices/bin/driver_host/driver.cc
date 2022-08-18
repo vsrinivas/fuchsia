@@ -20,7 +20,7 @@ zx::status<fbl::RefPtr<Driver>> Driver::Create(zx_driver_t* zx_driver) {
   auto dispatcher = fdf::Dispatcher::Create(
       FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS,
       fbl::StringPrintf("%s-default-%p", zx_driver->name(), driver.get()),
-      [](fdf_dispatcher_t* dispatcher) { fdf_dispatcher_destroy(dispatcher); });
+      [driver = driver.get()](fdf_dispatcher_t* dispatcher) { driver->released_.Signal(); });
   if (dispatcher.is_error()) {
     return dispatcher.take_error();
   }
@@ -30,11 +30,11 @@ zx::status<fbl::RefPtr<Driver>> Driver::Create(zx_driver_t* zx_driver) {
 }
 
 Driver::~Driver() {
-  // TODO(fxbug.dev/97755): ideally we would want to force shutdown the dispatchers
-  // before calling the device ReleaseOp, but that doesn't work currently if we are
-  // sharing the same dispatcher for all devices in a driver.
+  // Generally, we will shut down the dispatcher when the last device associated with
+  // the driver is unbound.
+  // However in some tests we don't properly tear down devices so we also shut down here.
   ZX_ASSERT(!fdf_internal_dispatcher_has_queued_tasks(dispatcher_.get()));
+  ZX_ASSERT(device_count_ == 0);
   dispatcher_.ShutdownAsync();
-  // The dispatcher will be destroyed in the callback.
-  dispatcher_.release();
+  released_.Wait();
 }

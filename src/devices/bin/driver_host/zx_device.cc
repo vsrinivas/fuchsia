@@ -16,7 +16,7 @@
 #include "proxy_device.h"
 
 zx_device::zx_device(DriverHostContext* ctx, std::string name, fbl::RefPtr<Driver> drv)
-    : driver(drv), driver_host_context_(ctx) {
+    : driver(drv), driver_ref_(drv.get()), driver_host_context_(ctx) {
   size_t len = name.length();
   // TODO(teisenbe): I think this is overly aggressive, and could be changed
   // to |len > ZX_DEVICE_NAME_MAX| and |len = ZX_DEVICE_NAME_MAX|.

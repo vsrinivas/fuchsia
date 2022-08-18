@@ -160,6 +160,7 @@ void DriverHostContext::DeviceDestroy(zx_device_t* dev) {
   dev->ctx = nullptr;
   dev->set_parent(nullptr);
   dev->FreeInspect();
+  dev->driver_ref_.Destroy();
   dev->driver = nullptr;
   {
     fbl::AutoLock guard(&dev->proxy_ios_lock);
@@ -209,9 +210,18 @@ void DriverHostContext::FinalizeDyingDevices() {
         dev->parent()->ChildPreReleaseOp(dev->ctx);
         api_lock_.Acquire();
       }
-      api_lock_.Release();
-      dev->ReleaseOp();
-      api_lock_.Acquire();
+
+      // Shut down the dispatcher if this is the last device.
+      if (dev->driver->device_count() == 1) {
+        dev->driver->StopDispatcher();
+        api_lock_.Release();
+        dev->ReleaseSyncOp();
+        api_lock_.Acquire();
+      } else {
+        api_lock_.Release();
+        dev->ReleaseOp();
+        api_lock_.Acquire();
+      }
     }
 
     if (dev->parent()) {

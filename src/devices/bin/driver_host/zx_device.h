@@ -209,6 +209,15 @@ struct zx_device
     completion.Wait();
   }
 
+  // This is identical to |ReleaseOp|, except it runs the op on the current thread.
+  // This is necessary when we're running ReleaseOp for the last device published by a driver, since
+  // it is called after the dispatcher has been shut down.
+  void ReleaseSyncOp() {
+    TraceLabelBuffer trace_label;
+    TRACE_DURATION("driver_host:driver-hooks", get_trace_label("release-sync", &trace_label));
+    Dispatch(ops_->release);
+  }
+
   void SuspendNewOp(uint8_t requested_state, bool enable_wake, uint8_t suspend_reason) {
     libsync::Completion completion;
 
@@ -420,6 +429,7 @@ struct zx_device
 
   // driver that has published this device
   fbl::RefPtr<Driver> driver;
+  DriverRef driver_ref_;
 
   const fbl::RefPtr<zx_device_t>& parent() const { return parent_; }
   void set_parent(fbl::RefPtr<zx_device_t> parent) {

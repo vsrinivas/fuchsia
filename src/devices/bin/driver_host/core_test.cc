@@ -144,6 +144,39 @@ class CoreTest : public zxtest::Test {
   FakeCoordinator coordinator_;
 };
 
+TEST_F(CoreTest, LastDeviceUnbindStopsAsyncLoop) {
+  EXPECT_EQ(0, driver_obj_->device_count());
+  zx_protocol_device_t ops = {};
+  {
+    fbl::RefPtr<zx_device> dev;
+    ASSERT_OK(zx_device::Create(&ctx_, "test", driver_obj_, &dev));
+
+    EXPECT_EQ(1, driver_obj_->device_count());
+    ASSERT_FALSE(driver_obj_->IsDispatcherShutdown());
+    dev->set_ops(&ops);
+    // Mark the device as "added" so that we try and call the release op on the device (and shut
+    // down its dispatcher).
+    dev->set_flag(DEV_FLAG_ADDED);
+
+    ASSERT_NO_FATAL_FAILURE(Connect(dev));
+
+    dev->unbind_cb = [](zx_status_t) {};
+    UnbindDevice(dev);
+
+    // Clean up the DeviceControllerConnection we set up in Connect().
+    clients_.clear();
+    ctx_.loop().Quit();
+    ctx_.loop().JoinThreads();
+    ASSERT_OK(ctx_.loop().ResetQuit());
+    ASSERT_OK(ctx_.loop().RunUntilIdle());
+    // Here the dev will go out of scope and fbl_recycle() will be called.
+  }
+
+  EXPECT_EQ(0, driver_obj_->device_count());
+
+  ASSERT_TRUE(driver_obj_->IsDispatcherShutdown());
+}
+
 TEST_F(CoreTest, RebindNoChildren) {
   fbl::RefPtr<zx_device> dev;
   ASSERT_OK(zx_device::Create(&ctx_, "test", driver_obj_, &dev));
