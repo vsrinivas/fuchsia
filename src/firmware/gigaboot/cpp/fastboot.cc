@@ -5,7 +5,9 @@
 #include "fastboot.h"
 
 #include <ctype.h>
+#include <lib/abr/abr.h>
 #include <lib/fastboot/fastboot_base.h>
+#include <lib/zircon_boot/zircon_boot.h>
 #include <stdio.h>
 
 #include <algorithm>
@@ -36,6 +38,7 @@ zx::status<void *> Fastboot::GetDownloadBuffer(size_t total_download_size) {
 cpp20::span<Fastboot::VariableCallbackEntry> Fastboot::GetVariableCallbackTable() {
   static VariableCallbackEntry var_entries[] = {
       {"max-download-size", &Fastboot::GetVarMaxDownloadSize},
+      {"current-slot", &Fastboot::GetVarCurrentSlot},
   };
 
   return var_entries;
@@ -49,6 +52,7 @@ cpp20::span<Fastboot::CommandCallbackEntry> Fastboot::GetCommandCallbackTable() 
       {"reboot", &Fastboot::Reboot},
       {"reboot-bootloader", &Fastboot::RebootBootloader},
       {"reboot-recovery", &Fastboot::RebootRecovery},
+      {"set_active", &Fastboot::SetActive},
   };
 
   return cmd_entries;
@@ -89,6 +93,34 @@ zx::status<> Fastboot::DoReboot(RebootMode reboot_mode, std::string_view cmd,
   return zx::ok();
 }
 
+zx::status<> Fastboot::SetActive(std::string_view cmd, fastboot::Transport *transport) {
+  CommandArgs args;
+  ExtractCommandArgs(cmd, ":", args);
+
+  if (args.num_args < 2) {
+    return SendResponse(ResponseType::kFail, "missing slot name", transport);
+  }
+
+  // It is not valid to explicitly set the slot to recovery.
+  AbrSlotIndex idx = kAbrSlotIndexR;
+  if (args.args[1] == "a") {
+    idx = kAbrSlotIndexA;
+  } else if (args.args[1] == "b") {
+    idx = kAbrSlotIndexB;
+  } else {
+    return SendResponse(ResponseType::kFail, "slot name is invalid", transport);
+  }
+
+  AbrOps abr_ops = GetAbrOps();
+  AbrResult res = AbrMarkSlotActive(&abr_ops, idx);
+  if (res != kAbrResultOk) {
+    return SendResponse(ResponseType::kFail, "Failed to set slot", transport,
+                        zx::error(ZX_ERR_INTERNAL));
+  }
+
+  return SendResponse(ResponseType::kOkay, "", transport);
+}
+
 zx::status<> Fastboot::GetVar(std::string_view cmd, fastboot::Transport *transport) {
   CommandArgs args;
   ExtractCommandArgs(cmd, ":", args);
@@ -110,6 +142,29 @@ zx::status<> Fastboot::GetVarMaxDownloadSize(const CommandArgs &, fastboot::Tran
   char size_str[16] = {0};
   snprintf(size_str, sizeof(size_str), "0x%08zx", download_buffer_.size());
   return SendResponse(ResponseType::kOkay, size_str, transport);
+}
+
+zx::status<> Fastboot::GetVarCurrentSlot(const CommandArgs &, fastboot::Transport *transport) {
+  AbrOps abr_ops = GetAbrOps();
+
+  char const *slot_str;
+  AbrSlotIndex slot = AbrGetBootSlot(&abr_ops, false, nullptr);
+  switch (slot) {
+    case kAbrSlotIndexA:
+      slot_str = "a";
+      break;
+    case kAbrSlotIndexB:
+      slot_str = "b";
+      break;
+    case kAbrSlotIndexR:
+      slot_str = "r";
+      break;
+    default:
+      slot_str = "";
+      break;
+  }
+
+  return SendResponse(ResponseType::kOkay, slot_str, transport);
 }
 
 zx::status<> Fastboot::Flash(std::string_view cmd, fastboot::Transport *transport) {

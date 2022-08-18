@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <lib/abr/data.h>
-#include <lib/cksum.h>
 #include <lib/zbi/zbi.h>
+#include <lib/zircon_boot/test/mock_zircon_boot_ops.h>
 #include <lib/zircon_boot/zircon_boot.h>
 #include <zircon/hw/gpt.h>
 
@@ -13,12 +13,7 @@
 
 #include <zxtest/zxtest.h>
 
-#include "mock_zircon_boot_ops.h"
 #include "test_data/test_images.h"
-
-uint32_t AbrCrc32(const void* buf, size_t buf_size) {
-  return crc32(0, reinterpret_cast<const uint8_t*>(buf), buf_size);
-}
 
 namespace {
 

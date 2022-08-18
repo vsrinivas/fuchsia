@@ -11,6 +11,7 @@
 #include "gigaboot/src/inet6.h"
 #include "gigaboot/src/tcp.h"
 #include "phys/efi/main.h"
+#include "zircon_boot_ops.h"
 
 namespace gigaboot {
 namespace {
@@ -76,7 +77,8 @@ zx::status<> FastbootTcpMain() {
   }
 
   TcpTransport transport(fb_tcp_socket);
-  Fastboot fastboot(download_buffer);
+  ZirconBootOps zb_ops = gigaboot::GetZirconBootOps();
+  Fastboot fastboot(download_buffer, zb_ops);
 
   while (true) {
     // TODO(b/235489025): Investigate broadcasting mdns here.

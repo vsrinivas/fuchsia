@@ -5,8 +5,10 @@
 #ifndef SRC_FIRMWARE_GIGABOOT_CPP_FASTBOOT_H_
 #define SRC_FIRMWARE_GIGABOOT_CPP_FASTBOOT_H_
 
+#include <lib/abr/ops.h>
 #include <lib/fastboot/fastboot_base.h>
 #include <lib/stdcompat/span.h>
+#include <lib/zircon_boot/zircon_boot.h>
 
 #include <fbl/vector.h>
 
@@ -16,13 +18,15 @@ namespace gigaboot {
 
 class Fastboot : public fastboot::FastbootBase {
  public:
-  Fastboot(cpp20::span<uint8_t> download_buffer) : download_buffer_(download_buffer) {}
+  Fastboot(cpp20::span<uint8_t> download_buffer, ZirconBootOps zb_ops)
+      : download_buffer_(download_buffer), zb_ops_(zb_ops) {}
   bool IsContinue() { return continue_; }
 
  private:
   zx::status<> ProcessCommand(std::string_view cmd, fastboot::Transport *transport) override;
   void DoClearDownload() override;
   zx::status<void *> GetDownloadBuffer(size_t total_download_size) override;
+  AbrOps GetAbrOps() { return GetAbrOpsFromZirconBootOps(&zb_ops_); }
 
   struct VariableCallbackEntry {
     std::string_view name;
@@ -39,6 +43,7 @@ class Fastboot : public fastboot::FastbootBase {
   cpp20::span<CommandCallbackEntry> GetCommandCallbackTable();
 
   zx::status<> GetVarMaxDownloadSize(const CommandArgs &, fastboot::Transport *);
+  zx::status<> GetVarCurrentSlot(const CommandArgs &, fastboot::Transport *);
 
   zx::status<> GetVar(std::string_view cmd, fastboot::Transport *transport);
   zx::status<> Flash(std::string_view cmd, fastboot::Transport *transport);
@@ -48,9 +53,10 @@ class Fastboot : public fastboot::FastbootBase {
   zx::status<> Reboot(std::string_view cmd, fastboot::Transport *transport);
   zx::status<> RebootBootloader(std::string_view cmd, fastboot::Transport *transport);
   zx::status<> RebootRecovery(std::string_view cmd, fastboot::Transport *transport);
+  zx::status<> SetActive(std::string_view cmd, fastboot::Transport *transport);
 
   cpp20::span<uint8_t> download_buffer_;
-
+  ZirconBootOps zb_ops_;
   bool continue_ = false;
 };
 

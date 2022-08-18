@@ -4,7 +4,7 @@
 
 import("//build/test.gni")
 
-test("unittests") {
+test("gigaboot_unittests") {
   sources = [
     "boot_zbi_items_tests.cc",
     "fastboot_test.cc",
@@ -15,7 +15,10 @@ test("unittests") {
   public_deps = [
     "..:lib",
     "//sdk/lib/fit",
+    "//src/firmware/lib/abr:in_tree",
     "//src/firmware/lib/fastboot/test:utils",
+    "//src/firmware/lib/zircon_boot:in_tree",
+    "//src/firmware/lib/zircon_boot/test:mock_zircon_boot_lib",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/zbitl",
     "//zircon/kernel/lib/efi",
@@ -27,5 +30,5 @@ test("unittests") {
 
 group("tests") {
   testonly = true
-  deps = [ ":unittests($host_toolchain)" ]
+  deps = [ ":gigaboot_unittests($host_toolchain)" ]
 }

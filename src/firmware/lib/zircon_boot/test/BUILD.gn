@@ -16,22 +16,32 @@ group("test") {
   }
 }
 
+source_set("mock_zircon_boot_lib") {
+  public = [ "../include/lib/zircon_boot/test/mock_zircon_boot_ops.h" ]
+  sources = [ "mock_zircon_boot_ops.cc" ]
+  deps = [
+    "//src/firmware/lib/zbi:in_tree",
+    "//src/firmware/lib/zircon_boot:in_tree",
+    "//src/lib/digest",
+    "//zircon/system/ulib/zxc",
+    "//zircon/third_party/ulib/cksum",
+  ]
+}
+
 test("firmware_zircon_boot_test") {
   sources = [
-    "mock_zircon_boot_ops.cc",
     "zbi_utils.cc",
     "zircon_boot.cc",
   ]
   deps = [
+    ":mock_zircon_boot_lib",
     "//src/firmware/lib/abr:in_tree",
     "//src/firmware/lib/zbi:in_tree",
     "//src/firmware/lib/zircon_boot:in_tree",
-    "//src/lib/digest",
     "//third_party/android/platform/external/avb:sysdeps-posix",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zxc",
     "//zircon/system/ulib/zxtest",
-    "//zircon/third_party/ulib/cksum",
   ]
 }
 

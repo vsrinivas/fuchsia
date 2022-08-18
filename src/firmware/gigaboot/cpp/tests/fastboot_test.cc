@@ -4,7 +4,11 @@
 
 #include "fastboot.h"
 
+#include <lib/abr/abr.h>
+#include <lib/abr/data.h>
+#include <lib/abr/util.h>
 #include <lib/fastboot/test/test-transport.h>
+#include <lib/zircon_boot/test/mock_zircon_boot_ops.h>
 
 #include <vector>
 
@@ -96,7 +100,7 @@ constexpr size_t kDownloadBufferSize = 1024;
 uint8_t download_buffer[kDownloadBufferSize];
 
 TEST(FastbootTest, FastbootContinueTest) {
-  Fastboot fastboot(download_buffer);
+  Fastboot fastboot(download_buffer, ZirconBootOps());
   fastboot::TestTransport transport;
   transport.AddInPacket(std::string("continue"));
   zx::status<> ret = fastboot.ProcessPacket(&transport);
@@ -108,7 +112,7 @@ TEST(FastbootTest, FastbootContinueTest) {
 }
 
 TEST(FastbootTcpSessionTest, ExitOnFastbootContinue) {
-  Fastboot fastboot(download_buffer);
+  Fastboot fastboot(download_buffer, ZirconBootOps());
   TestTcpTransport transport;
 
   // Handshake message
@@ -139,7 +143,7 @@ TEST(FastbootTcpSessionTest, ExitOnFastbootContinue) {
 }
 
 TEST(FastbootTcpSessionTest, HandshakeFailsNotFB) {
-  Fastboot fastboot(download_buffer);
+  Fastboot fastboot(download_buffer, ZirconBootOps());
   TestTcpTransport transport;
 
   // Handshake message
@@ -156,7 +160,7 @@ TEST(FastbootTcpSessionTest, HandshakeFailsNotFB) {
 }
 
 TEST(FastbootTcpSessionTest, HandshakeFailsNotNumericVersion) {
-  Fastboot fastboot(download_buffer);
+  Fastboot fastboot(download_buffer, ZirconBootOps());
   TestTcpTransport transport;
 
   // Handshake message
@@ -173,7 +177,7 @@ TEST(FastbootTcpSessionTest, HandshakeFailsNotNumericVersion) {
 }
 
 TEST(FastbootTcpSessionTest, ExitWhenNoMoreData) {
-  Fastboot fastboot(download_buffer);
+  Fastboot fastboot(download_buffer, ZirconBootOps());
   TestTcpTransport transport;
 
   // Handshake message
@@ -190,7 +194,7 @@ TEST(FastbootTcpSessionTest, ExitWhenNoMoreData) {
 }
 
 TEST(FastbootTcpSessionTest, ExitOnCommandFailure) {
-  Fastboot fastboot(download_buffer);
+  Fastboot fastboot(download_buffer, ZirconBootOps());
   TestTcpTransport transport;
 
   // Handshake message
@@ -270,8 +274,33 @@ class FastbootFlashTest : public ::testing::Test {
   BlockDevice block_device_;
 };
 
+class FastbootSlotTest : public ::testing::Test {
+ public:
+  void InitializeAbr(AbrSlotIndex slot) {
+    mock_zb_ops_.AddPartition(GPT_DURABLE_BOOT_NAME, sizeof(AbrData));
+    ZirconBootOps zb_ops = mock_zb_ops_.GetZirconBootOps();
+    AbrOps abr_ops = GetAbrOpsFromZirconBootOps(&zb_ops);
+    AbrResult res;
+
+    if (slot == kAbrSlotIndexR) {
+      res = AbrMarkSlotUnbootable(&abr_ops, kAbrSlotIndexA);
+      ASSERT_EQ(res, kAbrResultOk);
+      res = AbrMarkSlotUnbootable(&abr_ops, kAbrSlotIndexB);
+      ASSERT_EQ(res, kAbrResultOk);
+    } else {
+      res = AbrMarkSlotActive(&abr_ops, slot);
+      ASSERT_EQ(res, kAbrResultOk);
+    }
+  }
+
+  MockZirconBootOps& mock_zb_ops() { return mock_zb_ops_; }
+
+ private:
+  MockZirconBootOps mock_zb_ops_;
+};
+
 TEST(FastbootTest, GetVarNotEnoughArgument) {
-  Fastboot fastboot(download_buffer);
+  Fastboot fastboot(download_buffer, ZirconBootOps());
   fastboot::TestTransport transport;
 
   transport.AddInPacket(std::string("getvar"));
@@ -284,7 +313,7 @@ TEST(FastbootTest, GetVarNotEnoughArgument) {
 }
 
 TEST(FastbootTest, GetVarUknown) {
-  Fastboot fastboot(download_buffer);
+  Fastboot fastboot(download_buffer, ZirconBootOps());
   fastboot::TestTransport transport;
 
   transport.AddInPacket(std::string("getvar:non-existing"));
@@ -296,10 +325,160 @@ TEST(FastbootTest, GetVarUknown) {
   ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
 }
 
+TEST_F(FastbootSlotTest, GetCurrentSlotA) {
+  InitializeAbr(kAbrSlotIndexA);
+  ZirconBootOps zb_ops = mock_zb_ops().GetZirconBootOps();
+
+  Fastboot fastboot(download_buffer, zb_ops);
+  fastboot::TestTransport transport;
+
+  transport.AddInPacket(std::string("getvar:current-slot"));
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+
+  fastboot::Packets expected_packets = {"OKAYa"};
+  ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
+}
+
+TEST_F(FastbootSlotTest, GetCurrentSlotB) {
+  InitializeAbr(kAbrSlotIndexB);
+  ZirconBootOps zb_ops = mock_zb_ops().GetZirconBootOps();
+
+  Fastboot fastboot(download_buffer, zb_ops);
+  fastboot::TestTransport transport;
+
+  transport.AddInPacket(std::string("getvar:current-slot"));
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+
+  fastboot::Packets expected_packets = {"OKAYb"};
+  ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
+}
+
+TEST_F(FastbootSlotTest, GetCurrentSlotR) {
+  InitializeAbr(kAbrSlotIndexR);
+  ZirconBootOps zb_ops = mock_zb_ops().GetZirconBootOps();
+
+  Fastboot fastboot(download_buffer, zb_ops);
+  fastboot::TestTransport transport;
+
+  transport.AddInPacket(std::string("getvar:current-slot"));
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+
+  fastboot::Packets expected_packets = {"OKAYr"};
+  ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
+}
+
+TEST_F(FastbootSlotTest, SetActiveSlotA) {
+  InitializeAbr(kAbrSlotIndexB);
+  ZirconBootOps zb_ops = mock_zb_ops().GetZirconBootOps();
+
+  Fastboot fastboot(download_buffer, zb_ops);
+  fastboot::TestTransport transport;
+  /*
+    Current slot is 'b', so we can check if command does anything.
+    Run the test twice in a row to verify that we don't just toggle the slot.
+  */
+  for (int i = 0; i < 2; i++) {
+    transport.ClearOutPackets();
+    transport.AddInPacket(std::string("set_active:a"));
+    zx::status<> ret = fastboot.ProcessPacket(&transport);
+    ASSERT_TRUE(ret.is_ok());
+
+    fastboot::Packets expected_packets = {"OKAY"};
+    ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
+    transport.ClearOutPackets();
+
+    transport.AddInPacket(std::string("getvar:current-slot"));
+    ret = fastboot.ProcessPacket(&transport);
+    ASSERT_TRUE(ret.is_ok());
+
+    expected_packets = {"OKAYa"};
+    ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
+  }
+}
+
+TEST_F(FastbootSlotTest, SetActiveSlotB) {
+  InitializeAbr(kAbrSlotIndexA);
+  ZirconBootOps zb_ops = mock_zb_ops().GetZirconBootOps();
+
+  Fastboot fastboot(download_buffer, zb_ops);
+  fastboot::TestTransport transport;
+  /*
+    Current slot is 'a', so we can check if command does anything.
+    Run the test twice in a row to verify that we don't just toggle the slot.
+  */
+  for (int i = 0; i < 2; i++) {
+    transport.ClearOutPackets();
+    transport.AddInPacket(std::string("set_active:b"));
+    zx::status<> ret = fastboot.ProcessPacket(&transport);
+    ASSERT_TRUE(ret.is_ok());
+
+    fastboot::Packets expected_packets = {"OKAY"};
+    ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
+    transport.ClearOutPackets();
+
+    transport.AddInPacket(std::string("getvar:current-slot"));
+    ret = fastboot.ProcessPacket(&transport);
+    ASSERT_TRUE(ret.is_ok());
+
+    expected_packets = {"OKAYb"};
+    ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
+  }
+}
+
+TEST_F(FastbootSlotTest, SetActiveSlotMissingSlotName) {
+  InitializeAbr(kAbrSlotIndexA);
+  ZirconBootOps zb_ops = mock_zb_ops().GetZirconBootOps();
+
+  Fastboot fastboot(download_buffer, zb_ops);
+  fastboot::TestTransport transport;
+
+  transport.AddInPacket(std::string("set_active"));
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+  auto sent_packets = transport.GetOutPackets();
+  ASSERT_EQ(sent_packets.size(), 1ULL);
+  ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
+}
+
+TEST_F(FastbootSlotTest, SetActiveSlotNoSuchSlot) {
+  InitializeAbr(kAbrSlotIndexA);
+  ZirconBootOps zb_ops = mock_zb_ops().GetZirconBootOps();
+
+  Fastboot fastboot(download_buffer, zb_ops);
+  fastboot::TestTransport transport;
+
+  transport.AddInPacket(std::string("set_active:squid"));
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+  auto sent_packets = transport.GetOutPackets();
+  ASSERT_EQ(sent_packets.size(), 1ULL);
+  ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
+}
+
+TEST_F(FastbootSlotTest, SetActiveSlotWriteFailure) {
+  // Do NOT call InitializeAbr in order to simulate
+  // a write error due to a missing partition.
+
+  ZirconBootOps zb_ops = mock_zb_ops().GetZirconBootOps();
+
+  Fastboot fastboot(download_buffer, zb_ops);
+  fastboot::TestTransport transport;
+
+  transport.AddInPacket(std::string("set_active:b"));
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_error());
+  auto sent_packets = transport.GetOutPackets();
+  ASSERT_EQ(sent_packets.size(), 1ULL);
+  ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
+}
+
 TEST_F(FastbootFlashTest, GetVarMaxDownloadSize) {
   auto cleanup = SetupEfiGlobalState(stub_service(), image_device());
 
-  Fastboot fastboot(download_buffer);
+  Fastboot fastboot(download_buffer, ZirconBootOps());
   fastboot::TestTransport transport;
 
   transport.AddInPacket(std::string("getvar:max-download-size"));
@@ -318,7 +497,7 @@ TEST_F(FastbootFlashTest, FlashPartition) {
   SetGptEntryName(GPT_ZIRCON_A_NAME, entry);
   AddPartition(entry);
 
-  Fastboot fastboot(download_buffer);
+  Fastboot fastboot(download_buffer, ZirconBootOps());
 
   // Download some data to flash to the partition.
   std::vector<uint8_t> download_content;
@@ -351,7 +530,7 @@ TEST_F(FastbootFlashTest, FlashPartitionFailedToFindGptDevice) {
   SetGptEntryName(GPT_ZIRCON_A_NAME, entry);
   AddPartition(entry);
 
-  Fastboot fastboot(download_buffer);
+  Fastboot fastboot(download_buffer, ZirconBootOps());
 
   // Download some data to flash to the partition.
   std::vector<uint8_t> download_content(128, 0);
@@ -374,7 +553,7 @@ TEST_F(FastbootFlashTest, FlashPartitionFailedToLoadGptDevice) {
   // Clear the gpt.
   memset(BlockDeviceStart(), 0, block_device().total_blocks() * kBlockSize);
 
-  Fastboot fastboot(download_buffer);
+  Fastboot fastboot(download_buffer, ZirconBootOps());
 
   // Download some data to flash to the partition.
   std::vector<uint8_t> download_content(128, 0);
@@ -404,7 +583,7 @@ TEST_F(FastbootFlashTest, RebootNormal) {
   };
   gEfiSystemTable->RuntimeServices = &runtime_services;
 
-  Fastboot fastboot(download_buffer);
+  Fastboot fastboot(download_buffer, ZirconBootOps());
   fastboot::TestTransport transport;
 
   // Set to a different initial boot mode.
@@ -426,7 +605,7 @@ TEST_F(FastbootFlashTest, RebootBootloader) {
   };
   gEfiSystemTable->RuntimeServices = &runtime_services;
 
-  Fastboot fastboot(download_buffer);
+  Fastboot fastboot(download_buffer, ZirconBootOps());
   fastboot::TestTransport transport;
 
   // Set to a different initial boot mode.
@@ -448,7 +627,7 @@ TEST_F(FastbootFlashTest, RebootRecovery) {
   };
   gEfiSystemTable->RuntimeServices = &runtime_services;
 
-  Fastboot fastboot(download_buffer);
+  Fastboot fastboot(download_buffer, ZirconBootOps());
   fastboot::TestTransport transport;
 
   // Set to a different initial boot mode.
@@ -470,7 +649,7 @@ TEST_F(FastbootFlashTest, RebootSetRebootModeFail) {
   };
   gEfiSystemTable->RuntimeServices = &runtime_services;
 
-  Fastboot fastboot(download_buffer);
+  Fastboot fastboot(download_buffer, ZirconBootOps());
   fastboot::TestTransport transport;
 
   // Set returned value to false
@@ -496,7 +675,7 @@ TEST_F(FastbootFlashTest, RebootResetSystemFail) {
   };
   gEfiSystemTable->RuntimeServices = &runtime_services;
 
-  Fastboot fastboot(download_buffer);
+  Fastboot fastboot(download_buffer, ZirconBootOps());
   fastboot::TestTransport transport;
 
   transport.AddInPacket(std::string("reboot"));
