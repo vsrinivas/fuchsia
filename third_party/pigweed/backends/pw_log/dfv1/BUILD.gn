@@ -16,6 +16,7 @@ source_set("dfv1") {
   public_deps = [ dir_pw_preprocessor ]
   deps = [
     "$dir_pw_log:facade",
+    "$dir_pw_string:builder",
     "//src/lib/ddk",
   ]
 }
@@ -24,4 +25,21 @@ source_set("dfv1") {
 # actual dependencies. The backend "impl" group may be empty if everything can
 # go directly in the backend target without causing circular dependencies.
 source_set("dfv1.impl") {
+}
+
+executable("tests_executable") {
+  testonly = true
+
+  sources = [ "log_dfv1_unittest.cc" ]
+
+  deps = [
+    ":dfv1",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fuchsia_unittest_package("tests") {
+  package_name = "pigweed-backend-pw-log-dfv1-tests"
+  deps = [ ":tests_executable" ]
 }
