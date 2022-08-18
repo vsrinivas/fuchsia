@@ -17,21 +17,22 @@
 
 namespace view_tree {
 // This class is responsible for registering and maintaining server endpoints for
-// fuchsia.ui.observation.geometry.Provider protocol clients. This class also listens for new
+// fuchsia.ui.observation.geometry.ViewTreeWatcher protocol clients. This class also listens for new
 // snapshots generated every frame, and sends a processed version of them to these registered
 // clients.
 class GeometryProvider {
  public:
   GeometryProvider() = default;
   // Adds a server side endpoint to |endpoints_| for lifecycle management.
-  void Register(fidl::InterfaceRequest<fuchsia::ui::observation::geometry::Provider> endpoint,
-                zx_koid_t context_view);
+  void Register(
+      fidl::InterfaceRequest<fuchsia::ui::observation::geometry::ViewTreeWatcher> endpoint,
+      zx_koid_t context_view);
 
   // Adds a server side endpoint provided by
-  // fuchsia.ui.observation.test.Registry.RegisterGlobalGeometryProvider to |endpoints_|. Endpoints
+  // fuchsia.ui.observation.test.Registry.RegisterGlobalViewTreeWatcher to |endpoints_|. Endpoints
   // registered by this method get a global access to the view tree.
-  void RegisterGlobalGeometryProvider(
-      fidl::InterfaceRequest<fuchsia::ui::observation::geometry::Provider> endpoint);
+  void RegisterGlobalViewTreeWatcher(
+      fidl::InterfaceRequest<fuchsia::ui::observation::geometry::ViewTreeWatcher> endpoint);
 
   // Inject a new snapshot of the ViewTree. Adds the snapshot to each ProviderEndpoint's
   // |view_tree_snapshots_| and send a response to the respective clients if the required conditions
@@ -48,20 +49,21 @@ class GeometryProvider {
  private:
   using ProviderEndpointId = int64_t;
 
-  // This class implements the server side endpoint for fuchsia.ui.observation.geometry.Provider
-  // clients and manages a deque of snapshot updates to be sent to the client on receiving a Watch()
-  // call.
-  class ProviderEndpoint : public fuchsia::ui::observation::geometry::Provider {
+  // This class implements the server side endpoint for
+  // fuchsia.ui.observation.geometry.ViewTreeWatcher clients and manages a deque of snapshot updates
+  // to be sent to the client on receiving a Watch() call.
+  class ProviderEndpoint : public fuchsia::ui::observation::geometry::ViewTreeWatcher {
    public:
     explicit ProviderEndpoint(
-        fidl::InterfaceRequest<fuchsia::ui::observation::geometry::Provider> provider,
+        fidl::InterfaceRequest<fuchsia::ui::observation::geometry::ViewTreeWatcher> provider,
         std::optional<zx_koid_t> context_view, ProviderEndpointId id,
         fit::function<void()> destroy_instance_function);
 
     ProviderEndpoint(ProviderEndpoint&& original) noexcept;
 
-    // |fuchsia.ui.observation.geometry.Provider.Watch|.
-    void Watch(fuchsia::ui::observation::geometry::Provider::WatchCallback callback) override;
+    // |fuchsia.ui.observation.geometry.ViewTreeWatcher.Watch|.
+    void Watch(
+        fuchsia::ui::observation::geometry::ViewTreeWatcher::WatchCallback callback) override;
 
     // Adds the latest snapshot to |view_tree_snapshots_|.
     //
@@ -95,7 +97,7 @@ class GeometryProvider {
     void Reset();
 
     // Server-side endpoint.
-    fidl::Binding<fuchsia::ui::observation::geometry::Provider> endpoint_;
+    fidl::Binding<fuchsia::ui::observation::geometry::ViewTreeWatcher> endpoint_;
 
     // A deque containing pending snapshot updates for a client. The size of the deque cannot exceed
     // |fuchsia::ui::observation::geometry::BUFFER_SIZE|.
@@ -103,7 +105,7 @@ class GeometryProvider {
 
     // If the last |Watch| call did not immediately trigger a callback, it gets stored here and is
     // triggered whenever a new snapshot gets generated.
-    fuchsia::ui::observation::geometry::Provider::WatchCallback pending_callback_;
+    fuchsia::ui::observation::geometry::ViewTreeWatcher::WatchCallback pending_callback_;
 
     std::optional<const zx_koid_t> context_view_;
 

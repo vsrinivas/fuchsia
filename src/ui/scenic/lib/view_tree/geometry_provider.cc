@@ -16,10 +16,10 @@
 #include "src/ui/scenic/lib/utils/math.h"
 
 namespace view_tree {
-using fuog_Provider = fuchsia::ui::observation::geometry::Provider;
+using fuog_ViewTreeWatcher = fuchsia::ui::observation::geometry::ViewTreeWatcher;
 using fuog_ViewTreeSnapshot = fuchsia::ui::observation::geometry::ViewTreeSnapshot;
 using fuog_ViewTreeSnapshotPtr = fuchsia::ui::observation::geometry::ViewTreeSnapshotPtr;
-using fuog_ProviderWatchResponse = fuchsia::ui::observation::geometry::ProviderWatchResponse;
+using fuog_WatchResponse = fuchsia::ui::observation::geometry::WatchResponse;
 using fuog_ViewDescriptor = fuchsia::ui::observation::geometry::ViewDescriptor;
 using fuog_Layout = fuchsia::ui::observation::geometry::Layout;
 using fuog_RotatableExtent = fuchsia::ui::observation::geometry::RotatableExtent;
@@ -27,9 +27,8 @@ using fuog_Error = fuchsia::ui::observation::geometry::Error;
 namespace fuog_measure_tape = measure_tape::fuchsia::ui::observation::geometry;
 const auto fuog_BUFFER_SIZE = fuchsia::ui::observation::geometry::BUFFER_SIZE;
 const auto fuog_MAX_VIEW_COUNT = fuchsia::ui::observation::geometry::MAX_VIEW_COUNT;
-const fuog_Error kNoError;
 
-void GeometryProvider::Register(fidl::InterfaceRequest<fuog_Provider> endpoint,
+void GeometryProvider::Register(fidl::InterfaceRequest<fuog_ViewTreeWatcher> endpoint,
                                 zx_koid_t context_view) {
   FX_DCHECK(endpoint.is_valid()) << "precondition";
   FX_DCHECK(context_view != ZX_KOID_INVALID) << "precondition";
@@ -42,8 +41,8 @@ void GeometryProvider::Register(fidl::InterfaceRequest<fuog_Provider> endpoint,
                                                    })});
 }
 
-void GeometryProvider::RegisterGlobalGeometryProvider(
-    fidl::InterfaceRequest<fuchsia::ui::observation::geometry::Provider> endpoint) {
+void GeometryProvider::RegisterGlobalViewTreeWatcher(
+    fidl::InterfaceRequest<fuchsia::ui::observation::geometry::ViewTreeWatcher> endpoint) {
   FX_DCHECK(endpoint.is_valid()) << "precondition";
   auto endpoint_id = endpoint_counter_++;
   endpoints_.insert(
@@ -79,7 +78,7 @@ fuog_ViewTreeSnapshotPtr GeometryProvider::ExtractObservationSnapshot(
   bool views_exceeded = false;
 
   // |ProviderEndpoint| not having a |context_view_| get global access to the view tree as they get
-  // registered through f.u.o.t.Registry.RegisterGlobalGeometryProvider.
+  // registered through f.u.o.t.Registry.RegisterGlobalViewTreeWatcher.
   zx_koid_t context_view = 0;
   if (endpoint_context_view.has_value()) {
     context_view = endpoint_context_view.value();
@@ -198,7 +197,7 @@ fuog_ViewDescriptor GeometryProvider::ExtractViewDescriptor(
                           extent_in_context_top_right[1] - extent_in_context_top_left[1]),
       .height = std::hypot(extent_in_context_bottom_left[0] - extent_in_context_top_left[0],
                            extent_in_context_bottom_left[1] - extent_in_context_top_left[1]),
-      .angle = static_cast<float>(angle_context)};
+      .angle_degrees = static_cast<float>(angle_context)};
 
   glm::mat4 extent_in_parent_transform;
 
@@ -232,7 +231,7 @@ fuog_ViewDescriptor GeometryProvider::ExtractViewDescriptor(
                           extent_in_parent_top_right[1] - extent_in_parent_top_left[1]),
       .height = std::hypot(extent_in_parent_bottom_left[0] - extent_in_parent_top_left[0],
                            extent_in_parent_bottom_left[1] - extent_in_parent_top_left[1]),
-      .angle = static_cast<float>(angle_parent)};
+      .angle_degrees = static_cast<float>(angle_parent)};
 
   fuog_ViewDescriptor view_descriptor;
   view_descriptor.set_view_ref_koid(view_ref_koid);
@@ -247,7 +246,7 @@ fuog_ViewDescriptor GeometryProvider::ExtractViewDescriptor(
 }
 
 GeometryProvider::ProviderEndpoint::ProviderEndpoint(
-    fidl::InterfaceRequest<fuog_Provider> endpoint, std::optional<zx_koid_t> context_view,
+    fidl::InterfaceRequest<fuog_ViewTreeWatcher> endpoint, std::optional<zx_koid_t> context_view,
     ProviderEndpointId id, fit::function<void()> destroy_instance_function)
     : endpoint_(this, std::move(endpoint)),
       context_view_(std::move(context_view)),
@@ -271,14 +270,14 @@ void GeometryProvider::ProviderEndpoint::AddViewTreeSnapshot(
 
   if (view_tree_snapshots_.size() > fuog_BUFFER_SIZE) {
     view_tree_snapshots_.pop_front();
-    error_.set_buffer_overflow(true);
+    error_ |= fuchsia::ui::observation::geometry::Error::BUFFER_OVERFLOW;
   }
   FX_DCHECK(view_tree_snapshots_.size() <= fuog_BUFFER_SIZE) << "invariant";
 
   SendResponseMaybe();
 }
 
-void GeometryProvider::ProviderEndpoint::Watch(fuog_Provider::WatchCallback callback) {
+void GeometryProvider::ProviderEndpoint::Watch(fuog_ViewTreeWatcher::WatchCallback callback) {
   // Check if there is an ongoing Watch call. If there is an in-flight Watch call, close the channel
   // and remove itself from |endpoints_|.
   if (pending_callback_ != nullptr) {
@@ -304,13 +303,10 @@ void GeometryProvider::ProviderEndpoint::SendResponse() {
   FX_DCHECK(!view_tree_snapshots_.empty());
   FX_DCHECK(pending_callback_ != nullptr);
 
-  fuog_ProviderWatchResponse watch_response;
+  fuog_WatchResponse watch_response;
   watch_response.set_epoch_end(scenic_impl::gfx::dispatcher_clock_now());
 
-  int64_t response_error_size = fuog_measure_tape::Measure(error_).num_bytes;
-
-  int64_t response_size = sizeof(watch_response) + sizeof(watch_response.epoch_end()) +
-                          sizeof(watch_response.updates()) + response_error_size;
+  int64_t response_size = fuog_measure_tape::Measure(watch_response).num_bytes;
 
   // Send pending snapshots to the client in a chronological order and clear the deque. If the size
   // of the response exceeds ZX_CHANNEL_MAX_MSG_BYTES, drop the oldest fuog_ViewTreeSnapshot in the
@@ -321,21 +317,19 @@ void GeometryProvider::ProviderEndpoint::SendResponse() {
       // The absence of a views vector in |ViewTreeSnapshot| indicates that a view overflow has
       // occurred.
       if (!view_tree_snapshots_.back()->has_views()) {
-        error_.set_views_overflow(true);
+        error_ |= fuchsia::ui::observation::geometry::Error::VIEWS_OVERFLOW;
       }
       watch_response.mutable_updates()->push_back(std::move(*view_tree_snapshots_.back()));
       view_tree_snapshots_.pop_back();
     } else {
-      error_.set_channel_overflow(true);
+      error_ |= fuchsia::ui::observation::geometry::Error::CHANNEL_OVERFLOW;
     }
   }
 
   std::reverse(watch_response.mutable_updates()->begin(), watch_response.mutable_updates()->end());
 
-  if (!error_.IsEmpty()) {
-    fuog_Error response_error;
-    fidl::Clone(error_, &response_error);
-    watch_response.set_error(std::move(response_error));
+  if (error_) {
+    watch_response.set_error(error_);
   }
 
   pending_callback_(std::move(watch_response));
@@ -353,7 +347,7 @@ void GeometryProvider::ProviderEndpoint::CloseChannel() {
 void GeometryProvider::ProviderEndpoint::Reset() {
   pending_callback_ = nullptr;
   view_tree_snapshots_.clear();
-  fidl::Clone(kNoError, &error_);
+  error_ = error_ ^ error_;  // Clear bits
 }
 
 }  // namespace view_tree

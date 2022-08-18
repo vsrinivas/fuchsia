@@ -11,10 +11,10 @@ namespace view_tree {
 ScopedRegistry::ScopedRegistry(std::shared_ptr<view_tree::GeometryProvider> geometry_provider)
     : geometry_provider_(std::move(geometry_provider)) {}
 
-void ScopedRegistry::RequestGeometry(
+void ScopedRegistry::RegisterScopedViewTreeWatcher(
     zx_koid_t context_view,
-    fidl::InterfaceRequest<fuchsia::ui::observation::geometry::Provider> request,
-    ScopedRegistry::RequestGeometryCallback callback) {
+    fidl::InterfaceRequest<fuchsia::ui::observation::geometry::ViewTreeWatcher> request,
+    ScopedRegistry::RegisterScopedViewTreeWatcherCallback callback) {
   FX_DCHECK(geometry_provider_) << "GeometryProvider should be set up before this method call.";
   geometry_provider_->Register(std::move(request), context_view);
 

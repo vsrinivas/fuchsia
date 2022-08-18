@@ -17,15 +17,16 @@ using zx;
 /// which securely ties observation protocols to a specific view client.
 @discoverable
 protocol Registry {
-    /// Sets up a `geometry` observation channel for receiving a the view tree
+    /// Sets up a geometry `ViewTreeWatcher` channel which reports the view tree
     /// geometry for a specific view, identified by `context_view`. The data
     /// received describes the `context_view` and its descendant views.
     ///
     /// This method may be called multiple times to obtain multiple geometry
-    /// observers. Typical usage is to obtain just one geometry observer.
+    /// `ViewTreeWatcher`s. Typical usage is to obtain just one geometry
+    /// `ViewTreeWatcher`.
     ///
-    /// Client can freely disconnect this `Provider` endpoint after this method
-    /// returns.
+    /// Client can freely disconnect this `Registry` endpoint after this method
+    /// returns and the `ViewTreeWatcher` endpoint will remain active.
     ///
     /// Flow control. The caller is allowed at most one in-flight call at a
     /// time. Subsequent calls must wait until the acknowledgment returns.
@@ -43,8 +44,8 @@ protocol Registry {
     ///   a view tree
     /// + request `geometry` a channel to observe `context_view`'s view tree
     /// - response acknowledgement that `geometry` is connected to the server
-    RequestGeometry(resource struct {
+    RegisterScopedViewTreeWatcher(resource struct {
         context_view zx.koid;
-        geometry server_end:fuchsia.ui.observation.geometry.Provider;
+        watcher server_end:fuchsia.ui.observation.geometry.ViewTreeWatcher;
     }) -> ();
 };
