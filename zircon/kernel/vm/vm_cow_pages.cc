@@ -2958,15 +2958,7 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
     // Unmap any page that is touched by this range in any of our, or our childrens, mapping
     // regions. We do this on the assumption we are going to be able to free pages either completely
     // or by turning them into markers and it's more efficient to unmap once in bulk here.
-    //
-    // The only exception here is if the page source is preserving content, in which case we will
-    // not be freeing pages (which represents absent content) or inserting markers (which represents
-    // clean zero content). We are creating dirty zero content here. So for this case do not perform
-    // the unmap.
-    if (!is_source_preserving_page_content_locked()) {
-      RangeChangeUpdateLocked(page_start_base, page_end_base - page_start_base,
-                              RangeChangeOp::Unmap);
-    }
+    RangeChangeUpdateLocked(page_start_base, page_end_base - page_start_base, RangeChangeOp::Unmap);
   }
 
   // We stack-own loaned pages from when they're removed until they're freed.
@@ -2991,6 +2983,19 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
       FreePagesLocked(&ancestor_freed_list, /*freeing_owned_pages=*/false);
     }
   });
+
+  // Ideally we just collect up pages and hand them over to the pmm all at the end, but if we need
+  // to allocate any pages then we would like to ensure that we do not cause total memory to peak
+  // higher due to squirreling these pages away.
+  auto free_any_pages = [this, &freed_list, &ancestor_freed_list] {
+    AssertHeld(lock_);
+    if (!list_is_empty(&freed_list)) {
+      FreePagesLocked(&freed_list, /*freeing_owned_pages=*/true);
+    }
+    if (!list_is_empty(&ancestor_freed_list)) {
+      FreePagesLocked(&ancestor_freed_list, /*freeing_owned_pages=*/false);
+    }
+  };
 
   // Give us easier names for our range.
   const uint64_t start = page_start_base;
@@ -3020,164 +3025,109 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
   // If the source preserves page content, empty slots beyond supply_zero_offset_ are implicitly
   // dirty and zero. Therefore, if supply_zero_offset_ falls in the specified range, we can simply
   // update supply_zero_offset_ to start, indicating that the range from start is now all dirty and
-  // zero. This will also cause us to exit the main loop below in the first iteration itself.
-  // Removing committed pages beyond supply_zero_offset_ is going to be handled separately at the
-  // end.
-  uint64_t prev_supply_zero_offset = supply_zero_offset_;
-  if (is_source_preserving_page_content_locked() && start < supply_zero_offset_ &&
-      supply_zero_offset_ <= end) {
+  // zero. Removing pages and markers beyond supply_zero_offset_ is going to be handled in the main
+  // page traversal loop. The only exception here is if there are any pinned pages which we will not
+  // be able to remove, so simply skip this optimization in that case and fall back to the general
+  // case.
+  if (is_source_preserving_page_content_locked() &&
+      (start < supply_zero_offset_ && supply_zero_offset_ <= end) &&
+      !AnyPagesPinnedLocked(start, supply_zero_offset_ - start)) {
     UpdateSupplyZeroOffsetLocked(start);
   }
 
-  *zeroed_len_out = 0;
-  uint64_t offset = start;
-  for (; offset < end; offset += PAGE_SIZE, *zeroed_len_out += PAGE_SIZE) {
-    const VmPageOrMarker* slot = page_list_.Lookup(offset);
+  // If the VMO is directly backed by a page source that preserves content, it should be the root
+  // VMO of the hierarchy.
+  DEBUG_ASSERT(!is_source_preserving_page_content_locked() || !parent_);
 
-    DEBUG_ASSERT(!direct_source_supplies_zero_pages_locked() || (!slot || !slot->IsMarker()));
-    if (direct_source_supplies_zero_pages_locked() && (!slot || slot->IsEmpty())) {
-      // Already logically zero - don't commit pages to back the zeroes if they're not already
-      // committed.  This is important for contiguous VMOs, as we don't use markers for contiguous
-      // VMOs, and allocating a page below to hold zeroes would not be asking the page_source_ for
-      // the proper physical page.  This prevents allocating an arbitrary physical page to back the
-      // zeroes.
-      continue;
+  // Helper lambda to determine if this VMO can see parent contents at offset, or if a length is
+  // specified as well in the range [offset, offset + length).
+  auto can_see_parent = [this](uint64_t offset, uint64_t length = PAGE_SIZE) TA_REQ(lock_) {
+    if (!parent_) {
+      return false;
     }
+    return offset < parent_limit_ && offset + length <= parent_limit_;
+  };
 
-    // If the source preserves page content, empty slots beyond supply_zero_offset_ are implicitly
-    // zero, and any committed pages beyond supply_zero_offset_ need to be removed. Exit the loop
-    // for this case, so that we can perform this operation later more optimally in the order of
-    // committed pages, instead of having to iterate over empty slots too.
-    //
-    // TODO(rashaeqbal): Optimize for the common case too so that we do not need to handle this case
-    // separately out of the common loop. Specialized code increases the likelihood of forgetting
-    // one of the many checks in this common loop, as is evidenced by fxbug.dev/101608.
-    if (is_source_preserving_page_content_locked() && offset >= supply_zero_offset_) {
-      break;
+  // This is a lambda as it only makes sense to talk about parent mutability when we have a parent
+  // for the offset being considered.
+  auto parent_immutable = [can_see_parent, this](uint64_t offset) TA_REQ(lock_) {
+    DEBUG_ASSERT(can_see_parent(offset));
+    AssertHeld(parent_->lock_ref());
+    return parent_->is_hidden_locked();
+  };
+
+  // Finding the initial page content is expensive, but we only need to call it under certain
+  // circumstances scattered in the code below. The lambda get_initial_page_content() will lazily
+  // fetch and cache the details. This avoids us calling it when we don't need to, or calling it
+  // more than once.
+  struct InitialPageContent {
+    bool inited = false;
+    VmCowPages* page_owner;
+    uint64_t owner_offset;
+    uint64_t cached_offset;
+    vm_page_t* page;
+  } initial_content_;
+  auto get_initial_page_content = [&initial_content_, can_see_parent, this](uint64_t offset)
+                                      TA_REQ(lock_) -> const InitialPageContent& {
+    // If there is no cached page content or if we're looking up a different offset from the cached
+    // one, perform the lookup.
+    if (!initial_content_.inited || offset != initial_content_.cached_offset) {
+      DEBUG_ASSERT(can_see_parent(offset));
+      const VmPageOrMarker* page_or_marker = FindInitialPageContentLocked(
+          offset, &initial_content_.page_owner, &initial_content_.owner_offset, nullptr);
+      // We only care about the parent having a 'true' vm_page for content. If the parent has a
+      // marker then it's as if the parent has no content since that's a zero page anyway, which is
+      // what we are trying to achieve.
+      initial_content_.page =
+          page_or_marker && page_or_marker->IsPage() ? page_or_marker->Page() : nullptr;
+      initial_content_.inited = true;
+      initial_content_.cached_offset = offset;
     }
+    DEBUG_ASSERT(offset == initial_content_.cached_offset);
+    return initial_content_;
+  };
 
-    // If there's already a marker then we can avoid any second guessing and leave the marker alone.
-    if (slot && slot->IsMarker()) {
-      continue;
+  // Helper lambda to determine if parent has content at the specified offset.
+  auto parent_has_content = [get_initial_page_content](uint64_t offset) TA_REQ(lock_) {
+    return get_initial_page_content(offset).page != nullptr;
+  };
+
+  // In the ideal case we can zero by making there be an Empty slot in our page list. This is true
+  // when we're not specifically avoiding decommit on zero and there is nothing pinned.
+  // Additionally, if the page source is preserving content, an empty slot at this offset should
+  // imply zero, and this is only true for offsets starting at supply_zero_offset_. For offsets
+  // preceding supply_zero_offset_ an empty slot signifies absent content that has not yet been
+  // supplied by the page source.
+  //
+  // Note that this lambda is only checking for pre-conditions in *this* VMO which allow us to
+  // represent zeros with an empty slot. We will combine this check with additional checks for
+  // contents visible through the parent, if applicable.
+  auto can_decommit_slot = [this](const VmPageOrMarker* slot, uint64_t offset) TA_REQ(lock_) {
+    if (!can_decommit_zero_pages_locked() ||
+        (slot && slot->IsPage() && slot->Page()->object.pin_count > 0)) {
+      return false;
     }
+    // Offsets less than supply_zero_offset_ cannot be decommitted.
+    return !is_source_preserving_page_content_locked() || offset >= supply_zero_offset_;
+  };
 
-    // If the VMO is directly backed by a page source that preserves content, it should be the root
-    // VMO of the hierarchy.
-    DEBUG_ASSERT(!is_source_preserving_page_content_locked() || !parent_);
-
-    const bool can_see_parent = parent_ && offset < parent_limit_;
-
-    // This is a lambda as it only makes sense to talk about parent mutability when we have a parent
-    // for this offset.
-    auto parent_immutable = [can_see_parent, this]() TA_REQ(lock_) {
-      DEBUG_ASSERT(can_see_parent);
-      AssertHeld(parent_->lock_ref());
-      return parent_->is_hidden_locked();
-    };
-
-    // Finding the initial page content is expensive, but we only need to call it
-    // under certain circumstances scattered in the code below. The lambda
-    // get_initial_page_content() will lazily fetch and cache the details. This
-    // avoids us calling it when we don't need to, or calling it more than once.
-    struct InitialPageContent {
-      bool inited = false;
-      VmCowPages* page_owner;
-      uint64_t owner_offset;
-      vm_page_t* page;
-    } initial_content_;
-    auto get_initial_page_content = [&initial_content_, can_see_parent, this, offset]()
-                                        TA_REQ(lock_) -> const InitialPageContent& {
-      if (!initial_content_.inited) {
-        DEBUG_ASSERT(can_see_parent);
-        const VmPageOrMarker* page_or_marker = FindInitialPageContentLocked(
-            offset, &initial_content_.page_owner, &initial_content_.owner_offset, nullptr);
-        // We only care about the parent having a 'true' vm_page for content. If the parent has a
-        // marker then it's as if the parent has no content since that's a zero page anyway, which
-        // is what we are trying to achieve.
-        initial_content_.page =
-            page_or_marker && page_or_marker->IsPage() ? page_or_marker->Page() : nullptr;
-        initial_content_.inited = true;
-      }
-      return initial_content_;
-    };
-
-    auto parent_has_content = [get_initial_page_content]() TA_REQ(lock_) {
-      return get_initial_page_content().page != nullptr;
-    };
-
-    // Ideally we just collect up pages and hand them over to the pmm all at the end, but if we need
-    // to allocate any pages then we would like to ensure that we do not cause total memory to peak
-    // higher due to squirreling these pages away.
-    auto free_any_pages = [this, &freed_list, &ancestor_freed_list] {
-      AssertHeld(lock_);
-      if (!list_is_empty(&freed_list)) {
-        FreePagesLocked(&freed_list, /*freeing_owned_pages=*/true);
-      }
-      if (!list_is_empty(&ancestor_freed_list)) {
-        FreePagesLocked(&ancestor_freed_list, /*freeing_owned_pages=*/false);
-      }
-    };
-
-    // In the ideal case we can zero by making there be an Empty slot in our page list. This is true
-    // when we're not specifically avoiding decommit on zero and there is nothing pinned.
-    // Additionally, if the page source is preserving content, an empty slot at this offset should
-    // imply zero, and this is only true for offsets starting at supply_zero_offset_. Since we
-    // exited the loop above for offset >= supply_zero_offset_, we know we cannot have this case.
-    // For offsets preceding supply_zero_offset_ an empty slot signifies absent content that has not
-    // yet been supplied by the page source.
-    //
-    // Note that this lambda is only checking for pre-conditions in *this* VMO which allow us to
-    // represent zeros with an empty slot. We will combine this check with additional checks for
-    // contents visible through the parent, if applicable.
-    //
-    // This is a lambda instead of a bool that is computed once, because slot gets recomputed below.
-    auto can_decommit_slot = [this, offset](const VmPageOrMarker* slot) TA_REQ(lock_) {
-      if (!can_decommit_zero_pages_locked() ||
-          (slot && slot->IsPage() && slot->Page()->object.pin_count > 0)) {
-        return false;
-      }
-      // If the page source is preserving content, we should only be operating on offsets smaller
-      // than supply_zero_offset_. We should have exited the loop above for offsets >=
-      // supply_zero_offset_.
-      DEBUG_ASSERT(!is_source_preserving_page_content_locked() || offset < supply_zero_offset_);
-      // Offsets less than supply_zero_offset_ cannot be decommitted.
-      return !is_source_preserving_page_content_locked();
-    };
-
-    // First see if we can simply get done with an empty slot in the page list. This VMO should
-    // allow decommitting a page at this offset when zeroing. Additionally, one of the following
-    // conditions should hold w.r.t. to the parent:
-    //  * This offset does not relate to our parent, or we don't have a parent.
-    //  * This offset does relate to our parent, but our parent is immutable and is currently zero
-    //    at this offset.
-    if (can_decommit_slot(slot) &&
-        (!can_see_parent || (parent_immutable() && !parent_has_content()))) {
-      if (slot && slot->IsPage()) {
-        vm_page_t* page = page_list_.RemovePage(offset).ReleasePage();
-        pmm_page_queues()->Remove(page);
-        DEBUG_ASSERT(!list_in_list(&page->queue_node));
-        list_add_tail(&freed_list, &page->queue_node);
-      }
-      continue;
+  // Like can_decommit_slot but for a range.
+  auto can_decommit_slots_in_range = [this](uint64_t offset, uint64_t length) TA_REQ(lock_) {
+    if (!can_decommit_zero_pages_locked() || AnyPagesPinnedLocked(offset, length)) {
+      return false;
     }
-    // The only time we would reach here and *not* have a parent is if we could not decommit a
-    // page at this offset when zeroing.
-    DEBUG_ASSERT(!can_decommit_slot(slot) || parent_);
+    // Offsets less than supply_zero_offset_ cannot be decommitted.
+    return !is_source_preserving_page_content_locked() || offset >= supply_zero_offset_;
+  };
 
-    // Now we know that we need to do something active to make this zero, either through a marker or
-    // a page. First make sure we have a slot to modify.
-    if (!slot) {
-      slot = page_list_.LookupOrAllocate(offset);
-      if (unlikely(!slot)) {
-        return ZX_ERR_NO_MEMORY;
-      }
-    }
-
+  // Helper lambda to zero the slot at offset either by inserting a marker or by zeroing the actual
+  // page as applicable. The return codes match those expected for VmPageList traversal.
+  auto zero_slot = [&](VmPageOrMarker* slot, uint64_t offset) TA_REQ(lock_) {
     // Ideally we will use a marker, but we can only do this if we can point to a committed page
     // to justify the allocation of the marker (i.e. we cannot allocate infinite markers with no
     // committed pages). A committed page in this case exists if the parent has any content.
     // Otherwise, we'll need to zero an actual page.
-    if (!can_decommit_slot(slot) || !parent_has_content()) {
+    if (!can_decommit_slot(slot, offset) || !parent_has_content(offset)) {
       // We might allocate a new page below. Free any pages we've accumulated first.
       free_any_pages();
 
@@ -3188,15 +3138,15 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
       // We could technically fall through to LookupPagesLocked even for an empty slot and let
       // LookupPagesLocked allocate a new page and zero it, but we want to avoid having to
       // redundantly zero a newly forked zero page after LookupPagesLocked.
-      if (slot->IsEmpty() && can_see_parent && !parent_has_content()) {
+      if (!slot && can_see_parent(offset) && !parent_has_content(offset)) {
         // We could only have ended up here if the parent was mutable, otherwise we should have been
         // able to treat an empty slot as zero (decommit a committed page) and return early above.
-        DEBUG_ASSERT(!parent_immutable());
+        DEBUG_ASSERT(!parent_immutable(offset));
         // We will try to insert a new zero page below. Note that at this point we know that this is
         // not a contiguous VMO (which cannot have arbitrary zero pages inserted into it). We
         // checked for can_see_parent just now and contiguous VMOs do not support (non-slice)
-        // clones. Besides, if the slot was empty we should have moved on at the top of the loop as
-        // the contiguous page source zeroes supplied pages by default.
+        // clones. Besides, if the slot was empty we should have moved on when we found the gap in
+        // the page list traversal as the contiguous page source zeroes supplied pages by default.
         DEBUG_ASSERT(!debug_is_contiguous());
 
         // Allocate a new page, it will be zeroed in the process.
@@ -3210,11 +3160,12 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
         VmPageOrMarker new_page = VmPageOrMarker::Page(p);
         status = AddPageLocked(&new_page, offset, CanOverwriteContent::Zero, nullptr,
                                /*do_range_update=*/false);
-        // Absent bugs, AddPageLocked() can only return ZX_ERR_NO_MEMORY, but that failure can only
-        // occur if we had to allocate a slot in the page list. Since we allocated a slot above, we
-        // know that can't be the case.
+        // Absent bugs, AddPageLocked() can only return ZX_ERR_NO_MEMORY.
+        if (status == ZX_ERR_NO_MEMORY) {
+          return status;
+        }
         DEBUG_ASSERT(status == ZX_OK);
-        continue;
+        return ZX_ERR_NEXT;
       }
 
       // Lookup the page which will potentially fault it in via the page source. Zeroing is
@@ -3230,16 +3181,17 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
       // Zero the page we looked up.
       DEBUG_ASSERT(lookup_page.num_pages == 1);
       ZeroPage(lookup_page.paddrs[0]);
-      continue;
+      return ZX_ERR_NEXT;
     }
-    DEBUG_ASSERT(parent_ && parent_has_content());
+
+    DEBUG_ASSERT(parent_ && parent_has_content(offset));
     DEBUG_ASSERT(!debug_is_contiguous());
 
     // We are able to insert a marker, but if our page content is from a hidden owner we need to
     // perform slightly more complex cow forking.
-    const InitialPageContent& content = get_initial_page_content();
+    const InitialPageContent& content = get_initial_page_content(offset);
     AssertHeld(content.page_owner->lock_ref());
-    if (slot->IsEmpty() && content.page_owner->is_hidden_locked()) {
+    if (!slot && content.page_owner->is_hidden_locked()) {
       free_any_pages();
       zx_status_t result =
           CloneCowPageAsZeroLocked(offset, &ancestor_freed_list, content.page_owner, content.page,
@@ -3247,7 +3199,7 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
       if (result != ZX_OK) {
         return result;
       }
-      continue;
+      return ZX_ERR_NEXT;
     }
 
     // Remove any page that could be hanging around in the slot and replace it with a marker.
@@ -3255,9 +3207,10 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
     ktl::optional<vm_page_t*> released_page = ktl::nullopt;
     zx_status_t status = AddPageLocked(&new_marker, offset, CanOverwriteContent::NonZero,
                                        &released_page, /*do_range_update=*/false);
-    // Absent bugs, AddPageLocked() can only return ZX_ERR_NO_MEMORY, but that failure can only
-    // occur if we had to allocate a slot in the page list. Since we allocated a slot above, we know
-    // that can't be the case.
+    // Absent bugs, AddPageLocked() can only return ZX_ERR_NO_MEMORY.
+    if (status == ZX_ERR_NO_MEMORY) {
+      return status;
+    }
     DEBUG_ASSERT(status == ZX_OK);
     // Free the old page.
     if (released_page.has_value()) {
@@ -3267,66 +3220,119 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
       DEBUG_ASSERT(!list_in_list(&page->queue_node));
       list_add_tail(&freed_list, &page->queue_node);
     }
-  }
+    return ZX_ERR_NEXT;
+  };
 
-  // We will end up here with a portion of the range remaining only if we exited the loop early,
-  // which we only do if we go beyond supply_zero_offset_. The motivation there is so that we can
-  // decommit pages efficiently without having to walk empty slots in the loop which are zero
-  // anyway.
-  if (offset < end) {
-    DEBUG_ASSERT(is_source_preserving_page_content_locked());
-    DEBUG_ASSERT(offset >= supply_zero_offset_);
-    DEBUG_ASSERT(can_decommit_zero_pages_locked());
+  *zeroed_len_out = 0;
+  // Main page list traversal loop to remove any existing pages / markers, zero existing pages, and
+  // also insert any new markers / zero pages in gaps as applicable. We use the VmPageList traversal
+  // helper here instead of iterating over each offset in the range so we can efficiently skip over
+  // gaps if possible.
+  zx_status_t status = page_list_.RemovePagesAndIterateGaps(
+      [&](VmPageOrMarker* slot, uint64_t offset) {
+        AssertHeld(lock_);
 
-    // Remove any committed pages that are not pinned. Empty slots starting at supply_zero_offset_
-    // are implicitly zero.
-    page_list_.RemovePages(
-        [this, &freed_list, prev_supply_zero_offset](VmPageOrMarker* p, uint64_t off) {
-          if (p->IsMarker()) {
-            // We cannot have markers i.e. clean zero pages beyond supply_zero_offset_. But if we
-            // updated supply_zero_offset_ above to a smaller value, it is possible to encounter
-            // markers in the range before the prev_supply_zero_offset.
-            ASSERT(off < prev_supply_zero_offset);
-            AssertHeld(this->lock_);
-            RangeChangeUpdateLocked(off, PAGE_SIZE, RangeChangeOp::Unmap);
-            *p = VmPageOrMarker::Empty();
-            return ZX_ERR_NEXT;
+        // Contiguous VMOs cannot have markers.
+        DEBUG_ASSERT(!direct_source_supplies_zero_pages_locked() || !slot->IsMarker());
+
+        // First see if we can simply get done with an empty slot in the page list. This VMO should
+        // allow decommitting a page at this offset when zeroing. Additionally, one of the following
+        // conditions should hold w.r.t. to the parent:
+        //  * This offset does not relate to our parent, or we don't have a parent.
+        //  * This offset does relate to our parent, but our parent is immutable and is currently
+        //  zero at this offset.
+        if (can_decommit_slot(slot, offset) &&
+            (!can_see_parent(offset) ||
+             (parent_immutable(offset) && !parent_has_content(offset)))) {
+          if (slot->IsPage()) {
+            vm_page_t* page = slot->ReleasePage();
+            pmm_page_queues()->Remove(page);
+            DEBUG_ASSERT(!list_in_list(&page->queue_node));
+            list_add_tail(&freed_list, &page->queue_node);
+          } else {
+            // If this is a marker, simply make the slot empty.
+            *slot = VmPageOrMarker::Empty();
           }
-
-          ASSERT(p->IsPage());
-          vm_page_t* page = p->Page();
-          ASSERT(is_page_dirty_tracked(page));
-          // We cannot have clean pages beyond supply_zero_offset_. But if we updated
-          // supply_zero_offset_ above to a smaller value, it is possible to encounter some clean
-          // pages in the range before the prev_supply_zero_offset.
-          ASSERT(off < prev_supply_zero_offset || !is_page_clean(page));
-          DEBUG_ASSERT(!page->is_loaned());
-
-          // We cannot remove a pinned page. Zero it instead.
-          if (page->object.pin_count > 0) {
-            ZeroPage(page);
-            return ZX_ERR_NEXT;
-          }
-
-          AssertHeld(this->lock_);
-          RangeChangeUpdateLocked(off, PAGE_SIZE, RangeChangeOp::Unmap);
-
-          vm_page_t* released_page = p->ReleasePage();
-          DEBUG_ASSERT(released_page == page);
-          DEBUG_ASSERT(page->object.pin_count == 0);
-          pmm_page_queues()->Remove(page);
-          DEBUG_ASSERT(!list_in_list(&page->queue_node));
-          list_add_tail(&freed_list, &page->queue_node);
+          // We successfully zeroed this offset. Move on to the next offset.
+          *zeroed_len_out += PAGE_SIZE;
           return ZX_ERR_NEXT;
-        },
-        offset, end);
+        }
 
-    *zeroed_len_out += (end - offset);
-  }
+        // If there's already a marker then we can avoid any second guessing and leave the marker
+        // alone.
+        if (slot->IsMarker()) {
+          *zeroed_len_out += PAGE_SIZE;
+          return ZX_ERR_NEXT;
+        }
+
+        // The only time we would reach here and *not* have a parent is if we could not decommit a
+        // page at this offset when zeroing.
+        DEBUG_ASSERT(!can_decommit_slot(slot, offset) || parent_);
+
+        // Now we know that we need to do something active to make this zero, either through a
+        // marker or a page.
+        zx_status_t status = zero_slot(slot, offset);
+        if (status == ZX_ERR_NEXT) {
+          // If we were able to successfully zero this slot, move on to the next offset.
+          *zeroed_len_out += PAGE_SIZE;
+        }
+        return status;
+      },
+      [&](uint64_t gap_start, uint64_t gap_end) {
+        AssertHeld(lock_);
+        if (direct_source_supplies_zero_pages_locked()) {
+          // Already logically zero - don't commit pages to back the zeroes if they're not already
+          // committed.  This is important for contiguous VMOs, as we don't use markers for
+          // contiguous VMOs, and allocating a page below to hold zeroes would not be asking the
+          // page_source_ for the proper physical page. This prevents allocating an arbitrary
+          // physical page to back the zeroes.
+          *zeroed_len_out += (gap_end - gap_start);
+          return ZX_ERR_NEXT;
+        }
+
+        // If empty slots imply zeroes, and the gap does not see parent contents, we already have
+        // zeroes.
+        if (can_decommit_slots_in_range(gap_start, gap_end - gap_start) &&
+            !can_see_parent(gap_start, gap_end - gap_start)) {
+          *zeroed_len_out += (gap_end - gap_start);
+          return ZX_ERR_NEXT;
+        }
+
+        // Otherwise fall back to examining each offset in the gap to determine the action to
+        // perform.
+        for (uint64_t offset = gap_start; offset < gap_end;
+             offset += PAGE_SIZE, *zeroed_len_out += PAGE_SIZE) {
+          // First see if we can simply get done with an empty slot in the page list. This VMO
+          // should allow decommitting a page at this offset when zeroing. Additionally, one of the
+          // following conditions should hold w.r.t. to the parent:
+          //  * This offset does not relate to our parent, or we don't have a parent.
+          //  * This offset does relate to our parent, but our parent is immutable and is currently
+          //  zero at this offset.
+          if (can_decommit_slot(nullptr, offset) &&
+              (!can_see_parent(offset) ||
+               (parent_immutable(offset) && !parent_has_content(offset)))) {
+            continue;
+          }
+
+          // The only time we would reach here and *not* have a parent is if we could not decommit a
+          // page at this offset when zeroing.
+          DEBUG_ASSERT(!can_decommit_slot(nullptr, offset) || parent_);
+
+          // Now we know that we need to do something active to make this zero, either through a
+          // marker or a page.
+          zx_status_t status = zero_slot(nullptr, offset);
+          if (status != ZX_ERR_NEXT) {
+            return status;
+          }
+        }
+
+        return ZX_ERR_NEXT;
+      },
+      start, end);
 
   VMO_VALIDATION_ASSERT(DebugValidatePageSplitsHierarchyLocked());
   VMO_FRUGAL_VALIDATION_ASSERT(DebugValidateVmoPageBorrowingLocked());
-  return ZX_OK;
+  return status;
 }
 
 void VmCowPages::MoveToWiredLocked(vm_page_t* page, uint64_t offset) {
