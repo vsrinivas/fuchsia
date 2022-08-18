@@ -304,15 +304,14 @@ stderr_file="$primary_output_rel".stderr
 
 # Copy stderr to a temporary file for diagnostic analysis.
 "${full_command[@]}" 2> >(tee "$stderr_file" >&2)
+# Preserve exit status from the rewrapper command.
+status="$?"
 
 trap cleanup EXIT
 
 function cleanup() {
   rm -f "$stderr_file"
 }
-
-# Exit normally on success.
-status="$?"
 
 if grep -q "fatal error:.*file not found" "$stderr_file"
 then :
