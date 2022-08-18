@@ -100,15 +100,7 @@ zx_status_t PciSdhci::Bind(void* /* unused */, zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  // TODO(fxbug.dev/93333): Remove this once DFv2 has stabilised.
-  bool is_dfv2 = device_is_dfv2(parent);
-
-  zx_status_t status = ZX_OK;
-  if (is_dfv2) {
-    status = device_get_protocol(parent, ZX_PROTOCOL_PCI, &dev->pci_);
-  } else {
-    status = device_get_fragment_protocol(parent, "pci", ZX_PROTOCOL_PCI, &dev->pci_);
-  }
+  zx_status_t status = device_get_fragment_protocol(parent, "pci", ZX_PROTOCOL_PCI, &dev->pci_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: could not get PCI protocol: %s", kTag, zx_status_get_string(status));
     return status;
