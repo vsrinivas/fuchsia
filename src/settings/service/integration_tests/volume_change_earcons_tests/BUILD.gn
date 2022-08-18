@@ -136,7 +136,8 @@ config_data("with_input_tests_config") {
 group("volume_change_earcons_tests") {
   testonly = true
   public_deps = [
-    ":earcons_with_input_integration_test_pkg",
+    # TODO(fxb/107134): Disable for the flakiness.
+    # ":earcons_with_input_integration_test_pkg",
     ":volume_change_earcons_integration_test_pkg",
   ]
 }
