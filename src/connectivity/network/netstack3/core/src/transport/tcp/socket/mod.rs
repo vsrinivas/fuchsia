@@ -27,7 +27,7 @@ use core::{
     fmt::Debug,
     marker::PhantomData,
     num::{NonZeroU16, NonZeroUsize},
-    ops::RangeInclusive,
+    ops::{DerefMut as _, RangeInclusive},
 };
 use nonzero_ext::nonzero;
 
@@ -62,6 +62,14 @@ use crate::{
     },
     Instant,
 };
+
+/// Per RFC 879 section 1 (https://tools.ietf.org/html/rfc879#section-1):
+///
+/// THE TCP MAXIMUM SEGMENT SIZE IS THE IP MAXIMUM DATAGRAM SIZE MINUS
+/// FORTY.
+///   The default IP Maximum Datagram Size is 576.
+///   The default TCP Maximum Segment Size is 536.
+const DEFAULT_MAXIMUM_SEGMENT_SIZE: u32 = 536;
 
 /// Non-sync context for TCP.
 ///
@@ -684,6 +692,34 @@ where
     Ok(conn_id)
 }
 
+/// Call this function whenever a socket can push out more data. That means either:
+///
+/// - A retransmission timer fires.
+/// - An ack received from peer so that our send window is enlarged.
+/// - The user puts data into the buffer and we are notified.
+fn do_send<I, SC, C>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    conn: ConnectionId,
+) -> Result<(), crate::ip::socket::IpSockSendError>
+where
+    I: IpExt,
+    C: TcpNonSyncContext,
+    SC: TcpSyncContext<I, C> + BufferTransportIpContext<I, C, Buf<Vec<u8>>>,
+{
+    let send_more = sync_ctx.with_tcp_sockets_mut(|sockets| {
+        let (conn, (), addr) =
+            sockets.socketmap.conns_mut().get_by_id_mut(&conn).expect("invalid connection id");
+        conn.state
+            .poll_send(DEFAULT_MAXIMUM_SEGMENT_SIZE, ctx.now())
+            .map(|seg| (conn.ip_sock.clone(), tcp_serialize_segment(seg, addr.ip.clone())))
+    });
+    if let Some((ip_sock, ser)) = send_more {
+        sync_ctx.send_ip_packet(ctx, &ip_sock, ser, None).map_err(|(body, err)| err)?;
+    }
+    Ok(())
+}
+
 impl From<ListenerId> for MaybeListenerId {
     fn from(ListenerId(x): ListenerId) -> Self {
         Self(x)
@@ -739,10 +775,11 @@ impl Into<usize> for UnboundId {
 #[cfg(test)]
 mod tests {
     use const_unwrap::const_unwrap_option;
-    use core::fmt::Debug;
+    use core::{cell::RefCell, fmt::Debug};
+    use fakealloc::rc::Rc;
     use net_types::ip::{AddrSubnet, Ip, Ipv4, Ipv6, Ipv6SourceAddr};
-    use packet::ParseBuffer as _;
-    use packet_formats::tcp::{TcpParseArgs, TcpSegment};
+    use packet::{ContiguousBuffer, ParseBuffer as _, Serializer};
+    use packet_formats::tcp::{TcpParseArgs, TcpSegment, TcpSegmentBuilder};
     use specialize_ip_macro::ip_test;
     use test_case::test_case;
 
@@ -758,8 +795,13 @@ mod tests {
             socket::{testutil::DummyIpSocketCtx, BufferIpSocketHandler, IpSocketHandler},
             BufferIpTransportContext as _, DummyDeviceId, SendIpPacketMeta,
         },
+        socket::SocketTypeStateMut,
         testutil::{set_logger_for_test, FakeCryptoRng, TestIpExt},
-        transport::tcp::{buffer::RingBuffer, UserError},
+        transport::tcp::{
+            buffer::{Buffer, RingBuffer, SendPayload},
+            segment::{self, Payload, Segment},
+            UserError,
+        },
     };
 
     use super::*;
@@ -793,16 +835,91 @@ mod tests {
 
     type TcpNonSyncCtx = DummyNonSyncCtx<(), (), ()>;
 
+    impl Buffer for Rc<RefCell<RingBuffer>> {
+        fn len(&self) -> usize {
+            self.borrow().len()
+        }
+
+        fn cap(&self) -> usize {
+            self.borrow().cap()
+        }
+
+        fn empty() -> Self {
+            Rc::new(RefCell::new(RingBuffer::empty()))
+        }
+    }
+
+    impl ReceiveBuffer for Rc<RefCell<RingBuffer>> {
+        type Residual = Self;
+
+        fn write_at<P: Payload>(&mut self, offset: usize, data: &P) -> usize {
+            self.borrow_mut().write_at(offset, data)
+        }
+
+        fn make_readable(&mut self, count: usize) {
+            self.borrow_mut().make_readable(count)
+        }
+    }
+
+    #[derive(Debug, Default)]
+    pub struct TestSendBuffer(Rc<RefCell<Vec<u8>>>, RingBuffer);
+
+    impl Buffer for TestSendBuffer {
+        fn len(&self) -> usize {
+            self.1.len() + self.0.borrow().len()
+        }
+
+        fn cap(&self) -> usize {
+            self.1.cap() + self.0.borrow().capacity()
+        }
+
+        fn empty() -> Self {
+            TestSendBuffer(Rc::new(RefCell::new(Vec::new())), RingBuffer::empty())
+        }
+    }
+
+    impl SendBuffer for TestSendBuffer {
+        fn mark_read(&mut self, count: usize) {
+            self.1.mark_read(count)
+        }
+
+        fn peek_with<'a, F, R>(&'a mut self, offset: usize, f: F) -> R
+        where
+            F: FnOnce(SendPayload<'a>) -> R,
+        {
+            let v = &self.0;
+            let rb = &mut self.1;
+            if !v.borrow().is_empty() {
+                let len = (rb.cap() - rb.len()).min(v.borrow().len());
+                let rest = v.borrow_mut().split_off(len);
+                let first = v.replace(rest);
+                assert_eq!(rb.enqueue_data(&first[..]), len);
+            }
+            rb.peek_with(offset, f)
+        }
+    }
+
     impl TcpNonSyncContext for TcpNonSyncCtx {
-        type ReceiveBuffer = RingBuffer;
-        type SendBuffer = RingBuffer;
-        type ClientEndBuffers = ();
-        type NetstackEndBuffers = ();
+        type ReceiveBuffer = Rc<RefCell<RingBuffer>>;
+        type SendBuffer = TestSendBuffer;
+        type ClientEndBuffers = (Rc<RefCell<RingBuffer>>, Rc<RefCell<Vec<u8>>>);
+        type NetstackEndBuffers = (Rc<RefCell<RingBuffer>>, Rc<RefCell<Vec<u8>>>);
 
         fn on_new_connection(&mut self, listener: ListenerId) {}
         fn new_passive_open_buffers(
         ) -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ClientEndBuffers) {
-            (RingBuffer::default(), RingBuffer::default(), ())
+            let rb = Rc::new(RefCell::new(RingBuffer::default()));
+            let sb = Rc::new(RefCell::new(Vec::new()));
+            (Rc::clone(&rb), TestSendBuffer(Rc::clone(&sb), RingBuffer::default()), (rb, sb))
+        }
+    }
+
+    impl IntoBuffers<Rc<RefCell<RingBuffer>>, TestSendBuffer>
+        for (Rc<RefCell<RingBuffer>>, Rc<RefCell<Vec<u8>>>)
+    {
+        fn into_buffers(self) -> (Rc<RefCell<RingBuffer>>, TestSendBuffer) {
+            let (rb, sb) = self;
+            (rb, TestSendBuffer(sb, Default::default()))
         }
     }
 
@@ -994,6 +1111,8 @@ mod tests {
             listen(sync_ctx, non_sync_ctx, conn, backlog)
         });
 
+        let client_rcv_end = Rc::new(RefCell::new(RingBuffer::default()));
+        let client_snd_end = Rc::new(RefCell::new(Vec::new()));
         let client = net.with_context(LOCAL, |TcpCtx { sync_ctx, non_sync_ctx }| {
             let conn = create_socket(sync_ctx, non_sync_ctx);
             if bind_client {
@@ -1005,7 +1124,7 @@ mod tests {
                     non_sync_ctx,
                     conn,
                     SocketAddr { ip: I::DUMMY_CONFIG.remote_ip, port: PORT_1 },
-                    (),
+                    (Rc::clone(&client_rcv_end), Rc::clone(&client_snd_end)),
                 )
                 .expect("failed to connect")
             } else {
@@ -1014,7 +1133,7 @@ mod tests {
                     non_sync_ctx,
                     conn,
                     SocketAddr { ip: I::DUMMY_CONFIG.remote_ip, port: PORT_1 },
-                    (),
+                    (Rc::clone(&client_rcv_end), Rc::clone(&client_snd_end)),
                 )
                 .expect("failed to connect")
             }
@@ -1036,9 +1155,10 @@ mod tests {
 
         // Step the test network until the handshake is done.
         net.run_until_idle(handle_frame, panic_if_any_timer);
-        let (accepted, addr, ()) = net.with_context(REMOTE, |TcpCtx { sync_ctx, non_sync_ctx }| {
-            accept(sync_ctx, non_sync_ctx, server).expect("failed to accept")
-        });
+        let (accepted, addr, (accepted_rcv_end, accepted_snd_end)) =
+            net.with_context(REMOTE, |TcpCtx { sync_ctx, non_sync_ctx }| {
+                accept(sync_ctx, non_sync_ctx, server).expect("failed to accept")
+            });
         if bind_client {
             assert_eq!(addr, SocketAddr { ip: I::DUMMY_CONFIG.local_ip, port: PORT_1 });
         } else {
@@ -1046,22 +1166,44 @@ mod tests {
         }
 
         let mut assert_connected = |name: &'static str, conn_id: ConnectionId| {
-            let (state, (), _): &(_, _, ConnAddr<_, _, _, _>) = net
+            let (state, (), _): (_, _, &ConnAddr<_, _, _, _>) = net
                 .sync_ctx(name)
-                .get_ref()
+                .get_mut()
                 .sockets
                 .socketmap
-                .conns()
-                .get_by_id(&conn_id)
+                .conns_mut()
+                .get_by_id_mut(&conn_id)
                 .expect("failed to retrieve the client socket");
             assert_matches!(
                 state,
                 Connection { acceptor: None, state: State::Established(_), ip_sock: _ }
-            );
+            )
         };
 
         assert_connected(LOCAL, client);
         assert_connected(REMOTE, accepted);
+
+        for snd_end in [client_snd_end, accepted_snd_end] {
+            snd_end.borrow_mut().extend_from_slice(b"Hello");
+        }
+
+        for (c, id) in [(LOCAL, client), (REMOTE, accepted)] {
+            net.with_context(c, |TcpCtx { sync_ctx, non_sync_ctx }| {
+                assert_matches!(do_send(sync_ctx, non_sync_ctx, id), Ok(()));
+            })
+        }
+        net.run_until_idle(handle_frame, panic_if_any_timer);
+
+        for rcv_end in [client_rcv_end, accepted_rcv_end] {
+            assert_eq!(
+                rcv_end.borrow_mut().read_with(|avail| {
+                    let avail = avail.concat();
+                    assert_eq!(avail, b"Hello");
+                    avail.len()
+                }),
+                5
+            );
+        }
 
         // Check the listener is in correct state.
         assert_eq!(
@@ -1132,7 +1274,7 @@ mod tests {
                 non_sync_ctx,
                 conn,
                 SocketAddr { ip: I::DUMMY_CONFIG.remote_ip, port: PORT_1 },
-                (),
+                (Rc::new(RefCell::new(RingBuffer::default())), Rc::new(RefCell::new(Vec::new()))),
             )
             .expect("failed to connect")
         });

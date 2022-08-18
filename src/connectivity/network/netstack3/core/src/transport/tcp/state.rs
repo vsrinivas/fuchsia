@@ -1600,16 +1600,12 @@ mod test {
             assert_eq!(count, 0);
         }
 
-        fn peek_with<'a, F, R>(&'a self, offset: usize, f: F) -> R
+        fn peek_with<'a, F, R>(&'a mut self, offset: usize, f: F) -> R
         where
             F: FnOnce(SendPayload<'a>) -> R,
         {
             assert_eq!(offset, 0);
             f(SendPayload::Contiguous(&[]))
-        }
-
-        fn enqueue_data(&mut self, _data: &[u8]) -> usize {
-            0
         }
     }
 

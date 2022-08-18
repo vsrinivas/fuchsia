@@ -71,14 +71,9 @@ pub trait SendBuffer: Buffer {
     // for this trait to have an associated type that describes the shape of
     // the borrowed readable region but is currently impossible because GATs
     // are not implemented yet.
-    fn peek_with<'a, F, R>(&'a self, offset: usize, f: F) -> R
+    fn peek_with<'a, F, R>(&'a mut self, offset: usize, f: F) -> R
     where
         F: FnOnce(SendPayload<'a>) -> R;
-
-    /// Enqueues as much of `data` as possible to the end of the buffer.
-    ///
-    /// Returns the number of bytes actually queued.
-    fn enqueue_data(&mut self, data: &[u8]) -> usize;
 }
 
 /// A type for the payload being sent.
@@ -212,6 +207,15 @@ impl RingBuffer {
         *head = (*head + nread) % storage.len();
         nread
     }
+
+    /// Enqueues as much of `data` as possible to the end of the buffer.
+    ///
+    /// Returns the number of bytes actually queued.
+    pub(crate) fn enqueue_data(&mut self, data: &[u8]) -> usize {
+        let nwritten = self.write_at(0, &data);
+        self.make_readable(nwritten);
+        nwritten
+    }
 }
 
 impl Buffer for RingBuffer {
@@ -267,7 +271,7 @@ impl SendBuffer for RingBuffer {
         *head += count;
     }
 
-    fn peek_with<'a, F, R>(&'a self, offset: usize, f: F) -> R
+    fn peek_with<'a, F, R>(&'a mut self, offset: usize, f: F) -> R
     where
         F: FnOnce(SendPayload<'a>) -> R,
     {
@@ -289,12 +293,6 @@ impl SendBuffer for RingBuffer {
                 ),
             },
         )
-    }
-
-    fn enqueue_data(&mut self, data: &[u8]) -> usize {
-        let nwritten = self.write_at(0, &data);
-        self.make_readable(nwritten);
-        nwritten
     }
 }
 
@@ -548,7 +546,7 @@ mod test {
         }
 
         #[test]
-        fn ring_buffer_peek_with((rb, expected, offset) in ring_buffer::with_read_data()) {
+        fn ring_buffer_peek_with((mut rb, expected, offset) in ring_buffer::with_read_data()) {
             assert_eq!(rb.len(), expected.len());
             let () = rb.peek_with(offset, |readable| {
                 assert_eq!(readable.to_vec(), &expected[offset..]);
