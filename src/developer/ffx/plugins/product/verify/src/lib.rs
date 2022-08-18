@@ -75,11 +75,6 @@ fn pb_verify_product_bundle(product_bundle: ProductBundleV1) -> Result<()> {
             bail!("Package 'repo_uri' paths must start with 'file:'");
         }
     }
-    if let Some(emu) = product_bundle.manifests.emu {
-        if emu.disk_images.is_empty() {
-            bail!("At least one entry in the emulator 'disk_images' must be supplied");
-        }
-    }
     if let Some(flash) = product_bundle.manifests.flash {
         if flash.products.is_empty() {
             bail!("At least one entry in the flash manifest 'products' must be supplied");
@@ -162,17 +157,6 @@ mod test {
     fn verify_package_invalid_repo_uri() {
         let mut pb = default_valid_pb();
         pb.packages[0].repo_uri = "gs://path/to/file".into();
-        assert!(pb_verify_product_bundle(pb).is_err());
-    }
-
-    #[test]
-    fn verify_missing_emu_disk_images() {
-        let mut pb = default_valid_pb();
-        pb.manifests.emu = Some(EmuManifest {
-            disk_images: vec![],
-            initial_ramdisk: "ramdisk".into(),
-            kernel: "kernel".into(),
-        });
         assert!(pb_verify_product_bundle(pb).is_err());
     }
 

@@ -583,7 +583,11 @@ product_metadata("product_metadata") {
   if (board_is_emu) {
     deps += [ ":virtual_device_specification" ]
     emu_manifest = {
-      initial_ramdisk = "fuchsia.zbi"
+      if (use_bringup_assembly) {
+        initial_ramdisk = "bringup.zbi"
+      } else {
+        initial_ramdisk = "fuchsia.zbi"
+      }
       kernel = rebase_path(files.qemu_kernel, root_out_dir)
       disk_images = []
       if (defined(files.fvm)) {

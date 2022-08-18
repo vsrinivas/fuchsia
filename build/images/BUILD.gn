@@ -264,6 +264,7 @@ group("default-images") {
   deps = default_image_deps + [
            "//build/images/flash:fastboot_manifest",
            "//build/images/flash:flash_script",
+           "//build/images/flash:product_metadata",
            "//build/images/tools:fastboot",
          ]
 
@@ -298,8 +299,6 @@ group("default-images") {
       ":record_filesystem_sizes",
       "//build/images/updates",
     ]
-
-    deps += [ "//build/images/flash:product_metadata" ]
   } else {
     deps += [ "//build/images/archive:fastboot-boot-script" ]
   }
