@@ -31,20 +31,20 @@ class FakeViewController : public fuchsia::element::ViewController {
   fidl::BindingSet<fuchsia::element::ViewController> view_controller_bindings_;
 };
 
-class SceneProvider : public fuchsia::ui::test::scene::Controller,
+class SceneProvider : public fuchsia::ui::test::scene::Provider,
                       public fuchsia::element::GraphicalPresenter {
  public:
   explicit SceneProvider(sys::ComponentContext* context) : context_(context) {}
   ~SceneProvider() override = default;
 
-  // |fuchsia::ui::test::scene::Controller|
-  void AttachClientView(fuchsia::ui::test::scene::ControllerAttachClientViewRequest request,
+  // |fuchsia::ui::test::scene::Provider|
+  void AttachClientView(fuchsia::ui::test::scene::ProviderAttachClientViewRequest request,
                         AttachClientViewCallback callback) override;
 
-  // |fuchsia::ui::test::scene::Controller|
-  void RegisterViewTreeWatcher(
-      fidl::InterfaceRequest<fuchsia::ui::observation::geometry::ViewTreeWatcher> geometry_observer,
-      RegisterViewTreeWatcherCallback callback) override;
+  // |fuchsia::ui::test::scene::Provider|
+  void RegisterGeometryObserver(
+      fidl::InterfaceRequest<fuchsia::ui::observation::geometry::Provider> geometry_observer,
+      RegisterGeometryObserverCallback callback) override;
 
   // |fuchsia::element::GraphicalPresenter|
   void PresentView(
@@ -53,8 +53,8 @@ class SceneProvider : public fuchsia::ui::test::scene::Controller,
       fidl::InterfaceRequest<fuchsia::element::ViewController> view_controller,
       PresentViewCallback callback) override;
 
-  // Returns a scene controller interface request handler bound to this object.
-  fidl::InterfaceRequestHandler<fuchsia::ui::test::scene::Controller> GetSceneControllerHandler();
+  // Returns a scene provider interface request handler bound to this object.
+  fidl::InterfaceRequestHandler<fuchsia::ui::test::scene::Provider> GetSceneProviderHandler();
 
   // Returns a graphical presenter interface request handler bound to this
   // object.
@@ -62,7 +62,7 @@ class SceneProvider : public fuchsia::ui::test::scene::Controller,
   GetGraphicalPresenterHandler();
 
  private:
-  fidl::BindingSet<fuchsia::ui::test::scene::Controller> scene_controller_bindings_;
+  fidl::BindingSet<fuchsia::ui::test::scene::Provider> scene_provider_bindings_;
   fidl::BindingSet<fuchsia::element::GraphicalPresenter> graphical_presenter_bindings_;
   std::optional<FakeViewController> fake_view_controller_;
   fuchsia::element::AnnotationControllerPtr annotation_controller_;

@@ -89,8 +89,8 @@ using fuf_FocusChainListenerRegistry = fuchsia::ui::focus::FocusChainListenerReg
 using fug_DisplayInfo = fuchsia::ui::gfx::DisplayInfo;
 using fug_vec2 = fuchsia::ui::gfx::vec2;
 using fug_ViewProperties = fuchsia::ui::gfx::ViewProperties;
-using fuog_ProviderPtr = fuchsia::ui::observation::geometry::ViewTreeWatcherPtr;
-using fuog_WatchResponse = fuchsia::ui::observation::geometry::WatchResponse;
+using fuog_ProviderPtr = fuchsia::ui::observation::geometry::ProviderPtr;
+using fuog_ProviderWatchResponse = fuchsia::ui::observation::geometry::ProviderWatchResponse;
 using fuog_ViewDescriptor = fuchsia::ui::observation::geometry::ViewDescriptor;
 using fuog_ViewTreeSnapshot = fuchsia::ui::observation::geometry::ViewTreeSnapshot;
 using fuot_Registry = fuchsia::ui::observation::test::Registry;
@@ -474,13 +474,13 @@ class GfxObserverRegistryIntegrationTest : public zxtest::Test,
 
   // Checks whether the view with |view_ref_koid| has connected to the view tree by checking its
   // presence in a Watch() call's response.
-  bool HasViewConnected(const fuog_ProviderPtr& view_tree_watcher, zx_koid_t view_ref_koid) {
-    std::optional<fuog_WatchResponse> view_tree_result;
-    view_tree_watcher->Watch(
-        [&view_tree_result](auto response) { view_tree_result = std::move(response); });
-    RunLoopUntil([&view_tree_result] { return view_tree_result.has_value(); });
-    auto snapshot = GetFirstSnapshotWithView(view_tree_result->updates(), view_ref_koid);
-    return snapshot != view_tree_result->updates().end();
+  bool HasViewConnected(const fuog_ProviderPtr& geometry_provider, zx_koid_t view_ref_koid) {
+    std::optional<fuog_ProviderWatchResponse> geometry_result;
+    geometry_provider->Watch(
+        [&geometry_result](auto response) { geometry_result = std::move(response); });
+    RunLoopUntil([&geometry_result] { return geometry_result.has_value(); });
+    auto snapshot = GetFirstSnapshotWithView(geometry_result->updates(), view_ref_koid);
+    return snapshot != geometry_result->updates().end();
   }
 
   fuot_RegistryPtr observer_registry_ptr_;
@@ -497,10 +497,10 @@ class GfxObserverRegistryIntegrationTest : public zxtest::Test,
 };
 
 TEST_F(FlatlandObserverRegistryIntegrationTest, RegistryProtocolConnectedSuccess) {
-  fuog_ProviderPtr view_tree_watcher;
+  fuog_ProviderPtr geometry_provider;
   std::optional<bool> result;
-  observer_registry_ptr_->RegisterGlobalViewTreeWatcher(view_tree_watcher.NewRequest(),
-                                                        [&result] { result = true; });
+  observer_registry_ptr_->RegisterGlobalGeometryProvider(geometry_provider.NewRequest(),
+                                                         [&result] { result = true; });
   RunLoopUntil([&result] { return result.has_value(); });
   EXPECT_TRUE(result.value());
 }
@@ -513,10 +513,10 @@ TEST_F(FlatlandObserverRegistryIntegrationTest, RegistryProtocolConnectedSuccess
 //                                    |
 //                               child_view
 TEST_F(FlatlandObserverRegistryIntegrationTest, ClientReceivesTopologyUpdatesForFlatland) {
-  fuog_ProviderPtr view_tree_watcher;
+  fuog_ProviderPtr geometry_provider;
   std::optional<bool> result;
-  observer_registry_ptr_->RegisterGlobalViewTreeWatcher(view_tree_watcher.NewRequest(),
-                                                        [&result] { result = true; });
+  observer_registry_ptr_->RegisterGlobalGeometryProvider(geometry_provider.NewRequest(),
+                                                         [&result] { result = true; });
 
   RunLoopUntil([&result] { return result.has_value(); });
   EXPECT_TRUE(result.value());
@@ -562,30 +562,29 @@ TEST_F(FlatlandObserverRegistryIntegrationTest, ClientReceivesTopologyUpdatesFor
   child_session->ReleaseView();
   BlockingPresent(child_session);
 
-  std::optional<fuog_WatchResponse> view_tree_result;
+  std::optional<fuog_ProviderWatchResponse> geometry_result;
 
-  view_tree_watcher->Watch(
-      [&view_tree_result](auto response) { view_tree_result = std::move(response); });
+  geometry_provider->Watch(
+      [&geometry_result](auto response) { geometry_result = std::move(response); });
 
-  RunLoopUntil([&view_tree_result] { return view_tree_result.has_value(); });
+  RunLoopUntil([&geometry_result] { return geometry_result.has_value(); });
 
-  EXPECT_FALSE(view_tree_result->has_error());
+  EXPECT_FALSE(geometry_result->has_error());
 
-  ASSERT_TRUE(view_tree_result->has_updates());
+  ASSERT_TRUE(geometry_result->has_updates());
 
   // This snapshot captures the state of the view tree when the scene only has the root_view.
   {
-    auto snapshot_iter = GetFirstSnapshotWithView(view_tree_result->updates(), root_view_ref_koid_);
-    ASSERT_TRUE(snapshot_iter != view_tree_result->updates().end());
+    auto snapshot_iter = GetFirstSnapshotWithView(geometry_result->updates(), root_view_ref_koid_);
+    ASSERT_TRUE(snapshot_iter != geometry_result->updates().end());
     AssertViewTreeSnapshot(*snapshot_iter, ViewBuilder().AddView(root_view_ref_koid_, {}).Build());
   }
 
   // This snapshot captures the state of the view tree when parent_view gets connected to the
   // root_view.
   {
-    auto snapshot_iter =
-        GetFirstSnapshotWithView(view_tree_result->updates(), parent_view_ref_koid);
-    ASSERT_TRUE(snapshot_iter != view_tree_result->updates().end());
+    auto snapshot_iter = GetFirstSnapshotWithView(geometry_result->updates(), parent_view_ref_koid);
+    ASSERT_TRUE(snapshot_iter != geometry_result->updates().end());
     AssertViewTreeSnapshot(*snapshot_iter, ViewBuilder()
                                                .AddView(root_view_ref_koid_, {parent_view_ref_koid})
                                                .AddView(parent_view_ref_koid, {})
@@ -595,8 +594,8 @@ TEST_F(FlatlandObserverRegistryIntegrationTest, ClientReceivesTopologyUpdatesFor
   // This snapshot captures the state of the view tree when child_view gets connected to the
   // parent_view.
   {
-    auto snapshot_iter = GetFirstSnapshotWithView(view_tree_result->updates(), child_view_ref_koid);
-    ASSERT_TRUE(snapshot_iter != view_tree_result->updates().end());
+    auto snapshot_iter = GetFirstSnapshotWithView(geometry_result->updates(), child_view_ref_koid);
+    ASSERT_TRUE(snapshot_iter != geometry_result->updates().end());
     AssertViewTreeSnapshot(*snapshot_iter, ViewBuilder()
                                                .AddView(root_view_ref_koid_, {parent_view_ref_koid})
                                                .AddView(parent_view_ref_koid, {child_view_ref_koid})
@@ -609,11 +608,10 @@ TEST_F(FlatlandObserverRegistryIntegrationTest, ClientReceivesTopologyUpdatesFor
   {
     // Updates are reversed to find the snapshot having only the root_view and parent_view after the
     // child_view gets connected. This represents child_view getting disconnected.
-    std::reverse(view_tree_result->mutable_updates()->begin(),
-                 view_tree_result->mutable_updates()->end());
-    auto snapshot_iter =
-        GetFirstSnapshotWithView(view_tree_result->updates(), parent_view_ref_koid);
-    ASSERT_TRUE(snapshot_iter != view_tree_result->updates().end());
+    std::reverse(geometry_result->mutable_updates()->begin(),
+                 geometry_result->mutable_updates()->end());
+    auto snapshot_iter = GetFirstSnapshotWithView(geometry_result->updates(), parent_view_ref_koid);
+    ASSERT_TRUE(snapshot_iter != geometry_result->updates().end());
 
     AssertViewTreeSnapshot(*snapshot_iter, ViewBuilder()
                                                .AddView(root_view_ref_koid_, {parent_view_ref_koid})
@@ -623,10 +621,10 @@ TEST_F(FlatlandObserverRegistryIntegrationTest, ClientReceivesTopologyUpdatesFor
 }
 
 TEST_F(FlatlandObserverRegistryIntegrationTest, ClientReceivesLayoutUpdatesForFlatland) {
-  fuog_ProviderPtr view_tree_watcher;
+  fuog_ProviderPtr geometry_provider;
   std::optional<bool> result;
-  observer_registry_ptr_->RegisterGlobalViewTreeWatcher(view_tree_watcher.NewRequest(),
-                                                        [&result] { result = true; });
+  observer_registry_ptr_->RegisterGlobalGeometryProvider(geometry_provider.NewRequest(),
+                                                         [&result] { result = true; });
 
   RunLoopUntil([&result] { return result.has_value(); });
   EXPECT_TRUE(result.value());
@@ -656,23 +654,23 @@ TEST_F(FlatlandObserverRegistryIntegrationTest, ClientReceivesLayoutUpdatesForFl
 
   BlockingPresent(root_session_);
 
-  std::optional<fuog_WatchResponse> view_tree_result;
+  std::optional<fuog_ProviderWatchResponse> geometry_result;
 
-  view_tree_watcher->Watch(
-      [&view_tree_result](auto response) { view_tree_result = std::move(response); });
+  geometry_provider->Watch(
+      [&geometry_result](auto response) { geometry_result = std::move(response); });
 
-  RunLoopUntil([&view_tree_result] { return view_tree_result.has_value(); });
+  RunLoopUntil([&geometry_result] { return geometry_result.has_value(); });
 
-  EXPECT_FALSE(view_tree_result->has_error());
+  EXPECT_FALSE(geometry_result->has_error());
 
-  ASSERT_TRUE(view_tree_result->has_updates());
+  ASSERT_TRUE(geometry_result->has_updates());
 
   // This snapshot captures the state of the view tree when the root view sets the logical size
   // of the viewport as {|kDefaultSize|,|kDefaultSize|}.
   {
     // The first snapshot having the child view should represent the state where the layout size of
     // the child view is {|kDefaultSize|,|kDefaultSize|}.
-    auto snapshot_iter = GetFirstSnapshotWithView(view_tree_result->updates(), child_view_ref_koid);
+    auto snapshot_iter = GetFirstSnapshotWithView(geometry_result->updates(), child_view_ref_koid);
     AssertViewTreeSnapshot(
         *snapshot_iter,
         ViewBuilder()
@@ -687,9 +685,9 @@ TEST_F(FlatlandObserverRegistryIntegrationTest, ClientReceivesLayoutUpdatesForFl
   {
     // The last snapshot having the child view should represent the state where the layout size of
     // the child view is {|kDefaultSize|,|kDefaultSize|}.
-    std::reverse(view_tree_result->mutable_updates()->begin(),
-                 view_tree_result->mutable_updates()->end());
-    auto snapshot_iter = GetFirstSnapshotWithView(view_tree_result->updates(), child_view_ref_koid);
+    std::reverse(geometry_result->mutable_updates()->begin(),
+                 geometry_result->mutable_updates()->end());
+    auto snapshot_iter = GetFirstSnapshotWithView(geometry_result->updates(), child_view_ref_koid);
     AssertViewTreeSnapshot(*snapshot_iter,
                            ViewBuilder()
                                .AddView(root_view_ref_koid_, {child_view_ref_koid},
@@ -703,10 +701,10 @@ TEST_F(FlatlandObserverRegistryIntegrationTest, ClientReceivesLayoutUpdatesForFl
 // focusable and hittable. In this test, the client (root view) uses |f.u.o.g.Provider| to get
 // notified about a child view getting connected and then moves focus to the child view.
 TEST_F(FlatlandObserverRegistryIntegrationTest, ChildRequestsFocusAfterConnectingForFlatland) {
-  fuog_ProviderPtr view_tree_watcher;
+  fuog_ProviderPtr geometry_provider;
   std::optional<bool> result;
-  observer_registry_ptr_->RegisterGlobalViewTreeWatcher(view_tree_watcher.NewRequest(),
-                                                        [&result] { result = true; });
+  observer_registry_ptr_->RegisterGlobalGeometryProvider(geometry_provider.NewRequest(),
+                                                         [&result] { result = true; });
 
   RunLoopUntil([&result] { return result.has_value(); });
   EXPECT_TRUE(result.value());
@@ -739,21 +737,21 @@ TEST_F(FlatlandObserverRegistryIntegrationTest, ChildRequestsFocusAfterConnectin
     child_focused = update.focused();
   });
 
-  std::optional<fuog_WatchResponse> view_tree_result;
+  std::optional<fuog_ProviderWatchResponse> geometry_result;
 
-  view_tree_watcher->Watch(
-      [&view_tree_result](auto response) { view_tree_result = std::move(response); });
+  geometry_provider->Watch(
+      [&geometry_result](auto response) { geometry_result = std::move(response); });
 
-  RunLoopUntil([&view_tree_result] { return view_tree_result.has_value(); });
+  RunLoopUntil([&geometry_result] { return geometry_result.has_value(); });
 
-  ASSERT_TRUE(view_tree_result->has_updates());
-  ASSERT_FALSE(view_tree_result->has_error());
+  ASSERT_TRUE(geometry_result->has_updates());
+  ASSERT_FALSE(geometry_result->has_error());
 
   // This snapshot captures the state of the view tree when the child view gets connected to the
   // root view.
   const auto child_view_ref_koid = ExtractKoid(child_view_ref);
-  auto snapshot = GetFirstSnapshotWithView(view_tree_result->updates(), child_view_ref_koid);
-  ASSERT_TRUE(snapshot != view_tree_result->updates().end());
+  auto snapshot = GetFirstSnapshotWithView(geometry_result->updates(), child_view_ref_koid);
+  ASSERT_TRUE(snapshot != geometry_result->updates().end());
   auto& root_view_descriptor = snapshot->views()[0];
   auto& children = root_view_descriptor.children();
 
@@ -786,10 +784,10 @@ TEST_F(FlatlandObserverRegistryIntegrationTest, ChildRequestsFocusAfterConnectin
 // stage (3) after which its ancestors receive the |is_rendering| signal and are included in the
 // response.
 TEST_F(GfxObserverRegistryIntegrationTest, ClientReceivesHierarchyUpdatesForGfx) {
-  fuog_ProviderPtr view_tree_watcher;
+  fuog_ProviderPtr geometry_provider;
   std::optional<bool> result;
-  observer_registry_ptr_->RegisterGlobalViewTreeWatcher(view_tree_watcher.NewRequest(),
-                                                        [&result] { result = true; });
+  observer_registry_ptr_->RegisterGlobalGeometryProvider(geometry_provider.NewRequest(),
+                                                         [&result] { result = true; });
 
   RunLoopUntil([&result] { return result.has_value(); });
   EXPECT_TRUE(result.value());
@@ -826,7 +824,7 @@ TEST_F(GfxObserverRegistryIntegrationTest, ClientReceivesHierarchyUpdatesForGfx)
   BlockingPresent(root_session_->session);
 
   // parent_view is not present in the response until the child_view renders some content.
-  EXPECT_FALSE(HasViewConnected(view_tree_watcher, parent_view_ref_koid));
+  EXPECT_FALSE(HasViewConnected(geometry_provider, parent_view_ref_koid));
 
   // Set up the child_view and connect it to the parent_view.
   scenic::Session child_session = CreateSession(scenic(), {});
@@ -851,23 +849,23 @@ TEST_F(GfxObserverRegistryIntegrationTest, ClientReceivesHierarchyUpdatesForGfx)
   BlockingPresent(child_session);
   BlockingPresent(parent_session);
 
-  std::optional<fuog_WatchResponse> view_tree_result;
+  std::optional<fuog_ProviderWatchResponse> geometry_result;
 
-  view_tree_watcher->Watch(
-      [&view_tree_result](auto response) { view_tree_result = std::move(response); });
+  geometry_provider->Watch(
+      [&geometry_result](auto response) { geometry_result = std::move(response); });
 
-  RunLoopUntil([&view_tree_result] { return view_tree_result.has_value(); });
+  RunLoopUntil([&geometry_result] { return geometry_result.has_value(); });
 
-  EXPECT_FALSE(view_tree_result->has_error());
+  EXPECT_FALSE(geometry_result->has_error());
 
-  ASSERT_TRUE(view_tree_result->has_updates());
+  ASSERT_TRUE(geometry_result->has_updates());
 
   // This snapshot captures the state of the view tree when child_view gets connected to the
   // parent_view. Note that all the views will be present in the response only when the child_view
   // has rendered some content.
   {
-    auto snapshot_iter = GetFirstSnapshotWithView(view_tree_result->updates(), child_view_ref_koid);
-    ASSERT_TRUE(snapshot_iter != view_tree_result->updates().end());
+    auto snapshot_iter = GetFirstSnapshotWithView(geometry_result->updates(), child_view_ref_koid);
+    ASSERT_TRUE(snapshot_iter != geometry_result->updates().end());
 
     AssertViewTreeSnapshot(*snapshot_iter, ViewBuilder()
                                                .AddView(std::nullopt, {parent_view_ref_koid})
@@ -880,23 +878,22 @@ TEST_F(GfxObserverRegistryIntegrationTest, ClientReceivesHierarchyUpdatesForGfx)
   parent_view.DetachChild(entity_node);
   BlockingPresent(parent_session);
 
-  view_tree_result.reset();
+  geometry_result.reset();
 
-  view_tree_watcher->Watch(
-      [&view_tree_result](auto response) { view_tree_result = std::move(response); });
+  geometry_provider->Watch(
+      [&geometry_result](auto response) { geometry_result = std::move(response); });
 
-  RunLoopUntil([&view_tree_result] { return view_tree_result.has_value(); });
+  RunLoopUntil([&geometry_result] { return geometry_result.has_value(); });
 
-  EXPECT_FALSE(view_tree_result->has_error());
+  EXPECT_FALSE(geometry_result->has_error());
 
-  ASSERT_TRUE(view_tree_result->has_updates());
+  ASSERT_TRUE(geometry_result->has_updates());
 
   // This snapshot captures the state of the view tree when child_view detaches from the
   // parent_view.
   {
-    auto snapshot_iter =
-        GetFirstSnapshotWithView(view_tree_result->updates(), parent_view_ref_koid);
-    ASSERT_TRUE(snapshot_iter != view_tree_result->updates().end());
+    auto snapshot_iter = GetFirstSnapshotWithView(geometry_result->updates(), parent_view_ref_koid);
+    ASSERT_TRUE(snapshot_iter != geometry_result->updates().end());
     AssertViewTreeSnapshot(*snapshot_iter, ViewBuilder()
                                                .AddView(std::nullopt, {parent_view_ref_koid})
                                                .AddView(parent_view_ref_koid, {})
@@ -908,10 +905,10 @@ TEST_F(GfxObserverRegistryIntegrationTest, ClientReceivesHierarchyUpdatesForGfx)
 // focusable and hittable. In this test, the client (root view) uses |f.u.o.g.Provider| to get
 // notified about a child view getting connected and then moves focus to the child view.
 TEST_F(GfxObserverRegistryIntegrationTest, ChildRequestsFocusAfterConnectingForGFX) {
-  fuog_ProviderPtr view_tree_watcher;
+  fuog_ProviderPtr geometry_provider;
   std::optional<bool> result;
-  observer_registry_ptr_->RegisterGlobalViewTreeWatcher(view_tree_watcher.NewRequest(),
-                                                        [&result] { result = true; });
+  observer_registry_ptr_->RegisterGlobalGeometryProvider(geometry_provider.NewRequest(),
+                                                         [&result] { result = true; });
 
   scenic::EntityNode entity_node(&root_session_->session);
 
@@ -957,7 +954,7 @@ TEST_F(GfxObserverRegistryIntegrationTest, ChildRequestsFocusAfterConnectingForG
   root_session_->session.Present2(0, 0, [](auto) {});
 
   // The view is not included in the response because it has not rendered any content.
-  EXPECT_FALSE(HasViewConnected(view_tree_watcher, child_view_ref_koid));
+  EXPECT_FALSE(HasViewConnected(geometry_provider, child_view_ref_koid));
 
   // Watch for child focused event.
   std::optional<bool> child_focused;
@@ -976,8 +973,8 @@ TEST_F(GfxObserverRegistryIntegrationTest, ChildRequestsFocusAfterConnectingForG
 
   // Wait until the child_view is present in the Watch() call's response.
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
-      [this, &view_tree_watcher, &child_view_ref_koid] {
-        return HasViewConnected(view_tree_watcher, child_view_ref_koid);
+      [this, &geometry_provider, &child_view_ref_koid] {
+        return HasViewConnected(geometry_provider, child_view_ref_koid);
       },
       kWatchTimeout));
 
@@ -998,10 +995,10 @@ TEST_F(GfxObserverRegistryIntegrationTest, ChildRequestsFocusAfterConnectingForG
 }
 
 TEST_F(GfxObserverRegistryIntegrationTest, GFXClientReceivesPixelScaleAndInsetValues) {
-  fuog_ProviderPtr view_tree_watcher;
+  fuog_ProviderPtr geometry_provider;
   std::optional<bool> result;
-  observer_registry_ptr_->RegisterGlobalViewTreeWatcher(view_tree_watcher.NewRequest(),
-                                                        [&result] { result = true; });
+  observer_registry_ptr_->RegisterGlobalGeometryProvider(geometry_provider.NewRequest(),
+                                                         [&result] { result = true; });
 
   scenic::EntityNode entity_node(&root_session_->session);
 
@@ -1053,22 +1050,22 @@ TEST_F(GfxObserverRegistryIntegrationTest, GFXClientReceivesPixelScaleAndInsetVa
   BlockingPresent(child_session);
   BlockingPresent(root_session_->session);
 
-  std::optional<fuog_WatchResponse> view_tree_result;
+  std::optional<fuog_ProviderWatchResponse> geometry_result;
 
-  view_tree_watcher->Watch(
-      [&view_tree_result](auto response) { view_tree_result = std::move(response); });
+  geometry_provider->Watch(
+      [&geometry_result](auto response) { geometry_result = std::move(response); });
 
-  RunLoopUntil([&view_tree_result] { return view_tree_result.has_value(); });
+  RunLoopUntil([&geometry_result] { return geometry_result.has_value(); });
 
-  EXPECT_FALSE(view_tree_result->has_error());
+  EXPECT_FALSE(geometry_result->has_error());
 
-  ASSERT_TRUE(view_tree_result->has_updates());
+  ASSERT_TRUE(geometry_result->has_updates());
 
   // This snapshot captures the state of the view tree when child view gets connected to the
   // root view.
   {
-    auto snapshot_iter = GetFirstSnapshotWithView(view_tree_result->updates(), child_view_ref_koid);
-    ASSERT_TRUE(snapshot_iter != view_tree_result->updates().end());
+    auto snapshot_iter = GetFirstSnapshotWithView(geometry_result->updates(), child_view_ref_koid);
+    ASSERT_TRUE(snapshot_iter != geometry_result->updates().end());
 
     // fuog_Provider captures pixel_scale and inset information for the child view.
     auto& child_vd = snapshot_iter->views()[1];

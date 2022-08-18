@@ -7,8 +7,7 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.ui.test.scene") {
   sdk_category = "partner"
 
-  sources = [ "controller.fidl" ]
-
+  sources = [ "provider.fidl" ]
   public_deps = [
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.observation.geometry",

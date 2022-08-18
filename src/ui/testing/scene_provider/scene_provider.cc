@@ -17,7 +17,7 @@
 namespace ui_testing {
 
 void SceneProvider::AttachClientView(
-    fuchsia::ui::test::scene::ControllerAttachClientViewRequest request,
+    fuchsia::ui::test::scene::ProviderAttachClientViewRequest request,
     AttachClientViewCallback callback) {
   FX_LOGS(INFO) << "Attach client view";
 
@@ -54,16 +54,14 @@ void SceneProvider::AttachClientView(
   callback(fsl::GetKoid(client_view_ref.reference.get()));
 }
 
-void SceneProvider::RegisterViewTreeWatcher(
-    fidl::InterfaceRequest<fuchsia::ui::observation::geometry::ViewTreeWatcher> view_tree_watcher,
-    RegisterViewTreeWatcherCallback callback) {
-  // Register the client's view tree watcher.
+void SceneProvider::RegisterGeometryObserver(
+    fidl::InterfaceRequest<fuchsia::ui::observation::geometry::Provider> geometry_observer,
+    RegisterGeometryObserverCallback callback) {
+  // Register the client's geometry observer.
   fuchsia::ui::observation::test::RegistrySyncPtr observer_registry;
   context_->svc()->Connect<fuchsia::ui::observation::test::Registry>(
       observer_registry.NewRequest());
-  observer_registry->RegisterGlobalViewTreeWatcher(std::move(view_tree_watcher));
-
-  callback();
+  observer_registry->RegisterGlobalGeometryProvider(std::move(geometry_observer));
 }
 
 void SceneProvider::PresentView(
@@ -81,7 +79,7 @@ void SceneProvider::PresentView(
 
   auto scene_provider_config = scene_provider_config_lib::Config::TakeFromStartupHandle();
 
-  // TODO(fxbug.dev/106094): Register client's scoped view tree watcher, if
+  // TODO(fxbug.dev/106094): Register client's scoped geometry observer, if
   // requested.
 
   // On GFX, |view_spec| will have the `view_ref` and `view_holder_token` fields
@@ -122,9 +120,9 @@ void SceneProvider::PresentView(
   callback(std::move(result));
 }
 
-fidl::InterfaceRequestHandler<fuchsia::ui::test::scene::Controller>
-SceneProvider::GetSceneControllerHandler() {
-  return scene_controller_bindings_.GetHandler(this);
+fidl::InterfaceRequestHandler<fuchsia::ui::test::scene::Provider>
+SceneProvider::GetSceneProviderHandler() {
+  return scene_provider_bindings_.GetHandler(this);
 }
 
 fidl::InterfaceRequestHandler<fuchsia::element::GraphicalPresenter>

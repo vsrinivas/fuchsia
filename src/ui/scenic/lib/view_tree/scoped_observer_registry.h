@@ -20,11 +20,10 @@ class ScopedRegistry : public fuchsia::ui::observation::scope::Registry {
   // Sets up forwarding of geometry requests to the geometry provider manager.
   explicit ScopedRegistry(std::shared_ptr<view_tree::GeometryProvider> geometry_provider);
 
-  // |fuchsia.ui.observation.scope.Registry.RegisterScopedViewTreeWatcher|.
-  void RegisterScopedViewTreeWatcher(
-      zx_koid_t context_view,
-      fidl::InterfaceRequest<fuchsia::ui::observation::geometry::ViewTreeWatcher> request,
-      ScopedRegistry::RegisterScopedViewTreeWatcherCallback callback) override;
+  // |fuchsia.ui.observation.scope.Registry.RequestGeometry|.
+  void RequestGeometry(zx_koid_t context_view,
+                       fidl::InterfaceRequest<fuchsia::ui::observation::geometry::Provider> request,
+                       ScopedRegistry::RequestGeometryCallback callback) override;
 
   void Publish(sys::ComponentContext* app_context);
 

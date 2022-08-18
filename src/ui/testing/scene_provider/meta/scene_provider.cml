@@ -14,7 +14,7 @@
         {
             protocol: [
                 "fuchsia.element.GraphicalPresenter",
-                "fuchsia.ui.test.scene.Controller",
+                "fuchsia.ui.test.scene.Provider",
             ],
         },
     ],
@@ -33,7 +33,7 @@
         {
             protocol: [
                 "fuchsia.element.GraphicalPresenter",
-                "fuchsia.ui.test.scene.Controller",
+                "fuchsia.ui.test.scene.Provider",
             ],
             from: "self",
         },

@@ -46,8 +46,8 @@ class FlutterEmbedderTestIp : public ::loop_fixture::RealLoop,
   }
 
   bool HasViewConnected(
-      const fuchsia::ui::observation::geometry::ViewTreeWatcherPtr& view_tree_watcher,
-      std::optional<fuchsia::ui::observation::geometry::WatchResponse>& watch_response,
+      const fuchsia::ui::observation::geometry::ProviderPtr& geometry_provider,
+      std::optional<fuchsia::ui::observation::geometry::ProviderWatchResponse>& watch_response,
       zx_koid_t view_ref_koid);
 
   scenic::Screenshot TakeScreenshot() {
@@ -121,8 +121,8 @@ class FlutterEmbedderTestIp : public ::loop_fixture::RealLoop,
   fuchsia::ui::scenic::ScenicPtr scenic_;
   fuchsia::ui::test::input::RegistryPtr input_registry_;
   fuchsia::ui::test::input::TouchScreenPtr fake_touchscreen_;
-  fuchsia::ui::test::scene::ControllerPtr scene_provider_;
-  fuchsia::ui::observation::geometry::ViewTreeWatcherPtr view_tree_watcher_;
+  fuchsia::ui::test::scene::ProviderPtr scene_provider_;
+  fuchsia::ui::observation::geometry::ProviderPtr geometry_provider_;
 
   // Wrapped in optional since the view is not created until the middle of SetUp
   component_testing::RealmBuilder realm_builder_;

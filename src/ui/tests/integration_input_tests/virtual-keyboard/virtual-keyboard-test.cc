@@ -264,7 +264,7 @@ class VirtualKeyboardBase : public gtest::RealLoopFixture {
 
   // This method does NOT block; it only logs when the client view has rendered.
   void WatchClientRenderStatus(zx_koid_t client_view_ref_koid) {
-    view_tree_watcher_->Watch([this, client_view_ref_koid](auto response) {
+    geometry_provider_->Watch([this, client_view_ref_koid](auto response) {
       if (response.has_updates() && !response.updates().empty() &&
           CheckViewExistsInSnapshot(response.updates().back(), client_view_ref_koid)) {
         FX_LOGS(INFO) << "Client view has rendered";
@@ -281,7 +281,7 @@ class VirtualKeyboardBase : public gtest::RealLoopFixture {
     // Use |fuchsia.ui.observation.test.Registry| to register the view observer endpoint with
     // scenic.
     realm()->Connect<fuchsia::ui::observation::test::Registry>(observer_registry_ptr_.NewRequest());
-    observer_registry_ptr_->RegisterGlobalViewTreeWatcher(view_tree_watcher_.NewRequest());
+    observer_registry_ptr_->RegisterGlobalGeometryProvider(geometry_provider_.NewRequest());
 
     auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
@@ -404,7 +404,7 @@ class VirtualKeyboardBase : public gtest::RealLoopFixture {
   std::unique_ptr<scenic::View> view_;
 
   fuchsia::ui::observation::test::RegistrySyncPtr observer_registry_ptr_;
-  fuchsia::ui::observation::geometry::ViewTreeWatcherPtr view_tree_watcher_;
+  fuchsia::ui::observation::geometry::ProviderPtr geometry_provider_;
 
   fuchsia::sys::ComponentControllerPtr client_component_;
   std::shared_ptr<sys::ServiceDirectory> child_services_;

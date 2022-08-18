@@ -110,11 +110,11 @@ class UITestManager : public fuchsia::ui::focus::FocusChainListener {
   // MUST be called AFTER BuildRealm().
   //
   // `use_scene_provider` indicates whether UITestManager should use
-  // `fuchsia.ui.test.scene.Controller` to initialize the scene, or use the raw
+  // `fuchsia.ui.test.scene.Provider` to initialize the scene, or use the raw
   // root presenter / scene manager APIs.
   //
   // TODO(fxbug.dev/103985): Remove the raw API option once web-semantics-test
-  // can use `fuchsia.ui.test.scene.Controller` without flaking.
+  // can use `fuchsia.ui.test.scene.Provider` without flaking.
   void InitializeScene(bool use_scene_provider = true);
 
   // Returns the view ref koid of the client view if it's available, and false
@@ -142,7 +142,7 @@ class UITestManager : public fuchsia::ui::focus::FocusChainListener {
   // Convenience method to inform the client of its view scale factor.
   //
   // Returns the scale factor applied to the client view, as reported in the
-  // Layout information received from the view tree watcher.
+  // Layout information received from the geometry observer.
   float ClientViewScaleFactor();
 
   // Convenience method to inform the client if the view specified by
@@ -162,7 +162,7 @@ class UITestManager : public fuchsia::ui::focus::FocusChainListener {
 
  private:
   // Helper method to monitor the state of the view tree continuously.
-  void Watch();
+  void WatchViewTree();
 
   // |fuchsia::ui::focus::FocusChainListener|
   void OnFocusChange(fuchsia::ui::focus::FocusChain focus_chain,
@@ -173,9 +173,9 @@ class UITestManager : public fuchsia::ui::focus::FocusChainListener {
 
   // FIDL endpoints used to drive scene business logic.
   fuchsia::ui::observation::test::RegistrySyncPtr observer_registry_;
-  fuchsia::ui::observation::geometry::ViewTreeWatcherPtr view_tree_watcher_;
+  fuchsia::ui::observation::geometry::ProviderPtr geometry_provider_;
   fidl::Binding<fuchsia::ui::focus::FocusChainListener> focus_chain_listener_binding_;
-  fuchsia::ui::test::scene::ControllerPtr scene_controller_;
+  fuchsia::ui::test::scene::ProviderPtr scene_provider_;
 
   // Connection to scene owner service. At most one will be active for a given
   // UITestManager instance.
@@ -185,14 +185,14 @@ class UITestManager : public fuchsia::ui::focus::FocusChainListener {
   // Client view's `ViewRef` kernel object ID.
   std::optional<zx_koid_t> client_view_ref_koid_ = std::nullopt;
 
-  // Holds the most recent view tree snapshot received from the view tree
-  // watcher.
+  // Holds the most recent view tree snapshot received from the geometry
+  // observer.
   //
   // From this snapshot, we can retrieve relevant view tree state on demand,
   // e.g. if the client view is rendering content.
   std::optional<fuchsia::ui::observation::geometry::ViewTreeSnapshot> last_view_tree_snapshot_;
 
-  // Holds the most recent focus chain received from the view tree watcher.
+  // Holds the most recent focus chain received from the geometry observer.
   std::optional<fuchsia::ui::focus::FocusChain> last_focus_chain_;
 
   // Save the scene owner as a workaround for fxbug.dev/103985. We can't use

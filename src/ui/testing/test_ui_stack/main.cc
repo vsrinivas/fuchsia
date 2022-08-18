@@ -88,8 +88,7 @@ int run_test_ui_stack(int argc, const char** argv) {
 
   // Helper services.
   AddPublicService<fuchsia::ui::test::input::Registry>(context.get(), realm_exposed_services.get());
-  AddPublicService<fuchsia::ui::test::scene::Controller>(context.get(),
-                                                         realm_exposed_services.get());
+  AddPublicService<fuchsia::ui::test::scene::Provider>(context.get(), realm_exposed_services.get());
 
   // Input-synthesis services.
   // TODO(fxbug.dev/107054): Remove these as soon as they are replaceable by

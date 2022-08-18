@@ -117,7 +117,7 @@ void FlutterEmbedderTestIp::SetUpRealmBase() {
   // Capabilities routed to test driver.
   realm_builder_.AddRoute(
       Route{.capabilities = {Protocol{fuchsia::ui::test::input::Registry::Name_},
-                             Protocol{fuchsia::ui::test::scene::Controller::Name_},
+                             Protocol{fuchsia::ui::test::scene::Provider::Name_},
                              Protocol{fuchsia::ui::scenic::Scenic::Name_}},
             .source = kTestUIStackRef,
             .targets = {ParentRef{}}});
@@ -126,17 +126,17 @@ void FlutterEmbedderTestIp::SetUpRealmBase() {
 // Checks whether the view with |view_ref_koid| has connected to the view tree. The response of a
 // f.u.o.g.Provider.Watch call is stored in |watch_response| if it contains |view_ref_koid|.
 bool FlutterEmbedderTestIp::HasViewConnected(
-    const fuchsia::ui::observation::geometry::ViewTreeWatcherPtr& view_tree_watcher,
-    std::optional<fuchsia::ui::observation::geometry::WatchResponse>& watch_response,
+    const fuchsia::ui::observation::geometry::ProviderPtr& geometry_provider,
+    std::optional<fuchsia::ui::observation::geometry::ProviderWatchResponse>& watch_response,
     zx_koid_t view_ref_koid) {
-  std::optional<fuchsia::ui::observation::geometry::WatchResponse> view_tree_result;
-  view_tree_watcher->Watch(
-      [&view_tree_result](auto response) { view_tree_result = std::move(response); });
-  FX_LOGS(INFO) << "Waiting for view tree result";
-  RunLoopUntil([&view_tree_result] { return view_tree_result.has_value(); });
-  FX_LOGS(INFO) << "Received view tree result";
-  if (CheckViewExistsInUpdates(view_tree_result->updates(), view_ref_koid)) {
-    watch_response = std::move(view_tree_result);
+  std::optional<fuchsia::ui::observation::geometry::ProviderWatchResponse> geometry_result;
+  geometry_provider->Watch(
+      [&geometry_result](auto response) { geometry_result = std::move(response); });
+  FX_LOGS(INFO) << "Waiting for geometry result";
+  RunLoopUntil([&geometry_result] { return geometry_result.has_value(); });
+  FX_LOGS(INFO) << "Received geometry result";
+  if (CheckViewExistsInUpdates(geometry_result->updates(), view_ref_koid)) {
+    watch_response = std::move(geometry_result);
   };
   return watch_response.has_value();
 }
@@ -210,12 +210,12 @@ void FlutterEmbedderTestIp::BuildRealmAndLaunchApp(const std::string& component_
 
   // Instruct Root Presenter to present test's View.
   std::optional<zx_koid_t> view_ref_koid;
-  scene_provider_ = realm_->Connect<fuchsia::ui::test::scene::Controller>();
+  scene_provider_ = realm_->Connect<fuchsia::ui::test::scene::Provider>();
   scene_provider_.set_error_handler(
       [](auto) { FX_LOGS(ERROR) << "Error from test scene provider"; });
-  fuchsia::ui::test::scene::ControllerAttachClientViewRequest request;
+  fuchsia::ui::test::scene::ProviderAttachClientViewRequest request;
   request.set_view_provider(realm_->Connect<fuchsia::ui::app::ViewProvider>());
-  scene_provider_->RegisterViewTreeWatcher(view_tree_watcher_.NewRequest(), []() {});
+  scene_provider_->RegisterGeometryObserver(geometry_provider_.NewRequest(), []() {});
   scene_provider_->AttachClientView(
       std::move(request),
       [&view_ref_koid](auto client_view_ref_koid) { view_ref_koid = client_view_ref_koid; });
@@ -224,10 +224,10 @@ void FlutterEmbedderTestIp::BuildRealmAndLaunchApp(const std::string& component_
   RunLoopUntil([&view_ref_koid] { return view_ref_koid.has_value(); });
 
   // Wait for the client view to get attached to the view tree.
-  std::optional<fuchsia::ui::observation::geometry::WatchResponse> watch_response;
+  std::optional<fuchsia::ui::observation::geometry::ProviderWatchResponse> watch_response;
   FX_LOGS(INFO) << "Waiting for client view to render";
   RunLoopUntil([this, &watch_response, &view_ref_koid] {
-    return HasViewConnected(view_tree_watcher_, watch_response, *view_ref_koid);
+    return HasViewConnected(geometry_provider_, watch_response, *view_ref_koid);
   });
   FX_LOGS(INFO) << "Client view has rendered";
 

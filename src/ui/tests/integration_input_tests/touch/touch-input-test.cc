@@ -71,7 +71,7 @@
 // - The test sets up this view hierarchy:
 //   - Top level scene, owned by Root Presenter.
 //   - Bottom view, owned by the child view.
-// - The test waits for view tree watcher to return a view tree with one more view in it.
+// - The test waits for geometry observer to return a view tree with one more view in it.
 // - The test injects input into Root Presenter, emulating a display's touch report.
 // - Root Presenter dispatches the touch event to Scenic, which in turn dispatches it to the child.
 // - The child receives the touch event and reports back to the test over a custom test-only FIDL.
@@ -336,16 +336,16 @@ class TouchInputBase : public gtest::RealLoopFixture {
   // Launches the test client by connecting to fuchsia.ui.app.ViewProvider protocol.
   // This method should only be invoked if this protocol has been exposed from
   // the root of the test realm. After establishing a connection, this method uses
-  // |fuchsia.ui.observation.geometry.ViewTreeWatcher| to get notified when the client view gets
-  // attached to the view tree.
+  // |fuchsia.ui.observation.geometry.Provider| to get notified when the client view gets attached
+  // to the view tree.
   void LaunchClient(std::string debug_name) {
     // Use |fuchsia.ui.observation.test.Registry| to register the view observer endpoint with
     // scenic.
-    fuchsia::ui::observation::geometry::ViewTreeWatcherPtr view_tree_watcher;
-    std::optional<bool> view_tree_available;
-    observer_registry_ptr_->RegisterGlobalViewTreeWatcher(
-        view_tree_watcher.NewRequest(), [&view_tree_available] { view_tree_available = true; });
-    RunLoopUntil([&view_tree_available] { return view_tree_available.has_value(); });
+    fuchsia::ui::observation::geometry::ProviderPtr geometry_provider;
+    std::optional<bool> geometry_available;
+    observer_registry_ptr_->RegisterGlobalGeometryProvider(
+        geometry_provider.NewRequest(), [&geometry_available] { geometry_available = true; });
+    RunLoopUntil([&geometry_available] { return geometry_available.has_value(); });
 
     auto tokens = scenic::ViewTokenPair::New();  // Root Presenter -> Client
 
@@ -370,9 +370,9 @@ class TouchInputBase : public gtest::RealLoopFixture {
                                          std::move(view_ref_control), std::move(view_ref));
 
     // Wait for the client view to get attached to the view tree.
-    std::optional<fuchsia::ui::observation::geometry::WatchResponse> watch_response;
-    RunLoopUntil([this, &view_tree_watcher, &watch_response, &view_ref_koid] {
-      return HasViewConnected(view_tree_watcher, watch_response, view_ref_koid);
+    std::optional<fuchsia::ui::observation::geometry::ProviderWatchResponse> watch_response;
+    RunLoopUntil([this, &geometry_provider, &watch_response, &view_ref_koid] {
+      return HasViewConnected(geometry_provider, watch_response, view_ref_koid);
     });
 
     // Get the display height and width from the view's extent in context as the bounding box of the
@@ -431,7 +431,7 @@ class TouchInputBase : public gtest::RealLoopFixture {
     test_app_launcher->Launch(debug_name, [&child_launched] { child_launched = true; });
     RunLoopUntil([&child_launched] { return child_launched; });
 
-    // TODO(fxb/101748) : Use fuchsia.ui.observation.geometry.ViewTreeWatcher for synchronization.
+    // TODO(fxb/101748) : Use fuchsia.ui.observation.geometry.Provider for synchronization.
     // Waits an extra frame to avoid any flakes from the child launching signal firing slightly
     // early.
     bool frame_presented = false;
@@ -507,15 +507,15 @@ class TouchInputBase : public gtest::RealLoopFixture {
   // Checks whether the view with |view_ref_koid| has connected to the view tree. The response of a
   // f.u.o.g.Provider.Watch call is stored in |watch_response| if it contains |view_ref_koid|.
   bool HasViewConnected(
-      const fuchsia::ui::observation::geometry::ViewTreeWatcherPtr& view_tree_watcher,
-      std::optional<fuchsia::ui::observation::geometry::WatchResponse>& watch_response,
+      const fuchsia::ui::observation::geometry::ProviderPtr& geometry_provider,
+      std::optional<fuchsia::ui::observation::geometry::ProviderWatchResponse>& watch_response,
       zx_koid_t view_ref_koid) {
-    std::optional<fuchsia::ui::observation::geometry::WatchResponse> view_tree_result;
-    view_tree_watcher->Watch(
-        [&view_tree_result](auto response) { view_tree_result = std::move(response); });
-    RunLoopUntil([&view_tree_result] { return view_tree_result.has_value(); });
-    if (CheckViewExistsInUpdates(view_tree_result->updates(), view_ref_koid)) {
-      watch_response = std::move(view_tree_result);
+    std::optional<fuchsia::ui::observation::geometry::ProviderWatchResponse> geometry_result;
+    geometry_provider->Watch(
+        [&geometry_result](auto response) { geometry_result = std::move(response); });
+    RunLoopUntil([&geometry_result] { return geometry_result.has_value(); });
+    if (CheckViewExistsInUpdates(geometry_result->updates(), view_ref_koid)) {
+      watch_response = std::move(geometry_result);
     };
     return watch_response.has_value();
   }

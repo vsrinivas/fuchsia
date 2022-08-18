@@ -13,11 +13,11 @@ namespace view_tree {
 Registry::Registry(std::shared_ptr<view_tree::GeometryProvider> geometry_provider)
     : geometry_provider_(std::move(geometry_provider)) {}
 
-void Registry::RegisterGlobalViewTreeWatcher(
-    fidl::InterfaceRequest<fuchsia::ui::observation::geometry::ViewTreeWatcher> request,
-    Registry::RegisterGlobalViewTreeWatcherCallback callback) {
+void Registry::RegisterGlobalGeometryProvider(
+    fidl::InterfaceRequest<fuchsia::ui::observation::geometry::Provider> request,
+    Registry::RegisterGlobalGeometryProviderCallback callback) {
   FX_DCHECK(geometry_provider_) << "GeometryProvider should be set up before this method call.";
-  geometry_provider_->RegisterGlobalViewTreeWatcher(std::move(request));
+  geometry_provider_->RegisterGlobalGeometryProvider(std::move(request));
 
   callback();
 }

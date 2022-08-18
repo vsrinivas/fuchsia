@@ -58,7 +58,7 @@ std::unique_ptr<sys::ServiceDirectory> UITestManager::CloneExposedServicesDirect
 }
 
 void UITestManager::InitializeScene(bool use_scene_provider) {
-  FX_CHECK(!view_tree_watcher_) << "InitializeScene() called twice";
+  FX_CHECK(!geometry_provider_) << "InitializeScene() called twice";
 
   // Register focus chain listener.
   auto focus_chain_listener_registry =
@@ -69,19 +69,19 @@ void UITestManager::InitializeScene(bool use_scene_provider) {
   // once we stabilize web-semantics-test.
   if (use_scene_provider) {
     // Use scene provider helper component to attach client view to the scene.
-    fuchsia::ui::test::scene::ControllerAttachClientViewRequest request;
+    fuchsia::ui::test::scene::ProviderAttachClientViewRequest request;
     request.set_view_provider(realm_.realm_root()->Connect<fuchsia::ui::app::ViewProvider>());
-    scene_controller_ = realm_.realm_root()->Connect<fuchsia::ui::test::scene::Controller>();
-    scene_controller_->RegisterViewTreeWatcher(view_tree_watcher_.NewRequest(), []() {});
-    scene_controller_->AttachClientView(std::move(request), [this](zx_koid_t client_view_ref_koid) {
+    scene_provider_ = realm_.realm_root()->Connect<fuchsia::ui::test::scene::Provider>();
+    scene_provider_->RegisterGeometryObserver(geometry_provider_.NewRequest(), []() {});
+    scene_provider_->AttachClientView(std::move(request), [this](zx_koid_t client_view_ref_koid) {
       client_view_ref_koid_ = client_view_ref_koid;
     });
   } else {
-    // Register geometry watcher. We should do this before attaching the client
+    // Register geometry observer. We should do this before attaching the client
     // view, so that we see all the view tree snapshots.
     realm_.realm_root()->Connect<fuchsia::ui::observation::test::Registry>(
         observer_registry_.NewRequest());
-    observer_registry_->RegisterGlobalViewTreeWatcher(view_tree_watcher_.NewRequest());
+    observer_registry_->RegisterGlobalGeometryProvider(geometry_provider_.NewRequest());
 
     if (scene_owner_ == UITestRealm::SceneOwnerType::ROOT_PRESENTER) {
       root_presenter_ = realm_.realm_root()->Connect<fuchsia::ui::policy::Presenter>();
@@ -112,35 +112,37 @@ void UITestManager::InitializeScene(bool use_scene_provider) {
     }
   }
 
-  Watch();
+  WatchViewTree();
 }
 
-void UITestManager::Watch() {
-  FX_CHECK(view_tree_watcher_) << "View Tree watcher must be registered before calling Watch()";
+void UITestManager::WatchViewTree() {
+  FX_CHECK(geometry_provider_)
+      << "Geometry observer must be registered before calling WatchViewTree()";
 
-  view_tree_watcher_->Watch([this](auto response) {
-    if (!response.has_error()) {
-      std::vector<fuchsia::ui::observation::geometry::ViewTreeSnapshot>* updates =
-          response.mutable_updates();
-      if (updates && !updates->empty()) {
-        last_view_tree_snapshot_ = std::move(updates->back());
+  geometry_provider_->Watch([this](auto response) {
+    std::vector<fuchsia::ui::observation::geometry::ViewTreeSnapshot>* updates =
+        response.mutable_updates();
+    if (updates && !updates->empty()) {
+      last_view_tree_snapshot_ = std::move(updates->back());
+    }
+
+    if (response.has_error()) {
+      const auto& error = response.error();
+      // For channel_overflow and buffer_overflow, we may have missed some older snapshots in the
+      // response. Since we only take the most recent snapshot these error situations are not too
+      // interesting.
+      if (error.has_channel_overflow() && error.channel_overflow()) {
+        FX_LOGS(DEBUG) << "Geometry provider channel overflowed";
       }
-
-      Watch();
-      return;
+      if (error.has_buffer_overflow() && error.buffer_overflow()) {
+        FX_LOGS(DEBUG) << "Geometry provider buffer overflowed";
+      }
+      if (error.has_views_overflow() && error.views_overflow()) {
+        // This one indicates some possible data loss, so we log with a high severity.
+        FX_LOGS(WARNING) << "Geometry provider attempted to report too many views";
+      }
     }
-
-    const auto& error = response.error();
-
-    if (error | fuchsia::ui::observation::geometry::Error::CHANNEL_OVERFLOW) {
-      FX_LOGS(DEBUG) << "View Tree watcher channel overflowed";
-    } else if (error | fuchsia::ui::observation::geometry::Error::BUFFER_OVERFLOW) {
-      FX_LOGS(DEBUG) << "View Tree watcher buffer overflowed";
-    } else if (error | fuchsia::ui::observation::geometry::Error::VIEWS_OVERFLOW) {
-      // This one indicates some possible data loss, so we log with a high severity.
-      FX_LOGS(WARNING) << "View Tree watcher attempted to report too many views";
-    }
-    Watch();
+    WatchViewTree();
   });
 }
 
