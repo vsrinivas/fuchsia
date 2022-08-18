@@ -658,5 +658,79 @@ TEST_F(GeometryProviderTest, GfxIsRenderingTest) {
   }
 }
 
+// Clients registered using |fuchsia.ui.observation.scope.Registry| get updates about its
+// |context_view| and other descendant views.
+TEST_F(GeometryProviderTest, ScopedRegistryTest) {
+  const zx_koid_t node_a_koid = 1, node_b_koid = 2;
+  const float width = 1, height = 1;
+
+  fuog_ProviderPtr client;
+  std::optional<fuog_ProviderWatchResponse> client_result;
+  geometry_provider_.Register(client.NewRequest(), node_b_koid);
+
+  // Generate an empty view tree snapshot.
+  {
+    auto snapshot = std::make_shared<view_tree::Snapshot>();
+    geometry_provider_.OnNewViewTreeSnapshot(snapshot);
+  }
+
+  client->Watch([&client_result](auto response) { client_result = std::move(response); });
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(client.is_bound());
+
+  ASSERT_TRUE(client_result.has_value());
+
+  // Client receives an empty views vector in the response when the view tree is empty.
+  EXPECT_EQ(client_result->updates().size(), 1UL);
+  EXPECT_TRUE(client_result->updates()[0].views().empty());
+
+  // Generate a snapshot containing only |node_a|.
+  {
+    auto snapshot = std::make_shared<view_tree::Snapshot>();
+    auto node_a = ViewNode{.bounding_box = {.min = {0, 0}, .max = {width, height}}};
+    snapshot->root = node_a_koid;
+    snapshot->view_tree.try_emplace(node_a_koid, std::move(node_a));
+    geometry_provider_.OnNewViewTreeSnapshot(snapshot);
+  }
+
+  client->Watch([&client_result](auto response) { client_result = std::move(response); });
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(client.is_bound());
+
+  ASSERT_TRUE(client_result.has_value());
+
+  // Client receives an empty views vector in the response as its |context_view| is not present in
+  // the view tree.
+  EXPECT_EQ(client_result->updates().size(), 1UL);
+  EXPECT_TRUE(client_result->updates()[0].views().empty());
+
+  // Generate a snapshot with |node_a| as the root and |node_b| as the child of |node_a|.
+  {
+    auto snapshot = std::make_shared<view_tree::Snapshot>();
+    auto node_a = ViewNode{.children = {node_b_koid},
+                           .bounding_box = {.min = {0, 0}, .max = {width, height}}};
+    auto node_b =
+        ViewNode{.parent = node_a_koid, .bounding_box = {.min = {0, 0}, .max = {width, height}}};
+    snapshot->root = node_a_koid;
+    snapshot->view_tree.try_emplace(node_a_koid, std::move(node_a));
+    snapshot->view_tree.try_emplace(node_b_koid, std::move(node_b));
+    geometry_provider_.OnNewViewTreeSnapshot(snapshot);
+  }
+
+  client->Watch([&client_result](auto response) { client_result = std::move(response); });
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(client.is_bound());
+
+  ASSERT_TRUE(client_result.has_value());
+
+  // Client receives updates about its |context_view| in the response as it is now present in the
+  // view tree.
+  EXPECT_EQ(client_result->updates().size(), 1UL);
+  EXPECT_EQ(client_result->updates()[0].views().size(), 1UL);
+}
+
 }  // namespace geometry_provider::test
 }  // namespace view_tree

@@ -93,9 +93,15 @@ fuog_ViewTreeSnapshotPtr GeometryProvider::ExtractObservationSnapshot(
     return view_tree_snapshot;
   }
 
+  // It is possible that |context_view| has not yet connected to the view tree or it has
+  // disconnected. In either case, send an empty snapshot.
+  if (snapshot->view_tree.count(context_view) == 0) {
+    view_tree_snapshot->set_views({});
+    return view_tree_snapshot;
+  }
+
   // Perform a depth-first search on the view tree to populate |views| with
   // fuog_ViewDescriptors.
-  FX_DCHECK(snapshot->view_tree.count(context_view) > 0) << "precondition";
   std::stack<zx_koid_t> stack;
   std::unordered_set<zx_koid_t> visited;
   stack.push(context_view);
