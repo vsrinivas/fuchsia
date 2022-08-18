@@ -24,7 +24,6 @@ import (
 	"fidl/fuchsia/io"
 	"fidl/fuchsia/logger"
 	fidlnet "fidl/fuchsia/net"
-	"fidl/fuchsia/net/interfaces"
 	"fidl/fuchsia/net/stack"
 	"fidl/fuchsia/netstack"
 	"fidl/fuchsia/unknown"
@@ -1103,17 +1102,9 @@ type noopNicRemovedHandler struct{}
 func (*noopNicRemovedHandler) RemovedNIC(tcpip.NICID) {}
 
 type netstackTestOptions struct {
-	nicRemovedHandler NICRemovedHandler
-	// TODO(https://fxbug.dev/104820): Tests which pass a NDPDispatcher impl
-	// and runs a goroutine should have the goroutine joined in addition to
-	// being cancelled.
-	ndpDisp ipv6.NDPDispatcher
-	// interfaceWatcherChan is the channel over which new interface
-	// watcher clients are added to the event loop.
-	//
-	// If it is non-nil, goroutines will be spawned to run the interface
-	// watcher and address event loops.
-	interfaceWatcherChan chan interfaces.WatcherWithCtxInterfaceRequest
+	nicRemovedHandler  NICRemovedHandler
+	ndpDisp            ipv6.NDPDispatcher
+	interfaceEventChan chan<- interfaceEvent
 }
 
 func newNetstack(t *testing.T, options netstackTestOptions) (*Netstack, *faketime.ManualClock) {
@@ -1140,23 +1131,7 @@ func newNetstack(t *testing.T, options netstackTestOptions) (*Netstack, *faketim
 		stk.Wait()
 	})
 
-	interfaceWatcherChan := options.interfaceWatcherChan
-	var interfaceEventChan chan interfaceEvent
-	if interfaceWatcherChan != nil {
-		interfaceEventChan = make(chan interfaceEvent)
-
-		ctx, cancel := context.WithCancel(context.Background())
-		var wg sync.WaitGroup
-		t.Cleanup(func() {
-			cancel()
-			wg.Wait()
-		})
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			interfaceWatcherEventLoop(ctx, interfaceEventChan, interfaceWatcherChan)
-		}()
-	}
+	interfaceEventChan := options.interfaceEventChan
 	ns := &Netstack{
 		stack: stk,
 		// Required initialization because adding/removing interfaces interacts with

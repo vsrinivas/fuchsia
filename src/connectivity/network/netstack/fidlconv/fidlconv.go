@@ -8,13 +8,9 @@
 package fidlconv
 
 import (
-	"errors"
 	"fmt"
-	"syscall/zx"
-	"time"
 
 	"fidl/fuchsia/net"
-	interfacesadmin "fidl/fuchsia/net/interfaces/admin"
 	"fidl/fuchsia/net/multicast/admin"
 	"fidl/fuchsia/net/stack"
 
@@ -237,44 +233,4 @@ func ToStackMulticastRoute(route admin.Route) (tcpipstack.MulticastRoute, bool) 
 		ExpectedInputInterface: tcpip.NICID(route.ExpectedInputInterface),
 		OutgoingInterfaces:     outgoingInterfaces,
 	}, true
-}
-
-func ToAddressAssignmentState(state tcpipstack.AddressAssignmentState) (interfacesadmin.AddressAssignmentState, error) {
-	switch state {
-	case tcpipstack.AddressDisabled:
-		return interfacesadmin.AddressAssignmentStateUnavailable, nil
-	case tcpipstack.AddressAssigned:
-		return interfacesadmin.AddressAssignmentStateAssigned, nil
-	case tcpipstack.AddressTentative:
-		return interfacesadmin.AddressAssignmentStateTentative, nil
-	default:
-		return 0, fmt.Errorf("unknown address assignment state: %d", state)
-	}
-}
-
-func ToAddressRemovalReason(reason tcpipstack.AddressRemovalReason) (interfacesadmin.AddressRemovalReason, error) {
-	switch reason {
-	case tcpipstack.AddressRemovalDADFailed:
-		return interfacesadmin.AddressRemovalReasonDadFailed, nil
-	case tcpipstack.AddressRemovalInterfaceRemoved:
-		return interfacesadmin.AddressRemovalReasonInterfaceRemoved, nil
-	case tcpipstack.AddressRemovalManualAction:
-		return interfacesadmin.AddressRemovalReasonUserRemoved, nil
-	// The invalidated removal reason is only returned for addresses auto-generated
-	// within the stack, and cannot be returned for addresses added via
-	// fuchsia.net.interfaces.admin/Control.AddAddress.
-	case tcpipstack.AddressRemovalInvalidated:
-		return 0, errors.New("unexpected address invalidation")
-	default:
-		return 0, fmt.Errorf("unknown address removal reason: %d", reason)
-	}
-}
-
-func ToTCPIPMonotonicTime(zxtime zx.Time) tcpip.MonotonicTime {
-	return tcpip.MonotonicTime{}.Add(time.Duration(zxtime))
-}
-
-// TODO(https://fxbug.dev/99434): Replace usages with `Clock.Elapsed` when available.
-func ToZXTime(t tcpip.MonotonicTime) zx.Time {
-	return zx.Time(t.Sub(tcpip.MonotonicTime{}))
 }

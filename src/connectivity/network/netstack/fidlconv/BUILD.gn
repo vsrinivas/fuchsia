@@ -12,7 +12,6 @@ go_library("fidlconv") {
 
   deps = [
     "//sdk/fidl/fuchsia.net($go_toolchain)",
-    "//sdk/fidl/fuchsia.net.interfaces.admin($go_toolchain)",
     "//sdk/fidl/fuchsia.net.multicast.admin($go_toolchain)",
     "//sdk/fidl/fuchsia.net.stack($go_toolchain)",
     "//src/connectivity/network/netstack/util",
