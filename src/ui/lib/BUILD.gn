@@ -8,6 +8,7 @@ group("tests") {
   deps = [
     "display:inject_service_test",
     "display:test",
+    "focus_chain_provider:tests",
     "input_pipeline:tests",
     "input_report_reader/tests",
     "key_util:test",

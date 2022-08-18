@@ -12,5 +12,8 @@ fidl("fuchsia.ui.focus") {
 
   sources = [ "focus_chain.fidl" ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.ui.views" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.views",
+    "//zircon/vdso/zx",
+  ]
 }

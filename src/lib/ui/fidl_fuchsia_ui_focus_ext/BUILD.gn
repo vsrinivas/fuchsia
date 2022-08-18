@@ -21,11 +21,25 @@ rustc_library("lib") {
   edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus_rust",
+    "//src/lib/ui/fidl_fuchsia_ui_views_ext:lib",
     "//src/lib/ui/fuchsia-scenic",
     "//src/lib/zircon/rust:fuchsia-zircon",
   ]
-  test_deps = [ "//src/lib/ui/fidl_fuchsia_ui_views_ext:lib" ]
+  test_deps = [ ":test-helpers-lib" ]
   sources = [ "src/lib.rs" ]
+}
+
+rustc_library("test-helpers-lib") {
+  name = "fidl_fuchsia_ui_focus_test_helpers"
+  testonly = true
+  edition = "2021"
+  deps = [
+    "//sdk/fidl/fuchsia.ui.focus:fuchsia.ui.focus_rust",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_rust",
+    "//src/lib/ui/fuchsia-scenic",
+  ]
+  sources = [ "src/test_helpers.rs" ]
+  source_root = "src/test_helpers.rs"
 }
 
 fuchsia_unittest_package("test-pkg") {
