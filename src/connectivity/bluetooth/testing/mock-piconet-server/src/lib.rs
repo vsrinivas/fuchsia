@@ -2,26 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::{format_err, Context, Error},
-    cm_rust::{ExposeDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget},
-    fidl::{
-        encoding::Decodable,
-        endpoints::{self as f_end, DiscoverableProtocolMarker},
-    },
-    fidl_fuchsia_bluetooth_bredr as bredr, fidl_fuchsia_component_test as ftest,
-    fidl_fuchsia_logger::LogSinkMarker,
-    fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
-    fuchsia_bluetooth::{types as bt_types, util::CollectExt},
-    fuchsia_component::server::ServiceFs,
-    fuchsia_component_test::{
-        Capability, ChildOptions, LocalComponentHandles, RealmBuilder, RealmInstance, Ref, Route,
-    },
-    fuchsia_zircon as zx,
-    fuchsia_zircon::{Duration, DurationNum},
-    futures::{stream::StreamExt, TryFutureExt, TryStreamExt},
-    tracing::info,
+use anyhow::{format_err, Context, Error};
+use cm_rust::{ExposeDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget};
+use fidl::encoding::Decodable;
+use fidl::endpoints::{self as f_end, DiscoverableProtocolMarker};
+use fidl_fuchsia_bluetooth_bredr as bredr;
+use fidl_fuchsia_component_test as ftest;
+use fidl_fuchsia_logger::LogSinkMarker;
+use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
+use fuchsia_bluetooth::{types as bt_types, util::CollectExt};
+use fuchsia_component::server::ServiceFs;
+use fuchsia_component_test::{
+    Capability, ChildOptions, LocalComponentHandles, RealmBuilder, RealmInstance, Ref, Route,
 };
+use fuchsia_zircon::{self as zx, Duration, DurationNum};
+use futures::{stream::StreamExt, TryFutureExt, TryStreamExt};
+use tracing::info;
 
 /// Timeout for updates over the PeerObserver of a MockPeer.
 ///
@@ -640,20 +636,6 @@ async fn fwd_observer_callbacks(
                     )
                 })?;
             }
-            bredr::PeerObserverRequest::ComponentTerminated { component_url, responder } => {
-                observer.component_terminated(&component_url).await.or_else(|e| {
-                    handle_fidl_err(
-                        e,
-                        format!("unexpected error forwarding observer event for: {}", id),
-                    )
-                })?;
-                responder.send().or_else(|e| {
-                    handle_fidl_err(
-                        e,
-                        format!("unexpected error acking observer event for: {}", id),
-                    )
-                })?;
-            }
         }
     }
     Ok(())
@@ -666,9 +648,6 @@ async fn drain_observer(mut stream: bredr::PeerObserverRequestStream) -> Result<
                 responder.send()?;
             }
             bredr::PeerObserverRequest::PeerConnected { responder, .. } => {
-                responder.send()?;
-            }
-            bredr::PeerObserverRequest::ComponentTerminated { responder, .. } => {
                 responder.send()?;
             }
         }

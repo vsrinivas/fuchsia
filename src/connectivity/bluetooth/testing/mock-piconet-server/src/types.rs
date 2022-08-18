@@ -2,16 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::{format_err, Error},
-    bt_rfcomm::profile::is_rfcomm_protocol,
-    fidl_fuchsia_bluetooth_bredr as bredr,
-    fuchsia_bluetooth::{
-        profile::{psm_from_protocol, Attribute, ProtocolDescriptor, Psm},
-        types::{PeerId, Uuid},
-    },
-    std::{collections::HashSet, convert::TryFrom},
-};
+use anyhow::{format_err, Error};
+use bt_rfcomm::profile::is_rfcomm_protocol;
+use fidl_fuchsia_bluetooth_bredr as bredr;
+use fuchsia_bluetooth::profile::{psm_from_protocol, Attribute, ProtocolDescriptor, Psm};
+use fuchsia_bluetooth::types::{PeerId, Uuid};
+use std::collections::HashSet;
 
 use crate::peer::service::ServiceHandle;
 
@@ -20,24 +16,6 @@ pub struct ServiceFoundResponse {
     pub id: PeerId,
     pub protocol: Option<Vec<bredr::ProtocolDescriptor>>,
     pub attributes: Vec<bredr::Attribute>,
-}
-
-/// Arguments used to launch a profile.
-#[derive(Clone, Debug)]
-pub struct LaunchInfo {
-    pub url: String,
-    pub arguments: Vec<String>,
-}
-
-impl TryFrom<bredr::LaunchInfo> for LaunchInfo {
-    type Error = Error;
-
-    fn try_from(src: bredr::LaunchInfo) -> Result<Self, Self::Error> {
-        Ok(LaunchInfo {
-            url: src.component_url.ok_or(format_err!("Component URL must be provided"))?,
-            arguments: src.arguments.unwrap_or(Vec::new()),
-        })
-    }
 }
 
 /// Converts a ProtocolDescriptor to a collection of DataElements.

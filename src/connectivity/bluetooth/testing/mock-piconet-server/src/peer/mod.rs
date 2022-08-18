@@ -2,28 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::{format_err, Error},
-    fidl_fuchsia_bluetooth_bredr as bredr,
-    fidl_fuchsia_sys::ComponentControllerEvent,
-    fuchsia_bluetooth::{
-        detachable_map::DetachableMap,
-        profile::Psm,
-        types::{Channel, PeerId},
-    },
-    fuchsia_component::{client, client::App, server::NestedEnvironment},
-    futures::{
-        stream::{StreamExt, TryStreamExt},
-        Future, Stream,
-    },
-    parking_lot::RwLock,
-    std::{
-        collections::{HashMap, HashSet},
-        convert::TryInto,
-        sync::Arc,
-    },
-    tracing::{info, warn},
-};
+use anyhow::{format_err, Error};
+use fidl_fuchsia_bluetooth_bredr as bredr;
+use fuchsia_bluetooth::detachable_map::DetachableMap;
+use fuchsia_bluetooth::profile::Psm;
+use fuchsia_bluetooth::types::{Channel, PeerId};
+use futures::stream::StreamExt;
+use futures::Future;
+use parking_lot::RwLock;
+use std::collections::{HashMap, HashSet};
+use std::{convert::TryInto, sync::Arc};
+use tracing::{info, warn};
 
 mod search;
 pub mod service;
@@ -33,49 +22,25 @@ use self::{
     service::{RegistrationHandle, ServiceSet},
 };
 use crate::profile::{build_l2cap_descriptor, parse_service_definitions};
-use crate::types::{LaunchInfo, ServiceRecord};
+use crate::types::ServiceRecord;
 
 /// Default SDU size the peer is capable of accepting. This is chosen as the default
 /// max size of the underlying fuchsia_bluetooth::Channel, as this is sufficient for
 /// audio streaming.
 const DEFAULT_TX_SDU_SIZE: usize = Channel::DEFAULT_MAX_TX;
 
-/// The unique identifier for a launched profile. This is used for internal bookkeeping
-/// and has no meaning outside of this context.
-#[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
-pub struct ProfileHandle(u64);
-
-/// The status events corresponding to a launched component's lifetime.
-#[derive(Debug, Clone)]
-pub enum ComponentStatus {
-    /// The component has been successfully launched, and output directory is ready.
-    DirectoryReady,
-
-    /// The component has terminated.
-    Terminated,
-}
-
 /// The primary object that represents a peer in the piconet.
 /// `MockPeer` facilitates the registering, advertising, and connecting of services
 /// for a peer.
 /// Each `MockPeer` contains it's own NestedEnvironment, allowing for the sandboxed
-/// launching of profiles.
+/// starting of profiles.
 pub struct MockPeer {
     /// The unique identifier for this peer.
     id: PeerId,
 
-    /// The nested environment for this peer. Used for the sandboxed launching of profiles.
-    env: Option<NestedEnvironment>,
-
     /// The PeerObserver relay for this peer. This is used to send updates about this peer.
     /// If not set, no updates will be relayed.
     observer: Option<bredr::PeerObserverProxy>,
-
-    /// The next available ProfileHandle.
-    next_profile_handle: ProfileHandle,
-
-    /// Information about the profiles that have been launched by this peer.
-    launched_profiles: DetachableMap<ProfileHandle, (String, App)>,
 
     /// Manages the active searches for this peer.
     search_mgr: Arc<RwLock<SearchSet>>,
@@ -89,18 +54,11 @@ pub struct MockPeer {
 }
 
 impl MockPeer {
-    pub fn new(
-        id: PeerId,
-        env: Option<NestedEnvironment>,
-        observer: Option<bredr::PeerObserverProxy>,
-    ) -> Self {
+    pub fn new(id: PeerId, observer: Option<bredr::PeerObserverProxy>) -> Self {
         // TODO(fxbug.dev/55462): If provided, take event stream of `observer` and listen for close.
         Self {
             id,
-            env,
             observer,
-            next_profile_handle: ProfileHandle(1),
-            launched_profiles: DetachableMap::new(),
             search_mgr: Arc::new(RwLock::new(SearchSet::new())),
             service_mgr: Arc::new(RwLock::new(ServiceSet::new(id))),
             services: DetachableMap::new(),
@@ -109,10 +67,6 @@ impl MockPeer {
 
     pub fn peer_id(&self) -> PeerId {
         self.id
-    }
-
-    pub fn env(&self) -> Option<&NestedEnvironment> {
-        self.env.as_ref()
     }
 
     /// Returns the set of active searches, identified by their Service Class ID.
@@ -128,75 +82,6 @@ impl MockPeer {
         self.service_mgr.read().get_service_records(ids)
     }
 
-    /// Returns the next available `ProfileHandle`.
-    fn get_next_profile_handle(&mut self) -> ProfileHandle {
-        let next_profile_handle = self.next_profile_handle;
-        self.next_profile_handle = ProfileHandle(next_profile_handle.0 + 1);
-        next_profile_handle
-    }
-
-    /// Attempts to launch the profile specified by the `launch_info`.
-    ///
-    /// Returns a stream that monitors component state. The returned stream _must_ be polled
-    /// in order to complete component launching. Furthermore, it should also be polled to
-    /// detect component termination - state will be cleaned up thereafter.
-    // TODO(fxbug.dev/85253): Remove this method once bt-a2dp-loopback has been migrated to CFv2.
-    pub fn launch_profile(
-        &mut self,
-        launch_info: LaunchInfo,
-    ) -> Result<(ProfileHandle, impl Stream<Item = Result<ComponentStatus, fidl::Error>>), Error>
-    {
-        let next_profile_handle = self.get_next_profile_handle();
-        let profile_url = launch_info.url;
-
-        // Launch the component and grab the event stream.
-        let app = {
-            // if there is no launcher we might have been started as part of a v2
-            // profile server
-            let launcher = self
-                .env
-                .as_ref()
-                .ok_or_else(|| {
-                    format_err!("Failed to launch profile, no environment provided to mock peer")
-                })?
-                .launcher();
-            client::launch(launcher, profile_url.clone(), Some(launch_info.arguments))?
-        };
-        let component_stream = app.controller().take_event_stream();
-
-        let entry = self.launched_profiles.lazy_entry(&next_profile_handle);
-        let detached_component = match entry.try_insert((profile_url.clone(), app)) {
-            Ok(component) => component,
-            Err(_) => return Err(format_err!("Launched component already exists")),
-        };
-
-        // The returned `component_stream` processes events from the launched component's
-        // event stream.
-        let peer_id = self.id.clone();
-        let handle = next_profile_handle.clone();
-        let observer = self.observer.clone();
-        let component_stream = component_stream.map_ok(move |event| {
-            let detached = detached_component.clone();
-            let url_clone = profile_url.clone();
-            let observer_clone = observer.clone();
-            match event {
-                ComponentControllerEvent::OnTerminated { return_code, termination_reason } => {
-                    info!(
-                        "Peer {:?}: Component {:?} terminated. Code: {}. Reason: {:?}",
-                        peer_id, handle, return_code, termination_reason
-                    );
-                    detached.detach();
-                    let _ = observer_clone.map(|o| Self::relay_terminated(&o, url_clone));
-                    ComponentStatus::Terminated
-                }
-                ComponentControllerEvent::OnDirectoryReady { .. } => {
-                    ComponentStatus::DirectoryReady
-                }
-            }
-        });
-        Ok((next_profile_handle, component_stream))
-    }
-
     /// Notifies the `observer` with the ServiceFound update from the ServiceRecord.
     fn relay_service_found(observer: &bredr::PeerObserverProxy, record: ServiceRecord) {
         let mut response = record.to_service_found_response().unwrap();
@@ -209,11 +94,6 @@ impl MockPeer {
             protocol,
             &mut response.attributes.iter_mut(),
         );
-    }
-
-    /// Notifies the `observer` with the URL of the terminated profile.
-    fn relay_terminated(observer: &bredr::PeerObserverProxy, profile_url: String) {
-        let _ = observer.component_terminated(&profile_url);
     }
 
     /// Notifies the `observer` with the connection on `psm` established by peer `other`.
@@ -374,7 +254,7 @@ mod tests {
 
     fn create_mock_peer(id: PeerId) -> Result<(MockPeer, bredr::PeerObserverRequestStream), Error> {
         let (proxy, stream) = create_proxy_and_stream::<bredr::PeerObserverMarker>().unwrap();
-        Ok((MockPeer::new(id, None, Some(proxy)), stream))
+        Ok((MockPeer::new(id, Some(proxy)), stream))
     }
 
     /// Builds and registers a search for an `id` with no attributes.

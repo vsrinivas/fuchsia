@@ -4,41 +4,28 @@
 
 #![recursion_limit = "512"]
 
-use {
-    anyhow::{format_err, Error},
-    argh::FromArgs,
-    async_utils::stream::{StreamItem, StreamWithEpitaph, Tagged, WithEpitaph, WithTag},
-    fidl::endpoints::ClientEnd,
-    fidl::prelude::*,
-    fidl_fuchsia_bluetooth::ErrorCode,
-    fidl_fuchsia_bluetooth_bredr as bredr,
-    fidl_fuchsia_sys::EnvironmentOptions,
-    fuchsia_async as fasync,
-    fuchsia_bluetooth::{profile::Psm, types::PeerId},
-    fuchsia_component::server::ServiceFs,
-    fuchsia_zircon as zx,
-    futures::{
-        self,
-        channel::mpsc,
-        future::FutureExt,
-        select,
-        sink::SinkExt,
-        stream::{SelectAll, StreamExt},
-    },
-    parking_lot::Mutex,
-    std::{
-        collections::{hash_map::Entry, HashMap, HashSet},
-        convert::TryFrom,
-        sync::Arc,
-    },
-    tracing::{error, info, warn},
-};
+use anyhow::{format_err, Error};
+use async_utils::stream::{StreamItem, StreamWithEpitaph, Tagged, WithEpitaph, WithTag};
+use fidl::endpoints::ClientEnd;
+use fidl::prelude::*;
+use fidl_fuchsia_bluetooth::ErrorCode;
+use fidl_fuchsia_bluetooth_bredr as bredr;
+use fuchsia_async as fasync;
+use fuchsia_bluetooth::{profile::Psm, types::PeerId};
+use fuchsia_component::server::ServiceFs;
+use fuchsia_zircon as zx;
+use futures::stream::{SelectAll, StreamExt};
+use futures::{self, channel::mpsc, future::FutureExt, select, sink::SinkExt};
+use parking_lot::Mutex;
+use std::collections::{hash_map::Entry, HashMap, HashSet};
+use std::sync::Arc;
+use tracing::{error, info, warn};
 
 mod peer;
 mod profile;
 mod types;
 
-use crate::{peer::MockPeer, types::LaunchInfo};
+use crate::peer::MockPeer;
 
 /// The maximum number of concurrent piconet member requests this server supports. This is chosen to
 /// be more than sufficient for most testing scenarios.
@@ -51,12 +38,11 @@ const MAX_CONCURRENT_PICONET_MEMBER_REQUESTS: usize = 32;
 /// the piconet.
 pub struct MockPiconetServer {
     inner: Arc<Mutex<MockPiconetServerInner>>,
-    proxy_launcher_enabled: bool,
 }
 
 impl MockPiconetServer {
-    pub fn new(proxy_launcher_enabled: bool) -> Self {
-        Self { inner: Arc::new(Mutex::new(MockPiconetServerInner::new())), proxy_launcher_enabled }
+    pub fn new() -> Self {
+        Self { inner: Arc::new(Mutex::new(MockPiconetServerInner::new())) }
     }
 
     fn contains_peer(&self, id: &PeerId) -> bool {
@@ -75,7 +61,7 @@ impl MockPiconetServer {
         }
 
         // Each registered peer will have its own ServiceFs and NestedEnvironment. This allows
-        // for the sandboxed launching of profiles.
+        // for the sandboxed starting of profiles.
         let mut peer_service_fs = ServiceFs::new();
         let _ = peer_service_fs.add_fidl_service(move |stream| {
             let mut sender_clone = sender.clone();
@@ -88,24 +74,8 @@ impl MockPiconetServer {
             .detach();
         });
 
-        let env = if self.proxy_launcher_enabled {
-            let env_name = format!("peer_{}", id);
-            let options = EnvironmentOptions {
-                inherit_parent_services: true,
-                use_parent_runners: false,
-                kill_on_oom: false,
-                delete_storage_on_death: false,
-            };
-            Some(
-                peer_service_fs
-                    .create_nested_environment_with_options(env_name.as_str(), options)?,
-            )
-        } else {
-            None
-        };
-
         let observer = observer.into_proxy()?;
-        let mock_peer = MockPeer::new(id, env, Some(observer));
+        let mock_peer = MockPeer::new(id, Some(observer));
 
         fasync::Task::spawn(peer_service_fs.collect()).detach();
 
@@ -121,11 +91,6 @@ impl MockPiconetServer {
     fn unregister_peer(&self, id: PeerId) -> Result<(), Error> {
         let mut inner = self.inner.lock();
         inner.unregister_peer(&id)
-    }
-
-    fn launch_profile(&self, id: PeerId, launch_info: LaunchInfo) -> Result<(), Error> {
-        let mut inner = self.inner.lock();
-        inner.launch_profile(id, launch_info)
     }
 
     fn new_advertisement(
@@ -213,17 +178,6 @@ impl MockPiconetServer {
                     }
                 }
             }
-            bredr::MockPeerRequest::LaunchProfile { launch_info, responder, .. } => {
-                // TODO(fxbug.dev/85253): Remove this method once bt-a2dp-loopback has been migrated
-                // to CFv2.
-                let mut result = match LaunchInfo::try_from(launch_info) {
-                    Ok(info) => self.launch_profile(id, info).map_err(|_| ErrorCode::Failed),
-                    Err(_) => Err(ErrorCode::InvalidArguments),
-                };
-                if let Err(e) = responder.send(&mut result) {
-                    warn!("Error sending on responder: {:?}", e);
-                }
-            }
         }
     }
 
@@ -232,7 +186,7 @@ impl MockPiconetServer {
     ///   2. Processes requests over the `bredr.MockPeer` protocol.
     ///   3. Processes requests over the `bredr.Profile` protocol.
     ///   4. Processes messages over a local mpsc channel. This relays the ProfileRequestStream
-    ///      that is created when a sandboxed instance of a Bluetooth Profile is launched.
+    ///      that is created when a sandboxed instance of a Bluetooth Profile is started.
     async fn handle_fidl_requests(
         &self,
         mut profile_test_requests: mpsc::Receiver<bredr::ProfileTestRequest>,
@@ -358,23 +312,6 @@ impl MockPiconetServerInner {
         }
         drop(self.peers.remove(id));
         Ok(())
-    }
-
-    /// Attempts to launch a profile, specified by the `profile_url`, for the peer.
-    ///
-    /// Returns an error if Peer `id` is not registered, or if launching the profile fails.
-    pub fn launch_profile(&mut self, id: PeerId, launch_info: LaunchInfo) -> Result<(), Error> {
-        match self.peers.entry(id) {
-            Entry::Vacant(_) => Err(format_err!("Peer {} not registered.", id)),
-            Entry::Occupied(mut entry) => {
-                let (_, component_stream) = entry.get_mut().launch_profile(launch_info)?;
-                fasync::Task::spawn(async move {
-                    component_stream.map(|_| ()).collect::<()>().await;
-                })
-                .detach();
-                Ok(())
-            }
-        }
     }
 
     /// Attempts to add a new advertisement for a set of `services` for the peer.
@@ -534,24 +471,12 @@ async fn handle_test_client_connection(
     }
 }
 
-#[derive(Debug, FromArgs)]
-/// Run the Bluetooth Mock Piconet Server, which is a mock piconet manager.
-struct Options {
-    #[argh(switch)]
-    /// whether we should run in v1 mode. LaunchProfile can only be used with
-    /// v1. This defaults to false so the Mock Piconet Server defaults to v2
-    /// mode.
-    v1: bool,
-}
-
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), anyhow::Error> {
     fuchsia_syslog::init_with_tags(&["bt-mock-piconet-server"])
         .expect("Unable to initialize logger");
 
-    let args: Options = argh::from_env();
-
-    let server = MockPiconetServer::new(args.v1);
+    let server = MockPiconetServer::new();
 
     let (test_sender, test_receiver) = mpsc::channel(MAX_CONCURRENT_PICONET_MEMBER_REQUESTS);
 
@@ -612,7 +537,7 @@ mod tests {
     #[fuchsia::test]
     fn register_peer_is_handled_by_server() {
         let mut exec = fasync::TestExecutor::new().unwrap();
-        let mps = MockPiconetServer::new(false);
+        let mps = MockPiconetServer::new();
         let (mut sender, receiver) = mpsc::channel(MAX_CONCURRENT_PICONET_MEMBER_REQUESTS);
 
         // The main handler - this is under test.
@@ -641,7 +566,7 @@ mod tests {
     #[fuchsia::test]
     fn concurrent_registered_peers_can_connect_profile_proxy() {
         let mut exec = fasync::TestExecutor::new().unwrap();
-        let mps = MockPiconetServer::new(false);
+        let mps = MockPiconetServer::new();
         let (mut sender, receiver) = mpsc::channel(MAX_CONCURRENT_PICONET_MEMBER_REQUESTS);
         let mut sender_clone = sender.clone();
 
@@ -684,7 +609,7 @@ mod tests {
     #[fuchsia::test]
     fn advertisement_request_resolves_when_terminated() {
         let mut exec = fasync::TestExecutor::new().unwrap();
-        let mps = MockPiconetServer::new(false);
+        let mps = MockPiconetServer::new();
         let (mut sender, receiver) = mpsc::channel(MAX_CONCURRENT_PICONET_MEMBER_REQUESTS);
 
         // The main handler - this is under test.

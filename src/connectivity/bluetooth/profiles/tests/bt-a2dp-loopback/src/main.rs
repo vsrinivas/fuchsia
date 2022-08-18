@@ -85,9 +85,6 @@ async fn main() {
                 assert_eq!(peer_id, a2dp_source.peer_id().into());
                 let _ = responder.send().unwrap();
             }
-            x => {
-                panic!("Expected PeerConnected or ServiceFound but got: {:?}", x);
-            }
         }
     }
 
