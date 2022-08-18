@@ -660,6 +660,10 @@ foreach(_target_type,
                       "-S",
                       rebase_path(script, root_build_dir),
                     ] + args
+        if (!defined(inputs)) {
+          inputs = []
+        }
+        inputs += [ script ]
         script = python_exe_src
         args = []
         args = _new_args
