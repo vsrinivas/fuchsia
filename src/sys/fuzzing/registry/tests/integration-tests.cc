@@ -71,7 +71,8 @@ class RegistryIntegrationTest : public AsyncTest {
     registry_->Disconnect(kFuzzerUrl, bridge.completer.bind());
     return bridge.consumer.promise()
         .then([](Result<zx_status_t>& result) { return AsZxResult(result); })
-        .and_then(process_->Wait());
+        .and_then(process_->Wait())
+        .and_then([](const int64_t& ignored) -> ZxResult<> { return fpromise::ok(); });
   }
 
   void TearDown() override {

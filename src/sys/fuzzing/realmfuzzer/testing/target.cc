@@ -105,6 +105,7 @@ ZxPromise<> TestTarget::Crash() {
            return fpromise::ok();
          })
       .and_then(target_.Wait())
+      .and_then([](const int64_t& ignored) -> ZxResult<> { return fpromise::ok(); })
       .wrap_with(scope_);
 }
 
@@ -113,6 +114,7 @@ ZxPromise<> TestTarget::Exit(int32_t exitcode) {
            return AsZxResult(local_.write(0, &exitcode, sizeof(exitcode), nullptr, 0));
          })
       .and_then(target_.Wait())
+      .and_then([](const int64_t& ignored) -> ZxResult<> { return fpromise::ok(); })
       .wrap_with(scope_);
 }
 

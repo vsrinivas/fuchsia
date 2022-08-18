@@ -59,6 +59,9 @@ class ChildProcess {
   // Returns a promise to |Spawn| a new child process.
   ZxPromise<> SpawnAsync();
 
+  // Returns whether the child process has been spawned and is running.
+  bool IsAlive();
+
   // Return a copy of the process.
   __WARN_UNUSED_RESULT zx_status_t Duplicate(zx::process* out);
 
@@ -81,8 +84,8 @@ class ChildProcess {
   // Collect process-related statistics for the child process.
   ZxResult<ProcessStats> GetStats();
 
-  // Promises to wait for the spawned process to terminate.
-  ZxPromise<> Wait();
+  // Promises to wait for the spawned process to terminate and return its return code.
+  ZxPromise<int64_t> Wait();
 
   // Returns a promise that kills the spawned process and waits for it to fully terminate. This
   // leaves the process in a "killed" state; it must be |Reset| before it can be reused.
@@ -112,6 +115,7 @@ class ChildProcess {
 
   // The handle to the spawned process.
   zx::process process_;
+  zx_info_process_t info_;
 
   // Stream-related variables for stdin, stdout, and stderr.
   static constexpr int kNumStreams = 3;

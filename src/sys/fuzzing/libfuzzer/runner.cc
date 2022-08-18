@@ -15,6 +15,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <zircon/status.h>
+#include <zircon/syscalls/object.h>
 #include <zircon/time.h>
 
 #include <filesystem>
@@ -45,6 +46,11 @@ const char* kResultInputPath = "/tmp/result_input";
 constexpr zx_duration_t kOneSecond = ZX_SEC(1);
 constexpr size_t kOneKb = 1ULL << 10;
 constexpr size_t kOneMb = 1ULL << 20;
+
+// See libFuzzer's |fuzzer::FuzzingOptions|.
+const int64_t kLibFuzzerNoErrorExitCode = 0;
+const int64_t kLibFuzzerTimeoutExitCode = 70;
+const int64_t kLibFuzzerOOMExitCode = 71;
 
 // Returns |one| if |original| is non-zero and less than |one|, otherwise returns |original|.
 template <typename T>
@@ -227,12 +233,19 @@ ZxPromise<Artifact> LibFuzzerRunner::Fuzz() {
 
 ZxPromise<Input> LibFuzzerRunner::Minimize(Input input) {
   AddArgs();
-  WriteInputToFile(input, kTestInputPath);
+  WriteInputToFile(input.Duplicate(), kTestInputPath);
   process_.AddArg("-minimize_crash=1");
   process_.AddArg(kTestInputPath);
-  minimized_ = false;
   return RunAsync()
-      .and_then([](Artifact& artifact) { return fpromise::ok(artifact.take_input()); })
+      .and_then([original = std::move(input)](Artifact& artifact) -> ZxResult<Input> {
+        // libFuzzer returns an error and an empty input if the input did not crash.
+        auto minimized = artifact.take_input();
+        if (artifact.fuzz_result() != FuzzResult::NO_ERRORS && minimized.size() == 0) {
+          FX_LOGS(WARNING) << "Test input did not trigger an error.";
+          return fpromise::error(ZX_ERR_INVALID_ARGS);
+        }
+        return fpromise::ok(std::move(minimized));
+      })
       .wrap_with(workflow_);
 }
 
@@ -244,8 +257,8 @@ ZxPromise<Input> LibFuzzerRunner::Cleanse(Input input) {
   return RunAsync()
       .and_then([input = std::move(input)](Artifact& artifact) mutable {
         auto result = artifact.take_input();
-        // A quirk of libFuzzer's cleanse workflow is that it doesn't return *anything* if the input
-        // doesn't crash or is already "clean". |RunAsync| translates this to an empty |Artifact|.
+        // A quirk of libFuzzer's cleanse workflow is that it returns no error and an empty input if
+        // the input doesn't crash or is already "clean", and doesn't distinguish between the two.
         return fpromise::ok(result.size() == input.size() ? std::move(result) : std::move(input));
       })
       .wrap_with(workflow_);
@@ -388,27 +401,57 @@ ZxPromise<Artifact> LibFuzzerRunner::RunAsync() {
            process_.SetStdoutFdAction(FdAction::kClone);
            return process_.SpawnAsync();
          })
-      .and_then([this, parse = ZxFuture<FuzzResult>(),
-                 kill = ZxFuture<>()](Context& context) mutable -> ZxResult<FuzzResult> {
-        if (!parse) {
-          status_.set_running(true);
-          start_ = zx::clock::get_monotonic();
-          parse = ParseOutput();
-        }
-        if (!parse(context)) {
-          return fpromise::pending();
-        }
+      .and_then([this]() -> ZxResult<> {
+        status_.set_running(true);
+        start_ = zx::clock::get_monotonic();
+        return fpromise::ok();
+      })
+      .and_then(ParseOutput())
+      .and_then(
+          [this, wait = ZxFuture<int64_t>()](
+              Context& context, const FuzzResult& fuzz_result) mutable -> ZxResult<FuzzResult> {
+            if (!wait) {
+              wait = process_.Wait();
+            }
+            if (!wait(context)) {
+              return fpromise::pending();
+            }
+            if (wait.is_error()) {
+              return fpromise::error(wait.take_error());
+            }
+            if (fuzz_result != FuzzResult::NO_ERRORS) {
+              return fpromise::ok(fuzz_result);
+            }
+            auto exitcode = wait.take_value();
+            switch (exitcode) {
+              case kLibFuzzerNoErrorExitCode:
+              case ZX_TASK_RETCODE_SYSCALL_KILL:
+                return fpromise::ok(FuzzResult::NO_ERRORS);
+              case kLibFuzzerOOMExitCode:
+              case ZX_TASK_RETCODE_OOM_KILL:
+                return fpromise::ok(FuzzResult::OOM);
+              case kLibFuzzerTimeoutExitCode:
+                return fpromise::ok(FuzzResult::TIMEOUT);
+              default:
+                return fpromise::ok(FuzzResult::CRASH);
+            }
+          })
+      .or_else([this, kill = ZxFuture<>()](
+                   Context& context, const zx_status_t& status) mutable -> ZxResult<FuzzResult> {
         if (!kill) {
           kill = process_.Kill();
         }
         if (!kill(context)) {
           return fpromise::pending();
         }
+        return fpromise::error(status);
+      })
+      .then([this](ZxResult<FuzzResult>& result) -> ZxResult<FuzzResult> {
         status_.set_running(false);
         process_.Reset();
-        return parse.take_result();
+        return std::move(result);
       })
-      .and_then([](FuzzResult& fuzz_result) {
+      .and_then([](const FuzzResult& fuzz_result) -> ZxResult<Artifact> {
         auto input =
             files::IsFile(kResultInputPath) ? ReadInputFromFile(kResultInputPath) : Input();
         return fpromise::ok(Artifact(fuzz_result, std::move(input)));
@@ -421,8 +464,7 @@ ZxPromise<Artifact> LibFuzzerRunner::RunAsync() {
 ZxPromise<FuzzResult> LibFuzzerRunner::ParseOutput() {
   return fpromise::make_promise(
       [this, read_line = ZxFuture<std::string>(),
-       result = ZxResult<FuzzResult>(fpromise::ok(FuzzResult::NO_ERRORS))](
-          Context& context) mutable -> ZxResult<FuzzResult> {
+       result = FuzzResult::NO_ERRORS](Context& context) mutable -> ZxResult<FuzzResult> {
         while (true) {
           if (!read_line) {
             read_line = process_.ReadFromStderr();
@@ -435,135 +477,75 @@ ZxPromise<FuzzResult> LibFuzzerRunner::ParseOutput() {
             if (status != ZX_ERR_STOP) {
               return fpromise::error(status);
             }
-            return std::move(result);
+            return fpromise::ok(result);
           }
-          // Save the first interesting result.
-          auto parse_result = ParseLine(read_line.take_value());
-          if (result.is_ok() && result.value() == FuzzResult::NO_ERRORS) {
-            result = std::move(parse_result);
+
+          // See libFuzzer's |Fuzzer::TryDetectingAMemoryLeak|.
+          // This match is ugly, but it's the only message in current libFuzzer that this code can
+          // rely on to detect a leak.
+          auto line = read_line.take_value();
+          if (line == "INFO: to ignore leaks on libFuzzer side use -detect_leaks=0.") {
+            result = FuzzResult::LEAK;
+            continue;
           }
+
+          // These patterns should match libFuzzer's |Fuzzer::PrintStats|.
+          re2::StringPiece input(std::move(line));
+          uint32_t runs;
+          if (!re2::RE2::Consume(&input, "#(\\d+)", &runs)) {
+            continue;
+          }
+          status_.set_runs(runs);
+
+          // Parse reason.
+          std::string reason_str;
+          if (!re2::RE2::Consume(&input, "\\t(\\S+)", &reason_str)) {
+            continue;
+          }
+          auto reason = UpdateReason::PULSE;  // By default, assume it's just a status update.
+          if (reason_str == "INITED") {
+            reason = UpdateReason::INIT;
+          } else if (reason_str == "NEW") {
+            reason = UpdateReason::NEW;
+          } else if (reason_str == "REDUCE") {
+            reason = UpdateReason::REDUCE;
+          } else if (reason_str == "DONE") {
+            reason = UpdateReason::DONE;
+            status_.set_running(false);
+          }
+
+          // Parse covered PCs.
+          size_t covered_pcs;
+          if (re2::RE2::FindAndConsume(&input, "cov: (\\d+)", &covered_pcs)) {
+            status_.set_covered_pcs(covered_pcs);
+          }
+
+          // Parse covered features.
+          size_t covered_features;
+          if (re2::RE2::FindAndConsume(&input, "ft: (\\d+)", &covered_features)) {
+            status_.set_covered_features(covered_features);
+          }
+
+          // Parse corpus stats.
+          size_t corpus_num_inputs;
+          if (re2::RE2::FindAndConsume(&input, "corp: (\\d+)", &corpus_num_inputs)) {
+            size_t corpus_total_size;
+            status_.set_corpus_num_inputs(corpus_num_inputs);
+            if (re2::RE2::Consume(&input, "/(\\d+)b", &corpus_total_size)) {
+              status_.set_corpus_total_size(corpus_total_size);
+            } else if (re2::RE2::Consume(&input, "/(\\d+)Kb", &corpus_total_size)) {
+              status_.set_corpus_total_size(corpus_total_size * kOneKb);
+            } else if (re2::RE2::Consume(&input, "/(\\d+)Mb", &corpus_total_size)) {
+              status_.set_corpus_total_size(corpus_total_size * kOneMb);
+            }
+          }
+
+          std::vector<ProcessStats> process_stats;
+          status_.set_process_stats(std::move(process_stats));
+
+          UpdateMonitors(reason);
         }
       });
-}
-
-ZxResult<FuzzResult> LibFuzzerRunner::ParseLine(const std::string& line) {
-  re2::StringPiece input(line);
-
-  // Start with normal status, the most common output.
-  uint32_t runs;
-  if (re2::RE2::Consume(&input, "#(\\d+)", &runs)) {
-    status_.set_runs(runs);
-    ParseStatus(&input);
-    return fpromise::ok(FuzzResult::NO_ERRORS);
-  }
-
-  // Check for easily identifiable errors.
-  if (re2::RE2::Consume(&input, "==\\d+== ERROR: libFuzzer: ")) {
-    return ParseError(&input);
-  }
-  // See libFuzzer's |Fuzzer::TryDetectingAMemoryLeak|.
-  // This match is ugly, but it's the only message in current libFuzzer that this code can
-  // rely on for a leak.
-  if (line == "INFO: to ignore leaks on libFuzzer side use -detect_leaks=0.") {
-    return fpromise::ok(FuzzResult::LEAK);
-  }
-
-  // See libFuzzer's |Fuzzer::MinimizeCrashInput|.
-  // Annoyingly, libFuzzer prints the same "error" message for an invalid input and a
-  // minimize loop that no longer triggers an error (see below). Use this diagnostic to
-  // distinguish.
-  if (re2::RE2::PartialMatch(
-          input,
-          "CRASH_MIN: '\\S+' \\(\\d+ bytes\\) caused a crash. Will try to minimize it further")) {
-    minimized_ = true;
-    return fpromise::ok(FuzzResult::NO_ERRORS);
-  }
-
-  // See libFuzzer's |Fuzzer::MinimizeCrashInput|.
-  if (re2::RE2::PartialMatch(input, "ERROR: the input \\S+ did not crash") && !minimized_) {
-    FX_LOGS(WARNING) << "Test input did not trigger an error.";
-    return fpromise::error(ZX_ERR_INVALID_ARGS);
-  }
-
-  return fpromise::ok(FuzzResult::NO_ERRORS);
-}
-
-void LibFuzzerRunner::ParseStatus(re2::StringPiece* input) {
-  // The patterns in this function should match libFuzzer's |Fuzzer::PrintStats|.
-
-  // Parse reason.
-  std::string reason_str;
-  if (!re2::RE2::Consume(input, "\\t(\\S+)", &reason_str)) {
-    return;
-  }
-  auto reason = UpdateReason::PULSE;  // By default, assume it's just a status update.
-  if (reason_str == "INITED") {
-    reason = UpdateReason::INIT;
-  } else if (reason_str == "NEW") {
-    reason = UpdateReason::NEW;
-  } else if (reason_str == "REDUCE") {
-    reason = UpdateReason::REDUCE;
-  } else if (reason_str == "DONE") {
-    reason = UpdateReason::DONE;
-    status_.set_running(false);
-  }
-
-  // Parse covered PCs.
-  size_t covered_pcs;
-  if (re2::RE2::FindAndConsume(input, "cov: (\\d+)", &covered_pcs)) {
-    status_.set_covered_pcs(covered_pcs);
-  }
-
-  // Parse covered features.
-  size_t covered_features;
-  if (re2::RE2::FindAndConsume(input, "ft: (\\d+)", &covered_features)) {
-    status_.set_covered_features(covered_features);
-  }
-
-  // Parse corpus stats.
-  size_t corpus_num_inputs;
-  if (re2::RE2::FindAndConsume(input, "corp: (\\d+)", &corpus_num_inputs)) {
-    size_t corpus_total_size;
-    status_.set_corpus_num_inputs(corpus_num_inputs);
-    if (re2::RE2::Consume(input, "/(\\d+)b", &corpus_total_size)) {
-      status_.set_corpus_total_size(corpus_total_size);
-    } else if (re2::RE2::Consume(input, "/(\\d+)Kb", &corpus_total_size)) {
-      status_.set_corpus_total_size(corpus_total_size * kOneKb);
-    } else if (re2::RE2::Consume(input, "/(\\d+)Mb", &corpus_total_size)) {
-      status_.set_corpus_total_size(corpus_total_size * kOneMb);
-    }
-  }
-
-  std::vector<ProcessStats> process_stats;
-  status_.set_process_stats(std::move(process_stats));
-
-  UpdateMonitors(reason);
-}
-
-ZxResult<FuzzResult> LibFuzzerRunner::ParseError(re2::StringPiece* input) {
-  if (re2::RE2::PartialMatch(*input, "fuzz target exited")) {
-    // See libFuzzer's |Fuzzer::ExitCallback|.
-    return fpromise::ok(FuzzResult::EXIT);
-  }
-  if (re2::RE2::PartialMatch(*input, "deadly signal")) {
-    // See libFuzzer's |Fuzzer::CrashCallback|.
-    return fpromise::ok(FuzzResult::CRASH);
-  }
-  if (re2::RE2::PartialMatch(*input, "timeout after \\d+ seconds")) {
-    // See libFuzzer's |Fuzzer::AlarmCallback|.
-    return fpromise::ok(FuzzResult::TIMEOUT);
-  }
-  if (re2::RE2::PartialMatch(*input, "out-of-memory \\(malloc\\(-?\\d+\\)\\)")) {
-    // See libFuzzer's |Fuzzer::HandleMalloc|.
-    return fpromise::ok(FuzzResult::BAD_MALLOC);
-  }
-  if (re2::RE2::PartialMatch(*input, "out-of-memory \\(used: \\d+Mb; limit: \\d+Mb\\)")) {
-    // See libFuzzer's |Fuzzer::RssLimitCallback|.
-    return fpromise::ok(FuzzResult::OOM);
-  }
-
-  // See libFuzzer's |Fuzzer::DeathCallback|.
-  return fpromise::ok(FuzzResult::DEATH);
 }
 
 }  // namespace fuzzing

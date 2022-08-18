@@ -70,18 +70,6 @@ class LibFuzzerRunner : public Runner {
   // update the fuzzer status accordingly, and return the fuzzing result when idenitifed.
   ZxPromise<FuzzResult> ParseOutput();
 
-  // Attempts to interpret the line as containing information from libFuzzer.
-  // Returns the fuzzing result or error detected in libFuzzer's output, or |fpromise:ok(NO_ERRORS)|
-  // if neither is found.
-  ZxResult<FuzzResult> ParseLine(const std::string& line);
-
-  // Attempts to interpret the line as containing status information from libFuzzer.
-  // Returns true if |line| is status, false otherwise.
-  void ParseStatus(re2::StringPiece* input);
-
-  // Attempts to interpret the line as containing error information from libFuzzer.
-  ZxResult<FuzzResult> ParseError(re2::StringPiece* input);
-
   // Update the list of input files in the live corpus.
   void ReloadLiveCorpus();
 
@@ -102,7 +90,6 @@ class LibFuzzerRunner : public Runner {
 
   Status status_;
   std::string result_input_pathname_;
-  bool minimized_ = false;
 
   // Asynchronous process used to run libFuzzer instances.
   ChildProcess process_;

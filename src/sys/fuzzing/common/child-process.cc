@@ -144,6 +144,18 @@ ZxPromise<> ChildProcess::SpawnAsync() {
       .wrap_with(scope_);
 }
 
+bool ChildProcess::IsAlive() {
+  if (!process_) {
+    return false;
+  }
+  auto status = process_.get_info(ZX_INFO_PROCESS, &info_, sizeof(info_), nullptr, nullptr);
+  if (status == ZX_ERR_BAD_HANDLE) {
+    return false;
+  }
+  FX_DCHECK(status == ZX_OK);
+  return (info_.flags & ZX_INFO_PROCESS_FLAG_EXITED) == 0;
+}
+
 zx_status_t ChildProcess::Duplicate(zx::process* out) {
   return process_.duplicate(ZX_RIGHT_SAME_RIGHTS, out);
 }
@@ -297,37 +309,41 @@ ZxResult<ProcessStats> ChildProcess::GetStats() {
   return fpromise::ok(std::move(stats));
 }
 
-ZxPromise<> ChildProcess::Wait() {
-  return fpromise::make_promise(
-      [this, terminated = ZxFuture<zx_packet_signal_t>()](Context& context) mutable -> ZxResult<> {
-        if (!process_) {
-          return fpromise::ok();
-        }
-        if (!terminated) {
-          terminated = executor_->MakePromiseWaitHandle(zx::unowned_handle(process_.get()),
-                                                        ZX_PROCESS_TERMINATED);
-        }
-        if (!terminated(context)) {
-          return fpromise::pending();
-        }
-        if (terminated.is_error()) {
-          auto status = terminated.error();
-          FX_LOGS(WARNING) << "Failed to wait for process to terminate: "
-                           << zx_status_get_string(status);
-          return fpromise::error(status);
-        }
-        process_.reset();
-        for (auto& stream : streams_) {
-          auto discarded = std::move(stream.previous);
-        }
-        return fpromise::ok();
-      });
+ZxPromise<int64_t> ChildProcess::Wait() {
+  return fpromise::make_promise([this, terminated = ZxFuture<zx_packet_signal_t>()](
+                                    Context& context) mutable -> ZxResult<int64_t> {
+           if (!IsAlive()) {
+             return fpromise::ok(info_.return_code);
+           }
+           if (!terminated) {
+             terminated = executor_->MakePromiseWaitHandle(zx::unowned_handle(process_.get()),
+                                                           ZX_PROCESS_TERMINATED);
+           }
+           if (!terminated(context)) {
+             return fpromise::pending();
+           }
+           if (terminated.is_error()) {
+             auto status = terminated.error();
+             FX_LOGS(WARNING) << "Failed to wait for process to terminate: "
+                              << zx_status_get_string(status);
+             return fpromise::error(status);
+           }
+           if (IsAlive()) {
+             FX_LOGS(WARNING) << "Failed to terminate process.";
+             return fpromise::error(ZX_ERR_BAD_STATE);
+           }
+           for (auto& stream : streams_) {
+             auto discarded = std::move(stream.previous);
+           }
+           return fpromise::ok(info_.return_code);
+         })
+      .wrap_with(scope_);
 }
 
 ZxPromise<> ChildProcess::Kill() {
   return fpromise::make_promise(
-             [this, wait = ZxFuture<>()](Context& context) mutable -> ZxResult<> {
-               if (!process_) {
+             [this, wait = ZxFuture<int64_t>()](Context& context) mutable -> ZxResult<> {
+               if (!IsAlive()) {
                  return fpromise::ok();
                }
                if (!wait) {
@@ -340,7 +356,10 @@ ZxPromise<> ChildProcess::Kill() {
                if (!wait(context)) {
                  return fpromise::pending();
                }
-               return wait.take_result();
+               if (wait.is_error()) {
+                 return fpromise::error(wait.take_error());
+               }
+               return fpromise::ok();
              })
       .wrap_with(scope_);
 }
@@ -361,6 +380,7 @@ void ChildProcess::Reset() {
     stream.previous = std::move(bridge.consumer);
     stream.fd_waiter = std::make_unique<fsl::FDWaiter>(executor_->dispatcher());
   }
+  memset(&info_, 0, sizeof(info_));
 }
 
 }  // namespace fuzzing

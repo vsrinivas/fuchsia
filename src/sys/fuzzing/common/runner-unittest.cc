@@ -130,9 +130,11 @@ void RunnerTest::ExecuteNoError() {
 void RunnerTest::ExecuteWithError() {
   Configure(MakeOptions());
   Input input({0x02});
-  FUZZING_EXPECT_OK(runner()->Execute(input.Duplicate()), FuzzResult::BAD_MALLOC);
+  FuzzResult fuzz_result;
+  FUZZING_EXPECT_OK(runner()->Execute(input.Duplicate()), &fuzz_result);
   FUZZING_EXPECT_OK(RunOne(FuzzResult::BAD_MALLOC), std::move(input));
   RunUntilIdle();
+  EXPECT_TRUE(fuzz_result == FuzzResult::BAD_MALLOC || fuzz_result == FuzzResult::OOM);
 }
 
 void RunnerTest::ExecuteWithLeak() {
@@ -363,7 +365,8 @@ void RunnerTest::FuzzUntilError() {
     EXPECT_TRUE(near_match_found) << "input: " << orig.ToHex();
   }
 
-  EXPECT_EQ(artifact.fuzz_result(), FuzzResult::EXIT);
+  auto fuzz_result = artifact.fuzz_result();
+  EXPECT_TRUE(fuzz_result == FuzzResult::EXIT || fuzz_result == FuzzResult::CRASH);
 }
 
 void RunnerTest::FuzzUntilRuns() {
