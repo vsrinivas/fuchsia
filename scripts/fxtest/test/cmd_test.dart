@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:async/async.dart';
 import 'package:fxtest/fxtest.dart';
 import 'package:fxutils/fxutils.dart';
 import 'package:mockito/mockito.dart';
@@ -11,7 +10,6 @@ import 'dart:io';
 import 'dart:convert';
 
 import 'fake_fx_env.dart';
-import 'helpers.dart';
 
 class MockEnvReader extends Mock implements EnvReader {}
 
@@ -63,7 +61,7 @@ void main() {
             'name': 'cmp_test',
             'os': 'fuchsia',
             'package_url':
-                "fuchsia-pkg://fuchsia.com/cmp_test#meta/cmp_test.cm",
+                'fuchsia-pkg://fuchsia.com/cmp_test#meta/cmp_test.cm',
           }
         },
         buildDir: '/whatever',
@@ -76,22 +74,22 @@ void main() {
     test('used for component tests', () async {
       final fakeDir = await Directory.systemTemp.createTemp();
       final fxEnv = FakeFxEnv(fuchsiaDir: fakeDir.path);
-      File("${fxEnv.outputDir}/package-repositories.json")
+      File('${fxEnv.outputDir}/package-repositories.json')
         ..createSync(recursive: true)
         ..writeAsStringSync(jsonEncode([
           {
-            "targets": "repo/targets.json",
-            "blobs": "repo/blobs.json",
-            "path": "repo"
+            'targets': 'repo/targets.json',
+            'blobs': 'repo/blobs.json',
+            'path': 'repo'
           }
         ]));
-      File("${fxEnv.outputDir}/repo/targets.json")
+      File('${fxEnv.outputDir}/repo/targets.json')
         ..createSync(recursive: true)
         ..writeAsStringSync(jsonEncode({
-          "signed": {
-            "targets": {
-              "cmp_test/0": {
-                "custom": {"merkle": "111111"}
+          'signed': {
+            'targets': {
+              'cmp_test/0': {
+                'custom': {'merkle': '111111'}
               }
             }
           }
@@ -113,14 +111,14 @@ void main() {
             'name': 'cmp_test',
             'os': 'fuchsia',
             'package_url':
-                "fuchsia-pkg://fuchsia.com/cmp_test#meta/cmp_test.cm",
+                'fuchsia-pkg://fuchsia.com/cmp_test#meta/cmp_test.cm',
           }
         },
         buildDir: '/whatever',
       ));
       expect(await cmd.maybeAddPackageHash(bundle), true);
       expect(cmd.packageRepository, isNotNull);
-      expect(bundle.testDefinition.hash, "111111");
+      expect(bundle.testDefinition.hash, '111111');
     });
   });
 }
