@@ -6,7 +6,6 @@ use crate::fs::*;
 use crate::lock::Mutex;
 use crate::task::*;
 use crate::types::*;
-use std::sync::Arc;
 
 const DATA_SIZE: usize = 8;
 
@@ -130,7 +129,7 @@ impl FileOps for EventFdFileObject {
         &self,
         _file: &FileObject,
         _current_task: &CurrentTask,
-        waiter: &Arc<Waiter>,
+        waiter: &Waiter,
         events: FdEvents,
         handler: EventHandler,
         options: WaitAsyncOptions,
@@ -144,7 +143,7 @@ impl FileOps for EventFdFileObject {
         }
     }
 
-    fn cancel_wait(&self, _current_task: &CurrentTask, _waiter: &Arc<Waiter>, key: WaitKey) {
+    fn cancel_wait(&self, _current_task: &CurrentTask, _waiter: &Waiter, key: WaitKey) {
         let mut inner = self.inner.lock();
         inner.wait_queue.cancel_wait(key);
     }

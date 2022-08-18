@@ -5,7 +5,7 @@
 #![allow(dead_code)]
 
 use crate::lock::RwLock;
-use crate::task::{WaitQueue, Waiter};
+use crate::task::{WaitQueue, WaiterRef};
 use crate::types::*;
 use std::collections::VecDeque;
 use std::sync::Arc;
@@ -72,7 +72,7 @@ pub struct SignalState {
     pub mask: sigset_t,
 
     /// The waiter that the task is currently sleeping on, if any.
-    pub waiter: Option<Arc<Waiter>>,
+    pub waiter: WaiterRef,
 }
 
 impl SignalState {

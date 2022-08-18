@@ -329,7 +329,7 @@ impl FileOps for PipeFileObject {
         &self,
         _file: &FileObject,
         _current_task: &CurrentTask,
-        waiter: &Arc<Waiter>,
+        waiter: &Waiter,
         events: FdEvents,
         handler: EventHandler,
         options: WaitAsyncOptions,
@@ -343,7 +343,7 @@ impl FileOps for PipeFileObject {
         }
     }
 
-    fn cancel_wait(&self, _current_task: &CurrentTask, _waiter: &Arc<Waiter>, key: WaitKey) {
+    fn cancel_wait(&self, _current_task: &CurrentTask, _waiter: &Waiter, key: WaitKey) {
         let mut pipe = self.pipe.lock();
         pipe.waiters.cancel_wait(key);
     }

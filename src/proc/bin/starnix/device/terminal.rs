@@ -171,7 +171,7 @@ impl Terminal {
     /// `wait_async` implementation of the main side of the terminal.
     pub fn main_wait_async(
         self: &Arc<Self>,
-        waiter: &Arc<Waiter>,
+        waiter: &Waiter,
         events: FdEvents,
         handler: EventHandler,
         options: WaitAsyncOptions,
@@ -224,7 +224,7 @@ impl Terminal {
     /// `wait_async` implementation of the replica side of the terminal.
     pub fn replica_wait_async(
         self: &Arc<Self>,
-        waiter: &Arc<Waiter>,
+        waiter: &Waiter,
         events: FdEvents,
         handler: EventHandler,
         options: WaitAsyncOptions,
@@ -412,7 +412,7 @@ state_implementation!(Terminal, TerminalMutableState, {
     /// `wait_async` implementation of the main side of the terminal.
     fn main_wait_async(
         &mut self,
-        waiter: &Arc<Waiter>,
+        waiter: &Waiter,
         events: FdEvents,
         handler: EventHandler,
         options: WaitAsyncOptions,
@@ -484,7 +484,7 @@ state_implementation!(Terminal, TerminalMutableState, {
     /// `wait_async` implementation of the replica side of the terminal.
     fn replica_wait_async(
         &mut self,
-        waiter: &Arc<Waiter>,
+        waiter: &Waiter,
         events: FdEvents,
         handler: EventHandler,
         options: WaitAsyncOptions,

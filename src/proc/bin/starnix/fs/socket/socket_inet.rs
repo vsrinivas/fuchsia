@@ -10,8 +10,6 @@ use crate::logging::not_implemented;
 use crate::task::*;
 use crate::types::*;
 
-use std::sync::Arc;
-
 // This is a stubbed version of AF_INET/AF_INET6
 pub struct InetSocket {}
 
@@ -76,7 +74,7 @@ impl SocketOps for InetSocket {
         &self,
         _socket: &Socket,
         _current_task: &CurrentTask,
-        _waiter: &Arc<Waiter>,
+        _waiter: &Waiter,
         _events: FdEvents,
         _handler: EventHandler,
         _options: WaitAsyncOptions,
@@ -89,7 +87,7 @@ impl SocketOps for InetSocket {
         &self,
         _socket: &Socket,
         _current_task: &CurrentTask,
-        _waiter: &Arc<Waiter>,
+        _waiter: &Waiter,
         _key: WaitKey,
     ) {
     }

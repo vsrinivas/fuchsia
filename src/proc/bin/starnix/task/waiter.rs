@@ -12,7 +12,7 @@ use crate::types::*;
 use fuchsia_zircon as zx;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 
 pub type SignalHandler = Box<dyn FnOnce(zx::Signals) + Send + Sync>;
 pub type EventHandler = Box<dyn FnOnce(FdEvents) + Send + Sync>;
@@ -68,7 +68,12 @@ impl InterruptionType {
 }
 
 /// A type that can put a thread to sleep waiting for a condition.
-pub struct Waiter {
+pub struct Waiter(Arc<WaiterImpl>);
+
+/// Implementation of Waiter. We put the Waiter data in an Arc so that WaitQueue can tell when the
+/// Waiter has been destroyed by keeping a Weak reference. But this is an implementation detail and
+/// a Waiter should have a single owner. So the Arc is hidden inside Waiter.
+struct WaiterImpl {
     /// The underlying Zircon port that the thread sleeps in.
     port: zx::Port,
     key_map: Mutex<HashMap<u64, WaitCallback>>, // the key 0 is reserved for 'no handler'
@@ -78,21 +83,26 @@ pub struct Waiter {
 
 impl Waiter {
     /// Internal constructor.
-    fn new_with_interruption_filter(interruption_filter: Vec<InterruptionType>) -> Arc<Self> {
-        Arc::new(Self {
+    fn new_with_interruption_filter(interruption_filter: Vec<InterruptionType>) -> Self {
+        Self(Arc::new(WaiterImpl {
             port: zx::Port::create().map_err(impossible_error).unwrap(),
             key_map: Mutex::new(HashMap::new()),
             next_key: AtomicU64::new(1),
             interruption_filter,
-        })
+        }))
     }
     /// Create a new waiter object.
-    pub fn new() -> Arc<Self> {
+    pub fn new() -> Self {
         Self::new_with_interruption_filter(vec![InterruptionType::Exit, InterruptionType::Signal])
     }
 
+    /// Create a weak reference to this waiter.
+    pub fn weak(&self) -> WaiterRef {
+        WaiterRef(Arc::downgrade(&self.0))
+    }
+
     /// Create a new waiter object for a thread waiting to be continued.
-    pub fn new_for_stopped_thread() -> Arc<Waiter> {
+    pub fn new_for_stopped_thread() -> Waiter {
         Self::new_with_interruption_filter(vec![InterruptionType::Exit, InterruptionType::Continue])
     }
 
@@ -100,7 +110,7 @@ impl Waiter {
     ///
     /// If the wait is interrupted (see [`Waiter::interrupt`]), this function returns
     /// EINTR.
-    pub fn wait(self: &Arc<Self>, task: &Task) -> Result<(), Errno> {
+    pub fn wait(&self, task: &Task) -> Result<(), Errno> {
         self.wait_until(task, zx::Time::INFINITE)
     }
 
@@ -110,29 +120,29 @@ impl Waiter {
     ///
     /// This method will return an EINTR error if the condition for the waiter is already reached.
     fn register_waiter<'a>(
-        self: &Arc<Self>,
+        &self,
         task: &'a Task,
     ) -> Result<scopeguard::ScopeGuard<&'a Task, impl FnOnce(&'a Task), scopeguard::Always>, Errno>
     {
         {
             let thread_state = task.thread_group.read();
             let mut state = task.write();
-            assert!(state.signals.waiter.is_none());
+            assert!(!state.signals.waiter.is_valid());
 
-            if self.interruption_filter.iter().any(|f| f.is_triggered(&state, &thread_state)) {
+            if self.0.interruption_filter.iter().any(|f| f.is_triggered(&state, &thread_state)) {
                 return error!(EINTR);
             }
-            state.signals.waiter = Some(Arc::clone(self));
+            state.signals.waiter = self.weak();
         }
 
-        let waiter_copy = Arc::clone(self);
+        let waiter_copy = Arc::clone(&self.0);
         return Ok(scopeguard::guard(&task, move |task| {
             let mut state = task.write();
             assert!(
-                Arc::ptr_eq(state.signals.waiter.as_ref().unwrap(), &waiter_copy),
+                state.signals.waiter.access(|waiter| Arc::ptr_eq(&waiter.unwrap().0, &waiter_copy)),
                 "SignalState waiter changed while waiting!"
             );
-            state.signals.waiter = None;
+            state.signals.waiter = WaiterRef::empty();
         }));
     }
 
@@ -140,7 +150,7 @@ impl Waiter {
     ///
     /// If the wait is interrupted (see [`Waiter::interrupt`]), this function returns
     /// EINTR.
-    pub fn wait_until(self: &Arc<Self>, task: &Task, deadline: zx::Time) -> Result<(), Errno> {
+    pub fn wait_until(&self, task: &Task, deadline: zx::Time) -> Result<(), Errno> {
         let _guard = self.register_waiter(task)?;
 
         self.wait_kernel_until(deadline)
@@ -148,20 +158,20 @@ impl Waiter {
 
     /// Waits until the waiter is woken up. Do not use if a current_task is available, this will
     /// result in incorrect signal behavior.
-    pub fn wait_without_current_task_dont_use_if_possible(self: &Arc<Self>) -> Result<(), Errno> {
+    pub fn wait_without_current_task_dont_use_if_possible(&self) -> Result<(), Errno> {
         self.wait_kernel_until(zx::Time::INFINITE)
     }
 
     /// Waits until the given deadline has passed or the waiter is woken up.
-    fn wait_kernel_until(self: &Arc<Self>, deadline: zx::Time) -> Result<(), Errno> {
-        match self.port.wait(deadline) {
+    fn wait_kernel_until(&self, deadline: zx::Time) -> Result<(), Errno> {
+        match self.0.port.wait(deadline) {
             Ok(packet) => match packet.status() {
                 zx::sys::ZX_OK => {
                     let contents = packet.contents();
                     match contents {
                         zx::PacketContents::SignalOne(sigpkt) => {
                             let key = packet.key();
-                            let handler = self.key_map.lock().remove(&key);
+                            let handler = self.0.key_map.lock().remove(&key);
                             if let Some(callback) = handler {
                                 match callback {
                                     WaitCallback::SignalHandler(handler) => {
@@ -179,7 +189,7 @@ impl Waiter {
                             mask_bytes[..4].copy_from_slice(&observed[..4]);
                             let events = FdEvents::from(u32::from_ne_bytes(mask_bytes));
                             let key = packet.key();
-                            let handler = self.key_map.lock().remove(&key);
+                            let handler = self.0.key_map.lock().remove(&key);
                             if let Some(callback) = handler {
                                 match callback {
                                     WaitCallback::EventHandler(handler) => {
@@ -205,11 +215,11 @@ impl Waiter {
     }
 
     fn register_callback(&self, callback: WaitCallback) -> u64 {
-        let key = self.next_key.fetch_add(1, Ordering::Relaxed);
+        let key = self.0.next_key.fetch_add(1, Ordering::Relaxed);
         // TODO - find a better reaction to wraparound
         assert!(key != 0, "bad key from u64 wraparound");
         assert!(
-            self.key_map.lock().insert(key, callback).is_none(),
+            self.0.key_map.lock().insert(key, callback).is_none(),
             "unexpected callback already present for key {}",
             key
         );
@@ -242,7 +252,7 @@ impl Waiter {
         } else {
             zx::WaitAsyncOpts::empty()
         };
-        handle.wait_async_handle(&self.port, key, signals, zx_options)?;
+        handle.wait_async_handle(&self.0.port, key, signals, zx_options)?;
         Ok(WaitKey { key })
     }
 
@@ -250,7 +260,7 @@ impl Waiter {
     where
         H: zx::AsHandleRef,
     {
-        self.port.cancel(handle, key.key).is_ok()
+        self.0.port.cancel(handle, key.key).is_ok()
     }
 
     fn wake_on_events(&self, handler: EventHandler) -> WaitKey {
@@ -274,7 +284,7 @@ impl Waiter {
     ///
     /// Returns whether the waiter was interrupted.
     pub fn interrupt(&self, interruption_type: InterruptionType) -> bool {
-        if !self.interruption_filter.contains(&interruption_type) {
+        if !self.0.interruption_filter.contains(&interruption_type) {
             return false;
         }
         self.queue_user_packet(zx::sys::ZX_ERR_CANCELED);
@@ -291,13 +301,40 @@ impl Waiter {
     fn queue_user_packet_data(&self, key: &WaitKey, status: i32, packet_data: [u8; 32]) {
         let user_packet = zx::UserPacket::from_u8_array(packet_data);
         let packet = zx::Packet::from_user_packet(key.key, status, user_packet);
-        self.port.queue(&packet).map_err(impossible_error).unwrap();
+        self.0.port.queue(&packet).map_err(impossible_error).unwrap();
     }
 }
 
 impl std::fmt::Debug for Waiter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Waiter").field("port", &self.port).finish_non_exhaustive()
+        f.debug_struct("Waiter").field("port", &self.0.port).finish_non_exhaustive()
+    }
+}
+
+/// A weak reference to a Waiter. Intended for holding in wait queues or stashing elsewhere for
+/// calling queue_events later.
+#[derive(Default)]
+pub struct WaiterRef(Weak<WaiterImpl>);
+
+impl WaiterRef {
+    pub fn empty() -> Self {
+        Self::default()
+    }
+
+    pub fn is_valid(&self) -> bool {
+        self.0.strong_count() != 0
+    }
+
+    /// Call the closure with a reference to the waiter if this weak ref is valid, or None if it
+    /// isn't.
+    pub fn access<R>(&self, f: impl FnOnce(Option<&Waiter>) -> R) -> R {
+        f(self.0.upgrade().map(Waiter).as_ref())
+    }
+}
+
+impl std::fmt::Debug for WaiterRef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.access(|waiter| f.debug_tuple("WaiterRef").field(&waiter).finish())
     }
 }
 
@@ -316,7 +353,7 @@ pub struct WaitQueue {
 /// An entry in a WaitQueue.
 struct WaitEntry {
     /// The waiter that is waking for the FdEvent.
-    waiter: Arc<Waiter>,
+    waiter: WaiterRef,
 
     /// The bitmask that the waiter is waiting for.
     events: u32,
@@ -351,12 +388,12 @@ impl WaitQueue {
     /// call the [`Waiter::wait`] function on the waiter.
     pub fn wait_async_mask(
         &mut self,
-        waiter: &Arc<Waiter>,
+        waiter: &Waiter,
         events: u32,
         handler: EventHandler,
     ) -> WaitKey {
         let key = waiter.wake_on_events(handler);
-        self.waiters.push(WaitEntry { waiter: Arc::clone(waiter), events, persistent: false, key });
+        self.waiters.push(WaitEntry { waiter: waiter.weak(), events, persistent: false, key });
         key
     }
 
@@ -366,7 +403,7 @@ impl WaitQueue {
     ///
     /// This function does not actually block the waiter. To block the waiter,
     /// call the [`Waiter::wait`] function on the waiter.
-    pub fn wait_async(&mut self, waiter: &Arc<Waiter>) -> WaitKey {
+    pub fn wait_async(&mut self, waiter: &Waiter) -> WaitKey {
         self.wait_async_mask(waiter, u32::MAX, WaitCallback::none())
     }
 
@@ -378,7 +415,7 @@ impl WaitQueue {
     /// call the [`Waiter::wait`] function on the waiter.
     pub fn wait_async_events(
         &mut self,
-        waiter: &Arc<Waiter>,
+        waiter: &Waiter,
         events: FdEvents,
         handler: EventHandler,
     ) -> WaitKey {
@@ -394,33 +431,36 @@ impl WaitQueue {
     /// The waiters will wake up on their own threads to handle these events.
     /// They are not called synchronously by this function.
     pub fn notify_mask_count(&mut self, events: u32, mut limit: usize) {
-        self.waiters = std::mem::take(&mut self.waiters)
-            .into_iter()
-            .filter(|entry| {
+        self.waiters.retain(|entry| {
+            entry.waiter.access(|waiter| {
+                // Drop entries whose waiter no longer exists.
+                let waiter = if let Some(waiter) = waiter {
+                    waiter
+                } else {
+                    return false;
+                };
+
                 if limit > 0 && (entry.events & events) != 0 {
-                    entry.waiter.queue_events(&entry.key, events);
+                    waiter.queue_events(&entry.key, events);
                     limit -= 1;
                     return entry.persistent;
                 }
                 return true;
             })
-            .collect();
+        });
     }
 
     pub fn cancel_wait(&mut self, key: WaitKey) -> bool {
         let mut cancelled = false;
         // TODO(steveaustin) Maybe make waiters a map to avoid linear search
-        self.waiters = std::mem::take(&mut self.waiters)
-            .into_iter()
-            .filter(|entry| {
-                if entry.key.equals(&key) {
-                    cancelled = true;
-                    false
-                } else {
-                    true
-                }
-            })
-            .collect();
+        self.waiters.retain(|entry| {
+            if entry.key.equals(&key) {
+                cancelled = true;
+                false
+            } else {
+                true
+            }
+        });
         cancelled
     }
 

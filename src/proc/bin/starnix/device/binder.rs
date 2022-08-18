@@ -18,7 +18,7 @@ use crate::mm::vmo::round_up_to_increment;
 use crate::mm::{DesiredAddress, MappedVmo, MappingOptions, MemoryManager, UserMemoryCursor};
 use crate::syscalls::{SyscallResult, SUCCESS};
 use crate::task::{
-    CurrentTask, EventHandler, Kernel, Task, WaitCallback, WaitKey, WaitQueue, Waiter,
+    CurrentTask, EventHandler, Kernel, Task, WaitCallback, WaitKey, WaitQueue, Waiter, WaiterRef,
 };
 use crate::types::*;
 use bitflags::bitflags;
@@ -86,7 +86,7 @@ impl FileOps for BinderDevInstance {
         &self,
         _file: &FileObject,
         current_task: &CurrentTask,
-        waiter: &Arc<Waiter>,
+        waiter: &Waiter,
         events: FdEvents,
         handler: EventHandler,
         options: WaitAsyncOptions,
@@ -99,7 +99,7 @@ impl FileOps for BinderDevInstance {
         self.driver.wait_async(&self.proc, &binder_thread, waiter, events, handler, options)
     }
 
-    fn cancel_wait(&self, _current_task: &CurrentTask, _waiter: &Arc<Waiter>, key: WaitKey) {
+    fn cancel_wait(&self, _current_task: &CurrentTask, _waiter: &Waiter, key: WaitKey) {
         self.driver.cancel_wait(&self.proc, key)
     }
 
@@ -634,7 +634,7 @@ impl ThreadPool {
                     .registration
                     .intersects(RegistrationState::MAIN | RegistrationState::REGISTERED)
                     && thread_state.command_queue.is_empty()
-                    && thread_state.waiter.is_some()
+                    && thread_state.waiter.is_valid()
                     && thread_state.transactions.is_empty()
             })
             .cloned()
@@ -844,7 +844,7 @@ struct BinderThreadState {
     command_queue: VecDeque<Command>,
     /// The [`Waiter`] object the binder thread is waiting on when there are no commands in the
     /// command queue. If `None`, the binder thread is not currently waiting.
-    waiter: Option<Arc<Waiter>>,
+    waiter: WaiterRef,
 }
 
 impl BinderThreadState {
@@ -854,17 +854,19 @@ impl BinderThreadState {
             registration: RegistrationState::empty(),
             transactions: Vec::new(),
             command_queue: VecDeque::new(),
-            waiter: None,
+            waiter: WaiterRef::empty(),
         }
     }
 
     /// Enqueues `command` for the thread and wakes it up if necessary.
     pub fn enqueue_command(&mut self, command: Command) {
         self.command_queue.push_back(command);
-        if let Some(waiter) = self.waiter.take() {
-            // Wake up the thread that is waiting.
-            waiter.wake_immediately(FdEvents::POLLIN.mask(), WaitCallback::none());
-        }
+        self.waiter.access(|waiter| {
+            if let Some(waiter) = waiter {
+                // Wake up the thread that is waiting.
+                waiter.wake_immediately(FdEvents::POLLIN.mask(), WaitCallback::none());
+            }
+        });
         // Notify any threads that are waiting on events from the binder driver FD.
         if let Some(binder_proc) = self.process.upgrade() {
             binder_proc.waiters.lock().notify_events(FdEvents::POLLIN);
@@ -2014,13 +2016,13 @@ impl BinderDriver {
 
             // No commands readily available to read. Wait for work.
             let waiter = Waiter::new();
-            thread_state.waiter = Some(waiter.clone());
+            thread_state.waiter = waiter.weak();
             drop(thread_state);
             drop(proc_command_queue);
 
             // Put this thread to sleep.
             scopeguard::defer! {
-                binder_thread.write().waiter = None
+                binder_thread.write().waiter = WaiterRef::empty();
             }
             waiter.wait(current_task)?;
         }
@@ -2343,7 +2345,7 @@ impl BinderDriver {
         &self,
         binder_proc: &Arc<BinderProcess>,
         binder_thread: &Arc<BinderThread>,
-        waiter: &Arc<Waiter>,
+        waiter: &Waiter,
         events: FdEvents,
         handler: EventHandler,
         _options: WaitAsyncOptions,
@@ -4369,10 +4371,11 @@ mod tests {
             .expect("request death notification");
 
         // Pretend the client thread is waiting for commands, so that it can be scheduled commands.
+        let fake_waiter = Waiter::new();
         {
             let mut client_state = client_thread.write();
             client_state.registration = RegistrationState::MAIN;
-            client_state.waiter = Some(Waiter::new());
+            client_state.waiter = fake_waiter.weak();
         }
 
         // Now the owner process dies.
@@ -4468,10 +4471,11 @@ mod tests {
             .expect("clear death notification");
 
         // Pretend the client thread is waiting for commands, so that it can be scheduled commands.
+        let fake_waiter = Waiter::new();
         {
             let mut client_state = client_thread.write();
             client_state.registration = RegistrationState::MAIN;
-            client_state.waiter = Some(Waiter::new());
+            client_state.waiter = fake_waiter.weak();
         }
 
         // Now the owner process dies.
@@ -4900,10 +4904,11 @@ mod tests {
             .thread_pool
             .write()
             .find_or_register_thread(&test.receiver_proc, test.receiver_proc.pid);
+        let fake_waiter = Waiter::new();
         {
             let mut thread_state = receiver_thread.write();
             thread_state.registration = RegistrationState::MAIN;
-            thread_state.waiter = Some(Waiter::new());
+            thread_state.waiter = fake_waiter.weak();
         }
 
         // Submit the transaction.
@@ -4961,10 +4966,11 @@ mod tests {
             .thread_pool
             .write()
             .find_or_register_thread(&test.receiver_proc, test.receiver_proc.pid);
+        let fake_waiter = Waiter::new();
         {
             let mut thread_state = receiver_thread.write();
             thread_state.registration = RegistrationState::MAIN;
-            thread_state.waiter = Some(Waiter::new());
+            thread_state.waiter = fake_waiter.weak();
         }
 
         // Submit the transaction.

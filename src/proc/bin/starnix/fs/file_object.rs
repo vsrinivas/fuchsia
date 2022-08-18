@@ -178,7 +178,7 @@ pub trait FileOps: Send + Sync + AsAny {
         &self,
         _file: &FileObject,
         _current_task: &CurrentTask,
-        _waiter: &Arc<Waiter>,
+        _waiter: &Waiter,
         _events: FdEvents,
         _handler: EventHandler,
         _options: WaitAsyncOptions,
@@ -188,7 +188,7 @@ pub trait FileOps: Send + Sync + AsAny {
     /// Returns true if the wait has not been activated and has been cancelled.
     ///
     /// If your file does not block, implement this with fileops_impl_nonblocking.
-    fn cancel_wait(&self, _current_task: &CurrentTask, _waiter: &Arc<Waiter>, _key: WaitKey);
+    fn cancel_wait(&self, _current_task: &CurrentTask, _waiter: &Waiter, _key: WaitKey);
 
     fn query_events(&self, current_task: &CurrentTask) -> FdEvents;
 
@@ -400,7 +400,7 @@ macro_rules! fileops_impl_nonblocking {
             &self,
             _file: &crate::fs::FileObject,
             _current_task: &crate::task::CurrentTask,
-            _waiter: &std::sync::Arc<crate::task::Waiter>,
+            _waiter: &crate::task::Waiter,
             _events: crate::fs::FdEvents,
             _handler: crate::task::EventHandler,
             _options: crate::fs::WaitAsyncOptions,
@@ -411,7 +411,7 @@ macro_rules! fileops_impl_nonblocking {
         fn cancel_wait(
             &self,
             _current_task: &CurrentTask,
-            _waiter: &std::sync::Arc<crate::task::Waiter>,
+            _waiter: &crate::task::Waiter,
             _key: crate::task::WaitKey,
         ) {
         }
@@ -845,7 +845,7 @@ impl FileObject {
     pub fn wait_async(
         &self,
         current_task: &CurrentTask,
-        waiter: &Arc<Waiter>,
+        waiter: &Waiter,
         events: FdEvents,
         handler: EventHandler,
         options: WaitAsyncOptions,
@@ -854,7 +854,7 @@ impl FileObject {
     }
 
     // Cancel a wait set up with wait_async
-    pub fn cancel_wait(&self, current_task: &CurrentTask, waiter: &Arc<Waiter>, key: WaitKey) {
+    pub fn cancel_wait(&self, current_task: &CurrentTask, waiter: &Waiter, key: WaitKey) {
         self.ops().cancel_wait(current_task, waiter, key);
     }
 

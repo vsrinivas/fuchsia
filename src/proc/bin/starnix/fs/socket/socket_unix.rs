@@ -462,7 +462,7 @@ impl SocketOps for UnixSocket {
         &self,
         socket: &Socket,
         current_task: &CurrentTask,
-        waiter: &Arc<Waiter>,
+        waiter: &Waiter,
         events: FdEvents,
         handler: EventHandler,
         options: WaitAsyncOptions,
@@ -479,7 +479,7 @@ impl SocketOps for UnixSocket {
         &self,
         _socket: &Socket,
         _current_task: &CurrentTask,
-        _waiter: &Arc<Waiter>,
+        _waiter: &Waiter,
         key: WaitKey,
     ) {
         let mut inner = self.lock();

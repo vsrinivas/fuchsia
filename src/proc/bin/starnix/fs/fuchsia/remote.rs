@@ -242,7 +242,7 @@ fn zxio_write_at(
 
 fn zxio_wait_async(
     zxio: &Arc<Zxio>,
-    waiter: &Arc<Waiter>,
+    waiter: &Waiter,
     events: FdEvents,
     handler: EventHandler,
     options: WaitAsyncOptions,
@@ -259,7 +259,7 @@ fn zxio_wait_async(
     waiter.wake_on_signals(&handle, signals, Box::new(signal_handler), options).unwrap()
 }
 
-fn zxio_cancel_wait(zxio: &Arc<Zxio>, waiter: &Arc<Waiter>, key: WaitKey) -> bool {
+fn zxio_cancel_wait(zxio: &Arc<Zxio>, waiter: &Waiter, key: WaitKey) -> bool {
     let (handle, signals) = zxio.wait_begin(ZxioSignals::NONE.bits());
     let did_cancel = waiter.cancel_signal_wait(&handle, key);
     zxio.wait_end(signals);
@@ -481,7 +481,7 @@ impl FileOps for RemoteFileObject {
         &self,
         _file: &FileObject,
         _current_task: &CurrentTask,
-        waiter: &Arc<Waiter>,
+        waiter: &Waiter,
         events: FdEvents,
         handler: EventHandler,
         options: WaitAsyncOptions,
@@ -489,7 +489,7 @@ impl FileOps for RemoteFileObject {
         zxio_wait_async(&self.zxio, waiter, events, handler, options)
     }
 
-    fn cancel_wait(&self, _current_task: &CurrentTask, waiter: &Arc<Waiter>, key: WaitKey) {
+    fn cancel_wait(&self, _current_task: &CurrentTask, waiter: &Waiter, key: WaitKey) {
         zxio_cancel_wait(&self.zxio, waiter, key);
     }
 
@@ -537,7 +537,7 @@ impl FileOps for RemotePipeObject {
         &self,
         _file: &FileObject,
         _current_task: &CurrentTask,
-        waiter: &Arc<Waiter>,
+        waiter: &Waiter,
         events: FdEvents,
         handler: EventHandler,
         options: WaitAsyncOptions,
@@ -545,7 +545,7 @@ impl FileOps for RemotePipeObject {
         zxio_wait_async(&self.zxio, waiter, events, handler, options)
     }
 
-    fn cancel_wait(&self, _current_task: &CurrentTask, waiter: &Arc<Waiter>, key: WaitKey) {
+    fn cancel_wait(&self, _current_task: &CurrentTask, waiter: &Waiter, key: WaitKey) {
         zxio_cancel_wait(&self.zxio, waiter, key);
     }
 

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use fuchsia_zircon as zx;
-use std::sync::Arc;
 
 use crate::fs::{buffers::*, socket::*, *};
 use crate::syscalls::SyscallResult;
@@ -45,7 +44,7 @@ impl FileOps for SocketFile {
         &self,
         _file: &FileObject,
         current_task: &CurrentTask,
-        waiter: &Arc<Waiter>,
+        waiter: &Waiter,
         events: FdEvents,
         handler: EventHandler,
         options: WaitAsyncOptions,
@@ -53,7 +52,7 @@ impl FileOps for SocketFile {
         self.socket.wait_async(current_task, waiter, events, handler, options)
     }
 
-    fn cancel_wait(&self, current_task: &CurrentTask, waiter: &Arc<Waiter>, key: WaitKey) {
+    fn cancel_wait(&self, current_task: &CurrentTask, waiter: &Waiter, key: WaitKey) {
         self.socket.cancel_wait(current_task, waiter, key);
     }
 

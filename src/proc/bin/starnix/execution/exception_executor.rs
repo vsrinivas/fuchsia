@@ -375,7 +375,7 @@ mod tests {
         });
 
         // Wait for the task to have a waiter.
-        while task.read().signals.waiter.is_none() {
+        while !task.read().signals.waiter.is_valid() {
             std::thread::sleep(std::time::Duration::from_millis(10));
         }
 
@@ -406,7 +406,7 @@ mod tests {
         });
 
         // Wait for the task to have a waiter.
-        while task.read().signals.waiter.is_none() {
+        while !task.read().signals.waiter.is_valid() {
             std::thread::sleep(std::time::Duration::from_millis(10));
         }
 

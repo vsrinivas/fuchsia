@@ -10,7 +10,6 @@ use crate::fs::*;
 use crate::lock::Mutex;
 use crate::task::*;
 use crate::types::*;
-use std::sync::Arc;
 
 /// A `TimerFile` represents a file created by `timerfd_create`.
 ///
@@ -189,7 +188,7 @@ impl FileOps for TimerFile {
         &self,
         _file: &FileObject,
         _current_task: &CurrentTask,
-        waiter: &Arc<Waiter>,
+        waiter: &Waiter,
         events: FdEvents,
         handler: EventHandler,
         options: WaitAsyncOptions,
@@ -208,7 +207,7 @@ impl FileOps for TimerFile {
             .unwrap() // TODO return error
     }
 
-    fn cancel_wait(&self, _current_task: &CurrentTask, waiter: &Arc<Waiter>, key: WaitKey) {
+    fn cancel_wait(&self, _current_task: &CurrentTask, waiter: &Waiter, key: WaitKey) {
         waiter.cancel_signal_wait(&self.timer, key);
     }
 

@@ -102,7 +102,7 @@ pub trait SocketOps: Send + Sync + AsAny {
         &self,
         socket: &Socket,
         current_task: &CurrentTask,
-        waiter: &Arc<Waiter>,
+        waiter: &Waiter,
         events: FdEvents,
         handler: EventHandler,
         options: WaitAsyncOptions,
@@ -115,7 +115,7 @@ pub trait SocketOps: Send + Sync + AsAny {
         &self,
         socket: &Socket,
         current_task: &CurrentTask,
-        waiter: &Arc<Waiter>,
+        waiter: &Waiter,
         key: WaitKey,
     );
 
@@ -396,7 +396,7 @@ impl Socket {
     pub fn wait_async(
         &self,
         current_task: &CurrentTask,
-        waiter: &Arc<Waiter>,
+        waiter: &Waiter,
         events: FdEvents,
         handler: EventHandler,
         options: WaitAsyncOptions,
@@ -404,7 +404,7 @@ impl Socket {
         self.ops.wait_async(self, current_task, waiter, events, handler, options)
     }
 
-    pub fn cancel_wait(&self, current_task: &CurrentTask, waiter: &Arc<Waiter>, key: WaitKey) {
+    pub fn cancel_wait(&self, current_task: &CurrentTask, waiter: &Waiter, key: WaitKey) {
         self.ops.cancel_wait(self, current_task, waiter, key)
     }
 

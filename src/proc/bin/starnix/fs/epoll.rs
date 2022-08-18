@@ -61,7 +61,7 @@ pub struct EpollEvent {
 /// EpollFileObject represents the FileObject used to
 /// implement epoll_create1/epoll_ctl/epoll_pwait.
 pub struct EpollFileObject {
-    waiter: Arc<Waiter>,
+    waiter: Waiter,
     /// Mutable state of this epoll object.
     state: Arc<RwLock<EpollState>>,
 }
@@ -398,7 +398,7 @@ impl FileOps for EpollFileObject {
         &self,
         _file: &FileObject,
         current_task: &CurrentTask,
-        waiter: &Arc<Waiter>,
+        waiter: &Waiter,
         events: FdEvents,
         handler: EventHandler,
         options: WaitAsyncOptions,
@@ -412,7 +412,7 @@ impl FileOps for EpollFileObject {
         }
     }
 
-    fn cancel_wait(&self, _current_task: &CurrentTask, _waiter: &Arc<Waiter>, key: WaitKey) {
+    fn cancel_wait(&self, _current_task: &CurrentTask, _waiter: &Waiter, key: WaitKey) {
         let mut state = self.state.write();
         state.waiters.cancel_wait(key);
     }

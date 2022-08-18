@@ -562,11 +562,13 @@ impl Task {
     ///
     /// TODO(qsr): This should also interrupt any running code.
     pub fn interrupt(&self, interruption_type: InterruptionType) -> bool {
-        if let Some(waiter) = &self.read().signals.waiter {
-            waiter.interrupt(interruption_type)
-        } else {
-            false
-        }
+        self.read().signals.waiter.access(|waiter| {
+            if let Some(waiter) = waiter {
+                waiter.interrupt(interruption_type)
+            } else {
+                false
+            }
+        })
     }
 
     pub fn command(&self) -> CString {

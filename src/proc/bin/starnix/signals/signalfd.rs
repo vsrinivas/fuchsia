@@ -7,7 +7,6 @@ use crate::signals::*;
 use crate::task::*;
 use crate::types::*;
 use std::convert::TryInto;
-use std::sync::Arc;
 
 use zerocopy::AsBytes;
 
@@ -87,7 +86,7 @@ impl FileOps for SignalFd {
         &self,
         _file: &FileObject,
         current_task: &CurrentTask,
-        waiter: &Arc<Waiter>,
+        waiter: &Waiter,
         events: FdEvents,
         handler: EventHandler,
         options: WaitAsyncOptions,
@@ -104,7 +103,7 @@ impl FileOps for SignalFd {
         }
     }
 
-    fn cancel_wait(&self, current_task: &CurrentTask, _waiter: &Arc<Waiter>, key: WaitKey) {
+    fn cancel_wait(&self, current_task: &CurrentTask, _waiter: &Waiter, key: WaitKey) {
         current_task.write().signals.signal_wait.cancel_wait(key);
     }
 

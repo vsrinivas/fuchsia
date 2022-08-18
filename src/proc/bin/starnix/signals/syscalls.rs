@@ -1220,7 +1220,7 @@ mod tests {
         // Wait for the first task to be suspended.
         let mut suspended = false;
         while !suspended {
-            suspended = first_task_clone.read().signals.waiter.is_some();
+            suspended = first_task_clone.read().signals.waiter.is_valid();
             std::thread::sleep(std::time::Duration::from_millis(10));
         }
 
@@ -1230,7 +1230,7 @@ mod tests {
         // Wait for the sigsuspend to complete.
         let _ = thread.join();
 
-        assert!(first_task_clone.read().signals.waiter.is_none());
+        assert!(!first_task_clone.read().signals.waiter.is_valid());
     }
 
     #[::fuchsia::test]
@@ -1386,7 +1386,7 @@ mod tests {
         });
 
         // Wait for the thread to be blocked on waiting for a child.
-        while task_clone.read().signals.waiter.is_none() {
+        while !task_clone.read().signals.waiter.is_valid() {
             std::thread::sleep(std::time::Duration::from_millis(10));
         }
         child.thread_group.exit(ExitStatus::Exit(0));

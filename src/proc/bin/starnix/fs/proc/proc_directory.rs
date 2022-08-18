@@ -148,7 +148,7 @@ impl FileOps for ProcKmsgFile {
         &self,
         _file: &FileObject,
         _current_task: &CurrentTask,
-        _waiter: &std::sync::Arc<Waiter>,
+        _waiter: &Waiter,
         _events: FdEvents,
         _handler: EventHandler,
         _options: WaitAsyncOptions,
@@ -156,13 +156,7 @@ impl FileOps for ProcKmsgFile {
         WaitKey::empty()
     }
 
-    fn cancel_wait(
-        &self,
-        _current_task: &CurrentTask,
-        _waiter: &std::sync::Arc<Waiter>,
-        _key: WaitKey,
-    ) {
-    }
+    fn cancel_wait(&self, _current_task: &CurrentTask, _waiter: &Waiter, _key: WaitKey) {}
 
     fn query_events(&self, _current_task: &CurrentTask) -> FdEvents {
         FdEvents::empty()

@@ -10,8 +10,6 @@ use crate::lock::Mutex;
 use crate::task::*;
 use crate::types::*;
 
-use std::sync::Arc;
-
 // An implementation of AF_VSOCK.
 // See https://man7.org/linux/man-pages/man7/vsock.7.html
 
@@ -209,7 +207,7 @@ impl SocketOps for VsockSocket {
         &self,
         _socket: &Socket,
         current_task: &CurrentTask,
-        waiter: &Arc<Waiter>,
+        waiter: &Waiter,
         events: FdEvents,
         handler: EventHandler,
         options: WaitAsyncOptions,
@@ -234,7 +232,7 @@ impl SocketOps for VsockSocket {
         &self,
         _socket: &Socket,
         current_task: &CurrentTask,
-        waiter: &Arc<Waiter>,
+        waiter: &Waiter,
         key: WaitKey,
     ) {
         let mut inner = self.lock();
