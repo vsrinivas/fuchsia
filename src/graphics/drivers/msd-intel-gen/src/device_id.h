@@ -30,6 +30,8 @@ class DeviceId {
     return false;
   }
 
+  static bool is_gen12(uint32_t device_id) { return false; }
+
   static constexpr unsigned int cache_line_size() { return 64; }
 };
 
