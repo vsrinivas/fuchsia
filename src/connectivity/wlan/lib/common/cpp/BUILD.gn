@@ -97,7 +97,10 @@ source_set("common") {
 }
 
 config("undefined_behavior_misaligned_memory") {
-  cflags = [ "-fno-sanitize=alignment" ]
+  cflags = [
+    "-fno-sanitize=alignment",
+    "-Wno-address-of-packed-member",
+  ]
 }
 
 executable("ieee80211_codes_test") {

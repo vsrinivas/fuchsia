@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <zircon/compiler.h>
 
 #include <array>
 #include <type_traits>
@@ -52,7 +53,7 @@ class BitField {
   }
 
   ValueType val_ = 0;
-};
+} __PACKED;
 
 /// A bitfield of arbitrary length, mapped onto an underlying byte array.
 /// This bitfield conforms to the definition in IEEE Std 802.11-2016, 9.2.2.
@@ -137,7 +138,7 @@ class LittleEndianBitField {
   }
 
   std::array<uint8_t, N> val_;
-};
+} __PACKED;
 
 // Specialize the mask function for full 64-bit fields, since (1 << 64) - 1 is
 // an error.
