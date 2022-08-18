@@ -284,10 +284,8 @@ def main():
     go_tool = os.path.join(build_goroot, 'bin', 'go')
 
     if args.vet:
-        retcode = subprocess.call(
-            [go_tool, 'vet', args.package], env=env, cwd=gopath_src)
-        if retcode != 0:
-            return retcode
+        subprocess.run([go_tool, 'vet', args.package], env=env,
+                       cwd=gopath_src).check_returncode()
 
     cmd = [go_tool]
     if args.is_test:
@@ -322,27 +320,23 @@ def main():
         os.path.relpath(args.output_path, gopath_src),
         args.package,
     ]
-    retcode = subprocess.call(cmd, env=env, cwd=gopath_src)
-    if retcode != 0:
-        return retcode
+    subprocess.run(cmd, env=env, cwd=gopath_src).check_returncode()
 
     if args.stripped_output_path:
         if args.current_os == 'mac':
-            retcode = subprocess.call(
+            subprocess.run(
                 [
                     'xcrun', 'strip', '-x', args.output_path, '-o',
                     args.stripped_output_path
                 ],
-                env=env)
+                env=env).check_returncode()
         else:
-            retcode = subprocess.call(
+            subprocess.run(
                 [
                     args.objcopy, '--strip-sections', args.output_path,
                     args.stripped_output_path
                 ],
-                env=env)
-        if retcode != 0:
-            return retcode
+                env=env).check_returncode()
 
     # TODO(fxbug.dev/27215): Also invoke the buildidtool in the case of linux
     # once buildidtool knows how to deal in Go's native build ID format.
@@ -350,16 +344,14 @@ def main():
     if args.dump_syms and supports_build_id:
         if args.current_os == 'fuchsia':
             with open(dist + '.sym', 'w') as f:
-                retcode = subprocess.call(
+                subprocess.run(
                     [args.dump_syms, '-r', '-o', 'Fuchsia', args.output_path],
-                    stdout=f)
-                if retcode != 0:
-                    return retcode
+                    stdout=f).check_returncode()
 
     if args.buildidtool and supports_build_id:
         if not args.build_id_dir:
             raise ValueError('Using --buildidtool requires --build-id-dir')
-        retcode = subprocess.call(
+        subprocess.run(
             [
                 args.buildidtool,
                 '-build-id-dir',
@@ -370,9 +362,7 @@ def main():
                 '.debug=' + args.output_path,
                 '-entry',
                 '=' + dist,
-            ])
-        if retcode != 0:
-            return retcode
+            ]).check_returncode()
 
     go_list_args = [go_tool, 'list', '-json', '-deps']
     if args.is_test:
