@@ -1267,7 +1267,7 @@ fdf_status_t DispatcherCoordinator::ShutdownDispatchersAsync(
     }
     driver_state->GetDispatchers(dispatchers);
     if (!dispatchers.empty()) {
-      auto status = driver_state->SetShutdownObserver(observer);
+      auto status = driver_state->SetShuttingDown(observer);
       if (status != ZX_OK) {
         return status;
       }
@@ -1353,15 +1353,14 @@ void DispatcherCoordinator::NotifyShutdown(Dispatcher& dispatcher) {
       return;
     }
 
-    observer = driver_state->shutdown_observer();
+    // We should take ownership of the shutdown observer before dropping the lock.
+    // This ensures we do not attempt to call it multiple times.
+    observer = driver_state->take_shutdown_observer();
     if (!observer) {
       // No one to notify. The driver state will be removed once all the dispatchers
       // are destroyed.
       return;
     }
-    // We should not clear |observer| from the driver state yet, as that would make
-    // it appear to other threads checking the driver state that the shutdown
-    // observer had already completed.
   }
 
   observer->handler(dispatcher.owner(), observer);
@@ -1373,10 +1372,11 @@ void DispatcherCoordinator::NotifyShutdown(Dispatcher& dispatcher) {
   auto driver_state = drivers_.find(dispatcher.owner());
   ZX_ASSERT(driver_state != drivers_.end());
 
-  driver_state->ClearShutdownObserver();
+  driver_state->SetShutdownComplete();
+  ZX_ASSERT(!driver_state->IsShuttingDown());
   // If the driver has completely shutdown, and all dispatchers have been destroyed,
   // the driver state can also be destroyed.
-  if (!driver_state->HasDispatchers() && !driver_state->IsShuttingDown()) {
+  if (!driver_state->HasDispatchers()) {
     drivers_.erase(driver_state);
   }
   if (drivers_.size() == 0) {

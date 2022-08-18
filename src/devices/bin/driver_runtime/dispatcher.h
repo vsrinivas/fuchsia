@@ -624,29 +624,39 @@ class DispatcherCoordinator {
       }
     }
 
-    // Sets the observer which will be notified once shutting down the driver's dispatchers
-    // completes.
-    zx_status_t SetShutdownObserver(fdf_internal_driver_shutdown_observer_t* observer) {
-      if (shutdown_observer_) {
+    // Sets the driver as shutting down, and the observer which will be notified once
+    // shutting down the driver's dispatchers completes.
+    zx_status_t SetShuttingDown(fdf_internal_driver_shutdown_observer_t* observer) {
+      if (shutdown_observer_ || driver_shutting_down_) {
         // Currently we only support one observer at a time.
         return ZX_ERR_BAD_STATE;
       }
+      driver_shutting_down_ = true;
       shutdown_observer_ = observer;
       return ZX_OK;
+    }
+
+    void SetShutdownComplete() {
+      ZX_ASSERT(driver_shutting_down_);
+      // We should have already called the shutdown observer.
+      ZX_ASSERT(!shutdown_observer_);
+      driver_shutting_down_ = false;
     }
 
     // Returns whether all dispatchers owned by the driver have completed shutdown.
     bool CompletedShutdown() { return dispatchers_.is_empty(); }
 
     // Returns whether the driver is currently being shut down.
-    bool IsShuttingDown() { return !!shutdown_observer_; }
+    bool IsShuttingDown() { return driver_shutting_down_; }
 
     // Returns whether there are dispatchers that have not yet been removed with |RemoveDispatcher|.
     bool HasDispatchers() { return !dispatchers_.is_empty() || !shutdown_dispatchers_.is_empty(); }
 
-    void ClearShutdownObserver() { shutdown_observer_ = nullptr; }
-
-    fdf_internal_driver_shutdown_observer_t* shutdown_observer() { return shutdown_observer_; }
+    fdf_internal_driver_shutdown_observer_t* take_shutdown_observer() {
+      auto observer = shutdown_observer_;
+      shutdown_observer_ = nullptr;
+      return observer;
+    }
 
    private:
     const void* driver_ = nullptr;
@@ -654,6 +664,8 @@ class DispatcherCoordinator {
     fbl::DoublyLinkedList<fbl::RefPtr<driver_runtime::Dispatcher>> shutdown_dispatchers_;
     // All other dispatchers owned by |driver|.
     fbl::DoublyLinkedList<fbl::RefPtr<driver_runtime::Dispatcher>> dispatchers_;
+    // Whether the driver is in the process of shutting down.
+    bool driver_shutting_down_ = false;
     // The observer which will be notified once shutdown completes.
     fdf_internal_driver_shutdown_observer_t* shutdown_observer_ = nullptr;
   };

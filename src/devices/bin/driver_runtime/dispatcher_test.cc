@@ -2867,3 +2867,53 @@ TEST_F(DispatcherTest, MaximumTenThreads) {
 
   driver_runtime::GetDispatcherCoordinator().Reset();
 }
+
+// Tests shutting down and destroying multiple dispatchers concurrently.
+TEST_F(DispatcherTest, ConcurrentDispatcherDestroy) {
+  auto fake_driver = CreateFakeDriver();
+  driver_context::PushDriver(fake_driver);
+  auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
+
+  // Synchronize the dispatcher shutdown handlers to return at the same time,
+  // so that |DispatcherCoordinator::NotifyShutdown| is more likely to happen concurrently.
+  fbl::Mutex lock;
+  bool dispatcher_shutdown = false;
+  fbl::ConditionVariable all_dispatchers_shutdown;
+
+  auto destructed_handler = [&](fdf_dispatcher_t* dispatcher) {
+    fdf_dispatcher_destroy(dispatcher);
+
+    fbl::AutoLock al(&lock);
+    // IF the other dispatcher has shutdown, we should signal them to wake up.
+    if (dispatcher_shutdown) {
+      all_dispatchers_shutdown.Broadcast();
+    } else {
+      // Block until the other dispatcher completes shutdown.
+      dispatcher_shutdown = true;
+      all_dispatchers_shutdown.Wait(&lock);
+    }
+  };
+
+  auto dispatcher = fdf::Dispatcher::Create(0, "", destructed_handler);
+  ASSERT_FALSE(dispatcher.is_error());
+
+  auto dispatcher2 =
+      fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS, "", destructed_handler);
+  ASSERT_FALSE(dispatcher2.is_error());
+
+  // The dispatchers will be destroyed in their shutdown handlers.
+  dispatcher->release();
+  dispatcher2->release();
+
+  fdf_internal::DriverShutdown driver_shutdown;
+  libsync::Completion completion;
+  ASSERT_OK(driver_shutdown.Begin(fake_driver, [&](const void* driver) { completion.Signal(); }));
+  ASSERT_OK(completion.Wait());
+
+  // Wait for the driver to be removed from the dispatcher coordinator's |driver_state_| map as
+  // |Reset| expects it to be empty.
+  fdf_internal_wait_until_all_dispatchers_destroyed();
+
+  // Reset the number of threads to 1.
+  driver_runtime::GetDispatcherCoordinator().Reset();
+}
