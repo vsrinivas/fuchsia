@@ -5,7 +5,6 @@
 import("//build/sdk/sdk_atom.gni")
 import("//build/sdk/sdk_noop_atom.gni")
 import("//src/developer/ffx/build/ffx_plugin.gni")
-import("emu_companion.gni")
 
 if (is_host) {
   ffx_plugin("ffx_emulator") {
@@ -33,27 +32,107 @@ if (is_host) {
     ]
   }
 
-  # AEMU is supported on mac and linux and both arm64 and x64
-  if (arm_sdk_tools || current_cpu == host_cpu) {
-    emu_companion("aemu_internal") {
-      default_binary = "//prebuilt/third_party/android/aemu/release/${current_os}-${current_cpu}/emulator"
-      prebuilt_path = "//prebuilt/third_party/android/aemu/release/${current_os}-${current_cpu}"
-      sdk_dest_path = "tools/${current_cpu}/aemu_internal"
+  # AEMU binaries are only available for x64 currently.
+  if (current_cpu == host_cpu && host_cpu == "x64") {
+    action("create_aemu_companion_data") {
+      script = "//src/developer/ffx/plugins/emulator/create_companion_data.py"
+      sources = [
+        "//prebuilt/third_party/android/aemu/release/${host_platform}/emulator",
+      ]
+      inputs =
+          [ "//prebuilt/third_party/android/aemu/release/${host_platform}" ]
+      outputs = [
+        "$target_gen_dir/${target_name}.txt",
+        "$target_gen_dir/${target_name}_metadata.json",
+      ]
+      args = [
+        "--name",
+        "aemu_internal",
+        "--binary",
+        rebase_path(sources[0], root_build_dir),
+        "--src_root",
+        rebase_path(inputs[0], root_build_dir),
+        "--dest_root",
+        "tools/${host_cpu}/aemu_internal",
+        "--output",
+        rebase_path(outputs[0], root_build_dir),
+        "--meta_out",
+        rebase_path(outputs[1], root_build_dir),
+      ]
+    }
+
+    action("create_qemu_companion_data") {
+      script = "//src/developer/ffx/plugins/emulator/create_companion_data.py"
+      sources = [
+        "//prebuilt/third_party/qemu/${host_platform}/bin/qemu-system-x86_64",
+      ]
+      inputs = [ "//prebuilt/third_party/qemu/${host_platform}" ]
+      outputs = [
+        "$target_gen_dir/${target_name}.txt",
+        "$target_gen_dir/${target_name}_metadata.json",
+      ]
+      args = [
+        "--name",
+        "qemu_internal",
+        "--binary",
+        rebase_path(sources[0], root_build_dir),
+        "--src_root",
+        rebase_path(inputs[0], root_build_dir),
+        "--dest_root",
+        "tools/${host_cpu}/qemu_internal",
+        "--output",
+        rebase_path(outputs[0], root_build_dir),
+        "--meta_out",
+        rebase_path(outputs[1], root_build_dir),
+      ]
+    }
+
+    if (host_os == "linux" || host_os == "mac") {
+      aemu_file_base = "tools/$current_cpu/aemu_internal"
+      qemu_file_base = "tools/$current_cpu/qemu_internal"
+    }
+    sdk_atom("aemu_internal") {
+      id = "sdk://tools/$current_cpu/aemu_internal"
+      category = "partner"
+
+      # Declare the support files to add for this host tool.
+      _file_list_array = get_target_outputs(":create_aemu_companion_data")
+
+      meta = {
+        dest = "${aemu_file_base}-meta.json"
+        schema = "companion_host_tool"
+        source = _file_list_array[1]
+      }
+
+      file_list = _file_list_array[0]
+
+      non_sdk_deps = [ ":create_aemu_companion_data" ]
+    }
+    sdk_atom("qemu_internal") {
+      id = "sdk://tools/$current_cpu/qemu_internal"
+      category = "partner"
+
+      # Declare the support files to add for this host tool.
+      _file_list_array = get_target_outputs(":create_qemu_companion_data")
+
+      meta = {
+        dest = "${qemu_file_base}-meta.json"
+        schema = "companion_host_tool"
+        source = _file_list_array[1]
+      }
+
+      file_list = _file_list_array[0]
+
+      non_sdk_deps = [ ":create_qemu_companion_data" ]
+    }
+    sdk_noop_atom("aemu_internal_legacy") {
+    }
+    sdk_noop_atom("qemu_internal_legacy") {
     }
   } else {
+    # There is no arm64 aemu yet.
     sdk_noop_atom("aemu_internal") {
     }
-  }
-
-  # QEMU is currently the host_cpu.
-  # TODO(fxbug.dev/106608) once arm64 is available for mac, provide it as well.
-  if (current_cpu == host_cpu) {
-    emu_companion("qemu_internal") {
-      default_binary = "//prebuilt/third_party/qemu/${current_os}-${current_cpu}/bin/qemu-system-x86_64"
-      prebuilt_path = "//prebuilt/third_party/qemu/${current_os}-${current_cpu}"
-      sdk_dest_path = "tools/${current_cpu}/qemu_internal"
-    }
-  } else {
     sdk_noop_atom("qemu_internal") {
     }
   }

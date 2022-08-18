@@ -127,18 +127,6 @@ build configuration][fx-config] and run the build command again.
 The resulting archive will be located under
 `<outdir>/sdk/archive/<name>.tar.gz`.
 
-The `core` SDK includes host tools needed for Fuchsia development. By default, when
-the SDK is built locally, it only includes host tools for the current host architecture,
-either x64 or arm64. When building the SDK on x64 hosts, you can also include arm64
-host tools by setting optional attributes for `fx` and `jiri`.
-
-   1. Add the `arm-sdk-tools` attribute to the jiri configuration by running
-    `jiri init -fetch-optional=arm-sdk-tools`. This only needs to be done once.
-   2. Update the Fuchsia checkout by running `jiri update`.
-   3. Configure to build the core sdk.
-    `fx set core.x64 --with //sdk:core --args arm_sdk_tools=true --args build_sdk_archives=true`
-   4. Build `fx build`
-
 ### Adding content to an IDK {#adding-content-to-an-idk}
 
 The first step is to make that content available to SDKs. This is done by using
