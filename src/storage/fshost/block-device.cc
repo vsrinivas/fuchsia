@@ -185,7 +185,7 @@ Copier TryReadingFilesystem(fidl::ClientEnd<fuchsia_io::Directory> export_root) 
   auto unmount = fit::defer([&export_root] {
     auto admin_client = service::ConnectAt<fuchsia_fs::Admin>(export_root);
     if (admin_client.is_ok()) {
-      auto ignore_failure = fidl::WireCall(*admin_client)->Shutdown();
+      [[maybe_unused]] auto result = fidl::WireCall(*admin_client)->Shutdown();
     }
   });
 
