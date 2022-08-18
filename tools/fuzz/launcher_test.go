@@ -56,7 +56,9 @@ func TestIncompleteQemuLauncherHandle(t *testing.T) {
 	}
 	defer handle.Release()
 
-	if _, err := loadConnectorFromHandle(handle); err == nil {
+	build, _ := newMockBuild()
+
+	if _, err := loadConnectorFromHandle(build, handle); err == nil {
 		t.Fatalf("expected error, but succeeded")
 	}
 }

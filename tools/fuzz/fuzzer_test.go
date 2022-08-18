@@ -92,6 +92,25 @@ func TestPrepare(t *testing.T) {
 	}
 }
 
+func TestIsCFF(t *testing.T) {
+	build, _ := newMockBuild()
+	f, err := build.Fuzzer("foo/bar")
+	if err != nil {
+		t.Fatalf("failed to load fuzzer: %s", err)
+	}
+	if f.isCFF() {
+		t.Fatalf("incorrect version detection for fuzzer %s", f.Name)
+	}
+
+	f, err = build.Fuzzer("cff/fuzzer")
+	if err != nil {
+		t.Fatalf("failed to load fuzzer: %s", err)
+	}
+	if !f.isCFF() {
+		t.Fatalf("incorrect version detection for fuzzer %s", f.Name)
+	}
+}
+
 const (
 	FuzzerNormal = iota
 	FuzzerSymbolizerFailure

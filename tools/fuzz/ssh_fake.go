@@ -100,7 +100,7 @@ func serveSSH(connCh chan<- *SSHConnector, errCh chan<- error, fakeFs *fakeSftp,
 
 	// Return a suitable connector for the test to use
 	addr := listener.Addr().(*net.TCPAddr)
-	connCh <- NewSSHConnector("127.0.0.1", addr.Port, pemFile)
+	connCh <- NewSSHConnector(nil, "127.0.0.1", addr.Port, pemFile)
 
 	// Indicate initialization is complete
 	errCh <- nil

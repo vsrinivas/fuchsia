@@ -148,6 +148,47 @@ func TestDoProcessMock(t *testing.T) {
 		}
 
 		exitCode = 0
+	case "ffx":
+		// Consume any leading flags and their parameters
+		i := 0
+		params := make(map[string]string)
+		for i < len(args) {
+			if !strings.HasPrefix(args[i], "-") {
+				break
+			}
+			params[args[i]] = args[i+1]
+			i += 2
+		}
+		// Validate presence of target parameter, but then ignore it
+		if _, ok := params["--target"]; !ok {
+			t.Fatalf("ffx call missing target parameter")
+		}
+		command := args[i]
+		switch command {
+		case "target":
+			if args[i+1] != "add" {
+				t.Fatalf("invalid ffx target command: %s", args)
+			}
+		case "daemon":
+			if args[i+1] != "stop" {
+				out = fmt.Sprintf("invalid ffx daemon command: %s", args)
+				exitCode = 1
+			}
+		case "fuzz":
+			subcommand := args[i+1]
+			switch subcommand {
+			case "list":
+				out = `Available fuzzers:
+  fuchsia-pkg://fuchsia.com/ffx-fuzzers#meta/one.cm
+  fuchsia-pkg://fuchsia.com/ffx-fuzzers#meta/two.cm
+Exiting...
+`
+			default:
+				t.Fatalf("invalid ffx fuzz subcommand: %s", subcommand)
+			}
+		default:
+			t.Fatalf("invalid ffx command: %s", command)
+		}
 	default:
 		exitCode = 127
 	}

@@ -28,7 +28,7 @@ func TestInstanceHandle(t *testing.T) {
 
 	instance := newTestInstance()
 	instance.Launcher = &QemuLauncher{Pid: 404, TmpDir: "/some/dir"}
-	instance.Connector = NewSSHConnector("somehost", 123, "keyfile")
+	instance.Connector = NewSSHConnector(nil, "somehost", 123, "keyfile")
 
 	handle, err := instance.Handle()
 	if err != nil {
@@ -176,7 +176,9 @@ func TestInstance(t *testing.T) {
 	}
 
 	fuzzers := i.ListFuzzers()
-	if !reflect.DeepEqual(fuzzers, []string{"foo/bar", "fail/nopid", "fail/notfound"}) {
+
+	if !reflect.DeepEqual(fuzzers, []string{"foo/bar", "fail/nopid", "fail/notfound",
+		"cff/fuzzer"}) {
 		t.Fatalf("incorrect fuzzer list: %v", fuzzers)
 	}
 

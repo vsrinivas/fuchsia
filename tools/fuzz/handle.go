@@ -100,7 +100,7 @@ func (h Handle) GetData() (*HandleData, error) {
 
 	switch rawData.ConnectorType {
 	case "SSHConnector":
-		data.connector = NewSSHConnector("", 0, "")
+		data.connector = NewSSHConnector(nil, "", 0, "")
 	case "":
 		// connector is empty
 	default:

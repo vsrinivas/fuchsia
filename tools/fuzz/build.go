@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -90,6 +91,8 @@ func NewClusterFuzzLegacyBuild() (Build, error) {
 			"llvm-symbolizer": filepath.Join(clangDir, "bin", "llvm-symbolizer"),
 			"symbolizer":      filepath.Join(buildDir, "zircon", "prebuilt", "downloads", "symbolize", "linux-x64", "symbolize"),
 			"fuzzers.json":    filepath.Join(buildDir, "out", "default", "fuzzers.json"),
+			"tests.json":      filepath.Join(buildDir, "out", "default", "tests.json"),
+			"ffx":             filepath.Join(bundleDir, "ffx"),
 		},
 		IDs: []string{
 			filepath.Join(clangDir, "lib", "debug", ".build_id"),
@@ -145,6 +148,11 @@ func NewLocalFuchsiaBuild() (Build, error) {
 		return nil, fmt.Errorf("unsupported os: %s", runtime.GOOS)
 	}
 
+	ffxPath, err := findToolPath(buildDir, "ffx")
+	if err != nil {
+		return nil, fmt.Errorf("unable to locate ffx: %s", err)
+	}
+
 	fxConfig := filepath.Join(buildDir, "fx.config")
 	file, err := os.Open(fxConfig)
 	if err != nil {
@@ -195,6 +203,8 @@ func NewLocalFuchsiaBuild() (Build, error) {
 			"llvm-symbolizer": filepath.Join(clangDir, "bin", "llvm-symbolizer"),
 			"symbolizer":      filepath.Join(buildDir, hostDir, "symbolize"),
 			"fuzzers.json":    filepath.Join(buildDir, "fuzzers.json"),
+			"tests.json":      filepath.Join(buildDir, "tests.json"),
+			"ffx":             ffxPath,
 		},
 		IDs: []string{
 			filepath.Join(clangDir, "lib", "debug", ".build-id"),
@@ -208,15 +218,66 @@ func NewLocalFuchsiaBuild() (Build, error) {
 	return build, nil
 }
 
+// Subset of data format used in tool_paths.json
+type toolMetadata struct {
+	Name string
+	Path string
+}
+
+// Resolve a tool by name using tool_paths.json in the buildDir. This is only
+// used when working in a local Fuchsia checkout.
+func findToolPath(buildDir string, toolName string) (string, error) {
+	jsonPath := filepath.Join(buildDir, "tool_paths.json")
+	jsonBlob, err := ioutil.ReadFile(jsonPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read %q: %s", jsonPath, err)
+	}
+	var metadataList []toolMetadata
+	if err := json.Unmarshal(jsonBlob, &metadataList); err != nil {
+		return "", fmt.Errorf("failed to parse %q: %s", jsonPath, err)
+	}
+
+	for _, metadata := range metadataList {
+		if metadata.Name == toolName {
+			return filepath.Join(buildDir, metadata.Path), nil
+		}
+	}
+
+	return "", fmt.Errorf("no path found for tool %q in %q", toolName, jsonPath)
+}
+
+// LoadFuzzers populates the build's map of Fuzzers. Unless an error is
+// returned, any previously loaded fuzzers will be discarded.
+func (b *BaseBuild) LoadFuzzers() error {
+	v1Fuzzers, err := b.loadV1Fuzzers()
+	if err != nil {
+		return fmt.Errorf("error loading v1 fuzzers: %s", err)
+	}
+
+	v2Fuzzers, err := b.loadV2Fuzzers()
+	if err != nil {
+		return fmt.Errorf("error loading v2 fuzzers: %s", err)
+	}
+
+	b.Fuzzers = make(map[string]*Fuzzer)
+	for name, fuzzer := range v1Fuzzers {
+		b.Fuzzers[name] = fuzzer
+	}
+	for name, fuzzer := range v2Fuzzers {
+		b.Fuzzers[name] = fuzzer
+	}
+
+	return nil
+}
+
 // Convenience type alias for heterogenous metadata objects in fuzzers.json
 type fuzzerMetadata map[string]string
 
-// LoadFuzzers reads and parses fuzzers.json to populate the build's map of Fuzzers.
-// Unless an error is returned, any previously loaded fuzzers will be discarded.
-func (b *BaseBuild) LoadFuzzers() error {
+// loadV1Fuzzers reads and parses fuzzers.json.
+func (b *BaseBuild) loadV1Fuzzers() (map[string]*Fuzzer, error) {
 	paths, err := b.Path("fuzzers.json")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	jsonPath := paths[0]
@@ -225,12 +286,12 @@ func (b *BaseBuild) LoadFuzzers() error {
 
 	jsonBlob, err := os.ReadFile(jsonPath)
 	if err != nil {
-		return fmt.Errorf("failed to read %q: %s", jsonPath, err)
+		return nil, fmt.Errorf("failed to read %q: %s", jsonPath, err)
 	}
 
 	var metadataList []fuzzerMetadata
 	if err := json.Unmarshal(jsonBlob, &metadataList); err != nil {
-		return fmt.Errorf("failed to parse %q: %s", jsonPath, err)
+		return nil, fmt.Errorf("failed to parse %q: %s", jsonPath, err)
 	}
 
 	// Condense metadata entries by label
@@ -238,7 +299,7 @@ func (b *BaseBuild) LoadFuzzers() error {
 	for _, metadata := range metadataList {
 		label, found := metadata["label"]
 		if !found {
-			return fmt.Errorf("failed to parse %q: entry missing label", jsonPath)
+			return nil, fmt.Errorf("failed to parse %q: entry missing label", jsonPath)
 		}
 
 		if _, found := metadataByLabel[label]; !found {
@@ -252,23 +313,77 @@ func (b *BaseBuild) LoadFuzzers() error {
 		}
 	}
 
-	b.Fuzzers = make(map[string]*Fuzzer)
+	fuzzers := make(map[string]*Fuzzer)
 	for label, metadata := range metadataByLabel {
 		pkg, found := metadata["package"]
 		if !found {
-			return fmt.Errorf("failed to parse %q: no package for %q", jsonPath, label)
+			return nil, fmt.Errorf("failed to parse %q: no package for %q", jsonPath, label)
 		}
 
 		fuzzer, found := metadata["fuzzer"]
 		if !found {
-			return fmt.Errorf("failed to parse %q: no fuzzer for %q", jsonPath, label)
+			return nil, fmt.Errorf("failed to parse %q: no fuzzer for %q", jsonPath, label)
 		}
 
-		f := NewFuzzer(b, pkg, fuzzer)
-		b.Fuzzers[f.Name] = f
+		f := NewV1Fuzzer(b, pkg, fuzzer)
+		fuzzers[f.Name] = f
 	}
 
-	return nil
+	return fuzzers, nil
+}
+
+// Relevant subset of tests.json metadata format
+type testMetadata struct {
+	BuildRule  string `json:"build_rule"`
+	PackageUrl string `json:"package_url"`
+}
+type testEntry struct {
+	Test testMetadata
+}
+
+// loadV2Fuzzers reads and parses tests.json.
+func (b *BaseBuild) loadV2Fuzzers() (map[string]*Fuzzer, error) {
+	paths, err := b.Path("tests.json")
+	if err != nil {
+		return nil, err
+	}
+
+	jsonPath := paths[0]
+
+	fuzzers := make(map[string]*Fuzzer)
+
+	// During transition, only load v2 fuzzers opportunistically
+	if !fileExists(jsonPath) {
+		glog.Warningf("Skipping v2 fuzzers, because %q does not exist", jsonPath)
+		return fuzzers, nil
+	}
+
+	glog.Infof("Loading fuzzers from %q", jsonPath)
+
+	jsonBlob, err := ioutil.ReadFile(jsonPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read %q: %s", jsonPath, err)
+	}
+
+	var testList []testEntry
+	if err := json.Unmarshal(jsonBlob, &testList); err != nil {
+		return nil, fmt.Errorf("failed to parse %q: %s", jsonPath, err)
+	}
+
+	pkgUrlRegex := regexp.MustCompile(`^fuchsia-pkg://[^/]+/([^#]+)#meta/([^\.]+)\.cm$`)
+	for _, entry := range testList {
+		if entry.Test.BuildRule != "fuchsia_fuzzer_package" {
+			continue
+		}
+		m := pkgUrlRegex.FindStringSubmatch(entry.Test.PackageUrl)
+		if m == nil {
+			return nil, fmt.Errorf("found test with unexpected url: %v", entry)
+		}
+		fuzzer := NewV2Fuzzer(b, m[1], m[2])
+		fuzzers[fuzzer.Name] = fuzzer
+	}
+
+	return fuzzers, nil
 }
 
 // ListFuzzers lists the names of fuzzers present in the build, excluding any

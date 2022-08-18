@@ -84,7 +84,7 @@ func NewQemuLauncher(build Build) *QemuLauncher {
 
 // Find an unused TCP port on the host
 func getFreePort() (int, error) {
-	listener, err := net.Listen("tcp", "localhost:0")
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return 0, err
 	}
@@ -419,7 +419,8 @@ func (q *QemuLauncher) Start() (conn Connector, returnErr error) {
 	outPipe.Close()
 	cmd.Process.Release()
 
-	return NewSSHConnector("localhost", port, q.sshKey), nil
+	// FFX requires IP addresses, so we can't use `localhost`
+	return NewSSHConnector(q.build, "127.0.0.1", port, q.sshKey), nil
 }
 
 // IsRunning checks if the qemu process is alive

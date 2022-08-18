@@ -6,6 +6,7 @@ package fuzz
 
 import (
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strings"
@@ -24,7 +25,7 @@ import (
 // end-to-end tests in e2e_test.go.
 
 func TestSSHConnectorHandle(t *testing.T) {
-	c := NewSSHConnector("somehost", 123, "keyfile")
+	c := NewSSHConnector(nil, "somehost", 123, "keyfile")
 
 	handle, err := NewHandleWithData(HandleData{connector: c})
 	if err != nil {
@@ -32,8 +33,10 @@ func TestSSHConnectorHandle(t *testing.T) {
 	}
 	defer handle.Release()
 
+	build, _ := newMockBuild()
+
 	// Note: we don't serialize here because that is covered by handle tests
-	reloadedConn, err := loadConnectorFromHandle(handle)
+	reloadedConn, err := loadConnectorFromHandle(build, handle)
 	if err != nil {
 		t.Fatalf("error loading connector from handle: %s", err)
 	}
@@ -50,7 +53,7 @@ func TestSSHConnectorHandle(t *testing.T) {
 
 func TestIncompleteSSHConnectorHandle(t *testing.T) {
 	// Construct an object that isn't fully initialized
-	c := NewSSHConnector("", 123, "")
+	c := NewSSHConnector(nil, "", 123, "")
 
 	handle, err := NewHandleWithData(HandleData{connector: c})
 	if err != nil {
@@ -58,7 +61,8 @@ func TestIncompleteSSHConnectorHandle(t *testing.T) {
 	}
 	defer handle.Release()
 
-	if _, err := loadConnectorFromHandle(handle); err == nil {
+	build, _ := newMockBuild()
+	if _, err := loadConnectorFromHandle(build, handle); err == nil {
 		t.Fatalf("expected error, but succeeded")
 	}
 }
@@ -76,6 +80,52 @@ func TestSSHCommand(t *testing.T) {
 
 	if string(out) != arg+"\n" {
 		t.Fatalf("unexpected output: %q", string(out))
+	}
+}
+
+func TestFfxCall(t *testing.T) {
+	// Enable subprocess mocking (for ffx)
+	ExecCommand = mockCommand
+	defer func() { ExecCommand = exec.Command }()
+
+	c, _ := getFakeSSHConnector(t, 0)
+	defer c.Close()
+
+	out, err := c.FfxCall("fuzz", "list")
+	if err != nil {
+		t.Fatalf("error running FFX command: %s", err)
+	}
+
+	if !strings.Contains(out, "fuchsia-pkg://fuchsia.com/ffx-fuzzers#meta/one.cm") {
+		t.Fatalf("unexpected output: %q", string(out))
+	}
+}
+
+func TestFfxCallWithoutFfx(t *testing.T) {
+	// Enable subprocess mocking (for ffx)
+	ExecCommand = mockCommand
+	defer func() { ExecCommand = exec.Command }()
+
+	c, _ := getFakeSSHConnector(t, 0)
+	defer c.Close()
+	brokenBuild := c.build.(*mockBuild)
+	brokenBuild.paths["ffx"] = invalidPath
+
+	if _, err := c.FfxCall("fuzz", "list"); err == nil {
+		t.Fatalf("expected failure calling missing ffx but succeeded")
+	}
+}
+
+func TestFfxCallInvalidCommand(t *testing.T) {
+	// Enable subprocess mocking (for ffx)
+	ExecCommand = mockCommand
+	defer func() { ExecCommand = exec.Command }()
+
+	c, _ := getFakeSSHConnector(t, 0)
+	defer c.Close()
+
+	if _, err := c.FfxCall("daemon", "pet"); err == nil {
+		t.Fatalf("unexpectedly succeeded running invalid ffx command")
 	}
 }
 
@@ -399,6 +449,9 @@ func getFakeSSHConnector(t *testing.T, failureCount uint) (*SSHConnector, *fakeS
 	}
 
 	conn.reconnectInterval = 1 * time.Millisecond
+
+	build, _ := newMockBuild()
+	conn.build = build
 
 	// Monitor for server errors
 	go func() {

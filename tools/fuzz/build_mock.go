@@ -29,8 +29,8 @@ func (b *mockBuild) Prepare() error {
 	b.paths = map[string]string{
 		"zbitool": "/path/to/zbi",
 	}
-	for _, k := range []string{"blk", "fvm", "zbi", "blk", "kernel",
-		"symbolize", "llvm-symbolizer", "fuzzers.json"} {
+	for _, k := range []string{"blk", "fvm", "zbi", "blk", "kernel", "ffx",
+		"symbolize", "llvm-symbolizer", "fuzzers.json", "tests.json"} {
 		b.paths[k] = fmt.Sprintf("/path/to/%s", k)
 	}
 	// Note: qemu is a special case because it needs to be a real tempfile,
@@ -63,13 +63,15 @@ func (b *mockBuild) enableQemu(t *testing.T, fakeType string) (tmpDir string) {
 func (b *mockBuild) Fuzzer(name string) (*Fuzzer, error) {
 	switch name {
 	case "example-fuzzers/noop_fuzzer":
-		return NewFuzzer(b, "example-fuzzers", "noop_fuzzer"), nil
+		return NewV1Fuzzer(b, "example-fuzzers", "noop_fuzzer"), nil
 	case "foo/bar":
-		return NewFuzzer(b, "foo", "bar"), nil
+		return NewV1Fuzzer(b, "foo", "bar"), nil
 	case "fail/nopid":
-		return NewFuzzer(b, "fail", "nopid"), nil
+		return NewV1Fuzzer(b, "fail", "nopid"), nil
 	case "fail/notfound":
-		return NewFuzzer(b, "fail", "notfound"), nil
+		return NewV1Fuzzer(b, "fail", "notfound"), nil
+	case "cff/fuzzer":
+		return NewV2Fuzzer(b, "cff", "fuzzer"), nil
 	default:
 		return nil, fmt.Errorf("invalid fuzzer name %q", name)
 	}
@@ -98,5 +100,5 @@ func (b *mockBuild) Symbolize(in io.ReadCloser, out io.Writer) error {
 }
 
 func (b *mockBuild) ListFuzzers() []string {
-	return []string{"foo/bar", "fail/nopid", "fail/notfound"}
+	return []string{"foo/bar", "fail/nopid", "fail/notfound", "cff/fuzzer"}
 }

@@ -72,3 +72,8 @@ func (c *mockConnector) GetSysLog(pid int) (string, error) {
 	}
 	return strings.Join(lines, "\n"), nil
 }
+
+func (c *mockConnector) FfxCall(args ...string) (string, error) {
+	// Echo back
+	return strings.Join(args, " "), nil
+}

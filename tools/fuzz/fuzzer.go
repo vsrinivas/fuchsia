@@ -22,12 +22,12 @@ type Fuzzer struct {
 	// Name is `package/binary`
 	Name string
 
-	pkg     string
-	cmx     string
-	pkgUrl  string
-	url     string
-	args    []string
-	options map[string]string
+	pkg      string
+	manifest string
+	pkgUrl   string
+	url      string
+	args     []string
+	options  map[string]string
 }
 
 // 1 is the default `exitcode` from SanitizerCommonFlags
@@ -40,22 +40,35 @@ var expectedFuzzerReturnCodes = []int{
 	77, // libFuzzer crash
 }
 
-// NewFuzzer constructs a fuzzer object with the given pkg/fuzzer name
-func NewFuzzer(build Build, pkg, fuzzer string) *Fuzzer {
+// NewV1Fuzzer and NewV2Fuzzer construct a fuzzer object with the given pkg/fuzzer name
+func NewV1Fuzzer(build Build, pkg, fuzzer string) *Fuzzer {
+	return newFuzzer(build, pkg, fuzzer, "cmx")
+}
+func NewV2Fuzzer(build Build, pkg, fuzzer string) *Fuzzer {
+	return newFuzzer(build, pkg, fuzzer, "cm")
+}
+func newFuzzer(build Build, pkg, fuzzer, manifestSuffix string) *Fuzzer {
 	return &Fuzzer{
-		build:  build,
-		Name:   fmt.Sprintf("%s/%s", pkg, fuzzer),
-		pkg:    pkg,
-		cmx:    fmt.Sprintf("%s.cmx", fuzzer),
-		pkgUrl: "fuchsia-pkg://fuchsia.com/" + pkg,
-		url:    fmt.Sprintf("fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx", pkg, fuzzer),
+		build:    build,
+		Name:     fmt.Sprintf("%s/%s", pkg, fuzzer),
+		pkg:      pkg,
+		manifest: fmt.Sprintf("%s.%s", fuzzer, manifestSuffix),
+		pkgUrl:   "fuchsia-pkg://fuchsia.com/" + pkg,
+		url: fmt.Sprintf("fuchsia-pkg://fuchsia.com/%s#meta/%s.%s",
+			pkg, fuzzer, manifestSuffix),
 	}
 }
 
 func (f *Fuzzer) IsExample() bool {
 	// Temporarily allow specific examples through for testing ClusterFuzz behavior in production
 	return f.pkg == "example-fuzzers" &&
-		!(f.cmx == "out_of_memory_fuzzer.cmx" || f.cmx == "toy_example_arbitrary.cmx")
+		!(f.Name == "example-fuzzers/out_of_memory_fuzzer" ||
+			f.Name == "example-fuzzers/toy_example_arbitrary")
+}
+
+// Return whether or not this is a Component Fuzzing Framework fuzzer
+func (f *Fuzzer) isCFF() bool {
+	return strings.HasSuffix(f.manifest, ".cm")
 }
 
 // Map paths as referenced by ClusterFuzz to internally-used paths as seen by
@@ -84,9 +97,11 @@ func (f *Fuzzer) AbsPath(relpath string) string {
 	} else if strings.HasPrefix(relpath, "pkg/") {
 		return fmt.Sprintf("/pkgfs/packages/%s/0/%s", f.pkg, relpath[4:])
 	} else if strings.HasPrefix(relpath, "data/") {
-		return fmt.Sprintf("/data/r/sys/fuchsia.com:%s:0#meta:%s/%s", f.pkg, f.cmx, relpath[5:])
+		return fmt.Sprintf("/data/r/sys/fuchsia.com:%s:0#meta:%s/%s",
+			f.pkg, f.manifest, relpath[5:])
 	} else if strings.HasPrefix(relpath, "tmp/") {
-		return fmt.Sprintf("/tmp/r/sys/fuchsia.com:%s:0#meta:%s/%s", f.pkg, f.cmx, relpath[4:])
+		return fmt.Sprintf("/tmp/r/sys/fuchsia.com:%s:0#meta:%s/%s",
+			f.pkg, f.manifest, relpath[4:])
 	} else {
 		return fmt.Sprintf("/%s", relpath)
 	}

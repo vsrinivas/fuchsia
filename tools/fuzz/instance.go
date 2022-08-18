@@ -70,7 +70,7 @@ func loadInstanceFromHandle(handle Handle) (Instance, error) {
 		return nil, fmt.Errorf("Error configuring build: %s", err)
 	}
 
-	connector, err := loadConnectorFromHandle(handle)
+	connector, err := loadConnectorFromHandle(build, handle)
 	if err != nil {
 		return nil, err
 	}

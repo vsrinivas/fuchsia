@@ -13,6 +13,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -52,9 +53,16 @@ type Connector interface {
 
 	// Retrieves a syslog from the instance, filtered to the given process ID
 	GetSysLog(pid int) (string, error)
+
+	// Make an FFX call to the target and returns its output.
+	// This possibly makes sense as a separate Connector type, eventually, but:
+	// - FFX relies on knowing the SSH connection details
+	// - We currently only support one Connector per Instance
+	FfxCall(args ...string) (string, error)
 }
 
-// An SSHConnector is a Connector that uses SSH/SFTP for transport
+// An SSHConnector is a Connector that uses SSH/SFTP for transport, along with
+// FFX for integrating with CFF fuzzers
 // Note: exported fields will be serialized to the handle
 type SSHConnector struct {
 	// Host can be any IP or hostname as accepted by net.Dial
@@ -64,6 +72,8 @@ type SSHConnector struct {
 	// authentication
 	Key string
 
+	build      Build
+	ffxPath    string
 	client     *ssh.Client
 	sftpClient *sftp.Client
 
@@ -74,9 +84,47 @@ type SSHConnector struct {
 const sshReconnectCount = 6
 const defaultSSHReconnectInterval = 15 * time.Second
 
-func NewSSHConnector(host string, port int, key string) *SSHConnector {
-	return &SSHConnector{Host: host, Port: port, Key: key,
+func NewSSHConnector(build Build, host string, port int, key string) *SSHConnector {
+	return &SSHConnector{build: build, Host: host, Port: port, Key: key,
 		reconnectInterval: defaultSSHReconnectInterval}
+}
+
+func (c *SSHConnector) initializeFfx() error {
+	// Resolve path to FFX tool
+	paths, err := c.build.Path("ffx")
+	if err != nil {
+		return fmt.Errorf("no ffx tool found: %s", err)
+	}
+	c.ffxPath = paths[0]
+
+	// Need to stop the daemon in order to allow for the SSH config to be picked up
+	// TODO(fxbug.dev/106121): In theory, we don't need to do this each time,
+	// but then we'd need to figure out the state of ffx.
+	// Note: This is not ideal in the case of multiple undercoat calls in
+	// parallel, but this doesn't happen currently.  Eventually, we should use
+	// isolated FFX daemons per-instance once this is supported.
+	if _, err := c.FfxCall("daemon", "stop"); err != nil {
+		// Mark as uninitialized
+		c.ffxPath = ""
+		return fmt.Errorf("error stopping ffx daemon: %s", err)
+	}
+
+	// Add the target to the daemon
+	addr := net.JoinHostPort(c.Host, strconv.Itoa(c.Port))
+	if _, err := c.FfxCall("-c", "ssh.priv="+c.Key, "target", "add", addr); err != nil {
+		// Mark as uninitialized
+		c.ffxPath = ""
+		return fmt.Errorf("error adding target to ffx: %s", err)
+	}
+
+	// Make sure the connection to fuzz manager is working
+	if _, err := c.FfxCall("fuzz", "list"); err != nil {
+		// Mark as uninitialized
+		c.ffxPath = ""
+		return fmt.Errorf("error initializing ffx fuzz: %s", err)
+	}
+
+	return nil
 }
 
 // Connect to the remote server
@@ -136,7 +184,6 @@ func (c *SSHConnector) Connect() error {
 	}
 
 	return fmt.Errorf("error connecting ssh")
-
 }
 
 // Close any open connections
@@ -325,7 +372,33 @@ func (c *SSHConnector) Put(hostSrc string, targetDst string) error {
 	return nil
 }
 
-func loadConnectorFromHandle(handle Handle) (Connector, error) {
+// FfxCall runs the specific command via FFX
+func (c *SSHConnector) FfxCall(args ...string) (string, error) {
+	// TODO(fxbug.dev/106110): Once we only support v2 fuzzer builds, we could
+	// safely connect earlier.
+	if c.ffxPath == "" {
+		if err := c.initializeFfx(); err != nil {
+			return "", fmt.Errorf("error connecting ffx: %s", err)
+		}
+	}
+
+	addr := net.JoinHostPort(c.Host, strconv.Itoa(c.Port))
+	args = append([]string{"--target", addr}, args...)
+
+	cmd := NewCommand(c.ffxPath, args...)
+	output, err := cmd.Output()
+	if err != nil {
+		if cmderr, ok := err.(*exec.ExitError); ok {
+			glog.Errorf("ffx stdout: %s", output)
+			glog.Errorf("ffx stderr: %s", cmderr.Stderr)
+		}
+
+		return "", fmt.Errorf("error calling ffx: %s", err)
+	}
+	return string(output), nil
+}
+
+func loadConnectorFromHandle(build Build, handle Handle) (Connector, error) {
 	handleData, err := handle.GetData()
 	if err != nil {
 		return nil, err
@@ -343,6 +416,7 @@ func loadConnectorFromHandle(handle Handle) (Connector, error) {
 		if conn.Key == "" {
 			return nil, fmt.Errorf("key not found in handle")
 		}
+		conn.build = build
 		return conn, nil
 	default:
 		return nil, fmt.Errorf("unknown connector type: %T", handleData.connector)
