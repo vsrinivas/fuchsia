@@ -27,13 +27,13 @@ pub fn verify_product_budgets(args: ProductSizeCheckArgs) -> Result<()> {
             return Ok(());
         }
     };
-    let max_contents_size = blobfs_contents
-        .maximum_contents_size
-        .ok_or(format_err!("BlobFS max_contents_size is not specified in images manifest"))?;
+    let max_contents_size = blobfs_contents.maximum_contents_size;
     let package_sizes = calculate_package_sizes(&blobfs_contents)?;
     let total_blobfs_size = calculate_total_blobfs_size(&blobfs_contents)?;
-    let contents_fit = total_blobfs_size <= max_contents_size;
-
+    let contents_fit = match max_contents_size {
+        None => true,
+        Some(max) => total_blobfs_size <= max,
+    };
     if let Some(base_assembly_manifest) = args.base_assembly_manifest {
         let other_images_manifest = read_config(&base_assembly_manifest)?;
         let other_blobfs_contents =
@@ -53,7 +53,7 @@ pub fn verify_product_budgets(args: ProductSizeCheckArgs) -> Result<()> {
         Err(format_err!(
             "BlobFS contents size ({}) exceeds max_contents_size ({})",
             total_blobfs_size,
-            max_contents_size
+            max_contents_size.unwrap(), // Value is always present when budget is exceeded.
         ))
     }
 }
