@@ -13,7 +13,8 @@ protocol Controller {
     /// Run the setup step for this test. Often, this involves formatting the filesystem of choice
     /// onto the block device, and perhaps setting up a base of files to work with.
     Setup(struct {
-        device_path string:MAX_DEVICE_PATH;
+        device_label string:MAX_DEVICE_PATH;
+        device_path string:<MAX_DEVICE_PATH, optional>;
         seed uint64;
     }) -> (struct {}) error zx.status;
 
@@ -21,14 +22,16 @@ protocol Controller {
     /// test, which will run indefinitely. It's expected that this load will be interrupted by a
     /// power cycle.
     Test(struct {
-        device_path string:MAX_DEVICE_PATH;
+        device_label string:MAX_DEVICE_PATH;
+        device_path string:<MAX_DEVICE_PATH, optional>;
         seed uint64;
     });
 
     /// Run the verify step for this test. Most of the time it involves running fsck on the block
     /// device and returning the result.
     Verify(struct {
-        device_path string:MAX_DEVICE_PATH;
+        device_label string:MAX_DEVICE_PATH;
+        device_path string:<MAX_DEVICE_PATH, optional>;
         seed uint64;
     }) -> (struct {}) error zx.status;
 };

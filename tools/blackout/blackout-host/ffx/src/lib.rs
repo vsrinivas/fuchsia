@@ -51,15 +51,15 @@ async fn step(
 
     let BlackoutCommand { step } = cmd;
     match step {
-        BlackoutSubcommand::Setup(SetupCommand { block_device, seed }) => proxy
-            .setup(&block_device, seed)
+        BlackoutSubcommand::Setup(SetupCommand { device_label, device_path, seed }) => proxy
+            .setup(&device_label, device_path.as_deref(), seed)
             .await?
             .map_err(|e| anyhow::anyhow!("setup failed: {}", Status::from_raw(e).to_string()))?,
-        BlackoutSubcommand::Test(TestCommand { block_device, seed }) => {
-            proxy.test(&block_device, seed)?
+        BlackoutSubcommand::Test(TestCommand { device_label, device_path, seed }) => {
+            proxy.test(&device_label, device_path.as_deref(), seed)?
         }
-        BlackoutSubcommand::Verify(VerifyCommand { block_device, seed }) => {
-            proxy.verify(&block_device, seed).await?.map_err(|e| {
+        BlackoutSubcommand::Verify(VerifyCommand { device_label, device_path, seed }) => {
+            proxy.verify(&device_label, device_path.as_deref(), seed).await?.map_err(|e| {
                 let status = Status::from_raw(e);
                 if status == Status::BAD_STATE {
                     anyhow::anyhow!("verification failure")

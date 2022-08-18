@@ -26,11 +26,26 @@ pub mod static_tree;
 #[async_trait]
 pub trait Test {
     /// Setup the test run on the given block_device.
-    async fn setup(&self, block_device: String, seed: u64) -> Result<()>;
-    /// Run the test body on the given block_device.
-    async fn test(&self, block_device: String, seed: u64) -> Result<()>;
-    /// Verify the consistency of the filesystem on the block_device.
-    async fn verify(&self, block_device: String, seed: u64) -> Result<()>;
+    async fn setup(
+        &self,
+        device_label: String,
+        device_path: Option<String>,
+        seed: u64,
+    ) -> Result<()>;
+    /// Run the test body on the given device_path.
+    async fn test(
+        &self,
+        device_label: String,
+        device_path: Option<String>,
+        seed: u64,
+    ) -> Result<()>;
+    /// Verify the consistency of the filesystem on the device_path.
+    async fn verify(
+        &self,
+        device_label: String,
+        device_path: Option<String>,
+        seed: u64,
+    ) -> Result<()>;
 }
 
 struct BlackoutController(ControllerRequestStream);
@@ -79,16 +94,18 @@ async fn handle_request<T: Test + Copy>(
 
 async fn handle_controller<T: Test + Copy>(test: T, request: ControllerRequest) -> Result<()> {
     match request {
-        ControllerRequest::Setup { responder, device_path, seed } => {
-            let mut res = test.setup(device_path, seed).await.map_err(|e| {
+        ControllerRequest::Setup { responder, device_label, device_path, seed } => {
+            let mut res = test.setup(device_label, device_path, seed).await.map_err(|e| {
                 tracing::error!("{}", e);
                 zx::Status::INTERNAL.into_raw()
             });
             responder.send(&mut res)?;
         }
-        ControllerRequest::Test { device_path, seed, .. } => test.test(device_path, seed).await?,
-        ControllerRequest::Verify { responder, device_path, seed } => {
-            let mut res = test.verify(device_path, seed).await.map_err(|e| {
+        ControllerRequest::Test { device_label, device_path, seed, .. } => {
+            test.test(device_label, device_path, seed).await?
+        }
+        ControllerRequest::Verify { responder, device_label, device_path, seed } => {
+            let mut res = test.verify(device_label, device_path, seed).await.map_err(|e| {
                 // The test tries failing on purpose, so only print errors as warnings.
                 tracing::warn!("{}", e);
                 zx::Status::BAD_STATE.into_raw()

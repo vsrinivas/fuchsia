@@ -13,22 +13,38 @@ struct IntegrationTest;
 
 #[async_trait]
 impl Test for IntegrationTest {
-    async fn setup(&self, _block_device: String, _seed: u64) -> Result<()> {
+    async fn setup(
+        &self,
+        _device_label: String,
+        _device_path: Option<String>,
+        _seed: u64,
+    ) -> Result<()> {
         tracing::info!("setup called");
         Ok(())
     }
 
-    async fn test(&self, _block_device: String, _seed: u64) -> Result<()> {
+    async fn test(
+        &self,
+        _device_label: String,
+        _device_path: Option<String>,
+        _seed: u64,
+    ) -> Result<()> {
         tracing::info!("test called");
         loop {}
     }
 
-    async fn verify(&self, block_device: String, _seed: u64) -> Result<()> {
-        tracing::info!("verify called with {}", block_device);
+    async fn verify(
+        &self,
+        device_label: String,
+        device_path: Option<String>,
+        _seed: u64,
+    ) -> Result<()> {
+        tracing::info!("verify called with {}", device_label);
 
         // We use the block device path to pass an indicator to fail verification, to test the
         // error propagation.
-        if block_device == "fail" {
+        if device_label == "fail" {
+            assert_eq!(device_label, device_path.unwrap());
             Err(anyhow::anyhow!("verification failure"))
         } else {
             Ok(())

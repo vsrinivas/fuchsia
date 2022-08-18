@@ -103,7 +103,8 @@ struct FfxRunner {
     package: String,
     component: String,
     seed: Seed,
-    block_device: String,
+    device_label: String,
+    device_path: Option<String>,
 }
 
 impl FfxRunner {
@@ -112,14 +113,16 @@ impl FfxRunner {
         package: &str,
         component: &str,
         seed: Seed,
-        block_device: &str,
+        device_label: &str,
+        device_path: Option<String>,
     ) -> Arc<dyn Runner> {
         Arc::new(FfxRunner {
             ffx,
             package: package.to_string(),
             component: component.to_string(),
             seed,
-            block_device: block_device.to_string(),
+            device_label: device_label.to_string(),
+            device_path,
         })
     }
 
@@ -145,22 +148,24 @@ impl FfxRunner {
     }
 
     async fn run_subcommand(&self, target: &str, command: &str) -> Result<(), CommandError> {
-        let output = self
-            .ffx
-            .ffx(&[
-                "--target",
-                target,
-                "--config",
-                "storage_dev=true",
-                "storage",
-                "blackout",
-                "step",
-                command,
-                &self.block_device,
-                &self.seed.get().to_string(),
-            ])
-            .await
-            .expect("failed to convert output");
+        let seed = self.seed.get().to_string();
+        let mut args = vec![
+            "--target",
+            target,
+            "--config",
+            "storage_dev=true",
+            "storage",
+            "blackout",
+            "step",
+            command,
+            &self.device_label,
+            &seed,
+        ];
+        if let Some(path) = &self.device_path {
+            args.push("--device-path");
+            args.push(path);
+        }
+        let output = self.ffx.ffx(&args).await.expect("failed to convert output");
         if output.status.success() {
             Ok(())
         } else {
@@ -211,9 +216,10 @@ impl SetupStep {
         package: &str,
         component: &str,
         seed: Seed,
-        block_device: &str,
+        device_label: &str,
+        device_path: Option<String>,
     ) -> Self {
-        Self { runner: FfxRunner::new(ffx, package, component, seed, block_device) }
+        Self { runner: FfxRunner::new(ffx, package, component, seed, device_label, device_path) }
     }
 }
 
@@ -239,10 +245,14 @@ impl LoadStep {
         package: &str,
         component: &str,
         seed: Seed,
-        block_device: &str,
+        device_label: &str,
+        device_path: Option<String>,
         duration: Duration,
     ) -> Self {
-        Self { runner: FfxRunner::new(ffx, package, component, seed, block_device), duration }
+        Self {
+            runner: FfxRunner::new(ffx, package, component, seed, device_label, device_path),
+            duration,
+        }
     }
 }
 
@@ -326,12 +336,13 @@ impl VerifyStep {
         package: &str,
         component: &str,
         seed: Seed,
-        block_device: &str,
+        device_label: &str,
+        device_path: Option<String>,
         num_retries: u32,
         retry_timeout: Duration,
     ) -> Self {
         Self {
-            runner: FfxRunner::new(ffx, package, component, seed, block_device),
+            runner: FfxRunner::new(ffx, package, component, seed, device_label, device_path),
             num_retries,
             retry_timeout,
         }

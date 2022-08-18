@@ -12,7 +12,8 @@ use {
 
 async fn failure(reboot: bool, bootserver: bool, dmc_reboot: bool) -> Result<()> {
     let opts = blackout_host::CommonOpts {
-        block_device: String::from("fail"),
+        device_label: Some(String::from("fail")),
+        device_path: Some(String::from("fail")),
         seed: None,
         reboot: if dmc_reboot {
             blackout_host::RebootType::Dmc
@@ -46,7 +47,8 @@ async fn success(
     dmc_reboot: bool,
 ) -> Result<()> {
     let opts = blackout_host::CommonOpts {
-        block_device: String::from("/nothing"),
+        device_label: None,
+        device_path: None,
         seed: None,
         reboot: if dmc_reboot {
             blackout_host::RebootType::Dmc

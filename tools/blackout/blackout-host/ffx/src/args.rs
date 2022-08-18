@@ -28,9 +28,14 @@ pub enum BlackoutSubcommand {
 #[derive(argh::FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "setup")]
 pub struct SetupCommand {
-    /// block device to run the test on.
+    /// block device partition label the test is going to be run on. Setup will likely create this
+    /// partition in fvm.
     #[argh(positional)]
-    pub block_device: String,
+    pub device_label: String,
+    /// optional block device path to run the test on. If no path is given the test will find an
+    /// appropriate device.
+    #[argh(option)]
+    pub device_path: Option<String>,
     /// seed to use for any random operations.
     #[argh(positional)]
     pub seed: u64,
@@ -40,9 +45,13 @@ pub struct SetupCommand {
 #[derive(argh::FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "test")]
 pub struct TestCommand {
-    /// block device to run the test on.
+    /// block device partition label the test is going to be run on.
     #[argh(positional)]
-    pub block_device: String,
+    pub device_label: String,
+    /// optional block device path to run the test on. If no path is given the test will find an
+    /// appropriate device.
+    #[argh(option)]
+    pub device_path: Option<String>,
     /// seed to use for any random operations.
     #[argh(positional)]
     pub seed: u64,
@@ -52,9 +61,13 @@ pub struct TestCommand {
 #[derive(argh::FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "verify")]
 pub struct VerifyCommand {
-    /// block device to run the test on.
+    /// block device partition label the test is going to be run on.
     #[argh(positional)]
-    pub block_device: String,
+    pub device_label: String,
+    /// optional block device path to run the test on. If no path is given the test will find an
+    /// appropriate device.
+    #[argh(option)]
+    pub device_path: Option<String>,
     /// seed to use for any random operations.
     #[argh(positional)]
     pub seed: u64,

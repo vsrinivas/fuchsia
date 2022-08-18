@@ -18,7 +18,13 @@ struct MinfsTree;
 
 #[async_trait]
 impl Test for MinfsTree {
-    async fn setup(&self, block_device: String, _seed: u64) -> Result<()> {
+    async fn setup(
+        &self,
+        _device_label: String,
+        device_path: Option<String>,
+        _seed: u64,
+    ) -> Result<()> {
+        let block_device = device_path.unwrap();
         tracing::info!("provided block device: {}", block_device);
         let dev = blackout_target::find_dev(&block_device).await?;
         tracing::info!("using equivalent block device: {}", dev);
@@ -30,7 +36,13 @@ impl Test for MinfsTree {
         Ok(())
     }
 
-    async fn test(&self, block_device: String, seed: u64) -> Result<()> {
+    async fn test(
+        &self,
+        _device_label: String,
+        device_path: Option<String>,
+        seed: u64,
+    ) -> Result<()> {
+        let block_device = device_path.unwrap();
         tracing::info!("provided block device: {}", block_device);
         let dev = blackout_target::find_dev(&block_device).await?;
         tracing::info!("using equivalent block device: {}", dev);
@@ -63,7 +75,13 @@ impl Test for MinfsTree {
         }
     }
 
-    async fn verify(&self, block_device: String, _seed: u64) -> Result<()> {
+    async fn verify(
+        &self,
+        _device_label: String,
+        device_path: Option<String>,
+        _seed: u64,
+    ) -> Result<()> {
+        let block_device = device_path.unwrap();
         tracing::info!("provided block device: {}", block_device);
         let dev = blackout_target::find_dev(&block_device).await?;
         tracing::info!("using equivalent block device: {}", dev);

@@ -28,6 +28,8 @@ use steps::{LoadStep, RebootStep, SetupStep, TestStep, VerifyStep};
 
 pub mod integration;
 
+const BLACKOUT_DEVICE_LABEL: &'static str = "blackout";
+
 fn box_message(message: String) -> String {
     let line_len = message.len() + 2;
     let line: String = std::iter::repeat('━').take(line_len).collect();
@@ -128,9 +130,13 @@ pub enum BlackoutError {
 /// running the test N times and collecting failure statistics.
 #[derive(Clone)]
 pub struct CommonOpts {
-    /// The block device on the target device to use for testing. WARNING: the test can (and likely
+    /// The optional label for the partition to run the test on. If non is provided, a default will
+    /// be used.
+    pub device_label: Option<String>,
+    /// The optional path to the block device on the target device to use for testing. If none is
+    /// provided, the test will find an appropriate device. WARNING: the test can (and likely
     /// will!) format this device. Don't use a main system partition!
-    pub block_device: String,
+    pub device_path: Option<String>,
     /// [Optional] A seed to use for all random operations. Tests are NOT deterministic relative to
     /// the provided seed. The operations will be identical, but because of the non-deterministic
     /// timing-dependent nature of the tests, the exact time the reboot is triggered in relation to
@@ -211,7 +217,8 @@ struct Test {
     package: String,
     component: String,
     seed: Seed,
-    block_device: String,
+    device_label: String,
+    device_path: Option<String>,
     reboot_type: RebootType,
     run_mode: RunMode,
     steps: Vec<Box<dyn TestStep>>,
@@ -225,14 +232,16 @@ impl fmt::Display for Test {
     package: {:?},
     component: {:?},
     seed: {:?},
-    block_device: {:?},
+    device_label: {:?},
+    device_path: {:?},
     reboot_type: {:?},
     run_mode: {:?},
 }}",
             self.package,
             self.component,
             self.seed,
-            self.block_device,
+            self.device_label,
+            self.device_path,
             self.reboot_type,
             self.run_mode,
         )
@@ -248,7 +257,8 @@ impl Test {
             package: package.to_string(),
             component: component.to_string(),
             seed: Seed::new(opts.seed),
-            block_device: opts.block_device,
+            device_label: opts.device_label.unwrap_or(BLACKOUT_DEVICE_LABEL.to_string()),
+            device_path: opts.device_path,
             reboot_type: opts.reboot,
             run_mode: match (opts.iterations, opts.run_until_failure) {
                 (None, false) => RunMode::Once,
@@ -385,7 +395,8 @@ impl TestEnv {
             &self.test.package,
             &self.test.component,
             self.test.seed.clone(),
-            &self.test.block_device,
+            &self.test.device_label,
+            self.test.device_path.clone(),
         )));
         self
     }
@@ -399,7 +410,8 @@ impl TestEnv {
             &self.test.package,
             &self.test.component,
             self.test.seed.clone(),
-            &self.test.block_device,
+            &self.test.device_label,
+            self.test.device_path.clone(),
             duration,
         )));
         self
@@ -425,7 +437,8 @@ impl TestEnv {
             &self.test.package,
             &self.test.component,
             self.test.seed.clone(),
-            &self.test.block_device,
+            &self.test.device_label,
+            self.test.device_path.clone(),
             num_retries,
             retry_timeout,
         )));
@@ -499,7 +512,8 @@ mod tests {
 
     fn fake_test(iterations: Option<u64>, run_until_failure: bool) -> Test {
         let opts = CommonOpts {
-            block_device: "/fake/block/device".into(),
+            device_label: None,
+            device_path: None,
             seed: None,
             reboot: RebootType::Software,
             iterations,
