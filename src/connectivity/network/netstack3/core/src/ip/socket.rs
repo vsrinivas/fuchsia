@@ -1029,14 +1029,16 @@ mod tests {
         ip::{AddrSubnet, SubnetEither},
         Witness,
     };
+    use nonzero_ext::nonzero;
     use packet::{Buf, InnerPacketBuilder, ParseBuffer};
     use packet_formats::{
-        ip::IpPacket,
-        ipv4::{Ipv4OnlyMeta, Ipv4Packet, Ipv4PacketBuilder},
-        ipv6::Ipv6PacketBuilder,
+        icmp::{IcmpEchoReply, IcmpIpExt, IcmpMessage, IcmpUnusedCode},
+        ip::{IpExt, IpPacket},
+        ipv4::{Ipv4OnlyMeta, Ipv4Packet},
         testutil::{parse_ethernet_frame, parse_ip_packet_in_ethernet_frame},
     };
     use specialize_ip_macro::{ip_test, specialize_ip};
+    use test_case::test_case;
 
     use super::*;
     use crate::{device::DeviceId, testutil::*, Ctx};
@@ -1065,13 +1067,151 @@ mod tests {
         expected_result: Result<(), IpSockCreationError>,
     }
 
-    #[specialize_ip]
-    fn test_new<I: Ip>(test_case: NewSocketTestCase) {
-        #[ipv4]
-        let (cfg, proto) = (DUMMY_CONFIG_V4, Ipv4Proto::Icmp);
+    trait IpSocketIpExt: Ip + TestIpExt + IcmpIpExt + IpExt + crate::ip::IpExt {
+        const DISPATCH_RECEIVE_COUNTER: &'static str;
+    }
 
-        #[ipv6]
-        let (cfg, proto) = (DUMMY_CONFIG_V6, Ipv6Proto::Icmpv6);
+    impl IpSocketIpExt for Ipv4 {
+        const DISPATCH_RECEIVE_COUNTER: &'static str = "dispatch_receive_ipv4_packet";
+    }
+    impl IpSocketIpExt for Ipv6 {
+        const DISPATCH_RECEIVE_COUNTER: &'static str = "dispatch_receive_ipv6_packet";
+    }
+
+    trait IpSocketBuilder: Default {
+        fn set_hop_limit(&mut self, hop_limit: NonZeroU8);
+    }
+
+    impl IpSocketBuilder for Ipv4SocketBuilder {
+        fn set_hop_limit(&mut self, hop_limit: NonZeroU8) {
+            let _: &mut Self = self.ttl(hop_limit);
+        }
+    }
+
+    impl IpSocketBuilder for Ipv6SocketBuilder {
+        fn set_hop_limit(&mut self, hop_limit: NonZeroU8) {
+            let _: &mut Self = self.hop_limit(hop_limit);
+        }
+    }
+
+    #[specialize_ip]
+    fn remove_all_local_addrs<I: Ip>(
+        sync_ctx: &mut crate::testutil::DummySyncCtx,
+        ctx: &mut crate::testutil::DummyNonSyncCtx,
+    ) {
+        let devices =
+            crate::ip::device::IpDeviceContext::<Ipv4, _>::with_devices(sync_ctx, |devices| {
+                devices.collect::<Vec<_>>()
+            });
+        for device in devices {
+            #[ipv4]
+            let subnets =
+                crate::ip::device::with_assigned_ipv4_addr_subnets(sync_ctx, device, |addrs| {
+                    addrs.collect::<Vec<_>>()
+                });
+            #[ipv6]
+            let subnets =
+                crate::ip::device::with_assigned_ipv6_addr_subnets(sync_ctx, device, |addrs| {
+                    addrs.collect::<Vec<_>>()
+                });
+
+            for subnet in subnets {
+                crate::device::del_ip_addr(sync_ctx, ctx, device, &subnet.addr())
+                    .expect("failed to remove addr from device");
+            }
+        }
+    }
+
+    #[ip_test]
+    #[test_case(NewSocketTestCase {
+            local_ip_type: AddressType::Unroutable,
+            remote_ip_type: AddressType::Remote,
+            device_type: DeviceType::Unspecified,
+            expected_result: Err(IpSockRouteError::Unroutable(
+                IpSockUnroutableError::LocalAddrNotAssigned,
+            )
+            .into()),
+        }; "unroutable local to remote")]
+    #[test_case(NewSocketTestCase {
+            local_ip_type: AddressType::LocallyOwned,
+            remote_ip_type: AddressType::Unroutable,
+            device_type: DeviceType::Unspecified,
+            expected_result: Err(IpSockRouteError::Unroutable(
+                IpSockUnroutableError::NoRouteToRemoteAddr,
+            )
+            .into()),
+        }; "local to unroutable remote")]
+    #[test_case(NewSocketTestCase {
+            local_ip_type: AddressType::LocallyOwned,
+            remote_ip_type: AddressType::Remote,
+            device_type: DeviceType::Unspecified,
+            expected_result: Ok(()),
+        }; "local to remote")]
+    #[test_case(NewSocketTestCase {
+            local_ip_type: AddressType::Unspecified { can_select: true },
+            remote_ip_type: AddressType::Remote,
+            device_type: DeviceType::Unspecified,
+            expected_result: Ok(()),
+        }; "unspecified to remote")]
+    #[test_case(NewSocketTestCase {
+            local_ip_type: AddressType::Unspecified { can_select: true },
+            remote_ip_type: AddressType::Remote,
+            device_type: DeviceType::LocalDevice,
+            expected_result: Ok(()),
+        }; "unspecified to remote through local device")]
+    #[test_case(NewSocketTestCase {
+            local_ip_type: AddressType::Unspecified { can_select: true },
+            remote_ip_type: AddressType::Remote,
+            device_type: DeviceType::OtherDevice,
+            expected_result: Err(IpSockRouteError::Unroutable(
+                IpSockUnroutableError::NoRouteToRemoteAddr,
+            )
+            .into()),
+        }; "unspecified to remote through other device")]
+    #[test_case(NewSocketTestCase {
+            local_ip_type: AddressType::Unspecified { can_select: false },
+            remote_ip_type: AddressType::Remote,
+            device_type: DeviceType::Unspecified,
+            expected_result: Err(IpSockRouteError::NoLocalAddrAvailable.into()),
+        }; "new unspcified to remote can't select")]
+    #[test_case(NewSocketTestCase {
+            local_ip_type: AddressType::Remote,
+            remote_ip_type: AddressType::Remote,
+            device_type: DeviceType::Unspecified,
+            expected_result: Err(IpSockRouteError::Unroutable(
+                IpSockUnroutableError::LocalAddrNotAssigned,
+            )
+            .into()),
+        }; "new remote to remote")]
+    #[test_case(NewSocketTestCase {
+            local_ip_type: AddressType::LocallyOwned,
+            remote_ip_type: AddressType::LocallyOwned,
+            device_type: DeviceType::Unspecified,
+            expected_result: Ok(()),
+        }; "new local to local")]
+    #[test_case(NewSocketTestCase {
+            local_ip_type: AddressType::Unspecified { can_select: true },
+            remote_ip_type: AddressType::LocallyOwned,
+            device_type: DeviceType::Unspecified,
+            expected_result: Ok(()),
+        }; "new unspecified to local")]
+    #[test_case(NewSocketTestCase {
+            local_ip_type: AddressType::Remote,
+            remote_ip_type: AddressType::LocallyOwned,
+            device_type: DeviceType::Unspecified,
+            expected_result: Err(IpSockRouteError::Unroutable(
+                IpSockUnroutableError::LocalAddrNotAssigned,
+            )
+            .into()),
+        }; "new remote to local")]
+    fn test_new<I: Ip + IpSocketIpExt>(test_case: NewSocketTestCase)
+    where
+        DummySyncCtx:
+            IpSocketHandler<I, DummyNonSyncCtx> + IpDeviceIdContext<I, DeviceId = DeviceId>,
+        <DummySyncCtx as IpSocketHandler<I, DummyNonSyncCtx>>::Builder: IpSocketBuilder,
+    {
+        let cfg = I::DUMMY_CONFIG;
+        let proto = I::ICMP_IP_PROTO;
 
         let DummyEventDispatcherConfig { local_ip, remote_ip, subnet, local_mac: _, remote_mac: _ } =
             cfg;
@@ -1089,48 +1229,6 @@ mod tests {
         let NewSocketTestCase { local_ip_type, remote_ip_type, expected_result, device_type } =
             test_case;
 
-        #[ipv4]
-        let remove_all_local_addrs =
-            |sync_ctx: &mut crate::testutil::DummySyncCtx,
-             ctx: &mut crate::testutil::DummyNonSyncCtx| {
-                let devices = crate::ip::device::IpDeviceContext::<Ipv4, _>::with_devices(
-                    sync_ctx,
-                    |devices| devices.collect::<Vec<_>>(),
-                );
-                for device in devices {
-                    let subnets = crate::ip::device::with_assigned_ipv4_addr_subnets(
-                        sync_ctx,
-                        device,
-                        |addrs| addrs.collect::<Vec<_>>(),
-                    );
-                    for subnet in subnets {
-                        crate::device::del_ip_addr(sync_ctx, ctx, device, &subnet.addr())
-                            .expect("failed to remove addr from device");
-                    }
-                }
-            };
-
-        #[ipv6]
-        let remove_all_local_addrs =
-            |sync_ctx: &mut crate::testutil::DummySyncCtx,
-             ctx: &mut crate::testutil::DummyNonSyncCtx| {
-                let devices = crate::ip::device::IpDeviceContext::<Ipv6, _>::with_devices(
-                    sync_ctx,
-                    |devices| devices.collect::<Vec<_>>(),
-                );
-                for device in devices {
-                    let subnets = crate::ip::device::with_assigned_ipv6_addr_subnets(
-                        sync_ctx,
-                        device,
-                        |addrs| addrs.collect::<Vec<_>>(),
-                    );
-                    for subnet in subnets {
-                        crate::device::del_ip_addr(sync_ctx, ctx, device, &subnet.addr())
-                            .expect("failed to remove addr from device");
-                    }
-                }
-            };
-
         const LOCAL_DEVICE: DeviceId = DeviceId::new_ethernet(0);
         const OTHER_DEVICE: DeviceId = DeviceId::new_ethernet(1);
         let local_device = match device_type {
@@ -1144,23 +1242,19 @@ mod tests {
             AddressType::Remote => (remote_ip, Some(remote_ip)),
             AddressType::Unspecified { can_select } => {
                 if !can_select {
-                    remove_all_local_addrs(&mut sync_ctx, &mut non_sync_ctx);
+                    remove_all_local_addrs::<I>(&mut sync_ctx, &mut non_sync_ctx);
                 }
                 (local_ip, None)
             }
             AddressType::Unroutable => {
-                remove_all_local_addrs(&mut sync_ctx, &mut non_sync_ctx);
+                remove_all_local_addrs::<I>(&mut sync_ctx, &mut non_sync_ctx);
                 (local_ip, Some(local_ip))
             }
         };
 
-        let (to_ip, device) = match remote_ip_type {
-            AddressType::LocallyOwned => (
-                local_ip,
-                IpDeviceIdContext::<I>::loopback_id(&sync_ctx)
-                    .expect("local test should have loopback device"),
-            ),
-            AddressType::Remote => (remote_ip, LOCAL_DEVICE),
+        let to_ip = match remote_ip_type {
+            AddressType::LocallyOwned => local_ip,
+            AddressType::Remote => remote_ip,
             AddressType::Unspecified { can_select: _ } => {
                 panic!("remote_ip_type cannot be unspecified")
             }
@@ -1176,25 +1270,9 @@ mod tests {
                     }
                 }
 
-                (remote_ip, LOCAL_DEVICE)
+                remote_ip
             }
         };
-
-        #[ipv4]
-        let builder = Ipv4PacketBuilder::new(
-            expected_from_ip,
-            to_ip,
-            crate::ip::DEFAULT_TTL.get(),
-            Ipv4Proto::Icmp,
-        );
-
-        #[ipv6]
-        let builder = Ipv6PacketBuilder::new(
-            expected_from_ip,
-            to_ip,
-            crate::ip::DEFAULT_TTL.get(),
-            Ipv6Proto::Icmpv6,
-        );
 
         let get_expected_result = |template| expected_result.map(|()| template);
 
@@ -1219,223 +1297,54 @@ mod tests {
         );
         assert_eq!(res, get_expected_result(template.clone()));
 
-        #[ipv4]
-        {
-            // TTL is specified.
-            let mut builder = Ipv4SocketBuilder::default();
-            let _: &mut Ipv4SocketBuilder = builder.ttl(NonZeroU8::new(1).unwrap());
-            assert_eq!(
-                IpSocketHandler::<Ipv4, _>::new_ip_socket(
-                    &mut sync_ctx,
-                    &mut non_sync_ctx,
-                    local_device,
-                    from_ip,
-                    to_ip,
-                    proto,
-                    Some(builder),
-                ),
-                {
-                    // The template socket, but with the TTL set to 1.
-                    let mut x = template.clone();
-                    let IpSock::<Ipv4, DeviceId> { defn } = &mut x;
-                    defn.hop_limit = NonZeroU8::new(1);
-                    get_expected_result(x)
-                }
-            );
-        }
-
-        #[ipv6]
-        {
-            // Hop Limit is specified.
-            const SPECIFIED_HOP_LIMIT: u8 = 1;
-            let mut builder = Ipv6SocketBuilder::default();
-            let _: &mut Ipv6SocketBuilder =
-                builder.hop_limit(NonZeroU8::new(SPECIFIED_HOP_LIMIT).unwrap());
-            assert_eq!(
-                IpSocketHandler::<Ipv6, _>::new_ip_socket(
-                    &mut sync_ctx,
-                    &mut non_sync_ctx,
-                    local_device,
-                    from_ip,
-                    to_ip,
-                    proto,
-                    Some(builder),
-                ),
-                {
-                    let mut template_with_hop_limit = template.clone();
-                    let IpSock::<Ipv6, DeviceId> { defn } = &mut template_with_hop_limit;
-                    defn.hop_limit = NonZeroU8::new(SPECIFIED_HOP_LIMIT);
-                    let builder =
-                        Ipv6PacketBuilder::new(expected_from_ip, to_ip, SPECIFIED_HOP_LIMIT, proto);
-                    get_expected_result(template_with_hop_limit)
-                }
-            );
-        }
+        // Hop Limit is specified.
+        const SPECIFIED_HOP_LIMIT: NonZeroU8 = nonzero!(1u8);
+        let mut builder = <DummySyncCtx as IpSocketHandler<I, _>>::Builder::default();
+        builder.set_hop_limit(SPECIFIED_HOP_LIMIT);
+        assert_eq!(
+            IpSocketHandler::new_ip_socket(
+                &mut sync_ctx,
+                &mut non_sync_ctx,
+                local_device,
+                from_ip,
+                to_ip,
+                proto,
+                Some(builder),
+            ),
+            {
+                // The template socket, but with the TTL set to 1.
+                let mut template_with_hop_limit = template.clone();
+                let IpSock { defn } = &mut template_with_hop_limit;
+                defn.hop_limit = Some(SPECIFIED_HOP_LIMIT);
+                get_expected_result(template_with_hop_limit)
+            }
+        );
     }
 
     #[ip_test]
-    fn test_new_unroutable_local_to_remote<I: Ip>() {
-        test_new::<I>(NewSocketTestCase {
-            local_ip_type: AddressType::Unroutable,
-            remote_ip_type: AddressType::Remote,
-            device_type: DeviceType::Unspecified,
-            expected_result: Err(IpSockRouteError::Unroutable(
-                IpSockUnroutableError::LocalAddrNotAssigned,
-            )
-            .into()),
-        });
-    }
-
-    #[ip_test]
-    fn test_new_local_to_unroutable_remote<I: Ip>() {
-        test_new::<I>(NewSocketTestCase {
-            local_ip_type: AddressType::LocallyOwned,
-            remote_ip_type: AddressType::Unroutable,
-            device_type: DeviceType::Unspecified,
-            expected_result: Err(IpSockRouteError::Unroutable(
-                IpSockUnroutableError::NoRouteToRemoteAddr,
-            )
-            .into()),
-        });
-    }
-
-    #[ip_test]
-    fn test_new_local_to_remote<I: Ip>() {
-        test_new::<I>(NewSocketTestCase {
-            local_ip_type: AddressType::LocallyOwned,
-            remote_ip_type: AddressType::Remote,
-            device_type: DeviceType::Unspecified,
-            expected_result: Ok(()),
-        });
-    }
-
-    #[ip_test]
-    fn test_new_unspecified_to_remote<I: Ip>() {
-        test_new::<I>(NewSocketTestCase {
-            local_ip_type: AddressType::Unspecified { can_select: true },
-            remote_ip_type: AddressType::Remote,
-            device_type: DeviceType::Unspecified,
-            expected_result: Ok(()),
-        });
-    }
-
-    #[ip_test]
-    fn test_new_unspecified_to_remote_through_local_device<I: Ip>() {
-        test_new::<I>(NewSocketTestCase {
-            local_ip_type: AddressType::Unspecified { can_select: true },
-            remote_ip_type: AddressType::Remote,
-            device_type: DeviceType::LocalDevice,
-            expected_result: Ok(()),
-        });
-    }
-
-    #[ip_test]
-    fn test_new_unspecified_to_remote_through_other_device<I: Ip>() {
-        test_new::<I>(NewSocketTestCase {
-            local_ip_type: AddressType::Unspecified { can_select: true },
-            remote_ip_type: AddressType::Remote,
-            device_type: DeviceType::OtherDevice,
-            expected_result: Err(IpSockRouteError::Unroutable(
-                IpSockUnroutableError::NoRouteToRemoteAddr,
-            )
-            .into()),
-        });
-    }
-
-    #[ip_test]
-    fn test_new_unspecified_to_remote_cant_select<I: Ip>() {
-        test_new::<I>(NewSocketTestCase {
-            local_ip_type: AddressType::Unspecified { can_select: false },
-            remote_ip_type: AddressType::Remote,
-            device_type: DeviceType::Unspecified,
-            expected_result: Err(IpSockRouteError::NoLocalAddrAvailable.into()),
-        });
-    }
-
-    #[ip_test]
-    fn test_new_remote_to_remote<I: Ip>() {
-        test_new::<I>(NewSocketTestCase {
-            local_ip_type: AddressType::Remote,
-            remote_ip_type: AddressType::Remote,
-            device_type: DeviceType::Unspecified,
-            expected_result: Err(IpSockRouteError::Unroutable(
-                IpSockUnroutableError::LocalAddrNotAssigned,
-            )
-            .into()),
-        });
-    }
-
-    #[ip_test]
-    fn test_new_local_to_local<I: Ip>() {
-        test_new::<I>(NewSocketTestCase {
-            local_ip_type: AddressType::LocallyOwned,
-            remote_ip_type: AddressType::LocallyOwned,
-            device_type: DeviceType::Unspecified,
-            expected_result: Ok(()),
-        });
-    }
-
-    #[ip_test]
-    fn test_new_unspecified_to_local<I: Ip>() {
-        test_new::<I>(NewSocketTestCase {
-            local_ip_type: AddressType::Unspecified { can_select: true },
-            remote_ip_type: AddressType::LocallyOwned,
-            device_type: DeviceType::Unspecified,
-            expected_result: Ok(()),
-        });
-    }
-
-    #[ip_test]
-    fn test_new_remote_to_local<I: Ip>() {
-        test_new::<I>(NewSocketTestCase {
-            local_ip_type: AddressType::Remote,
-            remote_ip_type: AddressType::LocallyOwned,
-            device_type: DeviceType::Unspecified,
-            expected_result: Err(IpSockRouteError::Unroutable(
-                IpSockUnroutableError::LocalAddrNotAssigned,
-            )
-            .into()),
-        });
-    }
-
-    #[specialize_ip]
-    fn test_send_local<I: Ip>(from_addr_type: AddressType, to_addr_type: AddressType) {
+    #[test_case(AddressType::LocallyOwned, AddressType::LocallyOwned; "local to local")]
+    #[test_case(AddressType::Unspecified { can_select: true },
+            AddressType::LocallyOwned; "unspecified to local")]
+    #[test_case(AddressType::LocallyOwned, AddressType::Remote; "local to remote")]
+    fn test_send_local<I: Ip + IpSocketIpExt>(
+        from_addr_type: AddressType,
+        to_addr_type: AddressType,
+    ) where
+        DummySyncCtx: BufferIpSocketHandler<I, DummyNonSyncCtx, packet::EmptyBuf>
+            + IpDeviceIdContext<I, DeviceId = DeviceId>,
+        IcmpEchoReply: IcmpMessage<I, &'static [u8], Code = IcmpUnusedCode>,
+    {
         set_logger_for_test();
 
-        use packet_formats::icmp::{IcmpEchoRequest, IcmpPacketBuilder, IcmpUnusedCode};
+        use packet_formats::icmp::{IcmpEchoRequest, IcmpPacketBuilder};
 
-        #[ipv4]
-        let (subnet, local_ip, remote_ip, local_mac, proto, socket_builder) = {
-            let DummyEventDispatcherConfig::<Ipv4Addr> {
-                subnet,
-                local_ip,
-                remote_ip,
-                local_mac,
-                remote_mac: _,
-            } = DUMMY_CONFIG_V4;
-
-            (subnet, local_ip, remote_ip, local_mac, Ipv4Proto::Icmp, Ipv4SocketBuilder::default())
-        };
-
-        #[ipv6]
-        let (subnet, local_ip, remote_ip, local_mac, proto, socket_builder) = {
-            let DummyEventDispatcherConfig::<Ipv6Addr> {
-                subnet,
-                local_ip,
-                remote_ip,
-                local_mac,
-                remote_mac: _,
-            } = DUMMY_CONFIG_V6;
-
-            (
-                subnet,
-                local_ip,
-                remote_ip,
-                local_mac,
-                Ipv6Proto::Icmpv6,
-                Ipv6SocketBuilder::default(),
-            )
-        };
+        let DummyEventDispatcherConfig::<I::Addr> {
+            subnet,
+            local_ip,
+            remote_ip,
+            local_mac,
+            remote_mac: _,
+        } = I::DUMMY_CONFIG;
 
         let mut builder = DummyEventDispatcherBuilder::default();
         let device_id = DeviceId::new_ethernet(builder.add_device(local_mac));
@@ -1502,8 +1411,8 @@ mod tests {
             None,
             from_ip,
             to_ip,
-            proto,
-            Some(socket_builder),
+            I::ICMP_IP_PROTO,
+            Some(<DummySyncCtx as IpSocketHandler<I, _>>::Builder::default()),
         )
         .unwrap();
 
@@ -1511,8 +1420,8 @@ mod tests {
         let body = &[1, 2, 3, 4];
         let buffer = Buf::new(body.to_vec(), ..)
             .encapsulate(IcmpPacketBuilder::<I, &[u8], _>::new(
-                expected_from_ip,
-                to_ip,
+                expected_from_ip.get(),
+                to_ip.get(),
                 IcmpUnusedCode,
                 reply,
             ))
@@ -1532,29 +1441,7 @@ mod tests {
 
         assert_eq!(non_sync_ctx.frames_sent().len(), 0);
 
-        #[ipv4]
-        assert_eq!(get_counter_val(&non_sync_ctx, "dispatch_receive_ipv4_packet"), 1);
-
-        #[ipv6]
-        assert_eq!(get_counter_val(&non_sync_ctx, "dispatch_receive_ipv6_packet"), 1);
-    }
-
-    #[ip_test]
-    fn test_send_local_to_local<I: Ip>() {
-        test_send_local::<I>(AddressType::LocallyOwned, AddressType::LocallyOwned);
-    }
-
-    #[ip_test]
-    fn test_send_unspecified_to_local<I: Ip>() {
-        test_send_local::<I>(
-            AddressType::Unspecified { can_select: true },
-            AddressType::LocallyOwned,
-        );
-    }
-
-    #[ip_test]
-    fn test_send_local_to_remote<I: Ip>() {
-        test_send_local::<I>(AddressType::LocallyOwned, AddressType::Remote);
+        assert_eq!(get_counter_val(&non_sync_ctx, I::DISPATCH_RECEIVE_COUNTER), 1);
     }
 
     #[ip_test]
