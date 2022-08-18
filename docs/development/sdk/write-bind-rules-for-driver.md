@@ -150,8 +150,8 @@ binary target:
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/i2c_temperature/controller/BUILD.bazel" region_tag="cc_binary" adjust_indentation="auto" highlight="12" %}
 ```
 
-Note: For more information on the generated bind library, see the
-[FIDL tutorial][fidl-tutorial] for drivers.
+Note: For more information on the generated bind library, see
+[Bind library code generation tutorial for Bazel][bind-library-tutorial].
 
 ## Appendices
 
@@ -200,4 +200,4 @@ type NodeAddArgs = table {
 [binding-prev-h]: /src/lib/ddk/include/lib/ddk/binding_priv.h
 [protodefs-h]: /src/lib/ddk/include/lib/ddk/protodefs.h
 [fuchsia-i2c-bind-library]: /src/devices/bind/fuchsia.i2c/fuchsia.i2c.bind
-[fidl-tutorial]: /docs/development/drivers/tutorials/fidl-tutorial.md
+[bind-library-tutorial]: /docs/development/sdk/bind-libraries-codegen-bazel.md
