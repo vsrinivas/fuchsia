@@ -155,7 +155,7 @@ where
     }
     /// Tests to see if this resource is ready to be read from.
     /// If it is not, it arranges for the current task to receive a notification
-    /// when a "writable" signal arrives.
+    /// when a "readable" signal arrives.
     pub fn poll_readable(&self, cx: &mut Context<'_>) -> Poll<Result<(), zx::Status>> {
         let receiver = self.signal_receiver.receiver();
         if (receiver.signals.load(Ordering::SeqCst) & (READABLE | ERROR | HUP)) != 0 {
