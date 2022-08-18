@@ -58,7 +58,7 @@ _rust_sanitizers = [ "asan" ]
 #           [boolean] Indicates whether to omit this fuzzer from the Fuchsia fuzzers package.
 #             Implies `fuzz_host`. Defaults to false.
 #
-#   visibility (optional)
+#   deps, visibility (optional)
 #     [list] Usual meaning.
 #
 # TODO(fxbug.dev/60168): Deprecated parameters. These will be removed when consumers have updated.
@@ -306,6 +306,9 @@ template("fuzzer_package") {
       visibility = [ ":*" ]
       package_name = _package_name
       deps = test_deps
+      if (defined(invoker.deps)) {
+        deps += invoker.deps
+      }
       foreach(fuzzer, tested) {
         deps += [ "${fuzzer.label}_test_component" ]
       }
