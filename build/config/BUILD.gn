@@ -101,10 +101,6 @@ config("compiler") {
   ]
 
   if (!is_gcc) {
-    # TODO(fxbug.dev/92521): Remove this after we address the wlan-hw-sim-test
-    # failures with the new Clang ABI.
-    cflags += [ "-fclang-abi-compat=13.0" ]
-
     configs += [
       ":clang_defaults",
       ":ffp_contract",
