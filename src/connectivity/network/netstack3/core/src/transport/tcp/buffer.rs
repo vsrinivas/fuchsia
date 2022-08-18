@@ -24,11 +24,6 @@ pub trait Buffer: Default + Debug {
 
     /// Returns an empty buffer.
     fn empty() -> Self;
-
-    /// Take the buffer out.
-    fn take(&mut self) -> Self {
-        mem::replace(self, Self::empty())
-    }
 }
 
 /// A buffer supporting TCP receiving operations.
@@ -430,6 +425,19 @@ impl Assembler {
             }
             outstanding.truncate(outstanding.len() - merge_left - merge_right + 1);
         }
+    }
+}
+
+/// A conversion trait that converts the object that Bindings give us into a
+/// pair of receive and send buffers.
+pub trait IntoBuffers<R: ReceiveBuffer, S: SendBuffer> {
+    /// Converts to receive and send buffers.
+    fn into_buffers(self) -> (R, S);
+}
+
+impl<R: Default + ReceiveBuffer, S: Default + SendBuffer> IntoBuffers<R, S> for () {
+    fn into_buffers(self) -> (R, S) {
+        Default::default()
     }
 }
 

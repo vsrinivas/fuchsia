@@ -52,7 +52,9 @@ enum SocketId {
     Listener(ListenerId),
 }
 
-pub(crate) trait SocketWorkerDispatcher {
+pub(crate) trait SocketWorkerDispatcher:
+    TcpNonSyncContext<NetstackEndBuffers = (), ClientEndBuffers = ()>
+{
     /// Registers a newly created listener with its local zircon socket.
     ///
     /// # Panics
@@ -78,7 +80,10 @@ impl SocketWorkerDispatcher for crate::bindings::BindingsNonSyncCtxImpl {
 impl TcpNonSyncContext for crate::bindings::BindingsNonSyncCtxImpl {
     type ReceiveBuffer = RingBuffer;
     type SendBuffer = RingBuffer;
-    type ClientEndBuffer = ();
+    // TODO(https://fxbug.dev/104013): These are `()` for now but should be
+    // changed to zircon sockets.
+    type ClientEndBuffers = ();
+    type NetstackEndBuffers = ();
 
     fn on_new_connection(&mut self, listener: ListenerId) {
         self.tcp_listeners
@@ -88,7 +93,8 @@ impl TcpNonSyncContext for crate::bindings::BindingsNonSyncCtxImpl {
             .expect("failed to signal that the new connection is available");
     }
 
-    fn new_buffers() -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ClientEndBuffer) {
+    fn new_passive_open_buffers() -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ClientEndBuffers)
+    {
         (RingBuffer::default(), RingBuffer::default(), ())
     }
 }
@@ -221,6 +227,7 @@ where
                                         non_sync_ctx,
                                         bound,
                                         SocketAddr { ip, port },
+                                        (),
                                     )
                                     .map_err(IntoErrno::into_errno)?;
                                     self.id = SocketId::Connection(connected);
@@ -239,6 +246,7 @@ where
                                         non_sync_ctx,
                                         unbound,
                                         SocketAddr { ip, port },
+                                        (),
                                     )
                                     .map_err(IntoErrno::into_errno)?;
                                     self.id = SocketId::Connection(connected);
@@ -307,7 +315,7 @@ where
                             SocketId::Listener(listener) => {
                                 let (accepted, addr) =
                                     accept::<I, _, _>(sync_ctx, non_sync_ctx, listener)
-                                        .map(|(x, a)| {
+                                        .map(|(x, a, ())| {
                                             (
                                                 x,
                                                 I::SocketAddress::new(*a.ip, a.port.get())

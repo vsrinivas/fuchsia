@@ -56,26 +56,58 @@ use crate::{
         SocketTypeState as _, SocketTypeStateMut as _,
     },
     transport::tcp::{
-        buffer::{ReceiveBuffer, SendBuffer},
+        buffer::{IntoBuffers, ReceiveBuffer, SendBuffer},
         socket::{demux::tcp_serialize_segment, isn::IsnGenerator},
-        state::{Closed, Initial, State},
+        state::{Closed, Initial, State, Takeable},
     },
     Instant,
 };
 
 /// Non-sync context for TCP.
+///
+/// The relationship between buffers defined in the context is as follows:
+///
+/// The application holds onto the client end buffers and uses them to read or
+/// write data. The peer end of those buffers will be held by the state machine
+/// inside the netstack. Specialized receive/send buffers will be derived from
+/// the netstack end buffers.
+///
+/// +-------------------------------+
+/// |       +--------------+        |
+/// |       |  client end  |        |
+/// |       |    buffers   |        |
+/// |       +------+-------+        |
+/// |              |     application|
+/// +--------------+----------------+
+///                |
+/// +--------------+----------------+
+/// |              |        netstack|
+/// |   +---+------+-------+---+    |
+/// |   |   | netstack end |   |    |
+/// |   | +-+-  buffers   -+-+ |    |
+/// |   +-+-+--------------+-+-+    |
+/// |     v                  v      |
+/// |receive buffer     send buffer |
+/// +-------------------------------+
 pub trait TcpNonSyncContext: InstantContext {
     /// Receive buffer used by TCP.
     type ReceiveBuffer: ReceiveBuffer;
     /// Send buffer used by TCP.
     type SendBuffer: SendBuffer;
-    /// The object that the application holds onto to read/write data.
-    type ClientEndBuffer: Debug;
+    /// The object that will be returned by the state machine when a passive
+    /// open connection becomes established. The bindings can use this object
+    /// to read/write bytes from/into the created buffers.
+    type ClientEndBuffers: Debug;
+    /// The object that is needed from the bindings to initiate a connection;
+    /// it will be later used to construct buffers when the connection becomes
+    /// established.
+    type NetstackEndBuffers: Debug + Takeable + IntoBuffers<Self::ReceiveBuffer, Self::SendBuffer>;
 
     /// A new connection is ready to be accepted on the listener.
     fn on_new_connection(&mut self, listener: ListenerId);
-    /// Creates new buffers together with the client end.
-    fn new_buffers() -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ClientEndBuffer);
+    /// Creates new buffers and returns the object that Bindings need to
+    /// read/write from/into the created buffers.
+    fn new_passive_open_buffers() -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ClientEndBuffers);
 }
 
 /// Sync context for TCP.
@@ -118,8 +150,9 @@ impl<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext> SocketMapStateSpec for TcpSo
     type ListenerId = MaybeListenerId;
     type ConnId = ConnectionId;
 
-    type ListenerState = MaybeListener;
-    type ConnState = Connection<I, D, C::Instant, C::ReceiveBuffer, C::SendBuffer>;
+    type ListenerState = MaybeListener<C::ClientEndBuffers>;
+    type ConnState =
+        Connection<I, D, C::Instant, C::ReceiveBuffer, C::SendBuffer, C::NetstackEndBuffers>;
 
     type ListenerSharingState = ();
     type ConnSharingState = ();
@@ -224,7 +257,10 @@ impl<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext> PortAllocImpl
 }
 
 impl<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext> TcpSockets<I, D, C> {
-    fn get_listener_by_id_mut(&mut self, id: ListenerId) -> Option<&mut Listener> {
+    fn get_listener_by_id_mut(
+        &mut self,
+        id: ListenerId,
+    ) -> Option<&mut Listener<C::ClientEndBuffers>> {
         self.socketmap.listeners_mut().get_by_id_mut(&MaybeListenerId::from(id)).map(
             |(maybe_listener, _sharing, _local_addr)| match maybe_listener {
                 MaybeListener::Bound(_) => {
@@ -262,9 +298,10 @@ enum Acceptor {
 /// connection can be in any state as long as both the local and remote socket
 /// addresses are specified.
 #[derive(Debug)]
-struct Connection<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer> {
+struct Connection<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen>
+{
     acceptor: Option<Acceptor>,
-    state: State<II, R, S>,
+    state: State<II, R, S, ActiveOpen>,
     ip_sock: IpSock<I, D>,
 }
 
@@ -274,15 +311,15 @@ struct Connection<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: Sen
 /// [`Connection`], only the local address is specified.
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
-struct Listener {
+struct Listener<PassiveOpen> {
     backlog: NonZeroUsize,
-    ready: VecDeque<ConnectionId>,
+    ready: VecDeque<(ConnectionId, PassiveOpen)>,
     pending: Vec<ConnectionId>,
     // If ip sockets can be half-specified so that only the local address
     // is needed, we can construct an ip socket here to be reused.
 }
 
-impl Listener {
+impl<PassiveOpen> Listener<PassiveOpen> {
     fn new(backlog: NonZeroUsize) -> Self {
         Self { backlog, ready: VecDeque::new(), pending: Vec::new() }
     }
@@ -290,9 +327,9 @@ impl Listener {
 
 /// Represents either a bound socket or a listener socket.
 #[derive(Debug)]
-enum MaybeListener {
+enum MaybeListener<PassiveOpen> {
     Bound(Inactive),
-    Listener(Listener),
+    Listener(Listener<PassiveOpen>),
 }
 
 // TODO(https://fxbug.dev/38297): The following IDs are all `Clone + Copy`,
@@ -441,7 +478,7 @@ where
             )
         })
         .map(|MaybeListenerId(x)| BoundId(x))
-        .map_err(|_: (InsertError, MaybeListener, ())| {
+        .map_err(|_: (InsertError, MaybeListener<_>, ())| {
             assert_eq!(
                 sync_ctx
                     .with_tcp_sockets_mut(|sockets| sockets.inactive.insert(idmap_key, inactive)),
@@ -493,7 +530,7 @@ pub fn accept<I, SC, C>(
     sync_ctx: &mut SC,
     _ctx: &mut C,
     id: ListenerId,
-) -> Result<(ConnectionId, SocketAddr<I::Addr>), AcceptError>
+) -> Result<(ConnectionId, SocketAddr<I::Addr>, C::ClientEndBuffers), AcceptError>
 where
     I: IpExt,
     C: TcpNonSyncContext,
@@ -501,7 +538,8 @@ where
 {
     sync_ctx.with_tcp_sockets_mut(|sockets| {
         let listener = sockets.get_listener_by_id_mut(id).expect("invalid listener id");
-        let conn_id = listener.ready.pop_front().ok_or(AcceptError::WouldBlock)?;
+        let (conn_id, client_buffers) =
+            listener.ready.pop_front().ok_or(AcceptError::WouldBlock)?;
         let (conn, _, conn_addr): (_, &(), _) = sockets
             .socketmap
             .conns_mut()
@@ -509,7 +547,7 @@ where
             .expect("failed to retrieve the connection state");
         conn.acceptor = None;
         let (remote_ip, remote_port) = conn_addr.ip.remote;
-        Ok((conn_id, SocketAddr { ip: remote_ip, port: remote_port }))
+        Ok((conn_id, SocketAddr { ip: remote_ip, port: remote_port }, client_buffers))
     })
 }
 
@@ -528,6 +566,7 @@ pub fn connect_bound<I, SC, C>(
     ctx: &mut C,
     id: BoundId,
     remote: SocketAddr<I::Addr>,
+    netstack_buffers: C::NetstackEndBuffers,
 ) -> Result<ConnectionId, ConnectError>
 where
     I: IpExt,
@@ -547,7 +586,7 @@ where
         .map_err(|err| match err {
             IpSockCreationError::Route(_) => ConnectError::NoRoute,
         })?;
-    let conn_id = connect_inner(sync_ctx, ctx, ip_sock, local_port, remote.port)?;
+    let conn_id = connect_inner(sync_ctx, ctx, ip_sock, local_port, remote.port, netstack_buffers)?;
     let _: Option<_> = sync_ctx
         .with_tcp_sockets_mut(|sockets| sockets.socketmap.listeners_mut().remove(&bound_id));
     Ok(conn_id)
@@ -559,6 +598,7 @@ pub fn connect_unbound<I, SC, C>(
     ctx: &mut C,
     id: UnboundId,
     remote: SocketAddr<I::Addr>,
+    netstack_buffers: C::NetstackEndBuffers,
 ) -> Result<ConnectionId, ConnectError>
 where
     I: IpExt,
@@ -577,7 +617,7 @@ where
                 None => Err(ConnectError::NoPort),
             }
         })?;
-    let conn_id = connect_inner(sync_ctx, ctx, ip_sock, local_port, remote.port)?;
+    let conn_id = connect_inner(sync_ctx, ctx, ip_sock, local_port, remote.port, netstack_buffers)?;
     let _: Option<_> = sync_ctx.with_tcp_sockets_mut(|sockets| sockets.inactive.remove(id.into()));
     Ok(conn_id)
 }
@@ -588,6 +628,7 @@ fn connect_inner<I, SC, C>(
     ip_sock: IpSock<I, SC::DeviceId>,
     local_port: NonZeroU16,
     remote_port: NonZeroU16,
+    netstack_buffers: C::NetstackEndBuffers,
 ) -> Result<ConnectionId, ConnectError>
 where
     I: IpExt,
@@ -610,7 +651,7 @@ where
                 device: None,
             };
             let now = ctx.now();
-            let (syn_sent, syn) = Closed::<Initial>::connect(isn, now);
+            let (syn_sent, syn) = Closed::<Initial>::connect(isn, now, netstack_buffers);
             let conn_id = socketmap
                 .conns_mut()
                 .try_insert(
@@ -755,10 +796,12 @@ mod tests {
     impl TcpNonSyncContext for TcpNonSyncCtx {
         type ReceiveBuffer = RingBuffer;
         type SendBuffer = RingBuffer;
-        type ClientEndBuffer = ();
+        type ClientEndBuffers = ();
+        type NetstackEndBuffers = ();
 
         fn on_new_connection(&mut self, listener: ListenerId) {}
-        fn new_buffers() -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ClientEndBuffer) {
+        fn new_passive_open_buffers(
+        ) -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ClientEndBuffers) {
             (RingBuffer::default(), RingBuffer::default(), ())
         }
     }
@@ -962,6 +1005,7 @@ mod tests {
                     non_sync_ctx,
                     conn,
                     SocketAddr { ip: I::DUMMY_CONFIG.remote_ip, port: PORT_1 },
+                    (),
                 )
                 .expect("failed to connect")
             } else {
@@ -970,6 +1014,7 @@ mod tests {
                     non_sync_ctx,
                     conn,
                     SocketAddr { ip: I::DUMMY_CONFIG.remote_ip, port: PORT_1 },
+                    (),
                 )
                 .expect("failed to connect")
             }
@@ -991,7 +1036,7 @@ mod tests {
 
         // Step the test network until the handshake is done.
         net.run_until_idle(handle_frame, panic_if_any_timer);
-        let (accepted, addr) = net.with_context(REMOTE, |TcpCtx { sync_ctx, non_sync_ctx }| {
+        let (accepted, addr, ()) = net.with_context(REMOTE, |TcpCtx { sync_ctx, non_sync_ctx }| {
             accept(sync_ctx, non_sync_ctx, server).expect("failed to accept")
         });
         if bind_client {
@@ -1087,6 +1132,7 @@ mod tests {
                 non_sync_ctx,
                 conn,
                 SocketAddr { ip: I::DUMMY_CONFIG.remote_ip, port: PORT_1 },
+                (),
             )
             .expect("failed to connect")
         });

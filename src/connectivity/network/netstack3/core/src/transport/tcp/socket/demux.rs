@@ -6,6 +6,7 @@
 //! state machine.
 
 use alloc::vec::Vec;
+use assert_matches::assert_matches;
 use core::{convert::TryFrom, num::NonZeroU16};
 use log::trace;
 
@@ -38,10 +39,12 @@ use crate::{
 };
 
 impl<C: TcpNonSyncContext> BufferProvider<C::ReceiveBuffer, C::SendBuffer> for C {
-    type ClientEndBuffer = C::ClientEndBuffer;
+    type ActiveOpen = C::NetstackEndBuffers;
 
-    fn new_buffers() -> (C::ReceiveBuffer, C::SendBuffer, Self::ClientEndBuffer) {
-        <C as TcpNonSyncContext>::new_buffers()
+    type PassiveOpen = C::ClientEndBuffers;
+
+    fn new_passive_open_buffers() -> (C::ReceiveBuffer, C::SendBuffer, Self::PassiveOpen) {
+        <C as TcpNonSyncContext>::new_passive_open_buffers()
     }
 }
 
@@ -49,7 +52,13 @@ impl<I, B, C, SC> BufferIpTransportContext<I, C, SC, B> for TcpIpTransportContex
 where
     I: IpExt,
     B: BufferMut,
-    C: TcpNonSyncContext + BufferProvider<C::ReceiveBuffer, C::SendBuffer>,
+    C: TcpNonSyncContext
+        + BufferProvider<
+            C::ReceiveBuffer,
+            C::SendBuffer,
+            ActiveOpen = <C as TcpNonSyncContext>::NetstackEndBuffers,
+            PassiveOpen = <C as TcpNonSyncContext>::ClientEndBuffers,
+        >,
     SC: TcpSyncContext<I, C> + BufferTransportIpContext<I, C, Buf<Vec<u8>>>,
 {
     fn receive_ip_packet(
@@ -219,7 +228,7 @@ where
             }
         });
 
-        let reply = match &conn_id {
+        let (reply, passive_open) = match &conn_id {
             Some(id) => {
                 sync_ctx.with_tcp_sockets_mut(|sockets| {
                     let (Connection { acceptor: _, state, ip_sock }, _, _): (
@@ -236,8 +245,8 @@ where
                     // `ip_sock` (which is inside `state`) is disjoint from the
                     // memory that `send_ip_packet` consults inside `sync_ctx`. If
                     // that is possible we can use the reference directly.
-                    let (seg, _client_end) = state.on_segment::<_, C>(incoming, now);
-                    seg.map(|seg| (seg, ip_sock.clone()))
+                    let (seg, passive_open) = state.on_segment::<_, C>(incoming, now);
+                    (seg.map(|seg| (seg, ip_sock.clone())), passive_open)
                 })
             }
             None => {
@@ -246,25 +255,28 @@ where
                 // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-21):
                 // CLOSED is fictional because it represents the state when
                 // there is no TCB, and therefore, no connection.
-                (Closed { reason: UserError::ConnectionClosed }.on_segment(incoming)).and_then(
-                    |seg| match sync_ctx.new_ip_socket(
-                        ctx,
-                        None,
-                        Some(local_ip),
-                        remote_ip,
-                        IpProto::Tcp.into(),
-                        None,
-                    ) {
-                        Ok(ip_sock) => Some((seg, ip_sock)),
-                        Err(err) => {
-                            // TODO(https://fxbug.dev/101993): Increment the counter.
-                            trace!(
-                                "cannot construct an ip socket to respond RST: {:?}, ignoring",
-                                err
-                            );
-                            None
-                        }
-                    },
+                (
+                    (Closed { reason: UserError::ConnectionClosed }.on_segment(incoming)).and_then(
+                        |seg| match sync_ctx.new_ip_socket(
+                            ctx,
+                            None,
+                            Some(local_ip),
+                            remote_ip,
+                            IpProto::Tcp.into(),
+                            None,
+                        ) {
+                            Ok(ip_sock) => Some((seg, ip_sock)),
+                            Err(err) => {
+                                // TODO(https://fxbug.dev/101993): Increment the counter.
+                                trace!(
+                                    "cannot construct an ip socket to respond RST: {:?}, ignoring",
+                                    err
+                                );
+                                None
+                            }
+                        },
+                    ),
+                    None,
                 )
             }
         };
@@ -279,39 +291,35 @@ where
             }
         }
 
-        let _: Option<()> = conn_id.and_then(|conn_id| {
+        if let Some(passive_open) = passive_open {
+            let conn_id = conn_id.expect("no conn_id but the connection became established");
             sync_ctx.with_tcp_sockets_mut(|sockets| {
                 let (conn, _, _): (_, &(), &ConnAddr<_, _, _, _>) = sockets
                     .socketmap
                     .conns_mut()
                     .get_by_id_mut(&conn_id)
                     .expect("inconsistent state: invalid connection id");
-                let acceptor_id = match conn {
-                    Connection {
-                        acceptor: Some(Acceptor::Pending(listener_id)),
-                        state: State::Established(_),
-                        ip_sock: _,
-                    } => {
-                        let listener_id = *listener_id;
-                        conn.acceptor = Some(Acceptor::Ready(listener_id));
-                        Some(listener_id)
-                    }
-                    Connection { acceptor: _, state: _, ip_sock: _ } => None,
-                };
-                acceptor_id.map(|acceptor_id| {
-                    let acceptor =
-                        sockets.get_listener_by_id_mut(acceptor_id).expect("orphaned acceptee");
-                    let pos = acceptor
-                        .pending
-                        .iter()
-                        .position(|x| x == &conn_id)
-                        .expect("acceptee is not found in acceptor's pending queue");
-                    let conn = acceptor.pending.swap_remove(pos);
-                    acceptor.ready.push_back(conn);
-                    ctx.on_new_connection(acceptor_id);
-                })
+                let acceptor_id = assert_matches!(conn, Connection {
+                    acceptor: Some(Acceptor::Pending(listener_id)),
+                    state: _,
+                    ip_sock: _,
+                } => {
+                    let listener_id = *listener_id;
+                    conn.acceptor = Some(Acceptor::Ready(listener_id));
+                    listener_id
+                });
+                let acceptor =
+                    sockets.get_listener_by_id_mut(acceptor_id).expect("orphaned acceptee");
+                let pos = acceptor
+                    .pending
+                    .iter()
+                    .position(|x| x == &conn_id)
+                    .expect("acceptee is not found in acceptor's pending queue");
+                let conn = acceptor.pending.swap_remove(pos);
+                acceptor.ready.push_back((conn, passive_open));
+                ctx.on_new_connection(acceptor_id);
             })
-        });
+        }
 
         Ok(())
     }
