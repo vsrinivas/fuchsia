@@ -4100,6 +4100,83 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(OpZeroWithMarkers, 0) {
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
 }
 
+// Tests that zeroing across a pinned page clips expansion of the tail.
+TEST_WITH_AND_WITHOUT_TRAP_DIRTY(OpZeroPinned, ZX_VMO_RESIZABLE) {
+  zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
+  if (!root_resource->is_valid()) {
+    printf("Root resource not available, skipping\n");
+    return;
+  }
+
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(3, create_option, &vmo));
+
+  // Supply the first two pages.
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 2));
+
+  // Pin a supplied page.
+  zx::iommu iommu;
+  zx::bti bti;
+  zx::pmt pmt;
+  zx_iommu_desc_dummy_t desc;
+  ASSERT_OK(zx_iommu_create(root_resource->get(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
+                            iommu.reset_and_get_address()));
+  ASSERT_OK(zx::bti::create(iommu, 0, 0xdeadbeef, &bti));
+  zx_paddr_t addr;
+  ASSERT_OK(bti.pin(ZX_BTI_PERM_READ, vmo->vmo(), zx_system_get_page_size(),
+                    zx_system_get_page_size(), &addr, 1, &pmt));
+
+  auto unpin = fit::defer([&pmt]() {
+    if (pmt) {
+      pmt.unpin();
+    }
+  });
+
+  // Resize the VMO up.
+  ASSERT_TRUE(vmo->Resize(4));
+
+  // Verify dirty pages.
+  zx_vmo_dirty_range_t range = {.offset = 3, .length = 1, .options = ZX_VMO_DIRTY_RANGE_IS_ZERO};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // Zero the VMO.
+  TestThread t([vmo]() -> bool {
+    return vmo->vmo().op_range(ZX_VMO_OP_ZERO, 0, 4 * zx_system_get_page_size(), nullptr, 0) ==
+           ZX_OK;
+  });
+  ASSERT_TRUE(t.Start());
+
+  // We should see dirty and read requests as required, i.e. we should not be able to simply expand
+  // the zero tail across a pinned page.
+  if (create_option & ZX_VMO_TRAP_DIRTY) {
+    ASSERT_TRUE(t.WaitForBlocked());
+    ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
+    ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+    ASSERT_TRUE(t.WaitForBlocked());
+    ASSERT_TRUE(pager.WaitForPageDirty(vmo, 1, 1, ZX_TIME_INFINITE));
+    ASSERT_TRUE(pager.DirtyPages(vmo, 1, 1));
+  }
+  ASSERT_TRUE(t.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 2, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 2, 1));
+
+  ASSERT_TRUE(t.Wait());
+
+  // No other page requests seen.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+
+  // Verify VMO contents and dirty pages.
+  std::vector<uint8_t> expected(4 * zx_system_get_page_size(), 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 4, expected.data(), true));
+  zx_vmo_dirty_range_t ranges[] = {{0, 2, 0}, {2, 2, ZX_VMO_DIRTY_RANGE_IS_ZERO}};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, ranges, sizeof(ranges) / sizeof(zx_vmo_dirty_range_t)));
+}
+
 // Tests that dirty pages can be written back after detach.
 TEST_WITH_AND_WITHOUT_TRAP_DIRTY(WritebackDirtyPagesAfterDetach, 0) {
   UserPager pager;
