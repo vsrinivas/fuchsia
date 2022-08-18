@@ -47,6 +47,7 @@ group("tests") {
                                                              # HW-specific tiled
                                                              # format
     "//src/media/codec/examples:vp9-decoder-conformance-test--bear-vp9",
+    "//src/media/codec/examples:vp9_decoder_canary_conformance_tests",
     "//src/media/codec/examples:vp9_decoder_fuzzer_tests",
     "//src/media/codec/factory:codec_detect_hw_decode_test",
     "//src/media/codec/factory:codec_factory_integration_test",

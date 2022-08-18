@@ -45,6 +45,7 @@ group("hw_dependent_tests") {
     "//src/media/codec/examples:use_vp9_decoder_stream_switching_tests",
     "//src/media/codec/examples:use_vp9_decoder_tests",
     "//src/media/codec/examples:vp9-decoder-conformance-test--bear-vp9",
+    "//src/media/codec/examples:vp9_decoder_canary_conformance_tests",
     "//src/media/codec/examples:vp9_decoder_fuzzer_tests",
   ]
 }
