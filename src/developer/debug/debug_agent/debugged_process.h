@@ -52,9 +52,8 @@ class DebuggedProcess : public ProcessHandleObserver {
   using WatchpointMap =
       std::map<debug::AddressRange, std::unique_ptr<Watchpoint>, debug::AddressRangeBeginCmp>;
 
-  // Caller must call Init immediately after construction and delete the
-  // object if that fails.
-  DebuggedProcess(DebugAgent*, DebuggedProcessCreateInfo&&);
+  // Caller must call Init after construction.
+  explicit DebuggedProcess(DebugAgent*);
   virtual ~DebuggedProcess();
 
   zx_koid_t koid() const { return process_handle_->GetKoid(); }
@@ -65,8 +64,11 @@ class DebuggedProcess : public ProcessHandleObserver {
 
   const ModuleList& module_list() const { return module_list_; }
 
-  // Returns true on success. On failure, the object may not be used further.
-  debug::Status Init();
+  // The object is not usable if |Init| is not called or fails.
+  debug::Status Init(DebuggedProcessCreateInfo create_info);
+
+  void SetStdout(OwnedStdioHandle handle);
+  void SetStderr(OwnedStdioHandle handle);
 
   // IPC handlers.
   void OnResume(const debug_ipc::ResumeRequest& request);

@@ -44,6 +44,8 @@
 #include "src/developer/debug/zxdb/console/commands/verb_regs.h"
 #include "src/developer/debug/zxdb/console/commands/verb_rm.h"
 #include "src/developer/debug/zxdb/console/commands/verb_run.h"
+#include "src/developer/debug/zxdb/console/commands/verb_run_component.h"
+#include "src/developer/debug/zxdb/console/commands/verb_run_test.h"
 #include "src/developer/debug/zxdb/console/commands/verb_stack.h"
 #include "src/developer/debug/zxdb/console/commands/verb_status.h"
 #include "src/developer/debug/zxdb/console/commands/verb_stderr.h"
@@ -151,6 +153,8 @@ const std::map<Verb, VerbRecord>& GetVerbs() {
     all_verbs[Verb::kRegs] = GetRegsVerbRecord();
     all_verbs[Verb::kRm] = GetRmVerbRecord();
     all_verbs[Verb::kRun] = GetRunVerbRecord();
+    all_verbs[Verb::kRunComponent] = GetRunComponentVerbRecord();
+    all_verbs[Verb::kRunTest] = GetRunTestVerbRecord();
     all_verbs[Verb::kStatus] = GetStatusVerbRecord();
     all_verbs[Verb::kStdout] = GetStdoutVerbRecord();
     all_verbs[Verb::kStderr] = GetStderrVerbRecord();

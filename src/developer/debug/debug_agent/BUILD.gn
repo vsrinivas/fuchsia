@@ -115,6 +115,7 @@ static_library("lib") {
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.sys2",
+    "//sdk/fidl/fuchsia.test.manager",
     "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp",
     "//src/developer/debug/ipc:agent",
@@ -196,7 +197,6 @@ source_set("test_lib") {
   sources = [
     "local_stream_backend.cc",
     "local_stream_backend.h",
-    "mock_component_manager.cc",
     "mock_component_manager.h",
     "mock_debug_agent_harness.cc",
     "mock_debug_agent_harness.h",

@@ -9,8 +9,10 @@
 namespace debug_agent {
 
 MockProcess::MockProcess(DebugAgent* debug_agent, zx_koid_t koid, std::string name)
-    : DebuggedProcess(debug_agent,
-                      DebuggedProcessCreateInfo(std::make_unique<MockProcessHandle>(koid, name))) {}
+    : DebuggedProcess(debug_agent) {
+  auto status = Init(DebuggedProcessCreateInfo{std::make_unique<MockProcessHandle>(koid, name)});
+  FX_CHECK(status.ok());
+}
 MockProcess::~MockProcess() = default;
 
 MockThread* MockProcess::AddThread(zx_koid_t thread_koid) {

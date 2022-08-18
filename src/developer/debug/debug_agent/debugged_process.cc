@@ -83,17 +83,13 @@ DebuggedProcessCreateInfo::DebuggedProcessCreateInfo(std::unique_ptr<ProcessHand
 
 // DebuggedProcess ---------------------------------------------------------------------------------
 
-DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent, DebuggedProcessCreateInfo&& create_info)
-    : debug_agent_(debug_agent),
-      process_handle_(std::move(create_info.handle)),
-      from_limbo_(create_info.from_limbo) {
-  if (create_info.stdio.out.is_valid())
-    stdout_ = std::make_unique<BufferedStdioHandle>(std::move(create_info.stdio.out));
-  if (create_info.stdio.err.is_valid())
-    stderr_ = std::make_unique<BufferedStdioHandle>(std::move(create_info.stdio.err));
-}
+DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent) : debug_agent_(debug_agent) {}
 
-DebuggedProcess::~DebuggedProcess() { DetachFromProcess(); }
+DebuggedProcess::~DebuggedProcess() {
+  if (process_handle_) {
+    DetachFromProcess();
+  }
+}
 
 void DebuggedProcess::DetachFromProcess() {
   DEBUG_LOG(Process) << LogPreamble(this) << "DetachFromProcess";
@@ -120,35 +116,21 @@ void DebuggedProcess::DetachFromProcess() {
   process_handle_->Detach();
 }
 
-debug::Status DebuggedProcess::Init() {
+debug::Status DebuggedProcess::Init(DebuggedProcessCreateInfo create_info) {
   // Watch for process events.
-  if (debug::Status status = process_handle_->Attach(this); status.has_error())
+  if (debug::Status status = create_info.handle->Attach(this); status.has_error())
     return status;
+
+  process_handle_ = std::move(create_info.handle);
+  from_limbo_ = create_info.from_limbo;
+
+  if (create_info.stdio.out.is_valid())
+    SetStdout(std::move(create_info.stdio.out));
+  if (create_info.stdio.err.is_valid())
+    SetStderr(std::move(create_info.stdio.err));
 
   // Update module list.
   module_list_.Update(process_handle());
-
-  // Binding stdout/stderr.
-  // We bind |this| into the callbacks. This is OK because the DebuggedProcess
-  // owns both sockets, meaning that it's assured to outlive the sockets.
-
-  if (stdout_) {
-    stdout_->set_data_available_callback([this]() { OnStdout(false); });
-    stdout_->set_error_callback([this]() { OnStdout(true); });
-    if (!stdout_->Start()) {
-      FX_LOGS(WARNING) << "Could not listen on stdout for process " << process_handle_->GetName();
-      stdout_.reset();
-    }
-  }
-
-  if (stderr_) {
-    stderr_->set_data_available_callback([this]() { OnStderr(false); });
-    stderr_->set_error_callback([this]() { OnStderr(true); });
-    if (!stderr_->Start()) {
-      FX_LOGS(WARNING) << "Could not listen on stderr for process " << process_handle_->GetName();
-      stderr_.reset();
-    }
-  }
 
   return debug::Status();
 }
@@ -608,6 +590,28 @@ std::vector<debug_ipc::ProcessThreadId> DebuggedProcess::ClientSuspendAllThreads
   }
 
   return suspended_thread_ids;
+}
+
+void DebuggedProcess::SetStdout(OwnedStdioHandle handle) {
+  stdout_ = std::make_unique<BufferedStdioHandle>(std::move(handle));
+  // We bind |this| into the callbacks. This is OK because the DebuggedProcess
+  // owns both sockets, meaning that it's assured to outlive the sockets.
+  stdout_->set_data_available_callback([this]() { OnStdout(false); });
+  stdout_->set_error_callback([this]() { OnStdout(true); });
+  if (!stdout_->Start()) {
+    FX_LOGS(WARNING) << "Could not listen on stdout for process " << process_handle_->GetName();
+    stdout_.reset();
+  }
+}
+
+void DebuggedProcess::SetStderr(OwnedStdioHandle handle) {
+  stderr_ = std::make_unique<BufferedStdioHandle>(std::move(handle));
+  stderr_->set_data_available_callback([this]() { OnStderr(false); });
+  stderr_->set_error_callback([this]() { OnStderr(true); });
+  if (!stderr_->Start()) {
+    FX_LOGS(WARNING) << "Could not listen on stderr for process " << process_handle_->GetName();
+    stderr_.reset();
+  }
 }
 
 void DebuggedProcess::OnStdout(bool close) {

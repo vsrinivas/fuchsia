@@ -22,10 +22,6 @@ class SystemInterface;
 
 // This class manages launching and monitoring Fuchsia components. It is a singleton owned by the
 // DebugAgent.
-//
-// Mostly the debugger deals with processes. It has a limited ability to launch components which
-// is handled by this class. Eventually we will need better integration with the Fuchsia component
-// framework which would also be managed by this class.
 class ComponentManager {
  public:
   // ComponentManager needs |SystemInterface::GetParentJobKoid| for |FindComponentInfo|.
@@ -44,6 +40,11 @@ class ComponentManager {
   // The component URL is in argv[0].
   virtual debug::Status LaunchComponent(const std::vector<std::string>& argv) = 0;
 
+  // Launches a test. DebugAgent is needed here because Fuchsia test framework provides
+  // stdout/stderr after the process starts, so we need to |GetDebuggedProcess| to |SetStdout|.
+  virtual debug::Status LaunchTest(std::string url, std::vector<std::string> case_filters,
+                                   DebugAgent* debug_agent) = 0;
+
   // Notification that a process has started.
   //
   // If the process starts because of a |LaunchComponent|, this function will fill in the given
@@ -51,7 +52,11 @@ class ComponentManager {
   //
   // If it was not a component launch, returns false (the caller normally won't know if a launch is
   // a component without asking us, so it isn't necessarily an error).
-  virtual bool OnProcessStart(const ProcessHandle& process, StdioHandles* out_stdio) = 0;
+  //
+  // |process_name_override| allows the component manager to override the process name observed
+  // by the client and is optional.
+  virtual bool OnProcessStart(const ProcessHandle& process, StdioHandles* out_stdio,
+                              std::string* process_name_override) = 0;
 
  private:
   SystemInterface* system_interface_;

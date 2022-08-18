@@ -11,6 +11,7 @@
 #include <zircon/status.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
+#include <zircon/types.h>
 
 #include <algorithm>
 
@@ -177,17 +178,23 @@ void DebugAgent::OnStatus(const debug_ipc::StatusRequest& request, debug_ipc::St
 }
 
 void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request, debug_ipc::LaunchReply* reply) {
+  reply->timestamp = GetNowTimestamp();
+  if (request.argv.empty()) {
+    reply->status = debug::Status("No launch arguments provided");
+    return;
+  }
   switch (request.inferior_type) {
     case debug_ipc::InferiorType::kBinary:
       LaunchProcess(request, reply);
       return;
     case debug_ipc::InferiorType::kComponent:
-      reply->timestamp = GetNowTimestamp();
       reply->status = system_interface_->GetComponentManager().LaunchComponent(request.argv);
       return;
-    case debug_ipc::InferiorType::kTest:  // not hooked up yet.
+    case debug_ipc::InferiorType::kTest:
+      reply->status = system_interface_->GetComponentManager().LaunchTest(
+          request.argv[0], {request.argv.begin() + 1, request.argv.end()}, this);
+      return;
     case debug_ipc::InferiorType::kLast:
-      reply->timestamp = GetNowTimestamp();
       reply->status = debug::Status("Invalid inferior type to launch.");
       return;
   }
@@ -578,8 +585,8 @@ debug::Status DebugAgent::AddDebuggedProcess(DebuggedProcessCreateInfo&& create_
                                              DebuggedProcess** new_process) {
   *new_process = nullptr;
 
-  auto proc = std::make_unique<DebuggedProcess>(this, std::move(create_info));
-  if (auto status = proc->Init(); status.has_error())
+  auto proc = std::make_unique<DebuggedProcess>(this);
+  if (auto status = proc->Init(std::move(create_info)); status.has_error())
     return status;
 
   auto process_id = proc->koid();
@@ -811,8 +818,10 @@ void DebugAgent::OnProcessStart(std::unique_ptr<ProcessHandle> process_handle) {
 
   debug_ipc::NotifyProcessStarting::Type type = debug_ipc::NotifyProcessStarting::Type::kLast;
   StdioHandles stdio;  // Will be filled in only for components.
+  std::string process_name_override;
 
-  if (system_interface_->GetComponentManager().OnProcessStart(*process_handle, &stdio)) {
+  if (system_interface_->GetComponentManager().OnProcessStart(*process_handle, &stdio,
+                                                              &process_name_override)) {
     type = debug_ipc::NotifyProcessStarting::Type::kLaunch;
   } else if (std::any_of(filters_.begin(), filters_.end(), [&](const Filter& filter) {
                return filter.MatchesProcess(*process_handle, *system_interface_);
@@ -829,7 +838,7 @@ void DebugAgent::OnProcessStart(std::unique_ptr<ProcessHandle> process_handle) {
   debug_ipc::NotifyProcessStarting notify;
   notify.type = type;
   notify.koid = process_handle->GetKoid();
-  notify.name = process_handle->GetName();
+  notify.name = process_name_override.empty() ? process_handle->GetName() : process_name_override;
   notify.timestamp = GetNowTimestamp();
   notify.component = system_interface_->GetComponentManager().FindComponentInfo(*process_handle);
 

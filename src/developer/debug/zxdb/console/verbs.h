@@ -74,6 +74,8 @@ enum class Verb {
   kRegs,
   kRm,
   kRun,
+  kRunComponent,
+  kRunTest,
   kSet,
   kStack,
   kStatus,

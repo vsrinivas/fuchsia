@@ -4,27 +4,37 @@
 
 #include "src/developer/debug/debug_agent/zircon_component_manager.h"
 
+#include <fuchsia/diagnostics/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/sys2/cpp/fidl.h>
+#include <fuchsia/test/manager/cpp/fidl.h>
 #include <lib/fit/defer.h>
 #include <lib/sys/cpp/termination_reason.h>
 #include <lib/syslog/cpp/macros.h>
+#include <unistd.h>
 #include <zircon/processargs.h>
 #include <zircon/types.h>
 
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 
 #include "src/developer/debug/debug_agent/debug_agent.h"
+#include "src/developer/debug/debug_agent/debugged_process.h"
 #include "src/developer/debug/debug_agent/filter.h"
+#include "src/developer/debug/debug_agent/stdio_handles.h"
+#include "src/developer/debug/debug_agent/zircon_utils.h"
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/shared/component_utils.h"
 #include "src/developer/debug/shared/logging/file_line_function.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/shared/status.h"
+#include "src/lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/ref_ptr.h"
 
 namespace debug_agent {
 
@@ -43,7 +53,7 @@ zx::socket AddStdio(int fd, fuchsia::sys::LaunchInfo* launch_info) {
   zx::socket local;
   zx::socket target;
 
-  zx_status_t status = zx::socket::create(0, &local, &target);
+  zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &local, &target);
   if (status != ZX_OK)
     return zx::socket();
 
@@ -193,7 +203,7 @@ ZirconComponentManager::ZirconComponentManager(SystemInterface* system_interface
       ReadElfJobId(std::move(instace_info_res.response().resolved->started->runtime_dir), moniker,
                    [weak_this = weak_factory_.GetWeakPtr(), moniker, url = std::move(info.url),
                     deferred_ready](zx_koid_t job_id) {
-                     if (weak_this) {
+                     if (weak_this && job_id != ZX_KOID_INVALID) {
                        weak_this->running_component_info_[job_id] = {.moniker = moniker,
                                                                      .url = url};
                      }
@@ -228,7 +238,7 @@ void ZirconComponentManager::OnEvent(fuchsia::sys2::Event event) {
             moniker,
             [weak_this = weak_factory_.GetWeakPtr(), moniker,
              url = event.header().component_url()](zx_koid_t job_id) {
-              if (weak_this) {
+              if (weak_this && job_id != ZX_KOID_INVALID) {
                 weak_this->running_component_info_[job_id] = {.moniker = moniker, .url = url};
                 DEBUG_LOG(Process)
                     << "Component started job_id=" << job_id
@@ -262,6 +272,135 @@ std::optional<debug_ipc::ComponentInfo> ZirconComponentManager::FindComponentInf
   return std::nullopt;
 }
 
+// We need a class to help to launch a test because the lifecycle of GetEvents callbacks
+// are undetermined.
+class ZirconComponentManager::TestLauncher : public fxl::RefCountedThreadSafe<TestLauncher> {
+ public:
+  // This function can only be called once.
+  debug::Status Launch(std::string url, std::vector<std::string> case_filters,
+                       ZirconComponentManager* component_manager, DebugAgent* debug_agent) {
+    test_url_ = std::move(url);
+    component_manager_ = component_manager->GetWeakPtr();
+    debug_agent_ = debug_agent->GetWeakPtr();
+
+    if (component_manager->running_tests_info_.count(test_url_))
+      return debug::Status("Test " + test_url_ + " is already launched");
+
+    fuchsia::test::manager::RunBuilderSyncPtr run_builder;
+    auto status = component_manager->services_->Connect(run_builder.NewRequest());
+    if (status != ZX_OK)
+      return debug::ZxStatus(status);
+
+    DEBUG_LOG(Process) << "Launching test url=" << test_url_;
+
+    fuchsia::test::manager::RunOptions run_options;
+    run_options.set_case_filters_to_run(std::move(case_filters));
+    run_options.set_arguments({"--gtest_break_on_failure"});  // does no harm to rust tests.
+    run_builder->AddSuite(test_url_, std::move(run_options), suite_controller_.NewRequest());
+    run_builder->Build(run_controller_.NewRequest());
+    run_controller_->GetEvents(
+        [self = fxl::RefPtr<TestLauncher>(this)](auto res) { self->OnRunEvents(std::move(res)); });
+    suite_controller_->GetEvents([self = fxl::RefPtr<TestLauncher>(this)](auto res) {
+      self->OnSuiteEvents(std::move(res));
+    });
+    component_manager->running_tests_info_[test_url_] = {};
+    return debug::Status();
+  }
+
+ private:
+  // Stdout and stderr are in case_artifact. Logging is in suite_artifact. Others are ignored.
+  // NOTE: custom.component_moniker in suite_artifact is NOT the moniker of the test!
+  void OnSuiteEvents(fuchsia::test::manager::SuiteController_GetEvents_Result result) {
+    if (!component_manager_ || result.is_err() || result.response().events.empty()) {
+      suite_controller_.Unbind();  // Otherwise the run_controller won't return.
+      if (result.is_err())
+        FX_LOGS(WARNING) << "Failed to launch test: " << result.err();
+      DEBUG_LOG(Process) << "Test finished url=" << test_url_;
+      if (component_manager_)
+        component_manager_->running_tests_info_.erase(test_url_);
+      return;
+    }
+    for (auto& event : result.response().events) {
+      FX_CHECK(event.has_payload());
+      if (event.payload().is_case_found()) {
+        auto& test_info = component_manager_->running_tests_info_[test_url_];
+        // Test cases should come in order.
+        FX_CHECK(test_info.case_names.size() == event.payload().case_found().identifier);
+        test_info.case_names.push_back(event.payload().case_found().test_case_name);
+        if (event.payload().case_found().test_case_name.find_first_of('.') != std::string::npos) {
+          test_info.ignored_process = 1;
+        }
+      } else if (event.payload().is_case_artifact()) {
+        if (auto proc = GetDebuggedProcess(event.payload().case_artifact().identifier)) {
+          auto& artifact = event.mutable_payload()->case_artifact().artifact;
+          if (artifact.is_stdout_()) {
+            proc->SetStdout(std::move(artifact.stdout_()));
+          } else if (artifact.is_stderr_()) {
+            proc->SetStderr(std::move(artifact.stderr_()));
+          }
+        } else {
+          FX_LOGS(ERROR) << "Cannot find the process to set stdout/stderr for test case "
+                         << event.payload().case_artifact().identifier;
+        }
+      } else if (event.payload().is_suite_artifact()) {
+        auto& artifact = event.mutable_payload()->suite_artifact().artifact;
+        if (artifact.is_log()) {
+          FX_CHECK(artifact.log().is_batch());
+          log_listener_ = artifact.log().batch().Bind();
+          log_listener_->GetNext(
+              [self = fxl::RefPtr<TestLauncher>(this)](auto res) { self->OnLog(std::move(res)); });
+        }
+      }
+    }
+    suite_controller_->GetEvents([self = fxl::RefPtr<TestLauncher>(this)](auto res) {
+      self->OnSuiteEvents(std::move(res));
+    });
+  }
+
+  // See the comment above |running_tests_info_| for the logic.
+  DebuggedProcess* GetDebuggedProcess(uint32_t test_identifier) {
+    auto& test_info = component_manager_->running_tests_info_[test_url_];
+    auto& pids = test_info.pids;
+    auto proc_idx = test_identifier + test_info.ignored_process;
+    if (proc_idx < pids.size() && debug_agent_) {
+      return debug_agent_->GetDebuggedProcess(pids[proc_idx]);
+    }
+    return nullptr;
+  }
+
+  // Unused but required by the test framework.
+  void OnRunEvents(std::vector<::fuchsia::test::manager::RunEvent> events) {
+    if (!events.empty()) {
+      FX_LOGS_FIRST_N(WARNING, 1) << "Not implemented yet";
+      run_controller_->GetEvents([self = fxl::RefPtr<TestLauncher>(this)](auto res) {
+        self->OnRunEvents(std::move(res));
+      });
+    } else {
+      run_controller_.Unbind();
+    }
+  }
+
+  // Unused but required.
+  void OnLog(fuchsia::diagnostics::BatchIterator_GetNext_Result result) {
+    if (result.is_response() && !result.response().batch.empty()) {
+      FX_LOGS_FIRST_N(WARNING, 1) << "Not implemented yet";
+      log_listener_->GetNext(
+          [self = fxl::RefPtr<TestLauncher>(this)](auto res) { self->OnLog(std::move(res)); });
+    } else {
+      if (result.is_err())
+        FX_LOGS(ERROR) << "Failed to read log";
+      log_listener_.Unbind();  // Otherwise archivist won't terminate.
+    }
+  }
+
+  fxl::WeakPtr<DebugAgent> debug_agent_;
+  fxl::WeakPtr<ZirconComponentManager> component_manager_;
+  std::string test_url_;
+  fuchsia::test::manager::RunControllerPtr run_controller_;
+  fuchsia::test::manager::SuiteControllerPtr suite_controller_;
+  fuchsia::diagnostics::BatchIteratorPtr log_listener_;
+};
+
 debug::Status ZirconComponentManager::LaunchComponent(const std::vector<std::string>& argv) {
   if (argv.empty()) {
     return debug::Status("No argument provided for LaunchComponent");
@@ -270,6 +409,13 @@ debug::Status ZirconComponentManager::LaunchComponent(const std::vector<std::str
     return LaunchV1Component(argv);
   }
   return LaunchV2Component(argv);
+}
+
+debug::Status ZirconComponentManager::LaunchTest(std::string url,
+                                                 std::vector<std::string> case_filters,
+                                                 DebugAgent* debug_agent) {
+  return fxl::MakeRefCounted<TestLauncher>()->Launch(std::move(url), std::move(case_filters), this,
+                                                     debug_agent);
 }
 
 debug::Status ZirconComponentManager::LaunchV1Component(const std::vector<std::string>& argv) {
@@ -387,17 +533,31 @@ debug::Status ZirconComponentManager::LaunchV2Component(const std::vector<std::s
   return debug::Status();
 }
 
-bool ZirconComponentManager::OnProcessStart(const ProcessHandle& process, StdioHandles* out_stdio) {
+bool ZirconComponentManager::OnProcessStart(const ProcessHandle& process, StdioHandles* out_stdio,
+                                            std::string* process_name_override) {
   if (auto it = expected_v1_components_.find(process.GetName());
       it != expected_v1_components_.end()) {
     *out_stdio = std::move(it->second);
     expected_v1_components_.erase(it);
     return true;
   }
-  if (auto component = ComponentManager::FindComponentInfo(process);
-      component && expected_v2_components_.count(component->moniker)) {
-    // It'll be erased in the stopped event.
-    return true;
+  if (auto component = ComponentManager::FindComponentInfo(process)) {
+    if (expected_v2_components_.count(component->moniker)) {
+      // It'll be erased in the stopped event.
+      return true;
+    }
+    if (auto it = running_tests_info_.find(component->url); it != running_tests_info_.end()) {
+      size_t idx = it->second.pids.size();
+      it->second.pids.push_back(process.GetKoid());
+      if (idx < it->second.ignored_process) {
+        return false;
+      }
+      idx -= it->second.ignored_process;
+      if (idx < it->second.case_names.size()) {
+        *process_name_override = it->second.case_names[idx];
+      }
+      return true;
+    }
   }
   return false;
 }
