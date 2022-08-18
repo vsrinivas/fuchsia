@@ -28,6 +28,25 @@ using ::testing::Values;
 constexpr char kLoopbackDeviceName[] = "lo";
 constexpr char kAnyDeviceName[] = "any";
 
+void LoadSockaddr(const fbl::unique_fd &fd, sockaddr_in &addr) {
+  socklen_t addrlen = sizeof(addr);
+  ASSERT_EQ(getsockname(fd.get(), reinterpret_cast<struct sockaddr *>(&addr), &addrlen), 0)
+      << strerror(errno);
+  ASSERT_EQ(addrlen, sizeof(addr));
+}
+
+void BindToLoopback(const fbl::unique_fd &fd) {
+  sockaddr_in addr = {
+      .sin_family = AF_INET,
+      .sin_addr =
+          {
+              .s_addr = htonl(INADDR_LOOPBACK),
+          },
+  };
+  ASSERT_EQ(bind(fd.get(), reinterpret_cast<const struct sockaddr *>(&addr), sizeof(addr)), 0)
+      << strerror(errno);
+}
+
 TEST(LibpcapFindAllDevicesTest, FindAllDevices) {
   pcap_if_t *devlist;
   char ebuf[PCAP_ERRBUF_SIZE];
@@ -142,23 +161,8 @@ class LibpcapPacketTest : public LibpcapTest {
  protected:
   void SetUp() override {
     ASSERT_NO_FATAL_FAILURE(LibpcapTest::SetUp());
-
-    udp_addr_ = {
-        .sin_family = AF_INET,
-        .sin_addr =
-            {
-                .s_addr = htonl(INADDR_LOOPBACK),
-            },
-    };
     ASSERT_TRUE(udp_ = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
-    ASSERT_EQ(
-        bind(udp_.get(), reinterpret_cast<const struct sockaddr *>(&udp_addr_), sizeof(udp_addr_)),
-        0)
-        << strerror(errno);
-    socklen_t addrlen = sizeof(udp_addr_);
-    ASSERT_EQ(getsockname(udp_.get(), reinterpret_cast<struct sockaddr *>(&udp_addr_), &addrlen), 0)
-        << strerror(errno);
-    ASSERT_EQ(addrlen, sizeof(udp_addr_));
+    ASSERT_NO_FATAL_FAILURE(BindToLoopback(udp_));
   }
 
   void TearDown() override {
@@ -167,22 +171,23 @@ class LibpcapPacketTest : public LibpcapTest {
     LibpcapTest::TearDown();
   }
 
-  void Send(uint16_t to_port = 0) {
-    sockaddr_in addr = udp_addr_;
+  void Send() { ASSERT_NO_FATAL_FAILURE(Send(udp_)); }
 
-    if (to_port != 0) {
-      addr.sin_port = htons(to_port);
-    }
+  void Send(const fbl::unique_fd &dst) {
+    sockaddr_in dst_addr;
+    ASSERT_NO_FATAL_FAILURE(LoadSockaddr(dst, dst_addr));
 
-    ASSERT_EQ(
-        sendto(udp_.get(), nullptr, 0, 0, reinterpret_cast<const sockaddr *>(&addr), sizeof(addr)),
-        0)
+    ASSERT_EQ(sendto(udp_.get(), nullptr, 0, 0, reinterpret_cast<const sockaddr *>(&dst_addr),
+                     sizeof(dst_addr)),
+              0)
         << strerror(errno);
   }
 
   void PcapDispatch(uint8_t pkttype, int max_packets, int expected_packets,
                     uint16_t expected_dst_port = 0) {
-    uint16_t bound_udp_port = ntohs(udp_addr_.sin_port);
+    sockaddr_in addr;
+    ASSERT_NO_FATAL_FAILURE(LoadSockaddr(udp_, addr));
+    uint16_t bound_udp_port = ntohs(addr.sin_port);
     packet_context ctx = {
         .src_port = bound_udp_port,
         .dst_port = bound_udp_port,
@@ -254,7 +259,6 @@ class LibpcapPacketTest : public LibpcapTest {
     EXPECT_EQ(ntohs(packet.udp.len), sizeof(udphdr));
   }
 
-  sockaddr_in udp_addr_;
   fbl::unique_fd udp_;
 };
 
@@ -298,10 +302,17 @@ TEST_F(LibpcapPacketTest, Filter) {
   ASSERT_EQ(res = pcap_activate(pcap_handle()), 0)
       << pcap_statustostr(res) << "; pcap error: " << pcap_geterr(pcap_handle());
 
-  constexpr uint16_t kFilteredDstPort = 1234;
-  constexpr char filter[] = "udp dst port 1234";
+  fbl::unique_fd filtered_dst;
+  ASSERT_TRUE(filtered_dst = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
+  ASSERT_NO_FATAL_FAILURE(BindToLoopback(filtered_dst));
+  sockaddr_in filtered_dstaddr;
+  ASSERT_NO_FATAL_FAILURE(LoadSockaddr(filtered_dst, filtered_dstaddr));
+
+  uint16_t filtered_port = ntohs(filtered_dstaddr.sin_port);
+  std::string filter = "udp dst port " + std::to_string(filtered_port);
   bpf_program bpf;
-  ASSERT_EQ(res = pcap_compile(pcap_handle(), &bpf, filter, 0 /* optimize */, PCAP_NETMASK_UNKNOWN),
+  ASSERT_EQ(res = pcap_compile(pcap_handle(), &bpf, filter.data(), 0 /* optimize */,
+                               PCAP_NETMASK_UNKNOWN),
             0)
       << pcap_statustostr(res) << "; pcap error: " << pcap_geterr(pcap_handle());
   res = pcap_setfilter(pcap_handle(), &bpf);
@@ -309,16 +320,22 @@ TEST_F(LibpcapPacketTest, Filter) {
   ASSERT_EQ(res, 0) << "pcap_setfilter" << pcap_statustostr(res)
                     << "; pcap error: " << pcap_geterr(pcap_handle());
 
+  fbl::unique_fd nonfiltered_dst;
+  ASSERT_TRUE(nonfiltered_dst = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
+  ASSERT_NO_FATAL_FAILURE(BindToLoopback(nonfiltered_dst));
+  sockaddr_in nonfiltered_dstaddr;
+  ASSERT_NO_FATAL_FAILURE(LoadSockaddr(nonfiltered_dst, nonfiltered_dstaddr));
+
   // Send a packet to some other port and expect not to receive the packet.
-  const uint16_t kOtherPort = kFilteredDstPort + 1;
-  ASSERT_NO_FATAL_FAILURE(Send(kOtherPort));
-  ASSERT_NO_FATAL_FAILURE(PcapDispatch(PACKET_HOST, 1 /* max_packets */, 0 /* expected_packets */,
-                                       kOtherPort /* expected_dst_port */));
+  ASSERT_NO_FATAL_FAILURE(Send(nonfiltered_dst));
+  ASSERT_NO_FATAL_FAILURE(
+      PcapDispatch(PACKET_HOST, 1 /* max_packets */, 0 /* expected_packets */,
+                   ntohs(nonfiltered_dstaddr.sin_port) /* expected_dst_port */));
 
   // Send a packet to the filtered port and expect to receive the packet.
-  ASSERT_NO_FATAL_FAILURE(Send(kFilteredDstPort));
+  ASSERT_NO_FATAL_FAILURE(Send(filtered_dst));
   ASSERT_NO_FATAL_FAILURE(PcapDispatch(PACKET_HOST, 2 /* max_packets */, 1 /* expected_packets */,
-                                       kFilteredDstPort /* expected_dst_port */));
+                                       filtered_port /* expected_dst_port */));
 }
 
 class LibpcapPacketDirectionTest
