@@ -125,6 +125,8 @@ LinkSystem::ParentLink LinkSystem::CreateParentLink(
         LayoutInfo layout_info;
         layout_info.set_logical_size(info.initial_logical_size);
         layout_info.set_pixel_scale({1, 1});
+        // TODO(fxbug.dev/107102): We should derive this initial value from the parent.
+        layout_info.set_device_pixel_ratio({1, 1});
         impl->UpdateLayoutInfo(std::move(layout_info));
 
         ref->parent_viewport_watcher_map_[*parent_viewport_watcher_map_key] =
@@ -230,6 +232,8 @@ void LinkSystem::UpdateLinks(const GlobalTopologyData::TopologyVector& global_to
           info.set_logical_size(properties_kv->second.logical_size());
           info.set_pixel_scale(
               {static_cast<uint32_t>(pixel_scale.x), static_cast<uint32_t>(pixel_scale.y)});
+          // TODO(fxbug.dev/107097): This should be |display_pixel_scale| when it is set correctly.
+          info.set_device_pixel_ratio({1, 1});
 
           // A transform handle may have multiple parents, resulting in the same handle appearing
           // in the global topology vector multiple times, with multiple global matrices. We only

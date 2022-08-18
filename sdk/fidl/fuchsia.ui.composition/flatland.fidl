@@ -58,7 +58,19 @@ type LayoutInfo = table {
     /// transforms of the parent: each logical pixel is displayed on-screen by one or more physical
     /// pixels, as determined by this scale.  Clients should not necessarily re-layout their content
     /// when this value changes.
+    ///
+    /// # Deprecation
+    ///
+    /// This arg is deprecated at API version 9 with addition of |device_pixel_ratio|.
+    @available(deprecated=9, note="use device_pixel_ratio")
     2: pixel_scale fuchsia.math.SizeU;
+    /// The ratio of display's physical pixels to device independent pixels. Each logical pixel of a
+    /// View is displayed on-screen by one or more physical pixels, as determined by this scale.
+    /// Clients should not necessarily re-layout their content when this value changes, but
+    /// accommodate by reallocating their Image buffers to avoid sampling artifacts. HiDPI-aware
+    /// client should allocate buffers that are sized (`logical_size`*`device_pixel_ratio`).
+    @available(added=9)
+    3: device_pixel_ratio fuchsia.math.VecF;
 };
 
 /// ParentViewportWatchers will be informed when they are actively attached to a output display

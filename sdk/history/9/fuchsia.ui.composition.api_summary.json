@@ -380,6 +380,11 @@
         "name": "fuchsia.ui.composition/ImageProperties"
     },
     {
+        "declaration": "fuchsia.math/VecF",
+        "kind": "table/member",
+        "name": "fuchsia.ui.composition/LayoutInfo.device_pixel_ratio"
+    },
+    {
         "declaration": "fuchsia.math/SizeU",
         "kind": "table/member",
         "name": "fuchsia.ui.composition/LayoutInfo.logical_size"
