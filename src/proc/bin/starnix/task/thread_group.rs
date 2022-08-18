@@ -66,6 +66,9 @@ pub struct ThreadGroupMutableState {
     /// Whether the process is currently stopped.
     pub stopped: bool,
 
+    /// Wait queue for updates to `stopped`.
+    pub stopped_waiters: WaitQueue,
+
     /// Whether the process is currently waitable via waitid and waitpid for either WSTOPPED or
     /// WCONTINUED, depending on the value of `stopped`. If not None, contains the SignalInfo to
     /// return.
@@ -190,6 +193,7 @@ impl ThreadGroup {
                 itimers: Default::default(),
                 did_exec: false,
                 stopped: false,
+                stopped_waiters: WaitQueue::default(),
                 waitable: None,
                 zombie_leader: None,
                 terminating: false,
@@ -427,7 +431,7 @@ impl ThreadGroup {
             state.stopped = stopped;
             state.waitable = Some(siginfo);
             if !stopped {
-                state.interrupt(InterruptionType::Continue);
+                state.stopped_waiters.notify_all();
             }
             if let Some(parent) = state.parent.clone() {
                 // OK to drop state here since we don't access it anymore.

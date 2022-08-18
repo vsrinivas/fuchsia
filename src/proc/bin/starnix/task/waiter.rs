@@ -49,20 +49,14 @@ impl WaitCallback {
 pub enum InterruptionType {
     Signal,
     Exit,
-    Continue,
 }
 
 impl InterruptionType {
     /// Returns whether the interruption is already triggered on the given task.
-    pub fn is_triggered(
-        &self,
-        task_state: &TaskMutableState,
-        thread_state: &ThreadGroupMutableState,
-    ) -> bool {
+    pub fn is_triggered(&self, task_state: &TaskMutableState) -> bool {
         match self {
             InterruptionType::Signal => task_state.signals.is_any_pending(),
             InterruptionType::Exit => task_state.exit_status.is_some(),
-            InterruptionType::Continue => !thread_state.stopped,
         }
     }
 }
@@ -91,9 +85,15 @@ impl Waiter {
             interruption_filter,
         }))
     }
-    /// Create a new waiter object.
+
+    /// Create a new waiter.
     pub fn new() -> Self {
         Self::new_with_interruption_filter(vec![InterruptionType::Exit, InterruptionType::Signal])
+    }
+
+    /// Create a new waiter that doesn't wake up when a signal is received.
+    pub fn new_ignoring_signals() -> Self {
+        Self::new_with_interruption_filter(vec![InterruptionType::Exit])
     }
 
     /// Create a weak reference to this waiter.
@@ -101,69 +101,54 @@ impl Waiter {
         WaiterRef(Arc::downgrade(&self.0))
     }
 
-    /// Create a new waiter object for a thread waiting to be continued.
-    pub fn new_for_stopped_thread() -> Waiter {
-        Self::new_with_interruption_filter(vec![InterruptionType::Exit, InterruptionType::Continue])
-    }
-
     /// Wait until the waiter is woken up.
     ///
     /// If the wait is interrupted (see [`Waiter::interrupt`]), this function returns
     /// EINTR.
-    pub fn wait(&self, task: &Task) -> Result<(), Errno> {
-        self.wait_until(task, zx::Time::INFINITE)
-    }
-
-    /// Register this waiter on the given task.
-    ///
-    /// The returned guard must be kept for as long as the waiter must be registered.
-    ///
-    /// This method will return an EINTR error if the condition for the waiter is already reached.
-    fn register_waiter<'a>(
-        &self,
-        task: &'a Task,
-    ) -> Result<scopeguard::ScopeGuard<&'a Task, impl FnOnce(&'a Task), scopeguard::Always>, Errno>
-    {
-        {
-            let thread_state = task.thread_group.read();
-            let mut state = task.write();
-            assert!(!state.signals.waiter.is_valid());
-
-            if self.0.interruption_filter.iter().any(|f| f.is_triggered(&state, &thread_state)) {
-                return error!(EINTR);
-            }
-            state.signals.waiter = self.weak();
-        }
-
-        let waiter_copy = Arc::clone(&self.0);
-        return Ok(scopeguard::guard(&task, move |task| {
-            let mut state = task.write();
-            assert!(
-                state.signals.waiter.access(|waiter| Arc::ptr_eq(&waiter.unwrap().0, &waiter_copy)),
-                "SignalState waiter changed while waiting!"
-            );
-            state.signals.waiter = WaiterRef::empty();
-        }));
+    pub fn wait(&self, current_task: &CurrentTask) -> Result<(), Errno> {
+        self.wait_until(current_task, zx::Time::INFINITE)
     }
 
     /// Wait until the given deadline has passed or the waiter is woken up.
     ///
     /// If the wait is interrupted (see [`Waiter::interrupt`]), this function returns
     /// EINTR.
-    pub fn wait_until(&self, task: &Task, deadline: zx::Time) -> Result<(), Errno> {
-        let _guard = self.register_waiter(task)?;
+    pub fn wait_until(
+        &self,
+        current_task: &CurrentTask,
+        deadline: zx::Time,
+    ) -> Result<(), Errno> {
+        {
+            let mut state = current_task.write();
+            assert!(!state.signals.waiter.is_valid());
 
-        self.wait_kernel_until(deadline)
+            if self.0.interruption_filter.iter().any(|f| f.is_triggered(&state)) {
+                return error!(EINTR);
+            }
+            state.signals.waiter = self.weak();
+        }
+
+        let waiter_copy = Arc::clone(&self.0);
+        scopeguard::defer! {
+            let mut state = current_task.write();
+            assert!(
+                state.signals.waiter.access(|waiter| Arc::ptr_eq(&waiter.unwrap().0, &waiter_copy)),
+                "SignalState waiter changed while waiting!"
+            );
+            state.signals.waiter = WaiterRef::empty();
+        };
+
+        self.wait_internal(deadline)
     }
 
     /// Waits until the waiter is woken up. Do not use if a current_task is available, this will
     /// result in incorrect signal behavior.
     pub fn wait_without_current_task_dont_use_if_possible(&self) -> Result<(), Errno> {
-        self.wait_kernel_until(zx::Time::INFINITE)
+        self.wait_internal(zx::Time::INFINITE)
     }
 
     /// Waits until the given deadline has passed or the waiter is woken up.
-    fn wait_kernel_until(&self, deadline: zx::Time) -> Result<(), Errno> {
+    fn wait_internal(&self, deadline: zx::Time) -> Result<(), Errno> {
         match self.0.port.wait(deadline) {
             Ok(packet) => match packet.status() {
                 zx::sys::ZX_OK => {
@@ -207,7 +192,9 @@ impl Waiter {
                     Ok(())
                 }
                 // TODO make a match arm for this and return EBADMSG by default
-                _ => error!(EINTR),
+                _ => {
+                    error!(EINTR)
+                }
             },
             Err(zx::Status::TIMED_OUT) => error!(ETIMEDOUT),
             Err(errno) => Err(impossible_error(errno)),
