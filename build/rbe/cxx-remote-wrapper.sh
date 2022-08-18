@@ -6,7 +6,12 @@
 # See usage() for description.
 
 script="$0"
+script_basename="$(basename "$script")"
 script_dir="$(dirname "$script")"
+
+function msg() {
+  echo "[$script_basename]: $@"
+}
 
 remote_action_wrapper="$script_dir"/fuchsia-rbe-action.sh
 
@@ -27,6 +32,7 @@ Options:
     effect, and is removed from the executed command.
   --verbose|-v: print debug information, including details about uploads.
   --dry-run: print remote execution command without executing (remote only).
+  --save-temps: preserve temporary files
 
   --project-root: location of source tree which also encompasses outputs
       and prebuilt tools, forwarded to --exec-root in the reclient tools.
@@ -48,6 +54,7 @@ EOF
 dry_run=0
 local_only=0
 verbose=0
+save_temps=0
 project_root="$default_project_root"
 canonicalize_working_dir=true
 rewrapper_options=()
@@ -74,6 +81,7 @@ do
     --local) local_only=1 ;;
     # --fsatrace) trace=1 ;;
     --verbose|-v) verbose=1 ;;
+    --save-temps) save_temps=1 ;;
     # --compare) compare=1 ;;
     # --check-determinism) check_determinism=1 ;;
     --project-root=*) project_root="$optarg" ;;
@@ -275,7 +283,7 @@ cc_relative="$(relpath "$project_root" "$cc")"
 # Remove these temporary files on exit.
 cleanup_files=()
 function cleanup() {
-  rm -f "${cleanup_files[@]}"
+  test "$save_temps" != 0 || rm -f "${cleanup_files[@]}"
 }
 trap cleanup EXIT
 
@@ -354,5 +362,6 @@ then
   exit
 fi
 
+test "$verbose" = 0 || msg "remote command: ${remote_cc_command[@]}"
 # Cannot `exec` because that would bypass the trap cleanup.
 "${remote_cc_command[@]}"
