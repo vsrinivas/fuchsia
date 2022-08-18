@@ -86,7 +86,7 @@ class DetectChangesVisitor<R> extends RecursiveAstVisitor<R> {
 
   @override
   R visitEnumDeclaration(EnumDeclaration node) {
-    String name = '${node.declaredElement.toString()}';
+    String name = '${node.declaredElement2.toString()}';
     if (name.startsWith('enum')) {
       name = name.split(' ')[1];
     }
