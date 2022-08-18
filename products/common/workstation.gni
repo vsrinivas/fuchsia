@@ -17,6 +17,7 @@ core_realm_shards += [
   "//src/power/battery-manager:battery-manager-core-shard",
   "//src/session/bin/session_manager:workstation_core_shard",
   "//src/ui:ui_core_shard",
+  "//src/media/playback/mediaplayer:mediaplayer_shard",
 ]
 
 legacy_base_package_labels += [
@@ -83,7 +84,6 @@ legacy_base_package_labels += [
   "//src/experiences/bin/settings/license:license_settings",
   "//src/experiences/session_shells/ermine",
   "//src/media/playback/bundles:services",
-  "//src/media/playback/bundles:audio_consumer_config",
   "//src/session",
   "//src/ui/bin/terminal",
   "//examples/fortune:fortune_teller",

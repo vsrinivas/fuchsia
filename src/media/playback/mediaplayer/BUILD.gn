@@ -7,7 +7,7 @@ import("//build/config.gni")
 import("//src/sys/core/build/core_shard.gni")
 
 core_shard("mediaplayer_shard") {
-  shard_file = "meta/mediaplayer_shard.core_shard.cml"
+  shard_file = "meta/mediaplayer.core_shard.cml"
 }
 
 group("tests") {

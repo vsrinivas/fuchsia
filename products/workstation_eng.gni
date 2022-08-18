@@ -34,7 +34,6 @@ _developer_packages = [
   "//src/experiences/bin/settings/license:license_settings",
   "//src/experiences/session_shells/ermine",
   "//src/media/playback/bundles:services",
-  "//src/media/playback/bundles:audio_consumer_config",
   "//src/session",
   "//src/ui/bin/terminal",
   "//examples/fortune:fortune_teller",
