@@ -72,11 +72,20 @@ zx_status_t Interrupter::IrqThread() {
   config.irq_support = true;
   async_loop_.emplace(&config);
   async_executor_.emplace(async_loop_->dispatcher());
-  if (zx_object_set_profile(zx_thread_self(), hci_->get_profile().get(), 0) != ZX_OK) {
-    zxlogf(WARNING,
-           "No scheduler profile available to apply to the high priority XHCI completer.  "
-           "Service will be best effort.\n");
+
+  {
+    const char* role_name = "fuchsia.devices.usb.xhci.interrupter";
+    const size_t role_name_size = strlen(role_name);
+    const zx_status_t status =
+        device_set_profile_by_role(hci_->zxdev(), zx_thread_self(), role_name, role_name_size);
+    if (status != ZX_OK) {
+      zxlogf(WARNING,
+             "Failed to apply role \"%s\" to the high priority XHCI completer.  Service will be "
+             "best effort.\n",
+             role_name);
+    }
   }
+
   async::Irq irq;
   irq.set_object(irq_.get());
   irq.set_handler([&](async_dispatcher_t* dispatcher, async::Irq* irq, zx_status_t status,

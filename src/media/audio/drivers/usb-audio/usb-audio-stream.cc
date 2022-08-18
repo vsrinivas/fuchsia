@@ -174,20 +174,6 @@ zx_status_t UsbAudioStream::Bind() {
         status);
   }
 
-  // Configure and fetch a deadline profile for our USB IRQ callback thread.  We
-  // will be running at a 1 mSec isochronous rate, and we mostly want to be sure
-  // that we are done and have queued the next job before the next cycle starts.
-  // Currently, there shouldn't be any great amount of work to be done, just
-  // memcpying the data into the buffer used by the USB controller driver.
-  // 250uSec should be more than enough time.
-  status = device_get_deadline_profile(
-      zxdev_,
-      ZX_USEC(250),  // capacity: we agree to run for no more than 250 uSec max
-      ZX_USEC(700),  // deadline: Let this be scheduled as late as 700 uSec into the cycle
-      ZX_USEC(995),  // period:   we need to do this at a rate of ~1KHz
-      "src/media/audio/drivers/usb-audio/usb-audio-stream",
-      profile_handle_.reset_and_get_address());
-
   if (status != ZX_OK) {
     LOG(ERROR, "Failed to retrieve profile, status %d", status);
     return status;
@@ -927,7 +913,16 @@ void UsbAudioStream::RequestComplete(usb_request_t* req) {
   // the first transaction gets queued.  Therefor, we just have a poor
   // estimate for now and will need to live with the consequences.
   if (!req_complete_prio_bumped_) {
-    zx_object_set_profile(zx_thread_self(), profile_handle_.get(), 0);
+    const char* role_name = "fuchsia.devices.usb.audio";
+    const size_t role_name_size = strlen(role_name);
+    const zx_status_t status =
+        device_set_profile_by_role(this->zxdev(), zx_thread_self(), role_name, role_name_size);
+    if (status != ZX_OK) {
+      zxlogf(WARNING,
+             "Failed to apply role \"%s\" to the USB audio callback thread.  Service will be best "
+             "effort.\n",
+             role_name);
+    }
     req_complete_prio_bumped_ = true;
   }
 

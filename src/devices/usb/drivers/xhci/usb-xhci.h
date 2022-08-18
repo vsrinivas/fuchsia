@@ -193,8 +193,6 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   // what, if anything this callback should be used for.
   void MfIndexWrapped() {}
 
-  zx::profile& get_profile() { return profile_; }
-
   uint8_t GetPortCount() { return static_cast<uint8_t>(params_.MaxPorts()); }
 
   // Resets a port. Not to be confused with ResetDevice.
@@ -351,10 +349,6 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   // to interrupters.
   fbl::Mutex scheduler_lock_;
 
-  // This is a high-priority profile used for increasing the priority
-  // of the interrupt thread. This is currently necessary to mitigate
-  // fxbug.dev/34507, and can be removed once the scheduling problem is fixed.
-  zx::profile profile_;
   // Performs the initialization sequence defined in section
   // 4.2 of the xHCI specification.
   zx_status_t Init();

@@ -1996,13 +1996,6 @@ zx_status_t UsbXhci::Init() {
     return status;
   }
 
-  status = device_get_profile(zxdev_, /*HIGH_PRIORITY*/ 31, "src/devices/usb/drivers/xhci/usb-xhci",
-                              profile_.reset_and_get_address());
-  if (status != ZX_OK) {
-    zxlogf(WARNING, "Failed to obtain scheduler profile for high priority completer (res %d)",
-           status);
-  }
-
   return ZX_OK;
 }
 

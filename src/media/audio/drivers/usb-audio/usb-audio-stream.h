@@ -328,7 +328,6 @@ class UsbAudioStream : public UsbAudioStreamBase,
 
   // TODO(johngro) : See MG-940.  eliminate this ASAP
   bool req_complete_prio_bumped_ = false;
-  zx::profile profile_handle_;
 
   // |shutting_down_| is a boolean indicating whether |loop_| is about to be shut down.
   bool shutting_down_ __TA_GUARDED(lock_) = false;
