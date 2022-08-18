@@ -188,13 +188,13 @@ bool MsdIntelDevice::BaseInit(void* device_handle) {
 
   register_io_ = std::make_unique<magma::RegisterIo>(std::move(mmio));
 
-  if (DeviceId::is_gen9(device_id_)) {
-    ForceWake::reset(register_io_.get(), registers::ForceWake::GEN9_RENDER);
-    ForceWake::request(register_io_.get(), registers::ForceWake::GEN9_RENDER);
-  } else {
+  if (!DeviceId::is_gen9(device_id_) && !DeviceId::is_gen12(device_id_)) {
     MAGMA_LOG(WARNING, "Unrecognized graphics PCI device id 0x%x", device_id_);
     return false;
   }
+
+  ForceWake::reset(register_io_.get(), registers::ForceWake::RENDER);
+  ForceWake::request(register_io_.get(), registers::ForceWake::RENDER);
 
   bus_mapper_ = magma::PlatformBusMapper::Create(platform_device_->GetBusTransactionInitiator());
   if (!bus_mapper_)

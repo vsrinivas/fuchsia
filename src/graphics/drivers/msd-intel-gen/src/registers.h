@@ -217,10 +217,7 @@ class FaultTlbReadData {
 // from intel-gfx-prm-osrc-bdw-vol02c-commandreference-registers_4.pdf p.493
 class ForceWake {
  public:
-  enum Domain { GEN9_RENDER };
-
-  static constexpr uint32_t kOffset = 0xA188;
-  static constexpr uint32_t kStatusOffset = 0x130044;
+  enum Domain { RENDER };
 
   static constexpr uint32_t kRenderOffset = 0xA278;
   static constexpr uint32_t kRenderStatusOffset = 0xD84;
@@ -231,7 +228,7 @@ class ForceWake {
     uint32_t val32 = mask;
     val32 = (val32 << 16) | val;
     switch (domain) {
-      case GEN9_RENDER:
+      case RENDER:
         reg_io->Write32(val32, kRenderOffset);
         break;
     }
@@ -239,7 +236,7 @@ class ForceWake {
 
   static uint16_t read_status(magma::RegisterIo* reg_io, Domain domain) {
     switch (domain) {
-      case GEN9_RENDER:
+      case RENDER:
         return static_cast<uint16_t>(reg_io->Read32(kRenderStatusOffset));
     }
   }
