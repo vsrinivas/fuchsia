@@ -46,9 +46,9 @@ declare -r LINUX_DEFCONFIG=${LINUX_DEFCONFIG:-machina_defconfig}
 # Configure environment for the specified architecture.
 case "${1}" in
 arm64)
-  type aarch64-linux-gnu-gcc-9 ||
-    { echo "Required package gcc-aarch64-linux-gnu-9 is not installed."
-      echo "(sudo apt install gcc-aarch64-linux-gnu-9)"; exit 1; }
+  type aarch64-linux-gnu-gcc ||
+    { echo "Required package gcc-aarch64-linux-gnu is not installed."
+      echo "(sudo apt install gcc-aarch64-linux-gnu)"; exit 1; }
 
   declare -rx ARCH=arm64
   declare -x CROSS_COMPILE=aarch64-linux-gnu-
@@ -68,11 +68,7 @@ x64)
 esac
 
 # Set compiler to use for Linux compile.
-#
-# Linux 4.18 is not compatible with gcc-10. Linux 5.4 is compatible with both
-# gcc-9 and gcc-10. We default to using gcc-9 while we still need to support
-# Linux 4.18.
-declare -x CC=${CROSS_COMPILE}gcc-9
+declare -x CC=${CROSS_COMPILE}gcc
 
 # Clone and checkout the given branch.
 if [ -n "${LINUX_BRANCH}" ]; then
