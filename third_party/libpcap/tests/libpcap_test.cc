@@ -8,6 +8,7 @@
 #include <netinet/ip.h>
 #include <netinet/udp.h>
 #include <pcap.h>
+#include <poll.h>
 #include <zircon/compiler.h>
 
 #include <array>
@@ -181,6 +182,20 @@ class LibpcapPacketTest : public LibpcapTest {
                      sizeof(dst_addr)),
               0)
         << strerror(errno);
+
+    // Tests assume that the datagram has been delivered once this method returns, but Fuchsia
+    // doesn't guarantee synchronous local delivery. Poll at the destination fd to bridge this
+    // gap.
+    constexpr int kTimeout = 10000;
+    pollfd pfd = {
+        .fd = dst.get(),
+        .events = POLLIN,
+    };
+    const int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
+    ASSERT_GE(n, 0) << strerror(errno);
+    EXPECT_EQ(n, 1);
+    ASSERT_EQ(pfd.revents & POLLIN, POLLIN)
+        << "expect pfd.revents contains POLLIN, found: " << pfd.revents;
   }
 
   void PcapDispatch(uint8_t pkttype, int max_packets, int expected_packets,
