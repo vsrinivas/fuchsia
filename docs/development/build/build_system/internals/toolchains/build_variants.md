@@ -83,7 +83,7 @@ example:
   by applying the `ubsan` variant, and its `root_out_dir` is
   `${root_build_dir}/host_x64-ubsan`.
 
-- `//build/toolchain/fuchsia:x64` is the default toolchain (when targetting
+- `//build/toolchain/fuchsia:x64` is the default toolchain (when targeting
   x64-based devices), used to build Fuchsia user-level binaries. Because it is
   the default, its `root_out_dir` is the same as `root_build_dir`.
 

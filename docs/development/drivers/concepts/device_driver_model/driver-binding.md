@@ -407,7 +407,7 @@ supports primitive types: one of `uint`, `string`, or `bool`; and enumerations (
 defining keys you should prefer enumerations except when values will be provided by an external
 source, such as hardware.
 
-When definining a primitive value use the form `<identifier> = <literal>`, and for enumerations
+When defining a primitive value use the form `<identifier> = <literal>`, and for enumerations
 only an identifier is necessary. It is valid to define multiple primitive values with the same
 literal.
 

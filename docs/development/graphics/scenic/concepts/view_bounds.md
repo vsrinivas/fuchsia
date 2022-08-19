@@ -83,7 +83,7 @@ The 3D system of Scenic consists of a number of coordinate spaces. They can
 roughly be categorized as: Layer Space, World Space and Local space. A spatial
 point has independent coordinates in each coordinate system. A transformation
 matrix describes how to map a spatial point between two coordinate spaces; the
-point's coordinates in system A is multipled by a transformation matrix to
+point's coordinates in system A is multiplied by a transformation matrix to
 obtain its coordinates in system B (or the matrix's inverse for the opposite
 direction).
 

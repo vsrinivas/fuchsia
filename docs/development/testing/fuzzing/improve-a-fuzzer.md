@@ -55,7 +55,7 @@ cpp_fuzzer("my_fuzzer"){
 
 Generally, libFuzzer is fairly effective at finding inputs that explore new conditional branches
 when the decision is based on bytes of the input. For example, it can use instrumentation on
-comparision instructions, such as CMP, to determine what value is needed to match a check on some
+comparison instructions, such as CMP, to determine what value is needed to match a check on some
 portion of the input.
 
 But this approach can fail when the fuzzer encounters "fuzzer-hostile" conditions. These include:
@@ -202,7 +202,7 @@ languages using [Rust's FFI][rust-ffi] or [Go's cgo][golang-cgo].
 
 In some case, the inputs being provided by the fuzzer may be transformed before being acted on.
 This can greatly reduce the fuzzer's ability to associate inputs with the behaviors they produce.
-For exmaple, a library being fuzzed my first decompress its inputs before processing them. The most
+For example, a library being fuzzed my first decompress its inputs before processing them. The most
 effective way to fuzz this library is to preform mutations on uncompressed inputs, then compress
 them before invoking the library.
 
@@ -214,7 +214,7 @@ extern "C" size_t LLVMFuzzerCustomMutator(uint8_t *Data, size_t Size,
                                           size_t MaxSize, unsigned int Seed);
 ```
 
-If provided, libFuzzer will call this function with a buffer `Data` of size `MaxSize` initally
+If provided, libFuzzer will call this function with a buffer `Data` of size `MaxSize` initially
 filled with `Size` bytes of a valid input from the corpus. This function can transform this data
 before calling another LLVM [fuzzing interface][fuzzer-interface] function:
 

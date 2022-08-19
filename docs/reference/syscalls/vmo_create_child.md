@@ -103,7 +103,7 @@ Non-slice child vmos will interact with the VMO syscalls in the following ways:
 - The COMMIT mode of [`zx_vmo_op_range()`] on a child will commit pages into the child that
   have the same content as its parent's corresponding pages. If those pages are supplied by a
   pager, this operation will also commit those pages in the parent. Otherwise, if those pages
-  are not comitted in the parent, zero-filled pages will be comitted directly into
+  are not committed in the parent, zero-filled pages will be committed directly into
   child, without affecting the parent.
 - The DECOMMIT mode of [`zx_vmo_op_range()`] is not supported.
 

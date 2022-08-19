@@ -166,7 +166,7 @@ Do the following:
 
     Some text editors use the `pubspec.yaml` file to recognize that this test is
     a Dart package. Provide the content of `OWNERS` and `README.md` files later
-    when you contribue the test to the Fuchsia project.
+    when you contribute the test to the Fuchsia project.
 
 ## 3. Build the test {#build-the-test}
 

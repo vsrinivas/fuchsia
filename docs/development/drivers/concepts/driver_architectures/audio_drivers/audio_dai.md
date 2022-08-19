@@ -156,7 +156,7 @@ Interface](audio_streaming.md).
 
 {% comment %}
 > TODO(fxbug.dev/63522): Add support for power control.
-> TODO(fxbug.dev/63523): Add support for content proteccion.
+> TODO(fxbug.dev/63523): Add support for content protection.
 {% endcomment %}
 
 ## Signal processing {#signal-processing}

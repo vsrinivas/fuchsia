@@ -1,6 +1,6 @@
 # Accessing Logs
 
-Like other diagnostics, logs are availble to read from the Archivist's [ArchiveAccessor] protocol.
+Like other diagnostics, logs are available to read from the Archivist's [ArchiveAccessor] protocol.
 See the [ArchiveAccessor reference] for general information on the API and its usage.
 
 ## Parameters

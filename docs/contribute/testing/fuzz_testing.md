@@ -112,7 +112,7 @@ Another critical aspect is the low overall developer cost for writing and mainta
 code is well unit-tested, it likely can be fuzzed with very little additional effort. The unit tests
 describe how to call an API, and can form the basis for a fuzz target function.
 
-If code isn't well unit-tested, developing fuzzers is harder but still extermely beneficial. Writing
+If code isn't well unit-tested, developing fuzzers is harder but still extremely beneficial. Writing
 fuzzers can make code easier to unit test:
 
  * It may prompt refactoring code to expose an API that's easier to fuzz, such as turning a binary

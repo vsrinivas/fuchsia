@@ -22,7 +22,7 @@ zx_status_t zx_system_get_performance_info(zx_handle_t resource,
 `zx_system_get_performance_info()` requests CPU performance parameters maintained by the kernel. The
 *topic* parameter indicates what specific information is desired.
 
-*count* indicates the number of items to query. Topics may impose requriements on this value.
+*count* indicates the number of items to query. Topics may impose requirements on this value.
 
 *info* is a pointer to a buffer of sufficient size to accommodate *count* entries of the type
 specified by *topic*. The values stored in this array are undefined if the syscall returns an error.

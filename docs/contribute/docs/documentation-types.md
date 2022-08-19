@@ -108,7 +108,7 @@ Good conceptual documentation usually includes:
 - **Description** rather than instruction
 - **Background** concepts
 - **Diagrams** or other visual aids (preferably in .png format)
-- **Links** to procedureal and/or reference docs
+- **Links** to procedural and/or reference docs
 
 After writing your document, it is good practice to proofread the document, put yourself in the
 user's shoes (no longer being the expert that developed the feature), and try to answer these

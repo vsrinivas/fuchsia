@@ -178,7 +178,7 @@ Example: `driver.usb_audio.disable`
 
 ## driver.\<name>.log=\<flags>
 
-Set the minumum log severity for a driver. The textual constants "error",
+Set the minimum log severity for a driver. The textual constants "error",
 "warn", "info", "debug", "trace", may be used, and they map to the corresponding
 bits in DDK\_LOG\_... in `ddk/debug.h`. If an unknown value is passed, the
 minimum log severity will be set to "trace". The default minimum log severity

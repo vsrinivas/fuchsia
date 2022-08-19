@@ -45,7 +45,7 @@ Relative paths in the rest of the tutorial will be relative to this directory.
    }
    ```
 
-1. Define a `dart_test` and then create a depencency on the test through the `$host_toolchain`.
+1. Define a `dart_test` and then create a dependency on the test through the `$host_toolchain`.
    To do this, add the following to `BUILD.gn`:
 
    ```gn

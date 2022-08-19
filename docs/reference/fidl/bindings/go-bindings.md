@@ -92,7 +92,7 @@ Given the [bits][lang-bits] definition:
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="consts" %}
 ```
 
-FIDL generates a type alias for the underyling type (or `uint32` if not
+FIDL generates a type alias for the underlying type (or `uint32` if not
 specified) and constants for each bits member:
 
 ```golang
@@ -139,7 +139,7 @@ Given the [enum][lang-enums] definition:
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="enums" %}
 ```
 
-FIDL generates a type alias for the underyling type (or `uint32` if not
+FIDL generates a type alias for the underlying type (or `uint32` if not
 specified) and constants for each enum member:
 
 ```golang

@@ -928,7 +928,7 @@ system.
 This option caps the number of CPUs to initialize.  It cannot be greater than *SMP\_MAX\_CPUS* 
 for a specific architecture.
 
-Note: The default value may vary for each architechture.
+Note: The default value may vary for each architecture.
 
 ### kernel.wallclock=[auto | tsc | pit | hpet]
 **Default:** `auto`

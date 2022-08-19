@@ -126,7 +126,7 @@ receiving `Code-Review+2`.
     details, heuristics, or "cosmetic" changes (e.g. background color of a UI).
     Tests of the style `assert_eq!(CONFIG_PARAM, 5);` are not considered useful
     and are not required by testability. However, if the contribution results
-    in an easily observable behavioral change, that contirbution should
+    in an easily observable behavioral change, that contribution should
     include a test for the new behavior.
 
 ## What does require testing

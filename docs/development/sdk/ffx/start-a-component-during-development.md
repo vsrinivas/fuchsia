@@ -180,6 +180,3 @@ Destroying component instance...
 [component-lifecycle]: /docs/concepts/components/v2/lifecycle.md
 [ffx-component-create]: https://fuchsia.dev/reference/tools/sdk/ffx#create_2
 [ffx-component-start]: https://fuchsia.dev/reference/tools/sdk/ffx#start
-[ffx-component-stop]: https://fuchsia.dev/reference/tools/sdk/ffx#stop
-[ffx-component-destory]: https://fuchsia.dev/reference/tools/sdk/ffx#destroy
-[get-the-list-of-components]: ./view-component-information.md#get-the-list-of-components

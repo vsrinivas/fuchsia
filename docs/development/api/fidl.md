@@ -79,7 +79,7 @@ FIDL should be used when runtime decisions will be made based on diagnostics inf
 programs. Inspect must never be used for communication between programs, it’s a best effort system
 that must not be relied on to make decisions or alter behavior during runtime in production.
 
-A heuristic to decide whether to use Insepct or FIDL could be:
+A heuristic to decide whether to use Inspect or FIDL could be:
 
 1. Is the data used by other programs in production?
    - Yes: Use FIDL.

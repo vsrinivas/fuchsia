@@ -78,7 +78,7 @@ templated on, but also the pointer type of the bindings that it stores. The code
 `unique_ptr` instead of raw pointers so that the binding set owns the
 instances of `EchoImpl`.
 
-This is the implentation of the two methods:
+This is the implementation of the two methods:
 
 ```cpp
 {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/request_pipelining/server/main.cc" region_tag="launcher-impl" highlight="3,4,5,6,7,8,9,11,12,13,14,15" %}

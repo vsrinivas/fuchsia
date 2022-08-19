@@ -102,7 +102,7 @@ DEFINE_OPTION("kernel.smp.maxcpus", uint32_t, x86_smp_max_cpus, {32}, R"""(
 This option caps the number of CPUs to initialize.  It cannot be greater than *SMP\_MAX\_CPUS* 
 for a specific architecture.
 
-Note: The default value may vary for each architechture.
+Note: The default value may vary for each architecture.
 )""")
 
 DEFINE_OPTION("kernel.wallclock", WallclockType, x86_wallclock, {WallclockType::kAutoDetect}, R"""(

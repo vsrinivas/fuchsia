@@ -51,7 +51,7 @@ To create a server implementation:
    inherits from the [corresponding test base class][test-base]. This means that
    the implementation only needs to override the methods that are being tested
    (in this case, `EchoString`), as well as the `NotImplemented_` method, which
-  is called if any of the request handler methods that are not overriden get
+  is called if any of the request handler methods that are not overridden get
   called.
 
 1. Create a test class that wraps the logic of publishing the echo protocol:

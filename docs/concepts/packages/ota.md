@@ -358,7 +358,7 @@ The system commits an update once that update is verified by the system.
 The system verifies the update in the following way:
 
 * [Rebooting into the update version](#reboot-update)
-* [Committing the update](#commiting-update)
+* [Committing the update](#committing-update)
 
 ### Rebooting into the updated version {#reboot-update}
 
@@ -393,7 +393,7 @@ bar/0 = new-version-hash-bar
 or activated. Then, `appmgr` starts which then starts the `pkg-resolver`,
 `pkg-cache`, `netstack`, etc...
 
-### Committing the update {#commiting-update}
+### Committing the update {#committing-update}
 
 The `system-update-committer` component runs various checks to verify if the
 new update was successful. For example, it instructs BlobFs to arbitrarily

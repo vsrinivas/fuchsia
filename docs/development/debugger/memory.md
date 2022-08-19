@@ -155,7 +155,7 @@ interpreted as an address.
 ## `sym-near`: Map addresses to symbols
 
 The `sym-near` command, abbreviated `sn`, attempts to map an address to a symbol name. Running the
-command outputs the name and line information (if available) for the symbol at or preceeding the
+command outputs the name and line information (if available) for the symbol at or preceding the
 address and is most often used to tell what a pointer points to.
 
 ```none {:.devsite-disable-click-to-copy}

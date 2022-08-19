@@ -221,7 +221,7 @@ by clients. Drivers with `CAN_ASYNC_NOTIFY` set will reply to the first
 {% comment %}
 > TODO(fxbug.dev/63522): Add support for power control.
 > TODO(fxbug.dev/64878): Add support for peripheral control.
-> TODO(fxbug.dev/63523): Add support for content proteccion.
+> TODO(fxbug.dev/63523): Add support for content protection.
 {% endcomment %}
 
 ### Signal processing {#signal-processing}

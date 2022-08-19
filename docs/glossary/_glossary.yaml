@@ -104,9 +104,9 @@
   area: ["System", "Devices"]
 
 - term: "Cache directory"
-  short_description: "A private directory, that may be cleared by thge system at any time, within
+  short_description: "A private directory, that may be cleared by the system at any time, within
   which a component instance may cache data local to the device."
-  full_description: "A private directory, that may be cleared by thge system at any time, within
+  full_description: "A private directory, that may be cleared by the system at any time, within
   which a component instance may cache data local to the device. Similar to a
   <a href=\"/docs/glossary#data-directory\">data directory</a>,
   except that the contents of a cache directory may be cleared by the system at any time, such as

@@ -10,7 +10,7 @@ about recording and viewing logs.
 
 ### GN dependency
 
-The necessary packages can be included with an addtion to `deps` in `BUILD.gn`:
+The necessary packages can be included with an addition to `deps` in `BUILD.gn`:
 
 ```
 deps = [

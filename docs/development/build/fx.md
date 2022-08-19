@@ -96,7 +96,7 @@ graph.
 * You selected the product `workstation_eng` (run `fx list-products` for a list of
   other product configurations).
 * You selected the board `x64`, which supports many typical boards based on the
-  `x64` architecture. (Note that `arm64` boards are less interchangable, and you
+  `x64` architecture. (Note that `arm64` boards are less interchangeable, and you
   will most likely need to give `fx set` the specific board, when building to an
   `arm64` architecture. Run `fx list-boards` for a list of known board
   configurations.)

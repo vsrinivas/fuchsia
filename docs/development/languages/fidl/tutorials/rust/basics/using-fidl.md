@@ -38,7 +38,7 @@ rm -r examples/fidl/rust/fidl_crates/*
    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="main" adjust_indentation="auto" %}
    ```
 
-1. Define a `rustc_binary` and then create a depencency on the test through the `$host_toolchain`, which will build the binary for the host.
+1. Define a `rustc_binary` and then create a dependency on the test through the `$host_toolchain`, which will build the binary for the host.
    To do this, add the following to `examples/fidl/rust/fidl_crates/BUILD.gn`:
 
    ```gn
@@ -57,7 +57,7 @@ rm -r examples/fidl/rust/fidl_crates/*
 
    Note: `rustc_binary` will look for a `src/main.rs` file by default as the crate root. It is possible
    to place the test code in a different file (e.g. `hello_world.rs`) instead, and then specify the
-   crate root explicity in the `rustc_binary` declaration (e.g. `source_root = "hello_world.rs"`).
+   crate root explicitly in the `rustc_binary` declaration (e.g. `source_root = "hello_world.rs"`).
 
 1. Include example in the build
 
