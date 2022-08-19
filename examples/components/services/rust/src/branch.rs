@@ -14,15 +14,14 @@ use {
 };
 
 const COLLECTION_NAME: &'static str = "account_providers";
-const TEST_PACKAGE: &'static str = "fuchsia-pkg://fuchsia.com/service-examples";
 
 #[fuchsia::test]
 async fn read_and_write_to_multiple_service_instances() {
     // Launch two BankAccount providers into the `account_providers` collection.
     let realm = fuchsia_component::client::connect_to_protocol::<fcomponent::RealmMarker>()
         .expect("connect to Realm service");
-    start_provider(&realm, "a", &format!("{}#meta/provider-a.cm", TEST_PACKAGE)).await;
-    start_provider(&realm, "b", &format!("{}#meta/provider-b.cm", TEST_PACKAGE)).await;
+    start_provider(&realm, "a", "#meta/provider-a.cm").await;
+    start_provider(&realm, "b", "#meta/provider-b.cm").await;
 
     let service_dir = fclient::open_service::<fexamples::BankAccountMarker>()
         .expect("failed to open service dir");

@@ -11,7 +11,10 @@ group("services") {
 
 group("tests") {
   testonly = true
-  deps = [ ":service-examples" ]
+  deps = [
+    ":service-examples-cpp",
+    ":service-examples-rust",
+  ]
 }
 
 fuchsia_component("services-cmp") {
@@ -20,11 +23,22 @@ fuchsia_component("services-cmp") {
   manifest = "meta/services.cml"
 }
 
-fuchsia_test_package("service-examples") {
+# Run with `fx test service-examples-rust`
+fuchsia_test_package("service-examples-rust") {
   test_components = [ ":services-cmp" ]
   deps = [
     "rust:branch-cmp",
     "rust:provider-a-cmp",
     "rust:provider-b-cmp",
+  ]
+}
+
+# Run with `fx test service-examples-cpp`
+fuchsia_test_package("service-examples-cpp") {
+  test_components = [ ":services-cmp" ]
+  deps = [
+    "cpp:branch-cmp",
+    "cpp:provider-a-cmp",
+    "cpp:provider-b-cmp",
   ]
 }

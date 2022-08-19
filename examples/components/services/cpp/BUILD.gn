@@ -1,0 +1,55 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+
+test("branch-bin") {
+  output_name = "branch_bin_cpp"
+  deps = [
+    "//examples/components/services/fidl:fuchsia.examples.services",
+    "//sdk/fidl/fuchsia.component",
+    "//sdk/fidl/fuchsia.component.decl",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture:gtest",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+  sources = [ "branch.cc" ]
+}
+
+executable("provider-bin") {
+  output_name = "provider_bin_cpp"
+  deps = [
+    "//examples/components/services/fidl:fuchsia.examples.services",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+  sources = [ "provider.cc" ]
+}
+
+fuchsia_component("branch-cmp") {
+  testonly = true
+  component_name = "branch"
+  manifest = "meta/branch.cml"
+  deps = [ ":branch-bin" ]
+}
+
+fuchsia_component("provider-a-cmp") {
+  testonly = true
+  component_name = "provider-a"
+  manifest = "meta/provider-a.cml"
+  deps = [ ":provider-bin" ]
+}
+
+fuchsia_component("provider-b-cmp") {
+  testonly = true
+  component_name = "provider-b"
+  manifest = "meta/provider-b.cml"
+  deps = [ ":provider-bin" ]
+}

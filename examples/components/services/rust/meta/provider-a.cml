@@ -5,7 +5,7 @@
     include: [ "syslog/client.shard.cml" ],
     program: {
         runner: "elf",
-        binary: "bin/provider_bin",
+        binary: "bin/provider_bin_rust",
 
         // format is [<owner_name>, <inital_balance_cents>]
         args: [

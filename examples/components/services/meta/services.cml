@@ -6,7 +6,7 @@
         // The consumer of `fuchsia.examples.services.BankAccount`.
         {
             name: "bank_branch",
-            url: "fuchsia-pkg://fuchsia.com/service-examples#meta/branch.cm",
+            url: "#meta/branch.cm",
         },
     ],
     collections: [

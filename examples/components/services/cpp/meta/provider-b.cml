@@ -1,11 +1,11 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
     include: [ "syslog/client.shard.cml" ],
     program: {
         runner: "elf",
-        binary: "bin/provider_bin_rust",
+        binary: "bin/provider_bin_cpp",
 
         // format is [<owner_name>, <inital_balance_cents>]
         args: [
