@@ -802,7 +802,7 @@ From //build/images/args.gni:29
 
 ### build_usb_installer
 Generate installer disk image (ISO) to be flashed to a USB drive.
-Will be located at obj/build/installer_images/ relative to the build directory.
+Will be located at obj/build/images/installer relative to the build directory.
 See https://fuchsia.dev/fuchsia-src/development/hardware/installer
 
 **Current value (from the default):** `false`
@@ -1066,19 +1066,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/e69b93db8303d1cb2bd0e987802849089014eb98/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/79b4782b1181318ee6aac0d175ec90cbb1996c6e/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
-**Current value (from the default):** `"socket"`
+**Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:19](https://fuchsia.googlesource.com/third_party/crashpad/+/e69b93db8303d1cb2bd0e987802849089014eb98/util/net/tls.gni#19)
+From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/79b4782b1181318ee6aac0d175ec90cbb1996c6e/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/e69b93db8303d1cb2bd0e987802849089014eb98/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/79b4782b1181318ee6aac0d175ec90cbb1996c6e/util/net/tls.gni#30)
 
 ### cts_version
 Name of the CTS version.
@@ -1143,7 +1143,7 @@ From //build/images/custom_signing.gni:21
 
 **Current value (from the default):** `""`
 
-From [//third_party/Vulkan-Loader/BUILD.gn:22](https://fuchsia.googlesource.com/third_party/Vulkan-Loader/+/99e723e3d7a4cd1bf1564131d8579f60d6e98989/BUILD.gn#22)
+From [//third_party/Vulkan-Loader/BUILD.gn:22](https://fuchsia.googlesource.com/third_party/Vulkan-Loader/+/728352b9c0ed498f6ffba8fad6f1dbfe615a3ad9/BUILD.gn#22)
 
 ### cxx_rbe_enable
 Set to true to enable distributed compilation of C++ using RBE.
@@ -2966,7 +2966,7 @@ From //build/go/go_build.gni:22
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/dartlang/.gocache"`
 
 From //build/go/go_build.gni:18
 
@@ -6262,7 +6262,7 @@ From //build/security.gni:209
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"thinlto-cache"`
+**Current value (from the default):** `"dartlang/thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
@@ -6517,7 +6517,7 @@ VkInstances or VkDevice will fail.
 This argument will affect all vulkan_{executable/test} build targets.
 
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
 From //src/lib/vulkan/build/config.gni:40
 
