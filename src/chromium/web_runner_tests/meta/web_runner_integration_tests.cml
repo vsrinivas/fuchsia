@@ -1,0 +1,108 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "sys/component/realm_builder.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/web_runner_integration_tests_bin",
+    },
+    children: [
+        {
+            name: "property_provider",
+            url: "fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager.cm",
+        },
+        {
+            name: "build_info",
+            url: "#meta/fake_build_info.cm",
+        },
+        {
+            name: "ui",
+            url: "fuchsia-pkg://fuchsia.com/test-ui-stack#meta/test-ui-stack.cm",
+        },
+    ],
+    use: [
+        // These are all the protocols that must be provided when
+        // creating a WebContext.
+        {
+            protocol: [
+                "fuchsia.accessibility.semantics.SemanticsManager",
+                "fuchsia.fonts.Provider",
+                "fuchsia.logger.LogSink",
+                "fuchsia.media.ProfileProvider",
+                "fuchsia.memorypressure.Provider",
+                "fuchsia.net.interfaces.State",
+                "fuchsia.netstack.Netstack",
+                "fuchsia.sys.Launcher",
+                "fuchsia.sysmem.Allocator",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "#ui",
+        },
+        {
+            protocol: "fuchsia.intl.PropertyProvider",
+            from: "#property_provider",
+        },
+        {
+            protocol: "fuchsia.buildinfo.Provider",
+            from: "#build_info",
+        },
+        {
+            // Needed to launch a web server
+            protocol: "fuchsia.posix.socket.Provider",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sys.Loader",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: "#realm_builder",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            as: "config-data",
+            to: "#realm_builder",
+            subdir: "web-runner-integration-test",
+        },
+        {
+            protocol: [
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: "#ui",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#build_info",
+                "#property_provider",
+                "#ui",
+            ],
+        },
+    ],
+    facets: {
+        "fuchsia.test": { type: "chromium" },
+    },
+}

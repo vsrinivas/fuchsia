@@ -3,15 +3,17 @@
 // found in the LICENSE file.
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/web/cpp/fidl.h>
 #include <lib/fit/function.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <gtest/gtest.h>
 
+#include "lib/sys/component/cpp/testing/realm_builder_types.h"
 #include "src/chromium/web_runner_tests/test_server.h"
-#include "src/chromium/web_runner_tests/web_context.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
@@ -20,6 +22,7 @@
 //
 // See also: https://chromium.googlesource.com/chromium/src/+/HEAD/fuchsia
 namespace {
+using namespace component_testing;
 
 // This is a black box smoke test for whether the web runner in a given system
 // is capable of performing basic operations.
@@ -30,7 +33,14 @@ namespace {
 //
 // See also:
 // https://chromium.googlesource.com/chromium/src/+/HEAD/fuchsia/runners/web/web_runner_smoke_test.cc
-TEST(WebRunnerIntegrationTest, Smoke) {
+//
+// Web Runner migration to Component Framework V2 is in progress
+// https://bugs.chromium.org/p/chromium/issues/detail?id=1065707 This test case should be replaced
+// when web_runner v2 is available.
+//
+// TODO(fxbug.dev/105686): This tests is currently disabled, awaiting migration to use existing test
+// utilities in src/ui/tests.
+TEST(WebRunnerIntegrationTest, DISABLED_Smoke) {
   web_runner_tests::TestServer server;
   FX_CHECK(server.FindAndBindPort());
 
@@ -84,14 +94,56 @@ class MockNavigationEventListener : public fuchsia::web::NavigationEventListener
 
 class ChromiumAppTest : public gtest::RealLoopFixture {
  protected:
-  ChromiumAppTest()
-      : web_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory().get(),
-                     fuchsia::web::ContextFeatureFlags()) {}
+  ChromiumAppTest() : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {
+    auto realm_builder = RealmBuilder::Create();
+    realm_builder.AddLegacyChild("context_provider",
+                                 "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx");
+    // Capabilities that must be given to ContextProvider
+    realm_builder.AddRoute(Route{.capabilities = {Protocol{"fuchsia.logger.LogSink"}},
+                                 .source = ParentRef(),
+                                 .targets = {ChildRef{"context_provider"}}});
 
-  WebContext* web_context() { return &web_context_; }
+    // Expose all capabilities to the test
+    realm_builder.AddRoute(Route{.capabilities = {Protocol{"fuchsia.web.ContextProvider"}},
+                                 .source = ChildRef{"context_provider"},
+                                 .targets = {ParentRef()}});
+    realm_ = std::make_unique<component_testing::RealmRoot>(realm_builder.Build(dispatcher()));
+    auto incoming_service_clone = context_->svc()->CloneChannel();
+    auto web_context_provider = realm_->Connect<fuchsia::web::ContextProvider>();
+    web_context_provider.set_error_handler([](zx_status_t status) {
+      FX_LOGS(WARNING) << "web_context_provider: " << zx_status_get_string(status);
+    });
+    FX_CHECK(incoming_service_clone.is_valid());
+
+    fuchsia::web::CreateContextParams params;
+    params.set_service_directory(std::move(incoming_service_clone));
+    params.set_features(fuchsia::web::ContextFeatureFlags());
+    web_context_provider->Create(std::move(params), web_context_.NewRequest());
+    web_context_.set_error_handler([](zx_status_t status) {
+      FX_LOGS(WARNING) << "web_context_: " << zx_status_get_string(status);
+    });
+    web_context_->CreateFrame(web_frame_.NewRequest());
+    web_frame_.set_error_handler([](zx_status_t status) {
+      FX_LOGS(WARNING) << "web_frame_: " << zx_status_get_string(status);
+    });
+  }
+  fuchsia::web::Frame* web_frame() const { return web_frame_.get(); }
+
+  void Navigate(const std::string& url) {
+    // By creating a new NavigationController for each Navigate() call, we
+    // implicitly ensure that any preceding calls to the Frame must have executed
+    // before LoadUrl() is handled.
+    fuchsia::web::NavigationControllerPtr navigation;
+    web_frame_->GetNavigationController(navigation.NewRequest());
+    navigation->LoadUrl(url, fuchsia::web::LoadUrlParams(),
+                        [](fuchsia::web::NavigationController_LoadUrl_Result) {});
+  }
 
  private:
-  WebContext web_context_;
+  std::unique_ptr<sys::ComponentContext> context_;
+  std::unique_ptr<RealmRoot> realm_;
+  fuchsia::web::ContextPtr web_context_;
+  fuchsia::web::FramePtr web_frame_;
 };
 
 // This test ensures that we can interact with the fuchsia.web FIDL.
@@ -102,8 +154,7 @@ TEST_F(ChromiumAppTest, CreateAndNavigate) {
   MockNavigationEventListener navigation_event_listener;
   fidl::Binding<fuchsia::web::NavigationEventListener> navigation_event_listener_binding(
       &navigation_event_listener);
-  web_context()->web_frame()->SetNavigationEventListener(
-      navigation_event_listener_binding.NewBinding());
+  web_frame()->SetNavigationEventListener(navigation_event_listener_binding.NewBinding());
   navigation_event_listener_binding.set_error_handler([](zx_status_t status) {
     FAIL() << "navigation_event_listener_binding: " << zx_status_get_string(status);
   });
@@ -135,7 +186,7 @@ TEST_F(ChromiumAppTest, CreateAndNavigate) {
   FX_CHECK(server.FindAndBindPort());
 
   const std::string url = fxl::StringPrintf("http://localhost:%d/foo.html", server.port());
-  web_context()->Navigate(url);
+  Navigate(url);
 
   ASSERT_TRUE(server.Accept());
 

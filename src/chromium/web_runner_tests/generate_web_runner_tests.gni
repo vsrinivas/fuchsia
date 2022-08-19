@@ -13,7 +13,6 @@ template("generate_web_runner_tests") {
 
     deps = [
       "${invoker.chromium_dir}:web_engine",
-      "${invoker.chromium_dir}:web_runner",
       "//src/chromium/web_runner_tests",
 
       # The deps below are necessary on minimal product configs.

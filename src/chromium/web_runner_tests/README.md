@@ -29,8 +29,6 @@ To run individual test suites, use these fx invocations:
 
 ```shell
 fx test web_runner_tests -t -- --gtest_filter="WebRunnerIntegrationTest.*"
-fx test web_runner_tests -t -- --gtest_filter="WebRunnerPixelTest.*"
-fx test web_runner_tests -t -- --gtest_filter="WebPixelTest.*"
 ```
 
 For more information about the individual tests, see their respective file
