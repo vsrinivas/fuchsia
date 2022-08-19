@@ -9,17 +9,17 @@ extensions.
 
 ## VS Code {#vs-code}
 
-To get started with VS Code, install [VS Code][#vs-code-download]{: .external}.
+To get started with VS Code, install [VS Code][vs-code-download]{: .external}.
 
 ### Configuration
 
 Once you have installed VS Code, you should configure the IDE. Depending on
 your development setup, consider the following guides:
 
-* [Configuring remote workspaces][#remote-workspaces]: This guide is recommended
+* [Configuring remote workspaces][remote-workspaces]: This guide is recommended
   if you are developing on a virtual machine, container, or an environment with
   a running SSH server.
-* [Configuring file reloading][#file-reloading]: This guide is recommended if
+* [Configuring file reloading][file-reloading]: This guide is recommended if
   you are developing Fuchsia in the source tree. As Fuchsia has a large code
   base, you may want to exclude some directories from being watched for file
   changes.
@@ -30,7 +30,7 @@ VS Code supports a large amount of extensions which can help you customize
 your IDE. Fuchsia has developed several extensions that are specific for
 developing the Fuchsia platform and for developing on Fuchsia with the SDK.
 
-* [Fuchsia developer][#fuchsia-dev-ext]: This extension integrates key
+* [Fuchsia developer][fuchsia-dev-ext]: This extension integrates key
   [ffx][ffx-ref] functionality into VS Code such as connecting, debugging,
   analyzing logs for Fuchsia devices, and functionality to help you edit and
   debug code as you develop for Fuchsia.
@@ -49,7 +49,7 @@ configurations for Fuchsia development.
 code-completion engine. YouCompleteMe works natively with Vim but it can also be
 integrated with other editors through [ycmd](https://github.com/Valloric/ycmd).
 
-For installation and usage information see [YouCompleteMe integration][#youcompleteme-editor]
+For installation and usage information see [YouCompleteMe integration][youcompleteme-editor]
 
 ### Vim configuration
 
@@ -60,18 +60,18 @@ following:
 *   Enable FIDL syntax highlighting (using `/tools/fidl/editors/vim/`).
 *   Integrate basic build system so that `:make` builds and populates the
     QuickFix window.
-*   Configure [YouCompleteMe][#youcompleteme-editor] (YCM)
+*   Configure [YouCompleteMe][youcompleteme-editor] (YCM)
     to provide error checking, code completion, and source navigation within the
     Fuchsia tree.
 
-For installation and usage information see [Vim tools for Fuchsia development][#vim-editor]
+For installation and usage information see [Vim tools for Fuchsia development][vim-editor]
 
 ### Sublime Text Configuration
 
 Each language may have extra configuration. See more for
 
-* [Rust][#rust-sublime]
-* [FIDL][#FIDL-sublime]
+* [Rust][rust-sublime]
+* [FIDL][FIDL-sublime]
 
 [vs-code-download]: https://code.visualstudio.com/docs/setup/setup-overview
 [remote-workspaces]: /docs/reference/tools/editors/vscode/remote-workspaces.md
