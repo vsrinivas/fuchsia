@@ -213,7 +213,7 @@
             "localizedDescription": "muteVolumeKeyboardShortcut"
         },
         {
-            "char": "mediaMute",
+            "char": "mute",
             "chord": "🔇",
             "description": "Mute Volume",
             "exclusive": false,
@@ -229,7 +229,7 @@
             "localizedDescription": "decreaseVolumeKeyboardShortcut"
         },
         {
-            "char": "mediaVolumeDecrement",
+            "char": "volumeDown",
             "chord": "🔉",
             "description": "Decrease Volume",
             "exclusive": false,
@@ -245,7 +245,7 @@
             "localizedDescription": "increaseVolumeKeyboardShortcut"
         },
         {
-            "char": "mediaVolumeIncrement",
+            "char": "volumeUp",
             "chord": "🔊",
             "description": "Increase Volume",
             "exclusive": false,
