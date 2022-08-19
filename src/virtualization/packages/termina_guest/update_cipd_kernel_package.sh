@@ -13,7 +13,8 @@ readonly SCRIPT_DIR
 FUCHSIA_DIR=$(git rev-parse --show-toplevel)
 readonly FUCHSIA_DIR
 declare -r CIPD="${FUCHSIA_DIR}/.jiri_root/bin/cipd"
-declare -r LINUX_BRANCH="machina-5.4"
+declare -r KERNEL_VERSION="5.15"
+declare -r LINUX_BRANCH="machina-${KERNEL_VERSION}"
 
 # Ensure a valid architecture was specified.
 case "${1}" in
@@ -44,12 +45,12 @@ mkdir -p "${OUTPUT_DIR}"
     -b "${LINUX_BRANCH}" \
     -d "machina_defconfig" \
     -l "${WORKING_DIR}/linux" \
-    -o "${OUTPUT_DIR}/vm_kernel" \
+    -o "${OUTPUT_DIR}/vm_kernel-${KERNEL_VERSION}" \
     "${ARCH}"
 LINUX_GIT_HASH="$( cd "${WORKING_DIR}/linux" && git rev-parse --verify HEAD )"
 
 # Copy to the prebuilt directory.
-cp -f "${OUTPUT_DIR}/vm_kernel" "${FUCHSIA_DIR}/prebuilt/virtualization/packages/termina_guest/images/${ARCH}/Image"
+cp -f "${OUTPUT_DIR}/vm_kernel-${KERNEL_VERSION}" "${FUCHSIA_DIR}/prebuilt/virtualization/packages/termina_guest/images/${ARCH}/Image"
 
 # Upload to CIPD.
 declare -r CIPD_PATH="fuchsia_internal/linux/linux_kernel-${LINUX_BRANCH}-${ARCH}"
