@@ -182,6 +182,7 @@ struct fdio : protected fbl::RefCounted<fdio>, protected fbl::Recyclable<fdio> {
 
   // The zxio object, if the zxio transport is selected in |ops|.
   zxio_storage_t& zxio_storage() { return storage_; }
+  const zxio_storage_t& zxio_storage() const { return storage_; }
 
   // Used to implement SO_RCVTIMEO. See `man 7 socket` for details.
   zx::duration& rcvtimeo() { return rcvtimeo_; }

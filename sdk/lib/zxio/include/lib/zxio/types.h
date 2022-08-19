@@ -105,7 +105,7 @@ typedef struct zxio_tag {
 // Storage for the |zxio_ops_t| implementation.
 // All |zxio_t| implementations must fit within this space.
 typedef struct zxio_private {
-  uint64_t reserved[6];
+  uint64_t reserved[8];
 } zxio_private_t;
 
 // See extensions.h
@@ -119,6 +119,12 @@ typedef struct zxio_storage {
 
 // Type of a zxio object.
 typedef uint32_t zxio_object_type_t;
+
+// Prelude sizes for datagram sockets.
+typedef struct zxio_datagram_prelude_size {
+  const size_t tx;
+  const size_t rx;
+} zxio_datagram_prelude_size_t;
 
 // clang-format off
 #define ZXIO_OBJECT_TYPE_NONE                         ((zxio_object_type_t) 0)

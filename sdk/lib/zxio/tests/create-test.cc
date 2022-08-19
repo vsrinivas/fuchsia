@@ -118,7 +118,7 @@ TEST(CreateWithTypeInvalidStorageClosesHandles, DatagramSocket) {
   ASSERT_OK(zx::channel::create(0, &channel0, &channel1));
 
   ASSERT_EQ(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET, socket0.release(),
-                                  channel0.release(), nullptr),
+                                  nullptr, nullptr, channel0.release()),
             ZX_ERR_INVALID_ARGS);
 
   zx_signals_t pending = 0;

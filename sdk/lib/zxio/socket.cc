@@ -166,12 +166,14 @@ static constexpr zxio_ops_t zxio_datagram_socket_ops = []() {
   return ops;
 }();
 
-zx_status_t zxio_datagram_socket_init(zxio_storage_t* storage, zx::socket socket,
-                                      fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> client,
-                                      const zx_info_socket_t& info) {
+zx_status_t zxio_datagram_socket_init(
+    zxio_storage_t* storage, zx::socket socket, const zx_info_socket_t& info,
+    const zxio_datagram_prelude_size_t& prelude_size,
+    fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> client) {
   auto zs = new (storage) zxio_datagram_socket_t{
       .io = {},
       .pipe = {},
+      .prelude_size = prelude_size,
       .client = fidl::BindSyncClient(std::move(client)),
   };
   zxio_init(&zs->io, &zxio_datagram_socket_ops);

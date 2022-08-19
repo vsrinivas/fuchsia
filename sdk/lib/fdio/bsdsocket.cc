@@ -246,13 +246,26 @@ int socket(int domain, int type, int protocol) {
           if (!response.has_rx_meta_buf_size()) {
             return ERROR(ZX_ERR_NOT_SUPPORTED);
           }
-          zx::status<fdio_ptr> io_result =
-              fdio_datagram_socket_create(std::move(response.socket()), std::move(control),
-                                          response.tx_meta_buf_size(), response.rx_meta_buf_size());
-          if (io_result.is_error()) {
-            return ERROR(io_result.status_value());
+          io = fdio_datagram_socket_allocate();
+          if (io == nullptr) {
+            return ERROR(ZX_ERR_NO_MEMORY);
           }
-          io = io_result.value();
+          zx::socket& socket = response.socket();
+          zx_info_socket_t info;
+          if (zx_status_t status =
+                  socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
+              status != ZX_OK) {
+            return ERROR(status);
+          }
+          const zxio_datagram_prelude_size_t prelude_size{
+              .tx = response.tx_meta_buf_size(),
+              .rx = response.rx_meta_buf_size(),
+          };
+          if (zx_status_t status = zxio::CreateDatagramSocket(
+                  &io->zxio_storage(), std::move(socket), info, prelude_size, std::move(control));
+              status != ZX_OK) {
+            return ERROR(status);
+          }
         } break;
         case fsocket::wire::ProviderDatagramSocketResponse::Tag::kSynchronousDatagramSocket: {
           fidl::ClientEnd<fsocket::SynchronousDatagramSocket>& control =

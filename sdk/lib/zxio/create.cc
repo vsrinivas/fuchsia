@@ -172,6 +172,23 @@ zx_status_t zxio_create_with_on_open(zx_handle_t raw_handle, zxio_storage_t* sto
 zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node, fio::wire::NodeInfo& info,
                                       zxio_storage_t* storage) {
   switch (info.Which()) {
+    case fio::wire::NodeInfo::Tag::kDatagramSocket: {
+      fio::wire::DatagramSocket& datagram_socket = info.datagram_socket();
+      zx::socket& socket = datagram_socket.socket;
+      zx_info_socket_t info;
+      if (zx_status_t status =
+              socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
+          status != ZX_OK) {
+        return status;
+      }
+      zxio_datagram_prelude_size_t prelude_size{
+          .tx = datagram_socket.tx_meta_buf_size,
+          .rx = datagram_socket.rx_meta_buf_size,
+      };
+      return zxio_datagram_socket_init(
+          storage, std::move(socket), info, prelude_size,
+          fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket>(node.TakeChannel()));
+    }
     case fio::wire::NodeInfo::Tag::kDirectory: {
       return zxio_dir_init(storage, node.TakeChannel().release());
     }
@@ -245,14 +262,16 @@ zx_status_t zxio_create_with_type(zxio_storage_t* storage, zxio_object_type_t ty
     }
     case ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET: {
       zx::socket socket(va_arg(args, zx_handle_t));
-      zx::channel client(va_arg(args, zx_handle_t));
       zx_info_socket_t* info = va_arg(args, zx_info_socket_t*);
-      if (!socket.is_valid() || !client.is_valid() || storage == nullptr || info == nullptr) {
+      zxio_datagram_prelude_size_t* prelude_size = va_arg(args, zxio_datagram_prelude_size_t*);
+      zx::channel client(va_arg(args, zx_handle_t));
+      if (storage == nullptr || !socket.is_valid() || info == nullptr || prelude_size == nullptr ||
+          !client.is_valid()) {
         return ZX_ERR_INVALID_ARGS;
       }
       return zxio_datagram_socket_init(
-          storage, std::move(socket),
-          fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket>(std::move(client)), *info);
+          storage, std::move(socket), *info, *prelude_size,
+          fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket>(std::move(client)));
     }
     case ZXIO_OBJECT_TYPE_DIR: {
       zx::handle control(va_arg(args, zx_handle_t));

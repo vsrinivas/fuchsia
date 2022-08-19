@@ -2736,6 +2736,10 @@ static zxio_datagram_socket_t& zxio_datagram_socket(zxio_t* io) {
   return *reinterpret_cast<zxio_datagram_socket_t*>(io);
 }
 
+static const zxio_datagram_socket_t& zxio_datagram_socket(const zxio_t* io) {
+  return *reinterpret_cast<const zxio_datagram_socket_t*>(io);
+}
+
 namespace fdio_internal {
 
 using ErrOrOutCode = zx::status<int16_t>;
@@ -2792,10 +2796,6 @@ struct socket_with_zx_socket : public network_socket<T> {
 };
 
 struct datagram_socket : public socket_with_zx_socket<DatagramSocket> {
-  datagram_socket(size_t tx_prelude_size, size_t rx_prelude_size)
-      : netstack_versioned_tx_prelude_size_(tx_prelude_size),
-        netstack_versioned_rx_prelude_size_(rx_prelude_size) {}
-
   std::optional<ErrOrOutCode> GetZxSocketReadError(zx_status_t status) override {
     switch (status) {
       case ZX_ERR_BAD_STATE:
@@ -2853,15 +2853,15 @@ struct datagram_socket : public socket_with_zx_socket<DatagramSocket> {
     std::unique_ptr<uint8_t[]> heap_allocated_buf;
     uint8_t stack_allocated_buf[kRxUdpPreludeSize];
     uint8_t* buf = stack_allocated_buf;
-    if (netstack_versioned_rx_prelude_size_ > kRxUdpPreludeSize) {
-      heap_allocated_buf = std::make_unique<uint8_t[]>(netstack_versioned_rx_prelude_size_);
+    if (prelude_size().rx > kRxUdpPreludeSize) {
+      heap_allocated_buf = std::make_unique<uint8_t[]>(prelude_size().rx);
       buf = heap_allocated_buf.get();
     }
 
     zx_iovec_t zx_iov[msg->msg_iovlen + 1];
     zx_iov[0] = {
         .buffer = buf,
-        .capacity = netstack_versioned_rx_prelude_size_,
+        .capacity = prelude_size().rx,
     };
 
     size_t zx_iov_idx = 1;
@@ -2898,13 +2898,13 @@ struct datagram_socket : public socket_with_zx_socket<DatagramSocket> {
       return err.status_value();
     }
 
-    if (count_bytes_read < netstack_versioned_rx_prelude_size_) {
+    if (count_bytes_read < prelude_size().rx) {
       *out_code = EIO;
       return ZX_OK;
     }
 
     fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta> decoded_meta =
-        deserialize_recv_msg_meta(cpp20::span<uint8_t>(buf, netstack_versioned_rx_prelude_size_));
+        deserialize_recv_msg_meta(cpp20::span<uint8_t>(buf, prelude_size().rx));
 
     if (!decoded_meta.ok()) {
       *out_code = EIO;
@@ -2922,7 +2922,7 @@ struct datagram_socket : public socket_with_zx_socket<DatagramSocket> {
           meta.from(), static_cast<struct sockaddr*>(msg->msg_name), msg->msg_namelen));
     }
 
-    size_t payload_bytes_read = count_bytes_read - netstack_versioned_rx_prelude_size_;
+    size_t payload_bytes_read = count_bytes_read - prelude_size().rx;
     if (payload_bytes_read > meta.payload_len()) {
       *out_code = EIO;
       return ZX_OK;
@@ -2990,8 +2990,8 @@ struct datagram_socket : public socket_with_zx_socket<DatagramSocket> {
     std::unique_ptr<uint8_t[]> heap_allocated_buf;
     uint8_t stack_allocated_buf[kTxUdpPreludeSize];
     uint8_t* buf = stack_allocated_buf;
-    if (netstack_versioned_tx_prelude_size_ > kTxUdpPreludeSize) {
-      heap_allocated_buf = std::make_unique<uint8_t[]>(netstack_versioned_tx_prelude_size_);
+    if (prelude_size().tx > kTxUdpPreludeSize) {
+      heap_allocated_buf = std::make_unique<uint8_t[]>(prelude_size().tx);
       buf = heap_allocated_buf.get();
     }
 
@@ -3013,8 +3013,7 @@ struct datagram_socket : public socket_with_zx_socket<DatagramSocket> {
     auto build_and_serialize =
         [this, &buf](fidl::WireTableBuilder<fsocket::wire::SendMsgMeta>& meta_builder) {
           fsocket::wire::SendMsgMeta meta = meta_builder.Build();
-          return serialize_send_msg_meta(
-              meta, cpp20::span<uint8_t>(buf, netstack_versioned_tx_prelude_size_));
+          return serialize_send_msg_meta(meta, cpp20::span<uint8_t>(buf, prelude_size().tx));
         };
 
     SerializeSendMsgMetaError serialize_err;
@@ -3038,7 +3037,7 @@ struct datagram_socket : public socket_with_zx_socket<DatagramSocket> {
     zx_iovec_t zx_iov[msg->msg_iovlen + 1];
     zx_iov[0] = {
         .buffer = buf,
-        .capacity = netstack_versioned_tx_prelude_size_,
+        .capacity = prelude_size().tx,
     };
 
     size_t zx_iov_idx = 1;
@@ -3064,7 +3063,7 @@ struct datagram_socket : public socket_with_zx_socket<DatagramSocket> {
       return err.status_value();
     }
 
-    size_t total_with_prelude = netstack_versioned_tx_prelude_size_ + total;
+    size_t total_with_prelude = prelude_size().tx + total;
     if (bytes_written != total_with_prelude) {
       // Datagram writes should never be short.
       *out_code = EIO;
@@ -3086,6 +3085,14 @@ struct datagram_socket : public socket_with_zx_socket<DatagramSocket> {
  private:
   zxio_datagram_socket_t& zxio_datagram_socket() {
     return ::zxio_datagram_socket(&zxio_storage().io);
+  }
+
+  const zxio_datagram_socket_t& zxio_datagram_socket() const {
+    return ::zxio_datagram_socket(&zxio_storage().io);
+  }
+
+  const zxio_datagram_prelude_size_t& prelude_size() const {
+    return zxio_datagram_socket().prelude_size;
   }
 
   zx_wait_item_t socket_err_wait_item() {
@@ -3347,32 +3354,12 @@ struct datagram_socket : public socket_with_zx_socket<DatagramSocket> {
 
   DestinationCache dest_cache_;
   RequestedCmsgCache cmsg_cache_;
-  size_t netstack_versioned_tx_prelude_size_;
-  size_t netstack_versioned_rx_prelude_size_;
 };
 
 }  // namespace fdio_internal
 
-zx::status<fdio_ptr> fdio_datagram_socket_create(zx::socket socket,
-                                                 fidl::ClientEnd<fsocket::DatagramSocket> client,
-                                                 size_t tx_prelude_size, size_t rx_prelude_size) {
-  zx_info_socket_t info;
-  if (zx_status_t status = socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
-      status != ZX_OK) {
-    return zx::error(status);
-  }
-
-  fdio_ptr io =
-      fbl::MakeRefCounted<fdio_internal::datagram_socket>(tx_prelude_size, rx_prelude_size);
-  if (io == nullptr) {
-    return zx::error(ZX_ERR_NO_MEMORY);
-  }
-  zx_status_t status =
-      zxio::CreateDatagramSocket(&io->zxio_storage(), std::move(socket), std::move(client), info);
-  if (status != ZX_OK) {
-    return zx::error(status);
-  }
-  return zx::ok(io);
+fdio_ptr fdio_datagram_socket_allocate() {
+  return fbl::MakeRefCounted<fdio_internal::datagram_socket>();
 }
 
 static zxio_stream_socket_t& zxio_stream_socket(zxio_t* io) {

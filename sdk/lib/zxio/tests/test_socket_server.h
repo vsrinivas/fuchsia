@@ -13,6 +13,22 @@
 
 namespace zxio_tests {
 
+class DatagramSocketServer final
+    : public fidl::testing::WireTestBase<fuchsia_posix_socket::DatagramSocket> {
+ public:
+  DatagramSocketServer() = default;
+
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) final {
+    ADD_FAILURE("unexpected message received: %s", name.c_str());
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+    completer.ReplySuccess();
+    completer.Close(ZX_OK);
+  }
+};
+
 class PacketSocketServer final
     : public fidl::testing::WireTestBase<fuchsia_posix_socket_packet::Socket> {
  public:

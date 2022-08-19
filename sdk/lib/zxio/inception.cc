@@ -55,6 +55,9 @@ zx_status_t zxio_create_with_allocator(fidl::ClientEnd<fuchsia_io::Node> node,
   zxio_storage_t* storage = nullptr;
   zxio_object_type_t type = ZXIO_OBJECT_TYPE_NONE;
   switch (info.Which()) {
+    case fio::wire::NodeInfo::Tag::kDatagramSocket:
+      type = ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET;
+      break;
     case fio::wire::NodeInfo::Tag::kDirectory:
       type = ZXIO_OBJECT_TYPE_DIR;
       break;

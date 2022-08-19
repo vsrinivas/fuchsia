@@ -16,9 +16,7 @@ struct fdio;
 
 fbl::RefPtr<fdio> fdio_synchronous_datagram_socket_allocate();
 
-zx::status<fbl::RefPtr<fdio>> fdio_datagram_socket_create(
-    zx::socket socket, fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> client,
-    size_t tx_meta_buf_size, size_t rx_meta_buf_size);
+fbl::RefPtr<fdio> fdio_datagram_socket_allocate();
 
 zx::status<fbl::RefPtr<fdio>> fdio_stream_socket_create(
     zx::socket socket, fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client);

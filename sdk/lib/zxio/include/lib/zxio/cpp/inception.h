@@ -11,6 +11,7 @@
 #include <fidl/fuchsia.posix.socket/cpp/wire.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zxio/ops.h>
+#include <lib/zxio/types.h>
 #include <threads.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -51,9 +52,8 @@ static_assert(sizeof(zxio_synchronous_datagram_socket_t) <= sizeof(zxio_storage_
 // A |zxio_t| backend that uses a fuchsia.posix.socket.DatagramSocket object.
 using zxio_datagram_socket_t = struct zxio_datagram_socket {
   zxio_t io;
-
   zxio_pipe_t pipe;
-
+  const zxio_datagram_prelude_size_t prelude_size;
   fidl::WireSyncClient<fuchsia_posix_socket::DatagramSocket> client;
 };
 

@@ -189,22 +189,6 @@ TEST_F(StreamSocketTest, CreateWithTypeWrapper) {
 
 namespace {
 
-class DatagramSocketServer final
-    : public fidl::testing::WireTestBase<fuchsia_posix_socket::DatagramSocket> {
- public:
-  DatagramSocketServer() = default;
-
-  void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) final {
-    ADD_FAILURE("unexpected message received: %s", name.c_str());
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
-    completer.ReplySuccess();
-    completer.Close(ZX_OK);
-  }
-};
-
 class DatagramSocketTest : public zxtest::Test {
  public:
   void SetUp() final {
@@ -219,7 +203,8 @@ class DatagramSocketTest : public zxtest::Test {
   }
 
   void Init() {
-    ASSERT_OK(zxio_datagram_socket_init(&storage_, TakeSocket(), TakeClientEnd(), info()));
+    ASSERT_OK(zxio_datagram_socket_init(&storage_, TakeSocket(), info(), prelude_size(),
+                                        TakeClientEnd()));
     zxio_ = &storage_.io;
   }
 
@@ -230,7 +215,8 @@ class DatagramSocketTest : public zxtest::Test {
     control_loop_.Shutdown();
   }
 
-  zx_info_socket_t& info() { return info_; }
+  const zx_info_socket_t& info() const { return info_; }
+  const zxio_datagram_prelude_size_t& prelude_size() const { return prelude_size_; }
   zx::socket TakeSocket() { return std::move(socket_); }
   fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> TakeClientEnd() {
     return std::move(client_end_);
@@ -242,9 +228,10 @@ class DatagramSocketTest : public zxtest::Test {
   zxio_storage_t storage_;
   zxio_t* zxio_{nullptr};
   zx_info_socket_t info_;
+  const zxio_datagram_prelude_size_t prelude_size_{};
   zx::socket socket_, peer_;
   fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> client_end_;
-  DatagramSocketServer server_;
+  zxio_tests::DatagramSocketServer server_;
   async::Loop control_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
 };
 
@@ -272,13 +259,14 @@ TEST_F(DatagramSocketTest, Borrow) {
 
 TEST_F(DatagramSocketTest, CreateWithType) {
   ASSERT_OK(zxio_create_with_type(storage(), ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET,
-                                  TakeSocket().release(), TakeClientEnd().TakeChannel().release(),
-                                  &info()));
+                                  TakeSocket().release(), &info(), &prelude_size(),
+                                  TakeClientEnd().TakeChannel().release()));
   ASSERT_OK(zxio_close(&storage()->io));
 }
 
 TEST_F(DatagramSocketTest, CreateWithTypeWrapper) {
-  ASSERT_OK(zxio::CreateDatagramSocket(storage(), TakeSocket(), TakeClientEnd(), info()));
+  ASSERT_OK(
+      zxio::CreateDatagramSocket(storage(), TakeSocket(), info(), prelude_size(), TakeClientEnd()));
   ASSERT_OK(zxio_close(&storage()->io));
 }
 

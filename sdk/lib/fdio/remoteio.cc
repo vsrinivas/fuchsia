@@ -49,6 +49,9 @@ static zx_status_t ZxioAllocator(zxio_object_type_t type, zxio_storage_t** out_s
   // The type of storage (fdio subclass) depends on the type of the object until
   // https://fxbug.dev/43267 is resolved, so this has to switch on the type.
   switch (type) {
+    case ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET:
+      io = fdio_datagram_socket_allocate();
+      break;
     case ZXIO_OBJECT_TYPE_DEBUGLOG:
       io = fbl::MakeRefCounted<fdio_internal::zxio>();
       break;
@@ -126,13 +129,6 @@ zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node, fio::wire::No
   }
 
   switch (info.Which()) {
-    case fio::wire::NodeInfo::Tag::kDatagramSocket: {
-      auto& datagram_socket = info.datagram_socket();
-      auto& socket = datagram_socket.socket;
-      return fdio_datagram_socket_create(
-          std::move(socket), fidl::ClientEnd<fsocket::DatagramSocket>(node.TakeChannel()),
-          datagram_socket.tx_meta_buf_size, datagram_socket.rx_meta_buf_size);
-    }
     case fio::wire::NodeInfo::Tag::kStreamSocket: {
       auto& socket = info.stream_socket().socket;
       return fdio_stream_socket_create(std::move(socket),
