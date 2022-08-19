@@ -108,9 +108,9 @@ To register a component as a driver in your Fuchsia system, do the following:
 1. Upload the Fuchsia package (that contains the driver component) to your
    [Fuchsia package server][fuchsia-package-server].
 
-   Note: The `bazel` commands can execute the building, uploading, and registrering
+   Note: The `bazel` commands can execute the building, uploading, and registering
    of a driver package at once. If your Fuchsia development environment uses the
-   Bazel build system, you can replace Step 1 and 2 here with the
+   Bazel build system, you can replace steps 1 and 2 here with the
    [`bazel run`][bazel-run] command.
 
 1. Register the component as a driver in the system:
@@ -211,7 +211,7 @@ keep in mind that a node is allowed to have only one driver bound to it. So you 
 that the target node in your Fuchsia system does not have a driver already bound to it.
 
 The example output above shows a PCI node and an ACPI node, which the `intel-i2c` driver can
-bind to. We can write the driver’s bind rules against these two nodes in the following way:
+bind to. You may write the driver’s bind rules against these two nodes in the following way:
 
 ```none {:.devsite-disable-click-to-copy}
 primary node "pci" {
@@ -234,12 +234,11 @@ node "acpi" {
 }
 ```
 
-Looking at the bind rules for the ACPI node, we can visually verify that the ACPI values are
-the same as the values shown in the node’s bind properties from the output of the ffx command
-above. And for the bind rules of the PCI node, we can directly examine the
-[PCI bind library][fuchsia-pci-bind] to check if those defined values match the values on the
-PCI node. (For more information on these two approaches, see
-[Write bind rules for a driver][write-bind-rules].)
+For the ACPI node, visually verify that the ACPI values specified in the bind rules match the
+values the ACPI node’s bind properties (shown in the output of the `ffx` command above). And for
+the PCI node, examine the [PCI bind library][fuchsia-pci-bind] directly to check if the values
+defined in the library match the values of the PCI node's bind properties. (For more information
+on these two approaches, see [Write bind rules for a driver][write-bind-rules].)
 
 ## Appendices
 
