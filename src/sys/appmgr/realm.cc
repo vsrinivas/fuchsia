@@ -686,6 +686,21 @@ void Realm::CreateComponentWithRunnerForScheme(const std::string& runner_url,
   TRACE_DURATION("appmgr", "Realm::CreateComponentWithRunnerForScheme", "runner_url", runner_url,
                  "launch_info.url", launch_info.url);
 
+  auto* runner = GetOrCreateRunner(runner_url);
+  if (runner == nullptr) {
+    FX_LOGS(ERROR) << "Cannot create " << runner_url << " to run " << launch_info.url;
+    component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::RUNNER_FAILED);
+    return;
+  }
+
+  fxl::RefPtr<Namespace> ns = Namespace::CreateChildNamespace(
+      default_namespace_, weak_ptr(), std::move(launch_info.additional_services), nullptr);
+
+  if (ns.get() == nullptr) {
+    component_request.SetReturnValues(-1, fuchsia::sys::TerminationReason::UNSUPPORTED);
+    return;
+  }
+
   fuchsia::sys::Package package;
   package.resolved_url = launch_info.url;
 
@@ -693,22 +708,13 @@ void Realm::CreateComponentWithRunnerForScheme(const std::string& runner_url,
   startup_info.launch_info = std::move(launch_info);
   NamespaceBuilder builder =
       NamespaceBuilder(appmgr_config_dir_.duplicate(), startup_info.launch_info.url);
+  zx::channel svc = ns->OpenServicesAsDirectory();
+  if (!svc) {
+    component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::INTERNAL_ERROR);
+    return;
+  }
+  builder.AddServices(std::move(svc));
   startup_info.flat_namespace = builder.BuildForRunner();
-
-  auto* runner = GetOrCreateRunner(runner_url);
-  if (runner == nullptr) {
-    FX_LOGS(ERROR) << "Cannot create " << runner_url << " to run " << startup_info.launch_info.url;
-    component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::RUNNER_FAILED);
-    return;
-  }
-
-  fxl::RefPtr<Namespace> ns =
-      Namespace::CreateChildNamespace(default_namespace_, weak_ptr(), nullptr, nullptr);
-
-  if (ns.get() == nullptr) {
-    component_request.SetReturnValues(-1, fuchsia::sys::TerminationReason::UNSUPPORTED);
-    return;
-  }
 
   fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller;
   component_request.Extract(&controller);
