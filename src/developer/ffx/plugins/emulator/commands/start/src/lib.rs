@@ -63,7 +63,8 @@ pub async fn start(cmd: StartCommand, proxy: TargetCollectionProxy) -> Result<()
     }
 
     match engine.start(emulator_cmd, &proxy).await {
-        Ok(result) => std::process::exit(result),
+        Ok(0) => Ok(()),
+        Ok(_) => ffx_bail!("Non zero return code"),
         Err(e) => ffx_bail!("{:?}", e.context("The emulator failed to start.")),
     }
 }
