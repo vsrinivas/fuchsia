@@ -15,18 +15,18 @@ use {
 
 /// The initial state of this recognizer, before 2 finger contact has been detected.
 #[derive(Debug)]
-struct InitialContender {
+pub(super) struct InitialContender {
     /// The minimum movement in millimeters on surface to recognize as a scroll.
-    min_movement_in_mm: f32,
+    pub(super) min_movement_in_mm: f32,
 
     /// The maximum movement in millimeters on surface to recognize as a scroll. If recognizer can
     /// not detect the scroll direction when movement more than this number, return Mismatch to
     /// end this recognizer.
-    max_movement_in_mm: f32,
+    pub(super) max_movement_in_mm: f32,
 
     /// The limit tangent for direction detect, for example if we only want to allow ±15° the number
     /// is 0.26794919243.
-    limit_tangent_for_direction: f32,
+    pub(super) limit_tangent_for_direction: f32,
 }
 
 /// The state when this recognizer has detected 2 finger contact, before finger movement > threshold.

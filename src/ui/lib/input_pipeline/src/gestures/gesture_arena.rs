@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::{click, motion, one_finger_drag, primary_tap, secondary_tap},
+    super::{click, motion, one_finger_drag, primary_tap, scroll, secondary_tap},
     crate::{input_device, input_handler::UnhandledInputHandler, mouse_binding, touch_binding},
     anyhow::{format_err, Error},
     async_trait::async_trait,
@@ -36,6 +36,11 @@ pub fn make_input_handler() -> std::rc::Rc<dyn crate::input_handler::InputHandle
             }),
             Box::new(one_finger_drag::InitialContender {
                 min_movement_in_mm: SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM,
+            }),
+            Box::new(scroll::InitialContender {
+                min_movement_in_mm: SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM,
+                max_movement_in_mm: MAX_SPURIOUS_TO_INTENTIONAL_SCROLL_THRESHOLD_MM,
+                limit_tangent_for_direction: MAX_SCROLL_DIRECTION_SKEW_DEGREES.to_radians().tan(),
             }),
         ]
     }))
@@ -217,8 +222,10 @@ pub(super) trait Winner: std::fmt::Debug {
 }
 
 const SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM: f32 = 16.0 / 12.0;
+const MAX_SPURIOUS_TO_INTENTIONAL_SCROLL_THRESHOLD_MM: f32 = 5.0 * 16.0 / 12.0;
 const MAX_TAP_MOVEMENT_IN_MM: f32 = 2.0;
 const TAP_TIMEOUT: zx::Duration = zx::Duration::from_millis(1200);
+const MAX_SCROLL_DIRECTION_SKEW_DEGREES: f32 = 40.0;
 
 #[derive(Debug)]
 enum MutableState {
