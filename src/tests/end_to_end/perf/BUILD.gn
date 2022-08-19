@@ -251,3 +251,13 @@ group("test") {
     deps += [ ":$target_name($host_toolchain)" ]
   }
 }
+
+group("tests_to_run_on_internal_builders") {
+  testonly = true
+
+  deps = [
+    ":audio_mixer_profiler_test($host_toolchain)",
+    ":kernel_boot_stats_test($host_toolchain)",
+    "//src/tests/benchmarks:kernel-boot-benchmarks",
+  ]
+}
