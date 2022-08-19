@@ -53,3 +53,7 @@ protocol Rpmb {
         request Request;
     }) -> (struct {}) error zx.status;
 };
+
+service Service {
+    device client_end:Rpmb;
+};
