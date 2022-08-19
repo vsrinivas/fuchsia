@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO(http://fxbug.dev/107197): Remove the below ignore_for_file
+// ignore_for_file: import_of_legacy_library_into_null_safe
+
 import 'dart:math';
 
 import 'package:ermine_driver/ermine_driver.dart';
-import 'package:flutter_driver/flutter_driver.dart';
 import 'package:image/image.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
@@ -32,19 +34,20 @@ void main() {
     sl4f.close();
   });
 
+  // TODO(fxbug.dev/105181): Reenable once we figure out why E2E tests fail locally due to socket issues
   // Take a screenshot until it's non-black or timeout.
-  Future<Image?> screenshotUntilNotBlack(Rectangle rect,
-      {Duration timeout = const Duration(seconds: 30)}) async {
-    final end = DateTime.now().add(timeout);
-    while (DateTime.now().isBefore(end)) {
-      final image = await ermine.screenshot(rect);
-      bool isAllBlack = image.data.every((pixel) => pixel & 0x00ffffff == 0);
-      if (!isAllBlack) {
-        return image;
-      }
-    }
-    return null;
-  }
+  // Future<Image?> screenshotUntilNotBlack(Rectangle rect,
+  //     {Duration timeout = const Duration(seconds: 30)}) async {
+  //   final end = DateTime.now().add(timeout);
+  //   while (DateTime.now().isBefore(end)) {
+  //     final image = await ermine.screenshot(rect);
+  //     bool isAllBlack = image.data.every((pixel) => pixel & 0x00ffffff == 0);
+  //     if (!isAllBlack) {
+  //       return image;
+  //     }
+  //   }
+  //   return null;
+  // }
 
   test('Verify spinning square view is launched', () async {
     const componentUrl =
@@ -70,7 +73,8 @@ void main() {
           return viewRect.width > 0 && viewRect.height > 0;
         }),
         isTrue);
-    // TODO(fxbug.dev/91950): Reenable on AEMU after Screenshots on Flatland is not flaky.
+
+    // TODO(fxbug.dev/105181): Reenable once we figure out why E2E tests fail locally due to socket issues
     // final viewRect = await ermine.getViewRect(componentUrl);
     // final screenshot = await screenshotUntilNotBlack(viewRect);
     // expect(screenshot, isNotNull);
