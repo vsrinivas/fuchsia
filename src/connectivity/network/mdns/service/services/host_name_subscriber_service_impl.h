@@ -30,8 +30,7 @@ class HostNameSubscriberServiceImpl
  private:
   class Subscriber : public Mdns::HostNameSubscriber {
    public:
-    Subscriber(fidl::InterfaceHandle<fuchsia::net::mdns::HostNameSubscriptionListener> handle,
-               fit::closure deleter);
+    Subscriber(fidl::InterfaceHandle<fuchsia::net::mdns::HostNameSubscriptionListener> handle);
 
     ~Subscriber() override;
 
@@ -54,9 +53,6 @@ class HostNameSubscriberServiceImpl
     Subscriber& operator=(const Subscriber&) = delete;
     Subscriber& operator=(Subscriber&&) = delete;
   };
-
-  size_t next_host_name_subscriber_id_ = 0;
-  std::unordered_map<size_t, std::unique_ptr<Subscriber>> host_name_subscribers_by_id_;
 };
 
 }  // namespace mdns

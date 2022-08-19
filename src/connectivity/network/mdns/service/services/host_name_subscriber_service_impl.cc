@@ -31,31 +31,26 @@ void HostNameSubscriberServiceImpl::SubscribeToHostName(
   IpVersions ip_versions =
       options.has_ip_versions() ? fidl::To<IpVersions>(options.ip_versions()) : IpVersions::kBoth;
 
-  size_t id = next_host_name_subscriber_id_++;
-  auto subscriber = std::make_unique<Subscriber>(
-      std::move(listener_handle), [this, id]() { host_name_subscribers_by_id_.erase(id); });
+  auto subscriber = new Subscriber(std::move(listener_handle));
 
   bool include_local = !options.has_exclude_local() || !options.exclude_local();
   bool include_local_proxies =
       !options.has_exclude_local_proxies() || !options.exclude_local_proxies();
 
   mdns().SubscribeToHostName(host_name, media, ip_versions, include_local, include_local_proxies,
-                             subscriber.get());
+                             subscriber);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // HostNameSubscriberServiceImpl::Subscriber implementation
 
 HostNameSubscriberServiceImpl::Subscriber::Subscriber(
-    fidl::InterfaceHandle<fuchsia::net::mdns::HostNameSubscriptionListener> handle,
-    fit::closure deleter) {
+    fidl::InterfaceHandle<fuchsia::net::mdns::HostNameSubscriptionListener> handle) {
   client_.Bind(std::move(handle));
-  client_.set_error_handler([this, deleter = std::move(deleter)](zx_status_t status) mutable {
-    // Clearing the error handler frees the capture list, so we need to save |deleter|.
-    auto save_deleter = std::move(deleter);
+  client_.set_error_handler([this](zx_status_t status) mutable {
     client_.set_error_handler(nullptr);
     client_.Unbind();
-    save_deleter();
+    delete this;
   });
 }
 

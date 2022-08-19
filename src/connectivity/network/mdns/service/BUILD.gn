@@ -149,6 +149,7 @@ test("mdns_test") {
     "test/dns_writing_test.cc",
     "test/host_name_requestor_test.cc",
     "test/host_name_resolver_test.cc",
+    "test/host_name_subscriber_service_impl_test.cc",
     "test/instance_prober_test.cc",
     "test/instance_requestor_test.cc",
     "test/instance_responder_test.cc",
