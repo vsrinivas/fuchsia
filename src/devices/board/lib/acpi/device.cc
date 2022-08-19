@@ -26,8 +26,6 @@
 
 #include "lib/ddk/device.h"
 #include "lib/zx/status.h"
-#include "src/devices/board/drivers/x86/include/errors.h"
-#include "src/devices/board/drivers/x86/include/sysmem.h"
 #include "src/devices/board/lib/acpi/event.h"
 #include "src/devices/board/lib/acpi/fidl.h"
 #include "src/devices/board/lib/acpi/global-lock.h"
