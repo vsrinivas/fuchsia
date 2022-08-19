@@ -1,0 +1,25 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("include") {
+  include_dirs = [ "include" ]
+}
+
+source_set("fuchsia.hardware.platform.bus_banjo_c") {
+  sources = [ "include/fuchsia/hardware/platform.bus/c/banjo.h" ]
+  public_configs = [ ":include" ]
+  public_deps = [ "//src/lib/ddk" ]
+}
+
+source_set("fuchsia.hardware.platform.bus_banjo_cpp") {
+  sources = [
+    "include/fuchsia/hardware/platform.bus/cpp/banjo-internal.h",
+    "include/fuchsia/hardware/platform.bus/cpp/banjo.h",
+  ]
+  public_configs = [ ":include" ]
+  public_deps = [
+    ":fuchsia.hardware.platform.bus_banjo_c",
+    "//src/lib/ddktl",
+  ]
+}
