@@ -12,7 +12,7 @@
 
 namespace debug_ipc {
 
-constexpr uint32_t kProtocolVersion = 44;
+constexpr uint32_t kProtocolVersion = 45;
 
 // This is so that it's obvious if the timestamp wasn't properly set (that number should be at
 // least 30,000 years) but it's not the max so that if things add to it then time keeps moving
@@ -191,7 +191,7 @@ struct ResumeRequest {
   enum class How : uint32_t {
     kResolveAndContinue = 0,  // Marks the exception as handled and continues executions.
     kForwardAndContinue,      // Marks the exception as second-chance and continues executions.
-    kStepInstruction,         // Step one machine instruction.
+    kStepInstruction,         // Step |count| machine instructions.
     kStepInRange,             // Step until control exits an address range.
 
     kLast  // Not a real state, used for validation.
@@ -210,6 +210,9 @@ struct ResumeRequest {
   std::vector<ProcessThreadId> ids;
 
   How how = How::kResolveAndContinue;
+
+  // When how == kStepInstruction, how many instructions to step.
+  uint64_t count = 1;
 
   // When how == kStepInRange, these variables define the address range to step in. As long as the
   // instruction pointer is inside [range_begin, range_end), execution will continue.

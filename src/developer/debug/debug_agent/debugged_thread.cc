@@ -216,6 +216,14 @@ void DebuggedThread::HandleSingleStep(debug_ipc::NotifyException* exception,
     return;
   }
 
+  // When stepping with a count, automatically continue if step_count_ > 1.
+  if (run_mode_ == debug_ipc::ResumeRequest::How::kStepInstruction && step_count_ > 1) {
+    DEBUG_LOG(Thread) << ThreadPreamble(this) << "Stepping with count. Continuing.";
+    step_count_ -= 1;
+    ResumeFromException();
+    return;
+  }
+
   DEBUG_LOG(Thread) << ThreadPreamble(this) << "Expected single step. Notifying.";
   SendExceptionNotification(exception, regs);
 }
@@ -350,9 +358,11 @@ void DebuggedThread::SendExceptionNotification(debug_ipc::NotifyException* excep
 void DebuggedThread::ClientResume(const debug_ipc::ResumeRequest& request) {
   DEBUG_LOG(Thread) << ThreadPreamble(this)
                     << "Resuming. Run mode: " << debug_ipc::ResumeRequest::HowToString(request.how)
-                    << ", Range: [" << request.range_begin << ", " << request.range_end << ").";
+                    << ", Count: " << request.count << ", Range: [" << request.range_begin << ", "
+                    << request.range_end << ").";
 
   run_mode_ = request.how;
+  step_count_ = request.count;
   step_in_range_begin_ = request.range_begin;
   step_in_range_end_ = request.range_end;
 

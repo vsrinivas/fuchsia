@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_THREAD_IMPL_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_THREAD_IMPL_H_
 
+#include <cstdint>
 #include <list>
 
 #include "gtest/gtest_prod.h"
@@ -39,7 +40,7 @@ class ThreadImpl final : public Thread, public Stack::Delegate {
   void ResumeFromAsyncThreadController(std::optional<debug_ipc::ExceptionType> type) override;
   void JumpTo(uint64_t new_address, fit::callback<void(const Err&)> cb) override;
   void NotifyControllerDone(ThreadController* controller) override;
-  void StepInstruction() override;
+  void StepInstructions(uint64_t count) override;
   const Stack& GetStack() const override;
   Stack& GetStack() override;
 

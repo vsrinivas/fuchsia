@@ -345,6 +345,8 @@ bool ReadRequest(MessageReader* reader, ResumeRequest* request, uint32_t* transa
     return false;
   request->how = static_cast<ResumeRequest::How>(how);
 
+  if (!reader->ReadUint64(&request->count))
+    return false;
   if (!reader->ReadUint64(&request->range_begin))
     return false;
   if (!reader->ReadUint64(&request->range_end))

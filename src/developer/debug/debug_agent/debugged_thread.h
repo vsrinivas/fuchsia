@@ -171,6 +171,9 @@ class DebuggedThread {
   // The main thing we're doing. Possibly overridden by stepping_over_breakpoint_.
   debug_ipc::ResumeRequest::How run_mode_ = debug_ipc::ResumeRequest::How::kResolveAndContinue;
 
+  // When run_mode_ == kStepInstruction, the number of instructions to step. Must be larger than 0.
+  uint64_t step_count_ = 1;
+
   // When run_mode_ == kStepInRange, this defines the range (end non-inclusive).
   uint64_t step_in_range_begin_ = 0;
   uint64_t step_in_range_end_ = 0;

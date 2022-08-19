@@ -235,10 +235,11 @@ void ThreadImpl::NotifyControllerDone(ThreadController* controller) {
   FX_NOTREACHED();  // Notification for unknown controller.
 }
 
-void ThreadImpl::StepInstruction() {
+void ThreadImpl::StepInstructions(uint64_t count) {
   debug_ipc::ResumeRequest request;
   request.ids.push_back({.process = process_->GetKoid(), .thread = koid_});
   request.how = debug_ipc::ResumeRequest::How::kStepInstruction;
+  request.count = count;
   session()->remote_api()->Resume(request, [](const Err& err, debug_ipc::ResumeReply) {});
 }
 

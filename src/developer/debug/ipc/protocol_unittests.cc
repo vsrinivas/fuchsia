@@ -306,6 +306,7 @@ TEST(Protocol, ResumeRequest) {
   ResumeRequest initial;
   initial.ids.push_back({.process = 3746234, .thread = 123523});
   initial.how = ResumeRequest::How::kStepInRange;
+  initial.count = 100;
   initial.range_begin = 0x12345;
   initial.range_end = 0x123456;
 
@@ -313,6 +314,7 @@ TEST(Protocol, ResumeRequest) {
   ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
   EXPECT_EQ(initial.ids, second.ids);
   EXPECT_EQ(initial.how, second.how);
+  EXPECT_EQ(initial.count, second.count);
   EXPECT_EQ(initial.range_begin, second.range_begin);
   EXPECT_EQ(initial.range_end, second.range_end);
 }

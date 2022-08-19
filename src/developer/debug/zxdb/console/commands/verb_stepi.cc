@@ -17,10 +17,11 @@ namespace {
 
 const char kStepiShortHelp[] = "stepi / si: Single-step a thread one machine instruction.";
 const char kStepiHelp[] =
-    R"(stepi / si
+    R"(stepi / si [ <count> ]
 
-  When a thread is stopped, "stepi" will execute one machine instruction and
-  stop the thread again. If the thread is running it will issue an error.
+  When a thread is stopped, "stepi" will execute <count> machine instructions
+  and stop the thread again. If <count> is not specified it will default to 1.
+  If the thread is running it will issue an error.
 
   By default, "stepi" will single-step the current thread. If a thread context
   is given, the specified thread will be single-stepped. You can't single-step
@@ -52,7 +53,19 @@ Err RunVerbStepi(ConsoleContext* context, const Command& cmd) {
   if (Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "stepi"); err.has_error())
     return err;
 
-  cmd.thread()->StepInstruction();
+  uint64_t count = 1;
+  if (cmd.args().size() == 1) {
+    if (Err err = StringToUint64(cmd.args()[0], &count); err.has_error()) {
+      return err;
+    }
+    if (count == 0) {
+      return Err("<count> must be non-zero.");
+    }
+  } else if (cmd.args().size() > 1) {
+    return Err("Too many arguments for 'stepi'.");
+  }
+
+  cmd.thread()->StepInstructions(count);
   return Err();
 }
 

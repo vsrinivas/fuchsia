@@ -40,7 +40,7 @@ class MockThread : public Thread, public Stack::Delegate {
   void ResumeFromAsyncThreadController(std::optional<debug_ipc::ExceptionType>) override {}
   void JumpTo(uint64_t new_address, fit::callback<void(const Err&)> cb) override {}
   void NotifyControllerDone(ThreadController* controller) override {}
-  void StepInstruction() override {}
+  void StepInstructions(uint64_t count) override {}
   const Stack& GetStack() const override { return stack_; }
   Stack& GetStack() override { return stack_; }
 

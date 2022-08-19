@@ -147,7 +147,7 @@ class Thread : public ClientObject {
   // should be removed from this thread and deleted.
   virtual void NotifyControllerDone(ThreadController* controller) = 0;
 
-  virtual void StepInstruction() = 0;
+  virtual void StepInstructions(uint64_t count) = 0;
 
   // Returns the stack object associated with this thread.
   virtual const Stack& GetStack() const = 0;

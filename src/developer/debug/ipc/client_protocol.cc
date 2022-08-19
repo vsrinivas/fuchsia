@@ -338,6 +338,7 @@ void WriteRequest(const ResumeRequest& request, uint32_t transaction_id, Message
   writer->WriteHeader(MsgHeader::Type::kResume, transaction_id);
   Serialize(request.ids, writer);
   writer->WriteUint32(static_cast<uint32_t>(request.how));
+  writer->WriteUint64(request.count);
   writer->WriteUint64(request.range_begin);
   writer->WriteUint64(request.range_end);
 }
