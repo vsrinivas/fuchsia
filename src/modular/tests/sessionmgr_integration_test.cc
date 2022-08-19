@@ -742,7 +742,7 @@ TEST_F(SessionmgrIntegrationTest, PresentViewBeforePresentationProtocolConnected
   });
 
   builder.InterceptSessionShell(fake_graphical_presenter->BuildInterceptOptions());
-  builder.UseSessionShellForStoryShellFactory();
+  builder.SetPresentModsAsStories();
 
   // Create the test harness and verify the session shell is up
   builder.BuildAndRun(test_harness());

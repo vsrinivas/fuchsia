@@ -192,6 +192,11 @@ void XdrSessionmgrConfig_v1(XdrContext* const xdr,
   xdr->FieldWithDefault(modular_config::kDisableAgentRestartOnCrash,
                         data->mutable_disable_agent_restart_on_crash(),
                         has_disable_agent_restart_on_crash, false);
+
+  bool has_present_mods_as_stories = data->has_present_mods_as_stories();
+  xdr->FieldWithDefault(modular_config::kPresentModsAsStories,
+                        data->mutable_present_mods_as_stories(), has_present_mods_as_stories,
+                        false);
 }
 
 }  // namespace modular

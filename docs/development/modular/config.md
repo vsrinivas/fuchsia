@@ -78,6 +78,8 @@ ffx inspect show sessionmgr.cmx:root:config
     "restart_session_on_agent_crash": [
       "fuchsia-pkg://fuchsia.com/some_agent#meta/some_agent.cmx"
     ]
+    "disable_agent_restart_on_crash": false,
+    "present_mods_as_stories": false,
   }
 }
 ```
@@ -171,6 +173,13 @@ ffx inspect show sessionmgr.cmx:root:config
 - `disable_agent_restart_on_crash`: **boolean** _(optional)_
   - When set to true, disables any automatic restarts of agents listed in
     `session_agents` if they crash.
+  - **default**: `false`
+- `present_mods_as_stories`: **boolean** _(optional)_
+  - When set to true, module views are presented to the session shell as
+    story shell views through the GraphicalPresenter protocol.
+    If the session shell exposes the SessionShell protocol instead of
+    GraphicalPresenter, `present_mods_as_stories` has no effect and mod views
+    will be sent to the story shell.
   - **default**: `false`
 
 [docs-inspect]: /docs/development/diagnostics/inspect/README.md

@@ -173,6 +173,10 @@
                 "disable_agent_restart_on_crash": {
                     "type": "boolean",
                     "default": false
+                },
+                "present_mods_as_stories": {
+                    "type": "boolean",
+                    "default": false
                 }
             },
             "additionalProperties": false

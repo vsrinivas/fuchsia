@@ -176,8 +176,9 @@ TEST_F(SessionShellTest, StartAndStopStoryWithExtraInfoMod) {
 
   // Stop the story. Check that the story went through the correct sequence
   // of states (see StoryState FIDL file for valid state transitions). Since we
-  // started it, ran it, and stopped it, the sequence is STOPPED -> RUNNING ->
-  // STOPPING -> STOPPED.
+  // started it, ran it, and stopped it, the sequence is RUNNING -> STOPPING -> STOPPED.
+  // There may be an extra initial STOPPED state if the StoryProvider is created
+  // before the story is created.
   fuchsia::modular::StoryControllerPtr story_controller;
   story_provider->GetController(kStoryId, story_controller.NewRequest());
 
@@ -187,10 +188,10 @@ TEST_F(SessionShellTest, StartAndStopStoryWithExtraInfoMod) {
 
   // Run the loop until there are the expected number of state changes;
   // having called Stop() is not enough to guarantee seeing all updates.
-  RunLoopUntil([&] { return sequence_of_story_states.size() == 4; });
-  EXPECT_THAT(sequence_of_story_states,
-              testing::ElementsAre(StoryState::STOPPED, StoryState::RUNNING, StoryState::STOPPING,
-                                   StoryState::STOPPED));
+  RunLoopUntil([&] { return sequence_of_story_states.size() >= 3; });
+  EXPECT_EQ(StoryState::RUNNING, sequence_of_story_states.at(sequence_of_story_states.size() - 3));
+  EXPECT_EQ(StoryState::STOPPING, sequence_of_story_states.at(sequence_of_story_states.size() - 2));
+  EXPECT_EQ(StoryState::STOPPED, sequence_of_story_states.at(sequence_of_story_states.size() - 1));
 }
 
 TEST_F(SessionShellTest, StoryInfoBeforeAndAfterDelete) {

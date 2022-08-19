@@ -26,7 +26,7 @@ namespace {
 
 class DevStoryShellApp : public modular::SingleServiceApp<fuchsia::modular::StoryShell> {
  public:
-  DevStoryShellApp(sys::ComponentContext* const component_context)
+  explicit DevStoryShellApp(sys::ComponentContext* const component_context)
       : SingleServiceApp(component_context),
         component_context_(component_context
                                ? std::unique_ptr<sys::ComponentContext>(component_context)
@@ -39,6 +39,15 @@ class DevStoryShellApp : public modular::SingleServiceApp<fuchsia::modular::Stor
       zx::eventpair view_token,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*incoming_services*/,
       fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> /*outgoing_services*/) override {
+    view_token_.value = std::move(view_token);
+
+    Connect();
+  }
+
+  // |SingleServiceApp|
+  void CreateViewWithViewRef(zx::eventpair view_token,
+                             fuchsia::ui::views::ViewRefControl view_ref_control,
+                             fuchsia::ui::views::ViewRef view_ref) override {
     view_token_.value = std::move(view_token);
 
     Connect();
@@ -141,9 +150,9 @@ int main(int /*argc*/, const char** /*argv*/) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
-  modular::AppDriver<DevStoryShellApp> driver(context->outgoing(),
-                                              std::make_unique<DevStoryShellApp>(context.get()),
-                                              [&loop] { loop.Quit(); });
+  modular::AppDriver<DevStoryShellApp> const driver(
+      context->outgoing(), std::make_unique<DevStoryShellApp>(context.get()),
+      [&loop] { loop.Quit(); });
 
   loop.Run();
   return 0;

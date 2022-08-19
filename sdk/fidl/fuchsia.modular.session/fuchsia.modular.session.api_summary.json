@@ -130,6 +130,11 @@
     {
         "declaration": "bool",
         "kind": "table/member",
+        "name": "fuchsia.modular.session/SessionmgrConfig.present_mods_as_stories"
+    },
+    {
+        "declaration": "bool",
+        "kind": "table/member",
         "name": "fuchsia.modular.session/SessionmgrConfig.reserved"
     },
     {

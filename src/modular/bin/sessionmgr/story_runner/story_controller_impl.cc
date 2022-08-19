@@ -368,12 +368,14 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
 
   // We only add a module to story shell if it's either a root module or its
   // anchor module is already known to story shell. Otherwise, we pend its view
-  // (StoryControllerImpl::pending_story_shell_views_) and pass it to the story
+  // (StoryControllerImpl::pending_mod_views_) and pass it to the story
   // shell once its anchor module is ready.
   void MaybeConnectViewToStoryShell(FlowToken flow) {
     // If this is called during Stop(), story_shell_ might already have been
     // reset. TODO(mesch): Then the whole operation should fail.
-    if (!story_controller_impl_->story_shell_) {
+    if (!story_controller_impl_->present_mods_as_stories_ &&
+        !story_controller_impl_->story_shell_) {
+      FX_LOGS(WARNING) << "StoryShell disconnected, not presenting module view.";
       return;
     }
 
@@ -404,20 +406,20 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
     // If this is a root module, or the anchor module is connected to the story shell,
     // connect this module to the story shell. Otherwise, pend it to connect once the anchor
     // module is ready.
+    ModViewInfo mod_view = {.module_path = module_data_.module_path(),
+                            .view_connection = std::move(view_connection),
+                            .surface_info = std::move(surface_info)};
     if (module_data_.module_path().size() == 1 ||
         story_controller_impl_->connected_views_.count(anchor_surface_id)) {
-      ConnectViewToStoryShell(flow, std::move(view_connection), std::move(surface_info));
+      ConnectViewToStoryShell(flow, std::move(mod_view));
     } else {
-      story_controller_impl_->pending_story_shell_views_.emplace(
-          ModulePathToSurfaceID(module_data_.module_path()),
-          PendingViewForStoryShell{module_data_.module_path(), std::move(view_connection),
-                                   std::move(surface_info)});
+      story_controller_impl_->pending_mod_views_.emplace(
+          ModulePathToSurfaceID(module_data_.module_path()), std::move(mod_view));
     }
   }
 
-  void ConnectViewToStoryShell(FlowToken flow, fuchsia::modular::ViewConnection view_connection,
-                               fuchsia::modular::SurfaceInfo2 surface_info) {
-    if (!view_connection.view_holder_token.value) {
+  void ConnectViewToStoryShell(FlowToken flow, ModViewInfo mod_view) {
+    if (!mod_view.view_connection.view_holder_token.value) {
       FX_LOGS(WARNING) << "The module ViewHolder token is not valid, so it "
                           "can't be sent to the story shell.";
       return;
@@ -425,12 +427,12 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
 
     const auto surface_id = ModulePathToSurfaceID(module_data_.module_path());
 
-    story_controller_impl_->story_shell_->AddSurface3(std::move(view_connection),
-                                                      std::move(surface_info));
-
+    story_controller_impl_->PresentModView(std::move(mod_view));
+    story_controller_impl_->ProcessPendingModViews();
     story_controller_impl_->connected_views_.emplace(surface_id);
-    story_controller_impl_->ProcessPendingStoryShellViews();
-    story_controller_impl_->story_shell_->FocusSurface(surface_id);
+    if (story_controller_impl_->story_shell_) {
+      story_controller_impl_->story_shell_->FocusSurface(surface_id);
+    }
   }
 
   StoryControllerImpl* const story_controller_impl_;  // not owned
@@ -718,7 +720,7 @@ class StoryControllerImpl::StartCall : public Operation<> {
       return;
     }
 
-    story_controller_impl_->StartStoryShell();
+    story_controller_impl_->MaybeStartStoryShell();
 
     // Start all modules that were not themselves explicitly started by another
     // module.
@@ -748,12 +750,14 @@ StoryControllerImpl::StoryControllerImpl(std::string story_id,
                                          SessionStorage* const session_storage,
                                          StoryStorage* const story_storage,
                                          StoryProviderImpl* story_provider_impl,
-                                         inspect::Node* story_inspect_node)
+                                         inspect::Node* story_inspect_node,
+                                         bool present_mods_as_stories)
     : story_id_(std::move(story_id)),
       story_provider_impl_(story_provider_impl),
       session_storage_(session_storage),
       story_storage_(story_storage),
       story_inspect_node_(story_inspect_node),
+      present_mods_as_stories_(present_mods_as_stories),
       story_shell_context_impl_{story_id_},
       weak_factory_(this) {
   story_storage_->SubscribeModuleDataUpdated(
@@ -809,7 +813,7 @@ void StoryControllerImpl::DeleteModule(const std::vector<std::string>& module_pa
       std::make_unique<DeleteModuleCall>(story_storage_, module_path, std::move(done)));
 }
 
-void StoryControllerImpl::ProcessPendingStoryShellViews() {
+void StoryControllerImpl::ProcessPendingModViews() {
   // NOTE(mesch): As it stands, this machinery to send modules in traversal
   // order to the story shell is N^3 over the lifetime of the story, where N
   // is the number of modules. This function is N^2, and it's called once for
@@ -817,13 +821,13 @@ void StoryControllerImpl::ProcessPendingStoryShellViews() {
   // limited my much more severe constraints. Eventually, we will address this
   // by changing story shell to be able to accommodate modules out of traversal
   // order.
-  if (!story_shell_) {
+  if (!story_shell_ && !present_mods_as_stories_) {
     return;
   }
 
   std::vector<fidl::StringPtr> added_keys;
 
-  for (auto& kv : pending_story_shell_views_) {
+  for (auto& kv : pending_mod_views_) {
     auto* const running_mod_info = FindRunningModInfo(kv.second.module_path);
     if (!running_mod_info) {
       continue;
@@ -849,8 +853,7 @@ void StoryControllerImpl::ProcessPendingStoryShellViews() {
 
     const auto surface_id = ModulePathToSurfaceID(kv.second.module_path);
 
-    story_shell_->AddSurface3(std::move(kv.second.view_connection),
-                              std::move(kv.second.surface_info));
+    PresentModView(std::move(kv.second));
     connected_views_.emplace(surface_id);
 
     added_keys.push_back(kv.first);
@@ -858,9 +861,9 @@ void StoryControllerImpl::ProcessPendingStoryShellViews() {
 
   if (added_keys.size()) {
     for (auto& key : added_keys) {
-      pending_story_shell_views_.erase(key.value_or(""));
+      pending_mod_views_.erase(key.value_or(""));
     }
-    ProcessPendingStoryShellViews();
+    ProcessPendingModViews();
   }
 }
 
@@ -915,18 +918,41 @@ void StoryControllerImpl::Watch(fidl::InterfaceHandle<fuchsia::modular::StoryWat
   watchers_.AddInterfacePtr(std::move(ptr));
 }
 
-void StoryControllerImpl::StartStoryShell() {
-  auto [view_token, view_holder_token] = scenic::NewViewTokenPair();
+void StoryControllerImpl::MaybeStartStoryShell() {
+  if (present_mods_as_stories_) {
+    FX_LOGS(INFO) << "Mods will be presented as stories. Story shell will not be started or "
+                     "requested from StoryShellFactory.";
+    return;
+  }
 
-  story_shell_holder_ = story_provider_impl_->StartStoryShell(story_id_, std::move(view_token),
-                                                              story_shell_.NewRequest());
-  story_provider_impl_->AttachOrPresentView(story_id_, std::move(view_holder_token));
+  story_shell_holder_ = story_provider_impl_->StartStoryShell(story_id_, story_shell_.NewRequest());
 
   fuchsia::modular::StoryShellContextPtr story_shell_context;
   story_shell_context_impl_.Connect(story_shell_context.NewRequest());
   story_shell_->Initialize(std::move(story_shell_context));
   story_shell_.events().OnSurfaceFocused =
       fit::bind_member(this, &StoryControllerImpl::OnSurfaceFocused);
+}
+
+void StoryControllerImpl::PresentModView(ModViewInfo mod_view) {
+  if (present_mods_as_stories_) {
+    if (!story_provider_impl_->is_graphical_presenter_presentation()) {
+      FX_LOGS(ERROR) << "Unable to present mod view as a story, requires GraphicalPresenter "
+                        "presentation protocol but not available.";
+      return;
+    }
+    AttachOrPresentViewParams params = {
+        .story_id = story_id_,
+        .view_holder_token = std::move(mod_view.view_connection.view_holder_token),
+        .view_ref = mod_view.surface_info.has_view_ref()
+                        ? std::make_optional(std::move(*mod_view.surface_info.mutable_view_ref()))
+                        : std::nullopt};
+    story_provider_impl_->AttachOrPresentView(std::move(params));
+  } else {
+    FX_DCHECK(story_shell_);
+    story_shell_->AddSurface3(std::move(mod_view.view_connection),
+                              std::move(mod_view.surface_info));
+  }
 }
 
 void StoryControllerImpl::DetachView(fit::function<void()> done) {
@@ -954,7 +980,7 @@ void StoryControllerImpl::EraseRunningModInfo(std::vector<std::string> module_pa
       std::find_if(running_mod_infos_.begin(), running_mod_infos_.end(),
                    [module_path](auto& e) { return e->module_data->module_path() == module_path; });
   FX_CHECK(it != running_mod_infos_.end());
-  pending_story_shell_views_.erase(ModulePathToSurfaceID(module_path));
+  pending_mod_views_.erase(ModulePathToSurfaceID(module_path));
   running_mod_infos_.erase(it);
 }
 
