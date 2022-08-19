@@ -179,9 +179,9 @@ pub fn parse_numbered_handles(
 pub fn create_remotefs_filesystem(
     kernel: &Kernel,
     root: &fio::DirectorySynchronousProxy,
+    rights: fio::OpenFlags,
     fs_src: &str,
 ) -> Result<FileSystemHandle, Error> {
-    let rights = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE;
     let root = syncio::directory_open_directory_async(root, fs_src, rights)
         .map_err(|e| anyhow!("Failed to open root: {}", e))?;
     Ok(RemoteFs::new(kernel, root.into_channel(), rights)?)
@@ -208,12 +208,15 @@ pub fn create_filesystem_from_spec<'a>(
     let fs_type = iter.next().ok_or_else(|| anyhow!("fs type is missing from {:?}", spec))?;
     let fs_src = iter.next().unwrap_or(".");
 
+    // Default rights for remotefs.
+    let rights = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE;
+
     // The filesystem types handled in this match are the ones that can only be specified in a
     // manifest file, for whatever reason. Anything else is passed to create_filesystem, which is
     // common code that also handles the mount() system call.
     let fs = match fs_type {
         "bind" => Dir(task.lookup_path_from_root(fs_src.as_bytes())?.entry),
-        "remotefs" => Fs(create_remotefs_filesystem(task.kernel(), pkg, &fs_src)?),
+        "remotefs" => Fs(create_remotefs_filesystem(task.kernel(), pkg, rights, &fs_src)?),
         "ext4" => {
             let vmo =
                 syncio::directory_open_vmo(&pkg, &fs_src, fio::VmoFlags::READ, zx::Time::INFINITE)

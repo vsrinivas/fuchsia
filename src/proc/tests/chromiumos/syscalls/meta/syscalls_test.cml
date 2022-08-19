@@ -8,4 +8,11 @@
         user: "fuchsia:x:0:0",
         environ: [ "TEST_TMPDIR=/data/tmp" ],
     },
+    use: [
+        {
+            storage: "custom_artifacts",
+            rights: [ "rw*" ],
+            path: "/custom_artifacts",
+        },
+    ],
 }

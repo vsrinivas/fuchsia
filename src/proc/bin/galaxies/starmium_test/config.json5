@@ -2,6 +2,7 @@
     apex_hack: [],
     features: [
         "wayland",
+        "custom_artifacts",
     ],
     init: [],
     init_user: "root:x:0:0",

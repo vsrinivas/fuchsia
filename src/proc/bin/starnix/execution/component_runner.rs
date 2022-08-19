@@ -49,18 +49,28 @@ pub async fn start_component(
         start_info.program,
     );
 
-    let ns = start_info.ns.take().ok_or_else(|| anyhow!("Missing namespace"))?;
+    let mut ns = start_info.ns.take().ok_or_else(|| anyhow!("Missing namespace"))?;
     let pkg = fio::DirectorySynchronousProxy::new(
-        ns.into_iter()
+        ns.iter_mut()
             .find(|entry| entry.path == Some("/pkg".to_string()))
             .ok_or_else(|| anyhow!("Missing /pkg entry in namespace"))?
             .directory
+            .take()
             .ok_or_else(|| anyhow!("Missing directory handlee in pkg namespace entry"))?
             .into_channel(),
     );
     // Mount the package directory.
     let pkg_directory = mount_component_pkg_data(&galaxy, &pkg)?;
     let resolve_template = |value: &str| value.replace("{pkg_path}", &pkg_directory);
+
+    if let Some(directory) = ns
+        .iter_mut()
+        .find(|entry| entry.path == Some("/custom_artifacts".to_string()))
+        .and_then(|entry| entry.directory.take())
+    {
+        let custom_artifacts = fio::DirectorySynchronousProxy::new(directory.into_channel());
+        mount_custom_artifacts(&galaxy, &custom_artifacts)?;
+    }
 
     let args = get_program_strvec(&start_info, "args")
         .map(|args| {
@@ -177,7 +187,24 @@ fn mount_component_pkg_data(
     };
 
     // Create the filesystem and mount it.
-    let fs = create_remotefs_filesystem(&galaxy.kernel, pkg, ".")?;
+    let rights = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE;
+    let fs = create_remotefs_filesystem(&galaxy.kernel, pkg, rights, ".")?;
     mount_point.mount(WhatToMount::Fs(fs), MountFlags::empty())?;
     Ok(pkg_path.to_owned())
+}
+
+fn mount_custom_artifacts(
+    galaxy: &Galaxy,
+    custom_artifacts: &fio::DirectorySynchronousProxy,
+) -> Result<(), Error> {
+    const PATH: &str = "/custom_artifacts";
+
+    // Create the new directory.
+    let mount_point = galaxy.system_task.lookup_path_from_root(PATH.as_bytes())?;
+
+    // Create the filesystem and mount it.
+    let rights = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE;
+    let fs = create_remotefs_filesystem(&galaxy.kernel, custom_artifacts, rights, ".")?;
+    mount_point.mount(WhatToMount::Fs(fs), MountFlags::empty())?;
+    Ok(())
 }

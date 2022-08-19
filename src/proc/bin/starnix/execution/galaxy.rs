@@ -83,7 +83,7 @@ pub async fn create_galaxy() -> Result<Galaxy, Error> {
     let kernel = Arc::new(kernel);
 
     let mut init_task = create_init_task(&kernel)?;
-    let fs_context = create_fs_context(&init_task, &pkg_dir_proxy)?;
+    let fs_context = create_fs_context(&init_task, &CONFIG.features, &pkg_dir_proxy)?;
     init_task.set_fs(fs_context.clone());
     let system_task = create_task(&kernel, Some(fs_context), "kthread", Credentials::root())?;
 
@@ -133,6 +133,7 @@ pub async fn create_galaxy() -> Result<Galaxy, Error> {
 
 fn create_fs_context(
     task: &CurrentTask,
+    features: &Vec<String>,
     pkg_dir_proxy: &fio::DirectorySynchronousProxy,
 ) -> Result<Arc<FsContext>, Error> {
     // The mounts are appplied in the order listed. Mounting will fail if the designated mount
@@ -158,16 +159,18 @@ fn create_fs_context(
     // /galaxy/pkg will be a tmpfs where component using the starnix runner will have their package
     // mounted.
     let kernel = task.kernel();
+    let rights = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE;
     let galaxy_fs = LayeredFs::new(
         kernel,
-        create_remotefs_filesystem(kernel, &pkg_dir_proxy, "data")?,
+        create_remotefs_filesystem(kernel, &pkg_dir_proxy, rights, "data")?,
         BTreeMap::from([(b"pkg".to_vec(), TmpFs::new(kernel))]),
     );
-    let root_fs = LayeredFs::new(
-        kernel,
-        root_fs,
-        BTreeMap::from([(b"galaxy".to_vec(), galaxy_fs), (b"data".to_vec(), TmpFs::new(kernel))]),
-    );
+    let mut mappings =
+        vec![(b"galaxy".to_vec(), galaxy_fs), (b"data".to_vec(), TmpFs::new(kernel))];
+    if features.contains(&"custom_artifacts".to_string()) {
+        mappings.push((b"custom_artifacts".to_vec(), TmpFs::new(kernel)));
+    }
+    let root_fs = LayeredFs::new(kernel, root_fs, mappings.into_iter().collect());
 
     Ok(FsContext::new(root_fs))
 }
