@@ -41,7 +41,6 @@ use {
     merge::{filter_marked_for_deletion, filter_tombstones, merge},
     serde::{Deserialize, Serialize},
     std::{
-        any::Any,
         borrow::Borrow,
         cmp::min,
         collections::{BTreeMap, HashSet, VecDeque},
@@ -99,11 +98,6 @@ pub trait Allocator: ReservationOwner {
     /// Does not necessarily perform the deletion stratight away but if this is the case,
     /// implementation should be invisible to the caller.
     async fn mark_for_deletion(&self, transaction: &mut Transaction<'_>, owner_object_id: u64);
-
-    /// Cast to super-trait.
-    fn as_journaling_object(self: Arc<Self>) -> Arc<dyn JournalingObject>;
-
-    fn as_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync>;
 
     /// Called when the device has been flush and indicates what the journal log offset was when
     /// that happened.
@@ -875,14 +869,6 @@ impl Allocator for SimpleAllocator {
             self.object_id(),
             Mutation::Allocator(AllocatorMutation::MarkForDeletion(owner_object_id)),
         );
-    }
-
-    fn as_journaling_object(self: Arc<Self>) -> Arc<dyn JournalingObject> {
-        self
-    }
-
-    fn as_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync> {
-        self
     }
 
     async fn did_flush_device(&self, flush_log_offset: u64) {

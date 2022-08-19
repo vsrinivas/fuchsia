@@ -11,7 +11,7 @@ use {
             GetProperties, ObjectHandle, ObjectProperties, ReadObjectHandle, WriteObjectHandle,
         },
         object_store::{
-            allocator::{self},
+            allocator::{self, Allocator},
             object_record::{AttributeKey, Timestamp},
             transaction::{LockKey, Options, TRANSACTION_METADATA_MAX_AMOUNT},
             writeback_cache::{StorageReservation, WritebackCache},
@@ -401,6 +401,7 @@ mod tests {
             lsm_tree::types::{ItemRef, LayerIterator},
             object_handle::{GetProperties, ObjectHandle, ReadObjectHandle, WriteObjectHandle},
             object_store::{
+                allocator::Allocator,
                 extent_record::ExtentValue,
                 object_record::{AttributeKey, ObjectKey, ObjectKeyData, ObjectValue, Timestamp},
                 transaction::{Options, TransactionHandler},

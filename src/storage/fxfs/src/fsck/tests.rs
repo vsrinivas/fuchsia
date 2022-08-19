@@ -16,7 +16,7 @@ use {
         },
         object_handle::{ObjectHandle, ObjectHandleExt, Writer, INVALID_OBJECT_ID},
         object_store::{
-            allocator::{AllocatorKey, AllocatorValue, CoalescingIterator, SimpleAllocator},
+            allocator::{Allocator, AllocatorKey, AllocatorValue, CoalescingIterator},
             directory::Directory,
             transaction::{self, Options, TransactionHandler},
             volume::root_volume,
@@ -462,7 +462,7 @@ async fn test_allocation_mismatch() {
 
     {
         let fs = test.filesystem();
-        let allocator = fs.allocator().as_any().downcast::<SimpleAllocator>().unwrap();
+        let allocator = fs.allocator();
         let range = {
             let layer_set = allocator.tree().layer_set();
             let mut merger = layer_set.merger();
@@ -493,7 +493,7 @@ async fn test_missing_allocation() {
 
     {
         let fs = test.filesystem();
-        let allocator = fs.allocator().as_any().downcast::<SimpleAllocator>().unwrap();
+        let allocator = fs.allocator();
         let key = {
             let layer_set = allocator.tree().layer_set();
             let mut merger = layer_set.merger();

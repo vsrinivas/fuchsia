@@ -11,7 +11,7 @@ use {
         metrics::{traits::Metric as _, traits::NumericMetric as _, UintMetric},
         object_handle::INVALID_OBJECT_ID,
         object_store::{
-            allocator::{Allocator, Reservation},
+            allocator::{Allocator, Reservation, SimpleAllocator},
             directory::Directory,
             journal::{self, JournalCheckpoint},
             transaction::{
@@ -76,7 +76,7 @@ struct Inner {
     root_parent_store_object_id: u64,
     root_store_object_id: u64,
     allocator_object_id: u64,
-    allocator: Option<Arc<dyn Allocator>>,
+    allocator: Option<Arc<SimpleAllocator>>,
 
     // Records dependencies on the journal for objects i.e. an entry for object ID 1, would mean it
     // has a dependency on journal records from that offset.
@@ -310,14 +310,14 @@ impl ObjectManager {
         inner.reservations.remove(&store_object_id);
     }
 
-    pub fn set_allocator(&self, allocator: Arc<dyn Allocator>) {
+    pub fn set_allocator(&self, allocator: Arc<SimpleAllocator>) {
         let mut inner = self.inner.write().unwrap();
         assert!(!inner.stores.contains_key(&allocator.object_id()));
         inner.allocator_object_id = allocator.object_id();
         inner.allocator = Some(allocator.clone());
     }
 
-    pub fn allocator(&self) -> Arc<dyn Allocator> {
+    pub fn allocator(&self) -> Arc<SimpleAllocator> {
         self.inner.read().unwrap().allocator.clone().unwrap()
     }
 
@@ -378,7 +378,7 @@ impl ObjectManager {
                 }
             }
             if object_id == inner.allocator_object_id {
-                Some(inner.allocator.clone().unwrap().as_journaling_object())
+                Some(inner.allocator.clone().unwrap() as Arc<dyn JournalingObject>)
             } else {
                 inner.stores.get(&object_id).map(|x| x.clone() as Arc<dyn JournalingObject>)
             }
@@ -587,7 +587,7 @@ impl ObjectManager {
     fn object(&self, object_id: u64) -> Option<Arc<dyn JournalingObject>> {
         let inner = self.inner.read().unwrap();
         if object_id == inner.allocator_object_id {
-            Some(inner.allocator.clone().unwrap().as_journaling_object())
+            Some(inner.allocator.clone().unwrap() as Arc<dyn JournalingObject>)
         } else {
             inner.stores.get(&object_id).map(|x| x.clone() as Arc<dyn JournalingObject>)
         }

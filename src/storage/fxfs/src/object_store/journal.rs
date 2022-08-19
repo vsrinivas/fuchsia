@@ -392,7 +392,7 @@ impl Journal {
     pub async fn replay(
         &self,
         filesystem: Arc<dyn Filesystem>,
-        on_new_allocator: Option<Box<dyn Fn(Arc<dyn Allocator>) + Send + Sync>>,
+        on_new_allocator: Option<Box<dyn Fn(Arc<SimpleAllocator>) + Send + Sync>>,
     ) -> Result<(), Error> {
         trace_duration!("Journal::replay");
         let block_size = filesystem.block_size();
@@ -406,7 +406,7 @@ impl Journal {
         let allocator =
             Arc::new(SimpleAllocator::new(filesystem.clone(), super_block.allocator_object_id));
         if let Some(on_new_allocator) = on_new_allocator {
-            on_new_allocator(allocator.clone() as Arc<dyn Allocator>);
+            on_new_allocator(allocator.clone());
         }
         self.objects.set_allocator(allocator.clone());
         self.objects.set_borrowed_metadata_space(super_block.borrowed_metadata_space);

@@ -81,7 +81,6 @@ fxfs_sources = [
   "src/object_store/object_record.rs",
   "src/object_store/store_object_handle.rs",
   "src/object_store/testing.rs",
-  "src/object_store/testing/fake_allocator.rs",
   "src/object_store/testing/fake_filesystem.rs",
   "src/object_store/transaction.rs",
   "src/object_store/tree.rs",

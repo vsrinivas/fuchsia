@@ -14,6 +14,7 @@ use {
             WriteObjectHandle,
         },
         object_store::{
+            allocator::Allocator,
             extent_record::{Checksums, ExtentKey, ExtentValue},
             object_manager::ObjectManager,
             object_record::{
@@ -1245,6 +1246,7 @@ mod tests {
                 GetProperties, ObjectHandle, ObjectProperties, ReadObjectHandle, WriteObjectHandle,
             },
             object_store::{
+                allocator::Allocator,
                 extent_record::ExtentValue,
                 object_record::{AttributeKey, ObjectKey, ObjectKeyData, ObjectValue, Timestamp},
                 transaction::{Options, TransactionHandler},

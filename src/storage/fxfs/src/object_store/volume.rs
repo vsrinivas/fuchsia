@@ -8,6 +8,7 @@ use {
         errors::FxfsError,
         filesystem::{Filesystem, FxFilesystem},
         object_store::{
+            allocator::Allocator,
             directory::Directory,
             transaction::{Options, TransactionHandler},
             NewChildStoreOptions, ObjectDescriptor, ObjectStore,
@@ -181,6 +182,7 @@ mod tests {
             filesystem::{Filesystem, FxFilesystem, JournalingObject, SyncOptions},
             object_handle::{ObjectHandle, WriteObjectHandle},
             object_store::{
+                allocator::Allocator,
                 directory::Directory,
                 transaction::{Options, TransactionHandler},
             },

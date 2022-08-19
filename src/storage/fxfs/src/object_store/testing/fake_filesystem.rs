@@ -6,7 +6,7 @@ use {
     crate::{
         filesystem::{self, Filesystem, Info, SyncOptions},
         object_store::{
-            allocator::Allocator,
+            allocator::{Allocator, SimpleAllocator},
             graveyard::Graveyard,
             journal::JournalCheckpoint,
             object_manager::ObjectManager,
@@ -61,7 +61,7 @@ impl Filesystem for FakeFilesystem {
         self.object_manager.root_store()
     }
 
-    fn allocator(&self) -> Arc<dyn Allocator> {
+    fn allocator(&self) -> Arc<SimpleAllocator> {
         self.object_manager.allocator()
     }
 

@@ -41,6 +41,7 @@ use {
         metrics::{traits::Metric, StringMetric, UintMetric},
         object_handle::{ObjectHandle, ObjectHandleExt, INVALID_OBJECT_ID},
         object_store::{
+            allocator::SimpleAllocator,
             graveyard::Graveyard,
             journal::JournalCheckpoint,
             transaction::{
@@ -1336,7 +1337,7 @@ impl ObjectStore {
             | last_object_id.cipher.as_ref().unwrap().encrypt(last_object_id.id as u32) as u64)
     }
 
-    fn allocator(&self) -> Arc<dyn Allocator> {
+    fn allocator(&self) -> Arc<SimpleAllocator> {
         self.filesystem().allocator()
     }
 

@@ -10,7 +10,7 @@ use {
         log::*,
         metrics::{traits::Metric as _, traits::NumericMetric as _, UintMetric},
         object_store::{
-            allocator::{Allocator, Hold, Reservation, ReservationOwner},
+            allocator::{Allocator, Hold, Reservation, ReservationOwner, SimpleAllocator},
             directory::Directory,
             graveyard::Graveyard,
             journal::{super_block::SuperBlock, Journal, JournalCheckpoint, JournalOptions},
@@ -81,7 +81,7 @@ pub trait Filesystem: TransactionHandler {
     fn root_store(&self) -> Arc<ObjectStore>;
 
     /// Returns the allocator or panics if it is not available.
-    fn allocator(&self) -> Arc<dyn Allocator>;
+    fn allocator(&self) -> Arc<SimpleAllocator>;
 
     /// Returns the object manager for the filesystem.
     fn object_manager(&self) -> &Arc<ObjectManager>;
@@ -230,7 +230,7 @@ pub struct OpenOptions {
     pub journal_options: JournalOptions,
 
     /// Called immediately after creating the allocator.
-    pub on_new_allocator: Option<Box<dyn Fn(Arc<dyn Allocator>) + Send + Sync>>,
+    pub on_new_allocator: Option<Box<dyn Fn(Arc<SimpleAllocator>) + Send + Sync>>,
 
     /// Called each time a new store is registered with ObjectManager.
     pub on_new_store: Option<Box<dyn Fn(&ObjectStore) + Send + Sync>>,
@@ -443,7 +443,7 @@ impl Filesystem for FxFilesystem {
         self.objects.root_store()
     }
 
-    fn allocator(&self) -> Arc<dyn Allocator> {
+    fn allocator(&self) -> Arc<SimpleAllocator> {
         self.objects.allocator()
     }
 
@@ -580,7 +580,6 @@ mod tests {
             lsm_tree::{types::Item, Operation},
             object_handle::{ObjectHandle, WriteObjectHandle},
             object_store::{
-                allocator::SimpleAllocator,
                 directory::replace_child,
                 directory::Directory,
                 journal::JournalOptions,
@@ -671,10 +670,6 @@ mod tests {
                         ..Default::default()
                     },
                     on_new_allocator: Some(Box::new(move |allocator| {
-                        let allocator = allocator
-                            .as_any()
-                            .downcast::<SimpleAllocator>()
-                            .unwrap_or_else(|_| panic!("Unexpected allocator"));
                         let allocator_mutations = allocator_mutations.clone();
                         allocator.tree().set_mutation_callback(Some(Box::new(move |op, item| {
                             allocator_mutations.push(op, item)

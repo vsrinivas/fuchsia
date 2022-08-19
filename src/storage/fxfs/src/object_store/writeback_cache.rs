@@ -600,7 +600,6 @@ mod tests {
         super::{Flushable, FlushableData, StorageReservation, WritebackCache},
         crate::{
             data_buffer::MemDataBuffer,
-            filesystem::JournalingObject,
             object_store::{
                 allocator::{Allocator, AllocatorInfo, Reservation, ReservationOwner},
                 transaction::Transaction,
@@ -614,7 +613,6 @@ mod tests {
         fuchsia_async as fasync,
         futures::{channel::oneshot::channel, join},
         std::{
-            any::Any,
             collections::BTreeMap,
             ops::Range,
             sync::{
@@ -729,14 +727,6 @@ mod tests {
             _owner_object_id: u64,
         ) {
             unimplemented!();
-        }
-
-        fn as_journaling_object(self: Arc<Self>) -> Arc<dyn JournalingObject> {
-            unreachable!();
-        }
-
-        fn as_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync> {
-            unreachable!();
         }
 
         async fn did_flush_device(&self, _flush_log_offset: u64) {

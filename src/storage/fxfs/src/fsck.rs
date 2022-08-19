@@ -17,9 +17,7 @@ use {
         },
         object_handle::{ObjectHandle, ObjectHandleExt, INVALID_OBJECT_ID},
         object_store::{
-            allocator::{
-                Allocator, AllocatorKey, AllocatorValue, CoalescingIterator, SimpleAllocator,
-            },
+            allocator::{Allocator, AllocatorKey, AllocatorValue, CoalescingIterator},
             journal::super_block::SuperBlockInstance,
             transaction::{LockKey, TransactionHandler},
             volume::root_volume,
@@ -144,7 +142,7 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
 
     // TODO(fxbug.dev/96077): It's a bit crude how details of SimpleAllocator are leaking here. Is
     // there a better way?
-    let allocator = filesystem.allocator().as_any().downcast::<SimpleAllocator>().unwrap();
+    let allocator = filesystem.allocator();
     root_store_root_objects.append(&mut allocator.parent_objects());
 
     if fsck.options.do_slow_passes {

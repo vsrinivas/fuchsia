@@ -536,8 +536,9 @@ mod tests {
             filesystem::{Filesystem, FxFilesystem},
             lsm_tree::types::LayerIterator,
             object_store::{
+                allocator::{Allocator, SimpleAllocator},
                 journal::{journal_handle_options, JournalCheckpoint},
-                testing::{fake_allocator::FakeAllocator, fake_filesystem::FakeFilesystem},
+                testing::fake_filesystem::FakeFilesystem,
                 transaction::{Options, TransactionHandler},
                 HandleOptions, NewChildStoreOptions, ObjectHandle, ObjectStore, StoreObjectHandle,
             },
@@ -554,12 +555,14 @@ mod tests {
     ) -> (Arc<FakeFilesystem>, StoreObjectHandle<ObjectStore>, StoreObjectHandle<ObjectStore>) {
         let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
         let fs = FakeFilesystem::new(device);
-        let allocator = Arc::new(FakeAllocator::new());
+        let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 2));
         fs.object_manager().set_allocator(allocator.clone());
         fs.object_manager().init_metadata_reservation();
         let root_parent_store = ObjectStore::new_empty(None, 3, fs.clone());
         fs.object_manager().set_root_parent_store(root_parent_store.clone());
         let root_store;
+        let handle_a; // extend will borrow handle and needs to outlive transaction.
+        let handle_b; // extend will borrow handle and needs to outlive transaction.
         let mut transaction = fs
             .clone()
             .new_transaction(&[], Options::default())
@@ -572,16 +575,9 @@ mod tests {
             )
             .await
             .expect("new_child_store failed");
-        root_store.create(&mut transaction).await.expect("create failed");
         fs.object_manager().set_root_store(root_store.clone());
-
-        let handle_a; // extend will borrow handle and needs to outlive transaction.
-        let handle_b; // extend will borrow handle and needs to outlive transaction.
-        let mut transaction = fs
-            .clone()
-            .new_transaction(&[], Options::default())
-            .await
-            .expect("new_transaction failed");
+        allocator.create(&mut transaction).await.expect("allocator create failed");
+        root_store.create(&mut transaction).await.expect("create failed");
         handle_a = ObjectStore::create_object_with_id(
             &root_store,
             &mut transaction,
