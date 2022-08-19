@@ -2,16 +2,22 @@
     "version": 1,
     "keys": {
         "1": {
-            "nonce": "9c64d51c8c82a2280ac1677d",
-            "bytes": "6c091c1a954d439dc41a5078a9728d2643ab05f23a9966b23bf3185df4d04d14a5593d6a437caad3068e46889f4102e4"
+            "Aes256GcmSivWrapped": [
+                "9c64d51c8c82a2280ac1677d",
+                "6c091c1a954d439dc41a5078a9728d2643ab05f23a9966b23bf3185df4d04d14a5593d6a437caad3068e46889f4102e4"
+            ]
         },
         "2": {
-            "nonce": "5dcfe863c238b9835b4fc3d3",
-            "bytes": "29dfd80898a3adc419fa10a9cc42b7a5015af92ded1e7481bab12152ffd658d35ec7ce359b8b6d1a8cbfb23f6b4752f4"
+            "Aes256GcmSivWrapped": [
+                "5dcfe863c238b9835b4fc3d3",
+                "29dfd80898a3adc419fa10a9cc42b7a5015af92ded1e7481bab12152ffd658d35ec7ce359b8b6d1a8cbfb23f6b4752f4"
+            ]
         },
         "0": {
-            "nonce": "3fda9c6016f19d140f251db6",
-            "bytes": "521d439c5ff2e94d5cd339dbb77ddd51accfd661db247b495ff68f48dfc8cadd7a337cc0279007188c88e520cf14760d"
+            "Aes256GcmSivWrapped": [
+                "3fda9c6016f19d140f251db6",
+                "521d439c5ff2e94d5cd339dbb77ddd51accfd661db247b495ff68f48dfc8cadd7a337cc0279007188c88e520cf14760d"
+            ]
         }
     }
 }

@@ -18,6 +18,7 @@ use {
 mod config;
 mod device;
 mod environment;
+mod fxfs;
 mod manager;
 mod matcher;
 mod service;

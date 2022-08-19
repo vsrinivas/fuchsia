@@ -15,10 +15,12 @@
 
 #include <fbl/unique_fd.h>
 
+#include "fidl/fuchsia.fxfs/cpp/markers.h"
 #include "fidl/fuchsia.io/cpp/markers.h"
 #include "lib/fidl/cpp/wire/internal/transport_channel.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/lib/storage/fs_management/cpp/options.h"
+#include "src/security/fcrypto/bytes.h"
 #include "src/storage/fshost/copier.h"
 #include "src/storage/fshost/fs-manager.h"
 #include "src/storage/fshost/fshost-boot-args.h"
@@ -85,10 +87,6 @@ class FilesystemMounter {
   bool DataMounted() const { return data_mounted_; }
   bool FactoryMounted() const { return factory_mounted_; }
   bool DurableMounted() const { return durable_mounted_; }
-
-  // If configuration indicates the data filesystem requires a crypt client, initializes it.  Does
-  // nothing otherwise.
-  zx::status<> MaybeInitCryptClient();
 
   FsManager& manager() { return fshost_; }
   FshostInspectManager& inspect_manager() { return fshost_.inspect_manager(); }

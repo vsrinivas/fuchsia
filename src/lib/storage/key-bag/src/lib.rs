@@ -5,7 +5,7 @@
 use {
     aes_gcm_siv::{
         aead::{Aead, NewAead},
-        Aes256GcmSiv, Key,
+        Aes128GcmSiv, Aes256GcmSiv, Key,
     },
     fuchsia_zircon::{self as zx},
     itertools::Itertools,
@@ -107,6 +107,7 @@ pub struct KeyBagManager {
     path: String,
 }
 
+pub const AES128_KEY_SIZE: usize = 16;
 pub const AES256_KEY_SIZE: usize = 32;
 
 const CURRENT_VERSION: u16 = 1;
@@ -115,12 +116,12 @@ const WRAPPED_AES256_KEY_SIZE: usize = AES256_KEY_SIZE + 16;
 
 pub type KeySlot = u16;
 
-/// An AES256 key which has been wrapped using AES256-GCM-SIV.
+/// An AES256 key which has been wrapped using an AEAD, e.g. AES256-GCM-SIV.
 /// This can be safely stored in plaintext, and requires the wrapping key to be decoded.
-#[derive(Default, Deserialize, Serialize, Debug)]
-pub struct WrappedKey {
-    pub nonce: Nonce,
-    pub bytes: KeyBytes,
+#[derive(Deserialize, Serialize, Debug)]
+pub enum WrappedKey {
+    Aes128GcmSivWrapped(Nonce, KeyBytes),
+    Aes256GcmSivWrapped(Nonce, KeyBytes),
 }
 
 // Helper for generating serde implementations for structs like 'KeyBytes' and 'Nonce'.
@@ -178,6 +179,7 @@ impl Nonce {
 
 impl_serde!(Nonce);
 
+/// A raw byte-string containing a wrapped AES256 key.
 #[derive(Debug)]
 pub struct KeyBytes([u8; WRAPPED_AES256_KEY_SIZE]);
 
@@ -219,6 +221,12 @@ impl_serde!(KeyBytes);
 #[derive(Default, PartialEq)]
 pub struct Aes256Key([u8; AES256_KEY_SIZE]);
 
+impl Aes256Key {
+    pub const fn create(data: [u8; AES256_KEY_SIZE]) -> Self {
+        Self(data)
+    }
+}
+
 impl Deref for Aes256Key {
     type Target = [u8; AES256_KEY_SIZE];
     fn deref(&self) -> &Self::Target {
@@ -236,6 +244,13 @@ impl Debug for Aes256Key {
     fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         formatter.write_str("Aes256Key")
     }
+}
+
+#[repr(C)]
+#[derive(PartialEq)]
+pub enum WrappingKey {
+    Aes128([u8; AES128_KEY_SIZE]),
+    Aes256([u8; AES256_KEY_SIZE]),
 }
 
 fn generate_key() -> Aes256Key {
@@ -271,26 +286,43 @@ impl KeyBagManager {
         }
         Ok(Self { key_bag, path: path_str })
     }
-    /// Generates and stores a new key in the key-bag, based on |wrapping_key|.
-    pub fn new_key(&mut self, slot: KeySlot, wrapping_key: &Aes256Key) -> Result<(), Error> {
-        match self.key_bag.keys.entry(slot) {
+    /// Generates and stores a new key in the key-bag, based on |wrapping_key|.  Returns the
+    /// unwrapped key contents.
+    pub fn new_key(
+        &mut self,
+        slot: KeySlot,
+        wrapping_key: &WrappingKey,
+    ) -> Result<Aes256Key, Error> {
+        let key = match self.key_bag.keys.entry(slot) {
             Entry::Occupied(_) => return Err(Error::SlotAlreadyUsed),
             Entry::Vacant(v) => {
                 let key = generate_key();
                 let nonce = generate_nonce();
 
-                let cipher = Aes256GcmSiv::new(Key::from_slice(&wrapping_key.0[..]));
-                let wrapped = cipher
-                    .encrypt(nonce.as_crypto_nonce(), &key.0[..])
-                    .map_err(|_| Error::Internal)?;
-                v.insert(WrappedKey {
-                    nonce,
-                    bytes: wrapped.try_into().map_err(|_| Error::Internal)?,
-                });
+                let entry = match wrapping_key {
+                    WrappingKey::Aes128(bytes) => {
+                        let cipher = Aes128GcmSiv::new(Key::from_slice(bytes));
+                        let wrapped = cipher
+                            .encrypt(nonce.as_crypto_nonce(), &key.0[..])
+                            .map_err(|_| Error::Internal)
+                            .and_then(|k| k.try_into().map_err(|_| Error::Internal))?;
+                        WrappedKey::Aes128GcmSivWrapped(nonce, wrapped)
+                    }
+                    WrappingKey::Aes256(bytes) => {
+                        let cipher = Aes256GcmSiv::new(Key::from_slice(bytes));
+                        let wrapped = cipher
+                            .encrypt(nonce.as_crypto_nonce(), &key.0[..])
+                            .map_err(|_| Error::Internal)
+                            .and_then(|k| k.try_into().map_err(|_| Error::Internal))?;
+                        WrappedKey::Aes256GcmSivWrapped(nonce, wrapped)
+                    }
+                };
+                v.insert(entry);
+                key
             }
         };
 
-        self.commit()
+        self.commit().map(|_| key)
     }
     /// Removes a key from the key bag.
     pub fn remove_key(&mut self, slot: KeySlot) -> Result<(), Error> {
@@ -303,11 +335,26 @@ impl KeyBagManager {
     pub fn unwrap_key(
         &self,
         slot: KeySlot,
-        wrapping_key: &Aes256Key,
+        wrapping_key: &WrappingKey,
     ) -> Result<Aes256Key, UnwrapError> {
-        let cipher = Aes256GcmSiv::new(Key::from_slice(&wrapping_key.0[..]));
         let key = self.key_bag.keys.get(&slot).ok_or(UnwrapError::SlotNotFound)?;
-        match cipher.decrypt(key.nonce.as_crypto_nonce(), &key.bytes.0[..]) {
+        let (nonce, bytes) = match key {
+            WrappedKey::Aes128GcmSivWrapped(nonce, bytes) => (nonce, bytes),
+            WrappedKey::Aes256GcmSivWrapped(nonce, bytes) => (nonce, bytes),
+        };
+        // Intentionally don't check that the algorithms match; we want AccessDenied to be returned
+        // if the wrong key type is specified, to minimize information leakage.
+        let decrypt_res = match wrapping_key {
+            WrappingKey::Aes128(wrap_bytes) => {
+                let cipher = Aes128GcmSiv::new(Key::from_slice(wrap_bytes));
+                cipher.decrypt(nonce.as_crypto_nonce(), &bytes[..])
+            }
+            WrappingKey::Aes256(wrap_bytes) => {
+                let cipher = Aes256GcmSiv::new(Key::from_slice(wrap_bytes));
+                cipher.decrypt(nonce.as_crypto_nonce(), &bytes[..])
+            }
+        };
+        match decrypt_res {
             Ok(unwrapped) => {
                 let mut key = Aes256Key([0u8; 32]);
                 key.0.copy_from_slice(&unwrapped[..]);
@@ -332,7 +379,8 @@ impl KeyBagManager {
 #[cfg(test)]
 mod tests {
     use {
-        super::{Aes256Key, Error, KeyBagManager, UnwrapError},
+        super::{Aes256Key, Error, KeyBagManager, UnwrapError, WrappingKey},
+        assert_matches::assert_matches,
         tempfile::NamedTempFile,
     };
 
@@ -359,7 +407,7 @@ mod tests {
         let path: &std::path::Path = owned_path.as_ref();
         {
             let mut keybag = KeyBagManager::open(path).expect("Open empty keybag failed");
-            let key = Aes256Key::default();
+            let key = WrappingKey::Aes256([0u8; 32]);
             keybag.new_key(0, &key).expect("new key failed");
             assert_eq!(
                 Error::SlotAlreadyUsed,
@@ -384,31 +432,36 @@ mod tests {
         let path: &std::path::Path = owned_path.as_ref();
         let mut keybag = KeyBagManager::open(path).expect("Open empty keybag failed");
 
-        let key = Aes256Key([3u8; 32]);
-        let key2 = Aes256Key([0xffu8; 32]);
+        let key = WrappingKey::Aes256([3u8; 32]);
+        let key2 = WrappingKey::Aes128([0xffu8; 16]);
 
         keybag.new_key(0, &key).expect("new_key failed");
         keybag.new_key(1, &key2).expect("new_key failed");
         keybag.new_key(2, &key).expect("new_key failed");
 
-        assert!(keybag.unwrap_key(0, &key).is_ok());
+        assert_matches!(keybag.unwrap_key(0, &key), Ok(_));
         assert_eq!(keybag.unwrap_key(1, &key), Err(UnwrapError::AccessDenied));
-        assert!(keybag.unwrap_key(2, &key).is_ok());
+        assert_matches!(keybag.unwrap_key(2, &key), Ok(_));
         assert_eq!(keybag.unwrap_key(3, &key), Err(UnwrapError::SlotNotFound));
+
+        assert_eq!(keybag.unwrap_key(0, &key2), Err(UnwrapError::AccessDenied));
+        assert_matches!(keybag.unwrap_key(1, &key2), Ok(_));
+        assert_eq!(keybag.unwrap_key(2, &key2), Err(UnwrapError::AccessDenied));
+        assert_eq!(keybag.unwrap_key(3, &key2), Err(UnwrapError::SlotNotFound));
     }
 
     #[test]
     fn from_testdata() {
         // The testdata file contains three keys, all of which have the same plaintext value
         // ("secret\0..\0").
-        // Slots 0,2 are encrypted with a null key, and 1 is encrypted with something else.
+        // Slots 0,2 are encrypted with a null AES256 key, and 1 is encrypted with something else.
         let path = std::path::Path::new("/pkg/data/key_bag.json");
         let keybag = KeyBagManager::open(path).expect("Open keybag failed");
 
         let mut expected = Aes256Key::default();
         expected.0[..6].copy_from_slice(b"secret");
 
-        let key = Aes256Key([0u8; 32]);
+        let key = WrappingKey::Aes256([0u8; 32]);
         assert_eq!(keybag.unwrap_key(0, &key).as_ref().map(|s| &s.0), Ok(&expected.0));
         assert_eq!(keybag.unwrap_key(1, &key), Err(UnwrapError::AccessDenied));
         assert_eq!(keybag.unwrap_key(2, &key), Ok(expected));

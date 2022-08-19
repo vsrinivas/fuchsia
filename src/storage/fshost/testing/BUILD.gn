@@ -206,6 +206,42 @@ fuchsia_component("test-fshost-fxfs-disk-migration-comp") {
   cm_label = ":test-fshost-fxfs-disk-migration-manifest"
 }
 
+cmc_merge("test-fshost-fxfs-legacy-crypto.cml") {
+  sources = [
+    "//src/storage/fshost/meta/base_fshost.cml",
+    "//src/storage/fshost/meta/config.cml",
+    "//src/storage/fshost/meta/core_fshost.cml",
+    "//src/storage/fshost/meta/cpp_fshost.cml",
+    "//src/storage/fshost/meta/fxfs_fshost.cml",
+  ]
+}
+
+fuchsia_component_manifest("test-fshost-fxfs-legacy-crypto-manifest") {
+  testonly = true
+  component_name = "test-fshost-fxfs-legacy-crypto"
+  manifest_outputs = get_target_outputs(":test-fshost-fxfs-legacy-crypto.cml")
+  manifest = manifest_outputs[0]
+  deps = [ ":test-fshost-fxfs-legacy-crypto.cml" ]
+}
+
+fuchsia_component("test-fshost-fxfs-legacy-crypto-comp") {
+  testonly = true
+
+  deps = [
+    "//src/security/policy/zxcrypt:null",
+    "//src/storage/fshost",
+  ]
+  cm_label = ":test-fshost-fxfs-legacy-crypto-manifest"
+}
+
+group("test-fshost-fxfs-legacy-crypto") {
+  testonly = true
+  deps = [
+    ":integration_test_config_fxfs_legacy_crypto",
+    ":test-fshost-fxfs-legacy-crypto-comp",
+  ]
+}
+
 group("test-fshost-no-watcher") {
   testonly = true
   deps = [
@@ -231,6 +267,8 @@ integration_test_config = {
 
   # The BlockDeviceManagerIntegration.SetPartitionName test needs this.
   allow_legacy_data_partition_names = true
+
+  use_native_fxfs_crypto = true
 }
 
 generated_fshost_config("integration_test_config") {
@@ -243,6 +281,13 @@ generated_fshost_config("integration_test_config_fxfs") {
   component_name = "test-fshost-fxfs"
   forward_variables_from(integration_test_config, "*")
   data_filesystem_format = "fxfs"
+}
+
+generated_fshost_config("integration_test_config_fxfs_legacy_crypto") {
+  component_name = "test-fshost-fxfs-legacy-crypto"
+  forward_variables_from(integration_test_config, "*")
+  data_filesystem_format = "fxfs"
+  use_native_fxfs_crypto = false
 }
 
 generated_fshost_config("integration_test_config_f2fs") {

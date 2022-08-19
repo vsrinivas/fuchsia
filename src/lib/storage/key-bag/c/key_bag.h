@@ -27,12 +27,35 @@
 
 namespace key_bag {
 
-static const uintptr_t AES256_KEY_SIZE = 32;
+constexpr static const uintptr_t AES128_KEY_SIZE = 16;
+
+constexpr static const uintptr_t AES256_KEY_SIZE = 32;
 
 // Manages the persistence of a KeyBag.
 //
 // All operations on the keybag are atomic.
 struct KeyBagManager;
+
+struct WrappingKey {
+  enum class Tag {
+    Aes128,
+    Aes256,
+  };
+
+  struct Aes128_Body {
+    uint8_t _0[AES128_KEY_SIZE];
+  };
+
+  struct Aes256_Body {
+    uint8_t _0[AES256_KEY_SIZE];
+  };
+
+  Tag tag;
+  union {
+    Aes128_Body aes128;
+    Aes256_Body aes256;
+  };
+};
 
 struct Aes256Key {
   uint8_t _0[AES256_KEY_SIZE];
@@ -40,26 +63,45 @@ struct Aes256Key {
 
 extern "C" {
 
+// C-friendly helper to create a `WrappingKey` for AES128-GCM-SIV by copying `key` which must be
+// `AES128_KEY_SIZE` bytes.
+//
+// # Safety
+//
+// The passed arguments might point to invalid memory.
+zx_status_t keybag_create_aes128_wrapping_key(const uint8_t *key, uintptr_t len, WrappingKey *out);
+
+// C-friendly helper to create a `WrappingKey` for AES256-GCM-SIV by copying `key` which must be
+// `AES256_KEY_SIZE` bytes.
+//
+// # Safety
+//
+// The passed arguments might point to invalid memory.
+zx_status_t keybag_create_aes256_wrapping_key(const uint8_t *key, uintptr_t len, WrappingKey *out);
+
 // Creates a `KeyBagManager` by opening or creating 'path', and returns an opaque pointer to it.
 //
 // # Safety
 //
 // The passed arguments might point to invalid memory.
-zx_status_t keybag_create(const char *path, KeyBagManager **out);
+zx_status_t keybag_open(const char *path, KeyBagManager **out);
 
 // Deallocates a previously created `KeyBagManager`.
 //
 // # Safety
 //
 // The passed arguments might point to invalid memory, or an object we didn't allocate.
-void keybag_destroy(KeyBagManager *keybag);
+void keybag_close(KeyBagManager *keybag);
 
-// Generates and stores a wrapped key in the key bag.
+// Generates and stores a wrapped key in the key bag.  Returns the unwrapped key in |out_key|.
 //
 // # Safety
 //
 // The passed arguments might point to invalid memory.
-zx_status_t keybag_new_key(KeyBagManager *keybag, uint16_t slot, const Aes256Key *wrapping_key);
+zx_status_t keybag_new_key(KeyBagManager *keybag,
+                           uint16_t slot,
+                           const WrappingKey *wrapping_key,
+                           Aes256Key *out_key);
 
 // Removes the key at the given slot from the key bag.
 //
@@ -75,7 +117,7 @@ zx_status_t keybag_remove_key(KeyBagManager *keybag, uint16_t slot);
 // The passed arguments might point to invalid memory.
 zx_status_t keybag_unwrap_key(KeyBagManager *keybag,
                               uint16_t slot,
-                              const Aes256Key *wrapping_key,
+                              const WrappingKey *wrapping_key,
                               Aes256Key *out_key);
 
 } // extern "C"

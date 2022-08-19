@@ -33,6 +33,7 @@ static_library("zxcrypt-dev") {
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxc",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }

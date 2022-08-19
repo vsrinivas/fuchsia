@@ -43,51 +43,40 @@ const char kHardwareKeyInfo[] = "zxcrypt";
 const size_t kMaxKeySourcePolicyLength = 32;
 const char kZxcryptConfigFile[] = "/pkg/config/zxcrypt";
 
-// Reads /boot/config/zxcrypt to determine what key source policy was selected for this product at
-// build time.
-//
-// Returns ZX_OK and sets |out| to the appropriate KeySourcePolicy value if the file contents
-// exactly match a known configuration value.
-// Returns ZX_ERR_NOT_FOUND if the config file was not present
-// Returns ZX_ERR_IO if the config file could not be read
-// Returns ZX_ERR_BAD_STATE if the config value was not recognized.
-zx_status_t SelectKeySourcePolicy(KeySourcePolicy* out) {
+}  // namespace
+
+__EXPORT
+zx::status<KeySourcePolicy> SelectKeySourcePolicy() {
   fbl::unique_fd fd(open(kZxcryptConfigFile, O_RDONLY));
   if (!fd) {
     xprintf("zxcrypt: couldn't open %s\n", kZxcryptConfigFile);
-    return ZX_ERR_NOT_FOUND;
+    return zx::error(ZX_ERR_NOT_FOUND);
   }
 
   char key_source_buf[kMaxKeySourcePolicyLength + 1];
   ssize_t len = read(fd.get(), key_source_buf, sizeof(key_source_buf) - 1);
   if (len < 0) {
     xprintf("zxcrypt: couldn't read %s\n", kZxcryptConfigFile);
-    return ZX_ERR_IO;
+    return zx::error(ZX_ERR_IO);
   } else {
     // add null terminator
     key_source_buf[len] = '\0';
     // Dispatch if recognized
     if (strcmp(key_source_buf, "null") == 0) {
-      *out = NullSource;
-      return ZX_OK;
+      return zx::ok(NullSource);
     }
     if (strcmp(key_source_buf, "tee") == 0) {
-      *out = TeeRequiredSource;
-      return ZX_OK;
+      return zx::ok(TeeRequiredSource);
     }
     if (strcmp(key_source_buf, "tee-transitional") == 0) {
-      *out = TeeTransitionalSource;
-      return ZX_OK;
+      return zx::ok(TeeTransitionalSource);
     }
     if (strcmp(key_source_buf, "tee-opportunistic") == 0) {
-      *out = TeeOpportunisticSource;
-      return ZX_OK;
+      return zx::ok(TeeOpportunisticSource);
     }
-    return ZX_ERR_BAD_STATE;
+    return zx::error(ZX_ERR_BAD_STATE);
   }
 }
-
-}  // namespace
 
 // Returns a ordered vector of |KeySource|s, representing all key sources,
 // ordered from most-preferred to least-preferred, that we should try for the
@@ -148,15 +137,13 @@ fbl::Vector<KeySource> ComputeEffectivePolicy(KeySourcePolicy ksp, Activity acti
 __EXPORT
 zx_status_t TryWithImplicitKeys(
     Activity activity, fit::function<zx_status_t(std::unique_ptr<uint8_t[]>, size_t)> callback) {
-  KeySourcePolicy source;
-  zx_status_t rc;
-  rc = SelectKeySourcePolicy(&source);
-  if (rc != ZX_OK) {
-    return rc;
+  auto source = SelectKeySourcePolicy();
+  if (source.is_error()) {
+    return source.status_value();
   }
 
-  rc = ZX_ERR_INTERNAL;
-  auto ordered_key_sources = ComputeEffectivePolicy(source, activity);
+  zx_status_t rc = ZX_ERR_INTERNAL;
+  auto ordered_key_sources = ComputeEffectivePolicy(*source, activity);
 
   for (auto& key_source : ordered_key_sources) {
     switch (key_source) {

@@ -42,6 +42,11 @@ declare_args() {
   # If true, will attempt to copy the data partition to a new partition and then delete the old one
   # to migrate from minfs to fxfs.
   use_disk_based_minfs_migration = false
+
+  # Enables the use of Fxfs' native encryption scheme, using a hardware key source when
+  # available.
+  # If set, devices not already using this scheme will be forcibly migrated, losing data.
+  use_native_fxfs_crypto = false
 }
 
 # Generates a structured config value file for fshost.
@@ -127,6 +132,7 @@ template("generated_fshost_config") {
       nand = false
       netboot = false
       use_disk_based_minfs_migration = false
+      use_native_fxfs_crypto = false
 
       # Template arguments
       allow_legacy_data_partition_names =
@@ -144,6 +150,8 @@ template("generated_fshost_config") {
       use_disk_based_minfs_migration =
           defined(invoker.use_disk_based_minfs_migration) &&
           invoker.use_disk_based_minfs_migration
+      use_native_fxfs_crypto = defined(invoker.use_native_fxfs_crypto) &&
+                               invoker.use_native_fxfs_crypto
       zxcrypt_non_ramdisk = fvm_ramdisk
 
       # Final template argument allows setting arbitrary values which need to override
