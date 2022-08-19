@@ -14,6 +14,15 @@ if (is_host) {
       "//src/developer/ffx/lib/errors:lib",
       "//src/developer/ffx/plugins/emulator/commands:ffx_emulator_commands",
       "//src/developer/ffx/plugins/emulator/common:ffx_emulator_common",
+      "//src/developer/ffx/plugins/emulator/configuration:ffx_emulator_config",
+      "//third_party/rust_crates:cfg-if",
+    ]
+    test_deps = [
+      "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx_rust",
+      "//src/lib/fuchsia-async",
+      "//third_party/rust_crates:async-trait",
+      "//third_party/rust_crates:lazy_static",
+      "//third_party/rust_crates:mockall",
     ]
     args_sources = [ "src/args.rs" ]
     sources = [ "src/lib.rs" ]
