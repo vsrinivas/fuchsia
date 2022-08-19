@@ -147,6 +147,43 @@ impl FsNodeOps for RemoteNode {
         Ok(Box::new(RemoteFileObject::new(zxio)))
     }
 
+    fn mknod(
+        &self,
+        node: &FsNode,
+        name: &FsStr,
+        mode: FileMode,
+        _dev: DeviceType,
+        _owner: FsCred,
+    ) -> Result<FsNodeHandle, Errno> {
+        let name = std::str::from_utf8(name).map_err(|_| {
+            warn!("bad utf8 in pathname! remote filesystems can't handle this");
+            EINVAL
+        })?;
+        if !mode.is_reg() {
+            warn!("Can only create regular files in remotefs.");
+            return error!(EINVAL, name);
+        }
+
+        let open_flags = fio::OpenFlags::CREATE
+            | fio::OpenFlags::RIGHT_WRITABLE
+            | fio::OpenFlags::RIGHT_READABLE;
+        let zxio = Arc::new(
+            self.zxio
+                .open(open_flags, 0, name)
+                .map_err(|status| from_status_like_fdio!(status, name))?,
+        );
+
+        // TODO: It's unfortunate to have another round-trip. We should be able
+        // to set the mode based on the information we get during open.
+        let attrs = zxio.attr_get().map_err(|status| from_status_like_fdio!(status, name))?;
+        let ops = Box::new(RemoteNode { zxio, rights: self.rights });
+        let user_perms = mode.bits() & 0o700;
+        let mode = mode | FileMode::from_bits((user_perms >> 3) | (user_perms >> 6));
+        let child = node.fs().create_node_with_id(ops, attrs.id, mode, FsCred::root());
+
+        Ok(child)
+    }
+
     fn lookup(
         &self,
         node: &FsNode,
@@ -157,11 +194,15 @@ impl FsNodeOps for RemoteNode {
             warn!("bad utf8 in pathname! remote filesystems can't handle this");
             EINVAL
         })?;
-        let zxio = Arc::new(
-            self.zxio
-                .open(self.rights, 0, name)
-                .map_err(|status| from_status_like_fdio!(status, name))?,
-        );
+        let zxio =
+            Arc::new(self.zxio.open(self.rights, 0, name).map_err(|status| match status {
+                // TODO: When the file is not found `PEER_CLOSED` is returned. In this case the peer
+                // closed should be translated into ENOENT, so that the file may be created. This
+                // logic creates a race when creating files in remote filesystems, between us and
+                // any other client creating a file between here and `mknod`.
+                zx::Status::PEER_CLOSED => errno!(ENOENT, name),
+                status => from_status_like_fdio!(status, name),
+            })?);
 
         // TODO: It's unfortunate to have another round-trip. We should be able
         // to set the mode based on the information we get during open.
