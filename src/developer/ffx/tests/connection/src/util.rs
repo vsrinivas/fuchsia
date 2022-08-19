@@ -152,7 +152,13 @@ where
     let isolate =
         ffx_isolate::Isolate::new(case_name, ffx_path, ssh_path).await.expect("create isolate");
 
-    let addr = std::env::var("FUCHSIA_DEVICE_ADDR").unwrap();
+    // Ensure that the address is formatted properly, and include port is if it available.
+    // Without this formatting, the connection does not work when using a remote workflow.
+    let addr = format!(
+        "[{}]{}",
+        std::env::var("FUCHSIA_DEVICE_ADDR").unwrap(),
+        std::env::var("FUCHSIA_SSH_PORT").map(|v| format!(":{}", v)).unwrap_or_default()
+    );
     let nodename = std::env::var("FUCHSIA_NODENAME").unwrap();
 
     isolate.ffx(&["target", "add", &addr]).await.expect("add target");
