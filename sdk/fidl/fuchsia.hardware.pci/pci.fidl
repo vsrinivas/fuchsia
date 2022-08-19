@@ -554,3 +554,7 @@ protocol Device {
         bti zx.handle:BTI;
     }) error zx.status;
 };
+
+service Service {
+    device client_end:Device;
+};
