@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/config.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 ###############################################################################
 # GROUPS
@@ -80,6 +81,13 @@ fuchsia_component("feedback") {
     ":feedback_exe",
     ":system_log_recorder_exe",
   ]
+}
+
+###############################################################################
+# CORE SHARDS
+###############################################################################
+core_shard("core_shard") {
+  shard_file = "forensics.core_shard.cml"
 }
 
 ###############################################################################
