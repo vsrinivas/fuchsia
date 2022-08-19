@@ -14,6 +14,7 @@
 #include "src/developer/forensics/feedback/annotations/types.h"
 #include "src/developer/forensics/feedback/attachments/types.h"
 #include "src/developer/forensics/utils/redact/redactor.h"
+#include "src/developer/forensics/utils/utc_clock_ready_watcher.h"
 #include "src/developer/forensics/utils/utc_time_provider.h"
 #include "src/lib/timekeeper/clock.h"
 
@@ -43,6 +44,7 @@ class Metadata {
   std::set<std::string> annotation_allowlist_;
   feedback::AttachmentKeys attachment_allowlist_;
 
+  UtcClockReadyWatcher utc_clock_ready_watcher_;
   UtcTimeProvider utc_provider_;
 };
 

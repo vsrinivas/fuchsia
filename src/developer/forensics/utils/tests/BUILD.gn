@@ -152,6 +152,21 @@ executable("time_unittest_exe") {
   ]
 }
 
+executable("utc_clock_ready_watcher_unittest_exe") {
+  testonly = true
+
+  sources = [ "utc_clock_ready_watcher_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/utils:utc_time_provider",
+    "//src/lib/timekeeper:testing",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("utc_time_provider_unittest_exe") {
   testonly = true
 
@@ -160,6 +175,7 @@ executable("utc_time_provider_unittest_exe") {
   deps = [
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/utils:utc_clock_ready_watcher",
     "//src/developer/forensics/utils:utc_time_provider",
     "//src/lib/files",
     "//src/lib/timekeeper:testing",
@@ -231,6 +247,10 @@ fuchsia_unittest_component("time_unittest") {
   deps = [ ":time_unittest_exe" ]
 }
 
+fuchsia_unittest_component("utc_clock_ready_watcher_unittest") {
+  deps = [ ":utc_clock_ready_watcher_unittest_exe" ]
+}
+
 fuchsia_component("utc_time_provider_unittest") {
   testonly = true
 
@@ -253,6 +273,7 @@ fuchsia_test_package("feedback-utils-tests") {
     ":log_format_unittest",
     ":previous_boot_file_unittest",
     ":time_unittest",
+    ":utc_clock_ready_watcher_unittest",
     ":utc_time_provider_unittest",
   ]
   test_specs = {

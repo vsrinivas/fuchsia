@@ -4,9 +4,8 @@
 
 #include "src/developer/forensics/utils/utc_time_provider.h"
 
-#include <lib/syslog/cpp/macros.h>
+#include <lib/fit/function.h>
 
-#include <cstdlib>
 #include <optional>
 
 #include "src/developer/forensics/utils/time.h"
@@ -14,26 +13,24 @@
 
 namespace forensics {
 
-UtcTimeProvider::UtcTimeProvider(async_dispatcher_t* dispatcher, zx::unowned_clock clock_handle,
+UtcTimeProvider::UtcTimeProvider(UtcClockReadyWatcher* utc_clock_ready_watcher,
                                  timekeeper::Clock* clock)
-    : UtcTimeProvider(dispatcher, std::move(clock_handle), clock, std::nullopt) {}
+    : UtcTimeProvider(utc_clock_ready_watcher, clock, std::nullopt) {}
 
-UtcTimeProvider::UtcTimeProvider(async_dispatcher_t* dispatcher, zx::unowned_clock clock_handle,
+UtcTimeProvider::UtcTimeProvider(UtcClockReadyWatcher* utc_clock_ready_watcher,
                                  timekeeper::Clock* clock,
                                  PreviousBootFile utc_monotonic_difference_file)
-    : UtcTimeProvider(dispatcher, std::move(clock_handle), clock,
+    : UtcTimeProvider(utc_clock_ready_watcher, clock,
                       std::optional(utc_monotonic_difference_file)) {}
 
-UtcTimeProvider::UtcTimeProvider(async_dispatcher_t* dispatcher, zx::unowned_clock clock_handle,
+UtcTimeProvider::UtcTimeProvider(UtcClockReadyWatcher* utc_clock_ready_watcher,
                                  timekeeper::Clock* clock,
                                  std::optional<PreviousBootFile> utc_monotonic_difference_file)
     : clock_(clock),
       utc_monotonic_difference_file_(std::move(utc_monotonic_difference_file)),
       previous_boot_utc_monotonic_difference_(std::nullopt),
-      wait_for_clock_start_(this, clock_handle->get_handle(), ZX_CLOCK_STARTED, /*options=*/0) {
-  if (const zx_status_t status = wait_for_clock_start_.Begin(dispatcher); status != ZX_OK) {
-    FX_PLOGS(FATAL, status) << "Failed to wait for clock start";
-  }
+      utc_clock_ready_watcher_(utc_clock_ready_watcher) {
+  utc_clock_ready_watcher->OnClockReady(fit::bind_member<&UtcTimeProvider::OnClockStart>(this));
 
   if (!utc_monotonic_difference_file_.has_value()) {
     return;
@@ -49,7 +46,7 @@ UtcTimeProvider::UtcTimeProvider(async_dispatcher_t* dispatcher, zx::unowned_clo
 }
 
 std::optional<timekeeper::time_utc> UtcTimeProvider::CurrentTime() const {
-  if (!is_utc_time_accurate_) {
+  if (!utc_clock_ready_watcher_->IsUtcClockReady()) {
     return std::nullopt;
   }
 
@@ -57,7 +54,7 @@ std::optional<timekeeper::time_utc> UtcTimeProvider::CurrentTime() const {
 }
 
 std::optional<zx::duration> UtcTimeProvider::CurrentUtcMonotonicDifference() const {
-  if (!is_utc_time_accurate_) {
+  if (!utc_clock_ready_watcher_->IsUtcClockReady()) {
     return std::nullopt;
   }
 
@@ -80,18 +77,7 @@ std::optional<zx::duration> UtcTimeProvider::PreviousBootUtcMonotonicDifference(
   return previous_boot_utc_monotonic_difference_;
 }
 
-void UtcTimeProvider::OnClockStart(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                                   zx_status_t status, const zx_packet_signal_t* signal) {
-  if (status != ZX_OK) {
-    FX_PLOGS(WARNING, status) << "Wait for clock start completed with error, trying again";
-
-    // Attempt to wait for the clock to start again.
-    wait->Begin(dispatcher);
-    return;
-  }
-
-  is_utc_time_accurate_ = true;
-
+void UtcTimeProvider::OnClockStart() {
   // Write the current difference between the UTC and monotonic clocks.
   if (const std::optional<timekeeper::time_utc> current_utc_time = CurrentUtcTimeRaw(clock_);
       current_utc_time.has_value() && utc_monotonic_difference_file_.has_value()) {

@@ -126,16 +126,28 @@ source_set("utc_time_provider") {
 
   public_deps = [
     ":previous_boot_file",
-    "//sdk/lib/sys/cpp",
+    ":utc_clock_ready_watcher",
     "//src/lib/timekeeper:system",
-    "//zircon/system/ulib/async",
-    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/zx",
   ]
 
   deps = [
     ":time",
-    "//sdk/lib/syslog/cpp",
     "//src/lib/files",
   ]
+}
+
+source_set("utc_clock_ready_watcher") {
+  sources = [
+    "utc_clock_ready_watcher.cc",
+    "utc_clock_ready_watcher.h",
+  ]
+
+  public_deps = [
+    "//zircon/system/ulib/async",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/zx",
+  ]
+
+  deps = [ "//sdk/lib/syslog/cpp" ]
 }

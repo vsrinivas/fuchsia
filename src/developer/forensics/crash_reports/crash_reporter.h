@@ -28,6 +28,7 @@
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/annotations/types.h"
 #include "src/developer/forensics/utils/errors.h"
+#include "src/developer/forensics/utils/utc_clock_ready_watcher.h"
 #include "src/developer/forensics/utils/utc_time_provider.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/timekeeper/clock.h"
@@ -59,6 +60,7 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   const std::shared_ptr<sys::ServiceDirectory> services_;
   LogTags* tags_;
   CrashRegister* crash_register_;
+  UtcClockReadyWatcher utc_clock_ready_watcher_;
   const UtcTimeProvider utc_provider_;
   SnapshotManager* snapshot_manager_;
   CrashServer* crash_server_;

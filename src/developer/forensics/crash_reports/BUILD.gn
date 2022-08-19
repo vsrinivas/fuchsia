@@ -93,6 +93,7 @@ source_set("crash_reporter") {
     "//src/developer/forensics/crash_reports/info",
     "//src/developer/forensics/feedback/annotations",
     "//src/developer/forensics/utils:errors",
+    "//src/developer/forensics/utils:utc_clock_ready_watcher",
     "//src/developer/forensics/utils:utc_time_provider",
     "//src/lib/timekeeper",
     "//zircon/system/ulib/async",

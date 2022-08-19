@@ -14,6 +14,7 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/forensics/testing/unit_test_fixture.h"
+#include "src/developer/forensics/utils/utc_clock_ready_watcher.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/timekeeper/test_clock.h"
@@ -31,8 +32,9 @@ class UtcTimeProviderTest : public UnitTestFixture {
     zx_clock_create_args_v1_t clock_args{.backstop_time = 0};
     FX_CHECK(zx::clock::create(0u, &clock_args, &clock_handle_) == ZX_OK);
 
-    utc_provider_ = std::make_unique<UtcTimeProvider>(
-        dispatcher(), zx::unowned_clock(clock_handle_.get_handle()), &clock_);
+    utc_clock_ready_watcher_ = std::make_unique<UtcClockReadyWatcher>(
+        dispatcher(), zx::unowned_clock(clock_handle_.get_handle()));
+    utc_provider_ = std::make_unique<UtcTimeProvider>(utc_clock_ready_watcher_.get(), &clock_);
   }
 
  protected:
@@ -49,25 +51,9 @@ class UtcTimeProviderTest : public UnitTestFixture {
 
  protected:
   zx::clock clock_handle_;
+  std::unique_ptr<UtcClockReadyWatcher> utc_clock_ready_watcher_;
   std::unique_ptr<UtcTimeProvider> utc_provider_;
 };
-
-TEST_F(UtcTimeProviderTest, Check_ClockStarts) {
-  EXPECT_FALSE(utc_provider_->CurrentTime().has_value());
-
-  StartClock();
-  RunLoopUntilIdle();
-
-  ASSERT_TRUE(utc_provider_->CurrentTime().has_value());
-  EXPECT_EQ(utc_provider_->CurrentTime().value(), kTime);
-}
-
-TEST_F(UtcTimeProviderTest, Check_ClockNeverStarts) {
-  for (size_t i = 0; i < 100; ++i) {
-    RunLoopFor(zx::hour(23));
-    EXPECT_FALSE(utc_provider_->CurrentTime().has_value());
-  }
-}
 
 TEST_F(UtcTimeProviderTest, Check_CurrentUtcMonotonicDifference) {
   clock_.Set(zx::time(0));
@@ -88,7 +74,7 @@ TEST_F(UtcTimeProviderTest, Check_ReadsPreviousBootUtcMonotonicDifference) {
 
   // |is_first_instance| is true becuase the previous UTC-monotonic difference should be read.
   utc_provider_ = std::make_unique<UtcTimeProvider>(
-      dispatcher(), zx::unowned_clock(clock_handle_.get_handle()), &clock_,
+      utc_clock_ready_watcher_.get(), &clock_,
       PreviousBootFile::FromCache(/*is_first_instance=*/true,
                                   "current_utc_monotonic_difference.txt"));
 
@@ -108,7 +94,7 @@ TEST_F(UtcTimeProviderTest, Check_WritesPreviousBootUtcMonotonicDifference) {
 
   // |is_first_instance| is true becuase the previous UTC-monotonic difference should be read.
   utc_provider_ = std::make_unique<UtcTimeProvider>(
-      dispatcher(), zx::unowned_clock(clock_handle_.get_handle()), &clock_,
+      utc_clock_ready_watcher_.get(), &clock_,
       PreviousBootFile::FromCache(/*is_first_instance=*/true,
                                   "current_utc_monotonic_difference.txt"));
   RunLoopUntilIdle();
