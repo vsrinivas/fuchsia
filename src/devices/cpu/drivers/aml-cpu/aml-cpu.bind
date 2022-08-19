@@ -16,7 +16,10 @@ if fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.google.platform.BIND_PLATFORM_DEV_VI
   }
 } else if fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC {
   fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_DID.CPU;
-  fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_PID.A311D;
+  accept fuchsia.BIND_PLATFORM_DEV_PID {
+    fuchsia.amlogic.platform.BIND_PLATFORM_DEV_PID.A311D,
+    fuchsia.amlogic.platform.BIND_PLATFORM_DEV_PID.A5,
+  }
 } else {
   false;
 }

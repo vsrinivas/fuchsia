@@ -169,6 +169,11 @@ TEST_F(DeviceEnumerationTest, Av400Test) {
       "av400-i2s-audio-out",
       "sys/platform/05:07:13/av400-audio-pdm-in",
 
+      // CPU Device
+      "sys/platform/05:07:1e",
+      "class/cpu-ctrl/000",
+      "aml-cpu/a5-arm-a55",
+
       // USB
       "aml-usb-crg-phy-v2",
       "xhci/xhci",

@@ -217,7 +217,8 @@
 #define A5_SYS_CTRL_STICKY_REG4 ((0x00b4 << 2) + 0xfe010000)
 #define A5_SYS_CTRL_STICKY_REG5 ((0x00b5 << 2) + 0xfe010000)
 #define A5_SYS_CTRL_STICKY_REG6 ((0x00b6 << 2) + 0xfe010000)
-#define A5_SYS_CTRL_STICKY_REG7 ((0x00b7 << 2) + 0xfe010000)  // AO_CPU - wakeup reason
+#define A5_SYS_CTRL_STICKY_REG7 ((0x00b7 << 2) + 0xfe010000)      // AO_CPU - wakeup reason
+#define A5_SYS_CTRL_SEC_STATUS_REG0 ((0x00c0 << 2) + 0xfe010000)  // cpu version
 
 // Temperature
 #define A5_TEMP_SENSOR_PLL_BASE 0xfe020000

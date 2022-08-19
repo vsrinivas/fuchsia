@@ -6,6 +6,7 @@
 
 #include <fuchsia/hardware/clock/cpp/banjo-mock.h>
 #include <fuchsia/hardware/power/cpp/banjo-mock.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fake_ddk/fidl-helper.h>
@@ -171,6 +172,9 @@ class FakeClockDevice : public ddk::ClockProtocol<FakeClockDevice, ddk::base_pro
 class AmlCpuBindingTest : public zxtest::Test {
  public:
   AmlCpuBindingTest() {
+    pdev_.set_device_info(pdev_device_info_t{
+        .pid = PDEV_PID_ASTRO,
+    });
     pdev_.set_mmio(0, mmio_.mmio_info());
 
     static constexpr size_t kNumBindFragments = 5;

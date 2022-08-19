@@ -29,8 +29,10 @@ namespace {
 // [4 fragments for cluster n]
 // Each fragment is a combination of the fixed string + id.
 constexpr size_t kFragmentsPerPfDomain = 4;
+constexpr size_t kFragmentsPerPfDomainA5 = 2;
 
 constexpr zx_off_t kCpuVersionOffset = 0x220;
+constexpr zx_off_t kCpuVersionOffsetA5 = 0x300;
 
 }  // namespace
 
@@ -52,18 +54,6 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
     return op_points.error_value();
   }
 
-  // Make sure we have the right number of fragments.
-  const uint32_t fragment_count = device_get_fragment_count(parent);
-  zxlogf(DEBUG, "%s: GetFragmentCount = %u", __func__, fragment_count);
-  if ((perf_doms->size() * kFragmentsPerPfDomain) + 1 != fragment_count) {
-    zxlogf(ERROR,
-           "%s: Expected %lu fragments for each %lu performance domains for a total of %lu "
-           "fragments but got %u instead",
-           __func__, kFragmentsPerPfDomain, perf_doms->size(),
-           perf_doms->size() * kFragmentsPerPfDomain, fragment_count);
-    return ZX_ERR_INTERNAL;
-  }
-
   // Map AOBUS registers
   auto pdev = ddk::PDev::FromFragment(parent);
   if (!pdev.is_valid()) {
@@ -75,26 +65,55 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
     zxlogf(ERROR, "aml-cpu: Failed to map mmio, st = %d", st);
     return st;
   }
-  const uint32_t cpu_version_packed = mmio_buffer->Read32(kCpuVersionOffset);
+
+  pdev_device_info_t info = {};
+  st = pdev.GetDeviceInfo(&info);
+  if (st != ZX_OK) {
+    zxlogf(ERROR, "Failed to get DeviceInfo: %s", zx_status_get_string(st));
+    return st;
+  }
+
+  size_t fragments_per_pf_domain = kFragmentsPerPfDomain;
+  zx_off_t cpu_version_offset = kCpuVersionOffset;
+  if (info.pid == PDEV_PID_AMLOGIC_A5) {
+    fragments_per_pf_domain = kFragmentsPerPfDomainA5;
+    cpu_version_offset = kCpuVersionOffsetA5;
+  }
+
+  // Make sure we have the right number of fragments.
+  const uint32_t fragment_count = device_get_fragment_count(parent);
+  zxlogf(DEBUG, "%s: GetFragmentCount = %u", __func__, fragment_count);
+  if ((perf_doms->size() * fragments_per_pf_domain) + 1 != fragment_count) {
+    zxlogf(ERROR,
+           "%s: Expected %lu fragments for each %lu performance domains for a total of %lu "
+           "fragments but got %u instead",
+           __func__, fragments_per_pf_domain, perf_doms->size(),
+           perf_doms->size() * fragments_per_pf_domain, fragment_count);
+    return ZX_ERR_INTERNAL;
+  }
+
+  const uint32_t cpu_version_packed = mmio_buffer->Read32(cpu_version_offset);
 
   // Build and publish each performance domain.
   for (const perf_domain_t& perf_domain : perf_doms.value()) {
     fbl::StringBuffer<32> fragment_name;
-    fragment_name.AppendPrintf("clock-pll-div16-%02d", perf_domain.id);
     ddk::ClockProtocolClient pll_div16_client;
-    if ((st = ddk::ClockProtocolClient::CreateFromDevice(parent, fragment_name.c_str(),
-                                                         &pll_div16_client)) != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to create pll_div_16 clock client, st = %d", __func__, st);
-      return st;
-    }
-
-    fragment_name.Resize(0);
-    fragment_name.AppendPrintf("clock-cpu-div16-%02d", perf_domain.id);
     ddk::ClockProtocolClient cpu_div16_client;
-    if ((st = ddk::ClockProtocolClient::CreateFromDevice(parent, fragment_name.c_str(),
-                                                         &cpu_div16_client)) != ZX_OK) {
-      zxlogf(ERROR, "%s: Failed to create cpu_div_16 clock client, st = %d", __func__, st);
-      return st;
+    if (fragments_per_pf_domain == kFragmentsPerPfDomain) {
+      fragment_name.AppendPrintf("clock-pll-div16-%02d", perf_domain.id);
+      if ((st = ddk::ClockProtocolClient::CreateFromDevice(parent, fragment_name.c_str(),
+                                                           &pll_div16_client)) != ZX_OK) {
+        zxlogf(ERROR, "%s: Failed to create pll_div_16 clock client, st = %d", __func__, st);
+        return st;
+      }
+
+      fragment_name.Resize(0);
+      fragment_name.AppendPrintf("clock-cpu-div16-%02d", perf_domain.id);
+      if ((st = ddk::ClockProtocolClient::CreateFromDevice(parent, fragment_name.c_str(),
+                                                           &cpu_div16_client)) != ZX_OK) {
+        zxlogf(ERROR, "%s: Failed to create cpu_div_16 clock client, st = %d", __func__, st);
+        return st;
+      }
     }
 
     fragment_name.Resize(0);
@@ -254,16 +273,20 @@ zx_status_t AmlCpu::Init() {
   zx_status_t result;
   constexpr uint32_t kInitialPstate = 0;
 
-  result = plldiv16_.Enable();
-  if (result != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to enable plldiv16, st = %d", __func__, result);
-    return result;
+  if (plldiv16_.is_valid()) {
+    result = plldiv16_.Enable();
+    if (result != ZX_OK) {
+      zxlogf(ERROR, "%s: Failed to enable plldiv16, st = %d", __func__, result);
+      return result;
+    }
   }
 
-  result = cpudiv16_.Enable();
-  if (result != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to enable cpudiv16_, st = %d", __func__, result);
-    return result;
+  if (cpudiv16_.is_valid()) {
+    result = cpudiv16_.Enable();
+    if (result != ZX_OK) {
+      zxlogf(ERROR, "%s: Failed to enable cpudiv16_, st = %d", __func__, result);
+      return result;
+    }
   }
 
   uint32_t min_voltage, max_voltage;

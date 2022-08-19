@@ -56,4 +56,5 @@ uint AXG_CLK_ID {
 uint A5_CLK_ID {
   CLK_NAND_SEL = 0x4000b,
   CLK_PWM_G = 0x1001f,
+  CLK_SYS_CPU_CLK = 0x100000,
 };

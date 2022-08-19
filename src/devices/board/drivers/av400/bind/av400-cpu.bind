@@ -1,0 +1,30 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite aml_cpu;
+
+using fuchsia.amlogic.platform.a5;
+using fuchsia.amlogic.platform.meson;
+using fuchsia.amlogic.platform;
+using fuchsia.clock;
+using fuchsia.platform;
+using fuchsia.power;
+
+primary node "power-01" {
+  fuchsia.BIND_PROTOCOL == fuchsia.power.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_POWER_DOMAIN == fuchsia.amlogic.platform.a5.POWER_DOMAIN.ARM_CORE;
+}
+
+node "pdev" {
+    fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
+    fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC;
+    fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_PID.A5;
+    fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_DID.CPU;
+    fuchsia.BIND_PLATFORM_DEV_INSTANCE_ID == 0;
+}
+
+node "clock-cpu-scaler-01" {
+  fuchsia.BIND_PROTOCOL == fuchsia.clock.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_CLOCK_ID == fuchsia.amlogic.platform.meson.A5_CLK_ID.CLK_SYS_CPU_CLK;
+}
