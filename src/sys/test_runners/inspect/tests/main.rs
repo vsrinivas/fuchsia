@@ -75,6 +75,12 @@ async fn run_test(
                 .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
                 .capability(Capability::protocol_by_name("fuchsia.sys2.EventSource"))
                 .capability(Capability::protocol_by_name("fuchsia.component.resolution.Resolver"))
+                .capability(Capability::event_stream("started_v2"))
+                .capability(Capability::event_stream("running_v2"))
+                .capability(Capability::event_stream("stopped_v2"))
+                .capability(Capability::event_stream("destroyed_v2"))
+                .capability(Capability::event_stream("capability_requested_v2"))
+                .capability(Capability::event_stream("directory_ready_v2"))
                 .from(Ref::parent())
                 .to(&test_manager),
         )
