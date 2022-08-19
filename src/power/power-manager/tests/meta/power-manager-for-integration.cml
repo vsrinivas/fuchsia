@@ -3,7 +3,4 @@
 // found in the LICENSE file.
 {
     include: [ "//src/power/power-manager/meta/base.shard.cml" ],
-    program: {
-        main_process_critical: "true",
-    },
 }
