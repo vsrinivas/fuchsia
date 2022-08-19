@@ -103,20 +103,9 @@ pub fn create_sub_directories(
     Ok(dir.unwrap())
 }
 
-pub async fn read_file_bytes(file: &fio::FileProxy) -> Result<Vec<u8>, Error> {
-    let bytes = file::read(file).await?;
-    Ok(bytes)
-}
-
 pub async fn read_file(file: &fio::FileProxy) -> Result<String, Error> {
     let string = file::read_to_string(file).await?;
     Ok(string)
-}
-
-/// Write the given bytes into a file open for writing.
-pub async fn write_file_bytes(file: &fio::FileProxy, data: &[u8]) -> Result<(), Error> {
-    file::write(file, data).await?;
-    Ok(())
 }
 
 /// Write the given string as UTF-8 bytes into a file open for writing.

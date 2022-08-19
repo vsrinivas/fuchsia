@@ -44,7 +44,7 @@ impl RemoteControlService {
                 );
             }
         };
-        let bytes = match fuchsia_fs::read_file_bytes(&f).await {
+        let bytes = match fuchsia_fs::file::read(&f).await {
             Ok(b) => b,
             Err(e) => {
                 error!(?e, "failed to read bytes from selector maps json");

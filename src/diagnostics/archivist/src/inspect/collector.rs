@@ -133,7 +133,7 @@ pub async fn populate_data_map(inspect_proxy: &fio::DirectoryProxy) -> DataMap {
                         )
                     }
                 }
-                match fuchsia_fs::read_file_bytes(&file_proxy).await {
+                match fuchsia_fs::file::read(&file_proxy).await {
                     Ok(contents) => InspectData::File(contents),
                     Err(err) => {
                         error!(

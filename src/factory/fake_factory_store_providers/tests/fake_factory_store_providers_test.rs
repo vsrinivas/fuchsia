@@ -35,7 +35,7 @@ async fn read_file_from_proxy<'a>(
         &PathBuf::from(file_path),
         fuchsia_fs::OpenFlags::RIGHT_READABLE,
     )?;
-    fuchsia_fs::read_file_bytes(&file).await
+    fuchsia_fs::file::read(&file).await.map_err(Into::into)
 }
 
 async fn assert_file<'a>(

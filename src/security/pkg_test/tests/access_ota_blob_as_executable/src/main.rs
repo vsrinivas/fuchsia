@@ -23,7 +23,7 @@ use {
     fuchsia_fs::directory::readdir,
     fuchsia_fs::{
         directory::{open_file, open_in_namespace},
-        read_file_bytes,
+        file,
     },
     fuchsia_hash::Hash,
     fuchsia_merkle::MerkleTree,
@@ -430,7 +430,7 @@ impl AccessCheckRequest {
             fio::OpenFlags::RIGHT_READABLE,
         )
         .await?;
-        read_file_bytes(&bin_file).await.unwrap();
+        file::read(&bin_file).await.unwrap();
         Ok(())
     }
 

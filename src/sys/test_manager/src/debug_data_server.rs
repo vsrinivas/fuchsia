@@ -60,9 +60,7 @@ fn serve_debug_data(
                             overwite_file_flag,
                         )
                         .context("open file")?;
-                        fuchsia_fs::write_file_bytes(&file, &contents)
-                            .await
-                            .context("write file")?;
+                        fuchsia_fs::file::write(&file, &contents).await.context("write file")?;
                         let (node_client, node_server) =
                             create_endpoints::<fio::NodeMarker>().context("create node")?;
                         file.clone(fuchsia_fs::OpenFlags::RIGHT_READABLE, node_server)
@@ -170,7 +168,7 @@ pub async fn send_kernel_debug_data(mut event_sender: mpsc::Sender<RunEvent>) {
         }
     })
     .filter_map(|(path, file)| async move {
-        match fuchsia_fs::read_file_bytes(&file).await {
+        match fuchsia_fs::file::read(&file).await {
             Ok(contents) => Some((path, contents)),
             Err(err) => {
                 warn!("Failed to read file {}. Error {}", path, err);
@@ -243,7 +241,7 @@ mod test {
         assert_eq!(1usize, values.len());
         let DebugData { name, file, .. } = values.pop().unwrap();
         assert_eq!(Some("file".to_string()), name);
-        let contents = fuchsia_fs::read_file_bytes(&file.expect("has file").into_proxy().unwrap())
+        let contents = fuchsia_fs::file::read(&file.expect("has file").into_proxy().unwrap())
             .await
             .expect("read file");
         assert_eq!(b"test".to_vec(), contents);
@@ -285,7 +283,7 @@ mod test {
                     let _ = &response;
                     let DebugData { name, file, .. } = response;
                     let contents =
-                        fuchsia_fs::read_file_bytes(&file.expect("has file").into_proxy().unwrap())
+                        fuchsia_fs::file::read(&file.expect("has file").into_proxy().unwrap())
                             .await
                             .expect("read file");
                     (name.expect("has name"), contents)

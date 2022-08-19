@@ -87,7 +87,7 @@ where
                 &PathBuf::from(name),
                 fio::OpenFlags::RIGHT_READABLE,
             )?;
-            let contents = fuchsia_fs::read_file_bytes(&file).await?;
+            let contents = fuchsia_fs::file::read(&file).await?;
 
             match std::str::from_utf8(&contents) {
                 Ok(value) => {

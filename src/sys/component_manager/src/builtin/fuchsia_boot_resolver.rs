@@ -258,7 +258,7 @@ impl BootPackageResolver {
             fio::OpenFlags::RIGHT_READABLE,
         )?;
 
-        let bootfs_package_contents = fuchsia_fs::read_file_bytes(&bootfs_package_index).await?;
+        let bootfs_package_contents = fuchsia_fs::file::read(&bootfs_package_index).await?;
 
         PathHashMapping::<Bootfs>::deserialize(&(*bootfs_package_contents))
             .map_err(|e| format_err!("Parsing bootfs index failed: {:?}", e))

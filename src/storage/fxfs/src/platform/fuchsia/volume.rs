@@ -383,7 +383,7 @@ mod tests {
             },
         },
         fidl_fuchsia_io as fio, fuchsia_async as fasync,
-        fuchsia_fs::{read_file_bytes, write_file_bytes},
+        fuchsia_fs::file,
         fuchsia_zircon::Status,
         std::sync::Arc,
         storage_device::{fake_device::FakeDevice, DeviceHolder},
@@ -527,7 +527,7 @@ mod tests {
         )
         .await;
         let buf = vec![0xaa as u8; 8192];
-        write_file_bytes(&src_file, buf.as_slice()).await.expect("Failed to write to file");
+        file::write(&src_file, buf.as_slice()).await.expect("Failed to write to file");
         close_file_checked(src_file).await;
 
         // The dst file is empty (so we can distinguish it).
@@ -554,7 +554,7 @@ mod tests {
         let file =
             open_file_checked(&root, fio::OpenFlags::RIGHT_READABLE, fio::MODE_TYPE_FILE, "bar/b")
                 .await;
-        let buf = read_file_bytes(&file).await.expect("read file failed");
+        let buf = file::read(&file).await.expect("read file failed");
         assert_eq!(buf, vec![0xaa as u8; 8192]);
         close_file_checked(file).await;
 

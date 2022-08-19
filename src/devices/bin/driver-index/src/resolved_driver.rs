@@ -263,7 +263,7 @@ pub async fn load_driver(
     )
     .with_context(|| format!("{}: Failed to open bind", component_url.as_str()))?;
 
-    let bind = fuchsia_fs::read_file_bytes(&bind)
+    let bind = fuchsia_fs::file::read(&bind)
         .await
         .with_context(|| format!("{}: Failed to read bind", component_url.as_str()))?;
     let bind_rules = DecodedRules::new(bind.clone())

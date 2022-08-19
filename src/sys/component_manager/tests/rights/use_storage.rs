@@ -32,7 +32,7 @@ async fn open_and_write_file(dir: &fio::DirectoryProxy) -> Result<(), Error> {
         OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE,
     )
     .await?;
-    fuchsia_fs::write_file_bytes(&file, b"test_data").await?;
+    fuchsia_fs::file::write(&file, b"test_data").await?;
     Ok(())
 }
 

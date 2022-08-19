@@ -112,7 +112,7 @@ async fn ext4_server_mounts_block_device(
             fuchsia_fs::OpenFlags::RIGHT_READABLE,
         )?;
         let mut hasher = Sha256::new();
-        hasher.update(&fuchsia_fs::read_file_bytes(&file).await?);
+        hasher.update(&fuchsia_fs::file::read(&file).await?);
         assert_eq!(*expected_hash, hex::encode(hasher.finalize()));
     }
 

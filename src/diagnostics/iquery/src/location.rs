@@ -193,7 +193,7 @@ impl InspectObject {
                     zx::Status::NOT_SUPPORTED => {}
                     err => return Err(err.into()),
                 }
-                let bytes = fuchsia_fs::read_file_bytes(&proxy).await?;
+                let bytes = fuchsia_fs::file::read(&proxy).await?;
                 PartialNodeHierarchy::try_from(bytes)
             }
         }?;

@@ -524,7 +524,7 @@ mod tests {
         },
         anyhow::format_err,
         fidl_fuchsia_io as fio, fuchsia_async as fasync,
-        fuchsia_fs::{read_file_bytes, write_file_bytes},
+        fuchsia_fs::file,
         fuchsia_zircon::Status,
         futures::join,
         std::sync::{
@@ -1021,7 +1021,7 @@ mod tests {
         let mut expected_buf = vec![0 as u8; len];
         expected_buf[..input.as_bytes().len()].copy_from_slice(input.as_bytes());
 
-        let buf = read_file_bytes(&file).await.expect("File read was successful");
+        let buf = file::read(&file).await.expect("File read was successful");
         assert_eq!(buf.len(), len);
         assert_eq!(buf, expected_buf);
 
@@ -1043,7 +1043,7 @@ mod tests {
             .expect("Seek was successful");
         assert_eq!(offset, 0);
 
-        let buf = read_file_bytes(&file).await.expect("File read was successful");
+        let buf = file::read(&file).await.expect("File read was successful");
         assert_eq!(buf.len(), len);
         assert_eq!(buf, expected_buf);
 
@@ -1076,7 +1076,7 @@ mod tests {
         };
         let short_len: usize = 513;
 
-        write_file_bytes(&file, &input).await.expect("File write was successful");
+        file::write(&file, &input).await.expect("File write was successful");
 
         let () = file
             .resize(short_len as u64)
@@ -1093,7 +1093,7 @@ mod tests {
             .expect("Seek was successful");
         assert_eq!(offset, 0);
 
-        let buf = read_file_bytes(&file).await.expect("File read was successful");
+        let buf = file::read(&file).await.expect("File read was successful");
         assert_eq!(buf.len(), short_len);
         assert_eq!(buf, input[..short_len]);
 
@@ -1119,7 +1119,7 @@ mod tests {
             .expect("Seek was successful");
         assert_eq!(offset, 0);
 
-        let buf = read_file_bytes(&file).await.expect("File read was successful");
+        let buf = file::read(&file).await.expect("File read was successful");
         assert_eq!(buf.len(), len);
         assert_eq!(buf, expected_buf);
 
@@ -1153,7 +1153,7 @@ mod tests {
         };
         let short_len: usize = 513;
 
-        write_file_bytes(&file, &input).await.expect("File write was successful");
+        file::write(&file, &input).await.expect("File write was successful");
 
         while len > short_len {
             len -= std::cmp::min(len - short_len, 512);
@@ -1173,7 +1173,7 @@ mod tests {
             .expect("Seek was successful");
         assert_eq!(offset, 0);
 
-        let buf = read_file_bytes(&file).await.expect("File read was successful");
+        let buf = file::read(&file).await.expect("File read was successful");
         assert_eq!(buf.len(), short_len);
         assert_eq!(buf, input[..short_len]);
 
@@ -1199,7 +1199,7 @@ mod tests {
             .expect("Seek was successful");
         assert_eq!(offset, 0);
 
-        let buf = read_file_bytes(&file).await.expect("File read was successful");
+        let buf = file::read(&file).await.expect("File read was successful");
         assert_eq!(buf.len(), orig_len);
         assert_eq!(buf, expected_buf);
 

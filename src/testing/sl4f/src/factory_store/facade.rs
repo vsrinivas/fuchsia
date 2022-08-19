@@ -80,7 +80,7 @@ impl FactoryStoreFacade {
             &Path::new(&req.filename),
             fio::OpenFlags::RIGHT_READABLE,
         )?;
-        let contents = fuchsia_fs::read_file_bytes(&file).await?;
+        let contents = fuchsia_fs::file::read(&file).await?;
         Ok(to_value(base64::encode(&contents))?)
     }
 

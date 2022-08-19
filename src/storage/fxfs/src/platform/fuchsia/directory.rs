@@ -748,7 +748,7 @@ mod tests {
         },
         fidl_fuchsia_io as fio, fuchsia_async as fasync,
         fuchsia_fs::directory::{DirEntry, DirentKind},
-        fuchsia_fs::{read_file_bytes, write_file_bytes},
+        fuchsia_fs::file,
         fuchsia_zircon::Status,
         rand::Rng,
         std::{sync::Arc, time::Duration},
@@ -913,11 +913,11 @@ mod tests {
         // Fill up the file with a lot of data, so we can verify that the extents are freed.
         let buf = vec![0xaa as u8; 512];
         loop {
-            match write_file_bytes(&file, buf.as_slice()).await {
+            match file::write(&file, buf.as_slice()).await {
                 Ok(_) => {}
                 Err(e) => {
-                    if let Some(status) = e.root_cause().downcast_ref::<Status>() {
-                        if status == &Status::NO_SPACE {
+                    if let fuchsia_fs::file::WriteError::WriteError(status) = e {
+                        if status == Status::NO_SPACE {
                             break;
                         }
                     }
@@ -954,7 +954,7 @@ mod tests {
         )
         .await;
         let buf = vec![0xaa as u8; 8192];
-        write_file_bytes(&file, buf.as_slice()).await.expect("Failed to write new file");
+        file::write(&file, buf.as_slice()).await.expect("Failed to write new file");
         close_file_checked(file).await;
 
         fixture.close().await;
@@ -1010,7 +1010,7 @@ mod tests {
         .await;
 
         let buf = vec![0xaa as u8; 512];
-        write_file_bytes(&file, buf.as_slice()).await.expect("write failed");
+        file::write(&file, buf.as_slice()).await.expect("write failed");
 
         root.unlink("foo", fio::UnlinkOptions::EMPTY)
             .await
@@ -1034,7 +1034,7 @@ mod tests {
             .expect("seek failed")
             .map_err(Status::from_raw)
             .expect("seek error");
-        let rbuf = read_file_bytes(&file).await.expect("read failed");
+        let rbuf = file::read(&file).await.expect("read failed");
         assert_eq!(rbuf, buf);
         close_file_checked(file).await;
 

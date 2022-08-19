@@ -10,7 +10,7 @@ use {
     fidl_test_security_pkg::{PackageServer_Request, PackageServer_RequestStream},
     fuchsia_async::{net::TcpListener, Task},
     fuchsia_component::server::ServiceFs,
-    fuchsia_fs::{open_file, read_file_bytes},
+    fuchsia_fs::{file, open_file},
     fuchsia_hyper::{Executor, TcpStream},
     fuchsia_syslog::{fx_log_info, fx_log_warn, init},
     futures::{
@@ -105,9 +105,9 @@ impl RequestHandler {
         let path = path_chars.as_str();
 
         match open_file(&self.repository_dir, Path::new(path), fio::OpenFlags::RIGHT_READABLE) {
-            Ok(file) => match read_file_bytes(&file).await {
+            Ok(file) => match file::read(&file).await {
                 Ok(bytes) => Self::ok(path, bytes),
-                Err(err) => Self::not_found(path, Some(err)),
+                Err(err) => Self::not_found(path, Some(err.into())),
             },
             Err(err) => Self::not_found(path, Some(err)),
         }
