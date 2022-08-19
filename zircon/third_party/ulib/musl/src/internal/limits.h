@@ -16,3 +16,9 @@
 // Clang's header did it.
 
 #include "../../include/limits.h"
+
+// The libc++ <climits> header, which is used by other libc++ headers, includes
+// <limits.h> and tries to check that it found the libc++ wrapper header, which
+// doesn't do anything useful.  Since this header preempts all others while
+// buildling, just define the macro that <climits> checks.
+#define _LIBCPP_LIMITS_H
