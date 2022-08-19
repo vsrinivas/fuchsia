@@ -181,10 +181,13 @@ impl TestRunBuilder {
             inspect_node_ref.set_execution_state(self_diagnostics::RunExecutionState::Executing);
 
             let serial_executor = scheduler::SerialScheduler {};
-            let parallel_executor = scheduler::ParallelScheduler {};
 
             match max_parallel_suites_ref {
-                Some(_max_parallel_suites) => {
+                Some(max_parallel_suites) => {
+                    let parallel_executor = scheduler::ParallelScheduler {
+                        suite_runner: scheduler::RunSuiteObj {},
+                        max_parallel_suites: *max_parallel_suites,
+                    };
                     inspect_node_ref.set_used_parallel_scheduler(true);
                     let get_facets_fn = |test_url, resolver| async move {
                         facet::get_suite_facets(test_url, resolver).await
