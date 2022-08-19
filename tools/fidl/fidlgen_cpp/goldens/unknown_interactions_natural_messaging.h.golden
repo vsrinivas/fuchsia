@@ -1457,7 +1457,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_unknowninteractions::Unkno
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
   ::fidl::Status DispatchEvent(
-      ::fidl::IncomingMessage& msg,
+      ::fidl::IncomingHeaderAndMessage& msg,
       internal::MessageStorageViewBase* storage_view) override;
 };
 
@@ -2058,7 +2058,7 @@ class ::fidl::Server<::test_unknowninteractions::UnknownInteractionsProtocol> : 
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
@@ -2067,7 +2067,7 @@ class ::fidl::Server<::test_unknowninteractions::UnknownInteractionsProtocol> : 
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsProtocol> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_unknowninteractions::UnknownInteractionsProtocol>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_unknowninteractions::UnknownInteractionsProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -3078,7 +3078,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_unknowninteractions::Unkno
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsAjarProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
   ::fidl::Status DispatchEvent(
-      ::fidl::IncomingMessage& msg,
+      ::fidl::IncomingHeaderAndMessage& msg,
       internal::MessageStorageViewBase* storage_view) override;
 };
 
@@ -3447,7 +3447,7 @@ class ::fidl::Server<::test_unknowninteractions::UnknownInteractionsAjarProtocol
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
@@ -3456,7 +3456,7 @@ class ::fidl::Server<::test_unknowninteractions::UnknownInteractionsAjarProtocol
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarProtocol> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_unknowninteractions::UnknownInteractionsAjarProtocol>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_unknowninteractions::UnknownInteractionsAjarProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -4216,7 +4216,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_unknowninteractions::Unkno
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsClosedProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
   ::fidl::Status DispatchEvent(
-      ::fidl::IncomingMessage& msg,
+      ::fidl::IncomingHeaderAndMessage& msg,
       internal::MessageStorageViewBase* storage_view) override;
 };
 
@@ -4533,7 +4533,7 @@ class ::fidl::Server<::test_unknowninteractions::UnknownInteractionsClosedProtoc
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
@@ -4542,7 +4542,7 @@ class ::fidl::Server<::test_unknowninteractions::UnknownInteractionsClosedProtoc
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedProtocol> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_unknowninteractions::UnknownInteractionsClosedProtocol>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_unknowninteractions::UnknownInteractionsClosedProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 

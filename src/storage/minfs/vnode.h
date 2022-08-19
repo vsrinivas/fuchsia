@@ -101,7 +101,7 @@ class VnodeMinfs : public fs::Vnode,
 
   // fs::Vnode interface (invoked publicly).
 #ifdef __Fuchsia__
-  void HandleFsSpecificMessage(fidl::IncomingMessage& msg, fidl::Transaction* txn) final;
+  void HandleFsSpecificMessage(fidl::IncomingHeaderAndMessage& msg, fidl::Transaction* txn) final;
 #endif
 
   // Required for memory management, see the class comment above Vnode for more.

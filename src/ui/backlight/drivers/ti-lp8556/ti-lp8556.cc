@@ -273,7 +273,7 @@ void Lp8556Device::GetVoltageVolts(GetVoltageVoltsRequestView request,
   completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
-void Lp8556Device::DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn) {
+void Lp8556Device::DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn) {
   if (fidl::WireTryDispatch<FidlBacklight::Device>(this, msg, &txn) ==
       ::fidl::DispatchResult::kFound) {
     return;

@@ -119,7 +119,7 @@ fidl::internal::WireWeakSyncClientImpl<::test_error::Example>::Foo(::fidl::Strin
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_error::Example>::entries_[] = {
     {
         ::test_error::kExample_foo_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_error::Example::Foo>> decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -138,20 +138,20 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
     &entries_[1];
 
 ::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_error::Example>::TryDispatch(
-    ::fidl::WireServer<::test_error::Example>* impl, ::fidl::IncomingMessage& msg,
+    ::fidl::WireServer<::test_error::Example>* impl, ::fidl::IncomingHeaderAndMessage& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, storage_view, txn, entries_, entries_end_);
 }
 
-void fidl::internal::WireServerDispatcher<::test_error::Example>::Dispatch(::fidl::WireServer<::test_error::Example>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::WireServerDispatcher<::test_error::Example>::Dispatch(::fidl::WireServer<::test_error::Example>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
 
 void fidl::WireServer<::test_error::Example>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_error::Example>::Dispatch(this, std::move(msg), storage_view, txn);
 }

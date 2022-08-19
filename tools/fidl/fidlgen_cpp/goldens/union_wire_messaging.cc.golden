@@ -207,7 +207,7 @@ fidl::internal::WireWeakSyncClientImpl<::test_union::TestProtocol>::FlexibleXUni
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_union::TestProtocol>::entries_[] = {
     {
         ::test_union::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fidl::WireRequest<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated> empty_request;
           auto* primary = &empty_request;
@@ -219,7 +219,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     },
     {
         ::test_union::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fidl::WireRequest<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated> empty_request;
           auto* primary = &empty_request;
@@ -235,20 +235,20 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
     &entries_[2];
 
 ::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_union::TestProtocol>::TryDispatch(
-    ::fidl::WireServer<::test_union::TestProtocol>* impl, ::fidl::IncomingMessage& msg,
+    ::fidl::WireServer<::test_union::TestProtocol>* impl, ::fidl::IncomingHeaderAndMessage& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, storage_view, txn, entries_, entries_end_);
 }
 
-void fidl::internal::WireServerDispatcher<::test_union::TestProtocol>::Dispatch(::fidl::WireServer<::test_union::TestProtocol>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::WireServerDispatcher<::test_union::TestProtocol>::Dispatch(::fidl::WireServer<::test_union::TestProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                 internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
 
 void fidl::WireServer<::test_union::TestProtocol>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_union::TestProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }

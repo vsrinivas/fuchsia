@@ -27,20 +27,20 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
     &entries_[0];
 
 ::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::TryDispatch(
-    ::fidl::WireServer<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>* impl, ::fidl::IncomingMessage& msg,
+    ::fidl::WireServer<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>* impl, ::fidl::IncomingHeaderAndMessage& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, storage_view, txn, entries_, entries_end_);
 }
 
-void fidl::internal::WireServerDispatcher<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::Dispatch(::fidl::WireServer<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::WireServerDispatcher<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::Dispatch(::fidl::WireServer<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                                    internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
 
 void fidl::WireServer<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>::Dispatch(this, std::move(msg), storage_view, txn);
 }
@@ -74,20 +74,20 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
     &entries_[0];
 
 ::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_bindingsdenylist::OnlyCppAndDeps>::TryDispatch(
-    ::fidl::WireServer<::test_bindingsdenylist::OnlyCppAndDeps>* impl, ::fidl::IncomingMessage& msg,
+    ::fidl::WireServer<::test_bindingsdenylist::OnlyCppAndDeps>* impl, ::fidl::IncomingHeaderAndMessage& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, storage_view, txn, entries_, entries_end_);
 }
 
-void fidl::internal::WireServerDispatcher<::test_bindingsdenylist::OnlyCppAndDeps>::Dispatch(::fidl::WireServer<::test_bindingsdenylist::OnlyCppAndDeps>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::WireServerDispatcher<::test_bindingsdenylist::OnlyCppAndDeps>::Dispatch(::fidl::WireServer<::test_bindingsdenylist::OnlyCppAndDeps>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                              internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
 
 void fidl::WireServer<::test_bindingsdenylist::OnlyCppAndDeps>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_bindingsdenylist::OnlyCppAndDeps>::Dispatch(this, std::move(msg), storage_view, txn);
 }
@@ -581,7 +581,7 @@ fidl::internal::WireWeakSyncClientImpl<::test_bindingsdenylist::DenyEachBinding>
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_bindingsdenylist::DenyEachBinding>::entries_[] = {
     {
         ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyDart_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>> decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -596,7 +596,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     },
     {
         ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyGo_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>> decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -611,7 +611,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     },
     {
         ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyLibfuzzer_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>> decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -626,7 +626,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     },
     {
         ::test_bindingsdenylist::kDenyEachBinding_OnlyDenyRust_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>> decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -641,7 +641,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     },
     {
         ::test_bindingsdenylist::kDenyEachBinding_OnlyDenySyzkaller_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>> decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -660,20 +660,20 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
     &entries_[5];
 
 ::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_bindingsdenylist::DenyEachBinding>::TryDispatch(
-    ::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>* impl, ::fidl::IncomingMessage& msg,
+    ::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>* impl, ::fidl::IncomingHeaderAndMessage& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, storage_view, txn, entries_, entries_end_);
 }
 
-void fidl::internal::WireServerDispatcher<::test_bindingsdenylist::DenyEachBinding>::Dispatch(::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::WireServerDispatcher<::test_bindingsdenylist::DenyEachBinding>::Dispatch(::fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                               internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
 
 void fidl::WireServer<::test_bindingsdenylist::DenyEachBinding>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_bindingsdenylist::DenyEachBinding>::Dispatch(this, std::move(msg), storage_view, txn);
 }
@@ -1072,20 +1072,20 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
     &entries_[0];
 
 ::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_bindingsdenylist::Allowed>::TryDispatch(
-    ::fidl::WireServer<::test_bindingsdenylist::Allowed>* impl, ::fidl::IncomingMessage& msg,
+    ::fidl::WireServer<::test_bindingsdenylist::Allowed>* impl, ::fidl::IncomingHeaderAndMessage& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, storage_view, txn, entries_, entries_end_);
 }
 
-void fidl::internal::WireServerDispatcher<::test_bindingsdenylist::Allowed>::Dispatch(::fidl::WireServer<::test_bindingsdenylist::Allowed>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::WireServerDispatcher<::test_bindingsdenylist::Allowed>::Dispatch(::fidl::WireServer<::test_bindingsdenylist::Allowed>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                       internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
 
 void fidl::WireServer<::test_bindingsdenylist::Allowed>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_bindingsdenylist::Allowed>::Dispatch(this, std::move(msg), storage_view, txn);
 }
@@ -1250,7 +1250,7 @@ namespace test_bindingsdenylist {
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_bindingsdenylist::ImportsSameNameContext>::entries_[] = {
     {
         ::test_bindingsdenylist::kImportsSameNameContext_Unattributed_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::Unattributed> empty_request;
           auto* primary = &empty_request;
@@ -1262,7 +1262,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     },
     {
         ::test_bindingsdenylist::kImportsSameNameContext_AlwaysAppearsInImportingLibrary_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fidl::WireRequest<::test_bindingsdenylist::ImportsSameNameContext::AlwaysAppearsInImportingLibrary> empty_request;
           auto* primary = &empty_request;
@@ -1278,20 +1278,20 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
     &entries_[2];
 
 ::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_bindingsdenylist::ImportsSameNameContext>::TryDispatch(
-    ::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext>* impl, ::fidl::IncomingMessage& msg,
+    ::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext>* impl, ::fidl::IncomingHeaderAndMessage& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, storage_view, txn, entries_, entries_end_);
 }
 
-void fidl::internal::WireServerDispatcher<::test_bindingsdenylist::ImportsSameNameContext>::Dispatch(::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::WireServerDispatcher<::test_bindingsdenylist::ImportsSameNameContext>::Dispatch(::fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                                      internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
 
 void fidl::WireServer<::test_bindingsdenylist::ImportsSameNameContext>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_bindingsdenylist::ImportsSameNameContext>::Dispatch(this, std::move(msg), storage_view, txn);
 }

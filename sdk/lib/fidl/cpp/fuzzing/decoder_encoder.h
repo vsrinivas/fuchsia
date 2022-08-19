@@ -31,7 +31,7 @@ enum DecoderEncoderProgress {
   // FIDL type.
   NoProgress = 0,
 
-  // The `fidl::IncomingMessage` type initialization has been successful.
+  // The `fidl::IncomingHeaderAndMessage` type initialization has been successful.
   //
   // This step involves transactional header validation if applicable.
   InitializedForDecoding,
@@ -104,13 +104,13 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
       .status = fidl::Status::Ok(),
   };
 
-  std::optional<fidl::IncomingMessage> incoming_initialize_later;
+  std::optional<fidl::IncomingHeaderAndMessage> incoming_initialize_later;
   constexpr bool kTransactionalMessage = fidl::IsFidlTransactionalMessage<T>::value;
   static_assert(!kTransactionalMessage);
-  incoming_initialize_later =
-      fidl::IncomingMessage::Create(bytes, num_bytes, handles, handle_metadata, num_handles,
-                                    fidl::IncomingMessage::kSkipMessageHeaderValidation);
-  fidl::IncomingMessage& incoming = incoming_initialize_later.value();
+  incoming_initialize_later = fidl::IncomingHeaderAndMessage::Create(
+      bytes, num_bytes, handles, handle_metadata, num_handles,
+      fidl::IncomingHeaderAndMessage::kSkipMessageHeaderValidation);
+  fidl::IncomingHeaderAndMessage& incoming = incoming_initialize_later.value();
 
   if (!incoming.ok()) {
     status.status = incoming;

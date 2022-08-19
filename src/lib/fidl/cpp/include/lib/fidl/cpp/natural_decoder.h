@@ -20,7 +20,7 @@ namespace fidl::internal {
 
 class NaturalDecoder final {
  public:
-  explicit NaturalDecoder(fidl::IncomingMessage message,
+  explicit NaturalDecoder(fidl::IncomingHeaderAndMessage message,
                           fidl::internal::WireFormatVersion wire_format_version);
   ~NaturalDecoder();
 
@@ -176,7 +176,7 @@ class NaturalDecoder final {
   const char* error() { return error_; }
 
  private:
-  fidl::IncomingMessage body_;
+  fidl::IncomingHeaderAndMessage body_;
 
   // The body_offset_ is either 16 (when decoding the body of a transactional message, which is
   // itself a concatenation of 2 FIDL messages, the header and body), or 0 (when decoding a

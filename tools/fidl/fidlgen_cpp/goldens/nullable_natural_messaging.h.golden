@@ -187,7 +187,7 @@ class ::fidl::Server<::test_nullable::SimpleProtocol> : public ::fidl::internal:
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
@@ -196,7 +196,7 @@ class ::fidl::Server<::test_nullable::SimpleProtocol> : public ::fidl::internal:
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_nullable::SimpleProtocol> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_nullable::SimpleProtocol>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_nullable::SimpleProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 

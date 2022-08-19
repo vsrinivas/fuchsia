@@ -41,7 +41,8 @@ zx_status_t BuiltinDevVnode::GetAttributes(fs::VnodeAttributes* a) {
   return ZX_OK;
 }
 
-void BuiltinDevVnode::HandleFsSpecificMessage(fidl::IncomingMessage& msg, fidl::Transaction* txn) {
+void BuiltinDevVnode::HandleFsSpecificMessage(fidl::IncomingHeaderAndMessage& msg,
+                                              fidl::Transaction* txn) {
   fidl::WireDispatch(this, std::move(msg), txn);
 }
 

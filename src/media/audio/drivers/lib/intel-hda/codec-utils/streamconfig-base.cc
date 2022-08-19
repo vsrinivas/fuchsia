@@ -33,7 +33,7 @@ zx_protocol_device_t IntelHDAStreamConfigBase::STREAM_DEVICE_THUNKS = []() {
     IntelHDAStreamConfigBase* thiz = static_cast<IntelHDAStreamConfigBase*>(ctx);
     DdkTransaction transaction(txn);
     fidl::WireDispatch<fuchsia_hardware_audio::StreamConfigConnector>(
-        thiz, fidl::IncomingMessage::FromEncodedCMessage(msg), &transaction);
+        thiz, fidl::IncomingHeaderAndMessage::FromEncodedCMessage(msg), &transaction);
     return transaction.Status();
   };
   return sdt;

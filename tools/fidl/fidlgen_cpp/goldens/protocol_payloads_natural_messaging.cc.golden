@@ -439,7 +439,7 @@ fidl::internal::NaturalSyncClientImpl<::test_protocolpayloads::MainProtocol>::On
 }
 ::fidl::Status
 fidl::internal::NaturalEventDispatcher<::test_protocolpayloads::MainProtocol>::DispatchEvent(
-    ::fidl::IncomingMessage& msg,
+    ::fidl::IncomingHeaderAndMessage& msg,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     case ::test_protocolpayloads::kMainProtocol_OnComposed_Ordinal: {
@@ -779,7 +779,7 @@ void fidl::internal::NaturalCompleterBase<::test_protocolpayloads::MainProtocol:
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_protocolpayloads::MainProtocol>::entries_[] = {
     {
         ::test_protocolpayloads::kMainProtocol_OneWayComposed_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads_imported::ImportStructPayload>(std::move(msg));
           if (decoded.is_error()) {
@@ -794,7 +794,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_protocolpayloads::kMainProtocol_TwoWayComposed_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads_imported::ImportStructPayload>(std::move(msg));
           if (decoded.is_error()) {
@@ -809,7 +809,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_protocolpayloads::kMainProtocol_TwoWayComposedWithError_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads_imported::ImportStructPayload>(std::move(msg));
           if (decoded.is_error()) {
@@ -824,7 +824,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_protocolpayloads::kMainProtocol_OneWayLocal_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads::LocalStructPayload>(std::move(msg));
           if (decoded.is_error()) {
@@ -839,7 +839,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_protocolpayloads::kMainProtocol_TwoWayLocal_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads::LocalStructPayload>(std::move(msg));
           if (decoded.is_error()) {
@@ -854,7 +854,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads::LocalStructPayload>(std::move(msg));
           if (decoded.is_error()) {
@@ -869,7 +869,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_protocolpayloads::kMainProtocol_OneWayImport_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads_imported::ImportStructPayload>(std::move(msg));
           if (decoded.is_error()) {
@@ -884,7 +884,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_protocolpayloads::kMainProtocol_TwoWayImport_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads_imported::ImportStructPayload>(std::move(msg));
           if (decoded.is_error()) {
@@ -899,7 +899,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_protocolpayloads::kMainProtocol_TwoWayImportWithError_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads_imported::ImportStructPayload>(std::move(msg));
           if (decoded.is_error()) {
@@ -914,7 +914,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_protocolpayloads::kMainProtocol_OneWayAnon_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads::MainProtocolOneWayAnonRequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -929,7 +929,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_protocolpayloads::kMainProtocol_TwoWayAnon_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads::MainProtocolTwoWayAnonRequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -944,7 +944,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocolpayloads::MainProtocolTwoWayAnonWithErrorRequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -962,13 +962,13 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
 const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_protocolpayloads::MainProtocol>::entries_end_ =
     &entries_[12];
 
-void fidl::internal::NaturalServerDispatcher<::test_protocolpayloads::MainProtocol>::Dispatch(::fidl::Server<::test_protocolpayloads::MainProtocol>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::NaturalServerDispatcher<::test_protocolpayloads::MainProtocol>::Dispatch(::fidl::Server<::test_protocolpayloads::MainProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                               internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 
 void fidl::Server<::test_protocolpayloads::MainProtocol>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_protocolpayloads::MainProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }

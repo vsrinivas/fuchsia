@@ -14,7 +14,8 @@ fidl::Status SyncEventHandler::HandleOneEventImpl_(zx::unowned_channel channel,
   if (status != ZX_OK) {
     return fidl::Status::TransportError(status, kErrorWaitOneFailed);
   }
-  fidl::IncomingMessage msg = fidl::MessageRead(channel, storage, ReadOptions{.discardable = true});
+  fidl::IncomingHeaderAndMessage msg =
+      fidl::MessageRead(channel, storage, ReadOptions{.discardable = true});
   if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new event,
@@ -39,7 +40,7 @@ void SyncEventHandler::OnTransitionalEvent_() {
 }
 
 fidl::Status IncomingEventDispatcherBase::DispatchEvent(
-    fidl::IncomingMessage& msg, internal::MessageStorageViewBase* storage_view) {
+    fidl::IncomingHeaderAndMessage& msg, internal::MessageStorageViewBase* storage_view) {
   return fidl::Status::UnknownOrdinal();
 }
 

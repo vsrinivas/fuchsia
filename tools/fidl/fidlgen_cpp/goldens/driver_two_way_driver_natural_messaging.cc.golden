@@ -78,7 +78,7 @@ void fidl::internal::NaturalCompleterBase<::test_drivertwoway::TwoWay::Add>::Rep
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_drivertwoway::TwoWay>::entries_[] = {
     {
         ::test_drivertwoway::kTwoWay_Add_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_drivertwoway::TwoWayAddRequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -96,13 +96,13 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
 const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_drivertwoway::TwoWay>::entries_end_ =
     &entries_[1];
 
-void fidl::internal::NaturalServerDispatcher<::test_drivertwoway::TwoWay>::Dispatch(::fdf::Server<::test_drivertwoway::TwoWay>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::NaturalServerDispatcher<::test_drivertwoway::TwoWay>::Dispatch(::fdf::Server<::test_drivertwoway::TwoWay>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 
 void fdf::Server<::test_drivertwoway::TwoWay>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_drivertwoway::TwoWay>::Dispatch(this, std::move(msg), storage_view, txn);
 }

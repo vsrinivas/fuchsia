@@ -255,10 +255,10 @@ struct ::fidl::internal::ProtocolDetails<::test_unknowninteractions::UnknownInte
 template<>
 struct ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsProtocol> final {
   WireServerDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>* impl, ::fidl::IncomingMessage& msg,
+  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>* impl, ::fidl::IncomingHeaderAndMessage& msg,
                                             internal::MessageStorageViewBase* storage_view,
                                             ::fidl::Transaction* txn);
-  static void Dispatch(::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -7284,7 +7284,7 @@ class ::fidl::internal::WireEventDispatcher<::test_unknowninteractions::UnknownI
   explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
     ::fidl::Status DispatchEvent(
-        ::fidl::IncomingMessage& msg,
+        ::fidl::IncomingHeaderAndMessage& msg,
         ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
@@ -8317,7 +8317,7 @@ class ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsProtocol
 
   private:
   void dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };namespace fidl {
 
@@ -8497,10 +8497,10 @@ struct ::fidl::internal::ProtocolDetails<::test_unknowninteractions::UnknownInte
 template<>
 struct ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarProtocol> final {
   WireServerDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>* impl, ::fidl::IncomingMessage& msg,
+  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>* impl, ::fidl::IncomingHeaderAndMessage& msg,
                                             internal::MessageStorageViewBase* storage_view,
                                             ::fidl::Transaction* txn);
-  static void Dispatch(::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -13061,7 +13061,7 @@ class ::fidl::internal::WireEventDispatcher<::test_unknowninteractions::UnknownI
   explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsAjarProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
     ::fidl::Status DispatchEvent(
-        ::fidl::IncomingMessage& msg,
+        ::fidl::IncomingHeaderAndMessage& msg,
         ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
@@ -13622,7 +13622,7 @@ class ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsAjarProt
 
   private:
   void dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };namespace fidl {
 
@@ -13750,10 +13750,10 @@ struct ::fidl::internal::ProtocolDetails<::test_unknowninteractions::UnknownInte
 template<>
 struct ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedProtocol> final {
   WireServerDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>* impl, ::fidl::IncomingMessage& msg,
+  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>* impl, ::fidl::IncomingHeaderAndMessage& msg,
                                             internal::MessageStorageViewBase* storage_view,
                                             ::fidl::Transaction* txn);
-  static void Dispatch(::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -17283,7 +17283,7 @@ class ::fidl::internal::WireEventDispatcher<::test_unknowninteractions::UnknownI
   explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsClosedProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
     ::fidl::Status DispatchEvent(
-        ::fidl::IncomingMessage& msg,
+        ::fidl::IncomingHeaderAndMessage& msg,
         ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
@@ -17825,7 +17825,7 @@ class ::fidl::WireServer<::test_unknowninteractions::UnknownInteractionsClosedPr
 
   private:
   void dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };namespace fidl {
 

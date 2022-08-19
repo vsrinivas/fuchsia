@@ -47,10 +47,10 @@ struct ::fidl::internal::ProtocolDetails<::test_driveroneway::OneWay> {
 template <>
 struct ::fidl::internal::WireServerDispatcher<::test_driveroneway::OneWay> final {
   WireServerDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(::fdf::WireServer<::test_driveroneway::OneWay>* impl, ::fidl::IncomingMessage& msg,
+  static ::fidl::DispatchResult TryDispatch(::fdf::WireServer<::test_driveroneway::OneWay>* impl, ::fidl::IncomingHeaderAndMessage& msg,
                                             internal::MessageStorageViewBase* storage_view,
                                             ::fidl::Transaction* txn);
-  static void Dispatch(::fdf::WireServer<::test_driveroneway::OneWay>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fdf::WireServer<::test_driveroneway::OneWay>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -245,7 +245,7 @@ class ::fdf::WireServer<::test_driveroneway::OneWay> : public ::fidl::internal::
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {

@@ -116,7 +116,7 @@ void fidl::internal::NaturalCompleterBase<::test_union::TestProtocol::FlexibleXU
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_union::TestProtocol>::entries_[] = {
     {
         ::test_union::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
@@ -131,7 +131,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_union::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
@@ -149,13 +149,13 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
 const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_union::TestProtocol>::entries_end_ =
     &entries_[2];
 
-void fidl::internal::NaturalServerDispatcher<::test_union::TestProtocol>::Dispatch(::fidl::Server<::test_union::TestProtocol>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::NaturalServerDispatcher<::test_union::TestProtocol>::Dispatch(::fidl::Server<::test_union::TestProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                    internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 
 void fidl::Server<::test_union::TestProtocol>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_union::TestProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }

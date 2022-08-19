@@ -109,7 +109,7 @@ class ::fidl::Server<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> : public ::f
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
@@ -118,7 +118,7 @@ class ::fidl::Server<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> : public ::f
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::OnlyLibfuzzerAndDeps> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_bindingsdenylist::OnlyLibfuzzerAndDeps>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -221,7 +221,7 @@ class ::fidl::Server<::test_bindingsdenylist::OnlyCppAndDeps> : public ::fidl::i
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
@@ -230,7 +230,7 @@ class ::fidl::Server<::test_bindingsdenylist::OnlyCppAndDeps> : public ::fidl::i
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::OnlyCppAndDeps> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_bindingsdenylist::OnlyCppAndDeps>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_bindingsdenylist::OnlyCppAndDeps>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -843,7 +843,7 @@ class ::fidl::Server<::test_bindingsdenylist::DenyEachBinding> : public ::fidl::
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
@@ -852,7 +852,7 @@ class ::fidl::Server<::test_bindingsdenylist::DenyEachBinding> : public ::fidl::
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::DenyEachBinding> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_bindingsdenylist::DenyEachBinding>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_bindingsdenylist::DenyEachBinding>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -955,7 +955,7 @@ class ::fidl::Server<::test_bindingsdenylist::Allowed> : public ::fidl::internal
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
@@ -964,7 +964,7 @@ class ::fidl::Server<::test_bindingsdenylist::Allowed> : public ::fidl::internal
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::Allowed> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_bindingsdenylist::Allowed>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_bindingsdenylist::Allowed>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -1114,7 +1114,7 @@ class ::fidl::Server<::test_bindingsdenylist::ImportsSameNameContext> : public :
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
@@ -1123,7 +1123,7 @@ class ::fidl::Server<::test_bindingsdenylist::ImportsSameNameContext> : public :
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_bindingsdenylist::ImportsSameNameContext> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_bindingsdenylist::ImportsSameNameContext>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_bindingsdenylist::ImportsSameNameContext>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 

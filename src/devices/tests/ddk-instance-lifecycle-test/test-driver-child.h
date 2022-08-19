@@ -37,7 +37,7 @@ class TestLifecycleDriverChild : public DeviceType {
     ZX_PANIC("DdkClose reached in device that only returns instances\n");
   }
 
-  void DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn) {
+  void DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn) {
     ZX_PANIC("DdkMessage reached in device that only returns instances\n");
   }
 

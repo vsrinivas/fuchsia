@@ -58,7 +58,8 @@ zx_status_t DevfsVnode::GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::R
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-void DevfsVnode::HandleFsSpecificMessage(fidl::IncomingMessage& msg, fidl::Transaction* txn) {
+void DevfsVnode::HandleFsSpecificMessage(fidl::IncomingHeaderAndMessage& msg,
+                                         fidl::Transaction* txn) {
   if (dev_->Unbound()) {
     txn->Close(ZX_ERR_IO_NOT_PRESENT);
     return;

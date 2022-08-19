@@ -107,7 +107,7 @@ class MockBlockDevice {
     if (status != ZX_ERR_NOT_SUPPORTED) {
       return status;
     }
-    auto incoming_msg = fidl::IncomingMessage::FromEncodedCMessage(msg);
+    auto incoming_msg = fidl::IncomingHeaderAndMessage::FromEncodedCMessage(msg);
     FidlTransaction ftxn(incoming_msg.header()->txid, zx::unowned(channel_));
     return fidl::WireTryDispatch<fio::Node>(mock_node_.get(), incoming_msg, &ftxn) ==
                    fidl::DispatchResult::kFound

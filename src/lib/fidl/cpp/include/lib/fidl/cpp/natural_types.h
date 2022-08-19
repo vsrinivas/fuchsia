@@ -186,9 +186,9 @@ OwnedEncodeResult Encode(FidlType value) {
 // object |FidlType|. Supported types are structs, tables, and unions. Example:
 //
 //     // Create a message referencing an encoded payload.
-//     fidl::IncomingMessage message = fidl::IncomingMessage::Create(
+//     fidl::IncomingHeaderAndMessage message = fidl::IncomingHeaderAndMessage::Create(
 //         bytes, num_bytes, handles, handle_metadata, num_handles,
-//         fidl::IncomingMessage::kSkipMessageHeaderValidation);
+//         fidl::IncomingHeaderAndMessage::kSkipMessageHeaderValidation);
 //
 //     // Decode the message.
 //     fitx::result decoded = fidl::Decode<fuchsia_my_lib::SomeType>(
@@ -203,7 +203,7 @@ OwnedEncodeResult Encode(FidlType value) {
 // |message| is always consumed. |metadata| informs the wire format of the
 // encoded message.
 template <typename FidlType>
-::fitx::result<::fidl::Error, FidlType> Decode(::fidl::IncomingMessage message,
+::fitx::result<::fidl::Error, FidlType> Decode(::fidl::IncomingHeaderAndMessage message,
                                                ::fidl::WireFormatMetadata metadata) {
   using internal::DefaultConstructPossiblyInvalidObjectTag;
   using internal::kCodingErrorInvalidWireFormatMetadata;

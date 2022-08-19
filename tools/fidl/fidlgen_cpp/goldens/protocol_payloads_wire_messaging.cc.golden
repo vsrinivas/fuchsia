@@ -1074,7 +1074,7 @@ fidl::internal::WireWeakSyncClientImpl<::test_protocolpayloads::MainProtocol>::T
 }
 ::fidl::Status
 fidl::internal::WireEventDispatcher<::test_protocolpayloads::MainProtocol>::DispatchEvent(
-    ::fidl::IncomingMessage& msg,
+    ::fidl::IncomingHeaderAndMessage& msg,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     case ::test_protocolpayloads::kMainProtocol_OnComposed_Ordinal: {
@@ -1178,7 +1178,7 @@ fidl::internal::WireEventDispatcher<::test_protocolpayloads::MainProtocol>::Disp
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_protocolpayloads::MainProtocol>::entries_[] = {
     {
         ::test_protocolpayloads::kMainProtocol_OneWayComposed_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayComposed>> decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -1193,7 +1193,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     },
     {
         ::test_protocolpayloads::kMainProtocol_TwoWayComposed_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposed>> decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -1208,7 +1208,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     },
     {
         ::test_protocolpayloads::kMainProtocol_TwoWayComposedWithError_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>> decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -1223,7 +1223,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     },
     {
         ::test_protocolpayloads::kMainProtocol_OneWayLocal_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayLocal>> decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -1238,7 +1238,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     },
     {
         ::test_protocolpayloads::kMainProtocol_TwoWayLocal_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>> decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -1253,7 +1253,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     },
     {
         ::test_protocolpayloads::kMainProtocol_TwoWayLocalWithError_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>> decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -1268,7 +1268,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     },
     {
         ::test_protocolpayloads::kMainProtocol_OneWayImport_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayImport>> decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -1283,7 +1283,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     },
     {
         ::test_protocolpayloads::kMainProtocol_TwoWayImport_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImport>> decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -1298,7 +1298,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     },
     {
         ::test_protocolpayloads::kMainProtocol_TwoWayImportWithError_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>> decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -1313,7 +1313,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     },
     {
         ::test_protocolpayloads::kMainProtocol_OneWayAnon_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::OneWayAnon>> decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -1328,7 +1328,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     },
     {
         ::test_protocolpayloads::kMainProtocol_TwoWayAnon_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>> decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -1343,7 +1343,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     },
     {
         ::test_protocolpayloads::kMainProtocol_TwoWayAnonWithError_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>> decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -1362,20 +1362,20 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
     &entries_[12];
 
 ::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_protocolpayloads::MainProtocol>::TryDispatch(
-    ::fidl::WireServer<::test_protocolpayloads::MainProtocol>* impl, ::fidl::IncomingMessage& msg,
+    ::fidl::WireServer<::test_protocolpayloads::MainProtocol>* impl, ::fidl::IncomingHeaderAndMessage& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, storage_view, txn, entries_, entries_end_);
 }
 
-void fidl::internal::WireServerDispatcher<::test_protocolpayloads::MainProtocol>::Dispatch(::fidl::WireServer<::test_protocolpayloads::MainProtocol>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::WireServerDispatcher<::test_protocolpayloads::MainProtocol>::Dispatch(::fidl::WireServer<::test_protocolpayloads::MainProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
 
 void fidl::WireServer<::test_protocolpayloads::MainProtocol>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_protocolpayloads::MainProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }

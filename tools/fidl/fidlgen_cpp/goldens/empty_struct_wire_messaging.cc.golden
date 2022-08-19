@@ -187,7 +187,7 @@ fidl::internal::WireWeakSyncClientImpl<::test_emptystruct::EmptyProtocol>::SendA
 }
 ::fidl::Status
 fidl::internal::WireEventDispatcher<::test_emptystruct::EmptyProtocol>::DispatchEvent(
-    ::fidl::IncomingMessage& msg,
+    ::fidl::IncomingHeaderAndMessage& msg,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     case ::test_emptystruct::kEmptyProtocol_Receive_Ordinal: {
@@ -214,7 +214,7 @@ fidl::internal::WireEventDispatcher<::test_emptystruct::EmptyProtocol>::Dispatch
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_emptystruct::EmptyProtocol>::entries_[] = {
     {
         ::test_emptystruct::kEmptyProtocol_Send_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::Send>> decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -229,7 +229,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     },
     {
         ::test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>> decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -248,20 +248,20 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
     &entries_[2];
 
 ::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_emptystruct::EmptyProtocol>::TryDispatch(
-    ::fidl::WireServer<::test_emptystruct::EmptyProtocol>* impl, ::fidl::IncomingMessage& msg,
+    ::fidl::WireServer<::test_emptystruct::EmptyProtocol>* impl, ::fidl::IncomingHeaderAndMessage& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, storage_view, txn, entries_, entries_end_);
 }
 
-void fidl::internal::WireServerDispatcher<::test_emptystruct::EmptyProtocol>::Dispatch(::fidl::WireServer<::test_emptystruct::EmptyProtocol>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::WireServerDispatcher<::test_emptystruct::EmptyProtocol>::Dispatch(::fidl::WireServer<::test_emptystruct::EmptyProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
 
 void fidl::WireServer<::test_emptystruct::EmptyProtocol>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_emptystruct::EmptyProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }

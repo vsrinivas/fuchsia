@@ -108,7 +108,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_doccomments::Interface> fi
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_doccomments::Interface>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
   ::fidl::Status DispatchEvent(
-      ::fidl::IncomingMessage& msg,
+      ::fidl::IncomingHeaderAndMessage& msg,
       internal::MessageStorageViewBase* storage_view) override;
 };
 
@@ -174,7 +174,7 @@ class ::fidl::Server<::test_doccomments::Interface> : public ::fidl::internal::I
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
@@ -183,7 +183,7 @@ class ::fidl::Server<::test_doccomments::Interface> : public ::fidl::internal::I
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_doccomments::Interface> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_doccomments::Interface>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_doccomments::Interface>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 

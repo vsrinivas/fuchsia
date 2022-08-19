@@ -9,7 +9,7 @@
 
 namespace fidl::internal {
 
-NaturalDecoder::NaturalDecoder(fidl::IncomingMessage message,
+NaturalDecoder::NaturalDecoder(fidl::IncomingHeaderAndMessage message,
                                fidl::internal::WireFormatVersion wire_format_version)
     : body_(std::move(message)),
       body_offset_(message.is_transactional() ? sizeof(fidl_message_header_t) : 0),

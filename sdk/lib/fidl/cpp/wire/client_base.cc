@@ -155,7 +155,7 @@ void ClientBase::TryAsyncDeliverError(::fidl::Status error, ResponseContext* con
   }
 }
 
-std::optional<UnbindInfo> ClientBase::Dispatch(fidl::IncomingMessage& msg,
+std::optional<UnbindInfo> ClientBase::Dispatch(fidl::IncomingHeaderAndMessage& msg,
                                                internal::MessageStorageViewBase* storage_view) {
   if (fit::nullable epitaph = msg.maybe_epitaph(); unlikely(epitaph)) {
     return UnbindInfo::PeerClosed((*epitaph)->error);

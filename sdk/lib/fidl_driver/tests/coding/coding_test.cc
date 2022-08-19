@@ -102,9 +102,11 @@ TEST(StandaloneResourceTypeCoding, Decode) {
   };
   fidl::WireFormatMetadata metadata =
       fidl::internal::WireFormatMetadataForVersion(fidl::internal::WireFormatVersion::kV2);
-  fidl::IncomingMessage message = fidl::IncomingMessage::Create<fidl::internal::DriverTransport>(
-      bytes.data(), static_cast<uint32_t>(bytes.size()), handles.data(), nullptr,
-      static_cast<uint32_t>(handles.size()), fidl::IncomingMessage::kSkipMessageHeaderValidation);
+  fidl::IncomingHeaderAndMessage message =
+      fidl::IncomingHeaderAndMessage::Create<fidl::internal::DriverTransport>(
+          bytes.data(), static_cast<uint32_t>(bytes.size()), handles.data(), nullptr,
+          static_cast<uint32_t>(handles.size()),
+          fidl::IncomingHeaderAndMessage::kSkipMessageHeaderValidation);
 
   // Perform decoding.
   fitx::result decoded =

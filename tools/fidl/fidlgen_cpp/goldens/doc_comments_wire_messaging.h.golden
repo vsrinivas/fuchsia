@@ -52,10 +52,10 @@ struct ::fidl::internal::ProtocolDetails<::test_doccomments::Interface> {
 template <>
 struct ::fidl::internal::WireServerDispatcher<::test_doccomments::Interface> final {
   WireServerDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_doccomments::Interface>* impl, ::fidl::IncomingMessage& msg,
+  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_doccomments::Interface>* impl, ::fidl::IncomingHeaderAndMessage& msg,
                                             internal::MessageStorageViewBase* storage_view,
                                             ::fidl::Transaction* txn);
-  static void Dispatch(::fidl::WireServer<::test_doccomments::Interface>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::WireServer<::test_doccomments::Interface>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -312,7 +312,7 @@ class ::fidl::internal::WireEventDispatcher<::test_doccomments::Interface> final
   explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_doccomments::Interface>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
   ::fidl::Status DispatchEvent(
-      ::fidl::IncomingMessage& msg,
+      ::fidl::IncomingHeaderAndMessage& msg,
       ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
@@ -381,7 +381,7 @@ class ::fidl::WireServer<::test_doccomments::Interface> : public ::fidl::interna
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {

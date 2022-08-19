@@ -53,7 +53,7 @@ fidl::internal::NaturalSyncClientImpl<::test_doccomments::Interface>::Method() {
 }
 ::fidl::Status
 fidl::internal::NaturalEventDispatcher<::test_doccomments::Interface>::DispatchEvent(
-    ::fidl::IncomingMessage& msg,
+    ::fidl::IncomingHeaderAndMessage& msg,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     case ::test_doccomments::kInterface_OnEvent_Ordinal: {
@@ -100,7 +100,7 @@ fidl::internal::NaturalEventDispatcher<::test_doccomments::Interface>::DispatchE
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_doccomments::Interface>::entries_[] = {
     {
         ::test_doccomments::kInterface_Method_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
@@ -118,13 +118,13 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
 const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_doccomments::Interface>::entries_end_ =
     &entries_[1];
 
-void fidl::internal::NaturalServerDispatcher<::test_doccomments::Interface>::Dispatch(::fidl::Server<::test_doccomments::Interface>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::NaturalServerDispatcher<::test_doccomments::Interface>::Dispatch(::fidl::Server<::test_doccomments::Interface>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                       internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 
 void fidl::Server<::test_doccomments::Interface>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_doccomments::Interface>::Dispatch(this, std::move(msg), storage_view, txn);
 }

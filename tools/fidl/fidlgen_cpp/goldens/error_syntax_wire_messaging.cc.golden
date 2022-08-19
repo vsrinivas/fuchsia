@@ -211,7 +211,7 @@ fidl::internal::WireWeakSyncClientImpl<::test_errorsyntax::ExampleUseOfErrorSynt
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_errorsyntax::ExampleUseOfErrorSyntax>::entries_[] = {
     {
         ::test_errorsyntax::kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>> decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -226,7 +226,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     },
     {
         ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>> decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -245,20 +245,20 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
     &entries_[2];
 
 ::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_errorsyntax::ExampleUseOfErrorSyntax>::TryDispatch(
-    ::fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>* impl, ::fidl::IncomingMessage& msg,
+    ::fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>* impl, ::fidl::IncomingHeaderAndMessage& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, storage_view, txn, entries_, entries_end_);
 }
 
-void fidl::internal::WireServerDispatcher<::test_errorsyntax::ExampleUseOfErrorSyntax>::Dispatch(::fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::WireServerDispatcher<::test_errorsyntax::ExampleUseOfErrorSyntax>::Dispatch(::fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                                  internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
 
 void fidl::WireServer<::test_errorsyntax::ExampleUseOfErrorSyntax>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_errorsyntax::ExampleUseOfErrorSyntax>::Dispatch(this, std::move(msg), storage_view, txn);
 }

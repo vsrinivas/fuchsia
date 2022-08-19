@@ -35,7 +35,7 @@ class Device : public fidl::WireServer<fuchsia_wlan_device::Phy>,
                             fdf::ClientEnd<fuchsia_wlan_wlanphyimpl::WlanphyImpl> client);
 
   // Overriding DDK functions.
-  void DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn);
+  void DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn);
   void DdkRelease();
   void DdkUnbind(::ddk::UnbindTxn txn);
 

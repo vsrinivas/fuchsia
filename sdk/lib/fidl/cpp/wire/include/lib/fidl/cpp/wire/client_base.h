@@ -127,10 +127,13 @@ class ResponseContext : public fidl::internal_wavl::WAVLTreeContainable<Response
   //
   // See |WireResponseContext<FidlMethod>::OnResult| for more details.
   virtual std::optional<fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& result, internal::MessageStorageViewBase* storage_view) = 0;
+      ::fidl::IncomingHeaderAndMessage&& result,
+      internal::MessageStorageViewBase* storage_view) = 0;
 
   // A helper around |OnRawResult| to directly notify an error to the context.
-  void OnError(::fidl::Status error) { OnRawResult(fidl::IncomingMessage::Create(error), nullptr); }
+  void OnError(::fidl::Status error) {
+    OnRawResult(fidl::IncomingHeaderAndMessage::Create(error), nullptr);
+  }
 
  private:
   friend class ResponseContextAsyncErrorTask<ResponseContext>;
@@ -227,7 +230,8 @@ class WireResponseContext : public internal::ResponseContext {
 
  private:
   ::std::optional<::fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg, internal::MessageStorageViewBase* storage_view) final {
+      ::fidl::IncomingHeaderAndMessage&& msg,
+      internal::MessageStorageViewBase* storage_view) final {
     if (unlikely(!msg.ok())) {
       ::fidl::internal::WireUnownedResultType<FidlMethod> result{msg.error()};
       OnResult(result);
@@ -354,7 +358,7 @@ class ClientBase final : public std::enable_shared_from_this<ClientBase> {
   // If errors occur during dispatching, the function will return an
   // |UnbindInfo| describing the error. Otherwise, it will return
   // |std::nullopt|.
-  std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage& msg,
+  std::optional<UnbindInfo> Dispatch(fidl::IncomingHeaderAndMessage& msg,
                                      internal::MessageStorageViewBase* storage_view);
 
   // Returns a weak pointer representing the lifetime of client objects exposed

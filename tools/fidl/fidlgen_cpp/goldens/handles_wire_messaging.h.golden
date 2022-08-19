@@ -38,10 +38,10 @@ struct ::fidl::internal::ProtocolDetails<::test_handles::SomeProtocol> {
 template <>
 struct ::fidl::internal::WireServerDispatcher<::test_handles::SomeProtocol> final {
   WireServerDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_handles::SomeProtocol>* impl, ::fidl::IncomingMessage& msg,
+  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_handles::SomeProtocol>* impl, ::fidl::IncomingHeaderAndMessage& msg,
                                             internal::MessageStorageViewBase* storage_view,
                                             ::fidl::Transaction* txn);
-  static void Dispatch(::fidl::WireServer<::test_handles::SomeProtocol>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::WireServer<::test_handles::SomeProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -146,7 +146,7 @@ class ::fidl::WireServer<::test_handles::SomeProtocol> : public ::fidl::internal
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {

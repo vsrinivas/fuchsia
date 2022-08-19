@@ -22,7 +22,7 @@
 namespace fs_pty::internal {
 
 void DispatchPtyDeviceMessage(fidl::WireServer<fuchsia_hardware_pty::Device>* interface,
-                              fidl::IncomingMessage& msg, fidl::Transaction* txn) {
+                              fidl::IncomingHeaderAndMessage& msg, fidl::Transaction* txn) {
   fidl::WireDispatch(interface, std::move(msg), txn);
 }
 

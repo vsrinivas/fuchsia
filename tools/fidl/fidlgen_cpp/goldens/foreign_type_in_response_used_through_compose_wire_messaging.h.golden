@@ -49,10 +49,10 @@ struct ::fidl::internal::ProtocolDetails<::test_foreigntypeinresponseusedthrough
 template <>
 struct ::fidl::internal::WireServerDispatcher<::test_foreigntypeinresponseusedthroughcompose::Top> final {
   WireServerDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_foreigntypeinresponseusedthroughcompose::Top>* impl, ::fidl::IncomingMessage& msg,
+  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_foreigntypeinresponseusedthroughcompose::Top>* impl, ::fidl::IncomingHeaderAndMessage& msg,
                                             internal::MessageStorageViewBase* storage_view,
                                             ::fidl::Transaction* txn);
-  static void Dispatch(::fidl::WireServer<::test_foreigntypeinresponseusedthroughcompose::Top>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::WireServer<::test_foreigntypeinresponseusedthroughcompose::Top>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -488,7 +488,7 @@ class ::fidl::WireServer<::test_foreigntypeinresponseusedthroughcompose::Top> : 
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {

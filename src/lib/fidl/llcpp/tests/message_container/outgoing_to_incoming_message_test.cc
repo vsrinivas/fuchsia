@@ -71,7 +71,7 @@ TEST(OutgoingToIncomingMessage, Handles) {
   auto msg = fidl::OutgoingMessage::FromEncodedCValue(&c_msg);
   auto result = fidl::OutgoingToIncomingMessage(msg);
   ASSERT_EQ(ZX_OK, result.status());
-  fidl::IncomingMessage& output = result.incoming_message();
+  fidl::IncomingHeaderAndMessage& output = result.incoming_message();
   EXPECT_EQ(output.byte_actual(), std::size(bytes));
   EXPECT_EQ(0, memcmp(output.bytes(), bytes, output.byte_actual()));
   EXPECT_EQ(output.handle_actual(), 1u);

@@ -289,7 +289,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_protocols::WithAndWithoutR
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::WithAndWithoutRequestResponse>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
   ::fidl::Status DispatchEvent(
-      ::fidl::IncomingMessage& msg,
+      ::fidl::IncomingHeaderAndMessage& msg,
       internal::MessageStorageViewBase* storage_view) override;
 };
 
@@ -495,7 +495,7 @@ class ::fidl::Server<::test_protocols::WithAndWithoutRequestResponse> : public :
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
@@ -504,7 +504,7 @@ class ::fidl::Server<::test_protocols::WithAndWithoutRequestResponse> : public :
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::WithAndWithoutRequestResponse> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_protocols::WithAndWithoutRequestResponse>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_protocols::WithAndWithoutRequestResponse>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -997,7 +997,7 @@ class ::fidl::Server<::test_protocols::WithErrorSyntax> : public ::fidl::interna
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
@@ -1006,7 +1006,7 @@ class ::fidl::Server<::test_protocols::WithErrorSyntax> : public ::fidl::interna
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::WithErrorSyntax> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_protocols::WithErrorSyntax>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_protocols::WithErrorSyntax>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -1237,7 +1237,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_protocols::ChannelProtocol
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::ChannelProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
   ::fidl::Status DispatchEvent(
-      ::fidl::IncomingMessage& msg,
+      ::fidl::IncomingHeaderAndMessage& msg,
       internal::MessageStorageViewBase* storage_view) override;
 };
 
@@ -1393,7 +1393,7 @@ class ::fidl::Server<::test_protocols::ChannelProtocol> : public ::fidl::interna
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
@@ -1402,7 +1402,7 @@ class ::fidl::Server<::test_protocols::ChannelProtocol> : public ::fidl::interna
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::ChannelProtocol> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_protocols::ChannelProtocol>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_protocols::ChannelProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -1551,7 +1551,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_protocols::Transitional> f
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::Transitional>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
   ::fidl::Status DispatchEvent(
-      ::fidl::IncomingMessage& msg,
+      ::fidl::IncomingHeaderAndMessage& msg,
       internal::MessageStorageViewBase* storage_view) override;
 };
 
@@ -1643,7 +1643,7 @@ class ::fidl::Server<::test_protocols::Transitional> : public ::fidl::internal::
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
@@ -1652,7 +1652,7 @@ class ::fidl::Server<::test_protocols::Transitional> : public ::fidl::internal::
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::Transitional> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_protocols::Transitional>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_protocols::Transitional>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -1778,7 +1778,7 @@ class ::fidl::Server<::test_protocols::DiscoverableProtocol> : public ::fidl::in
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
@@ -1787,7 +1787,7 @@ class ::fidl::Server<::test_protocols::DiscoverableProtocol> : public ::fidl::in
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::DiscoverableProtocol> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_protocols::DiscoverableProtocol>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_protocols::DiscoverableProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -1890,7 +1890,7 @@ class ::fidl::Server<::test_protocols::AnotherDiscoverableProtocol> : public ::f
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
@@ -1899,7 +1899,7 @@ class ::fidl::Server<::test_protocols::AnotherDiscoverableProtocol> : public ::f
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::AnotherDiscoverableProtocol> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_protocols::AnotherDiscoverableProtocol>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_protocols::AnotherDiscoverableProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -2047,7 +2047,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_protocols::HandleRightsPro
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_protocols::HandleRightsProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
   ::fidl::Status DispatchEvent(
-      ::fidl::IncomingMessage& msg,
+      ::fidl::IncomingHeaderAndMessage& msg,
       internal::MessageStorageViewBase* storage_view) override;
 };
 
@@ -2139,7 +2139,7 @@ class ::fidl::Server<::test_protocols::HandleRightsProtocol> : public ::fidl::in
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
@@ -2148,7 +2148,7 @@ class ::fidl::Server<::test_protocols::HandleRightsProtocol> : public ::fidl::in
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::HandleRightsProtocol> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_protocols::HandleRightsProtocol>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_protocols::HandleRightsProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -2484,7 +2484,7 @@ class ::fidl::Server<::test_protocols::WithProtocolEnds> : public ::fidl::intern
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
@@ -2493,7 +2493,7 @@ class ::fidl::Server<::test_protocols::WithProtocolEnds> : public ::fidl::intern
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::WithProtocolEnds> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_protocols::WithProtocolEnds>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_protocols::WithProtocolEnds>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -2629,7 +2629,7 @@ class ::fidl::Server<::test_protocols::ManyParameters> : public ::fidl::internal
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
@@ -2638,7 +2638,7 @@ class ::fidl::Server<::test_protocols::ManyParameters> : public ::fidl::internal
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::ManyParameters> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_protocols::ManyParameters>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_protocols::ManyParameters>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -2822,7 +2822,7 @@ class ::fidl::Server<::test_protocols::MethodWithUnion> : public ::fidl::interna
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
@@ -2831,7 +2831,7 @@ class ::fidl::Server<::test_protocols::MethodWithUnion> : public ::fidl::interna
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_protocols::MethodWithUnion> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_protocols::MethodWithUnion>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_protocols::MethodWithUnion>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 

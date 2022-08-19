@@ -52,13 +52,13 @@ AsyncBinding::AsyncBinding(async_dispatcher_t* dispatcher, AnyUnownedTransport t
   ZX_ASSERT(transport_.is_valid());
   transport_.create_waiter(
       dispatcher,
-      [this](fidl::IncomingMessage& msg, internal::MessageStorageViewBase* storage_view) {
+      [this](fidl::IncomingHeaderAndMessage& msg, internal::MessageStorageViewBase* storage_view) {
         this->MessageHandler(msg, storage_view);
       },
       [this](UnbindInfo info) { this->WaitFailureHandler(info); }, any_transport_waiter_);
 }
 
-void AsyncBinding::MessageHandler(fidl::IncomingMessage& msg,
+void AsyncBinding::MessageHandler(fidl::IncomingHeaderAndMessage& msg,
                                   internal::MessageStorageViewBase* storage_view) {
   ScopedThreadGuard guard(thread_checker_);
   ZX_ASSERT(keep_alive_);
@@ -380,7 +380,7 @@ std::shared_ptr<AsyncServerBinding> AsyncServerBinding::Create(
 }
 
 std::optional<DispatchError> AsyncServerBinding::Dispatch(
-    fidl::IncomingMessage& msg, bool* next_wait_begun_early,
+    fidl::IncomingHeaderAndMessage& msg, bool* next_wait_begun_early,
     internal::MessageStorageViewBase* storage_view) {
   auto* hdr = msg.header();
   SyncTransaction txn(hdr->txid, this, next_wait_begun_early);
@@ -446,7 +446,7 @@ AsyncClientBinding::AsyncClientBinding(async_dispatcher_t* dispatcher,
       teardown_observer_(std::move(teardown_observer)) {}
 
 std::optional<DispatchError> AsyncClientBinding::Dispatch(
-    fidl::IncomingMessage& msg, bool*, internal::MessageStorageViewBase* storage_view) {
+    fidl::IncomingHeaderAndMessage& msg, bool*, internal::MessageStorageViewBase* storage_view) {
   std::optional<UnbindInfo> info = client_->Dispatch(msg, storage_view);
   if (info.has_value()) {
     // A client binding does not propagate synchronous sending errors as part of

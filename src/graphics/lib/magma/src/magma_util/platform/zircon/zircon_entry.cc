@@ -223,7 +223,7 @@ class GpuDevice : public fidl::WireServer<DeviceType>,
   }
 
   void DdkInit(ddk::InitTxn txn);
-  void DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn);
+  void DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn);
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
@@ -287,7 +287,7 @@ void GpuDevice::DdkUnbind(ddk::UnbindTxn txn) {
   txn.Reply();
 }
 
-void GpuDevice::DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn) {
+void GpuDevice::DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn) {
   fidl::WireDispatch<DeviceType>(this, std::move(msg), &txn);
 }
 

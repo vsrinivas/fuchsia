@@ -124,7 +124,7 @@ void fidl::internal::NaturalCompleterBase<::test_errorsyntax::ExampleUseOfErrorS
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_errorsyntax::ExampleUseOfErrorSyntax>::entries_[] = {
     {
         ::test_errorsyntax::kExampleUseOfErrorSyntax_ComposedCallWhichMayFail_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_errorsyntax_parent::ParentUsesErrorSyntaxComposedCallWhichMayFailRequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -139,7 +139,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_errorsyntax::kExampleUseOfErrorSyntax_CallWhichMayFail_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailRequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -157,13 +157,13 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
 const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_errorsyntax::ExampleUseOfErrorSyntax>::entries_end_ =
     &entries_[2];
 
-void fidl::internal::NaturalServerDispatcher<::test_errorsyntax::ExampleUseOfErrorSyntax>::Dispatch(::fidl::Server<::test_errorsyntax::ExampleUseOfErrorSyntax>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::NaturalServerDispatcher<::test_errorsyntax::ExampleUseOfErrorSyntax>::Dispatch(::fidl::Server<::test_errorsyntax::ExampleUseOfErrorSyntax>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                                     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 
 void fidl::Server<::test_errorsyntax::ExampleUseOfErrorSyntax>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_errorsyntax::ExampleUseOfErrorSyntax>::Dispatch(this, std::move(msg), storage_view, txn);
 }

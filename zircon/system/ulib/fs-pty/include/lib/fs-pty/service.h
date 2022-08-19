@@ -22,8 +22,7 @@ namespace fs_pty {
 namespace internal {
 
 void DispatchPtyDeviceMessage(fidl::WireServer<fuchsia_hardware_pty::Device>* interface,
-                              fidl::IncomingMessage& msg, fidl::Transaction* txn);
-
+                              fidl::IncomingHeaderAndMessage& msg, fidl::Transaction* txn);
 }
 
 // This is roughly the same as fs::Service, but GetNodeInfo returns a TTY type
@@ -61,7 +60,8 @@ class Service : public fs::Vnode {
   }
 
   // From fs::Vnode
-  void HandleFsSpecificMessage(fidl::IncomingMessage& msg, fidl::Transaction* txn) override {
+  void HandleFsSpecificMessage(fidl::IncomingHeaderAndMessage& msg,
+                               fidl::Transaction* txn) override {
     auto pty_device_interface =
         static_cast<fidl::WireServer<fuchsia_hardware_pty::Device>*>(&pty_device_impl_);
     internal::DispatchPtyDeviceMessage(pty_device_interface, msg, txn);

@@ -81,14 +81,14 @@ class NaturalMessageConverter {
 //
 // |message| is always consumed.
 template <typename Payload = cpp17::nullopt_t>
-static auto DecodeTransactionalMessage(::fidl::IncomingMessage&& message)
+static auto DecodeTransactionalMessage(::fidl::IncomingHeaderAndMessage&& message)
     -> std::conditional_t<std::is_same_v<Payload, cpp17::nullopt_t>, ::fitx::result<::fidl::Error>,
                           ::fitx::result<::fidl::Error, Payload>> {
   ZX_DEBUG_ASSERT(message.is_transactional());
   constexpr bool kHasPayload = !std::is_same_v<Payload, cpp17::nullopt_t>;
   const fidl_message_header& header = *message.header();
   auto metadata = ::fidl::WireFormatMetadata::FromTransactionalHeader(header);
-  fidl::IncomingMessage body_message = message.SkipTransactionHeader();
+  fidl::IncomingHeaderAndMessage body_message = message.SkipTransactionHeader();
 
   if constexpr (kHasPayload) {
     // Delegate into the decode logic of the payload.

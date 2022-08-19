@@ -146,13 +146,13 @@ class Server {
   }
 
   template <typename FidlType>
-  static fidl::unstable::DecodedMessage<FidlType> DecodeAs(fidl::IncomingMessage& msg) {
+  static fidl::unstable::DecodedMessage<FidlType> DecodeAs(fidl::IncomingHeaderAndMessage& msg) {
     return fidl::unstable::DecodedMessage<FidlType>(std::move(msg));
   }
 
   static zx_status_t FidlDispatch(void* ctx, fidl_txn_t* txn, fidl_incoming_msg_t* c_msg,
                                   const void* ops) {
-    auto msg = fidl::IncomingMessage::FromEncodedCMessage(c_msg);
+    auto msg = fidl::IncomingHeaderAndMessage::FromEncodedCMessage(c_msg);
     if (!msg.ok()) {
       return msg.status();
     }

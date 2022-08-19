@@ -48,7 +48,8 @@ class BuiltinDevVnode : public fs::Vnode, public fidl::WireServer<fuchsia_io::Di
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  void HandleFsSpecificMessage(fidl::IncomingMessage& msg, fidl::Transaction* txn) override;
+  void HandleFsSpecificMessage(fidl::IncomingHeaderAndMessage& msg,
+                               fidl::Transaction* txn) override;
 
   // fuchsia.io.Node functionality is handled by the vfs, so we just close the connection.
   void GetAttributes(GetAttributesRequestView request,

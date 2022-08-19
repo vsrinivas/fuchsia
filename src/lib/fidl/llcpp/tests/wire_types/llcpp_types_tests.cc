@@ -86,7 +86,7 @@ TEST(LlcppTypesTests, RoundTripTest) {
   HelperExpectPeerValid(channel_1);
 
   // Decode
-  auto incoming = fidl::IncomingMessage::Create(
+  auto incoming = fidl::IncomingHeaderAndMessage::Create(
       encoded_bytes.data(), encoded_bytes.size(), outgoing.handles(),
       outgoing.handle_metadata<fidl::internal::ChannelTransport>(), outgoing.handle_actual());
   ASSERT_EQ(ZX_OK, incoming.status());

@@ -74,7 +74,7 @@ class FakeClientImpl {
 
   fidl::ServerEnd<TestProtocol>& server_end() { return server_end_; }
 
-  fidl::IncomingMessage ReadFromServer() {
+  fidl::IncomingHeaderAndMessage ReadFromServer() {
     return fidl::MessageRead(
         server_end_.channel(),
         fidl::ChannelMessageStorageView{
@@ -98,7 +98,7 @@ class FakeWireEventDispatcher
   FakeWireEventDispatcher() : IncomingEventDispatcher(nullptr) {}
 
  private:
-  fidl::Status DispatchEvent(fidl::IncomingMessage& msg,
+  fidl::Status DispatchEvent(fidl::IncomingHeaderAndMessage& msg,
                              fidl::internal::MessageStorageViewBase* storage_view) override {
     ZX_PANIC("Never used in this test");
   }
@@ -110,7 +110,7 @@ class MockResponseContext : public fidl::internal::ResponseContext {
   MockResponseContext() : fidl::internal::ResponseContext(kTestOrdinal) {}
 
   std::optional<fidl::UnbindInfo> OnRawResult(
-      ::fidl::IncomingMessage&& msg,
+      ::fidl::IncomingHeaderAndMessage&& msg,
       fidl::internal::MessageStorageViewBase* storage_view) override {
     if (msg.ok()) {
       // We never get a response from the server in this test.
@@ -178,7 +178,7 @@ TEST_F(ClientBaseTest, TwoWay) {
   EXPECT_FALSE(context().canceled());
   EXPECT_EQ(0, context().num_errors());
 
-  fidl::IncomingMessage incoming = impl()->ReadFromServer();
+  fidl::IncomingHeaderAndMessage incoming = impl()->ReadFromServer();
   EXPECT_OK(incoming.status());
   EXPECT_EQ(kTestOrdinal, incoming.header()->ordinal);
   EXPECT_NE(0, incoming.header()->txid);
@@ -192,7 +192,7 @@ TEST_F(ClientBaseTest, TwoWayUnbound) {
   controller().Unbind();
   ASSERT_OK(loop().RunUntilIdle());
 
-  fidl::IncomingMessage incoming = impl()->ReadFromServer();
+  fidl::IncomingHeaderAndMessage incoming = impl()->ReadFromServer();
   EXPECT_STATUS(ZX_ERR_PEER_CLOSED, incoming.status());
 
   EXPECT_EQ(0, impl()->GetTransactionCount());
@@ -215,7 +215,7 @@ TEST_F(ClientBaseTest, OneWay) {
   EXPECT_OK(result.status());
   EXPECT_EQ(0, impl()->GetTransactionCount());
 
-  fidl::IncomingMessage incoming = impl()->ReadFromServer();
+  fidl::IncomingHeaderAndMessage incoming = impl()->ReadFromServer();
   EXPECT_OK(incoming.status());
   EXPECT_EQ(kTestOrdinal, incoming.header()->ordinal);
   EXPECT_EQ(0, incoming.header()->txid);
@@ -227,7 +227,7 @@ TEST_F(ClientBaseTest, OneWayUnbound) {
   controller().Unbind();
   ASSERT_OK(loop().RunUntilIdle());
 
-  fidl::IncomingMessage incoming = impl()->ReadFromServer();
+  fidl::IncomingHeaderAndMessage incoming = impl()->ReadFromServer();
   EXPECT_STATUS(ZX_ERR_PEER_CLOSED, incoming.status());
 
   EXPECT_EQ(0, impl()->GetTransactionCount());

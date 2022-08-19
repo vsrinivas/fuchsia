@@ -60,7 +60,7 @@ zx_status_t Vnode::CreateStream(uint32_t stream_options, zx::stream* out_stream)
 
 zx_status_t Vnode::ConnectService(zx::channel channel) { return ZX_ERR_NOT_SUPPORTED; }
 
-void Vnode::HandleFsSpecificMessage(fidl::IncomingMessage& msg, fidl::Transaction* txn) {
+void Vnode::HandleFsSpecificMessage(fidl::IncomingHeaderAndMessage& msg, fidl::Transaction* txn) {
   txn->Close(ZX_ERR_NOT_SUPPORTED);
 }
 

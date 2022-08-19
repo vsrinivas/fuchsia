@@ -84,7 +84,7 @@ namespace test_drivertwoway {
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_drivertwoway::TwoWay>::entries_[] = {
     {
         ::test_drivertwoway::kTwoWay_Add_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
           ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>> decoded{std::move(msg)};
@@ -104,20 +104,20 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
     &entries_[1];
 
 ::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_drivertwoway::TwoWay>::TryDispatch(
-    ::fdf::WireServer<::test_drivertwoway::TwoWay>* impl, ::fidl::IncomingMessage& msg,
+    ::fdf::WireServer<::test_drivertwoway::TwoWay>* impl, ::fidl::IncomingHeaderAndMessage& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, storage_view, txn, entries_, entries_end_);
 }
 
-void fidl::internal::WireServerDispatcher<::test_drivertwoway::TwoWay>::Dispatch(::fdf::WireServer<::test_drivertwoway::TwoWay>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::WireServerDispatcher<::test_drivertwoway::TwoWay>::Dispatch(::fdf::WireServer<::test_drivertwoway::TwoWay>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                  internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
 
 void fdf::WireServer<::test_drivertwoway::TwoWay>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_drivertwoway::TwoWay>::Dispatch(this, std::move(msg), storage_view, txn);
 }

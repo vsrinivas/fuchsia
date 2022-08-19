@@ -106,7 +106,7 @@ void CheckBindDriverReceived(
   uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   fidl_channel_handle_metadata_t handle_metadata[ZX_CHANNEL_MAX_MSG_HANDLES];
-  fidl::IncomingMessage msg = fidl::MessageRead(
+  fidl::IncomingHeaderAndMessage msg = fidl::MessageRead(
       controller.channel(), fidl::ChannelMessageStorageView{
                                 .bytes = fidl::BufferSpan(bytes, std::size(bytes)),
                                 .handles = handles,

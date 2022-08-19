@@ -13,7 +13,7 @@ namespace fidl {
 
 namespace internal {
 
-void ChannelTransaction::Dispatch(fidl::IncomingMessage& msg) {
+void ChannelTransaction::Dispatch(fidl::IncomingHeaderAndMessage& msg) {
   binding_->interface_->dispatch_message(std::move(msg), this, nullptr);
 }
 

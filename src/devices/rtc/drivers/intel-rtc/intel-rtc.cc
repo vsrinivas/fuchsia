@@ -233,7 +233,7 @@ void RtcDevice::Write(WriteRequestView request, WriteCompleter::Sync& completer)
   completer.ReplySuccess();
 }
 
-void RtcDevice::DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn) {
+void RtcDevice::DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn) {
   if (fidl::WireTryDispatch<FidlRtc::Device>(this, msg, &txn) == fidl::DispatchResult::kFound) {
     return;
   }

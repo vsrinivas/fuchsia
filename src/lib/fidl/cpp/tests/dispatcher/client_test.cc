@@ -60,7 +60,7 @@ class NaturalEventDispatcher<TestProtocol>
   using IncomingEventDispatcher<fidl::AsyncEventHandler<TestProtocol>>::IncomingEventDispatcher;
 
  private:
-  ::fidl::Status DispatchEvent(fidl::IncomingMessage& msg,
+  ::fidl::Status DispatchEvent(fidl::IncomingHeaderAndMessage& msg,
                                MessageStorageViewBase* storage_view) override {
     ZX_PANIC("Not used in this test");
   }
@@ -98,7 +98,7 @@ class ClientFixture : public zxtest::Test {
 
   fidl::Endpoints<TestProtocol>& endpoints() { return endpoints_; }
 
-  fidl::IncomingMessage ReadFromServer() {
+  fidl::IncomingHeaderAndMessage ReadFromServer() {
     return fidl::MessageRead(
         endpoints_.server.channel(),
         fidl::ChannelMessageStorageView{

@@ -84,7 +84,8 @@ zx_status_t DevfsVnode::GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::R
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-void DevfsVnode::HandleFsSpecificMessage(fidl::IncomingMessage& msg, fidl::Transaction* txn) {
+void DevfsVnode::HandleFsSpecificMessage(fidl::IncomingHeaderAndMessage& msg,
+                                         fidl::Transaction* txn) {
   ::fidl::DispatchResult dispatch_result =
       fidl::WireTryDispatch<fuchsia_device::Controller>(this, msg, txn);
   if (dispatch_result == ::fidl::DispatchResult::kFound) {

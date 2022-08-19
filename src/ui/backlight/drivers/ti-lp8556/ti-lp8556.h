@@ -88,7 +88,7 @@ class Lp8556Device : public DeviceType,
 
   // Methods required by the ddk mixins
   void DdkRelease();
-  void DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn);
+  void DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn);
 
   zx_status_t GetBacklightState(bool* power, double* brightness);
   zx_status_t SetBacklightState(bool power, double brightness);

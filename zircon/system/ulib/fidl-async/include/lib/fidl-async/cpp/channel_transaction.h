@@ -51,7 +51,7 @@ class ChannelTransaction final : public Transaction {
  private:
   friend fidl::internal::SimpleBinding;
 
-  void Dispatch(fidl::IncomingMessage& msg);
+  void Dispatch(fidl::IncomingHeaderAndMessage& msg);
 
   std::unique_ptr<SimpleBinding> TakeBinding() { return std::move(binding_); }
 

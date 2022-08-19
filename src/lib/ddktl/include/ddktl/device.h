@@ -69,7 +69,7 @@
 // |                            |                                                    |
 // | ddk::Messageable<P>::Mixin | Methods defined by fidl::WireServer<P>             |
 // |                            |                                                    |
-// | ddk::MessageableManual     | zx_status_t DdkMessage(fidl::IncomingMessage&& msg,|
+// | ddk::MessageableManual     | zx_status_t DdkMessage(fidl::IncomingHeaderAndMessage&& msg,|
 // |                            |                        DdkTransaction& txn)        |
 // |                            |                                                    |
 // | ddk::Suspendable           | void DdkSuspend(ddk::SuspendTxn txn)               |
@@ -292,7 +292,8 @@ class MessageableInternal : public fidl::WireServer<Protocol>, public base_mixin
   static zx_status_t Message(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
     fidl::WireDispatch<Protocol>(static_cast<D*>(ctx),
-                                 fidl::IncomingMessage::FromEncodedCMessage(msg), &transaction);
+                                 fidl::IncomingHeaderAndMessage::FromEncodedCMessage(msg),
+                                 &transaction);
     return transaction.Status();
   }
 };
@@ -317,7 +318,8 @@ class MessageableManual : public base_mixin {
  private:
   static zx_status_t Message(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
-    static_cast<D*>(ctx)->DdkMessage(fidl::IncomingMessage::FromEncodedCMessage(msg), transaction);
+    static_cast<D*>(ctx)->DdkMessage(fidl::IncomingHeaderAndMessage::FromEncodedCMessage(msg),
+                                     transaction);
     return transaction.Status();
   }
 };

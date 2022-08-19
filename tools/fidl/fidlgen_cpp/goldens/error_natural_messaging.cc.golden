@@ -81,7 +81,7 @@ void fidl::internal::NaturalCompleterBase<::test_error::Example::Foo>::Reply(con
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_error::Example>::entries_[] = {
     {
         ::test_error::kExample_foo_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_error::ExampleFooRequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -99,13 +99,13 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
 const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_error::Example>::entries_end_ =
     &entries_[1];
 
-void fidl::internal::NaturalServerDispatcher<::test_error::Example>::Dispatch(::fidl::Server<::test_error::Example>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::NaturalServerDispatcher<::test_error::Example>::Dispatch(::fidl::Server<::test_error::Example>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                               internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 
 void fidl::Server<::test_error::Example>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_error::Example>::Dispatch(this, std::move(msg), storage_view, txn);
 }

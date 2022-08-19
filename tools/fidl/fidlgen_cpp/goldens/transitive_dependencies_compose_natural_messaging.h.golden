@@ -185,7 +185,7 @@ class ::fidl::Server<::test_transitivedependenciescompose::Top> : public ::fidl:
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
@@ -194,7 +194,7 @@ class ::fidl::Server<::test_transitivedependenciescompose::Top> : public ::fidl:
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_transitivedependenciescompose::Top> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_transitivedependenciescompose::Top>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_transitivedependenciescompose::Top>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 

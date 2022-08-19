@@ -109,7 +109,7 @@ class ::fidl::Server<::test_handles::SomeProtocol> : public ::fidl::internal::In
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
@@ -118,7 +118,7 @@ class ::fidl::Server<::test_handles::SomeProtocol> : public ::fidl::internal::In
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_handles::SomeProtocol> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_handles::SomeProtocol>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_handles::SomeProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 

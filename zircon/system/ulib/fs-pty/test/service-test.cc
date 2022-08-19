@@ -46,8 +46,9 @@ class TestService : public fs_pty::TtyService<TestConsoleOps, TestConsoleState*>
 
   ~TestService() override = default;
 
-  // From fs_pty::Service.
-  void HandleFsSpecificMessage(fidl::IncomingMessage& msg, fidl::Transaction* txn) override {
+  // From fs_pty::Service
+  void HandleFsSpecificMessage(fidl::IncomingHeaderAndMessage& msg,
+                               fidl::Transaction* txn) override {
     auto* hdr = msg.header();
     state_->last_seen_ordinal.store(hdr->ordinal);
 

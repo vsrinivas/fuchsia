@@ -57,7 +57,7 @@ std::variant<::fidl::Transaction*, std::unique_ptr<::fidl::Transaction>> FromDdk
   return ptr;
 }
 
-void FidlMessenger::Dispatch(fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
+void FidlMessenger::Dispatch(fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn) {
   auto ddk_txn = MakeDdkInternalTransaction(txn);
   fidl_incoming_msg_t c_msg = std::move(msg).ReleaseToEncodedCMessage();
   auto status = message_op_(op_ctx_, &c_msg, ddk_txn.Txn());

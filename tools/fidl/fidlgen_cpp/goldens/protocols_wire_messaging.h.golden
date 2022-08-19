@@ -130,10 +130,10 @@ struct ::fidl::internal::ProtocolDetails<::test_protocols::WithAndWithoutRequest
 template<>
 struct ::fidl::internal::WireServerDispatcher<::test_protocols::WithAndWithoutRequestResponse> final {
   WireServerDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>* impl, ::fidl::IncomingMessage& msg,
+  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>* impl, ::fidl::IncomingHeaderAndMessage& msg,
                                             internal::MessageStorageViewBase* storage_view,
                                             ::fidl::Transaction* txn);
-  static void Dispatch(::fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -1895,7 +1895,7 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::WithAndWithoutRequ
   explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_protocols::WithAndWithoutRequestResponse>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
     ::fidl::Status DispatchEvent(
-        ::fidl::IncomingMessage& msg,
+        ::fidl::IncomingHeaderAndMessage& msg,
         ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
@@ -2212,7 +2212,7 @@ class ::fidl::WireServer<::test_protocols::WithAndWithoutRequestResponse> : publ
 
   private:
   void dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };namespace fidl {
 
@@ -2265,10 +2265,10 @@ struct ::fidl::internal::ProtocolDetails<::test_protocols::WithErrorSyntax> {
 template<>
 struct ::fidl::internal::WireServerDispatcher<::test_protocols::WithErrorSyntax> final {
   WireServerDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_protocols::WithErrorSyntax>* impl, ::fidl::IncomingMessage& msg,
+  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_protocols::WithErrorSyntax>* impl, ::fidl::IncomingHeaderAndMessage& msg,
                                             internal::MessageStorageViewBase* storage_view,
                                             ::fidl::Transaction* txn);
-  static void Dispatch(::fidl::WireServer<::test_protocols::WithErrorSyntax>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::WireServer<::test_protocols::WithErrorSyntax>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -3890,7 +3890,7 @@ class ::fidl::WireServer<::test_protocols::WithErrorSyntax> : public ::fidl::int
 
   private:
   void dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };namespace fidl {
 
@@ -3951,10 +3951,10 @@ struct ::fidl::internal::ProtocolDetails<::test_protocols::ChannelProtocol> {
 template<>
 struct ::fidl::internal::WireServerDispatcher<::test_protocols::ChannelProtocol> final {
   WireServerDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_protocols::ChannelProtocol>* impl, ::fidl::IncomingMessage& msg,
+  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_protocols::ChannelProtocol>* impl, ::fidl::IncomingHeaderAndMessage& msg,
                                             internal::MessageStorageViewBase* storage_view,
                                             ::fidl::Transaction* txn);
-  static void Dispatch(::fidl::WireServer<::test_protocols::ChannelProtocol>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::WireServer<::test_protocols::ChannelProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -5322,7 +5322,7 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::ChannelProtocol> f
   explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_protocols::ChannelProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
     ::fidl::Status DispatchEvent(
-        ::fidl::IncomingMessage& msg,
+        ::fidl::IncomingHeaderAndMessage& msg,
         ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
@@ -5563,7 +5563,7 @@ class ::fidl::WireServer<::test_protocols::ChannelProtocol> : public ::fidl::int
 
   private:
   void dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };namespace fidl {
 
@@ -5611,10 +5611,10 @@ struct ::fidl::internal::ProtocolDetails<::test_protocols::Transitional> {
 template<>
 struct ::fidl::internal::WireServerDispatcher<::test_protocols::Transitional> final {
   WireServerDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_protocols::Transitional>* impl, ::fidl::IncomingMessage& msg,
+  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_protocols::Transitional>* impl, ::fidl::IncomingHeaderAndMessage& msg,
                                             internal::MessageStorageViewBase* storage_view,
                                             ::fidl::Transaction* txn);
-  static void Dispatch(::fidl::WireServer<::test_protocols::Transitional>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::WireServer<::test_protocols::Transitional>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -6294,7 +6294,7 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::Transitional> fina
   explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_protocols::Transitional>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
     ::fidl::Status DispatchEvent(
-        ::fidl::IncomingMessage& msg,
+        ::fidl::IncomingHeaderAndMessage& msg,
         ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
@@ -6421,7 +6421,7 @@ class ::fidl::WireServer<::test_protocols::Transitional> : public ::fidl::intern
 
   private:
   void dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };namespace fidl {
 
@@ -6455,10 +6455,10 @@ struct ::fidl::internal::ProtocolDetails<::test_protocols::DiscoverableProtocol>
 template<>
 struct ::fidl::internal::WireServerDispatcher<::test_protocols::DiscoverableProtocol> final {
   WireServerDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_protocols::DiscoverableProtocol>* impl, ::fidl::IncomingMessage& msg,
+  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_protocols::DiscoverableProtocol>* impl, ::fidl::IncomingHeaderAndMessage& msg,
                                             internal::MessageStorageViewBase* storage_view,
                                             ::fidl::Transaction* txn);
-  static void Dispatch(::fidl::WireServer<::test_protocols::DiscoverableProtocol>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::WireServer<::test_protocols::DiscoverableProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -6718,7 +6718,7 @@ class ::fidl::WireServer<::test_protocols::DiscoverableProtocol> : public ::fidl
 
   private:
   void dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };namespace fidl {
 
@@ -6748,10 +6748,10 @@ struct ::fidl::internal::ProtocolDetails<::test_protocols::AnotherDiscoverablePr
 template<>
 struct ::fidl::internal::WireServerDispatcher<::test_protocols::AnotherDiscoverableProtocol> final {
   WireServerDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_protocols::AnotherDiscoverableProtocol>* impl, ::fidl::IncomingMessage& msg,
+  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_protocols::AnotherDiscoverableProtocol>* impl, ::fidl::IncomingHeaderAndMessage& msg,
                                             internal::MessageStorageViewBase* storage_view,
                                             ::fidl::Transaction* txn);
-  static void Dispatch(::fidl::WireServer<::test_protocols::AnotherDiscoverableProtocol>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::WireServer<::test_protocols::AnotherDiscoverableProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -6873,7 +6873,7 @@ class ::fidl::WireServer<::test_protocols::AnotherDiscoverableProtocol> : public
 
   private:
   void dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };namespace fidl {
 
@@ -6921,10 +6921,10 @@ struct ::fidl::internal::ProtocolDetails<::test_protocols::HandleRightsProtocol>
 template<>
 struct ::fidl::internal::WireServerDispatcher<::test_protocols::HandleRightsProtocol> final {
   WireServerDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_protocols::HandleRightsProtocol>* impl, ::fidl::IncomingMessage& msg,
+  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_protocols::HandleRightsProtocol>* impl, ::fidl::IncomingHeaderAndMessage& msg,
                                             internal::MessageStorageViewBase* storage_view,
                                             ::fidl::Transaction* txn);
-  static void Dispatch(::fidl::WireServer<::test_protocols::HandleRightsProtocol>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::WireServer<::test_protocols::HandleRightsProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -7667,7 +7667,7 @@ class ::fidl::internal::WireEventDispatcher<::test_protocols::HandleRightsProtoc
   explicit WireEventDispatcher(::fidl::internal::WireEventHandlerInterface<::test_protocols::HandleRightsProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
     ::fidl::Status DispatchEvent(
-        ::fidl::IncomingMessage& msg,
+        ::fidl::IncomingHeaderAndMessage& msg,
         ::fidl::internal::MessageStorageViewBase* storage_view) override;
 };
 
@@ -7794,7 +7794,7 @@ class ::fidl::WireServer<::test_protocols::HandleRightsProtocol> : public ::fidl
 
   private:
   void dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };namespace fidl {
 
@@ -7844,10 +7844,10 @@ struct ::fidl::internal::ProtocolDetails<::test_protocols::WithProtocolEnds> {
 template<>
 struct ::fidl::internal::WireServerDispatcher<::test_protocols::WithProtocolEnds> final {
   WireServerDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_protocols::WithProtocolEnds>* impl, ::fidl::IncomingMessage& msg,
+  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_protocols::WithProtocolEnds>* impl, ::fidl::IncomingHeaderAndMessage& msg,
                                             internal::MessageStorageViewBase* storage_view,
                                             ::fidl::Transaction* txn);
-  static void Dispatch(::fidl::WireServer<::test_protocols::WithProtocolEnds>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::WireServer<::test_protocols::WithProtocolEnds>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -9247,7 +9247,7 @@ class ::fidl::WireServer<::test_protocols::WithProtocolEnds> : public ::fidl::in
 
   private:
   void dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };namespace fidl {
 
@@ -9282,10 +9282,10 @@ struct ::fidl::internal::ProtocolDetails<::test_protocols::ManyParameters> {
 template<>
 struct ::fidl::internal::WireServerDispatcher<::test_protocols::ManyParameters> final {
   WireServerDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_protocols::ManyParameters>* impl, ::fidl::IncomingMessage& msg,
+  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_protocols::ManyParameters>* impl, ::fidl::IncomingHeaderAndMessage& msg,
                                             internal::MessageStorageViewBase* storage_view,
                                             ::fidl::Transaction* txn);
-  static void Dispatch(::fidl::WireServer<::test_protocols::ManyParameters>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::WireServer<::test_protocols::ManyParameters>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -9590,7 +9590,7 @@ class ::fidl::WireServer<::test_protocols::ManyParameters> : public ::fidl::inte
 
   private:
   void dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };namespace fidl {
 
@@ -9626,10 +9626,10 @@ struct ::fidl::internal::ProtocolDetails<::test_protocols::MethodWithUnion> {
 template<>
 struct ::fidl::internal::WireServerDispatcher<::test_protocols::MethodWithUnion> final {
   WireServerDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_protocols::MethodWithUnion>* impl, ::fidl::IncomingMessage& msg,
+  static ::fidl::DispatchResult TryDispatch(::fidl::WireServer<::test_protocols::MethodWithUnion>* impl, ::fidl::IncomingHeaderAndMessage& msg,
                                             internal::MessageStorageViewBase* storage_view,
                                             ::fidl::Transaction* txn);
-  static void Dispatch(::fidl::WireServer<::test_protocols::MethodWithUnion>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::WireServer<::test_protocols::MethodWithUnion>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -10145,7 +10145,7 @@ class ::fidl::WireServer<::test_protocols::MethodWithUnion> : public ::fidl::int
 
   private:
   void dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };namespace fidl {
 

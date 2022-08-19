@@ -92,7 +92,7 @@ zx_status_t Device::ConnectToWlanphyImpl(fdf::Channel server_channel) {
   return status;
 }
 
-void Device::DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn) {
+void Device::DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn) {
   DeviceConnector connector(this);
 
   fidl::WireDispatch<fuchsia_wlan_device::Connector>(&connector, std::move(msg), &txn);

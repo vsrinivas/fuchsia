@@ -10,10 +10,10 @@
 template<>
 struct {{ .WireServerDispatcher }} final {
   {{ .WireServerDispatcher.Self }}() = delete;
-  static ::fidl::DispatchResult TryDispatch({{ .WireServer }}* impl, ::fidl::IncomingMessage& msg,
+  static ::fidl::DispatchResult TryDispatch({{ .WireServer }}* impl, ::fidl::IncomingHeaderAndMessage& msg,
                                             internal::MessageStorageViewBase* storage_view,
                                             ::fidl::Transaction* txn);
-  static void Dispatch({{ .WireServer }}* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch({{ .WireServer }}* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -39,7 +39,7 @@ struct {{ .WireServerDispatcher }} final {
 constexpr ::fidl::internal::MethodEntry {{ .WireServerDispatcher.NoLeading }}::entries_[] = {
   {{- range .ClientMethods }}
     { {{ .OrdinalName }},
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         {{- if eq .Transport.Name "Driver" }}
         {{/* |arena| needs to be declared before |decoded| so that |decoded| is destructed first.
@@ -92,7 +92,7 @@ const ::fidl::internal::UnknownInteractionHandlerEntry {{ .WireServerDispatcher.
 {{ end }}
 
 ::fidl::DispatchResult {{ .WireServerDispatcher.NoLeading }}::TryDispatch(
-    {{ .WireServer }}* impl, ::fidl::IncomingMessage& msg,
+    {{ .WireServer }}* impl, ::fidl::IncomingHeaderAndMessage& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
     impl, msg, storage_view, txn, entries_, entries_end_);
@@ -100,7 +100,7 @@ const ::fidl::internal::UnknownInteractionHandlerEntry {{ .WireServerDispatcher.
 
 {{ EnsureNamespace "" }}
 void {{ .WireServerDispatcher.NoLeading }}::Dispatch(
-    {{- .WireServer }}* impl, ::fidl::IncomingMessage&& msg,
+    {{- .WireServer }}* impl, ::fidl::IncomingHeaderAndMessage&& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
   &unknown_interaction_handler_entry_);
@@ -108,7 +108,7 @@ void {{ .WireServerDispatcher.NoLeading }}::Dispatch(
 
 {{- EnsureNamespace "" }}
 void {{ .WireServer.NoLeading }}::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   {{ .WireServerDispatcher }}::Dispatch(this, std::move(msg), storage_view, txn);
 }
@@ -124,7 +124,7 @@ void {{ .WireServer.NoLeading }}::dispatch_message(
 template<>
 struct {{ .NaturalServerDispatcher }} final {
   {{ .NaturalServerDispatcher.Self }}() = delete;
-  static void Dispatch({{ .NaturalServer }}* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch({{ .NaturalServer }}* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -151,7 +151,7 @@ struct {{ .NaturalServerDispatcher }} final {
 constexpr ::fidl::internal::MethodEntry {{ .NaturalServerDispatcher.NoLeading }}::entries_[] = {
   {{- range .ClientMethods }}
     { {{ .OrdinalName }},
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage
             {{- if .HasRequestPayload }}<{{ .RequestPayload }}>{{ end }}(std::move(msg));
@@ -194,14 +194,14 @@ const ::fidl::internal::UnknownInteractionHandlerEntry {{ .NaturalServerDispatch
 
 {{ EnsureNamespace "" }}
 void {{ .NaturalServerDispatcher.NoLeading }}::Dispatch(
-    {{- .NaturalServer }}* impl, ::fidl::IncomingMessage&& msg,
+    {{- .NaturalServer }}* impl, ::fidl::IncomingHeaderAndMessage&& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 
 {{- EnsureNamespace "" }}
 void {{ .NaturalServer.NoLeading }}::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   {{ .NaturalServerDispatcher }}::Dispatch(this, std::move(msg), storage_view, txn);
 }

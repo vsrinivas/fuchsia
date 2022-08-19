@@ -159,7 +159,8 @@ void Directory::Sync(SyncCallback closure) {
       });
 }
 
-void Directory::HandleFsSpecificMessage(fidl::IncomingMessage& msg, fidl::Transaction* txn) {
+void Directory::HandleFsSpecificMessage(fidl::IncomingHeaderAndMessage& msg,
+                                        fidl::Transaction* txn) {
   fidl::WireDispatch<fuchsia_blobfs::Blobfs>(this, std::move(msg), txn);
 }
 

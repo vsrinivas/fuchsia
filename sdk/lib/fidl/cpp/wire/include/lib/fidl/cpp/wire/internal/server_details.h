@@ -52,7 +52,7 @@ class IncomingMessageDispatcher {
   // names which would appear on the subclasses.
   //
   // Always consumes the handles in |msg|.
-  virtual void dispatch_message(::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+  virtual void dispatch_message(::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
                                 internal::MessageStorageViewBase* storage_view) = 0;
 };
 
@@ -65,7 +65,7 @@ struct MethodEntry {
   //
   // The function must consume the handles in |msg|.
   // The function should perform decoding, and return the decoding status.
-  ::fidl::Status (*dispatch)(void* interface, ::fidl::IncomingMessage&& msg,
+  ::fidl::Status (*dispatch)(void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
                              internal::MessageStorageViewBase* storage_view,
                              ::fidl::Transaction* txn);
 };
@@ -90,7 +90,7 @@ struct UnknownInteractionHandlerEntry {
 // The compiler generates an array of MethodEntry for each protocol.
 // The TryDispatch method for each protocol calls this function using the generated entries, which
 // searches through the array using the method ordinal to find the corresponding dispatch function.
-::fidl::DispatchResult TryDispatch(void* impl, ::fidl::IncomingMessage& msg,
+::fidl::DispatchResult TryDispatch(void* impl, ::fidl::IncomingHeaderAndMessage& msg,
                                    fidl::internal::MessageStorageViewBase* storage_view,
                                    ::fidl::Transaction* txn, const MethodEntry* begin,
                                    const MethodEntry* end);
@@ -101,7 +101,7 @@ struct UnknownInteractionHandlerEntry {
 // in |msg| and notifies |txn| of an error. For flexible methods which can be
 // handled, replies (if the method is two-way), closes all the handles in |msg|
 // and then passes off to the unknown interaction handler.
-void Dispatch(void* impl, ::fidl::IncomingMessage& msg,
+void Dispatch(void* impl, ::fidl::IncomingHeaderAndMessage& msg,
               fidl::internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn,
               const MethodEntry* begin, const MethodEntry* end,
               const UnknownInteractionHandlerEntry* unknown_interaction_handler);

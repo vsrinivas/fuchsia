@@ -15,7 +15,7 @@ const UnknownInteractionHandlerEntry UnknownInteractionHandlerEntry::kClosedProt
     .send_reply = nullptr,
 };
 
-::fidl::DispatchResult TryDispatch(void* impl, ::fidl::IncomingMessage& msg,
+::fidl::DispatchResult TryDispatch(void* impl, ::fidl::IncomingHeaderAndMessage& msg,
                                    fidl::internal::MessageStorageViewBase* storage_view,
                                    ::fidl::Transaction* txn, const MethodEntry* begin,
                                    const MethodEntry* end) {
@@ -41,7 +41,7 @@ const UnknownInteractionHandlerEntry UnknownInteractionHandlerEntry::kClosedProt
   return ::fidl::DispatchResult::kNotFound;
 }
 
-void Dispatch(void* impl, ::fidl::IncomingMessage& msg,
+void Dispatch(void* impl, ::fidl::IncomingHeaderAndMessage& msg,
               fidl::internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn,
               const MethodEntry* begin, const MethodEntry* end,
               const UnknownInteractionHandlerEntry* unknown_interaction_handler) {

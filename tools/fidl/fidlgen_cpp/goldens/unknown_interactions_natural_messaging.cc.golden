@@ -864,7 +864,7 @@ namespace test_unknowninteractions {
   }
   ::fidl::Status
   fidl::internal::NaturalEventDispatcher<::test_unknowninteractions::UnknownInteractionsProtocol>::DispatchEvent(
-      ::fidl::IncomingMessage& msg,
+      ::fidl::IncomingHeaderAndMessage& msg,
       ::fidl::internal::MessageStorageViewBase* storage_view) {
     switch (msg.header()->ordinal) {
       case ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictEvent_Ordinal:
@@ -1610,7 +1610,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
 
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsProtocol>::entries_[] = {
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictOneWay_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -1624,7 +1624,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleOneWay_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -1638,7 +1638,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWay_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -1652,7 +1652,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayFields_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -1666,7 +1666,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayUnion_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -1680,7 +1680,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayTable_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -1694,7 +1694,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -1708,7 +1708,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayFieldsErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -1722,7 +1722,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayUnionErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -1736,7 +1736,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_StrictTwoWayTableErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -1750,7 +1750,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWay_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -1764,7 +1764,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayFields_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -1778,7 +1778,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayUnion_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -1792,7 +1792,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayTable_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -1806,7 +1806,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -1820,7 +1820,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -1834,7 +1834,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -1848,7 +1848,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsProtocol_FlexibleTwoWayTableErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -1884,13 +1884,13 @@ const ::fidl::internal::UnknownInteractionHandlerEntry fidl::internal::NaturalSe
 
 
 
-void fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsProtocol>::Dispatch(::fidl::Server<::test_unknowninteractions::UnknownInteractionsProtocol>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsProtocol>::Dispatch(::fidl::Server<::test_unknowninteractions::UnknownInteractionsProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 
 void fidl::Server<::test_unknowninteractions::UnknownInteractionsProtocol>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
@@ -2443,7 +2443,7 @@ namespace test_unknowninteractions {
   }
   ::fidl::Status
   fidl::internal::NaturalEventDispatcher<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::DispatchEvent(
-      ::fidl::IncomingMessage& msg,
+      ::fidl::IncomingHeaderAndMessage& msg,
       ::fidl::internal::MessageStorageViewBase* storage_view) {
     switch (msg.header()->ordinal) {
       case ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictEvent_Ordinal:
@@ -3110,7 +3110,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
 
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::entries_[] = {
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictOneWay_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -3124,7 +3124,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_FlexibleOneWay_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -3138,7 +3138,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWay_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -3152,7 +3152,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayFields_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -3166,7 +3166,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayUnion_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -3180,7 +3180,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayTable_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -3194,7 +3194,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -3208,7 +3208,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -3222,7 +3222,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -3236,7 +3236,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsAjarProtocol_StrictTwoWayTableErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -3270,13 +3270,13 @@ const ::fidl::internal::UnknownInteractionHandlerEntry fidl::internal::NaturalSe
 
 
 
-void fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::Dispatch(::fidl::Server<::test_unknowninteractions::UnknownInteractionsAjarProtocol>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::Dispatch(::fidl::Server<::test_unknowninteractions::UnknownInteractionsAjarProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 
 void fidl::Server<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
@@ -3728,7 +3728,7 @@ namespace test_unknowninteractions {
   }
   ::fidl::Status
   fidl::internal::NaturalEventDispatcher<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::DispatchEvent(
-      ::fidl::IncomingMessage& msg,
+      ::fidl::IncomingHeaderAndMessage& msg,
       ::fidl::internal::MessageStorageViewBase* storage_view) {
     switch (msg.header()->ordinal) {
       case ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictEvent_Ordinal:
@@ -4108,7 +4108,7 @@ void fidl::internal::NaturalCompleterBase<::test_unknowninteractions::UnknownInt
 
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::entries_[] = {
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictOneWay_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -4122,7 +4122,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWay_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -4136,7 +4136,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayFields_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -4150,7 +4150,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayUnion_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -4164,7 +4164,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayTable_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -4178,7 +4178,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -4192,7 +4192,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -4206,7 +4206,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -4220,7 +4220,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsClosedProtocol_StrictTwoWayTableErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
         if (decoded.is_error()) {
@@ -4240,13 +4240,13 @@ const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::t
 
 
 
-void fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::Dispatch(::fidl::Server<::test_unknowninteractions::UnknownInteractionsClosedProtocol>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::Dispatch(::fidl::Server<::test_unknowninteractions::UnknownInteractionsClosedProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 
 void fidl::Server<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }

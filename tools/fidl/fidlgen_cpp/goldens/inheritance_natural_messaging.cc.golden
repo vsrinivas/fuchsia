@@ -81,7 +81,7 @@ void fidl::internal::NaturalCompleterBase<::test_inheritance::Super::Foo>::Reply
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_inheritance::Super>::entries_[] = {
     {
         ::test_inheritance::ksuper_foo_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_inheritance::SuperFooRequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -99,13 +99,13 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
 const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_inheritance::Super>::entries_end_ =
     &entries_[1];
 
-void fidl::internal::NaturalServerDispatcher<::test_inheritance::Super>::Dispatch(::fidl::Server<::test_inheritance::Super>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::NaturalServerDispatcher<::test_inheritance::Super>::Dispatch(::fidl::Server<::test_inheritance::Super>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                   internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 
 void fidl::Server<::test_inheritance::Super>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_inheritance::Super>::Dispatch(this, std::move(msg), storage_view, txn);
 }
@@ -190,7 +190,7 @@ void fidl::internal::NaturalCompleterBase<::test_inheritance::Sub::Foo>::Reply(c
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_inheritance::Sub>::entries_[] = {
     {
         ::test_inheritance::ksub_foo_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_inheritance::SuperFooRequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -208,13 +208,13 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
 const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_inheritance::Sub>::entries_end_ =
     &entries_[1];
 
-void fidl::internal::NaturalServerDispatcher<::test_inheritance::Sub>::Dispatch(::fidl::Server<::test_inheritance::Sub>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::NaturalServerDispatcher<::test_inheritance::Sub>::Dispatch(::fidl::Server<::test_inheritance::Sub>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                 internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 
 void fidl::Server<::test_inheritance::Sub>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_inheritance::Sub>::Dispatch(this, std::move(msg), storage_view, txn);
 }

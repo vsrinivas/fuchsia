@@ -248,8 +248,8 @@ static zx_status_t sysdrv_gpu_message(void* context, fidl_incoming_msg_t* messag
                                       fidl_txn_t* transaction) {
   sysdrv_device_t* device = get_device(context);
   DdkTransaction ddk_transaction(transaction);
-  fidl::WireDispatch<DeviceType>(device, fidl::IncomingMessage::FromEncodedCMessage(message),
-                                 &ddk_transaction);
+  fidl::WireDispatch<DeviceType>(
+      device, fidl::IncomingHeaderAndMessage::FromEncodedCMessage(message), &ddk_transaction);
   return ddk_transaction.Status();
 }
 

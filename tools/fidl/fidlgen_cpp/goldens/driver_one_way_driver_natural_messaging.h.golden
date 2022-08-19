@@ -87,7 +87,7 @@ class ::fdf::Server<::test_driveroneway::OneWay> : public ::fidl::internal::Inco
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 #ifdef __Fuchsia__
@@ -95,7 +95,7 @@ class ::fdf::Server<::test_driveroneway::OneWay> : public ::fidl::internal::Inco
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_driveroneway::OneWay> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fdf::Server<::test_driveroneway::OneWay>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fdf::Server<::test_driveroneway::OneWay>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 

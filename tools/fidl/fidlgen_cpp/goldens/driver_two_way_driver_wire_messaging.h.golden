@@ -48,10 +48,10 @@ struct ::fidl::internal::ProtocolDetails<::test_drivertwoway::TwoWay> {
 template <>
 struct ::fidl::internal::WireServerDispatcher<::test_drivertwoway::TwoWay> final {
   WireServerDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(::fdf::WireServer<::test_drivertwoway::TwoWay>* impl, ::fidl::IncomingMessage& msg,
+  static ::fidl::DispatchResult TryDispatch(::fdf::WireServer<::test_drivertwoway::TwoWay>* impl, ::fidl::IncomingHeaderAndMessage& msg,
                                             internal::MessageStorageViewBase* storage_view,
                                             ::fidl::Transaction* txn);
-  static void Dispatch(::fdf::WireServer<::test_drivertwoway::TwoWay>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fdf::WireServer<::test_drivertwoway::TwoWay>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -440,7 +440,7 @@ class ::fdf::WireServer<::test_drivertwoway::TwoWay> : public ::fidl::internal::
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {

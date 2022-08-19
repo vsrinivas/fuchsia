@@ -176,7 +176,7 @@ TEST(BasicTypesTest, RawChannelCallStruct) {
       .handle_metadata = nullptr,
       .handle_capacity = 0,
   };
-  fidl::IncomingMessage response_message =
+  fidl::IncomingHeaderAndMessage response_message =
       encoded.GetOutgoingMessage().Call(zx::unowned_channel(client.get()), response_storage_view);
   fidl::unstable::DecodedMessage<
       fidl::internal::TransactionalResponse<basictypes::TestInterface::ConsumeSimpleStruct>>
@@ -215,7 +215,7 @@ TEST(BasicTypesTest, RawChannelCallStructWithTimeout) {
       .handle_metadata = nullptr,
       .handle_capacity = 0,
   };
-  fidl::IncomingMessage response_message =
+  fidl::IncomingHeaderAndMessage response_message =
       encoded.GetOutgoingMessage().Call(zx::unowned_channel(client.get()), response_storage_view,
                                         fidl::CallOptions{.deadline = ZX_TIME_INFINITE_PAST});
   fidl::unstable::DecodedMessage<

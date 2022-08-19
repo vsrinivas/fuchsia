@@ -95,7 +95,7 @@ zx_status_t VirtualAudioControlImpl::DdkMessage(void* ctx, fidl_incoming_msg_t* 
   VirtualAudioControlImpl* self = static_cast<VirtualAudioControlImpl*>(ctx);
   DdkTransaction transaction(txn);
   fidl::WireDispatch<fuchsia_virtualaudio::Control>(
-      self, fidl::IncomingMessage::FromEncodedCMessage(msg), &transaction);
+      self, fidl::IncomingHeaderAndMessage::FromEncodedCMessage(msg), &transaction);
   return transaction.Status();
 }
 

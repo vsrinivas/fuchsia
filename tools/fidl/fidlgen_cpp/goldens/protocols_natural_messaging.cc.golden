@@ -212,7 +212,7 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::WithAndWithoutRequestRes
 }
 ::fidl::Status
 fidl::internal::NaturalEventDispatcher<::test_protocols::WithAndWithoutRequestResponse>::DispatchEvent(
-    ::fidl::IncomingMessage& msg,
+    ::fidl::IncomingHeaderAndMessage& msg,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     case ::test_protocols::kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal: {
@@ -322,7 +322,7 @@ void fidl::internal::NaturalCompleterBase<::test_protocols::WithAndWithoutReques
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_protocols::WithAndWithoutRequestResponse>::entries_[] = {
     {
         ::test_protocols::kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
@@ -337,7 +337,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_protocols::kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
@@ -352,7 +352,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_protocols::kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
@@ -367,7 +367,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_protocols::kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocols::WithAndWithoutRequestResponseWithRequestNoResponseRequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -382,7 +382,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_protocols::kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocols::WithAndWithoutRequestResponseWithRequestEmptyResponseRequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -397,7 +397,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_protocols::kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocols::WithAndWithoutRequestResponseWithRequestWithResponseRequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -415,13 +415,13 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
 const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_protocols::WithAndWithoutRequestResponse>::entries_end_ =
     &entries_[6];
 
-void fidl::internal::NaturalServerDispatcher<::test_protocols::WithAndWithoutRequestResponse>::Dispatch(::fidl::Server<::test_protocols::WithAndWithoutRequestResponse>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::NaturalServerDispatcher<::test_protocols::WithAndWithoutRequestResponse>::Dispatch(::fidl::Server<::test_protocols::WithAndWithoutRequestResponse>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                                         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 
 void fidl::Server<::test_protocols::WithAndWithoutRequestResponse>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_protocols::WithAndWithoutRequestResponse>::Dispatch(this, std::move(msg), storage_view, txn);
 }
@@ -619,7 +619,7 @@ void fidl::internal::NaturalCompleterBase<::test_protocols::WithErrorSyntax::Han
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_protocols::WithErrorSyntax>::entries_[] = {
     {
         ::test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
@@ -634,7 +634,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
@@ -649,7 +649,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
@@ -664,7 +664,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_protocols::kWithErrorSyntax_HandleInResult_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
@@ -682,13 +682,13 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
 const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_protocols::WithErrorSyntax>::entries_end_ =
     &entries_[4];
 
-void fidl::internal::NaturalServerDispatcher<::test_protocols::WithErrorSyntax>::Dispatch(::fidl::Server<::test_protocols::WithErrorSyntax>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::NaturalServerDispatcher<::test_protocols::WithErrorSyntax>::Dispatch(::fidl::Server<::test_protocols::WithErrorSyntax>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 
 void fidl::Server<::test_protocols::WithErrorSyntax>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_protocols::WithErrorSyntax>::Dispatch(this, std::move(msg), storage_view, txn);
 }
@@ -852,7 +852,7 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::ChannelProtocol>::Method
 }
 ::fidl::Status
 fidl::internal::NaturalEventDispatcher<::test_protocols::ChannelProtocol>::DispatchEvent(
-    ::fidl::IncomingMessage& msg,
+    ::fidl::IncomingHeaderAndMessage& msg,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     case ::test_protocols::kChannelProtocol_EventA_Ordinal: {
@@ -928,7 +928,7 @@ void fidl::internal::NaturalCompleterBase<::test_protocols::ChannelProtocol::Mut
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_protocols::ChannelProtocol>::entries_[] = {
     {
         ::test_protocols::kChannelProtocol_MethodA_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocols::ChannelProtocolMethodARequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -943,7 +943,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_protocols::kChannelProtocol_MethodB_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocols::ChannelProtocolMethodBRequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -958,7 +958,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_protocols::kChannelProtocol_TakeHandle_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocols::ChannelProtocolTakeHandleRequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -973,7 +973,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_protocols::kChannelProtocol_MutateSocket_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocols::ChannelProtocolMutateSocketRequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -991,13 +991,13 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
 const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_protocols::ChannelProtocol>::entries_end_ =
     &entries_[4];
 
-void fidl::internal::NaturalServerDispatcher<::test_protocols::ChannelProtocol>::Dispatch(::fidl::Server<::test_protocols::ChannelProtocol>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::NaturalServerDispatcher<::test_protocols::ChannelProtocol>::Dispatch(::fidl::Server<::test_protocols::ChannelProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 
 void fidl::Server<::test_protocols::ChannelProtocol>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_protocols::ChannelProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
@@ -1093,7 +1093,7 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::Transitional>::OneWay(co
 }
 ::fidl::Status
 fidl::internal::NaturalEventDispatcher<::test_protocols::Transitional>::DispatchEvent(
-    ::fidl::IncomingMessage& msg,
+    ::fidl::IncomingHeaderAndMessage& msg,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     case ::test_protocols::kTransitional_Event_Ordinal: {
@@ -1153,7 +1153,7 @@ void fidl::internal::NaturalCompleterBase<::test_protocols::Transitional::Reques
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_protocols::Transitional>::entries_[] = {
     {
         ::test_protocols::kTransitional_Request_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocols::TransitionalRequestRequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -1168,7 +1168,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_protocols::kTransitional_OneWay_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocols::TransitionalOneWayRequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -1186,13 +1186,13 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
 const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_protocols::Transitional>::entries_end_ =
     &entries_[2];
 
-void fidl::internal::NaturalServerDispatcher<::test_protocols::Transitional>::Dispatch(::fidl::Server<::test_protocols::Transitional>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::NaturalServerDispatcher<::test_protocols::Transitional>::Dispatch(::fidl::Server<::test_protocols::Transitional>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                        internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 
 void fidl::Server<::test_protocols::Transitional>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_protocols::Transitional>::Dispatch(this, std::move(msg), storage_view, txn);
 }
@@ -1255,7 +1255,7 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::DiscoverableProtocol>::M
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_protocols::DiscoverableProtocol>::entries_[] = {
     {
         ::test_protocols::kDiscoverableProtocol_Method_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage(std::move(msg));
           if (decoded.is_error()) {
@@ -1273,13 +1273,13 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
 const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_protocols::DiscoverableProtocol>::entries_end_ =
     &entries_[1];
 
-void fidl::internal::NaturalServerDispatcher<::test_protocols::DiscoverableProtocol>::Dispatch(::fidl::Server<::test_protocols::DiscoverableProtocol>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::NaturalServerDispatcher<::test_protocols::DiscoverableProtocol>::Dispatch(::fidl::Server<::test_protocols::DiscoverableProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                                internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 
 void fidl::Server<::test_protocols::DiscoverableProtocol>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_protocols::DiscoverableProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
@@ -1316,13 +1316,13 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
 const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_protocols::AnotherDiscoverableProtocol>::entries_end_ =
     &entries_[0];
 
-void fidl::internal::NaturalServerDispatcher<::test_protocols::AnotherDiscoverableProtocol>::Dispatch(::fidl::Server<::test_protocols::AnotherDiscoverableProtocol>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::NaturalServerDispatcher<::test_protocols::AnotherDiscoverableProtocol>::Dispatch(::fidl::Server<::test_protocols::AnotherDiscoverableProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                                       internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 
 void fidl::Server<::test_protocols::AnotherDiscoverableProtocol>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_protocols::AnotherDiscoverableProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
@@ -1418,7 +1418,7 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::HandleRightsProtocol>::N
 }
 ::fidl::Status
 fidl::internal::NaturalEventDispatcher<::test_protocols::HandleRightsProtocol>::DispatchEvent(
-    ::fidl::IncomingMessage& msg,
+    ::fidl::IncomingHeaderAndMessage& msg,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     case ::test_protocols::kHandleRightsProtocol_AnEvent_Ordinal: {
@@ -1478,7 +1478,7 @@ void fidl::internal::NaturalCompleterBase<::test_protocols::HandleRightsProtocol
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_protocols::HandleRightsProtocol>::entries_[] = {
     {
         ::test_protocols::kHandleRightsProtocol_NoResponseMethod_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocols::HandleRightsProtocolNoResponseMethodRequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -1493,7 +1493,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_protocols::kHandleRightsProtocol_ResponseMethod_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocols::HandleRightsProtocolResponseMethodRequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -1511,13 +1511,13 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
 const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_protocols::HandleRightsProtocol>::entries_end_ =
     &entries_[2];
 
-void fidl::internal::NaturalServerDispatcher<::test_protocols::HandleRightsProtocol>::Dispatch(::fidl::Server<::test_protocols::HandleRightsProtocol>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::NaturalServerDispatcher<::test_protocols::HandleRightsProtocol>::Dispatch(::fidl::Server<::test_protocols::HandleRightsProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                                internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 
 void fidl::Server<::test_protocols::HandleRightsProtocol>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_protocols::HandleRightsProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
@@ -1688,7 +1688,7 @@ void fidl::internal::NaturalCompleterBase<::test_protocols::WithProtocolEnds::St
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_protocols::WithProtocolEnds>::entries_[] = {
     {
         ::test_protocols::kWithProtocolEnds_ClientEnds_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocols::WithProtocolEndsClientEndsRequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -1703,7 +1703,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_protocols::kWithProtocolEnds_ServerEnds_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocols::WithProtocolEndsServerEndsRequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -1718,7 +1718,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_protocols::kWithProtocolEnds_StructContainingEnds_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocols::WithProtocolEndsStructContainingEndsRequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -1736,13 +1736,13 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
 const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_protocols::WithProtocolEnds>::entries_end_ =
     &entries_[3];
 
-void fidl::internal::NaturalServerDispatcher<::test_protocols::WithProtocolEnds>::Dispatch(::fidl::Server<::test_protocols::WithProtocolEnds>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::NaturalServerDispatcher<::test_protocols::WithProtocolEnds>::Dispatch(::fidl::Server<::test_protocols::WithProtocolEnds>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 
 void fidl::Server<::test_protocols::WithProtocolEnds>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_protocols::WithProtocolEnds>::Dispatch(this, std::move(msg), storage_view, txn);
 }
@@ -1810,7 +1810,7 @@ fidl::internal::NaturalSyncClientImpl<::test_protocols::ManyParameters>::Fifteen
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_protocols::ManyParameters>::entries_[] = {
     {
         ::test_protocols::kManyParameters_Fifteen_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocols::ManyParametersFifteenRequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -1828,13 +1828,13 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
 const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_protocols::ManyParameters>::entries_end_ =
     &entries_[1];
 
-void fidl::internal::NaturalServerDispatcher<::test_protocols::ManyParameters>::Dispatch(::fidl::Server<::test_protocols::ManyParameters>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::NaturalServerDispatcher<::test_protocols::ManyParameters>::Dispatch(::fidl::Server<::test_protocols::ManyParameters>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                          internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 
 void fidl::Server<::test_protocols::ManyParameters>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_protocols::ManyParameters>::Dispatch(this, std::move(msg), storage_view, txn);
 }
@@ -1919,7 +1919,7 @@ void fidl::internal::NaturalCompleterBase<::test_protocols::MethodWithUnion::Uni
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_protocols::MethodWithUnion>::entries_[] = {
     {
         ::test_protocols::kMethodWithUnion_UnionMethod_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_protocols::MethodWithUnionUnionMethodRequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -1937,13 +1937,13 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
 const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_protocols::MethodWithUnion>::entries_end_ =
     &entries_[1];
 
-void fidl::internal::NaturalServerDispatcher<::test_protocols::MethodWithUnion>::Dispatch(::fidl::Server<::test_protocols::MethodWithUnion>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::NaturalServerDispatcher<::test_protocols::MethodWithUnion>::Dispatch(::fidl::Server<::test_protocols::MethodWithUnion>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 
 void fidl::Server<::test_protocols::MethodWithUnion>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_protocols::MethodWithUnion>::Dispatch(this, std::move(msg), storage_view, txn);
 }

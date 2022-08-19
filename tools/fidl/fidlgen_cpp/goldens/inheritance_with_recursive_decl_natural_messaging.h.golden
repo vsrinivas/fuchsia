@@ -138,7 +138,7 @@ class ::fidl::Server<::test_inheritancewithrecursivedecl::Parent> : public ::fid
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
@@ -147,7 +147,7 @@ class ::fidl::Server<::test_inheritancewithrecursivedecl::Parent> : public ::fid
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_inheritancewithrecursivedecl::Parent> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_inheritancewithrecursivedecl::Parent>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_inheritancewithrecursivedecl::Parent>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -310,7 +310,7 @@ class ::fidl::Server<::test_inheritancewithrecursivedecl::Child> : public ::fidl
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
@@ -319,7 +319,7 @@ class ::fidl::Server<::test_inheritancewithrecursivedecl::Child> : public ::fidl
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_inheritancewithrecursivedecl::Child> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_inheritancewithrecursivedecl::Child>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_inheritancewithrecursivedecl::Child>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 

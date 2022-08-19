@@ -263,7 +263,7 @@ class ::fidl::Server<::test_requestflexibleenvelope::Protocol> : public ::fidl::
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
@@ -272,7 +272,7 @@ class ::fidl::Server<::test_requestflexibleenvelope::Protocol> : public ::fidl::
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_requestflexibleenvelope::Protocol> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_requestflexibleenvelope::Protocol>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_requestflexibleenvelope::Protocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 

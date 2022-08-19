@@ -44,7 +44,7 @@ class FakeCpuDevice : TestDeviceType,
   static zx_status_t MessageOp(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   zx::channel& GetMessengerChannel() { return messenger_.local(); }
 
-  void DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn);
+  void DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn);
   void DdkRelease() {}
 
   zx_status_t DdkSetPerformanceState(uint32_t requested_state, uint32_t* out_state) {
@@ -93,12 +93,12 @@ zx_status_t FakeCpuDevice::Init() {
 
 zx_status_t FakeCpuDevice::MessageOp(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  static_cast<FakeCpuDevice*>(ctx)->DdkMessage(fidl::IncomingMessage::FromEncodedCMessage(msg),
-                                               transaction);
+  static_cast<FakeCpuDevice*>(ctx)->DdkMessage(
+      fidl::IncomingHeaderAndMessage::FromEncodedCMessage(msg), transaction);
   return transaction.Status();
 }
 
-void FakeCpuDevice::DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn) {
+void FakeCpuDevice::DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn) {
   if (fidl::WireTryDispatch<cpuctrl::Device>(this, msg, &txn) == ::fidl::DispatchResult::kFound) {
     return;
   }

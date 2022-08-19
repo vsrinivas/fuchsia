@@ -22,7 +22,7 @@ namespace internal {
 // If a terminal error occurred which warrants unbinding, |out_maybe_unbind|
 // will be populated with a reason if not nullptr.
 template <typename FidlMethod>
-auto DecodeResponseAndFoldError(::fidl::IncomingMessage&& incoming,
+auto DecodeResponseAndFoldError(::fidl::IncomingHeaderAndMessage&& incoming,
                                 ::std::optional<::fidl::UnbindInfo>* out_maybe_unbind) {
   using ResultType = typename FidlMethod::Protocol::Transport::template Result<FidlMethod>;
   using NaturalResponse = ::fidl::Response<FidlMethod>;
@@ -118,7 +118,7 @@ ResponseContext* MakeResponseContext(uint64_t ordinal,
 
    private:
     std::optional<::fidl::UnbindInfo> OnRawResult(
-        ::fidl::IncomingMessage&& result,
+        ::fidl::IncomingHeaderAndMessage&& result,
         ::fidl::internal::MessageStorageViewBase* storage_view) override {
       std::optional<fidl::UnbindInfo> maybe_unbind;
       ResultType value = DecodeResponseAndFoldError<FidlMethod>(std::move(result), &maybe_unbind);

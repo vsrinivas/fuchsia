@@ -1215,7 +1215,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
 
   ::fidl::Status
   fidl::internal::WireEventDispatcher<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::DispatchEvent(
-      ::fidl::IncomingMessage& msg,
+      ::fidl::IncomingHeaderAndMessage& msg,
       ::fidl::internal::MessageStorageViewBase* storage_view) {
     switch (msg.header()->ordinal) {
       default:
@@ -1245,7 +1245,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
 
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::entries_[] = {
     { ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictOneWay_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -1258,7 +1258,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleOneWay_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -1271,7 +1271,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWay_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -1284,7 +1284,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWayFields_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -1297,7 +1297,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWayUnion_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -1310,7 +1310,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWayTable_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -1323,7 +1323,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWayErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -1336,7 +1336,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWayFieldsErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -1349,7 +1349,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWayUnionErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -1362,7 +1362,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_StrictTwoWayTableErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -1375,7 +1375,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWay_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -1388,7 +1388,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -1401,7 +1401,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -1414,7 +1414,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWayTable_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -1427,7 +1427,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -1440,7 +1440,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -1453,7 +1453,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -1466,7 +1466,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -1500,7 +1500,7 @@ const ::fidl::internal::UnknownInteractionHandlerEntry fidl::internal::WireServe
 
 
 ::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::TryDispatch(
-    ::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>* impl, ::fidl::IncomingMessage& msg,
+    ::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>* impl, ::fidl::IncomingHeaderAndMessage& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
     impl, msg, storage_view, txn, entries_, entries_end_);
@@ -1508,14 +1508,14 @@ const ::fidl::internal::UnknownInteractionHandlerEntry fidl::internal::WireServe
 
 
 
-void fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::Dispatch(::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::Dispatch(::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
   &unknown_interaction_handler_entry_);
 }
 
 void fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
@@ -2894,7 +2894,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDri
 
   ::fidl::Status
   fidl::internal::WireEventDispatcher<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::DispatchEvent(
-      ::fidl::IncomingMessage& msg,
+      ::fidl::IncomingHeaderAndMessage& msg,
       ::fidl::internal::MessageStorageViewBase* storage_view) {
     switch (msg.header()->ordinal) {
       default:
@@ -2924,7 +2924,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDri
 
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::entries_[] = {
     { ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictOneWay_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -2937,7 +2937,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_FlexibleOneWay_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -2950,7 +2950,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWay_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -2963,7 +2963,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWayFields_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -2976,7 +2976,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWayUnion_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -2989,7 +2989,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWayTable_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -3002,7 +3002,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -3015,7 +3015,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWayFieldsErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -3028,7 +3028,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWayUnionErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -3041,7 +3041,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsAjarDriverProtocol_StrictTwoWayTableErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -3073,7 +3073,7 @@ const ::fidl::internal::UnknownInteractionHandlerEntry fidl::internal::WireServe
 
 
 ::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::TryDispatch(
-    ::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>* impl, ::fidl::IncomingMessage& msg,
+    ::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>* impl, ::fidl::IncomingHeaderAndMessage& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
     impl, msg, storage_view, txn, entries_, entries_end_);
@@ -3081,14 +3081,14 @@ const ::fidl::internal::UnknownInteractionHandlerEntry fidl::internal::WireServe
 
 
 
-void fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::Dispatch(::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::Dispatch(::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
   &unknown_interaction_handler_entry_);
 }
 
 void fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }
@@ -4069,7 +4069,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedD
 
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>::entries_[] = {
     { ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictOneWay_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -4082,7 +4082,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWay_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -4095,7 +4095,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWayFields_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -4108,7 +4108,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWayUnion_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -4121,7 +4121,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWayTable_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -4134,7 +4134,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -4147,7 +4147,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWayFieldsErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -4160,7 +4160,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWayUnionErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -4173,7 +4173,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
       },
     },
     { ::test_unknowninteractions::kUnknownInteractionsClosedDriverProtocol_StrictTwoWayTableErr_Ordinal,
-      [](void* interface, ::fidl::IncomingMessage&& msg,
+      [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
         internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
         
         fdf::Arena arena(::fidl::internal::TakeDriverArenaFromStorage(storage_view));
@@ -4191,7 +4191,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
     &entries_[9];
 
 ::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>::TryDispatch(
-    ::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>* impl, ::fidl::IncomingMessage& msg,
+    ::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>* impl, ::fidl::IncomingHeaderAndMessage& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
     impl, msg, storage_view, txn, entries_, entries_end_);
@@ -4199,14 +4199,14 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 
 
 
-void fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>::Dispatch(::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>::Dispatch(::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
   &unknown_interaction_handler_entry_);
 }
 
 void fdf::WireServer<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }

@@ -360,7 +360,7 @@ int TapDevice::Thread() {
 
       TapDeviceTransaction txn(this,
                                reinterpret_cast<const fidl_message_header_t*>(msg.bytes)->txid);
-      fidl::WireDispatch(&server, fidl::IncomingMessage::FromEncodedCMessage(&msg), &txn);
+      fidl::WireDispatch(&server, fidl::IncomingHeaderAndMessage::FromEncodedCMessage(&msg), &txn);
     }
     if (pending & ZX_CHANNEL_PEER_CLOSED) {
       ethertap_trace("channel closed (peer)\n");

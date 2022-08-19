@@ -105,7 +105,7 @@ struct CallOptions {
   internal::OutgoingTransportContext outgoing_transport_context;
 };
 
-class IncomingMessage;
+class IncomingHeaderAndMessage;
 
 namespace internal {
 
@@ -205,8 +205,8 @@ using AnyTransportWaiter =
     fit::pinned_inline_any<TransportWaiter, /* Reserve = */ 256, /* Align = */ 16>;
 
 // Function receiving notification of successful waits on a TransportWaiter.
-using TransportWaitSuccessHandler =
-    fit::inline_function<void(fidl::IncomingMessage&, MessageStorageViewBase* storage_view)>;
+using TransportWaitSuccessHandler = fit::inline_function<void(
+    fidl::IncomingHeaderAndMessage&, MessageStorageViewBase* storage_view)>;
 
 // Function receiving notification of failing waits on a TransportWaiter.
 using TransportWaitFailureHandler = fit::inline_function<void(UnbindInfo)>;

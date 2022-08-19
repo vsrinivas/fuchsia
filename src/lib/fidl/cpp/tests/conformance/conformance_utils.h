@@ -90,10 +90,10 @@ void DecodeSuccess(fidl::internal::WireFormatVersion wire_format_version,
         .rights = handle_infos[i].rights,
     };
   }
-  auto message = fidl::IncomingMessage::Create<fidl::internal::ChannelTransport>(
+  auto message = fidl::IncomingHeaderAndMessage::Create<fidl::internal::ChannelTransport>(
       bytes.data(), static_cast<uint32_t>(bytes.size()), handles.get(), handle_metadata.get(),
       static_cast<uint32_t>(handle_infos.size()),
-      fidl::IncomingMessage::kSkipMessageHeaderValidation);
+      fidl::IncomingHeaderAndMessage::kSkipMessageHeaderValidation);
   auto result =
       fidl::Decode<FidlType>(std::move(message), CreateWireFormatMetadata(wire_format_version));
   ASSERT_TRUE(result.is_ok(), "Error decoding: %s",
@@ -122,10 +122,10 @@ void DecodeFailure(fidl::internal::WireFormatVersion wire_format_version,
         .rights = handle_infos[i].rights,
     };
   }
-  auto message = fidl::IncomingMessage::Create<fidl::internal::ChannelTransport>(
+  auto message = fidl::IncomingHeaderAndMessage::Create<fidl::internal::ChannelTransport>(
       bytes.data(), static_cast<uint32_t>(bytes.size()), handles.get(), handle_metadata.get(),
       static_cast<uint32_t>(handle_infos.size()),
-      fidl::IncomingMessage::kSkipMessageHeaderValidation);
+      fidl::IncomingHeaderAndMessage::kSkipMessageHeaderValidation);
   auto result =
       fidl::Decode<FidlType>(std::move(message), CreateWireFormatMetadata(wire_format_version));
   ASSERT_TRUE(result.is_error());

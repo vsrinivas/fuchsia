@@ -64,7 +64,7 @@ fidl::internal::NaturalSyncClientImpl<::test_inheritancewithrecursivedecl::Paren
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_inheritancewithrecursivedecl::Parent>::entries_[] = {
     {
         ::test_inheritancewithrecursivedecl::kParent_First_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_inheritancewithrecursivedecl::ParentFirstRequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -82,13 +82,13 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
 const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_inheritancewithrecursivedecl::Parent>::entries_end_ =
     &entries_[1];
 
-void fidl::internal::NaturalServerDispatcher<::test_inheritancewithrecursivedecl::Parent>::Dispatch(::fidl::Server<::test_inheritancewithrecursivedecl::Parent>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::NaturalServerDispatcher<::test_inheritancewithrecursivedecl::Parent>::Dispatch(::fidl::Server<::test_inheritancewithrecursivedecl::Parent>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                                     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 
 void fidl::Server<::test_inheritancewithrecursivedecl::Parent>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_inheritancewithrecursivedecl::Parent>::Dispatch(this, std::move(msg), storage_view, txn);
 }
@@ -183,7 +183,7 @@ fidl::internal::NaturalSyncClientImpl<::test_inheritancewithrecursivedecl::Child
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_inheritancewithrecursivedecl::Child>::entries_[] = {
     {
         ::test_inheritancewithrecursivedecl::kChild_First_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_inheritancewithrecursivedecl::ParentFirstRequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -198,7 +198,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_inheritancewithrecursivedecl::kChild_Second_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_inheritancewithrecursivedecl::ChildSecondRequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -216,13 +216,13 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
 const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_inheritancewithrecursivedecl::Child>::entries_end_ =
     &entries_[2];
 
-void fidl::internal::NaturalServerDispatcher<::test_inheritancewithrecursivedecl::Child>::Dispatch(::fidl::Server<::test_inheritancewithrecursivedecl::Child>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::NaturalServerDispatcher<::test_inheritancewithrecursivedecl::Child>::Dispatch(::fidl::Server<::test_inheritancewithrecursivedecl::Child>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                                    internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 
 void fidl::Server<::test_inheritancewithrecursivedecl::Child>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_inheritancewithrecursivedecl::Child>::Dispatch(this, std::move(msg), storage_view, txn);
 }

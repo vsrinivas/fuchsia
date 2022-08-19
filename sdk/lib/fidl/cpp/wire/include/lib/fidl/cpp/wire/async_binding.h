@@ -137,8 +137,9 @@ class AsyncBinding : public std::enable_shared_from_this<AsyncBinding> {
   }
 
   // Common message handling entrypoint shared by both client and server bindings.
-  void MessageHandler(fidl::IncomingMessage& msg, internal::MessageStorageViewBase* storage_view)
-      __TA_EXCLUDES(thread_checker_) __TA_EXCLUDES(lock_);
+  void MessageHandler(fidl::IncomingHeaderAndMessage& msg,
+                      internal::MessageStorageViewBase* storage_view) __TA_EXCLUDES(thread_checker_)
+      __TA_EXCLUDES(lock_);
 
   void WaitFailureHandler(UnbindInfo info) __TA_EXCLUDES(thread_checker_) __TA_EXCLUDES(lock_);
 
@@ -155,7 +156,7 @@ class AsyncBinding : public std::enable_shared_from_this<AsyncBinding> {
   //
   // In other cases (e.g. unknown message, epitaph), |msg| is not consumed.
   //
-  // The caller should simply ignore the |fidl::IncomingMessage| object once
+  // The caller should simply ignore the |fidl::IncomingHeaderAndMessage| object once
   // it is passed to this function, letting RAII clean up handles as needed.
   //
   // ## Return value
@@ -166,7 +167,7 @@ class AsyncBinding : public std::enable_shared_from_this<AsyncBinding> {
   //
   // If `*next_wait_begun_early` is set, the calling code no longer has ownership of
   // this |AsyncBinding| object and so must not access its state.
-  virtual std::optional<DispatchError> Dispatch(fidl::IncomingMessage& msg,
+  virtual std::optional<DispatchError> Dispatch(fidl::IncomingHeaderAndMessage& msg,
                                                 bool* next_wait_begun_early,
                                                 internal::MessageStorageViewBase* storage_view)
       __TA_REQUIRES(thread_checker_) = 0;
@@ -354,7 +355,8 @@ class AsyncServerBinding : public AsyncBinding {
     return std::static_pointer_cast<AsyncServerBinding>(AsyncBinding::shared_from_this());
   }
 
-  std::optional<DispatchError> Dispatch(fidl::IncomingMessage& msg, bool* next_wait_begun_early,
+  std::optional<DispatchError> Dispatch(fidl::IncomingHeaderAndMessage& msg,
+                                        bool* next_wait_begun_early,
                                         internal::MessageStorageViewBase* storage_view) override;
 
   // Start closing the server connection with an |epitaph|.
@@ -423,7 +425,7 @@ class AsyncClientBinding final : public AsyncBinding {
                      std::shared_ptr<ClientBase> client, AsyncEventHandler* error_handler,
                      AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy);
 
-  std::optional<DispatchError> Dispatch(fidl::IncomingMessage& msg, bool* binding_released,
+  std::optional<DispatchError> Dispatch(fidl::IncomingHeaderAndMessage& msg, bool* binding_released,
                                         internal::MessageStorageViewBase* storage_view) override;
 
   void FinishTeardown(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info) override;

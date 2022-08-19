@@ -38,10 +38,10 @@ struct ::fidl::internal::ProtocolDetails<::test_handles::DriverProtocol> {
 template <>
 struct ::fidl::internal::WireServerDispatcher<::test_handles::DriverProtocol> final {
   WireServerDispatcher() = delete;
-  static ::fidl::DispatchResult TryDispatch(::fdf::WireServer<::test_handles::DriverProtocol>* impl, ::fidl::IncomingMessage& msg,
+  static ::fidl::DispatchResult TryDispatch(::fdf::WireServer<::test_handles::DriverProtocol>* impl, ::fidl::IncomingHeaderAndMessage& msg,
                                             internal::MessageStorageViewBase* storage_view,
                                             ::fidl::Transaction* txn);
-  static void Dispatch(::fdf::WireServer<::test_handles::DriverProtocol>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fdf::WireServer<::test_handles::DriverProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -104,7 +104,7 @@ class ::fdf::WireServer<::test_handles::DriverProtocol> : public ::fidl::interna
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 namespace fidl {

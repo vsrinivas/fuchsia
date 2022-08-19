@@ -185,7 +185,7 @@ class ::fidl::Server<::test_foreigntypeinresponseusedthroughcompose::Top> : publ
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
@@ -194,7 +194,7 @@ class ::fidl::Server<::test_foreigntypeinresponseusedthroughcompose::Top> : publ
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_foreigntypeinresponseusedthroughcompose::Top> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_foreigntypeinresponseusedthroughcompose::Top>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_foreigntypeinresponseusedthroughcompose::Top>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 

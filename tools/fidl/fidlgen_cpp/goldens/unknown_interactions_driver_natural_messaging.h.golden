@@ -892,7 +892,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_unknowninteractions::Unkno
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsDriverProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
   ::fidl::Status DispatchEvent(
-      ::fidl::IncomingMessage& msg,
+      ::fidl::IncomingHeaderAndMessage& msg,
       internal::MessageStorageViewBase* storage_view) override;
 };
 
@@ -1413,7 +1413,7 @@ class ::fdf::Server<::test_unknowninteractions::UnknownInteractionsDriverProtoco
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 #ifdef __Fuchsia__
@@ -1421,7 +1421,7 @@ class ::fdf::Server<::test_unknowninteractions::UnknownInteractionsDriverProtoco
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsDriverProtocol> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fdf::Server<::test_unknowninteractions::UnknownInteractionsDriverProtocol>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fdf::Server<::test_unknowninteractions::UnknownInteractionsDriverProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -1888,7 +1888,7 @@ class ::fidl::internal::NaturalEventDispatcher<::test_unknowninteractions::Unkno
   explicit NaturalEventDispatcher(::fidl::internal::NaturalEventHandlerInterface<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>* event_handler)
       : IncomingEventDispatcher(event_handler) {}
   ::fidl::Status DispatchEvent(
-      ::fidl::IncomingMessage& msg,
+      ::fidl::IncomingHeaderAndMessage& msg,
       internal::MessageStorageViewBase* storage_view) override;
 };
 
@@ -2177,7 +2177,7 @@ class ::fdf::Server<::test_unknowninteractions::UnknownInteractionsAjarDriverPro
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 #ifdef __Fuchsia__
@@ -2185,7 +2185,7 @@ class ::fdf::Server<::test_unknowninteractions::UnknownInteractionsAjarDriverPro
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fdf::Server<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fdf::Server<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -2916,7 +2916,7 @@ class ::fdf::Server<::test_unknowninteractions::UnknownInteractionsClosedDriverP
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 #ifdef __Fuchsia__
@@ -2924,7 +2924,7 @@ class ::fdf::Server<::test_unknowninteractions::UnknownInteractionsClosedDriverP
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fdf::Server<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fdf::Server<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 

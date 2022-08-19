@@ -38,7 +38,7 @@ zx_status_t BlockDevice::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
   }
 }
 
-void BlockDevice::DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn) {
+void BlockDevice::DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn) {
   fidl_incoming_msg_t message = std::move(msg).ReleaseToEncodedCMessage();
   if (parent_volume_protocol_.is_valid()) {
     txn.set_status(

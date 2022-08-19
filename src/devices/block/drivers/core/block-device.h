@@ -76,7 +76,7 @@ class BlockDevice : public BlockDeviceType,
 
   void DdkRelease();
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_protocol);
-  void DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn);
+  void DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn);
   zx_status_t DdkRead(void* buf, size_t buf_len, zx_off_t off, size_t* actual);
   zx_status_t DdkWrite(const void* buf, size_t buf_len, zx_off_t off, size_t* actual);
   zx_off_t DdkGetSize();

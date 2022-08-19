@@ -75,7 +75,7 @@ enum class DispatchResult;
 // The caller does not have to ensure |msg| has a |ZX_OK| status. It is idiomatic to pass a |msg|
 // with potential errors; any error would be funneled through |InternalError| on the |txn|.
 template <typename FidlProtocol>
-void WireDispatch(fidl::WireServer<FidlProtocol>* impl, fidl::IncomingMessage&& msg,
+void WireDispatch(fidl::WireServer<FidlProtocol>* impl, fidl::IncomingHeaderAndMessage&& msg,
                   fidl::Transaction* txn) {
   fidl::internal::WireServerDispatcher<FidlProtocol>::Dispatch(impl, std::move(msg), nullptr, txn);
 }
@@ -94,7 +94,7 @@ void WireDispatch(fidl::WireServer<FidlProtocol>* impl, fidl::IncomingMessage&& 
 // with potential errors; any error would be funneled through |InternalError| on the |txn|.
 template <typename FidlProtocol>
 fidl::DispatchResult WireTryDispatch(fidl::WireServer<FidlProtocol>* impl,
-                                     fidl::IncomingMessage& msg, fidl::Transaction* txn) {
+                                     fidl::IncomingHeaderAndMessage& msg, fidl::Transaction* txn) {
   FIDL_EMIT_STATIC_ASSERT_ERROR_FOR_TRY_DISPATCH(FidlProtocol);
   return fidl::internal::WireServerDispatcher<FidlProtocol>::TryDispatch(impl, msg, nullptr, txn);
 }

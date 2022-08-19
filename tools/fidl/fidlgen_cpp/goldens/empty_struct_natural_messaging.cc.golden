@@ -92,7 +92,7 @@ fidl::internal::NaturalSyncClientImpl<::test_emptystruct::EmptyProtocol>::Send(c
 }
 ::fidl::Status
 fidl::internal::NaturalEventDispatcher<::test_emptystruct::EmptyProtocol>::DispatchEvent(
-    ::fidl::IncomingMessage& msg,
+    ::fidl::IncomingHeaderAndMessage& msg,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   switch (msg.header()->ordinal) {
     case ::test_emptystruct::kEmptyProtocol_Receive_Ordinal: {
@@ -152,7 +152,7 @@ void fidl::internal::NaturalCompleterBase<::test_emptystruct::EmptyProtocol::Sen
 constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<::test_emptystruct::EmptyProtocol>::entries_[] = {
     {
         ::test_emptystruct::kEmptyProtocol_Send_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_emptystruct::EmptyProtocolSendRequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -167,7 +167,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
     },
     {
         ::test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fitx::result decoded = ::fidl::internal::DecodeTransactionalMessage<::test_emptystruct::EmptyProtocolSendAndReceiveRequest>(std::move(msg));
           if (decoded.is_error()) {
@@ -185,13 +185,13 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::NaturalServerDispatcher<
 const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::test_emptystruct::EmptyProtocol>::entries_end_ =
     &entries_[2];
 
-void fidl::internal::NaturalServerDispatcher<::test_emptystruct::EmptyProtocol>::Dispatch(::fidl::Server<::test_emptystruct::EmptyProtocol>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::NaturalServerDispatcher<::test_emptystruct::EmptyProtocol>::Dispatch(::fidl::Server<::test_emptystruct::EmptyProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                           internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
 }
 
 void fidl::Server<::test_emptystruct::EmptyProtocol>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::NaturalServerDispatcher<::test_emptystruct::EmptyProtocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }

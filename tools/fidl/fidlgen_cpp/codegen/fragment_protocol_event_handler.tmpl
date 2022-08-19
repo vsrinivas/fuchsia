@@ -62,7 +62,7 @@ class {{ .WireEventDispatcher }} final :
 
   {{- if or .Events .HandlesOneWayUnknownInteractions }}
     ::fidl::Status DispatchEvent(
-        ::fidl::IncomingMessage& msg,
+        ::fidl::IncomingHeaderAndMessage& msg,
         ::fidl::internal::MessageStorageViewBase* storage_view) override;
   {{- end }}
 };
@@ -87,7 +87,7 @@ class {{ .WireEventDispatcher }} final :
 {{- if or .Events .HandlesOneWayUnknownInteractions }}
   ::fidl::Status
   {{ .WireEventDispatcher.NoLeading }}::DispatchEvent(
-      ::fidl::IncomingMessage& msg,
+      ::fidl::IncomingHeaderAndMessage& msg,
       ::fidl::internal::MessageStorageViewBase* storage_view) {
     switch (msg.header()->ordinal) {
     {{- range .Events }}
@@ -194,7 +194,7 @@ class {{ .NaturalEventDispatcher }} final :
 
   {{- if or .Events .HandlesOneWayUnknownInteractions }}
     ::fidl::Status DispatchEvent(
-        ::fidl::IncomingMessage& msg,
+        ::fidl::IncomingHeaderAndMessage& msg,
         internal::MessageStorageViewBase* storage_view) override;
   {{- end }}
 };
@@ -219,7 +219,7 @@ class {{ .NaturalEventDispatcher }} final :
 {{- if or .Events .HandlesOneWayUnknownInteractions }}
   ::fidl::Status
   {{ .NaturalEventDispatcher.NoLeading }}::DispatchEvent(
-      ::fidl::IncomingMessage& msg,
+      ::fidl::IncomingHeaderAndMessage& msg,
       ::fidl::internal::MessageStorageViewBase* storage_view) {
     switch (msg.header()->ordinal) {
     {{- range .Events }}

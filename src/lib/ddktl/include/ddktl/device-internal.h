@@ -316,9 +316,9 @@ constexpr void CheckMessageableManual() {
   static_assert(has_ddk_message_manual<D>::value,
                 "MessageableManual classes must implement DdkMessage");
   static_assert(std::is_same<decltype(&D::DdkMessage),
-                             void (D::*)(fidl::IncomingMessage&&, DdkTransaction&)>::value,
+                             void (D::*)(fidl::IncomingHeaderAndMessage&&, DdkTransaction&)>::value,
                 "DdkMessage must be a public non-static member function with signature "
-                "'void DdkMessage(fidl::IncomingMessage&&, DdkTransaction&)'.");
+                "'void DdkMessage(fidl::IncomingHeaderAndMessage&&, DdkTransaction&)'.");
 }
 
 DDKTL_INTERNAL_DECLARE_HAS_MEMBER_FN(has_ddk_suspend, DdkSuspend);

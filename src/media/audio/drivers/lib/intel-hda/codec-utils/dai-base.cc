@@ -29,7 +29,7 @@ zx_protocol_device_t IntelHDADaiBase::DAI_DEVICE_THUNKS = []() {
     IntelHDADaiBase* thiz = static_cast<IntelHDADaiBase*>(ctx);
     DdkTransaction transaction(txn);
     fidl::WireDispatch<fuchsia_hardware_audio::DaiConnector>(
-        thiz, fidl::IncomingMessage::FromEncodedCMessage(msg), &transaction);
+        thiz, fidl::IncomingHeaderAndMessage::FromEncodedCMessage(msg), &transaction);
     return transaction.Status();
   };
   return sdt;

@@ -92,7 +92,7 @@ void SocketWaiter::HandleWaitFinished(async_dispatcher_t* dispatcher, zx_status_
   }
 
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT InlineMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes;
-  IncomingMessage msg =
+  IncomingHeaderAndMessage msg =
       fidl::MessageRead(zx::unowned_socket(async_wait_t::object),
                         fidl::internal::SocketMessageStorageView{.bytes = bytes.view()});
   if (!msg.ok()) {

@@ -53,7 +53,7 @@ class RtcDevice : public DeviceType,
                   public fidl::WireServer<fuchsia_hardware_nvram::Device> {
  public:
   RtcDevice(zx_device_t* parent, zx::resource ioport, uint16_t port_base, uint16_t port_count);
-  void DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn);
+  void DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn);
   void DdkRelease() { delete this; }
 
   // fuchsia.hardware.rtc implementation.

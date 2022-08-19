@@ -57,7 +57,7 @@ class ::fdf::Server<::test_driverhandle::DriverProtocol> : public ::fidl::intern
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 #ifdef __Fuchsia__
@@ -65,7 +65,7 @@ class ::fdf::Server<::test_driverhandle::DriverProtocol> : public ::fidl::intern
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_driverhandle::DriverProtocol> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fdf::Server<::test_driverhandle::DriverProtocol>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fdf::Server<::test_driverhandle::DriverProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -154,7 +154,7 @@ class ::fdf::Server<::test_driverhandle::HandlesInProtocol> : public ::fidl::int
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 #ifdef __Fuchsia__
@@ -162,7 +162,7 @@ class ::fdf::Server<::test_driverhandle::HandlesInProtocol> : public ::fidl::int
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_driverhandle::HandlesInProtocol> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fdf::Server<::test_driverhandle::HandlesInProtocol>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fdf::Server<::test_driverhandle::HandlesInProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 

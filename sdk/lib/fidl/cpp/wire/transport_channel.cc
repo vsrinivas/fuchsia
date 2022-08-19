@@ -204,7 +204,8 @@ void ChannelWaiter::HandleWaitFinished(async_dispatcher_t* dispatcher, zx_status
       .handle_capacity = ZX_CHANNEL_MAX_MSG_HANDLES,
   };
   fidl_trace(WillLLCPPAsyncChannelRead);
-  IncomingMessage msg = fidl::MessageRead(zx::unowned_channel(async_wait_t::object), storage_view);
+  IncomingHeaderAndMessage msg =
+      fidl::MessageRead(zx::unowned_channel(async_wait_t::object), storage_view);
   if (!msg.ok()) {
     return failure_handler_(fidl::UnbindInfo{msg});
   }

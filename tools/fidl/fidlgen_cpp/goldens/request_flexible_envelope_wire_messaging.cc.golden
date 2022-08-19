@@ -211,7 +211,7 @@ fidl::internal::WireWeakSyncClientImpl<::test_requestflexibleenvelope::Protocol>
 constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::test_requestflexibleenvelope::Protocol>::entries_[] = {
     {
         ::test_requestflexibleenvelope::kProtocol_RequestStrictResponseFlexible_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -226,7 +226,7 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
     },
     {
         ::test_requestflexibleenvelope::kProtocol_RequestFlexibleResponseStrict_Ordinal,
-        [](void* interface, ::fidl::IncomingMessage&& msg,
+        [](void* interface, ::fidl::IncomingHeaderAndMessage&& msg,
            internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
           ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalRequest<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> decoded{std::move(msg)};
           if (unlikely(!decoded.ok())) {
@@ -245,20 +245,20 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
     &entries_[2];
 
 ::fidl::DispatchResult fidl::internal::WireServerDispatcher<::test_requestflexibleenvelope::Protocol>::TryDispatch(
-    ::fidl::WireServer<::test_requestflexibleenvelope::Protocol>* impl, ::fidl::IncomingMessage& msg,
+    ::fidl::WireServer<::test_requestflexibleenvelope::Protocol>* impl, ::fidl::IncomingHeaderAndMessage& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   return ::fidl::internal::TryDispatch(
       impl, msg, storage_view, txn, entries_, entries_end_);
 }
 
-void fidl::internal::WireServerDispatcher<::test_requestflexibleenvelope::Protocol>::Dispatch(::fidl::WireServer<::test_requestflexibleenvelope::Protocol>* impl, ::fidl::IncomingMessage&& msg,
+void fidl::internal::WireServerDispatcher<::test_requestflexibleenvelope::Protocol>::Dispatch(::fidl::WireServer<::test_requestflexibleenvelope::Protocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                               internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
                              &unknown_interaction_handler_entry_);
 }
 
 void fidl::WireServer<::test_requestflexibleenvelope::Protocol>::dispatch_message(
-    ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+    ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
     ::fidl::internal::MessageStorageViewBase* storage_view) {
   ::fidl::internal::WireServerDispatcher<::test_requestflexibleenvelope::Protocol>::Dispatch(this, std::move(msg), storage_view, txn);
 }

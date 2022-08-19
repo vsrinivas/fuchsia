@@ -111,7 +111,7 @@ class IncomingEventDispatcherBase {
   //
   // Any errors during dispatching will be returned in a |fidl::Status|.
   // If not ok, bindings that support it should close the connection.
-  virtual fidl::Status DispatchEvent(fidl::IncomingMessage& msg,
+  virtual fidl::Status DispatchEvent(fidl::IncomingHeaderAndMessage& msg,
                                      internal::MessageStorageViewBase* storage_view);
 
   BaseEventHandlerInterface* event_handler() const { return event_handler_; }

@@ -187,7 +187,7 @@ class ::fidl::Server<::test_inheritance::Super> : public ::fidl::internal::Incom
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
@@ -196,7 +196,7 @@ class ::fidl::Server<::test_inheritance::Super> : public ::fidl::internal::Incom
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_inheritance::Super> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_inheritance::Super>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_inheritance::Super>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 
@@ -370,7 +370,7 @@ class ::fidl::Server<::test_inheritance::Sub> : public ::fidl::internal::Incomin
 
  private:
   void dispatch_message(
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn,
+      ::fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
       ::fidl::internal::MessageStorageViewBase* storage_view) final;
 };
 
@@ -379,7 +379,7 @@ class ::fidl::Server<::test_inheritance::Sub> : public ::fidl::internal::Incomin
 template <>
 struct ::fidl::internal::NaturalServerDispatcher<::test_inheritance::Sub> final {
   NaturalServerDispatcher() = delete;
-  static void Dispatch(::fidl::Server<::test_inheritance::Sub>* impl, ::fidl::IncomingMessage&& msg,
+  static void Dispatch(::fidl::Server<::test_inheritance::Sub>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                        internal::MessageStorageViewBase* storage_view,
                        ::fidl::Transaction* txn);
 

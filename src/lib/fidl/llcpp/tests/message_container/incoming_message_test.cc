@@ -15,18 +15,19 @@
 
 #include "src/lib/fidl/llcpp/tests/types_test_utils.h"
 
-TEST(IncomingMessage, ConstructNonOkMessage) {
+TEST(IncomingHeaderAndMessage, ConstructNonOkMessage) {
   constexpr auto kError = "test error";
-  auto message =
-      fidl::IncomingMessage::Create(fidl::Status::TransportError(ZX_ERR_ACCESS_DENIED, kError));
+  auto message = fidl::IncomingHeaderAndMessage::Create(
+      fidl::Status::TransportError(ZX_ERR_ACCESS_DENIED, kError));
   EXPECT_FALSE(message.ok());
   EXPECT_EQ(ZX_ERR_ACCESS_DENIED, message.status());
 }
 
-TEST(IncomingMessage, ConstructNonOkMessageRequiresNonOkStatus) {
+TEST(IncomingHeaderAndMessage, ConstructNonOkMessageRequiresNonOkStatus) {
 #if ZX_DEBUG_ASSERT_IMPLEMENTED
-  ASSERT_DEATH({ auto message = fidl::IncomingMessage::Create(fidl::Status::DecodeError(ZX_OK)); },
-               "!= ZX_OK");
+  ASSERT_DEATH(
+      { auto message = fidl::IncomingHeaderAndMessage::Create(fidl::Status::DecodeError(ZX_OK)); },
+      "!= ZX_OK");
 #else
   GTEST_SKIP() << "Debug assertions are disabled";
 #endif
@@ -73,14 +74,14 @@ TEST_F(IncomingMessageWithHandlesTest, AdoptHandlesFromC) {
       .num_bytes = static_cast<uint32_t>(std::size(bytes_)),
       .num_handles = static_cast<uint32_t>(std::size(handles_)),
   };
-  auto incoming = fidl::IncomingMessage::FromEncodedCMessage(&c_msg);
+  auto incoming = fidl::IncomingHeaderAndMessage::FromEncodedCMessage(&c_msg);
   EXPECT_EQ(ZX_OK, incoming.status());
 }
 
 TEST_F(IncomingMessageWithHandlesTest, AdoptHandlesWithRegularConstructor) {
-  auto incoming =
-      fidl::IncomingMessage::Create(bytes_, static_cast<uint32_t>(std::size(bytes_)), handles_,
-                                    handle_metadata_, static_cast<uint32_t>(std::size(handles_)));
+  auto incoming = fidl::IncomingHeaderAndMessage::Create(
+      bytes_, static_cast<uint32_t>(std::size(bytes_)), handles_, handle_metadata_,
+      static_cast<uint32_t>(std::size(handles_)));
   EXPECT_EQ(ZX_OK, incoming.status());
 }
 
@@ -88,9 +89,9 @@ TEST_F(IncomingMessageWithHandlesTest, ReleaseHandles) {
   fidl_incoming_msg c_msg = {};
 
   {
-    auto incoming =
-        fidl::IncomingMessage::Create(bytes_, static_cast<uint32_t>(std::size(bytes_)), handles_,
-                                      handle_metadata_, static_cast<uint32_t>(std::size(handles_)));
+    auto incoming = fidl::IncomingHeaderAndMessage::Create(
+        bytes_, static_cast<uint32_t>(std::size(bytes_)), handles_, handle_metadata_,
+        static_cast<uint32_t>(std::size(handles_)));
     ASSERT_EQ(ZX_OK, incoming.status());
     c_msg = std::move(incoming).ReleaseToEncodedCMessage();
     // At this point, |incoming| will not close the handles.
@@ -105,20 +106,20 @@ TEST_F(IncomingMessageWithHandlesTest, ReleaseHandles) {
   }
 
   // Adopt the handles again to close them.
-  auto incoming = fidl::IncomingMessage::FromEncodedCMessage(&c_msg);
+  auto incoming = fidl::IncomingHeaderAndMessage::FromEncodedCMessage(&c_msg);
 }
 
 TEST_F(IncomingMessageWithHandlesTest, MoveConstructorHandleOwnership) {
-  auto incoming =
-      fidl::IncomingMessage::Create(bytes_, static_cast<uint32_t>(std::size(bytes_)), handles_,
-                                    handle_metadata_, static_cast<uint32_t>(std::size(handles_)));
-  fidl::IncomingMessage another{std::move(incoming)};
+  auto incoming = fidl::IncomingHeaderAndMessage::Create(
+      bytes_, static_cast<uint32_t>(std::size(bytes_)), handles_, handle_metadata_,
+      static_cast<uint32_t>(std::size(handles_)));
+  fidl::IncomingHeaderAndMessage another{std::move(incoming)};
   EXPECT_EQ(incoming.handle_actual(), 0u);
   EXPECT_GT(another.handle_actual(), 0u);
   EXPECT_EQ(ZX_OK, another.status());
 }
 
-TEST(IncomingMessage, ValidateTransactionalMessageHeader) {
+TEST(IncomingHeaderAndMessage, ValidateTransactionalMessageHeader) {
   uint8_t bytes[sizeof(fidl_message_header_t)] = {};
   auto* hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
   fidl::InitTxnHeader(hdr, /* txid */ 1, /* ordinal */ 1, fidl::MessageDynamicFlags::kStrictMethod);
@@ -126,16 +127,16 @@ TEST(IncomingMessage, ValidateTransactionalMessageHeader) {
   hdr->magic_number = 42;
 
   {
-    auto incoming = fidl::IncomingMessage::Create<fidl::internal::ChannelTransport>(
+    auto incoming = fidl::IncomingHeaderAndMessage::Create<fidl::internal::ChannelTransport>(
         bytes, static_cast<uint32_t>(std::size(bytes)), nullptr, nullptr, 0);
     EXPECT_EQ(ZX_ERR_PROTOCOL_NOT_SUPPORTED, incoming.status());
     EXPECT_FALSE(incoming.ok());
   }
 
   {
-    auto incoming = fidl::IncomingMessage::Create<fidl::internal::ChannelTransport>(
+    auto incoming = fidl::IncomingHeaderAndMessage::Create<fidl::internal::ChannelTransport>(
         bytes, static_cast<uint32_t>(std::size(bytes)), nullptr, nullptr, 0,
-        fidl::IncomingMessage::kSkipMessageHeaderValidation);
+        fidl::IncomingHeaderAndMessage::kSkipMessageHeaderValidation);
     EXPECT_EQ(ZX_OK, incoming.status());
     EXPECT_TRUE(incoming.ok());
   }
