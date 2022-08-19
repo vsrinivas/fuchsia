@@ -167,6 +167,8 @@ FUNCTION(x86_ras_fill)
 2:
     subl $1, %ecx
     jnz 0b
+    /* Prevent speculation past JNZ, until RAS is overwritten */
+    lfence
 
     addq $256, %rsp
     popq %rcx
