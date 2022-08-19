@@ -2379,3 +2379,16 @@
   reviewers: ['aaronwood@google.com', 'adamperry@google.com', 'ampearce@google.com', 'awolter@google.com', 'ddorwin@google.com', 'fmil@google.com', 'geb@google.com', 'jsankey@google.com', 'kpozin@google.com', 'wez@google.com', 'yaar@google.com', 'ypomortsev@google.com']
   submitted: '2022-08-15'
   reviewed: '2022-08-15'
+
+- name: 'RFC-0184'
+  title: 'POSIX Compatibility for the System Netstack'
+  short_description: 'Describes the policy for supporting POSIX-like networking APIs on Fuchsia.'
+  authors: ['akonradi@google.com']
+  file: '0184_posix_compatibility_for_the_system_netstack.md'
+  area: ['Foreign ABI Compatibility', 'Netstack']
+  issue: ['104552']
+  gerrit_change_id: ['701126']
+  status: 'Accepted'
+  reviewers: ['abarth@google.com', 'brunodalbo@google.com', 'dhobsd@google.com']
+  submitted: '2022-07-15'
+  reviewed: '2022-08-17'

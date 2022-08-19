@@ -626,8 +626,9 @@
   full_description: "The Zircon IO library. It provides the implementation of
   posix-style open(), close(), read(), write(), select(), poll(), etc, against the RemoteIO
   RPC protocol. These APIs are return- not-supported stubs in libc, and linking
-  against libfdio overrides these stubs with functional implementations."
-  see_also: ["<a href=\"/sdk/lib/fdio/\">fdio source code</a>"]
+  against libfdio overrides these stubs with functional implementations. Sometimes referred to as
+  \"POSIX Lite\"."
+  see_also: ["<a href=\"/sdk/lib/fdio/\">fdio source code</a>", "<a href=\"/docs/contribute/governance/rfcs/0082_starnix\">RFC-0082</a>"]
   related_guides: [""]
   area: ["Zircon"]
 
