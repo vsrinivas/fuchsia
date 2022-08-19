@@ -4,7 +4,6 @@
 
 #include "aml-uart.h"
 
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/hw/reg.h>

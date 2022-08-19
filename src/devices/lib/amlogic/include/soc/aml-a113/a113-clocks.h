@@ -5,7 +5,6 @@
 #ifndef SRC_DEVICES_LIB_AMLOGIC_INCLUDE_SOC_AML_A113_A113_CLOCKS_H_
 #define SRC_DEVICES_LIB_AMLOGIC_INCLUDE_SOC_AML_A113_A113_CLOCKS_H_
 
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <lib/mmio-ptr/mmio-ptr.h>
 #include <lib/mmio/mmio-buffer.h>
 

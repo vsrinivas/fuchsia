@@ -11,7 +11,6 @@
 #include <threads.h>
 #endif
 #include <fuchsia/hardware/gdc/cpp/banjo.h>
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>

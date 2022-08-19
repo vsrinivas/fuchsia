@@ -79,7 +79,6 @@ test("spi-test-bin") {
   ]
   deps = [
     ":spi_bind",
-    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.spi:fuchsia.hardware.spi_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.spiimpl:fuchsia.hardware.spiimpl_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.spi:fuchsia.hardware.spi_cpp_wire",

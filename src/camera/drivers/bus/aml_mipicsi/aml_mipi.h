@@ -6,7 +6,6 @@
 #define SRC_CAMERA_DRIVERS_BUS_AML_MIPICSI_AML_MIPI_H_
 
 #include <fuchsia/hardware/mipicsi/cpp/banjo.h>
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>

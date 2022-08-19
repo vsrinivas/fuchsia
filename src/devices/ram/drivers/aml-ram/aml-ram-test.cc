@@ -4,7 +4,6 @@
 
 #include "aml-ram.h"
 
-#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>

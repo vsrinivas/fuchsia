@@ -24,7 +24,6 @@ fuchsia_driver("ti-lp8556-driver") {
   sources = [ "ti-lp8556.cc" ]
   deps = [
     ":ti-lp8556-bind",
-    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.backlight:fuchsia.hardware.backlight_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.power.sensor:fuchsia.hardware.power.sensor_cpp_wire",
     "//sdk/lib/fidl",

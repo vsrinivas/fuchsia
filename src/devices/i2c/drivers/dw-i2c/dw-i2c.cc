@@ -5,7 +5,6 @@
 #include "dw-i2c.h"
 
 #include <fuchsia/hardware/i2cimpl/c/banjo.h>
-#include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>

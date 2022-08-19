@@ -68,7 +68,6 @@ test("registers-test") {
 
 group("common") {
   public_deps = [
-    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.registers:fuchsia.hardware.registers_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.registers:fuchsia.hardware.registers_cpp_wire",
     "//src/devices/bus/lib/device-protocol-pdev",

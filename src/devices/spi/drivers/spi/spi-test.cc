@@ -4,7 +4,6 @@
 
 #include "spi.h"
 
-#include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/ddk/debug.h>
