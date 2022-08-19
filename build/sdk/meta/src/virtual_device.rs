@@ -4,12 +4,19 @@
 
 //! Representation of the virtual_device metadata.
 
-use crate::common::{
-    AudioModel, CpuArchitecture, DataUnits, ElementType, Envelope, PointingDevice, ScreenUnits,
+use {
+    crate::{
+        common::{
+            AudioModel, CpuArchitecture, DataUnits, ElementType, Envelope, PointingDevice,
+            ScreenUnits,
+        },
+        json::{schema, JsonObject},
+        Metadata,
+    },
+    anyhow::{bail, Result},
+    serde::{Deserialize, Serialize},
+    std::collections::HashMap,
 };
-use crate::json::{schema, JsonObject};
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 /// Specifics for a CPU.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -117,6 +124,36 @@ impl JsonObject for Envelope<VirtualDeviceV1> {
 
     fn get_referenced_schemata() -> &'static [&'static str] {
         &[schema::COMMON, schema::HARDWARE_V1]
+    }
+}
+
+/// Versioned virtual device specification.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(untagged)]
+pub enum VirtualDevice {
+    VirtualDeviceV1(VirtualDeviceV1),
+}
+
+impl TryFrom<Metadata> for VirtualDevice {
+    type Error = anyhow::Error;
+    #[inline]
+    fn try_from(value: Metadata) -> Result<Self> {
+        match value {
+            Metadata::PhysicalDeviceV1(_) => bail!("No conversion"),
+            Metadata::ProductBundleV1(_) => bail!("No conversion"),
+            Metadata::ProductBundleContainerV1(_) => bail!("No conversion"),
+            Metadata::ProductBundleContainerV2(_) => bail!("No conversion"),
+            Metadata::VirtualDeviceV1(data) => Ok(VirtualDevice::VirtualDeviceV1(data)),
+        }
+    }
+}
+
+impl VirtualDevice {
+    /// Returns VirtualDevice entry name.
+    pub fn name(&self) -> &str {
+        match self {
+            Self::VirtualDeviceV1(device) => &device.name.as_str(),
+        }
     }
 }
 

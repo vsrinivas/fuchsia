@@ -4,10 +4,15 @@
 
 //! Representation of the product_bundle metadata.
 
-use crate::common::{ElementType, Envelope};
-use crate::json::{schema, JsonObject};
-use anyhow::Result;
-use serde::{Deserialize, Serialize};
+use {
+    crate::{
+        common::{ElementType, Envelope},
+        json::{schema, JsonObject},
+        Metadata,
+    },
+    anyhow::{bail, Result},
+    serde::{Deserialize, Serialize},
+};
 
 impl JsonObject for Envelope<ProductBundleV1> {
     fn get_schema() -> &'static str {
@@ -201,6 +206,50 @@ pub struct ProductBundleV1 {
     /// debugging or when writing this record to a json string.
     #[serde(rename = "type")]
     pub kind: ElementType,
+}
+
+/// Versioned product bundle metadata.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(untagged)]
+pub enum ProductBundle {
+    ProductBundleV1(ProductBundleV1),
+}
+
+impl TryFrom<Metadata> for ProductBundle {
+    type Error = anyhow::Error;
+    #[inline]
+    fn try_from(value: Metadata) -> Result<Self> {
+        match value {
+            Metadata::PhysicalDeviceV1(_) => bail!("No conversion"),
+            Metadata::ProductBundleV1(data) => Ok(ProductBundle::ProductBundleV1(data)),
+            Metadata::ProductBundleContainerV1(_) => bail!("No conversion"),
+            Metadata::ProductBundleContainerV2(_) => bail!("No conversion"),
+            Metadata::VirtualDeviceV1(_) => bail!("No conversion"),
+        }
+    }
+}
+
+impl ProductBundle {
+    /// Returns ProductBundle entry name.
+    pub fn name(&self) -> &str {
+        match self {
+            Self::ProductBundleV1(pbm) => &pbm.name.as_str(),
+        }
+    }
+
+    /// Get the list of logical device names.
+    pub fn device_refs(&self) -> &Vec<String> {
+        match self {
+            ProductBundle::ProductBundleV1(pbm) => &pbm.device_refs,
+        }
+    }
+
+    /// Manifest for the emulator, if present.
+    pub fn emu_manifest(&self) -> &Option<EmuManifest> {
+        match self {
+            ProductBundle::ProductBundleV1(pbm) => &pbm.manifests.emu,
+        }
+    }
 }
 
 #[cfg(test)]
