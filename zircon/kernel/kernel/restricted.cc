@@ -14,6 +14,7 @@
 
 #include <arch/regs.h>
 #include <fbl/alloc_checker.h>
+#include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
 #include <vm/vm.h>
 
@@ -50,6 +51,9 @@ extern "C" [[noreturn]] void syscall_from_restricted(const syscall_regs_t* regs)
   arch->SaveRestrictedSyscallState(regs);
 
   LTRACEF("returning to normal mode at vector %#lx, contex %#lx\n", rs.vector_ptr(), rs.context());
+
+  ProcessDispatcher* up = ProcessDispatcher::GetCurrent();
+  vmm_set_active_aspace(up->normal_aspace_ptr());
 
   // bounce into normal mode
   arch->EnterFull(rs.vector_ptr(), rs.context(), 0);
@@ -102,6 +106,17 @@ zx_status_t RestrictedEnter(uint32_t options, uintptr_t vector_table_ptr, uintpt
     // from now on out we're committed, disable interrupts so we can do this
     // without being interrupted as we save/restore state
     arch_disable_ints();
+
+    // no more errors or interrupts, so we can switch the active aspace
+    // without worrying about ending up in a situation where the thread is
+    // set to normal with the restricted aspace active.
+    ProcessDispatcher* up = ProcessDispatcher::GetCurrent();
+    VmAspace* restricted_aspace = up->restricted_aspace();
+    // This check can be removed once the restricted mode tests can and do run with a restricted
+    // aspace.
+    if (restricted_aspace) {
+      vmm_set_active_aspace(restricted_aspace);
+    }
 
     // save the vector table pointer for return from restricted mode
     rs.set_vector_ptr(vector_table_ptr);

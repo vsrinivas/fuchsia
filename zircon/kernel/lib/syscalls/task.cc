@@ -231,8 +231,8 @@ zx_status_t sys_process_create(zx_handle_t job_handle, user_in_ptr<const char> _
                                user_out_handle* vmar_handle) {
   LTRACEF("job handle %x, options %#x\n", job_handle, options);
 
-  // currently, the only valid option value is 0
-  if (options != 0)
+  // currently, the only valid option values are 0 or ZX_PROCESS_SHARED
+  if (options != ZX_PROCESS_SHARED && options != 0)
     return ZX_ERR_INVALID_ARGS;
 
   auto up = ProcessDispatcher::GetCurrent();
@@ -287,6 +287,75 @@ zx_status_t sys_process_create(zx_handle_t job_handle, user_in_ptr<const char> _
   result = proc_handle->make(ktl::move(new_process_handle), proc_rights);
   if (result == ZX_OK)
     result = vmar_handle->make(ktl::move(new_vmar_handle), vmar_rights);
+  return result;
+}
+
+// zx_status_t zx_process_create_shared
+zx_status_t sys_process_create_shared(zx_handle_t shared_proc_handle, uint32_t options,
+                                      user_in_ptr<const char> _name, size_t name_len,
+                                      user_out_handle* proc_handle,
+                                      user_out_handle* restricted_vmar_handle) {
+  // currently, the only valid option value is 0
+  if (options != 0) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  auto up = ProcessDispatcher::GetCurrent();
+
+  // We check the policy against the process calling zx_process_create, which
+  // is the operative policy.
+  // TODO(fxbug.dev/98922): Figure out which policy check makes sense here.
+  zx_status_t result = up->EnforceBasicPolicy(ZX_POL_NEW_PROCESS);
+  if (result != ZX_OK) {
+    return result;
+  }
+
+  // copy out the name
+  char buf[ZX_MAX_NAME_LEN];
+  ktl::string_view sp;
+  // Silently truncate the given name.
+  if (name_len > sizeof(buf)) {
+    name_len = sizeof(buf);
+  }
+  result = copy_user_string(_name, name_len, buf, sizeof(buf), &sp);
+  if (result != ZX_OK) {
+    return result;
+  }
+  LTRACEF("name %s\n", buf);
+
+  fbl::RefPtr<ProcessDispatcher> shared_proc;
+  result = up->handle_table().GetDispatcherWithRights(*up, shared_proc_handle,
+                                                      ZX_RIGHT_MANAGE_PROCESS, &shared_proc);
+  if (result != ZX_OK) {
+    return result;
+  }
+
+  // create a new process dispatcher
+  KernelHandle<ProcessDispatcher> new_process_handle;
+  KernelHandle<VmAddressRegionDispatcher> new_restricted_vmar_handle;
+  zx_rights_t proc_rights, restricted_vmar_rights;
+  result =
+      ProcessDispatcher::CreateShared(shared_proc, sp, options, &new_process_handle, &proc_rights,
+                                      &new_restricted_vmar_handle, &restricted_vmar_rights);
+  if (result != ZX_OK) {
+    return result;
+  }
+
+  uint32_t koid = (uint32_t)new_process_handle.dispatcher()->get_koid();
+  ktrace(TAG_PROC_CREATE, koid, 0, 0, 0);
+  // TODO(fxbug.dev/98922): Add a new tag, and add the koid of the shared process.
+  ktrace_name(TAG_PROC_NAME, koid, 0, buf);
+
+  // Give arch-specific tracing a chance to record process creation.
+  arch_trace_process_create(koid, shared_proc->arch_table_phys());
+
+  result = proc_handle->make(ktl::move(new_process_handle), proc_rights);
+
+  if (result == ZX_OK) {
+    result =
+        restricted_vmar_handle->make(ktl::move(new_restricted_vmar_handle), restricted_vmar_rights);
+  }
+
   return result;
 }
 

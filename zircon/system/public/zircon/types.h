@@ -560,6 +560,10 @@ typedef atomic_int zx_futex_t;
 #endif
 typedef int zx_futex_storage_t;
 
+// Process options.
+// These options can be passed to zx_process_create().
+#define ZX_PROCESS_SHARED     ((uint32_t)1u << 0)
+
 __END_CDECLS
 
 #endif // SYSROOT_ZIRCON_TYPES_H_

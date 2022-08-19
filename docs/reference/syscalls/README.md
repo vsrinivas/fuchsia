@@ -29,6 +29,7 @@
 
 ## Processes
 + [process_create](process_create.md) - create a new process within a job
++ [process_create_shared](process_create_shared.md) - create a new shared process within a job
 + [process_read_memory](process_read_memory.md) - read from a process's address space
 + [process_start](process_start.md) - cause a new process to start executing
 + [process_write_memory](process_write_memory.md) - write to a process's address space

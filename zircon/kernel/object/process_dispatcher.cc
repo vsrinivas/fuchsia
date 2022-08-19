@@ -77,12 +77,20 @@ zx_status_t ProcessDispatcher::Create(fbl::RefPtr<JobDispatcher> job, ktl::strin
   }
 
   KernelHandle new_handle(
-      fbl::AdoptRef(new (&ac) ProcessDispatcher(ktl::move(shareable_state), job, name, flags)));
+      fbl::AdoptRef(new (&ac) ProcessDispatcher(shareable_state, job, name, flags)));
   if (!ac.check()) {
+    // shareable_state was created successfully, and thus has a process count of 1 that needs to be
+    // decremented here.
+    shareable_state->DecrementShareCount();
     return ZX_ERR_NO_MEMORY;
   }
 
-  zx_status_t result = new_handle.dispatcher()->Initialize(nullptr);
+  zx_status_t result;
+  if (flags == ZX_PROCESS_SHARED) {
+    result = new_handle.dispatcher()->Initialize(SharedAspaceType::New);
+  } else {
+    result = new_handle.dispatcher()->Initialize();
+  }
   if (result != ZX_OK)
     return result;
 
@@ -107,6 +115,62 @@ zx_status_t ProcessDispatcher::Create(fbl::RefPtr<JobDispatcher> job, ktl::strin
   return ZX_OK;
 }
 
+zx_status_t ProcessDispatcher::CreateShared(
+    fbl::RefPtr<ProcessDispatcher> shared_proc, ktl::string_view name, uint32_t flags,
+    KernelHandle<ProcessDispatcher>* handle, zx_rights_t* rights,
+    KernelHandle<VmAddressRegionDispatcher>* restricted_vmar_handle,
+    zx_rights_t* restricted_vmar_rights) {
+  fbl::AllocChecker ac;
+  fbl::RefPtr<ShareableProcessState> shareable_state;
+  if (!shared_proc->normal_aspace() || !shared_proc->restricted_aspace()) {
+    // The shared_proc process must have a normal and restricted aspace.
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  shareable_state = shared_proc->shared_state_;
+  // Increment the share count on the shared state before passing it to the ProcessDispatcher
+  // constructor. If the increment fails, the shared state has already been destroyed.
+  if (!shareable_state->IncrementShareCount()) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  KernelHandle new_process(
+      fbl::AdoptRef(new (&ac) ProcessDispatcher(shareable_state, shared_proc->job(), name, flags)));
+  if (!ac.check()) {
+    // shareable_state was created successfully, and thus has a process count of 1 that needs to be
+    // decremented here.
+    shareable_state->DecrementShareCount();
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  zx_status_t result = new_process.dispatcher()->Initialize(SharedAspaceType::Shared);
+  if (result != ZX_OK) {
+    return result;
+  }
+
+  // Create a dispatcher for the restricted VMAR.
+  KernelHandle<VmAddressRegionDispatcher> new_restricted_vmar_handle;
+  fbl::RefPtr<VmAddressRegion> restricted_vmar =
+      new_process.dispatcher()->restricted_aspace()->RootVmar();
+  result = VmAddressRegionDispatcher::Create(restricted_vmar, ARCH_MMU_FLAG_PERM_USER,
+                                             &new_restricted_vmar_handle, restricted_vmar_rights);
+  if (result != ZX_OK) {
+    return result;
+  }
+
+  // Only now that the process has been fully created and initialized can we register it with its
+  // parent job. We don't want anyone to see it in a partially initialized state.
+  if (!shared_proc->job()->AddChildProcess(new_process.dispatcher())) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  *rights = default_rights();
+  *handle = ktl::move(new_process);
+  *restricted_vmar_handle = ktl::move(new_restricted_vmar_handle);
+
+  return ZX_OK;
+}
+
 ProcessDispatcher::ProcessDispatcher(fbl::RefPtr<ShareableProcessState> shared_state,
                                      fbl::RefPtr<JobDispatcher> job, ktl::string_view name,
                                      uint32_t flags)
@@ -117,9 +181,6 @@ ProcessDispatcher::ProcessDispatcher(fbl::RefPtr<ShareableProcessState> shared_s
       debug_exceptionate_(ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER),
       name_(name.data(), name.length()) {
   LTRACE_ENTRY_OBJ;
-
-  [[maybe_unused]] uint32_t count = shared_state_->IncrementShareCount();
-  DEBUG_ASSERT(count == 0);
 
   kcounter_add(dispatcher_process_create_count, 1);
 }
@@ -166,7 +227,7 @@ zx_status_t ProcessDispatcher::set_name(const char* name, size_t len) {
   return name_.set(name, len);
 }
 
-zx_status_t ProcessDispatcher::Initialize(fbl::RefPtr<VmAspace> restricted_aspace) {
+zx_status_t ProcessDispatcher::Initialize() {
   LTRACE_ENTRY_OBJ;
 
   Guard<CriticalMutex> guard{get_lock()};
@@ -176,16 +237,37 @@ zx_status_t ProcessDispatcher::Initialize(fbl::RefPtr<VmAspace> restricted_aspac
   char aspace_name[ZX_MAX_NAME_LEN];
   snprintf(aspace_name, sizeof(aspace_name), "proc:%" PRIu64, get_koid());
 
-  if (restricted_aspace) {
-    static constexpr vaddr_t kTopOfRestricted = USER_ASPACE_BASE + USER_ASPACE_SIZE / 2;
-    if (!shared_state_->Initialize(kTopOfRestricted, USER_ASPACE_SIZE / 2, aspace_name)) {
+  if (!shared_state_->Initialize(USER_ASPACE_BASE, USER_ASPACE_SIZE, aspace_name)) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t ProcessDispatcher::Initialize(SharedAspaceType type) {
+  LTRACE_ENTRY_OBJ;
+
+  Guard<CriticalMutex> guard{get_lock()};
+
+  DEBUG_ASSERT(state_ == State::INITIAL);
+
+  char aspace_name[ZX_MAX_NAME_LEN];
+  snprintf(aspace_name, sizeof(aspace_name), "proc:%" PRIu64, get_koid());
+
+  if (type == SharedAspaceType::New) {
+    static constexpr vaddr_t top_of_private = USER_ASPACE_BASE + PAGE_ALIGN(USER_ASPACE_SIZE / 2);
+    static constexpr vaddr_t size_of_shared = USER_ASPACE_BASE + USER_ASPACE_SIZE - top_of_private;
+    DEBUG_ASSERT(IS_PAGE_ALIGNED(top_of_private));
+    if (!shared_state_->Initialize(top_of_private, size_of_shared, aspace_name)) {
       return ZX_ERR_NO_MEMORY;
     }
-    restricted_aspace_ = restricted_aspace;
-  } else {
-    if (!shared_state_->Initialize(USER_ASPACE_BASE, USER_ASPACE_SIZE, aspace_name)) {
-      return ZX_ERR_NO_MEMORY;
-    }
+  }
+
+  snprintf(aspace_name, sizeof(aspace_name), "proc(restricted):%" PRIu64, get_koid());
+  restricted_aspace_ = VmAspace::Create(USER_ASPACE_BASE, PAGE_ALIGN(USER_ASPACE_SIZE / 2),
+                                        VmAspace::Type::User, aspace_name);
+  if (!restricted_aspace_) {
+    return ZX_ERR_NO_MEMORY;
   }
 
   return ZX_OK;

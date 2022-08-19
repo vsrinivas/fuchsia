@@ -9,6 +9,7 @@
 
 #include <fbl/ref_counted.h>
 #include <kernel/mutex.h>
+#include <ktl/atomic.h>
 #include <object/futex_context.h>
 #include <object/handle_table.h>
 #include <vm/vm_aspace.h>
@@ -20,32 +21,43 @@
 // This class is logically private to ProcessDispatcher.
 //
 // The objects contained in this class have lifetimes that are decoupled from their lifecycle.
+//
+// A ShareableProcessState is always constructed with a process count of 1, meaning that the creator
+// should issues a matching |DecrementShareCount| before the |ShareableProcessState| is destroyed.
 class ShareableProcessState : public fbl::RefCounted<ShareableProcessState> {
  public:
   ShareableProcessState() = default;
   ~ShareableProcessState() {
     DEBUG_ASSERT(!aspace_ || aspace_->is_destroyed());
-    DEBUG_ASSERT(process_count_.load() == 0);
+    DEBUG_ASSERT(process_count_.load(ktl::memory_order_relaxed) == 0);
   }
 
   // Shares this state with a process, effectively incrementing the number of calls to
   // |RemoveFromProcess| that can be made before the shared resources are cleaned up.
   //
-  // Returns the previous share count.
-  uint32_t IncrementShareCount() {
-    const uint32_t prev = process_count_.fetch_add(1);
-    return prev;
+  // Returns whether or not the share count was incremented successfully. Can fail if the process
+  // state has been destroyed.
+  bool IncrementShareCount() {
+    uint32_t prev = process_count_.load(ktl::memory_order_relaxed);
+    do {
+      if (prev == 0) {
+        return false;
+      }
+    } while (!process_count_.compare_exchange_weak(prev, prev + 1, ktl::memory_order_relaxed));
+    return true;
   }
 
   // Removes this state from a process. If the state is not shared with any other processes, the
   // shared resources are cleaned.
   void DecrementShareCount() {
-    const uint32_t prev = process_count_.fetch_sub(1);
-    DEBUG_ASSERT(prev > 0);
+    DEBUG_ASSERT(process_count_ > 0);
+
+    const uint32_t prev = process_count_.fetch_sub(1, ktl::memory_order_relaxed);
+
     if (prev > 1) {
       return;
     }
-    // That was the last one.
+
     handle_table_.Clean();
     if (aspace_) {
       zx_status_t result = aspace_->Destroy();
@@ -53,7 +65,13 @@ class ShareableProcessState : public fbl::RefCounted<ShareableProcessState> {
     }
   }
 
+  // Initializes the shared state.
+  //
+  // It is an error to call initialize on a shared state that has already been initialized, or one
+  // that has been destroyed.
   bool Initialize(vaddr_t aspace_base, vaddr_t aspace_size, const char* aspace_name) {
+    DEBUG_ASSERT(!aspace_);
+    DEBUG_ASSERT(process_count_.load(ktl::memory_order_relaxed) > 0);
     aspace_ = VmAspace::Create(aspace_base, aspace_size, VmAspace::Type::User, aspace_name);
     return aspace_ != nullptr;
   }
@@ -67,9 +85,14 @@ class ShareableProcessState : public fbl::RefCounted<ShareableProcessState> {
   fbl::RefPtr<VmAspace> aspace() { return aspace_; }
   const fbl::RefPtr<VmAspace>& aspace() const { return aspace_; }
 
+  VmAspace* aspace_ptr() { return aspace_.get(); }
+  const VmAspace* aspace_ptr() const { return aspace_.get(); }
+
  private:
+  mutable DECLARE_MUTEX(ShareableProcessState) lock_;
+
   // The number of processes currently sharing this state.
-  RelaxedAtomic<uint32_t> process_count_ = 0;
+  ktl::atomic<uint32_t> process_count_ = 1;
 
   HandleTable handle_table_;
   FutexContext futex_context_;

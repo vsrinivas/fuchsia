@@ -36,6 +36,11 @@ Process handles may be waited on and will assert the signal
 *job* is the controlling [job object](/docs/reference/kernel_objects/job.md) for the new
 process, which will become a child of that job.
 
+*options* can contain zero or the following flag:
+
+ - **ZX_PROCESS_SHARED** to create a process that can share its address space with another
+   process. Processes created with this flag can be passed to `zx_process_create_shared()`.
+
 ## Rights
 
 *job* must be of type **ZX_OBJ_TYPE_JOB** and have **ZX_RIGHT_MANAGE_PROCESS**.
@@ -58,7 +63,7 @@ On success, `zx_process_create()` returns **ZX_OK**, a handle to the new process
 (only when not **ZX_HANDLE_INVALID**).
 
 **ZX_ERR_INVALID_ARGS**  *name*, *proc_handle*, or *vmar_handle*  was an invalid pointer,
-or *options* was non-zero.
+or *options* contained invalid options.
 
 **ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
 There is no good way for userspace to handle this (unlikely) error.
@@ -74,6 +79,7 @@ In a future build this error will no longer occur.
  - [`zx_object_wait_async()`]
  - [`zx_object_wait_many()`]
  - [`zx_object_wait_one()`]
+ - [`zx_process_create_shared()`]
  - [`zx_process_start()`]
  - [`zx_task_kill()`]
  - [`zx_thread_create()`]
@@ -86,6 +92,7 @@ In a future build this error will no longer occur.
 [`zx_object_wait_async()`]: object_wait_async.md
 [`zx_object_wait_many()`]: object_wait_many.md
 [`zx_object_wait_one()`]: object_wait_one.md
+[`zx_process_create_shared()`]: process_create_shared.md
 [`zx_process_start()`]: process_start.md
 [`zx_task_kill()`]: task_kill.md
 [`zx_thread_create()`]: thread_create.md

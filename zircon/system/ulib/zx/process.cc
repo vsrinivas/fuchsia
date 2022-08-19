@@ -20,6 +20,14 @@ zx_status_t process::create(const job& job, const char* name, uint32_t name_len,
                            vmar->reset_and_get_address());
 }
 
+zx_status_t process::create_shared(const process& prototype, const char* name, uint32_t name_len,
+                                   uint32_t flags, process* proc, vmar* restricted_vmar) {
+  // Assume |proc| and |vmar| must refer to different containers, due to strict aliasing.
+  return zx_process_create_shared(prototype.get(), flags, name, name_len,
+                                  proc->reset_and_get_address(),
+                                  restricted_vmar->reset_and_get_address());
+}
+
 zx_status_t process::start(const thread& thread_handle, uintptr_t entry, uintptr_t stack,
                            handle arg_handle, uintptr_t arg2) const {
   return zx_process_start(get(), thread_handle.get(), entry, stack, arg_handle.release(), arg2);

@@ -36,6 +36,10 @@ class process final : public task<process> {
   static zx_status_t create(const job& job, const char* name, uint32_t name_len, uint32_t flags,
                             process* proc, vmar* root_vmar) ZX_AVAILABLE_SINCE(7);
 
+  static zx_status_t create_shared(const process& prototype, const char* name, uint32_t name_len,
+                                   uint32_t flags, process* proc, vmar* restricted_vmar)
+      ZX_AVAILABLE_SINCE(8);
+
   zx_status_t start(const thread& thread_handle, uintptr_t entry, uintptr_t stack,
                     handle arg_handle, uintptr_t arg2) const ZX_AVAILABLE_SINCE(7);
 

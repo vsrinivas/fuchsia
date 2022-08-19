@@ -710,6 +710,10 @@ TEXT ·Sys_process_exit(SB),NOSPLIT,$0
 TEXT ·Sys_process_create(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_process_create(SB)
 
+// func Sys_process_create_shared(shared_proc Handle, options uint32, name *uint8, name_size uint, proc_handle *Handle, restricted_vmar_handle *Handle) Status
+TEXT ·Sys_process_create_shared(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_process_create_shared(SB)
+
 // func Sys_process_start(handle Handle, thread Handle, entry Vaddr, stack Vaddr, arg1 Handle, arg2 uintptr) Status
 TEXT ·Sys_process_start(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_process_start(SB)
@@ -1510,6 +1514,10 @@ func Sys_process_create(job Handle, name *uint8, name_size uint, options uint32,
 
 //go:noescape
 //go:nosplit
+func Sys_process_create_shared(shared_proc Handle, options uint32, name *uint8, name_size uint, proc_handle *Handle, restricted_vmar_handle *Handle) Status
+
+//go:noescape
+//go:nosplit
 func Sys_process_start(handle Handle, thread Handle, entry Vaddr, stack Vaddr, arg1 Handle, arg2 uintptr) Status
 
 //go:noescape
@@ -2303,6 +2311,10 @@ TEXT ·Sys_process_exit(SB),NOSPLIT,$0
 // func Sys_process_create(job Handle, name *uint8, name_size uint, options uint32, proc_handle *Handle, vmar_handle *Handle) Status
 TEXT ·Sys_process_create(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_process_create(SB)
+
+// func Sys_process_create_shared(shared_proc Handle, options uint32, name *uint8, name_size uint, proc_handle *Handle, restricted_vmar_handle *Handle) Status
+TEXT ·Sys_process_create_shared(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_process_create_shared(SB)
 
 // func Sys_process_start(handle Handle, thread Handle, entry Vaddr, stack Vaddr, arg1 Handle, arg2 uintptr) Status
 TEXT ·Sys_process_start(SB),NOSPLIT,$0
@@ -4760,6 +4772,27 @@ TEXT runtime·vdsoCall_zx_process_create(SB),NOSPLIT,$0-52
 	MOVD $0, m_vdsoSP(R21)
 	RET
 
+// func vdsoCall_zx_process_create_shared(shared_proc uint32, options uint32, name unsafe.Pointer, name_size uint, proc_handle unsafe.Pointer, restricted_vmar_handle unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_process_create_shared(SB),NOSPLIT,$0-44
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	MOVD g_m(g), R21
+	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
+	MOVD $ret-8(FP), R20 // caller's SP
+	MOVD R20, m_vdsoSP(R21)
+	MOVW shared_proc+0(FP), R0
+	MOVW options+4(FP), R1
+	MOVD name+8(FP), R2
+	MOVD name_size+16(FP), R3
+	MOVD proc_handle+24(FP), R4
+	MOVD restricted_vmar_handle+32(FP), R5
+	BL vdso_zx_process_create_shared(SB)
+	MOVW R0, ret+40(FP)
+	MOVD g_m(g), R21
+	MOVD $0, m_vdsoSP(R21)
+	RET
+
 // func vdsoCall_zx_process_start(handle uint32, thread uint32, entry uintptr, stack uintptr, arg1 uint32, arg2 uintptr) int32
 TEXT runtime·vdsoCall_zx_process_start(SB),NOSPLIT,$0-44
 	GO_ARGS
@@ -6435,6 +6468,7 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 	{"_zx_port_cancel", 0x5166105f, &vdso_zx_port_cancel},
 	{"_zx_process_exit", 0xc7f8a64d, &vdso_zx_process_exit},
 	{"_zx_process_create", 0xa3a21647, &vdso_zx_process_create},
+	{"_zx_process_create_shared", 0xcc9e43dd, &vdso_zx_process_create_shared},
 	{"_zx_process_start", 0xc80873a1, &vdso_zx_process_start},
 	{"_zx_process_read_memory", 0x883ab627, &vdso_zx_process_read_memory},
 	{"_zx_process_write_memory", 0x18162116, &vdso_zx_process_write_memory},
@@ -6633,6 +6667,7 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 //go:cgo_import_dynamic vdso_zx_port_cancel zx_port_cancel
 //go:cgo_import_dynamic vdso_zx_process_exit zx_process_exit
 //go:cgo_import_dynamic vdso_zx_process_create zx_process_create
+//go:cgo_import_dynamic vdso_zx_process_create_shared zx_process_create_shared
 //go:cgo_import_dynamic vdso_zx_process_start zx_process_start
 //go:cgo_import_dynamic vdso_zx_process_read_memory zx_process_read_memory
 //go:cgo_import_dynamic vdso_zx_process_write_memory zx_process_write_memory
@@ -6830,6 +6865,7 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 //go:linkname vdso_zx_port_cancel vdso_zx_port_cancel
 //go:linkname vdso_zx_process_exit vdso_zx_process_exit
 //go:linkname vdso_zx_process_create vdso_zx_process_create
+//go:linkname vdso_zx_process_create_shared vdso_zx_process_create_shared
 //go:linkname vdso_zx_process_start vdso_zx_process_start
 //go:linkname vdso_zx_process_read_memory vdso_zx_process_read_memory
 //go:linkname vdso_zx_process_write_memory vdso_zx_process_write_memory
@@ -7368,6 +7404,10 @@ func vdsoCall_zx_process_create(job uint32, name unsafe.Pointer, name_size uint,
 
 //go:noescape
 //go:nosplit
+func vdsoCall_zx_process_create_shared(shared_proc uint32, options uint32, name unsafe.Pointer, name_size uint, proc_handle unsafe.Pointer, restricted_vmar_handle unsafe.Pointer) int32
+
+//go:noescape
+//go:nosplit
 func vdsoCall_zx_process_start(handle uint32, thread uint32, entry uintptr, stack uintptr, arg1 uint32, arg2 uintptr) int32
 
 //go:noescape
@@ -7812,6 +7852,7 @@ var (
 	vdso_zx_port_cancel uintptr
 	vdso_zx_process_exit uintptr
 	vdso_zx_process_create uintptr
+	vdso_zx_process_create_shared uintptr
 	vdso_zx_process_start uintptr
 	vdso_zx_process_read_memory uintptr
 	vdso_zx_process_write_memory uintptr
@@ -10508,6 +10549,31 @@ TEXT runtime·vdsoCall_zx_process_create(SB),NOSPLIT,$8-52
 	MOVQ vdso_zx_process_create(SB), AX
 	CALL AX
 	MOVL AX, ret+48(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_process_create_shared(shared_proc uint32, options uint32, name unsafe.Pointer, name_size uint, proc_handle unsafe.Pointer, restricted_vmar_handle unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_process_create_shared(SB),NOSPLIT,$8-44
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL shared_proc+0(FP), DI
+	MOVL options+4(FP), SI
+	MOVQ name+8(FP), DX
+	MOVQ name_size+16(FP), CX
+	MOVQ proc_handle+24(FP), R8
+	MOVQ restricted_vmar_handle+32(FP), R9
+	MOVQ vdso_zx_process_create_shared(SB), AX
+	CALL AX
+	MOVL AX, ret+40(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -16327,6 +16393,58 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "return_type": "zx_status_t"
     },
     {
+      "name": "process_create_shared",
+      "attributes": [
+        "*"
+      ],
+      "arguments": [
+        {
+          "name": "shared_proc",
+          "type": "zx_handle_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "options",
+          "type": "uint32_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "name",
+          "type": "char",
+          "is_array": true,
+          "attributes": [
+            "IN"
+          ]
+        },
+        {
+          "name": "name_size",
+          "type": "size_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "proc_handle",
+          "type": "zx_handle_t",
+          "is_array": true,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "restricted_vmar_handle",
+          "type": "zx_handle_t",
+          "is_array": true,
+          "attributes": [
+          ]
+        }
+      ],
+      "return_type": "zx_status_t"
+    },
+    {
       "name": "process_start",
       "attributes": [
         "*"
@@ -19852,6 +19970,15 @@ KERNEL_SYSCALL(process_create, zx_status_t, /* no attributes */, 6,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) user_out_handle* proc_handle,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) user_out_handle* vmar_handle))
 
+KERNEL_SYSCALL(process_create_shared, zx_status_t, /* no attributes */, 6,
+    (shared_proc, options, name, name_size, proc_handle, restricted_vmar_handle), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t shared_proc,
+    uint32_t options,
+    user_in_ptr<const char> name,
+    size_t name_size,
+    _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) user_out_handle* proc_handle,
+    _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) user_out_handle* restricted_vmar_handle))
+
 KERNEL_SYSCALL(process_start, zx_status_t, /* no attributes */, 6,
     (handle, thread, entry, stack, arg1, arg2), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
@@ -21426,6 +21553,26 @@ syscall_result wrapper_process_create(SafeSyscallArgument<zx_handle_t>::RawType 
     });
 }
 
+syscall_result wrapper_process_create_shared(SafeSyscallArgument<zx_handle_t>::RawType shared_proc, SafeSyscallArgument<uint32_t>::RawType options, SafeSyscallArgument<const char*>::RawType name, SafeSyscallArgument<size_t>::RawType name_size, SafeSyscallArgument<zx_handle_t*>::RawType proc_handle, SafeSyscallArgument<zx_handle_t*>::RawType restricted_vmar_handle, uint64_t pc);
+syscall_result wrapper_process_create_shared(SafeSyscallArgument<zx_handle_t>::RawType shared_proc, SafeSyscallArgument<uint32_t>::RawType options, SafeSyscallArgument<const char*>::RawType name, SafeSyscallArgument<size_t>::RawType name_size, SafeSyscallArgument<zx_handle_t*>::RawType proc_handle, SafeSyscallArgument<zx_handle_t*>::RawType restricted_vmar_handle, uint64_t pc) {
+    return do_syscall(ZX_SYS_process_create_shared, pc, &VDso::ValidSyscallPC::process_create_shared, [&](ProcessDispatcher* current_process) -> uint64_t {
+        user_out_handle out_handle_proc_handle;
+        user_out_handle out_handle_restricted_vmar_handle;
+        auto result = sys_process_create_shared(SafeSyscallArgument<zx_handle_t>::Sanitize(shared_proc), SafeSyscallArgument<uint32_t>::Sanitize(options), make_user_in_ptr(SafeSyscallArgument<const char*>::Sanitize(name)), SafeSyscallArgument<size_t>::Sanitize(name_size), &out_handle_proc_handle, &out_handle_restricted_vmar_handle);
+        if (result != ZX_OK)
+            return result;
+        result = out_handle_proc_handle.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(proc_handle)));
+        if (result != ZX_OK)
+            return result;
+        result = out_handle_restricted_vmar_handle.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(restricted_vmar_handle)));
+        if (result != ZX_OK)
+            return result;
+        out_handle_proc_handle.finish_copyout(current_process);
+        out_handle_restricted_vmar_handle.finish_copyout(current_process);
+        return result;
+    });
+}
+
 syscall_result wrapper_process_start(SafeSyscallArgument<zx_handle_t>::RawType handle, SafeSyscallArgument<zx_handle_t>::RawType thread, SafeSyscallArgument<zx_vaddr_t>::RawType entry, SafeSyscallArgument<zx_vaddr_t>::RawType stack, SafeSyscallArgument<zx_handle_t>::RawType arg1, SafeSyscallArgument<uintptr_t>::RawType arg2, uint64_t pc);
 syscall_result wrapper_process_start(SafeSyscallArgument<zx_handle_t>::RawType handle, SafeSyscallArgument<zx_handle_t>::RawType thread, SafeSyscallArgument<zx_vaddr_t>::RawType entry, SafeSyscallArgument<zx_vaddr_t>::RawType stack, SafeSyscallArgument<zx_handle_t>::RawType arg1, SafeSyscallArgument<uintptr_t>::RawType arg2, uint64_t pc) {
     return do_syscall(ZX_SYS_process_start, pc, &VDso::ValidSyscallPC::process_start, [&](ProcessDispatcher* current_process) -> uint64_t {
@@ -22929,6 +23076,15 @@ KERNEL_SYSCALL(process_create, zx_status_t, /* no attributes */, 6,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* proc_handle,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* vmar_handle))
 
+KERNEL_SYSCALL(process_create_shared, zx_status_t, /* no attributes */, 6,
+    (shared_proc, options, name, name_size, proc_handle, restricted_vmar_handle), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t shared_proc,
+    uint32_t options,
+    const char* name,
+    size_t name_size,
+    _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* proc_handle,
+    _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* restricted_vmar_handle))
+
 KERNEL_SYSCALL(process_start, zx_status_t, /* no attributes */, 6,
     (handle, thread, entry, stack, arg1, arg2), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
@@ -24155,6 +24311,15 @@ _ZX_SYSCALL_DECL(process_create, zx_status_t, /* no attributes */, 6,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* proc_handle,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* vmar_handle))
 
+_ZX_SYSCALL_DECL(process_create_shared, zx_status_t, /* no attributes */, 6,
+    (shared_proc, options, name, name_size, proc_handle, restricted_vmar_handle), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t shared_proc,
+    uint32_t options,
+    const char* name,
+    size_t name_size,
+    _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* proc_handle,
+    _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* restricted_vmar_handle))
+
 _ZX_SYSCALL_DECL(process_start, zx_status_t, /* no attributes */, 6,
     (handle, thread, entry, stack, arg1, arg2), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
@@ -25280,6 +25445,15 @@ extern {
         vmar_handle: *mut zx_handle_t
         ) -> zx_status_t;
 
+    pub fn zx_process_create_shared(
+        shared_proc: zx_handle_t,
+        options: u32,
+        name: *const u8,
+        name_size: usize,
+        proc_handle: *mut zx_handle_t,
+        restricted_vmar_handle: *mut zx_handle_t
+        ) -> zx_status_t;
+
     pub fn zx_process_start(
         handle: zx_handle_t,
         thread: zx_handle_t,
@@ -25924,84 +26098,85 @@ extern {
 #define ZX_SYS_port_cancel 100
 #define ZX_SYS_process_exit 101
 #define ZX_SYS_process_create 102
-#define ZX_SYS_process_start 103
-#define ZX_SYS_process_read_memory 104
-#define ZX_SYS_process_write_memory 105
-#define ZX_SYS_profile_create 106
-#define ZX_SYS_resource_create 107
-#define ZX_SYS_restricted_enter 108
-#define ZX_SYS_restricted_write_state 109
-#define ZX_SYS_restricted_read_state 110
-#define ZX_SYS_smc_call 111
-#define ZX_SYS_socket_create 112
-#define ZX_SYS_socket_write 113
-#define ZX_SYS_socket_read 114
-#define ZX_SYS_socket_set_disposition 115
-#define ZX_SYS_stream_create 116
-#define ZX_SYS_stream_writev 117
-#define ZX_SYS_stream_writev_at 118
-#define ZX_SYS_stream_readv 119
-#define ZX_SYS_stream_readv_at 120
-#define ZX_SYS_stream_seek 121
-#define ZX_SYS_syscall_test_0 122
-#define ZX_SYS_syscall_test_1 123
-#define ZX_SYS_syscall_test_2 124
-#define ZX_SYS_syscall_test_3 125
-#define ZX_SYS_syscall_test_4 126
-#define ZX_SYS_syscall_test_5 127
-#define ZX_SYS_syscall_test_6 128
-#define ZX_SYS_syscall_test_7 129
-#define ZX_SYS_syscall_test_8 130
-#define ZX_SYS_syscall_next_1 131
-#define ZX_SYS_syscall_test_wrapper 132
-#define ZX_SYS_syscall_test_handle_create 133
-#define ZX_SYS_syscall_test_widening_unsigned_narrow 134
-#define ZX_SYS_syscall_test_widening_signed_narrow 135
-#define ZX_SYS_syscall_test_widening_unsigned_wide 136
-#define ZX_SYS_syscall_test_widening_signed_wide 137
-#define ZX_SYS_system_get_event 138
-#define ZX_SYS_system_set_performance_info 139
-#define ZX_SYS_system_get_performance_info 140
-#define ZX_SYS_system_mexec 141
-#define ZX_SYS_system_mexec_payload_get 142
-#define ZX_SYS_system_powerctl 143
-#define ZX_SYS_task_suspend 144
-#define ZX_SYS_task_suspend_token 145
-#define ZX_SYS_task_create_exception_channel 146
-#define ZX_SYS_task_kill 147
-#define ZX_SYS_thread_exit 148
-#define ZX_SYS_thread_create 149
-#define ZX_SYS_thread_start 150
-#define ZX_SYS_thread_read_state 151
-#define ZX_SYS_thread_write_state 152
-#define ZX_SYS_thread_legacy_yield 153
-#define ZX_SYS_timer_create 154
-#define ZX_SYS_timer_set 155
-#define ZX_SYS_timer_cancel 156
-#define ZX_SYS_vcpu_create 157
-#define ZX_SYS_vcpu_enter 158
-#define ZX_SYS_vcpu_kick 159
-#define ZX_SYS_vcpu_interrupt 160
-#define ZX_SYS_vcpu_read_state 161
-#define ZX_SYS_vcpu_write_state 162
-#define ZX_SYS_vmar_allocate 163
-#define ZX_SYS_vmar_destroy 164
-#define ZX_SYS_vmar_map 165
-#define ZX_SYS_vmar_unmap 166
-#define ZX_SYS_vmar_protect 167
-#define ZX_SYS_vmar_op_range 168
-#define ZX_SYS_vmo_create 169
-#define ZX_SYS_vmo_read 170
-#define ZX_SYS_vmo_write 171
-#define ZX_SYS_vmo_get_size 172
-#define ZX_SYS_vmo_set_size 173
-#define ZX_SYS_vmo_op_range 174
-#define ZX_SYS_vmo_create_child 175
-#define ZX_SYS_vmo_set_cache_policy 176
-#define ZX_SYS_vmo_replace_as_executable 177
-#define ZX_SYS_vmo_create_contiguous 178
-#define ZX_SYS_vmo_create_physical 179
-#define ZX_SYS_COUNT 180
+#define ZX_SYS_process_create_shared 103
+#define ZX_SYS_process_start 104
+#define ZX_SYS_process_read_memory 105
+#define ZX_SYS_process_write_memory 106
+#define ZX_SYS_profile_create 107
+#define ZX_SYS_resource_create 108
+#define ZX_SYS_restricted_enter 109
+#define ZX_SYS_restricted_write_state 110
+#define ZX_SYS_restricted_read_state 111
+#define ZX_SYS_smc_call 112
+#define ZX_SYS_socket_create 113
+#define ZX_SYS_socket_write 114
+#define ZX_SYS_socket_read 115
+#define ZX_SYS_socket_set_disposition 116
+#define ZX_SYS_stream_create 117
+#define ZX_SYS_stream_writev 118
+#define ZX_SYS_stream_writev_at 119
+#define ZX_SYS_stream_readv 120
+#define ZX_SYS_stream_readv_at 121
+#define ZX_SYS_stream_seek 122
+#define ZX_SYS_syscall_test_0 123
+#define ZX_SYS_syscall_test_1 124
+#define ZX_SYS_syscall_test_2 125
+#define ZX_SYS_syscall_test_3 126
+#define ZX_SYS_syscall_test_4 127
+#define ZX_SYS_syscall_test_5 128
+#define ZX_SYS_syscall_test_6 129
+#define ZX_SYS_syscall_test_7 130
+#define ZX_SYS_syscall_test_8 131
+#define ZX_SYS_syscall_next_1 132
+#define ZX_SYS_syscall_test_wrapper 133
+#define ZX_SYS_syscall_test_handle_create 134
+#define ZX_SYS_syscall_test_widening_unsigned_narrow 135
+#define ZX_SYS_syscall_test_widening_signed_narrow 136
+#define ZX_SYS_syscall_test_widening_unsigned_wide 137
+#define ZX_SYS_syscall_test_widening_signed_wide 138
+#define ZX_SYS_system_get_event 139
+#define ZX_SYS_system_set_performance_info 140
+#define ZX_SYS_system_get_performance_info 141
+#define ZX_SYS_system_mexec 142
+#define ZX_SYS_system_mexec_payload_get 143
+#define ZX_SYS_system_powerctl 144
+#define ZX_SYS_task_suspend 145
+#define ZX_SYS_task_suspend_token 146
+#define ZX_SYS_task_create_exception_channel 147
+#define ZX_SYS_task_kill 148
+#define ZX_SYS_thread_exit 149
+#define ZX_SYS_thread_create 150
+#define ZX_SYS_thread_start 151
+#define ZX_SYS_thread_read_state 152
+#define ZX_SYS_thread_write_state 153
+#define ZX_SYS_thread_legacy_yield 154
+#define ZX_SYS_timer_create 155
+#define ZX_SYS_timer_set 156
+#define ZX_SYS_timer_cancel 157
+#define ZX_SYS_vcpu_create 158
+#define ZX_SYS_vcpu_enter 159
+#define ZX_SYS_vcpu_kick 160
+#define ZX_SYS_vcpu_interrupt 161
+#define ZX_SYS_vcpu_read_state 162
+#define ZX_SYS_vcpu_write_state 163
+#define ZX_SYS_vmar_allocate 164
+#define ZX_SYS_vmar_destroy 165
+#define ZX_SYS_vmar_map 166
+#define ZX_SYS_vmar_unmap 167
+#define ZX_SYS_vmar_protect 168
+#define ZX_SYS_vmar_op_range 169
+#define ZX_SYS_vmo_create 170
+#define ZX_SYS_vmo_read 171
+#define ZX_SYS_vmo_write 172
+#define ZX_SYS_vmo_get_size 173
+#define ZX_SYS_vmo_set_size 174
+#define ZX_SYS_vmo_op_range 175
+#define ZX_SYS_vmo_create_child 176
+#define ZX_SYS_vmo_set_cache_policy 177
+#define ZX_SYS_vmo_replace_as_executable 178
+#define ZX_SYS_vmo_create_contiguous 179
+#define ZX_SYS_vmo_create_physical 180
+#define ZX_SYS_COUNT 181
 ----- syscall-numbers.h END -----
 
 

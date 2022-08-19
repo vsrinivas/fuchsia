@@ -27,7 +27,6 @@
 
 #include <mini-process/mini-process.h>
 #include <zxtest/zxtest.h>
-
 namespace {
 
 #ifdef __aarch64__
@@ -1117,6 +1116,92 @@ TEST(ProcessTest, InfoProcessNoProcessHandles) {
 
   // Cleanup
   EXPECT_EQ(mini_process_cmd(cmd_channel, MINIP_CMD_EXIT_NORMAL, nullptr), ZX_ERR_PEER_CLOSED);
+}
+
+TEST(ProcessTest, SharedMapInPrototypeProcess) {
+  zx::process prototype_process;
+  zx::vmar shared_vmar;
+  constexpr const char kPrototypeName[] = "prototype_process";
+  ASSERT_OK(zx::process::create(*zx::job::default_job(), kPrototypeName, sizeof(kPrototypeName),
+                                ZX_PROCESS_SHARED, &prototype_process, &shared_vmar));
+
+  zx::process process;
+  zx::vmar restricted_vmar;
+  constexpr const char kProcessName[] = "process";
+  ASSERT_OK(zx::process::create_shared(prototype_process, kProcessName, sizeof(kProcessName), 0,
+                                       &process, &restricted_vmar));
+
+  // Map a vmo into the shared vmar using the prototype handle.
+  zx_handle_t vmo;
+  ASSERT_OK(zx_vmo_create(zx_system_get_page_size(), 0, &vmo));
+  uintptr_t addr;
+  ASSERT_OK(zx_vmar_map(shared_vmar.get(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0,
+                        zx_system_get_page_size(), &addr));
+
+  // Write some data to the vmo.
+  std::vector<char> shared_data = {'a', 'b', 'c'};
+  ASSERT_OK(zx_vmo_write(vmo, shared_data.data(), 0, shared_data.size()));
+
+  // Read process memory from both processes to make sure they have the data.
+  std::vector<char> read_data = {'d', 'e', 'f'};
+  size_t actual = 0;
+  ASSERT_EQ(prototype_process.read_memory(addr, read_data.data(), read_data.size(), &actual),
+            ZX_OK);
+  ASSERT_EQ(read_data, shared_data);
+
+  // Now read the same address from the second process.
+  read_data = {'d', 'e', 'f'};
+  ASSERT_EQ(process.read_memory(addr, read_data.data(), read_data.size(), &actual), ZX_OK);
+  ASSERT_EQ(read_data, shared_data);
+}
+
+TEST(ProcessTest, RestrictedVmarNotShared) {
+  zx::process prototype_process;
+  zx::vmar shared_vmar;
+  constexpr const char kPrototypeName[] = "prototype_process";
+  ASSERT_OK(zx::process::create(*zx::job::default_job(), kPrototypeName, sizeof(kPrototypeName),
+                                ZX_PROCESS_SHARED, &prototype_process, &shared_vmar));
+
+  zx::process process;
+  zx::vmar restricted_vmar;
+  constexpr const char kProcessName[] = "process";
+  ASSERT_OK(zx::process::create_shared(prototype_process, kProcessName, sizeof(kProcessName), 0,
+                                       &process, &restricted_vmar));
+
+  // Map a vmo into the restricted vmar of the second process.
+  zx_handle_t vmo;
+  ASSERT_OK(zx_vmo_create(zx_system_get_page_size(), 0, &vmo));
+  uintptr_t addr;
+  ASSERT_OK(zx_vmar_map(restricted_vmar.get(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0,
+                        zx_system_get_page_size(), &addr));
+
+  // Write some data to the vmo.
+  std::vector<char> restricted_data = {'a', 'b', 'c'};
+  ASSERT_OK(zx_vmo_write(vmo, restricted_data.data(), 0, restricted_data.size()));
+
+  std::vector<char> read_data = {'d', 'e', 'f'};
+  size_t actual = 0;
+  // Now try to read the same address from the first process, which should fail.
+  if (prototype_process.read_memory(addr, read_data.data(), read_data.size(), &actual) == ZX_OK) {
+    // If `addr` happened to be valid, make sure that the read data was not the restricted data from
+    // the prototype.
+    ASSERT_NE(read_data, restricted_data);
+  }
+}
+
+TEST(ProcessTest, SharedProcessInvalidPrototype) {
+  zx::process prototype_process;
+  zx::vmar prototype_vmar;
+  constexpr const char kPrototypeName[] = "prototype_process";
+  ASSERT_OK(zx::process::create(*zx::job::default_job(), kPrototypeName, sizeof(kPrototypeName), 0,
+                                &prototype_process, &prototype_vmar));
+
+  zx::process process;
+  zx::vmar restricted_vmar;
+  constexpr const char kProcessName[] = "process";
+  ASSERT_EQ(zx::process::create_shared(prototype_process, kProcessName, sizeof(kProcessName), 0,
+                                       &process, &restricted_vmar),
+            ZX_ERR_INVALID_ARGS);
 }
 
 }  // namespace

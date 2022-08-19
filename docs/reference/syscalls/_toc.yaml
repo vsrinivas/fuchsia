@@ -58,6 +58,8 @@ toc:
   section:
   - title: "zx_process_create"
     path: /docs/reference/syscalls/process_create.md
+  - title: "zx_process_create_shared"
+    path: /docs/reference/syscalls/process_create_shared.md
   - title: "zx_process_exit"
     path: /docs/reference/syscalls/process_exit.md
   - title: "zx_process_read_memory"

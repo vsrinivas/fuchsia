@@ -1820,6 +1820,14 @@
               "type": "VariableDeclarationImpl",
               "varType": "int"
             },
+            "PROCESS_SHARED": {
+              "isConst": true,
+              "isFinal": false,
+              "isLate": false,
+              "name": "PROCESS_SHARED",
+              "type": "VariableDeclarationImpl",
+              "varType": "int"
+            },
             "PROCESS_TERMINATED": {
               "isConst": true,
               "isFinal": false,

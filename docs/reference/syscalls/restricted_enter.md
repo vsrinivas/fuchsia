@@ -36,6 +36,18 @@ ARM64 support is currently unimplemented.
 
 Currently, the *exception code* passed back to normal mode is always 0.
 
+### Shared process
+
+Processes created with the `ZX_PROCESS_SHARED` option, or via `zx_process_create_shared()`
+have two distinct [address spaces]. One is shared between multiple processes, while the other
+is restricted to the specific process. When a thread that is entering restrcited mode
+belongs to such a process, the active address space for the thread is updated as follows:
+
+  - When entering restricted mode the active address space for the thread is set to the
+    restricted address space of the process.
+  - When exiting restricted mode the active address space for the thread is set to the
+    shared address space of the process.
+
 ## Rights
 
 None (currently)
@@ -57,7 +69,10 @@ is non-zero.
 
 - [`zx_restricted_write_state()`]
 - [`zx_restricted_read_state()`]
+- [`zx_process_create_shared()`]
 
 [`zx_restricted_write_state()`]: restricted_write_state.md
 [`zx_restricted_read_state()`]: restricted_read_state.md
+[`zx_process_create_shared()`]: process_create_shared.md
+[address spaces]: /docs/concepts/memory/address_spaces.md
 

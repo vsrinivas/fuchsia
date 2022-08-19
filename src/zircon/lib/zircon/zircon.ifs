@@ -105,6 +105,7 @@ Symbols:
   - { Name: _zx_port_queue, Type: Func }
   - { Name: _zx_port_wait, Type: Func }
   - { Name: _zx_process_create, Type: Func }
+  - { Name: _zx_process_create_shared, Type: Func }
   - { Name: _zx_process_exit, Type: Func }
   - { Name: _zx_process_read_memory, Type: Func }
   - { Name: _zx_process_start, Type: Func }
@@ -297,6 +298,7 @@ Symbols:
   - { Name: zx_port_queue, Type: Func, Weak: true }
   - { Name: zx_port_wait, Type: Func, Weak: true }
   - { Name: zx_process_create, Type: Func, Weak: true }
+  - { Name: zx_process_create_shared, Type: Func, Weak: true }
   - { Name: zx_process_exit, Type: Func, Weak: true }
   - { Name: zx_process_read_memory, Type: Func, Weak: true }
   - { Name: zx_process_start, Type: Func, Weak: true }
