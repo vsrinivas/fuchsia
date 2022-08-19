@@ -114,11 +114,14 @@ void XdrBasemgrConfig_v1(XdrContext* const xdr,
       has_story_shell_url = data->story_shell().app_config().has_url();
     }
   }
-  xdr->FieldWithDefault(modular_config::kStoryShellUrl,
-                        data->mutable_story_shell()->mutable_app_config()->mutable_url(),
-                        has_story_shell_url, std::string(modular_config::kDefaultStoryShellUrl));
-  if (xdr->op() == XdrOp::FROM_JSON) {
-    data->mutable_story_shell()->mutable_app_config()->set_args(std::vector<std::string>());
+  if (xdr->HasField(modular_config::kStoryShellUrl, has_story_shell_url)) {
+    xdr->Field(modular_config::kStoryShellUrl,
+               data->mutable_story_shell()->mutable_app_config()->mutable_url());
+    if (xdr->op() == XdrOp::FROM_JSON) {
+      data->mutable_story_shell()->mutable_app_config()->set_args({});
+    }
+  } else {
+    data->clear_story_shell();
   }
 
   if (xdr->HasField(modular_config::kSessionLauncher, data->has_session_launcher())) {

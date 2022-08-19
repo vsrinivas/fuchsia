@@ -64,27 +64,6 @@ source_set("story_runner") {
   ]
 }
 
-executable("dev_story_shell_bin") {
-  output_name = "dev_story_shell"
-  sources = [ "dev_story_shell.cc" ]
-  deps = [
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/lib/sys/cpp",
-    "//src/modular/lib/app_driver/cpp",
-    "//src/modular/lib/fidl:single_service_app",
-    "//src/modular/lib/fidl:view_host",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-}
-
-fuchsia_package_with_single_component("dev_story_shell") {
-  manifest = "meta/dev_story_shell.cmx"
-  deps = [ ":dev_story_shell_bin" ]
-}
-
 executable("annotation_controller_impl_unittest") {
   testonly = true
 

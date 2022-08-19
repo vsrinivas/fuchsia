@@ -48,7 +48,8 @@ ffx inspect show sessionmgr.cmx:root:config
       {
         "url": "fuchsia-pkg://fuchsia.com/session_shell#meta/session_shell.cmx",
       }
-    ]
+    ],
+    "story_shell_url": "fuchsia-pkg://fuchsia.com/story_shell#meta/story_shell.cmx"
   },
   "sessionmgr": {
     "startup_agents": [
@@ -94,7 +95,6 @@ ffx inspect show sessionmgr.cmx:root:config
   - **default**: An empty array. sessionmgr will not launch a session shell.
 - `story_shell_url`: **string** _(optional)_
   - The fuchsia component url for which story shell to use.
-  - **default**: `fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx`
 - `enable_cobalt`: **boolean** _(optional)_
   - When set to false, Cobalt statistics are disabled.
   - **default**: `true`

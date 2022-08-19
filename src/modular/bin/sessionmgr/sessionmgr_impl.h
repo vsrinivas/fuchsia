@@ -87,10 +87,10 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void InitializeStartupAgents();
   void InitializeV2ModularAgents();
   void InitializeAgentRunner();
-  void InitializeStoryProvider(fuchsia::modular::session::AppConfig story_shell_config,
-                               PresentationProtocolPtr presentation_protocol,
-                               bool use_session_shell_for_story_shell_factory,
-                               bool present_mods_as_stories);
+  void InitializeStoryProvider(
+      std::optional<fuchsia::modular::session::AppConfig> story_shell_config,
+      PresentationProtocolPtr presentation_protocol, bool use_session_shell_for_story_shell_factory,
+      bool present_mods_as_stories);
   void InitializeSessionShell(
       std::optional<fuchsia::modular::session::AppConfig> session_shell_config,
       std::optional<fuchsia::ui::views::ViewToken> view_token,

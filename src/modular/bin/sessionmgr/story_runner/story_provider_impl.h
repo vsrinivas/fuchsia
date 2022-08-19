@@ -53,7 +53,7 @@ class StoryControllerImpl;
 class StoryProviderImpl : fuchsia::modular::StoryProvider {
  public:
   StoryProviderImpl(Environment* session_environment, SessionStorage* session_storage,
-                    fuchsia::modular::session::AppConfig story_shell_config,
+                    std::optional<fuchsia::modular::session::AppConfig> story_shell_config,
                     fuchsia::modular::StoryShellFactoryPtr story_shell_factory,
                     PresentationProtocolPtr presentation_protocol, bool present_mods_as_stories,
                     ComponentContextInfo component_context_info,
@@ -75,14 +75,6 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
 
   // Called by StoryControllerImpl.
   const ComponentContextInfo& component_context_info() { return component_context_info_; }
-
-  // Called by StoryControllerImpl.
-  AgentServicesFactory* agent_services_factory() { return agent_services_factory_; }
-
-  // Called by StoryControllerImpl.
-  const fuchsia::modular::session::AppConfig& story_shell_config() const {
-    return story_shell_config_;
-  }
 
   // Called by SessionmgrImpl.
   //
@@ -181,7 +173,7 @@ class StoryProviderImpl : fuchsia::modular::StoryProvider {
   fidl::InterfacePtrSet<fuchsia::modular::StoryProviderWatcher> watchers_;
 
   // Component URL and arguments used to launch story shells.
-  fuchsia::modular::session::AppConfig story_shell_config_;
+  std::optional<fuchsia::modular::session::AppConfig> story_shell_config_;
 
   // Services that story shells can connect to from their environment.
   component::ServiceProviderImpl story_shell_services_;

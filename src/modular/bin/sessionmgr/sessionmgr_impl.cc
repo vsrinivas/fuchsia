@@ -183,7 +183,7 @@ void SessionmgrImpl::InitializeInternal(
             // all modules to be terminated before agents are terminated. Agents must
             // outlive the stories which contain modules that are connected to those
             // agents.
-            InitializeStoryProvider(CloneStruct(config_accessor_.story_shell_app_config()),
+            InitializeStoryProvider(config_accessor_.story_shell_app_config(),
                                     std::move(presentation_protocol),
                                     config_accessor_.use_session_shell_for_story_shell_factory(),
                                     config_accessor_.sessionmgr_config().present_mods_as_stories());
@@ -427,7 +427,7 @@ void SessionmgrImpl::InitializeStartupAgents() {
 }
 
 void SessionmgrImpl::InitializeStoryProvider(
-    fuchsia::modular::session::AppConfig story_shell_config,
+    std::optional<fuchsia::modular::session::AppConfig> story_shell_config,
     PresentationProtocolPtr presentation_protocol, bool use_session_shell_for_story_shell_factory,
     bool present_mods_as_stories) {
   FX_DCHECK(agent_runner_.get());

@@ -194,15 +194,13 @@ class StoryProviderImpl::StopStoryShellCall : public Operation<> {
   StoryProviderImpl* const story_provider_impl_;  // not owned
 };
 
-StoryProviderImpl::StoryProviderImpl(Environment* const session_environment,
-                                     SessionStorage* const session_storage,
-                                     fuchsia::modular::session::AppConfig story_shell_config,
-                                     fuchsia::modular::StoryShellFactoryPtr story_shell_factory,
-                                     PresentationProtocolPtr presentation_protocol,
-                                     bool present_mods_as_stories,
-                                     ComponentContextInfo component_context_info,
-                                     AgentServicesFactory* const agent_services_factory,
-                                     inspect::Node* root_node)
+StoryProviderImpl::StoryProviderImpl(
+    Environment* const session_environment, SessionStorage* const session_storage,
+    std::optional<fuchsia::modular::session::AppConfig> story_shell_config,
+    fuchsia::modular::StoryShellFactoryPtr story_shell_factory,
+    PresentationProtocolPtr presentation_protocol, bool present_mods_as_stories,
+    ComponentContextInfo component_context_info, AgentServicesFactory* const agent_services_factory,
+    inspect::Node* root_node)
     : session_environment_(session_environment),
       session_storage_(session_storage),
       story_shell_config_(std::move(story_shell_config)),
@@ -344,11 +342,13 @@ void StoryProviderImpl::MaybeLoadStoryShell() {
     return;
   }
 
+  FX_DCHECK(story_shell_config_.has_value()) << "Story shell must be configured.";
+
   auto service_list = std::make_unique<fuchsia::sys::ServiceList>();
   for (const auto& service_name : component_context_info_.agent_runner->GetAgentServices()) {
     service_list->names.push_back(service_name);
   }
-  component_context_info_.agent_runner->PublishAgentServices(story_shell_config_.url(),
+  component_context_info_.agent_runner->PublishAgentServices(story_shell_config_->url(),
                                                              &story_shell_services_);
 
   fuchsia::sys::ServiceProviderPtr service_provider;
@@ -356,7 +356,7 @@ void StoryProviderImpl::MaybeLoadStoryShell() {
   service_list->provider = std::move(service_provider);
 
   preloaded_story_shell_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-      session_environment_->GetLauncher(), CloneStruct(story_shell_config_), /*data_origin=*/"",
+      session_environment_->GetLauncher(), CloneStruct(*story_shell_config_), /*data_origin=*/"",
       std::move(service_list));
 }
 

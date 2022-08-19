@@ -13,6 +13,8 @@
 
 #include <fbl/macros.h>
 
+#include "src/modular/lib/fidl/clone.h"
+
 namespace modular {
 
 class ModularConfigAccessor {
@@ -30,10 +32,11 @@ class ModularConfigAccessor {
     FX_DCHECK(config_.has_sessionmgr_config());
     return config_.sessionmgr_config();
   }
-  const fuchsia::modular::session::AppConfig& story_shell_app_config() const {
-    FX_DCHECK(basemgr_config().has_story_shell());
-    FX_DCHECK(basemgr_config().story_shell().has_app_config());
-    return basemgr_config().story_shell().app_config();
+  std::optional<fuchsia::modular::session::AppConfig> story_shell_app_config() const {
+    if (!basemgr_config().has_story_shell() || !basemgr_config().story_shell().has_app_config()) {
+      return std::nullopt;
+    }
+    return std::make_optional(CloneStruct(basemgr_config().story_shell().app_config()));
   }
   bool use_session_shell_for_story_shell_factory() const {
     FX_DCHECK(basemgr_config().has_use_session_shell_for_story_shell_factory());

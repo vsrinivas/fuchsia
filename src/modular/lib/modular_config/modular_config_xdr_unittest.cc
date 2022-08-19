@@ -24,8 +24,7 @@ TEST(ModularConfigXdr, BasemgrWriteDefaultValues) {
   static constexpr auto kExpectedJson = R"({
       "enable_cobalt": true,
       "use_session_shell_for_story_shell_factory": false,
-      "session_shells": null,
-      "story_shell_url": "fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
+      "session_shells": null
     })";
   rapidjson::Document expected_json_doc;
   expected_json_doc.Parse(kExpectedJson);
@@ -51,7 +50,6 @@ TEST(ModularConfigXdr, BasemgrReadDefaultValues) {
   EXPECT_FALSE(read_config.use_session_shell_for_story_shell_factory());
 
   ASSERT_TRUE(read_config.session_shell_map().empty());
-  EXPECT_EQ(modular_config::kDefaultStoryShellUrl, read_config.story_shell().app_config().url());
 }
 
 // Tests that values are set correctly for BasemgrConfig when reading JSON.
@@ -92,6 +90,7 @@ TEST(ModularConfigXdr, BasemgrReadValues) {
 
   ASSERT_TRUE(read_config.has_story_shell());
   ASSERT_TRUE(read_config.story_shell().has_app_config());
+  ASSERT_TRUE(read_config.story_shell().app_config().has_args());
   ASSERT_EQ(kTestStoryShellUrl, read_config.story_shell().app_config().url());
   EXPECT_EQ(0u, read_config.story_shell().app_config().args().size());
 }
@@ -258,8 +257,7 @@ TEST(ModularConfigXdr, ModularWriteDefaultValues) {
       "basemgr": {
         "enable_cobalt": true,
         "use_session_shell_for_story_shell_factory": false,
-        "session_shells": [],
-        "story_shell_url": "fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
+        "session_shells": []
       },
       "sessionmgr": {
         "enable_cobalt": true,
@@ -293,8 +291,7 @@ TEST(ModularConfigXdr, ModularReadWriteValues) {
       "basemgr": {
         "enable_cobalt": false,
         "use_session_shell_for_story_shell_factory": false,
-        "session_shells": null,
-        "story_shell_url": "fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
+        "session_shells": null
       },
       "sessionmgr": {
         "enable_cobalt": false,

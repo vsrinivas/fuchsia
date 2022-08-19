@@ -38,6 +38,7 @@ source_set("modular_config_accessor") {
   public_deps = [
     "//sdk/fidl/fuchsia.modular.session",
     "//sdk/lib/syslog/cpp",
+    "//src/modular/lib/fidl:clone",
     "//zircon/system/ulib/fbl",
   ]
 
