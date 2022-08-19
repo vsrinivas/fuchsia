@@ -207,7 +207,7 @@ zx_status_t PhysicalPageProvider::WaitOnEvent(Event* event) {
       uint32_t iterations = 0;
       while (!page->is_free()) {
         if (++iterations % 10 == 0) {
-          dprintf(INFO, "PhysicalPageProvider::WaitOnEvent() looping more than expected\n");
+          printf("[ppb] PhysicalPageProvider::WaitOnEvent() looping more than expected\n");
         }
         auto maybe_vmo_backlink = pmm_page_queues()->GetCowWithReplaceablePage(page, cow_pages_);
         if (!maybe_vmo_backlink) {
@@ -237,6 +237,10 @@ zx_status_t PhysicalPageProvider::WaitOnEvent(Event* event) {
                 cow_container->ReplacePage(page, vmo_backlink.offset, false, nullptr);
             // If replacement failed for any reason, fall back to eviction.
             needs_evict = replace_result != ZX_OK;
+            if (needs_evict) {
+              printf("[ppb] Failed to replace page %p (%lx) with %d\n. Falling back to eviction.\n",
+                     page, phys_base_ + offset, replace_result);
+            }
           }
 
           if (needs_evict) {
@@ -245,11 +249,14 @@ zx_status_t PhysicalPageProvider::WaitOnEvent(Event* event) {
             bool evict_result = cow_container->RemovePageForEviction(
                 page, vmo_backlink.offset, VmCowPages::EvictionHintAction::Follow);
             if (!evict_result) {
+              printf("[ppb] Could not evict page %p (%lx). Waiting on stack owner.\n", page,
+                     phys_base_ + offset);
               // We must have raced and this page has already become free, or is currently in a
               // stack ownership somewhere else on the way to becoming free. For the second case we
               // wait until it's not stack owned, ensuring that the only possible state is that the
               // page is FREE.
               StackOwnedLoanedPagesInterval::WaitUntilContiguousPageNotStackOwned(page);
+              printf("[ppb] Page %p (%lx) no longer stack owned.\n", page, phys_base_ + offset);
             } else {
               pmm_free_page(page);
             }
