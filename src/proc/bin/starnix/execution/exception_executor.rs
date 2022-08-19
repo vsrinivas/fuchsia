@@ -105,6 +105,18 @@ fn start_task_thread(current_task: &CurrentTask) -> Result<zx::Channel, zx::Stat
 
 /// Block the exception handler as long as the task is stopped and not terminated.
 fn block_while_stopped(current_task: &CurrentTask) {
+    // Early exit test to avoid creating a port when we don't need to sleep. Testing in the loop
+    // after adding the waiter to the wait queue is still important to deal with race conditions
+    // where the condition becomes true between checking it and starting the wait.
+    // TODO(tbodt): Find a less hacky way to do this. There might be some way to create one port
+    // per task and use it every time the current task needs to sleep.
+    if current_task.read().exit_status.is_some() {
+        return;
+    }
+    if !current_task.thread_group.read().stopped {
+        return;
+    }
+
     let waiter = Waiter::new_ignoring_signals();
     loop {
         current_task.thread_group.write().stopped_waiters.wait_async(&waiter);
