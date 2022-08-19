@@ -91,18 +91,20 @@ TEST(FormatName, GCCLambda) {
 
 TEST(FormatName, RustClosure) {
   // Rust closures are named like:
-  // "fuchsia_async::executor::{{impl}}::run_singlethreaded::{{closure}}<()>"
-  // The function "assigned name" will be "{{closure}}<()>".
+  // fuchsia_async::runtime::fuchsia::executor::local::{impl#1}::run_singlethreaded::{closure#0}<core::future::from_generator::GenFuture<regulatory_region::main::func::{async_fn_env#0}>>
 
   // Make a function for the closure to be inside of.
   auto enclosing = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   enclosing->set_assigned_name("EnclosingFunction");
 
   auto closure = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
-  closure->set_assigned_name("{{closure}}<()>");
+  closure->set_assigned_name(
+      "{closure#0}<core::future::from_generator::GenFuture<regulatory_region::main::func::{async_"
+      "fn_env#0}>>");
   SymbolTestParentSetter closure_parent(closure, enclosing);
 
-  EXPECT_EQ("λ()", FormatFunctionName(closure.get(), FormatFunctionNameOptions()).AsString());
+  EXPECT_EQ("EnclosingFunction::λ()",
+            FormatFunctionName(closure.get(), FormatFunctionNameOptions()).AsString());
 }
 
 TEST(FormatName, FormatIdentifier) {

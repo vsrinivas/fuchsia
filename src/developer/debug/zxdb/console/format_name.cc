@@ -54,19 +54,6 @@ bool FormatClangLambda(const Function* function, OutputBuffer* out) {
   return false;
 }
 
-bool FormatRustClosure(const Function* function, OutputBuffer* out) {
-  // Rust closures currently look like
-  // "fuchsia_async::executor::{{impl}}::run_singlethreaded::{{closure}}<()>"
-  // The function "assigned name" will be just the last component.
-  if (!StringStartsWith(function->GetAssignedName(), "{{closure}}"))
-    return false;
-
-  // As with the Clang lambda above, this assumes the file/line or function enclosing the original
-  // lambda is redundant.
-  out->Append("λ");
-  return true;
-}
-
 // Escapes the given identifier component. This does not put the "$(...) around it, but handles the
 // stuff in the middle. There are two things that need to happen: handling parens and escaping
 // backslashes.
@@ -137,12 +124,34 @@ bool NeedsEscaping(const std::string& name) {
   return true;
 }
 
+// Does some custom per-component rewriting to clean up generated identifiers. Returns true if it
+// handled the component.
+bool FormatPrettyComponent(const std::string& name, OutputBuffer* out) {
+  // Rust closures look like:
+  //   fuchsia_async::runtime::fuchsia::executor::local::{impl#1}::run_singlethreaded::{closure#0}<core::future::from_generator::GenFuture<regulatory_region::main::func::{async_fn_env#0}>>
+  // Things the current version of Rust generates which we could as "lambdas" are
+  //   - {closure_env#0}
+  //   - {async_fn_env#0}
+  //   - {closure#0}<...>
+  if (StringStartsWith(name, "{closure") || StringStartsWith(name, "{async")) {
+    out->Append("λ");
+    return true;
+  }
+
+  // Handle Rust impl annotations like "{impl#1}".
+  if (StringStartsWith(name, "{impl")) {
+    out->Append(Syntax::kComment, "«impl»");
+    return true;
+  }
+  return false;
+}
+
 }  // namespace
 
 OutputBuffer FormatFunctionName(const Function* function,
                                 const FormatFunctionNameOptions& options) {
   OutputBuffer result;
-  if (!FormatClangLambda(function, &result) && !FormatRustClosure(function, &result))
+  if (!FormatClangLambda(function, &result))
     result = FormatIdentifier(function->GetIdentifier(), options.name);
 
   const auto& params = function->parameters();
@@ -200,7 +209,8 @@ OutputBuffer FormatIdentifier(const ParsedIdentifier& identifier,
       if (name.empty()) {
         // Provide names for anonymous components.
         result.Append(Syntax::kComment, kAnonIdentifierComponentName);
-      } else {
+      } else if (!FormatPrettyComponent(comp.name(), &result)) {
+        // Normal name.
         bool needs_escaping = NeedsEscaping(name);
         if (needs_escaping)
           result.Append(Syntax::kComment, "$(");
