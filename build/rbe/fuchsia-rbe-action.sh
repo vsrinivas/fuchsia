@@ -372,7 +372,7 @@ EOF
 fi
 
 # TODO(b/201697587): surface this diagnostic from rewrapper
-mapfile -t local_missing_files < <(grep "Status:LocalErrorResultStatus.*: no such file or directory" "$reproxy_errors" | sed -e 's|^.*Err:stat ||' -e 's|: no such file.*$||')
+local_missing_files=( $(grep "Status:LocalErrorResultStatus.*: no such file or directory" "$reproxy_errors" | sed -e 's|^.*Err:stat ||' -e 's|: no such file.*$||') )
 test "${#local_missing_files[@]}" = 0 || {
 cat <<EOF
 $message_header:
