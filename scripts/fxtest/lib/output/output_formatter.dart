@@ -345,8 +345,10 @@ class StandardOutputFormatter extends OutputFormatter {
 
     // Report for failed messages
     if (!event.isSuccess && event.message != null) {
-      // But only if not already doing realtime
-      if (!hasRealTimeOutput && !_currentTestIsSlow) {
+      // Skip printing the message if real time printing is enabled since that
+      // should provide information. DO print the message if the test was never
+      // executed as there is no other context.
+      if (!event.testExecuted || !(hasRealTimeOutput || _currentTestIsSlow)) {
         buffer.addLines([event.message!, '']);
       }
     }

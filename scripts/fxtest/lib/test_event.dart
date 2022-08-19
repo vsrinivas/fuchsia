@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:fxtest/test_definition.dart';
+import 'package:fxtest/constants.dart';
 
 /// Base class for our test suite stream which keeps our output in sync with
 /// ongoing test progress.
@@ -24,10 +25,15 @@ class TestResult extends TestEvent {
   /// The full command invoked to run this test.
   final String? command;
 
-  /// Whether the test was actually executed.
+  /// Whether the test was a dryrun.
   ///
-  /// Will be `true` if the test was run and `false` if the test was skipped.
+  /// Will be `true` iff the test was invoked as a dryrun.
   final bool isDryRun;
+
+  /// Whether the test was actually attempted.
+  ///
+  /// Will be `true` iff the test command was invoked.
+  final bool testExecuted;
 
   /// Explanatory string accompanying the test result - likely only supplied on
   /// test failures.
@@ -43,7 +49,8 @@ class TestResult extends TestEvent {
     required this.exitCode,
     required this.message,
     required this.runtime,
-  }) : isDryRun = false;
+  })  : isDryRun = false,
+        testExecuted = true;
 
   TestResult.skipped({
     required this.testName,
@@ -51,7 +58,17 @@ class TestResult extends TestEvent {
         exitCode = 0,
         runtime = Duration(),
         message = null,
-        command = null;
+        command = null,
+        testExecuted = false;
+
+  TestResult.failedPreprocessing({
+    required this.testName,
+    required this.message,
+  })  : isDryRun = false,
+        exitCode = failureExitCode,
+        runtime = Duration(),
+        command = null,
+        testExecuted = false;
 
   bool get isSuccess => exitCode == 0;
 

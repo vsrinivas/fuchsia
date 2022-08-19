@@ -306,24 +306,19 @@ class FuchsiaTestCommand {
       _packageRepository ??= await PackageRepository.fromManifest(
           buildDir: testsConfig.fxEnv.outputDir!);
       if (_packageRepository == null) {
-        emitEvent(TestResult(
-            runtime: Duration(seconds: 0),
-            exitCode: failureExitCode,
-            message:
-                'Package repository is not available. Run "fx serve-updates" again or use the "--no-use-package-hash" flag.',
-            testName: testBundle.testDefinition.name,
-            command: ''));
+        emitEvent(TestResult.failedPreprocessing(
+          message:
+              'Package repository is not available. Run "fx serve-updates" again or use the "--no-use-package-hash" flag.',
+          testName: testBundle.testDefinition.name,
+        ));
         return false;
       } else {
         String packageName = testBundle.testDefinition.packageUrl!.packageName;
         if (_packageRepository![packageName] == null) {
-          emitEvent(TestResult(
-              runtime: Duration(seconds: 0),
-              exitCode: failureExitCode,
+          emitEvent(TestResult.failedPreprocessing(
               message:
                   'Package $packageName is not in the package repository, check if it was correctly built or use the "--no-use-package-hash" flag.',
-              testName: testBundle.testDefinition.name,
-              command: ''));
+              testName: testBundle.testDefinition.name));
           return false;
         }
         testBundle.testDefinition.hash =
