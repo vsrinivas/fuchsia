@@ -31,7 +31,11 @@ class LinkChecker {
   /// Top level paths to the published doc site that any page can link to.
   /// Links to other locations have to be allowed by adding the source doc
   /// page to _filesAllowedToLinkToPublishedDocs.
-  static const List<String> _publishedLinksAllowed = ['', 'reference'];
+  static const List<String> _publishedLinksAllowed = [
+    '',
+    'reference',
+    'schema'
+  ];
 
   /// Files that are allowed to link to the documentation host site.
   static const List<String> _filesAllowedToLinkToPublishedDocs = ['navbar.md'];

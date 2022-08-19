@@ -129,11 +129,13 @@ void main() {
       const String rootlink = 'https://fuchsia.dev';
       // Links to the reference section are OK.
       const String referencelink = 'https://fuchsia.dev/reference/something';
+      // Links to schemas published to the devsite are OK.
+      const String schemalink = 'https://fuchsia.dev/schema/something.json';
 
       // navbar.md can link to anywhere
       const navbar = 'navbar.md';
 
-      List<String> links = [codelink, rootlink, referencelink];
+      List<String> links = [codelink, rootlink, referencelink, schemalink];
 
       List<DocContext> docList = [
         DocContext(docsDir, 'randompage', null, links),
