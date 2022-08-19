@@ -2,4 +2,4 @@
 
 #include <test/bindingsdenylist/cpp/libfuzzer_decode_encode.h>
 
-static_assert(::fuzzing::test_bindingsdenylist_decoder_encoders.size() == 24);
+static_assert(::fuzzing::test_bindingsdenylist_decoder_encoders.size() == 14);

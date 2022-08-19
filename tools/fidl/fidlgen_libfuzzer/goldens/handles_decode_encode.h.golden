@@ -11,7 +11,6 @@ namespace fuzzing {
 
 inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 2>
     test_handles_decoder_encoders = {
-
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_handles::wire::Handles",
             .has_flexible_envelope = false,

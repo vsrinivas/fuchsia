@@ -24,7 +24,6 @@ if (is_host) {
       "codegen/decoder_encoder_source.tmpl",
       "codegen/enum.tmpl",
       "codegen/header.tmpl",
-      "codegen/protocol_decoder_encoders.tmpl",
       "codegen/source.tmpl",
       "codegen/struct.tmpl",
       "codegen/table.tmpl",

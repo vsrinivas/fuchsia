@@ -2,4 +2,4 @@
 
 #include <test/doccomments/cpp/libfuzzer_decode_encode.h>
 
-static_assert(::fuzzing::test_doccomments_decoder_encoders.size() == 4);
+static_assert(::fuzzing::test_doccomments_decoder_encoders.size() == 2);

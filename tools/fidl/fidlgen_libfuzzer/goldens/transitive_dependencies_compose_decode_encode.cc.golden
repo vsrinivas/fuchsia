@@ -2,4 +2,4 @@
 
 #include <test/transitivedependenciescompose/cpp/libfuzzer_decode_encode.h>
 
-static_assert(::fuzzing::test_transitivedependenciescompose_decoder_encoders.size() == 2);
+static_assert(::fuzzing::test_transitivedependenciescompose_decoder_encoders.size() == 0);

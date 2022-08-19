@@ -61,21 +61,12 @@ func fuzzableProtocols(decls []cpp.Kinded) []fuzzableProtocol {
 	return result
 }
 
-// countDecoderEncoders duplicates template logic that inlines protocol, struct, and table
+// countDecoderEncoders duplicates template logic that inlines struct and table
 // decode/encode callbacks to get a count of total callbacks.
 func countDecoderEncoders(decls []cpp.Kinded) int {
 	count := 0
 	for _, decl := range decls {
-		if p, ok := decl.(*cpp.Protocol); ok {
-			for _, method := range p.Methods {
-				if method.HasRequest {
-					count++
-				}
-				if method.HasResponse {
-					count++
-				}
-			}
-		} else if _, ok := decl.(*cpp.Struct); ok {
+		if _, ok := decl.(*cpp.Struct); ok {
 			count++
 		} else if _, ok := decl.(*cpp.Table); ok {
 			count++

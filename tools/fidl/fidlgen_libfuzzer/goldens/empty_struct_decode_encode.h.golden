@@ -9,7 +9,7 @@
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 9>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 5>
     test_emptystruct_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_emptystruct::wire::Empty",
@@ -35,27 +35,6 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 9>
             .fidl_type_name = "::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_emptystruct::wire::EmptyProtocolSendAndReceiveTopResponse>,
-        },
-
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::Send>",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::Send>>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::internal::TransactionalEvent<::test_emptystruct::EmptyProtocol::Receive>",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalEvent<::test_emptystruct::EmptyProtocol::Receive>>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>>,
         },
 };
 

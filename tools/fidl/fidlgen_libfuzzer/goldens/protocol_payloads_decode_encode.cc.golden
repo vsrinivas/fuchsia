@@ -2,4 +2,4 @@
 
 #include <test/protocolpayloads/cpp/libfuzzer_decode_encode.h>
 
-static_assert(::fuzzing::test_protocolpayloads_decoder_encoders.size() == 42);
+static_assert(::fuzzing::test_protocolpayloads_decoder_encoders.size() == 14);

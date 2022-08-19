@@ -9,7 +9,7 @@
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 3>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 2>
     test_driveroneway_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_driveroneway::wire::Payload",
@@ -21,7 +21,6 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 3>
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_driveroneway::wire::OneWaySendRequest>,
         },
-
 };
 
 }  // namespace fuzzing

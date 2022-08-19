@@ -106,14 +106,10 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
 
   std::optional<fidl::IncomingMessage> incoming_initialize_later;
   constexpr bool kTransactionalMessage = fidl::IsFidlTransactionalMessage<T>::value;
-  if (kTransactionalMessage) {
-    incoming_initialize_later =
-        fidl::IncomingMessage::Create(bytes, num_bytes, handles, handle_metadata, num_handles);
-  } else {
-    incoming_initialize_later =
-        fidl::IncomingMessage::Create(bytes, num_bytes, handles, handle_metadata, num_handles,
-                                      fidl::IncomingMessage::kSkipMessageHeaderValidation);
-  }
+  static_assert(!kTransactionalMessage);
+  incoming_initialize_later =
+      fidl::IncomingMessage::Create(bytes, num_bytes, handles, handle_metadata, num_handles,
+                                    fidl::IncomingMessage::kSkipMessageHeaderValidation);
   fidl::IncomingMessage& incoming = incoming_initialize_later.value();
 
   if (!incoming.ok()) {
@@ -123,12 +119,8 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
   status.progress = DecoderEncoderProgress::InitializedForDecoding;
 
   std::optional<fidl::unstable::DecodedMessage<T>> decoded_initialize_later;
-  if constexpr (kTransactionalMessage) {
-    decoded_initialize_later.emplace(std::move(incoming));
-  } else {
-    // TODO(fxbug.dev/45252): Use FIDL at rest.
-    decoded_initialize_later.emplace(fidl::internal::WireFormatVersion::kV2, std::move(incoming));
-  }
+  // TODO(fxbug.dev/45252): Use FIDL at rest.
+  decoded_initialize_later.emplace(fidl::internal::WireFormatVersion::kV2, std::move(incoming));
   fidl::unstable::DecodedMessage<T>& decoded = decoded_initialize_later.value();
 
   if (!decoded.ok()) {
@@ -166,12 +158,8 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
   status.progress = DecoderEncoderProgress::FirstEncodeVerified;
 
   std::optional<fidl::unstable::DecodedMessage<T>> decoded2_initialize_later;
-  if constexpr (kTransactionalMessage) {
-    decoded2_initialize_later.emplace(std::move(conversion.incoming_message()));
-  } else {
-    decoded2_initialize_later.emplace(fidl::internal::WireFormatVersion::kV2,
-                                      std::move(conversion.incoming_message()));
-  }
+  decoded2_initialize_later.emplace(fidl::internal::WireFormatVersion::kV2,
+                                    std::move(conversion.incoming_message()));
   fidl::unstable::DecodedMessage<T>& decoded2 = decoded2_initialize_later.value();
 
   if (!decoded2.ok()) {

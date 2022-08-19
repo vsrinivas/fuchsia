@@ -9,9 +9,8 @@
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 10>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 4>
     test_protocolrequest_decoder_encoders = {
-
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_protocolrequest::wire::ParentGetChildTopResponse",
             .has_flexible_envelope = false,
@@ -31,37 +30,6 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 10>
             .fidl_type_name = "::test_protocolrequest::wire::ParentTakeChildRequestRequest",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_protocolrequest::wire::ParentTakeChildRequestRequest>,
-        },
-
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChild>",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChild>>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild>",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild>>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChildRequest>",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChildRequest>>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChild>",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChild>>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChildRequest>",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChildRequest>>,
         },
 };
 

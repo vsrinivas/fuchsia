@@ -9,34 +9,17 @@
 
 namespace fuzzing {
 
-inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 5>
+inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, 2>
     test_inheritancewithrecursivedecl_decoder_encoders = {
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_inheritancewithrecursivedecl::wire::ParentFirstRequest",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_inheritancewithrecursivedecl::wire::ParentFirstRequest>,
         },
-
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Parent::First>",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Parent::First>>,
-        },
         ::fidl::fuzzing::DecoderEncoderForType{
             .fidl_type_name = "::test_inheritancewithrecursivedecl::wire::ChildSecondRequest",
             .has_flexible_envelope = false,
             .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::test_inheritancewithrecursivedecl::wire::ChildSecondRequest>,
-        },
-
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::First>",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::First>>,
-        },
-        ::fidl::fuzzing::DecoderEncoderForType{
-            .fidl_type_name = "::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::Second>",
-            .has_flexible_envelope = false,
-            .decoder_encoder = ::fidl::fuzzing::DecoderEncoderImpl<::fidl::internal::TransactionalRequest<::test_inheritancewithrecursivedecl::Child::Second>>,
         },
 };
 

@@ -2,4 +2,4 @@
 
 #include <test/requestflexibleenvelope/cpp/libfuzzer_decode_encode.h>
 
-static_assert(::fuzzing::test_requestflexibleenvelope_decoder_encoders.size() == 8);
+static_assert(::fuzzing::test_requestflexibleenvelope_decoder_encoders.size() == 4);
