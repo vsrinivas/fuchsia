@@ -103,6 +103,7 @@
                 "fuchsia.ssh.AuthorizedKeys",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Loader",
+                "fuchsia.thermal.ClientStateConnector",
                 "fuchsia.timezone.Timezone",
                 "fuchsia.tracing.perfetto.ProducerConnector",
                 "fuchsia.ultrasound.Factory",

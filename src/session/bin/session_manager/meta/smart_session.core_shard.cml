@@ -188,6 +188,11 @@
             to: "#session-manager",
         },
         {
+            protocol: "fuchsia.thermal.ClientStateConnector",
+            from: "#audio_core",
+            to: "#session-manager",
+        },
+        {
             protocol: "fuchsia.hardware.radar.RadarBurstReaderProvider",
             from: "#radar-proxy",
             to: "#session-manager",
