@@ -2,19 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::{
-        packet_logs::{append_pcap, write_pcap_header},
-        *,
-    },
-    async_utils::PollExt,
-    fidl::{endpoints::RequestStream, Error as FidlError},
-    fidl_fuchsia_bluetooth_snoop::{PacketType, SnoopMarker, SnoopProxy, SnoopRequestStream},
-    fuchsia_async::{Channel, TestExecutor},
-    fuchsia_inspect::{assert_data_tree, Inspector},
-    fuchsia_zircon as zx,
-    futures::pin_mut,
-    std::task::Poll,
+use argh::FromArgs;
+use async_utils::PollExt;
+use fidl::{endpoints::RequestStream, Error as FidlError};
+use fidl_fuchsia_bluetooth_snoop::{PacketType, SnoopMarker, SnoopProxy, SnoopRequestStream};
+use fuchsia_async::{self as fasync, Channel, TestExecutor};
+use fuchsia_inspect::{assert_data_tree, Inspector};
+use fuchsia_zircon as zx;
+use futures::{pin_mut, StreamExt};
+use std::{task::Poll, time::Duration};
+
+use crate::{
+    handle_client_request,
+    packet_logs::{append_pcap, write_pcap_header},
+    register_new_client, Args, ClientId, ClientRequest, ConcurrentClientRequestFutures,
+    ConcurrentSnooperPacketFutures, IdGenerator, PacketLogs, SnoopConfig, SnoopPacket,
+    SubscriptionManager, HCI_DEVICE_CLASS_PATH,
 };
 
 fn setup() -> (
@@ -82,7 +85,7 @@ fn unwrap_response<T, E>(response: Poll<Result<T, E>>) -> T {
 
 #[test]
 fn test_snoop_default_command_line_args() {
-    let args = Args::from_args(&["bt-snoop.cmx"], &[]).expect("Args created from empty args");
+    let args = Args::from_args(&["bt-snoop-v2"], &[]).expect("Args created from empty args");
     assert_eq!(args.log_size_soft_kib, 32);
     assert_eq!(args.log_size_hard_kib, 256);
     assert_eq!(args.log_time_seconds, 60);
@@ -112,7 +115,7 @@ fn test_snoop_command_line_args() {
         "-v",
         "-v",
     ];
-    let args = Args::from_args(&["bt-snoop.cmx"], raw_args).expect("Args created from args");
+    let args = Args::from_args(&["bt-snoop-v2"], raw_args).expect("Args created from args");
     assert_eq!(args.log_size_soft_kib, log_size_kib);
     assert_eq!(args.log_size_hard_kib, log_size_kib);
     assert_eq!(args.log_time_seconds, log_time_seconds);
@@ -157,7 +160,7 @@ async fn test_packet_logs_inspect() {
     });
 
     let ts = zx::Time::from_nanos(123 * 1_000_000_000);
-    let packet = snooper::SnoopPacket::new(false, PacketType::Data, ts, vec![3, 2, 1]);
+    let packet = SnoopPacket::new(false, PacketType::Data, ts, vec![3, 2, 1]);
 
     // write pcap header and packet data to expected_data buffer
     let mut expected_data = vec![];

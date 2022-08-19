@@ -1,0 +1,44 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "bt-snoop",
+            url: "fuchsia-pkg://fuchsia.com/bt-snoop#meta/bt-snoop.cm",
+            environment: "#core-env",
+        },
+    ],
+    use: [
+        // Supports running `fx shell bt-snoop-cli`.
+        {
+            protocol: [ "fuchsia.bluetooth.snoop.Snoop" ],
+            from: "#bt-snoop",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#bt-snoop" ],
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-bt-hci",
+            to: [ "#bt-snoop" ],
+            subdir: "class/bt-hci",
+        },
+        {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            from: "#trace_manager",
+            to: [ "#bt-snoop" ],
+            source_availability: "unknown",
+        },
+        {
+            protocol: [ "fuchsia.bluetooth.snoop.Snoop" ],
+            from: "#bt-snoop",
+            to: [ "#bluetooth-core" ],
+        },
+    ],
+}

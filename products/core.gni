@@ -20,6 +20,7 @@ product_bootfs_labels -= [ "//products/kernel_cmdline:oom.reboot-timeout--low" ]
 
 core_realm_package_name = "core"
 core_realm_shards += [
+  "//src/connectivity/bluetooth/tools/bt-snoop:bt-snoop-core-shard",
   "//src/connectivity/wlan/wlancfg:wlancfg-core-shard",
   "//src/connectivity/wlan/wlandevicemonitor:wlandevicemonitor-core-shard",
   "//src/connectivity/wlan/wlanstack:wlanstack-core-shard",

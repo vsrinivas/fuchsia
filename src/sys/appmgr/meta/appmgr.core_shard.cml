@@ -27,7 +27,6 @@
         // lose access to the protocol at some point when the system is shut down.
         {
             protocol: [
-                "fuchsia.bluetooth.snoop.Snoop",
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.lowpan.device.Lookup",
                 "fuchsia.media.SessionAudioConsumerFactory",
@@ -357,12 +356,6 @@
             ],
             from: "self",
             to: "#session-manager",
-        },
-        {
-            protocol: [ "fuchsia.bluetooth.snoop.Snoop" ],
-            from: "self",
-            to: "#bluetooth-core",
-            dependency: "weak_for_migration",
         },
         {
             protocol: [
