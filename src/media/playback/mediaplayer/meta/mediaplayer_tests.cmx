@@ -3,7 +3,7 @@
         "syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/mediaplayer_tests"
+        "binary": "bin/mediaplayer_tests_cfv1"
     },
     "sandbox": {
         "services": [
