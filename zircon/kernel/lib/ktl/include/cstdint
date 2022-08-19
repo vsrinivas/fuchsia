@@ -1,0 +1,15 @@
+// Copyright 2022 The Fuchsia Authors
+//
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file or at
+// https://opensource.org/licenses/MIT
+
+#pragma once
+
+// Other libc++ headers use <cstdint> but libc++'s <cstdint> complains if it
+// thinks <stdint.h> is not its own wrapper, which we do not need.  We always
+// get the real <stdint.h> before the libc++ with the way the include paths are
+// set up, which is necessary because of other headers where preempting
+// libc++'s header is unavoidable for the kernel environment.
+
+#include <stdint.h>

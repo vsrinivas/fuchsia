@@ -14,6 +14,7 @@ zx_library("ktl") {
   ]
 
   deps = [
+    ":headers",  # Necessary to put ktl includes before libc.
     "//sdk/lib/stdcompat",
     "//zircon/kernel/lib/libc",
   ]
