@@ -308,7 +308,7 @@ group("default-images") {
   }
 
   if (build_usb_installer) {
-    deps += [ "//build/installer_images" ]
+    deps += [ "//build/images/installer" ]
   }
 }
 

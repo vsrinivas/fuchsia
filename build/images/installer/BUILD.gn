@@ -5,9 +5,9 @@ import("//build/images/args.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/paths.gni")
 
-if (bootfs_only) {
-  # bootfs_only builds don't need installer images.
-  group("installer_images") {
+if (use_bringup_assembly) {
+  # The installer doesn't work without an FVM image.
+  group("installer") {
   }
 } else {
   input_partition_labels = [
@@ -31,7 +31,7 @@ if (bootfs_only) {
     output_conversion = "json"
   }
 
-  action("installer_images") {
+  action("installer") {
     testonly = true
     script = "//scripts/mkinstaller/mkinstaller.py"
     outputs = [ "$target_out_dir/$target_name.img" ]

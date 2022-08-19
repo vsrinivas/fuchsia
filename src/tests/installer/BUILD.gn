@@ -27,10 +27,9 @@ if (is_linux) {
   }
 
   host_test_data("installer_image") {
-    sources =
-        [ "$root_build_dir/obj/build/installer_images/installer_images.img" ]
+    sources = [ "$root_build_dir/obj/build/images/installer/installer.img" ]
 
-    deps = [ "//build/installer_images:installer_images($target_toolchain)" ]
+    deps = [ "//build/images/installer($target_toolchain)" ]
   }
 
   go_test("installer_test") {
@@ -40,7 +39,10 @@ if (is_linux) {
       "//tools/virtual_device",
       "//tools/virtual_device:proto",
     ]
-    non_go_deps = [ ":installer_image" ]
+    non_go_deps = [
+      ":installer_image",
+      "//build/images/recovery:test_data",
+    ]
 
     # The installer test is really slow.
     timeout = "60m"

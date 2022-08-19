@@ -143,12 +143,8 @@ group("host-tests") {
 
   if (is_linux) {
     deps += [
-      "//tools/fvdl/e2e:tests",
-
-      # Installer tests.
-      "//build/images/recovery:recovery-installer($target_toolchain)",
-      "//build/installer_images($target_toolchain)",
       "//src/tests/installer:tests",
+      "//tools/fvdl/e2e:tests",
     ]
   }
 }

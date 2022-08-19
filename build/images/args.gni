@@ -29,7 +29,7 @@ declare_args() {
   build_uefi_disk = false
 
   # Generate installer disk image (ISO) to be flashed to a USB drive.
-  # Will be located at obj/build/installer_images/ relative to the build directory.
+  # Will be located at obj/build/images/installer relative to the build directory.
   # See https://fuchsia.dev/fuchsia-src/development/hardware/installer
   build_usb_installer = false
 

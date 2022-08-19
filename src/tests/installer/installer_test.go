@@ -55,7 +55,7 @@ func TestInstaller(t *testing.T) {
 	// The installer disk is connected as a UMS device.
 	device.Hw.Drives = append(device.Hw.Drives, &fvdpb.Drive{
 		Id:         "installer",
-		Image:      filepath.Join(exDir, "../obj/build/installer_images/installer_images.img"),
+		Image:      filepath.Join(exDir, "../obj/build/images/installer/installer.img"),
 		IsFilename: true,
 		Device:     &fvdpb.Device{Model: "usb-storage", Options: []string{"drive=installer", "bus=xhci.0"}},
 	})
