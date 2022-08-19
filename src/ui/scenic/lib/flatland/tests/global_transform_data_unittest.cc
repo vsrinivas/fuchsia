@@ -705,6 +705,101 @@ TEST(GlobalTransformClipTest, NoOverlapClipRegions) {
   }
 }
 
+// The following tests ensure scale and rotate modify the clip region as expected.
+
+TEST(GlobalTransformClipTest, ScaleAndRotate90DegreesTest) {
+  UberStruct::InstanceMap uber_structs;
+
+  // Make a global topology representing a single node.
+  GlobalTopologyData::TopologyVector topology_vector = {{1, 0}};
+  GlobalTopologyData::ParentIndexVector parent_indices = {0};
+
+  const glm::vec2 scale(3.f, 2.f);
+  glm::mat3 matrix =
+      glm::rotate(glm::mat3(), GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_90));
+  matrix = glm::scale(matrix, scale);
+  GlobalMatrixVector global_matrices = {matrix};
+
+  auto uber_struct = std::make_unique<UberStruct>();
+
+  uber_struct->local_clip_regions[{1, 0}] = {0, 0, 100, 50};
+
+  uber_structs[1] = std::move(uber_struct);
+
+  GlobalTransformClipRegionVector expected_clip_regions = {{0, -300, 100, 300}};
+
+  auto global_clip_regions = ComputeGlobalTransformClipRegions(topology_vector, parent_indices,
+                                                               global_matrices, uber_structs);
+  EXPECT_EQ(global_clip_regions.size(), expected_clip_regions.size());
+  const auto& a = global_clip_regions[0];
+  const auto& b = expected_clip_regions[0];
+  EXPECT_FLOAT_EQ(a.x, b.x);
+  EXPECT_FLOAT_EQ(a.y, b.y);
+  EXPECT_FLOAT_EQ(a.width, b.width);
+}
+
+TEST(GlobalTransformClipTest, ScaleAndRotate180DegreesTest) {
+  UberStruct::InstanceMap uber_structs;
+
+  // Make a global topology representing a single node.
+  GlobalTopologyData::TopologyVector topology_vector = {{1, 0}};
+  GlobalTopologyData::ParentIndexVector parent_indices = {0};
+
+  const glm::vec2 scale(3.f, 2.f);
+  glm::mat3 matrix =
+      glm::rotate(glm::mat3(), GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_180));
+  matrix = glm::scale(matrix, scale);
+  GlobalMatrixVector global_matrices = {matrix};
+
+  auto uber_struct = std::make_unique<UberStruct>();
+
+  uber_struct->local_clip_regions[{1, 0}] = {0, 0, 100, 50};
+
+  uber_structs[1] = std::move(uber_struct);
+
+  GlobalTransformClipRegionVector expected_clip_regions = {{-300, -100, 300, 100}};
+
+  auto global_clip_regions = ComputeGlobalTransformClipRegions(topology_vector, parent_indices,
+                                                               global_matrices, uber_structs);
+  EXPECT_EQ(global_clip_regions.size(), expected_clip_regions.size());
+  const auto& a = global_clip_regions[0];
+  const auto& b = expected_clip_regions[0];
+  EXPECT_FLOAT_EQ(a.x, b.x);
+  EXPECT_FLOAT_EQ(a.y, b.y);
+  EXPECT_FLOAT_EQ(a.width, b.width);
+}
+
+TEST(GlobalTransformClipTest, ScaleAndRotate270DegreesTest) {
+  UberStruct::InstanceMap uber_structs;
+
+  // Make a global topology representing a single node.
+  GlobalTopologyData::TopologyVector topology_vector = {{1, 0}};
+  GlobalTopologyData::ParentIndexVector parent_indices = {0};
+
+  const glm::vec2 scale(3.f, 2.f);
+  glm::mat3 matrix =
+      glm::rotate(glm::mat3(), GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_270));
+  matrix = glm::scale(matrix, scale);
+  GlobalMatrixVector global_matrices = {matrix};
+
+  auto uber_struct = std::make_unique<UberStruct>();
+
+  uber_struct->local_clip_regions[{1, 0}] = {0, 0, 100, 50};
+
+  uber_structs[1] = std::move(uber_struct);
+
+  GlobalTransformClipRegionVector expected_clip_regions = {{-100, 0, 100, 300}};
+
+  auto global_clip_regions = ComputeGlobalTransformClipRegions(topology_vector, parent_indices,
+                                                               global_matrices, uber_structs);
+  EXPECT_EQ(global_clip_regions.size(), expected_clip_regions.size());
+  const auto& a = global_clip_regions[0];
+  const auto& b = expected_clip_regions[0];
+  EXPECT_FLOAT_EQ(a.x, b.x);
+  EXPECT_FLOAT_EQ(a.y, b.y);
+  EXPECT_FLOAT_EQ(a.width, b.width);
+}
+
 // Test a more complicated scenario with multiple transforms, each with its own
 // clip region and transform matrix set.
 TEST(GlobalTransformClipTest, ComplicatedGraphClipRegions) {

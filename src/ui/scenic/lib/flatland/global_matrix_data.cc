@@ -114,11 +114,11 @@ std::pair<std::array<glm::vec2, 4>, std::array<glm::vec2, 4>> MatrixMultiplyVert
 }
 
 fuchsia::math::Rect MatrixMultiplyRect(const glm::mat3& matrix, fuchsia::math::Rect rect) {
-  return ConvertVertsToRect(std::get<0>(MatrixMultiplyVerts(matrix, ConvertRectToVerts(rect))));
+  return ConvertVertsToRect(std::get<1>(MatrixMultiplyVerts(matrix, ConvertRectToVerts(rect))));
 }
 
 fuchsia::math::RectF MatrixMultiplyRectF(const glm::mat3& matrix, fuchsia::math::RectF rect) {
-  return ConvertVertsToRectF(std::get<0>(MatrixMultiplyVerts(matrix, ConvertRectFToVerts(rect))));
+  return ConvertVertsToRectF(std::get<1>(MatrixMultiplyVerts(matrix, ConvertRectFToVerts(rect))));
 }
 
 // TODO(fxbug.dev/77993): This will not produce the correct results for the display
