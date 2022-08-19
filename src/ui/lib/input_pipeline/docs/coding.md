@@ -115,3 +115,44 @@ for debugging the test. When a test returns an `Err`, however, the test
 runner does not print a backtrace.
 
 Hence, test code, should _prefer_ to abort, rather than propagating errors.
+
+## Blocking
+
+Implementations of [`InputHandler::handle_input_event()`][handle-input-event]
+should avoid blocking unnecessarily, as that prevents [`InputEvent`s][input-event]
+from propagating to downstream handlers in a timely manner.
+
+For example, consider [`MediaButtonsHandler`][media-buttons-handler], which
+handles [`ConsumerControlsEvent`][consumer-controls-event]s by sending events to
+[`fuchsia.ui.policy.MediaButtonsListener`][media-buttons-listener] channels.
+
+After https://fxbug.dev/106843 is resolved, we will consider a [`ConsumerControlsEvent`][consumer-controls-event]
+handled when the [`MediaButtonsHandler`][media-buttons-handler]
+has invoked the [`OnEvent()`][on-event-fidl] method on all listeners, even if the
+listeners have not yet acknowledged the call.
+
+By doing so, we will unblock handling of events intended for handlers downstream
+of [`MediaButtonsHandler`][media-buttons-handler]. In particular, [`TouchInjectorHandler`][touch-injector-handler]
+will be able to process [`TouchScreenEvent`s][touchscreen-event]
+before the [`MediaButtonsListener`s][media-buttons-listener] have acknowledged
+the media buttons event.
+
+Handlers _should_ still listen for acknowledgements, to prevent unread ACKs from
+accumulating in the associated Zircon channel. However, that work can be done off
+of the critical path of `handle_input_event()`.
+
+## Unresponsive clients in general
+
+Beyond the advice about blocking above, we don't have any advice about how to deal with
+unresponsive clients. For example, we do not yet have enough experience to recommend
+that handlers should, or should not, time out a client that fails to acknowledge a
+message after a set period of time.
+
+[consumer-controls-event]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/ui/lib/input_pipeline/src/consumer_controls_binding.rs;l=17
+[handle-input-event]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/ui/lib/input_pipeline/src/input_handler.rs;l=30
+[input-event]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/ui/lib/input_pipeline/src/input_device.rs;l=31
+[media-buttons-handler]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/ui/lib/input_pipeline/src/media_buttons_handler.rs;l=20
+[media-buttons-listener]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.ui.policy/device_listener.fidl;l=32
+[on-event-fidl]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.ui.policy/device_listener.fidl;l=40
+[touch-injector-handler]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/ui/lib/input_pipeline/src/touch_injector_handler.rs;l=25
+[touchscreen-event]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/ui/lib/input_pipeline/src/touch_binding.rs;l=25
