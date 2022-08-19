@@ -823,7 +823,7 @@ mod stub {
         }
 
         pub async fn build(self) -> Rc<RefCell<StubFidlServer>> {
-            let config = configuration::get_config("0.1.2", None);
+            let config = configuration::get_config("0.1.2", None, None);
             let storage_ref = Rc::new(Mutex::new(MemStorage::new()));
 
             let cup_handler: Option<StandardCupv2Handler> =

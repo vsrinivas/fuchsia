@@ -126,20 +126,16 @@ impl ClientConfiguration {
             .build();
         let mut app_set = FuchsiaAppSet::new(app);
 
-        let mut platform_config = get_config(&version, service_url);
+        let eager_package_configs = EagerPackageConfigs::from_namespace();
+        let platform_config =
+            get_config(&version, eager_package_configs.as_ref().ok(), service_url);
 
-        match EagerPackageConfigs::from_namespace() {
+        match eager_package_configs {
             Ok(eager_package_configs) => {
                 let proxy = fuchsia_component::client::connect_to_protocol::<CupMarker>()
                     .map_err(|e: Error| error!("Failed to connect to Cup protocol {:#}", e))
                     .ok();
-                Self::add_eager_packages(
-                    &mut app_set,
-                    &mut platform_config,
-                    eager_package_configs,
-                    proxy,
-                )
-                .await
+                Self::add_eager_packages(&mut app_set, eager_package_configs, proxy).await
             }
             Err(e) => {
                 match e.downcast_ref::<std::io::Error>() {
@@ -171,12 +167,9 @@ impl ClientConfiguration {
     /// Also adds Omaha config to platform_config.
     async fn add_eager_packages(
         app_set: &mut FuchsiaAppSet,
-        platform_config: &mut Config,
         eager_package_configs: EagerPackageConfigs,
         cup: Option<CupProxy>,
     ) {
-        platform_config.service_url = eager_package_configs.server.service_url;
-        platform_config.omaha_public_keys = Some(eager_package_configs.server.public_keys);
         for package in eager_package_configs.packages {
             let (version, channel_config) =
                 Self::get_eager_package_version_and_channel(&package, &cup).await;
@@ -264,9 +257,18 @@ impl ClientConfiguration {
     }
 }
 
-pub fn get_config(version: &str, vbmeta_service_url: Option<String>) -> Config {
+pub fn get_config(
+    version: &str,
+    eager_package_configs: Option<&EagerPackageConfigs>,
+    vbmeta_service_url: Option<String>,
+) -> Config {
+    // If eager_package_configs defines a service_url and vbmeta does too,
+    // vbmeta should override the value in eager_package_configs.
+    let service_url: Option<String> =
+        vbmeta_service_url.or(eager_package_configs.map(|epc| epc.server.service_url.clone()));
+
     // This file does not exist in production, it is only used in integration/e2e testing.
-    let service_url = vbmeta_service_url.unwrap_or_else(|| {
+    let service_url = service_url.unwrap_or_else(|| {
         fs::read_to_string("/config/data/omaha_url").unwrap_or_else(|_| {
             "https://clients2.google.com/service/update2/fuchsia/json".to_string()
         })
@@ -282,7 +284,7 @@ pub fn get_config(version: &str, vbmeta_service_url: Option<String>) -> Config {
         },
 
         service_url,
-        omaha_public_keys: None,
+        omaha_public_keys: eager_package_configs.map(|epc| epc.server.public_keys.clone()),
     }
 }
 
@@ -333,7 +335,10 @@ mod tests {
     use futures::prelude::*;
     use omaha_client::{
         app_set::AppSet,
-        cup_ecdsa::{test_support::make_default_public_key_for_test, PublicKeyAndId, PublicKeys},
+        cup_ecdsa::{
+            test_support::{make_default_public_key_for_test, make_default_public_keys_for_test},
+            PublicKeyAndId, PublicKeys,
+        },
     };
     use std::{collections::HashMap, convert::TryInto};
 
@@ -348,6 +353,55 @@ mod tests {
         assert_eq!(os.version, "1.2.3.4");
         assert_eq!(os.arch, std::env::consts::ARCH);
         assert_eq!(config.service_url, "https://clients2.google.com/service/update2/fuchsia/json");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_get_config_service_url() {
+        // If EagerPackageConfigs is present, use that service_url
+        // whether or not vbmeta provides one.
+        assert_eq!(
+            get_config(
+                "1.2.3.4",
+                Some(&EagerPackageConfigs {
+                    server: OmahaServer {
+                        service_url: "foo".to_string(),
+                        public_keys: make_default_public_keys_for_test(),
+                    },
+                    packages: vec![],
+                }),
+                /*vbmeta_service_url=*/ None,
+            )
+            .service_url,
+            "foo"
+        );
+        assert_eq!(
+            get_config(
+                "1.2.3.4",
+                Some(&EagerPackageConfigs {
+                    server: OmahaServer {
+                        service_url: "foo".to_string(),
+                        public_keys: make_default_public_keys_for_test(),
+                    },
+                    packages: vec![],
+                }),
+                /*vbmeta_service_url=*/ Some("bar".to_string()),
+            )
+            .service_url,
+            "bar"
+        );
+        // If EagerPackageConfigs is not present, use the service_url from
+        // vbmeta if it is available.
+        assert_eq!(
+            get_config("1.2.3.4", None, /*vbmeta_service_url=*/ Some("bar".to_string()),)
+                .service_url,
+            "bar"
+        );
+        // If neither source is present, fall back to a hard-coded string used
+        // in integration/e2e testing.
+        assert_eq!(
+            get_config("1.2.3.4", None, None,).service_url,
+            "https://clients2.google.com/service/update2/fuchsia/json"
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -556,7 +610,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_add_eager_packages() {
-        let mut platform_config = get_config("1.0.0.0", None);
+        let platform_config = get_config("1.0.0.0", None, None);
         let system_app = App::builder().id("system_app_id").version([1]).build();
         let mut app_set = FuchsiaAppSet::new(system_app.clone());
 
@@ -626,15 +680,10 @@ mod tests {
             ],
         };
         // without CUP
-        ClientConfiguration::add_eager_packages(
-            &mut app_set,
-            &mut platform_config,
-            config.clone(),
-            None,
-        )
-        .await;
+        ClientConfiguration::add_eager_packages(&mut app_set, config.clone(), None).await;
 
-        assert_eq!(platform_config.omaha_public_keys, Some(public_keys));
+        // add_eager_packages does not set public keys; get_config does.
+        assert!(platform_config.omaha_public_keys.is_none());
 
         let package_app = App::builder()
             .id("1a2b3c4d")
@@ -669,12 +718,7 @@ mod tests {
                 }
             }
         };
-        let fut = ClientConfiguration::add_eager_packages(
-            &mut app_set,
-            &mut platform_config,
-            config,
-            Some(proxy),
-        );
+        let fut = ClientConfiguration::add_eager_packages(&mut app_set, config, Some(proxy));
         future::join(fut, stream_fut).await;
         let package_app = App::builder()
             .id("1a2b3c4d")
