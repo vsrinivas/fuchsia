@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::{cache::Cache, resolver::Resolver},
+    crate::cache::Cache,
+    crate::resolver::Resolver,
     anyhow::{anyhow, Context, Error},
     fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker},
     fidl_fuchsia_io as fio,
@@ -31,7 +32,6 @@ pub const DEFAULT_UPDATE_PACKAGE_URL: &str = "fuchsia-pkg://fuchsia.com/update";
 
 pub struct Updater {
     _system_updater: App,
-    _cache: Arc<Cache>,
     _resolver: Arc<Resolver>,
     proxy: InstallerProxy,
     paver_proxy: PaverProxy,
@@ -43,11 +43,11 @@ impl Updater {
     pub async fn launch(
         blobfs: ClientEnd<fio::DirectoryMarker>,
         paver: ClientEnd<fio::DirectoryMarker>,
-        cache: Arc<Cache>,
         resolver: Arc<Resolver>,
+        cache: Arc<Cache>,
         board_name: &str,
     ) -> Result<Self, Error> {
-        Self::launch_with_components(blobfs, paver, cache, resolver, board_name, UPDATER_URL).await
+        Self::launch_with_components(blobfs, paver, resolver, cache, board_name, UPDATER_URL).await
     }
 
     /// Launch the system updater. This is the same as `launch`, except that it expects the path
@@ -55,8 +55,8 @@ impl Updater {
     pub async fn launch_with_components(
         blobfs: ClientEnd<fio::DirectoryMarker>,
         paver: ClientEnd<fio::DirectoryMarker>,
-        cache: Arc<Cache>,
         resolver: Arc<Resolver>,
+        cache: Arc<Cache>,
         board_name: &str,
         updater_url: &str,
     ) -> Result<Self, Error> {
@@ -77,8 +77,8 @@ impl Updater {
         let mut fs: ServiceFs<ServiceObj<'_, ()>> = ServiceFs::new();
         let paver = Arc::new(paver.into_channel());
         fs.add_proxy_service_to::<PaverMarker, _>(Arc::clone(&paver))
-            .add_proxy_service_to::<PackageCacheMarker, _>(cache.directory_request())
-            .add_proxy_service_to::<PackageResolverMarker, _>(resolver.directory_request());
+            .add_proxy_service_to::<PackageResolverMarker, _>(resolver.directory_request())
+            .add_proxy_service_to::<PackageCacheMarker, _>(cache.directory_request()?);
 
         let (paver_proxy, remote) =
             fidl::endpoints::create_proxy::<PaverMarker>().context("Creating paver proxy")?;
@@ -94,14 +94,7 @@ impl Updater {
             .connect_to_protocol::<InstallerMarker>()
             .context("connect to fuchsia.update.installer.Installer")?;
 
-        Ok(Self {
-            _system_updater: updater,
-            _cache: cache,
-            _resolver: resolver,
-            proxy,
-            paver_proxy,
-            _env: env,
-        })
+        Ok(Self { _system_updater: updater, _resolver: resolver, proxy, paver_proxy, _env: env })
     }
 
     /// Perform an update, skipping the final reboot.
@@ -190,7 +183,8 @@ impl Updater {
     }
 }
 
-pub mod for_tests {
+#[cfg(test)]
+pub(crate) mod for_tests {
     use {
         super::*,
         crate::resolver::for_tests::{ResolverForTest, EMPTY_REPO_PATH},
@@ -354,8 +348,8 @@ pub mod for_tests {
             let mut updater = Updater::launch_with_components(
                 resolver.cache.blobfs.root_dir_handle().expect("getting blobfs root handle"),
                 ClientEnd::from(client),
-                Arc::clone(&resolver.cache.cache),
                 Arc::clone(&resolver.resolver),
+                Arc::clone(&resolver.cache.cache),
                 "test",
                 TEST_UPDATER_URL,
             )

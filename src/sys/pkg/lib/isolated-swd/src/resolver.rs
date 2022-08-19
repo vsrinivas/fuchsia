@@ -7,7 +7,7 @@ use {
     anyhow::{Context, Error},
     fidl_fuchsia_boot::{ArgumentsRequest, ArgumentsRequestStream},
     fidl_fuchsia_pkg::PackageCacheMarker,
-    fidl_fuchsia_pkg_ext as pkg, fuchsia_async as fasync,
+    fuchsia_async as fasync,
     fuchsia_component::{
         client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs, ServiceObj},
@@ -15,7 +15,7 @@ use {
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon::{self as zx},
     futures::prelude::*,
-    std::{io::Write, sync::Arc},
+    std::sync::Arc,
 };
 
 const RESOLVER_URL: &str =
@@ -94,7 +94,7 @@ impl Resolver {
             .add_proxy_service::<fidl_fuchsia_posix_socket::ProviderMarker, _>()
             .add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>()
             .add_proxy_service::<fidl_fuchsia_tracing_provider::RegistryMarker, _>()
-            .add_proxy_service_to::<PackageCacheMarker, _>(cache.directory_request());
+            .add_proxy_service_to::<PackageCacheMarker, _>(cache.directory_request()?);
 
         fs.add_fidl_service(move |stream: ArgumentsRequestStream| {
             fasync::Task::spawn(Arc::clone(&boot_args).serve(stream)).detach()
@@ -117,16 +117,19 @@ impl Resolver {
     }
 }
 
-pub mod for_tests {
+#[cfg(test)]
+pub(crate) mod for_tests {
     use {
         super::*,
         crate::cache::for_tests::CacheForTest,
         anyhow::anyhow,
         fidl_fuchsia_io as fio,
         fidl_fuchsia_pkg::PackageResolverMarker,
+        fidl_fuchsia_pkg_ext as pkg,
         fidl_fuchsia_pkg_ext::RepositoryConfigs,
         fuchsia_pkg_testing::{serve::ServedRepository, Repository},
         fuchsia_url::RepositoryUrl,
+        std::io::Write,
     };
 
     const SSL_TEST_CERTS_PATH: &str = "/pkg/data/ssl";
@@ -151,7 +154,6 @@ pub mod for_tests {
                 repo_url,
                 channel,
                 "fuchsia-pkg://fuchsia.com/isolated-swd-tests#meta/pkg-resolver-isolated.cmx",
-                "fuchsia-pkg://fuchsia.com/isolated-swd-tests#meta/pkg-cache-isolated.cmx",
             )
             .await
         }
@@ -174,9 +176,8 @@ pub mod for_tests {
             repo_url: RepositoryUrl,
             channel: Option<String>,
             resolver_url: &str,
-            cache_url: &str,
         ) -> Result<Self, Error> {
-            let cache = CacheForTest::new_with_component(cache_url).context("launching cache")?;
+            let cache = CacheForTest::new().await.context("setting up cache outgoing dir")?;
 
             // Set up the repository config for pkg-resolver.
             let served_repo = Arc::clone(&repo).server().start()?;

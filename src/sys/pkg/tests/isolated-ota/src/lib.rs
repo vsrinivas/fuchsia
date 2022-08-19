@@ -5,12 +5,14 @@ use {
     anyhow::{Context, Error},
     assert_matches::assert_matches,
     blobfs_ramdisk::BlobfsRamdisk,
+    fidl::endpoints::Proxy,
     fidl::endpoints::{ClientEnd, RequestStream, ServerEnd},
     fidl_fuchsia_io as fio,
     fidl_fuchsia_paver::{Asset, Configuration, PaverRequestStream},
     fidl_fuchsia_pkg_ext::{MirrorConfigBuilder, RepositoryConfigBuilder, RepositoryConfigs},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
+    fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, Ref, Route},
     fuchsia_merkle::Hash,
     fuchsia_pkg_testing::{
         make_epoch_json, serve::ServedRepository, Package, PackageBuilder, RepositoryBuilder,
@@ -18,7 +20,10 @@ use {
     fuchsia_zircon as zx,
     futures::prelude::*,
     http::uri::Uri,
-    isolated_ota::{download_and_apply_update, OmahaConfig, UpdateError},
+    isolated_ota::{
+        download_and_apply_update_with_pre_configured_components, OmahaConfig, UpdateError,
+    },
+    isolated_swd::cache::Cache,
     mock_omaha_server::{
         OmahaResponse, OmahaServer, OmahaServerBuilder, ResponseAndMetadata, ResponseMap,
     },
@@ -32,6 +37,7 @@ use {
         sync::Arc,
     },
     tempfile::TempDir,
+    vfs::directory::entry::DirectoryEntry,
 };
 
 const EMPTY_REPO_PATH: &str = "/pkg/empty-repo";
@@ -278,8 +284,116 @@ impl TestEnv {
         service_fs.serve_connection(server).expect("Failed to serve connection");
         fasync::Task::spawn(service_fs.collect()).detach();
 
-        let result = download_and_apply_update(
-            blobfs_handle,
+        let realm_builder = RealmBuilder::new().await.unwrap();
+
+        let pkg_component =
+            realm_builder.add_child("pkg", "#meta/pkg.cm", ChildOptions::new()).await.unwrap();
+        realm_builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.boot.Arguments"))
+                    .capability(Capability::protocol_by_name("fuchsia.cobalt.LoggerFactory"))
+                    .capability(Capability::protocol_by_name("fuchsia.tracing.provider.Registry"))
+                    .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                    .from(Ref::parent())
+                    .to(&pkg_component),
+            )
+            .await
+            .unwrap();
+
+        realm_builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.pkg.PackageCache"))
+                    .capability(Capability::protocol_by_name("fuchsia.pkg.RetainedPackages"))
+                    .capability(Capability::protocol_by_name("fuchsia.space.Manager"))
+                    .from(&pkg_component)
+                    .to(Ref::parent()),
+            )
+            .await
+            .unwrap();
+
+        let blobfs_proxy = fio::DirectoryProxy::from_channel(
+            fasync::Channel::from_channel(blobfs_handle.into_channel()).unwrap(),
+        );
+
+        let (blobfs_client_end_clone, remote) =
+            fidl::endpoints::create_endpoints::<fio::DirectoryMarker>().unwrap();
+        blobfs_proxy
+            .clone(fio::OpenFlags::CLONE_SAME_RIGHTS, ServerEnd::from(remote.into_channel()))
+            .unwrap();
+
+        let blobfs_proxy_clone = blobfs_client_end_clone.into_proxy().unwrap();
+        let blobfs_vfs = vfs::remote::remote_dir(blobfs_proxy_clone);
+        let blobfs_reflector = realm_builder
+            .add_local_child(
+                "pkg_cache_blobfs",
+                move |handles| {
+                    let blobfs_vfs = blobfs_vfs.clone();
+                    let out_dir = vfs::pseudo_directory! {
+                        "blob" => blobfs_vfs,
+                    };
+                    let scope = vfs::execution_scope::ExecutionScope::new();
+                    let () = out_dir.open(
+                        scope.clone(),
+                        fio::OpenFlags::RIGHT_READABLE
+                            | fio::OpenFlags::RIGHT_WRITABLE
+                            | fio::OpenFlags::RIGHT_EXECUTABLE,
+                        0,
+                        vfs::path::Path::dot(),
+                        handles.outgoing_dir.into_channel().into(),
+                    );
+                    async move { Ok(scope.wait().await) }.boxed()
+                },
+                ChildOptions::new(),
+            )
+            .await
+            .unwrap();
+
+        realm_builder
+            .add_route(
+                Route::new()
+                    .capability(
+                        Capability::directory("blob-exec")
+                            .path("/blob")
+                            .rights(fio::RW_STAR_DIR | fio::Operations::EXECUTE),
+                    )
+                    .from(&blobfs_reflector)
+                    .to(&pkg_component),
+            )
+            .await
+            .unwrap();
+
+        let realm_instance = realm_builder.build().await.unwrap();
+        let pkg_cache_proxy = realm_instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<fidl_fuchsia_pkg::PackageCacheMarker>()
+            .expect("connect to pkg cache");
+        let space_manager_proxy = realm_instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<fidl_fuchsia_space::ManagerMarker>()
+            .expect("connect to space manager");
+
+        let (cache_clone, remote) =
+            fidl::endpoints::create_endpoints::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
+        realm_instance
+            .root
+            .get_exposed_dir()
+            .clone(
+                fidl_fuchsia_io::OpenFlags::CLONE_SAME_RIGHTS,
+                ServerEnd::from(remote.into_channel()),
+            )
+            .unwrap();
+
+        let cache = Cache::new_with_proxies(
+            pkg_cache_proxy,
+            space_manager_proxy,
+            cache_clone.into_proxy().unwrap(),
+        )
+        .unwrap();
+
+        let result = download_and_apply_update_with_pre_configured_components(
+            blobfs_proxy,
             ClientEnd::from(client),
             std::fs::File::open(self.repo_config_dir.into_path()).expect("Opening repo config dir"),
             self.ssl_certs,
@@ -287,6 +401,7 @@ impl TestEnv {
             &self.board,
             &self.version,
             omaha_config,
+            Arc::new(cache),
         )
         .await;
 

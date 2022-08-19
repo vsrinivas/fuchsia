@@ -8,6 +8,7 @@
         "//src/sys/test_runners/rust/default.shard.cml",
         "//src/sys/test_runners/tmp_storage.shard.cml",
         "inspect/client.shard.cml",
+        "sys/component/realm_builder.shard.cml",
 
         // Depends on root ssl certificate which is currently a system capability.
         "sys/testing/system-test.shard.cml",

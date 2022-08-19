@@ -1,0 +1,70 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This component represents the set of capabilities required to use the package stack in recovery
+// mode. It will eventually 'offer' and 'expose' the minimal set of capabilities required to perform
+// an OTA, but as the CFv1 -> CFv2 migration is ongoing, we will require offering and exposing more
+// than that set.
+// TODO(fxbug.dev/104919): ensure this set is minimal to and from the parent component.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    children: [
+        {
+            name: "pkg-cache",
+            url: "#meta/pkg-cache-ignore-system-image.cm",
+        },
+        {
+            // TODO(fxbug.dev/65383) investigate how isolated-ota should work with commits. GC is
+            // traditionally blocked on the previous updated being committed. Here, we relax this
+            // restriction because it does not make sense for recovery, and use a fake
+            // system-update-committer that always reports the system is committed.
+            name: "fake-system-update-committer",
+            url: "#meta/fake-system-update-committer.cm",
+        },
+    ],
+    offer: [
+        {
+            directory: "blob-exec",
+            from: "parent",
+            to: "#pkg-cache",
+            rights: [
+                "execute",
+                "rw*",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: "#pkg-cache",
+        },
+        {
+            protocol: "fuchsia.update.CommitStatusProvider",
+            from: "#fake-system-update-committer",
+            to: "#pkg-cache",
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: "#pkg-cache",
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.pkg.PackageCache",
+                "fuchsia.pkg.RetainedPackages",
+                "fuchsia.space.Manager",
+            ],
+            from: "#pkg-cache",
+            to: "parent",
+        },
+    ],
+}
