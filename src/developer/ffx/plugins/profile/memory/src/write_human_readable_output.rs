@@ -59,7 +59,7 @@ fn print_processes_digest(w: &mut Writer, processes: Vec<processed::Process>) ->
 }
 
 /// Print to `w` a human-readable presentation of `digest`.
-fn print_complete_digest(mut w: Writer, digest: processed::Digest) -> Result<()> {
+fn print_complete_digest(w: &mut Writer, digest: processed::Digest) -> Result<()> {
     writeln!(w, "Time:  {}", digest.time)?;
     writeln!(w, "VMO:   {}", digest.kernel.vmo.file_size(BINARY).unwrap())?;
     writeln!(w, "Free:  {}", digest.kernel.free.file_size(BINARY).unwrap())?;
@@ -78,17 +78,17 @@ fn print_complete_digest(mut w: Writer, digest: processed::Digest) -> Result<()>
     writeln!(w, "    mmu:   {}", digest.kernel.mmu.file_size(BINARY).unwrap())?;
     writeln!(w, "    ipc:   {}", digest.kernel.ipc.file_size(BINARY).unwrap())?;
     writeln!(w)?;
-    print_processes_digest(&mut w, digest.processes)?;
+    print_processes_digest(w, digest.processes)?;
     writeln!(w)?;
     Ok(())
 }
 
 /// Print to `w` a human-readable presentation of `output`.
-pub fn write_human_readable_output<'a>(mut w: Writer, output: ProfileMemoryOutput) -> Result<()> {
+pub fn write_human_readable_output<'a>(w: &mut Writer, output: ProfileMemoryOutput) -> Result<()> {
     match output {
         ProfileMemoryOutput::CompleteDigest(digest) => print_complete_digest(w, digest),
         ProfileMemoryOutput::ProcessDigest(processes_digest) => {
-            print_processes_digest(&mut w, processes_digest)
+            print_processes_digest(w, processes_digest)
         }
     }
 }

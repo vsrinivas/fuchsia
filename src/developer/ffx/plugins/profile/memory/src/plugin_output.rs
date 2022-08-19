@@ -14,7 +14,7 @@ pub enum ProfileMemoryOutput {
 /// Returns a ProfileMemoryOutput that only contains information related to the process identified by `koid`.
 pub fn filter_digest_by_process_koids(
     digest: processed::Digest,
-    koids: Vec<u64>,
+    koids: &Vec<u64>,
 ) -> ProfileMemoryOutput {
     let mut vec = Vec::new();
     for process in digest.processes {

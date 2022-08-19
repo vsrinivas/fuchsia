@@ -20,4 +20,10 @@ pub struct MemoryCommand {
 
     #[argh(option, description = "filters by process koids. Repeatable flag.")]
     pub process_koids: Vec<u64>,
+
+    #[argh(
+        option,
+        description = "repeats the command at the given interval (in seconds) until terminated."
+    )]
+    pub interval: Option<f64>,
 }

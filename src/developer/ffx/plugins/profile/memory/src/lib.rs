@@ -20,14 +20,32 @@ use {
     futures::AsyncReadExt,
     plugin_output::ProfileMemoryOutput,
     std::io::Write,
+    std::time::Duration,
 };
 
 #[ffx_plugin("ffx_memory", MonitorProxy = "core/appmgr:out:fuchsia.memory.Monitor")]
 /// Prints a memory digest to stdout.
-pub async fn print_memory_digest(
+pub async fn plugin_entrypoint(
     monitor_proxy: MonitorProxy,
     cmd: MemoryCommand,
     #[ffx(machine = ProfileMemoryOutput)] mut writer: Writer,
+) -> Result<()> {
+    // Either call `print_output` once, or call `print_output` repeatedly every `interval` seconds
+    // until the user presses ctrl-C.
+    match cmd.interval {
+        None => print_output(&monitor_proxy, &cmd, &mut writer).await?,
+        Some(interval) => loop {
+            print_output(&monitor_proxy, &cmd, &mut writer).await?;
+            fuchsia_async::Timer::new(Duration::from_secs_f64(interval)).await;
+        },
+    }
+    Ok(())
+}
+
+pub async fn print_output(
+    monitor_proxy: &MonitorProxy,
+    cmd: &MemoryCommand,
+    writer: &mut Writer,
 ) -> Result<()> {
     if cmd.print_json_from_memory_monitor {
         let raw_data = get_raw_data(monitor_proxy).await?;
@@ -38,7 +56,7 @@ pub async fn print_memory_digest(
         let processed_digest = processed::Digest::from(digest);
         let output = match cmd.process_koids.len() {
             0 => ProfileMemoryOutput::CompleteDigest(processed_digest),
-            _ => filter_digest_by_process_koids(processed_digest, cmd.process_koids),
+            _ => filter_digest_by_process_koids(processed_digest, &cmd.process_koids),
         };
         if writer.is_machine() {
             writer.machine(&output)
@@ -49,9 +67,7 @@ pub async fn print_memory_digest(
 }
 
 /// Returns a buffer containing the data that MemoryMonitor wrote.
-async fn get_raw_data(
-    monitor_proxy: impl fidl_fuchsia_memory::MonitorProxyInterface,
-) -> Result<Vec<u8>> {
+async fn get_raw_data(monitor_proxy: &MonitorProxy) -> Result<Vec<u8>> {
     // Create a socket.
     let (rx, tx) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
 
@@ -67,9 +83,7 @@ async fn get_raw_data(
 }
 
 /// Returns a `Digest` obtained via the `MonitorProxyInterface`. Performs basic schema validation.
-async fn get_digest(
-    monitor_proxy: impl fidl_fuchsia_memory::MonitorProxyInterface,
-) -> anyhow::Result<raw::Digest> {
+async fn get_digest(monitor_proxy: &MonitorProxy) -> anyhow::Result<raw::Digest> {
     let buffer = get_raw_data(monitor_proxy).await?;
     Ok(serde_json::from_slice(&buffer)?)
 }
@@ -132,7 +146,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn get_raw_data_test() {
         let monitor_proxy = setup_fake_monitor_svc();
-        let raw_data = get_raw_data(monitor_proxy).await.expect("failed to get raw data");
+        let raw_data = get_raw_data(&monitor_proxy).await.expect("failed to get raw data");
         assert_eq!(raw_data, *DATA_WRITTEN_BY_MEMORY_MONITOR);
     }
 
@@ -140,7 +154,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn get_digest_test() {
         let monitor_proxy = setup_fake_monitor_svc();
-        let digest = get_digest(monitor_proxy).await.expect("failed to get digest");
+        let digest = get_digest(&monitor_proxy).await.expect("failed to get digest");
         assert_eq!(digest, *EXPECTED_DIGEST);
     }
 }
