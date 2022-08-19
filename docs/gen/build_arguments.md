@@ -1066,19 +1066,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/79b4782b1181318ee6aac0d175ec90cbb1996c6e/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/15b6dcb54e078a8255dcfe1795f526d02e30563a/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
-**Current value (from the default):** `"libcurl"`
+**Current value (from the default):** `"socket"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/79b4782b1181318ee6aac0d175ec90cbb1996c6e/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:19](https://fuchsia.googlesource.com/third_party/crashpad/+/15b6dcb54e078a8255dcfe1795f526d02e30563a/util/net/tls.gni#19)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/79b4782b1181318ee6aac0d175ec90cbb1996c6e/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/15b6dcb54e078a8255dcfe1795f526d02e30563a/util/net/tls.gni#30)
 
 ### cts_version
 Name of the CTS version.
@@ -2966,7 +2966,7 @@ From //build/go/go_build.gni:22
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/dartlang/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/.gocache"`
 
 From //build/go/go_build.gni:18
 
@@ -6262,7 +6262,7 @@ From //build/security.gni:209
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"dartlang/thinlto-cache"`
+**Current value (from the default):** `"thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
@@ -6497,6 +6497,15 @@ Use link time optimization (LTO).
 
 From //build/config/lto/config.gni:7
 
+### use_native_fxfs_crypto
+Enables the use of Fxfs' native encryption scheme, using a hardware key source when
+available.
+If set, devices not already using this scheme will be forcibly migrated, losing data.
+
+**Current value (from the default):** `false`
+
+From //src/storage/fshost/generated_fshost_config.gni:49
+
 ### use_netstack3
 DO NOT SET THIS IN A PRODUCT DEFINITION!!  FOR NETSTACK DEVELOPER USE ONLY
 TODO(https://fxbug.dev/85450) - Convert this to a platform configuration
@@ -6517,7 +6526,7 @@ VkInstances or VkDevice will fail.
 This argument will affect all vulkan_{executable/test} build targets.
 
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
 From //src/lib/vulkan/build/config.gni:40
 
