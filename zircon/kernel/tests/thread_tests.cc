@@ -857,8 +857,9 @@ int thread_tests(int, const cmd_args*, uint32_t) {
 }
 
 static int spinner_thread(void* arg) {
-  for (;;)
-    ;
+  for (;;) {
+    asm("");
+  }
 
   return 0;
 }
