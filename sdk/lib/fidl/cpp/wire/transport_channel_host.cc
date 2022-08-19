@@ -34,8 +34,11 @@ const CodingConfig ChannelTransport::EncodingConfiguration = {
     .handle_metadata_stride = sizeof(fidl_channel_handle_metadata_t),
     .encode_process_handle = channel_encode_process_handle,
     .decode_process_handle = channel_decode_process_handle,
-    .close = [](fidl_handle_t) {},
-    .close_many = [](const fidl_handle_t*, size_t num_handles) {},
+    .close = [](fidl_handle_t) { ZX_PANIC("Handles are not supported on host"); },
+    .close_many =
+        [](const fidl_handle_t*, size_t num_handles) {
+          ZX_ASSERT_MSG(num_handles == 0, "Handles are not supported on host");
+        },
 };
 
 }  // namespace fidl::internal
