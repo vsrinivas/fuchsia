@@ -185,7 +185,7 @@ sdk_documentation("sdk_notice") {
 
   files = [
     {
-      source = "//tools/check-licenses/golden/sdk/NOTICE.fuchsia"
+      source = "//tools/check-licenses/static/sdk/NOTICE.fuchsia"
       dest = "NOTICE.fuchsia"
     },
   ]
