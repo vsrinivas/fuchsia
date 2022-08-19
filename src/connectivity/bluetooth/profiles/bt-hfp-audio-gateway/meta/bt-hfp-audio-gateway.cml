@@ -27,13 +27,16 @@
         {
             protocol: [
                 "fuchsia.bluetooth.bredr.Profile",
-                "fuchsia.bluetooth.internal.a2dp.Controller",
                 "fuchsia.media.AudioDeviceEnumerator",
             ],
             from: "parent",
         },
         {
             protocol: [ "fuchsia.power.battery.BatteryManager" ],
+            availability: "optional",
+        },
+        {
+            protocol: [ "fuchsia.bluetooth.internal.a2dp.Controller" ],
             availability: "optional",
         },
     ],

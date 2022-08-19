@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "//src/connectivity/bluetooth/profiles/bt-hfp-audio-gateway/meta/bt-headset.core_shard.cml" ],
+    include: [ "//src/connectivity/bluetooth/profiles/bt-hfp-audio-gateway/meta/bt-hfp-audio-gateway.core_shard.cml" ],
     use: [
         {
             protocol: [ "fuchsia.bluetooth.hfp.test.HfpTest" ],

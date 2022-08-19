@@ -1,12 +1,56 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+// TODO(fxbug.dev/106658): Remove this when the soft migration is done.
 {
-    include: [
-        "//src/connectivity/bluetooth/profiles/bt-a2dp/meta/bt-a2dp-lazy.core_shard.cml",
-        "//src/connectivity/bluetooth/profiles/bt-hfp-audio-gateway/meta/bt-hfp-audio-gateway.core_shard.cml",
+    include: [ "//src/connectivity/bluetooth/profiles/bt-a2dp/meta/bt-a2dp-lazy.core_shard.cml" ],
+    children: [
+        {
+            name: "bt-hfp-audio-gateway",
+            url: "fuchsia-pkg://fuchsia.com/bt-hfp-audio-gateway-default#meta/bt-hfp-audio-gateway.cm",
+            environment: "#core-env",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.bluetooth.hfp.Hfp" ],
+            from: "#bt-hfp-audio-gateway",
+        },
     ],
     offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#bt-hfp-audio-gateway" ],
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-dai",
+            to: [ "#bt-hfp-audio-gateway" ],
+            subdir: "class/dai",
+        },
+        {
+            protocol: [ "fuchsia.media.AudioDeviceEnumerator" ],
+            from: "#audio_core",
+            to: [ "#bt-hfp-audio-gateway" ],
+        },
+        {
+            protocol: [ "fuchsia.bluetooth.bredr.Profile" ],
+            from: "#bluetooth-core",
+            to: [ "#bt-hfp-audio-gateway" ],
+        },
+        {
+            protocol: [ "fuchsia.power.battery.BatteryManager" ],
+            from: "#battery_manager",
+            to: "#bt-hfp-audio-gateway",
+            source_availability: "unknown",
+        },
+        {
+            protocol: [ "fuchsia.bluetooth.hfp.Hfp" ],
+            from: "#bt-hfp-audio-gateway",
+            to: "#session-manager",
+        },
         {
             protocol: [ "fuchsia.bluetooth.internal.a2dp.Controller" ],
             from: "#bt-a2dp",

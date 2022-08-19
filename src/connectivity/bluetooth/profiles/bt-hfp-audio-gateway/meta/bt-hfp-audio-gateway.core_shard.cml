@@ -45,6 +45,12 @@
             source_availability: "unknown",
         },
         {
+            protocol: [ "fuchsia.bluetooth.internal.a2dp.Controller" ],
+            from: "#bt-a2dp",
+            to: [ "#bt-hfp-audio-gateway" ],
+            source_availability: "unknown",
+        },
+        {
             protocol: [ "fuchsia.bluetooth.hfp.Hfp" ],
             from: "#bt-hfp-audio-gateway",
             to: "#session-manager",
