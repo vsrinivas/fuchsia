@@ -19,17 +19,17 @@ use {
     fidl_fuchsia_pkg_rewrite_ext::{do_transaction, Rule},
     fuchsia_async as fasync,
     fuchsia_hyper::{new_https_client, HttpsClient},
-    fuchsia_zircon_status::Status,
-    futures::{FutureExt as _, StreamExt as _},
-    itertools::Itertools as _,
-    pkg::{
-        config as pkg_config,
+    fuchsia_repo::{
         manager::RepositoryManager,
         repository::{
             self, FileSystemRepository, HttpRepository, PmRepository, Repository, RepositoryBackend,
         },
         server::RepositoryServer,
     },
+    fuchsia_zircon_status::Status,
+    futures::{FutureExt as _, StreamExt as _},
+    itertools::Itertools as _,
+    pkg::config as pkg_config,
     protocols::prelude::*,
     std::{
         convert::{TryFrom, TryInto},

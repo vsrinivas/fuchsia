@@ -19,13 +19,13 @@ use {
     ffx_config::sdk::SdkVersion,
     fms::{find_product_bundle, Entries},
     fuchsia_hyper::new_https_client,
-    futures::{stream::FuturesUnordered, TryStreamExt as _},
-    pkg::{
+    fuchsia_repo::{
         repo_keys::RepoKeys,
         repository::{
             FileSystemRepository, GcsRepository, HttpRepository, Repository, RepositoryBackend,
         },
     },
+    futures::{stream::FuturesUnordered, TryStreamExt as _},
     sdk_metadata::{Metadata, PackageBundle},
     serde_json::Value,
     std::path::{Path, PathBuf},
@@ -558,7 +558,7 @@ where
     // metadata won't expired.
     let start_time = DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(0, 0), Utc);
 
-    let trusted_targets = pkg::resolve::resolve_repository_metadata_with_start_time(
+    let trusted_targets = fuchsia_repo::resolve::resolve_repository_metadata_with_start_time(
         &repo,
         &metadata_dir,
         &start_time,
@@ -570,7 +570,8 @@ where
     // Exit early if there are no targets.
     if let Some(trusted_targets) = trusted_targets {
         // Download all the packages.
-        let fetcher = pkg::resolve::PackageFetcher::new(&repo, blobs_dir.as_std_path(), 5).await?;
+        let fetcher =
+            fuchsia_repo::resolve::PackageFetcher::new(&repo, blobs_dir.as_std_path(), 5).await?;
 
         let mut futures = FuturesUnordered::new();
 
@@ -612,7 +613,7 @@ where
     let keys_dir = local_dir.join("keys");
     let repo_keys = RepoKeys::from_dir(keys_dir.as_std_path())?;
 
-    pkg::repo_storage::refresh_repository(&repo_storage, &repo_keys).await?;
+    fuchsia_repo::repo_storage::refresh_repository(&repo_storage, &repo_keys).await?;
 
     Ok(())
 }

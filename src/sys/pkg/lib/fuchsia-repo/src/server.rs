@@ -655,7 +655,6 @@ mod tests {
         http_sse::Client as SseClient,
         std::convert::TryInto,
         std::{fs::remove_file, io::Write as _, net::Ipv4Addr},
-        timeout::timeout,
     };
 
     async fn get(url: impl AsRef<str>) -> Result<Response<Body>> {
@@ -902,15 +901,15 @@ mod tests {
                 let mut client =
                     SseClient::connect(fuchsia_hyper::new_https_client(), url).await.unwrap();
 
-                assert_eq!(
-                    timeout(std::time::Duration::from_secs(3), client.next())
-                        .await
-                        .unwrap()
-                        .unwrap()
-                        .unwrap()
-                        .data(),
-                    "1"
-                );
+                futures::select! {
+                    value = client.next().fuse() => {
+                        assert_eq!(value.unwrap().unwrap().data(), "1");
+                    },
+                    () = fuchsia_async::Timer::new(Duration::from_secs(3)).fuse() => {
+                        panic!("timed out reading auto");
+                    },
+                }
+
                 write_file(
                     &timestamp_file,
                     serde_json::to_string(&SignedTimestamp {

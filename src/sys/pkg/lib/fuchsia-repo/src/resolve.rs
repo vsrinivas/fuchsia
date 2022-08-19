@@ -4,10 +4,9 @@
 
 use {
     crate::repository::{get_tuf_client, Repository},
-    anyhow::{anyhow, Context, Result},
+    anyhow::{anyhow, bail, Context, Result},
     async_lock::Mutex,
     chrono::{DateTime, Utc},
-    errors::ffx_bail,
     fuchsia_merkle::{Hash, MerkleTreeBuilder},
     fuchsia_pkg::MetaContents,
     futures::{
@@ -217,7 +216,7 @@ fn merkle_from_description(desc: &TargetDescription) -> Result<Hash> {
     if let Value::String(hash) = merkle {
         Ok(hash.parse()?)
     } else {
-        ffx_bail!("Merkle field is not a String. {:#?}", desc)
+        bail!("Merkle field is not a String. {:#?}", desc)
     }
 }
 
@@ -255,7 +254,7 @@ impl<'a> PackageFetcher<'a> {
         }
 
         if blobs_dir.is_file() {
-            ffx_bail!("Download path points at a file: {}", blobs_dir.display());
+            bail!("Download path points at a file: {}", blobs_dir.display());
         }
 
         Ok(Self { repo, blobs_dir, concurrency, verified_blobs: Mutex::new(HashMap::new()) })

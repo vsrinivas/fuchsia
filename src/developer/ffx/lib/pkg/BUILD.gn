@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/rust/rustc_test.gni")
 import("//build/testing/test_spec.gni")
 
 host_test_data("empty-repo-keys") {
@@ -37,80 +36,23 @@ rustc_library("pkg") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx_rust",
-    "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
     "//src/developer/ffx/config:lib",
-    "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/fidl-fuchsia-developer-ffx-ext",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-fs",
-    "//src/lib/fuchsia-url",
-    "//src/lib/gcs",
-    "//src/lib/http-sse:http_sse",
-    "//src/sys/pkg/lib/far/rust:fuchsia-archive",
-    "//src/sys/pkg/lib/fuchsia-merkle",
-    "//src/sys/pkg/lib/fuchsia-pkg",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:async-fs",
-    "//third_party/rust_crates:async-lock",
-    "//third_party/rust_crates:async-net",
-    "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:bytes",
-    "//third_party/rust_crates:camino",
-    "//third_party/rust_crates:chrono",
-    "//third_party/rust_crates:data-encoding",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:hyper",
-    "//third_party/rust_crates:maplit",
-    "//third_party/rust_crates:notify",
-    "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:percent-encoding",
-    "//third_party/rust_crates:pin-project",
-    "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:tempfile",
-    "//third_party/rust_crates:thiserror",
-    "//third_party/rust_crates:tokio",
     "//third_party/rust_crates:tracing",
-    "//third_party/rust_crates:tuf",
-    "//third_party/rust_crates:url",
-    "//third_party/rust_crates:walkdir",
   ]
 
   test_deps = [
-    ":empty-repo-keys",
-    ":empty-repo-metadata",
-    "//src/developer/ffx/lib/timeout:lib",
-    "//src/lib/fuchsia",
-    "//src/lib/fuchsia-hyper",
-    "//src/sys/pkg/lib/fuchsia-pkg",
-    "//third_party/rust_crates:assert_matches",
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:maplit",
-    "//third_party/rust_crates:pretty_assertions",
-    "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:serial_test",
-    "//third_party/rust_crates:tempfile",
   ]
 
   sources = [
-    "src/async_spooled.rs",
     "src/config.rs",
     "src/lib.rs",
-    "src/manager.rs",
-    "src/range.rs",
-    "src/repo_keys.rs",
-    "src/repo_storage.rs",
-    "src/repository.rs",
-    "src/repository/file_system.rs",
-    "src/repository/gcs_repository.rs",
-    "src/repository/http_repository.rs",
-    "src/repository/pm.rs",
-    "src/repository/repo_tests.rs",
-    "src/resolve.rs",
-    "src/resource.rs",
-    "src/server.rs",
-    "src/test_utils.rs",
-    "src/util.rs",
   ]
 }
 

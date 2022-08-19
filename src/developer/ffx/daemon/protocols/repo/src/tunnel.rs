@@ -8,8 +8,8 @@ use {
     fidl_fuchsia_developer_remotecontrol as rcs,
     fidl_fuchsia_net_ext::SocketAddress as SocketAddressExt,
     fuchsia_async as fasync,
+    fuchsia_repo::server::ConnectionStream,
     futures::{channel::mpsc::UnboundedSender, StreamExt as _},
-    pkg::server::ConnectionStream,
     protocols::prelude::*,
     std::{collections::HashMap, net::SocketAddr, sync::Arc, time::Duration},
 };

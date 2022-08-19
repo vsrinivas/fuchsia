@@ -8,7 +8,7 @@ use {
     ffx_package_download_args::DownloadCommand,
     fuchsia_hyper::new_https_client,
     fuchsia_pkg::PackageManifest,
-    pkg::{
+    fuchsia_repo::{
         repository::{HttpRepository, Repository},
         resolve::resolve_package,
     },
@@ -62,7 +62,7 @@ mod tests {
         super::*,
         camino::Utf8Path,
         fuchsia_async as fasync,
-        pkg::{
+        fuchsia_repo::{
             manager::RepositoryManager, server::RepositoryServer, test_utils::make_pm_repository,
         },
         pretty_assertions::assert_eq,

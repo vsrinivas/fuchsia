@@ -42,6 +42,7 @@ if (is_host) {
       "//src/lib/network/fidl_fuchsia_net_ext",
       "//src/lib/zircon/rust:fuchsia-zircon-status",
       "//src/sys/lib/fidl-fuchsia-pkg-rewrite-ext",
+      "//src/sys/pkg/lib/fuchsia-repo",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:async-lock",
       "//third_party/rust_crates:async-trait",
