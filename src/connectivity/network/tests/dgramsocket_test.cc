@@ -18,6 +18,10 @@
 #include <gtest/gtest.h>
 
 #if defined(__Fuchsia__)
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <zircon/status.h>
+
 #include "src/connectivity/network/netstack/udp_serde/udp_serde.h"
 #endif
 
@@ -545,11 +549,12 @@ TEST_P(DatagramSocketErrWithIOMethodNonBlockingOptionTest, ClearsErrWithIO) {
 
 TEST_P(DatagramSocketErrWithIOMethodNonBlockingOptionTest,
        ClearsErrWithIOAfterSendCacheInvalidated) {
-  // Datagram sockets using the Fast UDP protocol
-  // (https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0109_socket_datagram_socket)
-  // use a single mechanism to 1) check for errors and 2) check the validity of elements
-  // in their cache. Here, we validate that signaled/sticky errors take precedence
-  // over cache errors.
+  // Datagram sockets using the Fast UDP protocol [1] use a single mechanism to
+  // 1) check for errors and 2) check the validity of elements in their cache.
+  // Here, we validate that signaled/sticky errors take precedence over cache
+  // errors.
+  //
+  // [1] https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0109_socket_datagram_socket
   fbl::unique_fd fd;
   const auto& [io_method, nonblocking] = GetParam();
   ASSERT_NO_FATAL_FAILURE(SetUpSocket(fd, nonblocking));
@@ -564,6 +569,35 @@ TEST_P(DatagramSocketErrWithIOMethodNonBlockingOptionTest,
   ASSERT_NO_FATAL_FAILURE(CheckNoPendingEvents(fd));
   EXPECT_EQ(close(fd.release()), 0) << strerror(errno);
 }
+
+#if defined(__Fuchsia__)
+TEST_P(DatagramSocketErrWithIOMethodNonBlockingOptionTest, ClearsErrWithIOAfterTransfer) {
+  fbl::unique_fd fd;
+  const auto& [io_method, nonblocking] = GetParam();
+  ASSERT_NO_FATAL_FAILURE(SetUpSocket(fd, nonblocking));
+  ASSERT_NO_FATAL_FAILURE(TriggerICMPUnreachable(fd));
+
+  // Create a second client from the existing file descriptor, and bind it to a
+  // new file descriptor. Now we have two file descriptors in the same process
+  // sharing a single netstack socket (and therefore zircon socket).
+  zx_handle_t handle;
+  zx_status_t status = fdio_fd_transfer(fd.release(), &handle);
+  ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+  fbl::unique_fd second_fd;
+  status = fdio_fd_create(handle, second_fd.reset_and_get_address());
+  ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+
+  // Expect that socket I/O returns the asynchronously received error. In the
+  // case of Tx I/O methods, this validates that such errors are returned even
+  // when the destination cache [1] is empty.
+  //
+  // [1] https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0109_socket_datagram_socket
+  ASSERT_NO_FATAL_FAILURE(ExpectConnectionRefusedErr(second_fd, io_method));
+
+  ASSERT_NO_FATAL_FAILURE(CheckNoPendingEvents(second_fd));
+  EXPECT_EQ(close(second_fd.release()), 0) << strerror(errno);
+}
+#endif
 
 std::string IOMethodNonBlockingOptionParamsToString(
     const testing::TestParamInfo<IOMethodNonBlockingOptionParams> info) {

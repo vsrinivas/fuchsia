@@ -53,6 +53,7 @@ test("netstack_dgramsocket_c_api_test") {
   if (is_fuchsia) {
     deps += [
       "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_cpp_wire",
+      "//sdk/lib/fdio",
       "//src/connectivity/network/netstack/udp_serde",
       "//src/lib/testing/predicates",
     ]
