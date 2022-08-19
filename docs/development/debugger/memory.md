@@ -5,7 +5,7 @@ Zxdb supports the following commands for inspecting memory:
   * [`aspace`](#aspace_show_mapped_memory_regions)
   * [`mem-analyze`](#mem-analyze_dumps_memory_trying_to_interpret_pointers)
   * [`mem-read` / `x`](#mem-read_dumps_process_memory)
-  * [`stack`](#stack_provides_a_low-level_analysis_of_the_stack)
+  * [`stack-data`](#stack-data_provides_a_low-level_analysis_of_the_stack)
   * [`sym-near`](#sym-near_map_addresses_to_symbols)
 
 ## `aspace`: Show mapped memory regions.
@@ -124,16 +124,16 @@ a known size, the dump automatically shows that many bytes:
 0x1605a5d1ed0:  70 1a c8 36 47 04 00 00-68 fe 3d dd 25 01 00 00  |p  6G   h = %
 ```
 
-## `stack`: Provides a low-level analysis of the stack
+## `stack-data`: Provides a low-level analysis of the stack
 
-The `stack` command analyzes the stack in a similar way to `mem-analyze`. It defaults to the
-top of the current thread's stack. The `stack` command attempts to decode addresses present in the
-memory region, but it also adds annotations for the known register values and stack base pointers of
-the thread.
+The `stack-data` command analyzes the stack in a similar way to `mem-analyze`. It defaults to the
+top of the current thread's stack. The `stack-data` command attempts to decode addresses present in
+the memory region, but it also adds annotations for the known register values and stack base
+pointers of the thread.
 
 ```none {:.devsite-disable-click-to-copy}
-[zxdb] stack
-      Address               Data 
+[zxdb] stack-data
+      Address               Data
 0x1605a5d1428 0x000042a352fca11f ◁ rsp. ▷ _zx_port_wait + 0x1f
 0x1605a5d1430 0x000001605a5d1460 ◁ frame 1 rsp. ▷ inside map "initial-thread"
 0x1605a5d1438 0x000001605a5d1540 ▷ inside map "initial-thread"

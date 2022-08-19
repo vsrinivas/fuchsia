@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/debug/zxdb/console/commands/verb_stack.h"
+#include "src/developer/debug/zxdb/console/commands/verb_stack_data.h"
 
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/target.h"
@@ -23,12 +23,10 @@ namespace {
 // Needs to not collide with the kMemAnalyze*Switches.
 constexpr int kOffsetSwitch = 100;
 
-const char kStackShortHelp[] = "stack / st: Analyze the stack.";
-const char kStackHelp[] =
-    R"(stack [ --offset=<offset> ] [ --num=<lines> ] [ --size=<bytes> ]
+const char kStackDataShortHelp[] = "stack-data: Analyze stack data.";
+const char kStackDataHelp[] =
+    R"(stack-data [ --offset=<offset> ] [ --num=<lines> ] [ --size=<bytes> ]
            [ <address-expression> ]
-
-  Alias: "st"
 
   Prints a stack analysis. This is a special case of "mem-analyze" that
   defaults to showing the memory address starting at the current frame's stack
@@ -57,13 +55,13 @@ Arguments
 
 Examples
 
-  stack
-  thread 2 stack
+  stack-data
+  thread 2 stack-data
 
-  stack --num=128 0x43011a14bfc8
+  stack-data --num=128 0x43011a14bfc8
 )";
-Err RunVerbStack(ConsoleContext* context, const Command& cmd) {
-  Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "stack");
+Err RunVerbStackData(ConsoleContext* context, const Command& cmd) {
+  Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "stack-data");
   if (err.has_error())
     return err;
 
@@ -78,7 +76,7 @@ Err RunVerbStack(ConsoleContext* context, const Command& cmd) {
     if (err.has_error())
       return err;
   } else if (cmd.args().size() > 1) {
-    return Err("Too many args to \"stack\", expecting 0 or 1.");
+    return Err("Too many args to \"stack-data\", expecting 0 or 1.");
   } else {
     // Use implicit SP from the frame (with optional --offset).
     opts.begin_address = cmd.frame()->GetStackPointer();
@@ -113,7 +111,7 @@ Err RunVerbStack(ConsoleContext* context, const Command& cmd) {
       // Help text for continuation.
       async_output->Append(
           Syntax::kComment,
-          fxl::StringPrintf("↓ For more lines: stack -n %d 0x%" PRIx64,
+          fxl::StringPrintf("↓ For more lines: stack-data -n %d 0x%" PRIx64,
                             static_cast<int>(bytes_to_read / sizeof(uint64_t)), next_addr));
     }
     async_output->Complete();
@@ -123,8 +121,8 @@ Err RunVerbStack(ConsoleContext* context, const Command& cmd) {
 
 }  // namespace
 
-VerbRecord GetStackVerbRecord() {
-  VerbRecord stack(&RunVerbStack, {"stack", "st"}, kStackShortHelp, kStackHelp,
+VerbRecord GetStackDataVerbRecord() {
+  VerbRecord stack(&RunVerbStackData, {"stack-data"}, kStackDataShortHelp, kStackDataHelp,
                    CommandGroup::kQuery);
   stack.switches.emplace_back(kMemAnalyzeSizeSwitch, true, "size", 's');
   stack.switches.emplace_back(kMemAnalyzeNumSwitch, true, "num", 'n');

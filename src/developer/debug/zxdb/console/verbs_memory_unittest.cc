@@ -49,10 +49,10 @@ TEST_F(VerbsMemoryTest, Stack) {
   MockConsole console(&session());
 
   // Error case with nothing running.
-  console.ProcessInputLine("stack");
+  console.ProcessInputLine("stack-data");
   auto event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  ASSERT_EQ("\"stack\" requires a thread but there is no current thread.", event.output.AsString());
+  ASSERT_EQ("\"stack-data\" requires a thread but there is no current thread.", event.output.AsString());
 
   // Inject a fake running process.
   constexpr uint64_t kProcessKoid = 1234;
@@ -65,11 +65,11 @@ TEST_F(VerbsMemoryTest, Stack) {
   console.FlushOutputEvents();
 
   // Error case with no stopped thread.
-  console.ProcessInputLine("stack");
+  console.ProcessInputLine("stack-data");
   event = console.GetOutputEvent();
   EXPECT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   EXPECT_EQ(
-      "\"stack\" requires a suspended thread but thread 1 is Running.\n"
+      "\"stack-data\" requires a suspended thread but thread 1 is Running.\n"
       "To view and sync thread state with the remote system, type \"thread\".\n"
       "Or type \"pause\" to pause a running thread.",
       event.output.AsString());
@@ -102,7 +102,7 @@ TEST_F(VerbsMemoryTest, Stack) {
   mem_data[1] = 0xee;
   memory_mock_remote_api()->AddMemory(kSP0, mem_data);
 
-  console.ProcessInputLine("stack");
+  console.ProcessInputLine("stack-data");
 
   loop().RunUntilNoTasks();
 
@@ -130,7 +130,7 @@ TEST_F(VerbsMemoryTest, Stack) {
       "0x10000088 0x0000000000000000 \n"
       "0x10000090 0x0000000000000000 \n"
       "0x10000098 0x0000000000000000 \n"
-      "↓ For more lines: stack -n 20 0x100000a0",
+      "↓ For more lines: stack-data -n 20 0x100000a0",
       event.output.AsString());
 }
 
