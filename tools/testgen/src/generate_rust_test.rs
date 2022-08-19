@@ -443,7 +443,7 @@ impl Mocks for TestComponentTest {
 #[fuchsia::test]
 async fn test_echomarker() {
     let instance = TestComponentTest::create_realm().await.expect("setting up test realm");
-    let proxy = TestComponentTest::connect_to_echomarker(instance);
+    let proxy = TestComponentTest::connect_to_echomarker(&instance);
     // Add test for Echo
 }
 "#;

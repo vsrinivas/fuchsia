@@ -7,6 +7,6 @@ mod lib;
 #[fuchsia::test]
 async fn test_echomarker() {
     let instance = EchoServerTest::create_realm().await.expect("setting up test realm");
-    let proxy = EchoServerTest::connect_to_echomarker(instance);
+    let proxy = EchoServerTest::connect_to_echomarker(&instance);
     // Add test for Echo
 }

@@ -41,7 +41,7 @@ impl EchoServerTest {
         let instance = builder.build().await?;
         Ok(instance)
     }
-    pub fn connect_to_echomarker(instance: RealmInstance) -> EchoProxy {
+    pub fn connect_to_echomarker(instance: &RealmInstance) -> EchoProxy {
         return instance
             .root
             .connect_to_protocol_at_exposed_dir::<EchoMarker>()

@@ -1,4 +1,4 @@
-    pub fn connect_to_MARKER_NAME(instance: RealmInstance) -> MARKER_PROXY {
+    pub fn connect_to_MARKER_NAME(instance: &RealmInstance) -> MARKER_PROXY {
         return instance
             .root
             .connect_to_protocol_at_exposed_dir::<MARKER_CONNECTOR>()

@@ -1,6 +1,6 @@
 #[fuchsia::test]
 async fn test_MARKER_NAME() {
     let instance = TEST_CLASS_NAME::create_realm().await.expect("setting up test realm");
-    let proxy = TEST_CLASS_NAME::connect_to_MARKER_NAME(instance);
+    let proxy = TEST_CLASS_NAME::connect_to_MARKER_NAME(&instance);
     // Add test for PROTOCOL
 }
