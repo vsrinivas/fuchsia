@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 
 #include "src/developer/debug/zxdb/client/mock_frame.h"
+#include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/console/console_test.h"
 
 namespace zxdb {
@@ -18,14 +19,16 @@ class VerbStackUsage : public ConsoleTest {};
 }  // namespace
 
 TEST_F(VerbStackUsage, GetThreadStackUsage) {
-  constexpr uint64_t kPageSize = 4096;
+  const uint64_t kPageSize = session().arch_info().page_size();
 
-  constexpr uint64_t kStackBase = 0x100000;  // HIGH address of stack region.
-  constexpr uint64_t kStackSizeInPages = 20;
-  constexpr uint64_t kStackSize = kStackSizeInPages * kPageSize;
+  const uint64_t kStackBase = 0x100000;  // HIGH address of stack region.
+  const uint64_t kStackSizeInPages = 20;
+  const uint64_t kStackSize = kStackSizeInPages * kPageSize;
 
-  constexpr uint64_t kUsedBytes = 0x5e;
-  constexpr uint64_t kStackPointer = kStackBase - kUsedBytes;
+  // This test expects the page size to be larger than the used bytes for the below computations.
+  const uint64_t kUsedBytes = 0x5e;
+  ASSERT_GE(kPageSize, kUsedBytes);
+  const uint64_t kStackPointer = kStackBase - kUsedBytes;
 
   // Set up the thread to be stopped with the given stack pointer.
   std::vector<std::unique_ptr<Frame>> frames;

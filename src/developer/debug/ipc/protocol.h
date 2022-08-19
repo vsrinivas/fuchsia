@@ -12,7 +12,7 @@
 
 namespace debug_ipc {
 
-constexpr uint32_t kProtocolVersion = 45;
+constexpr uint32_t kProtocolVersion = 46;
 
 // This is so that it's obvious if the timestamp wasn't properly set (that number should be at
 // least 30,000 years) but it's not the max so that if things add to it then time keeps moving
@@ -96,6 +96,7 @@ struct HelloReply {
   uint64_t signature = kStreamSignature;
   uint32_t version = kProtocolVersion;
   debug::Arch arch = debug::Arch::kUnknown;
+  uint64_t page_size = 0;
 };
 
 enum class InferiorType : uint32_t {

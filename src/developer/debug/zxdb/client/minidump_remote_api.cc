@@ -394,6 +394,9 @@ void MinidumpRemoteAPI::Hello(const debug_ipc::HelloRequest& request,
       break;
   }
 
+  // Assume 4K page size since minidumps don't include this information.
+  reply.page_size = 4096;
+
   Succeed(std::move(cb), reply);
 }
 

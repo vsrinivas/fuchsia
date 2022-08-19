@@ -283,14 +283,14 @@ Err Session::PendingConnection::DoConnectBackgroundThread() {
 
 Session::Session()
     : remote_api_(std::make_unique<RemoteAPIImpl>(this)), system_(this), weak_factory_(this) {
-  SetArch(debug::Arch::kUnknown);
+  SetArch(debug::Arch::kUnknown, 0);
 
   ListenForSystemSettings();
 }
 
-Session::Session(std::unique_ptr<RemoteAPI> remote_api, debug::Arch arch)
+Session::Session(std::unique_ptr<RemoteAPI> remote_api, debug::Arch arch, uint64_t page_size)
     : remote_api_(std::move(remote_api)), system_(this), arch_(arch), weak_factory_(this) {
-  Err err = SetArch(arch);
+  Err err = SetArch(arch, page_size);
   FX_DCHECK(!err.has_error());  // Should not fail for synthetically set-up architectures.
 
   ListenForSystemSettings();
@@ -421,10 +421,10 @@ void Session::Connect(const SessionConnectionInfo& info, fit::callback<void(cons
   pending_connection_->Initiate(weak_factory_.GetWeakPtr(), std::move(cb));
 }
 
-Err Session::SetArch(debug::Arch arch) {
+Err Session::SetArch(debug::Arch arch, uint64_t page_size) {
   arch_info_ = std::make_unique<ArchInfo>();
 
-  Err arch_err = arch_info_->Init(arch);
+  Err arch_err = arch_info_->Init(arch, page_size);
   if (!arch_err.has_error()) {
     arch_ = arch;
   } else {
@@ -460,7 +460,7 @@ void Session::OpenMinidump(const std::string& path, fit::callback<void(const Err
                      [callback = std::move(callback), weak_this = GetWeakPtr()](
                          const Err& err, debug_ipc::HelloReply reply) mutable {
                        if (weak_this && !err.has_error()) {
-                         weak_this->SetArch(reply.arch);
+                         weak_this->SetArch(reply.arch, reply.page_size);
                        }
 
                        callback(err);
@@ -759,7 +759,7 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending, const E
   }
 
   // Initialize arch-specific stuff.
-  Err arch_err = SetArch(reply.arch);
+  Err arch_err = SetArch(reply.arch, reply.page_size);
   if (arch_err.has_error()) {
     last_connection_error_ = arch_err;
     if (callback)

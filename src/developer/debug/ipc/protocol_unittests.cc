@@ -81,6 +81,9 @@ TEST(Protocol, HelloRequest) {
 TEST(Protocol, HelloReply) {
   HelloReply initial;
   initial.version = 12345678;
+  initial.arch = debug::Arch::kArm64;
+  initial.page_size = 1024;
+
   HelloReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
   EXPECT_EQ(initial.version, second.version);

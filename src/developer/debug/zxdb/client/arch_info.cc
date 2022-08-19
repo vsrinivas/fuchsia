@@ -40,8 +40,9 @@ ArchInfo::ArchInfo() {
 
 ArchInfo::~ArchInfo() = default;
 
-Err ArchInfo::Init(debug::Arch arch) {
+Err ArchInfo::Init(debug::Arch arch, uint64_t page_size) {
   arch_ = arch;
+  page_size_ = page_size;
 
   switch (arch) {
     case debug::Arch::kUnknown:

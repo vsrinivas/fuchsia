@@ -65,7 +65,7 @@ class Session : public SettingStoreObserver {
 
   // Creates a session using a custom RemoteAPI implementation. Use for tests to mock out sending
   // IPC messages.
-  Session(std::unique_ptr<RemoteAPI> remote_api, debug::Arch arch);
+  Session(std::unique_ptr<RemoteAPI> remote_api, debug::Arch arch, uint64_t page_size);
 
   // Creates with a previously-allocated connection. The pointer must outlive this class. In this
   // mode, the stream can not be disconnected.
@@ -179,7 +179,7 @@ class Session : public SettingStoreObserver {
   using Callback = fit::callback<void(const Err&, std::vector<char>)>;
 
   // Set the arch_ and arch_info_ fields.
-  Err SetArch(debug::Arch arch);
+  Err SetArch(debug::Arch arch, uint64_t page_size);
 
   // Checks whether it's safe to begin establishing a connection. If not, the callback is invoked
   // with details. The opening_dump argument indicates whether we are trying to open a dump file

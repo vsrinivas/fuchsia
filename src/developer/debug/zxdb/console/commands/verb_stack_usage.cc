@@ -9,6 +9,7 @@
 
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/process.h"
+#include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/console/analyze_memory.h"
@@ -202,8 +203,11 @@ ThreadStackUsage GetThreadStackUsage(ConsoleContext* console_context,
   }
   uint64_t stack_base = region_or->base + region_or->size;
 
-  // TODO make page size parameterizable!
-  constexpr uint64_t kPageSize = 4096;
+  const uint64_t kPageSize = thread->session()->arch_info().page_size();
+  if (kPageSize == 0) {
+    result.err = Err("Invalid page size for target system.");
+    return result;
+  }
 
   result.total = region_or->size;
   result.used = stack_base - stack_pointer;

@@ -137,6 +137,7 @@ void DebugAgent::RemoveBreakpoint(uint32_t breakpoint_id) {
 void DebugAgent::OnHello(const debug_ipc::HelloRequest& request, debug_ipc::HelloReply* reply) {
   // Version and signature are default-initialized to their current values.
   reply->arch = arch::GetCurrentArch();
+  reply->page_size = zx_system_get_page_size();
 }
 
 void DebugAgent::OnStatus(const debug_ipc::StatusRequest& request, debug_ipc::StatusReply* reply) {

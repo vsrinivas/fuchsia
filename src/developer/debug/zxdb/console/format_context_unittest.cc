@@ -100,7 +100,7 @@ TEST(FormatContext, FormatSourceContext_LineOffEnd) {
 
 TEST(FormatContext, FormatAsmContext) {
   ArchInfo arch;
-  Err err = arch.Init(debug::Arch::kX64);
+  Err err = arch.Init(debug::Arch::kX64, 4096);
   ASSERT_FALSE(err.has_error());
 
   // Make a little memory dump.
@@ -273,10 +273,9 @@ TEST(FormatContext, FormatSourceFileContext_Stale) {
   out = OutputBuffer();
   ASSERT_FALSE(
       FormatSourceFileContext(FileLine(kFileName, 4), file_provider, opts, &out).has_error());
-  EXPECT_EQ(
-      "⚠️  Warning: Source file is newer than the binary. The build may be out-of-date.\n" +
-          expected_code,
-      out.AsString());
+  EXPECT_EQ("⚠️  Warning: Source file is newer than the binary. The build may be out-of-date.\n" +
+                expected_code,
+            out.AsString());
 
   // Doing the same file again should not give a warning. Each file should be warned about once.
   out = OutputBuffer();

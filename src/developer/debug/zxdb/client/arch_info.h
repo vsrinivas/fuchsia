@@ -29,9 +29,10 @@ class ArchInfo {
   ArchInfo();
   ~ArchInfo();
 
-  Err Init(debug::Arch arch);
+  Err Init(debug::Arch arch, uint64_t page_size);
 
   debug::Arch arch() const { return arch_; }
+  uint64_t page_size() const { return page_size_; }
 
   const std::shared_ptr<Abi>& abi() const { return abi_; }
 
@@ -62,6 +63,7 @@ class ArchInfo {
 
  private:
   debug::Arch arch_ = debug::Arch::kUnknown;
+  uint64_t page_size_ = 0;
   std::shared_ptr<Abi> abi_;
 
   bool is_fixed_instr_ = false;

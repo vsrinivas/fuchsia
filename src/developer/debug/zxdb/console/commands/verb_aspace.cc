@@ -5,6 +5,7 @@
 #include "src/developer/debug/zxdb/console/commands/verb_aspace.h"
 
 #include "src/developer/debug/zxdb/client/process.h"
+#include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/console/command.h"
@@ -119,12 +120,23 @@ void OnAspaceComplete(const Err& err, std::vector<debug_ipc::AddressRegion> map,
                ColSpec(Align::kLeft, 0, "Name", 1)},
               rows, &out);
 
+  // Format the section at the bottom showing statistics. These are formatted so the "=" align
+  // horizontally (hence extra left-spacing on the strings).
+  uint64_t page_size = console->context().session()->arch_info().page_size();
+  out.Append("\n");
+  out.Append(Syntax::kHeading, "              Page size: ");
+  out.Append(std::to_string(page_size));
+  out.Append("\n");
+
   if (print_totals) {
-    out.Append("\n");
-    out.Append(Syntax::kHeading, "Total mapped bytes: ");
+    out.Append(Syntax::kHeading, "     Total mapped bytes: ");
     out.Append(std::to_string(total_mapped));
-    out.Append(Syntax::kHeading, "    Total committed pages: ");
+    out.Append("\n");
+
+    out.Append(Syntax::kHeading, "  Total committed pages: ");
     out.Append(std::to_string(total_committed));
+    out.Append(" = " + std::to_string(total_committed * page_size) + " bytes\n");
+    out.Append("                         (See \"help aspace\" for what committed pages mean.)\n");
   }
 
   console->Output(out);
