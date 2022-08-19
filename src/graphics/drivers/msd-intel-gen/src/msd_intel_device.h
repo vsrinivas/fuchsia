@@ -45,7 +45,7 @@ class MsdIntelDevice : public msd_device_t,
   // transferred across the MSD ABI by the caller
   std::unique_ptr<MsdIntelConnection> Open(msd_client_id_t client_id);
 
-  uint32_t device_id() { return device_id_; }
+  uint32_t device_id() override { return device_id_; }  // provided for EngineCommandStreamer
   uint32_t revision() { return revision_; }
   uint32_t subslice_total() { return subslice_total_; }
   uint32_t eu_total() { return eu_total_; }

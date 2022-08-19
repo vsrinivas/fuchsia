@@ -47,16 +47,27 @@ class MiBatchBufferEnd {
 };
 
 // from intel-gfx-prm-osrc-bdw-vol02a-commandreference-instructions_2.pdf pp.940
+// https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-tgl-vol02a-commandreference-instructions_0.pdf
+// p.1002
 class MiLoadDataImmediate {
  public:
   static constexpr uint32_t kCommandType = 0x22 << 23;
+  static constexpr uint32_t kForcePosted = 1 << 12;
+  static constexpr uint32_t kAddMmioBase = 1 << 19;
 
   static uint32_t dword_count(uint32_t register_count) { return 2 * register_count + 1; }
+
+  static uint32_t header(uint32_t register_count, bool force_posted) {
+    uint32_t header = kCommandType | (dword_count(register_count) - 2);
+    if (force_posted)
+      header |= kForcePosted;
+    return header;
+  }
 
   static void write(magma::InstructionWriter* writer, uint32_t register_offset,
                     uint32_t register_count, uint32_t dword[]) {
     DASSERT((register_offset & 0x3) == 0);
-    writer->Write32(kCommandType | dword_count(register_count) - 2);
+    writer->Write32(header(register_count, /*force_posted=*/false));
     for (uint32_t i = 0; i < register_count; i++) {
       writer->Write32(register_offset + i * sizeof(uint32_t));
       writer->Write32(dword[i]);

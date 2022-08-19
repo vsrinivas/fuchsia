@@ -13,6 +13,7 @@
 #include "msd_intel_connection.h"
 #include "platform_logger.h"
 #include "platform_trace.h"
+#include "register_state_helper.h"
 #include "registers.h"
 #include "render_init_batch.h"
 #include "ringbuffer.h"
@@ -145,215 +146,8 @@ void EngineCommandStreamer::InvalidateTlbs() {
   }
 }
 
-// Register definitions from BSpec BXML Reference.
-// Register State Context definition from public BSpec.
-// Render command streamer pp.25:
-// https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-kbl-vol07-3d_media_gpgpu.pdf
-// Video command streamer pp.15:
-// https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-kbl-vol03-gpu_overview.pdf
-class RegisterStateHelper {
- public:
-  // From INDIRECT_CTX_OFFSET register, p.1070:
-  // https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-kbl-vol02c-commandreference-registers-part1.pdf
-  static constexpr uint64_t kIndirectContextOffsetGen9 = 0x26;
-
-  static void* register_context_base(void* context_buffer) {
-    return static_cast<uint8_t*>(context_buffer) + magma::page_size();
-  }
-
-  RegisterStateHelper(EngineCommandStreamer* engine, MsdIntelContext* context)
-      : RegisterStateHelper(engine->id(), engine->mmio_base(),
-                            static_cast<uint32_t*>(register_context_base(
-                                context->GetCachedContextBufferCpuAddr(engine->id())))) {}
-
-  RegisterStateHelper(EngineCommandStreamerId id, uint32_t mmio_base, uint32_t* state)
-      : id_(id), mmio_base_(mmio_base), state_(state) {}
-
-  void write_load_register_immediate_headers() {
-    state_[0x1] = 0x1100101B;
-    state_[0x21] = 0x11001011;
-    switch (id_) {
-      case RENDER_COMMAND_STREAMER:
-        state_[0x41] = 0x11000001;
-        break;
-      case VIDEO_COMMAND_STREAMER:
-        break;
-      default:
-        DASSERT(false);
-    }
-  }
-
-  // CTXT_SR_CTL - Context Save/Restore Control Register
-  void write_context_save_restore_control() {
-    constexpr uint32_t kInhibitSyncContextSwitchBit = 1 << 3;
-    constexpr uint32_t kRenderContextRestoreInhibitBit = 1;
-
-    state_[0x2] = mmio_base_ + 0x244;
-
-    uint32_t bits = kInhibitSyncContextSwitchBit;
-    if (id_ == RENDER_COMMAND_STREAMER) {
-      bits |= kRenderContextRestoreInhibitBit;
-    }
-    state_[0x3] = (bits << 16) | bits;
-  }
-
-  // RING_BUFFER_HEAD - Ring Buffer Head
-  void write_ring_head_pointer(uint32_t head) {
-    state_[0x4] = mmio_base_ + 0x34;
-    state_[0x5] = head;
-  }
-
-  // RING_BUFFER_TAIL - Ring Buffer Tail
-  void write_ring_tail_pointer(uint32_t tail) {
-    state_[0x6] = mmio_base_ + 0x30;
-    state_[0x7] = tail;
-  }
-
-  // RING_BUFFER_START - Ring Buffer Start
-  void write_ring_buffer_start(uint32_t gtt_ring_buffer_start) {
-    DASSERT(magma::is_page_aligned(gtt_ring_buffer_start));
-    state_[0x8] = mmio_base_ + 0x38;
-    state_[0x9] = gtt_ring_buffer_start;
-  }
-
-  // RING_BUFFER_CTL - Ring Buffer Control
-  void write_ring_buffer_control(uint32_t ringbuffer_size) {
-    constexpr uint32_t kRingValid = 1;
-    DASSERT(ringbuffer_size >= PAGE_SIZE && ringbuffer_size <= 512 * PAGE_SIZE);
-    DASSERT(magma::is_page_aligned(ringbuffer_size));
-    state_[0xA] = mmio_base_ + 0x3C;
-    // This register assumes 4k pages
-    DASSERT(PAGE_SIZE == 4096);
-    state_[0xB] = (ringbuffer_size - PAGE_SIZE) | kRingValid;
-  }
-
-  // BB_ADDR_UDW - Batch Buffer Upper Head Pointer Register
-  void write_batch_buffer_upper_head_pointer() {
-    state_[0xC] = mmio_base_ + 0x168;
-    state_[0xD] = 0;
-  }
-
-  // BB_ADDR - Batch Buffer Head Pointer Register
-  void write_batch_buffer_head_pointer() {
-    state_[0xE] = mmio_base_ + 0x140;
-    state_[0xF] = 0;
-  }
-
-  // BB_STATE - Batch Buffer State Register
-  void write_batch_buffer_state() {
-    constexpr uint32_t kAddressSpacePpgtt = 1 << 5;
-    state_[0x10] = mmio_base_ + 0x110;
-    state_[0x11] = kAddressSpacePpgtt;
-  }
-
-  // SBB_ADDR_UDW - Second Level Batch Buffer Upper Head Pointer Register
-  void write_second_level_batch_buffer_upper_head_pointer() {
-    state_[0x12] = mmio_base_ + 0x11C;
-    state_[0x13] = 0;
-  }
-
-  // SBB_ADDR - Second Level Batch Buffer Head Pointer Register
-  void write_second_level_batch_buffer_head_pointer() {
-    state_[0x14] = mmio_base_ + 0x114;
-    state_[0x15] = 0;
-  }
-
-  // SBB_STATE - Second Level Batch Buffer State Register
-  void write_second_level_batch_buffer_state() {
-    state_[0x16] = mmio_base_ + 0x118;
-    state_[0x17] = 0;
-  }
-
-  // BB_PER_CTX_PTR - Batch Buffer Per Context Pointer
-  void write_batch_buffer_per_context_pointer() {
-    state_[0x18] = mmio_base_ + 0x1C0;
-    state_[0x19] = 0;
-  }
-
-  // INDIRECT_CTX - Indirect Context Pointer
-  void write_indirect_context_pointer(uint32_t gpu_addr, uint32_t size) {
-    DASSERT((gpu_addr & 0x3F) == 0);
-    uint32_t size_in_cache_lines = size / DeviceId::cache_line_size();
-    DASSERT(size_in_cache_lines < 64);
-    state_[0x1A] = mmio_base_ + 0x1C4;
-    state_[0x1B] = gpu_addr | size_in_cache_lines;
-  }
-
-  // INDIRECT_CTX_OFFSET - Indirect Context Offset
-  void write_indirect_context_offset(uint32_t context_offset) {
-    DASSERT((context_offset & ~0x3FF) == 0);
-    state_[0x1C] = mmio_base_ + 0x1C8;
-    state_[0x1D] = context_offset << 6;
-  }
-
-  // CS_CTX_TIMESTAMP - CS Context Timestamp Count
-  void write_context_timestamp() {
-    state_[0x22] = mmio_base_ + 0x3A8;
-    state_[0x23] = 0;
-  }
-
-  void write_pdp3_upper(uint64_t pdp_bus_addr) {
-    state_[0x24] = mmio_base_ + 0x28C;
-    state_[0x25] = magma::upper_32_bits(pdp_bus_addr);
-  }
-
-  void write_pdp3_lower(uint64_t pdp_bus_addr) {
-    state_[0x26] = mmio_base_ + 0x288;
-    state_[0x27] = magma::lower_32_bits(pdp_bus_addr);
-  }
-
-  void write_pdp2_upper(uint64_t pdp_bus_addr) {
-    state_[0x28] = mmio_base_ + 0x284;
-    state_[0x29] = magma::upper_32_bits(pdp_bus_addr);
-  }
-
-  void write_pdp2_lower(uint64_t pdp_bus_addr) {
-    state_[0x2A] = mmio_base_ + 0x280;
-    state_[0x2B] = magma::lower_32_bits(pdp_bus_addr);
-  }
-
-  void write_pdp1_upper(uint64_t pdp_bus_addr) {
-    state_[0x2C] = mmio_base_ + 0x27C;
-    state_[0x2D] = magma::upper_32_bits(pdp_bus_addr);
-  }
-
-  void write_pdp1_lower(uint64_t pdp_bus_addr) {
-    state_[0x2E] = mmio_base_ + 0x278;
-    state_[0x2F] = magma::lower_32_bits(pdp_bus_addr);
-  }
-
-  void write_pdp0_upper(uint64_t pdp_bus_addr) {
-    state_[0x30] = mmio_base_ + 0x274;
-    state_[0x31] = magma::upper_32_bits(pdp_bus_addr);
-  }
-
-  void write_pdp0_lower(uint64_t pdp_bus_addr) {
-    state_[0x32] = mmio_base_ + 0x270;
-    state_[0x33] = magma::lower_32_bits(pdp_bus_addr);
-  }
-
-  // R_PWR_CLK_STATE - Render Power Clock State Register
-  void write_render_power_clock_state() {
-    DASSERT(id_ == RENDER_COMMAND_STREAMER);
-    state_[0x42] = mmio_base_ + 0x0C8;
-    state_[0x43] = 0;
-  }
-
- private:
-  EngineCommandStreamerId id_;
-  uint32_t mmio_base_;
-  uint32_t* state_;
-};
-
-bool EngineCommandStreamer::InitContextBuffer(MsdIntelBuffer* buffer, Ringbuffer* ringbuffer,
-                                              AddressSpace* address_space) const {
-  void* addr;
-  if (!buffer->platform_buffer()->MapCpu(&addr))
-    return DRETF(false, "Couldn't map context buffer");
-
-  RegisterStateHelper helper(
-      id(), mmio_base_, static_cast<uint32_t*>(RegisterStateHelper::register_context_base(addr)));
-
+void EngineCommandStreamer::InitRegisterState(RegisterStateHelper& helper, Ringbuffer* ringbuffer,
+                                              uint64_t ppgtt_pml4_addr) const {
   helper.write_load_register_immediate_headers();
   helper.write_context_save_restore_control();
   helper.write_ring_head_pointer(ringbuffer->head());
@@ -370,6 +164,8 @@ bool EngineCommandStreamer::InitContextBuffer(MsdIntelBuffer* buffer, Ringbuffer
   helper.write_batch_buffer_per_context_pointer();
   helper.write_indirect_context_pointer(0, 0);
   helper.write_indirect_context_offset(0);
+  helper.write_ccid();
+  helper.write_semaphore_token();
   helper.write_context_timestamp();
   helper.write_pdp3_upper(0);
   helper.write_pdp3_lower(0);
@@ -377,17 +173,36 @@ bool EngineCommandStreamer::InitContextBuffer(MsdIntelBuffer* buffer, Ringbuffer
   helper.write_pdp2_lower(0);
   helper.write_pdp1_upper(0);
   helper.write_pdp1_lower(0);
-  helper.write_pdp0_upper(0);
-  helper.write_pdp0_lower(0);
-  if (address_space->type() == ADDRESS_SPACE_PPGTT) {
-    auto ppgtt = static_cast<PerProcessGtt*>(address_space);
-    uint64_t pml4_addr = ppgtt->get_pml4_bus_addr();
-    helper.write_pdp0_upper(pml4_addr);
-    helper.write_pdp0_lower(pml4_addr);
-  }
+  helper.write_pdp0_upper(ppgtt_pml4_addr);
+  helper.write_pdp0_lower(ppgtt_pml4_addr);
 
   if (id() == RENDER_COMMAND_STREAMER) {
     helper.write_render_power_clock_state();
+  }
+}
+
+bool EngineCommandStreamer::InitContextBuffer(MsdIntelBuffer* buffer, Ringbuffer* ringbuffer,
+                                              AddressSpace* address_space) const {
+  void* addr;
+  if (!buffer->platform_buffer()->MapCpu(&addr))
+    return DRETF(false, "Couldn't map context buffer");
+
+  uint64_t ppgtt_pml4_addr = address_space->type() == ADDRESS_SPACE_PPGTT
+                                 ? static_cast<PerProcessGtt*>(address_space)->get_pml4_bus_addr()
+                                 : 0;
+
+  if (DeviceId::is_gen12(owner_->device_id())) {
+    RegisterStateHelperGen12 helper(
+        id(), mmio_base_, static_cast<uint32_t*>(RegisterStateHelper::register_context_base(addr)));
+
+    InitRegisterState(helper, ringbuffer, ppgtt_pml4_addr);
+  } else {
+    DASSERT(DeviceId::is_gen9(owner_->device_id()));
+
+    RegisterStateHelperGen9 helper(
+        id(), mmio_base_, static_cast<uint32_t*>(RegisterStateHelper::register_context_base(addr)));
+
+    InitRegisterState(helper, ringbuffer, ppgtt_pml4_addr);
   }
 
   if (!buffer->platform_buffer()->UnmapCpu())
@@ -398,12 +213,23 @@ bool EngineCommandStreamer::InitContextBuffer(MsdIntelBuffer* buffer, Ringbuffer
 
 void EngineCommandStreamer::InitIndirectContext(MsdIntelContext* context,
                                                 std::shared_ptr<IndirectContextBatch> batch) {
-  RegisterStateHelper helper(this, context);
+  uint32_t gtt_addr = magma::to_uint32(batch->GetBatchMapping()->gpu_addr());
 
-  gpu_addr_t gpu_addr = batch->GetBatchMapping()->gpu_addr();
+  auto register_state = static_cast<uint32_t*>(
+      RegisterStateHelper::register_context_base(context->GetCachedContextBufferCpuAddr(id())));
 
-  helper.write_indirect_context_pointer(magma::to_uint32(gpu_addr), batch->length());
-  helper.write_indirect_context_offset(RegisterStateHelper::kIndirectContextOffsetGen9);
+  if (DeviceId::is_gen12(owner_->device_id())) {
+    RegisterStateHelperGen12 helper(id(), mmio_base(), register_state);
+
+    helper.write_indirect_context_pointer(gtt_addr, batch->length());
+    helper.write_indirect_context_offset(RegisterStateHelperGen12::kIndirectContextOffsetGen12);
+  } else {
+    DASSERT(DeviceId::is_gen9(owner_->device_id()));
+    RegisterStateHelperGen9 helper(id(), mmio_base(), register_state);
+
+    helper.write_indirect_context_pointer(gtt_addr, batch->length());
+    helper.write_indirect_context_offset(RegisterStateHelperGen9::kIndirectContextOffsetGen9);
+  }
 
   context->SetIndirectContextBatch(std::move(batch));
 }
@@ -422,11 +248,14 @@ bool EngineCommandStreamer::UpdateContext(MsdIntelContext* context, uint32_t tai
   if (!context->GetRingbufferGpuAddress(id(), &gpu_addr))
     return DRETF(false, "failed to get ringbuffer gpu address");
 
-  RegisterStateHelper helper(this, context);
+  uint32_t gtt_addr = magma::to_uint32(gpu_addr);
+
+  RegisterStateHelper helper(id(), mmio_base(),
+                             static_cast<uint32_t*>(RegisterStateHelper::register_context_base(
+                                 context->GetCachedContextBufferCpuAddr(id()))));
 
   DLOG("UpdateContext ringbuffer gpu_addr 0x%lx tail 0x%x", gpu_addr, tail);
 
-  uint32_t gtt_addr = magma::to_uint32(gpu_addr);
   helper.write_ring_buffer_start(gtt_addr);
   helper.write_ring_tail_pointer(tail);
 

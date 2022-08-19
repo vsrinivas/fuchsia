@@ -33,9 +33,14 @@ class TestRingbuffer {
   static uint32_t* vaddr(Ringbuffer* ringbuffer) { return ringbuffer->vaddr(); }
 };
 
+struct TestParam {
+  EngineCommandStreamerId id;
+  uint32_t device_id;
+};
+
 class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
                                   public Gtt::Owner,
-                                  public testing::TestWithParam<EngineCommandStreamerId> {
+                                  public testing::TestWithParam<TestParam> {
  public:
   static constexpr uint32_t kFirstSequenceNumber = 5;
 
@@ -62,13 +67,11 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
 
     sequencer_ = std::unique_ptr<Sequencer>(new Sequencer(kFirstSequenceNumber));
 
-    EngineCommandStreamerId id = GetParam();
-
     auto mapping = AddressSpace::MapBufferGpu(address_space_,
                                               MsdIntelBuffer::Create(PAGE_SIZE, "global hwsp"));
     ASSERT_TRUE(mapping);
 
-    switch (id) {
+    switch (id()) {
       case RENDER_COMMAND_STREAMER:
         engine_cs_ = std::make_unique<RenderEngineCommandStreamer>(this, std::move(mapping));
         break;
@@ -79,7 +82,7 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
     ASSERT_TRUE(engine_cs_);
   }
 
-  EngineCommandStreamerId id() const { return GetParam(); }
+  EngineCommandStreamerId id() const { return GetParam().id; }
 
   uint32_t mmio_base() {
     switch (id()) {
@@ -108,67 +111,132 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
     EXPECT_TRUE(buffer->platform_buffer()->MapCpu(&addr));
 
     uint32_t* state = reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(addr) + PAGE_SIZE);
-    EXPECT_EQ(state[1], 0x1100101Bul);
-    EXPECT_EQ(state[2], mmio_base() + 0x244ul);
-    switch (id()) {
-      case RENDER_COMMAND_STREAMER:
-        EXPECT_EQ(state[3], 0x00090009ul);
-        break;
-      case VIDEO_COMMAND_STREAMER:
-        EXPECT_EQ(state[3], 0x00080008ul);
-        break;
+
+    if (DeviceId::is_gen12(device_id())) {
+      EXPECT_EQ(state[1], 0x11081019ul);
+      EXPECT_EQ(state[2], mmio_base() + 0x244ul);
+      switch (id()) {
+        case RENDER_COMMAND_STREAMER:
+          EXPECT_EQ(state[3], 0x00090009ul);
+          break;
+        case VIDEO_COMMAND_STREAMER:
+          EXPECT_EQ(state[3], 0x00090009ul);
+          break;
+      }
+      EXPECT_EQ(state[4], mmio_base() + 0x34ul);
+      EXPECT_EQ(state[5], ringbuffer->head());
+      EXPECT_EQ(state[6], mmio_base() + 0x30ul);
+      EXPECT_EQ(state[7], 0u);
+      EXPECT_EQ(state[8], mmio_base() + 0x38ul);
+      // state[9] is not set until later
+      EXPECT_EQ(state[0xA], mmio_base() + 0x3Cul);
+      EXPECT_EQ(state[0xB], (31ul * PAGE_SIZE) | 1);
+      EXPECT_EQ(state[0xC], mmio_base() + 0x168ul);
+      EXPECT_EQ(state[0xD], 0ul);
+      EXPECT_EQ(state[0xE], mmio_base() + 0x140ul);
+      EXPECT_EQ(state[0xF], 0ul);
+      EXPECT_EQ(state[0x10], mmio_base() + 0x110ul);
+      EXPECT_EQ(state[0x11], 1ul << 5);
+      EXPECT_EQ(state[0x12], mmio_base() + 0x1C0ul);
+      EXPECT_EQ(state[0x13], 0ul);
+      EXPECT_EQ(state[0x14], mmio_base() + 0x1C4ul);
+      EXPECT_EQ(state[0x15], 0ul);
+      EXPECT_EQ(state[0x16], mmio_base() + 0x1C8ul);
+      EXPECT_EQ(state[0x17], 0ul);
+      EXPECT_EQ(state[0x18], mmio_base() + 0x180ul);
+      EXPECT_EQ(state[0x19], 0ul);
+      EXPECT_EQ(state[0x1A], mmio_base() + 0x2B4ul);
+      EXPECT_EQ(state[0x1B], 0ul);
+      EXPECT_EQ(state[0x1C], 0ul);
+      EXPECT_EQ(state[0x1D], 0ul);
+      EXPECT_EQ(state[0x21], 0x11081011ul);
+      EXPECT_EQ(state[0x22], mmio_base() + 0x3A8ul);
+      EXPECT_EQ(state[0x23], 0ul);
+      EXPECT_EQ(state[0x24], mmio_base() + 0x28Cul);
+      EXPECT_EQ(state[0x25], 0ul);  // pdp3_upper
+      EXPECT_EQ(state[0x26], mmio_base() + 0x288ul);
+      EXPECT_EQ(state[0x27], 0ul);  // pdp3_lower
+      EXPECT_EQ(state[0x28], mmio_base() + 0x284ul);
+      EXPECT_EQ(state[0x29], 0ul);  // pdp2_upper
+      EXPECT_EQ(state[0x2A], mmio_base() + 0x280ul);
+      EXPECT_EQ(state[0x2B], 0ul);  // pdp2_lower
+      EXPECT_EQ(state[0x2C], mmio_base() + 0x27Cul);
+      EXPECT_EQ(state[0x2D], 0ul);  // pdp1_upper
+      EXPECT_EQ(state[0x2E], mmio_base() + 0x278ul);
+      EXPECT_EQ(state[0x2F], 0ul);  // pdp1_lower
+      EXPECT_EQ(state[0x30], mmio_base() + 0x274ul);
+      // EXPECT_EQ(state[0x31], pdp0_upper);
+      EXPECT_EQ(state[0x32], mmio_base() + 0x270ul);
+      // EXPECT_EQ(state[0x33], pdp0_lower);
+      if (id() == RENDER_COMMAND_STREAMER) {
+        EXPECT_EQ(state[0x41], 0x11080001ul);
+        EXPECT_EQ(state[0x42], mmio_base() + 0xC8ul);
+      }
+      EXPECT_EQ(state[0x43], 0ul);
+    } else if (DeviceId::is_gen9(device_id())) {
+      EXPECT_EQ(state[1], 0x1100101Bul);
+      EXPECT_EQ(state[2], mmio_base() + 0x244ul);
+      switch (id()) {
+        case RENDER_COMMAND_STREAMER:
+          EXPECT_EQ(state[3], 0x00090009ul);
+          break;
+        case VIDEO_COMMAND_STREAMER:
+          EXPECT_EQ(state[3], 0x00090009ul);
+          break;
+      }
+      EXPECT_EQ(state[4], mmio_base() + 0x34ul);
+      EXPECT_EQ(state[5], ringbuffer->head());
+      EXPECT_EQ(state[6], mmio_base() + 0x30ul);
+      EXPECT_EQ(state[7], 0u);
+      EXPECT_EQ(state[8], mmio_base() + 0x38ul);
+      // state[9] is not set until later
+      EXPECT_EQ(state[0xA], mmio_base() + 0x3Cul);
+      EXPECT_EQ(state[0xB], (31ul * PAGE_SIZE) | 1);
+      EXPECT_EQ(state[0xC], mmio_base() + 0x168ul);
+      EXPECT_EQ(state[0xD], 0ul);
+      EXPECT_EQ(state[0xE], mmio_base() + 0x140ul);
+      EXPECT_EQ(state[0xF], 0ul);
+      EXPECT_EQ(state[0x10], mmio_base() + 0x110ul);
+      EXPECT_EQ(state[0x11], 1ul << 5);
+      EXPECT_EQ(state[0x12], mmio_base() + 0x11Cul);
+      EXPECT_EQ(state[0x13], 0ul);
+      EXPECT_EQ(state[0x14], mmio_base() + 0x114ul);
+      EXPECT_EQ(state[0x15], 0ul);
+      EXPECT_EQ(state[0x16], mmio_base() + 0x118ul);
+      EXPECT_EQ(state[0x17], 0ul);
+      EXPECT_EQ(state[0x18], mmio_base() + 0x1C0ul);
+      EXPECT_EQ(state[0x19], 0ul);
+      EXPECT_EQ(state[0x1A], mmio_base() + 0x1C4ul);
+      EXPECT_EQ(state[0x1B], 0ul);
+      EXPECT_EQ(state[0x1C], mmio_base() + 0x1C8ul);
+      EXPECT_EQ(state[0x1D], 0ul);
+      EXPECT_EQ(state[0x21], 0x11001011ul);
+      EXPECT_EQ(state[0x22], mmio_base() + 0x3A8ul);
+      EXPECT_EQ(state[0x23], 0ul);
+      EXPECT_EQ(state[0x24], mmio_base() + 0x28Cul);
+      EXPECT_EQ(state[0x25], 0ul);  // pdp3_upper
+      EXPECT_EQ(state[0x26], mmio_base() + 0x288ul);
+      EXPECT_EQ(state[0x27], 0ul);  // pdp3_lower
+      EXPECT_EQ(state[0x28], mmio_base() + 0x284ul);
+      EXPECT_EQ(state[0x29], 0ul);  // pdp2_upper
+      EXPECT_EQ(state[0x2A], mmio_base() + 0x280ul);
+      EXPECT_EQ(state[0x2B], 0ul);  // pdp2_lower
+      EXPECT_EQ(state[0x2C], mmio_base() + 0x27Cul);
+      EXPECT_EQ(state[0x2D], 0ul);  // pdp1_upper
+      EXPECT_EQ(state[0x2E], mmio_base() + 0x278ul);
+      EXPECT_EQ(state[0x2F], 0ul);  // pdp1_lower
+      EXPECT_EQ(state[0x30], mmio_base() + 0x274ul);
+      // EXPECT_EQ(state[0x31], pdp0_upper);
+      EXPECT_EQ(state[0x32], mmio_base() + 0x270ul);
+      // EXPECT_EQ(state[0x33], pdp0_lower);
+      if (id() == RENDER_COMMAND_STREAMER) {
+        EXPECT_EQ(state[0x41], 0x11000001ul);
+        EXPECT_EQ(state[0x42], mmio_base() + 0xC8ul);
+      }
+      EXPECT_EQ(state[0x43], 0ul);
+    } else {
+      ASSERT_TRUE(false);
     }
-    EXPECT_EQ(state[4], mmio_base() + 0x34ul);
-    EXPECT_EQ(state[5], ringbuffer->head());
-    EXPECT_EQ(state[6], mmio_base() + 0x30ul);
-    EXPECT_EQ(state[7], 0u);
-    EXPECT_EQ(state[8], mmio_base() + 0x38ul);
-    // state[9] is not set until later
-    EXPECT_EQ(state[0xA], mmio_base() + 0x3Cul);
-    EXPECT_EQ(state[0xB], (31ul * PAGE_SIZE) | 1);
-    EXPECT_EQ(state[0xC], mmio_base() + 0x168ul);
-    EXPECT_EQ(state[0xD], 0ul);
-    EXPECT_EQ(state[0xE], mmio_base() + 0x140ul);
-    EXPECT_EQ(state[0xF], 0ul);
-    EXPECT_EQ(state[0x10], mmio_base() + 0x110ul);
-    EXPECT_EQ(state[0x11], 1ul << 5);
-    EXPECT_EQ(state[0x12], mmio_base() + 0x11Cul);
-    EXPECT_EQ(state[0x13], 0ul);
-    EXPECT_EQ(state[0x14], mmio_base() + 0x114ul);
-    EXPECT_EQ(state[0x15], 0ul);
-    EXPECT_EQ(state[0x16], mmio_base() + 0x118ul);
-    EXPECT_EQ(state[0x17], 0ul);
-    EXPECT_EQ(state[0x18], mmio_base() + 0x1C0ul);
-    EXPECT_EQ(state[0x19], 0ul);
-    EXPECT_EQ(state[0x1A], mmio_base() + 0x1C4ul);
-    EXPECT_EQ(state[0x1B], 0ul);
-    EXPECT_EQ(state[0x1C], mmio_base() + 0x1C8ul);
-    EXPECT_EQ(state[0x1D], 0ul);
-    EXPECT_EQ(state[0x21], 0x11001011ul);
-    EXPECT_EQ(state[0x22], mmio_base() + 0x3A8ul);
-    EXPECT_EQ(state[0x23], 0ul);
-    EXPECT_EQ(state[0x24], mmio_base() + 0x28Cul);
-    // TODO(fxbug.dev/12686) - check ppgtt pdp addresses
-    // EXPECT_EQ(state[0x25], pdp3_upper);
-    EXPECT_EQ(state[0x26], mmio_base() + 0x288ul);
-    // EXPECT_EQ(state[0x27], pdp3_lower);
-    EXPECT_EQ(state[0x28], mmio_base() + 0x284ul);
-    // EXPECT_EQ(state[0x29], pdp2_upper);
-    EXPECT_EQ(state[0x2A], mmio_base() + 0x280ul);
-    // EXPECT_EQ(state[0x2B], pdp2_lower);
-    EXPECT_EQ(state[0x2C], mmio_base() + 0x27Cul);
-    // EXPECT_EQ(state[0x2D], pdp1_upper);
-    EXPECT_EQ(state[0x2E], mmio_base() + 0x278ul);
-    // EXPECT_EQ(state[0x2F], pdp1_lower);
-    EXPECT_EQ(state[0x30], mmio_base() + 0x274ul);
-    // EXPECT_EQ(state[0x31], pdp0_upper);
-    EXPECT_EQ(state[0x32], mmio_base() + 0x270ul);
-    // EXPECT_EQ(state[0x33], pdp0_lower);
-    if (id() == RENDER_COMMAND_STREAMER) {
-      EXPECT_EQ(state[0x41], 0x11000001ul);
-      EXPECT_EQ(state[0x42], mmio_base() + 0xC8ul);
-    }
-    EXPECT_EQ(state[0x43], 0ul);
   }
 
   void InitHardware() {
@@ -286,11 +354,19 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
     uint32_t* state =
         reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(addr) + magma::page_size());
 
-    EXPECT_EQ(state[0x1A], EngineCommandStreamer::kRenderEngineMmioBase + 0x1C4);
-    EXPECT_EQ(state[0x1B] & ~0x3F, indirect_context_batch->GetBatchMapping()->gpu_addr());
-    EXPECT_EQ(state[0x1B] & 0x3F, indirect_context_batch->length() / DeviceId::cache_line_size());
-    EXPECT_EQ(state[0x1C], EngineCommandStreamer::kRenderEngineMmioBase + 0x1C8);
-    EXPECT_EQ(state[0x1D], 0x26u << 6);
+    if (DeviceId::is_gen12(device_id())) {
+      EXPECT_EQ(state[0x14], EngineCommandStreamer::kRenderEngineMmioBase + 0x1C4);
+      EXPECT_EQ(state[0x15] & ~0x3F, indirect_context_batch->GetBatchMapping()->gpu_addr());
+      EXPECT_EQ(state[0x15] & 0x3F, indirect_context_batch->length() / DeviceId::cache_line_size());
+      EXPECT_EQ(state[0x16], EngineCommandStreamer::kRenderEngineMmioBase + 0x1C8);
+      EXPECT_EQ(state[0x17], 0x0Du << 6);
+    } else {
+      EXPECT_EQ(state[0x1A], EngineCommandStreamer::kRenderEngineMmioBase + 0x1C4);
+      EXPECT_EQ(state[0x1B] & ~0x3F, indirect_context_batch->GetBatchMapping()->gpu_addr());
+      EXPECT_EQ(state[0x1B] & 0x3F, indirect_context_batch->length() / DeviceId::cache_line_size());
+      EXPECT_EQ(state[0x1C], EngineCommandStreamer::kRenderEngineMmioBase + 0x1C8);
+      EXPECT_EQ(state[0x1D], 0x26u << 6);
+    }
 
     EXPECT_TRUE(TestContext::get_context_buffer(context_.get(), engine_cs_->id())
                     ->platform_buffer()
@@ -425,7 +501,6 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
     EXPECT_TRUE(engine_cs_->Reset());
   }
 
- private:
   uint32_t* ValidateBatchBufferStart(uint32_t* ringbuffer_content) {
     auto render_cs = reinterpret_cast<RenderEngineCommandStreamer*>(engine_cs_.get());
 
@@ -473,6 +548,8 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
     return ringbuffer_content;
   }
 
+  uint32_t device_id() override { return GetParam().device_id; }
+
   magma::RegisterIo* register_io() override { return register_io_.get(); }
 
   Sequencer* sequencer() override { return sequencer_.get(); }
@@ -487,6 +564,7 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
     return nullptr;
   }
 
+ private:
   std::unique_ptr<magma::RegisterIo> register_io_;
   std::unique_ptr<AddressSpaceOwner> address_space_owner_;
   std::shared_ptr<AddressSpace> address_space_;
@@ -500,13 +578,13 @@ TEST_P(TestEngineCommandStreamer, InitContext) { TestEngineCommandStreamer::Init
 TEST_P(TestEngineCommandStreamer, InitHardware) { TestEngineCommandStreamer::InitHardware(); }
 
 TEST_P(TestEngineCommandStreamer, RenderInitGen9) {
-  if (id() != RENDER_COMMAND_STREAMER) {
+  if (id() != RENDER_COMMAND_STREAMER || !DeviceId::is_gen9(device_id())) {
     GTEST_SKIP();
   }
   TestEngineCommandStreamer::RenderInit();
 }
 
-TEST_P(TestEngineCommandStreamer, IndirectContextGen9) {
+TEST_P(TestEngineCommandStreamer, IndirectContext) {
   if (id() != RENDER_COMMAND_STREAMER) {
     GTEST_SKIP();
   }
@@ -521,14 +599,25 @@ TEST_P(TestEngineCommandStreamer, MoveBatchToInflight) {
 
 TEST_P(TestEngineCommandStreamer, MappingRelease) { TestEngineCommandStreamer::MappingRelease(); }
 
+// TODO(fxbug.dev/82881) - add gen12
 INSTANTIATE_TEST_SUITE_P(
     TestEngineCommandStreamer, TestEngineCommandStreamer,
-    testing::Values(RENDER_COMMAND_STREAMER, VIDEO_COMMAND_STREAMER),
+    testing::Values(TestParam{.id = RENDER_COMMAND_STREAMER, .device_id = 0x5916},
+                    TestParam{.id = VIDEO_COMMAND_STREAMER, .device_id = 0x5916}),
     [](const testing::TestParamInfo<TestEngineCommandStreamer::ParamType>& info) {
-      switch (info.param) {
+      std::string name;
+      switch (info.param.id) {
         case RENDER_COMMAND_STREAMER:
-          return "Render";
+          name += "Render";
+          break;
         case VIDEO_COMMAND_STREAMER:
-          return "Video";
+          name += "Video";
+          break;
       }
+      if (DeviceId::is_gen12(info.param.device_id)) {
+        name += "Gen12";
+      } else if (DeviceId::is_gen9(info.param.device_id)) {
+        name += "Gen9";
+      }
+      return name;
     });

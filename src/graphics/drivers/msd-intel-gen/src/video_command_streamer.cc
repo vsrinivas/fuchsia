@@ -8,8 +8,10 @@
 
 VideoCommandStreamer::VideoCommandStreamer(EngineCommandStreamer::Owner* owner,
                                            std::unique_ptr<GpuMapping> hw_status_page)
-    : EngineCommandStreamer(owner, VIDEO_COMMAND_STREAMER, kVideoEngineMmioBase,
-                            std::move(hw_status_page), Scheduler::CreateFifoScheduler()) {}
+    : EngineCommandStreamer(
+          owner, VIDEO_COMMAND_STREAMER,
+          DeviceId::is_gen12(owner->device_id()) ? kVideoEngineMmioBaseGen12 : kVideoEngineMmioBase,
+          std::move(hw_status_page), Scheduler::CreateFifoScheduler()) {}
 
 bool VideoCommandStreamer::WriteBatchToRingBuffer(MappedBatch* mapped_batch,
                                                   uint32_t* sequence_number_out) {

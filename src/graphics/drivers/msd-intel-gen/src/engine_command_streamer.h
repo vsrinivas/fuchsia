@@ -22,6 +22,7 @@
 
 // See below
 class InflightCommandSequence;
+struct RegisterStateHelper;
 
 class EngineCommandStreamer : public HardwareStatusPage::Owner {
  public:
@@ -29,6 +30,7 @@ class EngineCommandStreamer : public HardwareStatusPage::Owner {
    public:
     virtual magma::RegisterIo* register_io() = 0;
     virtual Sequencer* sequencer() = 0;
+    virtual uint32_t device_id() = 0;
   };
 
   EngineCommandStreamer(Owner* owner, EngineCommandStreamerId id, uint32_t mmio_base,
@@ -84,6 +86,9 @@ class EngineCommandStreamer : public HardwareStatusPage::Owner {
   std::vector<MappedBatch*> GetInflightBatches();
 
  protected:
+  void InitRegisterState(RegisterStateHelper& helper, Ringbuffer* ringbuffer,
+                         uint64_t ppgtt_pml4_addr) const;
+
   bool SubmitContext(MsdIntelContext* context, uint32_t tail);
   bool UpdateContext(MsdIntelContext* context, uint32_t tail);
   void SubmitExeclists(MsdIntelContext* context);
@@ -99,8 +104,11 @@ class EngineCommandStreamer : public HardwareStatusPage::Owner {
                         AddressSpaceType address_space_type);
 
   // from intel-gfx-prm-osrc-kbl-vol03-gpu_overview.pdf p.5
+  // https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-tgl-vol08-command_stream_programming_0.pdf
+  // p.30
   static constexpr uint32_t kRenderEngineMmioBase = 0x2000;
   static constexpr uint32_t kVideoEngineMmioBase = 0x12000;
+  static constexpr uint32_t kVideoEngineMmioBaseGen12 = 0x1C0000;
 
   magma::RegisterIo* register_io() { return owner_->register_io(); }
 
