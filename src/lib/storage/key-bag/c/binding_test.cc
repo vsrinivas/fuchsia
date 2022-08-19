@@ -15,13 +15,13 @@
 namespace key_bag {
 namespace {
 
-TEST(KeyBagTest, CreateEmptyKeyBag) {
+TEST(KeyBagTest, OpenEmptyKeyBag) {
   files::ScopedTempDir dir;
   std::string temp_file;
   ASSERT_TRUE(dir.NewTempFile(&temp_file));
   KeyBagManager* kb;
-  ASSERT_EQ(keybag_create(temp_file.c_str(), &kb), ZX_OK);
-  auto cleanup = fit::defer([&]() { keybag_destroy(kb); });
+  ASSERT_EQ(keybag_open(temp_file.c_str(), &kb), ZX_OK);
+  auto cleanup = fit::defer([&]() { keybag_close(kb); });
 }
 
 TEST(KeyBagTest, AddRemoveKey) {
@@ -30,24 +30,27 @@ TEST(KeyBagTest, AddRemoveKey) {
   ASSERT_TRUE(dir.NewTempFile(&temp_file));
   {
     KeyBagManager* kb;
-    ASSERT_EQ(keybag_create(temp_file.c_str(), &kb), ZX_OK);
-    auto cleanup = fit::defer([&]() { keybag_destroy(kb); });
+    ASSERT_EQ(keybag_open(temp_file.c_str(), &kb), ZX_OK);
+    auto cleanup = fit::defer([&]() { keybag_close(kb); });
 
-    Aes256Key key{._0{0}};
-    ASSERT_EQ(keybag_new_key(kb, 0, &key), ZX_OK);
+    uint8_t raw[AES256_KEY_SIZE];
+    WrappingKey wrap;
+    ASSERT_EQ(keybag_create_aes256_wrapping_key(raw, sizeof(raw), &wrap), ZX_OK);
+    Aes256Key out;
+    ASSERT_EQ(keybag_new_key(kb, 0, &wrap, &out), ZX_OK);
   }
   {
     KeyBagManager* kb;
-    ASSERT_EQ(keybag_create(temp_file.c_str(), &kb), ZX_OK);
-    auto cleanup = fit::defer([&]() { keybag_destroy(kb); });
+    ASSERT_EQ(keybag_open(temp_file.c_str(), &kb), ZX_OK);
+    auto cleanup = fit::defer([&]() { keybag_close(kb); });
 
     ASSERT_EQ(keybag_remove_key(kb, 0), ZX_OK);
     ASSERT_EQ(keybag_remove_key(kb, 0), ZX_ERR_NOT_FOUND);
   }
   {
     KeyBagManager* kb;
-    ASSERT_EQ(keybag_create(temp_file.c_str(), &kb), ZX_OK);
-    auto cleanup = fit::defer([&]() { keybag_destroy(kb); });
+    ASSERT_EQ(keybag_open(temp_file.c_str(), &kb), ZX_OK);
+    auto cleanup = fit::defer([&]() { keybag_close(kb); });
 
     ASSERT_EQ(keybag_remove_key(kb, 0), ZX_ERR_NOT_FOUND);
   }

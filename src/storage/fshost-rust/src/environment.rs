@@ -3,18 +3,16 @@
 // found in the LICENSE file.
 
 use {
-    crate::device::Device,
+    crate::{device::Device, fxfs},
     anyhow::Error,
     async_trait::async_trait,
     fidl::endpoints::{create_proxy, Proxy, ServerEnd},
     fidl_fuchsia_device::ControllerProxy,
-    fidl_fuchsia_fxfs::{CryptManagementMarker, CryptMarker, KeyPurpose},
     fidl_fuchsia_io as fio,
     fs_management::{
         filesystem::{ServingMultiVolumeFilesystem, ServingSingleVolumeFilesystem},
         Blobfs, Fxfs,
     },
-    fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon as zx,
 };
 
@@ -64,16 +62,11 @@ impl Filesystem {
 pub struct FshostEnvironment {
     blobfs: Filesystem,
     data: Filesystem,
-    crypt_service_initialized: bool,
 }
 
 impl FshostEnvironment {
     pub fn new() -> Self {
-        Self {
-            blobfs: Filesystem::Queue(Vec::new()),
-            data: Filesystem::Queue(Vec::new()),
-            crypt_service_initialized: false,
-        }
+        Self { blobfs: Filesystem::Queue(Vec::new()), data: Filesystem::Queue(Vec::new()) }
     }
 
     /// Returns a proxy for the root of the Blobfs filesystem.  This can be called before Blobfs is
@@ -86,46 +79,6 @@ impl FshostEnvironment {
     /// mounted and it will get routed once Blobfs is mounted.
     pub fn data_root(&mut self) -> Result<fio::DirectoryProxy, Error> {
         self.data.root()
-    }
-
-    async fn init_crypt_service(&mut self) -> Result<(), Error> {
-        if self.crypt_service_initialized {
-            return Ok(());
-        }
-        let crypt_management = connect_to_protocol::<CryptManagementMarker>()?;
-        // TODO(fxbug.dev/94587): A hardware source should be used for keys.
-        crypt_management
-            .add_wrapping_key(
-                0,
-                &[
-                    0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf,
-                    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c,
-                    0x1d, 0x1e, 0x1f,
-                ],
-            )
-            .await?
-            .map_err(zx::Status::from_raw)?;
-        crypt_management
-            .add_wrapping_key(
-                1,
-                &[
-                    0xff, 0xfe, 0xfd, 0xfc, 0xfb, 0xfa, 0xf9, 0xf8, 0xf7, 0xf6, 0xf5, 0xf4, 0xf3,
-                    0xf2, 0xf1, 0xf0, 0xef, 0xee, 0xed, 0xec, 0xeb, 0xea, 0xe9, 0xe8, 0xe7, 0xe6,
-                    0xe5, 0xe4, 0xe3, 0xe2, 0xe1, 0xe0,
-                ],
-            )
-            .await?
-            .map_err(zx::Status::from_raw)?;
-        crypt_management
-            .set_active_key(KeyPurpose::Data, 0)
-            .await?
-            .map_err(zx::Status::from_raw)?;
-        crypt_management
-            .set_active_key(KeyPurpose::Metadata, 1)
-            .await?
-            .map_err(zx::Status::from_raw)?;
-        self.crypt_service_initialized = true;
-        Ok(())
     }
 }
 
@@ -158,26 +111,23 @@ impl Environment for FshostEnvironment {
 
     async fn mount_data(&mut self, device: &mut dyn Device) -> Result<(), Error> {
         let mut fs = Fxfs::from_channel(device.proxy()?.into_channel().unwrap().into())?;
-        self.init_crypt_service().await?;
-        let crypt_service = Some(
-            connect_to_protocol::<CryptMarker>()
-                .expect("Unable to connect to Crypt service")
-                .into_channel()
-                .unwrap()
-                .into_zx_channel()
-                .into(),
-        );
-        let mut serving_fs;
+        let mut serving_fs = None;
         let vol = match fs.serve_multi_volume().await {
             Ok(fs) => {
-                serving_fs = fs;
-                serving_fs.open_volume("default", crypt_service).await?
+                serving_fs = Some(fs);
+                fxfs::unlock_data_volume(serving_fs.as_mut().unwrap()).await
             }
+            Err(e) => Err(e),
+        };
+        let vol = match vol {
+            Ok(vol) => vol,
             Err(e) => {
-                log::info!("Failed to mount data partition, reformating: {}", e);
+                log::info!("Failed to mount data partition, reformatting: {}", e);
+                // TODO(fxbug.dev/102666): We need to ensure the hardware key source is also wiped.
+                let _ = serving_fs.take();
                 fs.format().await?;
-                serving_fs = fs.serve_multi_volume().await?;
-                serving_fs.create_volume("default", crypt_service).await?
+                serving_fs = Some(fs.serve_multi_volume().await?);
+                fxfs::init_data_volume(serving_fs.as_mut().unwrap()).await?
             }
         };
         if let Filesystem::Queue(queue) = &mut self.data {
@@ -188,7 +138,7 @@ impl Environment for FshostEnvironment {
         } else {
             panic!("data already mounted");
         };
-        self.data = Filesystem::ServingMultiVolume(serving_fs);
+        self.data = Filesystem::ServingMultiVolume(serving_fs.unwrap());
         Ok(())
     }
 }
