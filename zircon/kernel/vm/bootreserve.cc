@@ -17,7 +17,7 @@
 
 #define LOCAL_TRACE VM_GLOBAL_TRACE(0)
 
-static const size_t NUM_RESERVES = 16;
+static const size_t NUM_RESERVES = 64;
 static reserve_range_t res[NUM_RESERVES];
 static size_t res_idx;
 // Used directly by boot_reserve_wire, and implicitly by boot_reserve_unwire_page
