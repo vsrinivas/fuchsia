@@ -66,37 +66,37 @@ continue
 quit
 ```
 
-#### A note about launcher environments
+## Directly launching in debugger
 
-The following loader environments all have different capabilities (in order
-from least capable to most capable):
+It's possible to launch an executable, a component, or a test in the debugger directly.
 
-  * The debugger's `run <file name>` command (base system process stuff).
-  * The system console or `fx shell` (adds some libraries).
-  * The base component environment via the shell's `run` and the debugger's
-    `run -c <package url>` (adds component capabilities).
-  * The test environment via `fx test`.
-  * The user environment when launched from a "story" (adds high-level
-    services like scenic).
+### Launching an executable
 
-This panoply of environments is why the debugger can't have a simple "run"
-command that always works.
+Use `run <executable>` to launch an executable from the debugger. Note that in Fuchsia, all
+processes need to be run in a namespace. `run` will launch the process in debug_agent's namespace,
+which means only executables in the debug_agent package and executables from [bootfs](../../glossary#bootfs)
+are available. Since they are run in debug_agent's namespace, the processes will also share the same
+capabilities of the debug_agent.
 
-## Directly launching components
+Due to the limitation above, `run` is only meant to be used to run some demo programs.
 
-> Note: only v1 components can be directly launched in the debugger.
+### Launching a component
 
-Components that can be executed with the console command `run fuchsia-pkg://...` can be loaded in
-the debugger with the following command, substituting your component's URL:
+Use `run-component <component url>` to launch a component. V2 components will be created in the
+[`ffx-laboratory`](../../development/components/run.md#ffx-laboratory) collection, similar to the
+behavior of `ffx component run --recreate`. The output of the component will NOT be redirected.
+Since all the limitations from `ffx-laboratory` are applied, `run-component` is usually only used
+to launch demo programs.
 
-```none {:.devsite-disable-click-to-copy}
-[zxdb] run -c fuchsia-pkg://fuchsia.com/your\_app#meta/your\_app.cmx
-```
+### Launching a test
 
-Not all components can be launched this way since most higher-level services won't be accessible: if
-you can't do `run ...` from the system console, it won't work from the debugger either. Note also
-that `fx test` is a different environment. According to your test's dependencies, it may or may not
-work from the debugger's `run` command.
+Use `run-test <test url>` to launch a test, similar to `ffx test run`. Optional case filters can be
+provided to specify test cases to run.
+
+Since Fuchsia test runners start one process for each test case, there could be many processes
+started in the debugger. These processes will have their names replaced as the names of the test
+cases, so that it's easier to navigate between test cases. The output of these processes will be
+redirected in the debugger and can be replayed by `stdout` or `stderr`.
 
 ## Attaching to an existing process
 
