@@ -4,7 +4,6 @@
 
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/inspect/cpp/vmo/block.h>
-#include <lib/inspect/cpp/vmo/limits.h>
 #include <lib/inspect/cpp/vmo/snapshot.h>
 
 #include <zxtest/zxtest.h>
@@ -20,14 +19,13 @@ using inspect::internal::GetBlock;
 using inspect::internal::HeaderBlockFields;
 using inspect::internal::kMagicNumber;
 using inspect::internal::kMinOrderSize;
-using inspect::internal::kVmoHeaderOrder;
 
 TEST(Snapshot, ValidRead) {
   fzl::OwnedVmoMapper vmo;
   ASSERT_OK(vmo.CreateAndMap(4096, "test"));
   memset(vmo.start(), 'a', 4096);
   Block* header = reinterpret_cast<Block*>(vmo.start());
-  header->header = HeaderBlockFields::Order::Make(kVmoHeaderOrder) |
+  header->header = HeaderBlockFields::Order::Make(0) |
                    HeaderBlockFields::Type::Make(BlockType::kHeader) |
                    HeaderBlockFields::Version::Make(0);
   memcpy(&header->header_data[4], kMagicNumber, 4);
@@ -50,7 +48,7 @@ TEST(Snapshot, ReadFailsWithBadVersion) {
   fzl::OwnedVmoMapper vmo;
   ASSERT_OK(vmo.CreateAndMap(4096, "test"));
   Block* header = reinterpret_cast<Block*>(vmo.start());
-  header->header = HeaderBlockFields::Order::Make(kVmoHeaderOrder) |
+  header->header = HeaderBlockFields::Order::Make(0) |
                    HeaderBlockFields::Type::Make(BlockType::kHeader) |
                    HeaderBlockFields::Version::Make(1ul << 15);
   memcpy(&header->header_data[4], kMagicNumber, 4);
@@ -75,7 +73,7 @@ TEST(Snapshot, GetBlock) {
   ASSERT_OK(vmo.CreateAndMap(4096, "test"));
   memset(vmo.start(), 'a', 4096);
   Block* header = reinterpret_cast<Block*>(vmo.start());
-  header->header = HeaderBlockFields::Order::Make(kVmoHeaderOrder) |
+  header->header = HeaderBlockFields::Order::Make(0) |
                    HeaderBlockFields::Type::Make(BlockType::kHeader) |
                    HeaderBlockFields::Version::Make(0);
   memcpy(&header->header_data[4], kMagicNumber, 4);
@@ -122,7 +120,7 @@ TEST(Snapshot, InvalidWritePending) {
   fzl::OwnedVmoMapper vmo;
   ASSERT_OK(vmo.CreateAndMap(4096, "test"));
   Block* header = reinterpret_cast<Block*>(vmo.start());
-  header->header = HeaderBlockFields::Order::Make(kVmoHeaderOrder) |
+  header->header = HeaderBlockFields::Order::Make(0) |
                    HeaderBlockFields::Type::Make(BlockType::kHeader) |
                    HeaderBlockFields::Version::Make(0);
   memcpy(&header->header_data[4], kMagicNumber, 4);
@@ -139,7 +137,7 @@ TEST(Snapshot, ValidPendingSkipCheck) {
   fzl::OwnedVmoMapper vmo;
   ASSERT_OK(vmo.CreateAndMap(4096, "test"));
   Block* header = reinterpret_cast<Block*>(vmo.start());
-  header->header = HeaderBlockFields::Order::Make(kVmoHeaderOrder) |
+  header->header = HeaderBlockFields::Order::Make(0) |
                    HeaderBlockFields::Type::Make(BlockType::kHeader) |
                    HeaderBlockFields::Version::Make(0);
   memcpy(&header->header_data[4], kMagicNumber, 4);
@@ -156,7 +154,7 @@ TEST(Snapshot, InvalidGenerationChange) {
   fzl::OwnedVmoMapper vmo;
   ASSERT_OK(vmo.CreateAndMap(4096, "test"));
   Block* header = reinterpret_cast<Block*>(vmo.start());
-  header->header = HeaderBlockFields::Order::Make(kVmoHeaderOrder) |
+  header->header = HeaderBlockFields::Order::Make(0) |
                    HeaderBlockFields::Type::Make(BlockType::kHeader) |
                    HeaderBlockFields::Version::Make(0);
   memcpy(&header->header_data[4], kMagicNumber, 4);
@@ -174,7 +172,7 @@ TEST(Snapshot, InvalidGenerationChangeFinalStep) {
   fzl::OwnedVmoMapper vmo;
   ASSERT_OK(vmo.CreateAndMap(4096, "test"));
   Block* header = reinterpret_cast<Block*>(vmo.start());
-  header->header = HeaderBlockFields::Order::Make(kVmoHeaderOrder) |
+  header->header = HeaderBlockFields::Order::Make(0) |
                    HeaderBlockFields::Type::Make(BlockType::kHeader) |
                    HeaderBlockFields::Version::Make(0);
   memcpy(&header->header_data[4], kMagicNumber, 4);
@@ -199,7 +197,7 @@ TEST(Snapshot, ValidGenerationChangeSkipCheck) {
   fzl::OwnedVmoMapper vmo;
   ASSERT_OK(vmo.CreateAndMap(4096, "test"));
   Block* header = reinterpret_cast<Block*>(vmo.start());
-  header->header = HeaderBlockFields::Order::Make(kVmoHeaderOrder) |
+  header->header = HeaderBlockFields::Order::Make(0) |
                    HeaderBlockFields::Type::Make(BlockType::kHeader) |
                    HeaderBlockFields::Version::Make(0);
   memcpy(&header->header_data[4], kMagicNumber, 4);
@@ -218,7 +216,7 @@ TEST(Snapshot, InvalidBadMagicNumber) {
   fzl::OwnedVmoMapper vmo;
   ASSERT_OK(vmo.CreateAndMap(4096, "test"));
   Block* header = reinterpret_cast<Block*>(vmo.start());
-  header->header = HeaderBlockFields::Order::Make(kVmoHeaderOrder) |
+  header->header = HeaderBlockFields::Order::Make(0) |
                    HeaderBlockFields::Type::Make(BlockType::kHeader) |
                    HeaderBlockFields::Version::Make(0);
   header->payload.u64 = 0;
@@ -233,7 +231,7 @@ TEST(Snapshot, InvalidBadMagicNumberSkipCheck) {
   fzl::OwnedVmoMapper vmo;
   ASSERT_OK(vmo.CreateAndMap(4096, "test"));
   Block* header = reinterpret_cast<Block*>(vmo.start());
-  header->header = HeaderBlockFields::Order::Make(kVmoHeaderOrder) |
+  header->header = HeaderBlockFields::Order::Make(0) |
                    HeaderBlockFields::Type::Make(BlockType::kHeader) |
                    HeaderBlockFields::Version::Make(0);
   header->payload.u64 = 0;
@@ -249,7 +247,7 @@ TEST(Snapshot, FrozenVmo) {
   fzl::OwnedVmoMapper vmo;
   ASSERT_OK(vmo.CreateAndMap(4096, "test"));
   Block* header = reinterpret_cast<Block*>(vmo.start());
-  header->header = HeaderBlockFields::Order::Make(kVmoHeaderOrder) |
+  header->header = HeaderBlockFields::Order::Make(0) |
                    HeaderBlockFields::Type::Make(BlockType::kHeader) |
                    HeaderBlockFields::Version::Make(0);
   memcpy(&header->header_data[4], kMagicNumber, 4);

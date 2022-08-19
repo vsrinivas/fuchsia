@@ -291,24 +291,6 @@ inline void SetArraySlotForString(Block* block, size_t index_into_array, BlockIn
 
 constexpr size_t kMaxPayloadSize = kMaxOrderSize - sizeof(Block::header);
 
-inline void SetHeaderVmoSize(Block* block, size_t headerVmoSize) {
-  if (GetType(block) != BlockType::kHeader || GetOrder(block) != kVmoHeaderOrder) {
-    return;
-  }
-  // The size field is located at the start of the first block after header and payload.
-  memcpy(block->payload_ptr() + sizeof(block->payload), &headerVmoSize, sizeof(size_t));
-}
-
-inline cpp17::optional<size_t> GetHeaderVmoSize(const Block* block) {
-  if (GetType(block) != BlockType::kHeader || GetOrder(block) != kVmoHeaderOrder) {
-    return {};
-  }
-  size_t size = 0;
-  // The size field is located at the start of the first block after header and payload.
-  memcpy(&size, block->payload_ptr() + sizeof(block->payload), sizeof(size_t));
-  return {size};
-}
-
 }  // namespace internal
 }  // namespace inspect
 
