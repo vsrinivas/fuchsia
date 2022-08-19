@@ -9,7 +9,6 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/status.h>
 
 #include <memory>
 
@@ -49,16 +48,6 @@ enum KeySource {
   kNullSource,
   kTeeSource,
 };
-
-// Reads /pkg/config/zxcrypt to determine what key source policy was selected for this product at
-// build time.
-//
-// Returns the appropriate KeySourcePolicy value if the file contents exactly match a known
-// configuration value.
-// Returns ZX_ERR_NOT_FOUND if the config file was not present
-// Returns ZX_ERR_IO if the config file could not be read
-// Returns ZX_ERR_BAD_STATE if the config value was not recognized.
-zx::status<KeySourcePolicy> SelectKeySourcePolicy();
 
 fbl::Vector<KeySource> ComputeEffectiveCreatePolicy(KeySourcePolicy ksp);
 fbl::Vector<KeySource> ComputeEffectiveUnsealPolicy(KeySourcePolicy ksp);

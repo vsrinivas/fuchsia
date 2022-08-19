@@ -221,6 +221,12 @@ int Main(bool disable_block_watcher, bool ignore_component_config) {
     thrd_detach(t);
   }
 
+  status = watcher.mounter().MaybeInitCryptClient().status_value();
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "cannot init crypt client";
+    return EXIT_FAILURE;
+  }
+
   if (disable_block_watcher) {
     FX_LOGS(INFO) << "block-watcher disabled";
   } else {

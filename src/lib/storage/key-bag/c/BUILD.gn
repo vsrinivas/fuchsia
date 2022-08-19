@@ -35,7 +35,7 @@ fuchsia_unittest_package("key-bag-binding-test") {
 }
 
 group("c") {
-  public_deps = [ ":key-bag-static" ]
+  deps = [ ":key-bag-static" ]
 }
 
 group("tests") {
