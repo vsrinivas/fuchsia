@@ -91,6 +91,15 @@ enum class InoType {
   kNrInoType,
 };
 
+// Block allocation mode.
+// Available types are:
+// kModeAdaptive    use both lfs/ssr allocation
+// kModeLfs         use lfs allocation only
+enum class ModeType {
+  kModeAdaptive,
+  kModeLfs,
+};
+
 // A utility class, trying to set an atomic flag.
 // If it succeeds to newly set the flag, it clears the flag in ~FlagAcquireGuard()
 // where it also wakes threads waiting for the flag if |wake_waiters_| is set.

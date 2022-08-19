@@ -223,6 +223,10 @@ void F2fs::ParseOptions() {
           if (value)
             superblock_info_->SetOpt(kMountInlineDentry);
           break;
+        case kOptForceLfs:
+          if (value)
+            superblock_info_->SetOpt(kMountForceLfs);
+          break;
         default:
           FX_LOGS(WARNING) << mount_options_.GetNameView(i) << " is not supported.";
           break;

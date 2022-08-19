@@ -7,7 +7,7 @@
 
 namespace f2fs {
 
-constexpr uint32_t kOptMaxNum = 11;
+constexpr uint32_t kOptMaxNum = 12;
 constexpr uint32_t kOptBgGcOff = 0;
 constexpr uint32_t kOptDisableRollForward = 1;
 constexpr uint32_t kOptDiscard = 2;
@@ -18,6 +18,7 @@ constexpr uint32_t kOptDisableExtIdentify = 6;
 constexpr uint32_t kOptInlineXattr = 7;
 constexpr uint32_t kOptInlineData = 8;
 constexpr uint32_t kOptInlineDentry = 9;
+constexpr uint32_t kOptForceLfs = 10;
 constexpr uint32_t kOptActiveLogs = (kOptMaxNum - 1);
 
 constexpr uint64_t kMountBgGcOff = (1 << kOptBgGcOff);
@@ -30,6 +31,7 @@ constexpr uint64_t kMountDisableExtIdentify = (1 << kOptDisableExtIdentify);
 constexpr uint64_t kMountInlineXattr = (1 << kOptInlineXattr);
 constexpr uint64_t kMountInlineData = (1 << kOptInlineData);
 constexpr uint64_t kMountInlineDentry = (1 << kOptInlineDentry);
+constexpr uint64_t kMountForceLfs = (1 << kOptForceLfs);
 
 struct MountOpt {
   std::string name;

@@ -49,6 +49,18 @@ void MountTestVerifyOptions(F2fs *fs, MountOptions &options) {
       case kOptDisableRollForward:
         ASSERT_EQ((value == 0), (superblock_info.TestOpt(kMountDisableRollForward) == 0));
         break;
+      case kOptInlineXattr:
+        ASSERT_EQ((value == 0), (superblock_info.TestOpt(kMountInlineXattr) == 0));
+        break;
+      case kOptInlineData:
+        ASSERT_EQ((value == 0), (superblock_info.TestOpt(kMountInlineData) == 0));
+        break;
+      case kOptInlineDentry:
+        ASSERT_EQ((value == 0), (superblock_info.TestOpt(kMountInlineDentry) == 0));
+        break;
+      case kOptForceLfs:
+        ASSERT_EQ((value == 0), (superblock_info.TestOpt(kMountForceLfs) == 0));
+        break;
     };
   }
   ASSERT_EQ(options.GetValue(kOptMaxNum, &value), ZX_ERR_INVALID_ARGS);

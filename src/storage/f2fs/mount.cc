@@ -26,6 +26,7 @@ const MountOpt default_option[] = {
     {"inline_xattr", 0, false},
     {"inline_data", 1, true},
     {"inline_dentry", 1, true},
+    {"mode", static_cast<uint32_t>(ModeType::kModeAdaptive), true},
     {"active_logs", 6, true},
 };
 
@@ -117,6 +118,7 @@ zx_status_t MountOptions::SetValue(std::string_view opt, const uint32_t value) {
       case kOptInlineXattr:
       case kOptInlineData:
       case kOptInlineDentry:
+      case kOptForceLfs:
         opt_[id].value = value;
         ret = ZX_OK;
         break;

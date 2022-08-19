@@ -156,7 +156,8 @@ block_t SegmentManager::ReservedSections() {
   return GetReservedSegmentsCount() / superblock_info_->GetSegsPerSec();
 }
 bool SegmentManager::NeedSSR() {
-  return (FreeSections() < static_cast<uint32_t>(OverprovisionSections()));
+  return (!superblock_info_->TestOpt(kMountForceLfs) &&
+          FreeSections() < static_cast<uint32_t>(OverprovisionSections()));
 }
 
 int SegmentManager::GetSsrSegment(CursegType type) {
@@ -182,6 +183,9 @@ constexpr uint32_t kMinIpuUtil = 100;
 bool SegmentManager::NeedInplaceUpdate(VnodeF2fs *vnode) {
   if (vnode->IsDir())
     return false;
+  if (superblock_info_->TestOpt(kMountForceLfs)) {
+    return false;
+  }
   if (NeedSSR() && Utilization() > kMinIpuUtil)
     return true;
   return false;
@@ -400,6 +404,8 @@ void SegmentManager::SetPrefreeAsFreeSegments() {
 void SegmentManager::ClearPrefreeSegments() {
   uint32_t offset = 0;
   uint32_t total_segs = TotalSegs();
+  bool need_align =
+      superblock_info_->TestOpt(kMountForceLfs) && superblock_info_->GetSegsPerSec() > 1;
 
   std::lock_guard seglist_lock(dirty_info_->seglist_lock);
   while (true) {
@@ -409,12 +415,19 @@ void SegmentManager::ClearPrefreeSegments() {
       break;
     }
 
-    uint32_t end = FindNextZeroBit(
-        dirty_info_->dirty_segmap[static_cast<int>(DirtyType::kPre)].get(), total_segs, start + 1);
-    if (end > total_segs) {
-      end = total_segs;
+    uint32_t end;
+    if (need_align) {
+      start = GetSecNo(start) * superblock_info_->GetSegsPerSec();
+      end = start + superblock_info_->GetSegsPerSec();
+      offset = end;
+    } else {
+      end = FindNextZeroBit(dirty_info_->dirty_segmap[static_cast<int>(DirtyType::kPre)].get(),
+                            total_segs, start + 1);
+      if (end > total_segs) {
+        end = total_segs;
+      }
+      offset = end + 1;
     }
-    offset = end + 1;
 
     for (uint32_t i = start; i < end; ++i) {
       if (TestAndClearBit(i, dirty_info_->dirty_segmap[static_cast<int>(DirtyType::kPre)].get())) {
@@ -426,11 +439,27 @@ void SegmentManager::ClearPrefreeSegments() {
       continue;
     }
 
-    block_t num_of_blocks =
-        safemath::CheckMul<block_t>(safemath::CheckSub<uint32_t>(end, start).ValueOrDie(),
-                                    superblock_info_->GetBlocksPerSeg())
-            .ValueOrDie();
-    fs_->MakeOperation(storage::OperationType::kTrim, StartBlock(start), num_of_blocks);
+    if (!need_align) {
+      block_t num_of_blocks =
+          (safemath::CheckSub<block_t>(end, start) * superblock_info_->GetBlocksPerSeg())
+              .ValueOrDie();
+      fs_->MakeOperation(storage::OperationType::kTrim, StartBlock(start), num_of_blocks);
+    } else {
+      // In kMountForceLfs mode, a section is reusable only when all segments of the section are
+      // free. Therefore, trim operation is performed in section unit only in this case.
+      while (start < end) {
+        uint32_t secno = GetSecNo(start);
+        uint32_t start_segno =
+            safemath::CheckMul(secno, superblock_info_->GetSegsPerSec()).ValueOrDie();
+        if (!IsCurSec(secno) && GetValidBlocks(start, superblock_info_->GetSegsPerSec()) == 0) {
+          block_t num_of_blocks = safemath::CheckMul<block_t>(superblock_info_->GetSegsPerSec(),
+                                                              superblock_info_->GetBlocksPerSeg())
+                                      .ValueOrDie();
+          fs_->MakeOperation(storage::OperationType::kTrim, StartBlock(start_segno), num_of_blocks);
+        }
+        start = safemath::CheckAdd(start_segno, superblock_info_->GetSegsPerSec()).ValueOrDie();
+      }
+    }
   }
 }
 

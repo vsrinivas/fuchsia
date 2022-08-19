@@ -479,5 +479,64 @@ TEST(SegmentManagerOptionTest, DestroySegmentManagerExceptionCase) {
   fs->GetSegmentManager().DestroySegmentManager();
 }
 
+TEST(SegmentManagerOptionTest, ModeLfs) {
+  std::unique_ptr<Bcache> bc;
+  MkfsOptions mkfs_options{};
+  mkfs_options.segs_per_sec = 4;
+  FileTester::MkfsOnFakeDevWithOptions(&bc, mkfs_options);
+
+  std::unique_ptr<F2fs> fs;
+  MountOptions mount_options;
+  mount_options.SetValue("mode", static_cast<uint32_t>(ModeType::kModeLfs));
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  FileTester::MountWithOptions(loop.dispatcher(), mount_options, &bc, &fs);
+  fbl::RefPtr<VnodeF2fs> root;
+  FileTester::CreateRoot(fs.get(), &root);
+  auto root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
+
+  ASSERT_EQ(fs->GetSuperblockInfo().TestOpt(kMountForceLfs), true);
+  ASSERT_EQ(fs->GetSegmentManager().NeedSSR(), false);
+
+  // Make SSR, IPU condition
+  FileTester::CreateChild(root_dir.get(), S_IFREG, "alpha");
+  fbl::RefPtr<fs::Vnode> vn;
+  FileTester::Lookup(root_dir.get(), "alpha", &vn);
+  auto file = fbl::RefPtr<File>::Downcast(std::move(vn));
+  char buf[4 * kPageSize] = {
+      1,
+  };
+  while (!fs->GetSegmentManager().NeedInplaceUpdate(file.get())) {
+    size_t out_end, out_actual;
+    if (auto ret = file->Append(buf, sizeof(buf), &out_end, &out_actual); ret == ZX_ERR_NO_SPACE) {
+      break;
+    } else {
+      ASSERT_EQ(ret, ZX_OK);
+    }
+    WritebackOperation op = {.bSync = true};
+    fs->SyncDirtyDataPages(op);
+  }
+
+  // Since kMountForceLfs is on, f2fs doesn't allocate segments in ssr manner.
+  ASSERT_EQ(fs->GetSegmentManager().NeedSSR(), false);
+  ASSERT_EQ(fs->GetSegmentManager().NeedInplaceUpdate(file.get()), false);
+
+  // Make SSR, IPU enable
+  fs->GetSuperblockInfo().ClearOpt(kMountForceLfs);
+  ASSERT_EQ(fs->GetSegmentManager().NeedSSR(), true);
+
+  EXPECT_EQ(file->Close(), ZX_OK);
+  file = nullptr;
+
+  // Test ClearPrefreeSegments()
+  fs->GetSuperblockInfo().SetOpt(kMountForceLfs);
+  FileTester::DeleteChild(root_dir.get(), "alpha", false);
+  fs->WriteCheckpoint(false, false);
+
+  EXPECT_EQ(root_dir->Close(), ZX_OK);
+  root_dir = nullptr;
+  FileTester::Unmount(std::move(fs), &bc);
+  EXPECT_EQ(Fsck(std::move(bc), FsckOptions{.repair = false}, &bc), ZX_OK);
+}
+
 }  // namespace
 }  // namespace f2fs
