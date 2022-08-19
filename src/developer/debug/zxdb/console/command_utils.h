@@ -41,7 +41,7 @@ class Thread;
 // generates an error of the form "<command_name> requires a running target".
 Err AssertRunningTarget(ConsoleContext* context, const char* command_name, Target* target);
 
-// Validates a command that applies to a stopped thread with a valid frame.
+// Validates a command that applies to a single stopped thread with a valid frame.
 //
 // If validate_nouns is set, only thread and process nouns may be specified (these are most common
 // for commands that operate on threads) for the "Thread" variant.
@@ -49,6 +49,11 @@ Err AssertRunningTarget(ConsoleContext* context, const char* command_name, Targe
 // If not, generates an error of the form "<command_name> requires a stopped thread".
 Err AssertStoppedThreadWithFrameCommand(ConsoleContext* context, const Command& cmd,
                                         const char* command_name, bool validate_nounds = true);
+
+// Asserts that all threads of the process for the given command are stopped. This does not check if
+// the frames have full stacks.
+Err AssertAllStoppedThreadsCommand(ConsoleContext* context, const Command& cmd,
+                                   const char* command_name, bool validate_nounds = true);
 
 // Checks if the given string starts with a hexadecimal prefix ("0x" or "0X"). If it does, returns
 // the first index into the array of the string FOLLOWING the prefix. If there is no prefix, returns

@@ -9,7 +9,7 @@
 
 namespace zxdb {
 
-// Converts a ray pointer to a reference-counted type to a RefPtr.
+// Converts a raw pointer to a reference-counted type to a RefPtr.
 //
 // Const and fxl::RefPtr don't play well together so this requires an awkward const_cast. Callers
 // should take care to preserve the const expectation of the caller.

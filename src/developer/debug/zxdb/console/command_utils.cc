@@ -98,6 +98,25 @@ Err AssertStoppedThreadWithFrameCommand(ConsoleContext* context, const Command& 
   return Err();
 }
 
+Err AssertAllStoppedThreadsCommand(ConsoleContext* context, const Command& cmd,
+                                   const char* command_name, bool validate_nounds) {
+  // For the threads to be stopped, the target needs to be running in the first place.
+  if (Err err = AssertRunningTarget(context, command_name, cmd.target()); err.has_error())
+    return err;
+  Process* process = cmd.target()->GetProcess();
+
+  std::vector<Thread*> threads = process->GetThreads();
+  for (const Thread* thread : threads) {
+    if (!thread->CurrentStopSupportsFrames()) {
+      return Err(
+          "\"%s\" requires all process threads be suspended but at least thread %d\n"
+          "is not. Use \"pause\" to suspend the threads first.",
+          command_name, context->IdForThread(thread));
+    }
+  }
+  return Err();
+}
+
 size_t CheckHexPrefix(const std::string& s) {
   if (s.size() >= 2u && s[0] == '0' && (s[1] == 'x' || s[1] == 'X'))
     return 2u;
