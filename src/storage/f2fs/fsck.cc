@@ -11,9 +11,20 @@
 namespace f2fs {
 namespace {
 uint32_t MaxInlineData(const Inode &inode) {
-  uint16_t extra_isize = (inode.i_inline & kExtraAttr) ? inode.i_extra_isize : 0;
+  uint16_t extra_isize = 0;
+  uint16_t inline_xattr_isize = 0;
+
+  if (inode.i_inline & kExtraAttr) {
+    extra_isize = inode.i_extra_isize;
+    if (inode.i_inline & kInlineXattr) {
+      inline_xattr_isize = inode.i_inline_xattr_size;
+    }
+  } else if ((inode.i_inline & kInlineXattr) || (inode.i_inline & kInlineDentry)) {
+    inline_xattr_isize = kInlineXattrAddrs;
+  }
+
   return sizeof(uint32_t) *
-         (kAddrsPerInode - extra_isize / sizeof(uint32_t) - kInlineXattrAddrs - 1);
+         (kAddrsPerInode - extra_isize / sizeof(uint32_t) - inline_xattr_isize - 1);
 }
 
 uint32_t MaxInlineDentry(const Inode &inode) {
@@ -75,11 +86,14 @@ static inline uint32_t OffsetInSegment(SuperblockInfo &sbi, SegmentManager &mana
 }
 
 static inline uint16_t AddrsPerInode(const Inode *i) {
-#if 0  // porting needed
-	      if (i->i_inline & kInlineXattr)
-					            return kAddrPerInode - kInlineXattrAddrs;
-#endif
-  return kAddrsPerInode;
+  uint16_t inline_xattr_isize = 0;
+
+  if ((i->i_inline & kExtraAttr) && (i->i_inline & kInlineXattr)) {
+    inline_xattr_isize = i->i_inline_xattr_size;
+  } else if ((i->i_inline & kInlineXattr) || (i->i_inline & kInlineDentry)) {
+    inline_xattr_isize = kInlineXattrAddrs;
+  }
+  return kAddrsPerInode - inline_xattr_isize;
 }
 
 zx_status_t FsckWorker::ReadBlock(FsBlock &fs_block, block_t bno) {

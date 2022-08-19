@@ -81,7 +81,6 @@ class Dir : public VnodeF2fs, public fbl::Recyclable<Dir> {
   zx::status<> RecoverLink(VnodeF2fs &vnode) __TA_EXCLUDES(dir_mutex_);
 
   // inline helper
-  uint32_t MaxInlineDentry() const;
   uint64_t InlineDentryBitmapSize() const;
 
   // helper
@@ -102,8 +101,8 @@ class Dir : public VnodeF2fs, public fbl::Recyclable<Dir> {
 
   // inline helper
   uint8_t *InlineDentryBitmap(Page *page);
-  DirEntry *InlineDentryArray(Page *page);
-  uint8_t (*InlineDentryFilenameArray(Page *page))[kDentrySlotLen];
+  DirEntry *InlineDentryArray(Page *page, VnodeF2fs &vnode);
+  uint8_t (*InlineDentryFilenameArray(Page *page, VnodeF2fs &vnode))[kDentrySlotLen];
 
   // link helper to update link information in Rename()
   DirEntry *FindEntrySafe(std::string_view name, fbl::RefPtr<Page> *res_page)

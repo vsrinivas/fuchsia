@@ -305,7 +305,6 @@ class F2fs : public fs::Vfs {
   void IncValidInodeCount();
   void DecValidInodeCount();
   uint32_t ValidInodeCount();
-  loff_t MaxFileSize(unsigned bits);
 
   VnodeF2fs &GetNodeVnode() { return *node_vnode_; }
   VnodeF2fs &GetMetaVnode() { return *meta_vnode_; }

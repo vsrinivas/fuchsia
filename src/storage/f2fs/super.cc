@@ -235,25 +235,6 @@ void F2fs::ParseOptions() {
   }
 }
 
-loff_t F2fs::MaxFileSize(unsigned bits) {
-  loff_t result = kAddrsPerInode;
-  loff_t leaf_count = kAddrsPerBlock;
-
-  /* two direct node blocks */
-  result += (leaf_count * 2);
-
-  /* two indirect node blocks */
-  leaf_count *= kNidsPerBlock;
-  result += (leaf_count * 2);
-
-  /* one double indirect node block */
-  leaf_count *= kNidsPerBlock;
-  result += leaf_count;
-
-  result <<= bits;
-  return result;
-}
-
 zx_status_t F2fs::SanityCheckRawSuper() {
   unsigned int blocksize;
 

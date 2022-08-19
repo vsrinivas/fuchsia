@@ -353,7 +353,7 @@ void NodeManager::GetNodeInfo(nid_t nid, NodeInfo &out) {
 // Offset[0] will have raw inode offset.
 zx::status<int32_t> NodeManager::GetNodePath(VnodeF2fs &vnode, pgoff_t block, int32_t (&offset)[4],
                                              uint32_t (&noffset)[4]) {
-  const pgoff_t direct_index = kAddrsPerInode - (vnode.GetExtraISize() / sizeof(uint32_t));
+  const pgoff_t direct_index = vnode.GetAddrsPerInode();
   const pgoff_t direct_blks = kAddrsPerBlock;
   const pgoff_t dptrs_per_blk = kNidsPerBlock;
   const pgoff_t indirect_blks = kAddrsPerBlock * kNidsPerBlock;

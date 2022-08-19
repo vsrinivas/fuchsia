@@ -225,7 +225,10 @@ struct Inode {
   Extent i_ext;  // caching a largest extent
 
   union {
-    uint16_t i_extra_isize;           // extra inode attribute size in bytes
+    struct {
+      uint16_t i_extra_isize;        // extra inode attribute size in bytes
+      uint16_t i_inline_xattr_size;  // inline xattr size
+    };
     uint32_t i_addr[kAddrsPerInode];  // Pointers to data blocks
   };
 
@@ -416,8 +419,6 @@ constexpr uint16_t kNameLenBits = 3;
 inline uint16_t GetDentrySlots(uint16_t namelen) {
   return ((namelen + kNameLen - 1) >> kNameLenBits);
 }
-
-constexpr uint32_t kMaxInlineData = sizeof(int32_t) * (kAddrsPerInode - kInlineXattrAddrs - 1);
 
 // the number of dentry in a block
 constexpr int kNrDentryInBlock = 214;

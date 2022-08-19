@@ -190,7 +190,7 @@ void F2fs::DoRecoverData(VnodeF2fs &vnode, NodePage &page) {
 
   start = page.StartBidxOfNode();
   if (IsInode(page)) {
-    end = start + kAddrsPerInode;
+    end = start + vnode.GetAddrsPerInode();
   } else {
     end = start + kAddrsPerBlock;
   }

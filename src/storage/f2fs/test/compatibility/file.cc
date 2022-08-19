@@ -534,5 +534,84 @@ TEST_F(FileCompatibilityTest, FileReadExceedFileSizeOnFuchsia) {
   }
 }
 
+TEST_F(FileCompatibilityTest, VerifyXattrsHostToFuchsia) {
+  constexpr uint32_t kVerifyPatternSize = 1024 * 1024 * 100;  // 100MB
+
+  std::string name = "user.comment";
+  std::string value = "\"This is a user comment\"";
+  std::string mkfs_option = "-f -O extra_attr,flexible_inline_xattr";
+  std::string mount_option = "-o inline_xattr,inline_xattr_size=60 ";
+  {
+    host_operator_->Mkfs(mkfs_option);
+    host_operator_->Mount(mount_option);
+
+    auto umount = fit::defer([&] { host_operator_->Unmount(); });
+
+    host_operator_->Mkdir("/alpha", 0755);
+
+    auto bravo_file = host_operator_->Open("/alpha/bravo", O_RDWR | O_CREAT, 0644);
+    ASSERT_TRUE(bravo_file->is_valid());
+
+    ASSERT_EQ(system(std::string("setfattr ")
+                         .append("-n ")
+                         .append(name)
+                         .append(" -v ")
+                         .append(value)
+                         .append(" ")
+                         .append(host_operator_->GetAbsolutePath("/alpha/bravo"))
+                         .c_str()),
+              0);
+  }
+
+  // Write on Fuchsia
+  {
+    target_operator_->Fsck();
+    target_operator_->Mount();
+
+    auto umount = fit::defer([&] { target_operator_->Unmount(); });
+
+    auto bravo_file = target_operator_->Open("/alpha/bravo", O_RDWR, 0644);
+    ASSERT_TRUE(bravo_file->is_valid());
+
+    uint32_t input[kBlockSize / sizeof(uint32_t)];
+    for (uint32_t i = 0; i < kVerifyPatternSize / sizeof(input); ++i) {
+      for (uint32_t j = 0; j < sizeof(input) / sizeof(uint32_t); ++j) {
+        input[j] = CpuToLe(j);
+      }
+      ASSERT_EQ(bravo_file->Write(input, sizeof(input)), static_cast<ssize_t>(sizeof(input)));
+    }
+  }
+  // verify on Host
+  {
+    host_operator_->Fsck();
+    host_operator_->Mount();
+
+    auto umount = fit::defer([&] { host_operator_->Unmount(); });
+
+    auto bravo_file = host_operator_->Open("/alpha/bravo", O_RDWR, 0644);
+    ASSERT_TRUE(bravo_file->is_valid());
+
+    uint32_t buffer[kBlockSize / sizeof(uint32_t)];
+    for (uint32_t i = 0; i < kVerifyPatternSize / sizeof(buffer); ++i) {
+      ASSERT_EQ(bravo_file->Read(buffer, sizeof(buffer)), static_cast<ssize_t>(sizeof(buffer)));
+
+      for (uint32_t j = 0; j < sizeof(buffer) / sizeof(uint32_t); ++j) {
+        ASSERT_EQ(buffer[j], LeToCpu(j));
+      }
+    }
+
+    ASSERT_EQ(system(std::string("getfattr ")
+                         .append("-d ")
+                         .append(host_operator_->GetAbsolutePath("/alpha/bravo"))
+                         .append(" | grep \"")
+                         .append(name)
+                         .append("=\\")
+                         .append(value)
+                         .append("\\\"")
+                         .c_str()),
+              0);
+  }
+}
+
 }  // namespace
 }  // namespace f2fs

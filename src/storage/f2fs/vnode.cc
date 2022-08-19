@@ -342,12 +342,20 @@ zx_status_t VnodeF2fs::Create(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) 
 
   if (ri.i_inline & kInlineDentry) {
     vnode->SetFlag(InodeInfoFlag::kInlineDentry);
+    vnode->SetInlineXattrAddrs(kInlineXattrAddrs);
   }
   if (ri.i_inline & kInlineData) {
     vnode->SetFlag(InodeInfoFlag::kInlineData);
   }
+  if (ri.i_inline & kInlineXattr) {
+    vnode->SetFlag(InodeInfoFlag::kInlineXattr);
+    vnode->SetInlineXattrAddrs(kInlineXattrAddrs);
+  }
   if (ri.i_inline & kExtraAttr) {
     vnode->SetExtraISize(ri.i_extra_isize);
+    if (ri.i_inline & kInlineXattr) {
+      vnode->SetInlineXattrAddrs(ri.i_inline_xattr_size);
+    }
   }
   if (ri.i_inline & kDataExist) {
     vnode->SetFlag(InodeInfoFlag::kDataExist);
@@ -582,11 +590,19 @@ void VnodeF2fs::UpdateInode(Page *node_page) {
   if (GetExtraISize()) {
     ri->i_inline |= kExtraAttr;
     ri->i_extra_isize = GetExtraISize();
+    if (TestFlag(InodeInfoFlag::kInlineXattr)) {
+      ri->i_inline_xattr_size = GetInlineXattrAddrs();
+    }
   }
   if (TestFlag(InodeInfoFlag::kDataExist)) {
     ri->i_inline |= kDataExist;
   } else {
     ri->i_inline &= ~kDataExist;
+  }
+  if (TestFlag(InodeInfoFlag::kInlineXattr)) {
+    ri->i_inline |= kInlineXattr;
+  } else {
+    ri->i_inline &= ~kInlineXattr;
   }
 
   node_page->SetDirty();
@@ -705,7 +721,7 @@ zx_status_t VnodeF2fs::TruncateBlocks(uint64_t from) {
       }
 
       if (IsInode(*node_page)) {
-        count = kAddrsPerInode;
+        count = GetAddrsPerInode();
       } else {
         count = kAddrsPerBlock;
       }

@@ -350,7 +350,7 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
   if (len == 0)
     return ZX_OK;
 
-  if (offset + len > static_cast<size_t>(Vfs()->MaxFileSize(Vfs()->RawSb().log_blocksize)))
+  if (offset + len > static_cast<size_t>(MaxFileSize(Vfs()->RawSb().log_blocksize)))
     return ZX_ERR_INVALID_ARGS;
 
   if (TestFlag(InodeInfoFlag::kInlineData)) {
@@ -449,7 +449,7 @@ zx_status_t File::Truncate(size_t len) {
   if (len == GetSize())
     return ZX_OK;
 
-  if (len > static_cast<size_t>(Vfs()->MaxFileSize(Vfs()->RawSb().log_blocksize)))
+  if (len > static_cast<size_t>(MaxFileSize(Vfs()->RawSb().log_blocksize)))
     return ZX_ERR_INVALID_ARGS;
 
   if (TestFlag(InodeInfoFlag::kInlineData)) {
@@ -463,4 +463,22 @@ zx_status_t File::Truncate(size_t len) {
   return DoTruncate(len);
 }
 
+loff_t File::MaxFileSize(unsigned bits) {
+  loff_t result = GetAddrsPerInode();
+  loff_t leaf_count = kAddrsPerBlock;
+
+  /* two direct node blocks */
+  result += (leaf_count * 2);
+
+  /* two indirect node blocks */
+  leaf_count *= kNidsPerBlock;
+  result += (leaf_count * 2);
+
+  /* one double indirect node block */
+  leaf_count *= kNidsPerBlock;
+  result += leaf_count;
+
+  result <<= bits;
+  return result;
+}
 }  // namespace f2fs

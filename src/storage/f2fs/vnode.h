@@ -23,12 +23,13 @@ enum class FAdvise {
 };
 
 struct InodeInfo {
-  uint32_t i_flags = 0;          // keep an inode flags for ioctl
-  uint8_t i_advise = 0;          // use to give file attribute hints
-  uint8_t i_dir_level = 0;       // use for dentry level for large dir
-  uint16_t i_extra_isize = 0;    // extra inode attribute size in bytes
-  uint64_t i_current_depth = 0;  // use only in directory structure
-  umode_t i_acl_mode = 0;        // keep file acl mode temporarily
+  uint32_t i_flags = 0;              // keep an inode flags for ioctl
+  uint8_t i_advise = 0;              // use to give file attribute hints
+  uint8_t i_dir_level = 0;           // use for dentry level for large dir
+  uint16_t i_extra_isize = 0;        // extra inode attribute size in bytes
+  uint16_t i_inline_xattr_size = 0;  // inline xattr size
+  uint64_t i_current_depth = 0;      // use only in directory structure
+  umode_t i_acl_mode = 0;            // keep file acl mode temporarily
 
   uint32_t flags = 0;         // use to pass per-file flags
   uint64_t data_version = 0;  // lastest version of data for fsync
@@ -58,8 +59,19 @@ class VnodeF2fs : public fs::Vnode,
            sizeof(uint32_t) * (kAddrsPerInode + kNidsPerInode - 1) + GetExtraISize();
   }
   uint32_t MaxInlineData() const {
-    return sizeof(uint32_t) *
-           (kAddrsPerInode - GetExtraISize() / sizeof(uint32_t) - kInlineXattrAddrs - 1);
+    return safemath::CheckMul<uint32_t>(sizeof(uint32_t), (GetAddrsPerInode() - 1)).ValueOrDie();
+  }
+  uint32_t MaxInlineDentry() const {
+    return safemath::checked_cast<uint32_t>(
+        safemath::CheckDiv(safemath::CheckMul(MaxInlineData(), kBitsPerByte).ValueOrDie(),
+                           ((kSizeOfDirEntry + kDentrySlotLen) * kBitsPerByte + 1))
+            .ValueOrDie());
+  }
+  uint32_t GetAddrsPerInode() const {
+    return safemath::checked_cast<uint32_t>(
+        (safemath::CheckSub(kAddrsPerInode, safemath::CheckDiv(GetExtraISize(), sizeof(uint32_t))) -
+         GetInlineXattrAddrs())
+            .ValueOrDie());
   }
 
   static void Allocate(F2fs *fs, ino_t ino, uint32_t mode, fbl::RefPtr<VnodeF2fs> *out);
@@ -339,6 +351,9 @@ class VnodeF2fs : public fs::Vnode,
   uint16_t GetExtraISize() const { return fi_.i_extra_isize; }
   void SetExtraISize(const uint16_t size) { fi_.i_extra_isize = size; }
   void UpdateVersion();
+
+  uint16_t GetInlineXattrAddrs() const { return fi_.i_inline_xattr_size; }
+  void SetInlineXattrAddrs(const uint16_t addrs) { fi_.i_inline_xattr_size = addrs; }
 
   bool IsBad() { return TestFlag(InodeInfoFlag::kBad); }
 

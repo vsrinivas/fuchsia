@@ -142,6 +142,7 @@ block_t NodePage::StartBidxOfNode() {
     NumOfIndirectNodes = (node_ofs - kOfsDoubleIndirectNode - 2) / (kNidsPerBlock + 1);
   }
 
-  return kAddrsPerInode + (node_ofs - NumOfIndirectNodes - 1) * kAddrsPerBlock;
+  uint32_t bidx = node_ofs - NumOfIndirectNodes - 1;
+  return (GetVnode().GetAddrsPerInode() + safemath::CheckMul(bidx, kAddrsPerBlock)).ValueOrDie();
 }
 }  // namespace f2fs

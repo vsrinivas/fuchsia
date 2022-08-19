@@ -36,7 +36,7 @@ void HostOperator::Mount(std::string_view opt) {
                        .append(test_image_path_)
                        .append(" ")
                        .append(opt)
-                       .append(" -o noinline_xattr ")
+                       .append(" ")
                        .append(mount_directory_)
                        .c_str()),
             0);
