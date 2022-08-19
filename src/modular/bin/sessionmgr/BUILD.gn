@@ -108,36 +108,6 @@ source_set("sessionmgr_lib") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-executable("dev_session_shell_bin") {
-  output_name = "dev_session_shell"
-
-  sources = [ "dev_session_shell.cc" ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.modular",
-    "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/lib/fidl/cpp",
-    "//src/modular/lib/app_driver/cpp",
-    "//src/modular/lib/fidl:array_to_string",
-    "//src/modular/lib/fidl:single_service_app",
-    "//src/modular/lib/fidl:view_host",
-    "//src/modular/lib/testing:test_driver",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-}
-
-fuchsia_component("dev_session_shell_component") {
-  component_name = "dev_session_shell"
-  manifest = "meta/dev_session_shell.cmx"
-  deps = [ ":dev_session_shell_bin" ]
-}
-
-fuchsia_package("dev_session_shell") {
-  deps = [ ":dev_session_shell_component" ]
-}
-
 source_set("session_ctl") {
   sources = [
     "session_ctl.cc",

@@ -383,7 +383,6 @@ fuchsia_test_package("basemgr_unittests") {
     "//src/cobalt/bin/testing/mock_cobalt:component_v2",
     "//src/modular/bin/basemgr:basemgr-for-testing-v1-to-v2",
     "//src/modular/bin/sessionmgr",
-    "//src/modular/bin/sessionmgr:dev_session_shell_component",
   ]
   test_specs = {
     # session_context_impl_unittest exercises crash handling that logs an ERROR.

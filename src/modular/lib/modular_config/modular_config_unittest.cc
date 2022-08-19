@@ -105,8 +105,7 @@ TEST_F(ModularConfigReaderTest, FailToReadConfigDir) {
   modular::ModularConfigReader reader(server.OpenAt("."));
 
   auto config = reader.GetBasemgrConfig();
-  EXPECT_EQ(modular_config::kDefaultSessionShellUrl,
-            config.session_shell_map().at(0).config().app_config().url());
+  EXPECT_EQ(modular_config::kDefaultStoryShellUrl, config.story_shell().app_config().url());
 }
 
 // Test that ModularConfigReader finds and reads the AgentServiceIndex.
@@ -346,9 +345,7 @@ TEST_F(ModularConfigReaderTest, DefaultConfig) {
 
   ASSERT_TRUE(config.has_basemgr_config());
   EXPECT_TRUE(config.basemgr_config().enable_cobalt());
-  ASSERT_EQ(1u, config.basemgr_config().session_shell_map().size());
-  EXPECT_EQ(modular_config::kDefaultSessionShellUrl,
-            config.basemgr_config().session_shell_map().at(0).config().app_config().url());
+  ASSERT_TRUE(config.basemgr_config().session_shell_map().empty());
 
   ASSERT_TRUE(config.has_sessionmgr_config());
   EXPECT_TRUE(config.sessionmgr_config().enable_cobalt());
@@ -360,12 +357,7 @@ TEST_F(ModularConfigReaderTest, ConfigToJsonString) {
       "basemgr": {
         "enable_cobalt": true,
         "use_session_shell_for_story_shell_factory": false,
-        "session_shells": [
-          {
-            "url": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx",
-            "args": []
-          }
-        ],
+        "session_shells": [],
         "story_shell_url": "fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
       },
       "sessionmgr": {
