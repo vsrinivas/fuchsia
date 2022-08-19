@@ -28,7 +28,6 @@ use rive_rs::{self as rive};
 use std::path::PathBuf;
 
 use fuchsia_zircon as zx;
-use std::io::{self, Write};
 
 mod menu;
 use menu::{Key, MenuButtonType, MenuEvent, MenuState, MenuStateMachine};
@@ -635,6 +634,7 @@ async fn fuchsia_install(
             );
         }
         Err(e) => {
+            tracing::error!("Error while installing: {:#}", e);
             app_sender.clone().queue_message(
                 MessageTarget::View(view_key),
                 make_message(InstallerMessages::Error(String::from(format!(
@@ -711,17 +711,15 @@ async fn do_install(
         );
         current_partition += 1;
 
-        print!("{:?}... ", part);
-        io::stdout().flush()?;
+        tracing::info!("Paving partition: {:?}", part);
         if let Err(e) = part.pave(&data_sink).await {
-            tracing::info!("Failed ({:?})", e);
+            tracing::error!("Failed ({:?})", e);
         } else {
             tracing::info!("OK");
             if part.is_ab() {
-                print!("{:?} [-B]... ", part);
-                io::stdout().flush()?;
-                if part.pave_b(&data_sink).await.is_err() {
-                    tracing::info!("Failed");
+                tracing::info!("Paving partition: {:?} [-B]", part);
+                if let Err(e) = part.pave_b(&data_sink).await {
+                    tracing::error!("Failed ({:?})", e);
                 } else {
                     tracing::info!("OK");
                 }
