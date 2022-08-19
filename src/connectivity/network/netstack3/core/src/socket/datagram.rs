@@ -55,7 +55,7 @@ pub(crate) struct ListenerState<A: Eq + Hash, D: Hash + Eq> {
 
 #[derive(Debug)]
 pub(crate) struct ConnState<I: IpExt, D: Eq + Hash> {
-    pub(crate) socket: IpSock<I, D>,
+    pub(crate) socket: IpSock<I, D, ()>,
     pub(crate) multicast_memberships: MulticastMemberships<I::Addr, D>,
 }
 

@@ -310,7 +310,7 @@ struct Connection<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: Sen
 {
     acceptor: Option<Acceptor>,
     state: State<II, R, S, ActiveOpen>,
-    ip_sock: IpSock<I, D>,
+    ip_sock: IpSock<I, D, ()>,
 }
 
 /// The Listener state.
@@ -633,7 +633,7 @@ where
 fn connect_inner<I, SC, C>(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    ip_sock: IpSock<I, SC::DeviceId>,
+    ip_sock: IpSock<I, SC::DeviceId, ()>,
     local_port: NonZeroU16,
     remote_port: NonZeroU16,
     netstack_buffers: C::NetstackEndBuffers,

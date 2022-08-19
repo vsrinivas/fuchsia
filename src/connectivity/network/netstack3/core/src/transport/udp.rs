@@ -1146,7 +1146,7 @@ pub fn send_udp_conn_to<
         Err(e) => return Err((body, UdpSendError::Zone(e))),
     };
 
-    let sock = match sync_ctx.new_ip_socket(
+    let sock = match sync_ctx.new_ip_socket::<()>(
         ctx,
         device,
         Some(local_ip),
@@ -1227,11 +1227,17 @@ pub fn send_udp_listener<
         (device, local_ip, local_port)
     });
 
-    let sock =
-        match sync_ctx.new_ip_socket(ctx, device, local_ip, remote_ip, IpProto::Udp.into(), None) {
-            Ok(sock) => sock,
-            Err(err) => return Err((body, UdpSendListenerError::CreateSock(err))),
-        };
+    let sock = match sync_ctx.new_ip_socket::<()>(
+        ctx,
+        device,
+        local_ip,
+        remote_ip,
+        IpProto::Udp.into(),
+        None,
+    ) {
+        Ok(sock) => sock,
+        Err(err) => return Err((body, UdpSendListenerError::CreateSock(err))),
+    };
 
     sync_ctx.send_ip_packet(
         ctx,

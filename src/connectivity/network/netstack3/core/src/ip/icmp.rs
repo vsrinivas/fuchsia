@@ -297,11 +297,11 @@ pub(crate) struct IcmpConn<S> {
     ip: S,
 }
 
-impl<'a, A: IpAddress, D> From<&'a IcmpConn<IpSock<A::Version, D>>> for IcmpAddr<A>
+impl<'a, A: IpAddress, D> From<&'a IcmpConn<IpSock<A::Version, D, ()>>> for IcmpAddr<A>
 where
     A::Version: IpExt,
 {
-    fn from(conn: &'a IcmpConn<IpSock<A::Version, D>>) -> IcmpAddr<A> {
+    fn from(conn: &'a IcmpConn<IpSock<A::Version, D, ()>>) -> IcmpAddr<A> {
         IcmpAddr {
             local_addr: *conn.ip.local_ip(),
             remote_addr: *conn.ip.remote_ip(),
@@ -680,7 +680,7 @@ pub(crate) trait InnerIcmpContext<I: IcmpIpExt + IpExt, C: IcmpNonSyncCtx<I>>:
     );
 
     /// Calls the function with an immutable reference to ICMP sockets.
-    fn with_icmp_sockets<O, F: FnOnce(&IcmpSockets<I::Addr, IpSock<I, Self::DeviceId>>) -> O>(
+    fn with_icmp_sockets<O, F: FnOnce(&IcmpSockets<I::Addr, IpSock<I, Self::DeviceId, ()>>) -> O>(
         &self,
         cb: F,
     ) -> O;
@@ -688,7 +688,7 @@ pub(crate) trait InnerIcmpContext<I: IcmpIpExt + IpExt, C: IcmpNonSyncCtx<I>>:
     /// Calls the function with a mutable reference to ICMP sockets.
     fn with_icmp_sockets_mut<
         O,
-        F: FnOnce(&mut IcmpSockets<I::Addr, IpSock<I, Self::DeviceId>>) -> O,
+        F: FnOnce(&mut IcmpSockets<I::Addr, IpSock<I, Self::DeviceId, ()>>) -> O,
     >(
         &mut self,
         cb: F,
@@ -2958,11 +2958,11 @@ fn connect_icmpv6_inner<C: IcmpNonSyncCtx<Ipv6>, SC: InnerIcmpv6Context<C>>(
 
 fn connect_icmp_inner<I: IcmpIpExt + IpExt, D>(
     unbound: &mut IdMap<()>,
-    conns: &mut ConnSocketMap<IcmpAddr<I::Addr>, IcmpConn<IpSock<I, D>>>,
+    conns: &mut ConnSocketMap<IcmpAddr<I::Addr>, IcmpConn<IpSock<I, D, ()>>>,
     id: IcmpUnboundId<I>,
     remote_addr: SpecifiedAddr<I::Addr>,
     icmp_id: u16,
-    ip: IpSock<I, D>,
+    ip: IpSock<I, D, ()>,
 ) -> Result<IcmpConnId<I>, IcmpSockCreationError> {
     let addr = IcmpAddr { local_addr: *ip.local_ip(), remote_addr, icmp_id };
     if conns.get_id_by_addr(&addr).is_some() {
@@ -3871,13 +3871,13 @@ mod tests {
 
     struct DummyIcmpv4Ctx {
         inner: DummyIcmpCtx<Ipv4, DummyDeviceId>,
-        sockets: IcmpSockets<Ipv4Addr, IpSock<Ipv4, DummyDeviceId>>,
+        sockets: IcmpSockets<Ipv4Addr, IpSock<Ipv4, DummyDeviceId, ()>>,
         error_send_bucket: TokenBucket<DummyInstant>,
     }
 
     struct DummyIcmpv6Ctx {
         inner: DummyIcmpCtx<Ipv6, DummyDeviceId>,
-        sockets: IcmpSockets<Ipv6Addr, IpSock<Ipv6, DummyDeviceId>>,
+        sockets: IcmpSockets<Ipv6Addr, IpSock<Ipv6, DummyDeviceId, ()>>,
         error_send_bucket: TokenBucket<DummyInstant>,
     }
 
@@ -4016,7 +4016,7 @@ mod tests {
                     }
                 }
 
-                fn with_icmp_sockets<O, F: FnOnce(&IcmpSockets<<$ip as Ip>::Addr, IpSock<$ip, DummyDeviceId>>) -> O>(
+                fn with_icmp_sockets<O, F: FnOnce(&IcmpSockets<<$ip as Ip>::Addr, IpSock<$ip, DummyDeviceId, ()>>) -> O>(
                     &self,
                     cb: F,
                 ) -> O {
@@ -4025,7 +4025,7 @@ mod tests {
 
                 fn with_icmp_sockets_mut<
                     O,
-                F: FnOnce(&mut IcmpSockets<<$ip as Ip>::Addr, IpSock<$ip, DummyDeviceId>>) -> O,
+                F: FnOnce(&mut IcmpSockets<<$ip as Ip>::Addr, IpSock<$ip, DummyDeviceId, ()>>) -> O,
                 >(
                     &mut self,
                     cb: F,

@@ -49,7 +49,7 @@ pub trait IpSocketHandler<I: IpExt, C>: IpDeviceIdContext<I> {
     /// The builder may be used to override certain default parameters. Passing
     /// `None` for the `builder` parameter is equivalent to passing
     /// `Some(Default::default())`.
-    fn new_ip_socket(
+    fn new_ip_socket<O: Default>(
         &mut self,
         ctx: &mut C,
         device: Option<Self::DeviceId>,
@@ -57,7 +57,7 @@ pub trait IpSocketHandler<I: IpExt, C>: IpDeviceIdContext<I> {
         remote_ip: SpecifiedAddr<I::Addr>,
         proto: I::Proto,
         builder: Option<Self::Builder>,
-    ) -> Result<IpSock<I, Self::DeviceId>, IpSockCreationError>;
+    ) -> Result<IpSock<I, Self::DeviceId, O>, IpSockCreationError>;
 }
 
 /// An error in sending a packet on an IP socket.
@@ -112,10 +112,10 @@ pub trait BufferIpSocketHandler<I: IpExt, C, B: BufferMut>: IpSocketHandler<I, C
     /// the smaller of `mtu` and the device's MTU will be imposed on the packet.
     ///
     /// If the socket is currently unroutable, an error is returned.
-    fn send_ip_packet<S: Serializer<Buffer = B>>(
+    fn send_ip_packet<S: Serializer<Buffer = B>, O>(
         &mut self,
         ctx: &mut C,
-        socket: &IpSock<I, Self::DeviceId>,
+        socket: &IpSock<I, Self::DeviceId, O>,
         body: S,
         mtu: Option<u32>,
     ) -> Result<(), (S, IpSockSendError)>;
@@ -158,7 +158,7 @@ pub trait BufferIpSocketHandler<I: IpExt, C, B: BufferMut>: IpSocketHandler<I, C
     ) -> Result<(), (S, IpSockCreateAndSendError)> {
         // We use a `match` instead of `map_err` because `map_err` would require passing a closure
         // which takes ownership of `get_body_from_src_ip`, which we also use in the success case.
-        match self.new_ip_socket(ctx, device, local_ip, remote_ip, proto, builder) {
+        match self.new_ip_socket::<()>(ctx, device, local_ip, remote_ip, proto, builder) {
             Err(err) => Err((get_body_from_src_ip(I::LOOPBACK_ADDRESS), err.into())),
             Ok(tmp) => self
                 .send_ip_packet(ctx, &tmp, get_body_from_src_ip(*tmp.local_ip()), mtu)
@@ -269,8 +269,16 @@ impl Ipv6SocketBuilder {
 /// An IP socket.
 #[derive(Clone, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
-pub struct IpSock<I: IpExt, D> {
+pub struct IpSock<I: IpExt, D, O> {
+    /// The definition of the socket.
+    ///
+    /// This does not change for the lifetime of the socket.
     defn: IpSockDefinition<I, D>,
+    /// Options set on the socket that are independent of the socket definition.
+    ///
+    /// TODO(https://fxbug.dev/39479): use this to record multicast options.
+    #[allow(unused)]
+    options: O,
 }
 
 /// The definition of an IP socket.
@@ -294,7 +302,7 @@ struct IpSockDefinition<I: IpExt, D> {
     proto: I::Proto,
 }
 
-impl<I: IpExt, D> IpSock<I, D> {
+impl<I: IpExt, D, O> IpSock<I, D, O> {
     pub(crate) fn local_ip(&self) -> &SpecifiedAddr<I::Addr> {
         &self.defn.local_ip
     }
@@ -365,7 +373,7 @@ where
 impl<C: IpSocketNonSyncContext, SC: IpSocketContext<Ipv4, C>> IpSocketHandler<Ipv4, C> for SC {
     type Builder = Ipv4SocketBuilder;
 
-    fn new_ip_socket(
+    fn new_ip_socket<O: Default>(
         &mut self,
         ctx: &mut C,
         device: Option<SC::DeviceId>,
@@ -373,7 +381,7 @@ impl<C: IpSocketNonSyncContext, SC: IpSocketContext<Ipv4, C>> IpSocketHandler<Ip
         remote_ip: SpecifiedAddr<Ipv4Addr>,
         proto: Ipv4Proto,
         builder: Option<Ipv4SocketBuilder>,
-    ) -> Result<IpSock<Ipv4, SC::DeviceId>, IpSockCreationError> {
+    ) -> Result<IpSock<Ipv4, SC::DeviceId, O>, IpSockCreationError> {
         // Make sure the remote is routable with a local address before creating
         // the socket. We do not care about the actual destination here because
         // we will recalculate it when we send a packet so that the best route
@@ -384,14 +392,15 @@ impl<C: IpSocketNonSyncContext, SC: IpSocketContext<Ipv4, C>> IpSocketHandler<Ip
         let Ipv4SocketBuilder { ttl } = builder.unwrap_or_default();
 
         let defn = IpSockDefinition { local_ip, remote_ip, device, proto, hop_limit: ttl };
-        Ok(IpSock { defn })
+        let options = O::default();
+        Ok(IpSock { defn, options })
     }
 }
 
 impl<C: IpSocketNonSyncContext, SC: IpSocketContext<Ipv6, C>> IpSocketHandler<Ipv6, C> for SC {
     type Builder = Ipv6SocketBuilder;
 
-    fn new_ip_socket(
+    fn new_ip_socket<O: Default>(
         &mut self,
         ctx: &mut C,
         device: Option<SC::DeviceId>,
@@ -399,7 +408,7 @@ impl<C: IpSocketNonSyncContext, SC: IpSocketContext<Ipv6, C>> IpSocketHandler<Ip
         remote_ip: SpecifiedAddr<Ipv6Addr>,
         proto: Ipv6Proto,
         builder: Option<Ipv6SocketBuilder>,
-    ) -> Result<IpSock<Ipv6, SC::DeviceId>, IpSockCreationError> {
+    ) -> Result<IpSock<Ipv6, SC::DeviceId, O>, IpSockCreationError> {
         // Make sure the remote is routable with a local address before creating
         // the socket. We do not care about the actual destination here because
         // we will recalculate it when we send a packet so that the best route
@@ -410,7 +419,8 @@ impl<C: IpSocketNonSyncContext, SC: IpSocketContext<Ipv6, C>> IpSocketHandler<Ip
         let Ipv6SocketBuilder { hop_limit } = builder.unwrap_or_default();
 
         let defn = IpSockDefinition { local_ip, remote_ip, device, proto, hop_limit };
-        Ok(IpSock { defn })
+        let options = O::default();
+        Ok(IpSock { defn, options })
     }
 }
 
@@ -422,16 +432,18 @@ fn send_ip_packet<
     SC: BufferIpSocketContext<I, C, B>
         + BufferIpSocketContext<I, C, Buf<Vec<u8>>>
         + IpSocketContext<I, C>,
+    O,
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
-    IpSock { defn: IpSockDefinition { remote_ip, local_ip, device, hop_limit, proto } }: &IpSock<
-        I,
-        SC::DeviceId,
-    >,
+    socket: &IpSock<I, SC::DeviceId, O>,
     body: S,
     mtu: Option<u32>,
 ) -> Result<(), (S, IpSockSendError)> {
+    let IpSock {
+        defn: IpSockDefinition { remote_ip, local_ip, device, hop_limit, proto },
+        options: _,
+    } = socket;
     let IpSockRoute { local_ip: got_local_ip, destination: Destination { device, next_hop } } =
         match sync_ctx.lookup_route(ctx, *device, Some(*local_ip), *remote_ip) {
             Ok(o) => o,
@@ -470,10 +482,10 @@ impl<
             + IpSocketContext<Ipv4, C>,
     > BufferIpSocketHandler<Ipv4, C, B> for SC
 {
-    fn send_ip_packet<S: Serializer<Buffer = B>>(
+    fn send_ip_packet<S: Serializer<Buffer = B>, O>(
         &mut self,
         ctx: &mut C,
-        ip_sock: &IpSock<Ipv4, SC::DeviceId>,
+        ip_sock: &IpSock<Ipv4, SC::DeviceId, O>,
         body: S,
         mtu: Option<u32>,
     ) -> Result<(), (S, IpSockSendError)> {
@@ -490,10 +502,10 @@ impl<
         SC: BufferIpSocketContext<Ipv6, C, B> + BufferIpSocketContext<Ipv6, C, Buf<Vec<u8>>>,
     > BufferIpSocketHandler<Ipv6, C, B> for SC
 {
-    fn send_ip_packet<S: Serializer<Buffer = B>>(
+    fn send_ip_packet<S: Serializer<Buffer = B>, O>(
         &mut self,
         ctx: &mut C,
-        ip_sock: &IpSock<Ipv6, SC::DeviceId>,
+        ip_sock: &IpSock<Ipv6, SC::DeviceId, O>,
         body: S,
         mtu: Option<u32>,
     ) -> Result<(), (S, IpSockSendError)> {
@@ -1284,6 +1296,7 @@ mod tests {
                 proto,
                 hop_limit: None,
             },
+            options: (),
         };
 
         let res = IpSocketHandler::<I, _>::new_ip_socket(
@@ -1314,7 +1327,7 @@ mod tests {
             {
                 // The template socket, but with the TTL set to 1.
                 let mut template_with_hop_limit = template.clone();
-                let IpSock { defn } = &mut template_with_hop_limit;
+                let IpSock { defn, options: _ } = &mut template_with_hop_limit;
                 defn.hop_limit = Some(SPECIFIED_HOP_LIMIT);
                 get_expected_result(template_with_hop_limit)
             }
@@ -1405,7 +1418,7 @@ mod tests {
             AddressType::Unroutable => panic!("to_addr_type cannot be unroutable"),
         };
 
-        let sock = IpSocketHandler::<I, _>::new_ip_socket(
+        let sock = IpSocketHandler::<I, _>::new_ip_socket::<()>(
             &mut sync_ctx,
             &mut non_sync_ctx,
             None,
@@ -1471,7 +1484,7 @@ mod tests {
             DummyEventDispatcherBuilder::from_config(cfg.clone()).build();
 
         // Create a normal, routable socket.
-        let sock = IpSocketHandler::<I, _>::new_ip_socket(
+        let sock = IpSocketHandler::<I, _>::new_ip_socket::<()>(
             &mut sync_ctx,
             &mut non_sync_ctx,
             None,
