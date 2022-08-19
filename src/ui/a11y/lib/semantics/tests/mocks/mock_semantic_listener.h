@@ -75,9 +75,10 @@ class MockSemanticListener : public fuchsia::accessibility::semantics::SemanticL
   // Returns true if a call to OnAccessibilityActionRequested() is made.
   bool OnAccessibilityActionRequestedCalled() const;
 
-  void Bind(fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticListener> *listener);
   void SetSemanticsEnabled(bool enabled) { semantics_enabled_ = enabled; }
   bool GetSemanticsEnabled() const { return semantics_enabled_; }
+
+  void Bind(fuchsia::accessibility::semantics::SemanticListenerPtr& listener);
 
  private:
   fidl::BindingSet<fuchsia::accessibility::semantics::SemanticListener> semantic_listener_bindings_;

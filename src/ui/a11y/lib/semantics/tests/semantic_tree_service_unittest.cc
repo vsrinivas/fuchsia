@@ -18,9 +18,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
 #include "src/ui/a11y/lib/semantics/semantic_tree.h"
+#include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_listener.h"
 #include "src/ui/a11y/lib/semantics/tests/semantic_tree_parser.h"
 #include "src/ui/a11y/lib/util/util.h"
 
@@ -92,17 +93,19 @@ const std::string kSemanticTreeOddNodesPath = "/pkg/data/semantic_tree_odd_nodes
 
 auto NodeIdEq(uint32_t node_id) { return testing::Property(&Node::node_id, node_id); }
 
-class SemanticTreeServiceTest : public gtest::TestLoopFixture {
+class SemanticTreeServiceTest : public gtest::RealLoopFixture {
  public:
   SemanticTreeServiceTest() {}
 
  protected:
   void SetUp() override {
-    TestLoopFixture::SetUp();
+    RealLoopFixture::SetUp();
     // Create View Ref.
     zx::eventpair a;
     zx::eventpair::create(0u, &a, &b_);
 
+    fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener;
+    mock_semantic_listener_.Bind(semantic_listener);
     a11y::SemanticTreeService::CloseChannelCallback close_channel_callback(
         [this](zx_status_t status) {
           this->close_channel_called_ = true;
@@ -111,8 +114,7 @@ class SemanticTreeServiceTest : public gtest::TestLoopFixture {
     auto tree = std::make_unique<MockSemanticTree>();
     tree_ptr_ = tree.get();
     semantic_tree_ = std::make_unique<a11y::SemanticTreeService>(
-        std::move(tree), koid_, fuchsia::accessibility::semantics::SemanticListenerPtr() /*unused*/,
-        std::move(close_channel_callback));
+        std::move(tree), koid_, std::move(semantic_listener), std::move(close_channel_callback));
     semantic_tree_->EnableSemanticsUpdates(true);
   }
 
@@ -134,6 +136,7 @@ class SemanticTreeServiceTest : public gtest::TestLoopFixture {
   }
 
   sys::testing::ComponentContextProvider context_provider_;
+  MockSemanticListener mock_semantic_listener_;
   std::unique_ptr<a11y::SemanticTreeService> semantic_tree_;
   MockSemanticTree* tree_ptr_ = nullptr;
   bool close_channel_called_ = false;
@@ -213,6 +216,37 @@ TEST_F(SemanticTreeServiceTest, SemanticEventsAreSentToTheTree) {
 
   EXPECT_TRUE(callback_ran);
   EXPECT_TRUE(tree_ptr_->received_events());
+}
+
+TEST_F(SemanticTreeServiceTest, ActionRequested) {
+  const uint32_t kNodeId = 1u;
+  const fuchsia::accessibility::semantics::Action kAction =
+      fuchsia::accessibility::semantics::Action::SECONDARY;
+
+  mock_semantic_listener_.SetOnAccessibilityActionCallbackStatus(true);
+  tree_ptr_->PerformAccessibilityAction(kNodeId, kAction, [this, kNodeId, kAction](bool result) {
+    EXPECT_TRUE(result);
+    EXPECT_TRUE(mock_semantic_listener_.OnAccessibilityActionRequestedCalled());
+    EXPECT_EQ(mock_semantic_listener_.GetRequestedActionNodeId(), kNodeId);
+    EXPECT_EQ(mock_semantic_listener_.GetRequestedAction(), kAction);
+    QuitLoop();
+  });
+
+  RunLoop();
+}
+
+TEST_F(SemanticTreeServiceTest, HitTestRequested) {
+  const uint32_t kNodeId = 2u;
+
+  mock_semantic_listener_.SetOnAccessibilityActionCallbackStatus(true);
+  mock_semantic_listener_.SetHitTestResult(kNodeId);
+  tree_ptr_->PerformHitTesting({1.f, 2.f}, [this, kNodeId](auto hit) {
+    ASSERT_TRUE(hit.has_node_id());
+    EXPECT_EQ(hit.node_id(), kNodeId);
+    QuitLoop();
+  });
+
+  RunLoop();
 }
 
 }  // namespace

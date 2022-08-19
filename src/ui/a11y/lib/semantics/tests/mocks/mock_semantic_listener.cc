@@ -8,9 +8,8 @@
 
 namespace accessibility_test {
 
-void MockSemanticListener::Bind(
-    fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticListener> *listener) {
-  semantic_listener_bindings_.AddBinding(this, listener->NewRequest());
+void MockSemanticListener::Bind(fuchsia::accessibility::semantics::SemanticListenerPtr& listener) {
+  semantic_listener_bindings_.AddBinding(this, listener.NewRequest());
 }
 
 void MockSemanticListener::SetHitTestResult(std::optional<uint32_t> node_id) {
