@@ -8,6 +8,7 @@ using fuchsia.bluetooth.sys as sys;
 
 using fuchsia.bluetooth.bredr;
 using fuchsia.bluetooth.gatt;
+using fuchsia.bluetooth.gatt2;
 using fuchsia.bluetooth.le;
 
 /// Interface for interacting with a Bluetooth host device (bt-host)
@@ -23,6 +24,9 @@ protocol Host {
     });
     RequestGattServer(resource struct {
         server server_end:fuchsia.bluetooth.gatt.Server;
+    });
+    RequestGatt2Server(resource struct {
+        server server_end:fuchsia.bluetooth.gatt2.Server;
     });
     RequestProfile(resource struct {
         profile server_end:fuchsia.bluetooth.bredr.Profile;

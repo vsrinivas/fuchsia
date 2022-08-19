@@ -9,6 +9,7 @@ use {
     fidl_fuchsia_bluetooth::{Appearance, DeviceClass},
     fidl_fuchsia_bluetooth_bredr::ProfileMarker,
     fidl_fuchsia_bluetooth_gatt::{LocalServiceDelegateRequest, Server_Marker, Server_Proxy},
+    fidl_fuchsia_bluetooth_gatt2::Server_Marker as Server_Marker2,
     fidl_fuchsia_bluetooth_host::HostProxy,
     fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker},
     fidl_fuchsia_bluetooth_sys::{
@@ -73,6 +74,7 @@ pub enum HostService {
     LeCentral,
     LePeripheral,
     LeGatt,
+    LeGatt2,
     Profile,
 }
 
@@ -621,6 +623,10 @@ impl HostDispatcher {
                     HostService::LeGatt => {
                         let remote = ServerEnd::<Server_Marker>::new(chan.into());
                         let _ = host.request_gatt_server_(remote);
+                    }
+                    HostService::LeGatt2 => {
+                        let remote = ServerEnd::<Server_Marker2>::new(chan.into());
+                        let _ = host.request_gatt2_server_(remote);
                     }
                     HostService::Profile => {
                         let remote = ServerEnd::<ProfileMarker>::new(chan.into());

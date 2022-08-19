@@ -310,6 +310,7 @@ rustc_test("bt_gap_smoke_test_bin") {
   deps = [
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr_rust",
     "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt_rust",
+    "//sdk/fidl/fuchsia.bluetooth.gatt2:fuchsia.bluetooth.gatt2_rust",
     "//sdk/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le_rust",
     "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys_rust",
     "//sdk/fidl/fuchsia.device:fuchsia.device_rust",

@@ -6,7 +6,8 @@ use {
     anyhow::Error,
     fidl::endpoints::DiscoverableProtocolMarker,
     fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileProxy},
-    fidl_fuchsia_bluetooth_gatt as fbgatt, fidl_fuchsia_bluetooth_le as fble,
+    fidl_fuchsia_bluetooth_gatt as fbgatt, fidl_fuchsia_bluetooth_gatt2 as fbgatt2,
+    fidl_fuchsia_bluetooth_le as fble,
     fidl_fuchsia_bluetooth_sys::{
         AccessMarker, AccessProxy, BootstrapMarker, BootstrapProxy, ConfigurationMarker,
         ConfigurationProxy, HostWatcherMarker, HostWatcherProxy, PairingMarker, PairingProxy,
@@ -42,6 +43,7 @@ const SECURE_STORE_MONIKER: &str = "fake-secure-store";
 enum Event {
     Profile(Option<ProfileProxy>),
     GattServer(Option<fbgatt::Server_Proxy>),
+    Gatt2Server(Option<fbgatt2::Server_Proxy>),
     LeCentral(Option<fble::CentralProxy>),
     LePeripheral(Option<fble::PeripheralProxy>),
     Access(Option<AccessProxy>),
@@ -57,7 +59,7 @@ enum Event {
 }
 
 /// The expected number of FIDL capability events.
-const NUMBER_OF_EVENTS: usize = 11;
+const NUMBER_OF_EVENTS: usize = 12;
 
 impl From<NameProviderRequestStream> for Event {
     fn from(src: NameProviderRequestStream) -> Self {
@@ -92,6 +94,12 @@ async fn mock_client(
     let gatt_server_svc = handles.connect_to_protocol::<fbgatt::Server_Marker>()?;
     sender
         .send(Event::GattServer(Some(gatt_server_svc)))
+        .await
+        .expect("failed sending ack to test");
+
+    let gatt2_server_svc = handles.connect_to_protocol::<fbgatt2::Server_Marker>()?;
+    sender
+        .send(Event::Gatt2Server(Some(gatt2_server_svc)))
         .await
         .expect("failed sending ack to test");
 
@@ -214,6 +222,7 @@ async fn bt_gap_component_topology() {
     // Add routes from bt-gap to the mock bt-gap client.
     route_from_bt_gap_to_mock_client::<ProfileMarker>(&builder).await;
     route_from_bt_gap_to_mock_client::<fbgatt::Server_Marker>(&builder).await;
+    route_from_bt_gap_to_mock_client::<fbgatt2::Server_Marker>(&builder).await;
     route_from_bt_gap_to_mock_client::<fble::CentralMarker>(&builder).await;
     route_from_bt_gap_to_mock_client::<fble::PeripheralMarker>(&builder).await;
     route_from_bt_gap_to_mock_client::<AccessMarker>(&builder).await;
@@ -292,6 +301,7 @@ async fn bt_gap_component_topology() {
     for event in vec![
         Event::Profile(None),
         Event::GattServer(None),
+        Event::Gatt2Server(None),
         Event::LeCentral(None),
         Event::LePeripheral(None),
         Event::Access(None),
