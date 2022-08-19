@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
 	"runtime/pprof"
 	"strings"
 	"time"
@@ -20,8 +21,26 @@ import (
 )
 
 // HandleError prints backtraces on the device for certain errors.
-func HandleError(ctx context.Context, serialSocketPath string, err error) error {
-	if !shouldPrintThreads(err) {
+func HandleError(ctx context.Context, serialSocketPath string, err error) {
+	if e := printBacktraces(ctx, serialSocketPath, err); e != nil {
+		logger.Errorf(ctx, "failed to dump backtraces: %v", e)
+	}
+
+	// Construct the command line arguments that produced this failure.
+	var b bytes.Buffer
+	for i, arg := range os.Args {
+		if i != 0 {
+			b.WriteString(" ")
+		}
+
+		b.WriteString(fmt.Sprintf("%q", arg))
+	}
+
+	logger.Infof(ctx, "This command can be reproduced by running: %s", b.String())
+}
+
+func printBacktraces(ctx context.Context, serialSocketPath string, err error) error {
+	if shouldPrintThreads(err) {
 		return nil
 	}
 

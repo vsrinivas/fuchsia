@@ -53,9 +53,7 @@ func TestPaveNewWithOldZedboot(t *testing.T) {
 
 	if err := doTest(ctx); err != nil {
 		logger.Errorf(ctx, "test failed: %v", err)
-		if e := errutil.HandleError(ctx, c.deviceConfig.SerialSocketPath, err); e != nil {
-			logger.Errorf(ctx, "failed to dump process back traces: %v", e)
-		}
+		errutil.HandleError(ctx, c.deviceConfig.SerialSocketPath, err)
 		t.Fatal(err)
 	}
 }
