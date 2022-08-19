@@ -230,7 +230,7 @@ void State::InnerFreeArray(WrapperType* value) {
 
 std::shared_ptr<State> State::Create(std::unique_ptr<Heap> heap) {
   BlockIndex header;
-  if (heap->Allocate(sizeof(Block), &header) != ZX_OK) {
+  if (heap->Allocate(OrderToSize(kVmoHeaderOrder), &header) != ZX_OK) {
     return nullptr;
   }
 
@@ -245,6 +245,7 @@ std::shared_ptr<State> State::Create(std::unique_ptr<Heap> heap) {
                   HeaderBlockFields::Version::Make(kVersion);
   memcpy(&block->header_data[4], kMagicNumber, 4);
   block->payload.u64 = 0;
+  SetHeaderVmoSize(block, kMinVmoSize);
 
   std::shared_ptr<State> ret(new State(std::move(heap), header));
   ret->weak_self_ptr_ = ret;

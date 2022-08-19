@@ -7,6 +7,7 @@
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/reader.h>
 #include <lib/inspect/cpp/vmo/block.h>
+#include <lib/inspect/cpp/vmo/limits.h>
 
 #include <condition_variable>
 #include <cstdint>
@@ -72,7 +73,7 @@ void MakeStringReference(uint64_t index, const std::string_view data, uint64_t n
 
 void MakeHeader(std::vector<uint8_t>* buf) {
   auto* header = reinterpret_cast<Block*>(buf->data());
-  header->header = HeaderBlockFields::Order::Make(0) |
+  header->header = HeaderBlockFields::Order::Make(inspect::internal::kVmoHeaderOrder) |
                    HeaderBlockFields::Type::Make(BlockType::kHeader) |
                    HeaderBlockFields::Version::Make(0);
   memcpy(&header->header_data[4], kMagicNumber, 4);
@@ -264,15 +265,10 @@ TEST(Reader, InvalidNameParsing) {
   std::vector<uint8_t> buf;
   buf.resize(4096);
 
-  Block* header = reinterpret_cast<Block*>(buf.data());
-  header->header = HeaderBlockFields::Order::Make(0) |
-                   HeaderBlockFields::Type::Make(BlockType::kHeader) |
-                   HeaderBlockFields::Version::Make(0);
-  memcpy(&header->header_data[4], kMagicNumber, 4);
-  header->payload.u64 = 0;
+  MakeHeader(&buf);
 
   // Manually create a value with an invalid name field.
-  Block* value = reinterpret_cast<Block*>(buf.data() + kMinOrderSize);
+  Block* value = reinterpret_cast<Block*>(buf.data() + kMinOrderSize * 2);
   value->header = ValueBlockFields::Order::Make(0) |
                   ValueBlockFields::Type::Make(BlockType::kNodeValue) |
                   ValueBlockFields::NameIndex::Make(2000);
@@ -285,30 +281,25 @@ TEST(Reader, LargeExtentsWithCycle) {
   std::vector<uint8_t> buf;
   buf.resize(4096);
 
-  Block* header = reinterpret_cast<Block*>(buf.data());
-  header->header = HeaderBlockFields::Order::Make(0) |
-                   HeaderBlockFields::Type::Make(BlockType::kHeader) |
-                   HeaderBlockFields::Version::Make(0);
-  memcpy(&header->header_data[4], kMagicNumber, 4);
-  header->payload.u64 = 0;
+  MakeHeader(&buf);
 
   // Manually create a property.
-  Block* value = reinterpret_cast<Block*>(buf.data() + kMinOrderSize);
+  Block* value = reinterpret_cast<Block*>(buf.data() + kMinOrderSize * 2);
   value->header = ValueBlockFields::Order::Make(0) |
                   ValueBlockFields::Type::Make(BlockType::kBufferValue) |
-                  ValueBlockFields::NameIndex::Make(2);
+                  ValueBlockFields::NameIndex::Make(3);
   value->payload.u64 = PropertyBlockPayload::TotalLength::Make(0xFFFFFFFF) |
-                       PropertyBlockPayload::ExtentIndex::Make(3);
+                       PropertyBlockPayload::ExtentIndex::Make(4);
 
-  Block* name = reinterpret_cast<Block*>(buf.data() + kMinOrderSize * 2);
+  Block* name = reinterpret_cast<Block*>(buf.data() + kMinOrderSize * 3);
   name->header = NameBlockFields::Order::Make(0) | NameBlockFields::Type::Make(BlockType::kName) |
                  NameBlockFields::Length::Make(1);
   memcpy(name->payload.data, "a", 2);
 
-  Block* extent = reinterpret_cast<Block*>(buf.data() + kMinOrderSize * 3);
+  Block* extent = reinterpret_cast<Block*>(buf.data() + kMinOrderSize * 4);
   extent->header = ExtentBlockFields::Order::Make(0) |
                    ExtentBlockFields::Type::Make(BlockType::kExtent) |
-                   ExtentBlockFields::NextExtentIndex::Make(3);
+                   ExtentBlockFields::NextExtentIndex::Make(4);
 
   auto result = inspect::ReadFromBuffer(std::move(buf));
   EXPECT_TRUE(result.is_ok());
@@ -319,20 +310,15 @@ TEST(Reader, NameDoesNotFit) {
   std::vector<uint8_t> buf;
   buf.resize(4096);
 
-  Block* header = reinterpret_cast<Block*>(buf.data());
-  header->header = HeaderBlockFields::Order::Make(0) |
-                   HeaderBlockFields::Type::Make(BlockType::kHeader) |
-                   HeaderBlockFields::Version::Make(0);
-  memcpy(&header->header_data[4], kMagicNumber, 4);
-  header->payload.u64 = 0;
+  MakeHeader(&buf);
 
   // Manually create a node.
-  Block* value = reinterpret_cast<Block*>(buf.data() + kMinOrderSize);
+  Block* value = reinterpret_cast<Block*>(buf.data() + kMinOrderSize * 2);
   value->header = ValueBlockFields::Order::Make(0) |
                   ValueBlockFields::Type::Make(BlockType::kNodeValue) |
                   ValueBlockFields::NameIndex::Make(2);
 
-  Block* name = reinterpret_cast<Block*>(buf.data() + kMinOrderSize * 2);
+  Block* name = reinterpret_cast<Block*>(buf.data() + kMinOrderSize * 3);
   name->header = NameBlockFields::Order::Make(0) | NameBlockFields::Type::Make(BlockType::kName) |
                  NameBlockFields::Length::Make(10);
   memcpy(name->payload.data, "a", 2);
