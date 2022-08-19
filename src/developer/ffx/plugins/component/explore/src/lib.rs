@@ -39,12 +39,9 @@ impl std::io::Write for Terminal<'_> {
 impl Terminal<'_> {
     // Create a terminal either in raw or standard mode. Use raw for interactivity, indicated by the
     // given command being None. Return an error if the terminal can't be created for the required
-    // combination of interactivity and input/output pipes: Only output pipes are allowed and only
-    // when not in interactive mode.
+    // combination of interactivity and output pipes: Output pipes are allowed only when not
+    // in interactive mode.
     fn new(cmd: &Option<String>) -> Result<Self> {
-        if !atty::is(Stream::Stdin) {
-            ffx_bail!("ffx component explore does not support input pipes");
-        }
         let piping = !atty::is(Stream::Stdout);
         if piping && cmd.is_none() {
             ffx_bail!("ffx component explore does not support pipes in interactive mode");
