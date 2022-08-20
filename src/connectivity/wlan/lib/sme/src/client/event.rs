@@ -7,7 +7,7 @@ use fuchsia_zircon::{self as zx, prelude::DurationNum};
 use ieee80211::{Bssid, MacAddr};
 use wlan_common::timer::TimeoutDuration;
 
-pub const ESTABLISHING_RSNA_TIMEOUT_SECONDS: i64 = 3;
+pub const ESTABLISHING_RSNA_TIMEOUT_SECONDS: i64 = 4;
 pub const KEY_FRAME_EXCHANGE_TIMEOUT_MILLIS: i64 = 200;
 pub const INSPECT_PULSE_CHECK_MINUTES: i64 = 1;
 pub const INSPECT_PULSE_PERSIST_MINUTES: i64 = 5;
