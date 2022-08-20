@@ -1,6 +1,3 @@
-aarongreen@google.com
-eep@google.com
-markdittmer@google.com
-mvanotti@google.com
+include /src/security/fuzzing/OWNERS
 
-# COMPONENT: Security>libfuzzer
+# COMPONENT: Security>Fuzzing

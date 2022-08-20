@@ -1,4 +1,4 @@
-include /src/sys/fuzzing/OWNERS
+include /src/security/fuzzing/OWNERS
 
 mcgrathr@google.com
 phosek@google.com
