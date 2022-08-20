@@ -27,56 +27,56 @@ void HandoffPrep::ArchSummarizeMiscZbiItem(const zbi_header_t& header,
     case ZBI_TYPE_KERNEL_DRIVER: {
       switch (header.extra) {
         // TODO(fxbug.dev/87958): Move me to userspace.
-        case KDRV_AMLOGIC_HDCP:
-          ZX_ASSERT(payload.size() >= sizeof(dcfg_amlogic_hdcp_driver_t));
+        case ZBI_KERNEL_DRIVER_AMLOGIC_HDCP:
+          ZX_ASSERT(payload.size() >= sizeof(zbi_dcfg_amlogic_hdcp_driver_t));
           arch_handoff.amlogic_hdcp_driver =
-              *reinterpret_cast<const dcfg_amlogic_hdcp_driver_t*>(payload.data());
+              *reinterpret_cast<const zbi_dcfg_amlogic_hdcp_driver_t*>(payload.data());
           SaveForMexec(header, payload);
           break;
-        case KDRV_AMLOGIC_RNG:
-          ZX_ASSERT(payload.size() >= sizeof(dcfg_amlogic_rng_driver_t));
+        case ZBI_KERNEL_DRIVER_AMLOGIC_RNG:
+          ZX_ASSERT(payload.size() >= sizeof(zbi_dcfg_amlogic_rng_driver_t));
           arch_handoff.amlogic_rng_driver =
-              *reinterpret_cast<const dcfg_amlogic_rng_driver_t*>(payload.data());
+              *reinterpret_cast<const zbi_dcfg_amlogic_rng_driver_t*>(payload.data());
           SaveForMexec(header, payload);
           break;
-        case KDRV_ARM_GENERIC_TIMER:
-          ZX_ASSERT(payload.size() >= sizeof(dcfg_arm_generic_timer_driver_t));
+        case ZBI_KERNEL_DRIVER_ARM_GENERIC_TIMER:
+          ZX_ASSERT(payload.size() >= sizeof(zbi_dcfg_arm_generic_timer_driver_t));
           arch_handoff.generic_timer_driver =
-              *reinterpret_cast<const dcfg_arm_generic_timer_driver_t*>(payload.data());
+              *reinterpret_cast<const zbi_dcfg_arm_generic_timer_driver_t*>(payload.data());
           SaveForMexec(header, payload);
           break;
-        case KDRV_ARM_GIC_V2:
+        case ZBI_KERNEL_DRIVER_ARM_GIC_V2:
           // Defer to the newer hardware: v3 configs win out over v2.
-          ZX_ASSERT(payload.size() >= sizeof(dcfg_arm_gicv2_driver_t));
-          if (!ktl::holds_alternative<dcfg_arm_gicv3_driver_t>(arch_handoff.gic_driver)) {
+          ZX_ASSERT(payload.size() >= sizeof(zbi_dcfg_arm_gicv2_driver_t));
+          if (!ktl::holds_alternative<zbi_dcfg_arm_gicv3_driver_t>(arch_handoff.gic_driver)) {
             arch_handoff.gic_driver =
-                *reinterpret_cast<const dcfg_arm_gicv2_driver_t*>(payload.data());
+                *reinterpret_cast<const zbi_dcfg_arm_gicv2_driver_t*>(payload.data());
           }
           SaveForMexec(header, payload);
           break;
-        case KDRV_ARM_GIC_V3:
-          ZX_ASSERT(payload.size() >= sizeof(dcfg_arm_gicv3_driver_t));
+        case ZBI_KERNEL_DRIVER_ARM_GIC_V3:
+          ZX_ASSERT(payload.size() >= sizeof(zbi_dcfg_arm_gicv3_driver_t));
           arch_handoff.gic_driver =
-              *reinterpret_cast<const dcfg_arm_gicv3_driver_t*>(payload.data());
+              *reinterpret_cast<const zbi_dcfg_arm_gicv3_driver_t*>(payload.data());
           SaveForMexec(header, payload);
           break;
-        case KDRV_ARM_PSCI:
-          ZX_ASSERT(payload.size() >= sizeof(dcfg_arm_psci_driver_t));
+        case ZBI_KERNEL_DRIVER_ARM_PSCI:
+          ZX_ASSERT(payload.size() >= sizeof(zbi_dcfg_arm_psci_driver_t));
           arch_handoff.psci_driver =
-              *reinterpret_cast<const dcfg_arm_psci_driver_t*>(payload.data());
+              *reinterpret_cast<const zbi_dcfg_arm_psci_driver_t*>(payload.data());
           SaveForMexec(header, payload);
           break;
-        case KDRV_GENERIC_32BIT_WATCHDOG:
-          ZX_ASSERT(payload.size() >= sizeof(dcfg_generic_32bit_watchdog_t));
+        case ZBI_KERNEL_DRIVER_GENERIC_32BIT_WATCHDOG:
+          ZX_ASSERT(payload.size() >= sizeof(zbi_dcfg_generic_32bit_watchdog_t));
           arch_handoff.generic_32bit_watchdog_driver =
-              *reinterpret_cast<const dcfg_generic_32bit_watchdog_t*>(payload.data());
+              *reinterpret_cast<const zbi_dcfg_generic_32bit_watchdog_t*>(payload.data());
           SaveForMexec(header, payload);
           break;
-        case KDRV_AS370_POWER:
+        case ZBI_KERNEL_DRIVER_AS370_POWER:
           ZX_ASSERT(payload.size() == 0);
           arch_handoff.as370_power_driver = true;
           break;
-        case KDRV_MOTMOT_POWER:
+        case ZBI_KERNEL_DRIVER_MOTMOT_POWER:
           ZX_ASSERT(payload.size() == 0);
           arch_handoff.motmot_power_driver = true;
           break;

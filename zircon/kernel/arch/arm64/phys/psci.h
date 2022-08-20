@@ -9,7 +9,7 @@
 
 #include <zircon/boot/driver-config.h>
 
-void ArmPsciSetup(const dcfg_arm_psci_driver_t* cfg);
+void ArmPsciSetup(const zbi_dcfg_arm_psci_driver_t* cfg);
 
 // This is defined in assembly.
 extern "C" [[noreturn]] void ArmPsciReset();

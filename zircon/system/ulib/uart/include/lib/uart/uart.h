@@ -92,7 +92,7 @@ inline void UnparseConfig(const Config& config, FILE* out) {
 //  4. Drive the actual hardware.
 //
 // The first three are handled by DriverBase.  The KdrvExtra and KdrvConfig
-// template arguments give the KDRV_* value and the dcfg_*_t type for the ZBI
+// template arguments give the ZBI_KERNEL_DRIVER_* value and the zbi_dcfg_*_t type for the ZBI
 // item.  The Pio template argument tells the IoProvider whether this driver
 // uses MMIO or PIO (including PIO via MMIO): the number of consecutive PIO
 // ports used, or 0 for simple MMIO.
@@ -244,7 +244,7 @@ class DriverBase {
 };
 
 // The IoProvider is a template class parameterized by UartDriver::config_type,
-// i.e. the dcfg_*_t type for the ZBI item's format.  This class is responsible
+// i.e. the zbi_dcfg_*_t type for the ZBI item's format.  This class is responsible
 // for supplying pointers to be passed to hwreg types' ReadFrom and WriteTo.
 //
 // The IoProvider(UartDriver::config_type, uint16_t pio_size) constructor
@@ -265,13 +265,13 @@ inline auto DirectMapMmio(uint64_t phys) { return reinterpret_cast<volatile void
 
 // The specialization used most commonly handles simple MMIO devices.
 template <>
-class BasicIoProvider<dcfg_simple_t> {
+class BasicIoProvider<zbi_dcfg_simple_t> {
  public:
   // Just install the MMIO base pointer.  The third argument can be passed by
   // a subclass constructor method to map the physical address to a virtual
   // address.
   template <typename T>
-  BasicIoProvider(const dcfg_simple_t& cfg, uint16_t pio_size, T&& map_mmio) : pio_size_(pio_size) {
+  BasicIoProvider(const zbi_dcfg_simple_t& cfg, uint16_t pio_size, T&& map_mmio) : pio_size_(pio_size) {
     auto ptr = map_mmio(cfg.mmio_phys);
     if (pio_size != 0) {
       // This is PIO via MMIO, i.e. scaled MMIO.
@@ -282,7 +282,7 @@ class BasicIoProvider<dcfg_simple_t> {
     }
   }
 
-  BasicIoProvider(const dcfg_simple_t& cfg, uint16_t pio_size)
+  BasicIoProvider(const zbi_dcfg_simple_t& cfg, uint16_t pio_size)
       : BasicIoProvider(cfg, pio_size, DirectMapMmio) {}
 
   BasicIoProvider& operator=(BasicIoProvider&& other) {
@@ -303,9 +303,9 @@ class BasicIoProvider<dcfg_simple_t> {
 // The specialization for devices using actual PIO only occurs on x86.
 #if defined(__x86_64__) || defined(__i386__)
 template <>
-class BasicIoProvider<dcfg_simple_pio_t> {
+class BasicIoProvider<zbi_dcfg_simple_pio_t> {
  public:
-  BasicIoProvider(const dcfg_simple_pio_t& cfg, uint16_t pio_size) : io_(cfg.base) {
+  BasicIoProvider(const zbi_dcfg_simple_pio_t& cfg, uint16_t pio_size) : io_(cfg.base) {
     ZX_DEBUG_ASSERT(pio_size > 0);
   }
 
@@ -470,16 +470,16 @@ class KernelDriver {
 // payload types used by the various drivers.
 
 template <>
-std::optional<dcfg_simple_t> ParseConfig<dcfg_simple_t>(std::string_view string);
+std::optional<zbi_dcfg_simple_t> ParseConfig<zbi_dcfg_simple_t>(std::string_view string);
 
 template <>
-void UnparseConfig(const dcfg_simple_t& config, FILE* out);
+void UnparseConfig(const zbi_dcfg_simple_t& config, FILE* out);
 
 template <>
-std::optional<dcfg_simple_pio_t> ParseConfig<dcfg_simple_pio_t>(std::string_view string);
+std::optional<zbi_dcfg_simple_pio_t> ParseConfig<zbi_dcfg_simple_pio_t>(std::string_view string);
 
 template <>
-void UnparseConfig(const dcfg_simple_pio_t& config, FILE* out);
+void UnparseConfig(const zbi_dcfg_simple_pio_t& config, FILE* out);
 
 }  // namespace uart
 

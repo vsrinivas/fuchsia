@@ -268,11 +268,11 @@ void CheckMaybeCreateFromAcpi(const U& debug_port) {
 
   if constexpr (Matches) {
     ASSERT_TRUE(driver);
-    if constexpr (std::is_same_v<decltype(driver->config()), dcfg_simple_t>) {
+    if constexpr (std::is_same_v<decltype(driver->config()), zbi_dcfg_simple_t>) {
       EXPECT_EQ(driver->config().mmio_phys, debug_port.address);
     }
 
-    if constexpr (std::is_same_v<decltype(driver->config()), dcfg_simple_pio_t>) {
+    if constexpr (std::is_same_v<decltype(driver->config()), zbi_dcfg_simple_pio_t>) {
       EXPECT_EQ(driver->config().base, debug_port.address);
     }
   } else {
@@ -284,7 +284,7 @@ TEST(ParsingTests, Ns8250MmioDriver) {
   auto driver = uart::ns8250::MmioDriver::MaybeCreate(kX86 ? "mmio,0xa,0xb" : "ns8250,0xa,0xb");
   ASSERT_TRUE(driver.has_value());
   EXPECT_STREQ(kX86 ? "mmio" : "ns8250", driver->config_name());
-  const dcfg_simple_t& config = driver->config();
+  const zbi_dcfg_simple_t& config = driver->config();
   EXPECT_EQ(0xa, config.mmio_phys);
   EXPECT_EQ(0xb, config.irq);
 
@@ -296,7 +296,7 @@ TEST(ParsingTests, Ns8250PioDriver) {
   auto driver = uart::ns8250::PioDriver::MaybeCreate("ioport,0xa,0xb");
   ASSERT_TRUE(driver.has_value());
   EXPECT_STREQ("ioport", driver->config_name());
-  const dcfg_simple_pio_t& config = driver->config();
+  const zbi_dcfg_simple_pio_t& config = driver->config();
   EXPECT_EQ(0xa, config.base);
   EXPECT_EQ(0xb, config.irq);
 
@@ -308,7 +308,7 @@ TEST(ParsingTests, Ns8250LegacyDriver) {
   auto driver = uart::ns8250::PioDriver::MaybeCreate("legacy");
   ASSERT_TRUE(driver.has_value());
   EXPECT_STREQ("ioport", driver->config_name());
-  const dcfg_simple_pio_t& config = driver->config();
+  const zbi_dcfg_simple_pio_t& config = driver->config();
   EXPECT_EQ(0x3f8, config.base);
   EXPECT_EQ(4, config.irq);
 }
@@ -317,7 +317,7 @@ TEST(ParsingTests, Pl011Driver) {
   auto driver = uart::pl011::Driver::MaybeCreate("pl011,0xa,0xb");
   ASSERT_TRUE(driver.has_value());
   EXPECT_STREQ("pl011", driver->config_name());
-  const dcfg_simple_t& config = driver->config();
+  const zbi_dcfg_simple_t& config = driver->config();
   EXPECT_EQ(0xa, config.mmio_phys);
   EXPECT_EQ(0xb, config.irq);
 
@@ -329,7 +329,7 @@ TEST(ParsingTests, Pl011QemuDriver) {
   auto driver = uart::pl011::Driver::MaybeCreate("qemu");
   ASSERT_TRUE(driver.has_value());
   EXPECT_STREQ("pl011", driver->config_name());
-  const dcfg_simple_t& config = driver->config();
+  const zbi_dcfg_simple_t& config = driver->config();
   EXPECT_EQ(0x09000000, config.mmio_phys);
   EXPECT_EQ(33, config.irq);
 }
@@ -338,7 +338,7 @@ TEST(ParsingTests, AmlogicDriver) {
   auto driver = uart::amlogic::Driver::MaybeCreate("amlogic,0xa,0xb");
   ASSERT_TRUE(driver.has_value());
   EXPECT_STREQ("amlogic", driver->config_name());
-  const dcfg_simple_t& config = driver->config();
+  const zbi_dcfg_simple_t& config = driver->config();
   EXPECT_EQ(0xa, config.mmio_phys);
   EXPECT_EQ(0xb, config.irq);
 

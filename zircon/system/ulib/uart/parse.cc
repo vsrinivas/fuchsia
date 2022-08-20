@@ -11,8 +11,8 @@ namespace uart {
 using namespace internal;
 
 template <>
-std::optional<dcfg_simple_t> ParseConfig<dcfg_simple_t>(std::string_view string) {
-  dcfg_simple_t config{};
+std::optional<zbi_dcfg_simple_t> ParseConfig<zbi_dcfg_simple_t>(std::string_view string) {
+  zbi_dcfg_simple_t config{};
   if (ParseInts(string, &config.mmio_phys, &config.irq)) {
     return config;
   }
@@ -20,13 +20,13 @@ std::optional<dcfg_simple_t> ParseConfig<dcfg_simple_t>(std::string_view string)
 }
 
 template <>
-void UnparseConfig(const dcfg_simple_t& config, FILE* out) {
+void UnparseConfig(const zbi_dcfg_simple_t& config, FILE* out) {
   UnparseInts(out, config.mmio_phys, config.irq);
 }
 
 template <>
-std::optional<dcfg_simple_pio_t> ParseConfig<dcfg_simple_pio_t>(std::string_view string) {
-  dcfg_simple_pio_t config{};
+std::optional<zbi_dcfg_simple_pio_t> ParseConfig<zbi_dcfg_simple_pio_t>(std::string_view string) {
+  zbi_dcfg_simple_pio_t config{};
   if (ParseInts(string, &config.base, &config.irq)) {
     return config;
   }
@@ -34,7 +34,7 @@ std::optional<dcfg_simple_pio_t> ParseConfig<dcfg_simple_pio_t>(std::string_view
 }
 
 template <>
-void UnparseConfig(const dcfg_simple_pio_t& config, FILE* out) {
+void UnparseConfig(const zbi_dcfg_simple_pio_t& config, FILE* out) {
   UnparseInts(out, config.base, config.irq);
 }
 

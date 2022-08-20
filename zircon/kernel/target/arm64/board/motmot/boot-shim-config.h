@@ -41,12 +41,12 @@ static const zbi_mem_range_t mem_config[] = {
     },
 };
 
-static const dcfg_simple_t uart_driver = {
+static const zbi_dcfg_simple_t uart_driver = {
     .mmio_phys = 0x10A00000,
     .irq = 634 + 32,  // SPI[634] INTREQ__USI0_UART_PERIC0
 };
 
-static const dcfg_arm_gicv3_driver_t gicv3_driver = {
+static const zbi_dcfg_arm_gicv3_driver_t gicv3_driver = {
     .mmio_phys = 0x10400000,
     .gicd_offset = 0x00000,
     .gicr_offset = 0x40000,
@@ -54,11 +54,11 @@ static const dcfg_arm_gicv3_driver_t gicv3_driver = {
     .ipi_base = 0,
 };
 
-static const dcfg_arm_psci_driver_t psci_driver = {
+static const zbi_dcfg_arm_psci_driver_t psci_driver = {
     .use_hvc = false,
 };
 
-static const dcfg_arm_generic_timer_driver_t timer_driver = {
+static const zbi_dcfg_arm_generic_timer_driver_t timer_driver = {
     .irq_phys = 30,
     .irq_virt = 27,
     .freq_override = 24000000,
@@ -66,7 +66,7 @@ static const dcfg_arm_generic_timer_driver_t timer_driver = {
 
 // TODO: fxb/86566 implement proper watchdog driver for hardware
 #define WDT_CLUSTER0 (0x10060000)
-static const dcfg_generic_32bit_watchdog_t watchdog_driver = {
+static const zbi_dcfg_generic_32bit_watchdog_t watchdog_driver = {
     .pet_action =
         {
             .addr = WDT_CLUSTER0 + 0x8,  // count register
@@ -76,7 +76,7 @@ static const dcfg_generic_32bit_watchdog_t watchdog_driver = {
     .enable_action = {},
     .disable_action = {},
     .watchdog_period_nsec = ZX_SEC(10),
-    .flags = KDRV_GENERIC_32BIT_WATCHDOG_FLAG_ENABLED,
+    .flags = ZBI_KERNEL_DRIVER_GENERIC_32BIT_WATCHDOG_FLAG_ENABLED,
     .reserved = 0,
 };
 
@@ -172,18 +172,18 @@ static void append_board_boot_item(zbi_header_t* bootdata) {
   add_cpu_topology(bootdata);
 
   // add kernel drivers
-  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_MOTMOT_UART, &uart_driver,
+  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_MOTMOT_UART, &uart_driver,
                    sizeof(uart_driver));
-  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V3, &gicv3_driver,
+  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_GIC_V3, &gicv3_driver,
                    sizeof(gicv3_driver));
-  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_PSCI, &psci_driver,
+  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_PSCI, &psci_driver,
                    sizeof(psci_driver));
-  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GENERIC_TIMER, &timer_driver,
+  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_GENERIC_TIMER, &timer_driver,
                    sizeof(timer_driver));
-  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_GENERIC_32BIT_WATCHDOG, &watchdog_driver,
+  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_GENERIC_32BIT_WATCHDOG, &watchdog_driver,
                    sizeof(watchdog_driver));
   uint32_t junk = 0;
-  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_MOTMOT_POWER, &junk, 0);
+  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_MOTMOT_POWER, &junk, 0);
 
   // add platform ID
   append_boot_item(bootdata, ZBI_TYPE_PLATFORM_ID, 0, &platform_id, sizeof(platform_id));

@@ -40,10 +40,10 @@ static constexpr zbi_platform_id_t kPlatformId = {
     .pid = 2,  // PDEV_PID_MACHINA
     .board_name = "machina",
 };
-static constexpr dcfg_arm_psci_driver_t kPsciDriver = {
+static constexpr zbi_dcfg_arm_psci_driver_t kPsciDriver = {
     .use_hvc = false,
 };
-static constexpr dcfg_arm_generic_timer_driver_t kTimerDriver = {
+static constexpr zbi_dcfg_arm_generic_timer_driver_t kTimerDriver = {
     .irq_virt = 27,
 };
 #elif __x86_64__
@@ -223,7 +223,7 @@ static zx_status_t build_data_zbi(const fuchsia::virtualization::GuestConfig& cf
   status = LogIfZbiError(image.Append(
                              zbi_header_t{
                                  .type = ZBI_TYPE_KERNEL_DRIVER,
-                                 .extra = KDRV_ARM_PSCI,
+                                 .extra = ZBI_KERNEL_DRIVER_ARM_PSCI,
                              },
                              zbitl::AsBytes(&kPsciDriver, sizeof(kPsciDriver))),
                          "Failed to append PSCI driver item");
@@ -235,7 +235,7 @@ static zx_status_t build_data_zbi(const fuchsia::virtualization::GuestConfig& cf
   status = LogIfZbiError(image.Append(
                              zbi_header_t{
                                  .type = ZBI_TYPE_KERNEL_DRIVER,
-                                 .extra = KDRV_ARM_GENERIC_TIMER,
+                                 .extra = ZBI_KERNEL_DRIVER_ARM_GENERIC_TIMER,
                              },
                              zbitl::AsBytes(kTimerDriver)),
                          "Failed to append timer driver item");

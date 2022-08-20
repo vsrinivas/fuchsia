@@ -10,7 +10,7 @@
 #include <zircon/boot/driver-config.h>
 
 // Initialization routines at the PLATFORM_EARLY and PLATFORM levels.
-void AmlogicS905UartInitEarly(const dcfg_simple_t& config);
+void AmlogicS905UartInitEarly(const zbi_dcfg_simple_t& config);
 void AmlogicS905UartInitLate();
 
 #endif  // ZIRCON_KERNEL_DEV_UART_AMLOGIC_S905_INCLUDE_DEV_UART_AMLOGIC_S905_INIT_H_

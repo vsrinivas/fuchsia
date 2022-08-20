@@ -69,7 +69,7 @@ void hdmitx_writereg(uint32_t addr, uint32_t data) {
 
 }  // namespace
 
-void AmlogicS912HdcpInit(const dcfg_amlogic_hdcp_driver_t& config) {
+void AmlogicS912HdcpInit(const zbi_dcfg_amlogic_hdcp_driver_t& config) {
   ASSERT(config.preset_phys);
   ASSERT(config.hiu_phys);
   ASSERT(config.hdmitx_phys);

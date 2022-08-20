@@ -126,8 +126,8 @@ struct FIFO_DEPTH : public hwreg::RegisterBase<FIFO_DEPTH, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<FIFO_DEPTH>(0xdc); }
 };
 
-struct Driver : public DriverBase<Driver, KDRV_MOTMOT_UART, dcfg_simple_t> {
-  using Base = DriverBase<Driver, KDRV_MOTMOT_UART, dcfg_simple_t>;
+struct Driver : public DriverBase<Driver, ZBI_KERNEL_DRIVER_MOTMOT_UART, zbi_dcfg_simple_t> {
+  using Base = DriverBase<Driver, ZBI_KERNEL_DRIVER_MOTMOT_UART, zbi_dcfg_simple_t>;
 
   static constexpr std::string_view config_name() { return "motmot"; }
 

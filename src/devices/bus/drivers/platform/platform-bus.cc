@@ -618,14 +618,14 @@ zx_status_t PlatformBus::Init() {
 #if __x86_64__
   interrupt_controller_type_ = fuchsia_sysinfo::wire::InterruptControllerType::kApic;
 #else
-  auto boot_item = GetBootItem(ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V2);
+  auto boot_item = GetBootItem(ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_GIC_V2);
   if (boot_item.is_error() && boot_item.status_value() != ZX_ERR_NOT_FOUND) {
     return boot_item.status_value();
   }
   if (boot_item.is_ok()) {
     interrupt_controller_type_ = fuchsia_sysinfo::wire::InterruptControllerType::kGicV2;
   }
-  boot_item = GetBootItem(ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V3);
+  boot_item = GetBootItem(ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_GIC_V3);
   if (boot_item.is_error() && boot_item.status_value() != ZX_ERR_NOT_FOUND) {
     return boot_item.status_value();
   }

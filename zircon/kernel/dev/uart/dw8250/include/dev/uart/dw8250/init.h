@@ -10,7 +10,7 @@
 #include <zircon/boot/driver-config.h>
 
 // Initialization routines at the PLATFORM_EARLY and PLATFORM levels.
-void Dw8250UartInitEarly(const dcfg_simple_t& config);
+void Dw8250UartInitEarly(const zbi_dcfg_simple_t& config);
 void Dw8250UartInitLate();
 
 #endif  // ZIRCON_KERNEL_DEV_UART_DW8250_INCLUDE_DEV_UART_DW8250_INIT_H_

@@ -32,17 +32,17 @@ class AcpiRsdpItem : public SingleOptionalItem<uint64_t, ZBI_TYPE_ACPI_RSDP> {
 // This can supply a ZBI_TYPE_KERNEL_DRIVER item based on the serial console
 // details in ACPI's DBG2 table.
 class AcpiUartItem
-    : public boot_shim::SingleVariantItemBase<AcpiUartItem, dcfg_simple_t, dcfg_simple_pio_t> {
+    : public boot_shim::SingleVariantItemBase<AcpiUartItem, zbi_dcfg_simple_t, zbi_dcfg_simple_pio_t> {
  public:
   // This initializes the data from ACPI tables.
   void Init(const acpi_lite::AcpiParserInterface& parser, const char* shim_name, FILE* log);
 
-  static constexpr zbi_header_t ItemHeader(const dcfg_simple_t& cfg) {
-    return {.type = ZBI_TYPE_KERNEL_DRIVER, .extra = KDRV_I8250_MMIO_UART};
+  static constexpr zbi_header_t ItemHeader(const zbi_dcfg_simple_t& cfg) {
+    return {.type = ZBI_TYPE_KERNEL_DRIVER, .extra = ZBI_KERNEL_DRIVER_I8250_MMIO_UART};
   }
 
-  static constexpr zbi_header_t ItemHeader(const dcfg_simple_pio_t& cfg) {
-    return {.type = ZBI_TYPE_KERNEL_DRIVER, .extra = KDRV_I8250_PIO_UART};
+  static constexpr zbi_header_t ItemHeader(const zbi_dcfg_simple_pio_t& cfg) {
+    return {.type = ZBI_TYPE_KERNEL_DRIVER, .extra = ZBI_KERNEL_DRIVER_I8250_PIO_UART};
   }
 };
 

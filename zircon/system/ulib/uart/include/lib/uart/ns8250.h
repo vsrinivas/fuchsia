@@ -27,7 +27,7 @@ constexpr uint8_t kFifoDepth16550A = 16;
 constexpr uint8_t kFifoDepthGeneric = 1;
 
 // Traditional COM1 configuration.
-constexpr dcfg_simple_pio_t kLegacyConfig{.base = 0x3f8, .irq = 4};
+constexpr zbi_dcfg_simple_pio_t kLegacyConfig{.base = 0x3f8, .irq = 4};
 
 enum class InterruptType : uint8_t {
   kNone = 0b0001,
@@ -169,11 +169,11 @@ class DriverImpl
   using Base = DriverBase<DriverImpl<KdrvExtra, KdrvConfig>, KdrvExtra, KdrvConfig, kPortCount>;
 
   static constexpr std::string_view config_name() {
-    if constexpr (KdrvExtra == KDRV_I8250_PIO_UART) {
+    if constexpr (KdrvExtra == ZBI_KERNEL_DRIVER_I8250_PIO_UART) {
       return "ioport";
     }
 #if defined(__i386__) || defined(__x86_64__)
-    if constexpr (KdrvExtra == KDRV_I8250_MMIO_UART) {
+    if constexpr (KdrvExtra == ZBI_KERNEL_DRIVER_I8250_MMIO_UART) {
       return "mmio";
     }
 #endif
@@ -187,13 +187,13 @@ class DriverImpl
 
   static std::optional<DriverImpl> MaybeCreate(
       const acpi_lite::AcpiDebugPortDescriptor& debug_port) {
-    if constexpr (KdrvExtra == KDRV_I8250_MMIO_UART) {
+    if constexpr (KdrvExtra == ZBI_KERNEL_DRIVER_I8250_MMIO_UART) {
       if (debug_port.type == acpi_lite::AcpiDebugPortDescriptor::Type::kMmio) {
         return DriverImpl(KdrvConfig{.mmio_phys = debug_port.address});
       }
     }
 
-    if constexpr (KdrvExtra == KDRV_I8250_PIO_UART) {
+    if constexpr (KdrvExtra == ZBI_KERNEL_DRIVER_I8250_PIO_UART) {
       if (debug_port.type == acpi_lite::AcpiDebugPortDescriptor::Type::kPio) {
         return DriverImpl(KdrvConfig{.base = static_cast<uint16_t>(debug_port.address)});
       }
@@ -202,7 +202,7 @@ class DriverImpl
   }
 
   static std::optional<DriverImpl> MaybeCreate(std::string_view string) {
-    if constexpr (KdrvExtra == KDRV_I8250_PIO_UART) {
+    if constexpr (KdrvExtra == ZBI_KERNEL_DRIVER_I8250_PIO_UART) {
       if (string == "legacy") {
         return DriverImpl{kLegacyConfig};
       }
@@ -383,13 +383,13 @@ class DriverImpl
 };
 
 // uart::KernelDriver UartDriver API for PIO via MMIO.
-using MmioDriver = DriverImpl<KDRV_I8250_MMIO_UART, dcfg_simple_t>;
+using MmioDriver = DriverImpl<ZBI_KERNEL_DRIVER_I8250_MMIO_UART, zbi_dcfg_simple_t>;
 
 // uart::KernelDriver UartDriver API for direct PIO.
-using PioDriver = DriverImpl<KDRV_I8250_PIO_UART, dcfg_simple_pio_t>;
+using PioDriver = DriverImpl<ZBI_KERNEL_DRIVER_I8250_PIO_UART, zbi_dcfg_simple_pio_t>;
 
 // uart::KernelDriver UartDriver API for PIO via MMIO using legacy item type.
-using LegacyDw8250Driver = DriverImpl<KDRV_DW8250_UART, dcfg_simple_t>;
+using LegacyDw8250Driver = DriverImpl<ZBI_KERNEL_DRIVER_DW8250_UART, zbi_dcfg_simple_t>;
 
 }  // namespace ns8250
 }  // namespace uart

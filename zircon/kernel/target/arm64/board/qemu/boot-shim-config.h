@@ -25,12 +25,12 @@ static const zbi_mem_range_t mem_config[] = {
     },
 };
 
-static const dcfg_simple_t uart_driver = {
+static const zbi_dcfg_simple_t uart_driver = {
     .mmio_phys = 0x09000000,
     .irq = 33,
 };
 
-static const dcfg_arm_gicv3_driver_t gicv3_driver = {
+static const zbi_dcfg_arm_gicv3_driver_t gicv3_driver = {
     .mmio_phys = 0x08000000,
     .gicd_offset = 0x00000,
     .gicr_offset = 0xa0000,
@@ -39,7 +39,7 @@ static const dcfg_arm_gicv3_driver_t gicv3_driver = {
     .optional = true,
 };
 
-static const dcfg_arm_gicv2_driver_t gicv2_driver = {
+static const zbi_dcfg_arm_gicv2_driver_t gicv2_driver = {
     .mmio_phys = 0x08000000,
     .msi_frame_phys = 0x08020000,
     .gicd_offset = 0x00000,
@@ -49,11 +49,11 @@ static const dcfg_arm_gicv2_driver_t gicv2_driver = {
     .use_msi = true,
 };
 
-static const dcfg_arm_psci_driver_t psci_driver = {
+static const zbi_dcfg_arm_psci_driver_t psci_driver = {
     .use_hvc = true,
 };
 
-static const dcfg_arm_generic_timer_driver_t timer_driver = {
+static const zbi_dcfg_arm_generic_timer_driver_t timer_driver = {
     .irq_phys = 30,
     .irq_virt = 27,
 };
@@ -127,24 +127,24 @@ static void append_board_boot_item(zbi_header_t* bootdata) {
   append_boot_item(bootdata, ZBI_TYPE_NVRAM, 0, &crashlog, sizeof(crashlog));
 
   // add kernel drivers
-  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_PL011_UART, &uart_driver,
+  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_PL011_UART, &uart_driver,
                    sizeof(uart_driver));
 
   // append the gic information from the specific gic version we detected from the
   // device tree.
   if (saved_gic_version == 2) {
-    append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V2, &gicv2_driver,
+    append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_GIC_V2, &gicv2_driver,
                      sizeof(gicv2_driver));
   } else if (saved_gic_version >= 3) {
-    append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V3, &gicv3_driver,
+    append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_GIC_V3, &gicv3_driver,
                      sizeof(gicv3_driver));
   } else {
     fail("failed to detect gic version from device tree\n");
   }
 
-  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_PSCI, &psci_driver,
+  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_PSCI, &psci_driver,
                    sizeof(psci_driver));
-  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GENERIC_TIMER, &timer_driver,
+  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_GENERIC_TIMER, &timer_driver,
                    sizeof(timer_driver));
 
   // add platform ID

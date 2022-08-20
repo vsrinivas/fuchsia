@@ -10,7 +10,7 @@
 #include <zircon/boot/driver-config.h>
 
 // Initialization routines at the PLATFORM_EARLY and PLATFORM levels.
-void MotmotUartInitEarly(const dcfg_simple_t& config);
+void MotmotUartInitEarly(const zbi_dcfg_simple_t& config);
 void MotmotUartInitLate();
 
 #endif  // ZIRCON_KERNEL_DEV_UART_MOTMOT_INCLUDE_DEV_UART_MOTMOT_INIT_H_

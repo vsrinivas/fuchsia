@@ -251,7 +251,7 @@ acpi_sdt_hdr_t* load_table_with_signature(acpi_rsdp_t* rsdp, uint8_t* signature)
 uint32_t spcr_type_to_kdrv(acpi_spcr_t* spcr);
 
 // Convert data in an SPCR table into a UART kernel driver configuration.
-void uart_driver_from_spcr(acpi_spcr_t* spcr, dcfg_simple_t* uart_driver);
+void uart_driver_from_spcr(acpi_spcr_t* spcr, zbi_dcfg_simple_t* uart_driver);
 
 // Use the data in the MADT table to construct a CPU topology.
 // Returns the number of cores found, 0 if there are no supported cores.
@@ -259,17 +259,17 @@ uint8_t topology_from_madt(const acpi_madt_t* madt, zbi_topology_node_t* nodes, 
 
 // Use the data in the MADT table to construct a GIC configuration.
 // Returns the version of the GIC that was found, 0 if there was an error.
-uint8_t gic_driver_from_madt(const acpi_madt_t* madt, dcfg_arm_gicv2_driver_t* v2_cfg,
-                             dcfg_arm_gicv3_driver_t* v3_cfg);
+uint8_t gic_driver_from_madt(const acpi_madt_t* madt, zbi_dcfg_arm_gicv2_driver_t* v2_cfg,
+                             zbi_dcfg_arm_gicv3_driver_t* v3_cfg);
 
 // Uses the data in the FADT table to construct a PSCI configuration.
 // Returns -1 if the architecture does not support PSCI.
 // Note that this currently only sets the use_hvc field of the PSCI driver.
-int psci_driver_from_fadt(const acpi_fadt_t* fadt, dcfg_arm_psci_driver_t* cfg);
+int psci_driver_from_fadt(const acpi_fadt_t* fadt, zbi_dcfg_arm_psci_driver_t* cfg);
 
 // Uses the data in the GTDT table to construct an ARM generic timer
 // configuration.
-void timer_from_gtdt(const acpi_gtdt_t* gtdt, dcfg_arm_generic_timer_driver_t* timer);
+void timer_from_gtdt(const acpi_gtdt_t* gtdt, zbi_dcfg_arm_generic_timer_driver_t* timer);
 
 __END_CDECLS
 

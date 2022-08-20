@@ -77,7 +77,7 @@ static struct hw_rng_ops ops = {
 
 }  // namespace
 
-void AmlogicRngInit(const dcfg_amlogic_rng_driver_t& config) {
+void AmlogicRngInit(const zbi_dcfg_amlogic_rng_driver_t& config) {
   ASSERT(config.rng_data_phys);
   ASSERT(config.rng_status_phys);
 

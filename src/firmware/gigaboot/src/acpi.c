@@ -152,15 +152,15 @@ uint32_t spcr_type_to_kdrv(acpi_spcr_t* spcr) {
   // We currently only rely on PL011 devices to be initialized here.
   switch (spcr->interface_type) {
     case 0x0003:
-      return KDRV_PL011_UART;
+      return ZBI_KERNEL_DRIVER_PL011_UART;
     default:
       printf("unsupported serial interface type 0x%x\n", spcr->interface_type);
       return 0;
   }
 }
 
-void uart_driver_from_spcr(acpi_spcr_t* spcr, dcfg_simple_t* uart_driver) {
-  memset(uart_driver, 0x0, sizeof(dcfg_simple_t));
+void uart_driver_from_spcr(acpi_spcr_t* spcr, zbi_dcfg_simple_t* uart_driver) {
+  memset(uart_driver, 0x0, sizeof(zbi_dcfg_simple_t));
   uint32_t interrupt = 0;
   if (0x1 & spcr->interrupt_type) {
     // IRQ is only valid if the lowest order bit of interrupt type is set.
@@ -234,10 +234,10 @@ uint8_t topology_from_madt(const acpi_madt_t* madt, zbi_topology_node_t* nodes, 
   return num_nodes;
 }
 
-uint8_t gic_driver_from_madt(const acpi_madt_t* madt, dcfg_arm_gicv2_driver_t* v2_cfg,
-                             dcfg_arm_gicv3_driver_t* v3_cfg) {
-  memset(v2_cfg, 0x0, sizeof(dcfg_arm_gicv2_driver_t));
-  memset(v3_cfg, 0x0, sizeof(dcfg_arm_gicv3_driver_t));
+uint8_t gic_driver_from_madt(const acpi_madt_t* madt, zbi_dcfg_arm_gicv2_driver_t* v2_cfg,
+                             zbi_dcfg_arm_gicv3_driver_t* v3_cfg) {
+  memset(v2_cfg, 0x0, sizeof(zbi_dcfg_arm_gicv2_driver_t));
+  memset(v3_cfg, 0x0, sizeof(zbi_dcfg_arm_gicv3_driver_t));
   const uint8_t* madt_end = (uint8_t*)madt + madt->hdr.length;
   // The list of interrupt controller structures is located at the end of MADT,
   // and each one starts with a type and a length.
@@ -310,8 +310,8 @@ uint8_t gic_driver_from_madt(const acpi_madt_t* madt, dcfg_arm_gicv2_driver_t* v
   return gicd->gic_version;
 }
 
-int psci_driver_from_fadt(const acpi_fadt_t* fadt, dcfg_arm_psci_driver_t* cfg) {
-  memset(cfg, 0x0, sizeof(dcfg_arm_psci_driver_t));
+int psci_driver_from_fadt(const acpi_fadt_t* fadt, zbi_dcfg_arm_psci_driver_t* cfg) {
+  memset(cfg, 0x0, sizeof(zbi_dcfg_arm_psci_driver_t));
   if ((fadt->arm_boot_arch & kPsciCompliant) == 0) {
     return -1;
   }
@@ -319,8 +319,8 @@ int psci_driver_from_fadt(const acpi_fadt_t* fadt, dcfg_arm_psci_driver_t* cfg) 
   return 0;
 }
 
-void timer_from_gtdt(const acpi_gtdt_t* gtdt, dcfg_arm_generic_timer_driver_t* timer) {
-  memset(timer, 0x0, sizeof(dcfg_arm_generic_timer_driver_t));
+void timer_from_gtdt(const acpi_gtdt_t* gtdt, zbi_dcfg_arm_generic_timer_driver_t* timer) {
+  memset(timer, 0x0, sizeof(zbi_dcfg_arm_generic_timer_driver_t));
   timer->irq_phys = gtdt->nonsecure_el1_timer_gsiv;
   timer->irq_virt = gtdt->virtual_el1_timer_gsiv;
 }

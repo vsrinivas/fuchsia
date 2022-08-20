@@ -11,6 +11,6 @@
 #include <zircon/boot/driver-config.h>
 
 // Initializes the driver.
-void AmlogicS912HdcpInit(const dcfg_amlogic_hdcp_driver_t& config);
+void AmlogicS912HdcpInit(const zbi_dcfg_amlogic_hdcp_driver_t& config);
 
 #endif  // ZIRCON_KERNEL_DEV_HDCP_AMLOGIC_S912_INCLUDE_DEV_HDCP_AMLOGIC_S912_INIT_H_

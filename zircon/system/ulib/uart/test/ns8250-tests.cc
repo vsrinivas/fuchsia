@@ -14,7 +14,7 @@ constexpr uint8_t kDefaultLineControls = 0b0000'0011;
 
 using SimpleTestDriver =
     uart::KernelDriver<uart::ns8250::MmioDriver, uart::mock::IoProvider, uart::Unsynchronized>;
-constexpr dcfg_simple_t kTestConfig = {};
+constexpr zbi_dcfg_simple_t kTestConfig = {};
 
 TEST(Ns8250Tests, HelloWorld) {
   SimpleTestDriver driver(kTestConfig);

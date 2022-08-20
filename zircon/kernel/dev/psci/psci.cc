@@ -71,7 +71,7 @@ void psci_system_reset(enum reboot_flags flags) {
   do_psci_call(reset_command, args[0], args[1], args[2]);
 }
 
-void PsciInit(const dcfg_arm_psci_driver_t& config) {
+void PsciInit(const zbi_dcfg_arm_psci_driver_t& config) {
   do_psci_call = config.use_hvc ? psci_hvc_call : psci_smc_call;
   memcpy(shutdown_args, config.shutdown_args, sizeof(shutdown_args));
   memcpy(reboot_args, config.reboot_args, sizeof(reboot_args));

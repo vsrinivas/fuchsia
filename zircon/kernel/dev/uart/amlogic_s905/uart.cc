@@ -288,7 +288,7 @@ static const struct pdev_uart_ops s905_uart_ops = {
     .dputs = s905_dputs,
 };
 
-void AmlogicS905UartInitEarly(const dcfg_simple_t& config) {
+void AmlogicS905UartInitEarly(const zbi_dcfg_simple_t& config) {
   ASSERT(config.mmio_phys != 0);
   ASSERT(config.irq != 0);
 

@@ -536,7 +536,7 @@ typedef struct {
 #define ZBI_MEM_RANGE_RESERVED (3)
 
 // Kernel driver configuration.  The zbi_header_t.extra field gives a
-// KDRV_* type that determines the payload format.
+// ZBI_KERNEL_DRIVER_* type that determines the payload format.
 // See [driver-config.h](<zircon/boot/driver-config.h>) for details.
 #define ZBI_TYPE_KERNEL_DRIVER (0x5652444B)  // KDRV
 

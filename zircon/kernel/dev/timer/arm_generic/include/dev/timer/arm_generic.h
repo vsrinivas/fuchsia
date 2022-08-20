@@ -15,6 +15,6 @@
 zx_time_t cntpct_to_zx_time(uint64_t cntpct);
 
 // Initializes the driver.
-void ArmGenericTimerInit(const dcfg_arm_generic_timer_driver_t& config);
+void ArmGenericTimerInit(const zbi_dcfg_arm_generic_timer_driver_t& config);
 
 #endif  // ZIRCON_KERNEL_DEV_TIMER_ARM_GENERIC_INCLUDE_DEV_TIMER_ARM_GENERIC_H_

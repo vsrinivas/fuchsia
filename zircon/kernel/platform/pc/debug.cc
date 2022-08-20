@@ -238,7 +238,7 @@ void X86UartInitEarly(const uart::all::Driver& serial) {
     const auto config = uart.config();
     using config_type = ktl::decay_t<decltype(config)>;
 
-    if constexpr (ktl::is_same_v<config_type, dcfg_simple_t>) {
+    if constexpr (ktl::is_same_v<config_type, zbi_dcfg_simple_t>) {
       gDebugPort = {
           .type = DebugPort::Type::kMmio,
           .irq = config.irq,
@@ -248,7 +248,7 @@ void X86UartInitEarly(const uart::all::Driver& serial) {
       mark_mmio_region_to_reserve(gDebugPort.phys_addr, PAGE_SIZE);
       dprintf(INFO, "UART: kernel serial enabled: mmio=%#lx, irq=%#x\n", gDebugPort.phys_addr,
               gDebugPort.irq);
-    } else if constexpr (ktl::is_same_v<config_type, dcfg_simple_pio_t>) {
+    } else if constexpr (ktl::is_same_v<config_type, zbi_dcfg_simple_pio_t>) {
       gDebugPort = {
           .type = DebugPort::Type::kIoPort,
           .irq = config.irq,

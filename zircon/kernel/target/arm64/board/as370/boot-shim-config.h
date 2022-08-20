@@ -20,23 +20,23 @@ static const zbi_mem_range_t mem_config[] = {
     },
 };
 
-static const dcfg_simple_t uart_driver = {
+static const zbi_dcfg_simple_t uart_driver = {
     .mmio_phys = 0xf7e80c00,
     .irq = 88,
 };
 
-static const dcfg_arm_gicv2_driver_t gicv2_driver = {
+static const zbi_dcfg_arm_gicv2_driver_t gicv2_driver = {
     .mmio_phys = 0xf7900000,
     .gicd_offset = 0x1000,
     .gicc_offset = 0x2000,
     .ipi_base = 0,
 };
 
-static const dcfg_arm_psci_driver_t psci_driver = {
+static const zbi_dcfg_arm_psci_driver_t psci_driver = {
     .use_hvc = false,
 };
 
-static const dcfg_arm_generic_timer_driver_t timer_driver = {
+static const zbi_dcfg_arm_generic_timer_driver_t timer_driver = {
     .irq_phys = 30, .irq_virt = 27,
     //.freq_override = 8333333,
 };
@@ -84,20 +84,20 @@ static void append_board_boot_item(zbi_header_t* bootdata) {
   add_cpu_topology(bootdata);
 
   // add kernel drivers
-  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_DW8250_UART, &uart_driver,
+  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_DW8250_UART, &uart_driver,
                    sizeof(uart_driver));
-  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V2, &gicv2_driver,
+  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_GIC_V2, &gicv2_driver,
                    sizeof(gicv2_driver));
-  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_PSCI, &psci_driver,
+  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_PSCI, &psci_driver,
                    sizeof(psci_driver));
-  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GENERIC_TIMER, &timer_driver,
+  append_boot_item(bootdata, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_GENERIC_TIMER, &timer_driver,
                    sizeof(timer_driver));
 
   // append_boot_item doesn't support zero-length payloads, so we have to call zbi_create_entry
   // directly.
   uint8_t* new_section = NULL;
   zbi_result_t result = zbi_create_entry(bootdata, SIZE_MAX, ZBI_TYPE_KERNEL_DRIVER,
-                                         KDRV_AS370_POWER, 0, 0, (void**)&new_section);
+                                         ZBI_KERNEL_DRIVER_AS370_POWER, 0, 0, (void**)&new_section);
   if (result != ZBI_RESULT_OK) {
     fail("zbi_create_entry failed\n");
   }

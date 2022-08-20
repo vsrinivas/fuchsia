@@ -105,17 +105,17 @@ class SingleOptionalItem : public ItemBase {
 // This is a base class for defining simple item types that store their data
 // directly and can handle a fixed set of alternative payload types.  The
 // different Payload... template parameters give different types, e.g.
-// dcfg_this_t and dcfg_that_t.  The derived class Item must then define an
+// zbi_dcfg_this_t and zbi_dcfg_that_t.  The derived class Item must then define an
 // overload for each Payload type:
 // ```
-//   static constexpr zbi_header_t ItemHeader(const dcfg_this_t& cfg) {
-//     return {.type = ZBI_TYPE_KERNEL_DRIVER, .extra = KDRV_THIS};
+//   static constexpr zbi_header_t ItemHeader(const zbi_dcfg_this_t& cfg) {
+//     return {.type = ZBI_TYPE_KERNEL_DRIVER, .extra = ZBI_KERNEL_DRIVER_THIS};
 //   }
-//   static constexpr zbi_header_t ItemHeader(const dcfg_that_t& cfg) {
-//     return {.type = ZBI_TYPE_KERNEL_DRIVER, .extra = KDRV_THAT};
+//   static constexpr zbi_header_t ItemHeader(const zbi_dcfg_that_t& cfg) {
+//     return {.type = ZBI_TYPE_KERNEL_DRIVER, .extra = ZBI_KERNEL_DRIVER_THAT};
 //   }
 // ```
-// Calling set_payload with either a dcfg_this_t or dcfg_that_t argument
+// Calling set_payload with either a zbi_dcfg_this_t or zbi_dcfg_that_t argument
 // installs a value.  The ItemHeader overload corresponding to the type of the
 // argument to set_payload will be used to produce the ZBI item.  set_payload
 // with no arguments resets it to initial state so no item is produced.

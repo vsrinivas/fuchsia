@@ -311,7 +311,7 @@ static const struct pdev_uart_ops uart_ops = {
     .dputs = pl011_dputs,
 };
 
-void Pl011UartInitEarly(const dcfg_simple_t& config) {
+void Pl011UartInitEarly(const zbi_dcfg_simple_t& config) {
   ASSERT(config.mmio_phys != 0);
   ASSERT(config.irq != 0);
 

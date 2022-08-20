@@ -18,12 +18,12 @@ class UartItem : public boot_shim::ItemBase {
  public:
   void Init(const uart::all::Driver& uart) { driver_ = uart; }
 
-  constexpr size_t size_bytes() const { return ItemSize(dcfg_size()); }
+  constexpr size_t size_bytes() const { return ItemSize(zbi_dcfg_size()); }
 
   fitx::result<DataZbi::Error> AppendItems(DataZbi& zbi) const;
 
  private:
-  constexpr size_t dcfg_size() const {
+  constexpr size_t zbi_dcfg_size() const {
     return std::visit([](const auto& driver) { return driver.size(); }, driver_);
   }
 

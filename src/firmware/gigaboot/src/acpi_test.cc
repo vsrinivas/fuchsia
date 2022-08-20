@@ -309,7 +309,7 @@ TEST(Acpi, SpcrTypeToKdrvSuccess) {
           },
       .interface_type = 0x0003,
   };
-  EXPECT_EQ(spcr_type_to_kdrv(&spcr), (uint32_t)KDRV_PL011_UART);
+  EXPECT_EQ(spcr_type_to_kdrv(&spcr), (uint32_t)ZBI_KERNEL_DRIVER_PL011_UART);
 }
 
 TEST(Acpi, UartDriverFromSpcrIrq) {
@@ -322,7 +322,7 @@ TEST(Acpi, UartDriverFromSpcrIrq) {
       .irq = 33,
       .gsiv = 48,
   };
-  dcfg_simple_t uart_driver;
+  zbi_dcfg_simple_t uart_driver;
   uart_driver_from_spcr(&spcr, &uart_driver);
   EXPECT_EQ(uart_driver.mmio_phys, (uint32_t)0x80000);
   EXPECT_EQ(uart_driver.irq, (uint32_t)33);
@@ -338,7 +338,7 @@ TEST(Acpi, UartDriverFromSpcrGsiv) {
       .irq = 33,
       .gsiv = 48,
   };
-  dcfg_simple_t uart_driver;
+  zbi_dcfg_simple_t uart_driver;
   uart_driver_from_spcr(&spcr, &uart_driver);
   EXPECT_EQ(uart_driver.mmio_phys, (uint32_t)0x80000);
   EXPECT_EQ(uart_driver.irq, (uint32_t)48);
@@ -511,8 +511,8 @@ TEST(Acpi, GicDriverFromMadtNoGicd) {
   };
   efi_config_table.AddInterruptControllerToMadt(madt, &gicc1, sizeof(gicc1));
 
-  dcfg_arm_gicv2_driver_t v2;
-  dcfg_arm_gicv3_driver_t v3;
+  zbi_dcfg_arm_gicv2_driver_t v2;
+  zbi_dcfg_arm_gicv3_driver_t v3;
   EXPECT_EQ(gic_driver_from_madt(madt, &v2, &v3), 0);
 }
 
@@ -535,8 +535,8 @@ TEST(Acpi, GicDriverFromMadtV2NoGicc) {
   };
   efi_config_table.AddInterruptControllerToMadt(madt, &gic_msi, sizeof(gic_msi));
 
-  dcfg_arm_gicv2_driver_t v2;
-  dcfg_arm_gicv3_driver_t v3;
+  zbi_dcfg_arm_gicv2_driver_t v2;
+  zbi_dcfg_arm_gicv3_driver_t v3;
   EXPECT_EQ(gic_driver_from_madt(madt, &v2, &v3), 0);
 }
 
@@ -562,11 +562,11 @@ TEST(Acpi, GicDriverFromMadtV2NoGicMsi) {
   };
   efi_config_table.AddInterruptControllerToMadt(madt, &gicc, sizeof(gicc));
 
-  dcfg_arm_gicv2_driver_t v2;
-  dcfg_arm_gicv3_driver_t v3;
+  zbi_dcfg_arm_gicv2_driver_t v2;
+  zbi_dcfg_arm_gicv3_driver_t v3;
   EXPECT_EQ(gic_driver_from_madt(madt, &v2, &v3), 2);
 
-  dcfg_arm_gicv2_driver_t expected = {
+  zbi_dcfg_arm_gicv2_driver_t expected = {
       .mmio_phys = 0x10000,
       .msi_frame_phys = 0x0,
       .gicd_offset = 0x20000,
@@ -607,11 +607,11 @@ TEST(Acpi, GicDriverFromMadtV2GiccBase) {
   };
   efi_config_table.AddInterruptControllerToMadt(madt, &gic_msi, sizeof(gic_msi));
 
-  dcfg_arm_gicv2_driver_t v2;
-  dcfg_arm_gicv3_driver_t v3;
+  zbi_dcfg_arm_gicv2_driver_t v2;
+  zbi_dcfg_arm_gicv3_driver_t v3;
   EXPECT_EQ(gic_driver_from_madt(madt, &v2, &v3), 2);
 
-  dcfg_arm_gicv2_driver_t expected = {
+  zbi_dcfg_arm_gicv2_driver_t expected = {
       .mmio_phys = 0x10000,
       .msi_frame_phys = 0x40000,
       .gicd_offset = 0x20000,
@@ -620,7 +620,7 @@ TEST(Acpi, GicDriverFromMadtV2GiccBase) {
       .optional = true,
       .use_msi = true,
   };
-  ASSERT_EQ(memcmp(&expected, &v2, sizeof(dcfg_arm_gicv2_driver_t)), 0);
+  ASSERT_EQ(memcmp(&expected, &v2, sizeof(zbi_dcfg_arm_gicv2_driver_t)), 0);
 }
 
 TEST(Acpi, GicDriverFromMadtV2GicdBase) {
@@ -652,11 +652,11 @@ TEST(Acpi, GicDriverFromMadtV2GicdBase) {
   };
   efi_config_table.AddInterruptControllerToMadt(madt, &gic_msi, sizeof(gic_msi));
 
-  dcfg_arm_gicv2_driver_t v2;
-  dcfg_arm_gicv3_driver_t v3;
+  zbi_dcfg_arm_gicv2_driver_t v2;
+  zbi_dcfg_arm_gicv3_driver_t v3;
   EXPECT_EQ(gic_driver_from_madt(madt, &v2, &v3), 2);
 
-  dcfg_arm_gicv2_driver_t expected = {
+  zbi_dcfg_arm_gicv2_driver_t expected = {
       .mmio_phys = 0x20000,
       .msi_frame_phys = 0x40000,
       .gicd_offset = 0x0,
@@ -665,7 +665,7 @@ TEST(Acpi, GicDriverFromMadtV2GicdBase) {
       .optional = true,
       .use_msi = true,
   };
-  ASSERT_EQ(memcmp(&expected, &v2, sizeof(dcfg_arm_gicv2_driver_t)), 0);
+  ASSERT_EQ(memcmp(&expected, &v2, sizeof(zbi_dcfg_arm_gicv2_driver_t)), 0);
 }
 
 TEST(Acpi, GicDriverFromMadtV3NoGicr) {
@@ -680,8 +680,8 @@ TEST(Acpi, GicDriverFromMadtV3NoGicr) {
   };
   efi_config_table.AddInterruptControllerToMadt(madt, &gicd, sizeof(gicd));
 
-  dcfg_arm_gicv2_driver_t v2;
-  dcfg_arm_gicv3_driver_t v3;
+  zbi_dcfg_arm_gicv2_driver_t v2;
+  zbi_dcfg_arm_gicv3_driver_t v3;
   EXPECT_EQ(gic_driver_from_madt(madt, &v2, &v3), 0);
 }
 
@@ -705,11 +705,11 @@ TEST(Acpi, GicDriverFromMadtV3GicdBase) {
   };
   efi_config_table.AddInterruptControllerToMadt(madt, &gicr, sizeof(gicr));
 
-  dcfg_arm_gicv2_driver_t v2;
-  dcfg_arm_gicv3_driver_t v3;
+  zbi_dcfg_arm_gicv2_driver_t v2;
+  zbi_dcfg_arm_gicv3_driver_t v3;
   EXPECT_EQ(gic_driver_from_madt(madt, &v2, &v3), 3);
 
-  dcfg_arm_gicv3_driver_t expected = {
+  zbi_dcfg_arm_gicv3_driver_t expected = {
       .mmio_phys = 0x20000,
       .gicd_offset = 0x0,
       .gicr_offset = 0xd0000,
@@ -717,7 +717,7 @@ TEST(Acpi, GicDriverFromMadtV3GicdBase) {
       .ipi_base = 0,
       .optional = true,
   };
-  ASSERT_EQ(memcmp(&expected, &v3, sizeof(dcfg_arm_gicv3_driver_t)), 0);
+  ASSERT_EQ(memcmp(&expected, &v3, sizeof(zbi_dcfg_arm_gicv3_driver_t)), 0);
 }
 
 TEST(Acpi, GicDriverFromMadtV3GicrBase) {
@@ -740,11 +740,11 @@ TEST(Acpi, GicDriverFromMadtV3GicrBase) {
   };
   efi_config_table.AddInterruptControllerToMadt(madt, &gicr, sizeof(gicr));
 
-  dcfg_arm_gicv2_driver_t v2;
-  dcfg_arm_gicv3_driver_t v3;
+  zbi_dcfg_arm_gicv2_driver_t v2;
+  zbi_dcfg_arm_gicv3_driver_t v3;
   EXPECT_EQ(gic_driver_from_madt(madt, &v2, &v3), 3);
 
-  dcfg_arm_gicv3_driver_t expected = {
+  zbi_dcfg_arm_gicv3_driver_t expected = {
       .mmio_phys = 0x10000,
       .gicd_offset = 0x70000,
       .gicr_offset = 0x0,
@@ -752,12 +752,12 @@ TEST(Acpi, GicDriverFromMadtV3GicrBase) {
       .ipi_base = 0,
       .optional = true,
   };
-  ASSERT_EQ(memcmp(&expected, &v3, sizeof(dcfg_arm_gicv3_driver_t)), 0);
+  ASSERT_EQ(memcmp(&expected, &v3, sizeof(zbi_dcfg_arm_gicv3_driver_t)), 0);
 }
 
 TEST(Acpi, PsciDriverFromFadtNotPsciCompliant) {
   auto fadt = acpi_fadt_t{};
-  dcfg_arm_psci_driver_t cfg;
+  zbi_dcfg_arm_psci_driver_t cfg;
   EXPECT_EQ(psci_driver_from_fadt(&fadt, &cfg), -1);
 }
 
@@ -765,7 +765,7 @@ TEST(Acpi, PsciDriverFromFadtNoHvc) {
   auto fadt = acpi_fadt_t{
       .arm_boot_arch = (uint16_t)kPsciCompliant,
   };
-  dcfg_arm_psci_driver_t cfg;
+  zbi_dcfg_arm_psci_driver_t cfg;
   EXPECT_EQ(psci_driver_from_fadt(&fadt, &cfg), 0);
   EXPECT_EQ(cfg.use_hvc, 0);
 }
@@ -774,7 +774,7 @@ TEST(Acpi, PsciDriverFromFadtUseHvc) {
   auto fadt = acpi_fadt_t{
       .arm_boot_arch = (uint16_t)(kPsciCompliant | kPsciUseHvc),
   };
-  dcfg_arm_psci_driver_t cfg;
+  zbi_dcfg_arm_psci_driver_t cfg;
   EXPECT_EQ(psci_driver_from_fadt(&fadt, &cfg), 0);
   EXPECT_NE(cfg.use_hvc, 0);
 }
@@ -784,7 +784,7 @@ TEST(Acpi, TimerDriverFromGtdt) {
       .nonsecure_el1_timer_gsiv = 30,
       .virtual_el1_timer_gsiv = 27,
   };
-  dcfg_arm_generic_timer_driver_t timer;
+  zbi_dcfg_arm_generic_timer_driver_t timer;
   timer_from_gtdt(&gtdt, &timer);
   EXPECT_EQ(timer.irq_phys, (uint32_t)30);
   EXPECT_EQ(timer.irq_virt, (uint32_t)27);

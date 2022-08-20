@@ -32,10 +32,10 @@ uint64_t gArmPsciResetRegisters[arch::kArmPsciRegisters] = {
     static_cast<uint64_t>(arch::ArmPsciFunction::kSystemReset),
 };
 
-void ArmPsciSetup(const dcfg_arm_psci_driver_t* cfg) {
+void ArmPsciSetup(const zbi_dcfg_arm_psci_driver_t* cfg) {
   if (!cfg) {
     gArmPsciDisabled = 1;
-    debugf("%s: No KDRV_ARM_PSCI item found in ZBI.  Early PSCI disabled.\n", ProgramName());
+    debugf("%s: No ZBI_KERNEL_DRIVER_ARM_PSCI item found in ZBI.  Early PSCI disabled.\n", ProgramName());
     return;
   }
 

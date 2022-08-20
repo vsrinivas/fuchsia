@@ -106,7 +106,7 @@ void Pl011::Print(uint8_t ch) {
 }
 
 zx_status_t Pl011::ConfigureZbi(cpp20::span<std::byte> zbi) const {
-  dcfg_simple_t zbi_uart = {
+  zbi_dcfg_simple_t zbi_uart = {
       .mmio_phys = kPl011PhysBase,
       .irq = 111,
   };
@@ -114,7 +114,7 @@ zx_status_t Pl011::ConfigureZbi(cpp20::span<std::byte> zbi) const {
   return LogIfZbiError(image.Append(
       zbi_header_t{
           .type = ZBI_TYPE_KERNEL_DRIVER,
-          .extra = KDRV_PL011_UART,
+          .extra = ZBI_KERNEL_DRIVER_PL011_UART,
       },
       zbitl::AsBytes(&zbi_uart, sizeof(zbi_uart))));
 }

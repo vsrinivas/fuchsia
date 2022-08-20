@@ -12,7 +12,7 @@ namespace {
 
 using SimpleTestDriver =
     uart::KernelDriver<uart::motmot::Driver, uart::mock::IoProvider, uart::Unsynchronized>;
-constexpr dcfg_simple_t kTestConfig = {};
+constexpr zbi_dcfg_simple_t kTestConfig = {};
 
 template <typename Mock>
 void AppendInitSequence(Mock& mock) {

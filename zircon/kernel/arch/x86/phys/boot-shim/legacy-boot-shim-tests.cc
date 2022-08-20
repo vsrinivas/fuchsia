@@ -94,7 +94,7 @@ TEST(X86LegacyBootShimTests, CmdlineItem) {
 TEST(X86LegacyBootShimTests, AcpiAndUartItems) {
   LegacyBoot info;
   constexpr uint64_t kRsdp = 0x7fa2'9000;
-  constexpr dcfg_simple_pio_t kUart = {.base = 0x3f8};
+  constexpr zbi_dcfg_simple_pio_t kUart = {.base = 0x3f8};
   info.acpi_rsdp = kRsdp;
   info.uart = uart::ns8250::PioDriver(kUart);
 

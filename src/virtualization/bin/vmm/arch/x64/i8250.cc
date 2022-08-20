@@ -151,7 +151,7 @@ zx_status_t I8250Group::Init(Guest* guest, const I8250::InterruptHandler& interr
 }
 
 zx_status_t I8250Group::ConfigureZbi(cpp20::span<std::byte> zbi) const {
-  dcfg_simple_pio_t zbi_uart = {
+  zbi_dcfg_simple_pio_t zbi_uart = {
       .base = kI8250Base0,
       .irq = kI8250Irq0,
   };
@@ -159,7 +159,7 @@ zx_status_t I8250Group::ConfigureZbi(cpp20::span<std::byte> zbi) const {
   return LogIfZbiError(image.Append(
       zbi_header_t{
           .type = ZBI_TYPE_KERNEL_DRIVER,
-          .extra = KDRV_I8250_PIO_UART,
+          .extra = ZBI_KERNEL_DRIVER_I8250_PIO_UART,
       },
       zbitl::AsBytes(&zbi_uart, sizeof(zbi_uart))));
 }

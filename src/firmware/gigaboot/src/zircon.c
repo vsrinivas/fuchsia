@@ -302,7 +302,7 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
   // This is best effort. If the SPCR table isn't found or the listed
   // serial interface type doesn't map to a supported zircon kernel
   // driver, we don't fail out; we just move on.
-  dcfg_simple_t uart_driver;
+  zbi_dcfg_simple_t uart_driver;
   acpi_spcr_t* spcr = (acpi_spcr_t*)load_table_with_signature(rsdp, (uint8_t*)kSpcrSignature);
   uint32_t serial_driver_type = spcr_type_to_kdrv(spcr);
   if (serial_driver_type) {
@@ -316,8 +316,8 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
 
   acpi_madt_t* madt = (acpi_madt_t*)load_table_with_signature(rsdp, (uint8_t*)kMadtSignature);
   uint8_t num_cpu_nodes = 0;
-  dcfg_arm_gicv2_driver_t v2_gic_cfg;
-  dcfg_arm_gicv3_driver_t v3_gic_cfg;
+  zbi_dcfg_arm_gicv2_driver_t v2_gic_cfg;
+  zbi_dcfg_arm_gicv3_driver_t v3_gic_cfg;
   uint8_t gic_version = 0;
   if (madt != 0) {
     // Assemble CPU topology.
@@ -335,13 +335,13 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
     // Assemble a GIC config if one exists.
     gic_version = gic_driver_from_madt(madt, &v2_gic_cfg, &v3_gic_cfg);
     if (gic_version == 2) {
-      result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V2,
+      result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_GIC_V2,
                                              0, &v2_gic_cfg, sizeof(v2_gic_cfg));
       if (result != ZBI_RESULT_OK) {
         return -1;
       }
     } else if (gic_version == 3) {
-      result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V3,
+      result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_GIC_V3,
                                              0, &v3_gic_cfg, sizeof(v3_gic_cfg));
       if (result != ZBI_RESULT_OK) {
         return -1;
@@ -352,9 +352,9 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
   // Assemble a PSCI config if needed on this architecture.
   acpi_fadt_t* fadt = (acpi_fadt_t*)load_table_with_signature(rsdp, (uint8_t*)kFadtSignature);
   if (fadt != 0) {
-    dcfg_arm_psci_driver_t psci_cfg;
+    zbi_dcfg_arm_psci_driver_t psci_cfg;
     if (!psci_driver_from_fadt(fadt, &psci_cfg)) {
-      result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_PSCI, 0,
+      result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_KERNEL_DRIVER, ZBI_KERNEL_DRIVER_ARM_PSCI, 0,
                                              &psci_cfg, sizeof(psci_cfg));
       if (result != ZBI_RESULT_OK) {
         return -1;
@@ -365,10 +365,10 @@ int boot_zircon(efi_handle img, efi_system_table* sys, void* image, size_t isz, 
   // Assemble a timer config for ARM architectures.
   acpi_gtdt_t* gtdt = (acpi_gtdt_t*)load_table_with_signature(rsdp, (uint8_t*)kGtdtSignature);
   if (gtdt != 0) {
-    dcfg_arm_generic_timer_driver_t timer;
+    zbi_dcfg_arm_generic_timer_driver_t timer;
     timer_from_gtdt(gtdt, &timer);
     result = zbi_create_entry_with_payload(ramdisk, rsz, ZBI_TYPE_KERNEL_DRIVER,
-                                           KDRV_ARM_GENERIC_TIMER, 0, &timer, sizeof(timer));
+                                           ZBI_KERNEL_DRIVER_ARM_GENERIC_TIMER, 0, &timer, sizeof(timer));
     if (result != ZBI_RESULT_OK) {
       return -1;
     }

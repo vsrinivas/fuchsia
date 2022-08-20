@@ -10,7 +10,7 @@
 #include <zircon/boot/driver-config.h>
 
 // Initialization routines at the PLATFORM_EARLY and PLATFORM levels.
-void Pl011UartInitEarly(const dcfg_simple_t& config);
+void Pl011UartInitEarly(const zbi_dcfg_simple_t& config);
 void Pl011UartInitLate();
 
 #endif  // ZIRCON_KERNEL_DEV_UART_PL011_INCLUDE_DEV_UART_PL011_INIT_H_

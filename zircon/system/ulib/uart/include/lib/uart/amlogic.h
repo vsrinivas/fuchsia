@@ -95,10 +95,10 @@ struct IrqControlRegister : public hwreg::RegisterBase<IrqControlRegister, uint3
   static auto Get() { return hwreg::RegisterAddr<IrqControlRegister>(0x10); }
 };
 
-struct Driver : public DriverBase<Driver, KDRV_AMLOGIC_UART, dcfg_simple_t> {
+struct Driver : public DriverBase<Driver, ZBI_KERNEL_DRIVER_AMLOGIC_UART, zbi_dcfg_simple_t> {
   template <typename... Args>
   explicit Driver(Args&&... args)
-      : DriverBase<Driver, KDRV_AMLOGIC_UART, dcfg_simple_t>(std::forward<Args>(args)...) {}
+      : DriverBase<Driver, ZBI_KERNEL_DRIVER_AMLOGIC_UART, zbi_dcfg_simple_t>(std::forward<Args>(args)...) {}
 
   static constexpr std::string_view config_name() { return "amlogic"; }
 

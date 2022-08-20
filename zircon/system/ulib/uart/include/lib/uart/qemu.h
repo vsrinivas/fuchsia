@@ -20,13 +20,13 @@ namespace qemu {
 #ifdef __aarch64__
 
 struct Driver : public pl011::Driver {
-  Driver(dcfg_simple_t cfg = pl011::kQemuConfig) : pl011::Driver(cfg) {}
+  Driver(zbi_dcfg_simple_t cfg = pl011::kQemuConfig) : pl011::Driver(cfg) {}
 };
 
 #elif defined(__x86_64__) || defined(__i386__)
 
 struct Driver : public ns8250::PioDriver {
-  explicit Driver(dcfg_simple_pio_t cfg = ns8250::kLegacyConfig) : ns8250::PioDriver(cfg) {}
+  explicit Driver(zbi_dcfg_simple_pio_t cfg = ns8250::kLegacyConfig) : ns8250::PioDriver(cfg) {}
 };
 
 #else

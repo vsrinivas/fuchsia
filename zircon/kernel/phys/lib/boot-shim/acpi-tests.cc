@@ -60,13 +60,13 @@ TEST(BootShimTests, AcpiUartNone) {
 }
 
 TEST(BootShimTests, AcpiUartAtlas) {
-  constexpr dcfg_simple_t kAtlasUart = {.mmio_phys = 0xfe03'4000};
+  constexpr zbi_dcfg_simple_t kAtlasUart = {.mmio_phys = 0xfe03'4000};
   auto parser = acpi_lite::testing::PixelbookAtlasAcpiParser();
   ASSERT_NO_FATAL_FAILURE(AcpiUartTest(&parser, kAtlasUart));
 }
 
 TEST(BootShimTests, AcpiUartNuc) {
-  constexpr dcfg_simple_pio_t kNucUart = {.base = 0x3f8};
+  constexpr zbi_dcfg_simple_pio_t kNucUart = {.base = 0x3f8};
   auto reader = acpi_lite::testing::IntelNuc7i5dnPhysMemReader();
   auto result = acpi_lite::AcpiParser::Init(reader, reader.rsdp());
   ASSERT_TRUE(result.is_ok());

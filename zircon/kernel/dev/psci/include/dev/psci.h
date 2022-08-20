@@ -58,7 +58,7 @@
 */
 
 // Initializes the PSCI driver.
-void PsciInit(const dcfg_arm_psci_driver_t& config);
+void PsciInit(const zbi_dcfg_arm_psci_driver_t& config);
 
 uint32_t psci_get_version();
 uint32_t psci_get_feature(uint32_t psci_call);

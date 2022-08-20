@@ -442,7 +442,7 @@ static void arm_generic_timer_init_secondary_cpu(uint level) {
 LK_INIT_HOOK_FLAGS(arm_generic_timer_init_secondary_cpu, arm_generic_timer_init_secondary_cpu,
                    LK_INIT_LEVEL_THREADING - 1, LK_INIT_FLAG_SECONDARY_CPUS)
 
-void ArmGenericTimerInit(const dcfg_arm_generic_timer_driver_t& config) {
+void ArmGenericTimerInit(const zbi_dcfg_arm_generic_timer_driver_t& config) {
   uint32_t irq_phys = config.irq_phys;
   uint32_t irq_virt = config.irq_virt;
   uint32_t irq_sphys = config.irq_sphys;

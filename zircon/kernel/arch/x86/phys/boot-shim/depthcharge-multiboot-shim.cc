@@ -151,12 +151,12 @@ ktl::optional<uart::all::Driver> GetUartFromLegacyUart(LegacyBootShim::InputZbi:
     memcpy(&uart, payload.data(), sizeof(uart));
     switch (uart.type) {
       case LegacyBootdataUart::Type::kPio:
-        return uart::ns8250::PioDriver(dcfg_simple_pio_t{
+        return uart::ns8250::PioDriver(zbi_dcfg_simple_pio_t{
             .base = static_cast<uint16_t>(uart.base),
         });
 
       case LegacyBootdataUart::Type::kMmio:
-        return uart::ns8250::MmioDriver(dcfg_simple_t{.mmio_phys = uart.base});
+        return uart::ns8250::MmioDriver(zbi_dcfg_simple_t{.mmio_phys = uart.base});
     }
   }
   return std::nullopt;

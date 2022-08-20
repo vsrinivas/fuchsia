@@ -19,10 +19,10 @@ void AcpiUartItem::Init(const acpi_lite::AcpiParserInterface& parser, const char
   if (auto dbg2 = acpi_lite::GetDebugPort(parser); dbg2.is_ok()) {
     switch (dbg2->type) {
       case acpi_lite::AcpiDebugPortDescriptor::Type::kMmio:
-        set_payload(dcfg_simple_t{.mmio_phys = dbg2->address});
+        set_payload(zbi_dcfg_simple_t{.mmio_phys = dbg2->address});
         break;
       case acpi_lite::AcpiDebugPortDescriptor::Type::kPio:
-        set_payload(dcfg_simple_pio_t{.base = static_cast<uint16_t>(dbg2->address)});
+        set_payload(zbi_dcfg_simple_pio_t{.base = static_cast<uint16_t>(dbg2->address)});
         break;
     }
   }

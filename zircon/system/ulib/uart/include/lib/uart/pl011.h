@@ -20,7 +20,7 @@ namespace uart {
 namespace pl011 {
 
 // This is where QEMU puts its emulated PL011.
-constexpr dcfg_simple_t kQemuConfig{.mmio_phys = 0x09000000, .irq = 33};
+constexpr zbi_dcfg_simple_t kQemuConfig{.mmio_phys = 0x09000000, .irq = 33};
 
 // We use expanded title (first clause in the Function column of the manual)
 // rather than the acronym (Name column in the manual) for readability, except
@@ -121,8 +121,8 @@ struct InterruptClearRegister {
   static auto Get() { return InterruptRegister::Get(0x44); }
 };
 
-struct Driver : public DriverBase<Driver, KDRV_PL011_UART, dcfg_simple_t> {
-  using Base = DriverBase<Driver, KDRV_PL011_UART, dcfg_simple_t>;
+struct Driver : public DriverBase<Driver, ZBI_KERNEL_DRIVER_PL011_UART, zbi_dcfg_simple_t> {
+  using Base = DriverBase<Driver, ZBI_KERNEL_DRIVER_PL011_UART, zbi_dcfg_simple_t>;
 
   static constexpr std::string_view config_name() { return "pl011"; }
 

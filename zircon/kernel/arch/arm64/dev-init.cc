@@ -38,18 +38,18 @@ void ArmGicInitLate(const ktl::monostate& no_config) {}
 // Overloads for early UART initialization below.
 void UartInitEarly(uint32_t extra, const uart::null::Driver::config_type& config) {}
 
-void UartInitEarly(uint32_t extra, const dcfg_simple_t& config) {
+void UartInitEarly(uint32_t extra, const zbi_dcfg_simple_t& config) {
   switch (extra) {
-    case KDRV_AMLOGIC_UART:
+    case ZBI_KERNEL_DRIVER_AMLOGIC_UART:
       AmlogicS905UartInitEarly(config);
       break;
-    case KDRV_DW8250_UART:
+    case ZBI_KERNEL_DRIVER_DW8250_UART:
       Dw8250UartInitEarly(config);
       break;
-    case KDRV_MOTMOT_UART:
+    case ZBI_KERNEL_DRIVER_MOTMOT_UART:
       MotmotUartInitEarly(config);
       break;
-    case KDRV_PL011_UART:
+    case ZBI_KERNEL_DRIVER_PL011_UART:
       Pl011UartInitEarly(config);
       break;
   }
@@ -57,16 +57,16 @@ void UartInitEarly(uint32_t extra, const dcfg_simple_t& config) {
 
 void UartInitLate(uint32_t extra) {
   switch (extra) {
-    case KDRV_AMLOGIC_UART:
+    case ZBI_KERNEL_DRIVER_AMLOGIC_UART:
       AmlogicS905UartInitLate();
       break;
-    case KDRV_DW8250_UART:
+    case ZBI_KERNEL_DRIVER_DW8250_UART:
       Dw8250UartInitLate();
       break;
-    case KDRV_MOTMOT_UART:
+    case ZBI_KERNEL_DRIVER_MOTMOT_UART:
       MotmotUartInitLate();
       break;
-    case KDRV_PL011_UART:
+    case ZBI_KERNEL_DRIVER_PL011_UART:
       Pl011UartInitLate();
       break;
   }
