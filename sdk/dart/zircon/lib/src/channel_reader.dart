@@ -53,6 +53,7 @@ class ChannelReader {
       return;
     }
     _waiter!.cancel();
+    _waiter = null;
     _channel!.close();
     _channel = null;
   }
