@@ -8,8 +8,13 @@
 use {
     crate::{fms_entries_from, get_images_dir, select_product_bundle},
     anyhow::{Context, Result},
-    sdk_metadata::{ProductBundleV1, VirtualDevice},
-    std::path::{Path, PathBuf},
+    sdk_metadata::{ProductBundle, VirtualDevice},
+    std::{
+        convert::TryInto,
+        fs::File,
+        io::BufReader,
+        path::{Path, PathBuf},
+    },
 };
 
 /// Product bundle information for a virtual device.
@@ -20,7 +25,7 @@ use {
 /// The virtual device is not encapsulated because that is specifically the
 /// domain of the VirtualDeviceProduct user.
 pub struct VirtualDeviceProduct {
-    product: ProductBundleV1,
+    product: ProductBundle,
     virtual_devices: Vec<VirtualDevice>,
     images_dir: PathBuf,
 }
@@ -28,6 +33,13 @@ pub struct VirtualDeviceProduct {
 impl VirtualDeviceProduct {
     /// Get pieces necessary for starting an emulator.
     pub async fn new(product_bundle: &Option<String>) -> Result<Self> {
+        tracing::debug!("Creating VirtualDeviceProduct");
+        if let Some(s) = product_bundle {
+            let path = Path::new(s);
+            if path.exists() {
+                return Self::from_path(path).context("Creating VirtualDeviceProduct from path");
+            }
+        }
         let product_url =
             select_product_bundle(product_bundle).await.context("Selecting product bundle")?;
         let name = product_url.fragment().expect("Product name is required.");
@@ -36,7 +48,11 @@ impl VirtualDeviceProduct {
         let product = fms::find_product_bundle(&fms_entries, &Some(name.to_string()))
             .context("problem with product_bundle")?
             .to_owned();
-        let virtual_devices = fms::find_virtual_devices(&fms_entries, &product.device_refs)
+        let product = ProductBundle::ProductBundleV1(product);
+        let device_refs = match &product {
+            ProductBundle::ProductBundleV1(pbm) => &pbm.device_refs,
+        };
+        let virtual_devices = fms::find_virtual_devices(&fms_entries, device_refs)
             .context("problem with virtual device")?;
 
         let images_dir = get_images_dir(&product_url).await.context("images dir")?;
@@ -45,11 +61,34 @@ impl VirtualDeviceProduct {
 
     /// Construct a new VirtualDeviceProduct from other bits.
     pub fn from_parts(
-        product: ProductBundleV1,
+        product: ProductBundle,
         virtual_devices: Vec<VirtualDevice>,
         images_dir: PathBuf,
     ) -> Self {
         Self { product, virtual_devices, images_dir }
+    }
+
+    /// Construct a new VirtualDeviceProduct from a local file path.
+    pub fn from_path(path: &Path) -> Result<Self> {
+        tracing::debug!("Creating VirtualDeviceProduct from local path {:?}", path);
+        let pbm_path = path.join("product_bundle.json");
+        let file =
+            File::open(&pbm_path).with_context(|| format!("opening pbm_path {:?}", pbm_path))?;
+        let buf_reader = BufReader::new(file);
+        let product = ProductBundle::try_from(sdk_metadata::from_reader(buf_reader)?)
+            .expect("read product bundle metadata");
+
+        let images_dir = path.join(product.name()).join("images").to_path_buf();
+
+        let device_path = images_dir.join("virtual_device.json");
+        let file = File::open(&device_path)
+            .with_context(|| format!("opening device_path {:?}", device_path))?;
+        let buf_reader = BufReader::new(file);
+        let virtual_devices = vec![sdk_metadata::from_reader(buf_reader)?
+            .try_into()
+            .expect("read virtual device spec")];
+
+        Ok(Self { product, virtual_devices, images_dir })
     }
 
     /// Get the set of virtual devices referenced from this product bundle.
@@ -70,19 +109,19 @@ impl VirtualDeviceProduct {
     /// The name isn't necessarily related to the URL or dir. It's the name
     /// field in the json metadata.
     pub fn name(&self) -> &str {
-        &self.product.name
+        self.product.name()
     }
 
     /// Get the list of logical device names.
     pub fn device_refs(&self) -> &Vec<String> {
-        &self.product.device_refs
+        self.product.device_refs()
     }
 
     /// The manifest for the emulator.
     ///
     /// If None is returned, there is no emu manifest for this product bundle.
     pub fn emu_manifest(&self) -> &Option<sdk_metadata::EmuManifest> {
-        &self.product.manifests.emu
+        self.product.emu_manifest()
     }
 }
 
@@ -135,7 +174,7 @@ mod test {
         let sdk_root = PathBuf::from("/some/sdk-root");
 
         let bundle = VirtualDeviceProduct::from_parts(
-            pb.to_owned(),
+            ProductBundle::ProductBundleV1(pb.to_owned()),
             vec![sdk_metadata::VirtualDevice::VirtualDeviceV1(device.to_owned())],
             sdk_root.to_owned(),
         );
