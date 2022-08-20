@@ -349,6 +349,11 @@ func infraToolLogChecks() []FailureModeCheck {
 			String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.PackageRepoSetupErrorMsg),
 			Type:   swarmingOutputType,
 		},
+		// For local package server failures.
+		&stringInLogCheck{
+			String: "botanist DEBUG: [package server] failed",
+			Type:   swarmingOutputType,
+		},
 		// For fxbug.dev/65073.
 		&stringInLogCheck{
 			String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.SerialReadErrorMsg),
