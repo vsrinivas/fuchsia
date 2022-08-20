@@ -72,7 +72,7 @@ func TestServer(t *testing.T) {
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
 
 	// The package ABI revision is required.
-	cfg.PkgABIRevision = 1
+	cfg.PkgABIRevision = build.TestABIRevision
 
 	build.BuildTestPackage(cfg)
 
@@ -295,7 +295,7 @@ func TestServerV2(t *testing.T) {
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
 
 	// The package ABI revision is required.
-	cfg.PkgABIRevision = 1
+	cfg.PkgABIRevision = build.TestABIRevision
 
 	build.BuildTestPackage(cfg)
 
@@ -397,7 +397,7 @@ func TestServeAuto(t *testing.T) {
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
 
 	// The package ABI revision is required.
-	cfg.PkgABIRevision = 1
+	cfg.PkgABIRevision = build.TestABIRevision
 
 	build.BuildTestPackage(cfg)
 
@@ -534,7 +534,7 @@ func TestServeAutoIncremental(t *testing.T) {
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
 
 	// The package ABI revision is required.
-	cfg.PkgABIRevision = 1
+	cfg.PkgABIRevision = build.TestABIRevision
 
 	portFileDir, err := os.MkdirTemp("", "pm-serve-test-port-file-dir")
 	if err != nil {

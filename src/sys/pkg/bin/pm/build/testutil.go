@@ -6,6 +6,7 @@ package build
 
 import (
 	"crypto/rand"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -18,7 +19,11 @@ import (
 // TestFiles is the list of files created by the default factories in this package.
 var TestFiles = []string{"a", "b", "dir/c", "rand1", "rand2", "meta/test/t"}
 
+// API Level 6
 const TestABIRevision uint64 = 0xE9CACD17EA11859D
+
+// API Level 7
+const TestABIRevision2 uint64 = 0xECCEA2F70ACD6FC0
 
 // TestPackage initializes a set of files into a package directory next to the
 // config manifest
@@ -108,6 +113,37 @@ func BuildTestPackage(cfg *Config) {
 		panic(err)
 	}
 	if err := os.WriteFile(outputManifestPath, content, os.ModePerm); err != nil {
+		panic(err)
+	}
+}
+
+func addTestABIRevisionToManifest(cfg *Config, abiRevision uint64) {
+	abiDir := filepath.Join(filepath.Dir(cfg.ManifestPath), "package", "meta", "fuchsia.abi")
+	if err := os.MkdirAll(abiDir, os.ModePerm); err != nil {
+		panic(err)
+	}
+
+	abiPath := filepath.Join(abiDir, "abi-revision")
+	b := make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, abiRevision)
+
+	// Add the ABI revision to the package manifest.
+	f, err := os.OpenFile(cfg.ManifestPath, os.O_RDWR, 0755)
+	if err != nil {
+		panic(err)
+	}
+	if _, err := f.Seek(0, 2); err != nil {
+		panic(err)
+	}
+	if _, err := fmt.Fprintf(f, "%s=%s\n", abiRevisionKey, abiPath); err != nil {
+		panic(err)
+	}
+
+	if err := f.Close(); err != nil {
+		panic(err)
+	}
+
+	if err := os.WriteFile(abiPath, b, os.ModePerm); err != nil {
 		panic(err)
 	}
 }

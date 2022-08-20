@@ -24,8 +24,6 @@ import (
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/merkle"
 )
 
-const testABIRevision uint64 = 0xE9CACD17EA11859D
-
 // Verifies package manifests can be properly loaded.
 func TestLoadPackageManifest(t *testing.T) {
 	testCases := []struct {
@@ -280,6 +278,51 @@ func TestUpdateRequiresABIRevision(t *testing.T) {
 	}
 }
 
+func TestUpdateReadsABIRevisionFromDirectory(t *testing.T) {
+	cfg := TestConfig()
+	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
+
+	cfg.PkgABIRevision = 0
+
+	TestPackage(cfg)
+	addTestABIRevisionToManifest(cfg, TestABIRevision)
+
+	if err := Update(cfg); err != nil {
+		t.Fatalf("expected update to read ABI revision from file: %v", err)
+	}
+
+	abiOutputPath := filepath.Join(cfg.OutputDir, "meta", "fuchsia.pkg", "abi-revision")
+	if _, err := os.Stat(abiOutputPath); err == nil {
+		t.Fatalf("should not have created abi revision file: %s", abiOutputPath)
+	}
+
+}
+
+func TestUpdateRequiresManifestABIRevisionToMatchCliABIRevision(t *testing.T) {
+	cfg := TestConfig()
+	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
+
+	cfg.PkgABIRevision = TestABIRevision
+
+	TestPackage(cfg)
+	addTestABIRevisionToManifest(cfg, TestABIRevision2)
+
+	if err := Update(cfg); err == nil {
+		t.Fatalf("expected update to fail because manifest ABI revision conflicted with CLI ABI revision")
+	}
+
+	cfg.PkgABIRevision = TestABIRevision2
+
+	if err := Update(cfg); err != nil {
+		t.Fatalf("expected update to read ABI revision from file: %v", err)
+	}
+
+	abiOutputPath := filepath.Join(cfg.OutputDir, "meta", "fuchsia.pkg", "abi-revision")
+	if _, err := os.Stat(abiOutputPath); err == nil {
+		t.Fatalf("should not have created abi revision file: %s", abiOutputPath)
+	}
+}
+
 func TestValidate(t *testing.T) {
 	cfg := TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
@@ -370,6 +413,51 @@ func TestSealRequiresABIRevision(t *testing.T) {
 	}
 
 	cfg.PkgABIRevision = 0
+
+	if _, err := Seal(cfg); err != nil {
+		t.Fatal(err)
+	}
+
+	// This test only verifies that the package meta data was correctly
+	// updated, it doesn't actually verify that the contents of the far are
+	// correct.
+	metafar := filepath.Join(cfg.OutputDir, "meta.far")
+	f, err := os.Open(metafar)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	r, err := far.NewReader(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	abiBytes, err := r.ReadFile(abiRevisionKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var abiRevision uint64
+	if err := binary.Read(bytes.NewReader(abiBytes), binary.LittleEndian, &abiRevision); err != nil {
+		t.Fatal(err)
+	}
+	if abiRevision != TestABIRevision {
+		t.Fatalf("expected ABI revision to be %x, not %x", TestABIRevision, abiRevision)
+	}
+}
+
+func TestSealReadsABIRevisionFromDirectory(t *testing.T) {
+	cfg := TestConfig()
+	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
+
+	cfg.PkgABIRevision = 0
+
+	TestPackage(cfg)
+	addTestABIRevisionToManifest(cfg, TestABIRevision)
+
+	if err := Update(cfg); err != nil {
+		t.Fatalf("expected update to read ABI revision from file: %v", err)
+	}
 
 	if _, err := Seal(cfg); err != nil {
 		t.Fatal(err)

@@ -10,12 +10,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"sync"
 
+	versionHistory "go.fuchsia.dev/fuchsia/src/lib/versioning/version-history/go"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pkg"
 	far "go.fuchsia.dev/fuchsia/src/sys/pkg/lib/far/go"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/lib/merkle"
@@ -227,15 +229,35 @@ func Update(cfg *Config) error {
 }
 
 func writeABIRevision(cfg *Config, manifest *Manifest) error {
-	if cfg.PkgABIRevision == 0 {
+	// Read the ABI file from the manifest, if it exists, and validate it.
+	manifestABIRevision, err := readABIRevision(manifest)
+	if err != nil {
+		return err
+	}
+
+	if manifestABIRevision == nil && cfg.PkgABIRevision == 0 {
 		return fmt.Errorf("ABI revision is required")
 	}
 
+	var abiRevision uint64
+
+	if manifestABIRevision != nil {
+		if cfg.PkgABIRevision != 0 && *manifestABIRevision != cfg.PkgABIRevision {
+			return fmt.Errorf("Manifest ABI revision %x does not match the CLI revision %x", *manifestABIRevision, cfg.PkgABIRevision)
+		}
+
+		abiRevision = *manifestABIRevision
+	} else {
+		abiRevision = cfg.PkgABIRevision
+	}
+
 	abiDir := filepath.Join(cfg.OutputDir, "meta", "fuchsia.abi")
-	os.MkdirAll(abiDir, os.ModePerm)
+	if err := os.MkdirAll(abiDir, os.ModePerm); err != nil {
+		return err
+	}
 
 	b := make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, cfg.PkgABIRevision)
+	binary.LittleEndian.PutUint64(b, abiRevision)
 
 	path := filepath.Join(abiDir, "abi-revision")
 	if err := os.WriteFile(path, b, os.ModePerm); err != nil {
@@ -245,6 +267,49 @@ func writeABIRevision(cfg *Config, manifest *Manifest) error {
 	manifest.Paths[abiRevisionKey] = path
 
 	return nil
+}
+
+func readABIRevision(manifest *Manifest) (*uint64, error) {
+	abiPath, ok := manifest.Meta()[abiRevisionKey]
+	if !ok {
+		return nil, nil
+	}
+
+	f, err := os.Open(abiPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// The ABI revision file should be exactly 8 bytes.
+	info, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
+
+	if info.Size() != 8 {
+		return nil, fmt.Errorf("ABI revision file must be 8 bytes")
+	}
+
+	abiRevisionBytes, err := ioutil.ReadAll(f)
+	if err != nil {
+		return nil, err
+	}
+
+	// We should have only read 8 bytes.
+	if len(abiRevisionBytes) != 8 {
+		return nil, fmt.Errorf("Invalid ABI revision")
+	}
+
+	abiRevision := binary.LittleEndian.Uint64(abiRevisionBytes)
+
+	// Make sure the ABI revision is a known value.
+	for _, version := range versionHistory.Versions() {
+		if version.ABIRevision == abiRevision {
+			return &abiRevision, nil
+		}
+	}
+
+	return nil, fmt.Errorf("ABI Revision %d is not defined in the SDK", abiRevision)
 }
 
 // ErrRequiredFileMissing is returned by operations when the operation depends
