@@ -236,6 +236,7 @@ void PrettyTypeManager::AddDefaultCppPrettyTypes() {
 void PrettyTypeManager::AddDefaultRustPrettyTypes() {
   rust_tuple_type_ = std::make_unique<PrettyRustTuple>();
 
+  // Borrowed version of Str, OsStr.
   // Rust's "&str" type won't parse as an identifier, construct an Identifier manually.
   rust_.emplace_back(IdentifierGlob(ParsedIdentifier(IdentifierQualification::kRelative,
                                                      ParsedIdentifierComponent("&str"))),
@@ -245,20 +246,40 @@ void PrettyTypeManager::AddDefaultRustPrettyTypes() {
                                                                    {"len", "length"},
                                                                    {"is_empty", "length == 0"}}));
   rust_.emplace_back(
-      InternalGlob("alloc::string::String"),
-      std::make_unique<PrettyHeapString>("vec.buf.ptr.pointer as *u8", "vec.len",
-                                         GetterList{{"as_ptr", "vec.buf.ptr.pointer as *u8"},
-                                                    {"as_mut_ptr", "vec.buf.ptr.pointer as *u8"},
-                                                    {"len", "vec.len"},
-                                                    {"capacity", "vec.buf.cap"},
-                                                    {"is_empty", "vec.len == 0"}}));
-  rust_.emplace_back(InternalGlob("alloc::vec::Vec<*>"),
-                     std::make_unique<PrettyArray>("buf.ptr.pointer", "len",
-                                                   GetterList{{"as_ptr", "buf.ptr.pointer"},
-                                                              {"as_mut_ptr", "buf.ptr.pointer"},
-                                                              {"len", "len"},
-                                                              {"capacity", "buf.cap"},
-                                                              {"is_empty", "len == 0"}}));
+      IdentifierGlob(ParsedIdentifier(IdentifierQualification::kRelative,
+                                      ParsedIdentifierComponent("&std::ffi::os_str::OsStr"))),
+      std::make_unique<PrettyHeapString>("data_ptr", "length",
+                                         GetterList{{"as_ptr", "data_ptr"},
+                                                    {"as_mut_ptr", "data_ptr"},
+                                                    {"len", "length"},
+                                                    {"is_empty", "length == 0"}}));
+  // TODO(fxbug.dev/79506): Support Rust slices.
+
+  // Owned version of String, OsString and Vec.
+  rust_.emplace_back(InternalGlob("alloc::string::String"),
+                     std::make_unique<PrettyHeapString>(
+                         "vec.buf.ptr.pointer.pointer as *u8", "vec.len",
+                         GetterList{{"as_ptr", "vec.buf.ptr.pointer.pointer as *u8"},
+                                    {"as_mut_ptr", "vec.buf.ptr.pointer.pointer as *u8"},
+                                    {"len", "vec.len"},
+                                    {"capacity", "vec.buf.cap"},
+                                    {"is_empty", "vec.len == 0"}}));
+  rust_.emplace_back(InternalGlob("std::ffi::os_str::OsString"),
+                     std::make_unique<PrettyHeapString>(
+                         "inner.inner.buf.ptr.pointer.pointer as *u8", "inner.inner.len",
+                         GetterList{{"as_ptr", "inner.inner.buf.ptr.pointer.pointer as *u8"},
+                                    {"as_mut_ptr", "inner.inner.buf.ptr.pointer.pointer as *u8"},
+                                    {"len", "inner.inner.len"},
+                                    {"capacity", "inner.inner.buf.cap"},
+                                    {"is_empty", "inner.inner.len == 0"}}));
+  rust_.emplace_back(
+      InternalGlob("alloc::vec::Vec<*>"),
+      std::make_unique<PrettyArray>("buf.ptr.pointer.pointer", "len",
+                                    GetterList{{"as_ptr", "buf.ptr.pointer.pointer"},
+                                               {"as_mut_ptr", "buf.ptr.pointer.pointer"},
+                                               {"len", "len"},
+                                               {"capacity", "buf.cap"},
+                                               {"is_empty", "len == 0"}}));
 
   // A BinaryHeap is a wrapper around a "Vec" named "data".
   rust_.emplace_back(InternalGlob("alloc::collections::binary_heap::BinaryHeap<*>"),

@@ -229,8 +229,12 @@ TEST_F(PrettyTypeManagerTest, RustStringObject) {
       DwarfTag::kStructureType, "Vec<*>",
       {{"buf", MakeCollectionType(
                    DwarfTag::kStructureType, "Buffer",
-                   {{"ptr", MakeCollectionType(DwarfTag::kStructureType, "Pointer",
-                                               {{"pointer", MakeRustCharPointerType()}})}})},
+                   {{"ptr", MakeCollectionType(
+                                DwarfTag::kStructureType, "Pointer",
+                                {{"pointer",
+                                  MakeCollectionType(
+                                      DwarfTag::kStructureType, "core::ptr::non_null::NonNull<u8>",
+                                      {{"pointer", MakeRustCharPointerType()}})}})}})},
        {"len", MakeUint64Type()},
        {"cap", MakeUint64Type()}});
   SymbolTestParentSetter vec_type_parent(vec_type, vec_namespace);
