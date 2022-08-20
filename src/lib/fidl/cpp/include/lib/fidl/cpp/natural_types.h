@@ -186,9 +186,7 @@ OwnedEncodeResult Encode(FidlType value) {
 // object |FidlType|. Supported types are structs, tables, and unions. Example:
 //
 //     // Create a message referencing an encoded payload.
-//     fidl::IncomingHeaderAndMessage message = fidl::IncomingHeaderAndMessage::Create(
-//         bytes, num_bytes, handles, handle_metadata, num_handles,
-//         fidl::IncomingHeaderAndMessage::kSkipMessageHeaderValidation);
+//     fidl::EncodedMessage message = fidl::EncodedMessage::Create(byte_span);
 //
 //     // Decode the message.
 //     fitx::result decoded = fidl::Decode<fuchsia_my_lib::SomeType>(
@@ -203,7 +201,7 @@ OwnedEncodeResult Encode(FidlType value) {
 // |message| is always consumed. |metadata| informs the wire format of the
 // encoded message.
 template <typename FidlType>
-::fitx::result<::fidl::Error, FidlType> Decode(::fidl::IncomingHeaderAndMessage message,
+::fitx::result<::fidl::Error, FidlType> Decode(::fidl::EncodedMessage message,
                                                ::fidl::WireFormatMetadata metadata) {
   using internal::DefaultConstructPossiblyInvalidObjectTag;
   using internal::kCodingErrorInvalidWireFormatMetadata;
@@ -213,14 +211,13 @@ template <typename FidlType>
   using internal::NaturalCodingConstraintEmpty;
 
   static_assert(::fidl::IsFidlType<FidlType>::value, "Only FIDL types are supported");
-  ZX_ASSERT(!message.is_transactional());
 
   if (!metadata.is_valid()) {
     return ::fitx::error(
         ::fidl::Error::DecodeError(ZX_ERR_INVALID_ARGS, kCodingErrorInvalidWireFormatMetadata));
   }
 
-  uint32_t message_byte_actual = message.byte_actual();
+  size_t message_byte_actual = message.bytes().size();
   uint32_t message_handle_actual = message.handle_actual();
   ::fidl::internal::NaturalDecoder decoder(std::move(message), metadata.wire_format_version());
   size_t offset;

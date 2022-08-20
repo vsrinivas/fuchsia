@@ -34,8 +34,8 @@ TEST(OutgoingToIncomingMessage, IovecMessage) {
   auto msg = fidl::OutgoingMessage::FromEncodedCValue(&c_msg);
   auto result = fidl::OutgoingToIncomingMessage(msg);
   ASSERT_EQ(ZX_OK, result.status());
-  ASSERT_EQ(std::size(bytes1) + std::size(bytes2), result.incoming_message().byte_actual());
-  EXPECT_EQ(0, memcmp(result.incoming_message().bytes(), bytes1, std::size(bytes1)));
+  ASSERT_EQ(std::size(bytes1) + std::size(bytes2), result.incoming_message().bytes().size());
+  EXPECT_EQ(0, memcmp(result.incoming_message().bytes().data(), bytes1, std::size(bytes1)));
   EXPECT_EQ(
       0, memcmp(&result.incoming_message().bytes()[std::size(bytes1)], bytes2, std::size(bytes2)));
   ASSERT_EQ(0u, result.incoming_message().handle_actual());
@@ -71,9 +71,9 @@ TEST(OutgoingToIncomingMessage, Handles) {
   auto msg = fidl::OutgoingMessage::FromEncodedCValue(&c_msg);
   auto result = fidl::OutgoingToIncomingMessage(msg);
   ASSERT_EQ(ZX_OK, result.status());
-  fidl::IncomingHeaderAndMessage& output = result.incoming_message();
-  EXPECT_EQ(output.byte_actual(), std::size(bytes));
-  EXPECT_EQ(0, memcmp(output.bytes(), bytes, output.byte_actual()));
+  fidl::EncodedMessage& output = result.incoming_message();
+  EXPECT_EQ(output.bytes().size(), std::size(bytes));
+  EXPECT_EQ(0, memcmp(output.bytes().data(), bytes, output.bytes().size()));
   EXPECT_EQ(output.handle_actual(), 1u);
   EXPECT_EQ(output.handles()[0], ev.get());
   fidl_channel_handle_metadata_t* out_handle_metadata =

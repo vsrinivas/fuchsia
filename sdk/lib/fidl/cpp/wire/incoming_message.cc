@@ -74,58 +74,45 @@ void EncodedMessage::MoveImpl(EncodedMessage&& other) noexcept {
 
 IncomingHeaderAndMessage IncomingHeaderAndMessage::FromEncodedCMessage(
     const fidl_incoming_msg_t* c_msg) {
-  return IncomingHeaderAndMessage(EncodedMessage::FromEncodedCMessage(c_msg), true);
+  ZX_DEBUG_ASSERT(c_msg->num_bytes >= sizeof(fidl_message_header_t));
+  return IncomingHeaderAndMessage(&internal::ChannelTransport::VTable,
+                                  reinterpret_cast<uint8_t*>(c_msg->bytes), c_msg->num_bytes,
+                                  c_msg->handles, c_msg->handle_metadata, c_msg->num_handles);
 }
 
 IncomingHeaderAndMessage::~IncomingHeaderAndMessage() = default;
 
 fidl_incoming_msg_t IncomingHeaderAndMessage::ReleaseToEncodedCMessage() && {
   ZX_DEBUG_ASSERT(status() == ZX_OK);
-  return std::move(body_).ReleaseToEncodedCMessage();
+  fidl_incoming_msg_t msg = std::move(body_).ReleaseToEncodedCMessage();
+  msg.bytes = bytes_.begin();
+  msg.num_bytes = static_cast<uint32_t>(bytes_.size());
+  return msg;
 }
 
 void IncomingHeaderAndMessage::CloseHandles() && { std::move(body_).CloseHandles(); }
 
-IncomingHeaderAndMessage IncomingHeaderAndMessage::SkipTransactionHeader() {
-  ZX_ASSERT(is_transactional());
-  const internal::TransportVTable* vtable = body_.transport_vtable_;
-  fidl_handle_t* handles = body_.handles();
-  fidl_handle_metadata_t* handle_metadata = body_.raw_handle_metadata();
-  uint32_t handle_actual = body_.handle_actual();
-  std::move(*this).ReleaseHandles();
-  return IncomingHeaderAndMessage(
-      EncodedMessage(vtable,
-                     cpp20::span<uint8_t>{
-                         bytes() + sizeof(fidl_message_header_t),
-                         byte_actual() - static_cast<uint32_t>(sizeof(fidl_message_header_t))},
-                     handles, handle_metadata, handle_actual),
-      false);
-}
+EncodedMessage IncomingHeaderAndMessage::SkipTransactionHeader() && { return std::move(body_); }
 
 IncomingHeaderAndMessage::IncomingHeaderAndMessage(const fidl::Status& failure)
     : fidl::Status(failure), body_(EncodedMessage::Create({})) {
   ZX_DEBUG_ASSERT(failure.status() != ZX_OK);
 }
 
-IncomingHeaderAndMessage::IncomingHeaderAndMessage(EncodedMessage&& body, bool is_transactional)
-    : fidl::Status(fidl::Status::Ok()),
-      body_(std::move(body)),
-      is_transactional_(is_transactional) {
-  if (is_transactional) {
-    ValidateHeader();
-  }
-}
-
 IncomingHeaderAndMessage::IncomingHeaderAndMessage(
     const internal::TransportVTable* transport_vtable, uint8_t* bytes, uint32_t byte_actual,
     fidl_handle_t* handles, fidl_handle_metadata_t* handle_metadata, uint32_t handle_actual)
-    : IncomingHeaderAndMessage(EncodedMessage(transport_vtable, {bytes, byte_actual}, handles,
-                                              handle_metadata, handle_actual),
-                               true) {}
+    : fidl::Status(fidl::Status::Ok()),
+      bytes_(cpp20::span{bytes, byte_actual}),
+      body_(EncodedMessage(transport_vtable, bytes_.subspan(sizeof(fidl_message_header_t)), handles,
+                           handle_metadata, handle_actual)) {
+  ValidateHeader();
+}
 
 void IncomingHeaderAndMessage::Decode(size_t inline_size, bool contains_envelope,
                                       internal::TopLevelDecodeFn decode_fn) {
-  ZX_ASSERT(is_transactional_);
+  ZX_DEBUG_ASSERT(status() == ZX_OK);
+
   // Old versions of the C bindings will send wire format V1 payloads that are compatible
   // with wire format V2 (they don't contain envelopes). Confirm that V1 payloads don't
   // contain envelopes and are compatible with V2.
@@ -134,17 +121,6 @@ void IncomingHeaderAndMessage::Decode(size_t inline_size, bool contains_envelope
       contains_envelope) {
     SetStatus(fidl::Status::DecodeError(
         ZX_ERR_INVALID_ARGS, "wire format v1 header received with unsupported envelope"));
-    return;
-  }
-  Decode(inline_size, decode_fn, internal::WireFormatVersion::kV2, true);
-}
-
-void IncomingHeaderAndMessage::Decode(size_t inline_size, internal::TopLevelDecodeFn decode_fn,
-                                      internal::WireFormatVersion wire_format_version,
-                                      bool is_transactional) {
-  ZX_DEBUG_ASSERT(status() == ZX_OK);
-  if (wire_format_version != internal::WireFormatVersion::kV2) {
-    SetStatus(fidl::Status::DecodeError(ZX_ERR_INVALID_ARGS, "only wire format v2 supported"));
     return;
   }
 

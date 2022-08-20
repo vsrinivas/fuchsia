@@ -104,32 +104,31 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
       .status = fidl::Status::Ok(),
   };
 
-  std::optional<fidl::IncomingHeaderAndMessage> incoming_initialize_later;
+  std::optional<fidl::WireFormatMetadata> wire_format_metadata_initialize_later;
+  std::optional<fidl::EncodedMessage> incoming_initialize_later;
   constexpr bool kTransactionalMessage = fidl::IsFidlTransactionalMessage<T>::value;
   static_assert(!kTransactionalMessage);
-  incoming_initialize_later = fidl::IncomingHeaderAndMessage::Create(
-      bytes, num_bytes, handles, handle_metadata, num_handles,
-      fidl::IncomingHeaderAndMessage::kSkipMessageHeaderValidation);
-  fidl::IncomingHeaderAndMessage& incoming = incoming_initialize_later.value();
+  wire_format_metadata_initialize_later.emplace(
+      fidl::internal::WireFormatMetadataForVersion(fidl::internal::WireFormatVersion::kV2));
+  incoming_initialize_later = fidl::EncodedMessage::Create(cpp20::span<uint8_t>(bytes, num_bytes),
+                                                           handles, handle_metadata, num_handles);
+  fidl::WireFormatMetadata& wire_format_metadata = wire_format_metadata_initialize_later.value();
+  fidl::EncodedMessage& incoming = incoming_initialize_later.value();
 
-  if (!incoming.ok()) {
-    status.status = incoming;
-    return status;
-  }
   status.progress = DecoderEncoderProgress::InitializedForDecoding;
 
-  std::optional<fidl::unstable::DecodedMessage<T>> decoded_initialize_later;
-  // TODO(fxbug.dev/45252): Use FIDL at rest.
-  decoded_initialize_later.emplace(fidl::internal::WireFormatVersion::kV2, std::move(incoming));
-  fidl::unstable::DecodedMessage<T>& decoded = decoded_initialize_later.value();
+  std::optional<fitx::result<fidl::Error, fidl::DecodedValue<T>>> decoded_initialize_later;
+  decoded_initialize_later.emplace(
+      fidl::InplaceDecode<T>(std::move(incoming), wire_format_metadata));
+  fitx::result<fidl::Error, fidl::DecodedValue<T>>& decoded = decoded_initialize_later.value();
 
-  if (!decoded.ok()) {
-    status.status = decoded;
+  if (!decoded.is_ok()) {
+    status.status = decoded.error_value();
     return status;
   }
   status.progress = DecoderEncoderProgress::FirstDecodeSuccess;
 
-  T* value = decoded.PrimaryObject();
+  T* value = decoded.value().pointer();
 
   // By specifying |AllowUnownedInputRef|, we fuzz the code paths used in production message
   // passing, which uses multiple iovecs referencing input objects instead of copying.
@@ -157,13 +156,13 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
   }
   status.progress = DecoderEncoderProgress::FirstEncodeVerified;
 
-  std::optional<fidl::unstable::DecodedMessage<T>> decoded2_initialize_later;
-  decoded2_initialize_later.emplace(fidl::internal::WireFormatVersion::kV2,
-                                    std::move(conversion.incoming_message()));
-  fidl::unstable::DecodedMessage<T>& decoded2 = decoded2_initialize_later.value();
+  std::optional<fitx::result<fidl::Error, fidl::DecodedValue<T>>> decoded2_initialize_later;
+  decoded2_initialize_later.emplace(
+      fidl::InplaceDecode<T>(std::move(conversion.incoming_message()), wire_format_metadata));
+  fitx::result<fidl::Error, fidl::DecodedValue<T>>& decoded2 = decoded2_initialize_later.value();
 
-  if (!decoded2.ok()) {
-    status.status = decoded2;
+  if (!decoded2.is_ok()) {
+    status.status = decoded2.error_value();
     return status;
   }
   status.progress = DecoderEncoderProgress::SecondDecodeSuccess;
@@ -171,7 +170,7 @@ DecoderEncoderStatus DecoderEncoderImpl(uint8_t* bytes, uint32_t num_bytes, zx_h
   // In contrast to |encoded| above, |encoded2| encodes using a less common path that is explicitly
   // encoded by users and fully owns the content of the encoded message. One example of this is
   // in-process messaging.
-  T* value2 = decoded2.PrimaryObject();
+  T* value2 = decoded2.value().pointer();
   // TODO(fxbug.dev/45252): Use FIDL at rest.
   fidl::unstable::OwnedEncodedMessage<T> encoded2(fidl::internal::WireFormatVersion::kV2, value2);
 

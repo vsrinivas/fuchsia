@@ -5,7 +5,7 @@
 // This file contains manual test cases that should be migrated to GIDL
 // and be generated as part of conformance_test.cc in the future.
 
-#include <fidl/fidl.test.misc/cpp/wire.h>
+#include <fidl/fidl.test.misc/cpp/wire_types.h>
 #include <fidl/manual.conformance.large/cpp/wire.h>
 
 #include <iostream>
@@ -15,10 +15,16 @@
 
 #include <gtest/gtest.h>
 
-#include "fidl/fidl.test.misc/cpp/wire_types.h"
 #include "src/lib/fidl/llcpp/tests/conformance/conformance_utils.h"
 
 namespace llcpp_misc = ::fidl_test_misc;
+
+namespace {
+
+const auto kV2Metadata =
+    fidl::internal::WireFormatMetadataForVersion(fidl::internal::WireFormatVersion::kV2);
+
+}
 
 TEST(PrimitiveInXUnionInStruct, Success) {
   // clang-format off
@@ -54,11 +60,10 @@ TEST(PrimitiveInXUnionInStruct, Success) {
   // decode
   {
     std::vector<uint8_t> encoded_bytes = expected;
-    fidl::unstable::DecodedMessage<llcpp_misc::wire::InlineXUnionInStruct> decoded(
-        fidl::internal::WireFormatVersion::kV2, encoded_bytes.data(),
-        static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
-    ASSERT_TRUE(decoded.ok());
-    const llcpp_misc::wire::InlineXUnionInStruct& msg = *decoded.PrimaryObject();
+    fitx::result result = fidl::InplaceDecode<llcpp_misc::wire::InlineXUnionInStruct>(
+        fidl::EncodedMessage::Create(encoded_bytes), kV2Metadata);
+    ASSERT_TRUE(result.is_ok());
+    const llcpp_misc::wire::InlineXUnionInStruct& msg = result.value().value();
     ASSERT_STREQ(msg.before.begin(), &before[0]);
     ASSERT_EQ(msg.before.size(), before.size());
     ASSERT_STREQ(msg.after.begin(), &after[0]);
@@ -97,13 +102,12 @@ TEST(InlineXUnionInStruct, FailToDecodeAbsentXUnion) {
       0x00, 0x00, 0x00,                                // 3 bytes of padding
   };
   // clang-format on
-  fidl::unstable::DecodedMessage<llcpp_misc::wire::InlineXUnionInStruct> decoded(
-      fidl::internal::WireFormatVersion::kV2, encoded_bytes.data(),
-      static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
-  EXPECT_FALSE(decoded.ok());
+  fitx::result result = fidl::InplaceDecode<llcpp_misc::wire::InlineXUnionInStruct>(
+      fidl::EncodedMessage::Create(encoded_bytes), kV2Metadata);
+  EXPECT_FALSE(result.is_ok());
   // TODO(fxbug.dev/35381): Test a reason enum instead of comparing strings.
-  EXPECT_EQ(std::string(decoded.lossy_description()), "non-nullable union is absent");
-  EXPECT_EQ(decoded.status(), ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(std::string(result.error_value().lossy_description()), "non-nullable union is absent");
+  EXPECT_EQ(result.error_value().status(), ZX_ERR_INVALID_ARGS);
 }
 
 TEST(InlineXUnionInStruct, FailToDecodeZeroOrdinalXUnion) {
@@ -122,13 +126,12 @@ TEST(InlineXUnionInStruct, FailToDecodeZeroOrdinalXUnion) {
       0x00, 0x00, 0x00,                                // 3 bytes of padding
   };
   // clang-format on
-  fidl::unstable::DecodedMessage<llcpp_misc::wire::InlineXUnionInStruct> decoded(
-      fidl::internal::WireFormatVersion::kV2, encoded_bytes.data(),
-      static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
-  EXPECT_FALSE(decoded.ok());
+  fitx::result result = fidl::InplaceDecode<llcpp_misc::wire::InlineXUnionInStruct>(
+      fidl::EncodedMessage::Create(encoded_bytes), kV2Metadata);
+  EXPECT_FALSE(result.is_ok());
   // TODO(fxbug.dev/35381): Test a reason enum instead of comparing strings.
-  EXPECT_EQ(std::string(decoded.lossy_description()), "non-nullable union is absent");
-  EXPECT_EQ(decoded.status(), ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(std::string(result.error_value().lossy_description()), "non-nullable union is absent");
+  EXPECT_EQ(result.error_value().status(), ZX_ERR_INVALID_ARGS);
 }
 
 // The xunion ordinal hashing algorithm generates 32 bit values. But if it did
@@ -151,10 +154,9 @@ TEST(InlineXUnionInStruct, SuccessLargeXUnionOrdinal) {
       0x00, 0x00, 0x00,                                // 3 bytes of padding
   };
   // clang-format on
-  fidl::unstable::DecodedMessage<llcpp_misc::wire::InlineXUnionInStruct> decoded(
-      fidl::internal::WireFormatVersion::kV2, encoded_bytes.data(),
-      static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
-  ASSERT_TRUE(decoded.ok());
+  fitx::result result = fidl::InplaceDecode<llcpp_misc::wire::InlineXUnionInStruct>(
+      fidl::EncodedMessage::Create(encoded_bytes), kV2Metadata);
+  ASSERT_TRUE(result.is_ok());
 }
 
 TEST(ComplexTable, Success) {
@@ -222,11 +224,10 @@ TEST(ComplexTable, Success) {
   // decode
   {
     std::vector<uint8_t> encoded_bytes = expected;
-    fidl::unstable::DecodedMessage<llcpp_misc::wire::ComplexTable> decoded(
-        fidl::internal::WireFormatVersion::kV2, encoded_bytes.data(),
-        static_cast<uint32_t>(encoded_bytes.size()), nullptr, 0);
-    ASSERT_TRUE(decoded.ok());
-    const llcpp_misc::wire::ComplexTable& msg = *decoded.PrimaryObject();
+    fitx::result result = fidl::InplaceDecode<llcpp_misc::wire::ComplexTable>(
+        fidl::EncodedMessage::Create(encoded_bytes), kV2Metadata);
+    ASSERT_TRUE(result.is_ok());
+    const llcpp_misc::wire::ComplexTable& msg = result.value().value();
     ASSERT_TRUE(msg.has_simple());
     ASSERT_TRUE(msg.simple().has_x());
     ASSERT_EQ(msg.simple().x(), table_x);

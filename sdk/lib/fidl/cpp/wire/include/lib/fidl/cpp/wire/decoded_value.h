@@ -54,7 +54,7 @@ class DecodedValue {
   const FidlType& value() const { return *ptr_; }
 
   FidlType* pointer() { return ptr_; }
-  const FidlType& pointer() const { return ptr_; }
+  const FidlType* pointer() const { return ptr_; }
 
   FidlType& operator*() { return *ptr_; }
   const FidlType& operator*() const { return *ptr_; }

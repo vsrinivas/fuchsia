@@ -41,6 +41,8 @@ extern const char* const kCodingErrorBackingBufferSizeExceeded;
 extern const char* const kCodingErrorTooManyHandlesConsumed;
 extern const char* const kCodingErrorAbsentNonNullableHandle;
 extern const char* const kCodingErrorInvalidWireFormatMetadata;
+extern const char* const kCodingErrorDoesNotSupportV1Envelopes;
+extern const char* const kCodingErrorUnsupportedWireFormatVersion;
 extern const char* const kCodingErrorAtLeastOneIovecIsNeeded;
 extern const char* const kCodingErrorTableFrameLargerThanExpected;
 extern const char* const kCodingErrorInvalidNullEnvelope;

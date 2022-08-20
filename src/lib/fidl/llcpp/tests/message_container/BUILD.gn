@@ -32,6 +32,7 @@ fidl("fidl.llcpp.buffersize.test") {
 test("fidl_llcpp_message_container_tests_bin") {
   output_name = "fidl_llcpp_message_container_tests"
   sources = [
+    "decoded_value_test.cc",
     "encoded_test.cc",
     "incoming_message_test.cc",
     "outgoing_message_test.cc",
@@ -42,6 +43,7 @@ test("fidl_llcpp_message_container_tests_bin") {
     ":fidl.llcpp.empty.test_cpp_wire",
     ":fidl.llcpp.linearized.test_cpp_wire",
     "//sdk/testing/fidl:fidl_test_cpp_wire",
+    "//sdk/testing/fidl/types_tests:test.types_cpp_wire",
     "//src/lib/fidl/llcpp/tests:types_test_utils",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",

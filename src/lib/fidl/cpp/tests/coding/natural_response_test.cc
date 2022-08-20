@@ -54,9 +54,8 @@ TEST(NaturalResponsePayload, Decode) {
   };
   // clang-format on
   EXPECT_EQ(bytes.size(), 8U);
-  auto message = fidl::IncomingHeaderAndMessage::Create<fidl::internal::ChannelTransport>(
-      bytes.data(), static_cast<uint32_t>(bytes.size()), nullptr, nullptr, 0,
-      fidl::IncomingHeaderAndMessage::kSkipMessageHeaderValidation);
+  auto message = fidl::EncodedMessage::Create<fidl::internal::ChannelTransport>(
+      cpp20::span(bytes), nullptr, nullptr, 0);
 
   // Create a V2 |WireFormatMetadata|.
   auto metadata =

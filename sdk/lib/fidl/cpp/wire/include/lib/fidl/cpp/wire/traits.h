@@ -117,6 +117,7 @@ struct IsResource : public std::false_type {
 // |kMaxOutOfLine|  is a uint32_t specifying the upper bound on the out-of-line
 //                  message size.  It is std::numeric_limits<uint32_t>::max() if
 //                  |T| is unbounded.
+// |kHasEnvelope|   is a boolean specifying if the structure contains envelopes.
 // |kHasPointer|    is a boolean specifying if the structure contains pointer
 //                  indirections, hence requires linearization when sending.
 //

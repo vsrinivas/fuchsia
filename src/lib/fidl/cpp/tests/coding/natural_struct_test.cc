@@ -23,9 +23,8 @@ TEST(NaturalStruct, Decode) {
   };
   // clang-format on
   EXPECT_EQ(bytes.size(), 8U);
-  auto message = fidl::IncomingHeaderAndMessage::Create<fidl::internal::ChannelTransport>(
-      bytes.data(), static_cast<uint32_t>(bytes.size()), nullptr, nullptr, 0,
-      fidl::IncomingHeaderAndMessage::kSkipMessageHeaderValidation);
+  auto message = fidl::EncodedMessage::Create<fidl::internal::ChannelTransport>(
+      cpp20::span(bytes), nullptr, nullptr, 0);
 
   // Indicate V2 wire format.
   auto wire_format =
@@ -63,9 +62,8 @@ TEST(NaturalStructWithHandle, Decode) {
   };
   uint32_t handle_actual = 1;
 
-  auto message = fidl::IncomingHeaderAndMessage::Create<fidl::internal::ChannelTransport>(
-      bytes.data(), static_cast<uint32_t>(bytes.size()), handles, handle_metadata, handle_actual,
-      fidl::IncomingHeaderAndMessage::kSkipMessageHeaderValidation);
+  auto message = fidl::EncodedMessage::Create<fidl::internal::ChannelTransport>(
+      cpp20::span(bytes), handles, handle_metadata, handle_actual);
 
   // Indicate V2 wire format.
   auto wire_format =

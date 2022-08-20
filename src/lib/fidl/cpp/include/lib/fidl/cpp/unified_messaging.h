@@ -84,11 +84,10 @@ template <typename Payload = cpp17::nullopt_t>
 static auto DecodeTransactionalMessage(::fidl::IncomingHeaderAndMessage&& message)
     -> std::conditional_t<std::is_same_v<Payload, cpp17::nullopt_t>, ::fitx::result<::fidl::Error>,
                           ::fitx::result<::fidl::Error, Payload>> {
-  ZX_DEBUG_ASSERT(message.is_transactional());
   constexpr bool kHasPayload = !std::is_same_v<Payload, cpp17::nullopt_t>;
   const fidl_message_header& header = *message.header();
   auto metadata = ::fidl::WireFormatMetadata::FromTransactionalHeader(header);
-  fidl::IncomingHeaderAndMessage body_message = message.SkipTransactionHeader();
+  fidl::EncodedMessage body_message = std::move(message).SkipTransactionHeader();
 
   if constexpr (kHasPayload) {
     // Delegate into the decode logic of the payload.
@@ -98,7 +97,7 @@ static auto DecodeTransactionalMessage(::fidl::IncomingHeaderAndMessage&& messag
     }
     return ::fitx::result<::fidl::Error, Payload>(::fitx::ok(std::move(decode_result.value())));
   } else {
-    if (body_message.byte_actual() > 0) {
+    if (!body_message.bytes().empty()) {
       return ::fitx::result<::fidl::Error>(::fitx::error(
           ::fidl::Status::DecodeError(ZX_ERR_INVALID_ARGS, kCodingErrorNotAllBytesConsumed)));
     }

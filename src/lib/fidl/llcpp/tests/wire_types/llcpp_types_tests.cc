@@ -197,12 +197,13 @@ TEST(LlcppTypesTests, OwnedEncodedMessageOwns) {
 
   fidl::OutgoingToIncomingMessage converted(encoded->GetOutgoingMessage());
   ASSERT_TRUE(converted.ok());
-  fidl::unstable::DecodedMessage<VectorStruct> decoded(fidl::internal::WireFormatVersion::kV2,
-                                                       std::move(converted.incoming_message()));
-
-  ASSERT_EQ(vector_view_count, decoded.PrimaryObject()->v.count());
+  fitx::result decoded = fidl::InplaceDecode<VectorStruct>(
+      std::move(converted.incoming_message()),
+      fidl::internal::WireFormatMetadataForVersion(fidl::internal::WireFormatVersion::kV2));
+  ASSERT_TRUE(decoded.is_ok());
+  ASSERT_EQ(vector_view_count, decoded->v.count());
   for (uint32_t i = 0; i < vector_view_count; i++) {
-    EXPECT_EQ(i, decoded.PrimaryObject()->v[i]);
+    EXPECT_EQ(i, decoded->v[i]);
   }
 }
 

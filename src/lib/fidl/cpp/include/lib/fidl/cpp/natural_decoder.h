@@ -20,14 +20,14 @@ namespace fidl::internal {
 
 class NaturalDecoder final {
  public:
-  explicit NaturalDecoder(fidl::IncomingHeaderAndMessage message,
+  explicit NaturalDecoder(fidl::EncodedMessage message,
                           fidl::internal::WireFormatVersion wire_format_version);
   ~NaturalDecoder();
 
   template <typename T>
   T* GetPtr(size_t offset) {
-    ZX_DEBUG_ASSERT(offset <= body_.byte_actual());
-    return reinterpret_cast<T*>((body_.bytes() - body_offset_) + offset);
+    ZX_DEBUG_ASSERT(offset <= body_.bytes().size());
+    return reinterpret_cast<T*>(body_.bytes().data() + offset);
   }
 
   size_t GetOffset(const void* ptr) const { return GetOffset(reinterpret_cast<uintptr_t>(ptr)); }
@@ -35,8 +35,8 @@ class NaturalDecoder final {
     // The |ptr| value comes from the message buffer, which we've already
     // validated. That means it should correspond to a valid offset within the
     // message.
-    size_t offset = ptr - reinterpret_cast<uintptr_t>(body_.bytes() - body_offset_);
-    ZX_DEBUG_ASSERT(offset <= body_.byte_actual());
+    size_t offset = ptr - reinterpret_cast<uintptr_t>(body_.bytes().data());
+    ZX_DEBUG_ASSERT(offset <= body_.bytes().size());
     return offset;
   }
 
@@ -48,7 +48,7 @@ class NaturalDecoder final {
     size_t old = next_out_of_line_;
     size_t next_unaligned = next_out_of_line_ + size;
     size_t next = FIDL_ALIGN(next_unaligned);
-    if (next > body_.byte_actual()) {
+    if (next > body_.bytes().size()) {
       SetError(kCodingErrorBackingBufferSizeExceeded);
       return false;
     }
@@ -176,17 +176,10 @@ class NaturalDecoder final {
   const char* error() { return error_; }
 
  private:
-  fidl::IncomingHeaderAndMessage body_;
-
-  // The body_offset_ is either 16 (when decoding the body of a transactional message, which is
-  // itself a concatenation of 2 FIDL messages, the header and body), or 0 (when decoding a
-  // standalone "at-rest" message body).
-  uint32_t body_offset_ = 0;
+  fidl::EncodedMessage body_;
 
   uint32_t handle_index_ = 0;
-
   size_t next_out_of_line_ = 0;
-
   WireFormatVersion wire_format_version_;
 
   zx_status_t status_ = ZX_OK;

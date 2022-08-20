@@ -15,6 +15,9 @@
 
 namespace fidl {
 
+template <typename FidlType>
+class DecodedValue;
+
 namespace internal {
 
 class DecodedMessageBase;
@@ -121,6 +124,12 @@ class EncodedMessage {
 
  private:
   friend class IncomingHeaderAndMessage;
+  friend class internal::NaturalDecoder;
+  template <typename FidlType>
+  friend ::fitx::result<::fidl::Error, ::fidl::DecodedValue<FidlType>> InplaceDecode(
+      fidl::EncodedMessage message, WireFormatMetadata metadata);
+
+  const internal::TransportVTable* transport_vtable() const { return transport_vtable_; }
 
   EncodedMessage(const internal::TransportVTable* transport_vtable, cpp20::span<uint8_t> bytes,
                  fidl_handle_t* handles, fidl_handle_metadata_t* handle_metadata,
@@ -172,33 +181,34 @@ class EncodedMessage {
 //
 class IncomingHeaderAndMessage : public ::fidl::Status {
  public:
-  // Creates an object which can manage a FIDL channel message. Allocated memory is
-  // not owned by the |IncomingHeaderAndMessage|, but handles are owned by it and cleaned up
-  // when the |IncomingHeaderAndMessage| is destructed.
+  // Creates an object which can manage a FIDL message. Allocated memory is not
+  // owned by the |IncomingHeaderAndMessage|, but handles are owned by it and
+  // cleaned up when the |IncomingHeaderAndMessage| is destructed.
   //
   // The bytes must represent a transactional message. See
   // https://fuchsia.dev/fuchsia-src/reference/fidl/language/wire-format?hl=en#transactional-messages
   template <typename HandleMetadata>
-  static IncomingHeaderAndMessage Create(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles,
-                                         HandleMetadata* handle_metadata, uint32_t handle_actual) {
+  static IncomingHeaderAndMessage Create(uint8_t* bytes, uint32_t byte_actual,
+                                         fidl_handle_t* handles, HandleMetadata* handle_metadata,
+                                         uint32_t handle_actual) {
     return Create<typename internal::AssociatedTransport<HandleMetadata>>(
         bytes, byte_actual, handles, handle_metadata, handle_actual);
   }
 
-  // Creates an object which can manage a FIDL message. Allocated memory is not owned by
-  // the |IncomingHeaderAndMessage|, but handles are owned by it and cleaned up when the
-  // |IncomingHeaderAndMessage| is destructed.
+  // Creates an object which can manage a FIDL message. Allocated memory is not
+  // owned by the |IncomingHeaderAndMessage|, but handles are owned by it and
+  // cleaned up when the |IncomingHeaderAndMessage| is destructed.
   //
   // The bytes must represent a transactional message. See
   // https://fuchsia.dev/fuchsia-src/reference/fidl/language/wire-format?hl=en#transactional-messages
   template <typename Transport>
-  static IncomingHeaderAndMessage Create(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles,
+  static IncomingHeaderAndMessage Create(uint8_t* bytes, uint32_t byte_actual,
+                                         fidl_handle_t* handles,
                                          typename Transport::HandleMetadata* handle_metadata,
                                          uint32_t handle_actual) {
-    return IncomingHeaderAndMessage(
-        EncodedMessage::Create<Transport>({bytes, byte_actual}, handles, handle_metadata,
-                                          handle_actual),
-        true);
+    return IncomingHeaderAndMessage(&Transport::VTable, bytes, byte_actual, handles,
+                                    reinterpret_cast<fidl_handle_metadata_t*>(handle_metadata),
+                                    handle_actual);
   }
 
   // Creates an |IncomingHeaderAndMessage| from a C |fidl_incoming_msg_t| already in
@@ -207,43 +217,6 @@ class IncomingHeaderAndMessage : public ::fidl::Status {
   //
   // The bytes must represent a transactional message.
   static IncomingHeaderAndMessage FromEncodedCMessage(const fidl_incoming_msg_t* c_msg);
-
-  struct SkipMessageHeaderValidationTag {};
-
-  // A marker that instructs the constructor of |IncomingHeaderAndMessage| to skip
-  // validating the message header. This is useful when the message is not a
-  // transactional message.
-  constexpr inline static auto kSkipMessageHeaderValidation = SkipMessageHeaderValidationTag{};
-
-  // An overload for when the bytes do not represent a transactional message.
-  //
-  // This constructor should be rarely used in practice. When decoding
-  // FIDL types that are not transactional messages (e.g. tables), consider
-  // using the constructor in |FidlType::DecodedMessage|, which delegates
-  // here appropriately.
-  template <typename HandleMetadata>
-  static IncomingHeaderAndMessage Create(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles,
-                                         HandleMetadata* handle_metadata, uint32_t handle_actual,
-                                         SkipMessageHeaderValidationTag) {
-    return Create<internal::AssociatedTransport<HandleMetadata>>(
-        bytes, byte_actual, handles, handle_metadata, handle_actual, kSkipMessageHeaderValidation);
-  }
-
-  // An overload for when the bytes do not represent a transactional message.
-  //
-  // This constructor should be rarely used in practice. When decoding
-  // FIDL types that are not transactional messages (e.g. tables), consider
-  // using the constructor in |FidlType::DecodedMessage|, which delegates
-  // here appropriately.
-  template <typename Transport>
-  static IncomingHeaderAndMessage Create(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles,
-                                         typename Transport::HandleMetadata* handle_metadata,
-                                         uint32_t handle_actual, SkipMessageHeaderValidationTag) {
-    return IncomingHeaderAndMessage(
-        EncodedMessage::Create<Transport>({bytes, byte_actual}, handles, handle_metadata,
-                                          handle_actual),
-        false);
-  }
 
   // Creates an empty incoming message representing an error (e.g. failed to read from
   // a channel).
@@ -285,10 +258,8 @@ class IncomingHeaderAndMessage : public ::fidl::Status {
     return fit::nullable<fidl_epitaph_t*>{};
   }
 
-  bool is_transactional() const { return is_transactional_; }
-
-  uint8_t* bytes() const { return body_.bytes().begin(); }
-  uint32_t byte_actual() const { return static_cast<uint32_t>(body_.bytes().size()); }
+  uint8_t* bytes() const { return bytes_.begin(); }
+  uint32_t byte_actual() const { return static_cast<uint32_t>(bytes_.size()); }
 
   fidl_handle_t* handles() const { return body_.handles(); }
   uint32_t handle_actual() const { return body_.handle_actual(); }
@@ -314,13 +285,12 @@ class IncomingHeaderAndMessage : public ::fidl::Status {
   // This consumes the |IncomingHeaderAndMessage|.
   void CloseHandles() &&;
 
-  // Consumes self and returns a new IncomingHeaderAndMessage with the transaction
+  // Consumes self and returns an |EncodedMessage| with the transaction
   // header bytes skipped.
-  IncomingHeaderAndMessage SkipTransactionHeader();
+  EncodedMessage SkipTransactionHeader() &&;
 
  private:
   explicit IncomingHeaderAndMessage(const ::fidl::Status& failure);
-  IncomingHeaderAndMessage(EncodedMessage&& body, bool is_transactional);
   IncomingHeaderAndMessage(const internal::TransportVTable* transport_vtable, uint8_t* bytes,
                            uint32_t byte_actual, fidl_handle_t* handles,
                            fidl_handle_metadata_t* handle_metadata, uint32_t handle_actual);
@@ -343,24 +313,14 @@ class IncomingHeaderAndMessage : public ::fidl::Status {
       typename internal::AssociatedTransport<TransportObject>::MessageStorageView storage,
       const ReadOptions& options);
 
-  // Decodes the message using |decode_fn| for the specified |wire_format_version|. If this
-  // operation succeed, |status()| is ok and |bytes()| contains the decoded object.
-  //
-  // On success, the handles owned by |IncomingHeaderAndMessage| are transferred to the decoded
-  // bytes.
-  //
-  // This method should be used after a read.
-  void Decode(size_t inline_size, internal::TopLevelDecodeFn decode_fn,
-              internal::WireFormatVersion wire_format_version, bool is_transactional);
-
   // Release the handle ownership after the message has been converted to its
   // decoded form. When used standalone and not as part of a |Decode|, this
   // method is only useful when interfacing with C APIs.
   void ReleaseHandles() && { std::move(body_).ReleaseHandles(); }
 
   void MoveImpl(IncomingHeaderAndMessage&& other) noexcept {
+    bytes_ = other.bytes_;
     body_ = std::move(other.body_);
-    is_transactional_ = other.is_transactional_;
     std::move(other).ReleaseHandles();
   }
 
@@ -371,19 +331,23 @@ class IncomingHeaderAndMessage : public ::fidl::Status {
   // determining the wire format version for decoding.
   //
   // On success, the handles owned by |IncomingHeaderAndMessage| are transferred to the decoded
-  // bytes. If a buffer needs to be allocated during decode, |out_transformed_buffer| will contain
-  // that buffer. This buffer will be stored on DecodedMessageBase and stays in scope for the
-  // lifetime of the decoded message, which is responsible for freeing it.
+  // bytes.
   //
   // This method should be used after a read.
+  // TODO(fxbug.dev/82681): This should be obsoleted by |fidl::InplaceDecode|.
+  // To achieve this, we need to remove the transactional versions of
+  // |fidl::unstable::DecodedMessage|. Instead, everyone should decode just the body.
   void Decode(size_t inline_size, bool contains_envelope, internal::TopLevelDecodeFn decode_fn);
 
   // Performs basic transactional message header validation and sets the |fidl::Status| fields
   // accordingly.
   void ValidateHeader();
 
+  // The byte sequence covering the header message followed by an optional body message.
+  cpp20::span<uint8_t> bytes_;
+
+  // The body message.
   EncodedMessage body_;
-  bool is_transactional_ = false;
 };
 
 }  // namespace fidl

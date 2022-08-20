@@ -132,14 +132,6 @@ TEST(IncomingHeaderAndMessage, ValidateTransactionalMessageHeader) {
     EXPECT_EQ(ZX_ERR_PROTOCOL_NOT_SUPPORTED, incoming.status());
     EXPECT_FALSE(incoming.ok());
   }
-
-  {
-    auto incoming = fidl::IncomingHeaderAndMessage::Create<fidl::internal::ChannelTransport>(
-        bytes, static_cast<uint32_t>(std::size(bytes)), nullptr, nullptr, 0,
-        fidl::IncomingHeaderAndMessage::kSkipMessageHeaderValidation);
-    EXPECT_EQ(ZX_OK, incoming.status());
-    EXPECT_TRUE(incoming.ok());
-  }
 }
 
 class IncomingMessageChannelReadEtcTest : public ::testing::Test {

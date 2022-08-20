@@ -63,37 +63,19 @@ struct fidl::internal::AssociatedTransportImpl<TestHandleMetadata> {
   using type = TestTransport;
 };
 
-static const struct FidlCodedHandle CodingTableHandle = {.tag = kFidlTypeHandle,
-                                                         .nullable = kFidlNullability_Nonnullable};
-static const struct FidlStructElement CodingTableFields[] = {
-    FidlStructElement{
-        .field =
-            FidlStructField{
-                .header = FidlStructElementHeader{.element_type = kFidlStructElementType_Field,
-                                                  .is_resource = kFidlIsResource_Resource},
-                .offset_v2 = 0u,
-                .field_type = reinterpret_cast<const fidl_type_t*>(&CodingTableHandle)}},
-};
-const struct FidlCodedStruct CodingTableStruct = {
-    .tag = kFidlTypeStruct,
-    .contains_envelope = kFidlContainsEnvelope_DoesNotContainEnvelope,
-    .element_count = 1u,
-    .size_v2 = 4u,
-    .elements = CodingTableFields,
-    .name = "coding/Input"};
-
 struct Input {
   fidl_handle_t h;
 };
 
 template <>
 struct fidl::TypeTraits<Input> {
-  static constexpr const fidl_type_t* kType = &CodingTableStruct;
   static constexpr uint32_t kMaxNumHandles = 1;
   static constexpr uint32_t kMaxDepth = 0;
   static constexpr uint32_t kPrimarySize = 4;
   static constexpr uint32_t kPrimarySizeV1 = 4;
   static constexpr uint32_t kMaxOutOfLineV1 = 0;
+  static constexpr bool kHasEnvelope = false;
+  static constexpr bool kHasPointer = false;
 };
 
 template <bool IsRecursive>
@@ -128,10 +110,11 @@ TEST(Coding, EncodedDecode) {
   ASSERT_EQ(kTestMetadataValue, msg.handle_metadata<TestTransport>()[0].metadata);
 
   auto copied_bytes = encoded.GetOutgoingMessage().CopyBytes();
-  fidl::unstable::DecodedMessage<Input, TestTransport> decoded(
-      copied_bytes.data(), static_cast<uint32_t>(copied_bytes.size()), msg.handles(),
-      msg.handle_metadata<TestTransport>(), msg.handle_actual());
-  ASSERT_OK(decoded.status());
-
-  ASSERT_EQ(kTestHandleValue, decoded.PrimaryObject()->h);
+  fidl::EncodedMessage message = fidl::EncodedMessage::Create<TestTransport>(
+      copied_bytes, msg.handles(), msg.handle_metadata<TestTransport>(), msg.handle_actual());
+  fitx::result decoded = fidl::InplaceDecode<Input>(
+      std::move(message),
+      fidl::internal::WireFormatMetadataForVersion(fidl::internal::WireFormatVersion::kV2));
+  ASSERT_TRUE(decoded.is_ok());
+  ASSERT_EQ(kTestHandleValue, decoded->h);
 }

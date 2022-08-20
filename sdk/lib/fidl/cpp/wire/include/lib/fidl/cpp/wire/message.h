@@ -13,6 +13,7 @@
 #include <lib/fidl/cpp/wire/status.h>
 #include <lib/fidl/cpp/wire/traits.h>
 #include <lib/fidl/cpp/wire/wire_coding_traits.h>
+#include <lib/fidl/cpp/wire/wire_types.h>
 #include <lib/fidl/cpp/wire_format_metadata.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/fit/nullable.h>
@@ -65,7 +66,7 @@ class UnownedEncodedMessageBase;
 // no-op and return the contained error if the message is in an error state.
 class OutgoingMessage : public ::fidl::Status {
  public:
-  // Copy and move is disabled for the sake of avoiding double handle close.
+  // Copy and move is disabled for the sakeof avoiding double handle close.
   // It is possible to implement the move operations with correct semantics if they are
   // ever needed.
   OutgoingMessage(const OutgoingMessage&) = delete;
@@ -373,20 +374,6 @@ class DecodedMessageBase : public ::fidl::Status {
     SetStatus(msg);
   }
 
-  // Creates an |DecodedMessageBase| by decoding the incoming message |msg| as the specified
-  // |wire_format_version|.
-  // Consumes |msg|.
-  explicit DecodedMessageBase(IsTransactional<false>,
-                              internal::WireFormatVersion wire_format_version,
-                              ::fidl::IncomingHeaderAndMessage&& msg, size_t inline_size,
-                              fidl::internal::TopLevelDecodeFn decode_fn) {
-    if (msg.ok()) {
-      msg.Decode(inline_size, decode_fn, wire_format_version, false);
-      bytes_ = msg.bytes();
-    }
-    SetStatus(msg);
-  }
-
   DecodedMessageBase(const DecodedMessageBase&) = delete;
   DecodedMessageBase(DecodedMessageBase&&) = delete;
   DecodedMessageBase& operator=(const DecodedMessageBase&) = delete;
@@ -398,7 +385,7 @@ class DecodedMessageBase : public ::fidl::Status {
 
   void ResetBytes() { bytes_ = nullptr; }
 
- private:
+ protected:
   uint8_t* bytes_ = nullptr;
 };
 
@@ -652,12 +639,10 @@ class DecodedMessage<FidlType, Transport,
 template <typename FidlType, typename Transport>
 class DecodedMessage<FidlType, Transport,
                      std::enable_if_t<::fidl::IsFidlObject<FidlType>::value, void>>
-    : public ::fidl::internal::DecodedMessageBase {
-  using Base = ::fidl::internal::DecodedMessageBase;
+    : public ::fidl::Status {
+  static_assert(!IsFidlTransactionalMessage<FidlType>::value);
 
  public:
-  using Base::DecodedMessageBase;
-
   DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_t* handles = nullptr,
                  typename Transport::HandleMetadata* handle_metadata = nullptr,
                  uint32_t handle_actual = 0)
@@ -669,17 +654,20 @@ class DecodedMessage<FidlType, Transport,
                  uint32_t byte_actual, zx_handle_t* handles = nullptr,
                  typename Transport::HandleMetadata* handle_metadata = nullptr,
                  uint32_t handle_actual = 0)
-      : DecodedMessage(wire_format_version,
-                       ::fidl::IncomingHeaderAndMessage::Create(
-                           bytes, byte_actual, handles, handle_metadata, handle_actual,
-                           IncomingHeaderAndMessage::kSkipMessageHeaderValidation)) {}
+      : DecodedMessage(wire_format_version, ::fidl::EncodedMessage::Create<Transport>(
+                                                cpp20::span<uint8_t>{bytes, byte_actual}, handles,
+                                                handle_metadata, handle_actual)) {}
 
-  DecodedMessage(internal::WireFormatVersion wire_format_version,
-                 ::fidl::IncomingHeaderAndMessage&& msg)
-      : Base(Base::template IsTransactional<IsFidlTransactionalMessage<FidlType>::value>(),
-             wire_format_version, std::move(msg),
-             internal::TopLevelCodingTraits<FidlType>::inline_size,
-             internal::MakeTopLevelDecodeFn<FidlType>()) {}
+  DecodedMessage(internal::WireFormatVersion wire_format_version, ::fidl::EncodedMessage&& msg)
+      : Status(::fidl::Status::Ok()) {
+    ::fitx::result result = ::fidl::InplaceDecode<FidlType>(
+        std::move(msg), ::fidl::internal::WireFormatMetadataForVersion(wire_format_version));
+    if (result.is_error()) {
+      Status::operator=(result.error_value());
+      return;
+    }
+    value_ = std::move(result.value());
+  }
 
   explicit DecodedMessage(const fidl_incoming_msg_t* c_msg)
       : DecodedMessage(static_cast<uint8_t*>(c_msg->bytes), c_msg->num_bytes, c_msg->handles,
@@ -694,30 +682,27 @@ class DecodedMessage<FidlType, Transport,
                        reinterpret_cast<fidl_channel_handle_metadata_t*>(c_msg->handle_metadata),
                        c_msg->num_handles) {}
 
-  ~DecodedMessage() {
-    if constexpr (::fidl::IsResource<FidlType>::value) {
-      if (Base::ok() && (PrimaryObject() != nullptr)) {
-        PrimaryObject()->_CloseHandles();
-      }
-    }
-  }
+  ~DecodedMessage() = default;
 
   FidlType* PrimaryObject() {
-    ZX_DEBUG_ASSERT(Base::ok());
-    return reinterpret_cast<FidlType*>(Base::bytes());
+    ZX_DEBUG_ASSERT(ok());
+    return value_.pointer();
   }
 
   // Release the ownership of the decoded message. That means that the handles won't be closed
   // When the object is destroyed.
   // After calling this method, the |DecodedMessage| object should not be used anymore.
-  void ReleasePrimaryObject() { Base::ResetBytes(); }
+  void ReleasePrimaryObject() { value_.Release(); }
 
   ::fidl::DecodedValue<FidlType> Take() {
-    ZX_ASSERT(Base::ok());
+    ZX_ASSERT(ok());
     FidlType* value = PrimaryObject();
     ReleasePrimaryObject();
     return ::fidl::DecodedValue<FidlType>(value);
   }
+
+ private:
+  ::fidl::DecodedValue<FidlType> value_;
 };
 
 }  // namespace unstable
@@ -726,6 +711,7 @@ class DecodedMessage<FidlType, Transport,
 //
 // |OutgoingToIncomingMessage| objects own the bytes and handles resulting from
 // conversion.
+// TODO(fxbug.dev/107222): Rename to |OutgoingToEncodedMessage|.
 class OutgoingToIncomingMessage {
  public:
   // Converts an outgoing message to an incoming message.
@@ -744,29 +730,31 @@ class OutgoingToIncomingMessage {
 
   ~OutgoingToIncomingMessage() = default;
 
-  fidl::IncomingHeaderAndMessage& incoming_message() & {
+  fidl::EncodedMessage& incoming_message() & {
     ZX_DEBUG_ASSERT(ok());
     return incoming_message_;
   }
 
   [[nodiscard]] fidl::Error error() const {
     ZX_DEBUG_ASSERT(!ok());
-    return incoming_message_;
+    return status_;
   }
-  [[nodiscard]] zx_status_t status() const { return incoming_message_.status(); }
-  [[nodiscard]] bool ok() const { return incoming_message_.ok(); }
+  [[nodiscard]] zx_status_t status() const { return status_.status(); }
+  [[nodiscard]] bool ok() const { return status_.ok(); }
   [[nodiscard]] std::string FormatDescription() const;
 
  private:
-  static fidl::IncomingHeaderAndMessage ConversionImpl(
+  static fidl::EncodedMessage ConversionImpl(
       OutgoingMessage& input, OutgoingMessage::CopiedBytes& buf_bytes,
       std::unique_ptr<zx_handle_t[]>& buf_handles,
-      std::unique_ptr<fidl_channel_handle_metadata_t[]>& buf_handle_metadata);
+      std::unique_ptr<fidl_channel_handle_metadata_t[]>& buf_handle_metadata,
+      fidl::Status& out_status);
 
+  fidl::Status status_;
   OutgoingMessage::CopiedBytes buf_bytes_;
   std::unique_ptr<zx_handle_t[]> buf_handles_ = {};
   std::unique_ptr<fidl_channel_handle_metadata_t[]> buf_handle_metadata_ = {};
-  fidl::IncomingHeaderAndMessage incoming_message_;
+  fidl::EncodedMessage incoming_message_;
 };
 
 }  // namespace fidl

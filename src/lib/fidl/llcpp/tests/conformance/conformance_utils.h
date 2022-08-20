@@ -175,14 +175,15 @@ bool DecodeSuccess(fidl::internal::WireFormatVersion wire_format_version, FidlTy
         .rights = handle_info.rights,
     });
   }
-  fidl::unstable::DecodedMessage<FidlType> decoded(
-      wire_format_version, bytes.data(), static_cast<uint32_t>(bytes.size()), handles.data(),
-      handle_metadata.data(), static_cast<uint32_t>(handle_infos.size()));
-  if (!decoded.ok()) {
-    std::cout << "Decoding failed: " << decoded.error() << std::endl;
+  fitx::result<fidl::Error, fidl::DecodedValue<FidlType>> result = fidl::InplaceDecode<FidlType>(
+      fidl::EncodedMessage::Create(bytes, handles.data(), handle_metadata.data(),
+                                   static_cast<uint32_t>(handle_infos.size())),
+      fidl::internal::WireFormatMetadataForVersion(wire_format_version));
+  if (!result.is_ok()) {
+    std::cout << "Decoding failed: " << result.error_value() << std::endl;
     return false;
   }
-  return equality_check(*decoded.PrimaryObject());
+  return equality_check(result.value().value());
 }
 
 // Verifies that |bytes| fails to decode as |FidlType|, with the expected error
@@ -201,17 +202,19 @@ bool DecodeFailure(fidl::internal::WireFormatVersion wire_format_version,
         .rights = handle_info.rights,
     });
   }
-  fidl::unstable::DecodedMessage<FidlType> decoded(
-      wire_format_version, bytes.data(), static_cast<uint32_t>(bytes.size()), handles.data(),
-      handle_metadata.data(), static_cast<uint32_t>(handle_infos.size()));
-  if (decoded.ok()) {
+  fitx::result<fidl::Error, fidl::DecodedValue<FidlType>> result = fidl::InplaceDecode<FidlType>(
+      fidl::EncodedMessage::Create(bytes, handles.data(), handle_metadata.data(),
+                                   static_cast<uint32_t>(handle_infos.size())),
+      fidl::internal::WireFormatMetadataForVersion(wire_format_version));
+  if (result.is_ok()) {
     std::cout << "Decoding unexpectedly succeeded" << std::endl;
     return false;
   }
-  if (decoded.status() != expected_error_code) {
-    std::cout << "Decoding failed with error code " << zx_status_get_string(decoded.status())
-              << " (" << decoded.error() << "), but expected error code "
-              << zx_status_get_string(expected_error_code) << std::endl;
+  if (result.error_value().status() != expected_error_code) {
+    std::cout << "Decoding failed with error code "
+              << zx_status_get_string(result.error_value().status()) << " (" << result.error_value()
+              << "), but expected error code " << zx_status_get_string(expected_error_code)
+              << std::endl;
     return false;
   }
   return true;

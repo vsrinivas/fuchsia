@@ -47,7 +47,10 @@ const char* const kCodingErrorBackingBufferSizeExceeded = "backing buffer size e
 const char* const kCodingErrorTooManyHandlesConsumed =
     "more handles consumed than exist in message";
 const char* const kCodingErrorAbsentNonNullableHandle = "non-nullable handle is absent";
+const char* const kCodingErrorDoesNotSupportV1Envelopes =
+    "does not support decoding envelopes in the V1 wire format";
 const char* const kCodingErrorInvalidWireFormatMetadata = "invalid wire format metadata";
+const char* const kCodingErrorUnsupportedWireFormatVersion = "unsupported wire format version";
 const char* const kCodingErrorAtLeastOneIovecIsNeeded = "at least one iovec is needed";
 const char* const kCodingErrorTableFrameLargerThanExpected = "table frame larger than expected";
 const char* const kCodingErrorInvalidNullEnvelope = "null envelope contained non-null bytes";
