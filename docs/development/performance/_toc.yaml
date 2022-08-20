@@ -10,3 +10,5 @@ toc:
   path: /docs/development/performance/chromeperf_user_guide.md
 - title: "Fuchsiaperf format for performance test results"
   path: /docs/development/performance/fuchsiaperf_format.md
+- title: "Metric name expectation files"
+  path: /docs/development/performance/metric_name_expectations.md
