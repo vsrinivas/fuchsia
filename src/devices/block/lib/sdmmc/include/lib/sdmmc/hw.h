@@ -173,6 +173,11 @@ __BEGIN_CDECLS
 #define MMC_EXT_CSD_REL_WR_SEC_C 222
 #define MMC_EXT_CSD_BOOT_SIZE_MULT 226
 #define MMC_EXT_CSD_GENERIC_CMD6_TIME 248
+#define MMC_EXT_CSD_DEVICE_LIFE_TIME_EST_TYP_A 268
+#define MMC_EXT_CSD_DEVICE_LIFE_TIME_EST_TYP_B 267
+
+// All invalid values are set to this.
+#define MMC_EXT_CSD_DEVICE_LIFE_TIME_EST_INVALID 0xc
 
 // Device register (CMD13 response) fields (SD/MMC)
 #define MMC_STATUS_ADDR_OUT_OF_RANGE (1 << 31)
