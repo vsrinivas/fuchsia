@@ -690,7 +690,7 @@
         <tr>
             <td><code>in</code></td>
             <td>
-                <code>request&lt;<a class='link' href='#DiscoverableProtocol'>DiscoverableProtocol</a>&gt;?</code>
+                <code>server_end&lt;<a class='link' href='#DiscoverableProtocol'>DiscoverableProtocol</a>&gt;?</code>
             </td>
         </tr>
 </table>
@@ -703,7 +703,7 @@
         <tr>
             <td><code>out</code></td>
             <td>
-                <code>request&lt;<a class='link' href='#DiscoverableProtocol'>DiscoverableProtocol</a>&gt;</code>
+                <code>server_end&lt;<a class='link' href='#DiscoverableProtocol'>DiscoverableProtocol</a>&gt;</code>
             </td>
         </tr>
 </table>
@@ -755,7 +755,7 @@
         <tr id="ProtocolEnds.server">
             <td><code>server</code></td>
             <td>
-                <code>request&lt;<a class='link' href='#DiscoverableProtocol'>DiscoverableProtocol</a>&gt;</code>
+                <code>server_end&lt;<a class='link' href='#DiscoverableProtocol'>DiscoverableProtocol</a>&gt;</code>
             </td>
             <td></td>
             <td>No default</td>
@@ -771,7 +771,7 @@
         <tr id="ProtocolEnds.server_opt">
             <td><code>server_opt</code></td>
             <td>
-                <code>request&lt;<a class='link' href='#DiscoverableProtocol'>DiscoverableProtocol</a>&gt;?</code>
+                <code>server_end&lt;<a class='link' href='#DiscoverableProtocol'>DiscoverableProtocol</a>&gt;?</code>
             </td>
             <td></td>
             <td>No default</td>

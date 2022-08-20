@@ -40,7 +40,7 @@
         <tr id="FdfHandles.server_end_driver">
             <td><code>server_end_driver</code></td>
             <td>
-                <code>request&lt;<a class='link' href='#DriverProtocol'>DriverProtocol</a>&gt;</code>
+                <code>server_end&lt;<a class='link' href='#DriverProtocol'>DriverProtocol</a>&gt;</code>
             </td>
             <td></td>
             <td>No default</td>
@@ -319,7 +319,7 @@
         <tr id="Handles.request_some_protocol">
             <td><code>request_some_protocol</code></td>
             <td>
-                <code>request&lt;<a class='link' href='#SomeProtocol'>SomeProtocol</a>&gt;</code>
+                <code>server_end&lt;<a class='link' href='#SomeProtocol'>SomeProtocol</a>&gt;</code>
             </td>
             <td></td>
             <td>No default</td>

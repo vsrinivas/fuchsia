@@ -55,7 +55,7 @@
         <tr id="ServerEndWrapper.value">
             <td><code>value</code></td>
             <td>
-                <code>request&lt;<a class='link' href='#DriverProtocol'>DriverProtocol</a>&gt;</code>
+                <code>server_end&lt;<a class='link' href='#DriverProtocol'>DriverProtocol</a>&gt;</code>
             </td>
             <td></td>
             <td>No default</td>

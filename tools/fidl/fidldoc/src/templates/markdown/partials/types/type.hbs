@@ -19,7 +19,7 @@
                     handle&lt;{{type.subtype}}&gt;
                 {{~ else ~}}
                     {{~ #if (eq type.kind "request") ~}}
-                        request&lt;{{~ pl type.subtype @root.name ~}}&gt;
+                        server_end&lt;{{~ pl type.subtype @root.name ~}}&gt;
                     {{~ else ~}}
                         {{~ type.kind ~}}
                     {{~ /if ~}}

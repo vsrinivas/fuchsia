@@ -48,7 +48,7 @@
         <tr>
             <td><code>r</code></td>
             <td>
-                <code>request&lt;<a class='link' href='#Child'>Child</a>&gt;</code>
+                <code>server_end&lt;<a class='link' href='#Child'>Child</a>&gt;</code>
             </td>
         </tr>
 </table>
@@ -79,7 +79,7 @@
         <tr>
             <td><code>r</code></td>
             <td>
-                <code>request&lt;<a class='link' href='#Child'>Child</a>&gt;</code>
+                <code>server_end&lt;<a class='link' href='#Child'>Child</a>&gt;</code>
             </td>
         </tr>
 </table>

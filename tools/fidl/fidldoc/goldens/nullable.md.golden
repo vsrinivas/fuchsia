@@ -100,7 +100,7 @@
         <tr id="StructWithNullableRequest.val">
             <td><code>val</code></td>
             <td>
-                <code>request&lt;<a class='link' href='#SimpleProtocol'>SimpleProtocol</a>&gt;?</code>
+                <code>server_end&lt;<a class='link' href='#SimpleProtocol'>SimpleProtocol</a>&gt;?</code>
             </td>
             <td></td>
             <td>No default</td>
