@@ -7,7 +7,7 @@
 //! to a minimum, while improving our ability to fully test the conversion code.
 
 use crate::{DeviceConfig, EmulatorConfiguration, GuestConfig, PortMapping, VirtualCpu};
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, Result};
 
 /// - `data_root` is a path to a directory. When working in-tree it's the path
 ///   to build output dir; when using the SDK it's the path to the downloaded
@@ -39,10 +39,7 @@ pub fn convert_bundle_to_configs(
 
     let data_root = bundle.images_dir();
     if let Some(template) = &virtual_device.start_up_args_template {
-        emulator_configuration.runtime.template =
-            data_root.join(&template).canonicalize().with_context(|| {
-                format!("canonicalize template path {:?}", data_root.join(&template))
-            })?;
+        emulator_configuration.runtime.template = data_root.join(&template);
     }
 
     if let Some(ports) = &virtual_device.ports {
@@ -82,16 +79,12 @@ mod tests {
         AudioDevice, AudioModel, CpuArchitecture, DataAmount, DataUnits, ElementType, EmuManifest,
         InputDevice, Manifests, PointingDevice, Screen, ScreenUnits,
     };
-    use sdk_metadata::{ProductBundle, ProductBundleV1, VirtualDevice, VirtualDeviceV1};
+    use sdk_metadata::{ProductBundleV1, VirtualDeviceV1};
     use std::collections::HashMap;
+    use std::path::PathBuf;
 
     #[test]
-    fn test_convert_bundle_to_configs() {
-        let temp_dir = tempfile::TempDir::new().expect("creating sdk_root temp dir");
-        let sdk_root = temp_dir.path();
-        let template_path = sdk_root.join("fake_template");
-        std::fs::write(&template_path, b"").expect("create fake template file");
-
+    fn test_convert_bundle_to_configs() -> Result<()> {
         // Set up some test data to pass into the conversion routine.
         let mut pb = ProductBundleV1 {
             description: Some("A fake product bundle".to_string()),
@@ -122,17 +115,19 @@ mod tests {
                 memory: DataAmount { quantity: 4, units: DataUnits::Gigabytes },
                 window_size: Screen { height: 480, width: 640, units: ScreenUnits::Pixels },
             },
-            start_up_args_template: Some(template_path.to_string_lossy().to_string()),
+            start_up_args_template: Some("path/to/template".to_string()),
             ports: None,
         };
 
+        let sdk_root = PathBuf::from("/some/sdk-root");
+
         // Run the conversion, then assert everything in the config matches the manifest data.
         let bundle = pbms::VirtualDeviceProduct::from_parts(
-            ProductBundle::ProductBundleV1(pb.to_owned()),
-            vec![VirtualDevice::VirtualDeviceV1(device.to_owned())],
+            pb.to_owned(),
+            vec![sdk_metadata::VirtualDevice::VirtualDeviceV1(device.to_owned())],
             sdk_root.to_owned(),
         );
-        let config = convert_bundle_to_configs(bundle).expect("convert_bundle_to_configs");
+        let config = convert_bundle_to_configs(bundle)?;
         assert_eq!(config.device.audio, device.hardware.audio);
         assert_eq!(config.device.cpu.architecture, device.hardware.cpu.arch);
         assert_eq!(config.device.memory, device.hardware.memory);
@@ -170,7 +165,7 @@ mod tests {
             memory: DataAmount { quantity: 2048, units: DataUnits::Megabytes },
             window_size: Screen { height: 1024, width: 1280, units: ScreenUnits::Pixels },
         };
-        device.start_up_args_template = Some(template_path.to_string_lossy().to_string());
+        device.start_up_args_template = Some("path/to/template".to_string());
 
         let mut ports = HashMap::new();
         ports.insert("ssh".to_string(), 22);
@@ -178,12 +173,11 @@ mod tests {
         device.ports = Some(ports);
 
         let bundle = pbms::VirtualDeviceProduct::from_parts(
-            ProductBundle::ProductBundleV1(pb.to_owned()),
-            vec![VirtualDevice::VirtualDeviceV1(device.to_owned())],
+            pb.to_owned(),
+            vec![sdk_metadata::VirtualDevice::VirtualDeviceV1(device.to_owned())],
             sdk_root.to_owned(),
         );
-        let mut config =
-            convert_bundle_to_configs(bundle).expect("convert_bundle_to_configs again");
+        let mut config = convert_bundle_to_configs(bundle)?;
 
         // Verify that all of the new values are loaded and match the new manifest data.
         assert_eq!(config.device.audio, device.hardware.audio);
@@ -214,5 +208,6 @@ mod tests {
             config.host.port_map.remove("debug").unwrap(),
             PortMapping { host: None, guest: 2345 }
         );
+        Ok(())
     }
 }
