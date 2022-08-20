@@ -26,8 +26,7 @@ pub(crate) async fn make_configs(
     ffx_config: &FfxConfigWrapper,
 ) -> Result<EmulatorConfiguration> {
     let bundle: pbms::VirtualDeviceProduct = pbms::VirtualDeviceProduct::new(&cmd.product_bundle)
-        .await
-        .context("creating VirtualDeviceProduct")?;
+        .await?;
     if cmd.verbose {
         println!(
             "Found PBM {:?}, device_refs {:?}, virtual_device {:?}.",

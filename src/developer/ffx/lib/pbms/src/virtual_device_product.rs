@@ -37,7 +37,11 @@ impl VirtualDeviceProduct {
         if let Some(s) = product_bundle {
             let path = Path::new(s);
             if path.exists() {
-                return Self::from_path(path).context("Creating VirtualDeviceProduct from path");
+                match Self::from_path(path).context("Creating VirtualDeviceProduct from path") {
+                    Ok(s) => return Ok(s),
+                    Err(e) => tracing::debug!("failed loading VirtualDeviceProduct \
+                        from local file path {:?} due to {:?}.", path, e),
+                }
             }
         }
         let product_url =
