@@ -6,6 +6,7 @@
 
 #include <fuchsia/boot/c/fidl.h>
 #include <lib/elfldltl/machine.h>
+#include <lib/fidl/txn_header.h>
 #include <lib/processargs/processargs.h>
 #include <lib/stdcompat/array.h>
 #include <lib/stdcompat/source_location.h>
@@ -306,9 +307,7 @@ void StashSvc(const zx::debuglog& log, const zx::channel& stash, std::string_vie
               zx::channel svc_end) {
   zx_handle_t h = svc_end.release();
   fuchsia_boot_SvcStashStoreRequestMessage request = {};
-  request.hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  request.hdr.at_rest_flags[0] = FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2;
-  request.hdr.ordinal = fuchsia_boot_SvcStashStoreOrdinal;
+  fidl_init_txn_header(&request.hdr, 0, fuchsia_boot_SvcStashStoreOrdinal, 0);
   request.svc_endpoint = FIDL_HANDLE_PRESENT;
 
   auto status = stash.write(0, &request, sizeof(request), &h, 1);

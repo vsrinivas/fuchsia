@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/debugdata/c/fidl.h>
+#include <lib/fidl/txn_header.h>
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -35,10 +36,7 @@ _fuchsia_io_DirectoryOpen(zx_handle_t channel, uint32_t flags, uint32_t mode, co
   }
   FIDL_ALIGNDECL char wr_bytes[sizeof(fuchsia_io_DirectoryOpenRequest) + fuchsia_io_MAX_PATH] = {};
   fuchsia_io_DirectoryOpenRequest* request = (fuchsia_io_DirectoryOpenRequest*)wr_bytes;
-  // TODO(fxbug.dev/38643) use fidl_init_txn_header once it is inline
-  request->hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  request->hdr.at_rest_flags[0] = FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2;
-  request->hdr.ordinal = fuchsia_io_DirectoryOpenOrdinal;
+  fidl_init_txn_header(&request->hdr, 0, fuchsia_io_DirectoryOpenOrdinal, 0);
   request->flags = flags;
   request->mode = mode;
   request->path.data = (char*)FIDL_ALLOC_PRESENT;
@@ -66,10 +64,7 @@ _fuchsia_debugdata_PublisherPublish(zx_handle_t debug_data_channel, const char* 
                                fuchsia_io_MAX_NAME_LENGTH] = {};
   fuchsia_debugdata_PublisherPublishRequestMessage* request =
       (fuchsia_debugdata_PublisherPublishRequestMessage*)wr_bytes;
-  // TODO(fxbug.dev/38643) use fidl_init_txn_header once it is inline
-  request->hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  request->hdr.at_rest_flags[0] = FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2;
-  request->hdr.ordinal = fuchsia_debugdata_PublisherPublishOrdinal;
+  fidl_init_txn_header(&request->hdr, 0, fuchsia_debugdata_PublisherPublishOrdinal, 0);
   request->data_sink.data = (char*)FIDL_ALLOC_PRESENT;
   request->data_sink.size = data_sink_size;
   request->data = FIDL_HANDLE_PRESENT;

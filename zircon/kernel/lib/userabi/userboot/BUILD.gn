@@ -99,6 +99,7 @@ if (toolchain_environment == "userboot") {
       ":gen-vdso-syms-ld",
       "//sdk/fidl/fuchsia.boot:fuchsia.boot_c_header",
       "//sdk/lib/fidl",
+      "//sdk/lib/fidl_base",
       "//src/lib/elfldltl",
       "//src/lib/zbitl",
       "//src/zircon/lib/zircon",
