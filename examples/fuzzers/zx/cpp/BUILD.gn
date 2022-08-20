@@ -1,0 +1,17 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+
+executable("bin") {
+  output_name = "hello_fuzzy_world"
+  sources = [ "zx.cc" ]
+}
+
+fuchsia_component("hello-fuzzy-world-component") {
+  component_name = "hello-fuzzy-world"
+  manifest = "meta/hello_fuzzy_world.cml"
+  deps = [ ":bin" ]
+}

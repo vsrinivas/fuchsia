@@ -1,0 +1,22 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    // Enable system logging capabilities
+    include: [ "syslog/client.shard.cml" ],
+
+    // Information about the program to run
+    program: {
+        // Use the built-in ELF runner for the executable
+        runner: "elf",
+        binary: "bin/hello_fuzzy_world",
+
+        // Pass non-0 to make the fuzzer run deterministically (good for
+        // reproducing crashes), or pass 0 for nondeterministic chaos.
+        args: [ "0" ],
+
+        // Enable stdout logging
+        forward_stderr_to: "log",
+        forward_stdout_to: "log",
+    },
+}

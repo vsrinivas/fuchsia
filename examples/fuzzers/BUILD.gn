@@ -46,6 +46,8 @@ fuzzers_package("fuzzing-examples") {
     "rust:toy_example_with_main",
   ]
 
+  deps = [ "zx" ]
+
   # TODO(fxbug.dev/91051): Go fuzzer tests flake.
   # go_fuzzers = [ "go:basic_fuzzer" ]
 }
