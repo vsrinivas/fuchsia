@@ -37,6 +37,7 @@ _fuchsia_io_DirectoryOpen(zx_handle_t channel, uint32_t flags, uint32_t mode, co
   fuchsia_io_DirectoryOpenRequest* request = (fuchsia_io_DirectoryOpenRequest*)wr_bytes;
   // TODO(fxbug.dev/38643) use fidl_init_txn_header once it is inline
   request->hdr.magic_number = kFidlWireFormatMagicNumberInitial;
+  request->hdr.at_rest_flags[0] = FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2;
   request->hdr.ordinal = fuchsia_io_DirectoryOpenOrdinal;
   request->flags = flags;
   request->mode = mode;
@@ -67,6 +68,7 @@ _fuchsia_debugdata_PublisherPublish(zx_handle_t debug_data_channel, const char* 
       (fuchsia_debugdata_PublisherPublishRequestMessage*)wr_bytes;
   // TODO(fxbug.dev/38643) use fidl_init_txn_header once it is inline
   request->hdr.magic_number = kFidlWireFormatMagicNumberInitial;
+  request->hdr.at_rest_flags[0] = FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2;
   request->hdr.ordinal = fuchsia_debugdata_PublisherPublishOrdinal;
   request->data_sink.data = (char*)FIDL_ALLOC_PRESENT;
   request->data_sink.size = data_sink_size;

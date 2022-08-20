@@ -307,6 +307,7 @@ void StashSvc(const zx::debuglog& log, const zx::channel& stash, std::string_vie
   zx_handle_t h = svc_end.release();
   fuchsia_boot_SvcStashStoreRequestMessage request = {};
   request.hdr.magic_number = kFidlWireFormatMagicNumberInitial;
+  request.hdr.at_rest_flags[0] = FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2;
   request.hdr.ordinal = fuchsia_boot_SvcStashStoreOrdinal;
   request.svc_endpoint = FIDL_HANDLE_PRESENT;
 

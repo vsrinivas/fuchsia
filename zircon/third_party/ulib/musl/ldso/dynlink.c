@@ -98,7 +98,7 @@ struct dso {
   struct funcdesc {
     void* addr;
     size_t* got;
-  } * funcdescs;
+  }* funcdescs;
   size_t* got;
   bool in_dlsym;
   struct dso* buf[];
@@ -356,10 +356,9 @@ __NO_SAFESTACK NO_ASAN static inline void dso_set_prev(struct dso* p, struct dso
 // is a PLT call that uses ShadowCallStack.
 __asm__(".weakref memcpy,__libc_memcpy");
 __asm__(".weakref memset,__libc_memset");
-__asan_weak_ref("memcpy")
-__asan_weak_ref("memset")
+__asan_weak_ref("memcpy") __asan_weak_ref("memset")
 
-__NO_SAFESTACK NO_ASAN static void decode_vec(ElfW(Dyn) * v, size_t* a, size_t cnt) {
+    __NO_SAFESTACK NO_ASAN static void decode_vec(ElfW(Dyn) * v, size_t* a, size_t cnt) {
   size_t i;
   for (i = 0; i < cnt; i++)
     a[i] = 0;
@@ -2578,6 +2577,7 @@ __NO_SAFESTACK zx_status_t dl_clone_loader_service(zx_handle_t* out) {
   memset(&req, 0, sizeof(req));
   req.hdr.ordinal = LDMSG_OP_CLONE;
   req.hdr.magic_number = kFidlWireFormatMagicNumberInitial;
+  req.hdr.at_rest_flags[0] = FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2;
   req.clone.object = FIDL_HANDLE_PRESENT;
 
   ldmsg_rsp_t rsp;
