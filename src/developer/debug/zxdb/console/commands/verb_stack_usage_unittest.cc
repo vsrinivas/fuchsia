@@ -30,6 +30,14 @@ TEST_F(VerbStackUsage, GetThreadStackUsage) {
   ASSERT_GE(kPageSize, kUsedBytes);
   const uint64_t kStackPointer = kStackBase - kUsedBytes;
 
+  // Same values for the unsafe stack.
+  const uint64_t kUnsafeStackBase = 0x9000000;
+  const uint64_t kUnsafeStackSizeInPages = 20;
+  const uint64_t kUnsafeStackSize = kUnsafeStackSizeInPages * kPageSize;
+  const uint64_t kUnsafeUsedBytes = 0x103;
+  ASSERT_GE(kPageSize, kUnsafeUsedBytes);
+  const uint64_t kUnsafeStackPointer = kUnsafeStackBase - kUnsafeUsedBytes;
+
   // Set up the thread to be stopped with the given stack pointer.
   std::vector<std::unique_ptr<Frame>> frames;
   Location location(Location::State::kSymbolized, 0x1000);
@@ -49,6 +57,7 @@ TEST_F(VerbStackUsage, GetThreadStackUsage) {
   other_region.depth = 1;
   other_region.vmo_koid = 1234;
 
+  // Safe stack region.
   debug_ipc::AddressRegion& stack_region = aspace.emplace_back();
   stack_region.base = kStackBase - kStackSize;
   stack_region.size = kStackSize;
@@ -57,12 +66,36 @@ TEST_F(VerbStackUsage, GetThreadStackUsage) {
   constexpr uint64_t kCommittedPages = 3;
   stack_region.committed_pages = kCommittedPages;
 
+  // Unused region.
+  debug_ipc::AddressRegion& other_region2 = aspace.emplace_back();
+  other_region2.base = kStackBase + 0x1000;
+  other_region2.size = 0x1000;
+  other_region2.depth = 1;
+  other_region2.vmo_koid = 99990;
+
+  // Unsafe stack region.
+  debug_ipc::AddressRegion& unsafe_region = aspace.emplace_back();
+  unsafe_region.base = kUnsafeStackBase - kUnsafeStackSize;
+  unsafe_region.size = kUnsafeStackSize;
+  unsafe_region.depth = 1;
+  unsafe_region.vmo_koid = 64291;
+  constexpr uint64_t kUnsafeCommittedPages = 5;
+  unsafe_region.committed_pages = kUnsafeCommittedPages;
+
   // Good query.
-  ThreadStackUsage usage = GetThreadStackUsage(&console().context(), aspace, thread());
-  EXPECT_EQ(usage.total, kStackSize);
-  EXPECT_EQ(usage.used, kUsedBytes);
-  EXPECT_EQ(usage.committed, kCommittedPages * kPageSize);
-  EXPECT_EQ(usage.wasted, (kCommittedPages - 1) * kPageSize);  // Actually used one page.
+  ThreadStackUsage usage =
+      GetThreadStackUsage(&console().context(), aspace, thread(), kUnsafeStackPointer);
+  ASSERT_TRUE(usage.safe_stack.ok());
+  EXPECT_EQ(usage.safe_stack.value().total, kStackSize);
+  EXPECT_EQ(usage.safe_stack.value().used, kUsedBytes);
+  EXPECT_EQ(usage.safe_stack.value().committed, kCommittedPages * kPageSize);
+  EXPECT_EQ(usage.safe_stack.value().wasted, (kCommittedPages - 1) * kPageSize);
+
+  ASSERT_TRUE(usage.unsafe_stack.ok());
+  EXPECT_EQ(usage.unsafe_stack.value().total, kUnsafeStackSize);
+  EXPECT_EQ(usage.unsafe_stack.value().used, kUnsafeUsedBytes);
+  EXPECT_EQ(usage.unsafe_stack.value().committed, kUnsafeCommittedPages * kPageSize);
+  EXPECT_EQ(usage.unsafe_stack.value().wasted, (kUnsafeCommittedPages - 1) * kPageSize);
 }
 
 }  // namespace zxdb
