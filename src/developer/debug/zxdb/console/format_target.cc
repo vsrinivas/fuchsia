@@ -43,12 +43,16 @@ OutputBuffer FormatTarget(ConsoleContext* context, const Target* target) {
     out.Append(Syntax::kVariable, " name");
     out.Append("=" + FormatConsoleString(process->GetName()));
     if (auto component = process->GetComponentInfo()) {
-      out.Append(Syntax::kVariable, " moniker");
+      // The component info can be long, put on separate lines.
+      out.Append("\n");
+      out.Append(Syntax::kVariable, "  moniker");
       out.Append("=" + FormatConsoleString(component->moniker));
-      out.Append(Syntax::kVariable, " component_url");
+      out.Append("\n");
+      out.Append(Syntax::kVariable, "  url");
       out.Append("=" + FormatConsoleString(component->url));
     }
   }
+  out.Append("\n");
 
   return out;
 }

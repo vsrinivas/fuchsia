@@ -64,7 +64,7 @@ TEST_F(VerbAttach, Koid) {
   auto event = console().GetOutputEvent();
   EXPECT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   EXPECT_EQ(
-      "Attached Process 2 state=Running koid=" + kLargeKoidInString + " name=\"some process\"",
+      "Attached Process 2 state=Running koid=" + kLargeKoidInString + " name=\"some process\"\n",
       event.output.AsString());
 
   // Attaching to the same process again should give an error.

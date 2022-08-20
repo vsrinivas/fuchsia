@@ -27,7 +27,7 @@ TEST_F(VerbSymStat, SymStat) {
 
   auto event = console().GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  ASSERT_EQ("Attached Process 2 state=Running koid=1234 name=<mock>", event.output.AsString());
+  ASSERT_EQ("Attached Process 2 state=Running koid=1234 name=<mock>\n", event.output.AsString());
 
   auto target = console().context().GetActiveTarget();
   ASSERT_NE(nullptr, target);

@@ -23,14 +23,15 @@ TEST(FormatTarget, FormatTarget) {
   context.DidCreateTarget(&target);
 
   // There's a default target.
-  EXPECT_EQ("Process 2 state=\"Not running\"", FormatTarget(&context, &target).AsString());
+  EXPECT_EQ("Process 2 state=\"Not running\"\n", FormatTarget(&context, &target).AsString());
 
   MockProcess process(&session);
   target.SetRunningProcess(&process);
 
   EXPECT_EQ(
-      "Process 2 state=Running koid=0 name=\"Mock process\" moniker=/moniker "
-      "component_url=schema://url#meta/component.cm",
+      "Process 2 state=Running koid=0 name=\"Mock process\"\n"
+      "  moniker=/moniker\n"
+      "  url=schema://url#meta/component.cm\n",
       FormatTarget(&context, &target).AsString());
 }
 
