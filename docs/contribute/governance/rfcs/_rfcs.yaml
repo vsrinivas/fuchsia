@@ -2392,3 +2392,16 @@
   reviewers: ['abarth@google.com', 'brunodalbo@google.com', 'dhobsd@google.com']
   submitted: '2022-07-15'
   reviewed: '2022-08-17'
+
+- name: 'RFC-0185'
+  title: 'Remove `zx_interrupt_bind_vcpu`'
+  short_description: 'Remove the `zx_interrupt_bind_vcpu` syscall, which is no longer required.'
+  authors: ['abdulla@google.com']
+  file: '0185_remove_zx_interrupt_bind_vcpu.md'
+  area: ['Virtualization']
+  issue: ['104712']
+  gerrit_change_id: ['701396']
+  status: 'Accepted'
+  reviewers: ['maniscalco@google.com', 'tjdetwiler@google.com', 'travisg@google.com', 'zarvox@google.com']
+  submitted: '2022-08-19'
+  reviewed: '2022-08-19'
