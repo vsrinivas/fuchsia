@@ -294,16 +294,9 @@ EncodedMessage OutgoingToIncomingMessage::ConversionImpl(
   uint32_t num_handles = input.handle_actual();
   input.ReleaseHandles();
 
-  if (num_handles > ZX_CHANNEL_MAX_MSG_HANDLES) {
-    FidlHandleCloseMany(handles, num_handles);
-    out_status = fidl::Status::EncodeError(ZX_ERR_OUT_OF_RANGE);
-    return fidl::EncodedMessage::Create({});
-  }
-
   // Note: it may be possible to remove these allocations.
-  buf_handles = std::make_unique<zx_handle_t[]>(ZX_CHANNEL_MAX_MSG_HANDLES);
-  buf_handle_metadata =
-      std::make_unique<fidl_channel_handle_metadata_t[]>(ZX_CHANNEL_MAX_MSG_HANDLES);
+  buf_handles = std::make_unique<zx_handle_t[]>(num_handles);
+  buf_handle_metadata = std::make_unique<fidl_channel_handle_metadata_t[]>(num_handles);
   for (uint32_t i = 0; i < num_handles; i++) {
     const char* error;
     zx_status_t status = FidlEnsureActualHandleRights(&handles[i], handle_metadata[i].obj_type,
@@ -319,13 +312,6 @@ EncodedMessage OutgoingToIncomingMessage::ConversionImpl(
   }
 
   buf_bytes = input.CopyBytes();
-  if (buf_bytes.size() > ZX_CHANNEL_MAX_MSG_BYTES) {
-    FidlHandleCloseMany(handles, num_handles);
-    FidlHandleCloseMany(buf_handles.get(), num_handles);
-    out_status = fidl::Status::EncodeError(ZX_ERR_INVALID_ARGS);
-    return fidl::EncodedMessage::Create({});
-  }
-
   out_status = fidl::Status::Ok();
   return fidl::EncodedMessage::Create(cpp20::span<uint8_t>{buf_bytes}, buf_handles.get(),
                                       buf_handle_metadata.get(), num_handles);

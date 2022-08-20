@@ -41,6 +41,27 @@ TEST(OutgoingToIncomingMessage, IovecMessage) {
   ASSERT_EQ(0u, result.incoming_message().handle_actual());
 }
 
+TEST(OutgoingToIncomingMessage, LargeMessage) {
+  constexpr uint32_t kLargeMessageSize = 1024 * 1024;  // 1 MiB
+  std::vector<uint8_t> bytes(kLargeMessageSize);
+  for (size_t i = 0; i < kLargeMessageSize; i++) {
+    bytes[i] = i % 0xFF;
+  }
+  fidl_outgoing_msg_t c_msg = {
+      .type = FIDL_OUTGOING_MSG_TYPE_BYTE,
+      .byte =
+          {
+              .bytes = bytes.data(),
+              .num_bytes = kLargeMessageSize,
+          },
+  };
+  auto msg = fidl::OutgoingMessage::FromEncodedCValue(&c_msg);
+  auto result = fidl::OutgoingToIncomingMessage(msg);
+  ASSERT_EQ(ZX_OK, result.status());
+  EXPECT_EQ(bytes, std::vector(result.incoming_message().bytes().begin(),
+                               result.incoming_message().bytes().end()));
+}
+
 #ifdef __Fuchsia__
 // Test that |OutgoingToIncomingMessage| converts handle metadata.
 TEST(OutgoingToIncomingMessage, Handles) {
