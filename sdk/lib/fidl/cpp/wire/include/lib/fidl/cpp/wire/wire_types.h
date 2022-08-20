@@ -5,14 +5,18 @@
 #ifndef LIB_FIDL_CPP_WIRE_INCLUDE_LIB_FIDL_CPP_WIRE_WIRE_TYPES_H_
 #define LIB_FIDL_CPP_WIRE_INCLUDE_LIB_FIDL_CPP_WIRE_WIRE_TYPES_H_
 
+#include <lib/fidl/cpp/wire/decoded_value.h>
 #include <lib/fidl/cpp/wire/envelope.h>
 #include <lib/fidl/cpp/wire/object_view.h>
 #include <lib/fidl/cpp/wire/wire_coding_traits.h>
-
-#include <algorithm>
+#include <lib/fidl/cpp/wire_format_metadata.h>
+#include <lib/stdcompat/span.h>
+#include <zircon/assert.h>
 
 #ifdef __Fuchsia__
 #include <lib/fidl/cpp/wire/internal/transport_channel.h>
+#else
+#include <lib/fidl/cpp/wire/internal/transport_channel_host.h>
 #endif  // __Fuchsia__
 
 // # Wire domain objects

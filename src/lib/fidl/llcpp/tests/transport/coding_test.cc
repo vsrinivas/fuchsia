@@ -35,7 +35,7 @@ zx_status_t decode_process_handle(fidl_handle_t* handle, fidl::internal::HandleA
 void close_handle(fidl_handle_t h) { ZX_ASSERT(h == kTestHandleValue); }
 
 void(close_handle_many)(const fidl_handle_t* handles, size_t num_handles) {
-  ZX_ASSERT(num_handles == 1);
+  ZX_ASSERT_MSG(num_handles == 1, "expected 1 handle, got %d", static_cast<uint32_t>(num_handles));
   close_handle(*handles);
 }
 
@@ -124,6 +124,7 @@ TEST(Coding, EncodedDecode) {
   ASSERT_OK(encoded.status());
   auto& msg = encoded.GetOutgoingMessage();
 
+  ASSERT_EQ(1, msg.handle_actual());
   ASSERT_EQ(kTestMetadataValue, msg.handle_metadata<TestTransport>()[0].metadata);
 
   auto copied_bytes = encoded.GetOutgoingMessage().CopyBytes();
