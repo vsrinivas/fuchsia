@@ -1,0 +1,10 @@
+{
+    "skips": [
+        {
+            "paths": [
+                "{root}/.empty"
+            ],
+            "notes": []
+        }
+    ]
+}
