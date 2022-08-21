@@ -539,10 +539,8 @@ group("pathdiff") {
   public_deps = [ ":pathdiff-v0_2_1" ]
 }
 
-if (!(current_os == "fuchsia")) {
-  group("pem") {
-    public_deps = [ ":pem-v0_8_3" ]
-  }
+group("pem") {
+  public_deps = [ ":pem-v0_8_3" ]
 }
 
 group("percent-encoding") {
