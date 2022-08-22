@@ -843,7 +843,7 @@ struct BinderThreadState {
     /// issues a [`BINDER_IOCTL_WRITE_READ`] ioctl, it will read from this command queue.
     command_queue: VecDeque<Command>,
     /// The [`Waiter`] object the binder thread is waiting on when there are no commands in the
-    /// command queue. If `None`, the binder thread is not currently waiting.
+    /// command queue. If empty, the binder thread is not currently waiting.
     waiter: WaiterRef,
 }
 
