@@ -1632,8 +1632,6 @@ ChildFunctions:
           - Kind:            'ParagraphComment'
             Children:
               - Kind:            'TextComment'
-                Text:            ' TODO(fxbug.dev/38643): make this inline'
-              - Kind:            'TextComment'
                 Text:            ' Initialize a txn header as per the Transaction Header v3 proposal (FTP-037)'
     Location:
       - LineNumber:      14

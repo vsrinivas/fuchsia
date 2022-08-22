@@ -254,7 +254,7 @@ void LoadObjectLdmsg(fidl::UnownedClientEnd<fldsvc::Loader> client, const char* 
                      zx::status<> expected) {
   size_t req_len;
   ldmsg_req_t req;
-  ldmsg_req_init_txn_header(&req, LDMSG_OP_LOAD_OBJECT);
+  ldmsg_req_init_txn_header(&req.header, LDMSG_OP_LOAD_OBJECT);
   zx_status_t status = ldmsg_req_encode(&req, &req_len, object_name, strlen(object_name));
   ASSERT_OK(status);
 

@@ -2471,8 +2471,7 @@ __NO_SAFESTACK static zx_status_t loader_svc_rpc(uint64_t ordinal, const void* d
   // the stack size too much.  Calls to this function are always
   // serialized anyway, so there is no danger of collision.
   static ldmsg_req_t req;
-  // TODO(38643) use fidl_init_txn_header once it is inline
-  ldmsg_req_init_txn_header(&req, ordinal);
+  ldmsg_req_init_txn_header(&req.header, ordinal);
 
   size_t req_len;
   zx_status_t status = ldmsg_req_encode(&req, &req_len, (const char*)data, len);
@@ -2566,18 +2565,15 @@ __NO_SAFESTACK zx_status_t dl_clone_loader_service(zx_handle_t* out) {
   if ((status = _zx_channel_create(0, &h0, &h1)) != ZX_OK) {
     return status;
   }
-  // TODO(38643) use fidl_init_txn_header once it is inline
   struct {
-    fidl_message_header_t hdr;
+    fidl_message_header_t header;
     ldmsg_clone_t clone;
   } req;
   // Memset to 0 first because ldmsg_clone_t has 4 bytes of padding, which the
   // FIDL wire format requires to be zero.
   // TODO(fxbug.dev/42907): Make these cases less error-prone.
   memset(&req, 0, sizeof(req));
-  req.hdr.ordinal = LDMSG_OP_CLONE;
-  req.hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  req.hdr.at_rest_flags[0] = FIDL_MESSAGE_HEADER_AT_REST_FLAGS_0_USE_VERSION_V2;
+  ldmsg_req_init_txn_header(&req.header, LDMSG_OP_CLONE);
   req.clone.object = FIDL_HANDLE_PRESENT;
 
   ldmsg_rsp_t rsp;
