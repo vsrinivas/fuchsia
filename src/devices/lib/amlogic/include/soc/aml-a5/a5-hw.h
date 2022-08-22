@@ -59,6 +59,9 @@
 #define A5_EMMC_C_BASE 0xfe08c000
 #define A5_EMMC_C_LENGTH 0x2000
 
+// DMC
+#define A5_DMC_BASE 0xfe036000
+#define A5_DMC_LENGTH 0x400
 // NNA
 
 // Power domain
@@ -109,6 +112,8 @@
 #define A5_AUDIO_FRDDR_A 68  // 36+32
 #define A5_AUDIO_FRDDR_B 69  // 37+32
 #define A5_AUDIO_FRDDR_C 70  // 38+32
+
+#define A5_DDR_BW_IRQ 110  // 78+32
 
 #define A5_USB_IDDIG_IRQ 161  // 129+32
 #define A5_USB2DRD_IRQ 162    // 130+32

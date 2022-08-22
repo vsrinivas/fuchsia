@@ -189,6 +189,9 @@ TEST_F(DeviceEnumerationTest, Av400Test) {
       "class/thermal/000",
       "sys/platform/00:00:1b/sysmem",
       "tee/optee",
+
+      // RAM (DDR) control.
+      "sys/platform/05:07:24/ram",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));

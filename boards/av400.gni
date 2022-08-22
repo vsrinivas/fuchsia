@@ -26,6 +26,7 @@ _common_bootfs_deps = [
   "//src/devices/power/drivers/aml-meson-power",
   "//src/devices/pwm/drivers/aml-pwm",
   "//src/devices/pwm/drivers/aml-pwm-init",
+  "//src/devices/ram/drivers/aml-ram",
   "//src/devices/registers/drivers/registers",
   "//src/devices/rtc/drivers/aml-rtc",
   "//src/devices/spi/drivers/aml-spi",

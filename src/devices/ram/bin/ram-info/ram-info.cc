@@ -19,43 +19,57 @@ namespace {
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wc99-designator"
-constexpr ram_info::RamDeviceInfo kDevices[] = {
-    {
-        // Astro
-        .devfs_path = "/dev/sys/platform/05:03:24/ram",
-        .default_cycles_to_measure = 456000000 / 20,  // 456 Mhz, 50 ms.
-        .default_channels =
+constexpr ram_info::RamDeviceInfo
+    kDevices[] =
+        {
             {
-                [0] = {.name = "cpu", .mask = aml_ram::kDefaultChannelCpu},
-                [1] = {.name = "gpu", .mask = aml_ram::kDefaultChannelGpu},
-                [2] = {.name = "vdec", .mask = aml_ram::kDefaultChannelVDec},
-                [3] = {.name = "vpu", .mask = aml_ram::kDefaultChannelVpu},
+                // Astro
+                .devfs_path = "/dev/sys/platform/05:03:24/ram",
+                .default_cycles_to_measure = 456000000 / 20,  // 456 Mhz, 50 ms.
+                .default_channels =
+                    {
+                        [0] = {.name = "cpu", .mask = aml_ram::kDefaultChannelCpu},
+                        [1] = {.name = "gpu", .mask = aml_ram::kDefaultChannelGpu},
+                        [2] = {.name = "vdec", .mask = aml_ram::kDefaultChannelVDec},
+                        [3] = {.name = "vpu", .mask = aml_ram::kDefaultChannelVpu},
+                    },
             },
-    },
-    {
-        // Sherlock
-        .devfs_path = "/dev/sys/platform/05:04:24/ram",
-        .default_cycles_to_measure = 792000000 / 20,  // 792 Mhz, 50 ms.
-        .default_channels =
             {
-                [0] = {.name = "cpu", .mask = aml_ram::kDefaultChannelCpu},
-                [1] = {.name = "gpu", .mask = aml_ram::kDefaultChannelGpu},
-                [2] = {.name = "vdec", .mask = aml_ram::kDefaultChannelVDec},
-                [3] = {.name = "vpu", .mask = aml_ram::kDefaultChannelVpu},
+                // Sherlock
+                .devfs_path = "/dev/sys/platform/05:04:24/ram",
+                .default_cycles_to_measure = 792000000 / 20,  // 792 Mhz, 50 ms.
+                .default_channels =
+                    {
+                        [0] = {.name = "cpu", .mask = aml_ram::kDefaultChannelCpu},
+                        [1] = {.name = "gpu", .mask = aml_ram::kDefaultChannelGpu},
+                        [2] = {.name = "vdec", .mask = aml_ram::kDefaultChannelVDec},
+                        [3] = {.name = "vpu", .mask = aml_ram::kDefaultChannelVpu},
+                    },
             },
-    },
-    {
-        // Nelson
-        .devfs_path = "/dev/sys/platform/05:05:24/ram",
-        .default_cycles_to_measure = 456000000 / 20,  // 456 Mhz, 50 ms.
-        .default_channels =
             {
-                [0] = {.name = "cpu", .mask = aml_ram::kDefaultChannelCpu},
-                [1] = {.name = "gpu", .mask = aml_ram::kDefaultChannelGpu},
-                [2] = {.name = "vdec", .mask = aml_ram::kDefaultChannelVDec},
-                [3] = {.name = "vpu", .mask = aml_ram::kDefaultChannelVpu},
+                // Nelson
+                .devfs_path = "/dev/sys/platform/05:05:24/ram",
+                .default_cycles_to_measure = 456000000 / 20,  // 456 Mhz, 50 ms.
+                .default_channels =
+                    {
+                        [0] = {.name = "cpu", .mask = aml_ram::kDefaultChannelCpu},
+                        [1] = {.name = "gpu", .mask = aml_ram::kDefaultChannelGpu},
+                        [2] = {.name = "vdec", .mask = aml_ram::kDefaultChannelVDec},
+                        [3] = {.name = "vpu", .mask = aml_ram::kDefaultChannelVpu},
+                    },
             },
-    },
+            {
+                // Av400
+                .devfs_path = "/dev/sys/platform/05:07:24/ram",
+                .default_cycles_to_measure = 660'000'000 / 20,  // 660 Mhz, 50 ms.
+                .default_channels =
+                    {
+                        [0] = {.name = "cpu", .mask = aml_ram::kDefaultChannelCpu},
+                        [1] = {.name = "nna", .mask = aml_ram::kA5PortIdNNA},
+                        [2] = {.name = "dsp", .mask = aml_ram::kA5PortIdDsp},
+                        [3] = {.name = "test", .mask = aml_ram::kA5PortIdTest},
+                    },
+            },
 };
 #pragma GCC diagnostic pop
 

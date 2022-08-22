@@ -9,6 +9,47 @@
 
 namespace aml_ram {
 
+// NOTE:
+// Port "DEVICE" is total name for small bandwidth device.
+// There are many small bandwidth devices such as nand/arb/parser
+// connected to dmc under port "device", for better configure of
+// these devices, re-number them with start ID of 32
+//
+// EXAMPLE:
+//
+//            A5 DMC CONTROLLER
+//                   |
+//   -------------------------------
+//   |    |    |    |        |     |
+//  arm  nnq  dev1 test     dev0   dsp
+//  (0)  (3)  (6)   (5)     (7)    (4)
+//             |             |
+//       -------------    -----------------
+//       |     |     |    | ...  |    |    |
+//     spicc1 eth spicc0 sdio  emmc  usb  audio
+//      (32)  (33)  (34) (40)  (42)  (43) (44)
+//
+// When port < 32 :
+//  set "dmc_offsets_.ctrl1_offset" to 'old_val | (1 << port)'
+//  set "dmc_offsets_.ctrl2_offset" to '0xffff'.
+//
+// When port >= 32: (The driver has not implemented this function)
+//  set "dmc_offsets_.ctrl1_offset" to '1 << 6' or '1 << 7'. (select the device port)
+//  set "dmc_offsets_.ctrl2_offset" to 'old_val | (1 << y)'.
+//
+//   if (port - 32) >= 8;
+//       y = port - 32 - 8
+//   else
+//       y = port - 32
+//
+//  e.g. set port -> sdio
+//    port = 40;
+//    y = 40 - 32 - 8 = 0;
+//
+//  ctrl1_offset = 1 << 7; (device0)
+//  ctrl2_offset |= 1 << 0;
+//
+
 // Astro and Sherlock ports.
 constexpr uint64_t kPortIdArmAe = 0x01u << 0;
 constexpr uint64_t kPortIdMali = 0x01u << 1;
@@ -32,6 +73,19 @@ constexpr uint64_t kPortIdNNA = 0x01u << 10;
 constexpr uint64_t kPortIdGDC = 0x01u << 11;
 constexpr uint64_t kPortIdMipiIsp = 0x01u << 12;
 constexpr uint64_t kPortIdArmAf = 0x01u << 13;
+// A5-only ports
+constexpr uint64_t kA5PortIdNNA = 0x01u << 3;
+constexpr uint64_t kA5PortIdDsp = 0x01u << 4;
+constexpr uint64_t kA5PortIdTest = 0x01u << 5;
+constexpr uint64_t kA5PortIdDev1 = 0x01u << 6;
+constexpr uint64_t kA5PortIdDev0 = 0x01u << 7;
+constexpr uint64_t kA5Sub0PortIdSpicc1 = 0x01ul << 32;
+constexpr uint64_t kA5Sub0PortIdEth = 0x01ul << 33;
+constexpr uint64_t kA5Sub0PortIdSpicc0 = 0x01ul << 34;
+constexpr uint64_t kA5Sub1PortIdSdio = 0x01ul << 41;
+constexpr uint64_t kA5Sub1PortIdEmmc = 0x01ul << 42;
+constexpr uint64_t kA5Sub1PortIdUsb = 0x01ul << 43;
+constexpr uint64_t kA5Sub1PortIdAudio = 0x01ul << 44;
 
 constexpr uint64_t kDefaultChannelCpu = kPortIdArmAe;
 constexpr uint64_t kDefaultChannelGpu = kPortIdMali;

@@ -7,10 +7,12 @@
 
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.hardware.ram.metrics/cpp/wire.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/port.h>
+#include <zircon/syscalls/smc.h>
 
 #include <deque>
 #include <thread>
@@ -30,34 +32,11 @@ namespace amlogic_ram {
 // refer to hardware, not to zircon objects.
 constexpr size_t MEMBW_MAX_CHANNELS = 4u;
 
-// Controls start,stop and if polling or interrupt mode.
-constexpr uint32_t MEMBW_PORTS_CTRL = (0x0020 << 2);
+// For `dmc_reg_ctl.port_ctrl_offset`
+// Bit31 qos_mon_en;
+// Bit30 qos_mon irq clear;
 constexpr uint32_t DMC_QOS_ENABLE_CTRL = (0x01 << 31);
 constexpr uint32_t DMC_QOS_CLEAR_CTRL = (0x01 << 30);
-
-// Returns all granted cycles.
-constexpr uint32_t MEMBW_ALL_GRANT_CNT = (0x2a << 2);
-
-// Returns the granted cycles per channel.
-constexpr uint32_t MEMBW_C0_GRANT_CNT = (0x2b << 2);
-constexpr uint32_t MEMBW_C1_GRANT_CNT = (0x2c << 2);
-constexpr uint32_t MEMBW_C2_GRANT_CNT = (0x2d << 2);
-constexpr uint32_t MEMBW_C3_GRANT_CNT = (0x2e << 2);
-
-// Controls how long to measure cycles for.
-constexpr uint32_t MEMBW_TIMER = (0x002f << 2);
-
-// Controls which ports are assigned to each channel.
-constexpr uint32_t MEMBW_RP[MEMBW_MAX_CHANNELS] = {(0x0021 << 2), (0x0023 << 2), (0x0025 << 2),
-                                                   (0x0027 << 2)};
-
-// Controls which subports are assigned to each channel.
-constexpr uint32_t MEMBW_SP[MEMBW_MAX_CHANNELS] = {(0x0022 << 2), (0x0024 << 2), (0x0026 << 2),
-                                                   (0x0028 << 2)};
-
-// Contains the DDR frequency.
-// TODO(reveman): Understand why we use 0x0300 instead of 0x0000.
-constexpr uint32_t MEMBW_PLL_CNTL = (0x0300 << 2);
 
 // Sticky bit that holds the DDR windowing tool results
 // address is: 0xff638804
@@ -66,6 +45,68 @@ constexpr uint32_t DMC_STICKY_1 = 0x804;
 
 constexpr uint64_t kMinimumCycleCount = 1024 * 512;
 constexpr uint64_t kMaximumCycleCount = 0xffffffff;
+
+typedef struct dmc_reg_ctl {
+  uint32_t port_ctrl_offset;  // Controls start,stop and if polling or interrupt mode.
+                              // Bit31 qos_mon_en;
+                              // Bit30 qos_mon irq clear;
+                              // Bit[x:0] BW monitor [?] enable
+  uint32_t timer_offset;      // Controls how long to measure cycles for.
+
+  // Controls which ports are assigned to each channel.
+  uint32_t ctrl1_offset[MEMBW_MAX_CHANNELS];
+  // Controls which subports are assigned to each channel.
+  uint32_t ctrl2_offset[MEMBW_MAX_CHANNELS];
+  // At the test period, Returns all granted cycles.
+  uint32_t all_bw_offset;
+  // At the test period, Returns the granted cycles per channel.
+  uint32_t bw_offset[MEMBW_MAX_CHANNELS];
+  // Contains the DDR frequency config settings.
+  union {
+    uint32_t pll_ctrl0_offset;  // Access with mmio read.
+    uint32_t pll_ctrl0_reg;     // Access with smc call.
+  };
+} dmc_reg_ctl_t;
+
+// For S905D2 / T931 / S905D3
+static constexpr dmc_reg_ctl_t g12_dmc_regs = {
+    .port_ctrl_offset = (0x0020 << 2),
+    .timer_offset = (0x002f << 2),
+    .ctrl1_offset = {(0x0021 << 2), (0x0023 << 2), (0x0025 << 2), (0x0027 << 2)},
+    .ctrl2_offset = {(0x0022 << 2), (0x0024 << 2), (0x0026 << 2), (0x0028 << 2)},
+    .all_bw_offset = (0x002a << 2),
+    .bw_offset = {(0x002b << 2), (0x002c << 2), (0x002d << 2), (0x002e << 2)},
+    .pll_ctrl0_offset = (0x0300 << 2),
+};
+
+// For A5
+static constexpr dmc_reg_ctl_t a5_dmc_regs = {
+    .port_ctrl_offset = (0x0020 << 2),
+    .timer_offset = (0x0021 << 2),
+    .ctrl1_offset = {(0x0026 << 2), (0x002a << 2), (0x002e << 2), (0x0032 << 2)},
+    .ctrl2_offset = {(0x0027 << 2), (0x002b << 2), (0x002f << 2), (0x0033 << 2)},
+    .all_bw_offset = (0x0023 << 2),
+    .bw_offset = {(0x0028 << 2), (0x002c << 2), (0x0030 << 2), (0x0034 << 2)},
+    .pll_ctrl0_reg = 0xfe040000,
+};
+
+static constexpr zx_smc_parameters_t CreateDmcSmcCall(uint64_t arg1, uint64_t arg2, uint64_t arg3,
+                                                      uint64_t arg4 = 0, uint64_t arg5 = 0,
+                                                      uint64_t arg6 = 0, uint16_t client_id = 0,
+                                                      uint16_t secure_os_id = 0) {
+  constexpr uint32_t kDmcSecureRegisterCtrlFuncId = 0x8200004A;
+  return {kDmcSecureRegisterCtrlFuncId,
+          {},
+          arg1,
+          arg2,
+          arg3,
+          arg4,
+          arg5,
+          arg6,
+          client_id,
+          secure_os_id,
+          {}};
+}
 
 class AmlRam;
 using DeviceType =
@@ -78,7 +119,7 @@ class AmlRam : public DeviceType {
   static zx_status_t Create(void* context, zx_device_t* parent);
 
   AmlRam(zx_device_t* parent, fdf::MmioBuffer mmio, zx::interrupt irq, zx::port port,
-         uint32_t device_pid);
+         zx::resource smc_monitor, uint32_t device_pid);
   ~AmlRam();
   void DdkRelease();
   void DdkSuspend(ddk::SuspendTxn txn);
@@ -109,11 +150,18 @@ class AmlRam : public DeviceType {
   void RevertJobs(std::deque<AmlRam::Job>* source);
   void AcceptJobs(std::deque<AmlRam::Job>* source);
   void Shutdown();
+  uint32_t DmcSmcRead(uint32_t addr) const;
   uint64_t ReadFrequency() const;
 
   fdf::MmioBuffer mmio_;
   zx::interrupt irq_;
   zx::port port_;
+  zx::resource smc_monitor_;
+  uint32_t device_pid_;
+
+  // DMC Register Offset
+  dmc_reg_ctl_t dmc_offsets_;
+
   std::thread thread_;
   fbl::Mutex lock_;
   std::deque<Job> requests_ TA_GUARDED(lock_);

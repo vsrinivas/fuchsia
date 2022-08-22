@@ -26,8 +26,9 @@ constexpr uint64_t kPortKeyIrqMsg = 0x0;
 constexpr uint64_t kPortKeyCancelMsg = 0x1;
 constexpr uint64_t kPortKeyWorkPendingMsg = 0x2;
 
-// TODO(reveman): Understand why this is 16. Configurable and a product
-// decision, or simply the way these counters are wired?
+// each axi cycle transfer 4 external bus
+// 16bit external bus width: kBytesPerCycle = 2 * 4 = 8
+// 32bit external bus width: kBytesPerCycle = 4 * 4 = 16
 constexpr uint64_t kBytesPerCycle = 16ul;
 
 zx_status_t ValidateRequest(const ram_metrics::wire::BandwidthMeasurementConfig& config) {
@@ -101,9 +102,18 @@ zx_status_t AmlRam::Create(void* context, zx_device_t* parent) {
     return status;
   }
 
+  zx::resource smc_monitor = {};
+  if (info.pid == PDEV_PID_AMLOGIC_A5) {
+    status = pdev.GetSmc(0, &smc_monitor);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "unable to get sip monitor handle: %s", zx_status_get_string(status));
+      return status;
+    }
+  }
+
   fbl::AllocChecker ac;
   auto device = fbl::make_unique_checked<AmlRam>(&ac, parent, *std::move(mmio), std::move(irq),
-                                                 std::move(port), info.pid);
+                                                 std::move(port), std::move(smc_monitor), info.pid);
   if (!ac.check()) {
     zxlogf(ERROR, "aml-ram: Failed to allocate device memory");
     return ZX_ERR_NO_MEMORY;
@@ -123,8 +133,13 @@ zx_status_t AmlRam::Create(void* context, zx_device_t* parent) {
 }
 
 AmlRam::AmlRam(zx_device_t* parent, fdf::MmioBuffer mmio, zx::interrupt irq, zx::port port,
-               uint32_t device_pid)
-    : DeviceType(parent), mmio_(std::move(mmio)), irq_(std::move(irq)), port_(std::move(port)) {
+               zx::resource smc_monitor, uint32_t device_pid)
+    : DeviceType(parent),
+      mmio_(std::move(mmio)),
+      irq_(std::move(irq)),
+      port_(std::move(port)),
+      smc_monitor_(std::move(smc_monitor)),
+      device_pid_(device_pid) {
   // TODO(fxbug.dev/53325): ALL_GRANT counter is broken on S905D2.
   all_grant_broken_ = device_pid == PDEV_PID_AMLOGIC_S905D2;
 
@@ -135,6 +150,19 @@ AmlRam::AmlRam(zx_device_t* parent, fdf::MmioBuffer mmio, zx::interrupt irq, zx:
     windowing_data_supported_ = true;
   } else {
     windowing_data_supported_ = false;
+  }
+
+  switch (device_pid_) {
+    case PDEV_PID_AMLOGIC_A5:
+      dmc_offsets_ = a5_dmc_regs;
+      break;
+    case PDEV_PID_AMLOGIC_S905D2:
+    case PDEV_PID_AMLOGIC_T931:
+    case PDEV_PID_AMLOGIC_S905D3:
+      dmc_offsets_ = g12_dmc_regs;
+      break;
+    default:
+      ZX_ASSERT_MSG(0, "Unsupport yet");
   }
 }
 
@@ -204,13 +232,13 @@ void AmlRam::StartReadBandwithCounters(Job* job) {
   uint32_t channels_enabled = 0u;
   for (size_t ix = 0; ix != MEMBW_MAX_CHANNELS; ++ix) {
     channels_enabled |= (job->config.channels[ix] != 0) ? (1u << ix) : 0;
-    mmio_.Write32(static_cast<uint32_t>(job->config.channels[ix]), MEMBW_RP[ix]);
-    mmio_.Write32(0xffff, MEMBW_SP[ix]);
+    mmio_.Write32(static_cast<uint32_t>(job->config.channels[ix]), dmc_offsets_.ctrl1_offset[ix]);
+    mmio_.Write32(0xffff, dmc_offsets_.ctrl2_offset[ix]);
   }
 
   job->start_time = zx_clock_get_monotonic();
-  mmio_.Write32(static_cast<uint32_t>(job->config.cycles_to_measure), MEMBW_TIMER);
-  mmio_.Write32(channels_enabled | DMC_QOS_ENABLE_CTRL, MEMBW_PORTS_CTRL);
+  mmio_.Write32(static_cast<uint32_t>(job->config.cycles_to_measure), dmc_offsets_.timer_offset);
+  mmio_.Write32(channels_enabled | DMC_QOS_ENABLE_CTRL, dmc_offsets_.port_ctrl_offset);
 }
 
 void AmlRam::FinishReadBandwithCounters(ram_metrics::wire::BandwidthInfo* bpi,
@@ -221,21 +249,21 @@ void AmlRam::FinishReadBandwithCounters(ram_metrics::wire::BandwidthInfo* bpi,
   bpi->frequency = ReadFrequency();
   bpi->bytes_per_cycle = kBytesPerCycle;
 
-  uint32_t value = mmio_.Read32(MEMBW_PORTS_CTRL);
+  uint32_t value = mmio_.Read32(dmc_offsets_.port_ctrl_offset);
   ZX_ASSERT((value & DMC_QOS_ENABLE_CTRL) == 0);
 
-  bpi->channels[0].readwrite_cycles = mmio_.Read32(MEMBW_C0_GRANT_CNT);
-  bpi->channels[1].readwrite_cycles = mmio_.Read32(MEMBW_C1_GRANT_CNT);
-  bpi->channels[2].readwrite_cycles = mmio_.Read32(MEMBW_C2_GRANT_CNT);
-  bpi->channels[3].readwrite_cycles = mmio_.Read32(MEMBW_C3_GRANT_CNT);
+  bpi->channels[0].readwrite_cycles = mmio_.Read32(dmc_offsets_.bw_offset[0]);
+  bpi->channels[1].readwrite_cycles = mmio_.Read32(dmc_offsets_.bw_offset[1]);
+  bpi->channels[2].readwrite_cycles = mmio_.Read32(dmc_offsets_.bw_offset[2]);
+  bpi->channels[3].readwrite_cycles = mmio_.Read32(dmc_offsets_.bw_offset[3]);
 
-  bpi->total.readwrite_cycles = all_grant_broken_ ? 0 : mmio_.Read32(MEMBW_ALL_GRANT_CNT);
+  bpi->total.readwrite_cycles = all_grant_broken_ ? 0 : mmio_.Read32(dmc_offsets_.all_bw_offset);
 
-  mmio_.Write32(0x0f | DMC_QOS_CLEAR_CTRL, MEMBW_PORTS_CTRL);
+  mmio_.Write32(0x0f | DMC_QOS_CLEAR_CTRL, dmc_offsets_.port_ctrl_offset);
 }
 
 void AmlRam::CancelReadBandwithCounters() {
-  mmio_.Write32(0x0f | DMC_QOS_CLEAR_CTRL, MEMBW_PORTS_CTRL);
+  mmio_.Write32(0x0f | DMC_QOS_CLEAR_CTRL, dmc_offsets_.port_ctrl_offset);
   // Here there might be a pending interrupt packet. The caller
   // is going to exit so it is immaterial if we drain it or
   // not.
@@ -329,8 +357,38 @@ void AmlRam::Shutdown() {
   }
 }
 
+uint32_t AmlRam::DmcSmcRead(uint32_t addr) const {
+  ZX_ASSERT(smc_monitor_.is_valid());
+  static constexpr uint64_t dmc_read = 0;
+  static const zx_smc_parameters_t kGetPllCtl0Call =
+      amlogic_ram::CreateDmcSmcCall(addr, 0, dmc_read);
+
+  union {
+    zx_smc_result_t raw;
+    uint32_t value;
+  } result;
+  zx_status_t status = zx_smc_call(smc_monitor_.get(), &kGetPllCtl0Call, &result.raw);
+  ZX_ASSERT(status == ZX_OK);
+
+  return result.value;
+}
+
 uint64_t AmlRam::ReadFrequency() const {
-  uint32_t value = mmio_.Read32(MEMBW_PLL_CNTL);
+  uint32_t value = {};
+
+  switch (device_pid_) {
+    case PDEV_PID_AMLOGIC_A5:
+      value = DmcSmcRead(dmc_offsets_.pll_ctrl0_reg);
+      break;
+    case PDEV_PID_AMLOGIC_S905D2:
+    case PDEV_PID_AMLOGIC_T931:
+    case PDEV_PID_AMLOGIC_S905D3:
+      value = mmio_.Read32(dmc_offsets_.pll_ctrl0_offset);
+      break;
+    default:
+      ZX_ASSERT_MSG(0, "Unsupport yet");
+  }
+
   uint64_t dpll_int_num = value & 0x1ff;
   uint64_t dpll_ref_div_n = (value >> 10) & 0x1f;
   uint64_t od = (value >> 16) & 0x7;

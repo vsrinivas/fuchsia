@@ -72,6 +72,8 @@ class AmlRamDeviceTest : public zxtest::Test {
         .pid = PDEV_PID_AMLOGIC_T931,
     });
 
+    dmc_offsets_ = g12_dmc_regs;
+
     pdev_.set_mmio(0, mmio_.mmio_info());
 
     ddk_.SetProtocol(ZX_PROTOCOL_PDEV, pdev_.proto());
@@ -94,6 +96,9 @@ class AmlRamDeviceTest : public zxtest::Test {
   fake_pdev::FakePDev pdev_;
   zx::unowned_interrupt irq_signaller_;
   Ddk ddk_;
+
+  // DMC Register Offset
+  dmc_reg_ctl_t dmc_offsets_;
 };
 
 void WriteDisallowed(uint64_t value) { EXPECT_TRUE(false, "got register write of 0x%lx", value); }
@@ -101,14 +106,14 @@ void WriteDisallowed(uint64_t value) { EXPECT_TRUE(false, "got register write of
 TEST_F(AmlRamDeviceTest, InitDoesNothing) {
   // By itself the driver does not write to registers.
   // The fixture's TearDown() test also the lifecycle bits.
-  mmio_.reg(MEMBW_PORTS_CTRL).SetWriteCallback(&WriteDisallowed);
-  mmio_.reg(MEMBW_TIMER).SetWriteCallback(&WriteDisallowed);
+  mmio_.reg(dmc_offsets_.port_ctrl_offset).SetWriteCallback(&WriteDisallowed);
+  mmio_.reg(dmc_offsets_.timer_offset).SetWriteCallback(&WriteDisallowed);
 }
 
 TEST_F(AmlRamDeviceTest, MalformedRequests) {
   // An invalid request does not write to registers.
-  mmio_.reg(MEMBW_PORTS_CTRL).SetWriteCallback(&WriteDisallowed);
-  mmio_.reg(MEMBW_TIMER).SetWriteCallback(&WriteDisallowed);
+  mmio_.reg(dmc_offsets_.port_ctrl_offset).SetWriteCallback(&WriteDisallowed);
+  mmio_.reg(dmc_offsets_.timer_offset).SetWriteCallback(&WriteDisallowed);
 
   fidl::WireSyncClient<ram_metrics::Device> client{std::move(ddk_.FidlClient())};
 
@@ -157,13 +162,14 @@ TEST_F(AmlRamDeviceTest, ValidRequest) {
   // |step| helps track of the expected sequence of reads and writes.
   std::atomic<int> step = 0;
 
-  mmio_.reg(MEMBW_TIMER).SetWriteCallback([expect = kCyclesToMeasure, &step](size_t value) {
-    EXPECT_EQ(step, 0, "unexpected: 0x%lx", value);
-    EXPECT_EQ(value, expect, "0: got write of 0x%lx", value);
-    ++step;
-  });
+  mmio_.reg(dmc_offsets_.timer_offset)
+      .SetWriteCallback([expect = kCyclesToMeasure, &step](size_t value) {
+        EXPECT_EQ(step, 0, "unexpected: 0x%lx", value);
+        EXPECT_EQ(value, expect, "0: got write of 0x%lx", value);
+        ++step;
+      });
 
-  mmio_.reg(MEMBW_PORTS_CTRL)
+  mmio_.reg(dmc_offsets_.port_ctrl_offset)
       .SetWriteCallback([this, start = kControlStart, stop = kControlStop, &step](size_t value) {
         if (step == 1) {
           EXPECT_EQ(value, start, "1: got write of 0x%lx", value);
@@ -177,37 +183,37 @@ TEST_F(AmlRamDeviceTest, ValidRequest) {
         }
       });
 
-  mmio_.reg(MEMBW_PLL_CNTL).SetReadCallback([value = kFreq]() { return value; });
+  mmio_.reg(dmc_offsets_.pll_ctrl0_offset).SetReadCallback([value = kFreq]() { return value; });
 
-  // Note that reading from MEMBW_PORTS_CTRL by default returns 0
+  // Note that reading from `dmc_offsets_.port_ctrl_offset` by default returns 0
   // and that makes the operation succeed.
 
-  mmio_.reg(MEMBW_C0_GRANT_CNT).SetReadCallback([&step, value = kReadCycles[0]]() {
+  mmio_.reg(dmc_offsets_.bw_offset[0]).SetReadCallback([&step, value = kReadCycles[0]]() {
     EXPECT_EQ(step, 2);
     // Value of channel 0 cycles granted.
     return value;
   });
 
-  mmio_.reg(MEMBW_C1_GRANT_CNT).SetReadCallback([&step, value = kReadCycles[1]]() {
+  mmio_.reg(dmc_offsets_.bw_offset[1]).SetReadCallback([&step, value = kReadCycles[1]]() {
     EXPECT_EQ(step, 2);
     // Value of channel 1 cycles granted.
     return value;
   });
 
-  mmio_.reg(MEMBW_C2_GRANT_CNT).SetReadCallback([&step, value = kReadCycles[2]]() {
+  mmio_.reg(dmc_offsets_.bw_offset[2]).SetReadCallback([&step, value = kReadCycles[2]]() {
     EXPECT_EQ(step, 2);
     // Value of channel 2 cycles granted.
     return value;
   });
 
-  mmio_.reg(MEMBW_C3_GRANT_CNT).SetReadCallback([&step, value = kReadCycles[3]]() {
+  mmio_.reg(dmc_offsets_.bw_offset[3]).SetReadCallback([&step, value = kReadCycles[3]]() {
     EXPECT_EQ(step, 2);
     ++step;
     // Value of channel 3 cycles granted.
     return value;
   });
 
-  mmio_.reg(MEMBW_ALL_GRANT_CNT)
+  mmio_.reg(dmc_offsets_.all_bw_offset)
       .SetReadCallback(
           [&step, value = kReadCycles[0] + kReadCycles[1] + kReadCycles[2] + kReadCycles[3]]() {
             EXPECT_EQ(step, 3);
