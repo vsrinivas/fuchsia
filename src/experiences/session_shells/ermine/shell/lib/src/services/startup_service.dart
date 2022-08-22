@@ -77,7 +77,6 @@ class StartupService extends activity.Listener {
   final _provider = buildinfo.ProviderProxy();
   final _activity = activity.ProviderProxy();
   final _activityBinding = activity.ListenerBinding();
-  final _activityTracker = activity.TrackerProxy();
   final _powerBtnMonitor = MonitorProxy();
 
   String _buildVersion = '--';
@@ -90,7 +89,6 @@ class StartupService extends activity.Listener {
     Incoming.fromSvcPath().connectToService(_intl);
     Incoming.fromSvcPath().connectToService(_provider);
     Incoming.fromSvcPath().connectToService(_activity);
-    Incoming.fromSvcPath().connectToService(_activityTracker);
     Incoming.fromSvcPath().connectToService(_powerBtnMonitor);
 
     if (allowScreensaver) {
@@ -186,7 +184,6 @@ class StartupService extends activity.Listener {
     _provider.ctrl.close();
     _activityBinding.close();
     _activity.ctrl.close();
-    _activityTracker.ctrl.close();
   }
 
   /// Publish outgoing services.
@@ -209,13 +206,6 @@ class StartupService extends activity.Listener {
             .subtract(Duration(seconds: 5))
             .isAfter(_lastActivityReport!)) {
       _lastActivityReport = DateTime.now();
-      _activityTracker
-          .reportDiscreteActivity(
-            activity.DiscreteActivity.withGeneric(
-                activity.GenericActivity(label: type)),
-            eventTime,
-          )
-          .catchError((e) => log.shout('Failed to report $type activity: $e'));
     }
     // Also exit from idle state.
     onIdle(idle: false);

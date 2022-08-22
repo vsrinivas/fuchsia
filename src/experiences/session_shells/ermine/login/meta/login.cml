@@ -128,7 +128,6 @@
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.perfetto.ProducerConnector",
                 "fuchsia.ui.activity.Provider",
-                "fuchsia.ui.activity.Tracker",
                 "fuchsia.ui.brightness.Control",
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
