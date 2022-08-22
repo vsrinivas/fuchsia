@@ -350,7 +350,7 @@ impl PackageDataCollector {
             .ok_or(anyhow!("Update package images package contains no zbi.signed or zbi entry"))
     }
 
-    fn get_pkg_source<'a>(
+    fn get_non_bootfs_pkg_source<'a>(
         pkg: &'a PackageDefinition,
         static_pkgs: &'a Option<Vec<StaticPackageDescription<'a>>>,
     ) -> Result<ComponentSource> {
@@ -413,7 +413,7 @@ impl PackageDataCollector {
         pkg: &PackageDefinition,
         static_pkgs: &'a Option<Vec<StaticPackageDescription<'a>>>,
     ) -> Result<()> {
-        let source = Self::get_pkg_source(pkg, static_pkgs)?;
+        let source = Self::get_non_bootfs_pkg_source(pkg, static_pkgs)?;
         // Extract V1 and V2 components from the packages.
         for (path, cm) in &pkg.cms {
             let path_str = path.to_str().ok_or_else(|| {
