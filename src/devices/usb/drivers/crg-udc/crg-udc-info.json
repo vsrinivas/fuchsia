@@ -1,0 +1,9 @@
+{
+    "short_description": "Corigine USB DCI driver",
+    "manufacturer": "Corigine",
+    "families": [],
+    "models": [],
+    "areas": [
+        "USB"
+    ]
+}

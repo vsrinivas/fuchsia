@@ -179,6 +179,7 @@ fuchsia_driver("av400-driver") {
     "//src/devices/lib/metadata:llcpp",
     "//src/devices/lib/mmio",
     "//src/devices/lib/ti",
+    "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
 
@@ -186,6 +187,7 @@ fuchsia_driver("av400-driver") {
     "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zircon-internal",
   ]
 
   # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.

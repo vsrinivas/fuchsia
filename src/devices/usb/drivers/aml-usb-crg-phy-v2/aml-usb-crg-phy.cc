@@ -232,9 +232,9 @@ void AmlUsbCrgPhy::SetMode(UsbMode mode, SetModeCompletion completion) {
 
   if (mode == UsbMode::HOST) {
     AddXhciDevice();
-    RemoveDwc2Device(std::move(completion));
+    RemoveUdcDevice(std::move(completion));
   } else {
-    AddDwc2Device();
+    AddUdcDevice();
     RemoveXhciDevice(std::move(completion));
   }
 }
@@ -324,32 +324,32 @@ void AmlUsbCrgPhy::RemoveXhciDevice(SetModeCompletion completion) {
   }
 }
 
-zx_status_t AmlUsbCrgPhy::AddDwc2Device() {
-  if (dwc2_device_) {
+zx_status_t AmlUsbCrgPhy::AddUdcDevice() {
+  if (udc_device_) {
     return ZX_ERR_BAD_STATE;
   }
 
-  dwc2_device_ = std::make_unique<Dwc2Device>(zxdev());
+  udc_device_ = std::make_unique<UdcDevice>(zxdev());
 
   zx_device_prop_t props[] = {
-      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GENERIC},
+      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_AMLOGIC},
       {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_GENERIC},
-      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_USB_DWC2},
+      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_USB_CRG_UDC},
   };
 
-  return dwc2_device_->DdkAdd(
-      ddk::DeviceAddArgs("dwc2").set_props(props).set_proto_id(ZX_PROTOCOL_USB_PHY));
+  return udc_device_->DdkAdd(
+      ddk::DeviceAddArgs("udc").set_props(props).set_proto_id(ZX_PROTOCOL_USB_PHY));
 }
 
-void AmlUsbCrgPhy::RemoveDwc2Device(SetModeCompletion completion) {
+void AmlUsbCrgPhy::RemoveUdcDevice(SetModeCompletion completion) {
   auto cleanup = fit::defer([&]() {
     if (completion)
       completion();
   });
-  if (dwc2_device_) {
-    // The callback will be run by the ChildPreRelease hook once the dwc2 device has been removed.
+  if (udc_device_) {
+    // The callback will be run by the ChildPreRelease hook once the udc device has been removed.
     set_mode_completion_ = std::move(completion);
-    dwc2_device_->DdkAsyncRemove();
+    udc_device_->DdkAsyncRemove();
   }
 }
 
@@ -453,7 +453,7 @@ void AmlUsbCrgPhy::DdkInit(ddk::InitTxn txn) {
 void AmlUsbCrgPhy::UsbPhyConnectStatusChanged(bool connected) {
   fbl::AutoLock lock(&lock_);
 
-  if (dwc2_connected_ == connected)
+  if (udc_connected_ == connected)
     return;
 
   auto* mmio = &*usbphy_mmio_;
@@ -465,7 +465,7 @@ void AmlUsbCrgPhy::UsbPhyConnectStatusChanged(bool connected) {
     InitPll(mmio);
   }
 
-  dwc2_connected_ = connected;
+  udc_connected_ = connected;
 }
 
 void AmlUsbCrgPhy::DdkUnbind(ddk::UnbindTxn txn) {
@@ -481,8 +481,8 @@ void AmlUsbCrgPhy::DdkChildPreRelease(void* child_ctx) {
   // devmgr will own the device until it is destroyed.
   if (xhci_device_ && (child_ctx == xhci_device_.get())) {
     __UNUSED auto* dev = xhci_device_.release();
-  } else if (dwc2_device_ && (child_ctx == dwc2_device_.get())) {
-    __UNUSED auto* dev = dwc2_device_.release();
+  } else if (udc_device_ && (child_ctx == udc_device_.get())) {
+    __UNUSED auto* dev = udc_device_.release();
   } else {
     zxlogf(ERROR, "AmlUsbCrgPhy::DdkChildPreRelease unexpected child ctx %p", child_ctx);
   }

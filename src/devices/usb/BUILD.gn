@@ -8,6 +8,7 @@ group("drivers") {
     "drivers/aml-usb-crg-phy-v2",
     "drivers/aml-usb-phy-v2",
     "drivers/as370-usb-phy",
+    "drivers/crg-udc",
     "drivers/dwc2",
     "drivers/dwc3",
     "drivers/nelson-usb-phy",

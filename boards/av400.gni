@@ -33,6 +33,7 @@ _common_bootfs_deps = [
   "//src/devices/tee/drivers/optee",
   "//src/devices/thermal/drivers/aml-thermal-s905d2g",
   "//src/devices/usb/drivers/aml-usb-crg-phy-v2",
+  "//src/devices/usb/drivers/crg-udc",
   "//src/media/audio/drivers/aml-g12-pdm",
   "//src/media/audio/drivers/aml-g12-tdm",
   "//src/media/audio/drivers/codecs/tas5707",

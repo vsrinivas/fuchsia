@@ -176,7 +176,8 @@ TEST_F(DeviceEnumerationTest, Av400Test) {
 
       // USB
       "aml-usb-crg-phy-v2",
-      "xhci/xhci",
+      // Force to usb peripheral
+      "udc/udc/usb-peripheral/function-000/cdc-eth-function",
 
       // Power Device.
       "aml-power-impl-composite/power-impl",

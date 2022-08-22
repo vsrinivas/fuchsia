@@ -270,6 +270,7 @@
 //src/devices/usb/drivers/as370-usb-phy:as370-usb-phy-driver
 //src/devices/usb/drivers/dwc2:dwc2-driver
 //src/devices/usb/drivers/dwc3:dwc3-driver
+//src/devices/usb/drivers/crg-udc:crg-udc-driver
 //src/devices/usb/drivers/nelson-usb-phy:nelson-usb-phy-driver
 //src/devices/usb/drivers/usb-bus:usb-bus-driver
 //src/devices/usb/drivers/usb-composite:usb-composite-driver

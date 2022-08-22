@@ -73,6 +73,7 @@ extend uint fuchsia.BIND_PLATFORM_DEV_DID {
   VIM3_USB_PHY = 0x2D,
   RTC = 0x2E,
   USB_CRG_PHY_V2 = 0x2F,
+  CRG_UDC = 0x30,
 };
 
 extend uint fuchsia.BIND_REGISTER_ID {

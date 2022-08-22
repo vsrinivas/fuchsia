@@ -19,7 +19,7 @@
 #include <fbl/mutex.h>
 #include <soc/aml-common/aml-registers.h>
 
-#include "dwc2-device.h"
+#include "udc-device.h"
 #include "xhci-device.h"
 
 namespace aml_usb_crg_phy {
@@ -72,8 +72,8 @@ class AmlUsbCrgPhy : public AmlUsbCrgPhyType,
 
   zx_status_t AddXhciDevice() __TA_REQUIRES(lock_);
   void RemoveXhciDevice(SetModeCompletion completion) __TA_REQUIRES(lock_);
-  zx_status_t AddDwc2Device() __TA_REQUIRES(lock_);
-  void RemoveDwc2Device(SetModeCompletion completion) __TA_REQUIRES(lock_);
+  zx_status_t AddUdcDevice() __TA_REQUIRES(lock_);
+  void RemoveUdcDevice(SetModeCompletion completion) __TA_REQUIRES(lock_);
 
   zx_status_t Init();
   int IrqThread();
@@ -95,11 +95,11 @@ class AmlUsbCrgPhy : public AmlUsbCrgPhyType,
 
   // Device node for binding XHCI driver.
   std::unique_ptr<XhciDevice> xhci_device_ __TA_GUARDED(lock_);
-  std::unique_ptr<Dwc2Device> dwc2_device_ __TA_GUARDED(lock_);
+  std::unique_ptr<UdcDevice> udc_device_ __TA_GUARDED(lock_);
 
   UsbMode phy_mode_ __TA_GUARDED(lock_) = UsbMode::UNKNOWN;  // Physical USB mode.
   usb_mode_t dr_mode_ = USB_MODE_OTG;  // USB Controller Mode. Internal to Driver.
-  bool dwc2_connected_ = false;
+  bool udc_connected_ = false;
 
   // If set, indicates that the device has a pending SetMode which
   // will be completed once |DdkChildPreRelease| is called.
