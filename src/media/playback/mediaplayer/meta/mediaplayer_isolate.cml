@@ -24,7 +24,6 @@
                 "fuchsia.media.AudioCore",
                 "fuchsia.mediacodec.CodecFactory",
                 "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.sys.Environment",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.scenic.Scenic",

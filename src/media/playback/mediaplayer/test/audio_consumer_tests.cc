@@ -90,7 +90,6 @@ class AudioConsumerTests : public gtest::RealLoopFixture {
                                      {
                                          Protocol{"fuchsia.logger.LogSink"},
                                          Protocol{"fuchsia.tracing.provider.Registry"},
-                                         Protocol{"fuchsia.sys.Environment"},
                                          Protocol{"fuchsia.sysmem.Allocator"},
                                          Protocol{"fuchsia.scheduler.ProfileProvider"},
                                          Protocol{"fuchsia.mediacodec.CodecFactory"},

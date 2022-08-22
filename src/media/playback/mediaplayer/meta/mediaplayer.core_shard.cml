@@ -9,25 +9,30 @@
         },
     ],
     capabilities: [
-        { protocol: [
+        {
+            protocol: [
+                "fuchsia.media.Audio",
+                "fuchsia.media.AudioCore",
                 "fuchsia.mediacodec.CodecFactory",
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sysmem.Allocator",
-                "fuchsia.media.Audio",
-                "fuchsia.media.AudioCore",
-          ], 
+            ],
         },
     ],
     offer: [
         {
-            protocol: ["fuchsia.media.SessionAudioConsumerFactory",
-                       "fuchsia.media.playback.Player",],
+            protocol: [
+                "fuchsia.media.playback.Player",
+                "fuchsia.media.SessionAudioConsumerFactory",
+            ],
             from: "#mediaplayer",
             to: [ "#session-manager" ],
         },
         {
-            protocol: ["fuchsia.media.Audio",
-                       "fuchsia.media.AudioCore",],
+            protocol: [
+                "fuchsia.media.Audio",
+                "fuchsia.media.AudioCore",
+            ],
             from: "#audio_core",
             to: [ "#mediaplayer" ],
         },
@@ -37,14 +42,11 @@
             to: [ "#mediaplayer" ],
         },
         {
-            protocol: ["fuchsia.scheduler.ProfileProvider",
-                       "fuchsia.logger.LogSink",],
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.scheduler.ProfileProvider",
+            ],
             from: "parent",
-            to: [ "#mediaplayer" ],
-        },
-        {
-            protocol: "fuchsia.sys.Environment",
-            from: "self",
             to: [ "#mediaplayer" ],
         },
         {
