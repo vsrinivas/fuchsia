@@ -16,7 +16,6 @@ use ffx_emulator_config::{
     NetworkingMode, OperatingSystem,
 };
 use ffx_emulator_start_args::StartCommand;
-use futures::executor::block_on;
 use port_picker::{is_free_tcp_port, pick_unused_port};
 use std::{collections::hash_map::DefaultHasher, env, hash::Hasher, path::PathBuf, time::Duration};
 
@@ -25,8 +24,8 @@ pub(crate) async fn make_configs(
     cmd: &StartCommand,
     ffx_config: &FfxConfigWrapper,
 ) -> Result<EmulatorConfiguration> {
-    let bundle: pbms::VirtualDeviceProduct = pbms::VirtualDeviceProduct::new(&cmd.product_bundle)
-        .await?;
+    let bundle: pbms::VirtualDeviceProduct =
+        pbms::VirtualDeviceProduct::new(&cmd.product_bundle).await?;
     if cmd.verbose {
         println!(
             "Found PBM {:?}, device_refs {:?}, virtual_device {:?}.",
@@ -62,7 +61,7 @@ pub(crate) async fn make_configs(
 async fn apply_command_line_options(
     mut emu_config: EmulatorConfiguration,
     cmd: &StartCommand,
-    ffx_config: &FfxConfigWrapper,
+    fcw: &FfxConfigWrapper,
 ) -> Result<EmulatorConfiguration> {
     // Clone any fields that can simply copy over.
     emu_config.host.acceleration = cmd.accel.clone();
@@ -76,7 +75,7 @@ async fn apply_command_line_options(
         // expect the log file to exist ahead of time.
         emu_config.host.log = PathBuf::from(env::current_dir()?).join(log);
     } else {
-        let instance = get_instance_dir(&ffx_config, &cmd.name, false).await?;
+        let instance = get_instance_dir(&fcw, &cmd.name, false).await?;
         emu_config.host.log = instance.join("emulator.log");
     }
 
@@ -87,12 +86,10 @@ async fn apply_command_line_options(
             OperatingSystem::Linux => {
                 emu_config.host.acceleration = AccelerationMode::None;
                 if check_kvm {
-                    if let Ok(kvm) = std::fs::File::open(
-                        ffx_config
-                            .get(KVM_PATH)
-                            .await
-                            .context("getting KVM path from ffx config")?,
-                    ) {
+                    let path: String = ffx_config::get(KVM_PATH)
+                        .await
+                        .context("getting KVM path from ffx config")?;
+                    if let Ok(kvm) = std::fs::File::open(path) {
                         if let Ok(metadata) = kvm.metadata() {
                             if !metadata.permissions().readonly() {
                                 emu_config.host.acceleration = AccelerationMode::Hyper
@@ -166,12 +163,8 @@ async fn apply_command_line_options(
 
     // Any generated values or values from ffx_config.
     emu_config.runtime.mac_address = generate_mac_address(&cmd.name);
-    emu_config.runtime.upscript = if let Ok(upscript) = block_on(ffx_config.file(EMU_UPSCRIPT_FILE))
-    {
-        Some(upscript)
-    } else {
-        None
-    };
+    let upscript = ffx_config::get(EMU_UPSCRIPT_FILE).await.ok().map(|s: String| PathBuf::from(s));
+    emu_config.runtime.upscript = upscript;
 
     Ok(emu_config)
 }
@@ -270,12 +263,14 @@ fn generate_mac_address(name: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ffx_config::{query, ConfigLevel};
     use ffx_emulator_common::config::EMU_INSTANCE_ROOT_DIR;
     use ffx_emulator_config::{
         AccelerationMode, ConsoleType, CpuArchitecture, EmulatorConfiguration, GpuType, LogLevel,
         NetworkingMode, PortMapping,
     };
     use regex::Regex;
+    use serde_json::json;
     use std::{
         collections::HashMap,
         fs::{create_dir_all, File},
@@ -285,8 +280,11 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_apply_command_line_options() -> Result<()> {
         let _env = ffx_config::test_init().await.unwrap();
-        let mut ffx_config = FfxConfigWrapper::new();
-        ffx_config.overrides.insert(EMU_UPSCRIPT_FILE, "/path/to/upscript".to_string());
+        let ffx_config = FfxConfigWrapper::new();
+        query(EMU_UPSCRIPT_FILE)
+            .level(Some(ConfigLevel::User))
+            .set(json!("/path/to/upscript".to_string()))
+            .await?;
 
         // Set up some test data to be applied.
         let mut cmd = StartCommand {
@@ -403,15 +401,24 @@ mod tests {
         let file = File::create(&file_path).expect("Create temp file");
         let mut perms = file.metadata().expect("Get file metadata").permissions();
 
-        let mut ffx_config = FfxConfigWrapper::new();
-        ffx_config.overrides.insert(
-            KVM_PATH,
-            file_path.as_path().to_str().expect("Couldn't convert file_path to str").to_string(),
-        );
-        ffx_config.overrides.insert(
-            EMU_INSTANCE_ROOT_DIR,
-            temp_path.as_path().to_str().expect("Couldn't convert temp_path to str").to_string(),
-        );
+        let ffx_config = FfxConfigWrapper::new();
+
+        query(KVM_PATH)
+            .level(Some(ConfigLevel::User))
+            .set(json!(file_path
+                .as_path()
+                .to_str()
+                .expect("Couldn't convert file_path to str")
+                .to_string()))
+            .await?;
+        query(EMU_INSTANCE_ROOT_DIR)
+            .level(Some(ConfigLevel::User))
+            .set(json!(temp_path
+                .as_path()
+                .to_str()
+                .expect("Couldn't convert temp_path to str")
+                .to_string()))
+            .await?;
 
         // Set up some test data to be applied.
         let cmd = StartCommand { accel: AccelerationMode::Auto, ..Default::default() };
