@@ -55,14 +55,24 @@ required for running the test suite.
    ( \
      source $DEV_ROOT/rust/fuchsia-env.sh && \
      $DEV_ROOT/rust/x.py \
-       --config $DEV_ROOT/rust/fuchsia-config.toml --stage=2 \
+       --config $DEV_ROOT/rust/fuchsia-config.toml \
+       --stage=2 \
        test {{ '<var>' }}TEST_SUITE{{ '</var>' }} \
        --target {{ '<var>' }}x86_64|aarch64{{ '</var>' }}-fuchsia \
-       --run=always --jobs 1 --test-args "--target-panic=abort
-       --remote-test-client $TEST_TOOLCHAIN" \
-       --rustc-args "-C panic=abort -Zpanic_abort_tests
-       -L $DEV_ROOT/sdk/arch/{{ '<var>' }}x64|a64{{ '</var>' }}/sysroot/lib
-       -L $DEV_ROOT/sdk/arch/{{ '<var>' }}x64|a64{{ '</var>' }}/lib" \
+       --run=always \
+       --jobs 1 \
+       --test-args "
+            --target-panic=abort
+            --remote-test-client $TEST_TOOLCHAIN
+            --target-rustcflags -L
+            --target-rustcflags $DEV_ROOT/sdk/arch/{{ '<var>' }}x64|a64{{ '</var>' }}/lib
+            --target-rustcflags -L
+            --target-rustcflags $DEV_ROOT/sdk/arch/{{ '<var>' }}x64|a64{{ '</var>' }}/sysroot/lib
+        " \
+       --rustc-args "
+            -C panic=abort 
+            -Zpanic_abort_tests
+        " \
    )
    ```
 
@@ -122,30 +132,43 @@ environments.
      --test {{ '<var>' }}TEST_PATH{{ '</var>' }}
    ```
 
+   Note: If you have the Fuchsia source available, you can additionally pass
+   `--fuchsia-src` with the Fuchsia source path and `zxdb` will include source
+   for zircon and Fuchsia.
+
    Then set any relevant breakpoints and run the test with:
 
    ```posix-terminal
     ( \
      source $DEV_ROOT/rust/fuchsia-env.sh && \
      $DEV_ROOT/rust/x.py \
-       --config $DEV_ROOT/rust/fuchsia-config.toml --stage=2 \
+       --config $DEV_ROOT/rust/fuchsia-config.toml \
+       --stage=2 \
        test {{ '<var>' }}TEST_SUITE{{ '</var>' }} \
        --target {{ '<var>' }}x86_64|aarch64{{ '</var>' }}-fuchsia \
-       --run=always --jobs 1 --test-args "--target-panic=abort
-       --remote-test-client $TEST_TOOLCHAIN" --rustc-args "-C debuginfo=2
-       -C opt-level=0 -C strip=none -C panic=abort -Zpanic_abort_tests
-       -L $DEV_ROOT/sdk/arch/{{ '<var>' }}x64|a64{{ '</var>' }}/sysroot/lib
-       -L $DEV_ROOT/sdk/arch/{{ '<var>' }}x64|a64{{ '</var>' }}/lib" \
+       --run=always \
+       --jobs 1 \
+       --test-args "
+            --target-panic=abort
+            --remote-test-client $TEST_TOOLCHAIN
+            --target-rustcflags -L
+            --target-rustcflags $DEV_ROOT/sdk/arch/{{ '<var>' }}x64|a64{{ '</var>' }}/lib
+            --target-rustcflags -L
+            --target-rustcflags $DEV_ROOT/sdk/arch/{{ '<var>' }}x64|a64{{ '</var>' }}/sysroot/lib
+        " \ 
+        --rustc-args "
+            -C debuginfo=2
+            -C opt-level=0 
+            -C strip=none 
+            -C panic=abort 
+            -Zpanic_abort_tests
+       " \
     )
    ```
 
    And `zxdb` will catch any crashes and break at any breakpoints you define.
    This command is the same as the one above with the additional
    `-C debuginfo=2 -C opt-level=0` flags for debugging.
-
-   Note: If you have the Fuchsia source available, you can additionally pass
-   `--fuchsia-src` with the Fuchsia source path and `zxdb` will include source
-   for zircon and Fuchsia.
 
 ### Tips
 
