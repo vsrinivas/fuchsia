@@ -221,7 +221,7 @@ pub const ENOTSUP: Errno = EOPNOTSUPP;
 
 /// A special error that represents an interrupted syscall that should be restarted if possible.
 // This is not defined in uapi as it is never exposed to userspace.
-pub const ERESTARTSYS: Errno = Errno { value: 512, anyhow: None };
+pub const ERESTARTSYS: Errno = Errno::constant(512);
 
 /// `errno` returns an `Errno` struct tagged with the current file name and line number.
 ///
