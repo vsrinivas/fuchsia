@@ -8,6 +8,7 @@
 #include <lib/ddk/driver.h>
 #include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/fidl/cpp/wire/wire_messaging.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 #include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 
@@ -581,6 +582,59 @@ TEST(MockDdk, SetFidlProtocol) {
 
   // Incorrect proto ids still fail.
   EXPECT_FALSE(test_device->ConnectToProtocol(kFakeProtocolName).is_ok());
+}
+
+TEST(MockDdk, SetFidlService) {
+  auto parent = MockDevice::FakeRootParent();  // Hold on to the parent during the test.
+  auto result = TestDevice::Bind(parent.get());
+  ASSERT_OK(result.status_value());
+  TestDevice* test_device = result.value();
+
+  // Initially, the device will fail to get a protocol:
+  EXPECT_FALSE(test_device->DdkOpenFidlService<fidl_examples_echo::EchoService>().is_ok());
+
+  async::Loop loop{&kAsyncLoopConfigNeverAttachToThread};
+  auto outgoing = component::OutgoingDirectory::Create(loop.dispatcher());
+  EchoServer server;
+
+  // So we add the necessary service to the parent:
+  component::ServiceHandler handler;
+  fidl_examples_echo::EchoService::Handler service(&handler);
+
+  auto echo_handler = [&](fidl::ServerEnd<fidl_examples_echo::Echo> request) {
+    server.Bind(loop.dispatcher(), std::move(request));
+  };
+  {
+    auto service_result = service.add_echo(echo_handler);
+    ASSERT_OK(service_result.status_value());
+    service_result = outgoing.AddService<fidl_examples_echo::EchoService>(std::move(handler));
+    ASSERT_OK(service_result.status_value());
+  }
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  ASSERT_OK(endpoints.status_value());
+
+  ASSERT_OK(outgoing.Serve(std::move(endpoints->server)).status_value());
+
+  parent->AddFidlService(fidl_examples_echo::EchoService::Name, std::move(endpoints->client));
+
+  // Service is available after being set.
+  auto service_result = test_device->DdkOpenFidlService<fidl_examples_echo::EchoService>();
+  ASSERT_OK(service_result.status_value());
+
+  auto echo_client = service_result->connect_echo();
+  ASSERT_OK(echo_client.status_value());
+  ASSERT_TRUE(echo_client.value().is_valid());
+  fidl::WireClient client(std::move(*echo_client), loop.dispatcher());
+
+  constexpr std::string_view kInput = "Test String";
+
+  client->EchoString(fidl::StringView::FromExternal(kInput))
+      .ThenExactlyOnce([&](fidl::WireUnownedResult<fidl_examples_echo::Echo::EchoString>& result) {
+        EXPECT_OK(result.status());
+        EXPECT_EQ(result.value().response.get(), kInput);
+      });
+  EXPECT_OK(loop.RunUntilIdle());
 }
 
 // Fragments are devices that allow for protocols to come from different parents.

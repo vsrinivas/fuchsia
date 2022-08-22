@@ -4,6 +4,8 @@
 
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
+#include <lib/service/llcpp/service.h>
+
 #include <algorithm>
 
 MockDevice::MockDevice(device_add_args_t* args, MockDevice* parent)
@@ -237,6 +239,13 @@ void MockDevice::AddFidlProtocol(const char* protocol_name, mock_ddk::ConnectCal
   fidl_protocols_[name][protocol_name] = std::move(callback);
 }
 
+void MockDevice::AddFidlService(const char* service_name, fidl::ClientEnd<fuchsia_io::Directory> ns,
+                                const char* name) {
+  fidl_services_.try_emplace(
+      name, std::unordered_map<std::string, fidl::ClientEnd<fuchsia_io::Directory>>());
+  fidl_services_[name][service_name] = std::move(ns);
+}
+
 void MockDevice::SetFirmware(std::vector<uint8_t> firmware, std::string_view path) {
   firmware_[path] = std::move(firmware);
 }
@@ -301,6 +310,23 @@ zx_status_t MockDevice::ConnectToFidlProtocol(const char* protocol_name, zx::cha
     return ZX_ERR_NOT_FOUND;
   }
   return callback->second(std::move(request));
+}
+
+zx_status_t MockDevice::OpenFidlService(const char* service_name, zx::channel request,
+                                        const char* fragment_name) {
+  // Check if there are protocols for the fragment/device:
+  auto service_set = fidl_services_.find(fragment_name);
+  if (service_set == fidl_services_.end()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  auto ns = service_set->second.find(service_name);
+  if (ns == service_set->second.end()) {
+    return ZX_ERR_NOT_FOUND;
+  }
+  const std::string path = std::string("svc/") + service_name + "/default";
+  return service::ConnectAt(ns->second, fidl::ServerEnd<fuchsia_io::Directory>(std::move(request)),
+                            path.c_str())
+      .status_value();
 }
 
 size_t MockDevice::descendant_count() const {

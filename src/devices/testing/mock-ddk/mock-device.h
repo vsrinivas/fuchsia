@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_TESTING_MOCK_DDK_MOCK_DEVICE_H_
 #define SRC_DEVICES_TESTING_MOCK_DDK_MOCK_DEVICE_H_
 
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/ddk/binding_priv.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
@@ -21,8 +22,6 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-#include "lib/async/dispatcher.h"
 
 // Allow redefining the zx_device_t struct. MockDevice cannot be in the mock_ddk namespace.
 #define MockDevice zx_device
@@ -182,6 +181,13 @@ struct MockDevice : public std::enable_shared_from_this<MockDevice> {
   void AddFidlProtocol(const char* protocol_name, mock_ddk::ConnectCallback callback,
                        const char* name = "");
 
+  // You can add FIDL service here to your device or your parent device.
+  // if you want to add a service to a fragment, add the fragment's name as 'name'.
+  // Devices will use `device_connect_fidl_protocol` or
+  // `device_connect_fragment_fidl_protocol` to connect to these protocols
+  void AddFidlService(const char* service_name, fidl::ClientEnd<fuchsia_io::Directory> ns,
+                      const char* name = "");
+
   // This struct can also be a root parent device, with reduced functionality.
   // This allows the parent to store protocols that can be accessed by a child device.
   // If IsRootParent returns true, only the following calls may target this device:
@@ -261,6 +267,15 @@ struct MockDevice : public std::enable_shared_from_this<MockDevice> {
                                                            const char* protocol_name,
                                                            zx_handle_t request);
 
+  zx_status_t OpenFidlService(const char* service_name, zx::channel request,
+                              const char* fragment_name = "");
+  friend zx_status_t device_open_fidl_service(zx_device_t* device, const char* service_name,
+                                              zx_handle_t request);
+  friend zx_status_t device_open_fragment_fidl_service(zx_device_t* device,
+                                                       const char* fragment_name,
+                                                       const char* service_name,
+                                                       zx_handle_t request);
+
   zx_off_t GetSize();
   friend zx_off_t device_get_size(zx_device_t* device);
 
@@ -288,8 +303,15 @@ struct MockDevice : public std::enable_shared_from_this<MockDevice> {
   std::list<std::shared_ptr<MockDevice>> children_;
   // Stores the normal protocols under the key "", fragment protocols under their name.
   std::unordered_map<std::string, std::list<mock_ddk::ProtocolEntry>> protocols_;
+  // The first key is the first key is the fragment name and the second key is the protocol name. ""
+  // is used as the key when there is no fragment.
   std::unordered_map<std::string, std::unordered_map<std::string, mock_ddk::ConnectCallback>>
       fidl_protocols_;
+  // The first key is the first key is the fragment name and the second key is the service name. ""
+  // is used as the key when there is no fragment.
+  std::unordered_map<std::string,
+                     std::unordered_map<std::string, fidl::ClientEnd<fuchsia_io::Directory>>>
+      fidl_services_;
   std::unordered_map<std::string_view, std::vector<uint8_t>> firmware_;
 
   size_t size_ = 0;

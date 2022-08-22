@@ -162,14 +162,20 @@ __EXPORT zx_status_t device_connect_fragment_fidl_protocol(zx_device_t* device,
 
 __EXPORT zx_status_t device_open_fidl_service(zx_device_t* device, const char* service_name,
                                               zx_handle_t request) {
-  return ZX_ERR_NOT_SUPPORTED;
+  if (!device) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  return device->OpenFidlService(service_name, zx::channel(request));
 }
 
 __EXPORT zx_status_t device_open_fragment_fidl_service(zx_device_t* device,
                                                        const char* fragment_name,
                                                        const char* service_name,
                                                        zx_handle_t request) {
-  return ZX_ERR_NOT_SUPPORTED;
+  if (!device) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  return device->OpenFidlService(service_name, zx::channel(request), fragment_name);
 }
 
 // Unsupported calls:

@@ -17,10 +17,12 @@ source_set("mock-ddk") {
   deps = [
     "//sdk/lib/fdio",
     "//src/lib/ddk",
+    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
   public_deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/stdcompat",
 
     # mock_ddk.h has #include <ddk/device.h>.
@@ -43,7 +45,8 @@ test("mock-ddk-test-bin") {
   sources = [ "mock-ddk-test.cc" ]
   deps = [
     ":mock-ddk",
-    "//src/devices/tests/fidl-protocol:echo_cpp_wire",
+    "//sdk/lib/sys/component/cpp",
+    "//src/devices/tests/fidl-service:echo_cpp_wire",
     "//src/lib/ddktl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fbl",
