@@ -26,7 +26,7 @@ use {
 };
 
 /// Maximum number of incorrect frames sent before SAE fails.
-const MAX_RETRIES_PER_EXCHANGE: u16 = 30;
+const MAX_RETRIES_PER_EXCHANGE: u16 = 3;
 
 /// A shared key computed by an SAE handshake.
 #[derive(Clone, PartialEq, Debug)]
