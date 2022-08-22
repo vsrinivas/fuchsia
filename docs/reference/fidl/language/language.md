@@ -41,8 +41,9 @@ attribute][doc-attribute].
 The following are keywords in FIDL.
 
 ```
-as, bits, compose, const, enum, library, protocol,
-resource, struct, table, union, using, xunion.
+alias, as, bits, compose, const, enum, error, flexible, library, optional,
+protocol, reserved, resource, service, strict, struct, table, type, union,
+using.
 ```
 
 ### Identifiers
