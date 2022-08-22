@@ -380,6 +380,8 @@
                     // this is added. `process_resolver` does not have a `use` declaration for
                     // it's own capability.
                     "/core/process_resolver",
+
+                    "/core/driver_playground",
                 ],
             },
             {
