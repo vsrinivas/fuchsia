@@ -60,3 +60,7 @@ protocol Device {
         read_data vector<ReadData>:MAX_COUNT_TRANSACTIONS;
     }) error zx.status;
 };
+
+service Service {
+    device client_end:Device;
+};
