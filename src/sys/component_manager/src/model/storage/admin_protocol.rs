@@ -75,7 +75,7 @@ impl CapabilityProvider for StorageAdminProtocolProvider {
         task_scope: TaskScope,
         flags: fio::OpenFlags,
         _open_mode: u32,
-        in_relative_path: PathBuf,
+        relative_path: PathBuf,
         server_end: &mut zx::Channel,
     ) -> Result<(), ModelError> {
         let server_end = channel::take_channel(server_end);
@@ -85,8 +85,11 @@ impl CapabilityProvider for StorageAdminProtocolProvider {
             warn!("open request for the storage admin protocol rejected: access denied");
             return Ok(());
         }
-        if in_relative_path != PathBuf::from("") {
-            warn!("open request for the storage admin protocol rejected: invalid path");
+        if relative_path.components().count() != 0 {
+            warn!(
+                path=%relative_path.display(),
+                "StorageAdmin capability got open request with non-empty",
+            );
             return Ok(());
         }
         let storage_decl = self.storage_decl.clone();

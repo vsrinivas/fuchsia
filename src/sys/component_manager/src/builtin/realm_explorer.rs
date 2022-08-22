@@ -263,8 +263,8 @@ impl CapabilityProvider for RealmExplorerCapabilityProvider {
 
         if relative_path.components().count() != 0 {
             warn!(
-                "RealmExplorer capability got open request with non-empty path: {}",
-                relative_path.display()
+                path=%relative_path.display(),
+                "RealmExplorer capability got open request with non-empty",
             );
             return Ok(());
         }

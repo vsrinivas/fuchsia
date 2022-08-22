@@ -182,8 +182,8 @@ impl CapabilityProvider for RealmQueryCapabilityProvider {
 
         if relative_path.components().count() != 0 {
             warn!(
-                "RealmQuery capability got open request with non-empty path: {}",
-                relative_path.display()
+                path=%relative_path.display(),
+                "RealmQuery capability got open request with non-empty",
             );
             return Ok(());
         }

@@ -184,8 +184,8 @@ impl CapabilityProvider for RouteValidatorCapabilityProvider {
 
         if relative_path.components().count() != 0 {
             warn!(
-                path = %relative_path.display(),
-                "RouteValidator capability got open request with non-empty path",
+                path=%relative_path.display(),
+                "RouteValidator capability got open request with non-empty",
             );
             return Ok(());
         }
