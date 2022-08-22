@@ -39,7 +39,7 @@ PINGABLE_FLUTTER_COMPONENTS = []
 foreach(cfg, BUILD_CONFIGS) {
   _target_name = "pingable-flutter-component-${cfg.name}-build-cfg"
   flutter_component(_target_name) {
-    manifest = "meta/pingable-flutter-component-${cfg.name}-build-cfg.cmx"
+    manifest = "meta/pingable-flutter-component-${cfg.name}-build-cfg.cml"
     main_package = "pingable_flutter_component"
     deps = [ ":lib" ]
     build_cfg = cfg.build_cfg

@@ -71,6 +71,7 @@ config("allow_unused_results") {
     "//src/diagnostics/*",
     "//src/experiences/*",
     "//src/factory/*",
+    "//src/flutter/tests/*",
     "//src/fonts/*",
     "//src/graphics/*",
     "//src/hwinfo/*",

@@ -1,0 +1,195 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "sys/component/realm_builder.shard.cml",
+        "sys/testing/system-test.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+
+    // Information about the program to run
+    program: {
+        // Use the built-in ELF runner for the executable
+        binary: "bin/flutter_runner_launch_smoke_test_bin_test",
+    },
+    children: [
+        {
+            // Centralized management of accessibility features.
+            name: "a11y_manager",
+            url: "fuchsia-pkg://fuchsia.com/a11y-manager#meta/a11y-manager.cm",
+        },
+        {
+            name: "flutter_jit_runner",
+            url: "fuchsia-pkg://fuchsia.com/flutter_jit_runner#meta/flutter_jit_runner.cm",
+        },
+        {
+            name: "flutter_aot_runner",
+            url: "fuchsia-pkg://fuchsia.com/flutter_aot_runner#meta/flutter_aot_runner.cm",
+        },
+        {
+            name: "flutter_aot_product_runner",
+            url: "fuchsia-pkg://fuchsia.com/flutter_aot_product_runner#meta/flutter_aot_product_runner.cm",
+        },
+        {
+            name: "mock_cobalt",
+            url: "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cm",
+        },
+        {
+            name: "scenic",
+            url: "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cm",
+        },
+        {
+            name: "text_manager",
+            url: "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cm",
+        },
+        {
+            name: "stash",
+            url: "fuchsia-pkg://fuchsia.com/stash#meta/stash.cm",
+        },
+    ],
+    collections: [
+        {
+            name: "flutter_runner_collection",
+            environment: "#runners_env",
+            durability: "transient",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.accessibility.semantics.SemanticsManager",
+                "fuchsia.fonts.Provider",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.sys.Launcher",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.metrics.MetricEventLoggerFactory" ],
+            from: "#mock_cobalt",
+            to: [ "#scenic" ],
+        },
+        {
+            protocol: [ "fuchsia.stash.Store" ],
+            from: "#stash",
+            to: [ "#scenic" ],
+        },
+        {
+            protocol: [
+                "fuchsia.fonts.Provider",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.logger.LogSink",
+                "fuchsia.memorypressure.Provider",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: [
+                "#a11y_manager",
+                "#flutter_aot_product_runner",
+                "#flutter_aot_runner",
+                "#flutter_jit_runner",
+                "#flutter_runner_collection",
+                "#mock_cobalt",
+                "#scenic",
+                "#stash",
+                "#text_manager",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input3.Keyboard",
+            ],
+            from: "#text_manager",
+            to: [
+                "#flutter_aot_product_runner",
+                "#flutter_aot_runner",
+                "#flutter_jit_runner",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.ui.pointerinjector.Registry" ],
+            from: "#scenic",
+            to: [
+                "#flutter_aot_product_runner",
+                "#flutter_aot_runner",
+                "#flutter_jit_runner",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.accessibility.semantics.SemanticsManager" ],
+            from: "#a11y_manager",
+            to: [
+                "#flutter_aot_product_runner",
+                "#flutter_aot_runner",
+                "#flutter_jit_runner",
+            ],
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [
+                "#flutter_aot_product_runner",
+                "#flutter_aot_runner",
+                "#flutter_jit_runner",
+                "#scenic",
+            ],
+        },
+        {
+            directory: "tmp",
+            from: "parent",
+            to: [ "#scenic" ],
+        },
+        {
+            directory: "dev-display-controller",
+            from: "parent",
+            to: [ "#scenic" ],
+        },
+    ],
+    environments: [
+        {
+            name: "runners_env",
+            extends: "realm",
+            runners: [
+                {
+                    runner: "flutter_jit_runner",
+                    from: "#flutter_jit_runner",
+                },
+                {
+                    runner: "flutter_aot_runner",
+                    from: "#flutter_aot_runner",
+                },
+                {
+                    runner: "flutter_aot_product_runner",
+                    from: "#flutter_aot_product_runner",
+                },
+                {
+                    runner: "realm_builder",
+                    from: "#realm_builder_server",
+                },
+            ],
+            resolvers: [
+                {
+                    resolver: "realm_builder_resolver",
+                    from: "#realm_builder_server",
+                    scheme: "realm-builder",
+                },
+            ],
+        },
+    ],
+}

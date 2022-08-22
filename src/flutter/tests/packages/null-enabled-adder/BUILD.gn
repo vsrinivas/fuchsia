@@ -6,7 +6,7 @@ import("//build/dart/dart_library.gni")
 
 dart_library("null-enabled-adder") {
   package_name = "null_enabled_adder"
-  language_version = "2.10"
+  language_version = "2.12"
 
   sources = [ "adder.dart" ]
 

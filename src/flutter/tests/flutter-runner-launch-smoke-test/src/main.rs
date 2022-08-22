@@ -17,51 +17,101 @@ mod tests {
         fidl_fuchsia_ui_app::ViewProviderMarker,
         fidl_test_fuchsia_flutter as fidl_ping,
         fuchsia_async::DurationExt,
-        fuchsia_component::client,
-        fuchsia_scenic as scenic,
-        fuchsia_syslog::{self as syslog, macros::*},
-        fuchsia_zircon as zx,
+        fuchsia_component_test::{
+            Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
+        },
+        fuchsia_scenic as scenic, fuchsia_zircon as zx,
         futures::future::Either,
+        tracing::info,
     };
+
+    const FLUTTER_COMPONENT_PACKAGE: &str = "pingable-flutter-component";
+    const FLUTTER_COMPONENT_DEBUG: &str = "pingable-flutter-component-debug-build-cfg";
+    const FLUTTER_COMPONENT_PROFILE: &str = "pingable-flutter-component-profile-build-cfg";
+    const FLUTTER_COMPONENT_RELEASE: &str = "pingable-flutter-component-release-build-cfg";
+
+    const TEXT_MANAGER: &str = "text_manager";
+
+    fn derive_component_url(package: &str, component_name: &str) -> String {
+        format!("fuchsia-pkg://fuchsia.com/{}#meta/{}.cm", package, component_name)
+    }
 
     #[fasync::run_singlethreaded(test)]
     async fn can_launch_debug_build_cfg() -> Result<(), Error> {
-        syslog::init_with_tags(&["can_launch_debug_build_cfg"]).context("Can't init logger")?;
-        launch_and_ping_component("fuchsia-pkg://fuchsia.com/pingable-flutter-component#meta/pingable-flutter-component-debug-build-cfg.cmx").await
+        launch_and_ping_component(FLUTTER_COMPONENT_PACKAGE, FLUTTER_COMPONENT_DEBUG).await
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn can_launch_profile_build_cfg() -> Result<(), Error> {
-        syslog::init_with_tags(&["can_launch_profile_build_cfg"]).context("Can't init logger")?;
-        launch_and_ping_component("fuchsia-pkg://fuchsia.com/pingable-flutter-component#meta/pingable-flutter-component-profile-build-cfg.cmx").await
+        launch_and_ping_component(FLUTTER_COMPONENT_PACKAGE, FLUTTER_COMPONENT_PROFILE).await
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn can_launch_release_build_cfg() -> Result<(), Error> {
-        syslog::init_with_tags(&["can_launch_release_build_cfg"]).context("Can't init logger")?;
-        launch_and_ping_component("fuchsia-pkg://fuchsia.com/pingable-flutter-component#meta/pingable-flutter-component-release-build-cfg.cmx").await
+        launch_and_ping_component(FLUTTER_COMPONENT_PACKAGE, FLUTTER_COMPONENT_RELEASE).await
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn can_launch_null_safe_build() -> Result<(), Error> {
-        syslog::init_with_tags(&["can_launch_release_build_cfg"]).context("Can't init logger")?;
-        let mut app = launch_and_connect_view_service("fuchsia-pkg://fuchsia.com/null-safe-enabled-flutter#meta/null-safe-enabled-flutter.cmx").await?;
-        app.kill()?;
-        Ok(())
-    }
+    async fn launch_and_connect_view_service(
+        package: &str,
+        component_name: &str,
+    ) -> Result<RealmInstance, Error> {
+        let component_url = &derive_component_url(package, component_name);
+        info!("Attempting to launch {}", component_url);
 
-    async fn launch_and_connect_view_service(component_url: &str) -> Result<client::App, Error> {
-        fx_log_info!("Attempting to launch {}", component_url);
+        let builder = RealmBuilder::new_with_collection("flutter_runner_collection").await?;
 
-        let launcher = client::launcher().context("Failed to get the launcher")?;
+        let text_manager = builder
+            .add_child(
+                TEXT_MANAGER,
+                &derive_component_url(TEXT_MANAGER, TEXT_MANAGER),
+                ChildOptions::new(),
+            )
+            .await?;
 
-        let app = client::launch(&launcher, component_url.to_string(), None)
-            .context("failed to launch the dart service under test")?;
+        // Add component to the realm, which is fetched using a URL.
+        let flutter_component =
+            builder.add_child(component_name, component_url, ChildOptions::new().eager()).await?;
+
+        // Route capabilities from flutter components to test component.
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.ui.app.ViewProvider"))
+                    .capability(Capability::protocol_by_name("test.fuchsia.flutter.Pinger"))
+                    .from(&flutter_component)
+                    .to(Ref::parent()),
+            )
+            .await?;
+
+        // Route capabilities from parent to flutter components.
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.fonts.Provider"))
+                    .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                    .capability(Capability::protocol_by_name("fuchsia.ui.scenic.Scenic"))
+                    .from(Ref::parent())
+                    .to(&flutter_component),
+            )
+            .await?;
+
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.ui.input.ImeService"))
+                    .capability(Capability::protocol_by_name("fuchsia.ui.input3.Keyboard"))
+                    .from(&text_manager)
+                    .to(&flutter_component),
+            )
+            .await?;
+
+        let realm = builder.build().await?;
 
         // We need to request a view from the component because the flutter runner
         // does not start up the vm service until this happens.
-        let view_provider = app
-            .connect_to_protocol::<ViewProviderMarker>()
+        let view_provider = realm
+            .root
+            .connect_to_protocol_at_exposed_dir::<ViewProviderMarker>()
             .context("Failed to connect to view_provider service")?;
         let token_pair = scenic::ViewTokenPair::new()?;
         let mut viewref_pair = scenic::ViewRefPair::new()?;
@@ -72,19 +122,22 @@ mod tests {
             &mut viewref_pair.view_ref,
         )?;
 
-        Ok(app)
+        Ok(realm)
     }
 
-    async fn launch_and_ping_component(component_url: &str) -> Result<(), Error> {
-        let app = launch_and_connect_view_service(component_url).await?;
-
+    async fn launch_and_ping_component(package: &str, component_name: &str) -> Result<(), Error> {
         // To ensure that we have launched and can receive messages we connect
         // to the ping service to try to communicate with the component.
-        let pinger = app
-            .connect_to_service::<fidl_ping::PingerMarker>()
-            .context("Failed to connect to pinger service")?;
+        let realm = launch_and_connect_view_service(package, component_name).await?;
+
+        let pinger = realm
+            .root
+            .connect_to_protocol_at_exposed_dir::<fidl_ping::PingerMarker>()
+            .expect("connect to Realm service");
 
         check_for_ping_response(&pinger).await?;
+
+        realm.destroy().await.context("destroy realm")?;
 
         Ok(())
     }
@@ -92,11 +145,11 @@ mod tests {
     /// Calls the ping server until a response is received.
     async fn check_for_ping_response(pinger: &fidl_ping::PingerProxy) -> Result<(), Error> {
         const MAX_ATTEMPTS: usize = 10;
-        let timeout = zx::Duration::from_millis(1000);
+        let timeout = zx::Duration::from_millis(2000);
 
         // Test multiple times in case the component is slow launching.
         for attempt in 1..=MAX_ATTEMPTS {
-            fx_log_info!("Calling pinger server, attempt: {}", attempt);
+            info!("Calling pinger server, attempt: {}", attempt);
 
             let timeout_fut = fasync::Timer::new(timeout.after_now());
             let either = futures::future::select(timeout_fut, pinger.ping());
@@ -104,9 +157,12 @@ mod tests {
 
             match resolved {
                 Either::Left(_) => {
-                    fx_log_info!("Timeout calling pinger server, attempt: {}", attempt);
+                    info!("Timeout calling pinger server, attempt: {}", attempt);
                 }
-                Either::Right((_, _)) => return Ok(()),
+                Either::Right((_, _)) => {
+                    info!("Pingable flutter component launched successfully!");
+                    return Ok(());
+                }
             }
         }
         Err(format_err!("Failed to connect to pinger service"))

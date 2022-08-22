@@ -1,0 +1,21 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    // Enable system logging capabilities
+    include: [ "//src/flutter/tests/bin/common.shard.cml" ],
+
+    // Information about the program to run
+    program: {
+        data: "data/pingable-flutter-component-profile-build-cfg",
+    },
+    capabilities: [
+        { protocol: "test.fuchsia.flutter.Pinger" },
+    ],
+    expose: [
+        {
+            protocol: "test.fuchsia.flutter.Pinger",
+            from: "self",
+        },
+    ],
+}
