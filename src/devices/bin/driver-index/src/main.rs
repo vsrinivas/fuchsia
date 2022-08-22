@@ -731,41 +731,6 @@ mod tests {
         }
     }
 
-    pub fn create_transform_vector(
-        primary: Vec<(fdf::NodePropertyKey, fdf::NodePropertyValue)>,
-        additionals: Vec<Vec<(fdf::NodePropertyKey, fdf::NodePropertyValue)>>,
-    ) -> Vec<fdf::TransformNode> {
-        let mut primary_props = vec![];
-        for prop_pair in primary {
-            primary_props.push(fdf::NodeProperty {
-                key: Some(prop_pair.0),
-                value: Some(prop_pair.1),
-                ..fdf::NodeProperty::EMPTY
-            });
-        }
-
-        let mut result = vec![fdf::TransformNode {
-            properties: Some(primary_props),
-            ..fdf::TransformNode::EMPTY
-        }];
-
-        for additional in additionals {
-            let mut props = vec![];
-            for prop_pair in additional {
-                props.push(fdf::NodeProperty {
-                    key: Some(prop_pair.0),
-                    value: Some(prop_pair.1),
-                    ..fdf::NodeProperty::EMPTY
-                });
-            }
-
-            result
-                .push(fdf::TransformNode { properties: Some(props), ..fdf::TransformNode::EMPTY });
-        }
-
-        return result;
-    }
-
     async fn get_driver_info_proxy(
         development_proxy: &fdd::DriverIndexProxy,
         driver_filter: &[&str],
@@ -2210,7 +2175,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_device_group_match() {
+    async fn test_device_group_node_match() {
         let base_repo = BaseRepo::Resolved(std::vec![]);
 
         let (proxy, stream) =
@@ -2235,6 +2200,12 @@ mod tests {
                 },
             ];
 
+            let transformation = vec![fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::StringValue("trembler".to_string())),
+                value: Some(fdf::NodePropertyValue::StringValue("thrasher".to_string())),
+                ..fdf::NodeProperty::EMPTY
+            }];
+
             assert_eq!(
                 Err(Status::NOT_FOUND.into_raw()),
                 proxy
@@ -2243,6 +2214,7 @@ mod tests {
                         nodes: Some(vec![fdf::DeviceGroupNode {
                             name: "whimbrel".to_string(),
                             properties: node_properties,
+                            transformation: transformation,
                         }]),
                         ..fdf::DeviceGroup::EMPTY
                     })
@@ -2312,7 +2284,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_device_group_match_v1() {
+    async fn test_device_group_node_match_v1() {
         let always_match_rules = bind::compiler::BindRules {
             instructions: vec![],
             symbol_table: std::collections::HashMap::new(),
@@ -2358,6 +2330,12 @@ mod tests {
                 },
             ];
 
+            let transformation = vec![fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::StringValue("trembler".to_string())),
+                value: Some(fdf::NodePropertyValue::StringValue("thrasher".to_string())),
+                ..fdf::NodeProperty::EMPTY
+            }];
+
             assert_eq!(
                 Err(Status::NOT_FOUND.into_raw()),
                 proxy
@@ -2366,6 +2344,7 @@ mod tests {
                         nodes: Some(vec![fdf::DeviceGroupNode {
                             name: "whimbrel".to_string(),
                             properties: node_properties,
+                            transformation: transformation,
                         }]),
                         ..fdf::DeviceGroup::EMPTY
                     })
@@ -2524,7 +2503,7 @@ mod tests {
 
         let index_task = run_index_server(index.clone(), stream).fuse();
         let test_task = async move {
-            let node_properties = vec![
+            let node_1_properties = vec![
                 fdf::DeviceGroupProperty {
                     key: fdf::NodePropertyKey::IntValue(1),
                     condition: fdf::Condition::Accept,
@@ -2540,42 +2519,46 @@ mod tests {
                 },
             ];
 
-            let matching_transform = create_transform_vector(
-                vec![(
-                    fdf::NodePropertyKey::StringValue("trembler".to_string()),
-                    fdf::NodePropertyValue::StringValue("thrasher".to_string()),
-                )],
-                vec![vec![
-                    (
-                        fdf::NodePropertyKey::StringValue("catbird".to_string()),
-                        fdf::NodePropertyValue::IntValue(1),
-                    ),
-                    (
-                        fdf::NodePropertyKey::StringValue("thrasher".to_string()),
-                        fdf::NodePropertyValue::StringValue("catbird".to_string()),
-                    ),
-                ]],
-            );
+            let node_1_transform_match = vec![fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::StringValue("trembler".to_string())),
+                value: Some(fdf::NodePropertyValue::StringValue("thrasher".to_string())),
+                ..fdf::NodeProperty::EMPTY
+            }];
 
-            let non_matching_transform = create_transform_vector(
-                vec![(
-                    fdf::NodePropertyKey::StringValue("trembler".to_string()),
-                    fdf::NodePropertyValue::StringValue("thrasher".to_string()),
-                )],
-                vec![vec![(
-                    fdf::NodePropertyKey::StringValue("catbird".to_string()),
-                    fdf::NodePropertyValue::IntValue(1),
-                )]],
-            );
+            let node_2_properties = vec![fdf::DeviceGroupProperty {
+                key: fdf::NodePropertyKey::IntValue(1),
+                condition: fdf::Condition::Accept,
+                values: vec![fdf::NodePropertyValue::IntValue(10)],
+            }];
+
+            let node_2_transform_match = vec![
+                fdf::NodeProperty {
+                    key: Some(fdf::NodePropertyKey::StringValue("catbird".to_string())),
+                    value: Some(fdf::NodePropertyValue::IntValue(1)),
+                    ..fdf::NodeProperty::EMPTY
+                },
+                fdf::NodeProperty {
+                    key: Some(fdf::NodePropertyKey::StringValue("thrasher".to_string())),
+                    value: Some(fdf::NodePropertyValue::StringValue("catbird".to_string())),
+                    ..fdf::NodeProperty::EMPTY
+                },
+            ];
 
             let result = proxy
                 .add_device_group(fdf::DeviceGroup {
-                    topological_path: Some("test/path".to_string()),
-                    nodes: Some(vec![fdf::DeviceGroupNode {
-                        name: "whimbrel".to_string(),
-                        properties: node_properties.clone(),
-                    }]),
-                    transformation: Some(matching_transform),
+                    topological_path: Some("test/match".to_string()),
+                    nodes: Some(vec![
+                        fdf::DeviceGroupNode {
+                            name: "whimbrel".to_string(),
+                            properties: node_1_properties.clone(),
+                            transformation: node_1_transform_match.clone(),
+                        },
+                        fdf::DeviceGroupNode {
+                            name: "curlew".to_string(),
+                            properties: node_2_properties.clone(),
+                            transformation: node_2_transform_match.clone(),
+                        },
+                    ]),
                     ..fdf::DeviceGroup::EMPTY
                 })
                 .await
@@ -2583,19 +2566,63 @@ mod tests {
                 .unwrap();
             assert_eq!(url.to_string(), result.driver_info.unwrap().url.unwrap());
 
-            let result = proxy
-                .add_device_group(fdf::DeviceGroup {
-                    topological_path: Some("test/path/another".to_string()),
-                    nodes: Some(vec![fdf::DeviceGroupNode {
-                        name: "whimbrel".to_string(),
-                        properties: node_properties,
-                    }]),
-                    transformation: Some(non_matching_transform),
-                    ..fdf::DeviceGroup::EMPTY
-                })
-                .await
-                .unwrap();
-            assert_eq!(Err(Status::NOT_FOUND.into_raw()), result);
+            let node_1_transform_nonmatch = vec![fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::StringValue("trembler".to_string())),
+                value: Some(fdf::NodePropertyValue::StringValue("catbird".to_string())),
+                ..fdf::NodeProperty::EMPTY
+            }];
+
+            assert_eq!(
+                Err(Status::NOT_FOUND.into_raw()),
+                proxy
+                    .add_device_group(fdf::DeviceGroup {
+                        topological_path: Some("test/non_match_1".to_string()),
+                        nodes: Some(vec![
+                            fdf::DeviceGroupNode {
+                                name: "whimbrel".to_string(),
+                                properties: node_1_properties.clone(),
+                                transformation: node_1_transform_nonmatch,
+                            },
+                            fdf::DeviceGroupNode {
+                                name: "curlew".to_string(),
+                                properties: node_2_properties.clone(),
+                                transformation: node_2_transform_match,
+                            },
+                        ]),
+                        ..fdf::DeviceGroup::EMPTY
+                    })
+                    .await
+                    .unwrap()
+            );
+
+            let node_2_transform_nonmatch = vec![fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::IntValue(1)),
+                value: Some(fdf::NodePropertyValue::IntValue(10)),
+                ..fdf::NodeProperty::EMPTY
+            }];
+
+            assert_eq!(
+                Err(Status::NOT_FOUND.into_raw()),
+                proxy
+                    .add_device_group(fdf::DeviceGroup {
+                        topological_path: Some("test/non_match_2".to_string()),
+                        nodes: Some(vec![
+                            fdf::DeviceGroupNode {
+                                name: "whimbrel".to_string(),
+                                properties: node_1_properties.clone(),
+                                transformation: node_1_transform_match,
+                            },
+                            fdf::DeviceGroupNode {
+                                name: "curlew".to_string(),
+                                properties: node_2_properties.clone(),
+                                transformation: node_2_transform_nonmatch,
+                            },
+                        ]),
+                        ..fdf::DeviceGroup::EMPTY
+                    })
+                    .await
+                    .unwrap()
+            );
         }
         .fuse();
 
@@ -2666,7 +2693,7 @@ mod tests {
 
         let index_task = run_index_server(index.clone(), stream).fuse();
         let test_task = async move {
-            let node_properties = vec![
+            let node_1_properties = vec![
                 fdf::DeviceGroupProperty {
                     key: fdf::NodePropertyKey::IntValue(1),
                     condition: fdf::Condition::Accept,
@@ -2681,6 +2708,55 @@ mod tests {
                     values: vec![fdf::NodePropertyValue::StringValue("plover".to_string())],
                 },
             ];
+
+            let node_1_transform_match = vec![fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::StringValue("trembler".to_string())),
+                value: Some(fdf::NodePropertyValue::StringValue("thrasher".to_string())),
+                ..fdf::NodeProperty::EMPTY
+            }];
+
+            let node_2_properties = vec![fdf::DeviceGroupProperty {
+                key: fdf::NodePropertyKey::IntValue(1),
+                condition: fdf::Condition::Accept,
+                values: vec![fdf::NodePropertyValue::IntValue(10)],
+            }];
+
+            let node_2_transform_match = vec![
+                fdf::NodeProperty {
+                    key: Some(fdf::NodePropertyKey::StringValue("catbird".to_string())),
+                    value: Some(fdf::NodePropertyValue::IntValue(1)),
+                    ..fdf::NodeProperty::EMPTY
+                },
+                fdf::NodeProperty {
+                    key: Some(fdf::NodePropertyKey::StringValue("thrasher".to_string())),
+                    value: Some(fdf::NodePropertyValue::StringValue("catbird".to_string())),
+                    ..fdf::NodeProperty::EMPTY
+                },
+            ];
+
+            // When we add the device group it should get not found since there's no drivers.
+            assert_eq!(
+                Err(Status::NOT_FOUND.into_raw()),
+                proxy
+                    .add_device_group(fdf::DeviceGroup {
+                        topological_path: Some("test/path".to_string()),
+                        nodes: Some(vec![
+                            fdf::DeviceGroupNode {
+                                name: "whimbrel".to_string(),
+                                properties: node_1_properties.clone(),
+                                transformation: node_1_transform_match.clone(),
+                            },
+                            fdf::DeviceGroupNode {
+                                name: "curlew".to_string(),
+                                properties: node_2_properties.clone(),
+                                transformation: node_2_transform_match,
+                            },
+                        ]),
+                        ..fdf::DeviceGroup::EMPTY
+                    })
+                    .await
+                    .unwrap()
+            );
 
             let device_properties_match = vec![
                 fdf::NodeProperty {
@@ -2698,38 +2774,6 @@ mod tests {
                 properties: Some(device_properties_match),
                 ..fdf::NodeAddArgs::EMPTY
             };
-
-            let matching_transform = create_transform_vector(
-                vec![(
-                    fdf::NodePropertyKey::StringValue("trembler".to_string()),
-                    fdf::NodePropertyValue::StringValue("thrasher".to_string()),
-                )],
-                vec![vec![
-                    (
-                        fdf::NodePropertyKey::StringValue("catbird".to_string()),
-                        fdf::NodePropertyValue::IntValue(1),
-                    ),
-                    (
-                        fdf::NodePropertyKey::StringValue("thrasher".to_string()),
-                        fdf::NodePropertyValue::StringValue("catbird".to_string()),
-                    ),
-                ]],
-            );
-
-            // When we add the device group it should get not found since there's no drivers.
-            let result = proxy
-                .add_device_group(fdf::DeviceGroup {
-                    topological_path: Some("test/path".to_string()),
-                    nodes: Some(vec![fdf::DeviceGroupNode {
-                        name: "whimbrel".to_string(),
-                        properties: node_properties,
-                    }]),
-                    transformation: Some(matching_transform),
-                    ..fdf::DeviceGroup::EMPTY
-                })
-                .await
-                .unwrap();
-            assert_eq!(Err(Status::NOT_FOUND.into_raw()), result);
 
             // We can see the device group comes back without a matched composite.
             let match_result = proxy.match_driver(match_args.clone()).await.unwrap().unwrap();
@@ -2837,6 +2881,15 @@ mod tests {
                         nodes: Some(vec![fdf::DeviceGroupNode {
                             name: "whimbrel".to_string(),
                             properties: node_properties,
+                            transformation: vec![fdf::NodeProperty {
+                                key: Some(fdf::NodePropertyKey::StringValue(
+                                    "trembler".to_string()
+                                )),
+                                value: Some(fdf::NodePropertyValue::StringValue(
+                                    "thrasher".to_string()
+                                )),
+                                ..fdf::NodeProperty::EMPTY
+                            }]
                         }]),
                         ..fdf::DeviceGroup::EMPTY
                     })
@@ -2850,12 +2903,19 @@ mod tests {
                 values: vec![fdf::NodePropertyValue::IntValue(2)],
             }];
 
+            let node_transform = vec![fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::StringValue("trembler".to_string())),
+                value: Some(fdf::NodePropertyValue::StringValue("thrasher".to_string())),
+                ..fdf::NodeProperty::EMPTY
+            }];
+
             let result = proxy
                 .add_device_group(fdf::DeviceGroup {
                     topological_path: Some("test/path".to_string()),
                     nodes: Some(vec![fdf::DeviceGroupNode {
                         name: "dunlin".to_string(),
                         properties: duplicate_node_properties,
+                        transformation: node_transform,
                     }]),
                     ..fdf::DeviceGroup::EMPTY
                 })
@@ -2921,12 +2981,19 @@ mod tests {
                 },
             ];
 
+            let node_transform = vec![fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::StringValue("trembler".to_string())),
+                value: Some(fdf::NodePropertyValue::StringValue("thrasher".to_string())),
+                ..fdf::NodeProperty::EMPTY
+            }];
+
             let result = proxy
                 .add_device_group(fdf::DeviceGroup {
                     topological_path: Some("test/path".to_string()),
                     nodes: Some(vec![fdf::DeviceGroupNode {
                         name: "whimbrel".to_string(),
                         properties: node_properties,
+                        transformation: node_transform,
                     }]),
                     ..fdf::DeviceGroup::EMPTY
                 })

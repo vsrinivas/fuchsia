@@ -23,6 +23,11 @@ pub struct DeviceGroupNodePropertyCondition {
 
 type DeviceGroupNodeProperties = BTreeMap<PropertyKey, DeviceGroupNodePropertyCondition>;
 
+struct DeviceGroupInfo {
+    pub nodes: Vec<fdf::DeviceGroupNode>,
+    pub composite_driver: Option<fdi::MatchedCompositeInfo>,
+}
+
 // The DeviceGroupManager struct is responsible of managing a list of device groups
 // for matching.
 pub struct DeviceGroupManager {
@@ -38,8 +43,7 @@ pub struct DeviceGroupManager {
     // We store this info here rather than the device_group_nodes items since these have a 1:1
     // mapping to the device group, putting them with the device_group_nodes would lead
     // to a lot of duplicates leading to wasted space.
-    pub device_group_list:
-        HashMap<String, (Vec<fdf::TransformNode>, Option<fdi::MatchedCompositeInfo>)>,
+    device_group_list: HashMap<String, DeviceGroupInfo>,
 }
 
 impl DeviceGroupManager {
@@ -55,10 +59,6 @@ impl DeviceGroupManager {
         let topological_path = group.topological_path.ok_or(Status::INVALID_ARGS.into_raw())?;
         let nodes = group.nodes.ok_or(Status::INVALID_ARGS.into_raw())?;
 
-        // TODO(fxb/105562): For now since we don't send a transformation from all of
-        // the unit tests, we don't want to validate that the transformation exists.
-        let transformation = group.transformation.unwrap_or(vec![]);
-
         if self.device_group_list.contains_key(&topological_path) {
             return Err(Status::ALREADY_EXISTS.into_raw());
         }
@@ -69,6 +69,8 @@ impl DeviceGroupManager {
 
         // Collect device group nodes in a separate vector before adding them to the device group
         // manager. This is to ensure that we add the nodes after they're all verified to be valid.
+        // TODO(fxb/105562): Update tests so that we can verify that transformation exists in
+        // each node.
         let mut device_group_nodes: Vec<(DeviceGroupNodeProperties, fdi::MatchedDeviceGroupInfo)> =
             vec![];
         for (node_idx, node) in nodes.iter().enumerate() {
@@ -92,19 +94,22 @@ impl DeviceGroupManager {
         }
 
         for composite_driver in composite_drivers {
-            let matched_composite =
-                match_composite_transformation(composite_driver, &transformation)?;
+            let matched_composite = match_composite_transformation(composite_driver, &nodes)?;
             if let Some(matched_composite) = matched_composite {
                 // Found a match so we can set this in our map.
                 self.device_group_list.insert(
                     topological_path.clone(),
-                    (transformation.clone(), Some(matched_composite.clone())),
+                    DeviceGroupInfo {
+                        nodes: nodes,
+                        composite_driver: Some(matched_composite.clone()),
+                    },
                 );
                 return Ok(matched_composite);
             }
         }
 
-        self.device_group_list.insert(topological_path.clone(), (transformation.clone(), None));
+        self.device_group_list
+            .insert(topological_path, DeviceGroupInfo { nodes: nodes, composite_driver: None });
         Err(Status::NOT_FOUND.into_raw())
     }
 
@@ -127,6 +132,7 @@ impl DeviceGroupManager {
 
         // Put in the matched composite info for this device group
         // that we have stored in our device_group_list.
+        // TODO(fxb/107371): Only return device groups that have a matched composite.
         for result_dev_group in &mut device_groups {
             if let Some(topological_path) = &result_dev_group.topological_path {
                 let list_value = self.device_group_list.get(topological_path);
@@ -137,8 +143,8 @@ impl DeviceGroupManager {
                             topological_path
                         );
                     }
-                    Some((_, matched_composite)) => {
-                        result_dev_group.composite = matched_composite.clone();
+                    Some(device_group) => {
+                        result_dev_group.composite = device_group.composite_driver.clone();
                     }
                 }
             }
@@ -152,13 +158,13 @@ impl DeviceGroupManager {
 
     pub fn new_driver_available(&mut self, resolved_driver: ResolvedDriver) {
         for dev_group in self.device_group_list.values_mut() {
-            if dev_group.1.is_some() {
+            if dev_group.composite_driver.is_some() {
                 continue;
             }
             let matched_composite_result =
-                match_composite_transformation(&resolved_driver, &dev_group.0);
+                match_composite_transformation(&resolved_driver, &dev_group.nodes);
             if let Ok(matched_composite) = matched_composite_result {
-                dev_group.1 = matched_composite;
+                dev_group.composite_driver = matched_composite;
             }
         }
     }
@@ -246,23 +252,23 @@ fn node_property_to_symbol(value: &fdf::NodePropertyValue) -> Symbol {
 
 fn match_composite_transformation<'a>(
     composite_driver: &'a ResolvedDriver,
-    transformation: &'a Vec<fdf::TransformNode>,
+    nodes: &'a Vec<fdf::DeviceGroupNode>,
 ) -> Result<Option<fdi::MatchedCompositeInfo>, i32> {
-    // Transformation has to have at least 1 node to match a composite driver.
-    if transformation.len() < 1 {
+    // The device group must have at least 1 node to match a composite driver.
+    if nodes.len() < 1 {
         return Ok(None);
     }
 
     let composite = get_composite_rules_from_composite_driver(composite_driver)?;
 
     // Both the composite driver and the transformation need the exact same number of nodes.
-    if composite.additional_nodes.len() + 1 != transformation.len() {
+    if composite.additional_nodes.len() + 1 != nodes.len() {
         return Ok(None);
     }
 
     // First check the primary nodes match.
-    let primary_matches = transform_node_matches_rules_node(
-        &transformation[0],
+    let primary_matches = node_matches_composite_driver(
+        &nodes[0],
         &composite.primary_node.instructions,
         &composite.symbol_table,
     );
@@ -289,14 +295,17 @@ fn match_composite_transformation<'a>(
     //
     // If we were smarter here we could match up transform[1] with additional_nodes[1]
     // and transform[2] with additional_nodes[0] to return a positive match.
+    // TODO(fxb/107176): Disallow ambiguity with device group matching. We should log
+    // a warning and return false if a device group node matches with multiple composite
+    // driver nodes, and vice versa.
     let mut unmatched_additional_indices =
         (0..composite.additional_nodes.len()).collect::<HashSet<_>>();
 
-    for i in 1..transformation.len() {
+    for i in 1..nodes.len() {
         let mut matched = None;
         for &j in &unmatched_additional_indices {
-            let matches = transform_node_matches_rules_node(
-                &transformation[i],
+            let matches = node_matches_composite_driver(
+                &nodes[i],
                 &composite.additional_nodes[j].instructions,
                 &composite.symbol_table,
             );
@@ -323,25 +332,17 @@ fn match_composite_transformation<'a>(
     }))
 }
 
-fn transform_node_matches_rules_node(
-    transform_node: &fdf::TransformNode,
+fn node_matches_composite_driver(
+    node: &fdf::DeviceGroupNode,
     bind_rules_node: &Vec<u8>,
     symbol_table: &HashMap<u32, String>,
 ) -> bool {
-    let props = convert_transform_to_properties(transform_node);
-    match props {
-        None => false,
-        Some(props) => {
+    match node_to_device_property(&node.transformation) {
+        Err(_) => false,
+        Ok(props) => {
             let match_bind_data = MatchBindData { symbol_table, instructions: bind_rules_node };
             match_bind(match_bind_data, &props).unwrap_or(false)
         }
-    }
-}
-
-fn convert_transform_to_properties(transform: &fdf::TransformNode) -> Option<DeviceProperties> {
-    match &transform.properties {
-        None => None,
-        Some(node_properties) => node_to_device_property(&node_properties).ok(),
     }
 }
 
@@ -349,7 +350,6 @@ fn convert_transform_to_properties(transform: &fdf::TransformNode) -> Option<Dev
 mod tests {
     use super::*;
     use crate::resolved_driver::DriverPackageType;
-    use crate::tests::create_transform_vector;
     use bind::compiler::{
         CompiledBindRules, CompositeBindRules, CompositeNode, Symbol, SymbolicInstruction,
         SymbolicInstructionInfo,
@@ -396,7 +396,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_property_match() {
+    async fn test_property_match_node() {
         let node_properties_1 = vec![
             fdf::DeviceGroupProperty {
                 key: fdf::NodePropertyKey::IntValue(1),
@@ -414,6 +414,12 @@ mod tests {
                 values: vec![fdf::NodePropertyValue::StringValue("plover".to_string())],
             },
         ];
+
+        let node_transformation_1 = vec![fdf::NodeProperty {
+            key: Some(fdf::NodePropertyKey::IntValue(2)),
+            value: Some(fdf::NodePropertyValue::BoolValue(false)),
+            ..fdf::NodeProperty::EMPTY
+        }];
 
         let node_properties_2 = vec![
             fdf::DeviceGroupProperty {
@@ -433,6 +439,12 @@ mod tests {
             },
         ];
 
+        let node_transformation_2 = vec![fdf::NodeProperty {
+            key: Some(fdf::NodePropertyKey::IntValue(3)),
+            value: Some(fdf::NodePropertyValue::BoolValue(true)),
+            ..fdf::NodeProperty::EMPTY
+        }];
+
         let mut device_group_manager = DeviceGroupManager::new();
         assert_eq!(
             Err(Status::NOT_FOUND.into_raw()),
@@ -443,10 +455,12 @@ mod tests {
                         fdf::DeviceGroupNode {
                             name: "whimbrel".to_string(),
                             properties: node_properties_1,
+                            transformation: node_transformation_1,
                         },
                         fdf::DeviceGroupNode {
                             name: "godwit".to_string(),
-                            properties: node_properties_2
+                            properties: node_properties_2,
+                            transformation: node_transformation_2,
                         },
                     ]),
                     ..fdf::DeviceGroup::EMPTY
@@ -523,6 +537,12 @@ mod tests {
             },
         ];
 
+        let node_transformation = vec![fdf::NodeProperty {
+            key: Some(fdf::NodePropertyKey::IntValue(3)),
+            value: Some(fdf::NodePropertyValue::BoolValue(true)),
+            ..fdf::NodeProperty::EMPTY
+        }];
+
         let mut device_group_manager = DeviceGroupManager::new();
         assert_eq!(
             Err(Status::NOT_FOUND.into_raw()),
@@ -532,6 +552,7 @@ mod tests {
                     nodes: Some(vec![fdf::DeviceGroupNode {
                         name: "whimbrel".to_string(),
                         properties: node_properties,
+                        transformation: node_transformation,
                     }]),
                     ..fdf::DeviceGroup::EMPTY
                 },
@@ -577,6 +598,12 @@ mod tests {
             },
         ];
 
+        let node_transformation_1 = vec![fdf::NodeProperty {
+            key: Some(fdf::NodePropertyKey::IntValue(2)),
+            value: Some(fdf::NodePropertyValue::BoolValue(false)),
+            ..fdf::NodeProperty::EMPTY
+        }];
+
         let node_properties_2 = vec![
             fdf::DeviceGroupProperty {
                 key: fdf::NodePropertyKey::StringValue("killdeer".to_string()),
@@ -613,10 +640,22 @@ mod tests {
             },
         ];
 
+        let node_transformation_2 = vec![fdf::NodeProperty {
+            key: Some(fdf::NodePropertyKey::IntValue(3)),
+            value: Some(fdf::NodePropertyValue::BoolValue(true)),
+            ..fdf::NodeProperty::EMPTY
+        }];
+
         let node_properties_3 = vec![fdf::DeviceGroupProperty {
             key: fdf::NodePropertyKey::StringValue("cormorant".to_string()),
             condition: fdf::Condition::Accept,
             values: vec![fdf::NodePropertyValue::BoolValue(true)],
+        }];
+
+        let node_transformation_3 = vec![fdf::NodeProperty {
+            key: Some(fdf::NodePropertyKey::StringValue("anhinga".to_string())),
+            value: Some(fdf::NodePropertyValue::BoolValue(false)),
+            ..fdf::NodeProperty::EMPTY
         }];
 
         let mut device_group_manager = DeviceGroupManager::new();
@@ -629,10 +668,12 @@ mod tests {
                         fdf::DeviceGroupNode {
                             name: "whimbrel".to_string(),
                             properties: node_properties_1,
+                            transformation: node_transformation_1,
                         },
                         fdf::DeviceGroupNode {
                             name: "godwit".to_string(),
-                            properties: node_properties_2
+                            properties: node_properties_2,
+                            transformation: node_transformation_2.clone(),
                         },
                     ]),
                     ..fdf::DeviceGroup::EMPTY
@@ -650,10 +691,12 @@ mod tests {
                         fdf::DeviceGroupNode {
                             name: "whimbrel".to_string(),
                             properties: node_properties_2_rearranged,
+                            transformation: node_transformation_2,
                         },
                         fdf::DeviceGroupNode {
                             name: "godwit".to_string(),
-                            properties: node_properties_3
+                            properties: node_properties_3,
+                            transformation: node_transformation_3,
                         },
                     ]),
                     ..fdf::DeviceGroup::EMPTY
@@ -714,6 +757,12 @@ mod tests {
             },
         ];
 
+        let node_transformation_1 = vec![fdf::NodeProperty {
+            key: Some(fdf::NodePropertyKey::IntValue(2)),
+            value: Some(fdf::NodePropertyValue::BoolValue(false)),
+            ..fdf::NodeProperty::EMPTY
+        }];
+
         let node_properties_2 = vec![
             fdf::DeviceGroupProperty {
                 key: fdf::NodePropertyKey::StringValue("killdeer".to_string()),
@@ -731,6 +780,12 @@ mod tests {
                 values: vec![fdf::NodePropertyValue::BoolValue(true)],
             },
         ];
+
+        let node_transformation_2 = vec![fdf::NodeProperty {
+            key: Some(fdf::NodePropertyKey::IntValue(3)),
+            value: Some(fdf::NodePropertyValue::BoolValue(true)),
+            ..fdf::NodeProperty::EMPTY
+        }];
 
         let node_properties_1_rearranged = vec![
             fdf::DeviceGroupProperty {
@@ -751,6 +806,12 @@ mod tests {
             values: vec![fdf::NodePropertyValue::BoolValue(true)],
         }];
 
+        let node_transformation_3 = vec![fdf::NodeProperty {
+            key: Some(fdf::NodePropertyKey::IntValue(3)),
+            value: Some(fdf::NodePropertyValue::BoolValue(false)),
+            ..fdf::NodeProperty::EMPTY
+        }];
+
         let node_properties_4 = vec![fdf::DeviceGroupProperty {
             key: fdf::NodePropertyKey::IntValue(1),
             condition: fdf::Condition::Accept,
@@ -758,6 +819,12 @@ mod tests {
                 fdf::NodePropertyValue::IntValue(10),
                 fdf::NodePropertyValue::IntValue(200),
             ],
+        }];
+
+        let node_transformation_4 = vec![fdf::NodeProperty {
+            key: Some(fdf::NodePropertyKey::IntValue(2)),
+            value: Some(fdf::NodePropertyValue::BoolValue(true)),
+            ..fdf::NodeProperty::EMPTY
         }];
 
         let mut device_group_manager = DeviceGroupManager::new();
@@ -770,10 +837,12 @@ mod tests {
                         fdf::DeviceGroupNode {
                             name: "whimbrel".to_string(),
                             properties: node_properties_1,
+                            transformation: node_transformation_1.clone(),
                         },
                         fdf::DeviceGroupNode {
                             name: "godwit".to_string(),
-                            properties: node_properties_2
+                            properties: node_properties_2,
+                            transformation: node_transformation_2,
                         },
                     ]),
                     ..fdf::DeviceGroup::EMPTY
@@ -791,10 +860,12 @@ mod tests {
                         fdf::DeviceGroupNode {
                             name: "sanderling".to_string(),
                             properties: node_properties_3,
+                            transformation: node_transformation_3,
                         },
                         fdf::DeviceGroupNode {
                             name: "plover".to_string(),
                             properties: node_properties_1_rearranged,
+                            transformation: node_transformation_1,
                         },
                     ]),
                     ..fdf::DeviceGroup::EMPTY
@@ -811,6 +882,7 @@ mod tests {
                     nodes: Some(vec![fdf::DeviceGroupNode {
                         name: "dunlin".to_string(),
                         properties: node_properties_4,
+                        transformation: node_transformation_4,
                     }]),
                     ..fdf::DeviceGroup::EMPTY
                 },
@@ -876,6 +948,12 @@ mod tests {
             },
         ];
 
+        let node_transformation_1 = vec![fdf::NodeProperty {
+            key: Some(fdf::NodePropertyKey::IntValue(2)),
+            value: Some(fdf::NodePropertyValue::BoolValue(false)),
+            ..fdf::NodeProperty::EMPTY
+        }];
+
         let node_properties_2 = vec![
             fdf::DeviceGroupProperty {
                 key: fdf::NodePropertyKey::StringValue("killdeer".to_string()),
@@ -889,6 +967,12 @@ mod tests {
             },
         ];
 
+        let node_transformation_2 = vec![fdf::NodeProperty {
+            key: Some(fdf::NodePropertyKey::IntValue(3)),
+            value: Some(fdf::NodePropertyValue::BoolValue(true)),
+            ..fdf::NodeProperty::EMPTY
+        }];
+
         let mut device_group_manager = DeviceGroupManager::new();
         assert_eq!(
             Err(Status::NOT_FOUND.into_raw()),
@@ -899,10 +983,12 @@ mod tests {
                         fdf::DeviceGroupNode {
                             name: "whimbrel".to_string(),
                             properties: node_properties_1,
+                            transformation: node_transformation_1,
                         },
                         fdf::DeviceGroupNode {
                             name: "godwit".to_string(),
-                            properties: node_properties_2
+                            properties: node_properties_2,
+                            transformation: node_transformation_2,
                         },
                     ]),
                     ..fdf::DeviceGroup::EMPTY
@@ -948,6 +1034,12 @@ mod tests {
             },
         ];
 
+        let node_transformation_1 = vec![fdf::NodeProperty {
+            key: Some(fdf::NodePropertyKey::IntValue(1)),
+            value: Some(fdf::NodePropertyValue::IntValue(100)),
+            ..fdf::NodeProperty::EMPTY
+        }];
+
         let node_properties_2 = vec![
             fdf::DeviceGroupProperty {
                 key: fdf::NodePropertyKey::IntValue(11),
@@ -964,6 +1056,12 @@ mod tests {
             },
         ];
 
+        let node_transformation_2 = vec![fdf::NodeProperty {
+            key: Some(fdf::NodePropertyKey::IntValue(3)),
+            value: Some(fdf::NodePropertyValue::BoolValue(true)),
+            ..fdf::NodeProperty::EMPTY
+        }];
+
         let mut device_group_manager = DeviceGroupManager::new();
         assert_eq!(
             Err(Status::NOT_FOUND.into_raw()),
@@ -974,10 +1072,12 @@ mod tests {
                         fdf::DeviceGroupNode {
                             name: "whimbrel".to_string(),
                             properties: node_properties_1,
+                            transformation: node_transformation_1,
                         },
                         fdf::DeviceGroupNode {
                             name: "godwit".to_string(),
-                            properties: node_properties_2
+                            properties: node_properties_2,
+                            transformation: node_transformation_2,
                         },
                     ]),
                     ..fdf::DeviceGroup::EMPTY
@@ -1048,6 +1148,12 @@ mod tests {
             },
         ];
 
+        let node_transformation_1 = vec![fdf::NodeProperty {
+            key: Some(fdf::NodePropertyKey::IntValue(1)),
+            value: Some(fdf::NodePropertyValue::IntValue(100)),
+            ..fdf::NodeProperty::EMPTY
+        }];
+
         let node_properties_2 = vec![
             fdf::DeviceGroupProperty {
                 key: fdf::NodePropertyKey::IntValue(11),
@@ -1064,6 +1170,12 @@ mod tests {
             },
         ];
 
+        let node_transformation_2 = vec![fdf::NodeProperty {
+            key: Some(fdf::NodePropertyKey::IntValue(3)),
+            value: Some(fdf::NodePropertyValue::BoolValue(true)),
+            ..fdf::NodeProperty::EMPTY
+        }];
+
         let mut device_group_manager = DeviceGroupManager::new();
         assert_eq!(
             Err(Status::NOT_FOUND.into_raw()),
@@ -1074,10 +1186,12 @@ mod tests {
                         fdf::DeviceGroupNode {
                             name: "sanderling".to_string(),
                             properties: node_properties_1,
+                            transformation: node_transformation_1,
                         },
                         fdf::DeviceGroupNode {
                             name: "dunlin".to_string(),
-                            properties: node_properties_2
+                            properties: node_properties_2,
+                            transformation: node_transformation_2,
                         },
                     ]),
                     ..fdf::DeviceGroup::EMPTY
@@ -1105,13 +1219,19 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_property_multiple_value_types() {
-        let node_properties_1 = vec![fdf::DeviceGroupProperty {
+        let node_properties = vec![fdf::DeviceGroupProperty {
             key: fdf::NodePropertyKey::IntValue(10),
             condition: fdf::Condition::Reject,
             values: vec![
                 fdf::NodePropertyValue::IntValue(200),
                 fdf::NodePropertyValue::BoolValue(false),
             ],
+        }];
+
+        let node_transformation = vec![fdf::NodeProperty {
+            key: Some(fdf::NodePropertyKey::IntValue(1)),
+            value: Some(fdf::NodePropertyValue::IntValue(100)),
+            ..fdf::NodeProperty::EMPTY
         }];
 
         let mut device_group_manager = DeviceGroupManager::new();
@@ -1122,7 +1242,8 @@ mod tests {
                     topological_path: Some("test/path".to_string()),
                     nodes: Some(vec![fdf::DeviceGroupNode {
                         name: "whimbrel".to_string(),
-                        properties: node_properties_1,
+                        properties: node_properties,
+                        transformation: node_transformation,
                     }]),
                     ..fdf::DeviceGroup::EMPTY
                 },
@@ -1136,7 +1257,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_property_duplicate_key() {
-        let node_properties_1 = vec![
+        let node_properties = vec![
             fdf::DeviceGroupProperty {
                 key: fdf::NodePropertyKey::IntValue(10),
                 condition: fdf::Condition::Reject,
@@ -1149,6 +1270,12 @@ mod tests {
             },
         ];
 
+        let node_transformation = vec![fdf::NodeProperty {
+            key: Some(fdf::NodePropertyKey::IntValue(3)),
+            value: Some(fdf::NodePropertyValue::BoolValue(true)),
+            ..fdf::NodeProperty::EMPTY
+        }];
+
         let mut device_group_manager = DeviceGroupManager::new();
         assert_eq!(
             Err(Status::INVALID_ARGS.into_raw()),
@@ -1157,7 +1284,8 @@ mod tests {
                     topological_path: Some("test/path".to_string()),
                     nodes: Some(vec![fdf::DeviceGroupNode {
                         name: "whimbrel".to_string(),
-                        properties: node_properties_1,
+                        properties: node_properties,
+                        transformation: node_transformation,
                     },]),
                     ..fdf::DeviceGroup::EMPTY
                 },
@@ -1184,6 +1312,18 @@ mod tests {
             },
         ];
 
+        let node_transformation_1 = vec![fdf::NodeProperty {
+            key: Some(fdf::NodePropertyKey::IntValue(3)),
+            value: Some(fdf::NodePropertyValue::BoolValue(true)),
+            ..fdf::NodeProperty::EMPTY
+        }];
+
+        let node_transformation_2 = vec![fdf::NodeProperty {
+            key: Some(fdf::NodePropertyKey::IntValue(10)),
+            value: Some(fdf::NodePropertyValue::BoolValue(false)),
+            ..fdf::NodeProperty::EMPTY
+        }];
+
         let mut device_group_manager = DeviceGroupManager::new();
         assert_eq!(
             Err(Status::INVALID_ARGS.into_raw()),
@@ -1194,8 +1334,13 @@ mod tests {
                         fdf::DeviceGroupNode {
                             name: "whimbrel".to_string(),
                             properties: node_properties,
+                            transformation: node_transformation_1,
                         },
-                        fdf::DeviceGroupNode { name: "curlew".to_string(), properties: vec![] },
+                        fdf::DeviceGroupNode {
+                            name: "curlew".to_string(),
+                            properties: vec![],
+                            transformation: node_transformation_2
+                        },
                     ]),
                     ..fdf::DeviceGroup::EMPTY
                 },
@@ -1222,6 +1367,18 @@ mod tests {
             },
         ];
 
+        let node_transformation_1 = vec![fdf::NodeProperty {
+            key: Some(fdf::NodePropertyKey::IntValue(3)),
+            value: Some(fdf::NodePropertyValue::BoolValue(true)),
+            ..fdf::NodeProperty::EMPTY
+        }];
+
+        let node_transformation_2 = vec![fdf::NodeProperty {
+            key: Some(fdf::NodePropertyKey::IntValue(1)),
+            value: Some(fdf::NodePropertyValue::BoolValue(false)),
+            ..fdf::NodeProperty::EMPTY
+        }];
+
         let mut device_group_manager = DeviceGroupManager::new();
         assert_eq!(
             Err(Status::INVALID_ARGS.into_raw()),
@@ -1232,8 +1389,13 @@ mod tests {
                         fdf::DeviceGroupNode {
                             name: "whimbrel".to_string(),
                             properties: node_properties,
+                            transformation: node_transformation_1,
                         },
-                        fdf::DeviceGroupNode { name: "curlew".to_string(), properties: vec![] },
+                        fdf::DeviceGroupNode {
+                            name: "curlew".to_string(),
+                            properties: vec![],
+                            transformation: node_transformation_2,
+                        },
                     ]),
                     ..fdf::DeviceGroup::EMPTY
                 },
@@ -1260,11 +1422,23 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_transform_match() {
-        let node_properties_1 = vec![fdf::DeviceGroupProperty {
+    async fn test_composite_match() {
+        let primary_node_properties = vec![fdf::DeviceGroupProperty {
             key: fdf::NodePropertyKey::IntValue(1),
             condition: fdf::Condition::Accept,
             values: vec![fdf::NodePropertyValue::IntValue(200)],
+        }];
+
+        let additional_node_properties_1 = vec![fdf::DeviceGroupProperty {
+            key: fdf::NodePropertyKey::IntValue(1),
+            condition: fdf::Condition::Accept,
+            values: vec![fdf::NodePropertyValue::IntValue(10)],
+        }];
+
+        let additional_node_properties_2 = vec![fdf::DeviceGroupProperty {
+            key: fdf::NodePropertyKey::IntValue(10),
+            condition: fdf::Condition::Accept,
+            values: vec![fdf::NodePropertyValue::BoolValue(false)],
         }];
 
         let primary_key_1 = "whimbrel";
@@ -1281,22 +1455,15 @@ mod tests {
         let additional_a_name = "mockingbird";
         let additional_b_name = "lapwing";
 
-        let transform = create_transform_vector(
-            vec![(
-                fdf::NodePropertyKey::StringValue(primary_key_1.to_string()),
-                fdf::NodePropertyValue::StringValue(primary_val_1.to_string()),
-            )],
-            vec![
-                vec![(
-                    fdf::NodePropertyKey::IntValue(additional_a_key_1.clone()),
-                    fdf::NodePropertyValue::IntValue(additional_a_val_1.clone()),
-                )],
-                vec![(
-                    fdf::NodePropertyKey::StringValue(additional_b_key_1.to_string()),
-                    fdf::NodePropertyValue::IntValue(additional_b_val_1.clone()),
-                )],
-            ],
-        );
+        let primary_device_group_node = fdf::DeviceGroupNode {
+            name: "plover".to_string(),
+            properties: primary_node_properties,
+            transformation: vec![fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::StringValue(primary_key_1.to_string())),
+                value: Some(fdf::NodePropertyValue::StringValue(primary_val_1.to_string())),
+                ..fdf::NodeProperty::EMPTY
+            }],
+        };
 
         let primary_node_inst = vec![SymbolicInstructionInfo {
             location: None,
@@ -1306,12 +1473,22 @@ mod tests {
             },
         }];
 
+        let additional_device_group_node_a = fdf::DeviceGroupNode {
+            name: "sanderling".to_string(),
+            properties: additional_node_properties_1,
+            transformation: vec![fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::IntValue(additional_a_key_1)),
+                value: Some(fdf::NodePropertyValue::IntValue(additional_a_val_1)),
+                ..fdf::NodeProperty::EMPTY
+            }],
+        };
+
         let additional_node_a_inst = vec![
             SymbolicInstructionInfo {
                 location: None,
                 instruction: SymbolicInstruction::AbortIfNotEqual {
-                    lhs: Symbol::Key(additional_b_key_1.to_string(), ValueType::Number),
-                    rhs: Symbol::NumberValue(additional_b_val_1.clone().into()),
+                    lhs: Symbol::DeprecatedKey(additional_a_key_1),
+                    rhs: Symbol::NumberValue(additional_a_val_1.clone().into()),
                 },
             },
             SymbolicInstructionInfo {
@@ -1323,11 +1500,21 @@ mod tests {
             },
         ];
 
+        let additional_device_group_node_b = fdf::DeviceGroupNode {
+            name: "avocet".to_string(),
+            properties: additional_node_properties_2,
+            transformation: vec![fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::StringValue(additional_b_key_1.to_string())),
+                value: Some(fdf::NodePropertyValue::IntValue(additional_b_val_1)),
+                ..fdf::NodeProperty::EMPTY
+            }],
+        };
+
         let additional_node_b_inst = vec![SymbolicInstructionInfo {
             location: None,
             instruction: SymbolicInstruction::AbortIfNotEqual {
-                lhs: Symbol::DeprecatedKey(additional_a_key_1.clone()),
-                rhs: Symbol::NumberValue(additional_a_val_1.clone().into()),
+                lhs: Symbol::Key(additional_b_key_1.to_string(), ValueType::Number),
+                rhs: Symbol::NumberValue(additional_b_val_1.clone().into()),
             },
         }];
 
@@ -1357,11 +1544,11 @@ mod tests {
             device_group_manager.add_device_group(
                 fdf::DeviceGroup {
                     topological_path: Some("test/path".to_string()),
-                    nodes: Some(vec![fdf::DeviceGroupNode {
-                        name: "plover".to_string(),
-                        properties: node_properties_1,
-                    },]),
-                    transformation: Some(transform),
+                    nodes: Some(vec![
+                        primary_device_group_node,
+                        additional_device_group_node_b,
+                        additional_device_group_node_a,
+                    ]),
                     ..fdf::DeviceGroup::EMPTY
                 },
                 vec![&composite_driver]
@@ -1370,11 +1557,23 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_transform_mismatch() {
-        let node_properties_1 = vec![fdf::DeviceGroupProperty {
+    async fn test_composite_mismatch() {
+        let primary_node_properties = vec![fdf::DeviceGroupProperty {
             key: fdf::NodePropertyKey::IntValue(1),
             condition: fdf::Condition::Accept,
             values: vec![fdf::NodePropertyValue::IntValue(200)],
+        }];
+
+        let additional_node_properties_1 = vec![fdf::DeviceGroupProperty {
+            key: fdf::NodePropertyKey::IntValue(1),
+            condition: fdf::Condition::Accept,
+            values: vec![fdf::NodePropertyValue::IntValue(10)],
+        }];
+
+        let additional_node_properties_2 = vec![fdf::DeviceGroupProperty {
+            key: fdf::NodePropertyKey::IntValue(10),
+            condition: fdf::Condition::Accept,
+            values: vec![fdf::NodePropertyValue::BoolValue(false)],
         }];
 
         let primary_key_1 = "whimbrel";
@@ -1391,23 +1590,6 @@ mod tests {
         let additional_a_name = "mockingbird";
         let additional_b_name = "lapwing";
 
-        let transform = create_transform_vector(
-            vec![(
-                fdf::NodePropertyKey::StringValue(primary_key_1.to_string()),
-                fdf::NodePropertyValue::StringValue(primary_val_1.to_string()),
-            )],
-            vec![
-                vec![(
-                    fdf::NodePropertyKey::IntValue(additional_a_key_1.clone()),
-                    fdf::NodePropertyValue::IntValue(additional_a_val_1.clone()),
-                )],
-                vec![(
-                    fdf::NodePropertyKey::StringValue(additional_b_key_1.to_string()),
-                    fdf::NodePropertyValue::IntValue(additional_b_val_1.clone()),
-                )],
-            ],
-        );
-
         let primary_node_inst = vec![SymbolicInstructionInfo {
             location: None,
             instruction: SymbolicInstruction::AbortIfNotEqual {
@@ -1415,6 +1597,16 @@ mod tests {
                 rhs: Symbol::StringValue(primary_val_1.to_string()),
             },
         }];
+
+        let primary_device_group_node = fdf::DeviceGroupNode {
+            name: "plover".to_string(),
+            properties: primary_node_properties,
+            transformation: vec![fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::StringValue(primary_key_1.to_string())),
+                value: Some(fdf::NodePropertyValue::StringValue(primary_val_1.to_string())),
+                ..fdf::NodeProperty::EMPTY
+            }],
+        };
 
         let additional_node_a_inst = vec![
             SymbolicInstructionInfo {
@@ -1434,6 +1626,16 @@ mod tests {
             },
         ];
 
+        let additional_device_group_node_a = fdf::DeviceGroupNode {
+            name: "sanderling".to_string(),
+            properties: additional_node_properties_1,
+            transformation: vec![fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::StringValue(additional_b_key_1.to_string())),
+                value: Some(fdf::NodePropertyValue::IntValue(additional_b_val_1)),
+                ..fdf::NodeProperty::EMPTY
+            }],
+        };
+
         let additional_node_b_inst = vec![SymbolicInstructionInfo {
             location: None,
             instruction: SymbolicInstruction::AbortIfNotEqual {
@@ -1441,6 +1643,16 @@ mod tests {
                 rhs: Symbol::NumberValue(additional_a_val_1.clone().into()),
             },
         }];
+
+        let additional_device_group_node_b = fdf::DeviceGroupNode {
+            name: "avocet".to_string(),
+            properties: additional_node_properties_2,
+            transformation: vec![fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::IntValue(additional_a_key_1)),
+                value: Some(fdf::NodePropertyValue::IntValue(additional_a_val_1)),
+                ..fdf::NodeProperty::EMPTY
+            }],
+        };
 
         let composite_driver = create_driver_with_rules(
             device_name,
@@ -1457,11 +1669,11 @@ mod tests {
             device_group_manager.add_device_group(
                 fdf::DeviceGroup {
                     topological_path: Some("test/path".to_string()),
-                    nodes: Some(vec![fdf::DeviceGroupNode {
-                        name: "plover".to_string(),
-                        properties: node_properties_1,
-                    },]),
-                    transformation: Some(transform),
+                    nodes: Some(vec![
+                        primary_device_group_node,
+                        additional_device_group_node_a,
+                        additional_device_group_node_b
+                    ]),
                     ..fdf::DeviceGroup::EMPTY
                 },
                 vec![&composite_driver]
