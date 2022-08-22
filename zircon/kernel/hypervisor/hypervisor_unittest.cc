@@ -412,30 +412,6 @@ static bool guest_physical_address_space_protect() {
   END_TEST;
 }
 
-static bool guest_physical_address_space_for_page() {
-  BEGIN_TEST;
-
-  if (!hypervisor_supported()) {
-    return true;
-  }
-
-  // Setup.
-  auto gpas = create_gpas();
-  EXPECT_EQ(ZX_OK, gpas.status_value(), "Failed to create GuestPhysicalAddressSpace\n");
-  fbl::RefPtr<VmObjectPaged> vmo;
-  zx_status_t status = create_vmo(PAGE_SIZE, &vmo);
-  EXPECT_EQ(ZX_OK, status, "Failed to create VMO\n");
-  status = create_mapping(gpas->RootVmar(), vmo, 0);
-  EXPECT_EQ(ZX_OK, status, "Failed to create mapping\n");
-
-  // For page.
-  auto result = gpas->ForPage(0, [](zx_paddr_t host_paddr) {});
-  EXPECT_EQ(ZX_OK, result.status_value(),
-            "Failed to apply the function for the page in the GuestPhysicalAddressSpace\n");
-
-  END_TEST;
-}
-
 template <typename T>
 [[nodiscard]] bool alloc_ids(T& allocator, hypervisor::GenType gen, uint8_t min, uint8_t max) {
   for (uint8_t i = min; i < max; i++) {
@@ -677,7 +653,6 @@ HYPERVISOR_UNITTEST(guest_physical_address_space_uncached)
 HYPERVISOR_UNITTEST(guest_physical_address_space_uncached_device)
 HYPERVISOR_UNITTEST(guest_physical_address_space_write_combining)
 HYPERVISOR_UNITTEST(guest_physical_address_space_protect)
-HYPERVISOR_UNITTEST(guest_physical_address_space_for_page)
 HYPERVISOR_UNITTEST(id_allocator_alloc_and_free)
 HYPERVISOR_UNITTEST(id_allocator_alloc_and_migrate)
 HYPERVISOR_UNITTEST(interrupt_bitmap)

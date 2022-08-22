@@ -18,7 +18,6 @@
 
 namespace {
 
-constexpr uint kPfFlags = VMM_PF_FLAG_WRITE | VMM_PF_FLAG_SW_FAULT;
 constexpr uint kInterruptMmuFlags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
 constexpr uint kGuestMmuFlags =
     ARCH_MMU_FLAG_CACHED | ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
@@ -94,41 +93,6 @@ zx::status<> GuestPhysicalAddressSpace::MapInterruptController(zx_gpaddr_t guest
 zx::status<> GuestPhysicalAddressSpace::UnmapRange(zx_gpaddr_t guest_paddr, size_t len) {
   zx_status_t status = RootVmar()->UnmapAllowPartial(guest_paddr, len);
   return zx::make_status(status);
-}
-
-zx::status<> GuestPhysicalAddressSpace::ForPage(zx_gpaddr_t guest_paddr, ForPageFn apply) {
-  __UNINITIALIZED LazyPageRequest page_request;
-
-  zx_status_t status;
-  do {
-    {
-      Guard<CriticalMutex> guard(guest_aspace_->lock());
-      fbl::RefPtr<VmMapping> mapping = FindMapping(guest_paddr);
-      if (!mapping) {
-        return zx::error(ZX_ERR_NOT_FOUND);
-      }
-
-      AssertHeld(mapping->lock_ref());
-      const zx_gpaddr_t offset = guest_paddr - mapping->base() + mapping->object_offset_locked();
-      fbl::RefPtr<VmObject> vmo = mapping->vmo_locked();
-
-      zx_paddr_t host_paddr;
-      Guard<CriticalMutex> vmo_guard(vmo->lock());
-      status = vmo->GetPageLocked(offset, kPfFlags, nullptr, &page_request, nullptr, &host_paddr);
-      if (status == ZX_OK) {
-        apply(host_paddr);
-        return zx::ok();
-      }
-    }
-
-    if (status == ZX_ERR_SHOULD_WAIT) {
-      if (zx_status_t result = page_request->Wait(); result != ZX_OK) {
-        return zx::error(result);
-      }
-    }
-  } while (status == ZX_ERR_SHOULD_WAIT);
-
-  return zx::error(status);
 }
 
 zx::status<> GuestPhysicalAddressSpace::PageFault(zx_gpaddr_t guest_paddr) {
