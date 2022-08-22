@@ -34,4 +34,16 @@
             from: "self",
         },
     ],
+    config: {
+        // HTTPS request is considered failed after the timeout.
+        https_timeout_sec: { type: "uint8" },
+
+        // The ratio between a standard deviation and a final bound size, expressed as a percentage.
+        standard_deviation_bound_percentage: { type: "uint8" },
+
+        // How many times longer than a subsequent poll the first poll will take. This encapsulates
+        // the additional time required during the first HTTPS request to setup a TLS connection and
+        // is used to make a best guess for how long the second call will take.
+        first_rtt_time_factor: { type: "uint16" },
+    },
 }

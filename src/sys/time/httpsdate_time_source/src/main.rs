@@ -34,10 +34,29 @@ const RETRY_STRATEGY: RetryStrategy = RetryStrategy {
 // TODO(fxbug.dev/68621): Allow configuration per product.
 const REQUEST_URI: &str = "https://clients3.google.com/generate_204";
 
+/// HttpsDate config, populated from build-time generated structured config.
+pub struct Config {
+    https_timeout: zx::Duration,
+    standard_deviation_bound_percentage: u8,
+    first_rtt_time_factor: u16,
+}
+
+impl From<httpsdate_config::Config> for Config {
+    fn from(source: httpsdate_config::Config) -> Self {
+        Config {
+            https_timeout: zx::Duration::from_seconds(source.https_timeout_sec.into()),
+            standard_deviation_bound_percentage: source.standard_deviation_bound_percentage,
+            first_rtt_time_factor: source.first_rtt_time_factor,
+        }
+    }
+}
+
 #[fuchsia::main(logging_tags=["time"])]
 async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(|stream: PushSourceRequestStream| stream);
+
+    let config: Config = httpsdate_config::Config::take_from_startup_handle().into();
 
     let inspect = InspectDiagnostics::new(fuchsia_inspect::component::inspector().root());
     let (cobalt, cobalt_sender_fut) = CobaltDiagnostics::new();
@@ -45,7 +64,7 @@ async fn main() -> Result<(), Error> {
 
     inspect_runtime::serve(fuchsia_inspect::component::inspector(), &mut fs)?;
 
-    let sampler = HttpsSamplerImpl::new(REQUEST_URI.parse()?);
+    let sampler = HttpsSamplerImpl::new(REQUEST_URI.parse()?, config);
 
     let interface_state_service = fuchsia_component::client::connect_to_protocol::<StateMarker>()
         .context("failed to connect to fuchsia.net.interfaces/State")?;

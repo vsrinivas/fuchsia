@@ -1,0 +1,13 @@
+{
+    // Currently based on a best guess.
+    https_timeout_sec: 10,
+
+    // This value is based on a small experiment to estimate the spread of errors across various
+    // bound sizes.
+    // TODO(63370): consider round trip times when calculating standard deviation.
+    standard_deviation_bound_percentage: 30,
+
+    // This value is based on a best guess how many times longer than a subsequent poll the first
+    // poll will take.
+    first_rtt_time_factor: 5,
+}

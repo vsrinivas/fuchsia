@@ -12,6 +12,7 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
+    ":httpsdate_config",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_rust",
     "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces_rust",
     "//sdk/fidl/fuchsia.time.external:fuchsia.time.external_rust",
@@ -57,9 +58,22 @@ rustc_binary("bin") {
   ]
 }
 
-fuchsia_component("service") {
+fuchsia_component_manifest("manifest") {
   component_name = "httpsdate_time_source"
   manifest = "meta/service.cml"
+}
+
+fuchsia_structured_config_rust_lib("httpsdate_config") {
+  cm_label = ":manifest"
+}
+
+fuchsia_structured_config_values("httpsdate-config-values") {
+  cm_label = ":manifest"
+  values_source = "config/values.json5"
+}
+
+fuchsia_component("service") {
+  cm_label = ":manifest"
   deps = [ ":bin" ]
 }
 
@@ -73,7 +87,10 @@ fuchsia_unittest_package("httpsdate-time-source-tests") {
 }
 
 fuchsia_package("httpsdate-time-source") {
-  deps = [ ":service" ]
+  deps = [
+    ":httpsdate-config-values",
+    ":service",
+  ]
 }
 
 group("tests") {
