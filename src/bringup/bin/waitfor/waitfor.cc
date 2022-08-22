@@ -132,11 +132,13 @@ zx_status_t expr_topo(const char* arg, int fd) {
     return status;
   }
   const std::string_view got = res->value()->path.get();
-  const std::string_view expected(arg);
+  // Take off one from arg so we don't include the null terminator.
+  const std::string_view expected(arg, strlen(arg) - 1);
   if (verbose) {
     fprintf(stderr, "waitfor: topological path='%s'\n", std::string(got).c_str());
   }
-  if (got == expected) {
+  // Check if the topo path starts with our prefix.
+  if (got.rfind(expected, 0) == 0) {
     return ZX_OK;
   }
   return ZX_ERR_NEXT;
