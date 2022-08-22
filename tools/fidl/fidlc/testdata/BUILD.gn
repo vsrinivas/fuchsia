@@ -29,6 +29,7 @@ standalone_libraries = [
   "inheritance_with_recursive_decl.test.fidl",
   "new_type.test.fidl",
   "nullable.test.fidl",
+  "overflowing.test.fidl",
   "padding.test.fidl",
   "protocol_request.test.fidl",
   "protocols.test.fidl",
@@ -65,6 +66,10 @@ foreach(filename, standalone_libraries) {
 
     if (filename == "new_type.test.fidl") {
       experimental_flags += [ "allow_new_types" ]
+    }
+
+    if (filename == "overflowing.test.fidl") {
+      experimental_flags += [ "allow_overflowing" ]
     }
 
     # To ensure quality of generated Dart bindings.

@@ -33,6 +33,7 @@ std::map<const std::string_view, const ExperimentalFlags::Flag> ExperimentalFlag
     {"unknown_interactions", Flag::kUnknownInteractions},
     {"no_optional_structs", Flag::kNoOptionalStructs},
     {"allow_new_types", Flag::kAllowNewTypes},
+    {"allow_overflowing", Flag::kAllowOverflowing},
     {"output_index_json", Flag::kOutputIndexJson},
 };
 

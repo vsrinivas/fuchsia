@@ -1,0 +1,21 @@
+{
+  "name": "test.overflowing",
+  "lib_declarations": [
+    {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/overflowing.test.fidl",
+      "data": "test.overflowing",
+      "start_offset": 173,
+      "end_offset": 189
+    }
+  ],
+  "using_declarations": [],
+  "dependencies": [],
+  "dependency_identifiers": [],
+  "consts": [],
+  "enums": [],
+  "unions": [],
+  "tables": [],
+  "structs": [],
+  "protocols": []
+}

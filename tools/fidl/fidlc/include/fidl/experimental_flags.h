@@ -16,6 +16,8 @@ class ExperimentalFlags {
  public:
   using FlagSet = uint32_t;
   enum class Flag : FlagSet {
+    // TODO(fxbug.dev/106641): Allows backends to implement overflowing experiments.
+    kAllowOverflowing = 0b10,
     kAllowNewTypes = 0b100,
     kUnknownInteractions = 0b10000,
     kNoOptionalStructs = 0b100000,

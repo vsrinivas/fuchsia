@@ -82,6 +82,9 @@ new_type.tables.c.golden
 nullable.index.json.golden
 nullable.json.golden
 nullable.tables.c.golden
+overflowing.index.json.golden
+overflowing.json.golden
+overflowing.tables.c.golden
 padding.index.json.golden
 padding.json.golden
 padding.tables.c.golden

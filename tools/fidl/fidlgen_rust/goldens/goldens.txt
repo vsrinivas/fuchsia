@@ -25,6 +25,7 @@ imported_const_values.rs.golden
 inheritance.rs.golden
 inheritance_with_recursive_decl.rs.golden
 nullable.rs.golden
+overflowing.rs.golden
 padding.rs.golden
 placement_of_attributes.rs.golden
 protocol_layouts.rs.golden

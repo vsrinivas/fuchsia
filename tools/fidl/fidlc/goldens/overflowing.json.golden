@@ -1,0 +1,23 @@
+{
+  "name": "test.overflowing",
+  "experiments": [
+    "allow_overflowing",
+    "no_optional_structs",
+    "output_index_json"
+  ],
+  "library_dependencies": [],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "experimental_resource_declarations": [],
+  "protocol_declarations": [],
+  "service_declarations": [],
+  "struct_declarations": [],
+  "external_struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [],
+  "type_alias_declarations": [],
+  "new_type_declarations": [],
+  "declaration_order": [],
+  "declarations": {}
+}
