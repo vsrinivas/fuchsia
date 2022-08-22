@@ -131,24 +131,6 @@ class UserFeedbackForm extends StatelessWidget {
                                   border: OutlineInputBorder(
                                       borderRadius: BorderRadius.zero),
                                 ),
-                                // TODO(fxb/79807): Remove this workaround once the bug is fixed.
-                                onFieldSubmitted: (desc) {
-                                  final cursorPos =
-                                      _descController.selection.base.offset;
-                                  final textBeforeCursor = _descController
-                                      .value.selection
-                                      .textBefore(desc);
-                                  final textAfterCursor = _descController
-                                      .value.selection
-                                      .textAfter(desc);
-                                  _descController
-                                    ..text =
-                                        '$textBeforeCursor\n$textAfterCursor'
-                                    ..selection = TextSelection.fromPosition(
-                                        TextPosition(offset: cursorPos + 1));
-                                  FocusScope.of(context)
-                                      .requestFocus(_descFocusNode);
-                                },
                                 validator: (value) =>
                                     value == null || value.isEmpty
                                         ? Strings.needDescription
