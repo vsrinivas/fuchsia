@@ -9,6 +9,7 @@ group("bin") {
     "clipboard",
     "input-pipeline",
     "root_presenter",
+    "root_presenter:virtual_keyboard_manager",
     "scene_manager",
     "shortcut",
     "text:text_manager",

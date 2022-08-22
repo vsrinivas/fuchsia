@@ -123,6 +123,7 @@ group("ui_packages") {
 
   if (use_scene_manager_as_scene_owner) {
     deps += [
+      "bin/root_presenter:virtual_keyboard_manager",
       "bin/scene_manager",
 
       # TODO(fxbug.dev/104239): Configure presence via build flag.

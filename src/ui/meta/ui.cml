@@ -181,6 +181,16 @@
             from: "#scenic",
             to: [ "#shortcut_manager" ],
         },
+        {
+            protocol: [ "fuchsia.ui.focus.FocusChainListenerRegistry" ],
+            from: "#scenic",
+            to: [ "#virtual_keyboard_manager" ],
+        },
+        {
+            protocol: [ "fuchsia.ui.keyboard.focus.Controller" ],
+            from: "#text_manager",
+            to: [ "#virtual_keyboard_manager" ],
+        },
     ],
     expose: [
         {

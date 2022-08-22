@@ -18,7 +18,15 @@
             ],
         },
     ],
-    use: [],
+    use: [
+        {
+            protocol: [
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.focus.FocusChainListenerRegistry",
+                "fuchsia.ui.keyboard.focus.Controller",
+            ],
+        },
+    ],
     expose: [
         {
             protocol: [

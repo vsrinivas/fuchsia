@@ -48,10 +48,8 @@ App::App(sys::ComponentContext* component_context, fit::closure quit_callback)
   component_context->outgoing()->AddPublicService(input_receiver_bindings_.GetHandler(this));
 
   component_context->svc()->Connect(scenic_.NewRequest());
-  scenic_.set_error_handler([this](zx_status_t error) {
-    FX_LOGS(WARNING) << "Scenic died with error " << zx_status_get_string(error)
-                     << ". Killing RootPresenter.";
-    Exit();
+  scenic_.set_error_handler([](zx_status_t error) {
+    FX_LOGS(WARNING) << "Scenic died with error " << zx_status_get_string(error);
   });
 
   scenic_->GetDisplayOwnershipEvent(
