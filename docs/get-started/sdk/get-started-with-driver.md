@@ -96,45 +96,33 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    $ tools/bazel build --config=fuchsia_x64 //src/qemu_edu/drivers:qemu_edu
    ...
-   INFO: Elapsed time: 129.268s, Critical Path: 35.22s
-   INFO: 773 processes: 507 internal, 266 linux-sandbox.
-   INFO: Build completed successfully, 773 total actions
+   INFO: Elapsed time: 156.844s, Critical Path: 34.80s
+   INFO: 777 processes: 510 internal, 267 linux-sandbox.
+   INFO: Build completed successfully, 777 total actions
    ```
 
 5. To verify that you can use the `ffx` tool in your environment, run the
    following command:
 
    ```posix-terminal
-   tools/ffx version -v
+   tools/ffx sdk version
    ```
 
    This command prints output similar to the following:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ tools/ffx version -v
-   ffx:
-     abi-revision: 0xECDB841C251A8CB9
-     api-level: 9
-     build-version: 2022-07-28T07:03:08+00:00
-     integration-commit-hash: d33b25d3cd0cd961c0eaa3ea398b374de15f1ef3
-     integration-commit-time: Thu, 28 Jul 2022 07:03:08 +0000
-
-   daemon:
-     abi-revision: 0xECDB841C251A8CB9
-     api-level: 9
-     build-version: 2022-07-28T07:03:08+00:00
-     integration-commit-hash: d33b25d3cd0cd961c0eaa3ea398b374de15f1ef3
-     integration-commit-time: Thu, 28 Jul 2022 07:03:08 +0000
+   $ tools/ffx sdk version
+   9.20220807.3.1
    ```
 
-   At this point, you only need to confirm that you can run this `ffx` command
-   without any errors.
+   At this point, you only need to confirm that you can run `ffx` commands
+   without error. (However for your information, the output above shows the version
+   `9.20220807.3.1`, which indicates that this SDK was built and published on August 7, 2022.)
 
-   Note: To ensure that you’re using the right version of `ffx` (which needs to
-   match the version of the SDK), consider updating your `PATH` to include the
-   SDK's `tools` directory where `ffx` is located (for instance,
-   `export PATH="$PATH:$HOME/drivers/tools"`). However, if you don't
-   wish to update your `PATH`, ensure that you specify the relative path to
+   Note: To ensure that you’re using the right version of `ffx` during development,
+   consider updating your `PATH` to include the SDK's `tools` directory
+   (for instance, `export PATH="$PATH:$HOME/fuchsia-getting-started/tools"`). However,
+   if you don't wish to update your `PATH`, ensure that you specify the relative path to
    this `ffx` tool (`tools/ffx`) whenever you run `ffx` commands.
 
 ## 3. Start the emulator {:#start-the-emulator}
@@ -333,10 +321,10 @@ Do the following:
    INFO: Found 1 target...
    Target //src/qemu_edu/drivers:pkg.component up-to-date:
      bazel-bin/src/qemu_edu/drivers/pkg.component_run_component.sh
-   INFO: Elapsed time: 48.802s, Critical Path: 40.71s
-   INFO: 791 processes: 516 internal, 274 linux-sandbox, 1 local.
-   INFO: Build completed successfully, 791 total actions
-   INFO: Build completed successfully, 791 total actions
+   INFO: Elapsed time: 43.548s, Critical Path: 35.04s
+   INFO: 795 processes: 519 internal, 275 linux-sandbox, 1 local.
+   INFO: Build completed successfully, 795 total actions
+   INFO: Build completed successfully, 795 total actions
    added repository bazel.pkg.component
    Registering fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm
    Successfully bound:
@@ -392,11 +380,11 @@ Do the following:
     Incoming Capabilities:  /svc/fuchsia.device.fs.Exporter
                             /svc/fuchsia.driver.compat.Service
                             /svc/fuchsia.logger.LogSink
-     Exposed Capabilities:  fuchsia.hardware.qemuedu.Device
-              Merkle root:  957cd123aba43515a5acc8b95a2abfecba3d714655f3a2a4e581c13ca0db6f7d
+     Exposed Capabilities:  fuchsia.hardware.qemuedu.Service
+              Merkle root:  b4c34c971b6e191a021f59be92feec56868ce3c1602b88fb094a4f07923d4e1e
           Execution State:  Running
              Start reason:  Instance is in a single_run collection
-    Outgoing Capabilities:  qemu-edu
+    Outgoing Capabilities:  fuchsia.hardware.qemuedu.Service
    ```
 
 5. View the device logs of the `qemu_edu` driver:
@@ -447,11 +435,11 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/bazel run --config=fuchsia_x64 //src/qemu_edu/tools:pkg.component
-   INFO: Analyzed target //src/qemu_edu/tools:pkg.component (0 packages loaded, 19 targets configured).
+   INFO: Analyzed target //src/qemu_edu/tools:pkg.component (1 packages loaded, 19 targets configured).
    INFO: Found 1 target...
    Target //src/qemu_edu/tools:pkg.component up-to-date:
      bazel-bin/src/qemu_edu/tools/pkg.component_run_component.sh
-   INFO: Elapsed time: 2.039s, Critical Path: 1.54s
+   INFO: Elapsed time: 2.189s, Critical Path: 1.63s
    INFO: 23 processes: 7 internal, 15 linux-sandbox, 1 local.
    INFO: Build completed successfully, 23 total actions
    INFO: Build completed successfully, 23 total actions
@@ -589,9 +577,9 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    [zxdb] break QemuEduDriver::ComputeFactorial
    Created Breakpoint 1 @ QemuEduDriver::ComputeFactorial
-      217 void QemuEduDriver::ComputeFactorial(ComputeFactorialRequestView request,
-    {{ '<strong>' }}◉ 218                                      ComputeFactorialCompleter::Sync& completer) { {{ '</strong>' }}
-      219   // Write a value into the factorial register.
+      203 void QemuEduDriver::ComputeFactorial(ComputeFactorialRequestView request,
+    {{ '<strong>' }}◉ 204                                      ComputeFactorialCompleter::Sync& completer) { {{ '</strong>' }}
+      205   // Write a value into the factorial register.
    [zxdb]
    ```
 
