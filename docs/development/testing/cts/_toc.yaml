@@ -25,5 +25,7 @@ toc:
   section:
   - title: "Plasa manifest"
     path: /docs/development/testing/cts/plasa_manifest.md
+- title: "FIDL API Compatibility Testing"
+  path: /docs/development/testing/cts/fidl_api_compatibility_testing.md
 - title: "Frequently Asked Questions"
   path: /docs/development/testing/cts/faq.md
