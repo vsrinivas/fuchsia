@@ -94,3 +94,7 @@ protocol GoldfishPipe {
         connection zx.handle:CHANNEL;
     }) -> (struct {}) error zx.status;
 };
+
+service Service {
+    device client_end:GoldfishPipe;
+};
