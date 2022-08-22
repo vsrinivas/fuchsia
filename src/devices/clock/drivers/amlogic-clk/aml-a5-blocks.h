@@ -9,6 +9,29 @@
 
 #include "aml-clk-blocks.h"
 
+#define CPU_LOW_PARAMS(_rate, _dyn_pre_mux, _dyn_post_mux, _dyn_div)                 \
+  {                                                                                  \
+    .rate = (_rate), .dyn_pre_mux = (_dyn_pre_mux), .dyn_post_mux = (_dyn_post_mux), \
+    .dyn_div = (_dyn_div),                                                           \
+  }
+
+#define PLL_PARAMS(_rate, _m, _n, _od) \
+  { .rate = (_rate), .m = (_m), .n = (_n), .od = (_od), }
+
+struct cpu_dyn_table {
+  uint32_t rate;
+  uint16_t dyn_pre_mux;
+  uint16_t dyn_post_mux;
+  uint16_t dyn_div;
+};
+
+struct pll_params_table {
+  uint32_t rate;
+  uint16_t m;
+  uint16_t n;
+  uint16_t od;
+};
+
 constexpr uint32_t kA5ClkctrlOscinCtrl = (0x1 << 2);
 constexpr uint32_t kA5ClkctrlRtcByOscinCtrl0 = (0x2 << 2);
 constexpr uint32_t kA5ClkctrlRtcCtrl = (0x4 << 2);
@@ -32,6 +55,9 @@ constexpr uint32_t kA5ClkctrlNnaClkCtrl = (0x88 << 2);
 constexpr uint32_t kA5ClkctrlTimestampCtrl = (0x100 << 2);
 constexpr uint32_t kA5ClkctrlTimebaseCtrl0 = (0x106 << 2);
 constexpr uint32_t kA5ClkctrlTimebaseCtrl1 = (0x107 << 2);
+
+// ANA_CTRL
+constexpr uint32_t kAnactrlSyspllCtrl0 = ((0x0000 << 2) + 0xfe008000);
 
 // clang-format off
 static constexpr meson_clk_gate_t a5_clk_gates[] = {
@@ -424,6 +450,53 @@ static const char* const a5_clk_table[] = {
     "sys_cpu_osc_ring[2]",       // 187
     "sys_cpu_osc_ring[3]",       // 188
     "axi_sramb_osc_ring",        // 189
+};
+
+static constexpr meson_cpu_clk_t a5_cpu_clks[] = {
+    // For A5, we set the clock in secure mode(bl31), not in the driver
+    {.initial_hz = 1'200'000'000},
+};
+
+static const struct cpu_dyn_table a5_cpu_dyn_table[] = {
+    CPU_LOW_PARAMS(24'000'000, 0, 0, 0),    CPU_LOW_PARAMS(100'000'000, 1, 1, 9),
+    CPU_LOW_PARAMS(250'000'000, 1, 1, 3),   CPU_LOW_PARAMS(333'333'333, 2, 1, 1),
+    CPU_LOW_PARAMS(500'000'000, 1, 1, 1),   CPU_LOW_PARAMS(667'000'000, 2, 0, 0),
+    CPU_LOW_PARAMS(1'000'000'000, 1, 0, 0),
+};
+
+static const struct pll_params_table a5_sys_pll_params_table[] = {
+    PLL_PARAMS(1'200'000'000, 100, 1, 1), PLL_PARAMS(1'404'000'000, 117, 1, 1),
+    PLL_PARAMS(1'500'000'000, 125, 1, 1), PLL_PARAMS(1'608'000'000, 67, 1, 0),
+    PLL_PARAMS(1'704'000'000, 71, 1, 0),  PLL_PARAMS(1'800'000'000, 75, 1, 0),
+    PLL_PARAMS(1'920'000'000, 80, 1, 0),  PLL_PARAMS(2'016'000'000, 84, 1, 0),
+};
+
+#undef CPU_LOW_PARAMS
+#undef PLL_PARAMS
+
+constexpr uint32_t kSecurePllClk = 0x82000098;
+constexpr uint32_t kSecureCpuClk = 0x82000099;
+
+constexpr uint32_t kFinalMuxSelMask = 0x1 << 11;
+constexpr uint32_t kFinalMuxSelCpuDyn = 0x0 << 11;
+constexpr uint32_t kFinalMuxSelSysPll = 0x1 << 11;
+
+// PLL secure clock index
+enum class SecPll {
+  kSecidSys0DcoPll = 0,
+  kSecidSys0DcoPllDis,
+  kSecidSys0PllOd,
+  kSecidCpuClkSel,
+  kSecidCpuClkRd,
+  kSecidCpuClkDyn,
+  kSecidDsuPreClkSel,
+  kSecidDsuPreClkRd,
+  kSecidDsuPreClkDyn,
+  kSecidDsuClkSel,
+  kSecidDsuClkRd,
+  kSecidGp1DcoPll,
+  kSecidGp1DcoPllDis,
+  kSecidGp1PllOd,
 };
 
 #endif  // SRC_DEVICES_CLOCK_DRIVERS_AMLOGIC_CLK_AML_A5_BLOCKS_H_

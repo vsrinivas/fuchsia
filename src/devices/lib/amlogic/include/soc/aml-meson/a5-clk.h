@@ -91,6 +91,9 @@ constexpr uint32_t CLK_GP0_PLL = AmlClkId(GP0_PLL, clk_type::kMesonPll);
 constexpr uint32_t CLK_HIFI_PLL = AmlClkId(HIFI_PLL, clk_type::kMesonPll);
 constexpr uint32_t CLK_SYS_PLL = AmlClkId(SYS_PLL, clk_type::kMesonPll);
 
+// Cpu Clocks
+constexpr uint32_t CLK_SYS_CPU_CLK = AmlClkId(0, clk_type::kMesonCpuClk);
+
 }  // namespace a5_clk
 
 #endif  // SRC_DEVICES_LIB_AMLOGIC_INCLUDE_SOC_AML_MESON_A5_CLK_H_
