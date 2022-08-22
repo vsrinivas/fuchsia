@@ -25,7 +25,7 @@ class SocketReader {
 
   bool get isBound => _socket != null;
 
-  late HandleWaiter _waiter;
+  HandleWaiter? _waiter;
 
   SocketReaderReadableHandler? onReadable;
   SocketReaderErrorHandler? onError;
@@ -42,7 +42,8 @@ class SocketReader {
     if (!isBound) {
       throw ZirconApiError('SocketReader is not bound');
     }
-    _waiter.cancel();
+    _waiter?.cancel();
+    _waiter = null;
     final Socket? result = _socket;
     _socket = null;
     return result;
@@ -52,7 +53,8 @@ class SocketReader {
     if (!isBound) {
       return;
     }
-    _waiter.cancel();
+    _waiter?.cancel();
+    _waiter = null;
     _socket!.close();
     _socket = null;
   }
