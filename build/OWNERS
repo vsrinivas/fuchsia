@@ -6,4 +6,8 @@ rudymathu@google.com
 
 per-file security.gni = file://src/security/OWNERS
 
+# Ensure that owners of out-of-tree config-data have control over the allowlist
+# that governs its usage.
+per-file config_data_for_pkg_allowlist.gni = ddorwin@google.com,wez@google.com,ypomortsev@google.com
+
 # COMPONENT: Build>GN
