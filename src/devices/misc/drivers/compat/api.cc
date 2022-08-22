@@ -112,11 +112,6 @@ __EXPORT zx_status_t device_add_metadata(zx_device_t* dev, uint32_t type, const 
   return dev->AddMetadata(type, data, size);
 }
 
-__EXPORT zx_status_t device_publish_metadata(zx_device_t* dev, const char* path, uint32_t type,
-                                             const void* data, size_t size) {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-
 __EXPORT zx_status_t device_add_composite(zx_device_t* dev, const char* name,
                                           const composite_device_desc_t* comp_desc) {
   // TODO(fxbug.dev/103658): In DFv2 we need to support vendor specific touchpads,
