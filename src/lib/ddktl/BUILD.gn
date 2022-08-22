@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/cpp/sdk_source_set.gni")
 import("//build/zircon/zx_library.gni")
 
 group("tests") {
@@ -14,9 +13,7 @@ config("include") {
   include_dirs = [ "include" ]
 }
 
-sdk_source_set("ddktl") {
-  category = "experimental"  # due to //sdk/lib/fidl/cpp/wire
-  sdk_name = "ddktl"
+source_set("ddktl") {
   sources = [
     "include/ddktl/device-internal.h",
     "include/ddktl/device.h",
