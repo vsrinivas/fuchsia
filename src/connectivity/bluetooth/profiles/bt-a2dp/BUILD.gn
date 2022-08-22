@@ -7,55 +7,71 @@ import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
 import("//src/sys/core/build/core_shard.gni")
 
+shared_deps = [
+  ":a2dp_profile_config",
+  "//sdk/fidl/fuchsia.bluetooth.a2dp:fuchsia.bluetooth.a2dp_rust",
+  "//sdk/fidl/fuchsia.bluetooth.avrcp:fuchsia.bluetooth.avrcp_rust",
+  "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr_rust",
+  "//sdk/fidl/fuchsia.bluetooth.internal.a2dp:fuchsia.bluetooth.internal.a2dp_rust",
+  "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
+  "//sdk/fidl/fuchsia.media.sessions2:fuchsia.media.sessions2_rust",
+  "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_rust",
+  "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
+  "//sdk/fidl/fuchsia.sys:fuchsia.sys_rust",
+  "//src/connectivity/bluetooth/fidl:component_rust",
+  "//src/connectivity/bluetooth/lib/async-helpers",
+  "//src/connectivity/bluetooth/lib/battery-client",
+  "//src/connectivity/bluetooth/lib/bt-a2dp",
+  "//src/connectivity/bluetooth/lib/bt-a2dp:bt_a2dp_metrics_rustlib",
+  "//src/connectivity/bluetooth/lib/bt-avdtp",
+  "//src/connectivity/bluetooth/lib/fuchsia-audio-codec",
+  "//src/connectivity/bluetooth/lib/fuchsia-audio-device-output",
+  "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
+  "//src/connectivity/bluetooth/lib/profile-client",
+  "//src/lib/async-utils",
+  "//src/lib/diagnostics/inspect/derive",
+  "//src/lib/diagnostics/inspect/runtime/rust",
+  "//src/lib/diagnostics/inspect/rust",
+  "//src/lib/fidl/rust/fidl",
+  "//src/lib/fidl_table_validation",
+  "//src/lib/fuchsia",
+  "//src/lib/fuchsia-async",
+  "//src/lib/fuchsia-component",
+  "//src/lib/trace/rust:trace",
+  "//src/lib/trace/rust:trace-provider",
+  "//src/lib/zircon/rust:fuchsia-zircon",
+  "//third_party/rust_crates:anyhow",
+  "//third_party/rust_crates:bitfield",
+  "//third_party/rust_crates:byteorder",
+  "//third_party/rust_crates:futures",
+  "//third_party/rust_crates:nom",
+  "//third_party/rust_crates:parking_lot",
+  "//third_party/rust_crates:thiserror",
+  "//third_party/rust_crates:tracing",
+]
+
+shared_sources = [
+  "src/avrcp_relay.rs",
+  "src/avrcp_target.rs",
+  "src/config.rs",
+  "src/encoding.rs",
+  "src/latm.rs",
+  "src/main.rs",
+  "src/pcm_audio.rs",
+  "src/player.rs",
+  "src/sink_task.rs",
+  "src/source_task.rs",
+  "src/sources.rs",
+  "src/stream_controller.rs",
+  "src/volume_relay.rs",
+]
+
 rustc_binary("bin") {
   edition = "2021"
   output_name = "bt_a2dp"
   with_unit_tests = true
 
-  deps = [
-    "//sdk/fidl/fuchsia.bluetooth.a2dp:fuchsia.bluetooth.a2dp_rust",
-    "//sdk/fidl/fuchsia.bluetooth.avrcp:fuchsia.bluetooth.avrcp_rust",
-    "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr_rust",
-    "//sdk/fidl/fuchsia.bluetooth.internal.a2dp:fuchsia.bluetooth.internal.a2dp_rust",
-    "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
-    "//sdk/fidl/fuchsia.media.sessions2:fuchsia.media.sessions2_rust",
-    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_rust",
-    "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys_rust",
-    "//src/connectivity/bluetooth/fidl:component_rust",
-    "//src/connectivity/bluetooth/lib/async-helpers",
-    "//src/connectivity/bluetooth/lib/battery-client",
-    "//src/connectivity/bluetooth/lib/bt-a2dp",
-    "//src/connectivity/bluetooth/lib/bt-a2dp:bt_a2dp_metrics_rustlib",
-    "//src/connectivity/bluetooth/lib/bt-avdtp",
-    "//src/connectivity/bluetooth/lib/fuchsia-audio-codec",
-    "//src/connectivity/bluetooth/lib/fuchsia-audio-device-output",
-    "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
-    "//src/connectivity/bluetooth/lib/profile-client",
-    "//src/lib/async-utils",
-    "//src/lib/diagnostics/inspect/derive",
-    "//src/lib/diagnostics/inspect/runtime/rust",
-    "//src/lib/diagnostics/inspect/rust",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fidl_table_validation",
-    "//src/lib/fuchsia",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/trace/rust:trace",
-    "//src/lib/trace/rust:trace-provider",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:argh",
-    "//third_party/rust_crates:bitfield",
-    "//third_party/rust_crates:byteorder",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:nom",
-    "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:thiserror",
-    "//third_party/rust_crates:tracing",
-  ]
+  deps = shared_deps
 
   test_deps = [
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth_rust",
@@ -68,54 +84,47 @@ rustc_binary("bin") {
     "//third_party/rust_crates:sha2",
   ]
 
-  sources = [
-    "src/avrcp_relay.rs",
-    "src/avrcp_target.rs",
-    "src/config.rs",
-    "src/encoding.rs",
-    "src/latm.rs",
-    "src/main.rs",
-    "src/pcm_audio.rs",
-    "src/player.rs",
-    "src/sink_task.rs",
-    "src/source_task.rs",
-    "src/sources.rs",
-    "src/stream_controller.rs",
-    "src/volume_relay.rs",
-  ]
+  sources = shared_sources
 
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
-fuchsia_component("component") {
+fuchsia_component_manifest("manifest") {
   component_name = "bt-a2dp"
-  manifest = "meta/bt-a2dp.cmx"
+  manifest = "meta/bt-a2dp.cml"
+}
+
+fuchsia_component("component") {
+  cm_label = ":manifest"
   deps = [ ":bin" ]
 }
 
-fuchsia_component("component-v2") {
-  component_name = "bt-a2dp"
-  manifest = "meta/bt-a2dp.cml"
-  deps = [ ":bin" ]
+fuchsia_structured_config_rust_lib("a2dp_profile_config") {
+  cm_label = ":manifest"
+}
+
+fuchsia_structured_config_values("default_config_values") {
+  cm_label = ":manifest"
+  values_source = "config/default.json5"
+}
+
+# A configuration for bt-a2dp which disables sink.
+fuchsia_structured_config_values("source_only_config") {
+  cm_label = ":manifest"
+  values_source = "config/source_only.json5"
 }
 
 fuchsia_package("bt-a2dp") {
   deps = [
     ":component",
-    ":component-v2",
+    ":default_config_values",
   ]
-}
-
-# A configuration for bt-a2dp which disables sink.
-resource("source_only_config") {
-  sources = [ "config/source_only.config" ]
-  outputs = [ "data/a2dp.config" ]
 }
 
 fuchsia_package("source-only") {
   package_name = "bt-a2dp"
   deps = [
-    ":component-v2",
+    ":component",
     ":source_only_config",
   ]
 }
@@ -152,75 +161,20 @@ rustc_test("encoding_integration_bin") {
   features = [ "test_encoding" ]
   source_root = "src/main.rs"
 
-  deps = [
-    "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth_rust",
-    "//sdk/fidl/fuchsia.bluetooth.a2dp:fuchsia.bluetooth.a2dp_rust",
-    "//sdk/fidl/fuchsia.bluetooth.avrcp:fuchsia.bluetooth.avrcp_rust",
-    "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr_rust",
-    "//sdk/fidl/fuchsia.bluetooth.internal.a2dp:fuchsia.bluetooth.internal.a2dp_rust",
-    "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
-    "//sdk/fidl/fuchsia.media.sessions2:fuchsia.media.sessions2_rust",
-    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_rust",
-    "//sdk/fidl/fuchsia.power.battery:fuchsia.power.battery_rust",
-    "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys_rust",
-    "//src/connectivity/bluetooth/fidl:component_rust",
-    "//src/connectivity/bluetooth/lib/async-helpers",
-    "//src/connectivity/bluetooth/lib/async-helpers:async-test-helpers",
-    "//src/connectivity/bluetooth/lib/battery-client",
-    "//src/connectivity/bluetooth/lib/bt-a2dp",
-    "//src/connectivity/bluetooth/lib/bt-a2dp:bt_a2dp_metrics_rustlib",
-    "//src/connectivity/bluetooth/lib/bt-avdtp",
-    "//src/connectivity/bluetooth/lib/fuchsia-audio-codec",
-    "//src/connectivity/bluetooth/lib/fuchsia-audio-device-output",
-    "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
-    "//src/connectivity/bluetooth/lib/profile-client",
-    "//src/connectivity/bluetooth/testing/test-battery-manager",
-    "//src/lib/async-utils",
-    "//src/lib/diagnostics/inspect/derive",
-    "//src/lib/diagnostics/inspect/runtime/rust",
-    "//src/lib/diagnostics/inspect/rust",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fidl_table_validation",
-    "//src/lib/fuchsia",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/test_util",
-    "//src/lib/trace/rust:trace",
-    "//src/lib/trace/rust:trace-provider",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:argh",
-    "//third_party/rust_crates:assert_matches",
-    "//third_party/rust_crates:bitfield",
-    "//third_party/rust_crates:byteorder",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:futures-test",
-    "//third_party/rust_crates:hex",
-    "//third_party/rust_crates:nom",
-    "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:sha2",
-    "//third_party/rust_crates:thiserror",
-    "//third_party/rust_crates:tracing",
-  ]
+  deps = shared_deps + [
+           "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth_rust",
+           "//sdk/fidl/fuchsia.power.battery:fuchsia.power.battery_rust",
+           "//src/connectivity/bluetooth/lib/async-helpers:async-test-helpers",
+           "//src/connectivity/bluetooth/lib/bt-avdtp",
+           "//src/connectivity/bluetooth/testing/test-battery-manager",
+           "//src/lib/test_util",
+           "//third_party/rust_crates:assert_matches",
+           "//third_party/rust_crates:futures-test",
+           "//third_party/rust_crates:hex",
+           "//third_party/rust_crates:sha2",
+         ]
 
-  sources = [
-    "src/avrcp_relay.rs",
-    "src/avrcp_target.rs",
-    "src/config.rs",
-    "src/encoding.rs",
-    "src/latm.rs",
-    "src/main.rs",
-    "src/pcm_audio.rs",
-    "src/player.rs",
-    "src/sink_task.rs",
-    "src/source_task.rs",
-    "src/sources.rs",
-    "src/stream_controller.rs",
-    "src/volume_relay.rs",
-  ]
+  sources = shared_sources
 
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }

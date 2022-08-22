@@ -12,7 +12,6 @@ use fuchsia_zircon::{self as zx, DurationNum};
 use futures::stream::{BoxStream, FusedStream};
 use futures::task::{Context, Poll};
 use futures::{FutureExt, StreamExt};
-use serde::Deserialize;
 use std::pin::Pin;
 
 use crate::PcmAudio;
@@ -112,8 +111,7 @@ impl AudioOutStream {
     }
 }
 
-#[derive(Clone, Copy, Deserialize, PartialEq, Debug)]
-#[serde(rename_all = "snake_case")]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum AudioSourceType {
     AudioOut,
     BigBen,

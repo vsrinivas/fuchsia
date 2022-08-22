@@ -14,9 +14,8 @@ use fuchsia_zircon as zx;
 use mock_piconet_client::{BtProfileComponent, PiconetHarness};
 use tracing::info;
 
-const A2DP_SOURCE_URL: &str =
-    "fuchsia-pkg://fuchsia.com/bt-a2dp-loopback-test#meta/bt-a2dp-source.cm";
-const A2DP_SINK_URL: &str = "fuchsia-pkg://fuchsia.com/bt-a2dp-loopback-test#meta/bt-a2dp-sink.cm";
+const A2DP_SOURCE_URL: &str = "#meta/bt-a2dp.cm";
+const A2DP_SINK_URL: &str = "#meta/bt-a2dp-sink.cm";
 const A2DP_SOURCE_MONIKER: &str = "a2dp-source";
 const A2DP_SINK_MONIKER: &str = "a2dp-sink";
 
@@ -60,6 +59,7 @@ async fn setup_piconet_with_two_a2dp_components() -> LoopbackIntegrationTest {
         .expect("can add a2dp sink profile");
 
     let test_realm = test_harness.build().await.expect("test topology should build");
+    info!("Test topology built");
 
     LoopbackIntegrationTest { test_realm, a2dp_source, a2dp_sink }
 }

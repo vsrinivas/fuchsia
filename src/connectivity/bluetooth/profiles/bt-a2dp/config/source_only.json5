@@ -1,0 +1,11 @@
+{
+    domain: "Bluetooth",
+    source_type: "audio_out",
+    channel_mode: "basic",
+
+    // Disable the audio sink.
+    enable_sink: false,
+    enable_avrcp_target: true,
+    enable_aac: true,
+    initiator_delay: 500,
+}

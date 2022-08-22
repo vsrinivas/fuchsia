@@ -120,9 +120,6 @@ impl StreamsBuilder {
         cobalt_sender: Option<cobalt::MetricEventLoggerProxy>,
         config: &A2dpConfiguration,
     ) -> Result<Self, Error> {
-        if !config.enable_sink && !config.enable_source {
-            return Err(format_err!("At least one of source or sink must be enabled"));
-        }
         // TODO(fxbug.dev/1126): detect codecs, add streams for each codec
         // Sink codecs
         let sbc_endpoint = Self::build_sbc_sink_endpoint()?;
@@ -137,17 +134,17 @@ impl StreamsBuilder {
             }
         }
 
-        let aac_available = if config.enable_aac {
-            let aac_cap =
-                Self::build_aac_capability(avdtp::EndpointType::Sink, /* bitrate=*/ 0)?;
-            let aac_config = MediaCodecConfig::try_from(&aac_cap)?;
-            if config.enable_sink {
+        let aac_available = match config {
+            A2dpConfiguration { enable_aac, .. } if !enable_aac => false,
+            // If AAC is enabled and source-only presume the config is correct.
+            A2dpConfiguration { enable_sink, .. } if !enable_sink => true,
+            _ => {
+                // Sink and AAC are enabled, test to see if we can play AAC audio.
+                let aac_cap =
+                    Self::build_aac_capability(avdtp::EndpointType::Sink, /* bitrate=*/ 0)?;
+                let aac_config = MediaCodecConfig::try_from(&aac_cap)?;
                 player::Player::test_playable(&aac_config).await.is_ok()
-            } else {
-                true
             }
-        } else {
-            false
         };
 
         let caps_available = if aac_available {
@@ -160,7 +157,6 @@ impl StreamsBuilder {
         };
 
         let codec_negotiation = CodecNegotiation::build(caps_available, avdtp::EndpointType::Sink)?;
-        let source_type = if config.enable_source { Some(config.source) } else { None };
 
         Ok(Self {
             cobalt_sender,
@@ -168,7 +164,7 @@ impl StreamsBuilder {
             domain: config.domain.clone(),
             aac_available,
             sink_enabled: config.enable_sink,
-            source_type,
+            source_type: config.source,
         })
     }
 
@@ -467,7 +463,7 @@ fn setup_profiles(
     config: &config::A2dpConfiguration,
 ) -> Result<profile::ProfileClient, profile::Error> {
     let mut service_defs = Vec::new();
-    if config.enable_source {
+    if config.source.is_some() {
         let source_uuid = Uuid::new16(bredr::ServiceClassProfileIdentifier::AudioSource as u16);
         service_defs.push(make_profile_service_definition(source_uuid));
     }
@@ -490,7 +486,7 @@ fn setup_profiles(
         ATTR_A2DP_SUPPORTED_FEATURES,
     ];
 
-    if config.enable_source {
+    if config.source.is_some() {
         profile.add_search(bredr::ServiceClassProfileIdentifier::AudioSink, &ATTRS)?;
     }
 
@@ -599,7 +595,7 @@ async fn main() -> Result<(), Error> {
     });
 
     // The AVRCP Target component is needed if it is requested and A2DP Source is requested.
-    let _avrcp_target = if config.enable_source && config.enable_avrcp_target {
+    let _avrcp_target = if config.source.is_some() && config.enable_avrcp_target {
         avrcp_target::start_avrcp_target()
             .await
             .or_else(|e| {
@@ -707,27 +703,14 @@ mod tests {
         (peers, stream)
     }
 
-    #[fuchsia::test]
-    fn test_at_least_one_profile_enabled() {
-        let mut exec = fasync::TestExecutor::new().expect("executor should build");
-        let config =
-            A2dpConfiguration { enable_sink: false, enable_source: false, ..Default::default() };
-        let mut streams_fut = Box::pin(StreamsBuilder::system_available(None, &config));
-
-        let streams = exec.run_singlethreaded(&mut streams_fut);
-        assert!(
-            streams.is_err(),
-            "Stream building should fail when both source and sink are disabled"
-        );
-    }
-
     #[cfg(not(feature = "test_encoding"))]
     #[fuchsia::test]
     /// build_local_streams should fail because it can't start the SBC decoder, because
     /// MediaPlayer isn't available in the test environment.
     fn test_sbc_unavailable_error() {
         let mut exec = fasync::TestExecutor::new().expect("executor should build");
-        let config = A2dpConfiguration { source: AudioSourceType::BigBen, ..Default::default() };
+        let config =
+            A2dpConfiguration { source: Some(AudioSourceType::BigBen), ..Default::default() };
         let mut streams_fut = Box::pin(StreamsBuilder::system_available(None, &config));
 
         let streams = exec.run_singlethreaded(&mut streams_fut);
@@ -741,7 +724,7 @@ mod tests {
     fn test_aac_switch() {
         let mut exec = fasync::TestExecutor::new().expect("executor should build");
         let mut config = A2dpConfiguration {
-            source: AudioSourceType::BigBen,
+            source: Some(AudioSourceType::BigBen),
             enable_sink: false,
             ..Default::default()
         };

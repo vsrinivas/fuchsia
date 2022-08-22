@@ -1,0 +1,9 @@
+{
+    domain: "Bluetooth",
+    source_type: "audio_out",
+    channel_mode: "basic",
+    enable_sink: true,
+    enable_avrcp_target: true,
+    enable_aac: true,
+    initiator_delay: 500,
+}

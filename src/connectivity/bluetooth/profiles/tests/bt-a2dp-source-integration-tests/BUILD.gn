@@ -5,12 +5,6 @@
 import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
 
-fuchsia_component("bt-a2dp-source-component-v2") {
-  component_name = "bt-a2dp-source"
-  manifest = "meta/test-a2dp-source.cml"
-  deps = [ "//src/connectivity/bluetooth/profiles/bt-a2dp:bin" ]
-}
-
 rustc_test("tests_bin") {
   edition = "2021"
   output_name = "bt_a2dp_source_integration_tests"
@@ -56,7 +50,8 @@ fuchsia_test_package("bt-a2dp-source-integration-tests") {
 
   deps = [
     # The v2 A2DP component with only Source mode enabled.
-    ":bt-a2dp-source-component-v2",
+    "//src/connectivity/bluetooth/profiles/bt-a2dp:component",
+    "//src/connectivity/bluetooth/profiles/bt-a2dp:source_only_config",
 
     # Mock Piconet Server
     "//src/connectivity/bluetooth/testing/mock-piconet-server:component",

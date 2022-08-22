@@ -5,16 +5,27 @@
 import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
 
-fuchsia_component("bt-a2dp-source") {
-  component_name = "bt-a2dp-source"
-  manifest = "meta/test-a2dp-source.cml"
-  deps = [ "//src/connectivity/bluetooth/profiles/bt-a2dp:bin" ]
+fuchsia_component_manifest("bt-a2dp-sink-manifest") {
+  component_name = "bt-a2dp-sink"
+  manifest = "//src/connectivity/bluetooth/profiles/bt-a2dp/meta/bt-a2dp.cml"
 }
 
 fuchsia_component("bt-a2dp-sink") {
-  component_name = "bt-a2dp-sink"
-  manifest = "meta/test-a2dp-sink.cml"
+  cm_label = ":bt-a2dp-sink-manifest"
   deps = [ "//src/connectivity/bluetooth/profiles/bt-a2dp:bin" ]
+}
+
+fuchsia_structured_config_values("sink_only_config") {
+  cm_label = ":bt-a2dp-sink-manifest"
+  values = {
+    domain = "Bluetooth"
+    source_type = "none"
+    channel_mode = "basic"
+    enable_sink = true
+    enable_avrcp_target = false
+    enable_aac = true
+    initiator_delay = 0
+  }
 }
 
 rustc_test("bin") {
@@ -69,10 +80,12 @@ fuchsia_test_package("bt-a2dp-loopback-test") {
 
   deps = [
     # The v2 A2DP component with only Source mode enabled.
-    ":bt-a2dp-source",
+    "//src/connectivity/bluetooth/profiles/bt-a2dp:component",
+    "//src/connectivity/bluetooth/profiles/bt-a2dp:source_only_config",
 
     # The v2 A2DP component with only Sink mode enabled.
     ":bt-a2dp-sink",
+    ":sink_only_config",
 
     # Mock Piconet Server
     "//src/connectivity/bluetooth/testing/mock-piconet-server:component",

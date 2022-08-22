@@ -15,8 +15,7 @@ use futures::stream::StreamExt;
 use mock_piconet_client::{BtProfileComponent, PiconetHarness, PiconetMember};
 
 /// A2DP Source component URL.
-const A2DP_URL: &str =
-    "fuchsia-pkg://fuchsia.com/bt-a2dp-source-integration-tests#meta/bt-a2dp-source.cm";
+const A2DP_URL: &str = "#meta/bt-a2dp.cm";
 const A2DP_SOURCE_MONIKER: &str = "bt-a2dp-source-profile";
 /// Name prefix for mock peers
 const MOCK_PEER_NAME: &str = "mock-peer";
