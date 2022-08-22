@@ -56,6 +56,10 @@ dry_run=0
 local_only=0
 verbose=0
 save_temps=0
+# C-preprocessing strategy is determined automatically.
+#   integrated: built into the command (common case)
+#   local: done separately to produce a .ii intermediate file.
+cpreprocess_strategy=integrated
 project_root="$default_project_root"
 canonicalize_working_dir=true
 rewrapper_options=()
@@ -169,11 +173,15 @@ comma_remote_outputs=
 
 uses_macos_sdk=0
 
+# Some compiles will need C-preprocessing to be done locally.
+cpreprocess_command=()
+# Conventionally, C-preprocessing is written to a .i or .ii file.
+cpreprocess_output=
+
 prev_opt=
 for opt in "$@"
 do
   # Copy most command tokens.
-  dep_only_token="$opt"
   # handle --option arg
   if test -n "$prev_opt"
   then
@@ -183,7 +191,20 @@ do
       comma_remote_inputs) ;;  # Remove this optarg.
       comma_remote_outputs) ;;  # Remove this optarg.
       # Copy all others.
-      *) cc_command+=( "$opt" ) ;;
+      output)
+         cc_command+=( "$opt" )
+         # Change C-preprocessing output to produce .ii for C++, .i for C
+         case "$cc" in
+           *clang++ | *g++ )
+             cpreprocess_output="${opt/.o/.ii}" ;;
+           *)
+             cpreprocess_output="${opt/.o/.i}" ;;
+         esac
+         cpreprocess_command+=( "$cpreprocess_output" )
+         ;;
+      *) cc_command+=( "$opt" )
+         cpreprocess_command+=( "$opt" )
+         ;;
     esac
     prev_opt=
     shift
@@ -286,7 +307,7 @@ EOF
     *=*) ;;
 
     # Capture the first named source file as the source-root.
-    *.cc | *.cpp | *.cxx | *.s | *.S)
+    *.c | *.cc | *.cpp | *.cxx | *.s | *.S)
         test -n "$first_source" || first_source="$opt"
         ;;
 
@@ -300,7 +321,60 @@ EOF
 
   # Copy tokens to craft a command for local and remote execution.
   cc_command+=( "$opt" )
+  cpreprocess_command+=( "$opt" )
   shift
+done
+
+# -E tells the compiler to stop after C-preprocessing
+cpreprocess_command+=( -E )
+# -fno-blocks works around an issue where C-preprocessing includes
+# blocks-featured code when it is not wanted.
+case "$cc" in
+  */bin/clang*) cpreprocess_command+=( -fno-blocks ) ;;
+  # Not a feature of gcc/g++
+esac
+
+# Craft a command that consumes a C-preprocessed input.
+# This must be constructed in a second pass because there is no ordering
+# guarantee between options like -c and -o.
+# Change the input to use the .ii file, and remove options that are
+# related to preprocessing.
+cc_using_ii_command=()
+delete_optarg=0
+prev_opt=
+for opt in "${cc_command[@]}"
+do
+  cc_using_ii_token="$opt"
+
+  if test -n "$prev_opt"
+  then
+    eval "$prev_opt"=\$opt
+    case "$prev_opt" in
+      depfile) ;;  # drop this
+      *) cc_using_ii_command+=( "$cc_using_ii_token" ) ;;
+    esac
+    prev_opt=
+    continue
+  fi
+
+  case "$opt" in
+    -D* | -I* | -isystem* | --sysroot=*)
+      cc_using_ii_token= ;;
+    -MD )
+      cc_using_ii_token= ;;
+    -MF )
+      prev_opt=depfile
+      cc_using_ii_token= ;;
+    -mmacosx-version-min=* )
+      # Sometimes this is used, sometimes not.  Allow either case.
+      cc_using_ii_command+=( -Wno-error=unused-command-line-argument ) ;;
+    -stdlib=* )
+      cc_using_ii_token= ;;
+    *.c | *.cc | *.cpp )
+      cc_using_ii_token="$cpreprocess_output"
+      ;;
+  esac
+  test -z "$cc_using_ii_token" || cc_using_ii_command+=( "$cc_using_ii_token" )
 done
 
 case "$first_source" in
@@ -308,9 +382,9 @@ case "$first_source" in
   *.S) local_only=1 ;;
 esac
 
-# For now, if compilation uses Mac OS SDK, fallback to local execution.
-# TODO(fangism): C-preprocess locally if needed.
-test "$uses_macos_sdk" = 0 || local_only=1
+# When compilation depends on the Mac OS SDK, C-preprocess locally,
+# and remote compile using the intermediate .ii file.
+test "$uses_macos_sdk" = 0 || cpreprocess_strategy=local
 
 if test "$local_only" = 1
 then
@@ -410,8 +484,29 @@ remote_cc_command=(
   "${compiler_swapper_prefix[@]}"
   "${rewrapper_options[@]}"
   --
-  "${cc_command[@]}"
 )
+
+case "$cpreprocess_strategy" in
+  integrated)
+    remote_cc_command+=( "${cc_command[@]}" )
+    # Workaround an issue where ZX_DEBUG_ASSERT triggers -Wconstant-logical-operand
+    remote_cc_command+=( -Wno-constant-logical-operand )
+    ;;
+  local)
+    cleanup_files+=( "$cpreprocess_output" )
+    test "$verbose" = 0 || msg "Local C-preprocessing: ${cpreprocess_command[@]}"
+    "${cpreprocess_command[@]}"
+    cpp_status="$?"
+    test "$cpp_status" = 0 || {
+      msg "*** Local C-preprocessing failed (exit=$cpp_status): ${cpreprocess_command[@]}"
+      exit "$cpp_status"
+    }
+    remote_cc_command+=( "${cc_using_ii_command[@]}" )
+    ;;
+  *) msg "*** Invalid C-preprocessing strategy: $cpreprocess_strategy"
+    exit 1
+    ;;
+esac
 
 if test "$dry_run" = 1
 then
@@ -422,3 +517,10 @@ fi
 test "$verbose" = 0 || msg "remote command: ${remote_cc_command[@]}"
 # Cannot `exec` because that would bypass the trap cleanup.
 "${remote_cc_command[@]}"
+status="$?"
+
+test "$status" = 0 || test "$verbose" = 1 || test "$cpreprocess_strategy" = integrated || {
+  msg "local C-preprocessing was: ${cpreprocess_command[@]}"
+}
+
+exit "$status"
