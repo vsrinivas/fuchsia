@@ -42,6 +42,16 @@ using fuchsia::ui::composition::ViewportProperties;
 using fuchsia::ui::views::ViewCreationToken;
 using fuchsia::ui::views::ViewportCreationToken;
 
+namespace {
+
+// TODO(fxbug.dev/107310): Default hit regions cover the entire screen. However, since hit
+// regions also have a global position (affected by translation, scale, and rotation), they
+// cannot be specified as numeric limits. The current solution is a short-term workaround but a
+// most robust solution should be investigated.
+constexpr float kDefaultHitRegionBounds = 1'000'000.F;
+
+}  // namespace
+
 namespace flatland {
 
 std::shared_ptr<Flatland> Flatland::New(
@@ -259,8 +269,13 @@ void Flatland::Present(fuchsia::ui::composition::PresentArgs args) {
   // root, add a full screen one.
   if (root_transform_.GetInstanceId() != 0 &&
       hit_regions_.find(root_transform_) == hit_regions_.end()) {
+    // TODO(fxbug.dev/107310): Default hit regions cover the entire screen. However, since hit
+    // regions also have a global position (affected by translation, scale, and rotation), they
+    // cannot be specified as numeric limits. The current solution is a short-term workaround but a
+    // most robust solution should be investigated.
     uber_struct->local_hit_regions_map[root_transform_] = {
-        {{FLT_MIN, FLT_MIN, FLT_MAX, FLT_MAX},
+        {{-kDefaultHitRegionBounds, -kDefaultHitRegionBounds, 2 * kDefaultHitRegionBounds,
+          2 * kDefaultHitRegionBounds},
          fuchsia::ui::composition::HitTestInteraction::DEFAULT}};
   }
 

@@ -2187,6 +2187,7 @@ TEST_F(FlatlandTest, SetHitRegionsOverwritesPreviousOnes) {
 
   PRESENT(flatland, true);
 
+  constexpr float expected_initial_bounds = 1'000'000.F;
   // Check that the default hit region is as expected.
   {
     auto uber_struct = GetUberStruct(flatland.get());
@@ -2198,7 +2199,8 @@ TEST_F(FlatlandTest, SetHitRegionsOverwritesPreviousOnes) {
     auto hit_region = hit_regions[handle1][0];
 
     auto rect = hit_region.region;
-    fuchsia::math::RectF expected_rect = {FLT_MIN, FLT_MIN, FLT_MAX, FLT_MAX};
+    fuchsia::math::RectF expected_rect = {-expected_initial_bounds, -expected_initial_bounds,
+                                          2 * expected_initial_bounds, 2 * expected_initial_bounds};
     ExpectRectFEquals(rect, expected_rect);
     EXPECT_EQ(hit_region.hit_test, fuchsia::ui::composition::HitTestInteraction::DEFAULT);
   }
@@ -2225,7 +2227,9 @@ TEST_F(FlatlandTest, SetHitRegionsOverwritesPreviousOnes) {
       auto hit_region = hit_regions[handle1][0];
 
       auto rect = hit_region.region;
-      fuchsia::math::RectF expected_rect = {FLT_MIN, FLT_MIN, FLT_MAX, FLT_MAX};
+      fuchsia::math::RectF expected_rect = {-expected_initial_bounds, -expected_initial_bounds,
+                                            2 * expected_initial_bounds,
+                                            2 * expected_initial_bounds};
       ExpectRectFEquals(rect, expected_rect);
       EXPECT_EQ(hit_region.hit_test, fuchsia::ui::composition::HitTestInteraction::DEFAULT);
     }
