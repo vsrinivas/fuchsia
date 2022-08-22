@@ -37,6 +37,12 @@ zx_library("zxdump") {
 
   sources = [
     "core.h",
+    "dump-file-mmap.cc",
+    "dump-file-mmap.h",
+    "dump-file-stdio.cc",
+    "dump-file-stdio.h",
+    "dump-file.cc",
+    "dump-file.h",
     "error.cc",
     "fd-writer.cc",
     "job-archive.h",
@@ -106,9 +112,11 @@ source_set("test-tool-process") {
 
 test("zxdump-unittests") {
   sources = [
+    "dump-file-tests.cc",
     "error-tests.cc",
     "fd-writer-tests.cc",
     "piped-command-tests.cc",
+    "test-file.h",
   ]
   deps = [
     ":piped-command",
@@ -130,6 +138,7 @@ test("zxdump-unittests") {
       "dump-tests.h",
       "gcore-tests.cc",
     ]
+    deps += [ "//sdk/lib/fdio" ]
     data_deps += [ ":gcore(${toolchain_variant.base})" ]
   }
 }
