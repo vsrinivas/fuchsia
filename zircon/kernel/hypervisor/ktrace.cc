@@ -32,6 +32,7 @@ static const char* const vcpu_exit[] = {
     [VCPU_DATA_ABORT] = "exit:data_abort",
     [VCPU_SERROR_INTERRUPT] = "exit:serror_interrupt",
 #elif ARCH_X86
+    [VCPU_EXCEPTION_OR_NMI] = "exit:exception_or_nmi",
     [VCPU_EXTERNAL_INTERRUPT] = "exit:external_interrupt",
     [VCPU_INTERRUPT_WINDOW] = "exit:interrupt_window",
     [VCPU_CPUID] = "exit:cpuid",
