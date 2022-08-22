@@ -230,7 +230,7 @@ __EXPORT zx_status_t device_get_variable(zx_device_t* device, const char* name, 
     out[1] = 0;
     return ZX_OK;
   }
-  return ZX_ERR_NOT_SUPPORTED;
+  return ZX_ERR_NOT_FOUND;
 }
 
 __EXPORT zx_status_t device_connect_fidl_protocol(zx_device_t* dev, const char* protocol_name,
