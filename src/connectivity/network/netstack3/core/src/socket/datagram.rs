@@ -7,8 +7,6 @@
 use alloc::collections::HashSet;
 use core::{hash::Hash, num::NonZeroU16};
 
-use rand::RngCore;
-
 use derivative::Derivative;
 use net_types::{
     ip::{Ip, IpAddress},
@@ -16,11 +14,11 @@ use net_types::{
 };
 
 use crate::{
-    algorithm::{PortAlloc, PortAllocImpl, ProtocolFlowId},
+    algorithm::ProtocolFlowId,
     data_structures::{id_map::IdMap, socketmap::Tagged},
     ip::{socket::IpSock, IpDeviceId, IpExt},
     socket::{
-        address::{ConnAddr, ConnIpAddr, IpPortSpec},
+        address::{ConnAddr, ConnIpAddr},
         AddrVec, Bound, BoundSocketMap, ListenerAddr, SocketMapAddrSpec, SocketMapAddrStateSpec,
         SocketMapConflictPolicy, SocketMapStateSpec, SocketTypeState as _, SocketTypeStateMut as _,
     },
@@ -32,12 +30,9 @@ use crate::{
 pub(crate) struct DatagramSockets<A: SocketMapAddrSpec, S: DatagramSocketSpec>
 where
     Bound<S>: Tagged<AddrVec<A>>,
-    BoundSocketMap<A, S>: PortAllocImpl,
 {
     pub(crate) bound: BoundSocketMap<A, S>,
     pub(crate) unbound: IdMap<UnboundSocketState<A::IpAddr, A::DeviceId, S::UnboundSharingState>>,
-    /// lazy_port_alloc is lazy-initialized when it's used.
-    pub(crate) lazy_port_alloc: Option<PortAlloc<BoundSocketMap<A, S>>>,
 }
 
 #[derive(Debug, Derivative)]
@@ -57,27 +52,6 @@ pub(crate) struct ListenerState<A: Eq + Hash, D: Hash + Eq> {
 pub(crate) struct ConnState<I: IpExt, D: Eq + Hash> {
     pub(crate) socket: IpSock<I, D, ()>,
     pub(crate) multicast_memberships: MulticastMemberships<I::Addr, D>,
-}
-
-impl<I: IpExt, D: IpDeviceId, S: DatagramSocketSpec> DatagramSockets<IpPortSpec<I, D>, S>
-where
-    Bound<S>: Tagged<AddrVec<IpPortSpec<I, D>>>,
-    BoundSocketMap<IpPortSpec<I, D>, S>: PortAllocImpl,
-{
-    /// Helper function to allocate a local port.
-    ///
-    /// Attempts to allocate a new unused local port with the given flow identifier
-    /// `id`.
-    pub(crate) fn try_alloc_local_port<R: RngCore>(
-        &mut self,
-        rng: &mut R,
-        id: <BoundSocketMap<IpPortSpec<I, D>, S> as PortAllocImpl>::Id,
-    ) -> Option<NonZeroU16> {
-        let Self { bound, unbound: _, lazy_port_alloc } = self;
-        // Lazily init port_alloc if it hasn't been inited yet.
-        let port_alloc = lazy_port_alloc.get_or_insert_with(|| PortAlloc::new(rng));
-        port_alloc.try_alloc(&id, bound).and_then(NonZeroU16::new)
-    }
 }
 
 #[derive(Debug, Derivative)]
@@ -200,9 +174,8 @@ pub(crate) fn create_unbound<
 ) -> S::UnboundId
 where
     Bound<S>: Tagged<AddrVec<A>>,
-    BoundSocketMap<A, S>: PortAllocImpl,
 {
-    sync_ctx.with_sockets_mut(|DatagramSockets { unbound, bound: _, lazy_port_alloc: _ }| {
+    sync_ctx.with_sockets_mut(|DatagramSockets { unbound, bound: _ }| {
         unbound.push(UnboundSocketState::default()).into()
     })
 }
@@ -218,11 +191,10 @@ pub(crate) fn remove_unbound<
     id: S::UnboundId,
 ) where
     Bound<S>: Tagged<AddrVec<A>>,
-    BoundSocketMap<A, S>: PortAllocImpl,
 {
     let UnboundSocketState { device: _, sharing: _, multicast_memberships } = sync_ctx
         .with_sockets_mut(|state| {
-            let DatagramSockets { unbound, bound: _, lazy_port_alloc: _ } = state;
+            let DatagramSockets { unbound, bound: _ } = state;
             unbound.remove(id.into()).expect("invalid UDP unbound ID")
         });
 
@@ -246,12 +218,11 @@ pub(crate) fn remove_listener<
 ) -> ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>
 where
     Bound<S>: Tagged<AddrVec<A>>,
-    BoundSocketMap<A, S>: PortAllocImpl,
     S::ListenerAddrState:
         SocketMapAddrStateSpec<Id = S::ListenerId, SharingState = S::ListenerSharingState>,
 {
     let (ListenerState { multicast_memberships }, addr) = sync_ctx.with_sockets_mut(|state| {
-        let DatagramSockets { bound, unbound: _, lazy_port_alloc: _ } = state;
+        let DatagramSockets { bound, unbound: _ } = state;
         let (state, _, addr): (_, S::ListenerSharingState, _) =
             bound.listeners_mut().remove(&id).expect("Invalid UDP listener ID");
         (state, addr)
@@ -278,13 +249,12 @@ pub(crate) fn remove_conn<
 ) -> ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>
 where
     Bound<S>: Tagged<AddrVec<A>>,
-    BoundSocketMap<A, S>: PortAllocImpl,
     S::ConnAddrState: SocketMapAddrStateSpec<Id = S::ConnId, SharingState = S::ConnSharingState>,
     A::IpVersion: IpExt,
 {
     let (ConnState { socket: _, multicast_memberships }, addr) =
         sync_ctx.with_sockets_mut(|state| {
-            let DatagramSockets { bound, unbound: _, lazy_port_alloc: _ } = state;
+            let DatagramSockets { bound, unbound: _ } = state;
             let (state, _sharing, addr): (_, S::ConnSharingState, _) =
                 bound.conns_mut().remove(&id).expect("UDP connection not found");
             (state, addr)
@@ -401,7 +371,6 @@ pub(crate) fn set_multicast_membership<
 ) -> Result<(), SetMulticastMembershipError>
 where
     Bound<S>: Tagged<AddrVec<A>>,
-    BoundSocketMap<A, S>: PortAllocImpl,
     S::ListenerAddrState:
         SocketMapAddrStateSpec<Id = S::ListenerId, SharingState = S::ListenerSharingState>,
     S::ConnAddrState: SocketMapAddrStateSpec<Id = S::ConnId, SharingState = S::ConnSharingState>,
@@ -411,7 +380,7 @@ where
     let interface = pick_matching_interface(sync_ctx, interface)?;
 
     let interface = sync_ctx.with_sockets(|state| {
-        let DatagramSockets { bound, unbound, lazy_port_alloc: _ } = state;
+        let DatagramSockets { bound, unbound } = state;
         let bound_device = match id.clone() {
             DatagramSocketId::Unbound(id) => {
                 let UnboundSocketState { device, sharing: _, multicast_memberships: _ } =
@@ -451,7 +420,7 @@ where
     // This can be folded into the above if we can teach our context traits that
     // the UDP state can be borrowed while the interface picking code runs.
     let change = sync_ctx.with_sockets_mut(|state| {
-        let DatagramSockets { bound, unbound, lazy_port_alloc: _ } = state;
+        let DatagramSockets { bound, unbound } = state;
         let multicast_memberships = match id {
             DatagramSocketId::Unbound(id) => {
                 let UnboundSocketState { device: _, sharing: _, multicast_memberships } =
