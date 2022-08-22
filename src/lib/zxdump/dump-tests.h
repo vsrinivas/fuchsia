@@ -71,6 +71,13 @@ class TestProcess {
     kill_job_ = true;
   }
 
+  // This is a standard SegmentCallback that can be used.
+  static fitx::result<zxdump::Error, zxdump::SegmentDisposition> PruneAllMemory(
+      zxdump::SegmentDisposition segment, const zx_info_maps_t& maps, const zx_info_vmo_t& vmo) {
+    segment.filesz = 0;
+    return fitx::ok(segment);
+  }
+
  private:
   static constexpr const char* kChildProgram = "/pkg/bin/zxdump-test-child";
 

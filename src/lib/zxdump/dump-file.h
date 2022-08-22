@@ -16,7 +16,12 @@
 
 #include <fbl/unique_fd.h>
 
+#include "core.h"
+#include "job-archive.h"
+
 namespace zxdump::internal {
+
+inline constexpr size_t kHeaderProbeSize = std::max(kMinimumElf, kMinimumArchive);
 
 // The bounds of an archive member file inside the underlying real dump file.
 // Member files inside nested archives have flat offsets into the real file.
@@ -56,7 +61,7 @@ struct FileRange {
   }
 
   uint64_t offset;
-  size_t size;
+  uint64_t size;
 };
 
 // Each open dump file is one of these.

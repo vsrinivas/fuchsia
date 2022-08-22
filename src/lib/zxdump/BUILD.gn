@@ -11,6 +11,7 @@ zx_library("zxdump") {
   sdk_headers = [
     "lib/zxdump/dump.h",
     "lib/zxdump/fd-writer.h",
+    "lib/zxdump/task.h",
     "lib/zxdump/types.h",
   ]
 
@@ -26,6 +27,9 @@ zx_library("zxdump") {
 
     # <lib/zxdump/fd-writer.h> has #include <fbl/unique_fd.h>.
     "//zircon/system/ulib/fbl",
+
+    # <lib/zxdump/types.h> has #include <lib/stdcompat/span.h>.
+    "//sdk/lib/stdcompat",
   ]
 
   if (is_fuchsia) {
@@ -46,7 +50,9 @@ zx_library("zxdump") {
     "error.cc",
     "fd-writer.cc",
     "job-archive.h",
+    "read.cc",
     "rights.h",
+    "task.cc",
   ]
 
   # Test code can use private headers from sources.
@@ -135,10 +141,15 @@ test("zxdump-unittests") {
 
   if (is_fuchsia) {
     sources += [
+      "dump-tests.cc",
       "dump-tests.h",
       "gcore-tests.cc",
     ]
-    deps += [ "//sdk/lib/fdio" ]
+    deps += [
+      "//sdk/lib/fdio",
+      "//zircon/system/ulib/zx",
+      "//zircon/system/ulib/zxc",
+    ]
     data_deps += [ ":gcore(${toolchain_variant.base})" ]
   }
 }

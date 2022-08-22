@@ -14,6 +14,9 @@ namespace zxdump {
 // Zircon core dumps are always in the 64-bit little-endian ELF format.
 using Elf = elfldltl::Elf64<elfldltl::ElfData::k2Lsb>;
 
+// Minimum size of an ELF file.
+inline constexpr size_t kMinimumElf = sizeof(Elf::Ehdr);
+
 // Note headers, names, and descriptions are aligned in the file.
 // The alignment padding is not included in n_namesz or n_descsz.
 // Note n_namesz does include the mandatory NUL terminator.

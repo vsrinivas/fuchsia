@@ -170,7 +170,7 @@ class ProcessDumpBase : protected DumpBase {
   // storage helds inside the DumpProcess object.  They can be used freely
   // until the object is destroyed or clear()'d.
   template <typename Dump>
-  fitx::result<DumpError<Dump>, size_t> DumpHeaders(Dump&& dump, size_t limit) {
+  fitx::result<DumpError<Dump>, size_t> DumpHeaders(Dump&& dump, size_t limit = DefaultLimit()) {
     using namespace std::literals;
     DumpWrapper wrapper(std::forward<Dump>(dump));
     return wrapper.error_or("DumpHeader"sv, DumpHeadersImpl(wrapper.callback(), limit));
@@ -195,7 +195,7 @@ class ProcessDumpBase : protected DumpBase {
   // that will be reused for the next callback.  So this `dump` callback must
   // stream the data out or copy it, not just accumulate the view objects.
   template <typename Dump>
-  fitx::result<DumpError<Dump>, size_t> DumpMemory(Dump&& dump, size_t limit) {
+  fitx::result<DumpError<Dump>, size_t> DumpMemory(Dump&& dump, size_t limit = DefaultLimit()) {
     using namespace std::literals;
     DumpWrapper wrapper(std::forward<Dump>(dump));
     return wrapper.error_or("DumpMemory"sv, DumpMemoryImpl(wrapper.callback(), limit));

@@ -111,7 +111,7 @@ class ArchiveMemberHeader {
     // spaces.  There are no separators between fields.
     memset(&header_, ' ', sizeof(header_));
     static_assert(ar_hdr::kMagic.size() == sizeof(header_.ar_fmag));
-    memcpy(header_.ar_fmag, ar_hdr::kMagic.data(), sizeof(header_.ar_fmag));
+    ar_hdr::kMagic.copy(header_.ar_fmag, sizeof(header_.ar_fmag));
   }
 
   // The name is copied directly into the header, truncated if necessary.
@@ -173,7 +173,11 @@ class ArchiveMemberHeader {
 
  private:
   void Check() const {
-    ZX_DEBUG_ASSERT(!memcmp(header_.ar_fmag, ar_hdr::kMagic.data(), sizeof(header_.ar_fmag)));
+    [[maybe_unused]] std::string_view magic{
+        header_.ar_fmag,
+        sizeof(header_.ar_fmag),
+    };
+    ZX_DEBUG_ASSERT(magic == ar_hdr::kMagic);
   }
 
   void Init() {
@@ -557,6 +561,7 @@ class ProcessDumpBase::Collector {
     }
 
     ZX_DEBUG_ASSERT(offset % NoteAlign() == 0);
+    ZX_DEBUG_ASSERT(offset == headers_size_bytes() + notes_size_bytes());
     return fitx::ok(offset);
   }
 
@@ -570,24 +575,28 @@ class ProcessDumpBase::Collector {
   // until all the data has been dumped, and the final `dump` callback's return
   // value will be the "success" return value.
   fitx::result<Error, size_t> DumpMemory(DumpCallback dump, size_t limit) {
-    size_t offset = notes_size_bytes_;
+    size_t offset = headers_size_bytes() + notes_size_bytes();
     for (const auto& segment : phdrs_) {
       if (segment.type == elfldltl::ElfPhdrType::kLoad) {
         uintptr_t vaddr = segment.vaddr;
-        offset = segment.offset;
-        if (offset >= limit) {
+        if (segment.offset >= limit) {
           break;
         }
-        size_t size = std::min(segment.filesz(), limit - offset);
-        while (size > 0) {
+        const size_t size = std::min(segment.filesz(), limit - segment.offset);
+        if (size == 0) {
+          continue;
+        }
+        size_t left = size;
+        offset = segment.offset;
+        do {
           ByteView chunk;
 
           // This yields some nonempty subset of the requested range.
-          if (auto read = memory_.ReadBytes(vaddr, 1, size); read.is_error()) {
+          if (auto read = memory_.ReadBytes(vaddr, 1, left); read.is_error()) {
             return read.take_error();
           } else {
             chunk = read.value();
-            ZX_DEBUG_ASSERT(chunk.size() <= size);
+            ZX_DEBUG_ASSERT(chunk.size() <= left);
             ZX_DEBUG_ASSERT(!chunk.empty());
             ZX_DEBUG_ASSERT(chunk.data());
           }
@@ -599,8 +608,9 @@ class ProcessDumpBase::Collector {
 
           vaddr += chunk.size();
           offset += chunk.size();
-          size -= chunk.size();
-        }
+          left -= chunk.size();
+        } while (left > 0);
+        ZX_DEBUG_ASSERT(offset == segment.offset + size);
       }
     }
     return fitx::ok(offset);
@@ -991,6 +1001,7 @@ class ProcessDumpBase::Collector {
       ehdr_.shoff = offset;
       offset += sizeof(shdr_);
     }
+    ZX_DEBUG_ASSERT(offset == headers_size_bytes());
 
     // Now assign offsets to all the segments.
     auto place = [&offset](Elf::Phdr& phdr) {
@@ -1157,6 +1168,13 @@ class ProcessDumpBase::Collector {
     size_t valid_size_ = 0;
     zx::unowned_process process_;
   };
+
+  size_t headers_size_bytes() const {
+    return sizeof(ehdr_) + (sizeof(phdrs_[0]) * phdrs_.size()) +
+           (ehdr_.phnum == Elf::Ehdr::kPnXnum ? sizeof(shdr_) : 0);
+  }
+
+  size_t notes_size_bytes() const { return notes_size_bytes_; }
 
   zx::unowned_process process_;
   zx::suspend_token process_suspended_;

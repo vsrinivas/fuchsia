@@ -15,7 +15,7 @@ A simple writer using POSIX I/O is provided to plug into the callback API to
 stream to a file descriptor.  This works with either seekable or non-seekable
 file descriptors, seeking forward over gaps of zero padding when possible.
 
-**TODO:** reading
+[TOC]
 
 ## Core file format
 
@@ -280,3 +280,180 @@ a flattened job archive will usually go more quickly than the equivalent
 hierarchical job archive.  However, the hierarchical job archive also ensures
 that the state shown in the dump is synchronized across all the processes in
 the hierarchy since they were all kept suspended while doing all the dumping.
+
+## Reader API
+
+The `zxdump` C++ library provides an API for reading dumps as well as one for
+creating them.  As described above, dumps can contain all the kinds of
+information the Zircon kernel reports about processes, threads, and jobs,
+using the kernel API's own formats.  So the library interface for reading
+information from core dumps and job archives has striking parallels with the
+Zircon system call interface.  In fact, most of the interface is what a
+read-only subset of the Zircon API might look like in a new style of C++
+language binding.  However, this is an API available on all host platforms as
+well as on Fuchsia.
+
+### `zxdump::TaskHolder`
+
+The [`<lib/zxdump/task.h>`](include/lib/zxdump/task.h) header describes this
+API in detail.  The `zxdump::TaskHolder` object is the root container used to
+represent dump data in memory.  As the name implies, it holds a set of related
+"task" objects, that is `zxdump::Job`, `zxdump::Process`, and `zxdump::Thread`
+objects.  The holder can be fed dump files, either `ET_CORE` files with single
+process dumps or job archives that can contain multiple dumps.  This is done
+with the `Insert` method to "insert" a dump into the holder by file descriptor.
+
+### Job, Process, & Thread Objects
+
+Each Zircon kernel object read from dumps is represented by a C++ object.  All
+these objects are owned by the `zxdump::TaskHolder` object and are always used
+by reference.  The API mirrors the Zircon system call API for the same kernel
+object types.  `zxdump::Job`, `zxdump::Process`, and `zxdump::Thread` classes
+are derived from a common base class `zxdump::Task`.
+
+Each has an object type and a KOID (aka PID in the case of processes) exactly
+reflecting the Zircon kernel objects in the snapshot of the running system
+taken by the dump.  The `get_info` and `get_property` methods return all the
+object-type-specific information captured in the snapshot, using the Zircon
+system call API's own data structures.  `zxdump::Thread` objects also have
+`read_state` methods.  The preferred form of each of these uses strong typing
+via a template parameter selecting the topic, property, or state kind to avoid
+the hassles and unsafety of the raw buffer and size in the C system call API.
+
+As in the live system's API, the various "KOID list" topics from `get_info` can
+be used with the `get_child` method to navigate the task hierarchy, from job to
+child job, from job to process, and from process to thread.  A more convenient
+and efficient `find` method is also provided to look up a descendent task by
+KOID from any job or process above it in the hierarchy.  `zxdump::Job` and
+`zxdump::Process` objects also have convenience methods that return
+`std::map<zx_koid_t, zxdump::...>` for the children, processes, and threads
+lists for doing full enumeration.
+
+### Task Hierarchy & Reading Multiple Dumps
+
+A single ELF core dump file describes only one process (with all its threads).
+A job archive can describe any number of jobs and processes.  Any particular
+dump file, whether a single-process dump or a job archive, might be only one
+slice of the picture that needs to be reassembled for post-mortem analysis.
+
+The `zxdump::TaskHolder` API supports reading multiple dump files into a
+single, unified view of the data.  As each dump is inserted, new job and
+process objects are collated by matching up task KOIDs with children and
+process KOID lists.  The tasks thus "self-assemble" into a task hierarchy
+replicating a partial view of the live system's task hierarchy.
+
+#### Root Job & The Super-Root
+
+Navigating the task hierarchy of a `zxdump::TaskHolder` works just like in the
+Zircon system call API: start with the root job, and enumerate children.  In
+the zxdump case, the `zxdump::TaskHolder::root_job()` method simply returns
+the root job object.
+
+It's possible that a single job archive, or a collection of job archives
+together, actually represent the root job of a system instance and all its
+descendent tasks.  More often, the reader API is only looking at a partial
+view of some subset of the tree.  This might be a strict subtree with a single
+parent job that can be considered the "local root job".  But it could also be
+just a collection of jobs that don't all share ancestry that's visible in the
+dump data.  It may well be only a collection of individual process dumps and
+no job information at all to indicate any kind of hierarchy above the threads
+within each process.  The reader API handles all these cases.
+
+When job archives provide a coherent view that assembles into a single tree
+with one root job, then the `zxdump::Job` object returned by `root_job()` is
+just this job, with all its job-specific information as well as its children
+and process lists.
+
+In other cases, `root_job()` is actually a special placeholder `zxdump::Job`
+object called the "super-root".  This object doesn't correspond to any real
+Zircon kernel object from the dumped system.  It serves only to provide the
+child job and process lists that a real root job would provide.  The
+placeholder object has KOID of zero and no other job information to report.
+All it does have is a children list and a processes list, which appear like the
+normal job `get_info` topics for those KOID lists even though no other topics
+are available.  Every "orphaned" job or process whose parent job wasn't
+described in any dump file will appear to be a child job or process of the
+super-root.  (When the only task without a known parent is a job, then that job
+becomes the "real" root job instead and there is no "super-root".)
+
+When displaying information from a dump, a nonzero KOID for the root job
+identifies a real, rooted job tree that can be displayed whole.  The zero KOID
+of the super-root indicates that instead it's really just a collection of
+unrelated "top-level" jobs and/or processes.
+
+### Memory-Mapped & Streaming Input
+
+The reader code uses file descriptors to read dump files.  When possible, it
+will use `mmap` to map an ELF or archive file into read-only memory and use
+its contents without requiring copies in memory.  But the reader will also
+generally work with pipes as input, and will read in a streaming fashion with
+some caveats.
+
+The reader first reads all the file headers and the "notes" and caches them in
+memory.  This contains all `get_info`, `get_property`, and `read_state` data
+items.  What remains in the dump file is the contents of process memory,
+which is read from files only on demand as needed for `read_memory` calls.
+This has some ramifications:
+
+ * When the reader can't use memory-mapped files, it has to hold onto the file
+   descriptor so it can seek and read for later `read_memory` calls.
+
+ * When the input file descriptor is not seekable (such as streaming input from
+   a pipe or socket), then `read_memory` calls only work when they match the
+   order of the data in the input dump file's layout.
+
+Recall from the ordering sections in the format description above that dump
+file layout is quite flexible.  The reader can cope with any valid layout.  But
+the streaming input support is optimized for the canonical layout with all the
+headers and note data first, followed by memory data with file order correlated
+to ascending address order.  If the reader has to seek past memory data to get
+to all the note data, this may be inefficient; and no `read_memory` calls will
+succeed later, even in ascending address order.
+
+Many particular uses of dump-reading are not concerned with reading memory.  So
+the `zxdump::TaskHolder::Insert` method takes an optional flag argument to say
+that `read_memory` isn't expected to be used later.  In this case, the reader
+will clean up and close the file descriptors immediately after inserting the
+dump.  Any later attempts to use `read_memory` on a `zxdump::Process` whose
+data came from that dump will fail with `ZX_ERR_NOT_SUPPORTED`.
+
+When full access to process memory via `read_memory` is required from a dump
+file coming from a streaming input source, it's probably best to just write
+the whole dump stream into a file and then use the memory-mapped reading mode.
+In other cases, it works very well to feed the reader a dump stream piped from
+a network connection or decompression process, etc.
+
+### Partial Dumps & Missing Data
+
+The dump format in theory represents every type of information about each job,
+process, and thread it describes.  However, the dump-writer has wide discretion
+to omit some pieces of information for any reason.  Particular `get_info`,
+`get_property`, or `read_state` items might be elided because the task died
+while being dumped; because the kernel or hardware didn't support a particular
+kind of information; to save space in the dump; to redact sensitive data; or
+simply by the whim of the user.  The dump reader can also often successfully
+read a dump that has been truncated, and will then present it just the same as
+a dump where specific information was elided intentionally.  In all these
+cases, particular task API calls will fail with `ZX_ERR_NOT_SUPPORTED` when the
+specific data requested is missing, even where their Zircon system call
+counterparts might never get that error.
+
+The `zxdump::Process::read_memory` distinguishes more cases:
+
+ * `ZX_ERR_NO_MEMORY` is the same error the kernel returns for a memory range
+   that simply isn't all mapped to anything in the process.
+
+ * `ZX_ERR_NOT_FOUND` indicates that the dump described the memory region as
+   present in the process, but intentionally omitted these actual memory
+   contents.  The core file has a `PT_LOAD` segment covering the region, and
+   may include `ZX_INFO_PROCESS_MAPS` data that gives more details, but the
+   contents were not included in the dump.
+
+ * `ZX_ERR_OUT_OF_RANGE` indicates that the memory was included in the dump,
+   but can't be read because the dump was truncated.  This is also the result
+   when trying to read memory from a non-seekable dump stream where the needed
+   portion of the file has already been passed.
+
+ * `ZX_ERR_NOT_SUPPORTED` specifically means that the dump file containing this
+   process was inserted by a `zxdump::TaskHolder::Insert` call with `false`
+   passed for the optional `read_memory` flag argument.
