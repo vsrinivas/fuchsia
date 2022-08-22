@@ -80,7 +80,9 @@ fn get_crypt_client() -> Result<Arc<RemoteCrypt>, Error> {
     )?))))
 }
 
-#[fasync::run(6)]
+// The number of threads chosen here must exceed the number of concurrent system calls to paged VMOs
+// that we allow since otherwise deadlocks are possible.  Search for CONCURRENT_SYSCALLS.
+#[fasync::run(10)]
 async fn main() -> Result<(), Error> {
     diagnostics_log::init!();
 

@@ -20,7 +20,7 @@ use {
     anyhow::Error,
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io as fio,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, Status},
     futures::{channel::oneshot, join},
     once_cell::sync::Lazy,
@@ -129,7 +129,6 @@ impl FxFile {
             open_count: AtomicUsize::new(0),
             has_written: AtomicBool::new(false),
         });
-
         file.handle.owner().pager().register_file(&file);
         file
     }
@@ -181,17 +180,17 @@ impl FxFile {
         self.handle.data_buffer().vmo()
     }
 
-    pub async fn page_in(self: &Arc<Self>, mut range: std::ops::Range<u64>) {
-        async_enter!("page_in");
+    pub fn page_in(self: &Arc<Self>, mut range: std::ops::Range<u64>) {
         const ZERO_VMO_SIZE: u64 = TRANSFER_BUFFER_MAX_SIZE;
         static ZERO_VMO: Lazy<zx::Vmo> = Lazy::new(|| zx::Vmo::create(ZERO_VMO_SIZE).unwrap());
 
+        let vmo = self.vmo();
         let aligned_size =
             round_up(self.handle.uncached_size(), zx::system_get_page_size()).unwrap();
         let mut offset = std::cmp::max(range.start, aligned_size);
         while offset < range.end {
             let end = std::cmp::min(range.end, offset + ZERO_VMO_SIZE);
-            self.handle.owner().pager().supply_pages(self.vmo(), offset..end, &ZERO_VMO, 0);
+            self.handle.owner().pager().supply_pages(vmo, offset..end, &ZERO_VMO, 0);
             offset = end;
         }
         if aligned_size < range.end {
@@ -208,63 +207,67 @@ impl FxFile {
             return;
         }
         range.start = round_down(range.start, self.handle.block_size());
-
-        static TRANSFER_BUFFERS: Lazy<TransferBuffers> = Lazy::new(|| TransferBuffers::new());
-        let (buffer_result, transfer_buffer) =
-            join!(async { self.handle.read_uncached(range.clone()).await }, async {
-                let buffer = TRANSFER_BUFFERS.get().await;
-                // Committing pages in the kernel is time consuming, so we do this in parallel
-                // to the read.  This assumes that the implementation of join! polls the other
-                // future first (which happens to be the case for now).
-                buffer.commit(range.end - range.start);
-                buffer
-            });
-        let buffer = match buffer_result {
-            Ok(buffer) => buffer,
-            Err(e) => {
-                error!(
-                    ?range,
-                    oid = self.handle.uncached_handle().object_id(),
-                    error = e.as_value(),
-                    "Failed to page-in range"
-                );
-                self.handle.owner().pager().report_failure(
-                    self.vmo(),
-                    range.clone(),
-                    zx::Status::IO,
-                );
-                return;
-            }
-        };
-        let mut buf = buffer.as_slice();
-        while !buf.is_empty() {
-            let (source, remainder) =
-                buf.split_at(std::cmp::min(buf.len(), TRANSFER_BUFFER_MAX_SIZE as usize));
-            buf = remainder;
-            let range_chunk = range.start..range.start + source.len() as u64;
-            match transfer_buffer.vmo().write(source, transfer_buffer.offset()) {
-                Ok(_) => self.handle.owner().pager().supply_pages(
-                    self.vmo(),
-                    range_chunk,
-                    transfer_buffer.vmo(),
-                    transfer_buffer.offset(),
-                ),
+        let this = self.clone();
+        fasync::Task::spawn_on(self.handle.owner().executor(), async move {
+            async_enter!("page_in");
+            static TRANSFER_BUFFERS: Lazy<TransferBuffers> = Lazy::new(|| TransferBuffers::new());
+            let (buffer_result, transfer_buffer) =
+                join!(async { this.handle.read_uncached(range.clone()).await }, async {
+                    let buffer = TRANSFER_BUFFERS.get().await;
+                    // Committing pages in the kernel is time consuming, so we do this in parallel
+                    // to the read.  This assumes that the implementation of join! polls the other
+                    // future first (which happens to be the case for now).
+                    buffer.commit(range.end - range.start);
+                    buffer
+                });
+            let buffer = match buffer_result {
+                Ok(buffer) => buffer,
                 Err(e) => {
-                    // Failures here due to OOM will get reported as IO errors, as those are
-                    // considered transient.
                     error!(
+                        ?range,
+                        oid = this.handle.uncached_handle().object_id(),
+                        error = e.as_value(),
+                        "Failed to page-in range"
+                    );
+                    this.handle.owner().pager().report_failure(
+                        this.vmo(),
+                        range.clone(),
+                        zx::Status::IO,
+                    );
+                    return;
+                }
+            };
+            let mut buf = buffer.as_slice();
+            while !buf.is_empty() {
+                let (source, remainder) =
+                    buf.split_at(std::cmp::min(buf.len(), TRANSFER_BUFFER_MAX_SIZE as usize));
+                buf = remainder;
+                let range_chunk = range.start..range.start + source.len() as u64;
+                match transfer_buffer.vmo().write(source, transfer_buffer.offset()) {
+                    Ok(_) => this.handle.owner().pager().supply_pages(
+                        this.vmo(),
+                        range_chunk,
+                        transfer_buffer.vmo(),
+                        transfer_buffer.offset(),
+                    ),
+                    Err(e) => {
+                        // Failures here due to OOM will get reported as IO errors, as those are
+                        // considered transient.
+                        error!(
                             range = ?range_chunk,
                             error = e.as_value(),
                             "Failed to transfer range");
-                    self.handle.owner().pager().report_failure(
-                        self.vmo(),
-                        range_chunk,
-                        zx::Status::IO,
-                    );
+                        this.handle.owner().pager().report_failure(
+                            this.vmo(),
+                            range_chunk,
+                            zx::Status::IO,
+                        );
+                    }
                 }
+                range.start += source.len() as u64;
             }
-            range.start += source.len() as u64;
-        }
+        })
+        .detach();
     }
 
     // Called by the pager to indicate there are no more VMO references.
@@ -444,7 +447,7 @@ impl File for FxFile {
         }
 
         let child_vmo = vmo.create_child(child_options, 0, size)?;
-        if self.handle.owner().pager().start_servicing(self).map_err(map_to_status)? {
+        if self.handle.owner().pager().start_servicing(self.object_id()).map_err(map_to_status)? {
             // Take an open count so that we keep this object alive if it is unlinked.
             self.open_count_add_one();
         }
