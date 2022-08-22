@@ -19,7 +19,6 @@
 #include <hypervisor/id_allocator.h>
 #include <hypervisor/interrupt_tracker.h>
 #include <hypervisor/page.h>
-#include <hypervisor/tlb.h>
 #include <hypervisor/trap_map.h>
 #include <kernel/event.h>
 #include <kernel/spinlock.h>
@@ -95,10 +94,7 @@ class DirectGuest : public Guest {
     vpid_allocator_.Migrate(id, std::move(invalidate));
   }
 
-  hypervisor::DefaultTlb& Tlb() { return tlb_; }
-
  private:
-  hypervisor::DefaultTlb tlb_;
   hypervisor::IdAllocator<uint16_t, UINT16_MAX> vpid_allocator_;
 };
 

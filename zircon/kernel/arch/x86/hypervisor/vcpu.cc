@@ -1218,7 +1218,7 @@ zx_status_t DirectVcpu::PreEnter(AutoVmcs& vmcs) {
 zx_status_t DirectVcpu::PostExit(AutoVmcs& vmcs, zx_port_packet_t& packet) {
   auto& guest = static_cast<DirectGuest&>(guest_);
   return vmexit_handler_direct(vmcs, vmx_state_.guest_state, fs_base_, guest.AddressSpace(),
-                               guest.Traps(), guest.Tlb(), packet);
+                               guest.Traps(), packet);
 }
 
 void DirectVcpu::Kick() {

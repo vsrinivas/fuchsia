@@ -13,7 +13,6 @@
 #include <hypervisor/guest_physical_address_space.h>
 #include <hypervisor/id_allocator.h>
 #include <hypervisor/interrupt_tracker.h>
-#include <hypervisor/tlb.h>
 #include <hypervisor/trap_map.h>
 #include <vm/pmm.h>
 #include <vm/scanner.h>
@@ -663,96 +662,6 @@ static bool trap_map_insert_trap_out_of_range() {
   END_TEST;
 }
 
-static bool tlb_insert_and_find() {
-  BEGIN_TEST;
-
-  hypervisor::DefaultTlb tlb;
-  zx_vaddr_t virt = 0;
-  zx_paddr_t phys = 1ul << 30;
-  constexpr uint64_t kPageSize = 1ul << 12;
-
-  // Insert and find.
-  for (size_t i = 0; i < tlb.Size() * 16; i++) {
-    tlb.Insert(virt, phys);
-    auto [addr, exists] = tlb.Find(virt);
-    EXPECT_TRUE(exists);
-    EXPECT_EQ(phys, addr);
-
-    virt += kPageSize;
-    phys += kPageSize;
-  }
-
-  virt -= kPageSize * tlb.Size();
-  phys -= kPageSize * tlb.Size();
-
-  // Find (random) and validate entry exists.
-  for (size_t i = 0; i < tlb.Size(); i++) {
-    size_t index = rand() % tlb.Size();
-    zx_vaddr_t rand_virt = virt + kPageSize * index;
-    zx_paddr_t rand_phys = phys + kPageSize * index;
-
-    auto [addr, exists] = tlb.Find(rand_virt);
-    EXPECT_TRUE(exists);
-    EXPECT_EQ(rand_phys, addr);
-  }
-
-  // Find (forward) and validate entry exists.
-  for (size_t i = 0; i < tlb.Size(); i++) {
-    auto [addr, exists] = tlb.Find(virt);
-    EXPECT_TRUE(exists);
-    EXPECT_EQ(phys, addr);
-
-    virt += kPageSize;
-    phys += kPageSize;
-  }
-
-  // Find (forward) and validate entry does not exists.
-  for (size_t i = 0; i < tlb.Size(); i++) {
-    auto [_, exists] = tlb.Find(virt);
-    EXPECT_FALSE(exists);
-
-    virt += kPageSize;
-    phys += kPageSize;
-  }
-
-  END_TEST;
-}
-
-static bool tlb_clear_range() {
-  BEGIN_TEST;
-
-  hypervisor::DefaultTlb tlb;
-  constexpr zx_vaddr_t kVirtBase = 0;
-  constexpr zx_paddr_t kPhysBase = 1ul << 30;
-  constexpr uint64_t kPageSize = 1ul << 12;
-
-  // Insert.
-  for (size_t i = 0; i < tlb.Size(); i++) {
-    tlb.Insert(kVirtBase + kPageSize * i, kPhysBase + kPageSize * i);
-  }
-
-  // Clear range.
-  tlb.ClearRange(kVirtBase, kPageSize * tlb.Size() / 2);
-
-  // Find (no match).
-  for (size_t i = 0; i < tlb.Size() / 2; i++) {
-    auto [addr, exists] = tlb.Find(kVirtBase + kPageSize * i);
-    EXPECT_FALSE(exists);
-    if (exists) {
-      dprintf(SPEW, "i: %lu virt: %#lx phys: %#lx\n", i, kVirtBase + kPageSize * i, addr);
-    }
-  }
-
-  // Find (match).
-  for (size_t i = tlb.Size() / 2; i < tlb.Size(); i++) {
-    auto [addr, exists] = tlb.Find(kVirtBase + kPageSize * i);
-    EXPECT_TRUE(exists);
-    EXPECT_EQ(addr, kPhysBase + kPageSize * i);
-  }
-
-  END_TEST;
-}
-
 // Use the function name as the test name
 #define HYPERVISOR_UNITTEST(fname) UNITTEST(#fname, fname)
 
@@ -774,6 +683,4 @@ HYPERVISOR_UNITTEST(id_allocator_alloc_and_migrate)
 HYPERVISOR_UNITTEST(interrupt_bitmap)
 HYPERVISOR_UNITTEST(trap_map_insert_trap_intersecting)
 HYPERVISOR_UNITTEST(trap_map_insert_trap_out_of_range)
-HYPERVISOR_UNITTEST(tlb_insert_and_find)
-HYPERVISOR_UNITTEST(tlb_clear_range)
 UNITTEST_END_TESTCASE(hypervisor, "hypervisor", "Hypervisor unit tests.")

@@ -10,7 +10,6 @@
 #include <zircon/types.h>
 
 #include <hypervisor/guest_physical_address_space.h>
-#include <hypervisor/tlb.h>
 #include <hypervisor/trap_map.h>
 
 // clang-format off
@@ -337,7 +336,6 @@ zx_status_t vmexit_handler_normal(AutoVmcs& vmcs, GuestState& guest_state,
 
 zx_status_t vmexit_handler_direct(AutoVmcs& vmcs, GuestState& guest_state, uintptr_t& fs_base,
                                   hypervisor::GuestPhysicalAddressSpace& gpas,
-                                  hypervisor::TrapMap& traps, hypervisor::DefaultTlb& tlb,
-                                  zx_port_packet_t& packet);
+                                  hypervisor::TrapMap& traps, zx_port_packet_t& packet);
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_VMEXIT_PRIV_H_

@@ -9,12 +9,9 @@
 
 #include <zircon/syscalls/port.h>
 
-#include <hypervisor/tlb.h>
-
 struct GuestState;
 
 // Dispatch a `syscall` that came through a `vmcall`.
-zx_status_t vmcall_dispatch(GuestState& guest_state, uintptr_t& fs_base,
-                            hypervisor::DefaultTlb& tlb, zx_port_packet_t& packet);
+zx_status_t vmcall_dispatch(GuestState& guest_state, uintptr_t& fs_base, zx_port_packet_t& packet);
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_VMCALL_PRIV_H_

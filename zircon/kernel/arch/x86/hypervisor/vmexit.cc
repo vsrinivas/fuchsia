@@ -1026,7 +1026,7 @@ zx_status_t handle_vmcall_regular(const ExitInfo& exit_info, AutoVmcs& vmcs,
 
 zx_status_t handle_vmcall_direct(const ExitInfo& exit_info, AutoVmcs& vmcs, GuestState& guest_state,
                                  uintptr_t& fs_base, hypervisor::GuestPhysicalAddressSpace& gpas,
-                                 hypervisor::DefaultTlb& tlb, zx_port_packet_t& packet) {
+                                 zx_port_packet_t& packet) {
   next_rip(exit_info, vmcs);
   if (!is_cpl0(vmcs, guest_state)) {
     guest_state.rax = ZX_ERR_ACCESS_DENIED;
@@ -1212,8 +1212,7 @@ zx_status_t vmexit_handler_normal(AutoVmcs& vmcs, GuestState& guest_state,
 
 zx_status_t vmexit_handler_direct(AutoVmcs& vmcs, GuestState& guest_state, uintptr_t& fs_base,
                                   hypervisor::GuestPhysicalAddressSpace& gpas,
-                                  hypervisor::TrapMap& traps, hypervisor::DefaultTlb& tlb,
-                                  zx_port_packet_t& packet) {
+                                  hypervisor::TrapMap& traps, zx_port_packet_t& packet) {
   zx_status_t status;
   ExitInfo exit_info(vmcs);
   switch (exit_info.exit_reason) {
@@ -1235,7 +1234,7 @@ zx_status_t vmexit_handler_direct(AutoVmcs& vmcs, GuestState& guest_state, uintp
     case ExitReason::VMCALL:
       ktrace_vcpu_exit(VCPU_VMCALL, exit_info.guest_rip);
       GUEST_STATS_INC(vmcall_instructions);
-      status = handle_vmcall_direct(exit_info, vmcs, guest_state, fs_base, gpas, tlb, packet);
+      status = handle_vmcall_direct(exit_info, vmcs, guest_state, fs_base, gpas, packet);
       break;
     case ExitReason::ENTRY_FAILURE_GUEST_STATE:
     case ExitReason::ENTRY_FAILURE_MSR_LOADING:

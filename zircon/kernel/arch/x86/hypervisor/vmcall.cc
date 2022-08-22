@@ -234,8 +234,7 @@ zx_status_t vmcall_register_fs(GuestState& guest_state, uintptr_t& fs_base) {
 
 }  // namespace
 
-zx_status_t vmcall_dispatch(GuestState& guest_state, uintptr_t& fs_base,
-                            hypervisor::DefaultTlb& tlb, zx_port_packet_t& packet) {
+zx_status_t vmcall_dispatch(GuestState& guest_state, uintptr_t& fs_base, zx_port_packet_t& packet) {
   if (guest_state.rax >= ZX_SYS_COUNT) {
     guest_state.rax = ZX_ERR_BAD_SYSCALL;
     return ZX_OK;
@@ -265,10 +264,6 @@ zx_status_t vmcall_dispatch(GuestState& guest_state, uintptr_t& fs_base,
       packet.guest_vcpu.type = ZX_PKT_GUEST_VCPU_STARTUP;
       guest_state.rax = 0;
       return ZX_ERR_NEXT;
-    case ZX_SYS_vmar_unmap:
-      LPRINTF("vmcall: %s\n", "vmar_unmap");
-      tlb.ClearRange(guest_state.rsi, guest_state.rdx);
-      break;
   }
   kVmcallHandlers[guest_state.rax](guest_state);
   return ZX_OK;
