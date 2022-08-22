@@ -364,6 +364,10 @@ template("go_build") {
       # TODO(fxbug.dev/53078): Eventually the default in the compler driver.
       extldflags += ",-zrel"
 
+      # TODO(fxbug.dev/107284): We would like to use compressed debug info
+      # eventually, but it breaks dump_syms; disable it until resolved.
+      extldflags += ",--compress-debug-sections=none"
+
       # When building with an instrumented variant, ensure the binary embeds a reference
       # to the right dynamic linker path.
       if (toolchain_variant.libprefix != "") {
