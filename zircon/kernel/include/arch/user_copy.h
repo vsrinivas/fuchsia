@@ -119,18 +119,4 @@ ARCH_COPY_ACCESS zx_status_t arch_copy_to_user(void *dst, const void *src, size_
 [[nodiscard]] ARCH_COPY_ACCESS UserCopyCaptureFaultsResult
 arch_copy_to_user_capture_faults(void *dst, const void *src, size_t len);
 
-struct GuestPageTable;
-
-// Copy from guest virtual address `src` to host virtual address `dst`, using
-// the guest page table described by `gpt.
-//
-// On success, return ZX_OK, or ZX_ERR_INVALID_ARGS on failure.
-zx_status_t arch_copy_from_guest(GuestPageTable &gpt, void *dst, const void *src, size_t len);
-
-// Copy to guest virtual address `dst` from host virtual address `src`, using
-// the guest page table described by `gpt.
-//
-// On success, return ZX_OK, or ZX_ERR_INVALID_ARGS on failure.
-zx_status_t arch_copy_to_guest(GuestPageTable &gpt, void *dst, const void *src, size_t len);
-
 #endif  // ZIRCON_KERNEL_INCLUDE_ARCH_USER_COPY_H_

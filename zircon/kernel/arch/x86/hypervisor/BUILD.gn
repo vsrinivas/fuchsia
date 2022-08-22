@@ -7,7 +7,6 @@
 source_set("hypervisor") {
   sources = [
     "guest.cc",
-    "guest_copy.cc",
     "pv.cc",
     "vcpu.cc",
     "vmcall.cc",
@@ -27,13 +26,9 @@ source_set("hypervisor") {
 
 source_set("tests") {
   # TODO: testonly = true
-  sources = [
-    "guest_copy_test.cc",
-    "vmx_test.cc",
-  ]
+  sources = [ "vmx_test.cc" ]
   deps = [
     "//zircon/kernel/hypervisor:headers",
     "//zircon/kernel/lib/unittest",
-    "//zircon/kernel/lib/user_copy:headers",
   ]
 }

@@ -30,7 +30,6 @@
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 
-#include "guest_copy_priv.h"
 #include "pv_priv.h"
 #include "vcpu_priv.h"
 #include "vmcall_priv.h"
