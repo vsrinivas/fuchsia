@@ -16,20 +16,4 @@
             path: "/svc_for_sys",
         },
     ],
-    use: [
-        {
-            directory: "svc_from_sys",
-            from: "#appmgr",
-            rights: [ "rw*" ],
-            path: "/svc_from_sys",
-            dependency: "weak_for_migration",
-        },
-    ],
-    offer: [
-        {
-            directory: "svc_for_sys",
-            from: "self",
-            to: "#appmgr",
-        },
-    ],
 }

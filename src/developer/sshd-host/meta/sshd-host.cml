@@ -35,6 +35,12 @@
             directory: "svc_from_sys",
             rights: [ "rw*" ],
             path: "/svc_from_sys",
+            availability: "optional",
+        },
+        {
+            directory: "svc_for_sys",
+            rights: [ "rw*" ],
+            path: "/svc_for_sys",
         },
         {
             directory: "bin",
@@ -75,6 +81,7 @@
             directory: "hub-legacy",
             rights: [ "rw*" ],
             path: "/hub",
+            availability: "optional",
         },
         {
             directory: "hub",

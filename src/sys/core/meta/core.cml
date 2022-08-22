@@ -4,6 +4,10 @@
 
 // Realm that acts as a container for general system components.
 {
+    include: [
+        // Add capabilities used by legacy sys realm and legacy shells
+        "//src/sys/core/meta/svc_for_sys.core_shard.cml",
+    ],
     children: [
         {
             name: "sl4f_bridge_server",

@@ -4,10 +4,6 @@
 
 // Add appmgr to core
 {
-    include: [
-        // Add core_proxy to bridge v1-v2
-        "//src/sys/core/meta/core_proxy.core_shard.cml",
-    ],
     children: [
         {
             name: "appmgr",
@@ -41,238 +37,18 @@
                 "fuchsia.weave.Signer",
             ],
         },
+        {
+            directory: "svc_from_sys",
+            rights: [ "rw*" ],
+            path: "/svc_from_sys",
+        },
     ],
-
-    // Protocols used from a child are routed to the v1 sys realm.
     use: [
         {
-            protocol: [
-                "fuchsia.boot.Arguments",
-                "fuchsia.boot.FactoryItems",
-                "fuchsia.boot.Items",
-                "fuchsia.boot.ReadOnlyLog",
-                "fuchsia.boot.RootResource",
-                "fuchsia.boot.WriteOnlyLog",
-                "fuchsia.device.manager.Administrator",
-                "fuchsia.device.manager.DebugDumper",
-                "fuchsia.device.NameProvider",
-                "fuchsia.diagnostics.ArchiveAccessor",
-                "fuchsia.diagnostics.FeedbackArchiveAccessor",
-                "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
-                "fuchsia.diagnostics.LoWPANArchiveAccessor",
-                "fuchsia.driver.development.DriverDevelopment",
-                "fuchsia.driver.registrar.DriverRegistrar",
-                "fuchsia.fshost.BlockWatcher",
-                "fuchsia.hardware.power.statecontrol.Admin",
-                "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
-                "fuchsia.hardware.pty.Device",
-                "fuchsia.hardware.usb.DeviceWatcher",
-                "fuchsia.kernel.Counter",
-                "fuchsia.kernel.DebugBroker",
-                "fuchsia.kernel.DebugResource",
-                "fuchsia.kernel.HypervisorResource",
-                "fuchsia.kernel.InfoResource",
-                "fuchsia.kernel.IoportResource",
-                "fuchsia.kernel.IrqResource",
-                "fuchsia.kernel.MmioResource",
-                "fuchsia.kernel.PowerResource",
-                "fuchsia.kernel.RootJob",
-                "fuchsia.kernel.RootJobForInspect",
-                "fuchsia.kernel.SmcResource",
-                "fuchsia.kernel.Stats",
-                "fuchsia.kernel.VmexResource",
-                "fuchsia.logger.Log",
-                "fuchsia.paver.Paver",
-                "fuchsia.power.clientlevel.Connector",
-                "fuchsia.power.profile.Watcher",
-                "fuchsia.power.systemmode.ClientConfigurator",
-                "fuchsia.power.systemmode.Requester",
-                "fuchsia.process.Launcher",
-                "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.sys2.CrashIntrospect",
-                "fuchsia.sysinfo.SysInfo",
-                "fuchsia.thermal.ClientStateConnector",
-                "fuchsia.time.Maintenance",
-                "fuchsia.tpm.cr50.Cr50",
-                "fuchsia.tracing.kernel.Controller",
-                "fuchsia.tracing.kernel.Reader",
-                "fuchsia.vboot.FirmwareParam",
-                "fuchsia.virtualconsole.SessionManager",
-            ],
-            from: "parent",
-        },
-        {
-            protocol: "fuchsia.devicesettings.DeviceSettingsManager",
-            from: "#device_settings",
-        },
-        {
-            protocol: "fuchsia.sysmem.Allocator",
-            from: "#sysmem_connector",
-        },
-        {
-            protocol: [
-                "fuchsia.net.http.Loader",
-                "fuchsia.net.interfaces.admin.Installer",
-                "fuchsia.net.interfaces.State",
-                "fuchsia.net.name.Lookup",
-                "fuchsia.net.routes.State",
-                "fuchsia.net.stack.Stack",
-                "fuchsia.netstack.Netstack",
-                "fuchsia.posix.socket.Provider",
-            ],
-            from: "#network",
-        },
-        {
-            protocol: "fuchsia.fonts.Provider",
-            from: "#font_provider",
-        },
-        {
-            protocol: [
-                "fuchsia.hwinfo.Board",
-                "fuchsia.hwinfo.Device",
-                "fuchsia.hwinfo.Product",
-            ],
-            from: "#hwinfo",
-        },
-        {
-            protocol: "fuchsia.update.CommitStatusProvider",
-            from: "#system-update-committer",
-        },
-        {
-            protocol: "fuchsia.developer.remotecontrol.RemoteControl",
-            from: "#remote-control",
-        },
-
-        // TODO(https://fxbug.dev/97617): If there's no v1 dependencies these should not be routed here.
-        {
-            protocol: [
-                "fuchsia.overnet.MeshController",
-                "fuchsia.overnet.Overnet",
-                "fuchsia.overnet.ServiceConsumer",
-                "fuchsia.overnet.ServicePublisher",
-            ],
-            from: "#overnetstack",
-        },
-        {
-            protocol: "fuchsia.starnix.developer.Manager",
-            from: "#starnix_manager",
-        },
-        {
-            protocol: "fuchsia.hardware.serial.NewDeviceProxy",
-            from: "#debug_serial",
-        },
-        {
-            protocol: "fuchsia.systemmetrics.test.SystemMetricsLogger",
-            from: "#system-metrics-logger",
-        },
-        {
-            protocol: "fuchsia.thermal.test.TemperatureLogger",
-            from: "#temperature-logger",
-        },
-        {
-            protocol: [
-                "fuchsia.pkg.PackageCache",
-                "fuchsia.space.Manager",
-            ],
-            from: "parent",
-        },
-        {
-            protocol: [
-                "fuchsia.pkg.PackageResolver",
-                "fuchsia.pkg.PackageResolverAdmin",
-                "fuchsia.pkg.RepositoryManager",
-                "fuchsia.pkg.rewrite.Engine",
-            ],
-            from: "#pkg-resolver",
-        },
-
-        // TODO(https://fxbug.dev/90433): prune these once MDNS is a CFv2 component.
-        {
-            protocol: [
-                "fuchsia.net.mdns.HostNameResolver",
-                "fuchsia.net.mdns.HostNameSubscriber",
-                "fuchsia.net.mdns.ProxyHostPublisher",
-                "fuchsia.net.mdns.Publisher",
-                "fuchsia.net.mdns.Resolver",
-                "fuchsia.net.mdns.ServiceInstancePublisher",
-                "fuchsia.net.mdns.ServiceInstanceResolver",
-                "fuchsia.net.mdns.ServiceSubscriber2",
-                "fuchsia.net.mdns.Subscriber",
-            ],
-            from: "#mdns",
-        },
-        {
-            protocol: "fuchsia.stash.Store",
-            from: "#stash",
-        },
-        {
-            protocol: "fuchsia.stash.Store2",
-            from: "#stash2",
-        },
-        {
-            protocol: "fuchsia.stash.SecureStore",
-            from: "#stash_secure",
-        },
-        {
-            protocol: "fuchsia.vulkan.loader.Loader",
-            from: "#vulkan_loader",
-        },
-
-        // Used by Bluetooth shell tools via appmgr.
-        {
-            protocol: [
-                "fuchsia.bluetooth.bredr.Profile",
-                "fuchsia.bluetooth.gatt.Server",
-                "fuchsia.bluetooth.le.Central",
-                "fuchsia.bluetooth.le.Peripheral",
-                "fuchsia.bluetooth.sys.Access",
-                "fuchsia.bluetooth.sys.Configuration",
-                "fuchsia.bluetooth.sys.HostWatcher",
-                "fuchsia.bluetooth.sys.Pairing",
-            ],
-            from: "#bluetooth-core",
-        },
-        {
-            protocol: [
-                "fuchsia.ui.activity.control.Control",
-                "fuchsia.ui.activity.Provider",
-                "fuchsia.ui.activity.Tracker",
-            ],
-            from: "#activity",
-        },
-        {
-            protocol: "fuchsia.ui.brightness.Control",
-            from: "#brightness_manager",
-        },
-        {
-            protocol: [
-                "fuchsia.cobalt.LoggerFactory",
-                "fuchsia.cobalt.SystemDataUpdater",
-                "fuchsia.metrics.MetricEventLoggerFactory",
-            ],
-            from: "#cobalt",
-        },
-        {
-            protocol: "fuchsia.diagnostics.persist.DataPersistence-wlan",
-            from: "#diagnostics-persistence",
-        },
-        {
-            protocol: "fuchsia.ssh.AuthorizedKeys",
-            from: "#ssh-key-manager",
-        },
-        {
-            protocol: [
-                "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
-                "fuchsia.location.namedplace.RegulatoryRegionWatcher",
-            ],
-            from: "#regulatory_region",
-        },
-        {
-            protocol: [
-                "fuchsia.element.GraphicalPresenter",
-                "fuchsia.session.Launcher",
-            ],
-            from: "#session-manager",
+            directory: "svc_from_sys",
+            from: "#appmgr",
+            rights: [ "rw*" ],
+            path: "/svc_from_sys",
             dependency: "weak_for_migration",
         },
     ],

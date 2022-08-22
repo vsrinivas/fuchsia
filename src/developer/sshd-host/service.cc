@@ -5,6 +5,7 @@
 #include "src/developer/sshd-host/service.h"
 
 #include <arpa/inet.h>
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/boot/cpp/fidl.h>
@@ -249,14 +250,22 @@ void Service::Launch(int conn, const std::string& peer_name) {
       {.action = FDIO_SPAWN_ACTION_CLONE_FD,
        .fd = {.local_fd = STDERR_FILENO, .target_fd = STDERR_FILENO}};
 
-  // Clone own namespace into child
+  const char* forward_as_svc;
+  // Forward either /svc_from_sys or /svc_for_sys as /svc to the child
+  DIR* dir = opendir("/svc_from_sys");
+  if (dir) {
+    closedir(dir);
+    forward_as_svc = "/svc_from_sys";
+  } else {
+    forward_as_svc = "/svc_for_sys";
+  }
+
   for (size_t i = 0; i < flat_ns->count; ++i) {
     const char* path = flat_ns->path[i];
     if (strcmp(path, "/svc") == 0) {
       // Don't forward our /svc to the child
       continue;
-    } else if (strcmp(path, "/svc_from_sys") == 0) {
-      // Instead, forward our /svc_from_sys as the child's /svc
+    } else if (strcmp(path, forward_as_svc) == 0) {
       path = "/svc";
     }
     actions[action++] = {
@@ -269,7 +278,7 @@ void Service::Launch(int conn, const std::string& peer_name) {
     };
   }
 
-  constexpr uint32_t kSpawnFlags =
+  const uint32_t kSpawnFlags =
       FDIO_SPAWN_CLONE_JOB | FDIO_SPAWN_DEFAULT_LDSVC | FDIO_SPAWN_CLONE_UTC_CLOCK;
   zx::process process;
   char error[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];

@@ -28,7 +28,6 @@ core_realm_shards += [
   "//src/developer:default-laboratory-env-core-shard",
   "//src/developer/remote-control:laboratory-core-shard",
   "//src/devices/bin/driver_playground:driver-playground-core-shard",
-  "//src/developer/sshd-host:core_shard",
   "//src/media/audio/audio_core:core_shard",
   "//src/media/sounds/soundplayer:core_shard",
   "//src/performance/perfetto-bridge:perfetto_bridge_core_shard",
@@ -60,8 +59,6 @@ core_realm_shards += [
 
 legacy_base_package_labels += [
   "//src/developer/forensics/snapshot:pkg",
-  "//src/developer/sshd-host",
-  "//src/developer/sshd-host:config",
   "//src/diagnostics/log_listener:log_listener_shell",
   "//src/connectivity/bluetooth:core",
   "//src/connectivity/wlan:packages",

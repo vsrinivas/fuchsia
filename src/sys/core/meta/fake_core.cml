@@ -22,11 +22,23 @@
     ],
     capabilities: [
         { protocol: "fidl.examples.routing.echo.Echo" },
+        {
+            directory: "svc_from_sys",
+            rights: [ "rw*" ],
+            path: "/svc_from_sys",
+        },
     ],
     use: [
         {
             protocol: "fidl.examples.routing.echo.Echo",
             from: "#echo_server",
+        },
+        {
+            directory: "svc_from_sys",
+            from: "#appmgr",
+            rights: [ "rw*" ],
+            path: "/svc_from_sys",
+            dependency: "weak_for_migration",
         },
     ],
     offer: [

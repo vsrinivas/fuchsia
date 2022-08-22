@@ -32,6 +32,7 @@ core_realm_shards = [
   "//src/developer/build_info:build_info_core_shard",
   "//src/developer/forensics:core_shard",
   "//src/developer/memory/monitor:memory_monitor_core_shard",
+  "//src/developer/sshd-host:core_shard",
   "//src/recovery/factory_reset:factory_reset_core_shard",
   "//src/sys/pkg/bin/system-update-checker:system-update-checker-core-shard",
   "//src/sys/pkg/bin/system-updater:system-updater-core-shard",
@@ -59,6 +60,8 @@ legacy_base_package_labels += [
 
   "//src/developer/forensics:pkg",
   "//src/developer/memory/monitor",
+  "//src/developer/sshd-host",
+  "//src/developer/sshd-host:config",
   "//src/diagnostics/config/persistence",
   "//src/diagnostics/config/triage:triage-detect",
   "//src/diagnostics/detect:triage-detect",

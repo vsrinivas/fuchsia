@@ -4,18 +4,15 @@
 
 // Add sshd-host to core
 {
+    include: [
+        // Add v2 capabilities used by legacy sys realm
+        "//src/sys/core/meta/svc_for_sys.core_shard.cml",
+    ],
     children: [
         {
             name: "sshd-host",
             url: "fuchsia-pkg://fuchsia.com/sshd-host#meta/sshd-host.cm",
             startup: "eager",
-        },
-    ],
-    capabilities: [
-        {
-            directory: "svc_from_sys",
-            rights: [ "rw*" ],
-            path: "/svc",
         },
     ],
     offer: [
@@ -26,6 +23,8 @@
             to: "#sshd-host",
             subdir: "sshd-host",
         },
+
+        // Needed to operate sshd-host
         {
             protocol: [
                 "fuchsia.boot.Items",
@@ -40,18 +39,30 @@
             from: "#network",
             to: "#sshd-host",
         },
+
+        // Needed for legacy shell /svc when appmgr exists
+        {
+            directory: "svc_from_sys",
+            from: "#appmgr",
+            to: "#sshd-host",
+            rights: [ "rw*" ],
+            source_availability: "unknown",
+        },
+
+        // Needed for legacy shell /svc when appmgr doesn't exist
+        {
+            directory: "svc_for_sys",
+            from: "self",
+            to: "#sshd-host",
+            rights: [ "rw*" ],
+        },
+
+        // Directories in legacy shell namespace
         {
             directory: "hub-legacy",
             from: "#appmgr",
             to: "#sshd-host",
-        },
-
-        // Needed to create the shell environment.
-        // See: fxbug.dev/104522
-        {
-            directory: "svc_from_sys",
-            from: "self",
-            to: "#sshd-host",
+            source_availability: "unknown",
         },
         {
             directory: [
