@@ -37,3 +37,7 @@ protocol Sysmem {
     /// considered an error.
     UnregisterSecureMem() -> (struct {}) error zx.status;
 };
+
+service Service {
+    device client_end:Sysmem;
+};
