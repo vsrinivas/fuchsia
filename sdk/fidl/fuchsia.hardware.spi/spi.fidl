@@ -51,3 +51,7 @@ protocol Device {
     compose fuchsia.hardware.sharedmemory.SharedVmoIo;
     compose fuchsia.hardware.sharedmemory.SharedVmoRegister;
 };
+
+service Service {
+    device client_end:Device;
+};
