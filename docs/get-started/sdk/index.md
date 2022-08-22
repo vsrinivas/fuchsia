@@ -106,36 +106,24 @@ Do the following:
    run the following command:
 
    ```posix-terminal
-   tools/ffx version -v
+   tools/ffx sdk version
    ```
 
    This command prints output similar to the following:
 
    ```none {:.devsite-disable-click-to-copy}
-   $ tools/ffx version -v
-   ffx:
-     abi-revision: 0xECDB841C251A8CB9
-     api-level: 9
-     build-version: 2022-07-28T07:03:08+00:00
-     integration-commit-hash: d33b25d3cd0cd961c0eaa3ea398b374de15f1ef3
-     integration-commit-time: Thu, 28 Jul 2022 07:03:08 +0000
-
-   daemon:
-     abi-revision: 0xECDB841C251A8CB9
-     api-level: 9
-     build-version: 2022-07-28T07:03:08+00:00
-     integration-commit-hash: d33b25d3cd0cd961c0eaa3ea398b374de15f1ef3
-     integration-commit-time: Thu, 28 Jul 2022 07:03:08 +0000
+   $ tools/ffx sdk version
+   9.20220807.3.1
    ```
 
-   At this point, you only need to confirm that you can run this `ffx` command
-   without any errors.
+   At this point, you only need to confirm that you can run `ffx` commands
+   without error. (However for your information, the output above shows the version
+   `9.20220807.3.1`, which indicates that this SDK was built and published on August 7, 2022.)
 
-   Note: To ensure that you’re using the right version of `ffx` (which needs to
-   match the version of the SDK), consider updating your `PATH` to include the
-   SDK's `tools` directory where `ffx` is located (for instance,
-   `export PATH="$PATH:$HOME/fuchsia-getting-started/tools"`). However, if you don't
-   wish to update your `PATH`, ensure that you specify the relative path to
+   Note: To ensure that you’re using the right version of `ffx` during development,
+   consider updating your `PATH` to include the SDK's `tools` directory
+   (for instance, `export PATH="$PATH:$HOME/fuchsia-getting-started/tools"`). However,
+   if you don't wish to update your `PATH`, ensure that you specify the relative path to
    this `ffx` tool (`tools/ffx`) whenever you run `ffx` commands.
 
 ## 3. Start the emulator {:#start-the-emulator}
@@ -268,7 +256,7 @@ Do the following:
    $ tools/ffx target show
    Target:
        Name: "fuchsia-emulator"
-       SSH Address: "172.16.243.142:22"
+       SSH Address: "127.0.0.1:42577"
    Board:
        Name: "default-board"
        Revision: "1"
@@ -276,10 +264,10 @@ Do the following:
    Device:
        ...
    Build:
-       Version: "9.20220728.1.1"
+       Version: "9.20220807.3.1"
        Product: "workstation_eng"
        Board: "qemu-x64"
-       Commit: "2022-07-28T07:03:08+00:00"
+       Commit: "2022-08-07T20:02:13+00:00"
    Last Reboot:
        Graceful: "false"
        Reason: "Cold"
@@ -287,8 +275,7 @@ Do the following:
    ```
 
    The example output above shows that the target device is running a
-   `workstation_eng.qemu-x64` prebuilt image whose version is `9.20220728.1.1`
-   (which indicates that this image was built and published on July 28, 2022).
+   `workstation_eng.qemu-x64` prebuilt image whose version is `9.20220807.3.1`.
 
 1. Verify that you can stream the device logs:
 
@@ -381,14 +368,14 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    $ tools/bazel run --config=fuchsia_x64 //src/hello_world:pkg.component
    INFO: Build options --copt, --cpu, --crosstool_top, and 1 more have changed, discarding analysis cache.
-   INFO: Analyzed target //src/hello_world:pkg.component (53 packages loaded, 1553 targets configured).
+   INFO: Analyzed target //src/hello_world:pkg.component (53 packages loaded, 1647 targets configured).
    INFO: Found 1 target...
    Target //src/hello_world:pkg.component up-to-date:
      bazel-bin/src/hello_world/pkg.component_run_component.sh
-   INFO: Elapsed time: 83.989s, Critical Path: 2.15s
-   INFO: 125 processes: 100 internal, 24 linux-sandbox, 1 local.
-   INFO: Build completed successfully, 125 total actions
-   INFO: Build completed successfully, 125 total actions
+   INFO: Elapsed time: 86.842s, Critical Path: 2.20s
+   INFO: 126 processes: 101 internal, 24 linux-sandbox, 1 local.
+   INFO: Build completed successfully, 126 total actions
+   INFO: Build completed successfully, 126 total actions
    added repository bazel.pkg.component
    URL: fuchsia-pkg://bazel.pkg.component/hello_world#meta/hello_world.cm
    Moniker: /core/ffx-laboratory:hello_world
@@ -753,18 +740,17 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx inspect list
    <component_manager>
-   audio_core.cmx
    bootstrap/archivist
    bootstrap/driver_manager
    bootstrap/fshost
+   bootstrap/fshost/blobfs
+   bootstrap/fshost/fxfs
    ...
+   core/ui/scenic
+   core/vulkan_loader
+   core/wlancfg
    core/wlandevicemonitor
    core/wlanstack
-   crash_reports.cmx
-   feedback_data.cmx
-   httpsdate_time_source.cmx
-   scenic.cmx
-   timekeeper.cmx
    ```
 
    Notice that the `bootstrap/archivist` component is on the list.
@@ -801,31 +787,38 @@ Do the following:
      metadata:
        filename = fuchsia.inspect.Tree
        component_url = fuchsia-boot:///#meta/archivist.cm
-       timestamp = 531685168169295
+       timestamp = 705335717538
      payload:
        root:
          events:
            recent_events:
-             319:
-               @time = 7730479794
+             361:
+               @time = 6272744049
+               event = component_stopped
+               moniker = core/trace_manager/cpuperf_provider
+             362:
+               @time = 6283370267
                event = log_sink_requested
-               moniker = core/memory_monitor
-             320:
-               @time = 7782621023
+               moniker = core/session-manager
+             ...
+             556:
+               @time = 415796882099
                event = log_sink_requested
-               moniker = core/bt-a2dp
-             321:
-               ...
-             516:
-               @time = 5538432236492
+               moniker = core/debug_agent
+             557:
+               @time = 453898419738
+               event = component_started
+               moniker = core/ffx-laboratory:hello_world
+             558:
+               @time = 453899964568
                event = log_sink_requested
                moniker = core/ffx-laboratory:hello_world
-             517:
-               @time = 5825449627765
-               event = component_stopped
-               moniker = debug_agent_channel.cmx:1064825
-             518:
-               @time = 5825475597828
+             559:
+               @time = 453900332656
+               event = log_sink_requested
+               moniker = core/ffx-laboratory:hello_world
+             560:
+               @time = 495458923475
                event = component_stopped
                moniker = core/ffx-laboratory:hello_world
    ```
