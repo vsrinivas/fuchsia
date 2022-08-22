@@ -1,4 +1,196 @@
 // Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-{}
+{
+    children: [
+        {
+            name: "exceptions",
+            url: "fuchsia-pkg://fuchsia.com/forensics#meta/exceptions.cm",
+        },
+        {
+            name: "feedback",
+            url: "fuchsia-pkg://fuchsia.com/forensics#meta/feedback.cm",
+            startup: "eager",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.feedback.ComponentDataRegister",
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.feedback.CrashReportingProductRegister",
+                "fuchsia.feedback.DataProvider",
+                "fuchsia.feedback.DataProviderController",
+                "fuchsia.feedback.LastRebootInfoProvider",
+            ],
+            from: "#feedback",
+        },
+        {
+            protocol: [
+                "fuchsia.exception.Handler",
+                "fuchsia.exception.ProcessLimbo",
+            ],
+            from: "#exceptions",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys2.CrashIntrospect",
+            ],
+            from: "parent",
+            to: "#exceptions",
+        },
+        {
+            protocol: [
+                "fuchsia.boot.ReadOnlyLog",
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.diagnostics.FeedbackArchiveAccessor",
+                "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sysinfo.SysInfo",
+            ],
+            from: "parent",
+            to: "#feedback",
+        },
+        {
+            protocol: "fuchsia.sys.internal.CrashIntrospect",
+            from: "self",
+            to: "#exceptions",
+
+            // This comes from appmgr.
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [
+                "fuchsia.ui.activity.control.Control",
+                "fuchsia.ui.activity.Provider",
+                "fuchsia.ui.activity.Tracker",
+            ],
+            from: "#activity",
+            to: "#feedback",
+        },
+        {
+            protocol: "fuchsia.metrics.MetricEventLoggerFactory",
+            from: "#cobalt",
+            to: "#feedback",
+        },
+        {
+            protocol: [
+                "fuchsia.hwinfo.Board",
+                "fuchsia.hwinfo.Product",
+            ],
+            from: "#hwinfo",
+            to: "#feedback",
+        },
+        {
+            protocol: "fuchsia.intl.PropertyProvider",
+            from: "#intl",
+            to: "#feedback",
+
+            // TODO(fxbug.dev/107206): feedback is available in configurations
+            // where intl is not present. Fix this irrationality somehow.
+            source_availability: "unknown",
+        },
+        {
+            protocol: "fuchsia.net.interfaces.State",
+            from: "#network",
+            to: "#exceptions",
+        },
+        {
+            protocol: [
+                "fuchsia.net.http.Loader",
+                "fuchsia.net.interfaces.State",
+            ],
+            from: "#network",
+            to: "#feedback",
+        },
+        {
+            protocol: "fuchsia.settings.Privacy",
+            from: "#setui_service",
+            to: "#feedback",
+
+            // TODO(fxbug.dev/107215): break the cycle
+            dependency: "weak",
+
+            // TODO(fxbug.dev/107215): feedback is available in configurations
+            // where setui_service is not present. Fix this irrationality somehow.
+            source_availability: "unknown",
+        },
+        {
+            protocol: "fuchsia.update.channelcontrol.ChannelControl",
+            from: "#system-update-checker",
+            to: "#feedback",
+            dependency: "weak",
+            source_availability: "unknown",
+        },
+        {
+            protocol: "fuchsia.ui.scenic.Scenic",
+            from: "#ui",
+            to: "#feedback",
+            dependency: "weak",
+            source_availability: "unknown",
+        },
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            from: "#trace_manager",
+            to: "#feedback",
+
+            // Trace manager may be excluded from builds where tracing is not
+            // expected to be used for observability, such as in the bringup
+            // product and non-eng builds of any product.
+            source_availability: "unknown",
+        },
+        {
+            protocol: "fuchsia.feedback.CrashReporter",
+            from: "#feedback",
+            to: "#exceptions",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [
+                "#exceptions",
+                "#feedback",
+            ],
+            subdir: "forensics",
+        },
+        {
+            directory: "build-info",
+            from: "parent",
+            to: "#feedback",
+        },
+        {
+            directory: "boot",
+            from: "parent",
+            to: "#feedback",
+        },
+        {
+            storage: "tmp",
+            from: "self",
+            to: "#exceptions",
+        },
+        {
+            storage: [
+                "cache",
+                "data",
+                "tmp",
+            ],
+            from: "self",
+            to: "#feedback",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.exception.Handler",
+            from: "#exceptions",
+        },
+        {
+            protocol: "fuchsia.feedback.CrashReporter",
+            from: "#feedback",
+        },
+    ],
+}

@@ -30,15 +30,6 @@
             on_terminate: "reboot",
         },
         {
-            name: "exceptions",
-            url: "fuchsia-pkg://fuchsia.com/forensics#meta/exceptions.cm",
-        },
-        {
-            name: "feedback",
-            url: "fuchsia-pkg://fuchsia.com/forensics#meta/feedback.cm",
-            startup: "eager",
-        },
-        {
             name: "mdns",
             url: "fuchsia-pkg://fuchsia.com/mdns#meta/mdns.cm",
 
@@ -222,7 +213,6 @@
             to: [
                 "#cobalt",
                 "#cobalt_system_metrics",
-                "#feedback",
             ],
         },
         {
@@ -252,19 +242,14 @@
             to: [ "#network" ],
         },
         {
-            protocol: [ "fuchsia.net.http.Loader" ],
+            protocol: "fuchsia.net.http.Loader",
             from: "#network",
-            to: [
-                "#cobalt",
-                "#feedback",
-            ],
+            to: "#cobalt",
         },
         {
             protocol: [ "fuchsia.net.interfaces.State" ],
             from: "#network",
             to: [
-                "#exceptions",
-                "#feedback",
                 "#mdns",
                 "#remote-control",
                 "#timekeeper",
@@ -363,15 +348,6 @@
             subdir: "pkg-resolver",
         },
         {
-            directory: "config-data",
-            from: "parent",
-            to: [
-                "#exceptions",
-                "#feedback",
-            ],
-            subdir: "forensics",
-        },
-        {
             protocol: [
                 "fuchsia.diagnostics.ArchiveAccessor",
                 "fuchsia.logger.Log",
@@ -385,10 +361,7 @@
         {
             protocol: [ "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister" ],
             from: "parent",
-            to: [
-                "#feedback",
-                "#sampler",
-            ],
+            to: "#sampler",
         },
         {
             protocol: [ "fuchsia.diagnostics.FeedbackArchiveAccessor" ],
@@ -396,7 +369,6 @@
             to: [
                 "#detect",
                 "#diagnostics-persistence",
-                "#feedback",
             ],
         },
         {
@@ -415,8 +387,6 @@
                 "#device_settings",
                 "#diagnostics-kcounter",
                 "#diagnostics-persistence",
-                "#exceptions",
-                "#feedback",
                 "#font_provider",
                 "#full-resolver",
                 "#hwinfo",
@@ -516,14 +486,6 @@
         },
         {
             protocol: [
-                "fuchsia.process.Launcher",
-                "fuchsia.sys2.CrashIntrospect",
-            ],
-            from: "parent",
-            to: "#exceptions",
-        },
-        {
-            protocol: [
                 "fuchsia.device.manager.Administrator",
                 "fuchsia.device.NameProvider",
             ],
@@ -568,17 +530,13 @@
             to: "#remote-control",
         },
         {
-            protocol: "fuchsia.feedback.CrashReporter",
-            from: "#feedback",
-            to: [
-                "#detect",
-                "#exceptions",
+            protocol: [
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.feedback.CrashReportingProductRegister",
             ],
-        },
-        {
-            protocol: "fuchsia.feedback.CrashReportingProductRegister",
             from: "#feedback",
             to: "#detect",
+            source_availability: "unknown",
         },
         {
             protocol: "fuchsia.fonts.Provider",
@@ -837,11 +795,6 @@
             ],
         },
         {
-            storage: [ "tmp" ],
-            from: "self",
-            to: "#exceptions",
-        },
-        {
             storage: [ "cache" ],
             from: "self",
             to: "#regulatory_region",
@@ -937,7 +890,6 @@
             from: "#cobalt",
             to: [
                 "#cobalt_system_metrics",
-                "#feedback",
                 "#log-stats",
                 "#pkg-resolver",
                 "#sampler",
@@ -960,10 +912,7 @@
         {
             protocol: "fuchsia.settings.Privacy",
             from: "#setui_service",
-            to: [
-                "#cobalt",
-                "#feedback",
-            ],
+            to: "#cobalt",
 
             // TODO: break the cycle
             dependency: "weak",
@@ -976,43 +925,6 @@
                 "#cobalt",
                 "#cobalt_system_metrics",
             ],
-        },
-        {
-            protocol: [
-                "fuchsia.boot.ReadOnlyLog",
-                "fuchsia.boot.WriteOnlyLog",
-                "fuchsia.process.Launcher",
-                "fuchsia.sysinfo.SysInfo",
-            ],
-            from: "parent",
-            to: "#feedback",
-        },
-        {
-            protocol: [
-                "fuchsia.hwinfo.Board",
-                "fuchsia.hwinfo.Product",
-            ],
-            from: "#hwinfo",
-            to: "#feedback",
-        },
-        {
-            storage: [
-                "cache",
-                "data",
-                "tmp",
-            ],
-            from: "self",
-            to: "#feedback",
-        },
-        {
-            directory: "build-info",
-            from: "parent",
-            to: "#feedback",
-        },
-        {
-            directory: "boot",
-            from: "parent",
-            to: "#feedback",
         },
         {
             directory: "config-data",
@@ -1031,7 +943,6 @@
             to: [
                 "#agis",
                 "#cobalt_system_metrics",
-                "#feedback",
                 "#metrics-logger",
                 "#session-manager",
                 "#starnix_manager",
@@ -1073,22 +984,11 @@
             // builds of any product.
             source_availability: "unknown",
         },
-        {
-            protocol: [ "fuchsia.ui.scenic.Scenic" ],
-            from: "#ui",
-            to: "#feedback",
-            dependency: "weak",
-            source_availability: "unknown",
-        },
     ],
     expose: [
         {
             protocol: "fuchsia.component.Binder",
             from: "framework",
-        },
-        {
-            protocol: "fuchsia.feedback.CrashReporter",
-            from: "#feedback",
         },
         {
             protocol: [ "fuchsia.sessionmanager.Startup" ],
@@ -1137,10 +1037,6 @@
         {
             protocol: [ "fuchsia.ui.activity.Provider" ],
             from: "#activity",
-        },
-        {
-            protocol: [ "fuchsia.exception.Handler" ],
-            from: "#exceptions",
         },
         {
             protocol: "fuchsia.update.CommitStatusProvider",

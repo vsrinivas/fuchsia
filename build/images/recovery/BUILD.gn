@@ -96,6 +96,7 @@ if (is_fuchsia) {
     "//src/connectivity/wlan/wlandevicemonitor:wlandevicemonitor-core-shard",
     "//src/connectivity/wlan/wlanstack:wlanstack-core-shard",
     "//src/developer/build_info:build_info_core_shard",
+    "//src/developer/forensics:core_shard",
     "//src/firmware/fastboot-tcp:fastboot-tcp-core-shard",
     "//src/recovery/factory_reset:factory_reset_core_shard",
     "//src/ui/bin/brightness_manager:auto-brightness_core_shard",

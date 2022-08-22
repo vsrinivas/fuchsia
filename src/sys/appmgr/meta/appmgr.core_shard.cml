@@ -275,24 +275,6 @@
             from: "#session-manager",
             dependency: "weak_for_migration",
         },
-        {
-            protocol: [
-                "fuchsia.exception.Handler",
-                "fuchsia.exception.ProcessLimbo",
-            ],
-            from: "#exceptions",
-        },
-        {
-            protocol: [
-                "fuchsia.feedback.ComponentDataRegister",
-                "fuchsia.feedback.CrashReporter",
-                "fuchsia.feedback.CrashReportingProductRegister",
-                "fuchsia.feedback.DataProvider",
-                "fuchsia.feedback.DataProviderController",
-                "fuchsia.feedback.LastRebootInfoProvider",
-            ],
-            from: "#feedback",
-        },
     ],
     offer: [
         {
@@ -344,27 +326,12 @@
             dependency: "weak_for_migration",
         },
         {
-            protocol: [ "fuchsia.sys.internal.CrashIntrospect" ],
-            from: "self",
-            to: "#exceptions",
-            dependency: "weak_for_migration",
-        },
-        {
             protocol: [
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.sys.Launcher",
             ],
             from: "self",
             to: "#session-manager",
-        },
-        {
-            protocol: [
-                "fuchsia.intl.PropertyProvider",
-                "fuchsia.update.channelcontrol.ChannelControl",
-            ],
-            from: "self",
-            to: "#feedback",
-            dependency: "weak_for_migration",
         },
     ],
     expose: [

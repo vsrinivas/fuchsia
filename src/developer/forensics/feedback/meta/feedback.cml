@@ -33,28 +33,22 @@
                 "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
                 "fuchsia.hwinfo.Board",
                 "fuchsia.hwinfo.Product",
-                "fuchsia.intl.PropertyProvider",
                 "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.net.http.Loader",
                 "fuchsia.process.Launcher",
                 "fuchsia.sysinfo.SysInfo",
                 "fuchsia.ui.activity.Provider",
-                "fuchsia.update.channelcontrol.ChannelControl",
             ],
-        },
-        {
-            protocol: [ "fuchsia.settings.Privacy" ],
-            availability: "optional",
         },
         {
             protocol: [
                 "fuchsia.feedback.DeviceIdProvider",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.settings.Privacy",
                 "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.update.channelcontrol.ChannelControl",
             ],
-            availability: "optional",
-        },
-        {
-            protocol: [ "fuchsia.ui.scenic.Scenic" ],
             availability: "optional",
         },
         {
