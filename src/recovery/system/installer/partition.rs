@@ -203,8 +203,12 @@ impl Partition {
             let local = fidl::AsyncChannel::from_channel(local).context("Creating AsyncChannel")?;
 
             let proxy = PartitionProxy::from_channel(local);
-            if let Some(partition) =
-                Partition::new(entry.class_path.clone(), proxy, bootloader).await?
+            if let Some(partition) = Partition::new(entry.class_path.clone(), proxy, bootloader)
+                .await
+                .context(format!(
+                    "Creating partition for block device at {} ({})",
+                    entry.topo_path, entry.class_path
+                ))?
             {
                 partitions.push(partition);
             }
