@@ -19,8 +19,6 @@
 
 #include <map>
 
-#include "src/lib/ui/input/device_state.h"
-#include "src/lib/ui/input/input_device_impl.h"
 #include "src/ui/bin/root_presenter/color_transform_handler.h"
 #include "src/ui/bin/root_presenter/constants.h"
 #include "src/ui/bin/root_presenter/displays/display_metrics.h"
@@ -110,10 +108,6 @@ class Presentation : fuchsia::ui::policy::Presenter,
       fuchsia::ui::views::ViewHolderToken view_holder_token, fuchsia::ui::views::ViewRef view_ref,
       fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) override;
 
-  void OnReport(uint32_t device_id, fuchsia::ui::input::InputReport report);
-  void OnDeviceAdded(ui_input::InputDeviceImpl* input_device);
-  void OnDeviceRemoved(uint32_t device_id);
-
   // For tests. Returns true if the display has been initialized and the scene is ready down to the
   // proxy view. Does not look at the a11y or client view.
   bool is_initialized() const {
@@ -174,9 +168,6 @@ class Presentation : fuchsia::ui::policy::Presenter,
                                      fuchsia::ui::views::ViewHolderToken a11y_view_holder_token,
                                      CreateAccessibilityViewHolderCallback callback) override;
 
-  void OnEvent(fuchsia::ui::input::InputEvent event);
-  void OnSensorEvent(uint32_t device_id, fuchsia::ui::input::InputReport event);
-
   // Passes the display rotation in degrees down to the scenic compositor.
   void SetScenicDisplayRotation();
 
@@ -191,8 +182,6 @@ class Presentation : fuchsia::ui::policy::Presenter,
   void UpdateGraphState(GraphState updated_state);
 
   inspect::Node inspect_node_;
-  InputReportInspector input_report_inspector_;
-  InputEventInspector input_event_inspector_;
 
   std::unique_ptr<scenic::Session> root_session_;
 
@@ -265,9 +254,6 @@ class Presentation : fuchsia::ui::policy::Presenter,
   fidl::Binding<fuchsia::ui::policy::Presentation> presentation_binding_;
   fidl::Binding<fuchsia::accessibility::MagnificationHandler> a11y_binding_;
   fidl::Binding<fuchsia::ui::accessibility::view::Registry> a11y_view_registry_binding_;
-
-  std::map<uint32_t, std::pair<ui_input::InputDeviceImpl*, std::unique_ptr<ui_input::DeviceState>>>
-      device_states_by_id_;
 
   // One SafePresenter for each Session.
   SafePresenter safe_presenter_root_;

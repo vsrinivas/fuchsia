@@ -8,7 +8,6 @@
 #include <fuchsia/accessibility/cpp/fidl.h>
 #include <fuchsia/input/virtualkeyboard/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -23,29 +22,20 @@
 #include <vector>
 
 #include "src/lib/fxl/macros.h"
-#include "src/lib/ui/input/input_device_impl.h"
 #include "src/ui/bin/root_presenter/constants.h"
 #include "src/ui/bin/root_presenter/focus_dispatcher.h"
 #include "src/ui/bin/root_presenter/inspect.h"
 #include "src/ui/bin/root_presenter/presentation.h"
 #include "src/ui/bin/root_presenter/virtual_keyboard_coordinator.h"
 #include "src/ui/bin/root_presenter/virtual_keyboard_manager.h"
-#include "src/ui/lib/input_report_reader/input_reader.h"
 
 namespace root_presenter {
 
 // Class for serving various input and graphics related APIs.
-class App : public fuchsia::ui::policy::DeviceListenerRegistry,
-            public fuchsia::ui::input::InputDeviceRegistry,
-            public ui_input::InputDeviceImpl::Listener {
+class App {
  public:
   App(sys::ComponentContext* component_context, fit::closure quit_callback);
   ~App() = default;
-
-  // |InputDeviceImpl::Listener|
-  void OnDeviceDisconnected(ui_input::InputDeviceImpl* input_device) override;
-  void OnReport(ui_input::InputDeviceImpl* input_device,
-                fuchsia::ui::input::InputReport report) override;
 
   // For testing.
   Presentation* presentation() { return presentation_.get(); }
@@ -57,33 +47,13 @@ class App : public fuchsia::ui::policy::DeviceListenerRegistry,
   // Exits the loop, terminating the RootPresenter process.
   void Exit() { quit_callback_(); }
 
-  // |DeviceListenerRegistry|
-  void RegisterMediaButtonsListener(
-      fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener) override;
-
-  // |DeviceListenerRegistry|
-  void RegisterListener(fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener,
-                        RegisterListenerCallback callback) override;
-
-  // |InputDeviceRegistry|
-  void RegisterDevice(
-      fuchsia::ui::input::DeviceDescriptor descriptor,
-      fidl::InterfaceRequest<fuchsia::ui::input::InputDevice> input_device_request) override;
-
   const fit::closure quit_callback_;
   sys::ComponentInspector inspector_;
-  InputReportInspector input_report_inspector_;
-  fidl::BindingSet<fuchsia::ui::policy::DeviceListenerRegistry> device_listener_bindings_;
-  fidl::BindingSet<fuchsia::ui::input::InputDeviceRegistry> input_receiver_bindings_;
-  ui_input::InputReader input_reader_;
 
   fuchsia::ui::scenic::ScenicPtr scenic_;
 
   // Created at construction time.
   std::unique_ptr<Presentation> presentation_;
-
-  uint32_t next_device_token_ = 0;
-  std::unordered_map<uint32_t, std::unique_ptr<ui_input::InputDeviceImpl>> devices_by_id_;
 
   // Coordinates virtual keyboard state changes between
   // `fuchsia.input.virtualkeyboard.Controller`s and the

@@ -24,7 +24,6 @@
 #include "src/ui/bin/root_presenter/presentation.h"
 #include "src/ui/bin/root_presenter/tests/fakes/fake_keyboard_focus_controller.h"
 #include "src/ui/bin/root_presenter/tests/fakes/fake_view.h"
-#include "src/ui/input/lib/injector/tests/mocks/mock_injector_registry.h"
 
 namespace root_presenter {
 namespace {
@@ -76,22 +75,14 @@ class RootPresenterTest : public gtest::RealLoopFixture,
   App* root_presenter() { return root_presenter_.get(); }
   Presentation* presentation() { return root_presenter_->presentation(); }
 
-  void ConnectInjectorRegistry(bool use_fake = true) {
-    if (use_fake) {
-      injector_registry_ = std::make_unique<input::test::MockInjectorRegistry>(context_provider_);
-    } else {
-      ASSERT_EQ(
-          ZX_OK,
-          context_provider_.service_directory_provider()
-              ->AddService<fuchsia::ui::pointerinjector::Registry>(
-                  [this](fidl::InterfaceRequest<fuchsia::ui::pointerinjector::Registry> request) {
-                    real_component_context_->svc()->Connect(std::move(request));
-                  }));
-    }
-
-    context_provider_.ConnectToPublicService<fuchsia::ui::input::InputDeviceRegistry>(
-        input_device_registry_ptr_.NewRequest());
-    input_device_registry_ptr_.set_error_handler([](auto...) { FAIL(); });
+  void ConnectInjectorRegistry() {
+    ASSERT_EQ(
+        ZX_OK,
+        context_provider_.service_directory_provider()
+            ->AddService<fuchsia::ui::pointerinjector::Registry>(
+                [this](fidl::InterfaceRequest<fuchsia::ui::pointerinjector::Registry> request) {
+                  real_component_context_->svc()->Connect(std::move(request));
+                }));
   }
 
   // The a11y view attempts to connect via the context's svc directory. Since
@@ -105,20 +96,6 @@ class RootPresenterTest : public gtest::RealLoopFixture,
                 [this](fidl::InterfaceRequest<fuchsia::ui::accessibility::view::Registry> request) {
                   context_provider_.public_service_directory()->Connect(std::move(request));
                 }));
-  }
-
-  void SetUpInputTest(bool use_mock_injector_registry = true) {
-    ConnectInjectorRegistry(use_mock_injector_registry);
-
-    // Present a fake view.
-    fuchsia::ui::scenic::ScenicPtr scenic =
-        context_provider_.context()->svc()->Connect<fuchsia::ui::scenic::Scenic>();
-    testing::FakeView fake_view(context_provider_.context(), std::move(scenic));
-    presentation()->PresentView(fake_view.view_holder_token(), nullptr);
-
-    RunLoopUntil([this]() {
-      return presentation()->is_initialized() && presentation()->ready_for_injection();
-    });
   }
 
   void SetUpFocusChainListener(
@@ -145,30 +122,6 @@ class RootPresenterTest : public gtest::RealLoopFixture,
     callback();
   }
 
-  fuchsia::ui::input::DeviceDescriptor TouchscreenDescriptorTemplate() {
-    fuchsia::ui::input::DeviceDescriptor descriptor;
-    {
-      descriptor.touchscreen = std::make_unique<fuchsia::ui::input::TouchscreenDescriptor>();
-      {
-        fuchsia::ui::input::Axis x_axis, y_axis;
-        x_axis.range = fuchsia::ui::input::Range{.min = 0, .max = 10};
-        y_axis.range = fuchsia::ui::input::Range{.min = 0, .max = 10};
-        descriptor.touchscreen->x = std::move(x_axis);
-        descriptor.touchscreen->y = std::move(y_axis);
-      }
-      descriptor.touchscreen->max_finger_id = 10;
-    }
-    return descriptor;
-  }
-
-  fuchsia::ui::input::InputReport TouchscreenReportTemplate() {
-    fuchsia::ui::input::InputReport input_report{
-        .touchscreen = std::make_unique<fuchsia::ui::input::TouchscreenReport>()};
-    input_report.touchscreen->touches.push_back(
-        {.finger_id = 1, .x = 5, .y = 5, .width = 1, .height = 1});
-    return input_report;
-  }
-
   std::vector<inspect::UintArrayValue::HistogramBucket> GetHistogramBuckets(
       const std::vector<std::string>& path, const std::string& property) {
     inspect::Hierarchy root =
@@ -183,9 +136,7 @@ class RootPresenterTest : public gtest::RealLoopFixture,
     return histogram->GetBuckets();
   }
 
-  std::unique_ptr<input::test::MockInjectorRegistry> injector_registry_;
   std::unique_ptr<testing::FakeKeyboardFocusController> keyboard_focus_ctl_;
-  fuchsia::ui::input::InputDeviceRegistryPtr input_device_registry_ptr_;
   sys::testing::ComponentContextProvider context_provider_;
 
  private:
@@ -211,7 +162,7 @@ TEST_F(RootPresenterTest, TestSceneSetup) {
 }
 
 TEST_F(RootPresenterTest, TestAttachA11yView) {
-  ConnectInjectorRegistry(/* use_fake = */ false);
+  ConnectInjectorRegistry();
   ConnectAccessibilityViewRegistry();
   RunLoopUntilIdle();
 
@@ -229,41 +180,10 @@ TEST_F(RootPresenterTest, TestAttachA11yView) {
 
   // Verify that nothing crashes during a11y view setup.
   RunLoopUntil([&a11y_view]() { return a11y_view.is_initialized(); });
-
-  // Add a rectangle to the fakeview so that hit testing will return a result.
-  auto view_properties = a11y_view.get_a11y_view_properties();
-  auto x = view_properties->bounding_box.min.x;
-  auto y = view_properties->bounding_box.min.y;
-  auto width = view_properties->bounding_box.max.x - view_properties->bounding_box.min.x;
-  auto height = view_properties->bounding_box.max.y - view_properties->bounding_box.min.y;
-  bool rectangle_added = false;
-  fake_view.AddRectangle(width, height, x, y, rectangle_added);
-  RunLoopUntil([&rectangle_added] { return rectangle_added; });
-
-  fake_view.clear_events();
-
-  // Register an input device.
-  fuchsia::ui::input::InputDevicePtr input_device_ptr;
-  bool channel_error = false;
-  input_device_ptr.set_error_handler([&channel_error](auto...) { channel_error = true; });
-  input_device_registry_ptr_->RegisterDevice(TouchscreenDescriptorTemplate(),
-                                             input_device_ptr.NewRequest());
-
-  RunLoopUntilIdle();
-
-  // Inject a touch event.
-  input_device_ptr->DispatchReport(TouchscreenReportTemplate());
-
-  // Verify that client view receives the event.
-  RunLoopUntil([&fake_view]() {
-    return std::any_of(fake_view.events().begin(), fake_view.events().end(), [](const auto& event) {
-      return event.Which() == fuchsia::ui::scenic::Event::Tag::kInput;
-    });
-  });
 }
 
 TEST_F(RootPresenterTest, TestAttachA11yViewBeforeClient) {
-  ConnectInjectorRegistry(/* use_fake = */ false);
+  ConnectInjectorRegistry();
   ConnectAccessibilityViewRegistry();
   RunLoopUntilIdle();
 
@@ -281,36 +201,6 @@ TEST_F(RootPresenterTest, TestAttachA11yViewBeforeClient) {
   RunLoopUntil([&fake_view]() { return fake_view.IsAttachedToScene(); });
   // A11y view should initialize after client view attaches.
   RunLoopUntil([&a11y_view]() { return a11y_view.is_initialized(); });
-
-  // Add a rectangle to the fakeview so that hit testing will return a result.
-  auto view_properties = a11y_view.get_a11y_view_properties();
-  auto x = view_properties->bounding_box.min.x;
-  auto y = view_properties->bounding_box.min.y;
-  auto width = view_properties->bounding_box.max.x - view_properties->bounding_box.min.x;
-  auto height = view_properties->bounding_box.max.y - view_properties->bounding_box.min.y;
-  bool rectangle_added = false;
-  fake_view.AddRectangle(width, height, x, y, rectangle_added);
-  RunLoopUntil([&rectangle_added] { return rectangle_added; });
-
-  fake_view.clear_events();
-
-  // Register an input device.
-  fuchsia::ui::input::InputDevicePtr input_device_ptr;
-  input_device_ptr.set_error_handler([](auto...) { FAIL(); });
-  input_device_registry_ptr_->RegisterDevice(TouchscreenDescriptorTemplate(),
-                                             input_device_ptr.NewRequest());
-
-  RunLoopUntilIdle();
-
-  // Inject a touch event.
-  input_device_ptr->DispatchReport(TouchscreenReportTemplate());
-
-  // Verify that client view receives the event.
-  RunLoopUntil([&fake_view]() {
-    return std::any_of(fake_view.events().begin(), fake_view.events().end(), [](const auto& event) {
-      return event.Which() == fuchsia::ui::scenic::Event::Tag::kInput;
-    });
-  });
 }
 
 TEST_F(RootPresenterTest, SinglePresentView_ShouldSucceed) {
@@ -390,267 +280,6 @@ TEST_F(RootPresenterTest, SecondPresentOrReplaceView_ShouldSucceeed_AndOriginalS
   EXPECT_EQ(error, ZX_ERR_PEER_CLOSED) << "Should be: " << zx_status_get_string(ZX_ERR_PEER_CLOSED)
                                        << " Was: " << zx_status_get_string(error);
   EXPECT_TRUE(alive2);
-}
-
-TEST_F(RootPresenterTest, InputInjectionRegistration) {
-  SetUpInputTest();
-
-  EXPECT_EQ(injector_registry_->num_registered(), 0u);
-
-  fuchsia::ui::input::InputDevicePtr input_device_ptr;
-  bool channel_error = false;
-  input_device_ptr.set_error_handler([&channel_error](auto...) { channel_error = true; });
-  input_device_registry_ptr_->RegisterDevice(TouchscreenDescriptorTemplate(),
-                                             input_device_ptr.NewRequest());
-  input_device_ptr->DispatchReport(TouchscreenReportTemplate());
-  RunLoopUntilIdle();
-
-  // After the first event a connection to the registry should have been made.
-  EXPECT_EQ(injector_registry_->num_registered(), 1u);
-  EXPECT_EQ(injector_registry_->num_events_received(), 1u);
-  EXPECT_FALSE(channel_error);
-
-  // After all events have been handled and the channel's been closed, the channel to the registry
-  // should also close.
-  input_device_ptr.Unbind();
-  RunLoopUntilIdle();
-  EXPECT_EQ(injector_registry_->num_registered(), 0u);
-  EXPECT_FALSE(channel_error);
-}
-
-TEST_F(RootPresenterTest, InputInjection_MultipleRegistrationBySameDevice) {
-  SetUpInputTest();
-
-  fuchsia::ui::input::InputDevicePtr input_device_ptr;
-  bool channel_error = false;
-  input_device_ptr.set_error_handler([&channel_error](auto...) { channel_error = true; });
-  input_device_registry_ptr_->RegisterDevice(TouchscreenDescriptorTemplate(),
-                                             input_device_ptr.NewRequest());
-  input_device_ptr->DispatchReport(TouchscreenReportTemplate());
-  RunLoopUntilIdle();
-
-  // After the first event a connection to the registry should have been made.
-  EXPECT_EQ(injector_registry_->num_registered(), 1u);
-  EXPECT_EQ(injector_registry_->num_events_received(), 1u);
-  EXPECT_FALSE(channel_error);
-
-  // Dispatch another event and then unregister the device by killing it.
-  input_device_ptr->DispatchReport(TouchscreenReportTemplate());
-  input_device_ptr.Unbind();
-
-  // Register a new device with the same id.
-  input_device_registry_ptr_->RegisterDevice(TouchscreenDescriptorTemplate(),
-                                             input_device_ptr.NewRequest());
-  input_device_ptr->DispatchReport(TouchscreenReportTemplate());
-
-  // All pending messages should be worked through, and then the first device should disconnect from
-  // the registry, while the second should remain connected.
-  RunLoopUntilIdle();
-  injector_registry_->FirePendingCallbacks();
-  RunLoopUntilIdle();
-  injector_registry_->FirePendingCallbacks();
-  RunLoopUntilIdle();
-  EXPECT_EQ(injector_registry_->num_registered(), 1u);
-  EXPECT_EQ(injector_registry_->num_events_received(), 3u);
-  EXPECT_FALSE(channel_error);
-}
-
-TEST_F(RootPresenterTest, InputInjection_FlowControl) {
-  SetUpInputTest();
-
-  fuchsia::ui::input::InputDevicePtr input_device_ptr;
-  input_device_registry_ptr_->RegisterDevice(TouchscreenDescriptorTemplate(),
-                                             input_device_ptr.NewRequest());
-  input_device_ptr->DispatchReport(TouchscreenReportTemplate());
-  RunLoopUntilIdle();
-  EXPECT_EQ(injector_registry_->num_events_received(), 1u);
-
-  // Next event gets buffered until the callback for the previous inejction returns.
-  input_device_ptr->DispatchReport(TouchscreenReportTemplate());
-  RunLoopUntilIdle();
-  EXPECT_EQ(injector_registry_->num_events_received(), 1u);
-
-  // After the callback the next event is immediately fired.
-  injector_registry_->FirePendingCallbacks();
-  RunLoopUntilIdle();
-  EXPECT_EQ(injector_registry_->num_events_received(), 2u);
-}
-
-TEST_F(RootPresenterTest, InputInjection_EventBatching) {
-  SetUpInputTest();
-
-  fuchsia::ui::input::InputDevicePtr input_device_ptr;
-  input_device_registry_ptr_->RegisterDevice(TouchscreenDescriptorTemplate(),
-                                             input_device_ptr.NewRequest());
-  input_device_ptr->DispatchReport(TouchscreenReportTemplate());
-  RunLoopUntilIdle();
-  EXPECT_EQ(injector_registry_->num_events_received(), 1u);
-
-  // Buffer more events than can be injected in a single message.
-  for (size_t i = 0; i < fuchsia::ui::pointerinjector::MAX_INJECT + 1; ++i) {
-    input_device_ptr->DispatchReport(TouchscreenReportTemplate());
-  }
-  RunLoopUntilIdle();
-  EXPECT_EQ(injector_registry_->num_events_received(), 1u);
-
-  // After the callback, only kMaxEventsPerInjection should be sent.
-  injector_registry_->FirePendingCallbacks();
-  RunLoopUntilIdle();
-  EXPECT_EQ(injector_registry_->num_events_received(),
-            fuchsia::ui::pointerinjector::MAX_INJECT + 1);
-
-  // And the last message should be sent after the next callback.
-  injector_registry_->FirePendingCallbacks();
-  RunLoopUntilIdle();
-  EXPECT_EQ(injector_registry_->num_events_received(),
-            fuchsia::ui::pointerinjector::MAX_INJECT + 2);
-}
-
-TEST_F(RootPresenterTest, InputInjection_InspectTouchscreen) {
-  SetUpInputTest();
-
-  fuchsia::ui::input::InputDevicePtr input_device_ptr;
-  input_device_registry_ptr_->RegisterDevice(TouchscreenDescriptorTemplate(),
-                                             input_device_ptr.NewRequest());
-  input_device_ptr->DispatchReport(TouchscreenReportTemplate());
-  RunLoopUntilIdle();
-
-  // Check that the histograms are updated.
-  {
-    uint64_t count = 0;
-    for (const inspect::UintArrayValue::HistogramBucket& bucket :
-         GetHistogramBuckets({"input_reports"}, "touchscreen_latency")) {
-      count += bucket.count;
-    }
-    EXPECT_EQ(1u, count);
-  }
-  {
-    uint64_t count = 0;
-    for (const inspect::UintArrayValue::HistogramBucket& bucket :
-         GetHistogramBuckets({"presentation-0x0", "input_reports"}, "touchscreen_latency")) {
-      count += bucket.count;
-    }
-    EXPECT_EQ(1u, count);
-  }
-  {
-    uint64_t count = 0;
-    for (const inspect::UintArrayValue::HistogramBucket& bucket :
-         GetHistogramBuckets({"presentation-0x0", "input_events"}, "pointer_latency")) {
-      count += bucket.count;
-    }
-    EXPECT_EQ(1u, count);
-  }
-}
-
-// The below tests check that we recover correctly in the following scenarios:
-// Registry closes the channel.
-// Device is removed.
-// Registry closes the channel and the device is removed at the same time.
-TEST_F(RootPresenterTest, InputInjection_RecoverAndFinishStreamOnServerDisconnect) {
-  SetUpInputTest();
-
-  fuchsia::ui::input::InputDevicePtr input_device_ptr;
-  bool channel_error = false;
-  input_device_ptr.set_error_handler([&channel_error](auto...) { channel_error = true; });
-  input_device_registry_ptr_->RegisterDevice(TouchscreenDescriptorTemplate(),
-                                             input_device_ptr.NewRequest());
-
-  {  // After the first event a connection to the registry should have been made.
-    input_device_ptr->DispatchReport(TouchscreenReportTemplate());
-    RunLoopUntilIdle();
-
-    EXPECT_EQ(injector_registry_->num_registered(), 1u);
-    EXPECT_EQ(injector_registry_->num_events_received(), 1u);
-    EXPECT_FALSE(channel_error);
-  }
-
-  // Closing the channel on the other side should be transparent to InputDevice and a new connection
-  // should be made immediately by the Presentation.
-  injector_registry_->KillAllBindings();
-  EXPECT_EQ(injector_registry_->num_registered(), 0u);
-  RunLoopUntilIdle();
-  EXPECT_FALSE(channel_error);
-  EXPECT_EQ(injector_registry_->num_registered(), 1u);
-}
-
-TEST_F(RootPresenterTest, InputInjection_FinishStreamOnClientDisconnect) {
-  SetUpInputTest();
-
-  fuchsia::ui::input::InputDevicePtr input_device_ptr;
-  input_device_registry_ptr_->RegisterDevice(TouchscreenDescriptorTemplate(),
-                                             input_device_ptr.NewRequest());
-
-  // Buffer an update.
-  input_device_ptr->DispatchReport(TouchscreenReportTemplate());
-  input_device_ptr->DispatchReport(TouchscreenReportTemplate());
-  RunLoopUntilIdle();
-  EXPECT_EQ(injector_registry_->num_events_received(), 1u);
-  EXPECT_EQ(injector_registry_->num_registered(), 1u);
-
-  // Killing the InputDevice-side channel should not be seen by the registry until the pending event
-  // has been delivered and their callbacks returned.
-  input_device_ptr.Unbind();
-  EXPECT_EQ(injector_registry_->num_events_received(), 1u);
-  EXPECT_EQ(injector_registry_->num_registered(), 1u);
-
-  injector_registry_->FirePendingCallbacks();
-  RunLoopUntilIdle();
-  injector_registry_->FirePendingCallbacks();
-  RunLoopUntilIdle();
-  EXPECT_EQ(injector_registry_->num_events_received(), 2u);
-  EXPECT_EQ(injector_registry_->num_registered(), 0u);
-}
-
-// Tests that Injector correctly buffers events until the scene is ready.
-TEST_F(RootPresenterTest, InjectorStartupTest) {
-  SetUpInputTest();
-
-  auto [control_ref1, view_ref1] = scenic::ViewRefPair::New();
-  auto [control_ref2, view_ref2] = scenic::ViewRefPair::New();
-  input::Injector injector(context_provider_.context(), std::move(view_ref1), std::move(view_ref2));
-
-  injector.OnDeviceAdded(/*device_id*/ 1);
-  injector.OnDeviceAdded(/*device_id*/ 2);
-
-  fuchsia::ui::input::InputEvent event;
-  {
-    fuchsia::ui::input::PointerEvent pointer;
-    pointer.device_id = 1;
-    pointer.pointer_id = 2;
-    event.set_pointer(std::move(pointer));
-  }
-  injector.OnEvent(event);
-  injector.OnEvent(event);
-
-  // Remove and add device_id 1, to show that the injector
-  // correctly buffers even on device_id reuse.
-  injector.OnDeviceRemoved(/*device_id*/ 1);
-  injector.OnDeviceAdded(/*device_id*/ 1);
-  injector.OnEvent(event);
-
-  RunLoopUntilIdle();
-
-  EXPECT_EQ(injector_registry_->num_registered(), 0u);
-  EXPECT_EQ(injector_registry_->num_events_received(), 0u);
-
-  injector.MarkSceneReady();
-  RunLoopUntilIdle();
-
-  // All ongoing streams shold have registered and injected.
-  EXPECT_EQ(injector_registry_->num_registered(), 3u);
-  EXPECT_EQ(injector_registry_->num_events_received(), 3u);
-
-  injector_registry_->FirePendingCallbacks();
-  RunLoopUntilIdle();
-  // The first injector for device_id 1 should have died.
-  EXPECT_EQ(injector_registry_->num_registered(), 2u);
-
-  // Any subsequent events should be handled immediately.
-  injector.OnDeviceAdded(/*device_id*/ 3);
-  injector.OnEvent(event);
-  RunLoopUntilIdle();
-  EXPECT_EQ(injector_registry_->num_registered(), 3u);
-  EXPECT_EQ(injector_registry_->num_events_received(), 4u);
 }
 
 // Tests that focus is requested for the client after the client view is connected.

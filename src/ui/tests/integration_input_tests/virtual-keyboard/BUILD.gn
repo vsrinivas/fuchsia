@@ -28,93 +28,6 @@ font_collection("single-font-collection-ip") {
   font_service_pkg = "virtual-keyboard-test-ip"
 }
 
-executable("virtual-keyboard-test-bin") {
-  testonly = true
-  sources = [ "virtual-keyboard-test.cc" ]
-  output_name = "virtual-keyboard-test"
-  deps = [
-    ":test.virtualkeyboard",
-    "//sdk/fidl/fuchsia.accessibility.semantics",
-    "//sdk/fidl/fuchsia.buildinfo",
-    "//sdk/fidl/fuchsia.cobalt",
-    "//sdk/fidl/fuchsia.component",
-    "//sdk/fidl/fuchsia.fonts",
-    "//sdk/fidl/fuchsia.input.virtualkeyboard",
-    "//sdk/fidl/fuchsia.intl",
-    "//sdk/fidl/fuchsia.io",
-    "//sdk/fidl/fuchsia.memorypressure",
-    "//sdk/fidl/fuchsia.netstack",
-    "//sdk/fidl/fuchsia.posix.socket",
-    "//sdk/fidl/fuchsia.scheduler",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.tracing.provider",
-    "//sdk/fidl/fuchsia.ui.accessibility.view",
-    "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.focus",
-    "//sdk/fidl/fuchsia.ui.input",
-    "//sdk/fidl/fuchsia.ui.observation.test",
-    "//sdk/fidl/fuchsia.ui.pointerinjector",
-    "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/fidl/fuchsia.vulkan.loader",
-    "//sdk/fidl/fuchsia.web",
-    "//sdk/lib/fdio",
-    "//sdk/lib/fit",
-    "//sdk/lib/sys/component/cpp/testing:cpp",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
-    "//sdk/lib/ui/scenic/cpp",
-    "//src/lib/fostr/fidl/fuchsia.ui.gfx",
-    "//src/lib/fostr/fidl/fuchsia.ui.input",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
-    "//third_party/googletest:gtest",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/zx",
-  ]
-}
-
-fuchsia_component("virtual-keyboard-test-component") {
-  testonly = true
-  manifest = "meta/virtual-keyboard-test.cml"
-  deps = [ ":virtual-keyboard-test-bin" ]
-}
-
-fuchsia_test_package("virtual-keyboard-test") {
-  test_components = [ ":virtual-keyboard-test-component" ]
-  deps = [
-    ":single-font-collection",
-    "//src/connectivity/network/netstack:component",
-    "//src/developer/build_info/testing:fake-build-info-component",
-    "//src/developer/memory/monitor:component",
-    "//src/fonts:font_provider_cm",
-    "//src/testing/fidl/intl_property_manager:intl_property_manager_component",
-    "//src/ui/a11y/testing:fake-a11y-manager",
-    "//src/ui/bin/root_presenter:component_v2_for_test",
-    "//src/ui/bin/text:text_manager_comp_v2",
-    "//src/ui/testing/ui_test_realm:scenic_only",
-    "//src/ui/tests/integration_input_tests/virtual-keyboard/web-virtual-keyboard-client:component",
-  ]
-  test_specs = {
-    log_settings = {
-      # Do not fail the test if a message with level ERROR is logged.  Several
-      # components will log ERROR if they miss a non-essential FIDL API in the
-      # sandbox, which would make the test fail if it weren't for this.
-      max_severity = "ERROR"
-    }
-    environments = [
-      {
-        dimensions = {
-          # Ensure the device has Vulkan.
-          device_type = "AEMU"
-        }
-      },
-    ]
-  }
-}
-
 executable("virtual-keyboard-test-ip-bin") {
   testonly = true
   sources = [ "virtual-keyboard-test-ip.cc" ]
@@ -198,7 +111,6 @@ fuchsia_test_package("virtual-keyboard-test-ip") {
 group("tests") {
   testonly = true
   deps = [
-    ":virtual-keyboard-test",
     ":virtual-keyboard-test-ip",
 
     # The deps below are necessary on minimal product configs.
@@ -212,7 +124,6 @@ group("tests") {
 group("tests-product-webengine") {
   testonly = true
   deps = [
-    ":virtual-keyboard-test",
     ":virtual-keyboard-test-ip",
     "//src/graphics/bin/vulkan_loader",
   ]

@@ -10,7 +10,6 @@ import("//build/test.gni")
 group("tests") {
   testonly = true
   deps = [
-    ":flutter-embedder-test",
     ":flutter-embedder-test-ip",
     "//src/ui/testing/test_ui_stack:test-ui-stack-flavors",
 
@@ -21,57 +20,6 @@ group("tests") {
     "//src/ui/bin/text:text_manager",
     "//src/ui/tests/integration_flutter_tests/embedder/child-view",
     "//src/ui/tests/integration_flutter_tests/embedder/parent-view",
-  ]
-}
-
-fuchsia_unittest_package("flutter-embedder-test") {
-  manifest = "meta/flutter-embedder-test.cml"
-  deps = [
-    ":flutter-embedder-test-bin",
-    "//src/connectivity/network/netstack:component-legacy",
-    "//src/lib/fuchsia-component-test/realm_builder_server:fuchsia-component-test",
-    "//src/ui/bin/root_presenter:component_v2_for_test",
-    "//src/ui/testing/ui_test_realm:scenic_only",
-    "//src/ui/tests/integration_flutter_tests/embedder/child-view",
-    "//src/ui/tests/integration_flutter_tests/embedder/parent-view",
-  ]
-  test_specs = {
-    log_settings = {
-      max_severity = "ERROR"
-    }
-    environments = [ aemu_env ]
-  }
-}
-
-test("flutter-embedder-test-bin") {
-  sources = [
-    "embedder_view.h",
-    "flutter-embedder-test.cc",
-    "flutter-embedder-test.h",
-  ]
-  output_name = "flutter-embedder-test"
-  deps = [
-    "//sdk/fidl/fuchsia.accessibility.semantics",
-    "//sdk/fidl/fuchsia.hardware.display",
-    "//sdk/fidl/fuchsia.logger",
-    "//sdk/fidl/fuchsia.scheduler",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.tracing.provider",
-    "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.input",
-    "//sdk/fidl/fuchsia.ui.pointerinjector",
-    "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/fidl/fuchsia.vulkan.loader",
-    "//sdk/lib/fit",
-    "//sdk/lib/sys/component/cpp/testing:cpp",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
-    "//sdk/lib/ui/scenic/cpp",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/ui/testing/views",
-    "//zircon/system/ulib/zx",
   ]
 }
 

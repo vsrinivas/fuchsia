@@ -12,8 +12,6 @@
 
 #include <cmath>
 
-#include <src/lib/fostr/fidl/fuchsia/ui/input/formatting.h>
-
 #include "src/ui/bin/root_presenter/displays/display_configuration.h"
 #include "src/ui/bin/root_presenter/inspect.h"
 #include "src/ui/bin/root_presenter/safe_presenter.h"
@@ -31,20 +29,6 @@ namespace {
 // TODO(fxbug.dev/24474): Don't hardcode Z bounds in multiple locations.
 constexpr float kDefaultRootViewDepth = 1000;
 
-void ChattyReportLog(const fuchsia::ui::input::InputReport& report) {
-  static uint32_t chatty = 0;
-  if (chatty++ < ChattyMax()) {
-    FX_LOGS(INFO) << "RP-PtrReport[" << chatty << "/" << ChattyMax() << "]: " << report;
-  }
-}
-
-void ChattyEventLog(const fuchsia::ui::input::InputEvent& event) {
-  static uint32_t chatty = 0;
-  if (chatty++ < ChattyMax()) {
-    FX_LOGS(INFO) << "RP-PtrEvent[" << chatty << "/" << ChattyMax() << "]: " << event;
-  }
-}
-
 }  // namespace
 
 Presentation::Presentation(inspect::Node inspect_node, sys::ComponentContext* component_context,
@@ -53,8 +37,6 @@ Presentation::Presentation(inspect::Node inspect_node, sys::ComponentContext* co
                            fuchsia::ui::views::FocuserPtr focuser,
                            int32_t display_startup_rotation_adjustment)
     : inspect_node_(std::move(inspect_node)),
-      input_report_inspector_(inspect_node_.CreateChild("input_reports")),
-      input_event_inspector_(inspect_node_.CreateChild("input_events")),
       root_session_(std::move(session)),
       compositor_(root_session_.get()),
       layer_stack_(root_session_.get()),
@@ -454,74 +436,6 @@ void Presentation::UpdateViewport(const DisplayMetrics& display_metrics) {
   injector_config_setup_->UpdateViewport(injector_->GetCurrentViewport());
 }
 
-void Presentation::OnDeviceAdded(ui_input::InputDeviceImpl* input_device) {
-  const uint32_t device_id = input_device->id();
-
-  FX_VLOGS(1) << "OnDeviceAdded: device_id=" << device_id;
-
-  FX_DCHECK(device_states_by_id_.count(device_id) == 0);
-  std::unique_ptr<ui_input::DeviceState> state;
-
-  if (input_device->descriptor()->sensor) {
-    ui_input::OnSensorEventCallback callback = [this](uint32_t device_id,
-                                                      fuchsia::ui::input::InputReport event) {
-      OnSensorEvent(device_id, std::move(event));
-    };
-    state = std::make_unique<ui_input::DeviceState>(device_id, input_device->descriptor(),
-                                                    std::move(callback));
-  } else {
-    ui_input::OnEventCallback callback = [this](fuchsia::ui::input::InputEvent event) {
-      OnEvent(std::move(event));
-    };
-    state = std::make_unique<ui_input::DeviceState>(device_id, input_device->descriptor(),
-                                                    std::move(callback));
-  }
-
-  ui_input::DeviceState* state_ptr = state.get();
-  auto device_pair = std::make_pair(input_device, std::move(state));
-  state_ptr->OnRegistered();
-  device_states_by_id_.emplace(device_id, std::move(device_pair));
-
-  injector_->OnDeviceAdded(device_id);
-}
-
-void Presentation::OnDeviceRemoved(uint32_t device_id) {
-  FX_VLOGS(1) << "OnDeviceRemoved: device_id=" << device_id;
-
-  if (device_states_by_id_.count(device_id) != 0) {
-    device_states_by_id_[device_id].second->OnUnregistered();
-    device_states_by_id_.erase(device_id);
-  }
-
-  injector_->OnDeviceRemoved(device_id);
-}
-
-void Presentation::OnReport(uint32_t device_id, fuchsia::ui::input::InputReport input_report) {
-  TRACE_DURATION("input", "presentation_on_report", "id", input_report.trace_id);
-  TRACE_FLOW_END("input", "report_to_presentation", input_report.trace_id);
-
-  FX_VLOGS(2) << "OnReport device=" << device_id
-              << ", count=" << device_states_by_id_.count(device_id) << ", report=" << input_report;
-  ChattyReportLog(input_report);
-  input_report_inspector_.OnInputReport(input_report);
-
-  if (device_states_by_id_.count(device_id) == 0) {
-    FX_VLOGS(1) << "OnReport: Unknown device " << device_id;
-    return;
-  }
-
-  if (!display_model_initialized_)
-    return;
-
-  ui_input::DeviceState* state = device_states_by_id_[device_id].second.get();
-  fuchsia::math::Size size;
-  size.width = display_model_.display_info().width_in_px;
-  size.height = display_model_.display_info().height_in_px;
-
-  TRACE_FLOW_BEGIN("input", "report_to_device_state", input_report.trace_id);
-  state->Update(std::move(input_report), size);
-}
-
 void Presentation::SetClipSpaceTransform(float x, float y, float scale,
                                          SetClipSpaceTransformCallback callback) {
   clip_offset_x_ = x;
@@ -538,25 +452,6 @@ void Presentation::SetClipSpaceTransform(float x, float y, float scale,
 
 void Presentation::ResetClipSpaceTransform() {
   SetClipSpaceTransform(0, 0, 1, [] {});
-}
-
-void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
-  TRACE_DURATION("input", "presentation_on_event");
-  FX_VLOGS(1) << "OnEvent " << event;
-  ChattyEventLog(event);
-  input_event_inspector_.OnInputEvent(event);
-  injector_->OnEvent(event);
-}
-
-void Presentation::OnSensorEvent(uint32_t device_id, fuchsia::ui::input::InputReport event) {
-  FX_VLOGS(2) << "OnSensorEvent(device_id=" << device_id << "): " << event;
-
-  FX_DCHECK(device_states_by_id_.count(device_id) > 0);
-  FX_DCHECK(device_states_by_id_[device_id].first);
-  FX_DCHECK(device_states_by_id_[device_id].first->descriptor());
-  FX_DCHECK(device_states_by_id_[device_id].first->descriptor()->sensor.get());
-
-  // No clients of sensor events at the moment.
 }
 
 void Presentation::SetScenicDisplayRotation() {

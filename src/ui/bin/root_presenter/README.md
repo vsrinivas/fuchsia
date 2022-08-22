@@ -19,18 +19,9 @@ This program is a server, and so is not started directly. See the `present_view`
 
 ## CML file and integration tests
 
-Note that the `meta/` directory has two CML files. One is for production, the
-other for tests.
-
 The production package `//src/ui/bin/root_presenter:root_presenter` includes
 `meta/root_presenter.cml`, which exists to serves routes related to scene ownership
 and virtual keyboard input.
-
-Test packages should include `//src/ui/bin/root_presenter:component_v2_for_test`
-and launch it with `fuchsia-pkg://fuchsia.com/<your-test-package>#meta/root_presenter.cm`
-for tests which rely on Root Presenter's input functionality. This test-only Root
-Presenter provides the `fuchsia.ui.input.InputDeviceRegistry` capability
-on top of the production package in order to enable input ownership in Root Presenter.
 
 Generally, test packages should include their own copy of a component to ensure
 hermeticity with respect to package loading semantics.

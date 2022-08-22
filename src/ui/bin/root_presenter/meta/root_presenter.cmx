@@ -1,5 +1,22 @@
 {
     "include": [
-        "//src/ui/bin/root_presenter/meta/root_presenter_base.cmx"
-    ]
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/root_presenter"
+    },
+    "sandbox": {
+        "features": [
+            "config-data",
+            "isolated-persistent-storage"
+        ],
+        "services": [
+            "fuchsia.accessibility.ColorTransform",
+            "fuchsia.accessibility.Magnifier",
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.ui.focus.FocusChainListenerRegistry",
+            "fuchsia.ui.keyboard.focus.Controller",
+            "fuchsia.ui.scenic.Scenic"
+        ]
+    }
 }
