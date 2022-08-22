@@ -20,6 +20,7 @@ use fidl_fuchsia_settings::{AudioMarker, AudioProxy, AudioSettings, AudioStreamS
 use fidl_fuchsia_ui_policy::DeviceListenerRegistryMarker;
 use fuchsia_component_test::{Capability, LocalComponentHandles, Ref, Route};
 use fuchsia_component_test::{ChildOptions, RealmBuilder, RealmInstance};
+use futures::channel::mpsc::Sender;
 use futures::lock::Mutex;
 use futures::StreamExt;
 use std::collections::HashMap;
@@ -69,7 +70,11 @@ impl VolumeChangeEarconsTest {
         self.media_button_listener.clone()
     }
 
-    async fn add_common_basic(&self, info: &utils::SettingsRealmInfo<'_>) -> Result<(), Error> {
+    async fn add_common_basic(
+        &self,
+        info: &utils::SettingsRealmInfo<'_>,
+        usage_control_bound_sender: Sender<()>,
+    ) -> Result<(), Error> {
         // Add basic Settings service realm information.
         utils::create_realm_basic(&info).await?;
 
@@ -78,7 +83,9 @@ impl VolumeChangeEarconsTest {
             .builder
             .add_local_child(
                 "audio_service",
-                move |handles: LocalComponentHandles| Box::pin(audio_core_service_mock(handles)),
+                move |handles: LocalComponentHandles| {
+                    Box::pin(audio_core_service_mock(handles, usage_control_bound_sender.clone()))
+                },
                 ChildOptions::new().eager(),
             )
             .await?;
@@ -158,27 +165,9 @@ impl VolumeChangeEarconsTest {
         Ok(())
     }
 
-    pub async fn create_realm_without_input_device_registry(&self) -> Result<RealmInstance, Error> {
-        let builder = RealmBuilder::new().await?;
-        // Add setui_service as child of the realm builder.
-        let setui_service =
-            builder.add_child("setui_service", COMPONENT_URL, ChildOptions::new()).await?;
-        let info = utils::SettingsRealmInfo {
-            builder,
-            settings: &setui_service,
-            has_config_data: true,
-            capabilities: vec![AudioMarker::PROTOCOL_NAME],
-        };
-
-        self.add_common_basic(&info).await?;
-
-        let instance = info.builder.build().await?;
-        Ok(instance)
-    }
-
-    pub async fn create_realm_with_input_device_registry(
-        &mut self,
-        media_button_sender: ButtonEventSender,
+    pub async fn create_realm_without_input_device_registry(
+        &self,
+        usage_control_bound_sender: Sender<()>,
     ) -> Result<RealmInstance, Error> {
         let builder = RealmBuilder::new().await?;
         // Add setui_service as child of the realm builder.
@@ -191,7 +180,29 @@ impl VolumeChangeEarconsTest {
             capabilities: vec![AudioMarker::PROTOCOL_NAME],
         };
 
-        self.add_common_basic(&info).await?;
+        self.add_common_basic(&info, usage_control_bound_sender).await?;
+
+        let instance = info.builder.build().await?;
+        Ok(instance)
+    }
+
+    pub async fn create_realm_with_input_device_registry(
+        &mut self,
+        media_button_sender: ButtonEventSender,
+        usage_control_bound_sender: Sender<()>,
+    ) -> Result<RealmInstance, Error> {
+        let builder = RealmBuilder::new().await?;
+        // Add setui_service as child of the realm builder.
+        let setui_service =
+            builder.add_child("setui_service", COMPONENT_URL, ChildOptions::new()).await?;
+        let info = utils::SettingsRealmInfo {
+            builder,
+            settings: &setui_service,
+            has_config_data: true,
+            capabilities: vec![AudioMarker::PROTOCOL_NAME],
+        };
+
+        self.add_common_basic(&info, usage_control_bound_sender).await?;
 
         self.media_button_listener = Some(Arc::new(Mutex::new(media_button_sender)));
         let media_button_listener = self.media_button_listener.clone().unwrap();

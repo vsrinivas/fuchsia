@@ -47,6 +47,7 @@ rustc_test("bin") {
     "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
     "//src/lib/fuchsia",
+    "//third_party/rust_crates:futures",
   ]
 
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
@@ -136,8 +137,7 @@ config_data("with_input_tests_config") {
 group("volume_change_earcons_tests") {
   testonly = true
   public_deps = [
-    # TODO(fxb/107134): Disable for the flakiness.
-    # ":earcons_with_input_integration_test_pkg",
+    ":earcons_with_input_integration_test_pkg",
     ":volume_change_earcons_integration_test_pkg",
   ]
 }

@@ -32,11 +32,14 @@ async fn test_max_volume_sound_on_press() {
     let mut volume_change_earcons_test = VolumeChangeEarconsTest::create();
     let (media_button_sender, mut media_button_receiver) =
         futures::channel::mpsc::channel::<MediaButtonsListenerProxy>(0);
+    let (signal_sender, mut signal_receiver) = futures::channel::mpsc::channel::<()>(0);
     let instance = volume_change_earcons_test
-        .create_realm_with_input_device_registry(media_button_sender)
+        .create_realm_with_input_device_registry(media_button_sender, signal_sender)
         .await
         .expect("setting up test realm");
     let audio_proxy = VolumeChangeEarconsTest::connect_to_audio_marker(&instance);
+    // Verify that audio core receives the initial request on start.
+    let _ = signal_receiver.next().await;
 
     // Create channel to receive notifications for when sounds are played. Used to know when to
     // check the sound player fake that the sound has been played.

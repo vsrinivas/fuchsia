@@ -5,6 +5,7 @@
 use common::{VolumeChangeEarconsTest, DEFAULT_VOLUME_LEVEL, DEFAULT_VOLUME_MUTED};
 use fidl_fuchsia_media::AudioRenderUsage;
 use fidl_fuchsia_settings::{AudioStreamSettingSource, AudioStreamSettings, Volume};
+use futures::StreamExt;
 
 /// A volume level of 0.7, which is different from the default of 0.5;
 const CHANGED_VOLUME_LEVEL: f32 = DEFAULT_VOLUME_LEVEL + 0.2;
@@ -162,11 +163,14 @@ const CHANGED_SYSTEM_AGENT_STREAM_SETTINGS_MAX: AudioStreamSettings = AudioStrea
 #[fuchsia::test]
 async fn test_media_sounds() {
     let volume_change_earcons_test = VolumeChangeEarconsTest::create();
+    let (signal_sender, mut signal_receiver) = futures::channel::mpsc::channel::<()>(0);
     let instance = volume_change_earcons_test
-        .create_realm_without_input_device_registry()
+        .create_realm_without_input_device_registry(signal_sender)
         .await
         .expect("setting up test realm");
     let audio_proxy = VolumeChangeEarconsTest::connect_to_audio_marker(&instance);
+    // Verify that audio core receives the initial request on start.
+    let _ = signal_receiver.next().await;
 
     // Create channel to receive notifications for when sounds are played. Used to know when to
     // check the sound player fake that the sound has been played.
@@ -201,11 +205,14 @@ async fn test_media_sounds() {
 #[fuchsia::test(allow_stalls = false)]
 async fn test_media_sounds_system_source() {
     let volume_change_earcons_test = VolumeChangeEarconsTest::create();
+    let (signal_sender, mut signal_receiver) = futures::channel::mpsc::channel::<()>(0);
     let instance = volume_change_earcons_test
-        .create_realm_without_input_device_registry()
+        .create_realm_without_input_device_registry(signal_sender)
         .await
         .expect("setting up test realm");
     let audio_proxy = VolumeChangeEarconsTest::connect_to_audio_marker(&instance);
+    // Verify that audio core receives the initial request on start.
+    let _ = signal_receiver.next().await;
 
     // Create channel to receive notifications for when sounds are played. Used to know when to
     // check the sound player fake that the sound has been played.
@@ -229,11 +236,14 @@ async fn test_media_sounds_system_source() {
 #[fuchsia::test]
 async fn test_media_sounds_system_with_feedback_source() {
     let volume_change_earcons_test = VolumeChangeEarconsTest::create();
+    let (signal_sender, mut signal_receiver) = futures::channel::mpsc::channel::<()>(0);
     let instance = volume_change_earcons_test
-        .create_realm_without_input_device_registry()
+        .create_realm_without_input_device_registry(signal_sender)
         .await
         .expect("setting up test realm");
     let audio_proxy = VolumeChangeEarconsTest::connect_to_audio_marker(&instance);
+    // Verify that audio core receives the initial request on start.
+    let _ = signal_receiver.next().await;
 
     // Create channel to receive notifications for when sounds are played. Used to know when to
     // check the sound player fake that the sound has been played.
@@ -259,11 +269,14 @@ async fn test_media_sounds_system_with_feedback_source() {
 #[fuchsia::test]
 async fn test_interruption_sounds() {
     let volume_change_earcons_test = VolumeChangeEarconsTest::create();
+    let (signal_sender, mut signal_receiver) = futures::channel::mpsc::channel::<()>(0);
     let instance = volume_change_earcons_test
-        .create_realm_without_input_device_registry()
+        .create_realm_without_input_device_registry(signal_sender)
         .await
         .expect("setting up test realm");
     let audio_proxy = VolumeChangeEarconsTest::connect_to_audio_marker(&instance);
+    // Verify that audio core receives the initial request on start.
+    let _ = signal_receiver.next().await;
 
     // Create channel to receive notifications for when sounds are played. Used to know when to
     // check the sound player fake that the sound has been played.
@@ -299,11 +312,14 @@ async fn test_interruption_sounds() {
 #[fuchsia::test]
 async fn test_max_volume_sound_on_sw_change() {
     let volume_change_earcons_test = VolumeChangeEarconsTest::create();
+    let (signal_sender, mut signal_receiver) = futures::channel::mpsc::channel::<()>(0);
     let instance = volume_change_earcons_test
-        .create_realm_without_input_device_registry()
+        .create_realm_without_input_device_registry(signal_sender)
         .await
         .expect("setting up test realm");
     let audio_proxy = VolumeChangeEarconsTest::connect_to_audio_marker(&instance);
+    // Verify that audio core receives the initial request on start.
+    let _ = signal_receiver.next().await;
 
     // Create channel to receive notifications for when sounds are played. Used to know when to
     // check the sound player fake that the sound has been played.
@@ -335,11 +351,14 @@ async fn test_max_volume_sound_on_sw_change() {
 #[fuchsia::test]
 async fn test_earcons_on_multiple_channel_change() {
     let volume_change_earcons_test = VolumeChangeEarconsTest::create();
+    let (signal_sender, mut signal_receiver) = futures::channel::mpsc::channel::<()>(0);
     let instance = volume_change_earcons_test
-        .create_realm_without_input_device_registry()
+        .create_realm_without_input_device_registry(signal_sender)
         .await
         .expect("setting up test realm");
     let audio_proxy = VolumeChangeEarconsTest::connect_to_audio_marker(&instance);
+    // Verify that audio core receives the initial request on start.
+    let _ = signal_receiver.next().await;
 
     let mut sound_event_receiver =
         VolumeChangeEarconsTest::create_sound_played_listener(&volume_change_earcons_test).await;
@@ -377,11 +396,14 @@ async fn test_earcons_on_multiple_channel_change() {
 #[fuchsia::test]
 async fn test_media_background_matching() {
     let volume_change_earcons_test = VolumeChangeEarconsTest::create();
+    let (signal_sender, mut signal_receiver) = futures::channel::mpsc::channel::<()>(0);
     let instance = volume_change_earcons_test
-        .create_realm_without_input_device_registry()
+        .create_realm_without_input_device_registry(signal_sender)
         .await
         .expect("setting up test realm");
     let audio_proxy = VolumeChangeEarconsTest::connect_to_audio_marker(&instance);
+    // Verify that audio core receives the initial request on start.
+    let _ = signal_receiver.next().await;
 
     VolumeChangeEarconsTest::set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
     VolumeChangeEarconsTest::verify_volume(
@@ -406,11 +428,14 @@ async fn test_media_background_matching() {
 #[fuchsia::test]
 async fn test_interruption_background_matching() {
     let volume_change_earcons_test = VolumeChangeEarconsTest::create();
+    let (signal_sender, mut signal_receiver) = futures::channel::mpsc::channel::<()>(0);
     let instance = volume_change_earcons_test
-        .create_realm_without_input_device_registry()
+        .create_realm_without_input_device_registry(signal_sender)
         .await
         .expect("setting up test realm");
     let audio_proxy = VolumeChangeEarconsTest::connect_to_audio_marker(&instance);
+    // Verify that audio core receives the initial request on start.
+    let _ = signal_receiver.next().await;
 
     // Test that the volume-changed sound gets played on the soundplayer for interruption
     // and the volume is matched on the background.
