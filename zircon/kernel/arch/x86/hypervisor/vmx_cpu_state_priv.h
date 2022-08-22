@@ -45,6 +45,7 @@ struct EptInfo {
   bool page_walk_4;
   bool write_back;
   bool invept;
+  bool invvpid;
 
   EptInfo();
 };

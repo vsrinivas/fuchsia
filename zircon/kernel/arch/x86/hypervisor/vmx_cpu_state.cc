@@ -75,6 +75,11 @@ zx::status<> vmxon_task(void* context, cpu_num_t cpu_num) {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
+  // Check that the INVVPID instruction is supported.
+  if (!ept_info.invvpid) {
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
+  }
+
   // Enable VMXON, if required.
   uint64_t feature_control = read_msr(X86_MSR_IA32_FEATURE_CONTROL);
   if (!(feature_control & X86_MSR_IA32_FEATURE_CONTROL_LOCK) ||
@@ -176,6 +181,17 @@ EptInfo::EptInfo() {
       BIT_SHIFT(ept_info, 25) &&
       // All-context INVEPT type is supported.
       BIT_SHIFT(ept_info, 26);
+  invvpid =
+      // INVVPID instruction is supported.
+      BIT_SHIFT(ept_info, 32) &&
+      // Individual-address INVVPID type is supported.
+      BIT_SHIFT(ept_info, 40) &&
+      // Single-context INVVPID type is supported.
+      BIT_SHIFT(ept_info, 41) &&
+      // All-context INVVPID type is supported.
+      BIT_SHIFT(ept_info, 42) &&
+      // Single-context-retaining-globals INVVPID type is supported.
+      BIT_SHIFT(ept_info, 43);
 }
 
 zx_status_t VmxPage::Alloc(const VmxInfo& vmx_info, uint8_t fill) {
