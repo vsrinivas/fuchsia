@@ -1,0 +1,5 @@
+fuchsia.netstack.iperf_benchmarks: lo/UDP/recv/64bytes/bits_per_second
+fuchsia.netstack.iperf_benchmarks: lo/UDP/recv/64bytes/jitter_ms
+fuchsia.netstack.iperf_benchmarks: lo/UDP/recv/64bytes/lost_packets
+fuchsia.netstack.iperf_benchmarks: lo/UDP/send-recv/64bytes/CPU
+fuchsia.netstack.iperf_benchmarks: lo/UDP/send/64bytes/bits_per_second

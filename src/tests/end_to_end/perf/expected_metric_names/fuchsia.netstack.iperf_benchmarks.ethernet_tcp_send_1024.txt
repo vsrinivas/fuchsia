@@ -1,0 +1,2 @@
+fuchsia.netstack.iperf_benchmarks: TCP/send/1024bytes/CPU
+fuchsia.netstack.iperf_benchmarks: TCP/send/1024bytes/bits_per_second

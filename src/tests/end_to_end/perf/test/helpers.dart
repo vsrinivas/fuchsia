@@ -103,7 +103,8 @@ class PerfTestHelper {
     await writeFuchsiaPerfJson(jsonSummaryFile, jsonSummaryData);
 
     await performance.convertResults('runtime_deps/catapult_converter',
-        jsonSummaryFile, Platform.environment, expectedMetricNamesFile);
+        jsonSummaryFile, Platform.environment,
+        expectedMetricNamesFile: expectedMetricNamesFile);
   }
 
   // Runs a command over SSH and publishes its output as performance

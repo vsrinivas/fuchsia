@@ -1,0 +1,2 @@
+fuchsia.netstack.iperf_benchmarks: TCP/recv/64bytes/CPU
+fuchsia.netstack.iperf_benchmarks: TCP/recv/64bytes/bits_per_second

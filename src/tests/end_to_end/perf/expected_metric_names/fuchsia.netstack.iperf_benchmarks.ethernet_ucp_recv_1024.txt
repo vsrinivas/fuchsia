@@ -1,0 +1,4 @@
+fuchsia.netstack.iperf_benchmarks: UDP/recv/1024bytes/CPU
+fuchsia.netstack.iperf_benchmarks: UDP/recv/1024bytes/bits_per_second
+fuchsia.netstack.iperf_benchmarks: UDP/recv/1024bytes/jitter_ms
+fuchsia.netstack.iperf_benchmarks: UDP/recv/1024bytes/lost_packets

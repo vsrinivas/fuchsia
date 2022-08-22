@@ -330,8 +330,9 @@ void main(List<String> args) {
     final File fuchsiaPerfFile =
         File(path.join(createTempDir().path, 'results.fuchsiaperf.json'))
           ..writeAsStringSync(jsonEncode(fuchsiaPerfJson));
-    await performance.convertResults('/bin/catapult_converter', fuchsiaPerfFile,
-        environment, 'fuchsia.test');
+    await performance.convertResults(
+        '/bin/catapult_converter', fuchsiaPerfFile, environment,
+        expectedMetricNamesFile: 'fuchsia.test');
 
     final outputFile = File(path.join(destDir, 'fuchsia.test'));
     expect(

@@ -1,0 +1,3 @@
+fuchsia.netstack.iperf_benchmarks: lo/TCP/recv/64bytes/bits_per_second
+fuchsia.netstack.iperf_benchmarks: lo/TCP/send-recv/64bytes/CPU
+fuchsia.netstack.iperf_benchmarks: lo/TCP/send/64bytes/bits_per_second

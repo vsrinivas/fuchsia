@@ -1,0 +1,2 @@
+fuchsia.netstack.iperf_benchmarks: UDP/send/1400bytes/CPU
+fuchsia.netstack.iperf_benchmarks: UDP/send/1400bytes/bits_per_second

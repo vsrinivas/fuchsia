@@ -313,8 +313,9 @@ class Performance {
     File processedResultFile = File(outputFileName);
     _log.info('Processing trace completed.');
     if (converterPath != null) {
-      await convertResults(converterPath, processedResultFile,
-          Platform.environment, expectedMetricNamesFile);
+      await convertResults(
+          converterPath, processedResultFile, Platform.environment,
+          expectedMetricNamesFile: expectedMetricNamesFile);
     }
     return processedResultFile;
   }
@@ -326,7 +327,7 @@ class Performance {
   /// indicating that it should be uploaded.
   Future<void> convertResults(
       String converterPath, File result, Map<String, String> environment,
-      [String expectedMetricNamesFile]) async {
+      {String expectedMetricNamesFile}) async {
     _log.info('Converting the results into the catapult format');
 
     _checkFuchsiaPerfMetricsNaming(
