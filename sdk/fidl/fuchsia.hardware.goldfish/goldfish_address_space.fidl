@@ -118,3 +118,7 @@ protocol AddressSpaceChildDriver {
         ping AddressSpaceChildDriverPingMessage;
     });
 };
+
+service AddressSpaceService {
+    device client_end:AddressSpaceChildDriver;
+};

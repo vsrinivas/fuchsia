@@ -40,3 +40,7 @@ protocol SyncTimeline {
         event zx.handle:EVENTPAIR;
     });
 };
+
+service SyncService {
+    device client_end:SyncDevice;
+};
