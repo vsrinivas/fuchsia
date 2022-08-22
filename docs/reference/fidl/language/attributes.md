@@ -137,7 +137,7 @@ deprecated C bindings. There should be no new uses of this attribute.
 
 **MEANING**: This attribute is used to override the name that `fidlc` reserves
 for any inline layout. This can be useful when a different name is preferred
-(for example, to avoid a name conflict with a another type).
+(for example, to avoid a name conflict with another type).
 
 As an example, the following code leads to a name conflict, because both inline
 layouts reserve the same name of `Options`:
@@ -255,7 +255,7 @@ Provide a comma-separated list of values, selected from:
 * `Syscall` &mdash; transport used to specify that the protocol is used to
   define Zircon syscalls, rather than typical IPC.
 
-The default is `Channel` if none specified.
+The default is `Channel` if none is specified.
 If you do specify a value or values, then only those values are used (e.g.,
 specifying `@transport("Foo")` disables `Channel` and uses only
 `Foo`).
