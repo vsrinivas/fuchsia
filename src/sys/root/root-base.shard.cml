@@ -226,14 +226,6 @@
             source_availability: "unknown",
         },
 
-        // driver_manager needs the v1 hub for the serial console
-        {
-            directory: "hub-legacy",
-            from: "#core",
-            to: "#bootstrap",
-            dependency: "weak_for_migration",
-        },
-
         // RCS uses the root hub for service discovery.
         {
             directory: "hub",

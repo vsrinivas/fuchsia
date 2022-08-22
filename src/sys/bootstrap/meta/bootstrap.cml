@@ -696,13 +696,6 @@
                 "#virtual_console",
             ],
         },
-
-        // The v1 hub is needed for the serial console.
-        {
-            directory: "hub-legacy",
-            from: "parent",
-            to: "#console-launcher",
-        },
         {
             directory: "hub",
             from: "parent",
