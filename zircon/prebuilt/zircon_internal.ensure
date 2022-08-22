@@ -20,22 +20,6 @@ $VerifiedPlatform linux-amd64
 @Subdir firmware/intel-adsp-sst
 fuchsia_internal/firmware/intel-adsp-sst NC0gy5Ej51GElpWUQXzO6Q1d5hPLV4Z4c1mbhDLuhfcC
 
-# Broadcom BCM4345C4 Firmware
-@Subdir firmware/bluetooth/bcm4345c4
-fuchsia_internal/firmware/bluetooth/bcm4345c4 git_revision:1e41b7d6f96f09558a36a636de2819068cd71ea0
-
-# FX3 USB Testing Firmware
-@Subdir firmware/usb-testing/fx3
-fuchsia_internal/firmware/usb-testing/fx3 ywX77St78eCmUF4NXi0rs4l0g7zHXxia_S3bM6n-OVkC
-
-# FX3 USB Flash Programmer Firmware
-@Subdir firmware/fx3-flash
-fuchsia_internal/firmware/fx3-flash c8whlpMnrQukCMf01_Yyi1F0nHK2g7A5fIwMXcDRyk4C
-
-# FX3 USB Bootloader Firmware
-@Subdir firmware/fx3-boot
-fuchsia_internal/firmware/fx3-boot pWauzviAyLDgNPkMyKQV-p8N5kCiG5P_QeMVgRZ-pykC
-
 # Mediatek MT7668 Firmware
 @Subdir firmware/bluetooth/mt7668
 fuchsia_internal/firmware/bluetooth/mt7668 git_revision:ed8b2eb6b877e93afb8a9f9281b93a7b91df0f09
