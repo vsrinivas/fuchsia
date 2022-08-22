@@ -153,7 +153,7 @@ From //build/images/vbmeta.gni:20
 
 **Current value for `target_cpu = "x64"`:** `"//third_party/android/platform/external/avb/test/data/atx_metadata.bin"`
 
-From //boards/x64.gni:56
+From //boards/common/x64-common.gni:86
 
 **Overridden from the default:** `""`
 
@@ -172,7 +172,7 @@ From //build/images/vbmeta.gni:17
 
 **Current value for `target_cpu = "x64"`:** `"//third_party/android/platform/external/avb/test/data/testkey_atx_psk.pem"`
 
-From //boards/x64.gni:54
+From //boards/common/x64-common.gni:84
 
 **Overridden from the default:** `""`
 
@@ -502,7 +502,7 @@ From //build/board.gni:87
 
 **Current value for `target_cpu = "x64"`:** `true`
 
-From //boards/x64.gni:83
+From //boards/x64.gni:61
 
 **Overridden from the default:** `false`
 
@@ -794,7 +794,7 @@ From //build/images/args.gni:29
 
 **Current value for `target_cpu = "x64"`:** `true`
 
-From //boards/x64.gni:51
+From //boards/x64.gni:50
 
 **Overridden from the default:** `false`
 
@@ -6463,7 +6463,7 @@ From //build/images/args.gni:26
 
 **Current value for `target_cpu = "x64"`:** `true`
 
-From //boards/x64.gni:52
+From //boards/x64.gni:51
 
 **Overridden from the default:** `false`
 
@@ -6620,7 +6620,7 @@ From //build/images/vbmeta.gni:14
 
 **Current value for `target_cpu = "x64"`:** `true`
 
-From //boards/x64.gni:50
+From //boards/common/x64-common.gni:82
 
 **Overridden from the default:** `false`
 
