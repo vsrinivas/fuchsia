@@ -16,6 +16,13 @@
 #include <memory>
 #include <sstream>
 
+namespace {
+
+// Path delimiter used by svc library.
+constexpr const char kSvcPathDelimiter[] = "/";
+
+}  // namespace
+
 namespace component {
 
 OutgoingDirectory OutgoingDirectory::Create(async_dispatcher_t* dispatcher) {
@@ -75,7 +82,7 @@ zx::status<> OutgoingDirectory::ServeFromStartupInfo() {
 }
 
 zx::status<> OutgoingDirectory::AddProtocol(AnyHandler handler, cpp17::string_view name) {
-  return AddProtocolAt(std::move(handler), kServiceDirectory, name);
+  return AddProtocolAt(std::move(handler), kServiceDirectoryWithNoSlash, name);
 }
 
 zx::status<> OutgoingDirectory::AddProtocolAt(AnyHandler handler, cpp17::string_view path,
@@ -148,7 +155,7 @@ zx::status<> OutgoingDirectory::AddService(ServiceHandler handler, cpp17::string
 }
 
 zx::status<> OutgoingDirectory::RemoveProtocol(cpp17::string_view name) {
-  return RemoveProtocolAt(kServiceDirectory, name);
+  return RemoveProtocolAt(kServiceDirectoryWithNoSlash, name);
 }
 
 zx::status<> OutgoingDirectory::RemoveProtocolAt(cpp17::string_view directory,
@@ -167,7 +174,7 @@ zx::status<> OutgoingDirectory::RemoveProtocolAt(cpp17::string_view directory,
 
   // Remove svc_dir_t entry first so that no new connections are attempted on
   // handler after we remove the pointer to it in |svc_root_handlers|.
-  zx_status_t status = svc_dir_remove_service(root_, kServiceDirectory, name.data());
+  zx_status_t status = svc_dir_remove_service(root_, kServiceDirectoryWithNoSlash, name.data());
   if (status != ZX_OK) {
     return zx::make_status(status);
   }
@@ -192,8 +199,8 @@ zx::status<> OutgoingDirectory::RemoveService(cpp17::string_view service,
 
   // Remove svc_dir_t entry first so that channels close _before_ we remove
   // pointer values out from underneath handlers.
-  std::string service_path =
-      std::string(kServiceDirectory) + std::string(kSvcPathDelimiter) + std::string(service);
+  std::string service_path = std::string(kServiceDirectoryWithNoSlash) +
+                             std::string(kSvcPathDelimiter) + std::string(service);
   zx_status_t status = svc_dir_remove_service_by_path(root_, service_path.c_str(), instance.data());
 
   // Now it's safe to remove entry from map.
@@ -231,7 +238,8 @@ void OutgoingDirectory::UnbindAllConnections(cpp17::string_view name) {
 
 std::string OutgoingDirectory::MakePath(cpp17::string_view service, cpp17::string_view instance) {
   std::stringstream path;
-  path << kServiceDirectory << kSvcPathDelimiter << service << kSvcPathDelimiter << instance;
+  path << kServiceDirectoryWithNoSlash << kSvcPathDelimiter << service << kSvcPathDelimiter
+       << instance;
   return path.str();
 }
 

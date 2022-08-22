@@ -11,10 +11,14 @@ namespace component {
 constexpr const char kDefaultInstance[] = "default";
 
 // The path referencing the incoming services directory.
-constexpr const char kServiceDirectory[] = "svc";
+constexpr const char kServiceDirectory[] = "/svc";
 
-// Path delimiter used by svc library.
-constexpr const char kSvcPathDelimiter[] = "/";
+// The path prefix referencing the incoming services directory,
+// with a trailing slash.
+constexpr const char kServiceDirectoryTrailingSlash[] = "/svc/";
+
+// The path referencing the incoming services directory.
+constexpr const char kServiceDirectoryWithNoSlash[] = "svc";
 
 }  // namespace component
 

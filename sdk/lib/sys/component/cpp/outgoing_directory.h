@@ -136,7 +136,7 @@ class OutgoingDirectory final {
   template <typename Protocol>
   zx::status<> AddProtocol(fidl::WireServer<Protocol>* impl,
                            cpp17::string_view name = fidl::DiscoverableProtocolName<Protocol>) {
-    return AddProtocolAt(kServiceDirectory, impl, name);
+    return AddProtocolAt(kServiceDirectoryWithNoSlash, impl, name);
   }
 
   // Same as above but overloaded to support servers implementations speaking
@@ -183,7 +183,7 @@ class OutgoingDirectory final {
   template <typename Protocol>
   zx::status<> AddProtocol(TypedHandler<Protocol> handler,
                            cpp17::string_view name = fidl::DiscoverableProtocolName<Protocol>) {
-    return AddProtocolAt<Protocol>(kServiceDirectory, std::move(handler), name);
+    return AddProtocolAt<Protocol>(kServiceDirectoryWithNoSlash, std::move(handler), name);
   }
 
   // Same as above but is untyped. This method is generally discouraged but
