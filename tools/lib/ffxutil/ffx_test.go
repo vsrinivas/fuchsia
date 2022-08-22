@@ -56,7 +56,8 @@ func TestFFXInstance(t *testing.T) {
 	if err := os.MkdirAll(testOutputDir, os.ModePerm); err != nil {
 		t.Errorf("failed to create test outputs dir: %s", err)
 	}
-	if err := os.WriteFile(filepath.Join(testOutputDir, runSummaryFilename), []byte("{}"), os.ModePerm); err != nil {
+	runSummaryBytes := []byte("{\"schema_id\": \"https://fuchsia.dev/schema/ffx_test/run_summary-8d1dd964.json\"}")
+	if err := os.WriteFile(filepath.Join(testOutputDir, runSummaryFilename), runSummaryBytes, os.ModePerm); err != nil {
 		t.Errorf("failed to write run_summary.json: %s", err)
 	}
 	_, err := ffx.Test(ctx, build.TestList{}, outDir)

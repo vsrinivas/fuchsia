@@ -84,8 +84,7 @@ func NewFFXInstance(
 	}
 	config.SetJsonPointer("/ssh/priv", []string{sshKey})
 	config.Set("test", map[string]bool{
-		"experimental_structured_output": true,
-		"experimental_json_input":        true,
+		"experimental_json_input": true,
 	})
 	configPath := filepath.Join(outputDir, "ffx_config.json")
 	if err := config.ToFile(configPath); err != nil {

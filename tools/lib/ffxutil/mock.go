@@ -42,7 +42,7 @@ func (f *MockFFXInstance) Test(_ context.Context, testList build.TestList, outDi
 	if err := os.MkdirAll(outDir, os.ModePerm); err != nil {
 		return nil, err
 	}
-	var suites []suiteEntry
+	var suites []SuiteResult
 	for i, test := range testList.Data {
 		relTestDir := fmt.Sprintf("test%d", i)
 		if err := os.Mkdir(filepath.Join(outDir, relTestDir), os.ModePerm); err != nil {
@@ -51,10 +51,7 @@ func (f *MockFFXInstance) Test(_ context.Context, testList build.TestList, outDi
 		if err := os.WriteFile(filepath.Join(outDir, relTestDir, "report.txt"), []byte("stdio"), os.ModePerm); err != nil {
 			return nil, err
 		}
-		suite := suiteEntry{fmt.Sprintf("summary%d.json", i)}
-		summaryFile := filepath.Join(outDir, suite.Summary)
-		fmt.Println("writing to ", summaryFile)
-		summaryBytes, err := json.Marshal(SuiteResult{
+		suiteResult := SuiteResult{
 			Outcome: outcome,
 			Name:    test.Execution.ComponentURL,
 			Cases: []CaseResult{
@@ -72,14 +69,8 @@ func (f *MockFFXInstance) Test(_ context.Context, testList build.TestList, outDi
 					ArtifactType: ReportType,
 				}},
 			ArtifactDir: relTestDir,
-		})
-		if err != nil {
-			return nil, err
 		}
-		if err := os.WriteFile(summaryFile, summaryBytes, os.ModePerm); err != nil {
-			return nil, err
-		}
-		suites = append(suites, suite)
+		suites = append(suites, suiteResult)
 	}
 	runArtifactDir := "artifact-run"
 	debugDir := "debug"
@@ -101,7 +92,11 @@ func (f *MockFFXInstance) Test(_ context.Context, testList build.TestList, outDi
 		Suites:      suites,
 		outputDir:   outDir,
 	}
-	runResultBytes, err := json.Marshal(*runResult)
+	runResultEnvelope := TestRunResultEnvelope{
+		Data:     *runResult,
+		SchemaID: runSummarySchemaID,
+	}
+	runResultBytes, err := json.Marshal(runResultEnvelope)
 	if err != nil {
 		return nil, err
 	}

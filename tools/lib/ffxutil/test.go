@@ -6,6 +6,7 @@ package ffxutil
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -13,6 +14,8 @@ import (
 const (
 	// The name of the summary.json describing a test run.
 	runSummaryFilename = "run_summary.json"
+	// ID of the schema understood by ffxutil.
+	runSummarySchemaID = "https://fuchsia.dev/schema/ffx_test/run_summary-8d1dd964.json"
 
 	// Test outcome values. This should match the list of values for the `outcome` field
 	// of the run summary at //src/sys/run_test_suite/directory/schema/suite_summary.schema.json
@@ -35,13 +38,20 @@ const (
 	DebugType         = "DEBUG"
 )
 
+// TestRunResultEnvelope is the JSON schema for the versioned envelope that contains
+// test run results.
+type TestRunResultEnvelope struct {
+	Data     TestRunResult `json:"data"`
+	SchemaID string        `json:"schema_id"`
+}
+
 // TestRunResult is the JSON schema for a test run in structured results output
 // by `ffx test run`.
 type TestRunResult struct {
 	Artifacts   map[string]ArtifactMetadata `json:"artifacts"`
 	ArtifactDir string                      `json:"artifact_dir"`
 	Outcome     string                      `json:"outcome"`
-	Suites      []suiteEntry                `json:"suites"`
+	Suites      []SuiteResult               `json:"suites"`
 	outputDir   string
 }
 
@@ -50,41 +60,26 @@ func GetRunResult(outputDir string) (*TestRunResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	runResult := &TestRunResult{}
-	err = json.Unmarshal(runSummaryBytes, runResult)
+	runResultEnvelope := &TestRunResultEnvelope{}
+	err = json.Unmarshal(runSummaryBytes, runResultEnvelope)
 	if err != nil {
 		return nil, err
 	}
-	runResult.outputDir = outputDir
-	return runResult, nil
+	if runResultEnvelope.SchemaID != runSummarySchemaID {
+		return nil, fmt.Errorf("unrecognized schema: %s", runResultEnvelope.SchemaID)
+	}
+	runResultEnvelope.Data.outputDir = outputDir
+	return &runResultEnvelope.Data, nil
 }
 
 // GetSuiteResults returns a list of the suite summaries from a test run.
-func (r *TestRunResult) GetSuiteResults() ([]*SuiteResult, error) {
-	var suiteResults []*SuiteResult
-	for _, suite := range r.Suites {
-		suiteSummaryBytes, err := os.ReadFile(filepath.Join(r.outputDir, suite.Summary))
-		if err != nil {
-			return suiteResults, err
-		}
-		suiteResult := &SuiteResult{}
-		err = json.Unmarshal(suiteSummaryBytes, suiteResult)
-		if err != nil {
-			return suiteResults, err
-		}
-		suiteResults = append(suiteResults, suiteResult)
-	}
-	return suiteResults, nil
+func (r *TestRunResult) GetSuiteResults() ([]SuiteResult, error) {
+	return r.Suites, nil
 }
 
 // GetTestOutputDir returns the path to the test output directory.
 func (r *TestRunResult) GetTestOutputDir() string {
 	return r.outputDir
-}
-
-// suiteEntry is an entry for a test suite in TestRunResult.
-type suiteEntry struct {
-	Summary string `json:"summary"`
 }
 
 // SuiteResult is a JSON schema for a suite in structured results output by `ffx test run`.
