@@ -116,6 +116,8 @@ foreach(idk, _idk_deps) {
   verify_sdk_compatibility("verify_${idk}_sdk_compatibility") {
     testonly = true
     sdk_archive = "$root_out_dir/sdk/archive/${idk}.tar.gz"
+    golden_file =
+        "//sdk/goldens/${target_cpu}/sdk_directory_layout_${idk}.golden"
     deps = [ "//sdk:${idk}_archive" ]
   }
   idk_verify_ct += [ ":verify_${idk}_sdk_compatibility" ]

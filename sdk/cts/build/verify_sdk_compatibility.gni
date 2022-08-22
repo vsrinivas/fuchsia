@@ -47,6 +47,7 @@ template("generate_sdk_layout_golden_file") {
 #
 template("verify_sdk_compatibility") {
   assert(defined(invoker.sdk_archive), "SDK archive tarball is required.")
+  assert(defined(invoker.golden_file), "SDK golden file is required.")
 
   # Nested function call to remove both parts of the archive's extension.
   idk_name = get_path_info(get_path_info(invoker.sdk_archive, "name"), "name")
@@ -60,10 +61,12 @@ template("verify_sdk_compatibility") {
     stamp_file = "$target_gen_dir/$target_name.verified"
 
     current = sdk_archive
-    golden =
-        "//sdk/goldens/${target_cpu}/sdk_directory_layout_${idk_name}.golden"
+    golden = golden_file
 
-    inputs = [ sdk_archive ]
+    inputs = [
+      sdk_archive,
+      golden_file,
+    ]
 
     outputs = [ stamp_file ]
 
@@ -76,7 +79,6 @@ template("verify_sdk_compatibility") {
       rebase_path(stamp_file, root_build_dir),
       "--update_golden",
       rebase_path(updated_golden, root_build_dir),
-      "--warn_only",
     ]
   }
 }

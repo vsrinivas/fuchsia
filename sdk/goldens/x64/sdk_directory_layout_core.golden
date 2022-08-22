@@ -216,8 +216,6 @@ arch/x64/sysroot/include/zircon/boot/bootfs.h
 arch/x64/sysroot/include/zircon/boot/crash-reason.h
 arch/x64/sysroot/include/zircon/boot/driver-config.h
 arch/x64/sysroot/include/zircon/boot/image.h
-arch/x64/sysroot/include/zircon/boot/multiboot.h
-arch/x64/sysroot/include/zircon/boot/netboot.h
 arch/x64/sysroot/include/zircon/compiler.h
 arch/x64/sysroot/include/zircon/device/audio.h
 arch/x64/sysroot/include/zircon/dlfcn.h
@@ -228,7 +226,6 @@ arch/x64/sysroot/include/zircon/fidl.h
 arch/x64/sysroot/include/zircon/hw/debug/arm64.h
 arch/x64/sysroot/include/zircon/hw/debug/x86.h
 arch/x64/sysroot/include/zircon/hw/gpt.h
-arch/x64/sysroot/include/zircon/hw/i2c.h
 arch/x64/sysroot/include/zircon/hw/pci.h
 arch/x64/sysroot/include/zircon/hw/usb.h
 arch/x64/sysroot/include/zircon/hw/usb/audio.h
@@ -544,8 +541,6 @@ fidl/fuchsia.intl/meta.json
 fidl/fuchsia.intl/overview.fidl
 fidl/fuchsia.intl/property_provider.fidl
 fidl/fuchsia.intl/time_zones.fidl
-fidl/fuchsia.io/connection-info.fidl
-fidl/fuchsia.io/connection-options.fidl
 fidl/fuchsia.io/directory.fidl
 fidl/fuchsia.io/directory2.fidl
 fidl/fuchsia.io/file2.fidl
@@ -556,8 +551,8 @@ fidl/fuchsia.io/meta.json
 fidl/fuchsia.io/node-protocols.fidl
 fidl/fuchsia.io/node.fidl
 fidl/fuchsia.io/node2.fidl
-fidl/fuchsia.io/overview.fidl
 fidl/fuchsia.io/rights-abilities.fidl
+fidl/fuchsia.io/rights-request.fidl
 fidl/fuchsia.kernel/cpu-resource.fidl
 fidl/fuchsia.kernel/debug-resource.fidl
 fidl/fuchsia.kernel/hypervisor-resource.fidl
@@ -855,6 +850,9 @@ fidl/fuchsia.ui.input3/keyboard.fidl
 fidl/fuchsia.ui.input3/meta.json
 fidl/fuchsia.ui.input3/modifiers.fidl
 fidl/fuchsia.ui.input3/overview.fidl
+fidl/fuchsia.ui.observation.geometry/meta.json
+fidl/fuchsia.ui.observation.geometry/overview.fidl
+fidl/fuchsia.ui.observation.geometry/watcher.fidl
 fidl/fuchsia.ui.pointer.augment/augment.fidl
 fidl/fuchsia.ui.pointer.augment/meta.json
 fidl/fuchsia.ui.pointer/meta.json
@@ -882,6 +880,13 @@ fidl/fuchsia.ui.scenic/overview.fidl
 fidl/fuchsia.ui.scenic/scenic.fidl
 fidl/fuchsia.ui.scenic/session.fidl
 fidl/fuchsia.ui.scenic/snapshot.fidl
+fidl/fuchsia.ui.test.input/meta.json
+fidl/fuchsia.ui.test.input/overview.fidl
+fidl/fuchsia.ui.test.input/registry.fidl
+fidl/fuchsia.ui.test.input/touch.fidl
+fidl/fuchsia.ui.test.scene/controller.fidl
+fidl/fuchsia.ui.test.scene/meta.json
+fidl/fuchsia.ui.test.scene/overview.fidl
 fidl/fuchsia.ui.types/meta.json
 fidl/fuchsia.ui.types/types.fidl
 fidl/fuchsia.ui.views/commands.fidl
@@ -896,6 +901,8 @@ fidl/fuchsia.ui.views/view_ref_installed.fidl
 fidl/fuchsia.ui.views/view_token.fidl
 fidl/fuchsia.ultrasound/factory.fidl
 fidl/fuchsia.ultrasound/meta.json
+fidl/fuchsia.unknown/meta.json
+fidl/fuchsia.unknown/unknown.fidl
 fidl/fuchsia.update.channel/channel.fidl
 fidl/fuchsia.update.channel/meta.json
 fidl/fuchsia.update.channelcontrol/channelcontrol.fidl
@@ -1058,12 +1065,12 @@ pkg/fidl_cpp/include/lib/fidl/cpp/internal/proxy.h
 pkg/fidl_cpp/include/lib/fidl/cpp/internal/proxy_controller.h
 pkg/fidl_cpp/include/lib/fidl/cpp/internal/stub.h
 pkg/fidl_cpp/include/lib/fidl/cpp/internal/stub_controller.h
-pkg/fidl_cpp/include/lib/fidl/cpp/internal/transport_err_hlcpp.h
 pkg/fidl_cpp/include/lib/fidl/cpp/internal/weak_stub_controller.h
 pkg/fidl_cpp/include/lib/fidl/cpp/member_connector.h
 pkg/fidl_cpp/include/lib/fidl/cpp/service_connector.h
 pkg/fidl_cpp/include/lib/fidl/cpp/service_handler_base.h
 pkg/fidl_cpp/include/lib/fidl/cpp/type_converter.h
+pkg/fidl_cpp/include/lib/fidl/cpp/unknown_interactions_hlcpp.h
 pkg/fidl_cpp/internal/message_handler.cc
 pkg/fidl_cpp/internal/message_reader.cc
 pkg/fidl_cpp/internal/pending_response.cc
