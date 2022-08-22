@@ -152,17 +152,9 @@ core_shard("bt-hfp-audio-gateway-core-shard") {
 }
 
 # The core realm shard to be used by product integrators.
-# This shard should be included in configurations that require both A2DP and HFP Audio Gateway
-# support.
-# TODO(fxbug.dev/106658): Remove
-core_shard("bt-headset-core-shard") {
-  shard_file = "meta/bt-headset.core_shard.cml"
-}
-
-# The core realm shard to be used by product integrators.
 # This shard should be included in testonly configurations that require HFP Audio Gateway support.
-core_shard("bt-headset-for-testing-core-shard") {
-  shard_file = "meta/bt-headset-for-testing.core_shard.cml"
+core_shard("bt-hfp-audio-gateway-for-testing-core-shard") {
+  shard_file = "meta/bt-hfp-audio-gateway-for-testing.core_shard.cml"
 }
 
 group("bt-hfp-audio-gateway") {
