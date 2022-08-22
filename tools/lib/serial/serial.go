@@ -38,6 +38,7 @@ var diagnosticCmds = []Command{
 	// Invoke the threads command twice to identify hanging processes.
 	{[]string{"threads", "--all-processes"}, 5 * time.Minute},
 	{[]string{"threads", "--all-processes"}, 5 * time.Minute},
+	{[]string{"iquery", "show", "bootstrap/driver_manager"}, 10 * time.Second},
 	// Print netstack goroutines while only using shell-builtin commands to
 	// avoid hitting the package resolver.
 	{[]string{`(export PATH=; export P="$(echo hub-v2/children/core/children/network/children/netstack/exec/out/debug/goroutines)" && test -e "$P" && while IFS='' read line; do echo "$line"; done < "$P";) &`}, 1 * time.Minute},
