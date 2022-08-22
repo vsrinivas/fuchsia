@@ -72,6 +72,32 @@ type CompoundIdentifier struct {
 	Member Identifier
 }
 
+// Experiment lists the name of an experiment active on this IR.
+type Experiment string
+
+// This is a direct copy of the fidlc experiment flag strings, found at
+// ///tools/fidl/fidlc/lib/experimental_flags.cc. That list should be considered
+// the source of truth for this mirror.
+const (
+	ExperimentAllowNewTypes       Experiment = "allow_new_types"
+	ExperimentNoOptionalStructs   Experiment = "no_optional_structs"
+	ExperimentOutputIndexJSON     Experiment = "output_index_json"
+	ExperimentUnknownInteractions Experiment = "unknown_interactions"
+)
+
+// Experiments is a list of active experiments for this IR.
+type Experiments []Experiment
+
+// Contains checks if a given experiment string is included in the list.
+func (exs Experiments) Contains(needle Experiment) bool {
+	for _, ex := range exs {
+		if needle == ex {
+			return true
+		}
+	}
+	return false
+}
+
 // An EncodedLibraryIdentifier is a LibraryIdentifier encoded as a string,
 // suitable for use in map keys.
 type EncodedLibraryIdentifier string
@@ -1456,6 +1482,7 @@ type Library struct {
 // It contains lists of all declarations and dependencies within the library.
 type Root struct {
 	Name            EncodedLibraryIdentifier    `json:"name,omitempty"`
+	Experiments     Experiments                 `json:"experiments,omitempty"`
 	Consts          []Const                     `json:"const_declarations,omitempty"`
 	Bits            []Bits                      `json:"bits_declarations,omitempty"`
 	Enums           []Enum                      `json:"enum_declarations,omitempty"`
@@ -1672,9 +1699,10 @@ func deniedContexts(r *Root, language string) []scopedNamingContext {
 func (r *Root) ForBindings(language string) Root {
 	denied := deniedContexts(r, language)
 	res := Root{
-		Name:      r.Name,
-		Libraries: r.Libraries,
-		Decls:     make(DeclMap, len(r.Decls)),
+		Name:        r.Name,
+		Experiments: r.Experiments,
+		Libraries:   r.Libraries,
+		Decls:       make(DeclMap, len(r.Decls)),
 	}
 
 	r.ForEachDecl(func(decl Declaration) {

@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgentest"
 )
@@ -129,12 +130,12 @@ func TestCanUnmarshalSignedEnums(t *testing.T) {
 		};
 
 		type EmptyEnum = flexible enum : uint16 {};
-		
+
 		type FlexibleEnum = flexible enum : int64 {
 			FIRST = 1;
 			SECOND = 2;
 		};
-		
+
 		type FlexibleEnumWithPlaceholder = flexible enum : uint32 {
 			FIRST = 1;
 			SECOND = 2;
@@ -652,6 +653,53 @@ func TestEncodedCompoundIdentifierParsing(t *testing.T) {
 		diff := cmp.Diff(output, test.expectedOutput)
 		if len(diff) > 0 {
 			t.Errorf("unexpected output for input %q diff: %s", test.input, diff)
+		}
+	}
+}
+
+func TestExperimentsParsing(t *testing.T) {
+	type testCase struct {
+		desc     string
+		ir       string
+		expected fidlgen.Experiments
+	}
+	tests := []testCase{
+		{
+			desc:     "empty",
+			ir:       `{"experiments": []}`,
+			expected: fidlgen.Experiments{},
+		},
+		{
+			desc:     "single",
+			ir:       `{"experiments": ["foo"]}`,
+			expected: fidlgen.Experiments{"foo"},
+		},
+		{
+			desc:     "multiple",
+			ir:       `{"experiments": ["foo", "bar"]}`,
+			expected: fidlgen.Experiments{"foo", "bar"},
+		},
+	}
+	for _, test := range tests {
+		ir, err := fidlgen.ReadJSONIrContent([]byte(test.ir))
+		if err != nil {
+			t.Errorf("case (%s) could not parse JSON IR: %v", test.desc, err)
+		}
+
+		actual := ir.Experiments
+		opt := cmpopts.SortSlices(func(a, b string) bool { return a < b })
+		if diff := cmp.Diff(actual, test.expected, opt); len(diff) > 0 {
+			t.Errorf("case (%s) \nexpected: %#v\nactual: %#v\n", test.desc, test.expected, actual)
+		}
+
+		// Make sure the "Contains" method works.
+		for _, ex := range test.expected {
+			if !actual.Contains(ex) {
+				t.Errorf("case (%s) Contains(\"%s\") returned false for present experiment", test.desc, ex)
+			}
+		}
+		if actual.Contains(fidlgen.Experiment("should always fail")) {
+			t.Errorf("case (%s) Contains always returns true", test.desc)
 		}
 	}
 }

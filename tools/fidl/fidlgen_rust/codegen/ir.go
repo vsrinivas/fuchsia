@@ -261,6 +261,7 @@ type ServiceMember struct {
 }
 
 type Root struct {
+	Experiments     fidlgen.Experiments
 	ExternCrates    []string
 	Bits            []Bits
 	Consts          []Const
@@ -555,6 +556,7 @@ var handleSubtypeConsts = map[fidlgen.HandleSubtype]string{
 
 type compiler struct {
 	decls        fidlgen.DeclInfoMap
+	experiments  fidlgen.Experiments
 	library      fidlgen.LibraryIdentifier
 	externCrates map[string]struct{}
 	// Identifies which types are used as payload types, message body types, or
@@ -1727,10 +1729,13 @@ func (dc *derivesCompiler) fillDerivesForType(ogType fidlgen.Type) derives {
 
 func Compile(r fidlgen.Root) Root {
 	r = r.ForBindings("rust")
-	root := Root{}
+	root := Root{
+		Experiments: r.Experiments,
+	}
 	thisLibParsed := r.Name.Parse()
 	c := compiler{
 		decls:                  r.DeclInfo(),
+		experiments:            r.Experiments,
 		library:                thisLibParsed,
 		externCrates:           map[string]struct{}{},
 		methodTypeUses:         r.MethodTypeUsageMap(),
