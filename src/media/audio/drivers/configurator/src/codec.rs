@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Error},
+    anyhow::{format_err, Context, Error},
     fidl::endpoints::Proxy,
     fidl_fuchsia_hardware_audio::*,
     fidl_fuchsia_io as fio,
@@ -15,9 +15,9 @@ use {
 // can poll the proxy's hanging gets (WatchPlugState and WatchGainState).
 pub struct CodecInterface {
     /// The proxy to the devfs "/dev".
-    dev_proxy: fio::DirectoryProxy,
+    dev_proxy: Option<fio::DirectoryProxy>,
     /// The path under "/dev" used to connect to the device.
-    path: PathBuf,
+    path: Option<PathBuf>,
     /// The proxy to the device if connected.
     proxy: Option<CodecProxy>,
 }
@@ -26,7 +26,13 @@ impl CodecInterface {
     /// A new interface that will connect to the device at the `path` within the `dev_proxy`
     /// directory. The interface is unconnected when created.
     pub fn new(dev_proxy: fio::DirectoryProxy, path: &Path) -> Self {
-        Self { dev_proxy: dev_proxy, path: path.to_path_buf(), proxy: None }
+        Self { dev_proxy: Some(dev_proxy), path: Some(path.to_path_buf()), proxy: None }
+    }
+
+    /// A new interface that will connect using a proxy.
+    #[cfg(test)]
+    pub fn new_with_proxy(proxy: CodecProxy) -> Self {
+        Self { dev_proxy: None, path: None, proxy: Some(proxy) }
     }
 
     /// Get the codec proxy.
@@ -34,21 +40,28 @@ impl CodecInterface {
         self.proxy.as_ref().ok_or(format_err!("Proxy not connected"))
     }
 
-    /// Connect to the CodecInterface.
+    /// Connect to the CodecInterface if not connected already.
     pub fn connect(&mut self) -> Result<(), Error> {
-        let path = self.path.to_str().ok_or(format_err!("invalid codec path"))?;
-        let (codec_connect_proxy, codec_connect_server) =
-            fidl::endpoints::create_proxy::<CodecConnectorMarker>()?;
-        fdio::service_connect_at(
-            self.dev_proxy.as_channel().as_ref(),
-            path,
-            codec_connect_server.into_channel(),
-        )?;
+        if self.proxy.is_none() {
+            let path = self
+                .path
+                .as_ref()
+                .context("path must exist")?
+                .to_str()
+                .ok_or(format_err!("invalid codec path"))?;
+            let (codec_connect_proxy, codec_connect_server) =
+                fidl::endpoints::create_proxy::<CodecConnectorMarker>()?;
+            fdio::service_connect_at(
+                self.dev_proxy.as_ref().context("dev proxy must exist")?.as_channel().as_ref(),
+                path,
+                codec_connect_server.into_channel(),
+            )?;
 
-        let (ours, theirs) = fidl::endpoints::create_proxy::<CodecMarker>()?;
-        codec_connect_proxy.connect(theirs)?;
+            let (ours, theirs) = fidl::endpoints::create_proxy::<CodecMarker>()?;
+            codec_connect_proxy.connect(theirs)?;
 
-        self.proxy = Some(ours);
+            self.proxy = Some(ours);
+        }
         Ok(())
     }
 
@@ -83,15 +96,9 @@ impl CodecInterface {
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        crate::config::Config,
-        crate::configurator::Configurator,
-        crate::discover::find_codecs,
-        crate::testing::tests::get_dev_proxy,
-        anyhow::{anyhow, Context},
-        async_trait::async_trait,
-        futures::lock::Mutex,
-        std::sync::Arc,
+        super::*, crate::config::Config, crate::configurator::Configurator,
+        crate::discover::find_codecs, crate::testing::tests::get_dev_proxy, anyhow::anyhow,
+        async_trait::async_trait, futures::lock::Mutex, std::sync::Arc,
     };
 
     pub struct TestConfigurator {}

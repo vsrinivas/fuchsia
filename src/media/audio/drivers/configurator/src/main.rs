@@ -18,6 +18,7 @@ mod dai;
 mod default;
 mod discover;
 mod indexes;
+mod signal;
 mod testing;
 
 use crate::{config::Config, configurator::Configurator, default::DefaultConfigurator};

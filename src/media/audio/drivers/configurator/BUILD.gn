@@ -33,6 +33,7 @@ rustc_binary("bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_rust",
+    "//sdk/fidl/fuchsia.hardware.audio.signalprocessing:fuchsia.hardware.audio.signalprocessing_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
     "//src/lib/async-utils",
@@ -60,6 +61,7 @@ rustc_binary("bin") {
     "src/discover.rs",
     "src/indexes.rs",
     "src/main.rs",
+    "src/signal.rs",
     "src/testing.rs",
   ]
   test_deps = [

@@ -4,15 +4,19 @@
 
 use {
     crate::{
+        codec::CodecInterface,
         config::{Config, Device},
         configurator::Configurator,
+        dai::DaiInterface,
         indexes::StreamConfigIndex,
+        signal::SignalInterface,
     },
     anyhow::{anyhow, Context, Error},
     async_trait::async_trait,
     async_utils::hanging_get::client::HangingGetStream,
     fidl::prelude::*,
     fidl_fuchsia_hardware_audio::*,
+    fidl_fuchsia_hardware_audio_signalprocessing::*,
     fidl_fuchsia_media::AudioDeviceEnumeratorMarker,
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{lock::Mutex, select, StreamExt},
@@ -138,7 +142,7 @@ impl Drop for StreamConfig {
 }
 
 impl StreamConfig {
-    async fn process_requests(mut self) {
+    async fn process_stream_requests(mut self) {
         loop {
             select! {
                 stream_config_request = self.stream.next() => {
@@ -524,10 +528,7 @@ impl Configurator for DefaultConfigurator {
         })
     }
 
-    async fn process_new_codec(
-        &mut self,
-        mut interface: crate::codec::CodecInterface,
-    ) -> Result<(), Error> {
+    async fn process_new_codec(&mut self, mut interface: CodecInterface) -> Result<(), Error> {
         let _ = interface.connect().context("Couldn't connect to codec")?;
 
         // Get codec properties.
@@ -544,6 +545,33 @@ impl Configurator for DefaultConfigurator {
             ..GainState::EMPTY
         };
         let _ = interface.set_gain_state(default_gain).await?;
+
+        let mut signal = SignalInterface::new();
+        let proxy = interface.get_proxy()?;
+        let _ = signal.connect_codec(proxy)?;
+        match signal.get_elements().await {
+            Ok(elements) => {
+                for e in elements {
+                    if let Some(id) = e.id && let Some(element_type) = e.type_ &&
+                        element_type == ElementType::Gain {
+                        let state = ElementState {
+                            type_specific: Some(TypeSpecificElementState::Gain(
+                                GainElementState {
+                                    gain: Some(0.0f32),
+                                    ..GainElementState::EMPTY
+                                },
+                            )),
+                            ..ElementState::EMPTY
+                        };
+                        signal.set_element_state(id, state).await?;
+                    }
+                }
+            }
+            Err(e) => {
+                // We allow to continue if the Signal Processing API is not supported.
+                tracing::warn!("Couldn't get elements from signal processing: {:?}", e)
+            }
+        }
 
         let plug_detect_capabilities = interface.get_plug_detect_capabilities().await?;
 
@@ -650,10 +678,7 @@ impl Configurator for DefaultConfigurator {
         Ok(())
     }
 
-    async fn process_new_dai(
-        &mut self,
-        mut interface: crate::dai::DaiInterface,
-    ) -> Result<(), Error> {
+    async fn process_new_dai(&mut self, mut interface: DaiInterface) -> Result<(), Error> {
         let _ = interface.connect().context("Couldn't connect to DAI")?;
         let (client, request_stream) =
             fidl::endpoints::create_request_stream::<StreamConfigMarker>()
@@ -814,7 +839,7 @@ impl Configurator for DefaultConfigurator {
                 stream_config.properties.is_input.ok_or(anyhow!("Must have is_input"))?,
                 client,
             )?;
-            tasks.push(fasync::Task::spawn(stream_config.process_requests()));
+            tasks.push(fasync::Task::spawn(stream_config.process_stream_requests()));
         }
         if tasks.len() == 0 {
             return Err(anyhow!("No Stream Configs to serve"));
@@ -981,7 +1006,7 @@ mod tests {
         let (_client, server) = fidl::endpoints::create_endpoints::<RingBufferMarker>()
             .expect("Error creating ring buffer endpoint");
         let proxy = stream_config.client.take().expect("Must have a client").into_proxy()?;
-        let _task = fasync::Task::spawn(stream_config.process_requests());
+        let _task = fasync::Task::spawn(stream_config.process_stream_requests());
         proxy.create_ring_buffer(ring_buffer_format, server)?;
 
         // To make sure we really complete running create ring buffer we call a 2-way method.
@@ -1040,7 +1065,7 @@ mod tests {
         let (_client, server) = fidl::endpoints::create_endpoints::<RingBufferMarker>()
             .expect("Error creating ring buffer endpoint");
         let proxy = stream_config.client.take().expect("Must have a client").into_proxy()?;
-        let _task = fasync::Task::spawn(stream_config.process_requests());
+        let _task = fasync::Task::spawn(stream_config.process_stream_requests());
         proxy.create_ring_buffer(ring_buffer_format, server)?;
 
         // To make sure we really complete running create ring buffer we call a 2-way method.
@@ -1312,7 +1337,7 @@ mod tests {
     ) {
         let client = stream_config.client.take().expect("Must have client");
         let proxy = client.into_proxy().expect("Client should be available");
-        let _task = fasync::Task::spawn(stream_config.process_requests());
+        let _task = fasync::Task::spawn(stream_config.process_stream_requests());
         let properties = match exec.run_until_stalled(&mut proxy.get_properties()) {
             Poll::Ready(Ok(v)) => v,
             x => panic!("Expected Ready Ok from get_properties, got: {:?}", x),
@@ -1338,7 +1363,7 @@ mod tests {
     ) {
         let client = stream_config.client.take().expect("Must have client");
         let proxy = client.into_proxy().expect("Client should be available");
-        let _task = fasync::Task::spawn(stream_config.process_requests());
+        let _task = fasync::Task::spawn(stream_config.process_stream_requests());
         let gain_state = match exec.run_until_stalled(&mut proxy.watch_gain_state()) {
             Poll::Ready(Ok(v)) => v,
             x => panic!("Expected Ready Ok from watch gain state, got: {:?}", x),
@@ -1356,7 +1381,7 @@ mod tests {
     ) {
         let client = stream_config.client.take().expect("Must have client");
         let proxy = client.into_proxy().expect("Client should be available");
-        let _task = fasync::Task::spawn(stream_config.process_requests());
+        let _task = fasync::Task::spawn(stream_config.process_stream_requests());
         let plug_state = match exec.run_until_stalled(&mut proxy.watch_plug_state()) {
             Poll::Ready(Ok(v)) => v,
             x => panic!("Expected Ready Ok from watch plug state, got: {:?}", x),
@@ -1367,20 +1392,28 @@ mod tests {
 
     const TEST_CODEC_PLUGGED: bool = false;
     const TEST_CODEC_PLUG_STATE_TIME: i64 = 123i64;
+    const TEST_CODEC_GAIN_PROCESSING_ELEMENT_ID: u64 = 1u64;
+    const TEST_CODEC_GAIN: f32 = 0.0f32;
 
     pub struct TestCodec {
         /// Stream to handle Codec API protocol.
-        stream: CodecRequestStream,
+        codec_stream: CodecRequestStream,
+
+        /// Stream to handle Signal Processing API protocol.
+        signal_stream: Option<SignalProcessingRequestStream>,
+
+        /// Last gain set
+        gain: Option<f32>,
     }
 
     impl TestCodec {
-        async fn process_requests(mut self) {
+        async fn process_codec_requests(mut self) {
             loop {
                 select! {
-                    request = self.stream.next() => {
+                    request = self.codec_stream.next() => {
                         match request {
                             Some(Ok(request)) => {
-                                if let Err(e) = self.handle_stream_request(request).await {
+                                if let Err(e) = self.handle_codec_request(request, false).await {
                                     tracing::warn!("codec request error: {:?}", e)
                                 }
                             },
@@ -1391,23 +1424,172 @@ mod tests {
                                 tracing::warn!("no codec error");
                             },
                         }
-                    }
+                    },
                     complete => break,
                 }
             }
         }
 
-        async fn handle_stream_request(
+        async fn process_codec_and_signal_requests(mut self) {
+            loop {
+                select! {
+                    request = self.codec_stream.next() => {
+                        match request {
+                            Some(Ok(request)) => {
+                                if let Err(e) = self.handle_codec_request(request, true).await {
+                                    tracing::warn!("codec request error: {:?}", e)
+                                }
+                            },
+                            Some(Err(e)) => {
+                                tracing::warn!("codec error: {:?}, stopping", e);
+                            },
+                            None => {
+                                tracing::warn!("no codec error");
+                            },
+                        }
+                    },
+                    request =
+                        self.signal_stream.as_mut().expect("Must have signal stream").next() => {
+                        match request {
+                            Some(Ok(request)) => {
+                                if let Err(e) = self.handle_signal_request(request).await {
+                                    tracing::warn!("signal processing request error: {:?}", e)
+                                }
+                            },
+                            Some(Err(e)) => {
+                                tracing::warn!("signal processing error: {:?}, stopping", e);
+                            },
+                            None => {
+                                tracing::warn!("no signal processing error");
+                            },
+                        }
+                    },
+                    complete => break,
+                }
+            }
+        }
+
+        async fn handle_codec_request(
             &mut self,
             request: CodecRequest,
+            with_signal: bool,
         ) -> std::result::Result<(), anyhow::Error> {
             match request {
+                CodecRequest::Reset { responder } => {
+                    responder.send()?;
+                }
+                CodecRequest::GetInfo { responder } => {
+                    let mut info = CodecInfo {
+                        unique_id: "".to_string(),
+                        manufacturer: "test".to_string(),
+                        product_name: "testy".to_string(),
+                    };
+                    responder.send(&mut info)?;
+                }
+                CodecRequest::Stop { responder: _ } => {}
+                CodecRequest::Start { responder: _ } => {}
+                CodecRequest::IsBridgeable { responder: _ } => {}
+                CodecRequest::SetBridgedMode { enable_bridged_mode: _, control_handle: _ } => {}
+                CodecRequest::GetDaiFormats { responder } => {
+                    let mut formats = Ok(vec![DaiSupportedFormats {
+                        number_of_channels: vec![2],
+                        sample_formats: vec![DaiSampleFormat::PcmSigned],
+                        frame_formats: vec![DaiFrameFormat::FrameFormatStandard(
+                            DaiFrameFormatStandard::I2S,
+                        )],
+                        frame_rates: vec![48000],
+                        bits_per_sample: vec![24],
+                        bits_per_slot: vec![32],
+                    }]);
+                    responder.send(&mut formats)?;
+                }
+                CodecRequest::SetDaiFormat { responder: _, format: _ } => {}
+                CodecRequest::GetPlugDetectCapabilities { responder } => {
+                    responder.send(PlugDetectCapabilities::Hardwired)?;
+                }
                 CodecRequest::WatchPlugState { responder } => {
                     responder.send(PlugState {
                         plugged: Some(TEST_CODEC_PLUGGED),
                         plug_state_time: Some(TEST_CODEC_PLUG_STATE_TIME),
                         ..PlugState::EMPTY
                     })?;
+                }
+                CodecRequest::SetGainState { target_state, control_handle: _ } => {
+                    if !with_signal {
+                        self.gain = target_state.gain_db;
+                    }
+                }
+                CodecRequest::SignalProcessingConnect { protocol, control_handle: _ } => {
+                    if with_signal {
+                        self.signal_stream = Some(protocol.into_stream()?);
+                    } else {
+                        let _ = protocol.close_with_epitaph(zx::Status::NOT_SUPPORTED);
+                    }
+                }
+                CodecRequest::WatchGainState { responder } => {
+                    responder.send(GainState { gain_db: self.gain, ..GainState::EMPTY })?;
+                }
+
+                r => panic!("{:?} Not covered by test", r),
+            }
+            Ok(())
+        }
+
+        async fn handle_signal_request(
+            &mut self,
+            request: SignalProcessingRequest,
+        ) -> std::result::Result<(), anyhow::Error> {
+            match request {
+                SignalProcessingRequest::GetElements { responder } => {
+                    let pe = Element {
+                        id: Some(TEST_CODEC_GAIN_PROCESSING_ELEMENT_ID),
+                        type_: Some(ElementType::Gain),
+                        type_specific: Some(TypeSpecificElement::Gain(Gain {
+                            type_: Some(
+                                fidl_fuchsia_hardware_audio_signalprocessing::GainType::Decibels,
+                            ),
+                            min_gain: Some(0.0f32),
+                            max_gain: Some(0.0f32),
+                            min_gain_step: Some(0.0f32),
+                            ..Gain::EMPTY
+                        })),
+                        ..Element::EMPTY
+                    };
+                    let mut ret = Ok(vec![pe]);
+                    responder.send(&mut ret)?;
+                }
+                SignalProcessingRequest::SetElementState {
+                    processing_element_id,
+                    state,
+                    responder,
+                } => {
+                    if processing_element_id == TEST_CODEC_GAIN_PROCESSING_ELEMENT_ID {
+                        match state.type_specific {
+                            Some(type_specific) => match type_specific {
+                                TypeSpecificElementState::Gain(gain) => {
+                                    self.gain = gain.gain;
+                                    let mut ret = Ok(());
+                                    return Ok(responder.send(&mut ret)?);
+                                }
+                                _ => panic!("Must be of type gain"),
+                            },
+                            _ => panic!("Must have gain"),
+                        }
+                    }
+                    panic!("Not covered by test");
+                }
+                SignalProcessingRequest::WatchElementState { processing_element_id, responder } => {
+                    if processing_element_id == TEST_CODEC_GAIN_PROCESSING_ELEMENT_ID {
+                        let state = ElementState {
+                            type_specific: Some(TypeSpecificElementState::Gain(GainElementState {
+                                gain: Some(TEST_CODEC_GAIN),
+                                ..GainElementState::EMPTY
+                            })),
+                            ..ElementState::EMPTY
+                        };
+                        return Ok(responder.send(state)?);
+                    }
+                    panic!("Not covered by test");
                 }
                 r => panic!("{:?} Not covered by test", r),
             }
@@ -1423,8 +1605,15 @@ mod tests {
     ) {
         let (codec_client, codec_stream) = fidl::endpoints::create_request_stream::<CodecMarker>()
             .expect("Error creating endpoint");
-        let codec = TestCodec { stream: codec_stream };
-        let _codec_task = fasync::Task::spawn(codec.process_requests());
+        let (_signal_client, signal_stream) =
+            fidl::endpoints::create_request_stream::<SignalProcessingMarker>()
+                .expect("Error creating endpoint");
+        let codec = TestCodec {
+            codec_stream: codec_stream,
+            signal_stream: Some(signal_stream),
+            gain: None,
+        };
+        let _codec_task = fasync::Task::spawn(codec.process_codec_requests());
         let stream_config_inner = stream_config.inner.clone();
         let _codec_plug_detect_task = fasync::Task::spawn(async move {
             DefaultConfigurator::watch_plug_detect(
@@ -1445,7 +1634,7 @@ mod tests {
 
         let stream_config_client = stream_config.client.take().expect("Must have client");
         let proxy = stream_config_client.into_proxy().expect("Client should be available");
-        let _stream_config_task = fasync::Task::spawn(stream_config.process_requests());
+        let _stream_config_task = fasync::Task::spawn(stream_config.process_stream_requests());
 
         // First get plugged with time 0 since there is no plug state before this first watch.
         let plug_state = match exec.run_until_stalled(&mut proxy.watch_plug_state()) {
@@ -1464,19 +1653,106 @@ mod tests {
         assert_eq!(plug_state.plug_state_time, Some(TEST_CODEC_PLUG_STATE_TIME));
     }
 
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_default_configurator_find_codec_without_signal_processing() -> Result<()> {
+        let mut config = Config::new()?;
+        config.load_device(
+            Device {
+                manufacturer: "test".to_string(),
+                product: "testy".to_string(),
+                hardwired: true,
+                is_codec: true,
+                dai_channel: 0,
+            },
+            STREAM_CONFIG_INDEX_SPEAKERS,
+        );
+        let mut configurator = DefaultConfigurator::new(config)?;
+        let (codec_client, codec_stream) = fidl::endpoints::create_request_stream::<CodecMarker>()
+            .expect("Error creating endpoint");
+        let (_signal_client, signal_stream) =
+            fidl::endpoints::create_request_stream::<SignalProcessingMarker>()
+                .expect("Error creating endpoint");
+        let codec = TestCodec {
+            codec_stream: codec_stream,
+            signal_stream: Some(signal_stream),
+            gain: None,
+        };
+        let _codec_task = fasync::Task::spawn(codec.process_codec_requests());
+        let codec_proxy = codec_client.into_proxy().expect("Client should be available");
+        let codec_interface = CodecInterface::new_with_proxy(codec_proxy);
+        let proxy = codec_interface.get_proxy()?.clone();
+        configurator.process_new_codec(codec_interface).await?;
+
+        let gain_state = proxy.watch_gain_state().await?;
+        assert_eq!(gain_state.gain_db, Some(0.0f32));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_default_configurator_find_codec_with_signal_processing() -> Result<()> {
+        let mut config = Config::new()?;
+        config.load_device(
+            Device {
+                manufacturer: "test".to_string(),
+                product: "testy".to_string(),
+                hardwired: true,
+                is_codec: true,
+                dai_channel: 0,
+            },
+            STREAM_CONFIG_INDEX_SPEAKERS,
+        );
+        let mut configurator = DefaultConfigurator::new(config)?;
+        let (codec_client, codec_stream) = fidl::endpoints::create_request_stream::<CodecMarker>()
+            .expect("Error creating endpoint");
+        let (_signal_client, signal_stream) =
+            fidl::endpoints::create_request_stream::<SignalProcessingMarker>()
+                .expect("Error creating endpoint");
+        let codec = TestCodec {
+            codec_stream: codec_stream,
+            signal_stream: Some(signal_stream),
+            gain: None,
+        };
+        let _codec_task = fasync::Task::spawn(codec.process_codec_and_signal_requests());
+        let codec_proxy = codec_client.into_proxy().expect("Client should be available");
+        let codec_interface = CodecInterface::new_with_proxy(codec_proxy);
+        let proxy = codec_interface.get_proxy()?.clone();
+        configurator.process_new_codec(codec_interface).await?;
+
+        let mut signal = SignalInterface::new();
+        let _ = signal.connect_codec(&proxy)?;
+        let elements = signal.get_elements().await?;
+        for e in elements {
+            if let Some(id) = e.id && let Some(element_type) = e.type_ &&
+                element_type == ElementType::Gain {
+                    let state = signal.watch_element_state(id).await?;
+                    match state.type_specific {
+                        Some(type_specific) => match type_specific {
+                            TypeSpecificElementState::Gain(gain) => {
+                                assert_eq!(gain.gain, Some(TEST_CODEC_GAIN));
+                                return Ok(())
+                            },
+                            _ => panic!("Must be of type gain"),
+                        },
+                        _ => panic!("Must have gain"),
+                    }
+                }
+        }
+        panic!("Must have found gain");
+    }
+
     pub struct TestCodecBad {
         /// Stream to handle Codec API protocol.
-        stream: CodecRequestStream,
+        codec_stream: CodecRequestStream,
     }
 
     impl TestCodecBad {
-        async fn process_requests(mut self) {
+        async fn process_codec_requests(mut self) {
             loop {
                 select! {
-                    request = self.stream.next() => {
+                    request = self.codec_stream.next() => {
                         match request {
                             Some(Ok(request)) => {
-                                if let Err(e) = self.handle_stream_request(request).await {
+                                if let Err(e) = self.handle_codec_request(request).await {
                                     tracing::warn!("codec request error: {:?}", e)
                                 }
                             },
@@ -1493,7 +1769,7 @@ mod tests {
             }
         }
 
-        async fn handle_stream_request(
+        async fn handle_codec_request(
             &mut self,
             request: CodecRequest,
         ) -> std::result::Result<(), anyhow::Error> {
@@ -1519,8 +1795,8 @@ mod tests {
     ) {
         let (codec_client, codec_stream) = fidl::endpoints::create_request_stream::<CodecMarker>()
             .expect("Error creating endpoint");
-        let codec = TestCodecBad { stream: codec_stream };
-        let _codec_task = fasync::Task::spawn(codec.process_requests());
+        let codec = TestCodecBad { codec_stream: codec_stream };
+        let _codec_task = fasync::Task::spawn(codec.process_codec_requests());
         let stream_config_inner = stream_config.inner.clone();
         let _codec_plug_detect_task = fasync::Task::spawn(async move {
             DefaultConfigurator::watch_plug_detect(
@@ -1541,7 +1817,7 @@ mod tests {
 
         let stream_config_client = stream_config.client.take().expect("Must have client");
         let proxy = stream_config_client.into_proxy().expect("Client should be available");
-        let _stream_config_task = fasync::Task::spawn(stream_config.process_requests());
+        let _stream_config_task = fasync::Task::spawn(stream_config.process_stream_requests());
 
         let plug_state = match exec.run_until_stalled(&mut proxy.watch_plug_state()) {
             Poll::Ready(Ok(v)) => v,
