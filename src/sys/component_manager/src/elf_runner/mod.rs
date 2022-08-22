@@ -806,7 +806,7 @@ mod tests {
             .into_inner()
         } else {
             let (process, _vmar) = job
-                .create_child_process(name_for_builtin.as_bytes())
+                .create_child_process(zx::ProcessOptions::empty(), name_for_builtin.as_bytes())
                 .expect("could not create process");
             process
         }

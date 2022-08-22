@@ -327,7 +327,7 @@ pub fn create_zircon_process(
 ) -> Result<(zx::Thread, Arc<ThreadGroup>, Arc<MemoryManager>), Errno> {
     let (process, root_vmar) = kernel
         .job
-        .create_child_process(name.as_bytes())
+        .create_child_process(zx::ProcessOptions::empty(), name.as_bytes())
         .map_err(|status| from_status_like_fdio!(status))?;
     let thread =
         process.create_thread(name.as_bytes()).map_err(|status| from_status_like_fdio!(status))?;

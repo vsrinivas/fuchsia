@@ -202,6 +202,7 @@ impl ProcessBuilder {
     pub fn new(
         name: &CStr,
         job: &zx::Job,
+        options: zx::ProcessOptions,
         executable: zx::Vmo,
         system_vdso_vmo: zx::Vmo,
     ) -> Result<ProcessBuilder, ProcessBuilderError> {
@@ -215,7 +216,7 @@ impl ProcessBuilder {
         // Creating the process immediately has the benefit that we fail fast if the calling
         // process does not have permission to create processes directly.
         let (process, root_vmar) = job
-            .create_child_process(name.to_bytes())
+            .create_child_process(options, name.to_bytes())
             .map_err(ProcessBuilderError::CreateProcess)?;
 
         // Create the initial thread.
@@ -1073,7 +1074,13 @@ mod tests {
         let job = fuchsia_runtime::job_default();
 
         let procname = CString::new(TEST_UTIL_BIN.to_owned())?;
-        Ok(ProcessBuilder::new(&procname, &job, vmo, get_system_vdso_vmo().unwrap())?)
+        Ok(ProcessBuilder::new(
+            &procname,
+            &job,
+            zx::ProcessOptions::empty(),
+            vmo,
+            get_system_vdso_vmo().unwrap(),
+        )?)
     }
 
     // Common builder setup for all tests that start a test util process.
@@ -1612,8 +1619,13 @@ mod tests {
         let vmo = zx::Vmo::create(1)?;
         let job = fuchsia_runtime::job_default();
         let procname = CString::new("dummy_name")?;
-        let mut builder =
-            ProcessBuilder::new(&procname, &job, vmo, get_system_vdso_vmo().unwrap())?;
+        let mut builder = ProcessBuilder::new(
+            &procname,
+            &job,
+            zx::ProcessOptions::empty(),
+            vmo,
+            get_system_vdso_vmo().unwrap(),
+        )?;
 
         // There's some duplicates between these slices but just checking twice is easier than
         // deduping these.
@@ -1668,12 +1680,24 @@ mod tests {
         let procname = CString::new("dummy_name")?;
 
         assert_invalid_arg(
-            ProcessBuilder::new(&procname, &invalid().into(), vmo, get_system_vdso_vmo().unwrap())
-                .map(|_| ()),
+            ProcessBuilder::new(
+                &procname,
+                &invalid().into(),
+                zx::ProcessOptions::empty(),
+                vmo,
+                get_system_vdso_vmo().unwrap(),
+            )
+            .map(|_| ()),
         );
         assert_invalid_arg(
-            ProcessBuilder::new(&procname, &job, invalid().into(), get_system_vdso_vmo().unwrap())
-                .map(|_| ()),
+            ProcessBuilder::new(
+                &procname,
+                &job,
+                zx::ProcessOptions::empty(),
+                invalid().into(),
+                get_system_vdso_vmo().unwrap(),
+            )
+            .map(|_| ()),
         );
 
         let (mut builder, _) = setup_test_util_builder(true)?;
@@ -1707,8 +1731,13 @@ mod tests {
         let job = fuchsia_runtime::job_default();
 
         let procname = CString::new(TEST_BIN.to_owned())?;
-        let mut builder =
-            ProcessBuilder::new(&procname, &job, vmo, get_system_vdso_vmo().unwrap())?;
+        let mut builder = ProcessBuilder::new(
+            &procname,
+            &job,
+            zx::ProcessOptions::empty(),
+            vmo,
+            get_system_vdso_vmo().unwrap(),
+        )?;
 
         // We pass the program a channel with handle type User0 which we send a message on and
         // expect it to echo back the message on the same channel.

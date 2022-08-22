@@ -6,13 +6,27 @@
 
 use crate::ok;
 use crate::{object_get_info, object_get_property, object_set_property, ObjectQuery, Topic};
-use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Status, Task, Thread};
+use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Status, Task, Thread, Vmar};
 use crate::{Property, PropertyQuery, PropertyQueryGet, PropertyQuerySet};
 use bitflags::bitflags;
 use fuchsia_zircon_sys::{
     self as sys, zx_info_maps_type_t, zx_koid_t, zx_time_t, zx_vaddr_t, zx_vm_option_t,
     InfoMapsTypeUnion, PadByte, ZX_MAX_NAME_LEN,
 };
+
+bitflags! {
+    /// Options that may be used when creating a `Process`.
+    #[repr(transparent)]
+    pub struct ProcessOptions: u32 {
+        const SHARED = sys::ZX_PROCESS_SHARED;
+    }
+}
+
+impl Default for ProcessOptions {
+    fn default() -> Self {
+        ProcessOptions::empty()
+    }
+}
 
 bitflags! {
     #[repr(transparent)]
@@ -161,6 +175,44 @@ impl Process {
         };
         ok(status)?;
         unsafe { Ok(Thread::from(Handle::from_raw(thread_out))) }
+    }
+
+    /// Creates a process that shares half its address space with this process.
+    ///
+    /// The created process will also share its handle table and futex context with `self`.
+    ///
+    /// Returns the created process and a handle to the created process' restricted address space.
+    ///
+    /// Wraps the
+    /// [zx_process_create_shared](https://fuchsia.dev/fuchsia-src/reference/syscalls/process_create_shared.md)
+    /// syscall.
+    pub fn create_shared(
+        &self,
+        options: ProcessOptions,
+        name: &[u8],
+    ) -> Result<(Process, Vmar), Status> {
+        let self_raw = self.raw_handle();
+        let name_ptr = name.as_ptr();
+        let name_len = name.len();
+        let mut process_out = 0;
+        let mut restricted_vmar_out = 0;
+        let status = unsafe {
+            sys::zx_process_create_shared(
+                self_raw,
+                options.bits(),
+                name_ptr,
+                name_len,
+                &mut process_out,
+                &mut restricted_vmar_out,
+            )
+        };
+        ok(status)?;
+        unsafe {
+            Ok((
+                Process::from(Handle::from_raw(process_out)),
+                Vmar::from(Handle::from_raw(restricted_vmar_out)),
+            ))
+        }
     }
 
     /// Write memory inside a process.

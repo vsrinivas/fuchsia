@@ -159,6 +159,10 @@ multiconst!(zx_vm_option_t, [
     ZX_VM_PERM_READ_IF_XOM_UNSUPPORTED = 1 << 14;
 ]);
 
+multiconst!(u32, [
+    ZX_PROCESS_SHARED = 1 << 0;
+]);
+
 // matches ///zircon/system/public/zircon/errors.h
 multiconst!(zx_status_t, [
     ZX_OK                         = 0;

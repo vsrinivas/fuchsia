@@ -90,12 +90,18 @@ struct ProcessLauncherState {
 struct LaunchInfo {
     executable: zx::Vmo,
     job: Arc<zx::Job>,
+    options: zx::ProcessOptions,
     name: String,
 }
 
 impl From<fproc::LaunchInfo> for LaunchInfo {
     fn from(info: fproc::LaunchInfo) -> Self {
-        LaunchInfo { executable: info.executable, job: Arc::new(info.job), name: info.name }
+        LaunchInfo {
+            executable: info.executable,
+            job: Arc::new(info.job),
+            options: zx::ProcessOptions::empty(),
+            name: info.name,
+        }
     }
 }
 
@@ -279,7 +285,13 @@ impl ProcessLauncher {
         let stable_vdso_vmo = get_stable_vdso_vmo().map_err(|_| {
             LauncherError::BuilderError(ProcessBuilderError::BadHandle("Failed to get stable vDSO"))
         })?;
-        let mut b = ProcessBuilder::new(&proc_name, &info.job, info.executable, stable_vdso_vmo)?;
+        let mut b = ProcessBuilder::new(
+            &proc_name,
+            &info.job,
+            info.options,
+            info.executable,
+            stable_vdso_vmo,
+        )?;
 
         let arg_cstr = state
             .args

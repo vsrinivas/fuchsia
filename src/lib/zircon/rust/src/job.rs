@@ -6,7 +6,10 @@
 
 use crate::ok;
 use crate::{object_get_info, ObjectQuery, Topic};
-use crate::{AsHandleRef, Duration, Handle, HandleBased, HandleRef, Process, Status, Task, Vmar};
+use crate::{
+    AsHandleRef, Duration, Handle, HandleBased, HandleRef, Process, ProcessOptions, Status, Task,
+    Vmar,
+};
 use bitflags::bitflags;
 use std::convert::Into;
 
@@ -58,11 +61,14 @@ impl Job {
     /// Wraps the
     /// [zx_process_create](https://fuchsia.dev/fuchsia-src/reference/syscalls/process_create.md)
     /// syscall.
-    pub fn create_child_process(&self, name: &[u8]) -> Result<(Process, Vmar), Status> {
+    pub fn create_child_process(
+        &self,
+        options: ProcessOptions,
+        name: &[u8],
+    ) -> Result<(Process, Vmar), Status> {
         let parent_job_raw = self.raw_handle();
         let name_ptr = name.as_ptr();
         let name_len = name.len();
-        let options = 0;
         let mut process_out = 0;
         let mut vmar_out = 0;
         let status = unsafe {
@@ -70,7 +76,7 @@ impl Job {
                 parent_job_raw,
                 name_ptr,
                 name_len,
-                options,
+                options.bits(),
                 &mut process_out,
                 &mut vmar_out,
             )
