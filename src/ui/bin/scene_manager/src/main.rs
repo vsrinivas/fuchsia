@@ -161,7 +161,7 @@ async fn inner_main() -> Result<(), Error> {
                     guessing based on display size: {}",
                 e
             );
-            None
+            Some(9.0) // Unknown display: match Root Presenter's 9.0f default pixel density
         }
     };
     let viewing_distance = match std::fs::read_to_string("/config/data/display_usage") {
