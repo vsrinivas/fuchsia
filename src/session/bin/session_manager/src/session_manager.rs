@@ -5,6 +5,7 @@
 use {
     crate::startup,
     anyhow::{Context as _, Error},
+    fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement,
     fidl_fuchsia_session::{
         LaunchConfiguration, LaunchError, LauncherRequest, LauncherRequestStream, RestartError,
@@ -14,7 +15,7 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon as zx,
     futures::{lock::Mutex, StreamExt, TryFutureExt, TryStreamExt},
-    std::sync::Arc,
+    std::{future::Future, sync::Arc},
     tracing::{error, info},
 };
 
@@ -106,6 +107,44 @@ impl SessionManager {
         Ok(())
     }
 
+    /// Forwards the given request stream to a service inside the `session`.
+    ///
+    /// # Parameters
+    /// - `request_stream`: The request stream being forwarded
+    /// - `handler`: The function that actually matches on each request type and calls the
+    ///    corresponding method on the given `Proxy`.
+    async fn forward_request_to_session<RS, F, Fut>(
+        &mut self,
+        request_stream: RS,
+        handler: F,
+    ) -> Result<(), Error>
+    where
+        RS: fidl::endpoints::RequestStream,
+        RS::Protocol: ProtocolMarker,
+        F: Fn(RS, <RS::Protocol as ProtocolMarker>::Proxy) -> Fut,
+        Fut: Future<Output = Result<(), Error>>,
+    {
+        let protocol_name = <RS::Protocol as ProtocolMarker>::DEBUG_NAME;
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<RS::Protocol>()
+            .with_context(|| format!("Failed to create_proxy for {}", protocol_name))?;
+        {
+            let state = self.state.lock().await;
+            let session_exposed_dir_channel =
+                state.session_exposed_dir_channel.as_ref().with_context(|| {
+                    format!("Failed to connect to {} because no session was started", protocol_name)
+                })?;
+            fdio::service_connect_at(
+                session_exposed_dir_channel,
+                protocol_name,
+                server_end.into_channel(),
+            )
+            .with_context(|| format!("Failed to connect to {}", protocol_name))?;
+        }
+        handler(request_stream, proxy)
+            .await
+            .with_context(|| format!("{} request stream got an error", protocol_name))
+    }
+
     /// Handles an [`IncomingRequest`].
     ///
     /// This will return once the protocol connection has been closed.
@@ -116,52 +155,19 @@ impl SessionManager {
         match request {
             IncomingRequest::Manager(request_stream) => {
                 // Connect to element.Manager served by the session.
-                let (manager_proxy, server_end) =
-                    fidl::endpoints::create_proxy::<felement::ManagerMarker>()
-                        .context("Failed to create ManagerProxy")?;
-                {
-                    let state = self.state.lock().await;
-                    let session_exposed_dir_channel =
-                        state.session_exposed_dir_channel.as_ref().context(
-                            "Failed to connect to ManagerProxy because no session was started",
-                        )?;
-                    fdio::service_connect_at(
-                        session_exposed_dir_channel,
-                        "fuchsia.element.Manager",
-                        server_end.into_channel(),
-                    )
-                    .context("Failed to connect to Manager service")?;
-                }
-                SessionManager::handle_manager_request_stream(request_stream, manager_proxy)
-                    .await
-                    .context("Manager request stream got an error.")?;
+                self.forward_request_to_session(
+                    request_stream,
+                    SessionManager::handle_manager_request_stream,
+                )
+                .await?;
             }
             IncomingRequest::GraphicalPresenter(request_stream) => {
                 // Connect to GraphicalPresenter served by the session.
-                let (graphical_presenter_proxy, server_end) =
-                    fidl::endpoints::create_proxy::<felement::GraphicalPresenterMarker>()
-                        .context("Failed to create GraphicalPresenterProxy")?;
-                {
-                    let state = self.state.lock().await;
-                    let session_exposed_dir_channel = state
-                        .session_exposed_dir_channel
-                        .as_ref()
-                        .context(
-                        "Failed to connect to GraphicalPresenterProxy because no session was started",
-                    )?;
-                    fdio::service_connect_at(
-                        session_exposed_dir_channel,
-                        "fuchsia.element.GraphicalPresenter",
-                        server_end.into_channel(),
-                    )
-                    .context("Failed to connect to GraphicalPresenter service")?;
-                }
-                SessionManager::handle_graphical_presenter_request_stream(
+                self.forward_request_to_session(
                     request_stream,
-                    graphical_presenter_proxy,
+                    SessionManager::handle_graphical_presenter_request_stream,
                 )
-                .await
-                .context("Graphical Presenter request stream got an error.")?;
+                .await?;
             }
             IncomingRequest::Launcher(request_stream) => {
                 self.handle_launcher_request_stream(request_stream)
