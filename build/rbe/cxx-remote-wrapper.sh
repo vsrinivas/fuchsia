@@ -14,6 +14,7 @@ function msg() {
 }
 
 remote_action_wrapper="$script_dir"/fuchsia-rbe-action.sh
+remote_compiler_swapper="$script_dir"/cxx-swap-remote-compiler.sh
 
 # The project_root must cover all inputs, prebuilt tools, and build outputs.
 # This should point to $FUCHSIA_DIR for the Fuchsia project.
@@ -121,6 +122,40 @@ fi
 
 build_subdir="$(relpath "$project_root" . )"
 project_root_rel="$(relpath . "$project_root")"
+
+detected_os="$(uname -s)"
+case "$detected_os" in
+  Darwin) readonly HOST_OS="mac" ;;
+  Linux) readonly HOST_OS="linux" ;;
+  *) echo >&2 "Unknown operating system: $detected_os" ; exit 1 ;;
+esac
+
+detected_arch="$(uname -m)"
+case "$detected_arch" in
+  x86_64) readonly HOST_ARCH="x64" ;;
+  *) echo >&2 "Unknown machine architecture: $detected_arch" ; exit 1 ;;
+esac
+
+readonly remote_clang_subdir=prebuilt/third_party/clang/linux-x64
+
+_required_remote_tools=(
+  "$remote_clang_subdir"
+)
+_missing_remote_tools=()
+test "$HOST_OS" = "linux" && test "$HOST_ARCH" = "x64" || {
+  for path in "${_required_remote_tools[@]}"
+  do [[ -d "$project_root_rel"/"$path" ]] || _missing_remote_tools+=( "$path" )
+  done
+}
+
+[[ "${#_missing_remote_tools[@]}" == 0 ]] || {
+  msg "Remote building C++ requires prebuilts for linux.  Missing:"
+  for path in "${_missing_remote_tools[@]}"
+  do echo "        $path"
+  done
+  msg "Add these prebuilt packages to integration/fuchsia/toolchain.  Example: tqr/563535"
+  exit 1
+}
 
 cc=
 cc_command=()
@@ -234,7 +269,7 @@ EOF
       ;;
 
     # This is the (likely prebuilt) cc binary.
-    */clang* | */gcc* | */g++* ) cc="$opt" ;;
+    */bin/clang* | */bin/gcc* | */bin/g++* ) cc="$opt" ;;
 
     -o) prev_opt=output ;;
 
@@ -315,6 +350,20 @@ remote_inputs=(
   "${extra_inputs_rel_project_root[@]}"
 )
 
+# RBE backend only has linux-x64 support for now.
+compiler_swapper_prefix=()
+# Substitute the platform portion of cc_relative with linux-x64 (for remote).
+remote_cc_relative="${cc_relative/third_party\/clang\/*\/bin/third_party/clang/linux-x64/bin}"
+test "$HOST_OS" = "linux" && test "$HOST_ARCH" = "x64" || {
+  remote_inputs+=(
+    "$(relpath "$project_root" "$remote_compiler_swapper")"
+    "$remote_cc_relative"
+  )
+  compiler_swapper_prefix+=(
+    --remote_wrapper="$remote_compiler_swapper"
+  )
+}
+
 # List inputs in a file to avoid exceeding shell limit.
 inputs_file_list="$output".inputs
 mkdir -p "$(dirname "$inputs_file_list")"
@@ -351,6 +400,7 @@ remote_cc_command=(
 #  "${remote_trace_flags[@]}"
   --input_list_paths="$inputs_file_list"
   --output_files="$remote_outputs_joined"
+  "${compiler_swapper_prefix[@]}"
   "${rewrapper_options[@]}"
   --
   "${cc_command[@]}"
