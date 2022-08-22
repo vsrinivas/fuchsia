@@ -155,6 +155,8 @@ class IdAllocator {
     // The bitmap returned this index as unset, therefore this should not fail.
     ZX_DEBUG_ASSERT(status == ZX_OK);
     auto val = static_cast<T>(first_unset);
+    // The value should be in [MinId, MaxId), therefore this should not fail.
+    ZX_DEBUG_ASSERT(val >= MinId && val < MaxId);
     return zx::ok(Id{val, gen_});
   }
 
