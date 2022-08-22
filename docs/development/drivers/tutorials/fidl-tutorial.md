@@ -134,24 +134,10 @@ class Device : public fidl::WireServer<fidl_examples_echo::Echo> {
 The first important thing to discuss is how the child driver will bind. It can
 bind due to any number of device properties, but if you wish to bind based
 solely on the FIDL protocol the parent exports, you will need the bind library
-that the build automatically generates for you from the FIDL library.
+that the build automatically generates for you from the FIDL library
+(For more information, see [Generated bind libraries](#generated-bind-libraries)).
 
-If the FIDL library target is:
-`//sdk/fidl/fidl.examples.echo:myecholibrary`
-
-Then the auto generated bind_library target is:
-`//sdk/fidl/fidl.examples.echo:myecholibrary_bindlib`.
-
-
-Most FIDL libraries have the target name be the same as the folder name they are in.
-
-In this common case the FIDL library is:
-`//sdk/fidl/fidl.examples.echo`
-
-The auto generated bind_library target is:
-`//sdk/fidl/fidl.examples.echo:fidl.examples.echo_bindlib`.
-
-You will need to depend on and use this library in your driver's bind rules:
+You will depend on and use this bind library in your driver's bind rules:
 
 ```
 using fidl.examples.echo;
@@ -215,3 +201,114 @@ zx_status_t CallEcho() {
   return ZX_OK;
 }
 ```
+
+## Generated bind libraries {:#generated-bind-libraries}
+
+All FIDL libraries get an auto-generated bind library created from them. This is to help driver
+authors create bind rules based on FIDL protocols provided by the parent, and the
+transport method the parent uses to provide each protocol.
+
+### The bind library
+
+There are three possible transport methods put in these bind libraries: `Banjo`, `ZirconTransport`,
+and `DriverTransport`. Currently it is safe to assume the value is `ZirconTransport`
+(which is just regular FIDL over Zircon channels). The bind library contains constants for
+protocols and these transport methods.
+
+Each discoverable protocol defined in the FIDL library gets an enum in the bind library with
+the values of the enum being the three transport methods.
+
+Here is an example of one where the FIDL library contains a single discoverable protocol:
+
+#### protocol.fidl {:#protocol-fidl}
+
+```fidl {:.devsite-disable-click-to-copy}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/drivers/fidl_bindlib_codegen/protocol.fidl" region_tag="fidl" %}
+```
+
+#### Generated lib {:#generated-lib}
+
+```none {:.devsite-disable-click-to-copy}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/drivers/fidl_bindlib_codegen/generated_lib.bind.golden" %}
+```
+
+### The build target
+
+These generated bind libraries will be based on the FIDL library's
+`library_name` and `target_name`. The bind library will have a target name of
+`{fidl_target_name}_bindlib`, and its `library_name` will be the same as the FIDL's.
+
+For example, if the FIDL library target is `//sdk/fidl/fidl.examples.echo:myecholibrary`,
+then the auto-generated bind library target is
+`//sdk/fidl/fidl.examples.echo:myecholibrary_bindlib`.
+
+In practice, most FIDL libraries have the same `target_name` as the folder they are in, which
+is usually the library name as well. So for example, if the FIDL library is
+`//sdk/fidl/fidl.examples.echo`, the auto-generated bind library target is
+`//sdk/fidl/fidl.examples.echo:fidl.examples.echo_bindlib`.
+
+### The generated code targets
+
+These generated bind libraries work exactly the same as if they were user-written
+bind libraries. Code generation for user-written bind libraries is described in detail at
+[Bind library code generation tutorial](/docs/development/drivers/tutorials/bind-libraries-codegen.md).
+
+### Example
+
+Lets take the FIDL library shown [above](#protocol-fidl) and use it in an example.
+
+
+#### FIDL (BUILD.gn)
+
+```gn {:.devsite-disable-click-to-copy}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/drivers/fidl_bindlib_codegen/BUILD.gn" region_tag="fidl" %}
+```
+
+This now gives us the generated bind library with the target name of `:my_fidl_target_bindlib`
+and library name of `fuchsia.gizmo.protocol`. The generated source for the bind library was shown
+[earlier](#generated-lib). We can use this to create bind rules for the child driver.
+
+#### Child bind rules (BUILD.gn)
+
+```gn {:.devsite-disable-click-to-copy}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/drivers/fidl_bindlib_codegen/BUILD.gn" region_tag="child_bind_rules" %}
+```
+
+#### child-driver.bind
+
+```none {:.devsite-disable-click-to-copy}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/drivers/fidl_bindlib_codegen/child_driver.bind" exclude_regexp="// Copyright.*|// Use of.*|// found in.*" %}
+```
+
+We can use the auto-generated code targets to access constants for this bind library from
+the parent driver code.
+
+#### Parent driver (BUILD.gn)
+
+* {C++}
+
+  ```gn {:.devsite-disable-click-to-copy}
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/drivers/fidl_bindlib_codegen/BUILD.gn" region_tag="example_cpp_target" %}
+  ```
+
+* {Rust}
+
+  ```gn {:.devsite-disable-click-to-copy}
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/drivers/fidl_bindlib_codegen/BUILD.gn" region_tag="example_rust_target" %}
+  ```
+
+
+
+#### Parent driver code
+
+* {C++}
+
+  ```cpp {:.devsite-disable-click-to-copy}
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/drivers/fidl_bindlib_codegen/bindlib_usage.cc" region_tag="code" %}
+  ```
+
+* {Rust}
+
+  ```rust {:.devsite-disable-click-to-copy}
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/drivers/fidl_bindlib_codegen/bindlib_usage.rs" region_tag="code" %}
+  ```

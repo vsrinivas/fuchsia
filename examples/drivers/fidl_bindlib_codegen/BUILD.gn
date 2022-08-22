@@ -1,0 +1,54 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/drivers.gni")
+import("//build/fidl/fidl.gni")
+import("//build/rust/rustc_binary.gni")
+
+group("fidl_bindlib_codegen") {
+  deps = [
+    ":bind",
+    ":bindlib_usage_cpp",
+    ":bindlib_usage_rust",
+    ":my_fidl_target",
+    ":my_fidl_target_bindlib",
+    ":my_fidl_target_bindlib_cpp",
+    ":my_fidl_target_bindlib_rust",
+  ]
+}
+
+# [START fidl]
+fidl("my_fidl_target") {  # The target_name
+  name = "fuchsia.gizmo.protocol"  # The library_name (optional, defaults to
+                                   # target_name)
+  sources = [ "protocol.fidl" ]
+}
+
+# [END fidl]
+
+# [START child_bind_rules]
+driver_bind_rules("bind") {
+  rules = "child_driver.bind"
+  bind_output = "child_driver.bindbc"
+  deps = [ ":my_fidl_target_bindlib" ]
+}
+
+# [END child_bind_rules]
+
+# [START example_cpp_target]
+source_set("bindlib_usage_cpp") {
+  sources = [ "bindlib_usage.cc" ]
+  deps = [ ":my_fidl_target_bindlib_cpp" ]
+}
+
+# [END example_cpp_target]
+
+# [START example_rust_target]
+rustc_binary("bindlib_usage_rust") {
+  edition = "2021"
+  source_root = "bindlib_usage.rs"
+  sources = [ "bindlib_usage.rs" ]
+  deps = [ ":my_fidl_target_bindlib_rust" ]
+}
+# [END example_rust_target]

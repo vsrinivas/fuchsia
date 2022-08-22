@@ -6,6 +6,7 @@ group("drivers") {
   deps = [
     "bindlib_codegen",
     "driver_test_realm/sample-driver",
+    "fidl_bindlib_codegen",
     "v2/demo-number:component",
   ]
 }

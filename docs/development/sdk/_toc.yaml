@@ -14,6 +14,8 @@ toc:
   path: /docs/development/sdk/write-bind-rules-for-driver.md
 - title: "Bind library code generation tutorial for Bazel"
   path: /docs/development/sdk/bind-libraries-codegen-bazel.md
+- title: "FIDL-based bind libraries tutorial for Bazel"
+  path: /docs/development/sdk/fidl-bind-libraries-bazel.md
 - title: "Debug a new driver when it fails to load"
   path: /docs/development/sdk/debug-a-new-driver-when-it-fails-to-load.md
 - include: /docs/development/sdk/ffx/_toc.yaml
