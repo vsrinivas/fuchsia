@@ -5,6 +5,9 @@ library fuchsia.hardware.gpio;
 
 using zx;
 
+/// Maximum length of the GPIO name.
+const MAX_GPIO_NAME_LEN uint32 = 256;
+
 /// Flags for `ConfigIn`.
 type GpioFlags = strict enum : uint32 {
     PULL_DOWN = 0x0;
@@ -14,6 +17,16 @@ type GpioFlags = strict enum : uint32 {
 };
 
 protocol Gpio {
+    /// Get the pin of a GPIO
+    GetPin() -> (struct {
+        pin uint32;
+    }) error zx.status;
+
+    /// Get the name of a GPIO.
+    GetName() -> (struct {
+        name string:MAX_GPIO_NAME_LEN;
+    }) error zx.status;
+
     /// Configures a GPIO for input.
     ConfigIn(struct {
         flags GpioFlags;

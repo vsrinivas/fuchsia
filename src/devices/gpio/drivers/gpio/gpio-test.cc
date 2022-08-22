@@ -36,7 +36,7 @@ class FakeGpio : public GpioDevice {
   }
 
   explicit FakeGpio(const gpio_impl_protocol_t* gpio_impl)
-      : GpioDevice(nullptr, const_cast<gpio_impl_protocol_t*>(gpio_impl), 0) {}
+      : GpioDevice(nullptr, const_cast<gpio_impl_protocol_t*>(gpio_impl), 0, "GPIO_0") {}
 };
 
 class GpioTest : public zxtest::Test {
@@ -137,9 +137,9 @@ TEST_F(GpioTest, TestOneClient) {
 
 TEST_F(GpioTest, ValidateMetadataOk) {
   constexpr gpio_pin_t pins[] = {
-      {0},
-      {1},
-      {2},
+      DECL_GPIO_PIN(0),
+      DECL_GPIO_PIN(1),
+      DECL_GPIO_PIN(2),
   };
 
   auto parent = MockDevice::FakeRootParent();
@@ -152,7 +152,12 @@ TEST_F(GpioTest, ValidateMetadataOk) {
 }
 
 TEST_F(GpioTest, ValidateMetadataRejectDuplicates) {
-  constexpr gpio_pin_t pins[] = {{2}, {1}, {2}, {0}};
+  constexpr gpio_pin_t pins[] = {
+      DECL_GPIO_PIN(2),
+      DECL_GPIO_PIN(1),
+      DECL_GPIO_PIN(2),
+      DECL_GPIO_PIN(0),
+  };
 
   auto parent = MockDevice::FakeRootParent();
 
@@ -161,6 +166,53 @@ TEST_F(GpioTest, ValidateMetadataRejectDuplicates) {
   parent->SetMetadata(DEVICE_METADATA_GPIO_PINS, pins, std::size(pins) * sizeof(gpio_pin_t));
 
   ASSERT_NOT_OK(GpioDevice::Create(nullptr, parent.get()));
+}
+
+TEST_F(GpioTest, ValidateGpioNameGeneration) {
+  constexpr gpio_pin_t pins_digit[] = {
+      DECL_GPIO_PIN(2),
+      DECL_GPIO_PIN(5),
+      DECL_GPIO_PIN((11)),
+  };
+  EXPECT_EQ(pins_digit[0].pin, 2);
+  EXPECT_STREQ(pins_digit[0].name, "2");
+  EXPECT_EQ(pins_digit[1].pin, 5);
+  EXPECT_STREQ(pins_digit[1].name, "5");
+  EXPECT_EQ(pins_digit[2].pin, 11);
+  EXPECT_STREQ(pins_digit[2].name, "(11)");
+
+#define GPIO_TEST_NAME1 5
+#define GPIO_TEST_NAME2 (6)
+#define GPIO_TEST_NAME3_OF_63_CHRS_ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890 7
+  constexpr uint32_t GPIO_TEST_NAME4 = 8;  // constexpr should work too
+#define GEN_GPIO0(x) (x + 1)
+#define GEN_GPIO1(x) x + 2
+  constexpr gpio_pin_t pins[] = {
+      DECL_GPIO_PIN(GPIO_TEST_NAME1),
+      DECL_GPIO_PIN(GPIO_TEST_NAME2),
+      DECL_GPIO_PIN(GPIO_TEST_NAME3_OF_63_CHRS_ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890),
+      DECL_GPIO_PIN(GPIO_TEST_NAME4),
+      DECL_GPIO_PIN(GEN_GPIO0(9)),
+      DECL_GPIO_PIN(GEN_GPIO1(18)),
+  };
+  EXPECT_EQ(pins[0].pin, 5);
+  EXPECT_STREQ(pins[0].name, "GPIO_TEST_NAME1");
+  EXPECT_EQ(pins[1].pin, 6);
+  EXPECT_STREQ(pins[1].name, "GPIO_TEST_NAME2");
+  EXPECT_EQ(pins[2].pin, 7);
+  EXPECT_STREQ(pins[2].name, "GPIO_TEST_NAME3_OF_63_CHRS_ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890");
+  EXPECT_EQ(strlen(pins[2].name), GPIO_NAME_MAX_LENGTH - 1);
+  EXPECT_EQ(pins[3].pin, 8);
+  EXPECT_STREQ(pins[3].name, "GPIO_TEST_NAME4");
+  EXPECT_EQ(pins[4].pin, 10);
+  EXPECT_STREQ(pins[4].name, "GEN_GPIO0(9)");
+  EXPECT_EQ(pins[5].pin, 20);
+  EXPECT_STREQ(pins[5].name, "GEN_GPIO1(18)");
+#undef GPIO_TEST_NAME1
+#undef GPIO_TEST_NAME2
+#undef GPIO_TEST_NAME3_OF_63_CHRS_ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890
+#undef GEN_GPIO0
+#undef GEN_GPIO1
 }
 
 }  // namespace gpio

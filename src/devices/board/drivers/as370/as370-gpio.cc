@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "as370-gpio.h"
+
 #include <lib/ddk/debug.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
@@ -392,10 +394,10 @@ zx_status_t As370::GpioInit() {
   };
 
   const gpio_pin_t gpio_pins[] = {
-      {17},  // AMP_EN.
-      {4},   // LED_RESET / TOUCH_RESET
-      {5},   // TOUCH_IRQ
-      {63},  // WLAN_EN
+      DECL_GPIO_PIN(GPIO_AMP_EN),
+      DECL_GPIO_PIN(GPIO_LED_TOUCH_RESET),
+      DECL_GPIO_PIN(GPIO_TOUCH_IRQ),
+      DECL_GPIO_PIN(GPIO_WLAN_EN),
   };
 
   const pbus_metadata_t gpio_metadata[] = {

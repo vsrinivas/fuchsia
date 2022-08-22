@@ -17,9 +17,9 @@ namespace board_test {
 namespace {
 
 static const gpio_pin_t gpio_pins[] = {
-    {1},
-    {3},
-    {5},
+    DECL_GPIO_PIN(1),
+    DECL_GPIO_PIN(3),
+    DECL_GPIO_PIN(5),
 };
 
 static const pbus_metadata_t gpio_metadata[] = {{

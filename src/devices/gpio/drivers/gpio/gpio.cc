@@ -111,7 +111,7 @@ zx_status_t GpioDevice::Create(void* ctx, zx_device_t* parent) {
 
   for (auto pin : pins.value()) {
     fbl::AllocChecker ac;
-    std::unique_ptr<GpioDevice> dev(new (&ac) GpioDevice(parent, &gpio, pin.pin));
+    std::unique_ptr<GpioDevice> dev(new (&ac) GpioDevice(parent, &gpio, pin.pin, pin.name));
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }

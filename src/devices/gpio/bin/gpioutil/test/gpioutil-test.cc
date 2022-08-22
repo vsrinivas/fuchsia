@@ -18,12 +18,20 @@ using fuchsia_hardware_gpio::Gpio;
 
 class FakeGpio : public fidl::WireServer<Gpio> {
  public:
-  explicit FakeGpio() {}
+  explicit FakeGpio(uint32_t pin = 0, std::string_view name = "NO_NAME") : pin_(pin), name_(name) {}
 
   zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
     return fidl::BindSingleInFlightOnly(dispatcher, std::move(request), this);
   }
 
+  void GetPin(GetPinRequestView request, GetPinCompleter::Sync& completer) override {
+    mock_get_pin_.Call();
+    completer.ReplySuccess(pin_);
+  }
+  void GetName(GetNameRequestView request, GetNameCompleter::Sync& completer) override {
+    mock_get_name_.Call();
+    completer.ReplySuccess(::fidl::StringView::FromExternal(name_));
+  }
   void ConfigIn(ConfigInRequestView request, ConfigInCompleter::Sync& completer) override {
     if (request->flags != fuchsia_hardware_gpio::wire::GpioFlags::kNoPull) {
       completer.ReplyError(ZX_ERR_INVALID_ARGS);
@@ -75,6 +83,8 @@ class FakeGpio : public fidl::WireServer<Gpio> {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
+  mock_function::MockFunction<zx_status_t>& MockGetPin() { return mock_get_pin_; }
+  mock_function::MockFunction<zx_status_t>& MockGetName() { return mock_get_name_; }
   mock_function::MockFunction<zx_status_t>& MockConfigIn() { return mock_config_in_; }
   mock_function::MockFunction<zx_status_t>& MockConfigOut() { return mock_config_out_; }
   mock_function::MockFunction<zx_status_t>& MockRead() { return mock_read_; }
@@ -84,6 +94,10 @@ class FakeGpio : public fidl::WireServer<Gpio> {
   }
 
  private:
+  const uint32_t pin_;
+  const std::string_view name_;
+  mock_function::MockFunction<zx_status_t> mock_get_pin_;
+  mock_function::MockFunction<zx_status_t> mock_get_name_;
   mock_function::MockFunction<zx_status_t> mock_config_in_;
   mock_function::MockFunction<zx_status_t> mock_config_out_;
   mock_function::MockFunction<zx_status_t> mock_read_;
@@ -119,6 +133,30 @@ class GpioUtilTest : public zxtest::Test {
   zx::channel client_;
   std::unique_ptr<FakeGpio> gpio_;
 };
+
+TEST_F(GpioUtilTest, GetNameTest) {
+  int argc = 3;
+  const char* argv[] = {"gpioutil", "n", "some_path"};
+
+  GpioFunc func;
+  uint8_t write_value, out_value;
+  uint64_t ds_ua;
+  fuchsia_hardware_gpio::wire::GpioFlags in_flag;
+  EXPECT_EQ(
+      ParseArgs(argc, const_cast<char**>(argv), &func, &write_value, &in_flag, &out_value, &ds_ua),
+      0);
+  EXPECT_EQ(func, 6);
+  EXPECT_EQ(write_value, 0);
+  EXPECT_EQ(in_flag, fuchsia_hardware_gpio::wire::GpioFlags::kNoPull);
+  EXPECT_EQ(out_value, 0);
+  EXPECT_EQ(ds_ua, 0);
+
+  gpio_->MockGetPin().ExpectCall(ZX_OK);
+  gpio_->MockGetName().ExpectCall(ZX_OK);
+  EXPECT_EQ(ClientCall(fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio>(std::move(client_)), func,
+                       write_value, in_flag, out_value, ds_ua),
+            0);
+}
 
 TEST_F(GpioUtilTest, ReadTest) {
   int argc = 3;

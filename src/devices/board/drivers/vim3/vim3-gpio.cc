@@ -70,8 +70,9 @@ static const pbus_irq_t gpio_irqs[] = {
 
 // GPIOs to expose from generic GPIO driver.
 static const gpio_pin_t gpio_pins[] = {
-    {VIM3_J4_PIN_39}, {VIM3_ETH_MAC_INTR}, {A311D_GPIOBOOT(12)},
-    {A311D_GPIOX(6)}, {VIM3_HPD_IN},       {VIM3_FUSB302_INT},
+    DECL_GPIO_PIN(VIM3_J4_PIN_39),     DECL_GPIO_PIN(VIM3_ETH_MAC_INTR),
+    DECL_GPIO_PIN(A311D_GPIOBOOT(12)), DECL_GPIO_PIN(A311D_GPIOX(6)),
+    DECL_GPIO_PIN(VIM3_HPD_IN),        DECL_GPIO_PIN(VIM3_FUSB302_INT),
 };
 
 static const pbus_metadata_t gpio_metadata[] = {
@@ -117,7 +118,7 @@ constexpr device_fragment_t gpio_expander_fragments[] = {
 };
 
 static const gpio_pin_t gpio_expander_pins[] = {
-    {VIM3_SD_MODE},
+    DECL_GPIO_PIN(VIM3_SD_MODE),
 };
 
 static const uint32_t gpio_expander_pin_offset = VIM3_EXPANDER_GPIO_START;

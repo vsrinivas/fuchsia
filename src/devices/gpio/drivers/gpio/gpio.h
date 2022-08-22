@@ -11,6 +11,8 @@
 #include <lib/ddk/platform-defs.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
+#include <string_view>
+
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <fbl/mutex.h>
@@ -34,8 +36,8 @@ static_assert(GPIO_PULL_MASK == static_cast<uint32_t>(GpioFlags::kPullMask),
 
 class GpioDevice : public GpioDeviceType, public ddk::GpioProtocol<GpioDevice, ddk::base_protocol> {
  public:
-  GpioDevice(zx_device_t* parent, gpio_impl_protocol_t* gpio, uint32_t pin)
-      : GpioDeviceType(parent), gpio_(gpio), pin_(pin) {}
+  GpioDevice(zx_device_t* parent, gpio_impl_protocol_t* gpio, uint32_t pin, std::string_view name)
+      : GpioDeviceType(parent), gpio_(gpio), pin_(pin), name_(name) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
@@ -43,6 +45,8 @@ class GpioDevice : public GpioDeviceType, public ddk::GpioProtocol<GpioDevice, d
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
   zx_status_t DdkClose(uint32_t flags);
 
+  zx_status_t GpioGetPin(uint32_t* pin);
+  zx_status_t GpioGetName(char* out_name);
   zx_status_t GpioConfigIn(uint32_t flags);
   zx_status_t GpioConfigOut(uint8_t initial_value);
   zx_status_t GpioSetAltFunction(uint64_t function);
@@ -55,6 +59,12 @@ class GpioDevice : public GpioDeviceType, public ddk::GpioProtocol<GpioDevice, d
   zx_status_t GpioGetDriveStrength(uint64_t* ds_ua);
 
   // FIDL
+  void GetPin(GetPinRequestView request, GetPinCompleter::Sync& completer) override {
+    completer.ReplySuccess(pin_);
+  }
+  void GetName(GetNameRequestView request, GetNameCompleter::Sync& completer) override {
+    completer.ReplySuccess(::fidl::StringView::FromExternal(name_));
+  }
   void ConfigIn(ConfigInRequestView request, ConfigInCompleter::Sync& completer) override {
     zx_status_t status = GpioConfigIn(static_cast<uint32_t>(request->flags));
     if (status == ZX_OK) {
@@ -131,6 +141,7 @@ class GpioDevice : public GpioDeviceType, public ddk::GpioProtocol<GpioDevice, d
  private:
   const ddk::GpioImplProtocolClient gpio_ TA_GUARDED(lock_);
   const uint32_t pin_;
+  const std::string name_;
   fbl::Mutex lock_;
   bool opened_ TA_GUARDED(lock_) = false;
 };

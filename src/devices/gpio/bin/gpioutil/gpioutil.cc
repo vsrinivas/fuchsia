@@ -4,9 +4,28 @@
 
 #include "gpioutil.h"
 
+#include <dirent.h>
+#include <lib/fdio/directory.h>
+#include <lib/fit/defer.h>
+#include <stdio.h>
+
+// Directory path to the GPIO class
+constexpr char kGpioDevClassDir[] = "/dev/class/gpio/";
+
 int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value,
               fuchsia_hardware_gpio::wire::GpioFlags* in_flag, uint8_t* out_value,
               uint64_t* ds_ua) {
+  if (argc < 2) {
+    return -1;
+  }
+
+  /* Following functions allow no args */
+  switch (argv[1][0]) {
+    case 'l':
+      *func = List;
+      return 0;
+  }
+
   if (argc < 3) {
     return -1;
   }
@@ -17,6 +36,9 @@ int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value,
   *ds_ua = 0;
   unsigned long flag = 0;
   switch (argv[1][0]) {
+    case 'n':
+      *func = GetName;
+      break;
     case 'r':
       *func = Read;
       break;
@@ -36,7 +58,7 @@ int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value,
       }
       flag = std::stoul(argv[3]);
       if (flag > 3) {
-        printf("Invalid flag\n\n");
+        fprintf(stderr, "Invalid flag\n\n");
         return -1;
       }
       *in_flag = static_cast<fuchsia_hardware_gpio::wire::GpioFlags>(flag);
@@ -68,14 +90,117 @@ int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value,
   return 0;
 }
 
+static std::optional<fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio>> GetClient(
+    const char* path) {
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
+    return std::nullopt;
+  }
+  status = fdio_service_connect(path, remote.release());
+  if (status != ZX_OK) {
+    return std::nullopt;
+  }
+  return fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio>(std::move(local));
+}
+
+int ListGpios(void) {
+  DIR* gpio_dir = opendir(kGpioDevClassDir);
+  if (!gpio_dir) {
+    fprintf(stderr, "Failed to open GPIO device dir %s\n", kGpioDevClassDir);
+    return -1;
+  }
+  auto cleanup = fit::defer([&gpio_dir]() { closedir(gpio_dir); });
+
+  struct dirent* dir;
+  while ((dir = readdir(gpio_dir)) != NULL) {
+    std::string gpio_path(kGpioDevClassDir);
+    gpio_path += std::string(dir->d_name);
+    auto client = GetClient(gpio_path.c_str());
+    if (!client) {
+      fprintf(stderr, "Failed to get client from %.*s", static_cast<int>(gpio_path.length()),
+              gpio_path.data());
+      continue;
+    }
+    auto result_pin = (*client)->GetPin();
+    if (!result_pin.ok()) {
+      fprintf(stderr, "Could not get pin from %.*s\n", static_cast<int>(gpio_path.length()),
+              gpio_path.data());
+      continue;
+    }
+    auto result_name = (*client)->GetName();
+    if (!result_name.ok()) {
+      fprintf(stderr, "Could not get name from %.*s\n", static_cast<int>(gpio_path.length()),
+              gpio_path.data());
+      continue;
+    }
+
+    auto pin = result_pin->value()->pin;
+    auto name = result_name->value()->name.get();
+    printf("[gpio-%d] %.*s\n", pin, static_cast<int>(name.length()), name.data());
+  }
+
+  return 0;
+}
+
+std::optional<fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio>> FindGpioClientByName(
+    std::string_view name) {
+  DIR* gpio_dir = opendir(kGpioDevClassDir);
+  if (!gpio_dir) {
+    fprintf(stderr, "Failed to open GPIO device dir %s\n", kGpioDevClassDir);
+    return std::nullopt;
+  }
+  auto cleanup = fit::defer([&gpio_dir]() { closedir(gpio_dir); });
+
+  struct dirent* dir;
+  while ((dir = readdir(gpio_dir)) != NULL) {
+    std::string gpio_path(kGpioDevClassDir);
+    gpio_path += std::string(dir->d_name);
+    auto client = GetClient(gpio_path.c_str());
+    if (!client) {
+      fprintf(stderr, "Failed to get client from %.*s", static_cast<int>(gpio_path.length()),
+              gpio_path.data());
+      continue;
+    }
+    auto result_name = (*client)->GetName();
+    if (!result_name.ok()) {
+      fprintf(stderr, "Could not get name from %.*s\n", static_cast<int>(gpio_path.length()),
+              gpio_path.data());
+      continue;
+    }
+    auto gpio_name = result_name->value()->name.get();
+    if (name.compare(gpio_name) == 0) {
+      return client;
+    }
+  }
+
+  return std::nullopt;
+}
+
 int ClientCall(fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio> client, GpioFunc func,
                uint8_t write_value, fuchsia_hardware_gpio::wire::GpioFlags in_flag,
                uint8_t out_value, uint64_t ds_ua) {
   switch (func) {
+    case GetName: {
+      auto result_pin = client->GetPin();
+      if (!result_pin.ok()) {
+        fprintf(stderr, "Could not get Pin\n");
+        return -2;
+      }
+      auto result_name = client->GetName();
+      if (!result_name.ok()) {
+        fprintf(stderr, "Could not get Name\n");
+        return -2;
+      }
+      auto pin = result_pin->value()->pin;
+      auto name = result_name->value()->name.get();
+      printf("GPIO Name: [gpio-%d] %.*s\n", pin, static_cast<int>(name.length()), name.data());
+      break;
+    }
     case Read: {
       auto result = client->Read();
       if ((result.status() != ZX_OK) || result->is_error()) {
-        printf("Could not read GPIO\n");
+        fprintf(stderr, "Could not read GPIO\n");
         return -2;
       }
       printf("GPIO Value: %u\n", result->value()->value);
@@ -84,7 +209,7 @@ int ClientCall(fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio> client, GpioFun
     case Write: {
       auto result = client->Write(write_value);
       if ((result.status() != ZX_OK) || result->is_error()) {
-        printf("Could not write to GPIO\n");
+        fprintf(stderr, "Could not write to GPIO\n");
         return -2;
       }
       break;
@@ -92,7 +217,7 @@ int ClientCall(fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio> client, GpioFun
     case ConfigIn: {
       auto result = client->ConfigIn(in_flag);
       if ((result.status() != ZX_OK) || result->is_error()) {
-        printf("Could not configure GPIO as input\n");
+        fprintf(stderr, "Could not configure GPIO as input\n");
         return -2;
       }
       break;
@@ -100,7 +225,7 @@ int ClientCall(fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio> client, GpioFun
     case ConfigOut: {
       auto result = client->ConfigOut(out_value);
       if ((result.status() != ZX_OK) || result->is_error()) {
-        printf("Could not configure GPIO as output\n");
+        fprintf(stderr, "Could not configure GPIO as output\n");
         return -2;
       }
       break;
@@ -108,7 +233,7 @@ int ClientCall(fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio> client, GpioFun
     case SetDriveStrength: {
       auto result = client->SetDriveStrength(ds_ua);
       if ((result.status() != ZX_OK) || result->is_error()) {
-        printf("Could not set GPIO drive strength\n");
+        fprintf(stderr, "Could not set GPIO drive strength\n");
         return -2;
       }
       printf("Set drive strength to %lu\n", result->value()->actual_ds_ua);
@@ -117,14 +242,14 @@ int ClientCall(fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio> client, GpioFun
     case GetDriveStrength: {
       auto result = client->GetDriveStrength();
       if ((result.status() != ZX_OK) || result->is_error()) {
-        printf("Could not get drive strength\n");
+        fprintf(stderr, "Could not get drive strength\n");
         return -2;
       }
       printf("Drive Strength: %lu ua\n", result->value()->result_ua);
       break;
     }
     default:
-      printf("Invalid function\n\n");
+      fprintf(stderr, "Invalid function\n\n");
       return -1;
   }
   return 0;

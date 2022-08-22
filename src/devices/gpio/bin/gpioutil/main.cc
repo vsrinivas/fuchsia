@@ -17,9 +17,11 @@
 #include "gpioutil.h"
 
 static void usage() {
-  printf("Usage: gpioutil <command> <device> [<args>]\n\n");
-  printf("Read from, write to, and configure the GPIO pin at <device>.\n\n");
+  printf("Usage: gpioutil <command> <device|name> [<args>]\n\n");
+  printf("Read from, write to, and configure the GPIO pin of <device|name>.\n\n");
   printf("Commands:\n");
+  printf("  list | l          List the known GPIOs. Both pin and name are printed.\n");
+  printf("  name | n          Read the pin and name info of <device|name>.\n");
   printf("  read | r          Read the current value of <device>. Possible return values:\n");
   printf("                    0 (LOW), 1 (HIGH)\n");
   printf("  write | w         Write to <device>. Accepted <args>:\n");
@@ -33,6 +35,15 @@ static void usage() {
   printf("                    drive strength value in microamps.\n");
   printf("  help | h          Print this help text.\n\n");
   printf("Examples:\n");
+  printf("  List GPIO pins.\n");
+  printf("  $ gpioutil list\n");
+  printf(
+      "  > [gpio-0] GPIO_HW_ID_3\n"
+      "    [gpio-1] GPIO_SOC_TH_BOOT_MODE_L\n"
+      "    ...\n\n");
+  printf("  Get name from a GPIO pin.\n");
+  printf("  $ gpioutil name /dev/sys/platform/05:05:1/gpio/gpio-0\n");
+  printf("  > GPIO Name: [gpio-0] GPIO_HW_ID_3\n\n");
   printf("  Read from a GPIO pin.\n");
   printf("  $ gpioutil read /dev/sys/platform/05:05:1/gpio/gpio-0\n");
   printf("  > GPIO Value: 1\n\n");
@@ -61,22 +72,43 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    fprintf(stderr, "Unable to create channel!\n\n");
-    usage();
-    return -1;
-  }
-  status = fdio_service_connect(argv[2], remote.release());
-  if (status != ZX_OK) {
-    fprintf(stderr, "Unable to connect to device!\n\n");
-    usage();
-    return -1;
+  // Handle functions without any parameter.
+  if (func == List) {
+    return ListGpios();
   }
 
-  int ret = ClientCall(fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio>(std::move(local)), func,
-                       write_value, in_flag, out_value, ds_ua);
+  int ret = 0;
+  if (access(argv[2], F_OK) == 0) {
+    // Access by device path
+    zx::channel local, remote;
+    zx_status_t status = zx::channel::create(0, &local, &remote);
+    if (status != ZX_OK) {
+      fprintf(stderr, "Unable to create channel!\n\n");
+      usage();
+      return -1;
+    }
+
+    status = fdio_service_connect(argv[2], remote.release());
+    if (status != ZX_OK) {
+      fprintf(stderr, "Unable to connect to device!\n\n");
+      usage();
+      return -1;
+    }
+
+    ret = ClientCall(fidl::WireSyncClient<fuchsia_hardware_gpio::Gpio>(std::move(local)), func,
+                     write_value, in_flag, out_value, ds_ua);
+  } else {
+    // Access by GPIO name
+    auto client = FindGpioClientByName(argv[2]);
+    if (!client) {
+      fprintf(stderr, "Unable to connect GPIO by name %s\n\n", argv[2]);
+      usage();
+      return -1;
+    }
+
+    ret = ClientCall(std::move(*client), func, write_value, in_flag, out_value, ds_ua);
+  }
+
   if (ret == -1) {
     fprintf(stderr, "Client call failed!\n\n");
     usage();

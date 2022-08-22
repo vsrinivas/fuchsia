@@ -73,30 +73,30 @@ static const pbus_irq_t gpio_irqs[] = {
 // GPIOs to expose from generic GPIO driver.
 static const gpio_pin_t gpio_pins[] = {
     // For wifi.
-    {S905D2_WIFI_SDIO_WAKE_HOST},
+    DECL_GPIO_PIN(S905D2_WIFI_SDIO_WAKE_HOST),
     // For display.
-    {GPIO_PANEL_DETECT},
-    {GPIO_LCD_RESET},
+    DECL_GPIO_PIN(GPIO_PANEL_DETECT),
+    DECL_GPIO_PIN(GPIO_LCD_RESET),
     // For touch screen.
-    {GPIO_TOUCH_INTERRUPT},
-    {GPIO_TOUCH_RESET},
+    DECL_GPIO_PIN(GPIO_TOUCH_INTERRUPT),
+    DECL_GPIO_PIN(GPIO_TOUCH_RESET),
     // For light sensor.
-    {GPIO_LIGHT_INTERRUPT},
+    DECL_GPIO_PIN(GPIO_LIGHT_INTERRUPT),
     // For audio.
-    {GPIO_AUDIO_SOC_FAULT_L},
-    {GPIO_SOC_AUDIO_EN},
+    DECL_GPIO_PIN(GPIO_AUDIO_SOC_FAULT_L),
+    DECL_GPIO_PIN(GPIO_SOC_AUDIO_EN),
     // For buttons.
-    {GPIO_VOLUME_UP},
-    {GPIO_VOLUME_DOWN},
-    {GPIO_VOLUME_BOTH},
-    {GPIO_MIC_PRIVACY},
+    DECL_GPIO_PIN(GPIO_VOLUME_UP),
+    DECL_GPIO_PIN(GPIO_VOLUME_DOWN),
+    DECL_GPIO_PIN(GPIO_VOLUME_BOTH),
+    DECL_GPIO_PIN(GPIO_MIC_PRIVACY),
     // For SDIO.
-    {GPIO_SDIO_RESET},
+    DECL_GPIO_PIN(GPIO_SDIO_RESET),
     // For Bluetooth.
-    {GPIO_SOC_WIFI_LPO_32k768},
-    {GPIO_SOC_BT_REG_ON},
+    DECL_GPIO_PIN(GPIO_SOC_WIFI_LPO_32k768),
+    DECL_GPIO_PIN(GPIO_SOC_BT_REG_ON),
     // For lights.
-    {GPIO_AMBER_LED},
+    DECL_GPIO_PIN(GPIO_AMBER_LED),
 };
 
 static const pbus_metadata_t gpio_metadata[] = {
