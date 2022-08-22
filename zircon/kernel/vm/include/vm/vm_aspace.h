@@ -43,7 +43,7 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
     // to allow mappings of very low memory using the standard VMM subsystem.
     LowKernel,
     // Used to construct an address space representing hypervisor guest memory.
-    GuestPhys,
+    GuestPhysical,
   };
 
   // Create an address space of the type specified in |type| with name |name|.
@@ -252,13 +252,13 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   void MarkAsLatencySensitive();
 
   // Returns whether this aspace is a guest physical address space.
-  // TODO(fxbug.dev/103417): Rationalize usage of `is_user` and `is_guest_phys`.
-  bool is_guest_phys() const { return type_ == Type::GuestPhys; }
+  // TODO(fxbug.dev/103417): Rationalize usage of `is_user` and `is_guest_physical`.
+  bool is_guest_physical() const { return type_ == Type::GuestPhysical; }
 
   // Encodes the idea that we can always unmap from user aspaces.
   ArchVmAspace::EnlargeOperation EnlargeArchUnmap() const {
-    return is_user() || is_guest_phys() ? ArchVmAspace::EnlargeOperation::Yes
-                                        : ArchVmAspace::EnlargeOperation::No;
+    return is_user() || is_guest_physical() ? ArchVmAspace::EnlargeOperation::Yes
+                                            : ArchVmAspace::EnlargeOperation::No;
   }
 
   fbl::RefPtr<VmAddressRegion> RootVmarLocked() TA_REQ(lock_);

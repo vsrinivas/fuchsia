@@ -87,7 +87,7 @@ inline bool is_valid_for_type(vaddr_t base, size_t size, VmAspace::Type type) {
       min = 0;
       max = USER_ASPACE_BASE + USER_ASPACE_SIZE;
       break;
-    case VmAspace::Type::GuestPhys:
+    case VmAspace::Type::GuestPhysical:
       min = GUEST_PHYSICAL_ASPACE_BASE;
       max = GUEST_PHYSICAL_ASPACE_BASE + GUEST_PHYSICAL_ASPACE_SIZE;
       break;
@@ -99,7 +99,7 @@ inline bool is_valid_for_type(vaddr_t base, size_t size, VmAspace::Type type) {
 
 uint arch_aspace_flags_from_type(VmAspace::Type type) {
   bool is_high_kernel = type == VmAspace::Type::Kernel;
-  bool is_guest = type == VmAspace::Type::GuestPhys;
+  bool is_guest = type == VmAspace::Type::GuestPhysical;
   return (is_high_kernel ? ARCH_ASPACE_FLAG_KERNEL : 0u) | (is_guest ? ARCH_ASPACE_FLAG_GUEST : 0u);
 }
 
@@ -211,7 +211,7 @@ fbl::RefPtr<VmAspace> VmAspace::Create(Type type, const char* name) {
       base = 0;
       size = USER_ASPACE_BASE + USER_ASPACE_SIZE;
       break;
-    case Type::GuestPhys:
+    case Type::GuestPhysical:
       base = GUEST_PHYSICAL_ASPACE_BASE;
       size = GUEST_PHYSICAL_ASPACE_SIZE;
       break;
@@ -543,7 +543,7 @@ zx_status_t VmAspace::PageFault(vaddr_t va, uint flags) {
   canary_.Assert();
   LTRACEF("va %#" PRIxPTR ", flags %#x\n", va, flags);
 
-  if (type_ == Type::GuestPhys) {
+  if (type_ == Type::GuestPhysical) {
     flags &= ~VMM_PF_FLAG_USER;
     flags |= VMM_PF_FLAG_GUEST;
   }

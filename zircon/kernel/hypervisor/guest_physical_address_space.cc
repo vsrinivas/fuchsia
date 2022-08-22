@@ -32,7 +32,7 @@ zx::status<GuestPhysicalAddressSpace> GuestPhysicalAddressSpace::Create(
     uint16_t vmid
 #endif
 ) {
-  auto guest_aspace = VmAspace::Create(VmAspace::Type::GuestPhys, "guest_aspace");
+  auto guest_aspace = VmAspace::Create(VmAspace::Type::GuestPhysical, "guest_physical");
   if (!guest_aspace) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }

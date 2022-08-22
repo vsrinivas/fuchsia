@@ -217,7 +217,7 @@ zx_status_t VmMapping::ProtectLocked(vaddr_t base, size_t size, uint new_arch_mm
     if (new_arch_mmu_flags & ARCH_MMU_FLAG_PERM_WRITE) {
       // Whatever happens, we're not going to be protecting the arch aspace to have write mappings,
       // so this has to be a user aspace so that we can lazily take write faults in the future.
-      ASSERT(aspace_->is_user() || aspace_->is_guest_phys());
+      ASSERT(aspace_->is_user() || aspace_->is_guest_physical());
       flags &= ~ARCH_MMU_FLAG_PERM_WRITE;
       vm_mappings_protect_no_write.Add(1);
       // If the new flags without write permission are the same as the old flags, then skip the

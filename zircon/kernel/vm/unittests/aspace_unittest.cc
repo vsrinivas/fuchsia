@@ -196,8 +196,8 @@ static bool vmaspace_create_invalid_ranges() {
   // Test when base < valid base.
   EXPECT_NULL(VmAspace::Create(USER_ASPACE_BASE - 1, 4096, VmAspace::Type::User, "test"));
   EXPECT_NULL(VmAspace::Create(KERNEL_ASPACE_BASE - 1, 4096, VmAspace::Type::Kernel, "test"));
-  EXPECT_NULL(
-      VmAspace::Create(GUEST_PHYSICAL_ASPACE_BASE - 1, 4096, VmAspace::Type::GuestPhys, "test"));
+  EXPECT_NULL(VmAspace::Create(GUEST_PHYSICAL_ASPACE_BASE - 1, 4096, VmAspace::Type::GuestPhysical,
+                               "test"));
 
   // Test when base + size exceeds valid range.
   EXPECT_NULL(
@@ -205,7 +205,7 @@ static bool vmaspace_create_invalid_ranges() {
   EXPECT_NULL(
       VmAspace::Create(KERNEL_ASPACE_BASE, KERNEL_ASPACE_SIZE + 1, VmAspace::Type::Kernel, "test"));
   EXPECT_NULL(VmAspace::Create(GUEST_PHYSICAL_ASPACE_BASE, GUEST_PHYSICAL_ASPACE_SIZE + 1,
-                               VmAspace::Type::GuestPhys, "test"));
+                               VmAspace::Type::GuestPhysical, "test"));
 
   END_TEST;
 }
