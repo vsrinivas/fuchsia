@@ -167,6 +167,7 @@ profile_list=
 comma_remote_inputs=
 comma_remote_outputs=
 
+uses_macos_sdk=0
 
 prev_opt=
 for opt in "$@"
@@ -277,6 +278,8 @@ EOF
     -fprofile-list=*) profile_list="$optarg" ;;
     -fprofile-list) prev_opt=profile_list ;;
 
+    --sysroot=/Library/Developer/* ) uses_macos_sdk=1 ;;
+
     --*=* ) ;;  # forward
 
     # Forward other environment variables (or similar looking).
@@ -304,6 +307,10 @@ case "$first_source" in
   # TODO(b/220030106): support remote preprocessing of assembly
   *.S) local_only=1 ;;
 esac
+
+# For now, if compilation uses Mac OS SDK, fallback to local execution.
+# TODO(fangism): C-preprocess locally if needed.
+test "$uses_macos_sdk" = 0 || local_only=1
 
 if test "$local_only" = 1
 then
