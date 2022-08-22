@@ -295,8 +295,6 @@ async fn watcher_after_state_closed<N: Netstack>(name: &str) {
 async fn test_add_remove_interface<E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
-    let stack =
-        realm.connect_to_protocol::<fnet_stack::StackMarker>().expect("connect to protocol");
     let device = sandbox.create_endpoint::<E, _>(name).await.expect("create endpoint");
 
     let iface = device.into_interface_in_realm(&realm).await.expect("add device");
@@ -322,7 +320,7 @@ async fn test_add_remove_interface<E: netemul::Endpoint>(name: &str) {
     .await
     .expect("observe interface addition");
 
-    let () = stack.del_ethernet_interface(id).await.squash_result().expect("delete device");
+    let (_endpoint, _device_control) = iface.remove().await.expect("failed to remove interface");
 
     let () = fidl_fuchsia_net_interfaces_ext::wait_interface(
         fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
@@ -382,9 +380,7 @@ async fn test_close_interface<E: netemul::Endpoint>(
     .await
     .expect("observe interface addition");
 
-    // Drop the device, that should cause the interface to be deleted.
-    let (ep, _control, _device_control) = iface.into_inner();
-    std::mem::drop(ep);
+    let (_control, _device_control) = iface.remove_device();
 
     // Wait until we observe the removed interface is missing.
     let () = fidl_fuchsia_net_interfaces_ext::wait_interface(

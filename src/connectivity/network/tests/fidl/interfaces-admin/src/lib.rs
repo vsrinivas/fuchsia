@@ -7,7 +7,6 @@
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_debug as fnet_debug;
 use fidl_fuchsia_net_interfaces_admin as finterfaces_admin;
-use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fidl_fuchsia_netemul_network as fnetemul_network;
 use fuchsia_async::TimeoutExt as _;
 use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
@@ -278,20 +277,8 @@ async fn add_address_removal<N: Netstack, E: netemul::Endpoint>(name: &str) {
                 .await
                 .expect("add address failed unexpectedly");
 
-        // Remove Ethernet devices with the `fuchsi.net.stack` API.
-        let (_netemul_endpoint, control_handle, _device_control_handle) = interface.into_inner();
-        if E::NETEMUL_BACKING == fnetemul_network::EndpointBacking::Ethertap {
-            let stack = realm
-                .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
-                .expect("connect to protocol");
-            let () = stack
-                .del_ethernet_interface(id)
-                .await
-                .squash_result()
-                .expect("delete ethernet interface");
-        } else {
-            std::mem::drop(control_handle);
-        }
+        let (_netemul_endpoint, _device_control_handle) =
+            interface.remove().await.expect("failed to remove interface");
         let fidl_fuchsia_net_interfaces_admin::AddressStateProviderEvent::OnAddressRemoved {
             error: reason,
         } = address_state_provider

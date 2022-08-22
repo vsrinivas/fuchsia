@@ -20,7 +20,6 @@ rustc_test("socket") {
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/lib/net-types",
     "//src/connectivity/lib/packet-formats",
-    "//src/connectivity/network/testing/netemul/network-context/fidl:network_rust",
     "//src/connectivity/network/testing/netemul/rust:lib",
     "//src/connectivity/network/tests/integration/common:netstack_testing_common",
     "//src/connectivity/network/tests/integration/macros:netstack_testing_macros",

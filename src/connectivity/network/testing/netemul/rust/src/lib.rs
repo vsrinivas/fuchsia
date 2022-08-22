@@ -1183,15 +1183,50 @@ impl<'a> TestInterface<'a> {
         Ok(())
     }
 
-    /// Consumes this [`TestInterface`] and returns all the lifetime-carrying
-    /// internal channels within it.
-    pub fn into_inner(
+    /// Consumes this [`TestInterface`] and removes the associated interface
+    /// in the Netstack, returning the device lifetime-carrying channels.
+    pub async fn remove(
         self,
-    ) -> (
-        fnetemul_network::EndpointProxy,
-        fnet_interfaces_ext::admin::Control,
-        Option<fnet_interfaces_admin::DeviceControlProxy>,
-    ) {
+    ) -> Result<(fnetemul_network::EndpointProxy, Option<fnet_interfaces_admin::DeviceControlProxy>)>
+    {
+        let Self {
+            endpoint: TestEndpoint { endpoint, name: _, _sandbox: _ },
+            id,
+            stack,
+            interface_state: _,
+            control,
+            device_control,
+        } = self;
+        // For Network Devices, the `control` handle  is tied to the lifetime of
+        // the interface; dropping it triggers interface removal in the
+        // Netstack. For Ethernet devices this is a No-Op.
+        std::mem::drop(control);
+        // Ethernet devices should be removed with the `fuchsia.net.stack` API.
+        // Note that NetDevice interfaces will be removed by this API in
+        // Netstack2, but will generate errors in Netstack3. Hence preferring
+        // the legacy `fuchsia.net.stack` API for Ethernet devices.
+        // TODO(https://fxbug.dev/102064): Remove this once Ethernet devices are
+        // no longer supported.
+        match endpoint.get_device().await.context("get_device failed")? {
+            fnetemul_network::DeviceConnection::Ethernet(_) => {
+                let () = stack
+                    .del_ethernet_interface(id)
+                    .await
+                    .squash_result()
+                    .context("delete ethernet interface failed")?;
+            }
+            fnetemul_network::DeviceConnection::NetworkDevice(_) => {}
+        }
+        Ok((endpoint, device_control))
+    }
+
+    /// Consumes this [`TestInterface`] and removes the underlying device. The
+    /// Netstack will implicitly remove the interface and clients can expect to
+    /// observe a `PEER_CLOSED` event on the returned control channel.
+    pub fn remove_device(
+        self,
+    ) -> (fnet_interfaces_ext::admin::Control, Option<fnet_interfaces_admin::DeviceControlProxy>)
+    {
         let Self {
             endpoint: TestEndpoint { endpoint, name: _, _sandbox: _ },
             id: _,
@@ -1200,7 +1235,8 @@ impl<'a> TestInterface<'a> {
             control,
             device_control,
         } = self;
-        (endpoint, control, device_control)
+        std::mem::drop(endpoint);
+        (control, device_control)
     }
 }
 

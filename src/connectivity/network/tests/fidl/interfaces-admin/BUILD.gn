@@ -16,7 +16,6 @@ rustc_test("interfaces-admin") {
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack_rust",
     "//sdk/fidl/fuchsia.net.tun:fuchsia.net.tun_rust",
     "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_rust",
-    "//src/connectivity/lib/fidl_fuchsia_net_stack_ext",
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/lib/net-types",
     "//src/connectivity/network/testing/netemul/network-context/fidl:network_rust",

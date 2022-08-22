@@ -12,7 +12,6 @@ use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
-use fidl_fuchsia_netemul_network as fnetemul_network;
 use fidl_fuchsia_posix as fposix;
 use fidl_fuchsia_posix_socket as fposix_socket;
 use fuchsia_async::{
@@ -1736,26 +1735,8 @@ async fn get_bound_device_errors_after_device_deleted<N: Netstack, E: netemul::E
     .await
     .expect("waiting for interface addition");
 
-    // Now that the socket has been bound to an interface, remove the interface.
-    // This needs to be done manually for Ethertap interfaces since Netstack3
-    // doesn't get notified on drop.
-    // TODO(https://fxbug.dev/102064): Remove this once Ethernet devices are no
-    // longer supported.
-    match N::VERSION {
-        NetstackVersion::Netstack3 => match E::NETEMUL_BACKING {
-            fnetemul_network::EndpointBacking::Ethertap => bound_interface
-                .stack()
-                .del_ethernet_interface(id)
-                .await
-                .expect("FIDL call failed")
-                .expect("del ethernet failed"),
-            fnetemul_network::EndpointBacking::NetworkDevice => (),
-        },
-        NetstackVersion::Netstack2
-        | NetstackVersion::ProdNetstack2
-        | NetstackVersion::Netstack2WithFastUdp => (),
-    }
-    drop(bound_interface);
+    let (_endpoint, _device_control) =
+        bound_interface.remove().await.expect("failed to remove interface");
 
     // Wait for the interface to be removed.
     fnet_interfaces_ext::wait_interface(stream, &mut state, |interfaces| {
