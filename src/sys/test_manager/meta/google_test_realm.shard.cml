@@ -69,5 +69,17 @@
             from: "parent",
             to: "#google-tests",
         },
+        // vulkan
+        {
+            directory: [
+                "dev-goldfish-address-space",
+                "dev-goldfish-control",
+                "dev-goldfish-pipe",
+                "dev-goldfish-sync",
+                "dev-gpu",
+            ],
+            from: "parent",
+            to: "#google-tests",
+        },
     ],
 }
