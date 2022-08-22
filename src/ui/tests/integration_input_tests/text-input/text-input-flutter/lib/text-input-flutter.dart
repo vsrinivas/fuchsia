@@ -87,9 +87,7 @@ class _MyHomePageState extends State<MyHomePage> {
                 key: ValueKey('textfield'),
                 autofocus: true,
                 controller: _controller,
-                // TODO(fxbug.dev/79807): Change to .multiline once the
-                // bug is fixed in Flutter.
-                keyboardType: TextInputType.text,
+                keyboardType: TextInputType.multiline,
                 maxLines: 4,
                 decoration: InputDecoration(
                   border: OutlineInputBorder(),

@@ -215,13 +215,13 @@ TEST_F(TextInputTest, FlutterTextFieldEntry) {
 
   FX_LOGS(INFO) << "Sending a text message";
   bool done = false;
-  input_synthesis->Send("Hello world!", [&done]() { done = true; });
+  input_synthesis->Send("Hello\nworld!", [&done]() { done = true; });
   RunLoopUntil([&] { return done; });
 
   FX_LOGS(INFO) << "Message was sent";
 
   // Sadly, we can only wait until test timeout if this fails.
-  RunLoopUntil([&] { return test_response_listener_->HasResponse("Hello world!"); });
+  RunLoopUntil([&] { return test_response_listener_->HasResponse("Hello\nworld!"); });
 
   FX_LOGS(INFO) << "Done";
 }
