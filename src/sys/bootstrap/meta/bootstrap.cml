@@ -188,7 +188,6 @@
                 "fuchsia.pkg.RepositoryManager",
                 "fuchsia.pkg.rewrite.Engine",
                 "fuchsia.process.Launcher",
-                "fuchsia.sys.Environment",
             ],
             from: "parent",
             to: [
