@@ -12,10 +12,6 @@
 
 #include "test-file.h"
 
-namespace {
-
-using namespace zxdump::testing;
-
 // The dump format is complex enough that direct testing of output data would
 // be tantamount to reimplementing the reader, and golden binary files aren't
 // easy to match up with fresh data from a live system where all the KOID and
@@ -23,6 +19,59 @@ using namespace zxdump::testing;
 // test the dumper is via end-to-end tests that dump into a file via the dumper
 // API, read the dump back using the reader API, and then compare the data from
 // the dump to the data from the original live tasks.
+
+namespace zxdump::testing {
+
+void TestProcessForPropertiesAndInfo::StartChild() {
+  SpawnAction({
+      .action = FDIO_SPAWN_ACTION_SET_NAME,
+      .name = {kChildName},
+  });
+  ASSERT_NO_FATAL_FAILURE(TestProcess::StartChild());
+}
+
+void TestProcessForPropertiesAndInfo::CheckDump(zxdump::TaskHolder& holder, bool threads_dumped) {
+  auto find_result = holder.root_job().find(koid());
+  ASSERT_TRUE(find_result.is_ok()) << find_result.error_value();
+
+  ASSERT_EQ(find_result->get().type(), ZX_OBJ_TYPE_PROCESS);
+  zxdump::Process& read_process = static_cast<zxdump::Process&>(find_result->get());
+
+  {
+    auto name_result = read_process.get_property<ZX_PROP_NAME>();
+    ASSERT_TRUE(name_result.is_ok()) << name_result.error_value();
+    std::string_view name(name_result->data(), name_result->size());
+    name = name.substr(0, name.find_first_of('\0'));
+    EXPECT_EQ(name, std::string_view(kChildName));
+  }
+
+  {
+    auto threads_result = read_process.get_info<ZX_INFO_PROCESS_THREADS>();
+    ASSERT_TRUE(threads_result.is_ok()) << threads_result.error_value();
+    EXPECT_EQ(threads_result->size(), size_t{1});
+  }
+
+  // Even though ZX_INFO_PROCESS_THREADS is present, threads() only
+  // returns anything if the threads were actually dumped.
+  {
+    auto threads_result = read_process.threads();
+    ASSERT_TRUE(threads_result.is_ok()) << threads_result.error_value();
+    if (threads_dumped) {
+      EXPECT_EQ(threads_result->get().size(), size_t{1});
+    } else {
+      EXPECT_EQ(threads_result->get().size(), size_t{0});
+    }
+  }
+
+  {
+    auto info_result = read_process.get_info<ZX_INFO_HANDLE_BASIC>();
+    ASSERT_TRUE(info_result.is_ok()) << info_result.error_value();
+    EXPECT_EQ(info_result->type, ZX_OBJ_TYPE_PROCESS);
+    EXPECT_EQ(info_result->koid, koid());
+  }
+}
+
+namespace {
 
 TEST(ZxdumpTests, ProcessDumpBasic) {
   TestFile file;
@@ -86,4 +135,37 @@ TEST(ZxdumpTests, ProcessDumpBasic) {
   }
 }
 
+TEST(ZxdumpTests, ProcessDumpPropertiesAndInfo) {
+  TestFile file;
+  zxdump::FdWriter writer(file.RewoundFd());
+
+  TestProcessForPropertiesAndInfo process;
+  ASSERT_NO_FATAL_FAILURE(process.StartChild());
+
+  zxdump::ProcessDump<zx::unowned_process> dump(process.borrow());
+
+  auto collect_result = dump.CollectProcess(TestProcess::PruneAllMemory);
+  ASSERT_TRUE(collect_result.is_ok()) << collect_result.error_value();
+
+  auto dump_result = dump.DumpHeaders(writer.AccumulateFragmentsCallback());
+  ASSERT_TRUE(dump_result.is_ok()) << dump_result.error_value();
+
+  auto write_result = writer.WriteFragments();
+  ASSERT_TRUE(write_result.is_ok()) << write_result.error_value();
+  const size_t bytes_written = write_result.value();
+
+  auto memory_result = dump.DumpMemory(writer.WriteCallback());
+  ASSERT_TRUE(memory_result.is_ok()) << memory_result.error_value();
+  const size_t total_with_memory = memory_result.value();
+
+  // We pruned all memory, so DumpMemory should not have added any output.
+  EXPECT_EQ(bytes_written, total_with_memory);
+
+  zxdump::TaskHolder holder;
+  auto read_result = holder.Insert(file.RewoundFd());
+  ASSERT_TRUE(read_result.is_ok()) << read_result.error_value();
+  ASSERT_NO_FATAL_FAILURE(process.CheckDump(holder, false));
+}
+
 }  // namespace
+}  // namespace zxdump::testing

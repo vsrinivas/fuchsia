@@ -10,6 +10,7 @@
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zxdump/dump.h>
+#include <lib/zxdump/task.h>
 #include <unistd.h>
 
 #include <cstdio>
@@ -34,12 +35,21 @@ class TestProcess {
     }
   }
 
+  TestProcess& SpawnAction(const fdio_spawn_action_t& action) {
+    spawn_actions_.push_back(action);
+    return *this;
+  }
+
   void StartChild(std::vector<const char*> args = {}) {
     args.insert(args.begin(), kChildProgram);
     args.push_back(nullptr);
     ASSERT_FALSE(*std::prev(args.end()));
-    ASSERT_EQ(ZX_OK, fdio_spawn(job().get(), FDIO_SPAWN_CLONE_ALL, kChildProgram, args.data(),
-                                process_.reset_and_get_address()));
+    char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH] = "";
+    ASSERT_EQ(fdio_spawn_etc(job().get(), FDIO_SPAWN_CLONE_ALL, kChildProgram, args.data(), environ,
+                             spawn_actions_.size(), spawn_actions_.data(),
+                             process_.reset_and_get_address(), err_msg),
+              ZX_OK)
+        << err_msg;
   }
 
   const zx::process& process() const { return process_; }
@@ -93,6 +103,18 @@ class TestProcess {
   zx::process process_;
   zx::job job_;
   bool kill_job_ = false;
+};
+
+class TestProcessForPropertiesAndInfo : public TestProcess {
+ public:
+  // Start a child for basic property & info dump testing.
+  void StartChild();
+
+  // Verify a dump file for that child was inserted and looks right.
+  void CheckDump(zxdump::TaskHolder& holder, bool threads_dumped = true);
+
+ private:
+  static constexpr const char* kChildName = "zxdump-property-test-child";
 };
 
 }  // namespace zxdump::testing
