@@ -23,6 +23,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/staticanalysis"
 	"go.fuchsia.dev/fuchsia/tools/staticanalysis/analyzers/clippy"
 	"go.fuchsia.dev/fuchsia/tools/staticanalysis/analyzers/codelinks"
+	"go.fuchsia.dev/fuchsia/tools/staticanalysis/analyzers/rfcmeta"
 )
 
 // fileToAnalyze is the expected schema of each element in the file specified by
@@ -47,6 +48,7 @@ func getAnalyzers(checkoutDir, buildDir string) ([]staticanalysis.Analyzer, erro
 	res = append(res, clippy)
 
 	res = append(res, codelinks.New(checkoutDir))
+	res = append(res, rfcmeta.New(checkoutDir))
 
 	return res, nil
 }

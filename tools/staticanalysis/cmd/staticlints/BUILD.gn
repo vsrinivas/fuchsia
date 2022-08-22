@@ -22,6 +22,7 @@ if (is_host) {
       "//tools/staticanalysis",
       "//tools/staticanalysis/analyzers:clippy",
       "//tools/staticanalysis/analyzers:codelinks",
+      "//tools/staticanalysis/analyzers:rfcmeta",
     ]
   }
 

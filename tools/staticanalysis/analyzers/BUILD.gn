@@ -45,6 +45,26 @@ if (is_host) {
         [ "go.fuchsia.dev/fuchsia/tools/staticanalysis/analyzers/codelinks" ]
     deps = [ ":codelinks" ]
   }
+
+  go_library("rfcmeta") {
+    source_dir = "rfcmeta"
+    sources = [
+      "rfcmeta.go",
+      "rfcmeta_test.go",
+    ]
+
+    deps = [
+      "//third_party/golibs:github.com/google/go-cmp",
+      "//third_party/golibs:gopkg.in/yaml.v2",
+      "//tools/staticanalysis",
+    ]
+  }
+
+  go_test("rfcmeta_tests") {
+    gopackages =
+        [ "go.fuchsia.dev/fuchsia/tools/staticanalysis/analyzers/rfcmeta" ]
+    deps = [ ":rfcmeta" ]
+  }
 }
 
 group("tests") {
@@ -52,5 +72,6 @@ group("tests") {
   deps = [
     ":clippy_tests($host_toolchain)",
     ":codelinks_tests($host_toolchain)",
+    ":rfcmeta_tests($host_toolchain)",
   ]
 }
