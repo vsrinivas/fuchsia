@@ -1,5 +1,9 @@
 {
   "name": "test.nullable",
+  "experiments": [
+    "no_optional_structs",
+    "output_index_json"
+  ],
   "library_dependencies": [
     {
       "name": "zx",

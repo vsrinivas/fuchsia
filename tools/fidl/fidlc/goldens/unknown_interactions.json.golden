@@ -1,5 +1,10 @@
 {
   "name": "test.unknowninteractions",
+  "experiments": [
+    "no_optional_structs",
+    "output_index_json",
+    "unknown_interactions"
+  ],
   "library_dependencies": [],
   "bits_declarations": [],
   "const_declarations": [],

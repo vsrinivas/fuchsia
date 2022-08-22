@@ -1,5 +1,10 @@
 {
   "name": "test.newtype",
+  "experiments": [
+    "allow_new_types",
+    "no_optional_structs",
+    "output_index_json"
+  ],
   "library_dependencies": [],
   "bits_declarations": [
     {

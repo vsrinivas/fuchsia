@@ -21,6 +21,14 @@ bool ExperimentalFlags::IsFlagEnabled(Flag flag) const {
   return (flags_ & static_cast<FlagSet>(flag)) != 0;
 }
 
+void ExperimentalFlags::ForEach(
+    const fit::function<void(const std::string_view, Flag, bool)>& fn) const {
+  for (const auto& [name, flag] : FLAG_STRINGS) {
+    bool is_enabled = IsFlagEnabled(flag);
+    fn(name, flag, is_enabled);
+  }
+}
+
 std::map<const std::string_view, const ExperimentalFlags::Flag> ExperimentalFlags::FLAG_STRINGS = {
     {"unknown_interactions", Flag::kUnknownInteractions},
     {"no_optional_structs", Flag::kNoOptionalStructs},

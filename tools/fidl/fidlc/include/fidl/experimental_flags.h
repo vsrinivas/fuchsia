@@ -5,6 +5,8 @@
 #ifndef TOOLS_FIDL_FIDLC_INCLUDE_FIDL_EXPERIMENTAL_FLAGS_H_
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_EXPERIMENTAL_FLAGS_H_
 
+#include <lib/fit/function.h>
+
 #include <map>
 #include <string_view>
 
@@ -27,6 +29,7 @@ class ExperimentalFlags {
   void EnableFlag(Flag flag);
 
   bool IsFlagEnabled(Flag flag) const;
+  void ForEach(const fit::function<void(const std::string_view, Flag, bool)>& fn) const;
 
  private:
   static std::map<const std::string_view, const Flag> FLAG_STRINGS;

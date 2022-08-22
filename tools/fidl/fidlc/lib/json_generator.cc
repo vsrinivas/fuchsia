@@ -980,6 +980,15 @@ std::ostringstream JSONGenerator::Produce() {
       GenerateObjectMember("maybe_attributes", compilation_->library_attributes);
     }
 
+    std::vector<const std::string_view> active_experiments;
+    experimental_flags_.ForEach(
+        [&](const std::string_view name, ExperimentalFlags::Flag flag, bool enabled) {
+          if (enabled) {
+            active_experiments.push_back(name);
+          }
+        });
+    GenerateObjectMember("experiments", active_experiments);
+
     GenerateObjectPunctuation(Position::kSubsequent);
     EmitObjectKey("library_dependencies");
     GenerateArray(compilation_->direct_and_composed_dependencies);

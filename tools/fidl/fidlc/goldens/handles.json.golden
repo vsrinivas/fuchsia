@@ -1,5 +1,9 @@
 {
   "name": "test.handles",
+  "experiments": [
+    "no_optional_structs",
+    "output_index_json"
+  ],
   "library_dependencies": [
     {
       "name": "fdf",

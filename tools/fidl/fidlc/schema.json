@@ -1946,6 +1946,13 @@
             },
             "type": "array"
         },
+        "experiments": {
+            "description": "List of active experiments given to fidlc via the --experimental flag",
+            "items": {
+                "type": "string"
+            },
+            "type": "array"
+        },
         "experimental_resource_declarations": {
             "description": "List of resources, sorted by fully qualified name",
             "items": {

@@ -1,5 +1,9 @@
 {
   "name": "test.anonymous",
+  "experiments": [
+    "no_optional_structs",
+    "output_index_json"
+  ],
   "library_dependencies": [],
   "bits_declarations": [
     {
