@@ -35,9 +35,20 @@ source_set("ddktl") {
     # <ddktl/device.h> has #include <lib/zx/channel.h>.
     "//zircon/system/ulib/zx",
 
+    # <ddktl/device.h> has #include <lib/zx/status.h>.
+    "//zircon/system/ulib/zxc",
+
     # <ddktl/fidl.h> has #include <ddk/device.h>
     "//src/lib/ddk",
   ]
+
+  if (is_fuchsia) {
+    public_deps += [
+      # <ddktl/device.h> has #include <lib/service/llcpp/service.h>.
+      "//zircon/system/ulib/service:service-llcpp",
+    ]
+  }
+
   deps = [
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//src/lib/ddk",

@@ -231,6 +231,8 @@
 //src/devices/tests/fidl-bindlib-generation/parent-driver:driver
 //src/devices/tests/fidl-protocol:child-driver
 //src/devices/tests/fidl-protocol:parent-driver
+//src/devices/tests/fidl-service:child-driver
+//src/devices/tests/fidl-service:parent-driver
 //src/devices/tests/isolateddevmgr:isolateddevmgr-test-driver-driver
 //src/devices/tests/mock-device:mock-device-driver
 //src/devices/tests/nonbindable:driver

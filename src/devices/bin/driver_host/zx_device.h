@@ -427,6 +427,17 @@ struct zx_device
 
   std::vector<const char*> fidl_offers_;
 
+  cpp20::span<const char*> fidl_service_offers() {
+    return {fidl_service_offers_.data(), fidl_service_offers_.size()};
+  }
+
+  void set_fidl_service_offers(cpp20::span<const char*> fidl_service_offers) {
+    fidl_service_offers_ = {fidl_service_offers.begin(), fidl_service_offers.end()};
+    inspect_->set_fidl_service_offers(fidl_service_offers);
+  }
+
+  std::vector<const char*> fidl_service_offers_;
+
   // driver that has published this device
   fbl::RefPtr<Driver> driver;
   DriverRef driver_ref_;

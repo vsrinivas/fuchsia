@@ -132,6 +132,9 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
   if (args->fidl_protocol_offers) {
     dev->set_fidl_offers({args->fidl_protocol_offers, args->fidl_protocol_offer_count});
   }
+  if (args->fidl_service_offers) {
+    dev->set_fidl_service_offers({args->fidl_service_offers, args->fidl_service_offer_count});
+  }
   if (args->flags & DEVICE_ADD_NON_BINDABLE) {
     dev->set_flag(DEV_FLAG_UNBINDABLE);
   }
@@ -553,4 +556,26 @@ __EXPORT zx_status_t device_add_group(zx_device_t* dev, const char* name,
   fbl::AutoLock lock(&internal::ContextForApi()->api_lock());
   auto dev_ref = fbl::RefPtr(dev);
   return internal::ContextForApi()->DeviceAddGroup(dev_ref, name, group_desc);
+}
+
+__EXPORT zx_status_t device_open_fidl_service(zx_device_t* device, const char* service_name,
+                                              zx_handle_t request) {
+  if (!device->is_proxy()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  return device->proxy()->OpenService(service_name, zx::channel(request)).status_value();
+}
+
+__EXPORT zx_status_t device_open_fragment_fidl_service(zx_device_t* device,
+                                                       const char* fragment_name,
+                                                       const char* service_name,
+                                                       zx_handle_t request) {
+  if (!device->is_composite()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  zx_device_t* fragment;
+  if (!device->composite()->GetFragment(fragment_name, &fragment)) {
+    return ZX_ERR_NOT_FOUND;
+  }
+  return device_open_fidl_service(fragment, service_name, request);
 }

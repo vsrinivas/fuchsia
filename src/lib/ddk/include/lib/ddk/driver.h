@@ -178,6 +178,15 @@ typedef struct device_add_args {
   // The number of elements in the above list.
   size_t fidl_protocol_offer_count;
 
+  // Optional list of fidl services to offer to child driver.
+  // These service will automatically be added as bind properties which may be used in
+  // bind rules.
+  // Only the service instance named "default" will be used.
+  const char** fidl_service_offers;
+
+  // The number of elements in the above list.
+  size_t fidl_service_offer_count;
+
   // Arguments used with DEVICE_ADD_MUST_ISOLATE
   // these will be passed to the create() driver op of
   // the proxy device in the new devhost
@@ -473,6 +482,29 @@ zx_status_t device_connect_fidl_protocol(zx_device_t* device, const char* protoc
 // ddktl equivalent is DdkConnectFragmentFidlProtocol.
 zx_status_t device_connect_fragment_fidl_protocol(zx_device_t* device, const char* fragment_name,
                                                   const char* protocol_name, zx_handle_t request);
+
+// Opens a connection to the specified FIDL service offered by |device|.
+//
+// |device| is typically the parent of the device invoking this function.
+// |service_name| can be constructed with `my_service_name::Name`.
+// |request| must be the server end of a zircon channel.
+//
+// If you are inside a C++ device class, it may be more convenient to use the
+// DdkOpenFidlService wrapper method from ddktl, which supplies |device| and
+// |service_name| automatically.
+zx_status_t device_open_fidl_service(zx_device_t* device, const char* service_name,
+                                     zx_handle_t request);
+
+// Opens a connection to the specified FIDL protocol offered by |device|.
+//
+// |device| should be a composite device. |fragment_name| picks out the specific
+// fragment device to use; it must match the fragment name declared in the
+// composite device's bind file.
+//
+// Arguments are otherwise the same as for device_open_fidl_service. The
+// ddktl equivalent is DdkOpenFragmentFidlService.
+zx_status_t device_open_fragment_fidl_service(zx_device_t* device, const char* fragment_name,
+                                              const char* service_name, zx_handle_t request);
 
 // Returns a string containing the variable for the given |name|. If |out| is not large enough,
 // |size_actual| will contain the size of the required buffer. |out| is guaranateed to be null

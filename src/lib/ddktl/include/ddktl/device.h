@@ -11,8 +11,10 @@
 #include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/fidl/cpp/wire/message.h>
 #include <lib/fidl/cpp/wire/wire_messaging.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/stdcompat/span.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
 
@@ -528,6 +530,11 @@ class DeviceAddArgs {
     args_.fidl_protocol_offer_count = fidl_protocol_offers.size();
     return *this;
   }
+  DeviceAddArgs& set_fidl_service_offers(cpp20::span<const char*> fidl_service_offers) {
+    args_.fidl_service_offers = fidl_service_offers.data();
+    args_.fidl_service_offer_count = fidl_service_offers.size();
+    return *this;
+  }
   DeviceAddArgs& set_power_states(cpp20::span<const device_power_state_info_t> power_states) {
     args_.power_states = power_states.data();
     args_.power_state_count = static_cast<uint8_t>(power_states.size());
@@ -828,6 +835,49 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
       const char* path = fidl::DiscoverableProtocolName<Protocol>) const {
     return device_connect_fragment_fidl_protocol(parent(), fragment_name, path,
                                                  request.TakeChannel().release());
+  }
+
+  template <typename Service>
+  zx::status<typename Service::ServiceClient> DdkOpenFidlService() const {
+    zx::channel local, remote;
+    if (zx_status_t status = zx::channel::create(0, &local, &remote); status != ZX_OK) {
+      return zx::error(status);
+    }
+    zx::status<> result = DdkOpenNamedFidlService(Service::Name, std::move(remote));
+    if (result.is_error()) {
+      return result.take_error();
+    }
+
+    return zx::ok(
+        typename Service::ServiceClient(std::move(local), service::internal::DirectoryOpenFunc));
+  }
+
+  zx::status<> DdkOpenNamedFidlService(const char* service, zx::channel request) const {
+    return zx::make_status(device_open_fidl_service(parent(), service, request.release()));
+  }
+
+  template <typename Service>
+  zx::status<typename Service::ServiceClient> DdkOpenFragmentFidlService(
+      const char* fragment_name) const {
+    zx::channel local, remote;
+    if (zx_status_t status = zx::channel::create(0, &local, &remote); status != ZX_OK) {
+      return zx::error(status);
+    }
+
+    zx::status<> result =
+        DdkOpenNamedFragmentFidlService(fragment_name, Service::Name, std::move(remote));
+    if (result.is_error()) {
+      return result.take_error();
+    }
+
+    return zx::ok(
+        typename Service::ServiceClient(std::move(local), service::internal::DirectoryOpenFunc));
+  }
+
+  zx::status<> DdkOpenNamedFragmentFidlService(const char* fragment_name, const char* service,
+                                               zx::channel request) const {
+    return zx::make_status(
+        device_open_fragment_fidl_service(parent(), fragment_name, service, request.release()));
   }
 
   zx_status_t DdkServiceConnect(const char* service_name, fdf::Channel channel) {

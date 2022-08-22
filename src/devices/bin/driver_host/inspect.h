@@ -239,6 +239,7 @@ class DeviceInspect {
 
   void set_protocol_id(uint32_t protocol_id);
   void set_fidl_offers(cpp20::span<const char*> fidl_offers);
+  void set_fidl_service_offers(cpp20::span<const char*> fidl_offers);
 
   void increment_instance_count();
   void decrement_instance_count();

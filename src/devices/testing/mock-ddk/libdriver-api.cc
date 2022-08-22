@@ -160,6 +160,18 @@ __EXPORT zx_status_t device_connect_fragment_fidl_protocol(zx_device_t* device,
   return device->ConnectToFidlProtocol(protocol_name, zx::channel(request), fragment_name);
 }
 
+__EXPORT zx_status_t device_open_fidl_service(zx_device_t* device, const char* service_name,
+                                              zx_handle_t request) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+__EXPORT zx_status_t device_open_fragment_fidl_service(zx_device_t* device,
+                                                       const char* fragment_name,
+                                                       const char* service_name,
+                                                       zx_handle_t request) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 // Unsupported calls:
 __EXPORT
 zx_status_t device_open_protocol_session_multibindable(const zx_device_t* dev, uint32_t proto_id,
