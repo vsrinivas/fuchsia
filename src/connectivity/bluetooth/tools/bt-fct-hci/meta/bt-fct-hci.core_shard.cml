@@ -1,0 +1,22 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "bt-fct-hci",
+            url: "fuchsia-pkg://fuchsia.com/bt-fct-hci#meta/bt-fct-hci.cm",
+            environment: "#core-env",
+        },
+    ],
+    offer: [
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-class-bluetooth",
+            to: "#bt-fct-hci",
+            rights: [ "rw*" ],
+            subdir: "class/bt-hci",
+        },
+    ],
+}
