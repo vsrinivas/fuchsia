@@ -10,8 +10,8 @@ use {
 #[ffx_plugin("storage_dev")]
 pub async fn blobfs_checkerboard(cmd: BlobfsCheckerboardCommand) -> Result<()> {
     let opts = blackout_host::CommonOpts {
-        device_label: None,
-        device_path: Some(cmd.block_device),
+        device_label: cmd.device_label,
+        device_path: cmd.device_path,
         seed: cmd.seed,
         reboot: if cmd.dmc_reboot {
             blackout_host::RebootType::Dmc

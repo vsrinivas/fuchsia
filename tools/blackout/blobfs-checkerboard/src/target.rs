@@ -42,15 +42,19 @@ struct BlobfsCheckerboard;
 impl Test for BlobfsCheckerboard {
     async fn setup(
         &self,
-        _device_label: String,
+        device_label: String,
         device_path: Option<String>,
         seed: u64,
     ) -> Result<()> {
-        let block_device = device_path.unwrap();
-        tracing::info!("provided block device: {}", block_device);
-        let dev = blackout_target::find_dev(&block_device).await?;
-        tracing::info!("using equivalent block device: {}", dev);
-        let mut blobfs = Blobfs::new(&dev)?;
+        tracing::info!(
+            "setting up device with label {} and potential path {:?}",
+            device_label,
+            device_path
+        );
+        let block_device =
+            blackout_target::set_up_partition(&device_label, device_path.as_deref(), true).await?;
+        tracing::info!("using block device: {}", block_device);
+        let mut blobfs = Blobfs::new(&block_device)?;
 
         let mut rng = StdRng::seed_from_u64(seed);
 
@@ -85,15 +89,19 @@ impl Test for BlobfsCheckerboard {
 
     async fn test(
         &self,
-        _device_label: String,
+        device_label: String,
         device_path: Option<String>,
         seed: u64,
     ) -> Result<()> {
-        let block_device = device_path.unwrap();
-        tracing::info!("provided block device: {}", block_device);
-        let dev = blackout_target::find_dev(&block_device).await?;
-        tracing::info!("using equivalent block device: {}", dev);
-        let mut blobfs = Blobfs::new(&dev)?;
+        tracing::info!(
+            "finding block device based on name {} and potential path {:?}",
+            device_label,
+            device_path
+        );
+        let block_device =
+            blackout_target::find_partition(&device_label, device_path.as_deref()).await?;
+        tracing::info!("using block device: {}", block_device);
+        let mut blobfs = Blobfs::new(&block_device)?;
 
         let mut rng = StdRng::seed_from_u64(seed);
         let root = format!("/test-fs-root-{}", rng.gen::<u16>());
@@ -195,15 +203,19 @@ impl Test for BlobfsCheckerboard {
 
     async fn verify(
         &self,
-        _device_label: String,
+        device_label: String,
         device_path: Option<String>,
         _seed: u64,
     ) -> Result<()> {
-        let block_device = device_path.unwrap();
-        tracing::info!("provided block device: {}", block_device);
-        let dev = blackout_target::find_dev(&block_device).await?;
-        tracing::info!("using equivalent block device: {}", dev);
-        let mut blobfs = Blobfs::new(&dev)?;
+        tracing::info!(
+            "finding block device based on name {} and potential path {:?}",
+            device_label,
+            device_path
+        );
+        let block_device =
+            blackout_target::find_partition(&device_label, device_path.as_deref()).await?;
+        tracing::info!("using block device: {}", block_device);
+        let mut blobfs = Blobfs::new(&block_device)?;
 
         tracing::info!("verifying disk with fsck");
         blobfs.fsck().await.context("fsck failed")?;

@@ -10,10 +10,14 @@
     description = "Run a power-failure test on blobfs with a checkerboard load pattern"
 )]
 pub struct BlobfsCheckerboardCommand {
-    /// the block device on the target device to use for testing. WARNING: the test can (and likely
+    /// the label of the partition the test should use. If one isn't provided a default is used.
+    #[argh(option, short = 'l')]
+    pub device_label: Option<String>,
+    /// the path of the block device on the target device to use for testing. If one isn't provided
+    /// the test will pick an appropriate one. WARNING: the test can (and likely
     /// will!) format this device. Don't use a main system partition!
-    #[argh(positional)]
-    pub block_device: String,
+    #[argh(option, short = 'p')]
+    pub device_path: Option<String>,
     /// a seed to use for all random operations. Tests are NOT deterministic relative to the
     /// provided seed. The operations will be identical, but because of the non-deterministic
     /// timing-dependent nature of the tests, the exact time the reboot is triggered in relation to

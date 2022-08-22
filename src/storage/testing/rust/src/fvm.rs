@@ -31,14 +31,23 @@ extern "C" {
 
 /// Formats the block device at `block_device` to be an empty FVM instance.
 pub fn format_for_fvm(block_device: &Path, fvm_slice_size: usize) -> Result<()> {
-    let file = OpenOptions::new().read(true).write(true).open(block_device)?;
+    let file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(block_device)
+        .context("format_for_fvm open failed")?;
     let status = unsafe { fvm_init(file.as_raw_fd(), fvm_slice_size) };
-    Ok(zx::ok(status)?)
+    Ok(zx::ok(status).context("fvm_init failed")?)
 }
 
 /// Binds the FVM driver to the device at `controller`. Does not wait for the driver to be ready.
 pub async fn bind_fvm_driver(controller: &ControllerProxy) -> Result<()> {
-    controller.bind(FVM_DRIVER_PATH).await?.map_err(zx::Status::from_raw)?;
+    controller
+        .bind(FVM_DRIVER_PATH)
+        .await
+        .context("fvm driver bind call failed")?
+        .map_err(zx::Status::from_raw)
+        .context("fvm driver bind returned error")?;
     Ok(())
 }
 
@@ -48,8 +57,11 @@ pub async fn wait_for_fvm_driver(block_device: &Path) -> Result<PathBuf> {
     let device = fuchsia_fs::directory::open_in_namespace(
         block_device.to_str().unwrap(),
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-    )?;
-    recursive_wait_and_open_node(&device, FVM_DEVICE_NAME).await?;
+    )
+    .context("wait_for_fvm_driver open failed")?;
+    recursive_wait_and_open_node(&device, FVM_DEVICE_NAME)
+        .await
+        .context("wait_for_fvm_driver wait failed")?;
     Ok(block_device.join(FVM_DEVICE_NAME))
 }
 
@@ -59,11 +71,13 @@ pub async fn set_up_fvm(block_device: &Path, fvm_slice_size: usize) -> Result<Vo
     format_for_fvm(block_device, fvm_slice_size)?;
 
     let controller =
-        connect_to_protocol_at_path::<ControllerMarker>(block_device.to_str().unwrap())?;
+        connect_to_protocol_at_path::<ControllerMarker>(block_device.to_str().unwrap())
+            .context("device_path controller connect failed")?;
     bind_fvm_driver(&controller).await?;
 
     let fvm_path = wait_for_fvm_driver(block_device).await?;
-    Ok(connect_to_protocol_at_path::<VolumeManagerMarker>(fvm_path.to_str().unwrap())?)
+    Ok(connect_to_protocol_at_path::<VolumeManagerMarker>(fvm_path.to_str().unwrap())
+        .context("fvm_path volume manager connect failed")?)
 }
 
 /// Creates an FVM volume in `volume_manager`.

@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
 import("//src/storage/testing/driver_test_realm.gni")
 
 rustc_library("blackout-target") {
@@ -11,14 +12,20 @@ rustc_library("blackout-target") {
   with_unit_tests = true
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_rust",
+    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/lib/device-watcher/rust",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-fs",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/storage/testing/rust:storage-isolated-driver-manager",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:tracing",
+    "//third_party/rust_crates:uuid",
     "//tools/blackout/fidl/fuchsia.blackout.test:fuchsia.blackout.test_rust",
   ]
 
@@ -34,13 +41,59 @@ rustc_library("blackout-target") {
   ]
 }
 
+# These tests are broken out into their own components because they don't respond well when they
+# aren't the only ones with access to /dev.
+rustc_test("blackout-target-test-no-path") {
+  edition = "2021"
+  deps = [
+    ":blackout-target",
+    "//sdk/lib/device-watcher/rust",
+    "//src/lib/fuchsia-async",
+    "//src/lib/storage/ramdevice_client/rust:ramdevice_client",
+    "//src/storage/testing/rust:storage-isolated-driver-manager",
+    "//third_party/rust_crates:uuid",
+  ]
+
+  sources = [ "tests/setup_then_find_no_path.rs" ]
+  source_root = "tests/setup_then_find_no_path.rs"
+}
+
+rustc_test("blackout-target-test-with-path") {
+  edition = "2021"
+  deps = [
+    ":blackout-target",
+    "//sdk/lib/device-watcher/rust",
+    "//src/lib/fuchsia-async",
+    "//src/lib/storage/ramdevice_client/rust:ramdevice_client",
+  ]
+
+  sources = [ "tests/setup_then_find_with_path.rs" ]
+  source_root = "tests/setup_then_find_with_path.rs"
+}
+
 storage_driver_test_realm_v2_component("blackout-target-test-component") {
   component_name = "blackout-target-test"
   deps = [ ":blackout-target_test" ]
 }
 
+storage_driver_test_realm_v2_component(
+    "blackout-target-test-no-path-component") {
+  component_name = "blackout-target-no-with-path"
+  deps = [ ":blackout-target-test-no-path" ]
+}
+
+storage_driver_test_realm_v2_component(
+    "blackout-target-test-with-path-component") {
+  component_name = "blackout-target-test-with-path"
+  deps = [ ":blackout-target-test-with-path" ]
+}
+
 fuchsia_test_package("blackout-target-test") {
-  test_components = [ ":blackout-target-test-component" ]
+  test_components = [
+    ":blackout-target-test-component",
+    ":blackout-target-test-no-path-component",
+    ":blackout-target-test-with-path-component",
+  ]
   test_specs = {
     log_settings = {
       # Required due to no access to Cobalt for minfs
