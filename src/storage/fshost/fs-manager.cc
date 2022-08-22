@@ -410,34 +410,40 @@ void FsManager::FileReport(fs_management::DiskFormat format, ReportReason reason
     FX_LOGS(INFO) << "Report filing disabled, ignoring crash report.";
     return;
   }
+  fshost::FileReport(std::string(fs_management::DiskFormatString(format)),
+                     std::move(report_reason));
+}
+
+void FileReport(std::string program_name, fbl::String report_reason) {
   // This thread accesses no state in the SyntheticCrashReporter, so is thread-safe even if the
   // reporter is destroyed.
-  std::thread t([format, report_reason = std::move(report_reason)]() {
-    auto client_end = service::Connect<fuchsia_feedback::CrashReporter>();
-    if (client_end.is_error()) {
-      FX_LOGS(WARNING) << "Unable to connect to crash reporting service: "
-                       << client_end.status_string();
-      return;
-    }
-    auto client = fidl::BindSyncClient(std::move(*client_end));
+  std::thread t(
+      [program_name = std::move(program_name), report_reason = std::move(report_reason)]() {
+        auto client_end = service::Connect<fuchsia_feedback::CrashReporter>();
+        if (client_end.is_error()) {
+          FX_LOGS(WARNING) << "Unable to connect to crash reporting service: "
+                           << client_end.status_string();
+          return;
+        }
+        auto client = fidl::BindSyncClient(std::move(*client_end));
 
-    fidl::Arena allocator;
-    auto report = fuchsia_feedback::wire::CrashReport::Builder(allocator)
-                      .program_name(fs_management::DiskFormatString(format))
-                      .crash_signature(report_reason)
-                      .is_fatal(false)
-                      .Build();
+        fidl::Arena allocator;
+        auto report = fuchsia_feedback::wire::CrashReport::Builder(allocator)
+                          .program_name(program_name)
+                          .crash_signature(report_reason)
+                          .is_fatal(false)
+                          .Build();
 
-    auto res = client->File(report);
-    if (!res.ok()) {
-      FX_LOGS(WARNING) << "Unable to send crash report (fidl error): " << res.status_string();
-    } else if (res->is_error()) {
-      FX_LOGS(WARNING) << "Failed to file crash report: "
-                       << zx_status_get_string(res->error_value());
-    } else {
-      FX_LOGS(INFO) << "Crash report successfully filed";
-    }
-  });
+        auto res = client->File(report);
+        if (!res.ok()) {
+          FX_LOGS(WARNING) << "Unable to send crash report (fidl error): " << res.status_string();
+        } else if (res->is_error()) {
+          FX_LOGS(WARNING) << "Failed to file crash report: "
+                           << zx_status_get_string(res->error_value());
+        } else {
+          FX_LOGS(INFO) << "Crash report successfully filed";
+        }
+      });
   t.detach();
 }
 

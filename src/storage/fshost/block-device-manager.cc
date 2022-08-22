@@ -409,6 +409,7 @@ class FxfsMatcher : public BlockDeviceManager::Matcher {
         if (inspect_) {
           inspect_->LogMigrationStatus(ret);
         }
+        fshost::FileReport("fxfs", "fuchsia-minfs-to-fxfs-migration-failure");
         // Attempt to mount as minfs.
         device.SetFormat(fs_management::kDiskFormatMinfs);
         return device.Add(format_on_corruption_);

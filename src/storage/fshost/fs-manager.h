@@ -32,6 +32,10 @@ namespace fshost {
 
 class BlockWatcher;
 
+// Stand-alone function for issuing synthetic crash reports.
+// Used by FilesystemMounter (failed mounts) and BlockDeviceManager (failed migrations).
+void FileReport(std::string program_name, fbl::String report_reason);
+
 // FsManager owns multiple sub-filesystems, managing them within a top-level
 // in-memory filesystem.
 class FsManager {
