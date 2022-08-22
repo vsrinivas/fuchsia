@@ -124,38 +124,44 @@ impl Experiments {
 
 async fn run_test<W: 'static + Write + Send + Sync>(
     builder_connector: Box<testing_lib::RunBuilderConnector>,
-    writer: W,
+    mut writer: W,
     cmd: RunCommand,
 ) -> Result<()> {
     let experiments = Experiments::from_env().await;
+    if experiments.structured_output.enabled {
+        // TODO(fxbug.dev/81195): Once the documentation lands add a link to it here.
+        writeln!(
+            writer,
+            "The experimental structured output will soon be removed.\
+             Please update any tools that read the output to parse the stable format\
+             and remove the {} configuration.",
+            experiments.structured_output.name
+        )?;
+    }
 
     let min_log_severity = cmd.min_severity_logs;
 
-    let output_directory = match (
-        cmd.disable_output_directory,
-        &cmd.output_directory,
-        experiments.structured_output.enabled,
-    ) {
-        (true, _, _) => None, // user explicitly disabled output.
-        (false, Some(directory), true) => Some(directory.clone().into()), // an override directory is specified.
-        // user specified an override, but output is disabled by experiment flag.
-        (false, Some(_), false) => {
-            ffx_bail!(
-                "Structured output is experimental and is subject to breaking changes. \
-                To enable structured output run \
-                'ffx config set {} true'",
-                experiments.structured_output.name
-            )
-        }
-        // Default to a managed directory when both structured output and output features are enabled.
-        (false, None, true) if experiments.managed_structured_output.enabled => {
+    let output_directory = match (cmd.disable_output_directory, &cmd.output_directory) {
+        (true, _) => None, // user explicitly disabled output.
+        (false, Some(directory)) => Some(directory.clone().into()), // an override directory is specified.
+
+        // Default to a managed directory if enabled.
+        (false, None) if experiments.managed_structured_output.enabled => {
             let mut directory_manager = get_directory_manager(&experiments).await?;
             Some(directory_manager.new_directory()?)
         }
-        // Default to nothing when either structured or managed output is disabled.
-        (false, None, false) | (false, None, true) => None,
+        (false, None) => None,
     };
-    let reporter = run_test_suite_lib::create_reporter(cmd.filter_ansi, output_directory, writer)?;
+    let output_directory_options =
+        output_directory.map(|root_path| run_test_suite_lib::DirectoryReporterOptions {
+            root_path,
+            schema: match experiments.structured_output.enabled {
+                true => run_test_suite_lib::output::SchemaVersion::UnstablePrototype,
+                false => run_test_suite_lib::output::SchemaVersion::V1,
+            },
+        });
+    let reporter =
+        run_test_suite_lib::create_reporter(cmd.filter_ansi, output_directory_options, writer)?;
 
     let run_params = run_test_suite_lib::RunParams {
         timeout_behavior: match cmd.continue_on_timeout {

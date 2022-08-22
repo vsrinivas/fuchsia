@@ -1,0 +1,51 @@
+{
+    "data": {
+        "artifacts": {},
+        "artifact_dir": "11780",
+        "outcome": "PASSED",
+        "start_time": 1659485784029,
+        "suites": [
+            {
+                "name": "fuchsia-pkg://fuchsia.com/stdout-test#meta/stdout-test.cm",
+                "artifacts": {
+                    "report.txt": {
+                        "artifact_type": "REPORT"
+                    },
+                    "syslog.txt": {
+                        "artifact_type": "SYSLOG"
+                    }
+                },
+                "artifact_dir": "44437896",
+                "outcome": "PASSED",
+                "start_time": 1659485786924,
+                "duration_milliseconds": 15,
+                "cases": [
+                    {
+                        "name": "case_1",
+                        "artifacts": {
+                            "stdout.txt": {
+                                "artifact_type": "STDOUT"
+                            }
+                        },
+                        "artifact_dir": "2944854696",
+                        "outcome": "PASSED",
+                        "start_time": 1659485786929
+                    },
+                    {
+                        "name": "case_2",
+                        "artifacts": {
+                            "stderr.txt": {
+                                "artifact_type": "STDERR"
+                            }
+                        },
+                        "artifact_dir": "2945185046",
+                        "outcome": "PASSED",
+                        "start_time": 1659485786929
+                    }
+                ],
+                "tags": []
+            }
+        ]
+    },
+    "schema_id": "https://fuchsia.dev/schema/ffx_test/run_summary-8d1dd964.json"
+}

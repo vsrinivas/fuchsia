@@ -32,3 +32,6 @@ toc:
   path: /docs/reference/platform-spec/diagnostics/logs-encoding.md
 - title: "Bitfields diagrams"
   path: /docs/reference/platform-spec/diagnostics/bitfield-diagram.md
+- heading: "Testing"
+- title: "Fuchsia test output format"
+  path: /docs/reference/platform-spec/testing/test-output-format.md

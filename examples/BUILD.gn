@@ -30,5 +30,6 @@ group("tests") {
     "hello_world:tests",
     "intl:tests",
     "rust:tests",
+    "testing:tests",
   ]
 }

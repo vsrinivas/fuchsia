@@ -1,0 +1,12 @@
+Running test 'fuchsia-pkg://fuchsia.com/stdout-test#meta/stdout-test.cm'
+[RUNNING]	case_1
+[RUNNING]	case_2
+[PASSED]	case_1
+[stdout - case_1]
+Hello, world!
+[PASSED]	case_2
+[stderr - case_2]
+Hello, stderr!
+
+2 out of 2 tests passed...
+fuchsia-pkg://fuchsia.com/stdout-test#meta/stdout-test.cm completed with result: PASSED
