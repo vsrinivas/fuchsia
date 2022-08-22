@@ -5,10 +5,12 @@
 // TODO(http://fxbug.dev/107197): Remove the below ignore_for_file
 // ignore_for_file: import_of_legacy_library_into_null_safe
 
-import 'dart:math';
+// TODO(fxbug.dev/105181): Reenable once we figure out why E2E tests fail
+// locally due to socket issues.
+// import 'dart:math';
+// import 'package:image/image.dart';
 
 import 'package:ermine_driver/ermine_driver.dart';
-import 'package:image/image.dart';
 import 'package:sl4f/sl4f.dart';
 import 'package:test/test.dart';
 
@@ -34,7 +36,8 @@ void main() {
     sl4f.close();
   });
 
-  // TODO(fxbug.dev/105181): Reenable once we figure out why E2E tests fail locally due to socket issues
+  // TODO(fxbug.dev/105181): Reenable once we figure out why E2E tests fail
+  // locally due to socket issues.
   // Take a screenshot until it's non-black or timeout.
   // Future<Image?> screenshotUntilNotBlack(Rectangle rect,
   //     {Duration timeout = const Duration(seconds: 30)}) async {
@@ -74,7 +77,8 @@ void main() {
         }),
         isTrue);
 
-    // TODO(fxbug.dev/105181): Reenable once we figure out why E2E tests fail locally due to socket issues
+    // TODO(fxbug.dev/105181): Reenable once we figure out why E2E tests fail
+    // locally due to socket issues.
     // final viewRect = await ermine.getViewRect(componentUrl);
     // final screenshot = await screenshotUntilNotBlack(viewRect);
     // expect(screenshot, isNotNull);

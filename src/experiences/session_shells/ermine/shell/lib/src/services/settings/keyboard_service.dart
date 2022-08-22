@@ -7,7 +7,6 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:ermine/src/services/settings/task_service.dart';
 import 'package:fidl_fuchsia_input/fidl_async.dart';
-import 'package:fidl_fuchsia_intl/fidl_async.dart';
 import 'package:fidl_fuchsia_settings/fidl_async.dart';
 import 'package:flutter/material.dart';
 import 'package:fuchsia_logger/logger.dart';
@@ -16,15 +15,15 @@ import 'package:fuchsia_services/services.dart';
 /// Defines a [TaskService] to control keyboard mappings.
 class KeyboardService implements TaskService {
   late final VoidCallback onChanged;
-
-  KeyboardProxy? _proxy;
-  KeyboardSettings? _keyboardSettings;
-  StreamSubscription? _keyboardSubscription;
-  Map<KeymapId, String> _keymapIds = {
+  final Map<KeymapId, String> _keymapIds = {
     KeymapId.usQwerty: 'usQwerty',
     KeymapId.frAzerty: 'frAzerty',
     KeymapId.usDvorak: 'usDvorak'
   };
+
+  KeyboardProxy? _proxy;
+  KeyboardSettings? _keyboardSettings;
+  StreamSubscription? _keyboardSubscription;
   String _keymap = 'usQwerty';
 
   KeyboardService();

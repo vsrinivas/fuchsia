@@ -76,7 +76,7 @@ abstract class OobeState {
       channelService: ChannelService(),
       sshKeysService: SshKeysService(),
       privacyConsentService: PrivacyConsentService(),
-    ) as OobeState;
+    );
   }
 
   void dispose();

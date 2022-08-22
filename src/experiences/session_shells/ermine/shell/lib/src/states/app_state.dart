@@ -86,7 +86,6 @@ abstract class AppState {
   void dismissDialogs();
 
   factory AppState.fromEnv() {
-    // ignore: unnecessary_cast
     return AppStateImpl(
       automatorService: AutomatorService(),
       launchService: LaunchService(),
@@ -96,6 +95,6 @@ abstract class AppState {
       shortcutsService: ShortcutsService(ScenicContext.hostViewRef()),
       preferencesService: PreferencesService(),
       userFeedbackService: UserFeedbackService(),
-    ) as AppState;
+    );
   }
 }
