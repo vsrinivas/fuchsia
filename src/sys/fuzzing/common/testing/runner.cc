@@ -79,7 +79,10 @@ ZxPromise<> FakeRunner::Configure(const OptionsPtr& options) {
 
 ZxPromise<FuzzResult> FakeRunner::Execute(std::vector<Input> inputs) {
   return Run()
-      .and_then([inputs = std::move(inputs)](const Artifact& artifact) {
+      .and_then([this, inputs = std::move(inputs)](const Artifact& artifact) {
+        for (const auto& input : inputs) {
+          inputs_.emplace_back(input.Duplicate());
+        }
         if (artifact.fuzz_result() != FuzzResult::NO_ERRORS) {
           return fpromise::ok(artifact.fuzz_result());
         }
@@ -97,7 +100,8 @@ ZxPromise<FuzzResult> FakeRunner::Execute(std::vector<Input> inputs) {
 
 ZxPromise<Input> FakeRunner::Minimize(Input input) {
   return Run()
-      .and_then([input = std::move(input)](Artifact& artifact) {
+      .and_then([this, input = std::move(input)](Artifact& artifact) {
+        inputs_.emplace_back(input.Duplicate());
         if (artifact.input().size() != 0) {
           return fpromise::ok(artifact.take_input());
         }
@@ -110,7 +114,8 @@ ZxPromise<Input> FakeRunner::Minimize(Input input) {
 
 ZxPromise<Input> FakeRunner::Cleanse(Input input) {
   return Run()
-      .and_then([input = std::move(input)](Artifact& artifact) {
+      .and_then([this, input = std::move(input)](Artifact& artifact) {
+        inputs_.emplace_back(input.Duplicate());
         if (artifact.input().size() != 0) {
           return fpromise::ok(artifact.take_input());
         }
@@ -142,6 +147,7 @@ ZxPromise<Artifact> FakeRunner::Fuzz() {
         status_.set_runs(runs);
         UpdateMonitors(UpdateReason::INIT);
         for (; runs < max_runs || max_runs == 0; ++runs) {
+          inputs_.emplace_back(input);
           auto prefix_len = get_prefix_len(input);
           if (prefix_len == kCrashLen) {
             return fpromise::ok(Artifact(FuzzResult::CRASH, Input(kCrash)));
@@ -169,6 +175,7 @@ ZxPromise<> FakeRunner::Merge() {
         // just the first input of a given prefix length when sorted lexicographically.
         size_t max_prefix_len = 0;
         for (const auto& input : seed_corpus_) {
+          inputs_.emplace_back(input.Duplicate());
           auto prefix_len = get_prefix_len(as_string(input));
           if (prefix_len > max_prefix_len) {
             max_prefix_len = prefix_len;
@@ -179,6 +186,7 @@ ZxPromise<> FakeRunner::Merge() {
         live_corpus_.emplace_back(Input());
         std::sort(unmerged.begin(), unmerged.end());
         for (const auto& input : unmerged) {
+          inputs_.emplace_back(input.Duplicate());
           auto prefix_len = get_prefix_len(as_string(input));
           if (prefix_len > max_prefix_len) {
             live_corpus_.emplace_back(input.Duplicate());

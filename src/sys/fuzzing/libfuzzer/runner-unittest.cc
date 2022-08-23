@@ -12,8 +12,8 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
 #include "src/sys/fuzzing/common/async-eventpair.h"
-#include "src/sys/fuzzing/common/component-context.h"
 #include "src/sys/fuzzing/common/runner-unittest.h"
+#include "src/sys/fuzzing/common/testing/component-context.h"
 #include "src/sys/fuzzing/libfuzzer/testing/feedback.h"
 
 namespace fuzzing {
@@ -50,7 +50,7 @@ class LibFuzzerRunnerTest : public RunnerTest {
   void SetUp() override {
     RunnerTest::SetUp();
     runner_ = LibFuzzerRunner::MakePtr(executor());
-    context_ = ComponentContext::CreateWithExecutor(executor());
+    context_ = ComponentContextForTest::Create(executor());
     eventpair_ = std::make_unique<AsyncEventPair>(executor());
     ASSERT_EQ(test_input_vmo_.Reserve(kDefaultMaxInputSize), ZX_OK);
     ASSERT_EQ(feedback_vmo_.Mirror(&feedback_, sizeof(feedback_)), ZX_OK);

@@ -27,18 +27,23 @@ std::string ConsumeArg(int* pargc, char*** pargv, char* arg) {
   for (; i != 0; --i) {
     argv[i] = argv[i - 1];
   }
-  if (argc > 1) {
-    *pargv = &argv[1];
-  }
-  if (argc > 0) {
-    *pargc = argc - 1;
-  }
+  *pargv = argc > 1 ? &argv[1] : nullptr;
+  *pargc = argc > 0 ? (argc - 1) : 0;
   return std::string(arg);
 }
 
 }  // namespace
 
+Engine::Engine() : Engine("/pkg") {}
+
+Engine::Engine(const std::string& pkg_dir) : pkg_dir_(pkg_dir) {}
+
 zx_status_t Engine::Initialize(int* pargc, char*** pargv) {
+  url_.reset();
+  fuzzing_ = false;
+  corpus_.clear();
+  dictionary_ = Input();
+
   int argc = *pargc;
   char** argv = *pargv;
   for (int i = 1; i < argc; ++i) {
@@ -49,10 +54,17 @@ zx_status_t Engine::Initialize(int* pargc, char*** pargv) {
       ConsumeArg(pargc, pargv, arg);
       continue;
     }
+    // Escape hatch.
+    if (strcmp(arg, "--") == 0) {
+      ConsumeArg(pargc, pargv, arg);
+      break;
+    }
+
     // Skip any remaining flags.
     if (arg[0] == '-') {
       continue;
     }
+
     // First positional argument is the fuzzer URL.
     if (!url_) {
       url_ = std::make_unique<component::FuchsiaPkgUrl>();
@@ -63,85 +75,133 @@ zx_status_t Engine::Initialize(int* pargc, char*** pargv) {
       }
       continue;
     }
-    // Directory arguments are seed corpora.
-    if (files::IsDirectory(arg)) {
-      std::vector<std::string> filenames;
-      auto dirname = ConsumeArg(pargc, pargv, arg);
-      if (!files::ReadDirContents(dirname, &filenames)) {
-        FX_LOGS(WARNING) << "Failed to read seed corpus '" << dirname << "': " << strerror(errno);
+
+    // Ignore remaining arguments except data files that need to be imported.
+    if (strncmp(arg, "data", 4) != 0) {
+      continue;
+    }
+    auto pathname = files::JoinPath(pkg_dir_, ConsumeArg(pargc, pargv, arg));
+
+    // A file argument is a dictionary.
+    if (files::IsFile(pathname)) {
+      if (dictionary_.size() != 0) {
+        FX_LOGS(WARNING) << "Multiple dictionaries found: " << arg;
         return ZX_ERR_INVALID_ARGS;
       }
+      std::vector<uint8_t> data;
+      if (!files::ReadFileToVector(pathname, &data)) {
+        FX_LOGS(WARNING) << "Failed to read dictionary '" << pathname << "': " << strerror(errno);
+        return ZX_ERR_IO;
+      }
+      dictionary_ = Input(data);
+      continue;
+    }
+
+    // Directory arguments are seed corpora.
+    if (files::IsDirectory(pathname)) {
+      std::vector<std::string> filenames;
+      if (!files::ReadDirContents(pathname, &filenames)) {
+        FX_LOGS(WARNING) << "Failed to read seed corpus '" << pathname << "': " << strerror(errno);
+        return ZX_ERR_IO;
+      }
       for (const auto& filename : filenames) {
-        auto pathname = files::JoinPath(dirname, filename);
+        auto input_file = files::JoinPath(pathname, filename);
+        if (!files::IsFile(input_file)) {
+          continue;
+        }
         std::vector<uint8_t> data;
-        if (!files::ReadFileToVector(pathname, &data)) {
-          FX_LOGS(WARNING) << "Failed to read test input '" << pathname << "': " << strerror(errno);
+        if (!files::ReadFileToVector(input_file, &data)) {
+          FX_LOGS(WARNING) << "Failed to read input '" << input_file << "': " << strerror(errno);
           return ZX_ERR_IO;
         }
-        inputs_.push_back(Input(data));
+        corpus_.push_back(Input(data));
       }
+      continue;
     }
+
+    // No other positional arguments are supported.
+    FX_LOGS(WARNING) << "Invalid package path: " << pathname;
+    return ZX_ERR_NOT_FOUND;
+  }
+  if (!url_) {
+    FX_LOGS(WARNING) << "Missing required URL.";
+    return ZX_ERR_INVALID_ARGS;
   }
   return ZX_OK;
 }
 
 zx_status_t Engine::Run(ComponentContextPtr context, RunnerPtr runner) {
+  if (!url_) {
+    FX_LOGS(WARNING) << "Not initialized.";
+    return ZX_ERR_BAD_STATE;
+  }
+  auto url = url_->ToString();
+  url_.reset();
+
+  if (dictionary_.size() != 0) {
+    if (auto status = runner->ParseDictionary(dictionary_); status != ZX_OK) {
+      return status;
+    }
+  }
+
   if (fuzzing_) {
-    return RunFuzzer(std::move(context), std::move(runner));
+    return RunFuzzer(std::move(context), std::move(runner), url);
   } else {
     return RunTest(std::move(context), std::move(runner));
   }
 }
 
-zx_status_t Engine::RunFuzzer(ComponentContextPtr context, RunnerPtr runner) {
-  if (!url_) {
-    FX_LOGS(WARNING) << "Missing 'url' argument";
-    return ZX_ERR_INVALID_ARGS;
-  }
-  for (auto& input : inputs_) {
+zx_status_t Engine::RunFuzzer(ComponentContextPtr context, RunnerPtr runner,
+                              const std::string& url) {
+  for (auto& input : corpus_) {
     if (auto status = runner->AddToCorpus(CorpusType::SEED, std::move(input)); status != ZX_OK) {
-      continue;
+      return status;
     }
   }
-  inputs_.clear();
   ControllerProviderImpl provider(context->executor());
   provider.SetRunner(std::move(runner));
-  auto task = provider.Serve(url_->ToString(), context->TakeChannel(0));
+  auto task = provider.Serve(url, context->TakeChannel(0));
   context->ScheduleTask(std::move(task));
   return context->Run();
 }
 
 zx_status_t Engine::RunTest(ComponentContextPtr context, RunnerPtr runner) {
-  auto inputs = std::move(inputs_);
-  inputs.emplace_back(Input());
-  inputs_.clear();
-  FX_LOGS(INFO) << "Testing with " << inputs_.size() << " inputs.";
+  corpus_.emplace_back(Input());
+  FX_LOGS(INFO) << "Testing with " << corpus_.size() << " inputs.";
 
   auto options = MakeOptions();
   runner->OverrideDefaults(options.get());
+
+  // In order to make this more testable, the following task does not exit directly. Instead, it
+  // repeatedly calls |RunUntilIdle| until it has set an exit code. This allows this method to be
+  // called as part of a gTest as well as by the elf_test_runner.
+  zx_status_t exitcode = ZX_ERR_NEXT;
   auto task = runner->Configure(options)
-                  .and_then([runner, inputs = std::move(inputs), execute = ZxFuture<FuzzResult>()](
+                  .and_then([runner, corpus = std::move(corpus_), execute = ZxFuture<FuzzResult>()](
                                 Context& context) mutable -> ZxResult<FuzzResult> {
                     if (!execute) {
-                      execute = runner->Execute(std::move(inputs));
+                      execute = runner->Execute(std::move(corpus));
                     }
                     if (!execute(context)) {
                       return fpromise::pending();
                     }
                     return execute.take_result();
                   })
-                  .then([](ZxResult<FuzzResult>& result) {
+                  .then([&exitcode](ZxResult<FuzzResult>& result) {
                     if (result.is_error()) {
-                      exit(result.error());
+                      exitcode = result.error();
+                      return;
                     }
                     auto fuzz_result = result.take_value();
-                    if (fuzz_result != FuzzResult::NO_ERRORS) {
-                      exit(fuzz_result);
-                    }
-                    exit(0);
+                    exitcode = (fuzz_result == FuzzResult::NO_ERRORS) ? 0 : fuzz_result;
                   });
   context->ScheduleTask(std::move(task));
-  return context->Run();
+  while (exitcode == ZX_ERR_NEXT) {
+    if (auto status = context->RunUntilIdle(); status != ZX_OK) {
+      return status;
+    }
+  }
+  return exitcode;
 }
 
 }  // namespace fuzzing

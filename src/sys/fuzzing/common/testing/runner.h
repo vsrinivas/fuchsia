@@ -28,6 +28,8 @@ class FakeRunner final : public Runner {
   static Input valid_dictionary() { return Input("key=\"value\"\n"); }
   static Input invalid_dictionary() { return Input("invalid"); }
 
+  const std::vector<Input>& get_inputs() const { return inputs_; }
+
   void set_error(zx_status_t error) { error_ = error; }
   void set_status(Status status) { status_ = std::move(status); }
 
@@ -67,6 +69,7 @@ class FakeRunner final : public Runner {
 
   zx_status_t error_ = ZX_OK;
   OptionsPtr options_;
+  std::vector<Input> inputs_;
   FuzzResult result_ = FuzzResult::NO_ERRORS;
   Input result_input_;
   Status status_;

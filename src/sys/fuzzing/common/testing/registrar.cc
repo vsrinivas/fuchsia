@@ -10,6 +10,8 @@
 
 namespace fuzzing {
 
+const char* kFakeFuzzerUrl = "fuchsia-pkg://fuchsia.com/fuzzing-common-tests#meta/fake.cm";
+
 FakeRegistrar::FakeRegistrar(ExecutorPtr executor)
     : binding_(this), executor_(std::move(executor)) {}
 

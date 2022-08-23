@@ -18,8 +18,16 @@ namespace fuzzing {
 // call |RunEngine| with command line arguments and a |Runner| factory method.
 class Engine {
  public:
-  Engine() = default;
+  Engine();
+  explicit Engine(const std::string& pkg_dir);
   ~Engine() = default;
+
+  // Accessors and mutators for testing.
+  std::string url() const { return url_ ? url_->ToString() : std::string(); }
+  bool fuzzing() const { return fuzzing_; }
+  const std::vector<Input>& corpus() { return corpus_; }
+  Input dictionary() const { return dictionary_.Duplicate(); }
+  void set_pkg_dir(const std::string& pkg_dir) { pkg_dir_ = pkg_dir; }
 
   // Parses the command line and extracts recognized arguments from it.
   __WARN_UNUSED_RESULT zx_status_t Initialize(int* pargc, char*** pargv);
@@ -30,15 +38,18 @@ class Engine {
  private:
   // Runs the engine in "fuzzing" mode: the engine will serve `fuchsia.fuzzer.ControllerProvider`
   // and fulfill `fuchsia.fuzzer.Controller` requests.
-  __WARN_UNUSED_RESULT zx_status_t RunFuzzer(ComponentContextPtr context, RunnerPtr runner);
+  __WARN_UNUSED_RESULT zx_status_t RunFuzzer(ComponentContextPtr context, RunnerPtr runner,
+                                             const std::string& url);
 
   // Runs the engine in "test" mode: the engine will execute the fuzzer with the set of inputs
   // given by seed corpora listed in the fuzzer's command line arguments.
   __WARN_UNUSED_RESULT zx_status_t RunTest(ComponentContextPtr context, RunnerPtr runner);
 
+  std::string pkg_dir_;
   std::unique_ptr<component::FuchsiaPkgUrl> url_;
   bool fuzzing_ = false;
-  std::vector<Input> inputs_;
+  std::vector<Input> corpus_;
+  Input dictionary_;
 };
 
 // Starts the engine with runner provided by |MakeRunnerPtr|, which should have the signature:

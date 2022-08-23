@@ -28,17 +28,8 @@ using ComponentContextPtr = std::unique_ptr<ComponentContext>;
 
 // This class is a wrapper around |sys::ComponentContext| that provides some additional common
 // behaviors, such as making an |async::Loop| and scheduling a primary task on an |async::Executor|.
-class ComponentContext final {
+class ComponentContext {
  public:
-  // This constructor is rarely used directly. Instead, most clients create a
-  // component context using one of |Create...| static methods below.
-  using LoopPtr = std::unique_ptr<async::Loop>;
-  using ServiceDirectoryPtr = std::shared_ptr<sys::ServiceDirectory>;
-  using OutgoingDirectoryPtr = std::shared_ptr<sys::OutgoingDirectory>;
-  ComponentContext(LoopPtr loop, ExecutorPtr executor, ServiceDirectoryPtr svc,
-                   OutgoingDirectoryPtr outgoing);
-  ~ComponentContext();
-
   // Creates a component context. This method consumes startup handles in order to serve FIDL
   // protocols, and can therefore be called at most once per process.
   static ComponentContextPtr Create();
@@ -48,14 +39,13 @@ class ComponentContext final {
   // not preclude creating other component contexts.
   static ComponentContextPtr CreateAuxillary();
 
-  // Creates a context that does not own its |executor|'s loop. This is useful for tests which
-  // provide and executor from a test loop.
-  static ComponentContextPtr CreateWithExecutor(ExecutorPtr executor);
+  ComponentContext() = default;
+  virtual ~ComponentContext();
 
   const ExecutorPtr& executor() const { return executor_; }
 
   // Takes the |PA_HND(PA_USER0, arg)| startup handle.
-  zx::channel TakeChannel(uint32_t arg);
+  virtual zx::channel TakeChannel(uint32_t arg);
 
   // Adds an interface request handler for a protocol capability provided by this component.
   template <typename Interface>
@@ -85,10 +75,18 @@ class ComponentContext final {
   }
 
   // Runs the message loop on the current thread. This method should only be called at most once.
-  __WARN_UNUSED_RESULT zx_status_t Run();
+  __WARN_UNUSED_RESULT virtual zx_status_t Run();
 
   // Runs until there are no tasks that can make progress.
-  __WARN_UNUSED_RESULT zx_status_t RunUntilIdle();
+  __WARN_UNUSED_RESULT virtual zx_status_t RunUntilIdle();
+
+ protected:
+  using LoopPtr = std::unique_ptr<async::Loop>;
+  using ServiceDirectoryPtr = std::shared_ptr<sys::ServiceDirectory>;
+  using OutgoingDirectoryPtr = std::shared_ptr<sys::OutgoingDirectory>;
+
+  void set_executor(ExecutorPtr executor) { executor_ = std::move(executor); }
+  void set_svc(ServiceDirectoryPtr svc) { svc_ = std::move(svc); }
 
  private:
   // Connects a |request| to a protocol capability provided by another component.

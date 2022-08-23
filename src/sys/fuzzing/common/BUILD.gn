@@ -108,6 +108,7 @@ test("unittests-bin") {
     "controller-provider-unittest.cc",
     "controller-unittest.cc",
     "corpus-reader-client-unittest.cc",
+    "engine-unittest.cc",
     "input-unittest.cc",
     "monitor-clients-unittest.cc",
     "options-unittest.cc",

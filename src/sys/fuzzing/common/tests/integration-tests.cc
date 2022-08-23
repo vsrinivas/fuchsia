@@ -7,6 +7,7 @@
 #include "src/sys/fuzzing/common/artifact.h"
 #include "src/sys/fuzzing/common/async-socket.h"
 #include "src/sys/fuzzing/common/engine.h"
+#include "src/sys/fuzzing/common/testing/component-context.h"
 
 namespace fuzzing {
 
@@ -14,7 +15,7 @@ using ::fuchsia::fuzzer::FUZZ_MODE;
 
 void EngineIntegrationTest::SetUp() {
   AsyncTest::SetUp();
-  context_ = ComponentContext::CreateWithExecutor(executor());
+  context_ = ComponentContextForTest::Create(executor());
   engine_ = std::make_unique<ChildProcess>(executor());
 }
 

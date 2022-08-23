@@ -9,6 +9,8 @@ source_set("testing") {
   testonly = true
   sources = [
     "async-test.h",
+    "component-context.cc",
+    "component-context.h",
     "corpus-reader.cc",
     "corpus-reader.h",
     "module.cc",

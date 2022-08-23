@@ -20,8 +20,6 @@ using ::fuchsia::fuzzer::ControllerPtr;
 
 // Test fixtures
 
-const char* kFakeFuzzerUrl = "fuchsia-pkg://fuchsia.com/fuzzing-common-tests#meta/fake.cm";
-
 class ControllerProviderTest : public AsyncTest {
  protected:
   void SetUp() override {

@@ -13,39 +13,32 @@ ComponentContextPtr ComponentContext::Create() {
   static bool once = true;
   FX_CHECK(once) << "ComponentContext::Create called more than once.";
   once = false;
-  auto context = sys::ComponentContext::Create();
+
+  auto sys_context = sys::ComponentContext::Create();
   auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
   auto executor = MakeExecutor(loop->dispatcher());
-  auto svc = context->svc();
-  auto outgoing = context->outgoing();
-  return std::make_unique<ComponentContext>(std::move(loop), std::move(executor), std::move(svc),
-                                            std::move(outgoing));
+  auto svc = sys_context->svc();
+  auto outgoing = sys_context->outgoing();
+
+  auto context = std::make_unique<ComponentContext>();
+  context->loop_ = std::move(loop);
+  context->executor_ = std::move(executor);
+  context->svc_ = std::move(svc);
+  context->outgoing_ = std::move(outgoing);
+  return context;
 }
 
 ComponentContextPtr ComponentContext::CreateAuxillary() {
   auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
   auto executor = MakeExecutor(loop->dispatcher());
   auto svc = sys::ServiceDirectory::CreateFromNamespace();
-  std::unique_ptr<sys::OutgoingDirectory> outgoing;
-  return std::make_unique<ComponentContext>(std::move(loop), std::move(executor), std::move(svc),
-                                            std::move(outgoing));
-}
 
-ComponentContextPtr ComponentContext::CreateWithExecutor(ExecutorPtr executor) {
-  auto context = sys::ComponentContext::Create();
-  std::unique_ptr<async::Loop> loop;
-  auto svc = context->svc();
-  auto outgoing = context->outgoing();
-  return std::make_unique<ComponentContext>(std::move(loop), std::move(executor), std::move(svc),
-                                            std::move(outgoing));
+  auto context = std::make_unique<ComponentContext>();
+  context->loop_ = std::move(loop);
+  context->executor_ = std::move(executor);
+  context->svc_ = std::move(svc);
+  return context;
 }
-
-ComponentContext::ComponentContext(LoopPtr loop, ExecutorPtr executor, ServiceDirectoryPtr svc,
-                                   OutgoingDirectoryPtr outgoing)
-    : loop_(std::move(loop)),
-      executor_(std::move(executor)),
-      svc_(std::move(svc)),
-      outgoing_(std::move(outgoing)) {}
 
 ComponentContext::~ComponentContext() {
   if (loop_ && !outgoing_) {

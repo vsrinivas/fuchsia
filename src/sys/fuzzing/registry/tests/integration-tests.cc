@@ -13,8 +13,8 @@
 #include <gtest/gtest.h>
 
 #include "src/sys/fuzzing/common/child-process.h"
-#include "src/sys/fuzzing/common/component-context.h"
 #include "src/sys/fuzzing/common/testing/async-test.h"
+#include "src/sys/fuzzing/common/testing/component-context.h"
 
 namespace fuzzing {
 namespace {
@@ -35,7 +35,7 @@ class RegistryIntegrationTest : public AsyncTest {
  protected:
   void SetUp() override {
     AsyncTest::SetUp();
-    context_ = ComponentContext::CreateWithExecutor(executor());
+    context_ = ComponentContextForTest::Create(executor());
     process_ = std::make_unique<ChildProcess>(executor());
   }
 

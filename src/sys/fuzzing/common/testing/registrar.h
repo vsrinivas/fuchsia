@@ -22,12 +22,15 @@ using ::fuchsia::fuzzer::Registrar;
 // Alias this type to improve readability.
 using ControllerProviderHandle = fidl::InterfaceHandle<ControllerProvider>;
 
+// Dummy URL that can be used with tests that involve the |FakeRegistrar|.
+extern const char* kFakeFuzzerUrl;
+
+// |FakeRegistrar| runs a simple implementation of |fuchsia.fuzzer.Registrar| locally.
 class FakeRegistrar final : public Registrar {
  public:
   explicit FakeRegistrar(ExecutorPtr executor);
   ~FakeRegistrar() override = default;
 
-  // Returns a channel to this object's implementation of |fuchsia.fuzzer.Registrar|.
   fidl::InterfaceHandle<Registrar> NewBinding();
 
   // FIDL methods.
@@ -35,6 +38,8 @@ class FakeRegistrar final : public Registrar {
   void Register(std::string url, ControllerProviderHandle provider,
                 RegisterCallback callback) override;
 
+  // Returns a promise to return the next |ControllerProvider| handle sent to this object via the
+  // |fuchsia.fuzzer.Registrar/Register| FIDL method.
   ZxPromise<ControllerProviderHandle> TakeProvider();
 
  private:

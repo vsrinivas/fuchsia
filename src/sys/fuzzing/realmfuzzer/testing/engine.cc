@@ -8,10 +8,10 @@
 
 #include <gtest/gtest.h>
 
-#include "src/sys/fuzzing/common/component-context.h"
 #include "src/sys/fuzzing/common/input.h"
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/common/testing/async-test.h"
+#include "src/sys/fuzzing/common/testing/component-context.h"
 #include "src/sys/fuzzing/realmfuzzer/engine/adapter-client.h"
 #include "src/sys/fuzzing/realmfuzzer/engine/corpus.h"
 
@@ -29,7 +29,7 @@ class FuzzerTest : public AsyncTest {
   const OptionsPtr& options() const { return options_; }
 
   std::unique_ptr<TargetAdapterClient> MakeClient() {
-    auto context = ComponentContext::CreateWithExecutor(executor());
+    auto context = ComponentContextForTest::Create(executor());
     auto client = std::make_unique<TargetAdapterClient>(context->executor());
     client->set_handler(context->MakeRequestHandler<TargetAdapter>());
     client->Configure(options_);

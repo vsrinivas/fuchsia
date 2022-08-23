@@ -152,7 +152,7 @@ bool ChildProcess::IsAlive() {
   if (status == ZX_ERR_BAD_HANDLE) {
     return false;
   }
-  FX_DCHECK(status == ZX_OK);
+  FX_CHECK(status == ZX_OK);
   return (info_.flags & ZX_INFO_PROCESS_FLAG_EXITED) == 0;
 }
 

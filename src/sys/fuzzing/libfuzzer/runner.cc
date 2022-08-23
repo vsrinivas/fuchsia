@@ -48,9 +48,9 @@ constexpr size_t kOneKb = 1ULL << 10;
 constexpr size_t kOneMb = 1ULL << 20;
 
 // See libFuzzer's |fuzzer::FuzzingOptions|.
-const int64_t kLibFuzzerNoErrorExitCode = 0;
-const int64_t kLibFuzzerTimeoutExitCode = 70;
-const int64_t kLibFuzzerOOMExitCode = 71;
+constexpr int64_t kLibFuzzerNoErrorExitCode = 0;
+constexpr int64_t kLibFuzzerTimeoutExitCode = 70;
+constexpr int64_t kLibFuzzerOOMExitCode = 71;
 
 // Returns |one| if |original| is non-zero and less than |one|, otherwise returns |original|.
 template <typename T>
