@@ -30,6 +30,7 @@ type OmahaToolArgs struct {
 	PrivateKeyPath string
 	AppId          string
 	LocalHostname  string
+	RequireCup     bool
 	Merkle         string
 	PackagePath    string
 }
@@ -96,6 +97,9 @@ func NewOmahaServer(ctx context.Context, args OmahaToolArgs, providedStdout io.W
 	toolArgs := []string{
 		"--key-id", args.PrivateKeyId,
 		"--key-path", privateKeyPath,
+	}
+	if args.RequireCup {
+		toolArgs = append(toolArgs, "--require-cup")
 	}
 	logger.Infof(ctx, "running: %s %q", toolPath, toolArgs)
 	cmd := exec.CommandContext(ctx, toolPath, toolArgs...)

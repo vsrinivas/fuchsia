@@ -49,6 +49,7 @@ type InstallerConfig struct {
 	privateKeyId    string
 	privateKeyPath  string
 	omahaAddress    string
+	omahaRequireCup bool
 }
 
 func NewInstallerConfig(fs *flag.FlagSet) (*InstallerConfig, error) {
@@ -65,6 +66,7 @@ func NewInstallerConfig(fs *flag.FlagSet) (*InstallerConfig, error) {
 	fs.StringVar(&c.privateKeyId, "omaha-key-id", "42", "the integer private key ID to use for CUP within Omaha requests.")
 	fs.StringVar(&c.privateKeyPath, "omaha-key-path", filepath.Join(filepath.Join(filepath.Dir(os.Args[0]), "test_data", "system-tests"), "test_private_key.pem"), "the path of the private key .pem to use for CUP within Omaha requests.")
 	fs.StringVar(&c.zbiToolPath, "zbitool-path", filepath.Join(testDataPath, "zbi"), "path to the zbi binary")
+	fs.BoolVar(&c.omahaRequireCup, "require-cup", false, "if true, mock-omaha-server will assert that all incoming requests have CUP enabled.")
 
 	return c, nil
 }
@@ -104,6 +106,7 @@ func (c *InstallerConfig) OmahaTool(ctx context.Context, device *device.Client) 
 		PrivateKeyPath: c.privateKeyPath,
 		AppId:          "fuchsia-test:no-update",
 		LocalHostname:  localHostname,
+		RequireCup:     c.omahaRequireCup,
 	}, /*stdout=*/ nil /*stderr=*/, nil)
 	if err != nil {
 		return nil, err
