@@ -43,7 +43,7 @@ void* fdf_arena::Allocate(size_t bytes) {
 }
 
 // No-op for initial implementation.
-void* fdf_arena::Free(void* data) { return NULL; }
+void fdf_arena::Free(void* data) {}
 
 namespace {
 

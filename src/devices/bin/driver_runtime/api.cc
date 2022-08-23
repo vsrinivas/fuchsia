@@ -24,7 +24,7 @@ __EXPORT void* fdf_arena_allocate(fdf_arena_t* arena, size_t bytes) {
   return arena->Allocate(bytes);
 }
 
-__EXPORT void* fdf_arena_free(fdf_arena_t* arena, void* data) { return arena->Free(data); }
+__EXPORT void fdf_arena_free(fdf_arena_t* arena, void* data) { return arena->Free(data); }
 
 __EXPORT bool fdf_arena_contains(fdf_arena_t* arena, const void* data, size_t num_bytes) {
   return arena->Contains(data, num_bytes);

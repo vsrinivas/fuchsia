@@ -11,14 +11,14 @@
 
 namespace fdf {
 
-// Usage Notes:
-//
 // C++ wrapper for an arena, with RAII semantics. Automatically frees
 // all allocated memory when it goes out of scope.
 //
-// Example:
+// This class is thread-safe.
 //
-//   consexptr uint32_t kTag = 'EXAM';
+// # Example
+//
+//   constexpr fdf_arena_tag_t kTag = 'EXAM';
 //   auto arena = fdf::Arena::Create(0, kTag);
 //
 //   // Allocate new blocks of memory.
@@ -26,15 +26,21 @@ namespace fdf {
 //   void* addr2 = arena.Allocate(arena, 0x2000);
 //
 //   // Use the allocated memory...
-//
 class Arena {
  public:
   explicit Arena(fdf_arena_t* arena = nullptr) : arena_(arena) {}
 
+  // Creates a FDF arena for allocating memory.
+  //
   // |tag| provides a hint to the runtime so that it may be more efficient.
-  // For example, adjusting the size of the buffer backing the arena
-  // to the expected total size of allocations.
-  // It may also be surfaced in debug information.
+  // For example, adjusting the size of the buffer backing the arena to the expected
+  // total size of allocations. It may also be surfaced in debug information.
+  //
+  // # Errors
+  //
+  // ZX_ERR_INVALID_ARGS: |options| is any value other than 0.
+  //
+  // ZX_ERR_NO_MEMORY: Failed due to a lack of memory.
   static zx::status<Arena> Create(uint32_t options, uint32_t tag) {
     fdf_arena_t* arena;
     fdf_status_t status = fdf_arena_create(options, tag, &arena);
@@ -44,9 +50,12 @@ class Arena {
     return zx::ok(Arena(arena));
   }
 
+  // Arena cannot be copied.
   Arena(const Arena& to_copy) = delete;
   Arena& operator=(const Arena& other) = delete;
 
+  // Arena can be moved. Once moved, invoking a method on an instance will
+  // yield undefined behavior.
   Arena(Arena&& other) noexcept : Arena(other.release()) {}
   Arena& operator=(Arena&& other) noexcept {
     reset(other.release());
@@ -55,11 +64,22 @@ class Arena {
 
   ~Arena() { close(); }
 
+  // Returns a pointer to allocated memory of size |bytes|. The memory is managed by the arena
+  // until it is freed by |Free|, or the arena is destroyed.
   void* Allocate(size_t bytes) const { return fdf_arena_allocate(arena_, bytes); }
+
+  // Hints to the arena that the |ptr| previously allocated by |Allocate| may be reclaimed.
+  // Memory is not guaranteed to be reclaimed until the arena is destroyed.
+  // Asserts if the memory is not managed by the arena.
   void Free(void* ptr) { fdf_arena_free(arena_, ptr); }
 
-  // Returns true if the memory region of |ptr| resides entirely within memory
+  // Returns whether the memory region corresponding to |ptr| resides entirely within memory
   // managed by the |arena|.
+  //
+  // # Example
+  //
+  //   MyStruct* ptr = static_cast<MyStruct*>(arena.Allocate(sizeof(size_t)));
+  //   bool contains = arena.Contains<MyStruct>(ptr);
   template <typename T>
   bool Contains(const T* ptr) const {
     return fdf_arena_contains(arena_, ptr, sizeof(T));
