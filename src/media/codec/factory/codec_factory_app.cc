@@ -43,6 +43,9 @@ CodecFactoryApp::CodecFactoryApp(async_dispatcher_t* dispatcher, ProdOrTest prod
       startup_context_(sys::ComponentContext::Create()),
       board_name_(GetBoardName()),
       policy_(this) {
+  inspector_ = std::make_unique<sys::ComponentInspector>(startup_context_.get());
+  inspector_->Health().StartingUp();
+  hardware_codec_nodes_ = inspector_->root().CreateChild("hardware_codec_nodes");
   // Don't publish service or outgoing()->ServeFromStartupInfo() until after initial discovery is
   // done, else the pumping of the loop will drop the incoming request for CodecFactory before
   // AddPublicService() below has had a chance to register for it.
@@ -98,6 +101,7 @@ void CodecFactoryApp::PublishService() {
           });
   // else this codec_factory is useless
   ZX_ASSERT(status == ZX_OK);
+  inspector_->Health().Ok();
   if (prod_or_test_ == ProdOrTest::kProduction) {
     status = startup_context_->outgoing()->ServeFromStartupInfo();
     ZX_ASSERT(status == ZX_OK);
@@ -477,12 +481,26 @@ void CodecFactoryApp::ProcessDiscoveryQueue() {
                     << ", mime_type: " << codec_description.mime_type
                     << ", device_path: " << front->device_path
                     << ", component url: " << front->component_url;
+      static uint64_t hardware_node_id;
+      inspect::Node node = hardware_codec_nodes_.CreateChild(std::to_string(hardware_node_id++));
+      node.RecordString("type",
+                        codec_description.codec_type == fuchsia::mediacodec::CodecType::DECODER
+                            ? "decoder"
+                            : "encoder");
+      node.RecordString("mime_type", codec_description.mime_type);
+      if (!front->device_path.empty()) {
+        node.RecordString("device_path", front->device_path);
+      }
+      if (!front->component_url.empty()) {
+        node.RecordString("component_url", front->component_url);
+      }
       hw_codecs_.emplace_front(std::make_unique<CodecListEntry>(CodecListEntry{
           .description = std::move(codec_description),
           .component_url = front->component_url,
           // shared_ptr<>
           .factory = front->codec_factory,
           .magma_device = front->magma_device,
+          .codec_node = std::move(node),
       }));
     }
 

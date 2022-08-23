@@ -32,6 +32,8 @@ source_set("factory_source") {
     "//sdk/fidl/fuchsia.sysinfo",
     "//sdk/lib/svc",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",

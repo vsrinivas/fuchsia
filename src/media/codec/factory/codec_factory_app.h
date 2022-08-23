@@ -11,6 +11,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/sys/inspect/cpp/component.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <list>
@@ -67,6 +68,7 @@ class CodecFactoryApp {
     std::shared_ptr<fuchsia::mediacodec::CodecFactoryPtr> factory;
 
     std::shared_ptr<fuchsia::gpu::magma::IcdLoaderDevicePtr> magma_device;
+    inspect::Node codec_node;
   };
 
   void DiscoverMagmaCodecDriversAndListenForMoreAsync();
@@ -87,6 +89,8 @@ class CodecFactoryApp {
   ProdOrTest prod_or_test_;
 
   std::unique_ptr<sys::ComponentContext> startup_context_;
+  std::unique_ptr<sys::ComponentInspector> inspector_;
+  inspect::Node hardware_codec_nodes_;
   std::string board_name_;
 
   // Per-board (or similar) policy on # of concurrent HW decoders that use
