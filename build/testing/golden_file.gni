@@ -51,15 +51,25 @@ template("golden_files") {
 
     script = "//build/testing/verify_golden_files.py"
 
-    result_file = "$target_gen_dir/$target_name.verified"
+    stamp_file = "$target_gen_dir/$target_name.verified"
+    depfile = "${stamp_file}.d"
 
+    # We purposefully do not register the golden and candidate files as
+    # action() inputs; instead we record them within a depfile. Further the
+    # script will proactively create a blank golden file if the supplied one
+    # does not yet exist. These two measures allow (1) a user to not have to
+    # tediously create the files themselves when adding a new `golden_files()`
+    # target, and (2) ninja to execute this action without complaint before the
+    # files exist.
     inputs = []
 
-    outputs = [ result_file ]
+    outputs = [ stamp_file ]
 
     args = [
-      "--result-file",
-      rebase_path(result_file, root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
+      "--stamp-file",
+      rebase_path(stamp_file, root_build_dir),
       "--label",
       get_label_info(":${target_name}", "label_no_toolchain"),
       "--comparisons",
@@ -79,11 +89,6 @@ template("golden_files") {
                                "golden",
                                "current",
                              ])
-
-      inputs += [
-        comparison.golden,
-        comparison.current,
-      ]
 
       args += [ rebase_path(comparison.current, root_build_dir) + ":" +
                 rebase_path(comparison.golden, root_build_dir) ]

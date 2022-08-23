@@ -5,12 +5,28 @@
 
 import argparse
 import filecmp
-import json
 import os
 import shutil
 import sys
 
 # Verifies that the current golden file matches the provided golden.
+
+
+def print_failure_msg(golden, current, label):
+    # Use abspath in cp command so it works regardless of the current working
+    # directory.
+    current = os.path.abspath(current)
+    golden = os.path.abspath(golden)
+    print(
+        f"""
+Please acknowledge this change by updating the golden.
+You can run this command:
+```
+cp {golden} \\
+    {current}
+```
+Or you can rebuild with `bless_goldens=true` in your GN args and {label} in your build graph.
+""")
 
 
 def main():
@@ -24,10 +40,15 @@ def main():
         required=True,
     )
     parser.add_argument(
-        '--result-file', help='Path to the victory file', required=True)
+        '--depfile', help='Path at which to write the depfile', required=True)
+    parser.add_argument(
+        '--stamp-file',
+        help='Path at which to write the stamp file',
+        required=True)
     parser.add_argument(
         '--bless',
-        help="Overwrites current with golden if they don't match.",
+        help=
+        "Overwrites the golden with the current if they don't match - or creates it if it does not yet exist",
         action='store_true')
     parser.add_argument(
         '--warn',
@@ -36,6 +57,7 @@ def main():
     args = parser.parse_args()
 
     diffs = False
+    inputs = []
     for comparison in args.comparisons:
         tokens = comparison.split(':')
         if len(tokens) != 2:
@@ -44,32 +66,36 @@ def main():
                 comparison)
             return 1
         current, golden = tokens
-        if not filecmp.cmp(current, golden):
+        inputs.extend([current, golden])
+
+        golden_exists = os.path.exists(golden)
+        if not golden_exists and args.bless:
+            # Create a blank golden file if one does not yet exist. This is a
+            # convenience measure that allows for the subsequent diff to fail
+            # gracefully and for the golden to be auto-updated with the desired
+            # contents.
+            with open(golden, 'w'):
+                golden_exists = True
+
+        if not golden_exists or not filecmp.cmp(current, golden):
             diffs = True
             type = 'Warning' if args.warn or args.bless else 'Error'
             print('%s: Golden file mismatch' % type)
 
             if args.bless:
+                assert golden_exists  # Should have been created above.
                 shutil.copyfile(current, golden)
             else:
-                print(
-                    'Please acknowledge this change by updating the golden.\n')
-                print('You can run this command:')
-                # Use abspath in cp command so it works regardless of current
-                # working directory.
-                print(
-                    '  cp ' + os.path.abspath(current) + ' ' +
-                    os.path.abspath(golden))
-                print(
-                    'Or you can rebuild with `bless_goldens=true` in your GN args and'
-                )
-                print(f'`{args.label}` in your build graph.')
+                print_failure_msg(golden, current, args.label)
 
     if diffs and not args.bless and not args.warn:
         return 1
 
-    with open(args.result_file, 'w') as result_file:
-        result_file.write('Golden!\n')
+    with open(args.stamp_file, 'w') as stamp_file:
+        stamp_file.write('Golden!\n')
+
+    with open(args.depfile, 'w') as depfile:
+        depfile.write('%s: %s\n' % (args.stamp_file, ' '.join(inputs)))
 
     return 0
 
