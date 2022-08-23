@@ -125,12 +125,11 @@ pub struct BasePackageBuildResults {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assembly_test_util::generate_test_manifest;
     use fuchsia_archive::Utf8Reader;
     use fuchsia_hash::Hash;
-    use fuchsia_pkg::{BlobInfo, MetaPackage, PackageManifest, PackageManifestBuilder};
     use fuchsia_url::PinnedAbsolutePackageUrl;
     use std::fs::File;
-    use std::path::Path;
     use tempfile::{NamedTempFile, TempDir};
 
     #[test]
@@ -205,35 +204,5 @@ mod tests {
         "
         .to_string();
         assert_eq!(expected_contents, contents);
-    }
-
-    // Generates a package manifest to be used for testing. The `name` is used in the blob file
-    // names to make each manifest somewhat unique. If supplied, `file_path` will be used as the
-    // non-meta-far blob source path, which allows the tests to use a real file.
-    fn generate_test_manifest(name: &str, file_path: Option<&Path>) -> PackageManifest {
-        let meta_source = format!("path/to/{}/meta.far", name);
-        let file_source = match file_path {
-            Some(path) => path.to_string_lossy().into_owned(),
-            _ => format!("path/to/{}/file.txt", name),
-        };
-        let builder = PackageManifestBuilder::new(MetaPackage::from_name(name.parse().unwrap()));
-        let builder = builder.repository("testrepository.com");
-        let builder = builder.add_blob(BlobInfo {
-            source_path: meta_source,
-            path: "meta/".into(),
-            merkle: "0000000000000000000000000000000000000000000000000000000000000000"
-                .parse()
-                .unwrap(),
-            size: 1,
-        });
-        let builder = builder.add_blob(BlobInfo {
-            source_path: file_source,
-            path: "data/file.txt".into(),
-            merkle: "1111111111111111111111111111111111111111111111111111111111111111"
-                .parse()
-                .unwrap(),
-            size: 1,
-        });
-        builder.build()
     }
 }

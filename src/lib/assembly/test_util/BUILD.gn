@@ -12,6 +12,7 @@ if (is_host) {
     name = "assembly_test_util"
     version = "0.1.0"
     with_unit_tests = true
+    deps = [ "//src/sys/pkg/lib/fuchsia-pkg" ]
     test_deps = [
       "//third_party/rust_crates:serial_test",
       "//third_party/rust_crates:tempfile",

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fuchsia_pkg::{BlobInfo, MetaPackage, PackageManifest, PackageManifestBuilder};
 use std::fs::{File, Permissions};
 use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
@@ -24,6 +25,32 @@ pub fn generate_fake_tool(path: impl AsRef<Path>, contents: impl AsRef<str>) {
     tool.set_permissions(Permissions::from_mode(0o500)).unwrap();
     tool.write_all(contents.as_ref().as_bytes()).unwrap();
     tool.sync_all().unwrap();
+}
+
+// Generates a package manifest to be used for testing. The `name` is used in the blob file
+// names to make each manifest somewhat unique. If supplied, `file_path` will be used as the
+// non-meta-far blob source path, which allows the tests to use a real file.
+pub fn generate_test_manifest(name: &str, file_path: Option<&Path>) -> PackageManifest {
+    let meta_source = format!("path/to/{}/meta.far", name);
+    let file_source = match file_path {
+        Some(path) => path.to_string_lossy().into_owned(),
+        _ => format!("path/to/{}/file.txt", name),
+    };
+    let builder = PackageManifestBuilder::new(MetaPackage::from_name(name.parse().unwrap()));
+    let builder = builder.repository("testrepository.com");
+    let builder = builder.add_blob(BlobInfo {
+        source_path: meta_source,
+        path: "meta/".into(),
+        merkle: "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap(),
+        size: 1,
+    });
+    let builder = builder.add_blob(BlobInfo {
+        source_path: file_source,
+        path: "data/file.txt".into(),
+        merkle: "1111111111111111111111111111111111111111111111111111111111111111".parse().unwrap(),
+        size: 1,
+    });
+    builder.build()
 }
 
 #[cfg(test)]

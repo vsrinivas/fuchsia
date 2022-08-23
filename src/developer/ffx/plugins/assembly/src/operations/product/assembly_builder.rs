@@ -7,10 +7,12 @@ use anyhow::{anyhow, ensure, Context, Result};
 use assembly_config_data::ConfigDataBuilder;
 use assembly_config_schema::{
     product_config::{
-        AssemblyInputBundle, ProductConfigData, ProductPackageDetails, ProductPackagesConfig,
+        AssemblyInputBundle, DriverDetails, ProductConfigData, ProductPackageDetails,
+        ProductPackagesConfig,
     },
     FileEntry,
 };
+use assembly_driver_manifest::DriverManifestBuilder;
 use assembly_package_utils::PackageManifestPathBuf;
 use assembly_platform_configuration::{PackageConfigPatch, StructuredConfigPatches};
 use assembly_structured_config::Repackager;
@@ -30,6 +32,9 @@ pub struct ImageAssemblyConfigBuilder {
 
     /// The cache packages from the AssemblyInputBundles
     cache: PackageSet,
+
+    /// The base driver packages from the AssemblyInputBundles
+    base_drivers: NamedMap<DriverDetails>,
 
     /// The system packages from the AssemblyInputBundles
     system: PackageSet,
@@ -70,6 +75,7 @@ impl ImageAssemblyConfigBuilder {
         Self {
             base: PackageSet::new("base packages"),
             cache: PackageSet::new("cache packages"),
+            base_drivers: NamedMap::new("base_drivers"),
             system: PackageSet::new("system packages"),
             bootfs_packages: PackageSet::new("bootfs packages"),
             boot_args: BTreeSet::default(),
@@ -110,13 +116,22 @@ impl ImageAssemblyConfigBuilder {
         bundle: AssemblyInputBundle,
     ) -> Result<()> {
         let bundle_path = bundle_path.as_ref();
-        let AssemblyInputBundle { image_assembly: bundle, config_data, blobs: _, base_drivers: _ } =
+        let AssemblyInputBundle { image_assembly: bundle, config_data, blobs: _, base_drivers } =
             bundle;
 
         Self::add_bundle_packages(bundle_path, &bundle.base, &mut self.base)?;
         Self::add_bundle_packages(bundle_path, &bundle.cache, &mut self.cache)?;
         Self::add_bundle_packages(bundle_path, &bundle.system, &mut self.system)?;
         Self::add_bundle_packages(bundle_path, &bundle.bootfs_packages, &mut self.bootfs_packages)?;
+
+        // Base drivers are added to the base packages
+        for driver_details in base_drivers {
+            Self::add_bundle_package(bundle_path, &driver_details.package, &mut self.base)
+                .context("Adding driver {}")?;
+            let driver_package_path = bundle_path.join(&driver_details.package);
+            let package_url = DriverManifestBuilder::get_base_package_url(driver_package_path)?;
+            self.base_drivers.try_insert_unique(package_url, driver_details)?;
+        }
 
         self.boot_args
             .try_insert_all_unique(bundle.boot_args)
@@ -159,6 +174,18 @@ impl ImageAssemblyConfigBuilder {
         Ok(())
     }
 
+    /// Add a packages from a bundle, resolving each path to a package
+    /// manifest from the bundle's path to locate it.
+    fn add_bundle_package(
+        bundle_path: impl AsRef<Path>,
+        package_path: impl AsRef<Path>,
+        package_set: &mut PackageSet,
+    ) -> Result<()> {
+        let path = bundle_path.as_ref().join(package_path);
+        package_set.add_package_from_path(path)?;
+        Ok(())
+    }
+
     /// Add a set of packages from a bundle, resolving each path to a package
     /// manifest from the bundle's path to locate it.
     fn add_bundle_packages(
@@ -167,8 +194,7 @@ impl ImageAssemblyConfigBuilder {
         package_set: &mut PackageSet,
     ) -> Result<()> {
         for path in bundle_package_paths {
-            let path = bundle_path.as_ref().join(path);
-            package_set.add_package_from_path(path)?;
+            Self::add_bundle_package(bundle_path.as_ref(), path, package_set)?;
         }
         Ok(())
     }
@@ -293,6 +319,7 @@ impl ImageAssemblyConfigBuilder {
             structured_config,
             mut base,
             mut cache,
+            base_drivers,
             mut system,
             boot_args,
             mut bootfs_files,
@@ -343,6 +370,22 @@ impl ImageAssemblyConfigBuilder {
             }
         }
 
+        // TODO(https://fxbug.dev/98103) Remove the conditional once we no longer create
+        // the package in GN
+        if !base_drivers.is_empty() {
+            // Build the driver-manager-base-config package and add it to the base packages
+            let mut driver_manifest_builder = DriverManifestBuilder::default();
+            for (package_url, driver_details) in base_drivers.entries {
+                driver_manifest_builder
+                    .add_driver(driver_details, &package_url)
+                    .with_context(|| format!("Adding driver {}", &package_url))?;
+            }
+            let driver_manifest_package_manifest_path = driver_manifest_builder
+                .build_driver_manifest_package(outdir)
+                .context("Building driver manifest package")?;
+            base.add_package(PackageEntry::parse_from(driver_manifest_package_manifest_path)?)?;
+        }
+
         if !config_data.is_empty() {
             // Build the config_data package
             let mut config_data_builder = ConfigDataBuilder::default();
@@ -358,11 +401,8 @@ impl ImageAssemblyConfigBuilder {
             let manifest_path = config_data_builder
                 .build(&outdir)
                 .context("Writing the 'config_data' package metafar.")?;
-            let entry = PackageEntry::parse_from(manifest_path)
-                .context("parsing generated config-data package")?;
-            base.try_insert_unique(entry.name().to_owned(), entry).map_err(|_| {
-                anyhow!("found a duplicate config_data package when adding generated one.")
-            })?;
+            base.add_package_from_path(manifest_path)
+                .context("Adding generated config-data package")?;
         }
 
         // Construct a single "partial" config from the combined fields, and

@@ -10,6 +10,7 @@ if (is_host) {
       "blobfs:host_tests",
       "config_data:host_tests",
       "config_schema:host_tests",
+      "driver_manifest:host_tests",
       "fvm:host_tests",
       "images_config:host_tests",
       "images_manifest:host_tests",

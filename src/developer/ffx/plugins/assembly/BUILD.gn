@@ -44,6 +44,7 @@ ffx_plugin("ffx_assembly") {
     "//src/lib/assembly/blobfs",
     "//src/lib/assembly/config_data",
     "//src/lib/assembly/config_schema",
+    "//src/lib/assembly/driver_manifest",
     "//src/lib/assembly/fvm",
     "//src/lib/assembly/images_config",
     "//src/lib/assembly/images_manifest",
