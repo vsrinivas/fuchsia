@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/config_data_for_pkg_allowlist.gni")
 import("//build/dist/distribution_manifest.gni")
 
 # Define configuration data that can be aggregated into other packages. This is
@@ -50,12 +49,11 @@ template("config_data") {
     if (defined(invoker.for_pkg)) {
       if (string_replace(target_out_dir, "vendor/google", "") !=
           target_out_dir) {
-        # TODO(fxbug.dev/101976): introduce vendor/google allowlist
-        allowlist = []
+        import("//vendor/google/build/config_data_for_pkg_allowlist.gni")
       } else {
-        allowlist = config_data_for_pkg_allowlist
+        import("//build/config_data_for_pkg_allowlist.gni")
       }
-      assert(allowlist == [] ||
+      assert(config_data_for_pkg_allowlist == [] ||
                  config_data_for_pkg_allowlist + [ invoker.for_pkg ] -
                      [ invoker.for_pkg ] != config_data_for_pkg_allowlist,
              "${invoker.for_pkg} is not an allowed value for for_pkg")
