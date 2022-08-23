@@ -16,7 +16,7 @@ use {
 #[fuchsia::test]
 async fn reboot_on_terminate_success() {
     let (send_trigger_called, mut receive_trigger_called) = mpsc::unbounded();
-    let (_instance, _task) = build_reboot_on_terminate_realm(
+    let _instance = build_reboot_on_terminate_realm(
         "#meta/reboot_on_terminate_success.cm",
         send_trigger_called,
     )
@@ -30,7 +30,7 @@ async fn reboot_on_terminate_success() {
 #[fuchsia::test]
 async fn reboot_on_terminate_policy() {
     let (send_trigger_called, mut receive_trigger_called) = mpsc::unbounded();
-    let (_instance, _task) =
+    let _instance =
         build_reboot_on_terminate_realm("#meta/reboot_on_terminate_policy.cm", send_trigger_called)
             .await;
 
@@ -42,7 +42,7 @@ async fn reboot_on_terminate_policy() {
 async fn build_reboot_on_terminate_realm(
     url: &str,
     send_trigger_called: mpsc::UnboundedSender<()>,
-) -> (RealmInstance, fasync::Task<()>) {
+) -> RealmInstance {
     // Define the realm inside component manager.
     let builder = RealmBuilder::new().await.unwrap();
     let realm = builder.add_child("realm", url, ChildOptions::new().eager()).await.unwrap();
@@ -94,7 +94,7 @@ async fn build_reboot_on_terminate_realm(
         .await
         .unwrap();
 
-    let (component_manager_realm, nested_component_manager_task) =
+    let (component_manager_realm, _task) =
         builder.with_nested_component_manager("#meta/component_manager.cm").await.unwrap();
 
     // Define a mock component that serves the `/boot` directory to component manager
@@ -125,7 +125,7 @@ async fn build_reboot_on_terminate_realm(
         .await
         .unwrap();
 
-    (component_manager_realm.build().await.unwrap(), nested_component_manager_task)
+    component_manager_realm.build().await.unwrap()
 }
 
 async fn trigger_mock(

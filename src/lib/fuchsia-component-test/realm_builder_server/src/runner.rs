@@ -99,10 +99,6 @@ impl Runner {
         LocalComponentId(local_component_id)
     }
 
-    pub async fn delete_component(self: &Arc<Self>, component_to_delete: &LocalComponentId) {
-        self.local_component_proxies.lock().await.remove(&component_to_delete.0);
-    }
-
     pub fn run_runner_service(self: &Arc<Self>, stream: fcrunner::ComponentRunnerRequestStream) {
         let self_ref = self.clone();
         fasync::Task::local(async move {
