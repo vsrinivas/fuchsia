@@ -11,10 +11,10 @@
 #include <stdio.h>
 
 #include <algorithm>
+#include <string>
 
 #include <phys/efi/main.h>
 
-#include "gpt.h"
 #include "utils.h"
 
 namespace gigaboot {
@@ -174,25 +174,15 @@ zx::status<> Fastboot::Flash(std::string_view cmd, fastboot::Transport *transpor
     return SendResponse(ResponseType::kFail, "Not enough argument", transport);
   }
 
-  auto gpt_device = FindEfiGptDevice();
-  if (gpt_device.is_error()) {
-    return SendResponse(ResponseType::kFail, "Failed to find gpt device", transport,
-                        zx::error(ZX_ERR_INTERNAL));
-  }
-
-  auto load_res = gpt_device.value().Load();
-  if (load_res.is_error()) {
-    return SendResponse(ResponseType::kFail, "Failed to load gpt", transport,
-                        zx::error(ZX_ERR_INTERNAL));
-  }
-
   ZX_ASSERT(args.args[1].size() < fastboot::kMaxCommandPacketSize);
 
-  auto ret = gpt_device.value().WritePartition(args.args[1], download_buffer_.data(), 0,
-                                               total_download_size());
+  size_t write_size;
+  bool res =
+      zb_ops_.write_to_partition(&zb_ops_, std::string(args.args[1]).data(), 0,
+                                 total_download_size(), download_buffer_.data(), &write_size);
 
-  if (ret.is_error()) {
-    return SendResponse(ResponseType::kFail, EfiStatusToString(ret.error_value()), transport,
+  if (!res || write_size != total_download_size()) {
+    return SendResponse(ResponseType::kFail, "Failed to write to partition", transport,
                         zx::error(ZX_ERR_INTERNAL));
   }
 

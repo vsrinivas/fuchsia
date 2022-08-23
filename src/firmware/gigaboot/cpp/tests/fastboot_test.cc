@@ -267,11 +267,13 @@ class FastbootFlashTest : public ::testing::Test {
   MockStubService& stub_service() { return stub_service_; }
   Device& image_device() { return image_device_; }
   BlockDevice& block_device() { return block_device_; }
+  MockZirconBootOps& mock_zb_ops() { return mock_zb_ops_; }
 
  private:
   MockStubService stub_service_;
   Device image_device_;
   BlockDevice block_device_;
+  MockZirconBootOps mock_zb_ops_;
 };
 
 class FastbootSlotTest : public ::testing::Test {
@@ -475,9 +477,7 @@ TEST_F(FastbootSlotTest, SetActiveSlotWriteFailure) {
   ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
 }
 
-TEST_F(FastbootFlashTest, GetVarMaxDownloadSize) {
-  auto cleanup = SetupEfiGlobalState(stub_service(), image_device());
-
+TEST(FastbootFlashVarTest, GetVarMaxDownloadSize) {
   Fastboot fastboot(download_buffer, ZirconBootOps());
   fastboot::TestTransport transport;
 
@@ -490,14 +490,11 @@ TEST_F(FastbootFlashTest, GetVarMaxDownloadSize) {
 }
 
 TEST_F(FastbootFlashTest, FlashPartition) {
+  constexpr size_t partition_size = 0x100;
   auto cleanup = SetupEfiGlobalState(stub_service(), image_device());
 
-  // Add a gpt entry for zircon_a
-  gpt_entry_t entry{{}, {}, kGptFirstUsableBlocks, kGptFirstUsableBlocks + 5, 0, {}};
-  SetGptEntryName(GPT_ZIRCON_A_NAME, entry);
-  AddPartition(entry);
-
-  Fastboot fastboot(download_buffer, ZirconBootOps());
+  mock_zb_ops().AddPartition(GPT_ZIRCON_A_NAME, sizeof(uint8_t) * partition_size);
+  Fastboot fastboot(download_buffer, mock_zb_ops().GetZirconBootOps());
 
   // Download some data to flash to the partition.
   std::vector<uint8_t> download_content;
@@ -515,22 +512,15 @@ TEST_F(FastbootFlashTest, FlashPartition) {
   fastboot::Packets expected_packets = {"OKAY"};
   ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
 
-  uint8_t* partition_start = BlockDeviceStart() + entry.first * kBlockSize;
-  ASSERT_TRUE(memcmp(partition_start, download_content.data(), download_content.size()) == 0);
+  uint8_t read_buf[partition_size] = {0};
+  ret = mock_zb_ops().ReadFromPartition(GPT_ZIRCON_A_NAME, 0, sizeof(read_buf), read_buf);
+  ASSERT_TRUE(ret.is_ok());
+  ASSERT_TRUE(memcmp(read_buf, download_content.data(), download_content.size()) == 0);
 }
 
-TEST_F(FastbootFlashTest, FlashPartitionFailedToFindGptDevice) {
-  // Set the current device to one whose parent is not the added block device for the test.
-  Device image({"non-parent-path", "image"});
-  stub_service().AddDevice(&image);
-  auto cleanup = SetupEfiGlobalState(stub_service(), image);
-
-  // Add a gpt entry for zircon_a
-  gpt_entry_t entry{{}, {}, kGptFirstUsableBlocks, kGptFirstUsableBlocks + 5, 0, {}};
-  SetGptEntryName(GPT_ZIRCON_A_NAME, entry);
-  AddPartition(entry);
-
-  Fastboot fastboot(download_buffer, ZirconBootOps());
+TEST_F(FastbootFlashTest, FlashPartitionFailedToWritePartition) {
+  // Do NOT add any partitions. Write should fail.
+  Fastboot fastboot(download_buffer, mock_zb_ops().GetZirconBootOps());
 
   // Download some data to flash to the partition.
   std::vector<uint8_t> download_content(128, 0);
@@ -548,29 +538,6 @@ TEST_F(FastbootFlashTest, FlashPartitionFailedToFindGptDevice) {
   ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
 }
 
-TEST_F(FastbootFlashTest, FlashPartitionFailedToLoadGptDevice) {
-  auto cleanup = SetupEfiGlobalState(stub_service(), image_device());
-  // Clear the gpt.
-  memset(BlockDeviceStart(), 0, block_device().total_blocks() * kBlockSize);
-
-  Fastboot fastboot(download_buffer, ZirconBootOps());
-
-  // Download some data to flash to the partition.
-  std::vector<uint8_t> download_content(128, 0);
-  ASSERT_NO_FATAL_FAILURE(DownloadData(fastboot, download_content));
-
-  fastboot::TestTransport transport;
-
-  transport.AddInPacket(std::string("flash:") + GPT_ZIRCON_A_NAME);
-  zx::status<> ret = fastboot.ProcessPacket(&transport);
-  ASSERT_TRUE(ret.is_error());
-
-  // Should fail while loading gpt.
-  auto sent_packets = transport.GetOutPackets();
-  ASSERT_EQ(sent_packets.size(), 1ULL);
-  ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
-}
-
 // TODO(b/235489025): Extends `StubBootServices` to cover the mock of efi_runtime_services.
 EFIAPI efi_status ResetSystemSucceed(efi_reset_type, efi_status, size_t, void*) {
   return EFI_SUCCESS;
@@ -583,7 +550,7 @@ TEST_F(FastbootFlashTest, RebootNormal) {
   };
   gEfiSystemTable->RuntimeServices = &runtime_services;
 
-  Fastboot fastboot(download_buffer, ZirconBootOps());
+  Fastboot fastboot(download_buffer, mock_zb_ops().GetZirconBootOps());
   fastboot::TestTransport transport;
 
   // Set to a different initial boot mode.
@@ -605,7 +572,7 @@ TEST_F(FastbootFlashTest, RebootBootloader) {
   };
   gEfiSystemTable->RuntimeServices = &runtime_services;
 
-  Fastboot fastboot(download_buffer, ZirconBootOps());
+  Fastboot fastboot(download_buffer, mock_zb_ops().GetZirconBootOps());
   fastboot::TestTransport transport;
 
   // Set to a different initial boot mode.
@@ -627,7 +594,7 @@ TEST_F(FastbootFlashTest, RebootRecovery) {
   };
   gEfiSystemTable->RuntimeServices = &runtime_services;
 
-  Fastboot fastboot(download_buffer, ZirconBootOps());
+  Fastboot fastboot(download_buffer, mock_zb_ops().GetZirconBootOps());
   fastboot::TestTransport transport;
 
   // Set to a different initial boot mode.
@@ -649,7 +616,7 @@ TEST_F(FastbootFlashTest, RebootSetRebootModeFail) {
   };
   gEfiSystemTable->RuntimeServices = &runtime_services;
 
-  Fastboot fastboot(download_buffer, ZirconBootOps());
+  Fastboot fastboot(download_buffer, mock_zb_ops().GetZirconBootOps());
   fastboot::TestTransport transport;
 
   // Set returned value to false
@@ -675,7 +642,7 @@ TEST_F(FastbootFlashTest, RebootResetSystemFail) {
   };
   gEfiSystemTable->RuntimeServices = &runtime_services;
 
-  Fastboot fastboot(download_buffer, ZirconBootOps());
+  Fastboot fastboot(download_buffer, mock_zb_ops().GetZirconBootOps());
   fastboot::TestTransport transport;
 
   transport.AddInPacket(std::string("reboot"));

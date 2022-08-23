@@ -57,6 +57,7 @@ source_set("legacy_c_gigaboot") {
   configs += [ "$dir_gigaboot/src:config" ]
 
   deps = [
+    "//src/bringup/lib/netboot",
     "//src/firmware/lib/abr:in_tree",
     "//src/firmware/lib/zbi:in_tree",
     "//third_party/android/platform/external/avb:lib",
