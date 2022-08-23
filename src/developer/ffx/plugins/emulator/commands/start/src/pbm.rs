@@ -163,8 +163,12 @@ async fn apply_command_line_options(
 
     // Any generated values or values from ffx_config.
     emu_config.runtime.mac_address = generate_mac_address(&cmd.name);
-    let upscript = ffx_config::get(EMU_UPSCRIPT_FILE).await.ok().map(|s: String| PathBuf::from(s));
-    emu_config.runtime.upscript = upscript;
+    let upscript: String = ffx_config::get(EMU_UPSCRIPT_FILE)
+        .await
+        .context("Getting upscript path from ffx config")?;
+    if !upscript.is_empty() {
+        emu_config.runtime.upscript = Some(PathBuf::from(upscript));
+    }
 
     Ok(emu_config)
 }
@@ -281,10 +285,6 @@ mod tests {
     async fn test_apply_command_line_options() -> Result<()> {
         let _env = ffx_config::test_init().await.unwrap();
         let ffx_config = FfxConfigWrapper::new();
-        query(EMU_UPSCRIPT_FILE)
-            .level(Some(ConfigLevel::User))
-            .set(json!("/path/to/upscript".to_string()))
-            .await?;
 
         // Set up some test data to be applied.
         let mut cmd = StartCommand {
@@ -330,6 +330,14 @@ mod tests {
         assert_eq!(opts.runtime.log_level, LogLevel::Verbose);
         assert_eq!(opts.runtime.name, "SomeName");
         assert_eq!(opts.runtime.template, PathBuf::from("/path/to/template"));
+        assert_eq!(opts.runtime.upscript, None);
+
+        query(EMU_UPSCRIPT_FILE)
+            .level(Some(ConfigLevel::User))
+            .set(json!("/path/to/upscript".to_string()))
+            .await?;
+
+        let opts = apply_command_line_options(opts, &cmd, &ffx_config).await?;
         assert_eq!(opts.runtime.upscript, Some(PathBuf::from("/path/to/upscript")));
 
         // "console" and "monitor" are exclusive, so swap them and reapply.
