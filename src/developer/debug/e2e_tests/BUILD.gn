@@ -1,0 +1,55 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/test.gni")
+import("//build/testing/environments.gni")
+import("//build/testing/host_test_data.gni")
+
+if (is_host) {
+  test("zxdb_e2e_tests") {
+    sources = [
+      "e2e_test.cc",
+      "e2e_test.h",
+      "ffx_debug_agent_bridge.cc",
+      "ffx_debug_agent_bridge.h",
+      "main_e2e_test.cc",
+      "main_e2e_test.h",
+      "status_test.cc",
+    ]
+
+    deps = [
+      # In variant builds the variant version of the test executable will be run. However, the test
+      # will expect it can still run the host_x64 default variant of ffx, which is still built
+      # regardless of build variant. But a simple dependency here would try to build an ASAN variant
+      # of ffx, which creates a conflict because then there are two ffx binaries in the path of the
+      # existing tooling, which causes the infra builds (and local attempts to invoke ffx) to fail
+      # horribly. ${toolchain_variant.base} specifies specifically to depend on the normal
+      # non-variant version of ffx that's built all the time so we don't create a second copy, and
+      # can expect the path to be consistent and predictable.
+      ":zxdb_e2e_test_data(${toolchain_variant.base})",
+      "//src/developer/debug/shared",
+      "//src/developer/debug/zxdb/client",
+      "//src/developer/debug/zxdb/common:test_support",
+      "//src/developer/debug/zxdb/symbols:test_support",
+      "//src/lib/fxl/test:test_settings",
+      "//third_party/googletest:gtest",
+    ]
+
+    # Only x64 hosts supports host tests, the arm64 emulator is run from an arm64 host and therefore
+    # cannot run the x64 binary produced by this target. https://fxbug.dev/64897 tracks enabling
+    # host tests to run in arm64 environment.
+    environments = all_fuchsia_envs
+    if (target_cpu == "arm64") {
+      environments -= [ emu_env ]
+    }
+  }
+
+  host_test_data("zxdb_e2e_test_data") {
+    sources = [ "$root_out_dir/ffx" ]
+
+    # Ensure the non-asan variant is built even in asan builds.
+    deps = [ "//src/developer/ffx:ffx_bin" ]
+  }
+}
