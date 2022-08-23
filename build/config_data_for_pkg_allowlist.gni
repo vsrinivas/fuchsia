@@ -19,8 +19,6 @@ config_data_for_pkg_allowlist = [
   "base_unittests",
   "basemgr",
   "chrome",
-  "chrome_browser",
-  "chromium_tests_base_unittests",
   "cobalt",
   "dart_aot_product_runner",
   "dart_aot_runner",
