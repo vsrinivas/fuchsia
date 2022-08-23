@@ -12,16 +12,9 @@
 #   current (required)
 #     A list of local JSON schema files.
 #
-#   policy (optional)
-#
 template("verify_json_schemas") {
   assert(defined(invoker.golden), "golden directory is required")
   assert(defined(invoker.current), "current directory is required")
-
-  policy = "no_changes"
-  if (defined(invoker.policy)) {
-    policy = invoker.policy
-  }
 
   # Run the test.
   action(target_name) {
@@ -50,10 +43,6 @@ template("verify_json_schemas") {
     args += rebased_goldens
     args += [ "--current" ]
     args += rebased_currents
-    args += [
-      "--policy",
-      policy,
-    ]
     args += [ "--stamp" ]
     args += [ rebase_path(stamp_file, root_build_dir) ]
   }

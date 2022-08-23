@@ -88,8 +88,6 @@ verify_json_schemas("verify_json_schemas") {
   }
 
   current = schemas
-
-  policy = "no_changes"
 }
 
 if (is_host) {
