@@ -97,7 +97,6 @@ rustc_binary("rust_fidl_microbenchmarks_bin") {
   deps = [
     ":benchmark_suite_rust_lib",
     "//src/developer/fuchsia-criterion",
-    "//src/lib/vulkan/compact_image",
     "//third_party/rust_crates:criterion",
   ]
 

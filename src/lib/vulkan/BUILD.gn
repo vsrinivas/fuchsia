@@ -87,7 +87,6 @@ config("vulkan_hpp") {
   }
 }
 
-import("//src/lib/vulkan/compact_image/sdk_atom_info.gni")
 import("//src/lib/vulkan/swapchain/sdk_atom_info.gni")
 import("//src/lib/vulkan/validation_layers/sdk_atom_info.gni")
 
@@ -124,10 +123,7 @@ import("//src/lib/vulkan/validation_layers/sdk_atom_info.gni")
 #     [GN path] Path to the configuration file.
 #
 vulkan_layers_sdk_atom_infos = vulkan_validation_layers_sdk_atom_infos
-vulkan_layers_sdk_atom_infos += [
-  vulkan_image_pipe_swapchain_sdk_atom_info,
-  vulkan_compact_image_sdk_atom_info,
-]
+vulkan_layers_sdk_atom_infos += [ vulkan_image_pipe_swapchain_sdk_atom_info ]
 
 sdk_atom("vulkan_layers") {
   id = "sdk://pkg/vulkan_layers"

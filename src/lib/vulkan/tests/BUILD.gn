@@ -9,34 +9,8 @@ import("//src/lib/vulkan/vulkan.gni")
 group("tests") {
   testonly = true
   deps = [
-    ":compact-image-tests",
     ":image-pipe-swapchain-hermetic-tests",
     ":image-pipe-swapchain-tests",
-  ]
-}
-
-fuchsia_unittest_package("compact-image-tests") {
-  manifest = "meta/compact-image-tests.cml"
-  deps = [
-    ":test_compact_image",
-    "//src/lib/vulkan/compact_image:compact_image_layer",
-    "//src/lib/vulkan/validation_layers",
-  ]
-  test_specs = {
-    # Currently only ARM GPU driver implements the FUCHSIA_memory_control
-    # extension which is required for the tests.
-    environments = arm_gpu_envs
-  }
-}
-
-test("test_compact_image") {
-  output_name = "compact-image-tests"
-  sources = [ "test_compact_image.cc" ]
-  deps = [
-    "//sdk/lib/sys/cpp/testing:unit",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
-    "//src/lib/vulkan",
   ]
 }
 
