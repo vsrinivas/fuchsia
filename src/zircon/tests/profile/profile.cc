@@ -21,63 +21,15 @@
 
 namespace {
 
-zx_status_t CreateProfile(const zx::channel& profile_provider, uint32_t priority,
-                          const std::string& name, zx_status_t* server_status,
-                          zx::profile* profile) {
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_scheduler::ProfileProvider>(
-                                   profile_provider.borrow()))
-                    ->GetProfile(priority, fidl::StringView::FromExternal(name));
-  if (!result.ok()) {
-    return result.status();
-  }
-  *server_status = result.value().status;
-  *profile = std::move(result.value().profile);
-  return ZX_OK;
-}
-
-zx_status_t CreateDeadlineProfile(const zx::channel& profile_provider, zx_duration_t capacity,
-                                  zx_duration_t relative_deadline, zx_duration_t period,
-                                  const std::string& name, zx_status_t* server_status,
-                                  zx::profile* profile) {
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_scheduler::ProfileProvider>(
-                                   profile_provider.borrow()))
-                    ->GetDeadlineProfile(capacity, relative_deadline, period,
-                                         fidl::StringView::FromExternal(name));
-  if (!result.ok()) {
-    return result.status();
-  }
-  *server_status = result.value().status;
-  *profile = std::move(result.value().profile);
-  return ZX_OK;
-}
-
-zx_status_t SetProfileByRole(const zx::channel& profile_provider, zx::unowned_thread thread,
-                             const std::string& role, zx_status_t* server_status) {
-  zx::thread duplicate;
-  if (zx_status_t status =
-          thread->duplicate(ZX_RIGHT_TRANSFER | ZX_RIGHT_MANAGE_THREAD, &duplicate);
-      status != ZX_OK) {
-    return status;
-  }
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_scheduler::ProfileProvider>(
-                                   profile_provider.borrow()))
-                    ->SetProfileByRole(std::move(duplicate), fidl::StringView::FromExternal(role));
-  if (!result.ok()) {
-    return result.status();
-  }
-  *server_status = result.value().status;
-  return ZX_OK;
-}
-
-void GetProfileProvider(zx::channel* channel) {
+void GetProfileProvider(fidl::ClientEnd<fuchsia_scheduler::ProfileProvider>* provider) {
   // Connect to ProfileProvider.
-  zx::channel server_endpoint;
-  ASSERT_OK(zx::channel::create(/*flags=*/0u, &server_endpoint, channel));
+  auto endpoints = fidl::CreateEndpoints<fuchsia_scheduler::ProfileProvider>();
+  ASSERT_OK(endpoints.status_value());
   ASSERT_OK(fdio_service_connect_by_name(
                 fidl::DiscoverableProtocolName<fuchsia_scheduler::ProfileProvider>,
-                server_endpoint.release()),
+                endpoints->server.channel().release()),
             "Could not connect to ProfileProvider.");
-  ASSERT_EQ(server_endpoint.get(), ZX_HANDLE_INVALID);
+  *provider = std::move(endpoints->client);
 }
 
 void CheckBasicDetails(const zx::profile& profile) {
@@ -91,48 +43,42 @@ void CheckBasicDetails(const zx::profile& profile) {
 
 // Test getting a profile via the GetProfile FIDL method.
 TEST(Profile, GetProfile) {
-  zx::channel provider;
+  fidl::ClientEnd<fuchsia_scheduler::ProfileProvider> provider;
   GetProfileProvider(&provider);
   ASSERT_FALSE(CURRENT_TEST_HAS_FAILURES());
 
-  zx::profile profile;
-  zx_status_t status;
-  ASSERT_OK(CreateProfile(provider, /*priority=*/0u, "<test>", &status, &profile),
-            "Error creating profile.");
-  ASSERT_OK(status);
+  auto result = fidl::WireCall(provider)->GetProfile(/*priority=*/0u, "<test>");
+  ASSERT_OK(result.status());
+  ASSERT_OK(result.value().status);
 
-  CheckBasicDetails(profile);
+  CheckBasicDetails(result.value().profile);
 }
 
 // Test getting a profile via the GetDeadlineProfile FIDL method.
 TEST(Profile, GetDeadlineProfile) {
-  zx::channel provider;
+  fidl::ClientEnd<fuchsia_scheduler::ProfileProvider> provider;
   GetProfileProvider(&provider);
   ASSERT_FALSE(CURRENT_TEST_HAS_FAILURES());
 
-  zx::profile profile;
-  zx_status_t status;
-  ASSERT_OK(
-      CreateDeadlineProfile(provider, /*capacity=*/ZX_MSEC(2), /*relative_deadline=*/ZX_MSEC(10),
-                            /*period=*/ZX_MSEC(10), "<test>", &status, &profile),
-      "Error creating deadline profile.");
-  ASSERT_OK(status);
+  auto result = fidl::WireCall(provider)->GetDeadlineProfile(/*capacity=*/ZX_MSEC(2),
+                                                             /*relative_deadline=*/ZX_MSEC(10),
+                                                             /*period=*/ZX_MSEC(10), "<test>");
+  ASSERT_OK(result.status());
+  ASSERT_OK(result.value().status);
 
-  CheckBasicDetails(profile);
+  CheckBasicDetails(result.value().profile);
 }
 
 // Test getting a profile via the GetCpuAffinityProfile FIDL method.
 TEST(Profile, GetCpuAffinityProfile) {
-  zx::channel provider;
+  fidl::ClientEnd<fuchsia_scheduler::ProfileProvider> provider;
   GetProfileProvider(&provider);
   ASSERT_FALSE(CURRENT_TEST_HAS_FAILURES());
 
   fuchsia_scheduler::wire::CpuSet cpu_set = {};
   cpu_set.mask[0] = 1;
-  auto result =
-      fidl::WireCall(fidl::UnownedClientEnd<fuchsia_scheduler::ProfileProvider>(provider.borrow()))
-          ->GetCpuAffinityProfile(cpu_set);
-  ASSERT_TRUE(result.ok());
+  auto result = fidl::WireCall(provider)->GetCpuAffinityProfile(cpu_set);
+  ASSERT_OK(result.status());
   ASSERT_OK(result.value().status);
 
   CheckBasicDetails(result.value().profile);
@@ -140,25 +86,28 @@ TEST(Profile, GetCpuAffinityProfile) {
 
 // Test setting a profile via the SetProfileByRole FIDL method.
 TEST(Profile, SetProfileByRole) {
-  zx::channel provider;
+  fidl::ClientEnd<fuchsia_scheduler::ProfileProvider> provider;
   GetProfileProvider(&provider);
   ASSERT_FALSE(CURRENT_TEST_HAS_FAILURES());
 
-  zx_status_t server_status;
-  zx_status_t status;
+  const zx_rights_t kRights = ZX_RIGHT_TRANSFER | ZX_RIGHT_MANAGE_THREAD;
+  zx::thread duplicate;
 
-  status = SetProfileByRole(provider, zx::thread::self(), "fuchsia.test-role:ok", &server_status);
-  EXPECT_OK(status);
-  EXPECT_OK(server_status);
+  {
+    ASSERT_OK(zx::thread::self()->duplicate(kRights, &duplicate));
+    auto result =
+        fidl::WireCall(provider)->SetProfileByRole(std::move(duplicate), "fuchsia.test-role:ok");
+    ASSERT_OK(result.status());
+    ASSERT_OK(result.value().status);
+  }
 
-  status = SetProfileByRole(provider, zx::unowned_thread{}, "fuchsia.test-role:ok", &server_status);
-  EXPECT_EQ(ZX_ERR_BAD_HANDLE, status);
-  EXPECT_OK(server_status);
-
-  status =
-      SetProfileByRole(provider, zx::thread::self(), "fuchsia.test-role:not-found", &server_status);
-  EXPECT_OK(status);
-  EXPECT_EQ(ZX_ERR_NOT_FOUND, server_status);
+  {
+    ASSERT_OK(zx::thread::self()->duplicate(kRights, &duplicate));
+    auto result = fidl::WireCall(provider)->SetProfileByRole(std::move(duplicate),
+                                                             "fuchsia.test-role:not-found");
+    ASSERT_OK(result.status());
+    ASSERT_EQ(ZX_ERR_NOT_FOUND, result.value().status);
+  }
 }
 
 }  // namespace
