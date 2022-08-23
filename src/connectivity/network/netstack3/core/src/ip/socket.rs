@@ -1038,7 +1038,7 @@ pub(crate) mod testutil {
 #[cfg(test)]
 mod tests {
     use net_types::{
-        ip::{AddrSubnet, SubnetEither},
+        ip::{AddrSubnet, IpAddr, SubnetEither},
         Witness,
     };
     use nonzero_ext::nonzero;
@@ -1049,11 +1049,22 @@ mod tests {
         ipv4::{Ipv4OnlyMeta, Ipv4Packet},
         testutil::{parse_ethernet_frame, parse_ip_packet_in_ethernet_frame},
     };
-    use specialize_ip_macro::{ip_test, specialize_ip};
+    use specialize_ip_macro::ip_test;
     use test_case::test_case;
 
     use super::*;
-    use crate::{device::DeviceId, testutil::*, Ctx};
+    use crate::{
+        context::testutil::DummyInstant,
+        device::DeviceId,
+        ip::{
+            device::{
+                IpDeviceContext as DeviceIpDeviceContext, IpDeviceIpExt, IpDeviceNonSyncContext,
+            },
+            IpDeviceContext, IpLayerIpExt, IpLayerStateIpExt, IpStateContext,
+        },
+        testutil::*,
+        Ctx, TimerContext,
+    };
 
     enum AddressType {
         LocallyOwned,
@@ -1106,26 +1117,23 @@ mod tests {
         }
     }
 
-    #[specialize_ip]
-    fn remove_all_local_addrs<I: Ip>(
-        sync_ctx: &mut crate::testutil::DummySyncCtx,
-        ctx: &mut crate::testutil::DummyNonSyncCtx,
-    ) {
-        let devices =
-            crate::ip::device::IpDeviceContext::<Ipv4, _>::with_devices(sync_ctx, |devices| {
-                devices.collect::<Vec<_>>()
-            });
+    fn remove_all_local_addrs<I: Ip + IpLayerIpExt + IpDeviceIpExt<DummyInstant, DeviceId>>(
+        sync_ctx: &mut DummySyncCtx,
+        ctx: &mut DummyNonSyncCtx,
+    ) where
+        DummySyncCtx: DeviceIpDeviceContext<I, DummyNonSyncCtx, DeviceId = DeviceId>,
+        DummyNonSyncCtx: IpDeviceNonSyncContext<I, DeviceId, Instant = DummyInstant>,
+    {
+        let devices = DeviceIpDeviceContext::<I, _>::with_devices(sync_ctx, |devices| {
+            devices.collect::<Vec<_>>()
+        });
         for device in devices {
-            #[ipv4]
             let subnets =
-                crate::ip::device::with_assigned_ipv4_addr_subnets(sync_ctx, device, |addrs| {
-                    addrs.collect::<Vec<_>>()
-                });
-            #[ipv6]
-            let subnets =
-                crate::ip::device::with_assigned_ipv6_addr_subnets(sync_ctx, device, |addrs| {
-                    addrs.collect::<Vec<_>>()
-                });
+                crate::ip::device::with_assigned_addr_subnets::<I, DummyNonSyncCtx, _, _, _>(
+                    sync_ctx,
+                    device,
+                    |addrs| addrs.collect::<Vec<_>>(),
+                );
 
             for subnet in subnets {
                 crate::device::del_ip_addr(sync_ctx, ctx, device, &subnet.addr())
@@ -1216,11 +1224,14 @@ mod tests {
             )
             .into()),
         }; "new remote to local")]
-    fn test_new<I: Ip + IpSocketIpExt>(test_case: NewSocketTestCase)
-    where
-        DummySyncCtx:
-            IpSocketHandler<I, DummyNonSyncCtx> + IpDeviceIdContext<I, DeviceId = DeviceId>,
+    fn test_new<I: Ip + IpSocketIpExt + IpLayerIpExt + IpDeviceIpExt<DummyInstant, DeviceId>>(
+        test_case: NewSocketTestCase,
+    ) where
+        DummySyncCtx: IpSocketHandler<I, DummyNonSyncCtx>
+            + IpDeviceIdContext<I, DeviceId = DeviceId>
+            + DeviceIpDeviceContext<I, DummyNonSyncCtx, DeviceId = DeviceId>,
         <DummySyncCtx as IpSocketHandler<I, DummyNonSyncCtx>>::Builder: IpSocketBuilder,
+        DummyNonSyncCtx: TimerContext<I::Timer>,
     {
         let cfg = I::DUMMY_CONFIG;
         let proto = I::ICMP_IP_PROTO;
@@ -1458,23 +1469,22 @@ mod tests {
     }
 
     #[ip_test]
-    #[specialize_ip]
-    fn test_send<I: Ip>() {
+    fn test_send<I: Ip + IpSocketIpExt + IpLayerStateIpExt<DummyInstant, DeviceId>>()
+    where
+        DummySyncCtx: BufferIpSocketHandler<I, DummyNonSyncCtx, packet::EmptyBuf>
+            + IpDeviceContext<I, DummyNonSyncCtx, DeviceId = DeviceId>
+            + IpStateContext<I, <DummyNonSyncCtx as InstantContext>::Instant>,
+        <DummySyncCtx as IpSocketHandler<I, DummyNonSyncCtx>>::Builder: IpSocketBuilder,
+    {
         // Test various edge cases of the
         // `BufferIpSocketContext::send_ip_packet` method.
 
-        #[ipv4]
-        let (cfg, socket_builder, proto) = {
-            let mut builder = Ipv4SocketBuilder::default();
-            let _: &mut Ipv4SocketBuilder = builder.ttl(NonZeroU8::new(1).unwrap());
-            (DUMMY_CONFIG_V4, builder, Ipv4Proto::Icmp)
-        };
-
-        #[ipv6]
-        let (cfg, socket_builder, proto) = {
-            let mut builder = Ipv6SocketBuilder::default();
-            let _: &mut Ipv6SocketBuilder = builder.hop_limit(NonZeroU8::new(1).unwrap());
-            (DUMMY_CONFIG_V6, builder, Ipv6Proto::Icmpv6)
+        let cfg = I::DUMMY_CONFIG;
+        let proto = I::ICMP_IP_PROTO;
+        let socket_builder = {
+            let mut builder = <DummySyncCtx as IpSocketHandler<I, _>>::Builder::default();
+            builder.set_hop_limit(nonzero!(1u8));
+            builder
         };
 
         let DummyEventDispatcherConfig::<_> { local_mac, remote_mac, local_ip, remote_ip, subnet } =
@@ -1495,35 +1505,35 @@ mod tests {
         )
         .unwrap();
 
-        #[ipv4]
         let curr_id = crate::ip::gen_ipv4_packet_id(&mut sync_ctx);
 
-        #[ipv4]
-        let check_frame = move |frame: &[u8], packet_count| {
-            let (mut body, src_mac, dst_mac, _ethertype) = parse_ethernet_frame(frame).unwrap();
-            let packet = (&mut body).parse::<Ipv4Packet<&[u8]>>().unwrap();
-            assert_eq!(src_mac, local_mac.get());
-            assert_eq!(dst_mac, remote_mac.get());
-            assert_eq!(packet.src_ip(), local_ip.get());
-            assert_eq!(packet.dst_ip(), remote_ip.get());
-            assert_eq!(packet.proto(), proto);
-            assert_eq!(packet.ttl(), 1);
-            let Ipv4OnlyMeta { id } = packet.version_specific_meta();
-            assert_eq!(usize::from(id), usize::from(curr_id) + packet_count);
-            assert_eq!(body, [0]);
-        };
-
-        #[ipv6]
-        let check_frame = move |frame: &[u8], _packet_count| {
-            let (body, src_mac, dst_mac, src_ip, dst_ip, ip_proto, ttl) =
-                parse_ip_packet_in_ethernet_frame::<Ipv6>(frame).unwrap();
-            assert_eq!(body, [0]);
-            assert_eq!(src_mac, local_mac.get());
-            assert_eq!(dst_mac, remote_mac.get());
-            assert_eq!(src_ip, local_ip.get());
-            assert_eq!(dst_ip, remote_ip.get());
-            assert_eq!(ip_proto, proto);
-            assert_eq!(ttl, 1);
+        let check_frame = move |frame: &[u8], packet_count| match [local_ip.get(), remote_ip.get()]
+            .into()
+        {
+            IpAddr::V4([local_ip, remote_ip]) => {
+                let (mut body, src_mac, dst_mac, _ethertype) = parse_ethernet_frame(frame).unwrap();
+                let packet = (&mut body).parse::<Ipv4Packet<&[u8]>>().unwrap();
+                assert_eq!(src_mac, local_mac.get());
+                assert_eq!(dst_mac, remote_mac.get());
+                assert_eq!(packet.src_ip(), local_ip);
+                assert_eq!(packet.dst_ip(), remote_ip);
+                assert_eq!(packet.proto(), Ipv4::ICMP_IP_PROTO);
+                assert_eq!(packet.ttl(), 1);
+                let Ipv4OnlyMeta { id } = packet.version_specific_meta();
+                assert_eq!(usize::from(id), usize::from(curr_id) + packet_count);
+                assert_eq!(body, [0]);
+            }
+            IpAddr::V6([local_ip, remote_ip]) => {
+                let (body, src_mac, dst_mac, src_ip, dst_ip, ip_proto, ttl) =
+                    parse_ip_packet_in_ethernet_frame::<Ipv6>(frame).unwrap();
+                assert_eq!(body, [0]);
+                assert_eq!(src_mac, local_mac.get());
+                assert_eq!(dst_mac, remote_mac.get());
+                assert_eq!(src_ip, local_ip);
+                assert_eq!(dst_ip, remote_ip);
+                assert_eq!(ip_proto, Ipv6::ICMP_IP_PROTO);
+                assert_eq!(ttl, 1);
+            }
         };
         let mut packet_count = 0;
         assert_eq!(non_sync_ctx.frames_sent().len(), packet_count);

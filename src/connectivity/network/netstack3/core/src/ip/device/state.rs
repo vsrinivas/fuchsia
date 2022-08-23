@@ -41,7 +41,7 @@ pub(crate) enum DelIpv6AddrReason {
 /// An `Ip` extension trait adding IP device state properties.
 pub(crate) trait IpDeviceStateIpExt<Instant>: Ip {
     /// The information stored about an IP address assigned to an interface.
-    type AssignedAddress: AssignedAddress<Self::Addr> + Debug;
+    type AssignedAddress: AssignedAddress<Self::Addr> + Clone + Debug;
 
     /// The state kept by the Group Messaging Protocol (GMP) used to announce
     /// membership in an IP multicast group for this version of IP.
@@ -51,16 +51,33 @@ pub(crate) trait IpDeviceStateIpExt<Instant>: Ip {
     /// device (because there are no remote hosts) or in the context of an IPsec
     /// device (because multicast is not supported).
     type GmpState;
+
+    /// Examines the address and returns its subnet if it is assigned.
+    ///
+    /// Otherwise returns `None`.
+    fn assigned_addr(addr: &Self::AssignedAddress) -> Option<AddrSubnet<Self::Addr>>;
 }
 
 impl<I: Instant> IpDeviceStateIpExt<I> for Ipv4 {
     type AssignedAddress = AddrSubnet<Ipv4Addr>;
     type GmpState = IgmpGroupState<I>;
+
+    fn assigned_addr(addr: &Self::AssignedAddress) -> Option<AddrSubnet<Self::Addr>> {
+        Some(addr.clone())
+    }
 }
 
 impl<I: Instant> IpDeviceStateIpExt<I> for Ipv6 {
     type AssignedAddress = Ipv6AddressEntry<I>;
     type GmpState = MldGroupState<I>;
+
+    fn assigned_addr(addr: &Self::AssignedAddress) -> Option<AddrSubnet<Self::Addr>> {
+        // Tentative IP addresses (addresses which are not yet fully bound to a
+        // device) and deprecated IP addresses (addresses which have been
+        // assigned but should no longer be used for new connections) will not
+        // be returned.
+        addr.state.is_assigned().then_some((*addr.addr_sub()).to_witness())
+    }
 }
 
 /// The state associated with an IP address assigned to an IP device.

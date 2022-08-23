@@ -278,7 +278,8 @@ impl<
 pub(crate) trait IpDeviceContext<
     I: IpDeviceIpExt<C::Instant, Self::DeviceId>,
     C: IpDeviceNonSyncContext<I, Self::DeviceId>,
->: IpDeviceIdContext<I>
+>: IpDeviceIdContext<I> where
+    I::State: AsRef<IpDeviceState<C::Instant, I>>,
 {
     /// Calls the function with an immutable reference to IP device state.
     fn with_ip_device_state<O, F: FnOnce(&I::State) -> O>(
@@ -658,6 +659,24 @@ fn disable_ipv4_device<
     leave_ip_multicast(sync_ctx, ctx, device_id, Ipv4::ALL_SYSTEMS_MULTICAST_ADDRESS);
 }
 
+pub(crate) fn with_assigned_addr_subnets<
+    I: Ip + IpDeviceIpExt<C::Instant, SC::DeviceId>,
+    C: IpDeviceNonSyncContext<I, SC::DeviceId>,
+    SC: IpDeviceContext<I, C>,
+    O,
+    F: FnOnce(Box<dyn Iterator<Item = AddrSubnet<I::Addr>> + '_>) -> O,
+>(
+    sync_ctx: &SC,
+    device_id: SC::DeviceId,
+    cb: F,
+) -> O {
+    sync_ctx.with_ip_device_state(device_id, |state| {
+        cb(Box::new(
+            AsRef::<IpDeviceState<_, I>>::as_ref(state).iter_addrs().filter_map(I::assigned_addr),
+        ))
+    })
+}
+
 /// Gets the IPv4 address and subnet pairs associated with this device.
 ///
 /// Returns an [`Iterator`] of `AddrSubnet`.
@@ -671,8 +690,7 @@ pub(crate) fn with_assigned_ipv4_addr_subnets<
     device_id: SC::DeviceId,
     cb: F,
 ) -> O {
-    sync_ctx
-        .with_ip_device_state(device_id, |state| cb(Box::new(state.ip_state.iter_addrs().cloned())))
+    with_assigned_addr_subnets::<Ipv4, _, _, _, _>(sync_ctx, device_id, cb)
 }
 
 /// Gets the IPv6 address and subnet pairs associated with this device which are
@@ -696,15 +714,7 @@ pub(crate) fn with_assigned_ipv6_addr_subnets<
     device_id: SC::DeviceId,
     cb: F,
 ) -> O {
-    sync_ctx.with_ip_device_state(device_id, |state| {
-        cb(Box::new(state.ip_state.iter_addrs().filter_map(|a| {
-            if a.state.is_assigned() {
-                Some((*a.addr_sub()).to_witness())
-            } else {
-                None
-            }
-        })))
-    })
+    with_assigned_addr_subnets::<Ipv6, _, _, _, _>(sync_ctx, device_id, cb)
 }
 
 /// Gets a single IPv4 address and subnet for a device.
