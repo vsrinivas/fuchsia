@@ -257,6 +257,10 @@ TEST_F(FlatlandManagerTest, ClientDiesBeforeManager) {
 
     // |flatland| falls out of scope, killing the session.
     EXPECT_CALL(*mock_flatland_presenter_, RemoveSession(id));
+
+    // FlatlandManager::RemoveFlatlandInstance() will be posted on main thread and may not be run
+    // yet.
+    RunLoopUntilIdle();
   }
 
   // The session should show up in the set of removed sessions.
@@ -284,8 +288,10 @@ TEST_F(FlatlandManagerTest, ManagerDiesBeforeClients) {
   EXPECT_TRUE(removed_sessions_.count(id));
 
   // Wait until unbound.
-  RunLoopUntil([&flatland] { return !flatland.is_bound(); },
-               /* step duration */ zx::msec(100));
+  RunLoopUntil([&flatland] { return !flatland.is_bound(); });
+
+  // FlatlandManager::RemoveFlatlandInstance() will be posted on main thread and may not be run yet.
+  RunLoopUntilIdle();
 }
 
 TEST_F(FlatlandManagerTest, FirstPresentReturnsMaxPresentCredits) {
@@ -518,6 +524,10 @@ TEST_F(FlatlandManagerTest, ErrorClosesSession) {
   // ultimately posts the destruction back onto the worker.
   RunLoopUntil([&flatland] { return !flatland.is_bound(); });
   EXPECT_EQ(error_returned, FlatlandError::BAD_OPERATION);
+
+  // FlatlandManager::RemoveFlatlandInstance() will be posted on main thread and may not be run
+  // yet.
+  RunLoopUntilIdle();
 }
 
 TEST_F(FlatlandManagerTest, TokensAreReplenishedAfterRunningOut) {
