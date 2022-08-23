@@ -443,12 +443,6 @@ class PageRequest : public fbl::WAVLTreeContainable<PageRequest*>,
   DISALLOW_COPY_ASSIGN_AND_MOVE(PageRequest);
 
  private:
-  // PageRequests may or may not be initialized, to support batching of requests. offset_ must be
-  // checked and the object must be initialized if necessary (an uninitialized request has offset_
-  // set to UINT64_MAX).
-  void Init(fbl::RefPtr<PageRequestInterface> src, uint64_t offset, page_request_type type,
-            VmoDebugInfo vmo_debug_info, bool internal_batching = false);
-
   // The batch state is used both to implement a stateful query of whether a batch page request is
   // finished taking new requests or not, and to implement assertions to catch misuse of the request
   // API.
@@ -473,6 +467,32 @@ class PageRequest : public fbl::WAVLTreeContainable<PageRequest*>,
     // external.
     Internal
   };
+
+  // TODO: PageSource and AnonymousPageRequest should not have direct access, but should rather have
+  // their access mediate by the PageRequestInterface class that they derive from.
+  friend PageSource;
+  friend AnonymousPageRequester;
+
+  friend PageProvider;
+  friend fbl::DefaultKeyedObjectTraits<uint64_t, PageRequest>;
+
+  // PageRequests may or may not be initialized, to support batching of requests. offset_ must be
+  // checked and the object must be initialized if necessary (an uninitialized request has offset_
+  // set to UINT64_MAX).
+  void Init(fbl::RefPtr<PageRequestInterface> src, uint64_t offset, page_request_type type,
+            VmoDebugInfo vmo_debug_info, bool internal_batching = false);
+
+  bool IsInitialized() const { return offset_ != UINT64_MAX; }
+
+  uint64_t GetEnd() const {
+    // Assert on overflow, since it means vmobject made an out-of-bounds request.
+    uint64_t unused;
+    DEBUG_ASSERT(!add_overflow(offset_, len_, &unused));
+
+    return offset_ + len_;
+  }
+
+  uint64_t GetKey() const { return GetEnd(); }
 
   // The batch state the external caller created this request with. A single page request object can
   // be reused multiple times by calling Init in between uses, at which point the batch_state_ is
@@ -512,24 +532,6 @@ class PageRequest : public fbl::WAVLTreeContainable<PageRequest*>,
 
   // Linked list for overlapping requests.
   fbl::TaggedDoublyLinkedList<PageRequest*, PageSourceTag> overlap_;
-
-  uint64_t GetEnd() const {
-    // Assert on overflow, since it means vmobject made an out-of-bounds request.
-    uint64_t unused;
-    DEBUG_ASSERT(!add_overflow(offset_, len_, &unused));
-
-    return offset_ + len_;
-  }
-
-  uint64_t GetKey() const { return GetEnd(); }
-
-  // TODO: PageSource and AnonymousPageRequest should not have direct access, but should rather have
-  // their access mediate by the PageRequestInterface class that they derive from.
-  friend PageSource;
-  friend AnonymousPageRequester;
-
-  friend PageProvider;
-  friend fbl::DefaultKeyedObjectTraits<uint64_t, PageRequest>;
 };
 
 // Declare page provider helpers inline now that PageRequest has been defined.

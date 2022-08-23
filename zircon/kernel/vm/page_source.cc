@@ -270,7 +270,7 @@ zx_status_t PageSource::PopulateRequestLocked(PageRequest* request, uint64_t off
   DEBUG_ASSERT(IS_ALIGNED(offset, PAGE_SIZE));
   DEBUG_ASSERT(type < page_request_type::COUNT);
   DEBUG_ASSERT(request->type_ == type);
-  DEBUG_ASSERT(request->offset_ != UINT64_MAX);
+  DEBUG_ASSERT(request->IsInitialized());
 
 #ifdef DEBUG_ASSERT_IMPLEMENTED
   ASSERT(current_request_ == nullptr || current_request_ == request);
@@ -339,7 +339,7 @@ zx_status_t PageSource::FinalizeRequest(PageRequest* request) {
   if (!page_provider_->SupportsPageRequestType(request->type_)) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  DEBUG_ASSERT(request->offset_ != UINT64_MAX);
+  DEBUG_ASSERT(request->IsInitialized());
 
   Guard<Mutex> guard{&page_source_mtx_};
   if (detached_) {
@@ -352,7 +352,7 @@ zx_status_t PageSource::FinalizeRequest(PageRequest* request) {
 
 zx_status_t PageSource::FinalizeRequestLocked(PageRequest* request) {
   DEBUG_ASSERT(!detached_);
-  DEBUG_ASSERT(request->offset_ != UINT64_MAX);
+  DEBUG_ASSERT(request->IsInitialized());
   DEBUG_ASSERT(request->type_ < page_request_type::COUNT);
 
   SendRequestToProviderLocked(request);
@@ -366,7 +366,7 @@ bool PageSource::DebugIsPageOk(vm_page_t* page, uint64_t offset) {
 void PageSource::SendRequestToProviderLocked(PageRequest* request) {
   LTRACEF_LEVEL(2, "%p %p\n", this, request);
   DEBUG_ASSERT(request->type_ < page_request_type::COUNT);
-  DEBUG_ASSERT(request->offset_ != UINT64_MAX);
+  DEBUG_ASSERT(request->IsInitialized());
   DEBUG_ASSERT(page_provider_->SupportsPageRequestType(request->type_));
   DEBUG_ASSERT(request->batch_state_ != PageRequest::BatchState::Accepting);
   // Find the node with the smallest endpoint greater than offset and then
@@ -417,7 +417,7 @@ void PageSource::CancelRequest(PageRequest* request) {
   Guard<Mutex> guard{&page_source_mtx_};
   LTRACEF("%p %lx\n", this, request->offset_);
 
-  if (request->offset_ == UINT64_MAX) {
+  if (!request->IsInitialized()) {
     return;
   }
   DEBUG_ASSERT(request->type_ < page_request_type::COUNT);
@@ -496,7 +496,7 @@ zx_status_t PageSource::RequestDirtyTransition(PageRequest* request, uint64_t of
   }
 
   // Request should not be previously initialized.
-  DEBUG_ASSERT(request->offset_ == UINT64_MAX);
+  DEBUG_ASSERT(!request->IsInitialized());
   request->Init(fbl::RefPtr<PageRequestInterface>(this), offset, page_request_type::DIRTY,
                 vmo_debug_info, /*internal_batching=*/true);
   // Init should have set the batch_state_ to Internal since we requested it, allowing us to
@@ -536,7 +536,7 @@ PageRequest::~PageRequest() { CancelRequest(); }
 void PageRequest::Init(fbl::RefPtr<PageRequestInterface> src, uint64_t offset,
                        page_request_type type, VmoDebugInfo vmo_debug_info,
                        bool internal_batching) {
-  DEBUG_ASSERT(offset_ == UINT64_MAX);
+  DEBUG_ASSERT(!IsInitialized());
   vmo_debug_info_ = vmo_debug_info;
   len_ = 0;
   offset_ = offset;
@@ -592,12 +592,12 @@ zx_status_t PageRequest::FinalizeRequest() {
 
 void PageRequest::CancelRequest() {
   // Nothing to cancel if the request isn't initialized yet.
-  if (offset_ == UINT64_MAX) {
+  if (!IsInitialized()) {
     return;
   }
   DEBUG_ASSERT(src_);
   src_->CancelRequest(this);
-  DEBUG_ASSERT(offset_ == UINT64_MAX);
+  DEBUG_ASSERT(!IsInitialized());
 }
 
 PageRequest* LazyPageRequest::get() {

@@ -19,7 +19,7 @@ lazy_init::LazyInit<fbl::RefPtr<AnonymousPageRequester>> anonymous_page_requeste
 }  // namespace
 
 zx_status_t AnonymousPageRequester::FillRequest(PageRequest* request) {
-  if (request->offset_ == UINT64_MAX) {
+  if (!request->IsInitialized()) {
     // Pretend a read request at offset 0. The only actor that should ever inspect these values is
     // us, and we don't, so they can be anything.
     request->Init(fbl::RefPtr<PageRequestInterface>(this), 0, page_request_type::READ,
