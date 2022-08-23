@@ -1,0 +1,20 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/devices/lib/compat/compat.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "driver",
+        compat: "driver/fidl-service-child.so",
+        bind: "meta/bind/child-driver-bind.bindbc",
+    },
+    use: [
+        {
+            service: [ "fidl.examples.echo.EchoService" ],
+        },
+    ],
+}

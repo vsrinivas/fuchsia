@@ -65,6 +65,9 @@ class Device : public DeviceParent {
       return ZX_ERR_INTERNAL;
     }
 
+    zxlogf(INFO, "Recieved: %.*s", (int)result.value().response.size(),
+           result.value().response.data());
+
     return ZX_OK;
   }
 

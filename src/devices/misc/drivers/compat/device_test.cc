@@ -913,9 +913,13 @@ TEST_F(DeviceTest, CreateNodeProperties) {
   args.fidl_protocol_offers = &protocol_offer;
   args.fidl_protocol_offer_count = 1;
 
+  const char* service_offer = "fuchsia.hardware.i2c.Service";
+  args.fidl_service_offers = &service_offer;
+  args.fidl_service_offer_count = 1;
+
   auto properties = compat::CreateProperties(arena, logger, &args);
 
-  ASSERT_EQ(5ul, properties.size());
+  ASSERT_EQ(6ul, properties.size());
 
   EXPECT_EQ(11u, properties[0].key().int_value());
   EXPECT_EQ(2u, properties[0].value().int_value());
@@ -930,6 +934,11 @@ TEST_F(DeviceTest, CreateNodeProperties) {
   EXPECT_EQ(static_cast<uint32_t>(BIND_FIDL_PROTOCOL), properties[3].key().int_value());
   EXPECT_EQ(3u, properties[3].value().int_value());
 
-  EXPECT_EQ(static_cast<uint32_t>(BIND_PROTOCOL), properties[4].key().int_value());
-  EXPECT_EQ(10u, properties[4].value().int_value());
+  EXPECT_EQ("fuchsia.hardware.i2c.Service", properties[4].key().string_value().get());
+  EXPECT_EQ("fuchsia.hardware.i2c.Service.ZirconTransport",
+            properties[4].value().enum_value().get());
+
+  EXPECT_EQ(static_cast<uint32_t>(BIND_PROTOCOL), properties[5].key().int_value());
+  EXPECT_EQ(10u, properties[5].value().int_value());
+
 }

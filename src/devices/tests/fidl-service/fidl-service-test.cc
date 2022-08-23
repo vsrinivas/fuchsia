@@ -46,8 +46,6 @@ TEST_F(FidlServiceTest, ChildBinds) {
   ASSERT_EQ(status, ZX_OK);
 }
 
-// TODO(surajmalhotra): Re-enable this once support is added to compat driver.
-#if 0
 TEST_F(FidlServiceTest, ChildBindsV2) {
   auto realm_builder = component_testing::RealmBuilder::Create();
   driver_test_realm::Setup(realm_builder);
@@ -80,6 +78,5 @@ TEST_F(FidlServiceTest, ChildBindsV2) {
   status = device_watcher::RecursiveWaitForFile(root_fd, "sys/test/parent/child", &fd);
   ASSERT_EQ(status, ZX_OK);
 }
-#endif
 
 }  // namespace

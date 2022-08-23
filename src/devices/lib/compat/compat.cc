@@ -8,10 +8,12 @@
 #include <lib/driver2/devfs_exporter.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fpromise/promise.h>
+#include <lib/service/llcpp/service.h>
 
 #include <fbl/unique_fd.h>
 
-#include "lib/fpromise/promise.h"
+#include "src/lib/storage/vfs/cpp/remote_dir.h"
 
 namespace compat {
 
@@ -176,6 +178,38 @@ zx_status_t Interop::AddToOutgoing(Child* child, fbl::RefPtr<fs::Vnode> dev_node
         (void)outgoing_->RemoveService<fuchsia_driver_compat::Service>(name);
       });
   child->offers().AddService(std::move(instance_offer));
+
+  // Add each service in the device as an service in our outgoing directory.
+  // We rename each instance from "default" into the child name, and then rename it back to default
+  // via the offer.
+  for (const auto& service_name : child->compat_device().offers()) {
+    auto handler = [child, service_name](zx::channel request) {
+      const auto path = std::string("svc/").append(service_name).append("/default");
+      (void)service::ConnectAt(child->compat_device().dir(),
+                               fidl::ServerEnd<fuchsia_io::Directory>(std::move(request)),
+                               path.c_str());
+    };
+
+    const auto path = std::string("svc/").append(service_name);
+    auto result = outgoing_->AddProtocolAt(std::move(handler), path, child->name());
+    if (result.is_error()) {
+      return result.error_value();
+    }
+
+    // Lastly add the service offer.
+    ServiceOffer instance_offer;
+    instance_offer.service_name = service_name;
+    instance_offer.renamed_instances.push_back(ServiceOffer::RenamedInstance{
+        .source_name = std::string(child->name()),
+        .target_name = "default",
+    });
+    instance_offer.included_instances.push_back("default");
+    instance_offer.remove_service_callback =
+        std::make_shared<fit::deferred_callback>([this, path, name = std::string(child->name())]() {
+          (void)outgoing_->RemoveProtocolAt(path, name);
+        });
+    child->offers().AddService(std::move(instance_offer));
+  }
 
   // Expose the child in /dev/.
   if (!dev_node) {

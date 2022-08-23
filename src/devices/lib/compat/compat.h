@@ -73,13 +73,16 @@ class ChildOffers {
 
 using Metadata = std::vector<uint8_t>;
 using MetadataMap = std::unordered_map<uint32_t, const Metadata>;
+using FidlServiceOffers = std::vector<std::string>;
 
 // The DeviceServer class vends the fuchsia_driver_compat::Device interface.
 // It represents a single device.
 class DeviceServer : public fidl::WireServer<fuchsia_driver_compat::Device> {
  public:
-  DeviceServer(std::string topological_path, MetadataMap metadata)
-      : topological_path_(std::move(topological_path)), metadata_(std::move(metadata)) {}
+  DeviceServer(std::string topological_path, MetadataMap metadata, FidlServiceOffers offers)
+      : topological_path_(std::move(topological_path)),
+        metadata_(std::move(metadata)),
+        offers_(std::move(offers)) {}
 
   // Functions to implement the DFv1 device API.
   zx_status_t AddMetadata(uint32_t type, const void* data, size_t size);
@@ -87,6 +90,9 @@ class DeviceServer : public fidl::WireServer<fuchsia_driver_compat::Device> {
   zx_status_t GetMetadataSize(uint32_t type, size_t* out_size);
 
   void set_dir(fidl::ClientEnd<fuchsia_io::Directory> dir) { dir_ = std::move(dir); }
+
+  const FidlServiceOffers& offers() const { return offers_; }
+  fidl::UnownedClientEnd<fuchsia_io::Directory> dir() const { return dir_; }
 
  private:
   // fuchsia.driver.compat.Compat
@@ -97,6 +103,7 @@ class DeviceServer : public fidl::WireServer<fuchsia_driver_compat::Device> {
 
   std::string topological_path_;
   MetadataMap metadata_;
+  FidlServiceOffers offers_;
   fidl::ClientEnd<fuchsia_io::Directory> dir_;
 };
 
@@ -144,11 +151,12 @@ zx::status<fidl::WireSharedClient<fuchsia_driver_compat::Device>> ConnectToParen
 // outgoing directory.
 class Child {
  public:
-  Child(std::string name, uint32_t proto_id, std::string topological_path, MetadataMap metadata)
+  Child(std::string name, uint32_t proto_id, std::string topological_path, MetadataMap metadata,
+        FidlServiceOffers offers = {})
       : topological_path_(std::move(topological_path)),
         name_(std::move(name)),
         proto_id_(proto_id),
-        compat_device_(topological_path_, std::move(metadata)) {}
+        compat_device_(topological_path_, std::move(metadata), std::move(offers)) {}
 
   DeviceServer& compat_device() { return compat_device_; }
   std::string_view name() { return name_; }
