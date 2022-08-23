@@ -155,8 +155,8 @@ TEST_F(DirV2, Enumerate) {
   EXPECT_EQ(1, entry.id);
   EXPECT_EQ("one", std::string_view(entry.name, entry.name_length));
 
-  ASSERT_EQ(ZX_ERR_NOT_FOUND, zxio_dirent_iterator_next(&iterator, &entry));
-  ASSERT_EQ(ZX_ERR_NOT_FOUND, zxio_dirent_iterator_next(&iterator, &entry));
+  ASSERT_STATUS(zxio_dirent_iterator_next(&iterator, &entry), ZX_ERR_NOT_FOUND);
+  ASSERT_STATUS(zxio_dirent_iterator_next(&iterator, &entry), ZX_ERR_NOT_FOUND);
 
   // Destroying the iterator should trigger the teardown of server-side iterator connection.
   zxio_dirent_iterator_destroy(&iterator);

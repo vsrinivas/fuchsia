@@ -190,7 +190,7 @@ TEST_F(CloneTest, Clone) {
   fidl::ClientEnd<fio::Node> clone_client(std::move(clone));
 
   const fidl::WireResult describe_response = fidl::WireCall(clone_client)->Describe();
-  ASSERT_EQ(ZX_OK, describe_response.status());
+  ASSERT_OK(describe_response.status());
 
   EXPECT_TRUE(describe_response.value().info.is_file());
 }

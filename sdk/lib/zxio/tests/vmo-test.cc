@@ -245,6 +245,6 @@ TEST_F(VmoCloseTest, UseAfterClose) {
 
   ASSERT_OK(zxio_close(io));
   actual = 0;
-  ASSERT_EQ(ZX_ERR_BAD_HANDLE, zxio_read_at(io, 0, buffer, 6, 0, &actual));
+  ASSERT_STATUS(zxio_read_at(io, 0, buffer, 6, 0, &actual), ZX_ERR_BAD_HANDLE);
   EXPECT_EQ(actual, 0);
 }

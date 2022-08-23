@@ -127,8 +127,8 @@ TEST_F(File, WaitTimeOut) {
   ASSERT_NO_FAILURES(OpenFile());
 
   zxio_signals_t observed = ZX_SIGNAL_NONE;
-  ASSERT_EQ(ZX_ERR_TIMED_OUT,
-            zxio_wait_one(&file_.io, ZXIO_SIGNAL_ALL, ZX_TIME_INFINITE_PAST, &observed));
+  ASSERT_STATUS(zxio_wait_one(&file_.io, ZXIO_SIGNAL_ALL, ZX_TIME_INFINITE_PAST, &observed),
+                ZX_ERR_TIMED_OUT);
   EXPECT_EQ(ZXIO_SIGNAL_NONE, observed);
 }
 

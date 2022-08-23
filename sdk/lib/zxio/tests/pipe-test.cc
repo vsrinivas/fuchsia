@@ -107,25 +107,25 @@ TEST(Pipe, ShutdownRead) {
 
   // Write some data before shutting down reading on the peer. Should succeed.
   size_t actual = 0u;
-  EXPECT_EQ(socket1.write(0u, &data, sizeof(data), &actual), ZX_OK);
+  EXPECT_OK(socket1.write(0u, &data, sizeof(data), &actual));
   EXPECT_EQ(actual, 4u);
   actual = 0u;
 
   EXPECT_OK(zxio_shutdown(io, ZXIO_SHUTDOWN_OPTIONS_READ));
 
   // We shouldn't be able to write any more data into the peer.
-  EXPECT_EQ(socket1.write(0u, &data, sizeof(data), &actual), ZX_ERR_BAD_STATE);
+  EXPECT_STATUS(socket1.write(0u, &data, sizeof(data), &actual), ZX_ERR_BAD_STATE);
   EXPECT_EQ(actual, 0u);
   actual = 0u;
 
   char buf[4] = {};
   // We should be able to read data written into the pipe before reading was
   // disabled.
-  EXPECT_EQ(zxio_read(io, buf, sizeof(buf), 0u, &actual), ZX_OK);
+  EXPECT_OK(zxio_read(io, buf, sizeof(buf), 0u, &actual));
   EXPECT_EQ(actual, 4u);
   actual = 0u;
 
-  EXPECT_EQ(zxio_read(io, buf, sizeof(buf), 0u, &actual), ZX_ERR_BAD_STATE);
+  EXPECT_STATUS(zxio_read(io, buf, sizeof(buf), 0u, &actual), ZX_ERR_BAD_STATE);
   EXPECT_EQ(actual, 0u);
   actual = 0u;
 
@@ -147,13 +147,13 @@ TEST(Pipe, ShutdownWrite) {
   size_t actual = 0u;
 
   char buf[4] = {};
-  EXPECT_EQ(socket1.read(0u, &buf, sizeof(buf), &actual), ZX_ERR_BAD_STATE);
+  EXPECT_STATUS(socket1.read(0u, &buf, sizeof(buf), &actual), ZX_ERR_BAD_STATE);
   EXPECT_EQ(actual, 0u);
   actual = 0u;
 
   const uint32_t data = 0x41424344;
 
-  EXPECT_EQ(zxio_write(io, &data, sizeof(data), 0u, &actual), ZX_ERR_BAD_STATE);
+  EXPECT_STATUS(zxio_write(io, &data, sizeof(data), 0u, &actual), ZX_ERR_BAD_STATE);
   EXPECT_EQ(actual, 0u);
 
   ASSERT_OK(zxio_close(io));
@@ -173,32 +173,32 @@ TEST(Pipe, ShutdownReadWrite) {
 
   // Write some data before shutting down the peer. Should succeed.
   size_t actual = 0u;
-  EXPECT_EQ(socket1.write(0u, &data, sizeof(data), &actual), ZX_OK);
+  EXPECT_OK(socket1.write(0u, &data, sizeof(data), &actual));
   EXPECT_EQ(actual, 4u);
   actual = 0u;
 
   EXPECT_OK(zxio_shutdown(io, ZXIO_SHUTDOWN_OPTIONS_READ | ZXIO_SHUTDOWN_OPTIONS_WRITE));
 
   char buf[4] = {};
-  EXPECT_EQ(socket1.read(0u, &buf, sizeof(buf), &actual), ZX_ERR_BAD_STATE);
+  EXPECT_STATUS(socket1.read(0u, &buf, sizeof(buf), &actual), ZX_ERR_BAD_STATE);
   EXPECT_EQ(actual, 0u);
   actual = 0u;
 
-  EXPECT_EQ(socket1.write(0u, &data, sizeof(data), &actual), ZX_ERR_BAD_STATE);
+  EXPECT_STATUS(socket1.write(0u, &data, sizeof(data), &actual), ZX_ERR_BAD_STATE);
   EXPECT_EQ(actual, 0u);
   actual = 0u;
 
   // We should be able to read data written into the pipe before reading was
   // disabled.
-  EXPECT_EQ(zxio_read(io, buf, sizeof(buf), 0u, &actual), ZX_OK);
+  EXPECT_OK(zxio_read(io, buf, sizeof(buf), 0u, &actual));
   EXPECT_EQ(actual, 4u);
   actual = 0u;
 
-  EXPECT_EQ(zxio_read(io, buf, sizeof(buf), 0u, &actual), ZX_ERR_BAD_STATE);
+  EXPECT_STATUS(zxio_read(io, buf, sizeof(buf), 0u, &actual), ZX_ERR_BAD_STATE);
   EXPECT_EQ(actual, 0u);
   actual = 0u;
 
-  EXPECT_EQ(zxio_write(io, &data, sizeof(data), 0u, &actual), ZX_ERR_BAD_STATE);
+  EXPECT_STATUS(zxio_write(io, &data, sizeof(data), 0u, &actual), ZX_ERR_BAD_STATE);
   EXPECT_EQ(actual, 0u);
 
   ASSERT_OK(zxio_close(io));

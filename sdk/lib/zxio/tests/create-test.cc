@@ -19,18 +19,18 @@
 #include "sdk/lib/zxio/tests/test_node_server.h"
 
 TEST(Create, InvalidArgs) {
-  ASSERT_EQ(zxio_create(ZX_HANDLE_INVALID, nullptr), ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(zxio_create(ZX_HANDLE_INVALID, nullptr), ZX_ERR_INVALID_ARGS);
 
   zxio_storage_t storage;
-  ASSERT_EQ(zxio_create(ZX_HANDLE_INVALID, &storage), ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(zxio_create(ZX_HANDLE_INVALID, &storage), ZX_ERR_INVALID_ARGS);
 
   zx::channel channel0, channel1;
   ASSERT_OK(zx::channel::create(0u, &channel0, &channel1));
-  ASSERT_EQ(zxio_create(channel0.release(), nullptr), ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(zxio_create(channel0.release(), nullptr), ZX_ERR_INVALID_ARGS);
 
   // Make sure that the handle is closed.
   zx_signals_t pending = 0;
-  ASSERT_EQ(channel1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(channel1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_EQ(pending & ZX_CHANNEL_PEER_CLOSED, ZX_CHANNEL_PEER_CLOSED);
 }
 
@@ -38,7 +38,7 @@ TEST(Create, NotSupported) {
   zx::event event;
   ASSERT_OK(zx::event::create(0u, &event));
   zxio_storage_t storage;
-  ASSERT_EQ(zxio_create(event.release(), &storage), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_STATUS(zxio_create(event.release(), &storage), ZX_ERR_NOT_SUPPORTED);
   zxio_t* io = &storage.io;
   zx::handle handle;
   ASSERT_OK(zxio_release(io, handle.reset_and_get_address()));
@@ -57,15 +57,15 @@ TEST(CreateWithTypeInvalidStorageClosesHandles, SynchronousDatagramSocket) {
   zx::channel channel0, channel1;
   ASSERT_OK(zx::channel::create(0, &channel0, &channel1));
 
-  ASSERT_EQ(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_SYNCHRONOUS_DATAGRAM_SOCKET,
-                                  event0.release(), channel0.release()),
-            ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_SYNCHRONOUS_DATAGRAM_SOCKET,
+                                      event0.release(), channel0.release()),
+                ZX_ERR_INVALID_ARGS);
 
   zx_signals_t pending = 0;
-  ASSERT_EQ(event1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(event1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_EQ(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED);
 
-  ASSERT_EQ(channel1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(channel1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_EQ(pending & ZX_CHANNEL_PEER_CLOSED, ZX_CHANNEL_PEER_CLOSED);
 }
 
@@ -73,11 +73,11 @@ TEST(CreateWithTypeInvalidStorageClosesHandles, Directory) {
   zx::channel channel0, channel1;
   ASSERT_OK(zx::channel::create(0, &channel0, &channel1));
 
-  ASSERT_EQ(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_DIR, channel0.release()),
-            ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_DIR, channel0.release()),
+                ZX_ERR_INVALID_ARGS);
 
   zx_signals_t pending = 0;
-  ASSERT_EQ(channel1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(channel1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_EQ(pending & ZX_CHANNEL_PEER_CLOSED, ZX_CHANNEL_PEER_CLOSED);
 }
 
@@ -85,11 +85,11 @@ TEST(CreateWithTypeInvalidStorageClosesHandles, Node) {
   zx::channel channel0, channel1;
   ASSERT_OK(zx::channel::create(0, &channel0, &channel1));
 
-  ASSERT_EQ(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_NODE, channel0.release()),
-            ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_NODE, channel0.release()),
+                ZX_ERR_INVALID_ARGS);
 
   zx_signals_t pending = 0;
-  ASSERT_EQ(channel1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(channel1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_EQ(pending & ZX_CHANNEL_PEER_CLOSED, ZX_CHANNEL_PEER_CLOSED);
 }
 
@@ -99,15 +99,15 @@ TEST(CreateWithTypeInvalidStorageClosesHandles, StreamSocket) {
   zx::channel channel0, channel1;
   ASSERT_OK(zx::channel::create(0, &channel0, &channel1));
 
-  ASSERT_EQ(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_STREAM_SOCKET, socket0.release(),
-                                  channel0.release(), nullptr),
-            ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_STREAM_SOCKET, socket0.release(),
+                                      channel0.release(), nullptr),
+                ZX_ERR_INVALID_ARGS);
 
   zx_signals_t pending = 0;
-  ASSERT_EQ(socket1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(socket1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_EQ(pending & ZX_SOCKET_PEER_CLOSED, ZX_SOCKET_PEER_CLOSED);
 
-  ASSERT_EQ(channel1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(channel1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_EQ(pending & ZX_CHANNEL_PEER_CLOSED, ZX_CHANNEL_PEER_CLOSED);
 }
 
@@ -117,15 +117,15 @@ TEST(CreateWithTypeInvalidStorageClosesHandles, DatagramSocket) {
   zx::channel channel0, channel1;
   ASSERT_OK(zx::channel::create(0, &channel0, &channel1));
 
-  ASSERT_EQ(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET, socket0.release(),
-                                  nullptr, nullptr, channel0.release()),
-            ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET, socket0.release(),
+                                      nullptr, nullptr, channel0.release()),
+                ZX_ERR_INVALID_ARGS);
 
   zx_signals_t pending = 0;
-  ASSERT_EQ(socket1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(socket1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_EQ(pending & ZX_SOCKET_PEER_CLOSED, ZX_SOCKET_PEER_CLOSED);
 
-  ASSERT_EQ(channel1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(channel1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_EQ(pending & ZX_CHANNEL_PEER_CLOSED, ZX_CHANNEL_PEER_CLOSED);
 }
 
@@ -133,12 +133,12 @@ TEST(CreateWithTypeInvalidStorageClosesHandles, Pipe) {
   zx::socket socket0, socket1;
   ASSERT_OK(zx::socket::create(ZX_SOCKET_STREAM, &socket0, &socket1));
 
-  ASSERT_EQ(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_PIPE, socket0.release()),
-            ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_PIPE, socket0.release()),
+                ZX_ERR_INVALID_ARGS);
 
   // Make sure that the handle is closed.
   zx_signals_t pending = 0;
-  ASSERT_EQ(socket1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(socket1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_EQ(pending & ZX_SOCKET_PEER_CLOSED, ZX_SOCKET_PEER_CLOSED);
 }
 
@@ -148,16 +148,16 @@ TEST(CreateWithTypeInvalidStorageClosesHandles, RawSocket) {
   zx::socket socket0, socket1;
   ASSERT_OK(zx::socket::create(ZX_SOCKET_STREAM, &socket0, &socket1));
 
-  ASSERT_EQ(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_RAW_SOCKET, event0.release(),
-                                  socket0.release()),
-            ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_RAW_SOCKET, event0.release(),
+                                      socket0.release()),
+                ZX_ERR_INVALID_ARGS);
 
   // Make sure that the handle is closed.
   zx_signals_t pending = 0;
-  ASSERT_EQ(event1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(event1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_EQ(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED);
 
-  ASSERT_EQ(socket1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(socket1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_EQ(pending & ZX_SOCKET_PEER_CLOSED, ZX_SOCKET_PEER_CLOSED);
 }
 
@@ -168,12 +168,13 @@ TEST(CreateWithTypeInvalidStorageClosesHandles, Vmo) {
   zx::stream stream;
   ASSERT_OK(zx::stream::create(0, child, 0, &stream));
 
-  ASSERT_EQ(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_VMO, child.release(), stream.release()),
-            ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(
+      zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_VMO, child.release(), stream.release()),
+      ZX_ERR_INVALID_ARGS);
 
   // Make sure that the handle is closed.
   zx_signals_t pending = 0;
-  ASSERT_EQ(parent.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(parent.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_EQ(pending & ZX_VMO_ZERO_CHILDREN, ZX_VMO_ZERO_CHILDREN);
 }
 
@@ -444,12 +445,12 @@ TEST_F(CreateTest, Tty) {
 
   // Closing the zxio object should close our eventpair's peer event.
   zx_signals_t pending = 0;
-  ASSERT_EQ(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_NE(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
 
   ASSERT_OK(zxio_close(zxio()));
 
-  ASSERT_EQ(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_EQ(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
 }
 
@@ -465,14 +466,14 @@ TEST_F(CreateWithOnOpenTest, Tty) {
 
   // Closing the zxio object should close our eventpair's peer event.
   zx_signals_t pending = 0;
-  ASSERT_EQ(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_NE(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
 
   StartServerThread();
 
   ASSERT_OK(zxio_close(zxio()));
 
-  ASSERT_EQ(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_EQ(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
 }
 

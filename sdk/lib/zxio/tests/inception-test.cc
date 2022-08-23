@@ -24,11 +24,12 @@ TEST(CreateWithAllocator, ErrorAllocator) {
   zx::channel channel0, channel1;
   ASSERT_OK(zx::channel::create(0u, &channel0, &channel1));
   void* context;
-  ASSERT_EQ(zxio_create_with_allocator(std::move(channel0), allocator, &context), ZX_ERR_NO_MEMORY);
+  ASSERT_STATUS(zxio_create_with_allocator(std::move(channel0), allocator, &context),
+                ZX_ERR_NO_MEMORY);
 
   // Make sure that the handle is closed.
   zx_signals_t pending = 0;
-  ASSERT_EQ(channel1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(channel1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_EQ(pending & ZX_CHANNEL_PEER_CLOSED, ZX_CHANNEL_PEER_CLOSED, "pending is %u", pending);
 }
 
@@ -40,11 +41,12 @@ TEST(CreateWithAllocator, BadAllocator) {
   zx::channel channel0, channel1;
   ASSERT_OK(zx::channel::create(0u, &channel0, &channel1));
   void* context;
-  ASSERT_EQ(zxio_create_with_allocator(std::move(channel0), allocator, &context), ZX_ERR_NO_MEMORY);
+  ASSERT_STATUS(zxio_create_with_allocator(std::move(channel0), allocator, &context),
+                ZX_ERR_NO_MEMORY);
 
   // Make sure that the handle is closed.
   zx_signals_t pending = 0;
-  ASSERT_EQ(channel1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(channel1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_EQ(pending & ZX_CHANNEL_PEER_CLOSED, ZX_CHANNEL_PEER_CLOSED, "pending is %u", pending);
 }
 
@@ -111,7 +113,7 @@ TEST(CreateWithAllocator, Unsupported) {
   void* context = nullptr;
   zx_status_t status =
       zxio_create_with_allocator(std::move(node_client), node_info, allocator, &context);
-  EXPECT_EQ(status, ZX_ERR_NOT_SUPPORTED);
+  EXPECT_STATUS(status, ZX_ERR_NOT_SUPPORTED);
   ASSERT_NE(context, nullptr);
 
   // The socket in node_info should be preserved.
@@ -326,12 +328,12 @@ TEST(CreateWithAllocator, Tty) {
 
   // Closing the zxio object should close our eventpair's peer event.
   zx_signals_t pending = 0;
-  ASSERT_EQ(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_NE(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
 
   ASSERT_OK(zxio_close(zxio));
 
-  ASSERT_EQ(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_EQ(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
 
   tty_control_loop.Shutdown();
@@ -449,12 +451,12 @@ TEST(CreateWithAllocator, PacketSocket) {
 
   // Closing the zxio object should close our eventpair's peer event.
   zx_signals_t pending = 0;
-  ASSERT_EQ(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_NE(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
 
   ASSERT_OK(zxio_close(zxio));
 
-  ASSERT_EQ(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_EQ(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
 
   control_loop.Shutdown();
@@ -500,12 +502,12 @@ TEST(CreateWithAllocator, RawSocket) {
 
   // Closing the zxio object should close our eventpair's peer event.
   zx_signals_t pending = 0;
-  ASSERT_EQ(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_NE(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
 
   ASSERT_OK(zxio_close(zxio));
 
-  ASSERT_EQ(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_EQ(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
 
   control_loop.Shutdown();
@@ -551,12 +553,12 @@ TEST(CreateWithAllocator, SynchronousDatagramSocket) {
 
   // Closing the zxio object should close our eventpair's peer event.
   zx_signals_t pending = 0;
-  ASSERT_EQ(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_NE(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
 
   ASSERT_OK(zxio_close(zxio));
 
-  ASSERT_EQ(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_EQ(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED, "pending is %u", pending);
 
   control_loop.Shutdown();

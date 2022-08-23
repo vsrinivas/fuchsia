@@ -29,6 +29,6 @@ TEST(OpsTest, CloseWillInvalidateTheObject) {
   zxio_t io = {};
   zxio_init(&io, &ops);
   ASSERT_OK(zxio_close(&io));
-  ASSERT_EQ(ZX_ERR_BAD_HANDLE, zxio_close(&io));
-  ASSERT_EQ(ZX_ERR_BAD_HANDLE, zxio_release(&io, nullptr));
+  ASSERT_STATUS(zxio_close(&io), ZX_ERR_BAD_HANDLE);
+  ASSERT_STATUS(zxio_release(&io, nullptr), ZX_ERR_BAD_HANDLE);
 }

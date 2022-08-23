@@ -135,7 +135,7 @@ TEST_F(RemoteV2, GetAttributesError) {
   ASSERT_NO_FAILURES(StartServer<TestServer>());
 
   zxio_node_attributes_t attr = {};
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, zxio_attr_get(&remote_.io, &attr));
+  EXPECT_STATUS(zxio_attr_get(&remote_.io, &attr), ZX_ERR_INVALID_ARGS);
 }
 
 TEST_F(RemoteV2, SetAttributes) {
@@ -176,7 +176,7 @@ TEST_F(RemoteV2, SetAttributesError) {
   ASSERT_NO_FAILURES(StartServer<TestServer>());
 
   zxio_node_attributes_t attr = {};
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, zxio_attr_set(&remote_.io, &attr));
+  EXPECT_STATUS(zxio_attr_set(&remote_.io, &attr), ZX_ERR_INVALID_ARGS);
 }
 
 TEST_F(RemoteV2, WaitTimeOut) {
