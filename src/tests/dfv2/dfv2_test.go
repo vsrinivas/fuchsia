@@ -12,6 +12,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/tools/emulator"
 	"go.fuchsia.dev/fuchsia/tools/emulator/emulatortest"
+	fvdpb "go.fuchsia.dev/fuchsia/tools/virtual_device/proto"
 )
 
 // Kernel commandline args to start in DFv2.
@@ -23,7 +24,7 @@ var cmdline = []string{
 func TestNetworking(t *testing.T) {
 	exDir := execDir(t)
 	distro := emulatortest.UnpackFrom(t, filepath.Join(exDir, "test_data"), emulator.DistributionParams{
-		Emulator: emulator.Qemu,
+		Emulator: emulator.Femu,
 	})
 	arch := distro.TargetCPU()
 	if arch != emulator.X64 {
@@ -31,6 +32,13 @@ func TestNetworking(t *testing.T) {
 	}
 
 	device := emulator.DefaultVirtualDevice(string(arch))
+	// Note: To run this test locally on linux, you must create the TAP interface:
+	// $ sudo ip tuntap add mode tap qemu
+	device.Hw.NetworkDevices = append(device.Hw.NetworkDevices, &fvdpb.Netdev{
+		Id:     "qemu",
+		Kind:   "tap",
+		Device: &fvdpb.Device{Model: "virtio-net-pci"},
+	})
 	device.KernelArgs = append(device.KernelArgs, cmdline...)
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -43,7 +51,7 @@ func TestNetworking(t *testing.T) {
 	i.WaitForLogMessage("console.shell: enabled")
 
 	// Ensure the network device comes up in DFv2.
-	i.RunCommand("waitfor verbose topo=/dev/class/network/000; echo NETWORK_READY")
+	i.RunCommand("waitfor verbose class=network topo=/dev/sys/platform/; echo NETWORK_READY")
 	i.WaitForLogMessage("NETWORK_READY")
 }
 

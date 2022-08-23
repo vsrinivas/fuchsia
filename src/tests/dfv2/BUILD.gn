@@ -10,7 +10,7 @@ group("tests") {
 
   deps = []
 
-  if (is_linux) {
+  if (host_os == "linux") {
     deps += [ ":dfv2_tests($host_toolchain)" ]
   }
 }
