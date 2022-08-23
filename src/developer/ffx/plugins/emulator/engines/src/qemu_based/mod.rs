@@ -12,6 +12,7 @@ use crate::{
 };
 use anyhow::{anyhow, bail, Context, Result};
 use async_trait::async_trait;
+use cfg_if::cfg_if;
 use errors::ffx_bail;
 use ffx_config::SshKeyFiles;
 use ffx_emulator_common::{
@@ -40,6 +41,28 @@ use std::{
     sync::Arc,
     time::Duration,
 };
+
+#[cfg(test)]
+use mockall::automock;
+
+#[cfg_attr(test, automock)]
+#[allow(dead_code)]
+mod modules {
+    use super::*;
+
+    pub(super) async fn get_host_tool(name: &str) -> Result<PathBuf> {
+        let sdk = ffx_config::get_sdk().await?;
+        sdk.get_host_tool(name)
+    }
+}
+
+cfg_if! {
+    if #[cfg(test)] {
+        use self::mock_modules::get_host_tool;
+    } else {
+        use self::modules::get_host_tool;
+    }
+}
 
 pub(crate) mod comms;
 pub(crate) mod femu;
@@ -86,12 +109,12 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
         guest_config: &GuestConfig,
         device_config: &DeviceConfig,
         reuse: bool,
-        config: &FfxConfigWrapper,
     ) -> Result<GuestConfig> {
         let mut updated_guest = guest_config.clone();
 
         // Create the data directory if needed.
-        let mut instance_root: PathBuf = config.file(config::EMU_INSTANCE_ROOT_DIR).await?;
+        let mut instance_root: PathBuf =
+            ffx_config::query(config::EMU_INSTANCE_ROOT_DIR).get_file().await?;
         instance_root.push(instance_name);
         fs::create_dir_all(&instance_root)?;
 
@@ -118,7 +141,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
         } else {
             // Add the authorized public keys to the zbi image to enable SSH access to
             // the guest.
-            Self::embed_authorized_keys(&guest_config.zbi_image, &zbi_path, config)
+            Self::embed_authorized_keys(&guest_config.zbi_image, &zbi_path)
                 .await
                 .context("cannot embed authorized keys")?;
         }
@@ -138,8 +161,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
                         device_config.storage.quantity,
                         device_config.storage.units.abbreviate()
                     );
-                    let fvm_tool = config
-                        .get_host_tool(config::FVM_HOST_TOOL)
+                    let fvm_tool = get_host_tool(config::FVM_HOST_TOOL)
                         .await
                         .context("cannot locate fvm tool")?;
                     let resize_result = Command::new(fvm_tool)
@@ -164,13 +186,8 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
         Ok(updated_guest)
     }
 
-    async fn embed_authorized_keys(
-        src: &PathBuf,
-        dest: &PathBuf,
-        config: &FfxConfigWrapper,
-    ) -> Result<()> {
-        let zbi_tool =
-            config.get_host_tool(config::ZBI_HOST_TOOL).await.context("ZBI tool is missing")?;
+    async fn embed_authorized_keys(src: &PathBuf, dest: &PathBuf) -> Result<()> {
+        let zbi_tool = get_host_tool(config::ZBI_HOST_TOOL).await.context("ZBI tool is missing")?;
         let ssh_keys = SshKeyFiles::load().await.context("finding ssh authorized_keys file.")?;
         ssh_keys.create_keys_if_needed().context("create ssh keys if needed")?;
         let auth_keys = ssh_keys.authorized_keys.display().to_string();
@@ -238,13 +255,13 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
 
     async fn stage(
         emu_config: &mut EmulatorConfiguration,
-        ffx_config: &FfxConfigWrapper,
+        _ffx_config: &FfxConfigWrapper,
     ) -> Result<()> {
         let name = &emu_config.runtime.name;
         let guest = &emu_config.guest;
         let device = &emu_config.device;
         let reuse = emu_config.runtime.reuse;
-        emu_config.guest = Self::stage_image_files(name, guest, device, reuse, ffx_config)
+        emu_config.guest = Self::stage_image_files(name, guest, device, reuse)
             .await
             .context("could not stage image files")?;
 
@@ -281,7 +298,10 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
             NetworkingMode::Tap => &self.emu_config().runtime.upscript,
             _ => &None,
         } {
-            let status = Command::new(&script).arg(TAP_INTERFACE_NAME).status()?;
+            let status = Command::new(&script)
+                .arg(TAP_INTERFACE_NAME)
+                .status()
+                .context(format!("Problem running upscript '{}'", &script.display()))?;
             if !status.success() {
                 return Err(anyhow!(
                     "Upscript {} returned non-zero exit code {}",
@@ -534,9 +554,29 @@ mod tests {
     use async_trait::async_trait;
     use ffx_config::{query, ConfigLevel};
     use ffx_emulator_config::EngineType;
+    use lazy_static::lazy_static;
     use serde::Serialize;
     use serde_json::json;
+    use std::sync::{Mutex, MutexGuard};
     use tempfile::{tempdir, TempDir};
+
+    // Since we are mocking global methods, we need to synchronize
+    // the setting of the expectations on the mock. This is done using a Mutex.
+    lazy_static! {
+        static ref MTX: Mutex<()> = Mutex::new(());
+    }
+
+    // When a test panics, it will poison the Mutex. Since we don't actually
+    // care about the state of the data we ignore that it is poisoned and grab
+    // the lock regardless.  If you just do `let _m = &MTX.lock().unwrap()`, one
+    // test panicking will cause all other tests that try and acquire a lock on
+    // that Mutex to also panic.
+    fn get_lock(m: &'static Mutex<()>) -> MutexGuard<'static, ()> {
+        match m.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => poisoned.into_inner(),
+        }
+    }
 
     #[derive(Default, Serialize)]
     struct TestEngine {}
@@ -587,11 +627,12 @@ mod tests {
     const ORIGINAL: &str = "THIS_STRING";
     const UPDATED: &str = "THAT_VALUE*";
 
-    async fn setup(
-        config: &mut FfxConfigWrapper,
-        guest: &mut GuestConfig,
-        temp: &TempDir,
-    ) -> Result<PathBuf> {
+    // Note that the caller MUST initialize the ffx_config environment before calling this function
+    // since we override config values as part of the test. This looks like:
+    //     let _env = ffx_config::test_init().await?;
+    // The returned structure must remain in scope for the duration of the test to function
+    // properly.
+    async fn setup(guest: &mut GuestConfig, temp: &TempDir) -> Result<PathBuf> {
         let root = temp.path();
 
         let kernel_path = root.join("kernel");
@@ -614,9 +655,10 @@ mod tests {
             .open(&fvm_path)
             .context("cannot create test fvm file")?;
 
-        config.overrides.insert(config::FVM_HOST_TOOL, "echo".to_string());
-        config.overrides.insert(config::ZBI_HOST_TOOL, "echo".to_string());
-        config.overrides.insert(config::EMU_INSTANCE_ROOT_DIR, root.display().to_string());
+        query(config::EMU_INSTANCE_ROOT_DIR)
+            .level(Some(ConfigLevel::User))
+            .set(json!(root.display().to_string()))
+            .await?;
 
         guest.kernel_image = kernel_path;
         guest.zbi_image = zbi_path;
@@ -651,12 +693,18 @@ mod tests {
     async fn test_staging_no_reuse() -> Result<()> {
         let _env = ffx_config::test_init().await?;
         let temp = tempdir().context("cannot get tempdir")?;
-        let mut config = FfxConfigWrapper::new();
         let instance_name = "test-instance";
         let mut guest = GuestConfig::default();
         let device = DeviceConfig::default();
 
-        let root = setup(&mut config, &mut guest, &temp).await?;
+        let root = setup(&mut guest, &temp).await?;
+
+        // get the lock for the mock, it is released when
+        // the test exits.
+        let _m = get_lock(&MTX);
+
+        let ctx = mock_modules::get_host_tool_context();
+        ctx.expect().returning(|_| Ok(PathBuf::from("echo")));
 
         write_to(&guest.kernel_image, ORIGINAL)
             .context("cannot write original value to kernel file")?;
@@ -668,7 +716,6 @@ mod tests {
             &guest,
             &device,
             false,
-            &config,
         )
         .await;
 
@@ -693,7 +740,6 @@ mod tests {
             &guest,
             &device,
             false,
-            &config,
         )
         .await;
 
@@ -732,12 +778,18 @@ mod tests {
     async fn test_staging_with_reuse() -> Result<()> {
         let _env = ffx_config::test_init().await?;
         let temp = tempdir().context("cannot get tempdir")?;
-        let mut config = FfxConfigWrapper::new();
         let instance_name = "test-instance";
         let mut guest = GuestConfig::default();
         let device = DeviceConfig::default();
 
-        let root = setup(&mut config, &mut guest, &temp).await?;
+        let root = setup(&mut guest, &temp).await?;
+
+        // get the lock for the mock, it is released when
+        // the test exits.
+        let _m = get_lock(&MTX);
+
+        let ctx = mock_modules::get_host_tool_context();
+        ctx.expect().returning(|_| Ok(PathBuf::from("echo")));
 
         // This checks if --reuse is true, but the directory isn't there to reuse; should succeed.
         write_to(&guest.kernel_image, ORIGINAL)
@@ -750,7 +802,6 @@ mod tests {
             &guest,
             &device,
             true,
-            &config,
         )
         .await;
 
@@ -776,7 +827,6 @@ mod tests {
             &guest,
             &device,
             true,
-            &config,
         )
         .await;
 
