@@ -2,7 +2,244 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    // This empty core shard is a temporary placeholder for platform-specific
-    // routes, to be separated from the product-only routes to be migrated to
-    // the product-specific repository.
+    // This core realm shard [1] routes protocols required by smart_session
+    // from components that run above the session (v1 components, and
+    // children/parent of core) to session-manager.
+    //
+    // session-manager then routes these protocols to the session component,
+    // smart_session, in session_manager.cml [2].
+    //
+    // [1]: https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0089_core_realm_variations
+    // [2]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/session/bin/session_manager/meta/session_manager.cml
+    //
+    // TODO(fxbug.dev/103234): Remove this shard
+    capabilities: [
+        {
+            // Protocols from v1 components.
+            // See also //src/sys/appmgr/meta/appmgr.core_shard.cml
+            protocol: [
+                "fuchsia.lowpan.bootstrap.Thread",
+                "fuchsia.media.ActivityReporter",
+                "fuchsia.media.audio.EffectsController",
+                "fuchsia.media.UsageGainReporter",
+                "fuchsia.timezone.Timezone",
+                "fuchsia.ultrasound.Factory",
+                "fuchsia.weave.Provisioner",
+                "fuchsia.web.ContextProvider",
+                "google.cast.cryptokey.NamedKeyProvider",
+                "google.cast.multizone.Leader",
+            ],
+        },
+    ],
+
+    // Protocols used from a child are routed to the v1 sys realm.
+    use: [],
+    offer: [
+        {
+            // Routed from v1 components.
+            protocol: [
+                "fuchsia.lowpan.bootstrap.Thread",
+                "fuchsia.media.SessionAudioConsumerFactory",
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Loader",
+                "fuchsia.timezone.Timezone",
+                "fuchsia.ultrasound.Factory",
+                "fuchsia.weave.FactoryDataManager",
+                "fuchsia.weave.Provisioner",
+                "fuchsia.weave.Signer",
+                "fuchsia.web.ContextProvider",
+                "google.cast.cryptokey.NamedKeyProvider",
+                "google.cast.multizone.Leader",
+            ],
+            from: "self",
+            to: [ "#session-manager" ],
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [
+                "fuchsia.device.NameProvider",
+                "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
+                "fuchsia.diagnostics.LoWPANArchiveAccessor",
+                "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
+                "fuchsia.paver.Paver",
+                "fuchsia.power.profile.Watcher",
+                "fuchsia.power.systemmode.ClientConfigurator",
+            ],
+            from: "parent",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.ui.activity.control.Control",
+                "fuchsia.ui.activity.Provider",
+            ],
+            from: "#activity",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.recovery.FactoryReset",
+            from: "#factory_reset",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.ui.brightness.Control",
+            from: "#brightness_manager",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.media.sessions2.ActiveSession",
+                "fuchsia.media.sessions2.Discovery",
+                "fuchsia.media.sessions2.Publisher",
+            ],
+            from: "#mediasession",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.settings.Accessibility",
+                "fuchsia.settings.Audio",
+                "fuchsia.settings.Display",
+                "fuchsia.settings.DoNotDisturb",
+                "fuchsia.settings.FactoryReset",
+                "fuchsia.settings.Input",
+                "fuchsia.settings.Intl",
+                "fuchsia.settings.Light",
+                "fuchsia.settings.NightMode",
+                "fuchsia.settings.policy.VolumePolicyController",
+                "fuchsia.settings.Privacy",
+                "fuchsia.settings.Setup",
+            ],
+            from: "#setui_service",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.bluetooth.gatt.Server",
+                "fuchsia.bluetooth.le.Central",
+                "fuchsia.bluetooth.le.Peripheral",
+                "fuchsia.bluetooth.sys.Access",
+                "fuchsia.bluetooth.sys.Pairing",
+            ],
+            from: "#bluetooth-core",
+            to: "#session-manager",
+        },
+        {
+            protocol: [ "fuchsia.cobalt.SystemDataUpdater" ],
+            from: "#cobalt",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.feedback.ComponentDataRegister",
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.feedback.CrashReportingProductRegister",
+                "fuchsia.feedback.DataProvider",
+                "fuchsia.feedback.LastRebootInfoProvider",
+            ],
+            from: "#feedback",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.hwinfo.Board",
+                "fuchsia.hwinfo.Device",
+                "fuchsia.hwinfo.Product",
+            ],
+            from: "#hwinfo",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.net.mdns.Publisher",
+                "fuchsia.net.mdns.Subscriber",
+            ],
+            from: "#mdns",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.net.http.Loader",
+                "fuchsia.net.interfaces.State",
+                "fuchsia.net.routes.State",
+                "fuchsia.netstack.Netstack",
+            ],
+            from: "#network",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
+                "fuchsia.location.namedplace.RegulatoryRegionWatcher",
+            ],
+            from: "#regulatory_region",
+            to: "#session-manager",
+        },
+        {
+            protocol: [ "fuchsia.media.sounds.Player" ],
+            from: "#soundplayer",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.thermal.ClientStateConnector",
+            from: "#audio_core",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.hardware.radar.RadarBurstReaderProvider",
+            from: "#radar-proxy",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
+        {
+            directory: [
+                "tzdata",
+                "tzdata-icu-44-le",
+            ],
+            from: "#tzdata-provider",
+            to: "#session-manager",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-backlight",
+            to: "#session-manager",
+            subdir: "class/backlight",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-light",
+            to: "#session-manager",
+            subdir: "class/light",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-class-radar",
+            to: "#session-manager",
+            subdir: "class/radar",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-power-sensor",
+            to: "#session-manager",
+            subdir: "class/power-sensor",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-temperature",
+            to: "#session-manager",
+            subdir: "class/temperature",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-thermal",
+            to: "#session-manager",
+            subdir: "class/thermal",
+        },
+    ],
 }
