@@ -3,56 +3,55 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Result,
+    anyhow::{Context, Result},
     chrono::{offset::Utc, DateTime},
     errors::ffx_bail,
     ffx_core::ffx_plugin,
     ffx_repository_packages_args::{
         ListSubCommand, PackagesCommand, PackagesSubCommand, ShowSubCommand,
     },
-    fidl,
+    ffx_writer::Writer,
     fidl_fuchsia_developer_ffx::{
         ListFields, PackageEntryIteratorMarker, RepositoryPackagesIteratorMarker,
         RepositoryRegistryProxy,
     },
-    fidl_fuchsia_developer_ffx_ext::RepositoryError,
+    fidl_fuchsia_developer_ffx_ext::{PackageEntry, RepositoryError, RepositoryPackage},
     humansize::{file_size_opts, FileSize},
     prettytable::{cell, format::TableFormat, row, Row, Table},
-    std::{
-        io::{stdout, Write},
-        time::{Duration, SystemTime},
-    },
+    std::time::{Duration, SystemTime},
 };
 
 const MAX_HASH: usize = 11;
 
 #[ffx_plugin("ffx_repository", RepositoryRegistryProxy = "daemon::protocol")]
-pub async fn packages(cmd: PackagesCommand, repos: RepositoryRegistryProxy) -> Result<()> {
+pub async fn packages(
+    cmd: PackagesCommand,
+    repos: RepositoryRegistryProxy,
+    #[ffx(machine = Vec<T:Serialize>)] mut writer: Writer,
+) -> Result<()> {
     match cmd.subcommand {
-        PackagesSubCommand::List(subcmd) => list_impl(subcmd, repos, None, stdout()).await,
-        PackagesSubCommand::Show(subcmd) => show_impl(subcmd, repos, None, stdout()).await,
+        PackagesSubCommand::List(subcmd) => list_impl(subcmd, repos, None, &mut writer).await,
+        PackagesSubCommand::Show(subcmd) => show_impl(subcmd, repos, None, &mut writer).await,
     }
 }
 
-async fn show_impl<W: Write>(
+async fn show_impl(
     cmd: ShowSubCommand,
     repos_proxy: RepositoryRegistryProxy,
     table_format: Option<TableFormat>,
-    mut writer: W,
+    writer: &mut Writer,
 ) -> Result<()> {
     let (client, server) = fidl::endpoints::create_endpoints::<PackageEntryIteratorMarker>()?;
 
     let repo_name = if let Some(repo_name) = cmd.repository.clone() {
         repo_name
+    } else if let Some(repo_name) = pkg::config::get_default_repository().await? {
+        repo_name
     } else {
-        if let Some(repo_name) = pkg::config::get_default_repository().await? {
-            repo_name
-        } else {
-            ffx_bail!(
-                "Either a default repository must be set, or the -r flag must be provided.\n\
+        ffx_bail!(
+            "Either a default repository must be set, or the -r flag must be provided.\n\
                 You can set a default repository using: `ffx repository default set <name>`."
-            )
-        }
+        )
     };
 
     match repos_proxy.show_package(&repo_name, &cmd.package, server).await? {
@@ -67,6 +66,35 @@ async fn show_impl<W: Write>(
 
     let client = client.into_proxy()?;
 
+    let mut blobs: Vec<PackageEntry> = vec![];
+    loop {
+        let batch = client.next().await.context("fetching next batch of blobs")?;
+        if batch.is_empty() {
+            break;
+        }
+
+        for blob in batch {
+            blobs.push((&blob).into());
+        }
+    }
+
+    blobs.sort();
+
+    if writer.is_machine() {
+        writer.machine(&blobs).context("writing machine representation of blobs")?;
+    } else {
+        print_blob_table(&cmd, &blobs, table_format, writer).context("printing repository table")?
+    }
+
+    Ok(())
+}
+
+fn print_blob_table(
+    cmd: &ShowSubCommand,
+    blobs: &[PackageEntry],
+    table_format: Option<TableFormat>,
+    writer: &mut Writer,
+) -> Result<()> {
     let mut table = Table::new();
     let header = row!("NAME", "SIZE", "HASH", "MODIFIED");
     table.set_titles(header);
@@ -75,67 +103,49 @@ async fn show_impl<W: Write>(
     }
 
     let mut rows = vec![];
-    loop {
-        let blobs = client.next().await?;
 
-        if blobs.is_empty() {
-            rows.sort_by_key(|r: &Row| r.get_cell(0).unwrap().get_content());
-            for row in rows.into_iter() {
-                table.add_row(row);
-            }
-            table.print(&mut writer)?;
-            return Ok(());
-        }
-
-        for blob in blobs {
-            let row = row!(
-                blob.path.as_deref().unwrap_or("<unknown>"),
-                blob.size
-                    .map(|s| s
-                        .file_size(file_size_opts::CONVENTIONAL)
-                        .unwrap_or_else(|_| format!("{}b", s)))
-                    .unwrap_or_else(|| "<unknown>".to_string()),
-                blob.hash
-                    .map(|s| {
-                        if cmd.full_hash {
-                            s
-                        } else {
-                            let mut clone = s.clone();
-                            clone.truncate(MAX_HASH);
-                            clone.push_str("...");
-                            clone
-                        }
-                    })
-                    .unwrap_or_else(|| "<unknown>".to_string()),
-                blob.modified
-                    .and_then(|m| SystemTime::UNIX_EPOCH.checked_add(Duration::from_secs(m)))
-                    .map(|m| DateTime::<Utc>::from(m).to_rfc2822())
-                    .unwrap_or_else(String::new)
-            );
-            rows.push(row);
-        }
+    for blob in blobs {
+        let row = row!(
+            blob.path.as_deref().unwrap_or("<unknown>"),
+            blob.size
+                .map(|s| s
+                    .file_size(file_size_opts::CONVENTIONAL)
+                    .unwrap_or_else(|_| format!("{}b", s)))
+                .unwrap_or_else(|| "<unknown>".to_string()),
+            format_hash(&blob.hash, cmd.full_hash),
+            blob.modified
+                .and_then(|m| SystemTime::UNIX_EPOCH.checked_add(Duration::from_secs(m)))
+                .map(|m| DateTime::<Utc>::from(m).to_rfc2822())
+                .unwrap_or_else(String::new)
+        );
+        rows.push(row);
     }
+
+    for row in rows.into_iter() {
+        table.add_row(row);
+    }
+    table.print(writer)?;
+
+    Ok(())
 }
 
-async fn list_impl<W: Write>(
+async fn list_impl(
     cmd: ListSubCommand,
     repos_proxy: RepositoryRegistryProxy,
     table_format: Option<TableFormat>,
-    mut writer: W,
+    writer: &mut Writer,
 ) -> Result<()> {
     let (client, server) = fidl::endpoints::create_endpoints::<RepositoryPackagesIteratorMarker>()?;
 
     let repo_name = if let Some(repo_name) = cmd.repository.clone() {
         repo_name
+    } else if let Some(repo_name) = pkg::config::get_default_repository().await? {
+        repo_name
     } else {
-        if let Some(repo_name) = pkg::config::get_default_repository().await? {
-            repo_name
-        } else {
-            ffx_bail!(
-                "Either a default repository must be set, or the --repository flag must be provided.\n\
+        ffx_bail!(
+            "Either a default repository must be set, or the --repository flag must be provided.\n\
                 You can set a default repository using: `ffx repository default set <name>`."
-            )
-        }
+        )
     };
 
     match repos_proxy
@@ -157,6 +167,36 @@ async fn list_impl<W: Write>(
 
     let client = client.into_proxy()?;
 
+    let mut packages: Vec<RepositoryPackage> = vec![];
+    loop {
+        let batch = client.next().await.context("fetching next batch of packages")?;
+        if batch.is_empty() {
+            break;
+        }
+
+        for package in batch {
+            packages.push(package.try_into().context("converting repository package")?);
+        }
+    }
+
+    packages.sort();
+
+    if writer.is_machine() {
+        writer.machine(&packages).context("writing machine representation of packages")?;
+    } else {
+        print_package_table(&cmd, &packages, table_format, writer)
+            .context("printing repository table")?
+    }
+
+    Ok(())
+}
+
+fn print_package_table(
+    cmd: &ListSubCommand,
+    packages: &[RepositoryPackage],
+    table_format: Option<TableFormat>,
+    writer: &mut Writer,
+) -> Result<()> {
     let mut table = Table::new();
     let mut header = row!("NAME", "SIZE", "HASH", "MODIFIED");
     if cmd.include_components {
@@ -168,58 +208,55 @@ async fn list_impl<W: Write>(
     }
 
     let mut rows = vec![];
-    loop {
-        let pkgs = client.next().await?;
 
-        if pkgs.is_empty() {
-            rows.sort_by_key(|r: &Row| r.get_cell(0).unwrap().get_content());
-            for row in rows.into_iter() {
-                table.add_row(row);
-            }
-            table.print(&mut writer)?;
-            return Ok(());
+    for pkg in packages {
+        let mut row = row!(
+            pkg.name.as_deref().unwrap_or("<unknown>"),
+            pkg.size
+                .map(|s| s
+                    .file_size(file_size_opts::CONVENTIONAL)
+                    .unwrap_or_else(|_| format!("{}b", s)))
+                .unwrap_or_else(|| "<unknown>".to_string()),
+            format_hash(&pkg.hash, cmd.full_hash),
+            pkg.modified
+                .and_then(|m| SystemTime::UNIX_EPOCH.checked_add(Duration::from_secs(m)))
+                .map(|m| DateTime::<Utc>::from(m).to_rfc2822())
+                .unwrap_or_else(String::new)
+        );
+        if cmd.include_components {
+            row.add_cell(cell!(pkg
+                .entries
+                .iter()
+                .map(|p| p
+                    .path
+                    .as_ref()
+                    .cloned()
+                    .unwrap_or_else(|| String::from("<missing manifest path>")))
+                .collect::<Vec<_>>()
+                .join("\n")));
         }
+        rows.push(row);
+    }
 
-        for pkg in pkgs {
-            let mut row = row!(
-                pkg.name.as_deref().unwrap_or("<unknown>"),
-                pkg.size
-                    .map(|s| s
-                        .file_size(file_size_opts::CONVENTIONAL)
-                        .unwrap_or_else(|_| format!("{}b", s)))
-                    .unwrap_or_else(|| "<unknown>".to_string()),
-                pkg.hash
-                    .map(|s| {
-                        if cmd.full_hash {
-                            s
-                        } else {
-                            let mut clone = s.clone();
-                            clone.truncate(MAX_HASH);
-                            clone.push_str("...");
-                            clone
-                        }
-                    })
-                    .unwrap_or_else(|| "<unknown>".to_string()),
-                pkg.modified
-                    .and_then(|m| SystemTime::UNIX_EPOCH.checked_add(Duration::from_secs(m)))
-                    .map(|m| DateTime::<Utc>::from(m).to_rfc2822())
-                    .unwrap_or_else(String::new)
-            );
-            if cmd.include_components {
-                row.add_cell(cell!(pkg
-                    .entries
-                    .unwrap_or(vec![])
-                    .iter()
-                    .map(|p| p
-                        .path
-                        .as_ref()
-                        .map(|s| s.clone())
-                        .unwrap_or_else(|| String::from("<missing manifest path>")))
-                    .collect::<Vec<_>>()
-                    .join("\n")));
-            }
-            rows.push(row);
+    rows.sort_by_key(|r: &Row| r.get_cell(0).unwrap().get_content());
+    for row in rows.into_iter() {
+        table.add_row(row);
+    }
+    table.print(writer)?;
+
+    Ok(())
+}
+
+fn format_hash(hash_value: &Option<String>, full: bool) -> String {
+    if let Some(value) = hash_value {
+        if full {
+            value.to_string()
+        } else {
+            let clone = value.to_string();
+            format!("{}...", &clone[..MAX_HASH])
         }
+    } else {
+        "unknown".to_string()
     }
 }
 
@@ -370,112 +407,151 @@ mod test {
         })
     }
 
-    async fn run_impl(cmd: ListSubCommand) -> String {
+    async fn run_impl(cmd: ListSubCommand, writer: &mut Writer) {
         let repos = setup_repo_proxy(if cmd.include_components {
             ListFields::COMPONENTS
         } else {
             ListFields::empty()
         })
         .await;
-        let mut out = Vec::<u8>::new();
         timeout::timeout(
             std::time::Duration::from_millis(1000),
-            list_impl(cmd, repos, Some(FormatBuilder::new().padding(1, 1).build()), &mut out),
+            list_impl(cmd, repos, Some(FormatBuilder::new().padding(1, 1).build()), writer),
         )
         .await
         .unwrap()
         .unwrap();
-
-        String::from_utf8_lossy(&out).to_string()
     }
 
-    async fn run_impl_for_show_command(cmd: ShowSubCommand) -> String {
+    async fn run_impl_for_show_command(cmd: ShowSubCommand, writer: &mut Writer) {
         let repos = setup_repo_proxy(ListFields::empty()).await;
-        let mut out = Vec::<u8>::new();
+
         timeout::timeout(
             std::time::Duration::from_millis(1000),
-            show_impl(cmd, repos, Some(FormatBuilder::new().padding(1, 1).build()), &mut out),
+            show_impl(cmd, repos, Some(FormatBuilder::new().padding(1, 1).build()), writer),
         )
         .await
         .unwrap()
         .unwrap();
-
-        String::from_utf8_lossy(&out).to_string()
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_package_list_truncated_hash() {
-        assert_eq!(
-            run_impl(ListSubCommand {
+    async fn test_package_list_truncated_hash() -> Result<()> {
+        let mut writer = Writer::new_test(None);
+
+        run_impl(
+            ListSubCommand {
                 repository: Some("devhost".to_string()),
                 full_hash: false,
-                include_components: false
-            })
-            .await
-            .trim(),
-            "NAME      SIZE  HASH            MODIFIED \n \
+                include_components: false,
+            },
+            &mut writer,
+        )
+        .await;
+        let actual = writer.test_output()?;
+        assert_eq!(
+            actual,
+            " NAME      SIZE  HASH            MODIFIED \n \
                           package1  1 B   longhashlon...  Fri, 02 Jan 1970 00:00:00 +0000 \n \
-                          package2  2 KB  secondhashs..."
+                          package2  2 KB  secondhashs...   \n"
         );
+        assert!(writer.test_error()?.is_empty());
+        Ok(())
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_package_list_full_hash() {
-        assert_eq!(
-            run_impl(ListSubCommand {
+    async fn test_package_list_full_hash() -> Result<()> {
+        let mut writer = Writer::new_test(None);
+
+        run_impl(
+            ListSubCommand {
                 repository: Some("devhost".to_string()),
                 full_hash: true,
                 include_components: false,
-            })
-            .await
-            .trim(),
-            "NAME      SIZE  HASH                              MODIFIED \n \
+            },
+            &mut writer,
+        )
+        .await;
+        let actual = writer.test_output()?;
+        assert_eq!(
+            actual,
+            " NAME      SIZE  HASH                              MODIFIED \n \
             package1  1 B   longhashlonghashlonghashlonghash  Fri, 02 Jan 1970 00:00:00 +0000 \n \
-            package2  2 KB  secondhashsecondhashsecondhash"
+            package2  2 KB  secondhashsecondhashsecondhash     \n"
         );
+        assert!(writer.test_error()?.is_empty());
+        Ok(())
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_package_list_including_components() {
-        assert_eq!(run_impl(ListSubCommand {
-            repository: Some("devhost".to_string()),
-            full_hash: false,
-            include_components: true
-        }).await.trim(), "NAME      SIZE  HASH            MODIFIED                         COMPONENTS \n \
+    async fn test_package_list_including_components() -> Result<()> {
+        let mut writer = Writer::new_test(None);
+
+        run_impl(
+            ListSubCommand {
+                repository: Some("devhost".to_string()),
+                full_hash: false,
+                include_components: true,
+            },
+            &mut writer,
+        )
+        .await;
+
+        let actual = writer.test_output()?;
+
+        assert_eq!(actual, " NAME      SIZE  HASH            MODIFIED                         COMPONENTS \n \
                           package1  1 B   longhashlon...  Fri, 02 Jan 1970 00:00:00 +0000  component1 \n \
                           package2  2 KB  secondhashs...                                   component2 \n                                                                  \
-                                                                                           component3");
+                                                                                           component3 \n");
+        assert!(writer.test_error()?.is_empty());
+        Ok(())
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_show_package_truncated_hash() {
-        assert_eq!(
-            run_impl_for_show_command(ShowSubCommand {
+    async fn test_show_package_truncated_hash() -> Result<()> {
+        let mut writer = Writer::new_test(None);
+
+        run_impl_for_show_command(
+            ShowSubCommand {
                 repository: Some("devhost".to_string()),
                 full_hash: false,
                 package: "package".to_string(),
-            })
-            .await
-            .trim(),
-            "NAME      SIZE  HASH            MODIFIED \n \
+            },
+            &mut writer,
+        )
+        .await;
+        let actual = writer.test_output()?;
+        assert_eq!(
+            actual,
+            " NAME      SIZE  HASH            MODIFIED \n \
             blob2     2 KB  secondhashs...   \n \
-            meta.far  1 B   longhashlon...  Fri, 02 Jan 1970 00:00:00 +0000"
+            meta.far  1 B   longhashlon...  Fri, 02 Jan 1970 00:00:00 +0000 \n"
         );
+        assert!(writer.test_error()?.is_empty());
+        Ok(())
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_show_package_full_hash() {
-        assert_eq!(
-            run_impl_for_show_command(ShowSubCommand {
+    async fn test_show_package_full_hash() -> Result<()> {
+        let mut writer = Writer::new_test(None);
+
+        run_impl_for_show_command(
+            ShowSubCommand {
                 repository: Some("devhost".to_string()),
                 full_hash: true,
                 package: "package".to_string(),
-            })
-            .await
-            .trim(),
-            "NAME      SIZE  HASH                              MODIFIED \n \
+            },
+            &mut writer,
+        )
+        .await;
+        let actual = writer.test_output()?;
+        assert_eq!(
+            actual,
+            " NAME      SIZE  HASH                              MODIFIED \n \
             blob2     2 KB  secondhashsecondhashsecondhash     \n \
-            meta.far  1 B   longhashlonghashlonghashlonghash  Fri, 02 Jan 1970 00:00:00 +0000"
+            meta.far  1 B   longhashlonghashlonghashlonghash  Fri, 02 Jan 1970 00:00:00 +0000 \n"
         );
+        assert!(writer.test_error()?.is_empty());
+        Ok(())
     }
 }

@@ -71,15 +71,15 @@ impl From<RepositorySpec> for fidl::RepositorySpec {
                 let metadata_repo_path = metadata_repo_path.into_string();
                 let blob_repo_path = blob_repo_path.into_string();
                 fidl::RepositorySpec::FileSystem(fidl::FileSystemRepositorySpec {
-                    metadata_repo_path: Some(metadata_repo_path.into()),
-                    blob_repo_path: Some(blob_repo_path.into()),
+                    metadata_repo_path: Some(metadata_repo_path),
+                    blob_repo_path: Some(blob_repo_path),
                     ..fidl::FileSystemRepositorySpec::EMPTY
                 })
             }
             RepositorySpec::Pm { path } => {
                 let path = path.into_string();
                 fidl::RepositorySpec::Pm(fidl::PmRepositorySpec {
-                    path: Some(path.into()),
+                    path: Some(path),
                     ..fidl::PmRepositorySpec::EMPTY
                 })
             }
@@ -164,7 +164,7 @@ impl TryFrom<fidl::RepositoryTarget> for RepositoryTarget {
         Ok(RepositoryTarget {
             repo_name: repo_target.repo_name.ok_or(RepositoryError::MissingRepositoryName)?,
             target_identifier: repo_target.target_identifier,
-            aliases: repo_target.aliases.unwrap_or_else(Vec::new),
+            aliases: repo_target.aliases.unwrap_or_default(),
             storage_type: repo_target.storage_type.map(|storage_type| storage_type.into()),
         })
     }
@@ -280,6 +280,61 @@ impl From<RepositoryError> for fidl::RepositoryError {
             }
             RepositoryError::ServerNotRunning => fidl::RepositoryError::ServerNotRunning,
             RepositoryError::InvalidUrl => fidl::RepositoryError::InvalidUrl,
+        }
+    }
+}
+
+/// Serializable version of  fidl_fuchsia_developer_ffx::PackageEntry
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct PackageEntry {
+    /// Blob name
+    pub path: Option<String>,
+    /// Blob's merkle hash
+    pub hash: Option<String>,
+    /// Size in bytes of this blob.
+    pub size: Option<u64>,
+    /// Last modification timestamp (seconds since UNIX epoch). May be null
+    /// depending on repository source.
+    pub modified: Option<u64>,
+}
+
+impl From<&fidl::PackageEntry> for PackageEntry {
+    fn from(entry: &fidl::PackageEntry) -> Self {
+        PackageEntry {
+            path: entry.path.clone(),
+            hash: entry.hash.clone(),
+            size: entry.size,
+            modified: entry.modified,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct RepositoryPackage {
+    /// Package name
+    pub name: Option<String>,
+    /// Package's merkle hash
+    pub hash: Option<String>,
+    /// Size in bytes of all blobs in this package.
+    pub size: Option<u64>,
+    /// Last modification timestamp (seconds since UNIX epoch). May be null depending on repository
+    /// source.
+    pub modified: Option<u64>,
+    /// List of blobs in this package: currently, this is only components.
+    pub entries: Vec<PackageEntry>,
+}
+
+impl From<fidl::RepositoryPackage> for RepositoryPackage {
+    fn from(repo_package: fidl::RepositoryPackage) -> Self {
+        RepositoryPackage {
+            name: repo_package.name,
+            hash: repo_package.hash,
+            size: repo_package.size,
+            modified: repo_package.modified,
+            entries: match repo_package.entries {
+                Some(list) => list.iter().map(|p| p.into()).collect(),
+                None => vec![],
+            },
         }
     }
 }

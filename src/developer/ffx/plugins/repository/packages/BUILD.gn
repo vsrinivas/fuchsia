@@ -13,6 +13,7 @@ ffx_plugin("ffx_repository_packages") {
     "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/fidl-fuchsia-developer-ffx-ext",
     "//src/developer/ffx/lib/pkg",
+    "//src/developer/ffx/lib/writer:lib",
     "//src/lib/fidl/rust/fidl",
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:humansize",
