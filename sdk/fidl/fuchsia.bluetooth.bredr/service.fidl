@@ -25,7 +25,7 @@ type DataElement = strict union {
     6: uint16 uint16;
     7: uint32 uint32;
     8: uint64 uint64;
-    9: str string:MAX_STRING_LENGTH;
+    9: str vector<uint8>:MAX_STRING_LENGTH;
    10: url fuchsia.url.Url;
    11: uuid fuchsia.bluetooth.Uuid;
    12: b bool;
