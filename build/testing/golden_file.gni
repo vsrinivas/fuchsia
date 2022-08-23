@@ -75,6 +75,13 @@ template("golden_files") {
       "--comparisons",
     ]
 
+    golden_file_metadata = {
+      name = target_name
+      label = get_label_info(":$target_name", "label_with_toolchain")
+      stamp = rebase_path(stamp_file, root_build_dir)
+      files = []
+    }
+
     foreach(comparison, invoker.comparisons) {
       assert(defined(comparison.golden),
              "no `golden` given in comparison: $comparison")
@@ -90,8 +97,17 @@ template("golden_files") {
                                "candidate",
                              ])
 
-      args += [ rebase_path(comparison.candidate, root_build_dir) + ":" +
-                rebase_path(comparison.golden, root_build_dir) ]
+      golden = rebase_path(comparison.golden, root_build_dir)
+      candidate = rebase_path(comparison.candidate, root_build_dir)
+
+      args += [ candidate + ":" + golden ]
+
+      golden_file_metadata.files += [
+        {
+          golden = rebase_path(comparison.golden, "//")
+          candidate = candidate
+        },
+      ]
     }
 
     if (bless_goldens) {
@@ -102,6 +118,11 @@ template("golden_files") {
         defined(invoker.warn_on_changes) && invoker.warn_on_changes
     if (warn_on_changes) {
       args += [ "--warn" ]
+    }
+
+    metadata = {
+      # Metadata for //:golden_files.
+      golden_files = [ golden_file_metadata ]
     }
   }
 }

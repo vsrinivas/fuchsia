@@ -150,6 +150,7 @@ build_api_module("api") {
     ":fuzzers",
     ":generated_sources",
     ":gerrit_size_report",
+    ":golden_files",
     ":images",
     ":package-repositories",
     ":platforms",
@@ -418,6 +419,44 @@ build_api_module("generated_sources") {
     "//build/images/updates:packages",
     "//sdk",
   ]
+}
+
+# This describes all golden files in the build, as defined by `golden_file()`
+# and `golden_files()`.
+#
+# Type: list(scope)
+#
+#  * name
+#    - Required: The name of the target defining the golden files.
+#    - Type: string
+#
+#  * label
+#    - Required: The label toolchain of the associated target.
+#    - Type: label_with_toolchain
+#
+#  * stamp
+#    - Required: The stamp file of the associated diff check.
+#    - Type: build directory -relative path
+#
+#  * files
+#    - Required: The associated golden file comparisons.
+#    - Type: list(scope)
+#
+#    Each scope contains:
+#
+#    * golden
+#      - Required: A golden file.
+#      - Type: source-relative path
+#
+#    * candidate
+#      - Required: The candidate version of the file, to be compared against the
+#        golden.
+#      - Type: build directory -relative path
+#
+build_api_module("golden_files") {
+  testonly = true
+  data_keys = [ "golden_files" ]
+  deps = [ ":default" ]
 }
 
 # Describes the "fuzzers" in the build, in the file:

@@ -1,0 +1,87 @@
+#!/bin/bash
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Source tree
+### Checks all golden file comparisons in the GN build graph.
+
+## usage: fx check-goldens [--list] [--regex] [SEARCH_TERM]
+##
+## Reruns golden file checks in the current build, relying on the
+## "golden_files" build API module. That is,  unless `--list` is passed, in
+## which case this command only prints out the associated goldens.
+##
+## The goldens may be filtered by a substring of their source path (e.g., a
+## full source-relative directory) or by a regular expression; if no search
+## term is provided, all accessible golden files will be matched.
+##
+## TODO(crbug.com/gn/301): This command may deal in stale metadata. Until this
+## bug is resolved, users must take care to make sure their build metadata is
+## up to data (e.g., via `fx gen`) before invoking this command.
+##
+##  --list    just list the matched goldens; do not perform any checks.
+##  --regex   if set, the search term will be matched as a regular expression.
+##
+
+set -o errexit
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh
+fx-config-read
+
+# Golden file build API module.
+readonly GOLDEN_FILES_JSON="golden_files.json"
+
+function run-jq {
+    fx-command-run jq --raw-output "$1" "${FUCHSIA_BUILD_DIR}/${GOLDEN_FILES_JSON}"
+}
+
+list=false
+filter="contains"  # jq filter function
+search_term=""
+while [[ $# -ne 0 ]]; do
+  case "$1" in
+  --help|-h)
+    fx-command-help
+    exit 0
+    ;;
+  --list)
+    list=true
+    ;;
+  --regex)
+    filter="test"
+    ;;
+  -*)
+    fx-error "Unknown flag: $1"
+    fx-command-help
+    exit 1
+    ;;
+  *)
+    if [[ ! -z "${search_term}" ]] ; then
+      fx-error "only one seach term may be provided;" \
+        " use --regex if you want more complicated matching"
+      exit 1
+    fi
+    search_term="$1"
+    ;;
+  esac
+  shift
+done
+
+# TODO(crbug.com/gn/301):
+# Minimally ensure that the metadata is up-to-date.
+# fx-command-run build golden_files.json
+test -r "${FUCHSIA_BUILD_DIR}/${GOLDEN_FILES_JSON}" || fx-gen
+
+# jq expression that gives the desired golden file element matches.
+expr=".[] | select(.files[] | .golden | ${filter}(\"${search_term}\"))"
+
+if $list ; then
+  run-jq "${expr} | .files[] | .golden"
+  exit 0
+fi
+
+stamps=($(run-jq "${expr} | .stamp"))
+if [[ "${#stamps[@]}" -gt 0 ]] ; then
+  fx-command-run build "${stamps[@]}"
+fi
