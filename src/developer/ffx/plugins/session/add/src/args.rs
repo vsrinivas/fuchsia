@@ -25,6 +25,10 @@ pub struct SessionAddCommand {
     #[argh(positional)]
     pub url: String,
 
+    /// pass to keep element alive until command exits
+    #[argh(switch)]
+    pub interactive: bool,
+
     /// arguments passed to the element
     #[argh(positional)]
     pub args: Vec<String>,
