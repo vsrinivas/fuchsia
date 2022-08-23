@@ -9,9 +9,6 @@ use crate::parser::bind_library;
 use num_traits::FromPrimitive;
 use std::collections::HashMap;
 
-// Each section header contains a uint32 magic number and a uint32 value.
-const HEADER_SZ: usize = 8;
-
 // Each node section header contains a u8 node type and a uint32 section
 // size.
 const NODE_TYPE_HEADER_SZ: usize = 9;
@@ -520,7 +517,7 @@ mod test {
             DecodedRules::new(bytecode)
         );
 
-        //Test invalid debug header.
+        // Test invalid debug information section header.
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
         bytecode.push(BYTECODE_ENABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
@@ -688,7 +685,7 @@ mod test {
     }
 
     #[test]
-    fn test_enable_debug_flag() {
+    fn test_enable_debug_flag_empty_debug_section() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
         bytecode.push(BYTECODE_ENABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);

@@ -13,9 +13,16 @@ use std::collections::HashSet;
 /// old bytecode format is deleted, the "v2" should be removed from the names.
 
 pub fn encode_to_bytecode_v2(bind_rules: BindRules) -> Result<Vec<u8>, BindRulesEncodeError> {
+    let mut debug_symbol_table_encoder_option =
+        if bind_rules.enable_debug { Some(SymbolTableEncoder::new()) } else { None };
+
     let mut symbol_table_encoder = SymbolTableEncoder::new();
-    let mut instruction_bytecode =
-        encode_instructions(bind_rules.instructions, &mut symbol_table_encoder)?;
+    let mut instruction_bytecode = encode_instructions(
+        bind_rules.instructions,
+        &mut symbol_table_encoder,
+        &mut debug_symbol_table_encoder_option,
+    )?;
+
     let mut bytecode: Vec<u8> = vec![];
 
     // Encode the header.
@@ -38,9 +45,8 @@ pub fn encode_to_bytecode_v2(bind_rules: BindRules) -> Result<Vec<u8>, BindRules
     bytecode.append(&mut instruction_bytecode);
 
     // Encode the debug section when enable_debug flag is true.
-    if bind_rules.enable_debug {
-        bytecode.extend_from_slice(&DEBG_MAGIC_NUM.to_be_bytes());
-        bytecode.extend_from_slice(&DEBUG_BYTE_COUNT.to_le_bytes());
+    if let Some(mut debug_symbol_table_encoder) = debug_symbol_table_encoder_option {
+        encode_debug_section(&mut bytecode, &mut debug_symbol_table_encoder)?;
     }
 
     Ok(bytecode)
@@ -55,11 +61,37 @@ pub fn encode_to_string_v2(bind_rules: BindRules) -> Result<(String, usize), Bin
     ))
 }
 
+fn encode_debug_section(
+    bytecode: &mut Vec<u8>,
+    debug_symbol_table_encoder: &mut SymbolTableEncoder,
+) -> Result<(), BindRulesEncodeError> {
+    // Debug information header
+    bytecode.extend_from_slice(&DEBG_MAGIC_NUM.to_be_bytes());
+    if debug_symbol_table_encoder.bytecode.len() == 0 {
+        bytecode
+            .extend_from_slice(&(debug_symbol_table_encoder.bytecode.len() as u32).to_le_bytes());
+    } else {
+        // Extend the debug information section to include the
+        // length of the debug symbol table bytecode and header
+        bytecode.extend_from_slice(
+            &((debug_symbol_table_encoder.bytecode.len() + HEADER_SZ) as u32).to_le_bytes(),
+        );
+        // Debug symbol table section
+        bytecode.extend_from_slice(&DBSY_MAGIC_NUM.to_be_bytes());
+        bytecode
+            .extend_from_slice(&(debug_symbol_table_encoder.bytecode.len() as u32).to_le_bytes());
+        bytecode.append(&mut debug_symbol_table_encoder.bytecode);
+    }
+
+    Ok(())
+}
+
 fn append_composite_node(
     bytecode: &mut Vec<u8>,
     node: CompositeNode,
     is_primary: bool,
     symbol_table_encoder: &mut SymbolTableEncoder,
+    debug_symbol_table_encoder: &mut Option<SymbolTableEncoder>,
 ) -> Result<(), BindRulesEncodeError> {
     if node.name.is_empty() {
         return Err(BindRulesEncodeError::MissingCompositeNodeName);
@@ -68,7 +100,8 @@ fn append_composite_node(
     bytecode.push(if is_primary { RawNodeType::Primary } else { RawNodeType::Additional } as u8);
     bytecode.extend_from_slice(&symbol_table_encoder.get_key(node.name)?.to_le_bytes());
 
-    let mut inst_bytecode = encode_instructions(node.instructions, symbol_table_encoder)?;
+    let mut inst_bytecode =
+        encode_instructions(node.instructions, symbol_table_encoder, debug_symbol_table_encoder)?;
     bytecode.extend_from_slice(&(inst_bytecode.len() as u32).to_le_bytes());
     bytecode.append(&mut inst_bytecode);
     Ok(())
@@ -78,6 +111,9 @@ pub fn encode_composite_to_bytecode(
     bind_rules: CompositeBindRules,
 ) -> Result<Vec<u8>, BindRulesEncodeError> {
     let mut symbol_table_encoder = SymbolTableEncoder::new();
+    let mut debug_symbol_table_encoder_option =
+        if bind_rules.enable_debug { Some(SymbolTableEncoder::new()) } else { None };
+
     if bind_rules.device_name.is_empty() {
         return Err(BindRulesEncodeError::MissingCompositeDeviceName);
     }
@@ -95,6 +131,7 @@ pub fn encode_composite_to_bytecode(
         bind_rules.primary_node,
         true,
         &mut symbol_table_encoder,
+        &mut debug_symbol_table_encoder_option,
     )?;
 
     // Add instructions from additional nodes.
@@ -103,7 +140,13 @@ pub fn encode_composite_to_bytecode(
             return Err(BindRulesEncodeError::DuplicateCompositeNodeName(node.name));
         }
         node_names.insert(node.name.clone());
-        append_composite_node(&mut inst_bytecode, node, false, &mut symbol_table_encoder)?;
+        append_composite_node(
+            &mut inst_bytecode,
+            node,
+            false,
+            &mut symbol_table_encoder,
+            &mut debug_symbol_table_encoder_option,
+        )?;
     }
 
     // Put all of the sections together.
@@ -129,9 +172,8 @@ pub fn encode_composite_to_bytecode(
     bytecode.append(&mut inst_bytecode);
 
     // Encode the debug section when enable_debug flag is true.
-    if bind_rules.enable_debug {
-        bytecode.extend_from_slice(&DEBG_MAGIC_NUM.to_be_bytes());
-        bytecode.extend_from_slice(&DEBUG_BYTE_COUNT.to_le_bytes());
+    if let Some(mut debug_symbol_table_encoder) = debug_symbol_table_encoder_option {
+        encode_debug_section(&mut bytecode, &mut debug_symbol_table_encoder)?;
     }
 
     Ok(bytecode)
@@ -263,7 +305,7 @@ mod test {
     }
 
     #[test]
-    fn test_enable_debug_flag_true() {
+    fn test_enable_debug_flag_true_empty_debug_section() {
         let bind_rules = BindRules {
             instructions: to_symbolic_inst_info(vec![SymbolicInstruction::UnconditionalAbort]),
             symbol_table: HashMap::new(),
@@ -988,6 +1030,79 @@ mod test {
         );
         checker.verify_jmp_pad();
         checker.verify_unconditional_abort();
+        checker.verify_end();
+    }
+
+    #[test]
+    fn test_composite_enable_debug_true_empty_debug() {
+        let primary_node = vec![
+            SymbolicInstruction::AbortIfEqual {
+                lhs: Symbol::DeprecatedKey(1),
+                rhs: Symbol::BoolValue(false),
+            },
+            SymbolicInstruction::UnconditionalAbort,
+        ];
+
+        let additional_nodes = vec![
+            SymbolicInstruction::JumpIfEqual {
+                lhs: Symbol::DeprecatedKey(15),
+                rhs: Symbol::StringValue("ruff".to_string()),
+                label: 1,
+            },
+            SymbolicInstruction::AbortIfEqual {
+                lhs: Symbol::Key("plover".to_string(), ValueType::Number),
+                rhs: Symbol::NumberValue(1),
+            },
+            SymbolicInstruction::Label(1),
+            SymbolicInstruction::UnconditionalAbort,
+        ];
+
+        let bind_rules = CompositeBindRules {
+            symbol_table: HashMap::new(),
+            device_name: "wader".to_string(),
+            primary_node: composite_node("stilt".to_string(), primary_node),
+            additional_nodes: vec![composite_node("avocet".to_string(), additional_nodes)],
+            enable_debug: true,
+        };
+
+        let mut checker = BytecodeChecker::new(encode_composite_to_bytecode(bind_rules).unwrap());
+        checker.verify_bind_rules_header(true);
+        checker.verify_sym_table_header(51);
+
+        checker.verify_symbol_table(&["wader", "stilt", "avocet", "ruff", "plover"]);
+
+        let primary_node_bytes = COND_ABORT_BYTES + UNCOND_ABORT_BYTES;
+        let additional_node_bytes =
+            COND_JMP_BYTES + COND_ABORT_BYTES + JMP_PAD_BYTES + UNCOND_ABORT_BYTES;
+        checker.verify_composite_header(
+            (NODE_HEADER_BYTES * 2)
+                + COMPOSITE_NAME_ID_BYTES
+                + primary_node_bytes
+                + additional_node_bytes,
+        );
+
+        // Verify primary node.
+        checker.verify_node_header(RawNodeType::Primary, 2, primary_node_bytes);
+        checker.verify_abort_equal(
+            EncodedValue { value_type: RawValueType::NumberValue, value: 1 },
+            EncodedValue { value_type: RawValueType::BoolValue, value: 0 },
+        );
+        checker.verify_unconditional_abort();
+
+        // Verify additional node.
+        checker.verify_node_header(RawNodeType::Additional, 3, additional_node_bytes);
+        checker.verify_jmp_if_equal(
+            COND_ABORT_BYTES,
+            EncodedValue { value_type: RawValueType::NumberValue, value: 15 },
+            EncodedValue { value_type: RawValueType::StringValue, value: 4 },
+        );
+        checker.verify_abort_equal(
+            EncodedValue { value_type: RawValueType::Key, value: 5 },
+            EncodedValue { value_type: RawValueType::NumberValue, value: 1 },
+        );
+        checker.verify_jmp_pad();
+        checker.verify_unconditional_abort();
+        checker.verify_debug_header(0);
         checker.verify_end();
     }
 

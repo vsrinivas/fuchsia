@@ -57,6 +57,7 @@ rustc_library("lib") {
   sources = [
     "src/bytecode_constants.rs",
     "src/bytecode_encoder/bytecode_checker.rs",
+    "src/bytecode_encoder/debug_encoder.rs",
     "src/bytecode_encoder/encode_v1.rs",
     "src/bytecode_encoder/encode_v2.rs",
     "src/bytecode_encoder/error.rs",

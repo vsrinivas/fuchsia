@@ -19,8 +19,8 @@ pub const COMPOSITE_MAGIC_NUM: u32 = 0x434F4D50;
 // Magic number for DEBG.
 pub const DEBG_MAGIC_NUM: u32 = 0x44454247;
 
-// Empty debug information section
-pub const DEBUG_BYTE_COUNT: u32 = 0;
+// Magic number for DBSY.
+pub const DBSY_MAGIC_NUM: u32 = 0x44425359;
 
 pub const BYTECODE_VERSION: u32 = 2;
 
@@ -38,6 +38,9 @@ pub const FALSE_VAL: u32 = 0x00;
 
 // Bytecode boolean value for true.
 pub const TRUE_VAL: u32 = 0x01;
+
+// Each section header contains a uint32 magic number and a uint32 value.
+pub const HEADER_SZ: usize = 8;
 
 #[derive(FromPrimitive, PartialEq)]
 pub enum RawOp {

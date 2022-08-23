@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod debug_encoder;
 pub mod encode_v1;
 pub mod encode_v2;
 pub mod error;

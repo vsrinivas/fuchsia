@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::bytecode_constants::*;
+use crate::bytecode_encoder::debug_encoder::add_astlocation_enum_debug_symbols;
 use crate::bytecode_encoder::error::BindRulesEncodeError;
 use crate::bytecode_encoder::symbol_table_encoder::SymbolTableEncoder;
 use crate::compiler::instruction::{Condition, Instruction};
@@ -53,25 +54,37 @@ impl<'a> InstructionEncoder<'a> {
     pub fn encode(
         &mut self,
         symbol_table_encoder: &mut SymbolTableEncoder,
+        debug_symbol_table_encoder: &mut Option<SymbolTableEncoder>,
     ) -> Result<Vec<u8>, BindRulesEncodeError> {
-        let mut bytecode: Vec<u8> = vec![];
+        let mut instruction_bytecode: Vec<u8> = vec![];
 
         while let Some(symbolic_inst) = self.inst_iter.next() {
+            // Check for compound identifiers and add them into a debug symbol table
+            if let Some(debug_encoder) = debug_symbol_table_encoder {
+                if let Some(location) = &symbolic_inst.location {
+                    add_astlocation_enum_debug_symbols(location, debug_encoder)?;
+                }
+            }
+
             let instruction = symbolic_inst.to_instruction().instruction;
             match instruction {
                 Instruction::Abort(condition) => {
-                    self.append_abort_instruction(&mut bytecode, symbol_table_encoder, condition)?;
+                    self.append_abort_instruction(
+                        &mut instruction_bytecode,
+                        symbol_table_encoder,
+                        condition,
+                    )?;
                 }
                 Instruction::Goto(condition, label) => {
                     self.append_jmp_statement(
-                        &mut bytecode,
+                        &mut instruction_bytecode,
                         symbol_table_encoder,
                         condition,
                         label,
                     )?;
                 }
                 Instruction::Label(label_id) => {
-                    self.append_and_update_label(&mut bytecode, label_id)?;
+                    self.append_and_update_label(&mut instruction_bytecode, label_id)?;
                 }
                 Instruction::Match(_) => {
                     // Match statements are not supported in the new bytecode. Once
@@ -95,12 +108,12 @@ impl<'a> InstructionEncoder<'a> {
 
                 let offset_bytes = offset.to_le_bytes();
                 for i in 0..4 {
-                    bytecode[usage.index + i] = offset_bytes[i];
+                    instruction_bytecode[usage.index + i] = offset_bytes[i];
                 }
             }
         }
 
-        Ok(bytecode)
+        Ok(instruction_bytecode)
     }
 
     fn append_abort_instruction(
@@ -265,6 +278,7 @@ impl<'a> InstructionEncoder<'a> {
 pub fn encode_instructions<'a>(
     instructions: Vec<SymbolicInstructionInfo<'a>>,
     symbol_table_encoder: &mut SymbolTableEncoder,
+    debug_symbol_table_encoder: &mut Option<SymbolTableEncoder>,
 ) -> Result<Vec<u8>, BindRulesEncodeError> {
-    InstructionEncoder::new(instructions).encode(symbol_table_encoder)
+    InstructionEncoder::new(instructions).encode(symbol_table_encoder, debug_symbol_table_encoder)
 }

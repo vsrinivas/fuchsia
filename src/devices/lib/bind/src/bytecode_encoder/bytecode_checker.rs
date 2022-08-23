@@ -116,6 +116,11 @@ impl BytecodeChecker {
         self.verify_next_u32(num_of_bytes);
     }
 
+    pub fn verify_debug_symbol_table_header(&mut self, num_of_bytes: u32) {
+        self.verify_magic_num(DBSY_MAGIC_NUM);
+        self.verify_next_u32(num_of_bytes);
+    }
+
     pub fn verify_symbol_table(&mut self, expected_symbols: &[&str]) {
         let mut unique_id = 1;
         expected_symbols.iter().for_each(|value| {
