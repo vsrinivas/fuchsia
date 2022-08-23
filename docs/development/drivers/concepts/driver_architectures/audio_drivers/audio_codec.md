@@ -22,6 +22,10 @@ In this document:
 
 | Term         | Definition                                                     |
 | ----------   | -------------------------------------------------------------- |
+| Channel      | A single source or destination of audio samples, usually       |
+:              : to be rendered by a single speaker or captured by a single     :
+:              : microphone. Within a DAI every frame will contain samples in   :
+:              : a fixed number of slots for the same fixed number of channels. :
 | Codec        | A real or virtual device that encodes/decodes a signal from    |
 :              : digital/analog to/from analog/digital including all            :
 :              : combinations, e.g. digital to digital. Example codecs include  :
@@ -30,24 +34,26 @@ In this document:
 :              : example an SOC's audio subsystem or an independent sound card. :
 | DAI          | Digital Audio Interface. Interface between audio HW, for       :
 :              : instance a TDM or PDM link between controllers and codecs.     :
+| Frame        | The representation of a single moment in time across data,     :
+:              : frame sync and sclk in the DAI.                                :
 | Frame Sync   | A DAI signal that marks frame boundaries, a.k.a. LRCLK, SYNC.  |
-| Sclk         | A DAI signal used to mark the data line(s) bits transferring,  :
-:              : a.k.a. SCK, BCLK.                                              :
+| Frame format | A frame's data, frame sync and sclk arrangement, e.g. location |
+:              : of the frame sync w.r.t. samples in the data line(s).          :
 | Mclk         | Master clock, a DAI signal sometimes needed to provide a clock |
 :              : to codecs. Sometimes Sclk is used as the Mclk (or Mclk is      :
 :              : derived from the Sclk within the codec).                       :
-| Frame        | The representation of a single moment in time across data,     :
-:              : frame sync and sclk in the DAI.                                :
-| Frame format | A frame's data, frame sync and sclk arrangement, e.g. location |
-:              : of the frame sync w.r.t. samples in the data line(s).          :
+| PDM          | Pulse-Density Modulation. Form of modulation used to represent |
+:              : an analog signal, used for example in digital microphone       :
+:              : interfaces.                                                    :
+| Sample       | A digital representation of sound taken at a particular time.  |
+| Sclk         | A DAI signal used to mark the data line(s) bits transferring   :
+:              : clock, a.k.a. SCK, BCLK.                                       :
 | Slot         | Within a frame, the bits reserved for a sample. A slot may be  |
 :              : bigger than needed to hold the samples, e.g. 32 bits slot      :
 :              : holding 24 or 16 bits samples.                                 :
-| Channel      | A single source or destination of audio samples, usually       |
-:              : to be rendered by a single speaker or captured by a single     :
-:              : microphone. Within a DAI every frame will contain samples in   :
-:              : a fixed number of slots for the same fixed number of channels. :
-| Sample       | A digital representation of sound taken at a particular time.  |
+| TDM          | Time-Division Multiplexing. Multiplexes different data streams |
+:              : into one audio interface, includes an Sclk, Frame Sync, and    :
+:              : input and output data signals.                                 :
 
 ## Basic Operation
 

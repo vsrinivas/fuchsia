@@ -85,7 +85,7 @@ type CodecFormatInfo = table {
     /// It may take some time for the hardware to get into fully stopped mode, for example due
     /// a power state change. This delay must be taken into account if playback/capture of samples
     /// after a 'Stop' command is not acceptable. Optional.
-    /// If not included `turn_off_delay` is unknown.
+    /// If not included, the turn off delay is unknown.
     3: turn_off_delay zx.duration;
 };
 
@@ -133,7 +133,7 @@ protocol Codec {
         start_time zx.time;
     });
 
-    /// Retrieves bridgeable mode from a codec.
+    /// Returns whether a codec is bridgeable.
     IsBridgeable() -> (struct {
         supports_bridged_mode bool;
     });
@@ -152,9 +152,8 @@ protocol Codec {
         formats vector<DaiSupportedFormats>:MAX_COUNT_FORMATS;
     }) error zx.status;
 
-    /// Sets the DAI format to be used in the interface between the controller and codec, if
-    /// the codec is not able to support the DAI format anymore, e.g. for a removable component
-    /// then the function may return an error status.
+    /// Sets the DAI format to be used in the interface between the controller and codec.
+    /// Returns an error if not supported at the time of the request (e.g. for removable hardware).
     SetDaiFormat(struct {
         format DaiFormat;
     }) -> (struct {
