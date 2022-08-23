@@ -333,7 +333,7 @@ The number of pager threads to spawn for blobfs.
 
 **Current value (from the default):** `2`
 
-From //src/storage/bin/blobfs-component/BUILD.gn:14
+From //src/storage/bin/blobfs/BUILD.gn:10
 
 ### blobfs_page_in_metrics_recording
 Set this to true when configuring gn args to enable blobfs page-in
@@ -1070,9 +1070,9 @@ From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.
 
 ### crashpad_http_transport_impl
 
-**Current value (from the default):** `"libcurl"`
+**Current value (from the default):** `"socket"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/1ecab90e4b41957012069965055802a9976e42da/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:19](https://fuchsia.googlesource.com/third_party/crashpad/+/1ecab90e4b41957012069965055802a9976e42da/util/net/tls.gni#19)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
@@ -4549,7 +4549,7 @@ Used to control whether board definitions include PMM checker options.
 
 **Current value (from the default):** `true`
 
-From //boards/kernel_cmdline/BUILD.gn:39
+From //boards/kernel_cmdline/BUILD.gn:51
 
 ### policy_labels
 Default policy_labels definition to ease with the transition away from
@@ -6526,7 +6526,7 @@ VkInstances or VkDevice will fail.
 This argument will affect all vulkan_{executable/test} build targets.
 
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
 From //src/lib/vulkan/build/config.gni:40
 
