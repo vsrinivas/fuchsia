@@ -1291,6 +1291,7 @@ static void x86_perfmon_unmap_buffers_locked(PerfmonState* state) {
       data->buffer_mapping->Destroy();
     }
     data->buffer_mapping.reset();
+    ktl::move(data->pinned_buffer);
     data->buffer_start = nullptr;
     data->buffer_end = nullptr;
     data->buffer_next = nullptr;
@@ -1375,6 +1376,12 @@ static zx_status_t x86_perfmon_map_buffers_locked(PerfmonState* state) {
     const size_t size = data->buffer_size;
     const uint arch_mmu_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
     const char* name = "ipm-buffer";
+    PinnedVmObject buf_pin;
+    status = PinnedVmObject::Create(data->buffer_vmo, vmo_offset, size, true, &buf_pin);
+    if (status != ZX_OK) {
+      TRACEF("error %d pinning buffer: cpu %u, size 0x%zx\n", status, cpu, size);
+      break;
+    }
     status = VmAspace::kernel_aspace()->RootVmar()->CreateVmMapping(
         0 /* ignored */, size, 0 /* align pow2 */, 0 /* vmar flags */, data->buffer_vmo, vmo_offset,
         arch_mmu_flags, name, &data->buffer_mapping);
@@ -1395,6 +1402,7 @@ static zx_status_t x86_perfmon_map_buffers_locked(PerfmonState* state) {
     data->buffer_start =
         reinterpret_cast<perfmon::BufferHeader*>(data->buffer_mapping->base() + vmo_offset);
     data->buffer_end = reinterpret_cast<char*>(data->buffer_start) + size;
+    data->pinned_buffer = ktl::move(buf_pin);
     LTRACEF("buffer mapped: cpu %u, start %p, end %p\n", cpu, data->buffer_start, data->buffer_end);
 
     auto hdr = data->buffer_start;

@@ -4,6 +4,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <zircon/errors.h>
+#include <zircon/types.h>
+
 #include <arch/arch_perfmon.h>
 #include <fbl/ref_ptr.h>
 #include <kernel/align.h>
@@ -11,12 +14,11 @@
 #include <kernel/mp.h>
 #include <kernel/mutex.h>
 #include <ktl/atomic.h>
+#include <vm/pinned_vm_object.h>
 #include <vm/vm.h>
 #include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
-#include <zircon/errors.h>
-#include <zircon/types.h>
 
 using PmuEventId = perfmon::EventId;
 
@@ -32,6 +34,7 @@ struct PerfmonCpuData {
   // The trace buffer when mapped into kernel space.
   // This is only done while the trace is running.
   fbl::RefPtr<VmMapping> buffer_mapping;
+  PinnedVmObject pinned_buffer;
   perfmon::BufferHeader* buffer_start = 0;
   void* buffer_end = 0;
 
