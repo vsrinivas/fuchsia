@@ -93,9 +93,13 @@ impl Agent {
             fx_log_err!("Could not set up VolumeChangeHandler: {:?}", e);
         }
 
-        if BluetoothHandler::create(self.publisher.clone(), common_earcons_params.clone())
-            .await
-            .is_err()
+        if BluetoothHandler::create(
+            self.publisher.clone(),
+            common_earcons_params.clone(),
+            self.messenger.clone(),
+        )
+        .await
+        .is_err()
         {
             // For now, report back as an error to prevent issues on
             // platforms that don't support the handler's dependencies.
