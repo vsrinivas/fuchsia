@@ -2177,10 +2177,6 @@ impl BinderDriver {
                     SerializedBinderObject::File { fd: new_fd, flags, cookie }
                 }
                 SerializedBinderObject::Buffer { buffer, length, flags, parent, parent_offset } => {
-                    if !buffer.is_aligned(std::mem::size_of::<binder_uintptr_t>() as u64) {
-                        return error!(EINVAL)?;
-                    }
-
                     // Copy the memory pointed to by this buffer object into the receiver.
                     if length > sg_remaining_buffer.length {
                         return error!(EINVAL)?;
