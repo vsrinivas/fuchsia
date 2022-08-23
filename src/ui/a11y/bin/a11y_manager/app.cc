@@ -67,7 +67,7 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
   fuchsia::ui::focus::FocusChainListenerRegistryPtr focus_chain_listener_registry =
       context->svc()->Connect<fuchsia::ui::focus::FocusChainListenerRegistry>();
   focus_chain_listener_registry.set_error_handler([](zx_status_t status) {
-    FX_LOGS(ERROR) << "Error from fuchsia::ui::focus::FocusChainListenerRegistry"
+    FX_LOGS(ERROR) << "Error from fuchsia::ui::focus::FocusChainListenerRegistry: "
                    << zx_status_get_string(status);
   });
   auto focus_chain_listener_handle =
@@ -77,14 +77,15 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
   // Connect to setui.
   setui_settings_ = context->svc()->Connect<fuchsia::settings::Accessibility>();
   setui_settings_.set_error_handler([](zx_status_t status) {
-    FX_LOGS(ERROR) << "Error from fuchsia::settings::Accessibility" << zx_status_get_string(status);
+    FX_LOGS(ERROR) << "Error from fuchsia::settings::Accessibility: "
+                   << zx_status_get_string(status);
   });
 
   // Connects to property provider to retrieve the current locale. Also adds a handler for the event
   // to process when the locale changes.
   property_provider_ = context->svc()->Connect<fuchsia::intl::PropertyProvider>();
   property_provider_.set_error_handler([this](zx_status_t status) {
-    FX_LOGS(INFO) << "Error from fuchsia::intl::PropertyProvider" << zx_status_get_string(status);
+    FX_LOGS(INFO) << "Error from fuchsia::intl::PropertyProvider: " << zx_status_get_string(status);
     if (status == ZX_ERR_PEER_CLOSED) {
       FX_LOGS(INFO) << "Using the default locale: en-US";
       inspect_property_intl_property_provider_disconnected_.Set(true);
@@ -186,7 +187,7 @@ void App::UpdateGestureManagerState() {
       pointer_event_registry_ =
           context_->svc()->Connect<fuchsia::ui::input::accessibility::PointerEventRegistry>();
       pointer_event_registry_.set_error_handler([](zx_status_t status) {
-        FX_LOGS(ERROR) << "Error from fuchsia::ui::input::accessibility::PointerEventRegistry"
+        FX_LOGS(ERROR) << "Error from fuchsia::ui::input::accessibility::PointerEventRegistry: "
                        << zx_status_get_string(status);
       });
     }
