@@ -49,14 +49,14 @@ pub enum ClientError {
     MissingTimer(dhcpv6_core::client::ClientTimerType),
     #[error("a timer is already scheduled for {:?}", _0)]
     TimerAlreadyExist(dhcpv6_core::client::ClientTimerType),
-    #[error("fidl error: {}", _0)]
-    Fidl(fidl::Error),
+    #[error("fidl error")]
+    Fidl(#[source] fidl::Error),
     #[error("got watch request while the previous one is pending")]
     DoubleWatch,
     #[error("unsupported DHCPv6 configuration")]
     UnsupportedConfigs,
-    #[error("socket receive error: {:?}", _0)]
-    SocketRecv(std::io::Error),
+    #[error("socket receive error")]
+    SocketRecv(#[source] std::io::Error),
     #[error("unimplemented DHCPv6 functionality: {:?}()", _0)]
     Unimplemented(String),
 }
@@ -451,8 +451,11 @@ impl<S: for<'a> AsyncSocket<'a>> Client<S> {
                     Ok(request) => {
                         request.map(|request| self.handle_client_request(request)).transpose()
                     }
+                    Err(e) if e.is_closed() => {
+                        Ok(None)
+                    }
                     Err(e) => {
-                        Ok(Some(warn!("FIDL client request error: {}", e)))
+                        Err(ClientError::Fidl(e))
                     }
                 }
             }
