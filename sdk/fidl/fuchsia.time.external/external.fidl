@@ -1,16 +1,18 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+//
 /// Defines the protocols used to sample UTC time using time synchronization
-/// protocols such as NTP.
+/// protocols such as NTP or Roughtime.
 ///
 /// New time protocols may be added to the system by implementing the server
-/// side of one or more of these protocols. The core timekeeper system acts as
+/// side of one or more of these protocols. The Timekeeper component acts as
 /// the client and uses produced samples to update the system time.
 ///
-/// Implementing PushSource is preferred, as it allows the server to decide when
-/// to produce samples. The server has knowledge of the particular protocol it
-/// understands and is therefore better informed when to produce a timesample.
+/// Implementing PushSource lets the server decide when to produce samples and
+/// implies that the time source will stay running between samples. Implementing
+/// PullSource places Timekeeper in control of when to produce samples and lets
+/// the time source be stopped between samples.
 ///
 /// UTC time is distributed by the system. Clients that need to obtain UTC time
 /// should use the standard libraries provided by their runtime.
@@ -33,37 +35,48 @@ protocol PullSource {
     compose TimeSource;
     /// Produce a new time sample.
     ///
-    /// Returns a RATE_LIMITED error if the client should wait before requesting
-    /// another sample. For example, this can occur if a server requests that the
-    /// source make less frequent requests. In this case, the client should call
-    /// `NextSampleTime` to retrieve the next time it may request a sample.
-    Sample() -> (struct {
+    /// The server may consider the supplied urgency and will potentially
+    /// produce a sample more quickly but with lower accuracy when a request
+    /// is marked urgent.
+    ///
+    /// The server will return an error for permanent errors but will block
+    /// on conditions that are not known to be permanent (e.g. network not
+    /// connected).
+    ///
+    /// The server will return a RATE_LIMITED error if the client should wait
+    /// before requesting another sample. In this case the client may call
+    /// `NextPossibleSampleTime` to determine when the time source will be
+    /// willing to produce another sample.
+    Sample(struct {
+        urgency Urgency;
+    }) -> (struct {
         sample TimeSample;
     }) error Error;
 
     /// Returns the monotonic time at which the PullSource is willing to produce
-    /// another sample. If the PullSource is not rate limited it may return the
-    /// current monotonic time or earlier.
+    /// another sample. If the PullSource is not rate limited it will return a
+    /// time less than or equal to current monotonic time.
     NextPossibleSampleTime() -> (struct {
         next_possible_time zx.time;
     });
 };
 
 /// A protocol for time sources that produce time samples on a schedule that it
-/// dictates. A PushSource does not report errors to clients as it is responsible
-/// for handling them internally. Instead, a PushSource reports a general health
-/// indication through the `WatchHealth` method to reflect whether or not it
-/// expects to successfully produce time samples.
+/// dictates. A PushSource does not report errors to clients as it is
+/// responsible for handling them internally. Instead, a PushSource reports a
+/// general health indication through the `WatchHealth` method to reflect
+/// whether or not it expects to successfully produce time samples.
 @discoverable
 protocol PushSource {
     compose TimeSource;
-    /// Watch for new time samples from the time source. This method is a hanging
-    /// get and returns the latest time sample if one is available and has not
-    /// already been returned to the client. If no such sample is available, the
-    /// method will hang until one is produced and return it then.
+    /// Watch for new time samples from the time source. This method is a
+    /// hanging get and returns the latest time sample if one is available and
+    /// has not already been returned to the client. If no such sample is
+    /// available, the method will hang until one is produced and return it
+    /// then.
     ///
     /// Note that it is entirely at the discretion of the PushSource
-    /// implementation when to produce a sample and a call to WatchSample does
+    /// implementation when to produce a sample; a call to WatchSample does
     /// not necessarily trigger sample collection.
     ///
     /// In the case a client sends a second WatchSample request while another
@@ -91,33 +104,52 @@ protocol PushSource {
 type TimeSample = table {
     /// The UTC time sample. Must always be provided.
     1: utc zx.time;
-    /// The monotonic time at which the sample was most valid. Must always be provided.
+    /// The monotonic time at which the sample was most valid. Must always be
+    /// provided.
     2: monotonic zx.time;
-    /// The standard deviation representing the error distribution of the UTC measurement.
-    /// Must always be provided.
+    /// The standard deviation representing the error distribution of the UTC
+    /// measurement. Must always be provided.
     3: standard_deviation zx.duration;
 };
 
-/// Enum of states a PullSource may be in.
+/// Enum of urgencies used when requesting a sample from a PullSource. The time
+/// source may use this information to balance the need to produce a response
+/// quickly against the desire to produce an accurate sample.
+type Urgency = flexible enum {
+    /// The client is blocked until the requested sample is received. For
+    /// example, the sample may be required to start a clock for the first time.
+    HIGH = 1;
+    /// The client will receive a significant benefit from the requested sample.
+    /// For example, the sample may be required to set the error bound on a
+    /// clock that is running with unknown accuracy.
+    MEDIUM = 2;
+    /// The client can wait as long as needed to receive a high-quality sample.
+    /// For example, the sample may be required for a periodic update on a clock
+    /// that is already running within an acceptable error bound.
+    LOW = 3;
+};
+
+/// Enum of states a PushSource may be in.
 type Status = strict enum {
-    /// The time source is performing setup steps or waiting for dependencies such
-    /// as network to become available.
+    /// The time source is performing setup steps or waiting for dependencies
+    /// such as network to become available.
     INITIALIZING = 0;
     /// The time source is healthy and expects to produce time samples.
     OK = 1;
     /// The time source does not expect to produce time samples for reasons that
     /// cannot be classified as one of the more specific statuses.
     UNKNOWN_UNHEALTHY = 2;
-    /// The time source is unable to produce time samples due to network availability
-    /// issues.
+    /// The time source is unable to produce time samples due to network
+    /// availability issues.
     NETWORK = 3;
-    /// The time source is unable to produce time samples due to hardware issues.
+    /// The time source is unable to produce time samples due to hardware
+    /// issues.
     HARDWARE = 4;
-    /// The time source is unable to produce time samples due to errors specific to
-    /// the implemented time protocol.
+    /// The time source is unable to produce time samples due to errors specific
+    /// to the implemented time protocol.
     PROTOCOL = 5;
-    /// The time source is unable to produce time samples due to local resource errors
-    /// such as IO, FIDL, or memory allocation.
+    /// The time source is unable to produce time samples due to local resource
+    /// errors such as IO, FIDL, or memory allocation.
     RESOURCE = 6;
 };
 
@@ -136,8 +168,8 @@ type Error = strict enum {
     NETWORK = 4;
     /// Some hardware that the time source depends on failed.
     HARDWARE = 5;
-    /// A retriable error specific to the implemented time protocol occurred, such
-    /// as a malformed response from a remote server.
+    /// A retriable error specific to the implemented time protocol occurred,
+    /// such as a malformed response from a remote server.
     PROTOCOL = 6;
     /// Sampling failed in a nonretriable way. Examples include failed
     /// authentication, or a missing configuration.
