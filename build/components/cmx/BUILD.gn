@@ -162,6 +162,7 @@ group("cmx_allowlist") {
     "//src/security/fcrypto/test:hmac-fuzzer_component_manifest_compile",
     "//src/storage/fuchsia-fatfs:fat-fuzzer_component_manifest_compile",
     "//src/storage/fuzzers:ftl-workload-fuzzer_component_manifest_compile",
+    "//src/storage/fxfs:fuzz_lsm_tree_actions_component_manifest_compile",
     "//src/storage/lib/paver/test:paver-validation-fuzzer_component_manifest_compile",
     "//src/storage/minfs/test:minfs-fuzzer_component_manifest_compile",
     "//src/sys/appmgr:appmgr_unittests_component_manifest_compile",

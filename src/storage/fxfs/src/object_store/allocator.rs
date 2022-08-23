@@ -742,7 +742,7 @@ impl Allocator for SimpleAllocator {
         );
         let mutation =
             AllocatorMutation::Allocate { device_range: result.clone(), owner_object_id };
-        self.reserved_allocations.insert(item).await;
+        self.reserved_allocations.insert(item).await.expect("Allocated over an in-use range.");
         assert!(transaction.add(self.object_id(), Mutation::Allocator(mutation)).is_none());
 
         Ok(result)
@@ -775,7 +775,7 @@ impl Allocator for SimpleAllocator {
             AllocatorValue::Abs { count: 1, owner_object_id },
         );
         let mutation = AllocatorMutation::Allocate { device_range, owner_object_id };
-        self.reserved_allocations.insert(item).await;
+        self.reserved_allocations.insert(item).await.expect("Allocated over an in-use range.");
         transaction.add(self.object_id(), Mutation::Allocator(mutation));
         Ok(())
     }
@@ -1024,7 +1024,10 @@ impl JournalingObject for SimpleAllocator {
                     let mut item = item.clone();
                     // Note that the point of this reservation is to avoid premature reuse.
                     item.value = AllocatorValue::Abs { count: 1, owner_object_id };
-                    self.reserved_allocations.insert(item).await;
+                    self.reserved_allocations
+                        .insert(item)
+                        .await
+                        .expect("Allocated over an in-use range.");
                 }
 
                 {
@@ -1332,8 +1335,8 @@ mod tests {
                 AllocatorValue::Abs { count: 1, owner_object_id: 99 },
             ),
         ];
-        skip_list.insert(items[1].clone()).await;
-        skip_list.insert(items[0].clone()).await;
+        skip_list.insert(items[1].clone()).await.expect("insert error");
+        skip_list.insert(items[0].clone()).await.expect("insert error");
         let mut iter =
             CoalescingIterator::new(skip_list.seek(Bound::Unbounded).await.expect("seek failed"))
                 .await
@@ -1358,14 +1361,16 @@ mod tests {
                 AllocatorKey { device_range: 100..200 },
                 AllocatorValue::Abs { count: 1, owner_object_id: 99 },
             ))
-            .await;
+            .await
+            .expect("insert error");
         lsm_tree.seal().await;
         lsm_tree
             .insert(Item::new(
                 AllocatorKey { device_range: 0..100 },
                 AllocatorValue::Abs { count: 1, owner_object_id: 99 },
             ))
-            .await;
+            .await
+            .expect("insert error");
 
         let layer_set = lsm_tree.layer_set();
         let mut merger = layer_set.merger();
@@ -1394,14 +1399,16 @@ mod tests {
                 AllocatorKey { device_range: 100..200 },
                 AllocatorValue::Abs { count: 1, owner_object_id: 99 },
             ))
-            .await;
+            .await
+            .expect("insert error");
         lsm_tree.seal().await;
         lsm_tree
             .insert(Item::new(
                 AllocatorKey { device_range: 0..100 },
                 AllocatorValue::Abs { count: 1, owner_object_id: 98 },
             ))
-            .await;
+            .await
+            .expect("insert error");
 
         let layer_set = lsm_tree.layer_set();
         let mut merger = layer_set.merger();

@@ -206,8 +206,9 @@ impl<'tree, K: MergeableKey, V: Value> LSMTree<K, V> {
         LayerSet { layers, merge_fn: self.merge_fn }
     }
 
-    /// Inserts an item into the mutable layer. Behaviour is undefined if the item already exists.
-    pub async fn insert(&self, item: Item<K, V>) {
+    /// Inserts an item into the mutable layer.
+    /// Returns error if item already exists.
+    pub async fn insert(&self, item: Item<K, V>) -> Result<(), Error> {
         let (_event, mutable_layer) = {
             let data = self.data.read().unwrap();
             if let Some(mutation_callback) = data.mutation_callback.as_ref() {
@@ -215,7 +216,7 @@ impl<'tree, K: MergeableKey, V: Value> LSMTree<K, V> {
             }
             data.mutable_layer.clone()
         };
-        mutable_layer.insert(item).await;
+        mutable_layer.insert(item).await
     }
 
     /// Replaces or inserts an item into the mutable layer.
@@ -395,8 +396,8 @@ mod tests {
     async fn test_iteration() {
         let tree = LSMTree::new(emit_left_merge_fn);
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
-        tree.insert(items[0].clone()).await;
-        tree.insert(items[1].clone()).await;
+        tree.insert(items[0].clone()).await.expect("insert error");
+        tree.insert(items[1].clone()).await.expect("insert error");
         let layers = tree.layer_set();
         let mut merger = layers.merger();
         let mut iter = merger.seek(Bound::Unbounded).await.expect("seek failed");
@@ -418,11 +419,11 @@ mod tests {
             Item::new(TestKey(3..3), 3),
             Item::new(TestKey(4..4), 4),
         ];
-        tree.insert(items[0].clone()).await;
-        tree.insert(items[1].clone()).await;
+        tree.insert(items[0].clone()).await.expect("insert error");
+        tree.insert(items[1].clone()).await.expect("insert error");
         tree.seal().await;
-        tree.insert(items[2].clone()).await;
-        tree.insert(items[3].clone()).await;
+        tree.insert(items[2].clone()).await.expect("insert error");
+        tree.insert(items[3].clone()).await.expect("insert error");
         tree.seal().await;
         let object = Arc::new(FakeObject::new());
         let handle = FakeObjectHandle::new(object.clone());
@@ -453,11 +454,11 @@ mod tests {
             Item::new(TestKey(4..4), 4),
         ];
         let tree = LSMTree::new(emit_left_merge_fn);
-        tree.insert(items[0].clone()).await;
-        tree.insert(items[1].clone()).await;
+        tree.insert(items[0].clone()).await.expect("insert error");
+        tree.insert(items[1].clone()).await.expect("insert error");
         tree.seal().await;
-        tree.insert(items[2].clone()).await;
-        tree.insert(items[3].clone()).await;
+        tree.insert(items[2].clone()).await.expect("insert error");
+        tree.insert(items[3].clone()).await.expect("insert error");
 
         let item = tree.find(&items[1].key).await.expect("find failed").expect("not found");
         assert_eq!(item, items[1]);
@@ -469,7 +470,7 @@ mod tests {
         let tree = LSMTree::new(emit_left_merge_fn);
         tree.seal().await;
         let item = Item::new(TestKey(1..1), 1);
-        tree.insert(item.clone()).await;
+        tree.insert(item.clone()).await.expect("insert error");
         let object = Arc::new(FakeObject::new());
         let handle = FakeObjectHandle::new(object.clone());
         tree.compact(&handle).await.expect("compact failed");
@@ -490,10 +491,10 @@ mod tests {
             Item::new(TestKey(4..4), 4),
         ];
         let tree = LSMTree::new(emit_left_merge_fn);
-        tree.insert(items[0].clone()).await;
-        tree.insert(items[1].clone()).await;
-        tree.insert(items[2].clone()).await;
-        tree.insert(items[3].clone()).await;
+        tree.insert(items[0].clone()).await.expect("insert error");
+        tree.insert(items[1].clone()).await.expect("insert error");
+        tree.insert(items[2].clone()).await.expect("insert error");
+        tree.insert(items[3].clone()).await.expect("insert error");
 
         let layers = tree.layer_set();
         let mut merger = layers.merger();
@@ -524,13 +525,13 @@ mod tests {
         ];
         let a = LSMTree::new(emit_left_merge_fn);
         for item in &items {
-            a.insert(item.clone()).await;
+            a.insert(item.clone()).await.expect("insert error");
         }
         let b = LSMTree::new(emit_left_merge_fn);
         let mut shuffled = items.clone();
         shuffled.shuffle(&mut thread_rng());
         for item in &shuffled {
-            b.insert(item.clone()).await;
+            b.insert(item.clone()).await.expect("insert error");
         }
         let layers = a.layer_set();
         let mut merger = layers.merger();
@@ -547,5 +548,90 @@ mod tests {
         }
         assert!(iter_a.get().is_none());
         assert!(iter_b.get().is_none());
+    }
+}
+
+#[cfg(fuzz)]
+mod fuzz {
+    use {
+        super::LSMTree,
+        crate::{
+            lsm_tree::{
+                merge::{MergeLayerIterator, MergeResult},
+                types::{Item, NextKey, OrdLowerBound, OrdUpperBound},
+            },
+            serialized_types::{
+                versioned_type, Version, Versioned, VersionedLatest, LATEST_VERSION,
+            },
+        },
+        arbitrary::{Arbitrary, Unstructured},
+        futures::executor::block_on,
+        fuzz::fuzz,
+    };
+
+    #[derive(
+        Arbitrary, Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize, Versioned,
+    )]
+    struct TestKey(std::ops::Range<u64>);
+
+    versioned_type! { 1.. => TestKey }
+
+    impl Versioned for u64 {}
+    versioned_type! { 1.. => u64 }
+
+    impl NextKey for TestKey {}
+
+    impl OrdUpperBound for TestKey {
+        fn cmp_upper_bound(&self, other: &TestKey) -> std::cmp::Ordering {
+            self.0.end.cmp(&other.0.end)
+        }
+    }
+
+    impl OrdLowerBound for TestKey {
+        fn cmp_lower_bound(&self, other: &Self) -> std::cmp::Ordering {
+            self.0.start.cmp(&other.0.start)
+        }
+    }
+
+    fn emit_left_merge_fn(
+        _left: &MergeLayerIterator<'_, TestKey, u64>,
+        _right: &MergeLayerIterator<'_, TestKey, u64>,
+    ) -> MergeResult<TestKey, u64> {
+        MergeResult::EmitLeft
+    }
+
+    impl Arbitrary<'_> for crate::lsm_tree::types::Item<TestKey, u64> {
+        fn arbitrary(u: &mut Unstructured<'_>) -> arbitrary::Result<Self> {
+            Ok(Item::new(TestKey(u.arbitrary()?), u.arbitrary()?))
+        }
+    }
+
+    #[derive(Arbitrary)]
+    enum FuzzAction {
+        Insert(Item<TestKey, u64>),
+        ReplaceOrInsert(Item<TestKey, u64>),
+        MergeInto(Item<TestKey, u64>, TestKey),
+        Find(TestKey),
+        Seal,
+    }
+
+    #[fuzz]
+    fn fuzz_lsm_tree_actions(actions: Vec<FuzzAction>) {
+        let tree = LSMTree::new(emit_left_merge_fn);
+        for action in actions {
+            match action {
+                FuzzAction::Insert(item) => {
+                    let _ = block_on(tree.insert(item));
+                }
+                FuzzAction::ReplaceOrInsert(item) => {
+                    block_on(tree.replace_or_insert(item));
+                }
+                FuzzAction::Find(key) => {
+                    block_on(tree.find(&key)).expect("find failed");
+                }
+                FuzzAction::MergeInto(item, bound) => block_on(tree.merge_into(item, &bound)),
+                FuzzAction::Seal => block_on(tree.seal()),
+            };
+        }
     }
 }

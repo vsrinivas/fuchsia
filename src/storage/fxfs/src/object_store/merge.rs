@@ -247,11 +247,11 @@ mod tests {
         expected: &[Item<K, V>],
     ) {
         for item in layer1 {
-            tree.insert(item.clone()).await;
+            tree.insert(item.clone()).await.expect("insert error");
         }
         tree.seal().await;
         for item in layer0 {
-            tree.insert(item.clone()).await;
+            tree.insert(item.clone()).await.expect("insert error");
         }
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
@@ -273,14 +273,16 @@ mod tests {
             ObjectKey::extent(object_id, attr_id, 0..512),
             ObjectValue::Extent(ExtentValue::new(0)),
         ))
-        .await;
+        .await
+        .expect("insert error");
         tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 512..1024),
             ObjectValue::Extent(ExtentValue::new(16384)),
         ))
-        .await;
+        .await
+        .expect("insert error");
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
@@ -303,14 +305,16 @@ mod tests {
             ObjectKey::extent(object_id, attr_id, 0..1024),
             ObjectValue::Extent(ExtentValue::new(0)),
         ))
-        .await;
+        .await
+        .expect("insert error");
         tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 512..1024),
             ObjectValue::Extent(ExtentValue::new(16384)),
         ))
-        .await;
+        .await
+        .expect("insert error");
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
@@ -335,14 +339,16 @@ mod tests {
             ObjectKey::extent(object_id, attr_id, 0..1024),
             ObjectValue::Extent(ExtentValue::with_checksum(0, Checksums::Fletcher(vec![1, 2]))),
         ))
-        .await;
+        .await
+        .expect("insert error");
         tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 0..512),
             ObjectValue::Extent(ExtentValue::with_checksum(16384, Checksums::Fletcher(vec![3]))),
         ))
-        .await;
+        .await
+        .expect("insert error");
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
@@ -376,14 +382,16 @@ mod tests {
                 Checksums::Fletcher(vec![1, 2, 3, 4]),
             )),
         ))
-        .await;
+        .await
+        .expect("insert error");
         tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 1024..1536),
             ObjectValue::Extent(ExtentValue::with_checksum(16384, Checksums::Fletcher(vec![5]))),
         ))
-        .await;
+        .await
+        .expect("insert error");
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
@@ -420,14 +428,16 @@ mod tests {
             ObjectKey::extent(object_id, attr_id, 1024..1536),
             ObjectValue::Extent(ExtentValue::new(0)),
         ))
-        .await;
+        .await
+        .expect("insert error");
         tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 0..2048),
             ObjectValue::Extent(ExtentValue::new(16384)),
         ))
-        .await;
+        .await
+        .expect("insert error");
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
@@ -449,14 +459,16 @@ mod tests {
             ObjectKey::extent(object_id, attr_id, 0..1024),
             ObjectValue::Extent(ExtentValue::new(0)),
         ))
-        .await;
+        .await
+        .expect("insert error");
         tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 0..512),
             ObjectValue::deleted_extent(),
         ))
-        .await;
+        .await
+        .expect("insert error");
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
@@ -481,14 +493,16 @@ mod tests {
             ObjectKey::extent(object_id, attr_id, 0..1024),
             ObjectValue::Extent(ExtentValue::new(0)),
         ))
-        .await;
+        .await
+        .expect("insert error");
         tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 512..1024),
             ObjectValue::deleted_extent(),
         ))
-        .await;
+        .await
+        .expect("insert error");
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
@@ -513,14 +527,16 @@ mod tests {
             ObjectKey::extent(object_id, attr_id, 0..2048),
             ObjectValue::Extent(ExtentValue::new(0)),
         ))
-        .await;
+        .await
+        .expect("insert error");
         tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 1024..1536),
             ObjectValue::deleted_extent(),
         ))
-        .await;
+        .await
+        .expect("insert error");
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
@@ -548,14 +564,16 @@ mod tests {
             ObjectKey::extent(object_id, attr_id, 1024..1536),
             ObjectValue::Extent(ExtentValue::new(0)),
         ))
-        .await;
+        .await
+        .expect("insert error");
         tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 0..2048),
             ObjectValue::deleted_extent(),
         ))
-        .await;
+        .await
+        .expect("insert error");
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
@@ -580,19 +598,22 @@ mod tests {
             ObjectKey::extent(object_id, attr_id, 0..512),
             ObjectValue::deleted_extent(),
         ))
-        .await;
+        .await
+        .expect("insert error");
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 1024..1536),
             ObjectValue::deleted_extent(),
         ))
-        .await;
+        .await
+        .expect("insert error");
         tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 512..1024),
             ObjectValue::deleted_extent(),
         ))
-        .await;
+        .await
+        .expect("insert error");
         tree.seal().await;
 
         let layer_set = tree.layer_set();
@@ -618,19 +639,22 @@ mod tests {
             ObjectKey::extent(object_id, attr_id, 512..1024),
             ObjectValue::deleted_extent(),
         ))
-        .await;
+        .await
+        .expect("insert error");
         tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 0..512),
             ObjectValue::deleted_extent(),
         ))
-        .await;
+        .await
+        .expect("insert error");
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 1024..1536),
             ObjectValue::deleted_extent(),
         ))
-        .await;
+        .await
+        .expect("insert error");
         tree.seal().await;
 
         let layer_set = tree.layer_set();
@@ -653,14 +677,16 @@ mod tests {
             ObjectKey::extent(object_id, attr_id, 0..1024),
             ObjectValue::deleted_extent(),
         ))
-        .await;
+        .await
+        .expect("insert error");
         tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 512..1536),
             ObjectValue::deleted_extent(),
         ))
-        .await;
+        .await
+        .expect("insert error");
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
@@ -682,13 +708,15 @@ mod tests {
             ObjectKey::extent(object_id, attr_id, 512..1536),
             ObjectValue::deleted_extent(),
         ))
-        .await;
+        .await
+        .expect("insert error");
         tree.seal().await;
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 0..1024),
             ObjectValue::deleted_extent(),
         ))
-        .await;
+        .await
+        .expect("insert error");
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
@@ -713,14 +741,16 @@ mod tests {
             ObjectKey::extent(object_id, attr_id, 0..1536),
             ObjectValue::deleted_extent(),
         ))
-        .await;
+        .await
+        .expect("insert error");
         tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 512..1024),
             ObjectValue::deleted_extent(),
         ))
-        .await;
+        .await
+        .expect("insert error");
         tree.seal().await;
 
         let layer_set = tree.layer_set();
@@ -746,14 +776,16 @@ mod tests {
             ObjectKey::extent(object_id, attr_id, 512..1024),
             ObjectValue::deleted_extent(),
         ))
-        .await;
+        .await
+        .expect("insert error");
         tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 0..1536),
             ObjectValue::deleted_extent(),
         ))
-        .await;
+        .await
+        .expect("insert error");
         tree.seal().await;
 
         let layer_set = tree.layer_set();
@@ -781,21 +813,24 @@ mod tests {
             ObjectKey::extent(object_id, attr_id, 512..1024),
             ObjectValue::deleted_extent(),
         ))
-        .await;
+        .await
+        .expect("insert error");
         tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 0..1024),
             ObjectValue::Extent(ExtentValue::new(0)),
         ))
-        .await;
+        .await
+        .expect("insert error");
         tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 0..512),
             ObjectValue::deleted_extent(),
         ))
-        .await;
+        .await
+        .expect("insert error");
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
@@ -824,19 +859,22 @@ mod tests {
             ObjectKey::extent(object_id, attr_id, 1024..1536),
             ObjectValue::Extent(ExtentValue::new(0)),
         ))
-        .await;
+        .await
+        .expect("insert error");
         tree.seal().await;
 
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 0..512),
             ObjectValue::deleted_extent(),
         ))
-        .await;
+        .await
+        .expect("insert error");
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 512..1536),
             ObjectValue::Extent(ExtentValue::new(0)),
         ))
-        .await;
+        .await
+        .expect("insert error");
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
@@ -861,12 +899,14 @@ mod tests {
             ObjectKey::extent(object_id, attr_id, 0..1024),
             ObjectValue::Extent(ExtentValue::new(0)),
         ))
-        .await;
+        .await
+        .expect("insert error");
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 1024..2048),
             ObjectValue::Extent(ExtentValue::new(16384)),
         ))
-        .await;
+        .await
+        .expect("insert error");
         let key = ObjectKey::extent(object_id, attr_id, 512..1536);
         tree.merge_into(
             Item::new(key.clone(), ObjectValue::deleted_extent()),
@@ -900,12 +940,14 @@ mod tests {
             ObjectKey::extent(object_id, attr_id, 0..1024),
             ObjectValue::deleted_extent(),
         ))
-        .await;
+        .await
+        .expect("insert error");
         tree.insert(Item::new(
             ObjectKey::extent(object_id, attr_id, 1024..2048),
             ObjectValue::deleted_extent(),
         ))
-        .await;
+        .await
+        .expect("insert error");
 
         let key = ObjectKey::extent(object_id, attr_id, 512..1536);
         tree.merge_into(
@@ -991,26 +1033,30 @@ mod tests {
             value: ObjectValue::Extent(ExtentValue::new(0u64)),
             sequence: 1u64,
         })
-        .await;
+        .await
+        .expect("insert error");
         tree.seal().await;
         tree.insert(Item {
             key: ObjectKey::extent(object_id, attr_id, 0..512),
             value: ObjectValue::deleted_extent(),
             sequence: 2u64,
         })
-        .await;
+        .await
+        .expect("insert error");
         tree.insert(Item {
             key: ObjectKey::extent(object_id, attr_id, 1536..2048),
             value: ObjectValue::Extent(ExtentValue::new(1536)),
             sequence: 3u64,
         })
-        .await;
+        .await
+        .expect("insert error");
         tree.insert(Item {
             key: ObjectKey::extent(object_id, attr_id, 768..1024),
             value: ObjectValue::Extent(ExtentValue::new(12345)),
             sequence: 4u64,
         })
-        .await;
+        .await
+        .expect("insert error");
 
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();

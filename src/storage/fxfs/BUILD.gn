@@ -5,7 +5,9 @@
 import("//build/components.gni")
 import("//build/components/fuchsia_unittest_component.gni")
 import("//build/fidl/fidl.gni")
+import("//build/fuzzing/fuzzer.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_fuzzer.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_macro.gni")
 import("//src/storage/fs_test/suite.gni")
@@ -331,10 +333,43 @@ group("tests") {
   testonly = true
   deps = [
     ":fxfs-fs-tests",
+    ":fxfs-fuzzers",
     ":fxfs-slow-fs-tests",
     ":fxfs-tests",
     ":fxfs_component",
     ":lib_test($host_toolchain)",
     "//src/storage/fxfs/tools:tests",
   ]
+}
+
+#################
+## Fuzzers
+#################
+
+rustc_fuzzer("fuzz_lsm_tree_actions") {
+  edition = "2021"
+  deps = fxfs_deps + [
+           "//src/lib/fuzzing/rust:fuzz",
+           "//third_party/rust_crates:arbitrary",
+           "//third_party/rust_crates:futures",
+         ]
+  sources = fxfs_sources
+  rustfunction = "fuzz_lsm_tree_actions"
+  if (is_fuchsia) {
+    features = [ "tracing" ]
+  }
+  options = [
+    "rss_limit_mb=3072",
+    "timeout=60",
+  ]
+}
+
+fuzzers_package("fxfs-fuzzers") {
+  rust_fuzzers = [ ":fuzz_lsm_tree_actions" ]
+  fuzz_host = true
+}
+
+group("fuzzers") {
+  testonly = true
+  deps = [ ":fxfs-fuzzers" ]
 }

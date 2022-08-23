@@ -1431,9 +1431,11 @@ impl JournalingObject for ObjectStore {
                                 self.update_last_object_id(item.key.object_id);
                             }
                         }
-                        self.tree.insert(item).await;
+                        self.tree.insert(item).await.expect("Insert overwrote existing object.");
                     }
-                    Operation::ReplaceOrInsert => self.tree.replace_or_insert(item).await,
+                    Operation::ReplaceOrInsert => {
+                        self.tree.replace_or_insert(item).await;
+                    }
                     Operation::Merge => {
                         if item.is_tombstone() {
                             self.store_info.lock().unwrap().adjust_object_count(-1);

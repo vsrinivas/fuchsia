@@ -214,12 +214,13 @@ pub trait Layer<K, V>: Send + Sync {
 pub trait MutableLayer<K, V>: Layer<K, V> {
     fn as_layer(self: Arc<Self>) -> Arc<dyn Layer<K, V>>;
 
-    /// Inserts the given item into the layer. The item *must* not already exist.
-    async fn insert(&self, item: Item<K, V>);
-
     /// Merges the given item into the layer. `lower_bound` is the key to search for that should
     /// provide the first potential item to be merged with.
     async fn merge_into(&self, item: Item<K, V>, lower_bound: &K, merge_fn: merge::MergeFn<K, V>);
+
+    /// Inserts the given item into the layer.
+    /// Returns an error if item already exist.
+    async fn insert(&self, item: Item<K, V>) -> Result<(), Error>;
 
     /// Inserts or replaces an item.
     async fn replace_or_insert(&self, item: Item<K, V>);

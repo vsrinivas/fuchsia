@@ -186,9 +186,13 @@ mod tests {
         expected: &[(Range<u64>, AllocatorValue)],
     ) {
         let tree = LSMTree::new(merge);
-        tree.insert(Item::new(AllocatorKey { device_range: right.0 }, right.1)).await;
+        tree.insert(Item::new(AllocatorKey { device_range: right.0 }, right.1))
+            .await
+            .expect("insert error");
         tree.seal().await;
-        tree.insert(Item::new(AllocatorKey { device_range: left.0 }, left.1)).await;
+        tree.insert(Item::new(AllocatorKey { device_range: left.0 }, left.1))
+            .await
+            .expect("insert error");
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter =
@@ -388,7 +392,8 @@ mod tests {
             value: AllocatorValue::Abs { count: 1, owner_object_id: INVALID_OBJECT_ID },
             sequence: 1u64,
         })
-        .await;
+        .await
+        .expect("insert error");
         tree.seal().await;
         // |1|0|1-1|
         tree.insert(Item {
@@ -396,14 +401,16 @@ mod tests {
             value: AllocatorValue::None,
             sequence: 2u64,
         })
-        .await;
+        .await
+        .expect("insert error");
         // |1|0|1|2|
         tree.insert(Item {
             key: AllocatorKey { device_range: 75..100 },
             value: AllocatorValue::Abs { count: 2, owner_object_id: INVALID_OBJECT_ID },
             sequence: 3u64,
         })
-        .await;
+        .await
+        .expect("insert error");
         let layer_set = tree.layer_set();
         let mut merger = layer_set.merger();
         let mut iter =

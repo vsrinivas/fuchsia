@@ -17,7 +17,7 @@ use {
         },
         serialized_types::{Version, LATEST_VERSION},
     },
-    anyhow::Error,
+    anyhow::{bail, Error},
     async_trait::async_trait,
     async_utils::event::Event,
     futures::future::poll_fn,
@@ -247,18 +247,19 @@ impl<K: Eq + Key + OrdLowerBound, V: Value> MutableLayer<K, V> for SkipListLayer
     }
 
     // Inserts the given item.
-    async fn insert(&self, item: Item<K, V>) {
+    async fn insert(&self, item: Item<K, V>) -> Result<(), Error> {
         let mut iter = SkipListLayerIterMut::new(self, Bound::Included(&item.key)).await;
         if let Some(found_item) = iter.get() {
-            // TODO(fxbug.dev/96084): This assertion will eventually have to go since it would be
-            // possible to trip this when replaying a malformed journal.
-            assert_ne!(found_item.key, &item.key);
+            if found_item.key == &item.key {
+                bail!("Attempted to insert an existing key");
+            }
         }
         iter.insert(item);
         iter.commit_and_wait().await;
+        Ok(())
     }
 
-    // Replaces or inserts the given item.
+    /// Replaces or inserts the given item.
     async fn replace_or_insert(&self, item: Item<K, V>) {
         let mut iter = SkipListLayerIterMut::new(self, Bound::Included(&item.key)).await;
         if let Some(found_item) = iter.get() {
@@ -692,8 +693,8 @@ mod tests {
         // Insert two items and make sure we can iterate back in the correct order.
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1), 1), Item::new(TestKey(2), 2)];
-        skip_list.insert(items[1].clone()).await;
-        skip_list.insert(items[0].clone()).await;
+        skip_list.insert(items[1].clone()).await.expect("insert error");
+        skip_list.insert(items[0].clone()).await.expect("insert error");
         let mut iter = skip_list.seek(Bound::Unbounded).await.unwrap();
         let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[0].key, &items[0].value));
@@ -709,7 +710,7 @@ mod tests {
         // Seek for an exact match.
         let skip_list = SkipListLayer::new(100);
         for i in (0..100).rev() {
-            skip_list.insert(Item::new(TestKey(i), i)).await;
+            skip_list.insert(Item::new(TestKey(i), i)).await.expect("insert error");
         }
         let mut iter = skip_list.seek(Bound::Included(&TestKey(57))).await.unwrap();
         let ItemRef { key, value, .. } = iter.get().expect("missing item");
@@ -726,7 +727,7 @@ mod tests {
         // Seek for a non-exact match.
         let skip_list = SkipListLayer::new(100);
         for i in (0..100).rev() {
-            skip_list.insert(Item::new(TestKey(i * 3), i * 3)).await;
+            skip_list.insert(Item::new(TestKey(i * 3), i * 3)).await.expect("insert error");
         }
         let mut expected_index = 57 * 3;
         let mut iter = skip_list.seek(Bound::Included(&TestKey(expected_index - 1))).await.unwrap();
@@ -744,8 +745,8 @@ mod tests {
     async fn test_replace_or_insert_replaces() {
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1), 1), Item::new(TestKey(2), 2)];
-        skip_list.insert(items[1].clone()).await;
-        skip_list.insert(items[0].clone()).await;
+        skip_list.insert(items[1].clone()).await.expect("insert error");
+        skip_list.insert(items[0].clone()).await.expect("insert error");
         let replacement_value = 3;
         skip_list.replace_or_insert(Item::new(items[1].key.clone(), replacement_value)).await;
 
@@ -763,8 +764,8 @@ mod tests {
     async fn test_replace_or_insert_inserts() {
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1), 1), Item::new(TestKey(2), 2), Item::new(TestKey(3), 3)];
-        skip_list.insert(items[2].clone()).await;
-        skip_list.insert(items[0].clone()).await;
+        skip_list.insert(items[2].clone()).await.expect("insert error");
+        skip_list.insert(items[0].clone()).await.expect("insert error");
         skip_list.replace_or_insert(items[1].clone()).await;
 
         let mut iter = skip_list.seek(Bound::Unbounded).await.unwrap();
@@ -784,8 +785,8 @@ mod tests {
     async fn test_erase() {
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1), 1), Item::new(TestKey(2), 2)];
-        skip_list.insert(items[1].clone()).await;
-        skip_list.insert(items[0].clone()).await;
+        skip_list.insert(items[1].clone()).await.expect("insert error");
+        skip_list.insert(items[0].clone()).await.expect("insert error");
 
         assert_eq!(skip_list.len(), 2);
 
@@ -824,7 +825,7 @@ mod tests {
         let time = loop {
             let skip_list = SkipListLayer::new(n as usize);
             for i in 0..n {
-                skip_list.insert(Item::new(TestKey(i), i)).await;
+                skip_list.insert(Item::new(TestKey(i), i)).await.expect("insert error");
             }
             let start = Instant::now();
             for i in 0..n {
@@ -842,7 +843,7 @@ mod tests {
         n >>= loops / 2; // This should, in theory, result in 50% seek time.
         let skip_list = SkipListLayer::new(n as usize);
         for i in 0..n {
-            skip_list.insert(Item::new(TestKey(i), i)).await;
+            skip_list.insert(Item::new(TestKey(i), i)).await.expect("insert error");
         }
         let start = Instant::now();
         for i in 0..seek_count {
@@ -869,7 +870,7 @@ mod tests {
         let item_count = 1000;
         let skip_list = SkipListLayer::new(1000);
         for i in 1..item_count {
-            skip_list.insert(Item::new(TestKey(i), 1)).await;
+            skip_list.insert(Item::new(TestKey(i), 1)).await.expect("insert error");
         }
         let mut iter = skip_list.seek(Bound::Included(&TestKey(item_count - 10))).await.unwrap();
         for i in item_count - 10..item_count {
@@ -883,8 +884,8 @@ mod tests {
     async fn test_mutliple_readers_allowed() {
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1), 1), Item::new(TestKey(2), 2)];
-        skip_list.insert(items[1].clone()).await;
-        skip_list.insert(items[0].clone()).await;
+        skip_list.insert(items[1].clone()).await.expect("insert error");
+        skip_list.insert(items[0].clone()).await.expect("insert error");
 
         // Create the first iterator and check the first item.
         let mut iter = skip_list.seek(Bound::Unbounded).await.unwrap();
@@ -916,7 +917,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_merge_into() {
         let skip_list = SkipListLayer::new(100);
-        skip_list.insert(Item::new(TestKey(1), 1)).await;
+        skip_list.insert(Item::new(TestKey(1), 1)).await.expect("insert error");
 
         skip_list.merge_into(Item::new(TestKey(2), 2), &TestKey(1), merge).await;
 
@@ -949,7 +950,7 @@ mod tests {
     async fn test_erase_after_insert() {
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1), 1), Item::new(TestKey(2), 2)];
-        skip_list.insert(items[1].clone()).await;
+        skip_list.insert(items[1].clone()).await.expect("insert error");
         {
             let mut iter = SkipListLayerIterMut::new(&skip_list, std::ops::Bound::Unbounded).await;
             iter.insert(items[0].clone());
@@ -967,7 +968,7 @@ mod tests {
     async fn test_insert_after_erase() {
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1), 1), Item::new(TestKey(2), 2)];
-        skip_list.insert(items[1].clone()).await;
+        skip_list.insert(items[1].clone()).await.expect("insert error");
         {
             let mut iter = SkipListLayerIterMut::new(&skip_list, std::ops::Bound::Unbounded).await;
             iter.erase();
@@ -985,7 +986,7 @@ mod tests {
     async fn test_insert_erase_insert() {
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1), 1), Item::new(TestKey(2), 2), Item::new(TestKey(3), 3)];
-        skip_list.insert(items[0].clone()).await;
+        skip_list.insert(items[0].clone()).await.expect("insert error");
         {
             let mut iter = SkipListLayerIterMut::new(&skip_list, std::ops::Bound::Unbounded).await;
             iter.insert(items[1].clone());
@@ -1005,9 +1006,9 @@ mod tests {
     async fn test_two_erase_erases() {
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1), 1), Item::new(TestKey(2), 2), Item::new(TestKey(3), 3)];
-        skip_list.insert(items[0].clone()).await;
-        skip_list.insert(items[1].clone()).await;
-        skip_list.insert(items[2].clone()).await;
+        skip_list.insert(items[0].clone()).await.expect("insert error");
+        skip_list.insert(items[1].clone()).await.expect("insert error");
+        skip_list.insert(items[2].clone()).await.expect("insert error");
         {
             let mut iter = SkipListLayerIterMut::new(&skip_list, std::ops::Bound::Unbounded).await;
             iter.erase();
@@ -1025,7 +1026,7 @@ mod tests {
     async fn test_readers_not_blocked_by_writers() {
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1), 1), Item::new(TestKey(2), 2)];
-        skip_list.insert(items[1].clone()).await;
+        skip_list.insert(items[1].clone()).await.expect("insert error");
 
         let mut iter = skip_list.seek(Bound::Unbounded).await.unwrap();
         let ItemRef { key, value, .. } = iter.get().expect("missing item");
@@ -1035,7 +1036,7 @@ mod tests {
         let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[1].key, &items[1].value));
 
-        join!(skip_list.insert(items[0].clone()), async {
+        join!(async { skip_list.insert(items[0].clone()).await.expect("insert error") }, async {
             loop {
                 let iter = skip_list.seek(Bound::Unbounded).await.unwrap();
                 let ItemRef { key, .. } = iter.get().expect("missing item");
@@ -1061,7 +1062,10 @@ mod tests {
                     let skip_list_clone = skip_list.clone();
                     fasync::Task::spawn(async move {
                         for j in 0..10 {
-                            skip_list_clone.insert(Item::new(TestKey(i * 100 + j), i)).await;
+                            skip_list_clone
+                                .insert(Item::new(TestKey(i * 100 + j), i))
+                                .await
+                                .expect("insert error");
                         }
                     })
                 })
@@ -1090,8 +1094,8 @@ mod tests {
     async fn test_insert_advance_erase() {
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1), 1), Item::new(TestKey(2), 2), Item::new(TestKey(3), 3)];
-        skip_list.insert(items[1].clone()).await;
-        skip_list.insert(items[2].clone()).await;
+        skip_list.insert(items[1].clone()).await.expect("insert error");
+        skip_list.insert(items[2].clone()).await.expect("insert error");
 
         assert_eq!(skip_list.len(), 2);
 
@@ -1118,8 +1122,8 @@ mod tests {
     async fn test_seek_excluded() {
         let skip_list = SkipListLayer::new(100);
         let items = [Item::new(TestKey(1), 1), Item::new(TestKey(2), 2)];
-        skip_list.insert(items[0].clone()).await;
-        skip_list.insert(items[1].clone()).await;
+        skip_list.insert(items[0].clone()).await.expect("insert error");
+        skip_list.insert(items[1].clone()).await.expect("insert error");
         let iter = skip_list.seek(Bound::Excluded(&items[0].key)).await.expect("seek failed");
         let ItemRef { key, value, .. } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[1].key, &items[1].value));
@@ -1129,12 +1133,12 @@ mod tests {
     async fn test_insert_race() {
         for _ in 0..1000 {
             let skip_list = SkipListLayer::new(100);
-            skip_list.insert(Item::new(TestKey(2), 2)).await;
+            skip_list.insert(Item::new(TestKey(2), 2)).await.expect("insert error");
 
             let skip_list_clone = skip_list.clone();
             join!(
                 fasync::Task::spawn(async move {
-                    skip_list_clone.insert(Item::new(TestKey(1), 1)).await;
+                    skip_list_clone.insert(Item::new(TestKey(1), 1)).await.expect("insert error");
                 }),
                 fasync::Task::spawn(async move {
                     let iter =
