@@ -1,6 +1,5 @@
 {
     "include": [
-        "//src/lib/vulkan/application.shard.cmx",
         "syslog/client.shard.cmx"
     ],
     "program": {
@@ -21,7 +20,8 @@
             "fuchsia.stash.Store",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry",
-            "fuchsia.ui.input.ImeService"
+            "fuchsia.ui.input.ImeService",
+            "fuchsia.vulkan.loader.Loader"
         ]
     }
 }
