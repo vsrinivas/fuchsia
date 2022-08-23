@@ -146,16 +146,14 @@ void ThreadDispatcher::get_name(char (&out_name)[ZX_MAX_NAME_LEN]) const {
 }
 
 // start a thread
-zx_status_t ThreadDispatcher::Start(const EntryState& entry, bool initial_thread) {
+zx_status_t ThreadDispatcher::Start(const EntryState& entry, bool ensure_initial_thread) {
   canary_.Assert();
 
   LTRACE_ENTRY_OBJ;
 
-  is_initial_thread_ = initial_thread;
-
   // add ourselves to the process, which may fail if the process is in a dead state.
   // If the process is live then it will call our StartRunning routine.
-  return process_->AddInitializedThread(this, initial_thread, entry);
+  return process_->AddInitializedThread(this, ensure_initial_thread, entry);
 }
 
 zx_status_t ThreadDispatcher::MakeRunnable(const EntryState& entry, bool suspended) {

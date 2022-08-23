@@ -87,12 +87,18 @@ class ThreadDispatcher final : public SoloDispatcher<ThreadDispatcher, ZX_DEFAUL
   zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_THREAD; }
   zx_koid_t get_related_koid() const final;
 
+  // Sets whether or not this is the initial thread in its process.
+  // Should only be called by ProcessDispatcher upon adding the initialized thread.
+  void set_is_initial_thread(bool is_initial_thread) { is_initial_thread_ = is_initial_thread; }
+
   // Performs initialization on a newly constructed ThreadDispatcher
   // If this fails, then the object is invalid and should be deleted
   zx_status_t Initialize() TA_EXCL(get_lock());
   // Start this thread running inside the parent process with the provided entry state, only
-  // valid to be called on a thread in the INITIALIZED state that has not yet been started.
-  zx_status_t Start(const EntryState& entry, bool initial_thread);
+  // valid to be called on a thread in the INITIALIZED state that has not yet been started. If
+  // `ensure_initial_thread` is true, the thread will only start if it is the first thread in the
+  // process.
+  zx_status_t Start(const EntryState& entry, bool ensure_initial_thread);
   // Transitions a thread from the INITIALIZED state to either the RUNNING or SUSPENDED state.
   // Is the caller's responsibility to ensure this thread is registered with the parent process,
   // as such this is only expected to be called from the ProcessDispatcher.

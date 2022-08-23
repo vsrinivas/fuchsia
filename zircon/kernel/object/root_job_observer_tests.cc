@@ -24,7 +24,8 @@ KernelHandle<ThreadDispatcher> CreateThread(fbl::RefPtr<ProcessDispatcher> paren
   child_thread = thread_handle.dispatcher();
   ASSERT(child_thread->Initialize() == ZX_OK);
   ASSERT(child_thread->Suspend() == ZX_OK);
-  ASSERT(child_thread->Start(ThreadDispatcher::EntryState{}, /*initial_thread=*/true) == ZX_OK);
+  ASSERT(child_thread->Start(ThreadDispatcher::EntryState{}, /*ensure_initial_thread=*/true) ==
+         ZX_OK);
 
   return thread_handle;
 }

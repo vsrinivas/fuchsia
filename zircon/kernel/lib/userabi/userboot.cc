@@ -410,7 +410,7 @@ void userboot_init(uint) {
   // Start the process's initial thread.
   auto arg1 = static_cast<uintptr_t>(hv);
   status = thread->Start(ThreadDispatcher::EntryState{entry, sp, arg1, vdso_base},
-                         /* initial_thread= */ true);
+                         /* ensure_initial_thread= */ true);
   ASSERT(status == ZX_OK);
 
   timeline_userboot.Set(current_ticks());

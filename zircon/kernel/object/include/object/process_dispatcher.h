@@ -318,7 +318,10 @@ class ProcessDispatcher final
   // state (RUNNING or SUSPENDED depending on whether this process is suspended) by calling
   // ThreadDispatcher::MakeRunnable. The thread is then added to the thread_list_ for this process
   // and we transition to running if this is the initial_thread.
-  zx_status_t AddInitializedThread(ThreadDispatcher* t, bool initial_thread,
+  //
+  // If `ensure_initial_thread` is true, adding the thread will fail if is not the initial thread in
+  // the process.
+  zx_status_t AddInitializedThread(ThreadDispatcher* t, bool ensure_initial_thread,
                                    const ThreadDispatcher::EntryState& entry);
   void RemoveThread(ThreadDispatcher* t);
 

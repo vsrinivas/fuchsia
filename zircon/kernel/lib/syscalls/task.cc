@@ -141,7 +141,7 @@ zx_status_t sys_thread_start(zx_handle_t handle, zx_vaddr_t thread_entry, zx_vad
 
   ktrace(TAG_THREAD_START, (uint32_t)thread->get_koid(), 0, 0, 0);
   return thread->Start(ThreadDispatcher::EntryState{thread_entry, stack, arg1, arg2},
-                       /* initial_thread= */ false);
+                       /* ensure_initial_thread= */ false);
 }
 
 void sys_thread_exit() {
@@ -410,7 +410,7 @@ zx_status_t sys_process_start(zx_handle_t process_handle, zx_handle_t thread_han
 
   status =
       thread->Start(ThreadDispatcher::EntryState{pc, sp, static_cast<uintptr_t>(arg_nhv), arg2},
-                    /* initial_thread */ true);
+                    /* ensure_initial_thread */ true);
   if (status != ZX_OK) {
     // Remove |arg_handle| from the process that failed to start.
     process->handle_table().RemoveHandle(*process, arg_nhv);

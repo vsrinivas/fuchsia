@@ -389,15 +389,20 @@ void ProcessDispatcher::KillAllThreadsLocked() {
   }
 }
 
-zx_status_t ProcessDispatcher::AddInitializedThread(ThreadDispatcher* t, bool initial_thread,
+zx_status_t ProcessDispatcher::AddInitializedThread(ThreadDispatcher* t, bool ensure_initial_thread,
                                                     const ThreadDispatcher::EntryState& entry) {
   LTRACE_ENTRY_OBJ;
 
   Guard<CriticalMutex> guard{get_lock()};
+  const bool initial_thread = thread_list_.is_empty();
+  if (ensure_initial_thread && !initial_thread) {
+    return ZX_ERR_BAD_STATE;
+  }
 
   if (initial_thread) {
     if (state_ != State::INITIAL)
       return ZX_ERR_BAD_STATE;
+    t->set_is_initial_thread(true);
   } else {
     // We must not add a thread when in the DYING or DEAD states.
     // Also, we want to ensure that this is not the first thread.
@@ -411,11 +416,11 @@ zx_status_t ProcessDispatcher::AddInitializedThread(ThreadDispatcher* t, bool in
   // whole process atomic to any observers.
   zx_status_t result = t->MakeRunnable(entry, suspend_count_ > 0);
   if (result != ZX_OK) {
+    t->set_is_initial_thread(false);
     return result;
   }
 
   // add the thread to our list
-  DEBUG_ASSERT(thread_list_.is_empty() == initial_thread);
   thread_list_.push_back(t);
 
   DEBUG_ASSERT(t->process() == this);

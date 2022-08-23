@@ -289,9 +289,8 @@ TEST(Threads, LongNameSucceeds) {
   zxr_thread_destroy(&thread);
 }
 
-// zx_thread_start() is not supposed to be usable for creating a
-// process's first thread.  That's what zx_process_start() is for.
-// Check that zx_thread_start() returns an error in this case.
+// zx_thread_start() is supposed to be usable for creating a
+// process's first thread.
 TEST(Threads, ThreadStartOnInitialThread) {
   if (getenv("NO_NEW_PROCESS")) {
     ZXTEST_SKIP("Running without the ZX_POL_NEW_PROCESS policy, skipping test case.");
@@ -303,7 +302,27 @@ TEST(Threads, ThreadStartOnInitialThread) {
   ASSERT_OK(zx_process_create(zx_job_default(), kProcessName, sizeof(kProcessName) - 1, 0, &process,
                               &vmar));
   ASSERT_OK(zx_thread_create(process, kThreadName, sizeof(kThreadName) - 1, 0, &thread));
-  ASSERT_EQ(ZX_ERR_BAD_STATE, zx_thread_start(thread, 0, 1, 1, 1));
+  ASSERT_EQ(ZX_OK, zx_thread_start(thread, 0, 1, 1, 1));
+
+  ASSERT_OK(zx_handle_close(thread));
+  ASSERT_OK(zx_handle_close(vmar));
+  ASSERT_OK(zx_handle_close(process));
+}
+
+// zx_process_start() should not start second thread.
+TEST(Threads, ProcessStartOnSecondThread) {
+  if (getenv("NO_NEW_PROCESS")) {
+    ZXTEST_SKIP("Running without the ZX_POL_NEW_PROCESS policy, skipping test case.");
+  }
+  static const char kProcessName[] = "test-proc-thread1";
+  zx_handle_t process;
+  zx_handle_t vmar;
+  zx_handle_t thread;
+  ASSERT_OK(zx_process_create(zx_job_default(), kProcessName, sizeof(kProcessName) - 1, 0, &process,
+                              &vmar));
+  ASSERT_OK(zx_thread_create(process, kThreadName, sizeof(kThreadName) - 1, 0, &thread));
+  ASSERT_OK(zx_thread_start(thread, 0, 1, 1, 1));
+  ASSERT_NE(zx_process_start(process, thread, 0, 1, ZX_HANDLE_INVALID, 1), ZX_OK);
 
   ASSERT_OK(zx_handle_close(thread));
   ASSERT_OK(zx_handle_close(vmar));
