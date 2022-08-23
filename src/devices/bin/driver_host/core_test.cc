@@ -334,6 +334,13 @@ TEST_F(CoreTest, AddDeviceGroup) {
         ASSERT_EQ(1, fragment_1_prop_2_result.values.count());
         EXPECT_EQ(3, fragment_1_prop_2_result.values.at(0).int_value());
 
+        auto fragment_1_transformation_result = fragment_result_1.transformation;
+        EXPECT_EQ(2, fragment_1_transformation_result.count());
+        ASSERT_EQ(100, fragment_1_transformation_result.at(0).key().int_value());
+        ASSERT_FALSE(fragment_1_transformation_result.at(0).value().bool_value());
+        ASSERT_STREQ("kinglet", fragment_1_transformation_result.at(1).key().string_value());
+        ASSERT_EQ(20, fragment_1_transformation_result.at(1).value().int_value());
+
         // Checking the second fragment.
         auto fragment_result_2 = device_group.fragments.at(1);
         EXPECT_STREQ("fragment-2", fragment_result_2.name.get());
@@ -351,6 +358,11 @@ TEST_F(CoreTest, AddDeviceGroup) {
         ASSERT_EQ(2, fragment_2_property_2.values.count());
         EXPECT_STREQ("willet", fragment_2_property_2.values.at(0).string_value().get());
         EXPECT_STREQ("sanderling", fragment_2_property_2.values.at(1).string_value().get());
+
+        auto fragment_2_transformation_result = fragment_result_2.transformation;
+        EXPECT_EQ(1, fragment_2_transformation_result.count());
+        ASSERT_EQ(100, fragment_2_transformation_result.at(0).key().int_value());
+        ASSERT_TRUE(fragment_2_transformation_result.at(0).value().bool_value());
       };
 
   coordinator_.set_device_group_callback(std::move(test_callback));
@@ -365,13 +377,13 @@ TEST_F(CoreTest, AddDeviceGroup) {
   };
 
   const device_group_prop_t fragment_1_props[] = {
-      device_group_prop_t{
+      {
           .key = device_group_prop_int_key(2),
           .condition = DEVICE_GROUP_PROPERTY_CONDITION_ACCEPT,
           .values = fragment_1_props_values_1,
           .values_count = std::size(fragment_1_props_values_1),
       },
-      device_group_prop_t{
+      {
           .key = device_group_prop_int_key(10),
           .condition = DEVICE_GROUP_PROPERTY_CONDITION_REJECT,
           .values = fragment_1_props_values_2,
@@ -379,10 +391,23 @@ TEST_F(CoreTest, AddDeviceGroup) {
       },
   };
 
+  const device_group_transformation_prop_t fragment_1_transformation[] = {
+      {
+          .key = device_group_prop_int_key(100),
+          .value = str_prop_bool_val(false),
+      },
+
+      {
+          .key = device_group_prop_str_key("kinglet"),
+          .value = str_prop_int_val(20),
+      }};
+
   const device_group_fragment fragment_1{
       .name = "fragment-1",
       .props = fragment_1_props,
       .props_count = std::size(fragment_1_props),
+      .transformation = fragment_1_transformation,
+      .transformation_count = std::size(fragment_1_transformation),
   };
 
   const zx_device_str_prop_val_t fragment_2_props_values_1[] = {
@@ -395,13 +420,13 @@ TEST_F(CoreTest, AddDeviceGroup) {
   };
 
   const device_group_prop_t fragment_2_props[] = {
-      device_group_prop_t{
+      {
           .key = device_group_prop_int_key(12),
           .condition = DEVICE_GROUP_PROPERTY_CONDITION_REJECT,
           .values = fragment_2_props_values_1,
           .values_count = std::size(fragment_2_props_values_1),
       },
-      device_group_prop_t{
+      {
           .key = device_group_prop_str_key("curlew"),
           .condition = DEVICE_GROUP_PROPERTY_CONDITION_REJECT,
           .values = fragment_2_props_values_2,
@@ -409,10 +434,17 @@ TEST_F(CoreTest, AddDeviceGroup) {
       },
   };
 
+  const device_group_transformation_prop_t fragment_2_transformation[] = {{
+      .key = device_group_prop_int_key(100),
+      .value = str_prop_bool_val(true),
+  }};
+
   const device_group_fragment fragment_2{
       .name = "fragment-2",
       .props = fragment_2_props,
       .props_count = std::size(fragment_2_props),
+      .transformation = fragment_2_transformation,
+      .transformation_count = std::size(fragment_2_transformation),
   };
 
   const device_group_fragment fragments[] = {

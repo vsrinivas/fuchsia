@@ -566,6 +566,13 @@ typedef struct device_group_prop {
   size_t values_count;
 } device_group_prop_t;
 
+// Represents a property that a device group node can
+// transform into.
+typedef struct device_group_transformation_prop {
+  device_group_prop_key_t key;
+  const zx_device_str_prop_val_t value;
+} device_group_transformation_prop_t;
+
 // Represents a transformed property in a device group fragment.
 // TODO(fxb/107076): Rename the property and transformation fields.
 typedef struct device_group_fragment {
@@ -573,6 +580,9 @@ typedef struct device_group_fragment {
 
   const device_group_prop_t* props;
   size_t props_count;
+
+  const device_group_transformation_prop_t* transformation;
+  size_t transformation_count;
 
 } device_group_fragment_t;
 

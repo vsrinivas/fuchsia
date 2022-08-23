@@ -523,10 +523,17 @@ TEST(MiscTestCase, AddDeviceGroup) {
       .values = prop_vals_2,
   };
 
+  auto transformation = fidl::VectorView<fdf::wire::NodeProperty>(allocator, 1);
+  transformation[0] = fdf::wire::NodeProperty::Builder(allocator)
+                          .key(fdf::wire::NodePropertyKey::WithIntValue(10))
+                          .value(fdf::wire::NodePropertyValue::WithIntValue(500))
+                          .Build();
+
   fidl::VectorView<fdf::wire::DeviceGroupNode> fragments(allocator, 1);
   fragments[0] = fdf::wire::DeviceGroupNode{
       .name = fidl::StringView(allocator, "mallard"),
       .properties = node_properties,
+      .transformation = transformation,
   };
 
   fidl::VectorView<fuchsia_device_manager::wire::DeviceMetadata> metadata(allocator, 0);

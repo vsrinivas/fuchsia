@@ -207,8 +207,57 @@ zx::status<fdf::wire::DeviceGroupProperty> convert_device_group_property(
   });
 }
 
-zx::status<fdf::wire::DeviceGroupNode> convert_device_group_node(fidl::AnyArena& allocator,
-                                                                 device_group_fragment_t fragment) {
+zx::status<fdf::wire::NodeProperty> ConvertTransformationToNodeProperty(
+    fidl::AnyArena& allocator, const device_group_transformation_prop_t& transformation) {
+  auto node_property = fdf::wire::NodeProperty::Builder(allocator);
+
+  switch (transformation.key.key_type) {
+    case DEVICE_GROUP_PROPERTY_KEY_INT: {
+      node_property.key(fdf::wire::NodePropertyKey::WithIntValue(transformation.key.data.int_key));
+      break;
+    }
+    case DEVICE_GROUP_PROPERTY_KEY_STRING: {
+      node_property.key(fdf::wire::NodePropertyKey::WithStringValue(
+          allocator, allocator, transformation.key.data.str_key));
+      break;
+    }
+    default: {
+      return zx::error(ZX_ERR_INVALID_ARGS);
+    }
+  }
+
+  switch (transformation.value.data_type) {
+    case ZX_DEVICE_PROPERTY_VALUE_INT: {
+      node_property.value(
+          fdf::wire::NodePropertyValue::WithIntValue(transformation.value.data.int_val));
+      break;
+    }
+    case ZX_DEVICE_PROPERTY_VALUE_STRING: {
+      node_property.value(fdf::wire::NodePropertyValue::WithStringValue(
+          allocator, allocator, transformation.value.data.str_val));
+      break;
+    }
+    case ZX_DEVICE_PROPERTY_VALUE_BOOL: {
+      node_property.value(
+          fdf::wire::NodePropertyValue::WithBoolValue(transformation.value.data.bool_val));
+      break;
+    }
+    case ZX_DEVICE_PROPERTY_VALUE_ENUM: {
+      node_property.value(
+          fdf::wire::NodePropertyValue::WithEnumValue(fidl::ObjectView<fidl::StringView>(
+              allocator, allocator, transformation.value.data.enum_val)));
+      break;
+    }
+    default: {
+      return zx::error(ZX_ERR_INVALID_ARGS);
+    }
+  }
+
+  return zx::ok(node_property.Build());
+}
+
+zx::status<fdf::wire::DeviceGroupNode> ConvertDeviceGroupNode(fidl::AnyArena& allocator,
+                                                              device_group_fragment_t fragment) {
   fidl::VectorView<fdf::wire::DeviceGroupProperty> properties(allocator, fragment.props_count);
   for (size_t i = 0; i < fragment.props_count; i++) {
     auto property_result = convert_device_group_property(allocator, fragment.props[i]);
@@ -218,6 +267,24 @@ zx::status<fdf::wire::DeviceGroupNode> convert_device_group_node(fidl::AnyArena&
 
     properties[i] = std::move(property_result.value());
   }
+
+  fidl::VectorView<fdf::wire::NodeProperty> transformation(allocator,
+                                                           fragment.transformation_count);
+  for (size_t i = 0; i < fragment.transformation_count; i++) {
+    auto transformation_result =
+        ConvertTransformationToNodeProperty(allocator, fragment.transformation[i]);
+    if (!transformation_result.is_ok()) {
+      return transformation_result.take_error();
+    }
+
+    transformation[i] = std::move(transformation_result.value());
+  }
+
+  return zx::ok(fdf::wire::DeviceGroupNode{
+      .name = fidl::StringView(allocator, fragment.name),
+      .properties = properties,
+      .transformation = transformation,
+  });
 
   return zx::ok(fdf::wire::DeviceGroupNode{
       .name = fidl::StringView(allocator, fragment.name),
@@ -1342,7 +1409,7 @@ zx_status_t DriverHostContext::DeviceAddGroup(const fbl::RefPtr<zx_device_t>& de
   auto fragments =
       fidl::VectorView<fdf::wire::DeviceGroupNode>(allocator, group_desc->fragments_count);
   for (size_t i = 0; i < group_desc->fragments_count; i++) {
-    auto fragment_result = convert_device_group_node(allocator, group_desc->fragments[i]);
+    auto fragment_result = ConvertDeviceGroupNode(allocator, group_desc->fragments[i]);
     if (!fragment_result.is_ok()) {
       return fragment_result.error_value();
     }
