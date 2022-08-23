@@ -51,41 +51,46 @@ zx::status<> vmxon_task(void* context, cpu_num_t cpu_num) {
   // Check that we have instruction information when we VM exit on IO.
   VmxInfo vmx_info;
   if (!vmx_info.io_exit_info) {
+    dprintf(CRITICAL, "hypervisor: IO instruction information not supported\n");
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
   // Check that full VMX controls are supported.
   if (!vmx_info.vmx_controls) {
+    dprintf(CRITICAL, "hypervisor: VMX controls not supported\n");
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
   // Check that a page-walk length of 4 is supported.
   EptInfo ept_info;
   if (!ept_info.page_walk_4) {
+    dprintf(CRITICAL, "hypervisor: VMX controls not supported\n");
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  // Check use write-back memory for EPT is supported.
+  // Check that use of the write-back memory type is supported.
   if (!ept_info.write_back) {
+    dprintf(CRITICAL, "hypervisor: EPT write-back memory type not supported\n");
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
   // Check that the INVEPT instruction is supported.
   if (!ept_info.invept) {
+    dprintf(CRITICAL, "hypervisor: INVEPT instruction not supported\n");
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
   // Check that the INVVPID instruction is supported.
   if (!ept_info.invvpid) {
+    dprintf(CRITICAL, "hypervisor: INVVPID instruction not supported\n");
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
   // Enable VMXON, if required.
   uint64_t feature_control = read_msr(X86_MSR_IA32_FEATURE_CONTROL);
-  if (!(feature_control & X86_MSR_IA32_FEATURE_CONTROL_LOCK) ||
-      !(feature_control & X86_MSR_IA32_FEATURE_CONTROL_VMXON)) {
-    if ((feature_control & X86_MSR_IA32_FEATURE_CONTROL_LOCK) &&
-        !(feature_control & X86_MSR_IA32_FEATURE_CONTROL_VMXON)) {
+  if ((feature_control & X86_MSR_IA32_FEATURE_CONTROL_VMXON) == 0) {
+    if ((feature_control & X86_MSR_IA32_FEATURE_CONTROL_LOCK) != 0) {
+      dprintf(CRITICAL, "hypervisor: VMX disabled\n");
       return zx::error(ZX_ERR_NOT_SUPPORTED);
     }
     feature_control |= X86_MSR_IA32_FEATURE_CONTROL_LOCK;
