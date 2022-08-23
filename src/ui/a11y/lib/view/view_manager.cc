@@ -53,8 +53,11 @@ void ViewManager::RegisterViewForSemantics(
 
   auto close_channel_callback = [this, koid](zx_status_t status) {
     if (auto it = view_wrapper_map_.find(koid); it != view_wrapper_map_.end()) {
-      FX_LOGS(INFO) << "View Manager is closing channel with koid:" << koid;
-      it->second->CloseChannel(status);
+      auto view_semantics = it->second->view_semantics();
+      if (view_semantics) {
+        FX_LOGS(INFO) << "View Manager is closing channel with koid:" << koid;
+        view_semantics->CloseChannel(status);
+      }
     }
     wait_map_.erase(koid);
     view_wrapper_map_.erase(koid);
@@ -126,14 +129,22 @@ void ViewManager::OnVisibilityChanged(bool updated_visibility,
 
 const fxl::WeakPtr<::a11y::SemanticTree> ViewManager::GetTreeByKoid(const zx_koid_t koid) const {
   auto it = view_wrapper_map_.find(koid);
-  return it != view_wrapper_map_.end() ? it->second->GetTree() : nullptr;
+  if (it == view_wrapper_map_.end()) {
+    return nullptr;
+  }
+
+  auto* view_semantics = it->second->view_semantics();
+  return view_semantics == nullptr ? nullptr : view_semantics->GetTree();
 }
 
 void ViewManager::SetSemanticsEnabled(bool enabled) {
   semantics_enabled_ = enabled;
   // Notify all the Views about change in Semantics Enabled.
   for (auto& view_wrapper : view_wrapper_map_) {
-    view_wrapper.second->EnableSemanticUpdates(enabled);
+    auto view_semantics = view_wrapper.second->view_semantics();
+    if (view_semantics) {
+      view_semantics->EnableSemanticUpdates(enabled);
+    }
   }
 }
 
@@ -252,7 +263,14 @@ void ViewManager::ClearFocusHighlights() {
   }
 
   FX_DCHECK(it->second);
-  it->second->ClearFocusHighlights();
+  auto* annotation_view = it->second->annotation_view();
+
+  if (!annotation_view) {
+    FX_LOGS(WARNING) << "Could not clear highlights: missing annotation view";
+    return;
+  }
+
+  annotation_view->ClearFocusHighlights();
 
   return;
 }
@@ -278,7 +296,43 @@ bool ViewManager::DrawHighlight(SemanticNodeIdentifier newly_highlighted_node) {
   }
 
   FX_DCHECK(it->second);
-  it->second->HighlightNode(newly_highlighted_node.node_id);
+
+  FX_DCHECK(it->second);
+  auto* annotation_view = it->second->annotation_view();
+
+  if (!annotation_view) {
+    FX_LOGS(WARNING) << "Could not draw highlight: missing annotation view";
+    return false;
+  }
+
+  // Get the node's bounding box and node-to-root transform, which are required
+  // to draw the highlight correctly.
+  auto tree_weak_ptr = GetTreeByKoid(newly_highlighted_node.koid);
+
+  if (!tree_weak_ptr) {
+    FX_LOGS(ERROR) << "Invalid tree pointer for view " << newly_highlighted_node.koid;
+    return false;
+  }
+
+  auto annotated_node = tree_weak_ptr->GetNode(newly_highlighted_node.node_id);
+
+  if (!annotated_node) {
+    FX_LOGS(ERROR) << "No node found with id: " << newly_highlighted_node.node_id;
+    return false;
+  }
+
+  auto transform = tree_weak_ptr->GetNodeToRootTransform(newly_highlighted_node.node_id);
+  if (!transform) {
+    FX_LOGS(ERROR) << "Could not compute node-to-root transform for node: "
+                   << newly_highlighted_node.node_id;
+    return false;
+  }
+
+  auto bounding_box = annotated_node->location();
+
+  // Request to draw the highlight.
+  annotation_view->DrawHighlight(bounding_box, transform->scale_vector(),
+                                 transform->translation_vector());
 
   return true;
 }
@@ -314,13 +368,14 @@ void ViewManager::PerformAccessibilityAction(
 
 std::optional<SemanticTransform> ViewManager::GetNodeToRootTransform(zx_koid_t koid,
                                                                      uint32_t node_id) const {
-  auto it = view_wrapper_map_.find(koid);
-  if (it == view_wrapper_map_.end()) {
-    FX_LOGS(WARNING) << "Invalid view koid: " << koid;
-    return std::nullopt;
+  auto tree_weak_ptr = GetTreeByKoid(koid);
+
+  if (!tree_weak_ptr) {
+    FX_LOGS(WARNING) << "Unable to retrieve node-to-root transform for node " << node_id
+                     << " in view " << koid << ": tree not found";
   }
 
-  return it->second->GetNodeToRootTransform(node_id);
+  return tree_weak_ptr->GetNodeToRootTransform(node_id);
 }
 
 bool ViewManager::InjectEventIntoView(fuchsia::ui::input::InputEvent& event, zx_koid_t koid) {

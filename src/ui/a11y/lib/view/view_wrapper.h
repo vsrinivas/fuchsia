@@ -30,31 +30,12 @@ class ViewWrapper {
 
   ~ViewWrapper() = default;
 
-  // Close the semantics channel with the appropriate status.
-  void CloseChannel(zx_status_t status) { view_semantics_->CloseChannel(status); }
-
-  // Turn on semantic updates for this view.
-  void EnableSemanticUpdates(bool enabled);
-
-  // Returns a weak pointer to the Semantic Tree. Caller must always check if the pointer is valid
-  // before accessing, as the pointer may be invalidated. The pointer may become invalidated if the
-  // semantic provider disconnects or if an error occurred. This is not thread safe. This pointer
-  // may only be used in the same thread as this service is running.
-  fxl::WeakPtr<::a11y::SemanticTree> GetTree() const;
-
   // Returns a clone of the ViewRef owned by this object.
   fuchsia::ui::views::ViewRef ViewRefClone() const;
 
-  // Highlights node with id |node_id|.
-  void HighlightNode(uint32_t node_id);
+  ViewSemantics* view_semantics() { return view_semantics_.get(); }
 
-  // Clears contents of annotation view.
-  void ClearAllHighlights();
-  void ClearFocusHighlights();
-
-  // Returns a SemanticTransform to transform node-local coordinates to
-  // root-view space.
-  std::optional<SemanticTransform> GetNodeToRootTransform(uint32_t node_id) const;
+  AnnotationViewInterface* annotation_view() { return annotation_view_.get(); }
 
   // Returns the injector for the view associated with this class. If no injector was registered,
   // turns nullptr.

@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "src/ui/a11y/lib/semantics/semantics_event.h"
+#include "src/ui/a11y/lib/semantics/util/semantic_transform.h"
 
 namespace a11y {
 
@@ -107,6 +108,10 @@ class SemanticTree {
   // Returns the parent node of the node with |node_id| if found, nullptr otherwise.
   virtual const fuchsia::accessibility::semantics::Node* GetParentNode(
       const uint32_t node_id) const;
+
+  // Returns a SemanticTransform to transform node-local coordinates to
+  // view logical space.
+  std::optional<SemanticTransform> GetNodeToRootTransform(uint32_t node_id) const;
 
   // Applies the node updates in |updates| if they leave the final resulting
   // tree in a valid state, returning true if the operation was successful. If

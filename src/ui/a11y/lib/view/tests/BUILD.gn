@@ -28,7 +28,6 @@ executable("view_tests") {
     "a11y_view_semantics_test.cc",
     "gfx_accessibility_view_test.cc",
     "view_manager_test.cc",
-    "view_wrapper_test.cc",
   ]
   public_deps = [ "//sdk/fidl/fuchsia.accessibility.semantics" ]
   deps = [

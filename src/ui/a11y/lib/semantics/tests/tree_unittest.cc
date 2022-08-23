@@ -615,5 +615,165 @@ TEST_F(SemanticTreeTest, InspectOutput) {
             ChildrenMatch(UnorderedElementsAre(root_node))));
 }
 
+TEST_F(SemanticTreeTest, GetNodeToRootTransformWithV2TransformAndContainers) {
+  std::vector<a11y::SemanticTree::TreeUpdate> node_updates;
+
+  // Create test nodes.
+  {
+    fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 1.0, .y = 2.0, .z = 3.0},
+                                                  .max = {.x = 4.0, .y = 5.0, .z = 6.0}};
+    auto node = CreateTestNode(0u, "test_label_0", {4u});
+    node.set_container_id(0u);
+    node.set_node_to_container_transform({10, 0, 0, 0, 0, 10, 0, 0, 0, 0, 10, 0, 50, 60, 70, 1});
+    node.set_location(std::move(bounding_box));
+    node_updates.emplace_back(std::move(node));
+  }
+
+  // This node's transform will be ignored since its child specifies another
+  // node as its container.
+  {
+    fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 3.0, .y = 4.0, .z = 5.0},
+                                                  .max = {.x = 6.0, .y = 7.0, .z = 8.0}};
+    auto node = CreateTestNode(4u, "test_label_4", {1u});
+    node.set_node_to_container_transform({7, 0, 0, 0, 0, 7, 0, 0, 0, 0, 7, 0, 10, 10, 10, 1});
+    node.set_location(std::move(bounding_box));
+    node_updates.emplace_back(std::move(node));
+  }
+
+  {
+    fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 5.0, .y = 6.0, .z = 7.0},
+                                                  .max = {.x = 8.0, .y = 9.0, .z = 10.0}};
+    auto node = CreateTestNode(1u, "test_label_1", {2u});
+    node.set_node_to_container_transform({2, 0, 0, 0, 0, 3, 0, 0, 0, 0, 4, 0, 1, 1, 1, 1});
+    node.set_location(std::move(bounding_box));
+    node.set_container_id(0u);
+    node_updates.emplace_back(std::move(node));
+  }
+
+  // This node's transform will be ignored since its child specifies another
+  // node as its container.
+  {
+    fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 15.0, .y = 16.0, .z = 17.0},
+                                                  .max = {.x = 18.0, .y = 19.0, .z = 20.0}};
+    auto node = CreateTestNode(2u, "test_label_2", {3u});
+    node.set_node_to_container_transform({20, 0, 0, 0, 0, 20, 0, 0, 0, 0, 20, 0, 5, 10, 15, 1});
+    node.set_location(std::move(bounding_box));
+    node_updates.emplace_back(std::move(node));
+  }
+
+  {
+    fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 2.0, .y = 3.0, .z = 4.0},
+                                                  .max = {.x = 4.0, .y = 5.0, .z = 6.0}};
+    auto node = CreateTestNode(3u, "test_label_3", {});
+    node.set_node_to_container_transform({5, 0, 0, 0, 0, 5, 0, 0, 0, 0, 5, 0, 10, 20, 30, 1});
+    node.set_location(std::move(bounding_box));
+    node.set_container_id(1u);
+    node_updates.emplace_back(std::move(node));
+  }
+
+  ASSERT_TRUE(tree_->Update(std::move(node_updates)));
+  RunLoopUntilIdle();
+
+  const auto& node_to_root_transform = tree_->GetNodeToRootTransform(3u);
+  EXPECT_TRUE(node_to_root_transform.has_value());
+  auto node_to_root_translation = node_to_root_transform->translation_vector();
+  EXPECT_EQ(node_to_root_translation[0], 370.0f);
+  EXPECT_EQ(node_to_root_translation[1], 870.0f);
+  EXPECT_EQ(node_to_root_translation[2], 1590.0f);
+
+  auto node_to_root_scale = node_to_root_transform->scale_vector();
+  EXPECT_EQ(node_to_root_scale[0], 100.0f);
+  EXPECT_EQ(node_to_root_scale[1], 150.0f);
+}
+
+TEST_F(SemanticTreeTest, GetNodeToRootTransformWithV2TransformNoContainers) {
+  std::vector<a11y::SemanticTree::TreeUpdate> node_updates;
+
+  // Create test nodes.
+  fuchsia::ui::gfx::BoundingBox root_bounding_box = {.min = {.x = 1.0, .y = 2.0, .z = 3.0},
+                                                     .max = {.x = 4.0, .y = 5.0, .z = 6.0}};
+  auto root_node = CreateTestNode(0u, "test_label_0", {1u});
+  root_node.set_transform({10, 0, 0, 0, 0, 10, 0, 0, 0, 0, 10, 0, 50, 60, 70, 1});
+  root_node.set_location(std::move(root_bounding_box));
+  node_updates.emplace_back(std::move(root_node));
+
+  fuchsia::ui::gfx::BoundingBox parent_bounding_box = {.min = {.x = 1.0, .y = 2.0, .z = 3.0},
+                                                       .max = {.x = 4.0, .y = 5.0, .z = 6.0}};
+  auto parent_node = CreateTestNode(1u, "test_label_1", {2u});
+  parent_node.set_transform({2, 0, 0, 0, 0, 3, 0, 0, 0, 0, 4, 0, 1, 1, 1, 1});
+  parent_node.set_location(std::move(parent_bounding_box));
+  node_updates.emplace_back(std::move(parent_node));
+
+  fuchsia::ui::gfx::BoundingBox child_bounding_box = {.min = {.x = 2.0, .y = 3.0, .z = 4.0},
+                                                      .max = {.x = 4.0, .y = 5.0, .z = 6.0}};
+  auto child_node = CreateTestNode(2u, "test_label_2", {});
+  child_node.set_transform({5, 0, 0, 0, 0, 5, 0, 0, 0, 0, 5, 0, 10, 20, 30, 1});
+  child_node.set_location(std::move(child_bounding_box));
+  node_updates.emplace_back(std::move(child_node));
+
+  ASSERT_TRUE(tree_->Update(std::move(node_updates)));
+  RunLoopUntilIdle();
+
+  const auto& node_to_root_transform = tree_->GetNodeToRootTransform(2u);
+  EXPECT_TRUE(node_to_root_transform.has_value());
+  auto node_to_root_translation = node_to_root_transform->translation_vector();
+  EXPECT_EQ(node_to_root_translation[0], 260.0f);
+  EXPECT_EQ(node_to_root_translation[1], 670.0f);
+  EXPECT_EQ(node_to_root_translation[2], 1280.0f);
+
+  auto node_to_root_scale = node_to_root_transform->scale_vector();
+  EXPECT_EQ(node_to_root_scale[0], 100.0f);
+  EXPECT_EQ(node_to_root_scale[1], 150.0f);
+}
+
+TEST_F(SemanticTreeTest, GetNodeToRootTransformWithV2TransformSelfReferentContainer) {
+  std::vector<a11y::SemanticTree::TreeUpdate> node_updates;
+
+  // Create test nodes.
+  {
+    fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 1.0, .y = 2.0, .z = 3.0},
+                                                  .max = {.x = 4.0, .y = 5.0, .z = 6.0}};
+    auto node = CreateTestNode(0u, "test_label_0", {1u});
+    node.set_node_to_container_transform({10, 0, 0, 0, 0, 10, 0, 0, 0, 0, 10, 0, 50, 60, 70, 1});
+    node.set_location(std::move(bounding_box));
+    node_updates.emplace_back(std::move(node));
+  }
+
+  // This node's offset container is equal to its own node id, so the loop to
+  // apply transforms should stop after this node.
+  {
+    fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 1.0, .y = 2.0, .z = 3.0},
+                                                  .max = {.x = 4.0, .y = 5.0, .z = 6.0}};
+    auto node = CreateTestNode(1u, "test_label_1", {2u});
+    node.set_container_id(1u);
+    node.set_node_to_container_transform({7, 0, 0, 0, 0, 8, 0, 0, 0, 0, 9, 0, 10, 10, 10, 1});
+    node.set_location(std::move(bounding_box));
+    node_updates.emplace_back(std::move(node));
+  }
+
+  {
+    fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 1.0, .y = 2.0, .z = 3.0},
+                                                  .max = {.x = 4.0, .y = 5.0, .z = 6.0}};
+    auto node = CreateTestNode(2u, "test_label_2");
+    node.set_container_id(1u);
+    node.set_node_to_container_transform({1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 3, 0, 100, 100, 100, 1});
+    node.set_location(std::move(bounding_box));
+    node_updates.emplace_back(std::move(node));
+  }
+
+  ASSERT_TRUE(tree_->Update(std::move(node_updates)));
+  RunLoopUntilIdle();
+
+  const auto& node_to_root_transform = tree_->GetNodeToRootTransform(2u);
+  const auto& node_to_root_translation = node_to_root_transform->translation_vector();
+  EXPECT_EQ(node_to_root_translation[0], 717.0f);
+  EXPECT_EQ(node_to_root_translation[1], 826.0f);
+  EXPECT_EQ(node_to_root_translation[2], 937.0f);
+
+  const auto& node_to_root_scale = node_to_root_transform->scale_vector();
+  EXPECT_EQ(node_to_root_scale[0], 7.0f);
+  EXPECT_EQ(node_to_root_scale[1], 16.0f);
+}
+
 }  // namespace
 }  // namespace accessibility_test
