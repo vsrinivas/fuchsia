@@ -28,6 +28,7 @@ group("prod-fuchsia-component-test") {
     # by executing profiles of "plugin" components which
     # are responsible for interacting with real hardware.
     "//vendor/google/bin/factory:*",
+    "//vendor/google/factory/framework:*",
   ]
 }
 
