@@ -5,6 +5,8 @@
 import("//build/components.gni")
 import("//build/fidl/fidl.gni")
 import("//build/testing/host_test.gni")
+import("//src/proc/tests/chromiumos/build/starnix_host_test_component.gni")
+import("//src/proc/tests/starnix_test_package.gni")
 
 # This can be built as a Fuchsia executable or as a host executable.
 # The latter allows running some of the benchmarks on Linux for
@@ -212,6 +214,47 @@ if (is_linux) {
   }
 }
 
+if (host_os == "linux" && target_cpu == "x64" && !is_asan) {
+  resource("no_op_executable_in_test_dir") {
+    testonly = true
+    out_dir = get_label_info(":no_op_executable", "root_out_dir")
+    sources = [ "${out_dir}/no_op_executable" ]
+    outputs = [ "data/tests/no_op_executable" ]
+    deps = [ ":no_op_executable" ]
+  }
+
+  starnix_host_test_component("starnix_microbenchmarks_component") {
+    test_label = ":bin"
+    test_binary = "fuchsia_microbenchmarks"
+
+    manifest = "meta/starnix_microbenchmarks.cml"
+    component_name = "starnix_microbenchmarks"
+
+    deps = [ ":no_op_executable_in_test_dir($host_toolchain)" ]
+  }
+
+  starmium_test_package("starnix_microbenchmarks_unittestmode") {
+    test_components = [ ":starnix_microbenchmarks_component" ]
+  }
+
+  fuchsia_shell_package("starnix_microbenchmarks_perftestmode") {
+    testonly = true
+
+    galaxy = "//src/proc/bin/galaxies/starmium_test"
+    name = get_label_info(galaxy, "name")
+    dir = get_label_info(galaxy, "dir")
+    deps = [
+      ":starnix_microbenchmarks_component",
+      "${dir}:${name}_deps",
+    ]
+
+    # This package intentionally contains many non-Fuchia ELF binaries that
+    # are not under /data/, and some of them are even unstripped, so disable
+    # these checks to build successfully.
+    disable_elf_binaries_checks = true
+  }
+}
+
 # This contains all the dependencies necessary for running
 # fuchsia_microbenchmarks in unit test mode.
 group("tests") {
@@ -222,6 +265,12 @@ group("tests") {
   ]
   if (host_os == "linux") {
     deps += [ ":fuchsia_microbenchmarks_host_unittestmode($host_toolchain)" ]
+    if (target_cpu == "x64" && !is_asan) {
+      deps += [
+        ":starnix_microbenchmarks_perftestmode",
+        ":starnix_microbenchmarks_unittestmode",
+      ]
+    }
   }
 }
 

@@ -32,6 +32,11 @@ test_list = [
   "storage_benchmarks_test",
   "rust_inspect_benchmarks_test",
 ]
+
+if (host_os == "linux" && target_cpu == "x64" && !is_asan) {
+  test_list += [ "starnix_benchmarks_test" ]
+}
+
 foreach(target_name, test_list) {
   dart_test(target_name) {
     sources = [
@@ -168,6 +173,7 @@ if (is_host) {
     "fuchsia.kernel.boot.txt",
     "fuchsia.microbenchmarks.tracing.txt",
     "fuchsia.microbenchmarks.tracing_categories_disabled.txt",
+    "fuchsia.microbenchmarks.starnix.txt",
     "fuchsia.microbenchmarks.txt",
     "fuchsia.netstack.iperf_benchmarks.ethernet_tcp_recv_1024.txt",
     "fuchsia.netstack.iperf_benchmarks.ethernet_tcp_recv_1400.txt",
@@ -258,6 +264,11 @@ group("package_deps") {
     # These are used by storage_benchmarks_test
     "//src/storage/bin/start-storage-benchmark:start-storage-benchmark",
   ]
+
+  if (host_os == "linux" && target_cpu == "x64" && !is_asan) {
+    public_deps +=
+        [ "//src/tests/microbenchmarks:starnix_microbenchmarks_perftestmode" ]
+  }
 }
 
 group("test") {

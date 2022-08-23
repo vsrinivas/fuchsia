@@ -23,5 +23,11 @@ int main(int argc, char** argv) {
   }
 #endif
 
-  return perftest::PerfTestMain(argc, argv, "fuchsia.microbenchmarks");
+  const char* test_suite = "fuchsia.microbenchmarks";
+  const char* env_test_suite = std::getenv("TEST_SUITE_LABEL");
+  if (env_test_suite) {
+    test_suite = env_test_suite;
+  }
+
+  return perftest::PerfTestMain(argc, argv, test_suite);
 }

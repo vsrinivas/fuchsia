@@ -48,7 +48,9 @@ template("starnix_toolchain_test_component") {
 
     testonly = true
     check_references = false
-    manifest = "meta/${target_name}.cml"
+    if (!defined(invoker.manifest)) {
+      manifest = "meta/${target_name}.cml"
+    }
 
     if (!defined(deps)) {
       deps = []
