@@ -12,6 +12,7 @@
 #include <zircon/types.h>
 
 #include <cstdint>
+#include <tuple>
 
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
@@ -70,10 +71,10 @@ class MockMmioRange {
   // The supported MMIO access sizes.
   enum class Size {
     kUseDefault = 0,
-    k8 = 1,   // fdf::MmioBuffer::Read8(), fdf::MmioBuffer::Write8().
-    k16 = 2,  // fdf::MmioBuffer::Read16(), fdf::MmioBuffer::Write16().
-    k32 = 4,  // fdf::MmioBuffer::Read32(), fdf::MmioBuffer::Write32().
-    k64 = 8,  // fdf::MmioBuffer::Read64(), fdf::MmioBuffer::Write64().
+    k8 = 8,    // fdf::MmioBuffer::Read8(), fdf::MmioBuffer::Write8().
+    k16 = 16,  // fdf::MmioBuffer::Read16(), fdf::MmioBuffer::Write16().
+    k32 = 32,  // fdf::MmioBuffer::Read32(), fdf::MmioBuffer::Write32().
+    k64 = 64,  // fdf::MmioBuffer::Read64(), fdf::MmioBuffer::Write64().
   };
 
   // Information about an expected MMIO access. Passed into Expect().
@@ -173,32 +174,46 @@ class MockMmioRange {
     fbl::AutoLock<fbl::Mutex> lock(&mutex_);
     if (access_index_ >= access_list_.size()) {
       // Google Test's ASSERT_*() macros only work in void functions.
-      EXPECT_FALSE("MMIO read after access list consumed");
+
+      // The tuples are a hack for getting the MMIO access details logged,
+      // making it easier to debug the test failure.
+      EXPECT_EQ(std::make_tuple(address, SizeInt(size), ""),
+                std::make_tuple(address, SizeInt(size), "MMIO read after access list consumed"));
       return 0;
     }
-    Access& expected_access = access_list_[access_index_];
+    const Access& expected_access = access_list_[access_index_];
     ++access_index_;
 
-    EXPECT_EQ(expected_access.write, false);
-    EXPECT_EQ(expected_access.address, address);
-    EXPECT_EQ(expected_access.size, size);
+    // Comparing tuples results in better error messages than comparing
+    // individual values.
+    EXPECT_EQ(std::make_tuple(expected_access.address, expected_access.write,
+                              SizeInt(expected_access.size)),
+              std::make_tuple(address, false, SizeInt(size)));
     return expected_access.value;
   }
 
   void Write(zx_off_t address, uint64_t value, Size size) const {
     fbl::AutoLock<fbl::Mutex> lock(&mutex_);
     if (access_index_ >= access_list_.size()) {
-      EXPECT_FALSE("MMIO read after access list consumed");
+      // The tuples are a hack for getting the MMIO access details logged,
+      // making it easier to debug the test failure.
+      EXPECT_EQ(
+          std::make_tuple(address, value, SizeInt(size), ""),
+          std::make_tuple(address, value, SizeInt(size), "MMIO write after access list consumed"));
       return;
     }
-    Access& expected_access = access_list_[access_index_];
+    const Access& expected_access = access_list_[access_index_];
     ++access_index_;
 
-    EXPECT_EQ(expected_access.write, true);
-    EXPECT_EQ(expected_access.address, address);
-    EXPECT_EQ(expected_access.size, size);
-    EXPECT_EQ(expected_access.value, value);
+    // Comparing tuples results in better error messages than comparing
+    // individual values.
+    EXPECT_EQ(std::make_tuple(expected_access.address, expected_access.value, expected_access.write,
+                              SizeInt(expected_access.size)),
+              std::make_tuple(address, value, true, SizeInt(size)));
   }
+
+  // Comparing sizes as integers (vs enum classes) yields better error logs.
+  static int SizeInt(Size access_size) { return static_cast<int>(access_size); }
 
   mutable fbl::Mutex mutex_;
   mutable fbl::Vector<Access> access_list_ __TA_GUARDED(mutex_);

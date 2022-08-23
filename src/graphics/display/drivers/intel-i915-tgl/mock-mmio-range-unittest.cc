@@ -128,7 +128,29 @@ TEST_F(MockMmioRangeTest, ReadVaryingAddressSizeFromAccessLists) {
   EXPECT_EQ(0x45u, mmio_buffer_.Read64(0x108));
 }
 
-TEST_F(MockMmioRangeTest, ReadMismatchedAddress) {
+TEST_F(MockMmioRangeTest, ReadMismatchedAddressLogsActualAccess) {
+  MockMmioRange mmio_range(0x1000, MockMmioRange::Size::k32);
+  fdf::MmioBuffer mmio_buffer = mmio_range.GetMmioBuffer();
+
+  mmio_range.Expect({.address = 0x100, .value = 0x42434445});  // Matched.
+  mmio_range.Expect({.address = 0x100, .value = 0x42434445});  // Not matched.
+
+  EXPECT_EQ(0x42434445u, mmio_buffer.Read32(0x100));
+  EXPECT_NONFATAL_FAILURE(std::ignore = mmio_buffer.Read32(0x222), "(546, false, 32)");
+}
+
+TEST_F(MockMmioRangeTest, ReadMismatchedAddressLogsExpectedAccess) {
+  MockMmioRange mmio_range(0x1000, MockMmioRange::Size::k32);
+  fdf::MmioBuffer mmio_buffer = mmio_range.GetMmioBuffer();
+
+  mmio_range.Expect({.address = 0x100, .value = 0x42434445});  // Matched.
+  mmio_range.Expect({.address = 0x100, .value = 0x42434445});  // Not matched.
+
+  EXPECT_EQ(0x42434445u, mmio_buffer.Read32(0x100));
+  EXPECT_NONFATAL_FAILURE(std::ignore = mmio_buffer.Read32(0x222), "(256, false, 32)");
+}
+
+TEST_F(MockMmioRangeTest, ReadMismatchedSizeLogsExpectedSize) {
   MockMmioRange mmio_range(0x1000, MockMmioRange::Size::k32);
   fdf::MmioBuffer mmio_buffer = mmio_range.GetMmioBuffer();
 
@@ -136,21 +158,10 @@ TEST_F(MockMmioRangeTest, ReadMismatchedAddress) {
   mmio_range.Expect({.address = 0x100, .value = 0x42434445});
 
   EXPECT_EQ(0x42434445u, mmio_buffer.Read32(0x100));
-  EXPECT_NONFATAL_FAILURE(std::ignore = mmio_buffer.Read32(0x222), "expected_access.address");
+  EXPECT_NONFATAL_FAILURE(std::ignore = mmio_buffer.Read64(0x100), "(256, false, 32)");
 }
 
-TEST_F(MockMmioRangeTest, ReadMismatchedSize) {
-  MockMmioRange mmio_range(0x1000, MockMmioRange::Size::k32);
-  fdf::MmioBuffer mmio_buffer = mmio_range.GetMmioBuffer();
-
-  mmio_range.Expect({.address = 0x100, .value = 0x42434445});
-  mmio_range.Expect({.address = 0x100, .value = 0x42434445});
-
-  EXPECT_EQ(0x42434445u, mmio_buffer.Read32(0x100));
-  EXPECT_NONFATAL_FAILURE(std::ignore = mmio_buffer.Read64(0x100), "expected_access.size");
-}
-
-TEST_F(MockMmioRangeTest, ReadPastAccessList) {
+TEST_F(MockMmioRangeTest, ReadPastAccessListLogsMessage) {
   MockMmioRange mmio_range(0x1000, MockMmioRange::Size::k32);
   fdf::MmioBuffer mmio_buffer = mmio_range.GetMmioBuffer();
 
@@ -163,7 +174,19 @@ TEST_F(MockMmioRangeTest, ReadPastAccessList) {
                           "MMIO read after access list consumed");
 }
 
-TEST_F(MockMmioRangeTest, ReadExpectedWrite) {
+TEST_F(MockMmioRangeTest, ReadPastAccessListLogsAccess) {
+  MockMmioRange mmio_range(0x1000, MockMmioRange::Size::k32);
+  fdf::MmioBuffer mmio_buffer = mmio_range.GetMmioBuffer();
+
+  mmio_range.Expect({.address = 0x100, .value = 0x42434445});
+  mmio_range.Expect({.address = 0x100, .value = 0x42434445});
+
+  EXPECT_EQ(0x42434445u, mmio_buffer.Read32(0x100));
+  EXPECT_EQ(0x42434445u, mmio_buffer.Read32(0x100));
+  EXPECT_NONFATAL_FAILURE(std::ignore = mmio_buffer.Read32(0x100), "(256, 32, ");
+}
+
+TEST_F(MockMmioRangeTest, ReadExpectedWriteLogsExpectedAccess) {
   MockMmioRange mmio_range(0x1000, MockMmioRange::Size::k32);
   fdf::MmioBuffer mmio_buffer = mmio_range.GetMmioBuffer();
 
@@ -171,7 +194,7 @@ TEST_F(MockMmioRangeTest, ReadExpectedWrite) {
   mmio_range.Expect({.address = 0x100, .value = 0x42434445, .write = true});
 
   mmio_buffer.Write32(0x42434445, 0x100);
-  EXPECT_NONFATAL_FAILURE(std::ignore = mmio_buffer.Read32(0x100), "expected_access.write");
+  EXPECT_NONFATAL_FAILURE(std::ignore = mmio_buffer.Read32(0x100), "(256, true, 32)");
 }
 
 TEST_F(MockMmioRangeTest, WriteOnce) {
@@ -246,7 +269,7 @@ TEST_F(MockMmioRangeTest, WriteVaryingAddressSizeFromAccessLists) {
   mmio_buffer_.Write64(0x45, 0x108);
 }
 
-TEST_F(MockMmioRangeTest, WriteMismatchedAddress) {
+TEST_F(MockMmioRangeTest, WriteMismatchedAddressLogsActualAccess) {
   MockMmioRange mmio_range(0x1000, MockMmioRange::Size::k32);
   fdf::MmioBuffer mmio_buffer = mmio_range.GetMmioBuffer();
 
@@ -254,10 +277,10 @@ TEST_F(MockMmioRangeTest, WriteMismatchedAddress) {
   mmio_range.Expect({.address = 0x100, .value = 0x42434445, .write = true});
 
   mmio_buffer.Write32(0x42434445, 0x100);
-  EXPECT_NONFATAL_FAILURE(mmio_buffer.Write32(0x42434445, 0x222), "expected_access.address");
+  EXPECT_NONFATAL_FAILURE(mmio_buffer.Write32(0x42434445, 0x222), "(546, 1111704645, true, 32)");
 }
 
-TEST_F(MockMmioRangeTest, WriteMismatchedSize) {
+TEST_F(MockMmioRangeTest, WriteMismatchedAddressLogsExpectedAccess) {
   MockMmioRange mmio_range(0x1000, MockMmioRange::Size::k32);
   fdf::MmioBuffer mmio_buffer = mmio_range.GetMmioBuffer();
 
@@ -265,10 +288,21 @@ TEST_F(MockMmioRangeTest, WriteMismatchedSize) {
   mmio_range.Expect({.address = 0x100, .value = 0x42434445, .write = true});
 
   mmio_buffer.Write32(0x42434445, 0x100);
-  EXPECT_NONFATAL_FAILURE(mmio_buffer.Write64(0x42434445, 0x100), "expected_access.size");
+  EXPECT_NONFATAL_FAILURE(mmio_buffer.Write32(0x42434445, 0x222), "(256, 1111704645, true, 32)");
 }
 
-TEST_F(MockMmioRangeTest, WritePastAccessList) {
+TEST_F(MockMmioRangeTest, WriteMismatchedSizeLogsExpectedAccess) {
+  MockMmioRange mmio_range(0x1000, MockMmioRange::Size::k32);
+  fdf::MmioBuffer mmio_buffer = mmio_range.GetMmioBuffer();
+
+  mmio_range.Expect({.address = 0x100, .value = 0x42434445, .write = true});
+  mmio_range.Expect({.address = 0x100, .value = 0x42434445, .write = true});
+
+  mmio_buffer.Write32(0x42434445, 0x100);
+  EXPECT_NONFATAL_FAILURE(mmio_buffer.Write64(0x42434445, 0x100), "(256, 1111704645, true, 32)");
+}
+
+TEST_F(MockMmioRangeTest, WritePastAccessListLogsMessage) {
   MockMmioRange mmio_range(0x1000, MockMmioRange::Size::k32);
   fdf::MmioBuffer mmio_buffer = mmio_range.GetMmioBuffer();
 
@@ -278,7 +312,19 @@ TEST_F(MockMmioRangeTest, WritePastAccessList) {
   mmio_buffer.Write32(0x42434445, 0x100);
   mmio_buffer.Write32(0x42434445, 0x100);
   EXPECT_NONFATAL_FAILURE(mmio_buffer.Write32(0x42434445, 0x100),
-                          "MMIO read after access list consumed");
+                          "MMIO write after access list consumed");
+}
+
+TEST_F(MockMmioRangeTest, WritePastAccessListLogsAccess) {
+  MockMmioRange mmio_range(0x1000, MockMmioRange::Size::k32);
+  fdf::MmioBuffer mmio_buffer = mmio_range.GetMmioBuffer();
+
+  mmio_range.Expect({.address = 0x100, .value = 0x42434445, .write = true});
+  mmio_range.Expect({.address = 0x100, .value = 0x42434445, .write = true});
+
+  mmio_buffer.Write32(0x42434445, 0x100);
+  mmio_buffer.Write32(0x42434445, 0x100);
+  EXPECT_NONFATAL_FAILURE(mmio_buffer.Write32(0x42434445, 0x100), "(256, 1111704645, 32, ");
 }
 
 TEST_F(MockMmioRangeTest, WriteExpectedRead) {
@@ -289,7 +335,7 @@ TEST_F(MockMmioRangeTest, WriteExpectedRead) {
   mmio_range.Expect({.address = 0x100, .value = 0x42434445});
 
   EXPECT_EQ(0x42434445u, mmio_buffer.Read32(0x100));
-  EXPECT_NONFATAL_FAILURE(mmio_buffer.Write32(0x42434445, 0x100), "expected_access.write");
+  EXPECT_NONFATAL_FAILURE(mmio_buffer.Write32(0x42434445, 0x100), "(256, 1111704645, false, 32)");
 }
 
 TEST_F(MockMmioRangeTest, InterleavedReadAndWrite) {
