@@ -52,6 +52,7 @@
                 "/core/starnix_manager/starless",
                 "/core/test_manager/starnix_test_runners/starnix_unit_test_runner",
                 "/core/test_manager/starnix-tests:**",
+                "/core/test_manager/system-tests:**",
             ],
         },
         capability_policy: [
@@ -380,7 +381,6 @@
                     // this is added. `process_resolver` does not have a `use` declaration for
                     // it's own capability.
                     "/core/process_resolver",
-
                     "/core/driver_playground",
                 ],
             },

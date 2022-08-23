@@ -171,4 +171,16 @@ protocol Launcher {
     AddHandles(resource struct {
         handles vector<HandleInfo>:MAX;
     });
+
+    /// Sets the options with which the process is created.
+    ///
+    /// Calling this method multiple times will overwrite the current options.
+    @available(added=9)
+    SetOptions(struct {
+        /// These options are expected to be valid process creation options. The options are checked
+        /// on `Launch` or `CreateWithoutStarting`.
+        ///
+        /// See <https://fuchsia.dev/fuchsia-src/reference/syscalls/process_create> for details.
+        options uint32;
+    });
 };

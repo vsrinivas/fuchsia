@@ -300,6 +300,9 @@ pub enum LaunchError {
 
     #[error("cannot add env to launcher: {:?}", _0)]
     AddEnvirons(String),
+
+    #[error("cannot set options for launcher: {:?}", _0)]
+    SetOptions(String),
 }
 
 /// Arguments to `configure_launcher` function.
@@ -309,6 +312,9 @@ pub struct LauncherConfigArgs<'a> {
 
     /// Name of the binary to add to `LaunchInfo`.
     pub name: &'a str,
+
+    /// The options used to create the process.
+    pub options: zx::ProcessOptions,
 
     /// Arguments to binary. Binary path will be automatically
     /// prepended so that should not be passed as first argument.
@@ -426,6 +432,13 @@ pub async fn configure_launcher(
         .launcher
         .add_handles(&mut handle_infos.iter_mut())
         .map_err(|e| LaunchError::AddHandles(e.to_string()))?;
+
+    if !config_args.options.is_empty() {
+        config_args
+            .launcher
+            .set_options(config_args.options.bits())
+            .map_err(|e| LaunchError::SetOptions(e.to_string()))?;
+    }
 
     // Send environment variables for the new process, if any, to the launcher.
     let environs: Vec<_> = config_args.environs.unwrap_or(vec![]);
@@ -727,6 +740,7 @@ mod tests {
             names: Vec<String>,
             handles: Vec<u32>,
             args: Vec<String>,
+            options: zx::ProcessOptions,
         }
 
         fn start_launcher(
@@ -770,6 +784,11 @@ mod tests {
                     fproc::LauncherRequest::AddHandles { handles, .. } => {
                         res.handles.extend(handles.into_iter().map(|m| m.id).collect::<Vec<u32>>());
                     }
+                    fproc::LauncherRequest::SetOptions { options, .. } => {
+                        // SAFETY: These options are passed directly to `zx_process_create`, which
+                        // will determine whether or not the options are valid.
+                        res.options = unsafe { zx::ProcessOptions::from_bits_unchecked(options) };
+                    }
                     fproc::LauncherRequest::CreateWithoutStarting { .. } => {}
                     fproc::LauncherRequest::Launch { .. } => {}
                 }
@@ -788,6 +807,7 @@ mod tests {
                     bin_path: "bin/path",
                     name: "name",
                     args: None,
+                    options: zx::ProcessOptions::empty(),
                     ns: ns,
                     job: None,
                     handle_infos: None,
@@ -814,6 +834,7 @@ mod tests {
                 bin_path: "test/path",
                 name: "name",
                 args: None,
+                options: zx::ProcessOptions::empty(),
                 ns: ns,
                 job: None,
                 handle_infos: None,
@@ -841,6 +862,7 @@ mod tests {
                 bin_path: "bin/path",
                 name: "name",
                 args: None,
+                options: zx::ProcessOptions::empty(),
                 ns: ns,
                 job: None,
                 handle_infos: None,
@@ -869,6 +891,7 @@ mod tests {
                 bin_path: "bin/runner_lib_test",
                 name: "name",
                 args: None,
+                options: zx::ProcessOptions::empty(),
                 ns: ns,
                 job: None,
                 handle_infos: None,
@@ -900,6 +923,7 @@ mod tests {
                 bin_path: "bin/runner_lib_test",
                 name: "name",
                 args: None,
+                options: zx::ProcessOptions::empty(),
                 ns: ns,
                 job: None,
                 handle_infos: None,
@@ -930,6 +954,7 @@ mod tests {
                 bin_path: "bin/runner_lib_test",
                 name: "name",
                 args: Some(args.clone()),
+                options: zx::ProcessOptions::empty(),
                 ns: ns,
                 job: None,
                 handle_infos: None,
@@ -962,6 +987,7 @@ mod tests {
                 bin_path: "bin/runner_lib_test",
                 name: "name",
                 args: None,
+                options: zx::ProcessOptions::empty(),
                 ns: ns,
                 job: None,
                 handle_infos: None,
@@ -1010,6 +1036,7 @@ mod tests {
                 bin_path: "bin/runner_lib_test",
                 name: "name",
                 args: None,
+                options: zx::ProcessOptions::empty(),
                 ns: ns,
                 job: None,
                 handle_infos: None,
@@ -1046,6 +1073,7 @@ mod tests {
                 bin_path: "bin/runner_lib_test",
                 name: "name",
                 args: None,
+                options: zx::ProcessOptions::empty(),
                 ns: ns,
                 job: None,
                 handle_infos: None,
@@ -1084,6 +1112,7 @@ mod tests {
                 bin_path: "bin/runner_lib_test",
                 name: "name",
                 args: None,
+                options: zx::ProcessOptions::empty(),
                 ns: ns,
                 job: None,
                 handle_infos: None,
@@ -1130,6 +1159,7 @@ mod tests {
                 bin_path: "bin/runner_lib_test",
                 name: "name",
                 args: None,
+                options: zx::ProcessOptions::empty(),
                 ns: ns,
                 job: None,
                 handle_infos: Some(handle_infos),

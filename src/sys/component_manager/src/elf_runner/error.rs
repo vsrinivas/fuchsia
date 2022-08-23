@@ -86,6 +86,8 @@ pub enum ElfRunnerError {
         #[source]
         ConfigError,
     ),
+    #[error("attempting to mark process as shared without also enabling `job_policy_create_raw_processes` for component with url \"{}\".", url)]
+    ComponentSharedProcessError { url: String },
 }
 
 impl ElfRunnerError {
@@ -161,6 +163,10 @@ impl ElfRunnerError {
         url: impl Into<String>,
     ) -> ElfRunnerError {
         ElfRunnerError::ProgramDictionaryError { key: key.into(), url: url.into() }
+    }
+
+    pub fn component_shared_process_error(url: impl Into<String>) -> ElfRunnerError {
+        ElfRunnerError::ComponentSharedProcessError { url: url.into() }
     }
 
     pub fn as_zx_status(&self) -> zx::Status {

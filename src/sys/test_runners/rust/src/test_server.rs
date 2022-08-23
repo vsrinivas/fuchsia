@@ -538,6 +538,7 @@ where
         handle_infos: None,
         loader_proxy_chan: Some(client.into_channel()),
         executable_vmo,
+        options: component.options,
     })
     .await?)
 }

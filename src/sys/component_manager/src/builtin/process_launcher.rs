@@ -82,6 +82,7 @@ struct ProcessLauncherState {
     environ: Vec<Vec<u8>>,
     name_info: Vec<fproc::NameInfo>,
     handles: Vec<fproc::HandleInfo>,
+    options: zx::ProcessOptions,
 }
 
 /// Similar to fproc::LaunchInfo, but with the job wrapped in an Arc (to enable use after the struct
@@ -90,18 +91,12 @@ struct ProcessLauncherState {
 struct LaunchInfo {
     executable: zx::Vmo,
     job: Arc<zx::Job>,
-    options: zx::ProcessOptions,
     name: String,
 }
 
 impl From<fproc::LaunchInfo> for LaunchInfo {
     fn from(info: fproc::LaunchInfo) -> Self {
-        LaunchInfo {
-            executable: info.executable,
-            job: Arc::new(info.job),
-            options: zx::ProcessOptions::empty(),
-            name: info.name,
-        }
+        LaunchInfo { executable: info.executable, job: Arc::new(info.job), name: info.name }
     }
 }
 
@@ -203,6 +198,11 @@ impl ProcessLauncher {
                 fproc::LauncherRequest::AddHandles { mut handles, control_handle: _ } => {
                     state.handles.append(&mut handles);
                 }
+                fproc::LauncherRequest::SetOptions { options, .. } => {
+                    // SAFETY: These options are passed directly to `zx_process_create`, which
+                    // will determine whether or not the options are valid.
+                    state.options = unsafe { zx::ProcessOptions::from_bits_unchecked(options) };
+                }
             }
         }
         Ok(())
@@ -288,7 +288,7 @@ impl ProcessLauncher {
         let mut b = ProcessBuilder::new(
             &proc_name,
             &info.job,
-            info.options,
+            state.options,
             info.executable,
             stable_vdso_vmo,
         )?;

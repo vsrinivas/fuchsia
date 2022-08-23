@@ -73,6 +73,8 @@ pub struct LaunchProcessArgs<'a> {
     pub loader_proxy_chan: Option<zx::Channel>,
     /// VMO containing mapping to executable binary.
     pub executable_vmo: Option<zx::Vmo>,
+    /// Options to create process with.
+    pub options: zx::ProcessOptions,
 }
 
 /// Launches process, assigns a combined logger stream as stdout/stderr to launched process.
@@ -134,6 +136,7 @@ async fn launch_process_impl(
             bin_path: args.bin_path,
             name: args.process_name,
             args: args.args,
+            options: args.options,
             ns: args.ns,
             job: args.job,
             handle_infos: Some(handle_infos),
@@ -269,6 +272,7 @@ mod tests {
             .unwrap(),
             loader_proxy_chan: None,
             executable_vmo: None,
+            options: zx::ProcessOptions::empty(),
         };
         let (mock_proxy, mut mock_stream) = create_proxy_and_stream::<fproc::LauncherMarker>()
             .expect("failed to create mock handles");

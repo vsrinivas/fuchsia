@@ -137,6 +137,12 @@ process to use [`zx_vmo_replace_as_executable`][vmo-replace] with a
 The `create_raw_processes` field may be used to allow a component to create
 processes by using [`zx_process_create`][process-create].
 
+#### Is Shared Process
+
+The `is_shared_process` field may be used to pass the `ZX_PROCESS_SHARED` flag
+when calling [`zx_process_create`][process-create]. This flag can only be used
+if the component also has `create_raw_processes` set to `true`.
+
 ## Further Reading
 
 For a detailed explanation of how processes are created, please see

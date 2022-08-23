@@ -438,6 +438,7 @@ where
             handle_infos: Some(handle_infos),
             loader_proxy_chan: Some(client_end.into_channel()),
             executable_vmo,
+            options: component.options,
         })
         .await?;
     Ok((p, j, out_l, err_l, client))

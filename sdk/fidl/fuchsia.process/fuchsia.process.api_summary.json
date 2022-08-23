@@ -65,6 +65,11 @@
         "name": "fuchsia.process/Launcher.Launch"
     },
     {
+        "declaration": "(uint32 options)",
+        "kind": "protocol/member",
+        "name": "fuchsia.process/Launcher.SetOptions"
+    },
+    {
         "kind": "protocol",
         "name": "fuchsia.process/Launcher"
     },

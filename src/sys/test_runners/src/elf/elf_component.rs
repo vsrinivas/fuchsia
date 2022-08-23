@@ -151,6 +151,9 @@ pub struct Component {
     /// Use direct vDSO for this test.
     pub use_direct_vdso: bool,
 
+    /// Options to create process with.
+    pub options: zx::ProcessOptions,
+
     /// Handle to library loader cache.
     lib_loader_cache: LibraryLoaderCacheProxy,
 
@@ -179,6 +182,9 @@ pub struct BuilderArgs {
 
     /// Parent job in which all test processes should be executed.
     pub job: zx::Job,
+
+    /// The options to create the process with.
+    pub options: zx::ProcessOptions,
 }
 
 impl Component {
@@ -216,6 +222,7 @@ impl Component {
         let environ = runner::get_environ(program)
             .map_err(|e| ComponentError::InvalidArgs(url.clone(), e.into()))?;
         let use_direct_vdso = runner::get_bool(program, "use_direct_vdso").unwrap_or(false);
+        let is_shared_process = runner::get_bool(program, "is_shared_process").unwrap_or(false);
 
         let ns = start_info.ns.ok_or_else(|| ComponentError::MissingNamespace(url.clone()))?;
         let ns = ComponentNamespace::try_from(ns)
@@ -255,6 +262,11 @@ impl Component {
                 use_direct_vdso,
                 executable_vmo,
                 lib_loader_cache,
+                options: if is_shared_process {
+                    zx::ProcessOptions::SHARED
+                } else {
+                    zx::ProcessOptions::empty()
+                },
             },
             outgoing_dir,
             runtime_dir,
@@ -299,6 +311,7 @@ impl Component {
             lib_loader_cache,
             executable_vmo,
             use_direct_vdso: false,
+            options: args.options,
         })
     }
 }
@@ -627,6 +640,7 @@ mod tests {
                 environ: None,
                 ns: ns,
                 job: child_job!(),
+                options: zx::ProcessOptions::empty(),
             })
             .await?,
         ))

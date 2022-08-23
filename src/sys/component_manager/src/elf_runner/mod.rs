@@ -231,6 +231,7 @@ impl ElfRunner {
             runner::component::configure_launcher(runner::component::LauncherConfigArgs {
                 bin_path: &bin_path,
                 name: &name,
+                options: elf_config.process_options(),
                 args: Some(args),
                 ns: ns,
                 job: Some(job),

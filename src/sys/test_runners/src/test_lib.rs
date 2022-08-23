@@ -338,6 +338,7 @@ pub async fn test_component(
         environ: None,
         ns,
         job: job_default().duplicate(zx::Rights::SAME_RIGHTS)?,
+        options: zx::ProcessOptions::empty(),
     })
     .await?;
     Ok(Arc::new(component))

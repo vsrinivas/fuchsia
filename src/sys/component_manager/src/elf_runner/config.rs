@@ -4,10 +4,11 @@
 
 use {
     super::error::ElfRunnerError, ::routing::policy::ScopedPolicyChecker,
-    fidl_fuchsia_data as fdata,
+    fidl_fuchsia_data as fdata, fuchsia_zircon as zx,
 };
 
 const CREATE_RAW_PROCESSES_KEY: &str = "job_policy_create_raw_processes";
+const SHARED_PROCESS_KEY: &str = "is_shared_process";
 const CRITICAL_KEY: &str = "main_process_critical";
 const ENVIRON_KEY: &str = "environ";
 const FORWARD_STDOUT_KEY: &str = "forward_stdout_to";
@@ -34,6 +35,7 @@ pub struct ElfProgramConfig {
     ambient_mark_vmo_exec: bool,
     main_process_critical: bool,
     create_raw_processes: bool,
+    is_shared_process: bool,
     use_next_vdso: bool,
     use_direct_vdso: bool,
     stdout_sink: StreamSink,
@@ -86,6 +88,12 @@ impl ElfProgramConfig {
             checker.create_raw_processes_allowed()?;
         }
 
+        let is_shared_process = runner::get_bool(program, SHARED_PROCESS_KEY)
+            .map_err(|_err| ElfRunnerError::program_dictionary_error(SHARED_PROCESS_KEY, url))?;
+        if is_shared_process && !create_raw_processes {
+            return Err(ElfRunnerError::component_shared_process_error(url));
+        }
+
         let use_next_vdso = runner::get_bool(program, USE_NEXT_VDSO_KEY)
             .map_err(|_err| ElfRunnerError::program_dictionary_error(USE_NEXT_VDSO_KEY, url))?;
 
@@ -103,6 +111,7 @@ impl ElfProgramConfig {
             ambient_mark_vmo_exec,
             main_process_critical,
             create_raw_processes,
+            is_shared_process,
             use_next_vdso,
             use_direct_vdso,
             stdout_sink,
@@ -125,6 +134,14 @@ impl ElfProgramConfig {
 
     pub fn can_create_raw_processes(&self) -> bool {
         self.create_raw_processes
+    }
+
+    pub fn process_options(&self) -> zx::ProcessOptions {
+        if self.is_shared_process {
+            zx::ProcessOptions::SHARED
+        } else {
+            zx::ProcessOptions::empty()
+        }
     }
 
     pub fn should_use_next_vdso(&self) -> bool {

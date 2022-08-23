@@ -52,6 +52,7 @@ impl ComponentLauncher for FuzzComponentLauncher {
             }]),
             loader_proxy_chan: Some(loader_client.into_channel()),
             executable_vmo,
+            options: component.options,
         })
         .await?;
         Ok(result)
