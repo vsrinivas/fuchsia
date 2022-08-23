@@ -77,7 +77,7 @@ fn handle_touchscreen_request_stream(
                         };
 
                         let input_report = InputReport {
-                            event_time: Some(0),
+                            event_time: Some(fasync::Time::now().into_nanos()),
                             touch: Some(touch_input_report),
                             ..InputReport::EMPTY
                         };
@@ -89,7 +89,7 @@ fn handle_touchscreen_request_stream(
                         // Send a report with an empty set of touch contacts, so that input
                         // pipeline generates a pointer event with phase == UP.
                         let empty_report = InputReport {
-                            event_time: Some(1),
+                            event_time: Some(fasync::Time::now().into_nanos()),
                             touch: Some(TouchInputReport {
                                 contacts: Some(vec![]),
                                 pressed_buttons: Some(vec![]),

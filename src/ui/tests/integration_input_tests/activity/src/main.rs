@@ -4,12 +4,18 @@
 
 use {
     async_utils::hanging_get::client::HangingGetStream,
+    fidl::endpoints::create_proxy,
     fidl_fuchsia_input_interaction::{NotifierMarker, NotifierProxy, State},
     fidl_fuchsia_input_report::MouseInputReport,
     fidl_fuchsia_logger::LogSinkMarker,
+    fidl_fuchsia_math::Vec_,
     fidl_fuchsia_scheduler::ProfileProviderMarker,
     fidl_fuchsia_sysmem::AllocatorMarker,
     fidl_fuchsia_tracing_provider::RegistryMarker,
+    fidl_fuchsia_ui_test_input::{
+        RegistryMarker as InputRegistryMarker, RegistryRegisterTouchScreenRequest,
+        TouchScreenMarker, TouchScreenSimulateTapRequest,
+    },
     fidl_fuchsia_vulkan_loader::LoaderMarker,
     fidl_test_inputsynthesis::{MouseMarker, TextMarker},
     fuchsia_async::{Time, Timer},
@@ -62,6 +68,7 @@ async fn assemble_realm(test_ui_stack_url: &str) -> RealmInstance {
                 .capability(Capability::protocol::<NotifierMarker>())
                 .capability(Capability::protocol::<MouseMarker>())
                 .capability(Capability::protocol::<TextMarker>())
+                .capability(Capability::protocol::<InputRegistryMarker>())
                 .from(Ref::child(TEST_UI_STACK))
                 .to(Ref::parent()),
         )
@@ -210,6 +217,74 @@ async fn enters_active_state_with_mouse() {
         )
         .await
         .expect("Failed to send mouse report.");
+
+    // Activity service transitions to active state.
+    assert_eq!(
+        watch_state_stream
+            .next()
+            .await
+            .expect("Expected updated state from watch_state()")
+            .unwrap(),
+        State::Active
+    );
+
+    // Shut down input pipeline before dropping mocks, so that input pipeline
+    // doesn't log errors about channels being closed.
+    realm.destroy().await.expect("Failed to shut down realm.");
+}
+
+#[test_case(ROOT_PRESENTER_UI_STACK_URL; "Standalone Input Pipeline variant")]
+#[test_case(GFX_SCENE_MANAGER_UI_STACK_URL; "GFX Scene Manager variant")]
+#[test_case(FLATLAND_UI_STACK_URL; "Flatland Scene Manager variant")]
+#[fuchsia::test]
+async fn enters_active_state_with_touchscreen(test_ui_stack_url: &str) {
+    let realm = assemble_realm(test_ui_stack_url).await;
+
+    // Subscribe to activity state, which serves "Active" initially.
+    let notifier_proxy = realm
+        .root
+        .connect_to_protocol_at_exposed_dir::<NotifierMarker>()
+        .expect("Failed to connect to fuchsia.input.interaction.Notifier.");
+    let mut watch_state_stream = HangingGetStream::new(notifier_proxy, NotifierProxy::watch_state);
+    assert_eq!(
+        watch_state_stream
+            .next()
+            .await
+            .expect("Expected initial state from watch_state()")
+            .unwrap(),
+        State::Active
+    );
+
+    // Do nothing. Activity service transitions to idle state in one minute.
+    let activity_timeout_upper_bound = Timer::new(Time::after(TEST_TIMEOUT));
+    match future::select(watch_state_stream.next(), activity_timeout_upper_bound).await {
+        future::Either::Left((result, _)) => {
+            assert_eq!(result.unwrap().expect("Expected state transition."), State::Idle);
+        }
+        future::Either::Right(_) => panic!("Timer expired before state transitioned."),
+    }
+
+    // Inject touch input.
+    let (touchscreen_proxy, touchscreen_server) =
+        create_proxy::<TouchScreenMarker>().expect("Failed to create TouchScreenProxy.");
+    let input_registry = realm
+        .root
+        .connect_to_protocol_at_exposed_dir::<InputRegistryMarker>()
+        .expect("Failed to connect to fuchsia.ui.test.input.Registry.");
+    input_registry
+        .register_touch_screen(RegistryRegisterTouchScreenRequest {
+            device: Some(touchscreen_server),
+            ..RegistryRegisterTouchScreenRequest::EMPTY
+        })
+        .await
+        .expect("Failed to register touchscreen device.");
+    touchscreen_proxy
+        .simulate_tap(TouchScreenSimulateTapRequest {
+            tap_location: Some(Vec_ { x: 0, y: 0 }),
+            ..TouchScreenSimulateTapRequest::EMPTY
+        })
+        .await
+        .expect("Failed to simulate tap at location (0, 0).");
 
     // Activity service transitions to active state.
     assert_eq!(
