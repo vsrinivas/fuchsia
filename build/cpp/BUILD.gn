@@ -356,7 +356,6 @@ config("fidl-wire-deprecated-mutable-tables") {
     "//src/media/audio/lib/simple-codec",
     "//src/security/tee/tee-client-api",
     "//src/security/tee/tee-client-api:tee-client-api-static",
-    "//src/storage/bin/blobfs-component:blobfs_component_test",
     "//src/storage/bin/mount",
     "//src/storage/blobfs/test:blobfs_unittest",
     "//src/storage/blobfs/test/integration:blobfs_verifier_service",

@@ -5,8 +5,7 @@
     children: [
         {
             name: "blobfs",
-            url: "fuchsia-boot:///#meta/blobfs.cm",
-            startup: "eager",
+            url: "#meta/blobfs.cm",
         },
     ],
     use: [

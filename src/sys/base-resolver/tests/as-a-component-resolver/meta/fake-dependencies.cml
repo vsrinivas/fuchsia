@@ -34,14 +34,10 @@
     use: [
         {
             protocol: [
+                "fuchsia.kernel.VmexResource",
                 "fuchsia.process.Launcher",
                 "fuchsia.sys.Launcher",
             ],
-        },
-        {
-            protocol: "fuchsia.kernel.VmexResource",
-            from: "parent",
-            path: "/svc_blobfs/fuchsia.kernel.VmexResource",
         },
     ],
     offer: [

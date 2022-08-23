@@ -16,6 +16,7 @@
 
 #include "src/lib/storage/block_client/cpp/remote_block_device.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
+#include "src/storage/bin/blobfs/blobfs_component_config.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/blobfs/cache_policy.h"
 #include "src/storage/blobfs/compression_settings.h"
@@ -35,8 +36,7 @@ struct Options {
 };
 
 zx::resource AttemptToGetVmexResource() {
-  auto client_end_or =
-      service::Connect<fuchsia_kernel::VmexResource>("/svc_blobfs/fuchsia.kernel.VmexResource");
+  auto client_end_or = service::Connect<fuchsia_kernel::VmexResource>();
   if (client_end_or.is_error()) {
     FX_LOGS(WARNING) << "Failed to connect to fuchsia.kernel.VmexResource: "
                      << client_end_or.status_string();
@@ -52,7 +52,20 @@ zx::resource AttemptToGetVmexResource() {
   return std::move(result.value().resource);
 }
 
-zx_status_t Mount(std::unique_ptr<BlockDevice> device, const Options& options) {
+zx_status_t Mount(const Options& options) {
+  zx::channel block_connection = zx::channel(zx_take_startup_handle(FS_HANDLE_BLOCK_DEVICE_ID));
+  if (!block_connection.is_valid()) {
+    FX_LOGS(ERROR) << "Could not access startup handle to block device";
+    return ZX_ERR_INTERNAL;
+  }
+
+  std::unique_ptr<RemoteBlockDevice> device;
+  zx_status_t status = RemoteBlockDevice::Create(std::move(block_connection), &device);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Could not initialize block device";
+    return ZX_ERR_INTERNAL;
+  }
+
   // Try and get a ZX_RSRC_SYSTEM_BASE_VMEX resource if the fuchsia.kernel.VmexResource service is
   // available, which will only be the case if this is launched by fshost. This is non-fatal because
   // blobfs can still otherwise work but will not support executable blobs.
@@ -67,25 +80,89 @@ zx_status_t Mount(std::unique_ptr<BlockDevice> device, const Options& options) {
                        std::move(vmex));
 }
 
-zx_status_t Mkfs(std::unique_ptr<BlockDevice> device, const Options& options) {
+zx_status_t Mkfs(const Options& options) {
+  zx::channel block_connection = zx::channel(zx_take_startup_handle(FS_HANDLE_BLOCK_DEVICE_ID));
+  if (!block_connection.is_valid()) {
+    FX_LOGS(ERROR) << "Could not access startup handle to block device";
+    return ZX_ERR_INTERNAL;
+  }
+
+  std::unique_ptr<RemoteBlockDevice> device;
+  zx_status_t status = RemoteBlockDevice::Create(std::move(block_connection), &device);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Could not initialize block device";
+    return ZX_ERR_INTERNAL;
+  }
+
   return blobfs::FormatFilesystem(device.get(), options.mkfs_options);
 }
 
-zx_status_t Fsck(std::unique_ptr<BlockDevice> device, const Options& options) {
+zx_status_t Fsck(const Options& options) {
+  zx::channel block_connection = zx::channel(zx_take_startup_handle(FS_HANDLE_BLOCK_DEVICE_ID));
+  if (!block_connection.is_valid()) {
+    FX_LOGS(ERROR) << "Could not access startup handle to block device";
+    return ZX_ERR_INTERNAL;
+  }
+
+  std::unique_ptr<RemoteBlockDevice> device;
+  zx_status_t status = RemoteBlockDevice::Create(std::move(block_connection), &device);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Could not initialize block device";
+    return ZX_ERR_INTERNAL;
+  }
+
   return blobfs::Fsck(std::move(device), options.mount_options);
 }
 
-typedef zx_status_t (*CommandFunction)(std::unique_ptr<BlockDevice> device, const Options& options);
+zx_status_t StartComponent(const Options& _options) {
+  FX_LOGS(INFO) << "starting blobfs component";
+
+  zx::channel outgoing_server = zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST));
+  if (!outgoing_server.is_valid()) {
+    FX_LOGS(ERROR) << "PA_DIRECTORY_REQUEST startup handle is required.";
+    return ZX_ERR_INTERNAL;
+  }
+  fidl::ServerEnd<fuchsia_io::Directory> outgoing_dir(std::move(outgoing_server));
+
+  zx::channel lifecycle_channel = zx::channel(zx_take_startup_handle(PA_LIFECYCLE));
+  if (!lifecycle_channel.is_valid()) {
+    FX_LOGS(ERROR) << "PA_LIFECYCLE startup handle is required.";
+    return ZX_ERR_INTERNAL;
+  }
+  fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle_request(
+      std::move(lifecycle_channel));
+
+  zx::resource vmex = AttemptToGetVmexResource();
+  if (!vmex.is_valid()) {
+    FX_LOGS(WARNING) << "VMEX resource unavailable, executable blobs are unsupported";
+  }
+
+  auto config = blobfs_component_config::Config::TakeFromStartupHandle();
+  const blobfs::ComponentOptions options{
+      .pager_threads = config.pager_threads(),
+  };
+  // blocks until blobfs exits
+  zx::status status = blobfs::StartComponent(options, std::move(outgoing_dir),
+                                             std::move(lifecycle_request), std::move(vmex));
+  if (status.is_error()) {
+    return ZX_ERR_INTERNAL;
+  }
+
+  return ZX_OK;
+}
+
+typedef zx_status_t (*CommandFunction)(const Options& options);
 
 const struct {
   const char* name;
   CommandFunction func;
   const char* help;
-} kCmds[] = {
-    {"create", Mkfs, "initialize filesystem"},     {"mkfs", Mkfs, "initialize filesystem"},
-    {"check", Fsck, "check filesystem integrity"}, {"fsck", Fsck, "check filesystem integrity"},
-    {"mount", Mount, "mount filesystem"},
-};
+} kCmds[] = {{"create", Mkfs, "initialize filesystem"},
+             {"mkfs", Mkfs, "initialize filesystem"},
+             {"check", Fsck, "check filesystem integrity"},
+             {"fsck", Fsck, "check filesystem integrity"},
+             {"mount", Mount, "mount filesystem"},
+             {"component", StartComponent, "start the blobfs component"}};
 
 std::optional<blobfs::CompressionAlgorithm> ParseAlgorithm(const char* str) {
   if (!strcmp(str, "UNCOMPRESSED")) {
@@ -296,19 +373,7 @@ int main(int argc, char** argv) {
   }
   const Options& options = options_or.value();
 
-  zx::channel block_connection = zx::channel(zx_take_startup_handle(FS_HANDLE_BLOCK_DEVICE_ID));
-  if (!block_connection.is_valid()) {
-    FX_LOGS(ERROR) << "Could not access startup handle to block device";
-    return EXIT_FAILURE;
-  }
-
-  std::unique_ptr<RemoteBlockDevice> device;
-  zx_status_t status = RemoteBlockDevice::Create(std::move(block_connection), &device);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Could not initialize block device";
-    return EXIT_FAILURE;
-  }
-  status = func(std::move(device), options);
+  zx_status_t status = func(options);
   if (status != ZX_OK) {
     return EXIT_FAILURE;
   }

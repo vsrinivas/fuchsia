@@ -8,7 +8,8 @@
     ],
     program: {
         runner: "elf",
-        binary: "bin/blobfs-component",
+        binary: "bin/blobfs",
+        args: [ "component" ],
         lifecycle: { stop_event: "notify" },
     },
     children: [

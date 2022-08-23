@@ -46,7 +46,7 @@ fuchsia_package("blackout-blobfs-checkerboard-target") {
   testonly = true
   deps = [
     ":blackout-blobfs-checkerboard-target-component",
-    "//src/storage/bin/blobfs-component:blobfs_rust_fs_management",
+    "//src/storage/bin/blobfs:blobfs-component",
   ]
 }
 

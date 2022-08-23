@@ -50,7 +50,7 @@ storage_driver_test_realm_v2_component("fs-management-rust-tests-component") {
   component_name = "fs-management-rust-tests"
   deps = [
     ":fs_management_test",
-    "//src/storage/bin/blobfs-component:blobfs_rust_fs_management",
+    "//src/storage/bin/blobfs:blobfs-component",
     "//src/storage/fxfs:fxfs_component",
     "//src/storage/fxfs:test_fxfs_component_manifest_shard",
   ]

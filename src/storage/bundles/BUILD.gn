@@ -5,7 +5,6 @@
 group("bootstrap") {
   deps = [
     "//src/storage/bin/blobfs",
-    "//src/storage/bin/blobfs-component:bootfs",
     "//src/storage/bin/fsck",
     "//src/storage/bin/minfs",
     "//src/storage/bin/mkfs",

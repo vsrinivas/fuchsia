@@ -105,7 +105,6 @@ assembled_system("guest") {
     "//src/graphics/display/drivers/display",
     "//src/graphics/drivers/virtio:virtio_gpu",
     "//src/power/shutdown-shim:bootfs",
-    "//src/storage/bin/blobfs-component:bootfs",
     "//src/storage/bin/minfs",
     "//src/storage/bin/dd",
     "//src/storage/bin/df",

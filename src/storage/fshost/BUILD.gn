@@ -143,6 +143,7 @@ source_set("block-watcher") {
     "//src/security/fcrypto",
     "//src/security/kms-stateless",
     "//src/security/zxcrypt:zxcrypt-client",
+    "//src/storage/bin/blobfs:component",
     "//src/storage/bin/minfs:minfs-component",
     "//src/storage/gpt",
     "//src/storage/minfs",
