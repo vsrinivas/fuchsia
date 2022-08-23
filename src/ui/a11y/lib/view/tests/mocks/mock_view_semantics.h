@@ -11,16 +11,14 @@
 #include <memory>
 #include <optional>
 
+#include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_tree.h"
 #include "src/ui/a11y/lib/view/view_semantics.h"
 
 namespace accessibility_test {
 
 class MockViewSemantics : public a11y::ViewSemantics {
  public:
-  MockViewSemantics(std::unique_ptr<a11y::SemanticTreeService> tree_service_ptr,
-                    fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree>
-                        semantic_tree_request);
-
+  MockViewSemantics();
   ~MockViewSemantics() override;
 
   // |ViewSemantics|
@@ -32,12 +30,15 @@ class MockViewSemantics : public a11y::ViewSemantics {
   // |ViewSemantics|
   fxl::WeakPtr<::a11y::SemanticTree> GetTree() override;
 
- private:
-  fidl::Binding<fuchsia::accessibility::semantics::SemanticTree,
-                std::unique_ptr<a11y::SemanticTreeService>>
-      semantic_tree_binding_;
+  bool semantics_enabled() const { return semantics_enabled_; }
 
+  MockSemanticTree* mock_semantic_tree() { return &mock_semantic_tree_; }
+
+ private:
   bool semantics_enabled_;
+  MockSemanticTree mock_semantic_tree_;
+
+  fxl::WeakPtrFactory<::a11y::SemanticTree> semantic_tree_factory_;
 };
 
 class MockViewSemanticsFactory : public a11y::ViewSemanticsFactory {

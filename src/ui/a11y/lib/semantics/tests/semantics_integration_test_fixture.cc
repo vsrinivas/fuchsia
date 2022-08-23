@@ -34,6 +34,7 @@
 #include "fuchsia/sysmem/cpp/fidl.h"
 #include "lib/sys/component/cpp/testing/realm_builder_types.h"
 #include "src/lib/fsl/handles/object_info.h"
+#include "src/ui/a11y/lib/view/a11y_view_semantics.h"
 
 namespace accessibility_test {
 
@@ -116,8 +117,8 @@ void SemanticsIntegrationTestV2::BuildRealm() {
 
   view_manager_ = std::make_unique<a11y::ViewManager>(
       std::make_unique<a11y::SemanticTreeServiceFactory>(),
-      std::make_unique<MockViewSemanticsFactory>(), std::make_unique<MockAnnotationViewFactory>(),
-      std::make_unique<MockViewInjectorFactory>(),
+      std::make_unique<a11y::A11yViewSemanticsFactory>(),
+      std::make_unique<MockAnnotationViewFactory>(), std::make_unique<MockViewInjectorFactory>(),
       std::make_unique<a11y::A11ySemanticsEventManager>(),
       std::make_shared<MockAccessibilityView>(), context_.get());
 

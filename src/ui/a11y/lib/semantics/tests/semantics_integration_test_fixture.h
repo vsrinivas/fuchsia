@@ -22,7 +22,6 @@
 #include "src/ui/a11y/lib/semantics/a11y_semantics_event_manager.h"
 #include "src/ui/a11y/lib/view/tests/mocks/mock_accessibility_view.h"
 #include "src/ui/a11y/lib/view/tests/mocks/mock_view_injector_factory.h"
-#include "src/ui/a11y/lib/view/tests/mocks/mock_view_semantics.h"
 #include "src/ui/a11y/lib/view/view_manager.h"
 #include "src/ui/testing/ui_test_manager/ui_test_manager.h"
 

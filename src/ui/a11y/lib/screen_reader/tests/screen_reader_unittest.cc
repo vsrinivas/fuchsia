@@ -89,24 +89,18 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
         std::move(mock_action_registry_));
     screen_reader_->BindGestures(mock_gesture_handler_.get());
     gesture_listener_registry_->Register(mock_gesture_listener_->NewBinding(), []() {});
-
-    semantic_provider_->SetSemanticsEnabled(true);
-    view_manager_->SetSemanticsEnabled(true);
-    factory_ptr_->service()->EnableSemanticsUpdates(true);
   }
 
   void SetUp() override {
     gtest::TestLoopFixture::SetUp();
 
-    factory_ = std::make_unique<MockSemanticTreeServiceFactory>();
-    factory_ptr_ = factory_.get(),
     context_provider_ = std::make_unique<sys::testing::ComponentContextProvider>();
     mock_gesture_handler_ = std::make_unique<MockGestureHandler>();
     view_manager_ = std::make_unique<a11y::ViewManager>(
-        std::move(factory_), std::make_unique<MockViewSemanticsFactory>(),
-        std::make_unique<MockAnnotationViewFactory>(), std::make_unique<MockViewInjectorFactory>(),
-        std::make_unique<MockSemanticsEventManager>(), std::make_shared<MockAccessibilityView>(),
-        context_provider_->context());
+        std::make_unique<MockSemanticTreeServiceFactory>(),
+        std::make_unique<MockViewSemanticsFactory>(), std::make_unique<MockAnnotationViewFactory>(),
+        std::make_unique<MockViewInjectorFactory>(), std::make_unique<MockSemanticsEventManager>(),
+        std::make_shared<MockAccessibilityView>(), context_provider_->context());
     context_ = std::make_unique<MockScreenReaderContext>();
     context_ptr_ = context_.get();
     a11y_focus_manager_ptr_ = context_ptr_->mock_a11y_focus_manager_ptr();
@@ -139,8 +133,6 @@ class ScreenReaderTest : public gtest::TestLoopFixture {
   }
 
   bool announce_screen_reader_enabled_ = true;
-  std::unique_ptr<MockSemanticTreeServiceFactory> factory_;
-  MockSemanticTreeServiceFactory* factory_ptr_;
   std::unique_ptr<sys::testing::ComponentContextProvider> context_provider_;
   std::unique_ptr<a11y::ViewManager> view_manager_;
   std::unique_ptr<a11y::GestureManager> gesture_manager_;

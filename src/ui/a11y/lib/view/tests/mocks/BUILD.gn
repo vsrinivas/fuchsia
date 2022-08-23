@@ -20,6 +20,7 @@ source_set("mocks") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl",
+    "//src/ui/a11y/lib/semantics/tests/mocks",
     "//src/ui/a11y/lib/view",
     "//src/ui/input/lib/injector",
   ]

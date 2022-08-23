@@ -22,9 +22,9 @@
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
 #include "src/ui/a11y/lib/annotation/tests/mocks/mock_annotation_view.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_listener.h"
-#include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_provider.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_tree_service_factory.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantics_event_manager.h"
+#include "src/ui/a11y/lib/testing/view_ref_helper.h"
 #include "src/ui/a11y/lib/util/util.h"
 #include "src/ui/a11y/lib/view/tests/mocks/mock_accessibility_view.h"
 #include "src/ui/a11y/lib/view/tests/mocks/mock_view_injector_factory.h"
@@ -74,10 +74,11 @@ class ViewManagerTest : public gtest::TestLoopFixture {
         context_provider_.context());
     view_manager_->SetAnnotationsEnabled(true);
 
-    semantic_provider_ =
-        std::make_unique<MockSemanticProvider>(view_manager_.get(), view_manager_.get());
-
-    RunLoopUntilIdle();
+    // NOTE: SemanticListener and SemanticTree handles are ignored.
+    semantics_manager()->RegisterViewForSemantics(
+        view_ref_helper_.Clone(),
+        fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticListener>(),
+        fidl::InterfaceRequest<fuchsia::accessibility::semantics::SemanticTree>());
   }
 
   void AddNodeToTree(uint32_t node_id, std::string label,
@@ -93,24 +94,34 @@ class ViewManagerTest : public gtest::TestLoopFixture {
     auto mock_view_semantics = view_semantics_factory_->GetViewSemantics();
     ASSERT_TRUE(mock_view_semantics);
 
-    auto tree_ptr = mock_view_semantics->GetTree();
+    auto tree_ptr = mock_view_semantics->mock_semantic_tree();
     ASSERT_TRUE(tree_ptr);
 
     ASSERT_TRUE(tree_ptr->Update(std::move(node_updates)));
     RunLoopUntilIdle();
   }
 
+  fuchsia::accessibility::semantics::SemanticsManager* semantics_manager() {
+    return view_manager_.get();
+  }
+  fuchsia::accessibility::virtualkeyboard::Registry* keyboard_registry() {
+    return view_manager_.get();
+  }
+  fuchsia::accessibility::virtualkeyboard::Listener* keyboard_listener() {
+    return view_manager_.get();
+  }
+
   sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<MockSemanticTreeServiceFactory> tree_service_factory_;
   std::unique_ptr<a11y::ViewManager> view_manager_;
-  std::unique_ptr<MockSemanticProvider> semantic_provider_;
   MockSemanticTreeServiceFactory* tree_service_factory_ptr_;
   MockViewSemanticsFactory* view_semantics_factory_;
   MockAnnotationViewFactory* annotation_view_factory_;
   input_test::MockInjector* mock_injector_;
+  ViewRefHelper view_ref_helper_;
 };
 
-TEST_F(ViewManagerTest, ProviderGetsNotifiedOfSemanticsEnabled) {
+TEST_F(ViewManagerTest, SemanticsEnabledAndDisabled) {
   // Enable Semantics Manager.
   view_manager_->SetSemanticsEnabled(true);
   // Upon initialization, MockSemanticProvider calls RegisterViewForSemantics().
@@ -118,26 +129,27 @@ TEST_F(ViewManagerTest, ProviderGetsNotifiedOfSemanticsEnabled) {
   EXPECT_TRUE(tree_service_factory_ptr_->service());
   RunLoopUntilIdle();
 
-  EXPECT_TRUE(semantic_provider_->GetSemanticsEnabled());
+  ASSERT_TRUE(view_semantics_factory_->GetViewSemantics());
+  EXPECT_TRUE(view_semantics_factory_->GetViewSemantics()->semantics_enabled());
 
   // Disable Semantics Manager.
   view_manager_->SetSemanticsEnabled(false);
   RunLoopUntilIdle();
   // Semantics Listener should get notified about Semantics manager disable.
-  EXPECT_FALSE(semantic_provider_->GetSemanticsEnabled());
+  EXPECT_FALSE(view_semantics_factory_->GetViewSemantics()->semantics_enabled());
 }
 
 TEST_F(ViewManagerTest, ClosesChannel) {
   view_manager_->SetSemanticsEnabled(true);
   RunLoopUntilIdle();
 
-  EXPECT_TRUE(view_manager_->ViewHasSemantics(semantic_provider_->koid()));
+  EXPECT_TRUE(view_manager_->ViewHasSemantics(view_ref_helper_.koid()));
 
   // Forces the client to disconnect.
-  semantic_provider_->SendEventPairSignal();
+  view_ref_helper_.SendEventPairSignal();
   RunLoopUntilIdle();
 
-  EXPECT_FALSE(view_manager_->ViewHasSemantics(semantic_provider_->koid()));
+  EXPECT_FALSE(view_manager_->ViewHasSemantics(view_ref_helper_.koid()));
 }
 
 TEST_F(ViewManagerTest, SemanticsSourceViewHasSemantics) {
@@ -145,12 +157,12 @@ TEST_F(ViewManagerTest, SemanticsSourceViewHasSemantics) {
   RunLoopUntilIdle();
 
   a11y::SemanticsSource* semantics_source = view_manager_.get();
-  EXPECT_TRUE(semantics_source->ViewHasSemantics(a11y::GetKoid(semantic_provider_->view_ref())));
+  EXPECT_TRUE(semantics_source->ViewHasSemantics(view_ref_helper_.koid()));
 
   // Forces the client to disconnect.
-  semantic_provider_->SendEventPairSignal();
+  view_ref_helper_.SendEventPairSignal();
   RunLoopUntilIdle();
-  EXPECT_FALSE(semantics_source->ViewHasSemantics(a11y::GetKoid(semantic_provider_->view_ref())));
+  EXPECT_FALSE(semantics_source->ViewHasSemantics(view_ref_helper_.koid()));
 }
 
 TEST_F(ViewManagerTest, SemanticsSourceViewRefClone) {
@@ -158,15 +170,14 @@ TEST_F(ViewManagerTest, SemanticsSourceViewRefClone) {
   RunLoopUntilIdle();
 
   a11y::SemanticsSource* semantics_source = view_manager_.get();
-  auto view_ref_or_null =
-      semantics_source->ViewRefClone(a11y::GetKoid(semantic_provider_->view_ref()));
-  EXPECT_EQ(a11y::GetKoid(semantic_provider_->view_ref()), a11y::GetKoid(*view_ref_or_null));
+  auto view_ref_or_null = semantics_source->ViewRefClone(view_ref_helper_.koid());
+  EXPECT_EQ(a11y::GetKoid(*view_ref_or_null), view_ref_helper_.koid());
 
   // Forces the client to disconnect.
-  semantic_provider_->SendEventPairSignal();
+  view_ref_helper_.SendEventPairSignal();
   RunLoopUntilIdle();
   // The view is not providing semantics anymore, so there is no return value.
-  EXPECT_FALSE(semantics_source->ViewRefClone(a11y::GetKoid(semantic_provider_->view_ref())));
+  EXPECT_FALSE(semantics_source->ViewRefClone(view_ref_helper_.koid()));
 }
 
 TEST_F(ViewManagerTest, SemanticsSourceGetSemanticNode) {
@@ -175,7 +186,7 @@ TEST_F(ViewManagerTest, SemanticsSourceGetSemanticNode) {
 
   AddNodeToTree(0u, "test_label");
 
-  const auto node = view_manager_->GetSemanticNode(semantic_provider_->koid(), 0u);
+  const auto node = view_manager_->GetSemanticNode(view_ref_helper_.koid(), 0u);
   EXPECT_TRUE(node);
   EXPECT_TRUE(node->has_attributes());
   EXPECT_TRUE(node->attributes().has_label());
@@ -193,8 +204,8 @@ TEST_F(ViewManagerTest, SemanticsSourceGetParentNode) {
   node_updates.emplace_back(CreateTestNode(3u, "test_label_3"));
   ApplyNodeUpdates(std::move(node_updates));
 
-  const auto root_node = view_manager_->GetParentNode(semantic_provider_->koid(), 2u);
-  const auto null_node = view_manager_->GetParentNode(semantic_provider_->koid(), 0u);
+  const auto root_node = view_manager_->GetParentNode(view_ref_helper_.koid(), 2u);
+  const auto null_node = view_manager_->GetParentNode(view_ref_helper_.koid(), 0u);
 
   EXPECT_TRUE(root_node);
   EXPECT_EQ(root_node->node_id(), 0u);
@@ -205,7 +216,7 @@ TEST_F(ViewManagerTest, SemanticsSourceGetNeighboringNodes) {
   view_manager_->SetSemanticsEnabled(true);
   RunLoopUntilIdle();
 
-  auto mock_tree = tree_service_factory_ptr_->semantic_tree();
+  auto mock_tree = view_semantics_factory_->GetViewSemantics()->mock_semantic_tree();
   ASSERT_TRUE(mock_tree);
   auto next_node = CreateTestNode(3u, "test_label_3");
   mock_tree->SetNextNode(&next_node);
@@ -213,10 +224,10 @@ TEST_F(ViewManagerTest, SemanticsSourceGetNeighboringNodes) {
   mock_tree->SetPreviousNode(&previous_node);
 
   const auto returned_next_node = view_manager_->GetNextNode(
-      semantic_provider_->koid(), 2u,
+      view_ref_helper_.koid(), 2u,
       [](const fuchsia::accessibility::semantics::Node* node) { return true; });
   const auto returned_previous_node = view_manager_->GetPreviousNode(
-      semantic_provider_->koid(), 2u,
+      view_ref_helper_.koid(), 2u,
       [](const fuchsia::accessibility::semantics::Node* node) { return true; });
 
   EXPECT_TRUE(returned_next_node);
@@ -229,33 +240,54 @@ TEST_F(ViewManagerTest, SemanticsSourceHitTest) {
   view_manager_->SetSemanticsEnabled(true);
   RunLoopUntilIdle();
 
-  AddNodeToTree(0u, "test_label");
-  semantic_provider_->SetHitTestResult(0u);
+  const uint32_t kHitTestResult = 1u;
 
-  view_manager_->ExecuteHitTesting(semantic_provider_->koid(), fuchsia::math::PointF(),
-                                   [](fuchsia::accessibility::semantics::Hit hit) {
-                                     EXPECT_TRUE(hit.has_node_id());
-                                     EXPECT_EQ(hit.node_id(), 0u);
+  auto mock_tree = view_semantics_factory_->GetViewSemantics()->mock_semantic_tree();
+  ASSERT_TRUE(mock_tree);
+  mock_tree->set_hit_testing_handler(
+      [](fuchsia::math::PointF local_point,
+         fuchsia::accessibility::semantics::SemanticListener::HitTestCallback callback) {
+        fuchsia::accessibility::semantics::Hit hit;
+        hit.set_node_id(kHitTestResult);
+        callback(std::move(hit));
+      });
+
+  std::optional<fuchsia::accessibility::semantics::Hit> hit_test_result;
+  view_manager_->ExecuteHitTesting(view_ref_helper_.koid(), fuchsia::math::PointF(),
+                                   [&hit_test_result](fuchsia::accessibility::semantics::Hit hit) {
+                                     hit_test_result = std::move(hit);
                                    });
 
-  RunLoopUntilIdle();
+  ASSERT_TRUE(hit_test_result.has_value());
+  ASSERT_TRUE(hit_test_result->has_node_id());
+  EXPECT_EQ(hit_test_result->node_id(), kHitTestResult);
 }
 
 TEST_F(ViewManagerTest, SemanticsSourcePerformAction) {
   view_manager_->SetSemanticsEnabled(true);
   RunLoopUntilIdle();
 
-  AddNodeToTree(0u, "test_label");
+  std::optional<uint32_t> request_node_id;
+  std::optional<fuchsia::accessibility::semantics::Action> request_action;
 
-  view_manager_->PerformAccessibilityAction(semantic_provider_->koid(), 0u,
+  auto mock_tree = view_semantics_factory_->GetViewSemantics()->mock_semantic_tree();
+  ASSERT_TRUE(mock_tree);
+  mock_tree->set_action_handler(
+      [&request_node_id, &request_action](uint32_t node_id,
+                                          fuchsia::accessibility::semantics::Action action,
+                                          fuchsia::accessibility::semantics::SemanticListener::
+                                              OnAccessibilityActionRequestedCallback callback) {
+        request_node_id = node_id;
+        request_action = action;
+        callback(true);
+      });
+
+  view_manager_->PerformAccessibilityAction(view_ref_helper_.koid(), 0u,
                                             fuchsia::accessibility::semantics::Action::DEFAULT,
                                             [](bool result) { EXPECT_TRUE(result); });
 
-  RunLoopUntilIdle();
-
-  EXPECT_EQ(semantic_provider_->GetRequestedAction(),
-            fuchsia::accessibility::semantics::Action::DEFAULT);
-  EXPECT_EQ(semantic_provider_->GetRequestedActionNodeId(), 0u);
+  EXPECT_EQ(request_action, fuchsia::accessibility::semantics::Action::DEFAULT);
+  EXPECT_EQ(request_node_id, 0u);
 }
 
 TEST_F(ViewManagerTest, SemanticsSourcePerformActionFailsBecausePointsToWrongTree) {
@@ -265,8 +297,8 @@ TEST_F(ViewManagerTest, SemanticsSourcePerformActionFailsBecausePointsToWrongTre
   AddNodeToTree(0u, "test_label");
   bool callback_ran = false;
   view_manager_->PerformAccessibilityAction(
-      semantic_provider_->koid() +
-          1 /*to simulate a koid that does not match the one we are expeting*/,
+      view_ref_helper_.koid() +
+          1 /* to simulate a koid that does not match the one we are expecting */,
       0u, fuchsia::accessibility::semantics::Action::DEFAULT, [&callback_ran](bool result) {
         callback_ran = true;
         EXPECT_FALSE(result);
@@ -291,12 +323,12 @@ TEST_F(ViewManagerTest, FocusHighlightManagerDrawAndClearHighlights) {
   ApplyNodeUpdates(std::move(node_updates));
 
   a11y::FocusHighlightManager::SemanticNodeIdentifier newly_highlighted_node;
-  newly_highlighted_node.koid = semantic_provider_->koid();
+  newly_highlighted_node.koid = view_ref_helper_.koid();
   newly_highlighted_node.node_id = 1u;
 
   view_manager_->UpdateHighlight(newly_highlighted_node);
 
-  auto highlighted_view = annotation_view_factory_->GetAnnotationView(semantic_provider_->koid());
+  auto highlighted_view = annotation_view_factory_->GetAnnotationView(view_ref_helper_.koid());
   ASSERT_TRUE(highlighted_view);
   auto highlight = highlighted_view->GetCurrentFocusHighlight();
   EXPECT_TRUE(highlight.has_value());
@@ -307,7 +339,7 @@ TEST_F(ViewManagerTest, FocusHighlightManagerDrawAndClearHighlights) {
   view_manager_->ClearFocusHighlights();
 
   auto maybe_highlighted_view =
-      annotation_view_factory_->GetAnnotationView(semantic_provider_->koid());
+      annotation_view_factory_->GetAnnotationView(view_ref_helper_.koid());
   ASSERT_TRUE(maybe_highlighted_view);
   auto maybe_highlight = maybe_highlighted_view->GetCurrentFocusHighlight();
   EXPECT_FALSE(maybe_highlight.has_value());
@@ -327,13 +359,13 @@ TEST_F(ViewManagerTest, FocusHighlightManagerDisableAnnotations) {
   ApplyNodeUpdates(std::move(node_updates));
 
   a11y::FocusHighlightManager::SemanticNodeIdentifier newly_highlighted_node;
-  newly_highlighted_node.koid = semantic_provider_->koid();
+  newly_highlighted_node.koid = view_ref_helper_.koid();
   newly_highlighted_node.node_id = 1u;
 
   view_manager_->UpdateHighlight(newly_highlighted_node);
   RunLoopUntilIdle();
 
-  auto highlighted_view = annotation_view_factory_->GetAnnotationView(semantic_provider_->koid());
+  auto highlighted_view = annotation_view_factory_->GetAnnotationView(view_ref_helper_.koid());
   ASSERT_TRUE(highlighted_view);
   auto highlight = highlighted_view->GetCurrentFocusHighlight();
   EXPECT_TRUE(highlight.has_value());
@@ -346,7 +378,7 @@ TEST_F(ViewManagerTest, FocusHighlightManagerDisableAnnotations) {
 
   // Verify that focus highlights were cleared.
   auto maybe_highlighted_view =
-      annotation_view_factory_->GetAnnotationView(semantic_provider_->koid());
+      annotation_view_factory_->GetAnnotationView(view_ref_helper_.koid());
   ASSERT_TRUE(maybe_highlighted_view);
   auto maybe_highlight = maybe_highlighted_view->GetCurrentFocusHighlight();
   EXPECT_FALSE(maybe_highlight.has_value());
@@ -364,51 +396,64 @@ TEST_F(ViewManagerTest, FocusHighlightManagerDrawHighlightWithAnnotationsDisable
   ApplyNodeUpdates(std::move(node_updates));
 
   a11y::FocusHighlightManager::SemanticNodeIdentifier newly_highlighted_node;
-  newly_highlighted_node.koid = semantic_provider_->koid();
+  newly_highlighted_node.koid = view_ref_helper_.koid();
   newly_highlighted_node.node_id = 1u;
 
   view_manager_->UpdateHighlight(newly_highlighted_node);
 
   auto maybe_highlighted_view =
-      annotation_view_factory_->GetAnnotationView(semantic_provider_->koid());
+      annotation_view_factory_->GetAnnotationView(view_ref_helper_.koid());
   ASSERT_TRUE(maybe_highlighted_view);
   auto maybe_highlight = maybe_highlighted_view->GetCurrentFocusHighlight();
   EXPECT_FALSE(maybe_highlight.has_value());
 }
 
 TEST_F(ViewManagerTest, VirtualkeyboardListenerUpdates) {
-  EXPECT_TRUE(semantic_provider_->IsVirtualkeyboardListenerConnected());
-  EXPECT_FALSE(view_manager_->ViewHasVisibleVirtualkeyboard(semantic_provider_->koid()));
+  EXPECT_FALSE(view_manager_->ViewHasVisibleVirtualkeyboard(view_ref_helper_.koid()));
   EXPECT_FALSE(view_manager_->GetViewWithVisibleVirtualkeyboard());
-  semantic_provider_->UpdateVirtualkeyboardVisibility(true);
+
+  fuchsia::accessibility::virtualkeyboard::ListenerPtr keyboard_client;
+  keyboard_registry()->Register(view_ref_helper_.Clone(), /* is_visible = */ false,
+                                keyboard_client.NewRequest());
   RunLoopUntilIdle();
-  EXPECT_TRUE(view_manager_->ViewHasVisibleVirtualkeyboard(semantic_provider_->koid()));
-  auto invalid_koid = semantic_provider_->koid() + 1;
+
+  EXPECT_TRUE(keyboard_client.is_bound());
+  EXPECT_FALSE(view_manager_->ViewHasVisibleVirtualkeyboard(view_ref_helper_.koid()));
+  EXPECT_FALSE(view_manager_->GetViewWithVisibleVirtualkeyboard());
+
+  keyboard_listener()->OnVisibilityChanged(true, []() {});
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(view_manager_->ViewHasVisibleVirtualkeyboard(view_ref_helper_.koid()));
+  auto invalid_koid = view_ref_helper_.koid() + 1;
   EXPECT_FALSE(view_manager_->ViewHasVisibleVirtualkeyboard(invalid_koid));
   EXPECT_TRUE(view_manager_->GetViewWithVisibleVirtualkeyboard());
-  EXPECT_EQ(*view_manager_->GetViewWithVisibleVirtualkeyboard(), semantic_provider_->koid());
+  EXPECT_EQ(*view_manager_->GetViewWithVisibleVirtualkeyboard(), view_ref_helper_.koid());
 
   // Connects a second semantic provider which tries to add a new virtual keyboard listener. This
   // one should fail, as only one registered is supported.
-  auto semantic_provider_2 =
-      std::make_unique<MockSemanticProvider>(view_manager_.get(), view_manager_.get());
+  ViewRefHelper view_ref_helper_2;
+  fuchsia::accessibility::virtualkeyboard::ListenerPtr keyboard_client_2;
+  keyboard_registry()->Register(view_ref_helper_2.Clone(), /* is_visible = */ true,
+                                keyboard_client_2.NewRequest());
   RunLoopUntilIdle();
-  EXPECT_FALSE(semantic_provider_2->IsVirtualkeyboardListenerConnected());
 
-  semantic_provider_->UpdateVirtualkeyboardVisibility(false);
-  RunLoopUntilIdle();
-  EXPECT_FALSE(view_manager_->ViewHasVisibleVirtualkeyboard(semantic_provider_->koid()));
+  EXPECT_FALSE(view_manager_->ViewHasVisibleVirtualkeyboard(view_ref_helper_2.koid()));
+  EXPECT_FALSE(keyboard_client_2.is_bound());
+
+  keyboard_listener()->OnVisibilityChanged(false, []() {});
+  EXPECT_FALSE(view_manager_->GetViewWithVisibleVirtualkeyboard());
 }
 
 TEST_F(ViewManagerTest, InjectorManagerTest) {
   fuchsia::ui::input::InputEvent event;
-  EXPECT_FALSE(view_manager_->InjectEventIntoView(event, semantic_provider_->koid()));
+  EXPECT_FALSE(view_manager_->InjectEventIntoView(event, view_ref_helper_.koid()));
   EXPECT_FALSE(mock_injector_->on_event_called());
-  view_manager_->MarkViewReadyForInjection(semantic_provider_->koid(), true);
-  EXPECT_TRUE(view_manager_->InjectEventIntoView(event, semantic_provider_->koid()));
+  view_manager_->MarkViewReadyForInjection(view_ref_helper_.koid(), true);
+  EXPECT_TRUE(view_manager_->InjectEventIntoView(event, view_ref_helper_.koid()));
   EXPECT_TRUE(mock_injector_->on_event_called());
-  view_manager_->MarkViewReadyForInjection(semantic_provider_->koid(), false);
-  EXPECT_FALSE(view_manager_->InjectEventIntoView(event, semantic_provider_->koid()));
+  view_manager_->MarkViewReadyForInjection(view_ref_helper_.koid(), false);
+  EXPECT_FALSE(view_manager_->InjectEventIntoView(event, view_ref_helper_.koid()));
 }
 
 }  // namespace

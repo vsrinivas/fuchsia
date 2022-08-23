@@ -47,6 +47,7 @@ executable("view_tests") {
     "//src/ui/a11y/lib/annotation/tests/mocks",
     "//src/ui/a11y/lib/semantics",
     "//src/ui/a11y/lib/semantics/tests/mocks",
+    "//src/ui/a11y/lib/testing:view_ref_helper",
     "//src/ui/a11y/lib/view",
     "//src/ui/a11y/lib/view/tests/mocks",
     "//src/ui/input/lib/injector/tests/mocks",

@@ -30,9 +30,9 @@
 #include "src/ui/a11y/lib/testing/input.h"
 #include "src/ui/a11y/lib/util/tests/mocks/mock_boot_info_manager.h"
 #include "src/ui/a11y/lib/util/util.h"
+#include "src/ui/a11y/lib/view/a11y_view_semantics.h"
 #include "src/ui/a11y/lib/view/tests/mocks/mock_accessibility_view.h"
 #include "src/ui/a11y/lib/view/tests/mocks/mock_view_injector_factory.h"
-#include "src/ui/a11y/lib/view/tests/mocks/mock_view_semantics.h"
 
 namespace accessibility_test {
 namespace {
@@ -54,10 +54,9 @@ class AppUnitTest : public gtest::TestLoopFixture {
         mock_focus_chain_(&context_provider_),
         mock_property_provider_(&context_provider_),
         mock_annotation_view_factory_(new MockAnnotationViewFactory()),
-        mock_view_semantics_factory_(new MockViewSemanticsFactory()),
         mock_boot_info_manager_(context_, true),
         view_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
-                      std::unique_ptr<MockViewSemanticsFactory>(mock_view_semantics_factory_),
+                      std::make_unique<a11y::A11yViewSemanticsFactory>(),
                       std::unique_ptr<MockAnnotationViewFactory>(mock_annotation_view_factory_),
                       std::make_unique<MockViewInjectorFactory>(),
                       std::make_unique<MockSemanticsEventManager>(),
@@ -69,21 +68,10 @@ class AppUnitTest : public gtest::TestLoopFixture {
 
   void AddNodeToTree(uint32_t node_id, std::string label,
                      std::vector<uint32_t> child_ids = std::vector<uint32_t>()) {
-    std::vector<a11y::SemanticTree::TreeUpdate> node_updates;
-    auto node = CreateTestNode(node_id, label, child_ids);
-    node_updates.emplace_back(std::move(node));
-
-    ApplyNodeUpdates(std::move(node_updates));
-  }
-
-  void ApplyNodeUpdates(std::vector<a11y::SemanticTree::TreeUpdate> node_updates) {
-    auto mock_view_semantics = mock_view_semantics_factory_->GetViewSemantics();
-    ASSERT_TRUE(mock_view_semantics);
-
-    auto tree_ptr = mock_view_semantics->GetTree();
-    ASSERT_TRUE(tree_ptr);
-
-    ASSERT_TRUE(tree_ptr->Update(std::move(node_updates)));
+    std::vector<fuchsia::accessibility::semantics::Node> updates;
+    updates.emplace_back(CreateTestNode(node_id, label, child_ids));
+    mock_semantic_provider_.UpdateSemanticNodes(std::move(updates));
+    mock_semantic_provider_.CommitUpdates();
     RunLoopUntilIdle();
   }
 
@@ -172,7 +160,6 @@ class AppUnitTest : public gtest::TestLoopFixture {
   MockFocusChain mock_focus_chain_;
   MockPropertyProvider mock_property_provider_;
   MockAnnotationViewFactory* mock_annotation_view_factory_;
-  MockViewSemanticsFactory* mock_view_semantics_factory_;
   MockBootInfoManager mock_boot_info_manager_;
   a11y::ViewManager view_manager_;
   a11y::TtsManager tts_manager_;
