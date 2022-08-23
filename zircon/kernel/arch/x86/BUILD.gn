@@ -147,6 +147,7 @@ zx_library("x86") {
     "spinlock.cc",
     "start.S",
     "start16.S",
+    "suspend.cc",
     "system_topology.cc",
     "thread.cc",
     "timer_freq.cc",
