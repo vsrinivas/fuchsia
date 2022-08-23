@@ -153,7 +153,7 @@ From //build/images/vbmeta.gni:20
 
 **Current value for `target_cpu = "x64"`:** `"//third_party/android/platform/external/avb/test/data/atx_metadata.bin"`
 
-From //boards/common/x64-common.gni:86
+From //boards/x64.gni:56
 
 **Overridden from the default:** `""`
 
@@ -172,7 +172,7 @@ From //build/images/vbmeta.gni:17
 
 **Current value for `target_cpu = "x64"`:** `"//third_party/android/platform/external/avb/test/data/testkey_atx_psk.pem"`
 
-From //boards/common/x64-common.gni:84
+From //boards/x64.gni:54
 
 **Overridden from the default:** `""`
 
@@ -502,7 +502,7 @@ From //build/board.gni:87
 
 **Current value for `target_cpu = "x64"`:** `true`
 
-From //boards/x64.gni:61
+From //boards/x64.gni:83
 
 **Overridden from the default:** `false`
 
@@ -794,7 +794,7 @@ From //build/images/args.gni:29
 
 **Current value for `target_cpu = "x64"`:** `true`
 
-From //boards/x64.gni:50
+From //boards/x64.gni:51
 
 **Overridden from the default:** `false`
 
@@ -2966,7 +2966,7 @@ From //build/go/go_build.gni:22
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/dartlang/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/.gocache"`
 
 From //build/go/go_build.gni:18
 
@@ -6262,7 +6262,7 @@ From //build/security.gni:209
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"dartlang/thinlto-cache"`
+**Current value (from the default):** `"thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
@@ -6463,7 +6463,7 @@ From //build/images/args.gni:26
 
 **Current value for `target_cpu = "x64"`:** `true`
 
-From //boards/x64.gni:51
+From //boards/x64.gni:52
 
 **Overridden from the default:** `false`
 
@@ -6620,7 +6620,7 @@ From //build/images/vbmeta.gni:14
 
 **Current value for `target_cpu = "x64"`:** `true`
 
-From //boards/common/x64-common.gni:82
+From //boards/x64.gni:50
 
 **Overridden from the default:** `false`
 
