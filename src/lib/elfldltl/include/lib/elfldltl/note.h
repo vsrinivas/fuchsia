@@ -7,10 +7,15 @@
 
 #include <zircon/assert.h>
 
+#include <cstdint>
 #include <cstdio>
+#include <optional>
 #include <string_view>
+#include <tuple>
+#include <type_traits>
 
 #include "layout.h"
+#include "phdr.h"
 
 namespace elfldltl {
 
@@ -32,6 +37,14 @@ struct ElfNote {
             nhdr.name_offset(), nhdr.namesz)),
         desc(note.substr(nhdr.desc_offset(), nhdr.descsz)),
         type(nhdr.type) {}
+
+  // For some reason `= default;` here doesn't permit constexpr.
+  constexpr ElfNote& operator=(const ElfNote& other) {
+    name = other.name;
+    desc = other.desc;
+    type = other.type;
+    return *this;
+  }
 
   // Match against an expected name.
   template <size_t N>
@@ -176,6 +189,113 @@ class ElfNoteSegment {
 
   Bytes notes_;
 };
+
+// elfldltl::PhdrFileNoteObserver(file_api_object, callback...) can be passed
+// to elfldltl::DecodePhdrs to call each callback as if it were bool(ElfNote)
+// on each note in the file, returning false the first time a callback returns
+// false, or earlier if there is a problem reading notes from the file.  This
+// will read both allocated and non-allocated notes, but always read them from
+// the file rather than from memory (for allocated notes, it should be the same
+// data as if the file were loaded into memory and then the notes read out of
+// memory, unless the note contents are writable or RELRO data).
+template <ElfData Data, class File, class Allocator, typename... Callback>
+class PhdrFileNoteObserver
+    : public PhdrObserver<PhdrFileNoteObserver<Data, File, Allocator, Callback...>,
+                          ElfPhdrType::kNote> {
+ public:
+  static_assert((std::is_invocable_r_v<bool, Callback, ElfNote> && ...));
+
+  PhdrFileNoteObserver() = delete;
+
+  // Copyable and/or movable if Allocator and Callback are.
+  constexpr PhdrFileNoteObserver(const PhdrFileNoteObserver&) = default;
+  constexpr PhdrFileNoteObserver(PhdrFileNoteObserver&&) noexcept = default;
+
+  template <class Elf>
+  explicit constexpr PhdrFileNoteObserver(Elf&& elf, File& file, Allocator allocator,
+                                          Callback... callback)
+      : file_(&file),
+        allocator_(std::move(allocator)),
+        callback_{std::forward<Callback>(callback)...} {
+    static_assert(std::decay_t<Elf>::kData == Data);
+    static_assert(std::is_copy_constructible_v<PhdrFileNoteObserver> ==
+                  (std::is_copy_constructible_v<Allocator> &&
+                   (std::is_copy_constructible_v<Callback> && ...)));
+    static_assert(std::is_move_constructible_v<PhdrFileNoteObserver> ==
+                  (std::is_move_constructible_v<Allocator> &&
+                   (std::is_move_constructible_v<Callback> && ...)));
+    static_assert(
+        std::is_copy_assignable_v<PhdrFileNoteObserver> ==
+        (std::is_copy_assignable_v<Allocator> && (std::is_copy_assignable_v<Callback> && ...)));
+    static_assert(
+        std::is_move_assignable_v<PhdrFileNoteObserver> ==
+        (std::is_move_assignable_v<Allocator> && (std::is_move_assignable_v<Callback> && ...)));
+  }
+
+  // Copy-assignable and/or move-assignable if Allocator and Callback are.
+  constexpr PhdrFileNoteObserver& operator=(const PhdrFileNoteObserver&) = default;
+  constexpr PhdrFileNoteObserver& operator=(PhdrFileNoteObserver&&) noexcept = default;
+
+  template <class Diag, typename Phdr>
+  constexpr bool Observe(Diag& diag, PhdrTypeMatch<ElfPhdrType::kNote> type, const Phdr& phdr) {
+    if (phdr.filesz == 0) [[unlikely]] {
+      return true;
+    }
+    auto bytes = file_->template ReadArrayFromFile<std::byte>(phdr.offset, allocator_, phdr.filesz);
+    if (!bytes) [[unlikely]] {
+      return diag.FormatError("failed to read note segment from file");
+    }
+    for (const ElfNote& note : ElfNoteSegment<Data>{{bytes->data(), bytes->size()}}) {
+      auto all_callbacks_ok = [&note](auto&&... callback) -> bool {
+        return (callback(note) && ...);
+      };
+      if (!std::apply(all_callbacks_ok, callback_)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  template <class Diag>
+  bool Finish(Diag& diag) {
+    return true;
+  }
+
+ private:
+  File* file_;
+  Allocator allocator_;
+  std::tuple<Callback...> callback_;
+};
+
+// Deduction guide.  When used without template parameters, the first
+// constructor argument is an empty Elf<...> object to identify the format; the
+// second is always an lvalue reference (see memory.h); the third is forwarded
+// as the allocator object used by File::ReadArrayFromFile<std::byte>; while
+// the later arguments (some invocable objects like `bool(ElfNote)`) are moved
+// or copied so they can safely be temporaries.  Use std::ref or std::cref to
+// make the PhdrFileNoteObserver object hold a callback by reference instead.
+template <class Elf, class File, typename Allocator, typename... Callback>
+PhdrFileNoteObserver(Elf&&, File&, Allocator&&, Callback&&...)
+    -> PhdrFileNoteObserver<std::decay_t<Elf>::kData, File, std::decay_t<Allocator>,
+                            std::decay_t<Callback>...>;
+
+// This returns a bool(ElfNote) callback object that can be passed to
+// elfldltl::PhdrFileNoteObserver.  That callback updates build_id to the
+// file's (first) build ID note.  If the optional second argument is true,
+// that callback returns true even after it's found the build ID, so that
+// PhdrFileNoteObserver would continue to call additional callbacks on this
+// and other notes rather than finish immediately.
+constexpr auto ObserveBuildIdNote(std::optional<ElfNote>& build_id, bool keep_going = false) {
+  return [keep_going, &build_id](const ElfNote& note) -> bool {
+    if (!build_id) {
+      if (!note.IsBuildId()) {
+        return true;
+      }
+      build_id = note;
+    }
+    return keep_going;
+  };
+}
 
 }  // namespace elfldltl
 
