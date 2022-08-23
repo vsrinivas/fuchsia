@@ -5,11 +5,15 @@
 #ifndef SRC_LIB_ELFLDLTL_INCLUDE_LIB_ELFLDLTL_LOAD_H_
 #define SRC_LIB_ELFLDLTL_INCLUDE_LIB_ELFLDLTL_LOAD_H_
 
+#include <array>
 #include <functional>
 #include <optional>
+#include <type_traits>
 #include <utility>
+#include <variant>
 
 #include "constants.h"
+#include "internal/load-segment-types.h"
 #include "layout.h"
 #include "phdr.h"
 
@@ -153,6 +157,147 @@ constexpr bool WithLoadHeadersFromFile(Diagnostics& diagnostics, File& file,
       return check_class(reinterpret_cast<const Ehdr64Msb&>(probe_ehdr));
   }
 }
+
+// elfldltl::LoadInfo<Elf, Container, ...> holds all the information an ELF
+// loader needs to know.  It holds representations of the PT_LOAD segments
+// in terms that matter to loading, using Container<Segment, ...>.  The
+// number of PT_LOAD segments and segments().size() do not necessarily
+// match exactly.  Rather, each Segment is a normalized loading step.
+//
+// Container is a vector-like template, such as from an adapter like
+// elfldltl::StdContainer<std::vector>::Container (container.h) or a special
+// implementation like elfldltl::StaticVector<N>::Container (static-vector.h).
+// It must support emplace_back, emplace, and erase methods.
+//
+// Segment is just an alias for std::variant<...> of the several specific
+// types.  All segment types have vaddr() and memsz(); most have offset() and
+// filesz().  All these are normalized to whole pages.
+//
+//  * ConstantSegment is loaded directly from the file (or was relocated);
+//    * It also has `bool readable()` and `bool executable()`.
+//
+//  * DataSegment is loaded from the file but writable (usually copy-on-write).
+//
+//  * DataWithZeroFillSegment is the same but has memsz() > filesz().
+//    * The bytes past filesz() are zero-fill, not from the file.
+//
+//  * ZeroFillSegment has only vaddr() and memsz().
+//
+// The GetPhdrObserver method is used with elfldltl::DecodePhdrs (see phdr.h)
+// to call AddSegment, which can also be called directly with a valid sequence
+// of PT_LOAD segments.
+//
+// relocation precedes loading, after all segments have been added.
+//
+// After adjustment, VisitSegments can be used to iterate over segments()
+// using std::visit.
+//
+template <class Elf, template <typename> class Container,
+          PhdrLoadPolicy Policy = PhdrLoadPolicy::kBasic>
+class LoadInfo {
+ private:
+  using Types = internal::LoadSegmentTypes<typename Elf::size_type>;
+
+ public:
+  using size_type = typename Elf::size_type;
+  using Phdr = typename Elf::Phdr;
+
+  using ConstantSegment = typename Types::template ConstantSegment<Policy>;
+  using DataSegment = typename Types::template DataSegment<Policy>;
+  using DataWithZeroFillSegment = typename Types::template DataWithZeroFillSegment<Policy>;
+  using ZeroFillSegment = typename Types::ZeroFillSegment;
+
+  using Segment =
+      std::variant<ConstantSegment, DataSegment, DataWithZeroFillSegment, ZeroFillSegment>;
+
+  constexpr Container<Segment>& segments() { return segments_; }
+  constexpr const Container<Segment>& segments() const { return segments_; }
+
+  constexpr size_type vaddr_start() const { return vaddr_start_; }
+
+  constexpr size_type vaddr_size() const { return vaddr_size_; }
+
+  // Add a PT_LOAD segment.
+  template <class Diagnostics>
+  constexpr bool AddSegment(Diagnostics& diagnostics, size_type page_size, const Phdr& phdr) {
+    // Merge with the last segment if possible, or else append a new one.
+    // Types::Merge overloads match each specific type as it's created below.
+    auto add = [this, &diagnostics](auto&& segment) -> bool {
+      return (!segments_.empty() && Types::Merge(segments_.back(), segment)) ||
+             segments_.emplace_back(diagnostics, internal::kTooManyLoads, segment);
+    };
+
+    // Normalize the file and memory bounds to whole pages.
+    auto [offset, filesz] = PageBounds(page_size, phdr.offset, phdr.filesz);
+    auto [vaddr, memsz] = PageBounds(page_size, phdr.vaddr, phdr.memsz);
+
+    // Choose which type of segment this should be.
+
+    if (memsz == 0) [[unlikely]] {
+      return true;
+    }
+    if (!(phdr.flags() & Phdr::kWrite)) {
+      return add(ConstantSegment(offset, vaddr, memsz, phdr.flags));
+    }
+    if (phdr.filesz == 0) {
+      return add(ZeroFillSegment(vaddr, memsz));
+    }
+    if (phdr.memsz > phdr.filesz) {
+      return add(DataWithZeroFillSegment(offset, vaddr, memsz, filesz));
+    }
+    return add(DataSegment(offset, vaddr, memsz));
+  }
+
+  // Get an ephemeral object to pass to elfldltl::DecodePhdrs.  The
+  // returned observer object must not outlive this LoadInfo object.
+  constexpr auto GetPhdrObserver(size_type page_size) {
+    auto add_segment = [this, page_size](auto& diagnostics, const Phdr& phdr) {
+      return this->AddSegment(diagnostics, page_size, phdr);
+    };
+    return GetPhdrObserver(page_size, add_segment);
+  }
+
+  // Iterate over segments() by calling std::visit(visitor, segment).
+  // Return false the first time the visitor returns false.
+  template <typename T>
+  constexpr bool VisitSegments(T&& visitor) {
+    return VisitAllOf(std::forward<T>(visitor), segments_);
+  }
+
+  template <typename T>
+  constexpr bool VisitSegments(T&& visitor) const {
+    return VisitAllOf(std::forward<T>(visitor), segments_);
+  }
+
+ private:
+  // Making this static with a universal reference parameter avoids having to
+  // repeat the actual body in the const and non-const methods that call it.
+  template <typename T, class C>
+  static constexpr bool VisitAllOf(T&& visitor, C&& container) {
+    for (auto& elt : container) {
+      if (!std::visit(visitor, elt)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  static constexpr std::pair<size_type, size_type> PageBounds(size_type page_size, size_type start,
+                                                              size_type size) {
+    size_type end = (start + size + page_size - 1) & -page_size;
+    start &= -page_size;
+    return {start, end - start};
+  }
+
+  template <typename T>
+  constexpr auto GetPhdrObserver(size_type page_size, T&& add_segment) {
+    return MakePhdrLoadObserver<Elf, Policy>(page_size, vaddr_start_, vaddr_size_,
+                                             std::forward<T>(add_segment));
+  }
+
+  Container<Segment> segments_;
+  size_type vaddr_start_ = 0, vaddr_size_ = 0;
+};
 
 }  // namespace elfldltl
 
