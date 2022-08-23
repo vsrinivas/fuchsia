@@ -34,8 +34,25 @@ pub struct CpuLoadCommand {
     pub duration: Duration,
 }
 
+const DURATION_REGEX: &'static str = r"^(\d+)(h|m|s|ms)$";
+
+/// Parses a Duration from string.
 fn parse_duration(value: &str) -> Result<Duration, String> {
-    Ok(Duration::from_secs(
-        value.parse().map_err(|e| format!("value '{}' is not a number: {}", value, e))?,
-    ))
+    let re = regex::Regex::new(DURATION_REGEX).unwrap();
+    let captures = re
+        .captures(&value)
+        .ok_or(format!("Durations must be specified in the form {}", DURATION_REGEX))?;
+    let number: u64 = captures[1].parse().unwrap();
+    let unit = &captures[2];
+
+    match unit {
+        "ms" => Ok(Duration::from_millis(number)),
+        "s" => Ok(Duration::from_secs(number)),
+        "m" => Ok(Duration::from_secs(number * 60)),
+        "h" => Ok(Duration::from_secs(number * 3600)),
+        _ => Err(format!(
+            "Invalid duration string \"{}\"; must be of the form {}",
+            value, DURATION_REGEX
+        )),
+    }
 }

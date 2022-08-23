@@ -17,4 +17,5 @@ ffx_plugin("ffx_cpu_load") {
   with_unit_tests = true
 
   args_sources = [ "src/args.rs" ]
+  args_deps = [ "//third_party/rust_crates:regex" ]
 }
