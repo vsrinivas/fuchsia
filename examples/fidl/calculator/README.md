@@ -67,7 +67,7 @@ To run these components together add `calculator-example-rust` to the ffx-labora
 
 ```
 ffx component create /core/ffx-laboratory:calculator-example-rust \
-    fuchsia-pkg://fuchsia.com/calculator-example-rust#meta/realm.cm
+    fuchsia-pkg://fuchsia.com/calculator-example-rust#meta/calculator_realm.cm
 ```
 
 and then start the component:

@@ -1,10 +1,38 @@
 # Copyright 2022 The Fuchsia Authors. All rights reserved. Use of this source
 # code is governed by a BSD-style license that can be found in the LICENSE file.
 
+import("//build/components.gni")
+
 group("all") {
   testonly = true
-  deps = [ "rust:all" ]
+  deps = [
+    ":calculator-example-rust",
+    #TODO(fxbug.dev/103280): add in C++ version here
+  ]
 }
+
+# This component combines the calculator_server & client components into one realm
+# with all necessary routing.
+fuchsia_component("calculator_realm") {
+  manifest = "realm/meta/realm.cml"
+}
+
+fuchsia_package("calculator-example-rust") {
+  deps = [
+    ":calculator_realm",
+    "//examples/fidl/calculator/rust/client:component",
+    "//examples/fidl/calculator/rust/server:component",
+  ]
+}
+
+#TODO(fxbug.dev/103280): add in C++ version here, e.g.
+#fuchsia_package("calculator-example-cpp") {
+#  deps = [
+#    ":calculator_realm",
+#    "//examples/fidl/calculator/cpp/client:component",
+#    "//examples/fidl/calculator/cpp/server:component",
+#  ]
+#}
 
 group("tests") {
   testonly = true
