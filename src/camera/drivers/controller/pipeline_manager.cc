@@ -299,8 +299,8 @@ std::string PipelineManager::Dump(bool log, cpp20::source_location location) con
   auto str = ss.str();
   if (log) {
     // Derivation of FX_LOGS(severity) that accepts custom FILE and LINE parameters.
-    FX_LAZY_STREAM(::syslog::LogMessage(::syslog::LOG_SEVERITY_AND_ID_INFO, location.file_name(),
-                                        location.line(), nullptr, nullptr)
+    FX_LAZY_STREAM(::syslog::LogMessage(::syslog::LOG_INFO, location.file_name(), location.line(),
+                                        nullptr, nullptr)
                        .stream(),
                    FX_LOG_IS_ON(INFO))
         << "PipelineManager::Dump()\n"

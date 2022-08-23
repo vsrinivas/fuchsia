@@ -92,12 +92,11 @@ void AudioOutput::Process() {
         DumpStageMetrics(os, metrics);
       }
 
-      FX_LOGS(ERROR("pipeline-underflow"))
-          << "PIPELINE UNDERFLOW: Mixer ran for " << std::setprecision(4)
-          << static_cast<double>(dt.to_nsecs()) / ZX_MSEC(1) << " ms, overran goal of "
-          << static_cast<double>(MixDeadline().to_nsecs()) / ZX_MSEC(1)
-          << " ms. Detailed metrics:\n"
-          << os.str();
+      FX_LOGS(ERROR) << "PIPELINE UNDERFLOW: Mixer ran for " << std::setprecision(4)
+                     << static_cast<double>(dt.to_nsecs()) / ZX_MSEC(1) << " ms, overran goal of "
+                     << static_cast<double>(MixDeadline().to_nsecs()) / ZX_MSEC(1)
+                     << " ms. Detailed metrics:\n"
+                     << os.str();
 
       reporter().PipelineUnderflow(mono_now + MixDeadline(), mono_end);
     }

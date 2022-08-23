@@ -174,36 +174,6 @@ struct LogBuffer {
 
 namespace syslog {
 
-class LogSeverityAndId {
- public:
-  // Constructs a LogSeverityAndId with the given severity and an empty id.
-  explicit constexpr LogSeverityAndId(LogSeverity severity) : severity_(severity), id_(nullptr) {}
-
-  // Constructs a LogSeverityAndId with the given severity and id.
-  constexpr LogSeverityAndId(LogSeverity severity, const char* id) : severity_(severity), id_(id) {}
-
-  // Constructs a new LogSeverityAndId with the same severity but the given id.
-  constexpr LogSeverityAndId operator()(const char* id) const {
-    return LogSeverityAndId(severity_, id);
-  }
-
-  LogSeverity severity() const { return severity_; }
-
-  const char* id() const { return id_; }
-
- private:
-  const LogSeverity severity_;
-  const char* const id_;
-};
-
-constexpr LogSeverityAndId LOG_SEVERITY_AND_ID_TRACE(LOG_TRACE);
-constexpr LogSeverityAndId LOG_SEVERITY_AND_ID_DEBUG(LOG_DEBUG);
-constexpr LogSeverityAndId LOG_SEVERITY_AND_ID_INFO(LOG_INFO);
-constexpr LogSeverityAndId LOG_SEVERITY_AND_ID_WARNING(LOG_WARNING);
-constexpr LogSeverityAndId LOG_SEVERITY_AND_ID_ERROR(LOG_ERROR);
-constexpr LogSeverityAndId LOG_SEVERITY_AND_ID_FATAL(LOG_FATAL);
-inline LogSeverityAndId LOG_SEVERITY_AND_ID_LEVEL(int8_t level) { return LogSeverityAndId(level); }
-
 template <typename... LogArgs>
 constexpr syslog_backend::Tuplet<LogArgs...> Args(LogArgs... values) {
   return syslog_backend::Tuplet<LogArgs...>(std::make_tuple(values...), sizeof...(values));
@@ -252,13 +222,6 @@ class LogMessageVoidify {
 
 class LogMessage {
  public:
-  LogMessage(LogSeverityAndId severity_and_id, const char* file, int line, const char* condition,
-             const char* tag
-#if defined(__Fuchsia__)
-             ,
-             zx_status_t status = std::numeric_limits<zx_status_t>::max()
-#endif
-  );
   LogMessage(LogSeverity severity, const char* file, int line, const char* condition,
              const char* tag
 #if defined(__Fuchsia__)
@@ -273,7 +236,6 @@ class LogMessage {
  private:
   std::ostringstream stream_;
   const LogSeverity severity_;
-  const char* const log_id_;
   const char* file_;
   const int line_;
   const char* condition_;
@@ -299,20 +261,13 @@ uint8_t GetVlogVerbosity();
 // LOG_FATAL and above is always true.
 bool ShouldCreateLogMessage(LogSeverity severity);
 
-// Returns true if severity is at or above the current minimum log level.
-// LOG_FATAL and above is always true.
-bool ShouldCreateLogMessage(const LogSeverityAndId& severity_and_id);
-
 }  // namespace syslog
 
-#define FX_LOG_STREAM(severity, tag)                                                               \
-  ::syslog::LogMessage(::syslog::LOG_SEVERITY_AND_ID_##severity, __FILE__, __LINE__, nullptr, tag) \
-      .stream()
+#define FX_LOG_STREAM(severity, tag) \
+  ::syslog::LogMessage(::syslog::LOG_##severity, __FILE__, __LINE__, nullptr, tag).stream()
 
-#define FX_LOG_STREAM_STATUS(severity, status, tag)                                                \
-  ::syslog::LogMessage(::syslog::LOG_SEVERITY_AND_ID_##severity, __FILE__, __LINE__, nullptr, tag, \
-                       status)                                                                     \
-      .stream()
+#define FX_LOG_STREAM_STATUS(severity, status, tag) \
+  ::syslog::LogMessage(::syslog::LOG_##severity, __FILE__, __LINE__, nullptr, tag, status).stream()
 
 #define FX_LAZY_STREAM(stream, condition) \
   !(condition) ? (void)0 : ::syslog::LogMessageVoidify() & (stream)
@@ -323,8 +278,7 @@ bool ShouldCreateLogMessage(const LogSeverityAndId& severity_and_id);
       : ::syslog::LogMessageVoidify() &   \
             ::syslog::LogMessage(::syslog::LOG_FATAL, 0, 0, nullptr, nullptr).stream()
 
-#define FX_LOG_IS_ON(severity) \
-  (::syslog::ShouldCreateLogMessage(::syslog::LOG_SEVERITY_AND_ID_##severity))
+#define FX_LOG_IS_ON(severity) (::syslog::ShouldCreateLogMessage(::syslog::LOG_##severity))
 
 #define FX_LOGS(severity) FX_LOGST(severity, nullptr)
 

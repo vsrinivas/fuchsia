@@ -619,37 +619,6 @@ TEST_F(LoggingFixture, MacroCompilationTest) {
   FX_SLOG(DEBUG, "test log", KV("key", static_cast<int64_t>(zero)));
 }
 
-TEST_F(LoggingFixture, LogId) {
-  LogSettings new_settings;
-  EXPECT_EQ(LOG_INFO, new_settings.min_log_level);
-#ifdef __Fuchsia__
-  auto guid = uuid::Generate();
-  zx::channel local;
-  zx::channel remote;
-  zx::channel::create(0, &local, &remote);
-  new_settings.log_sink = local.release();
-#else
-  files::ScopedTempDir temp_dir;
-  ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
-#endif
-  SetLogSettings(new_settings);
-
-  int line = __LINE__ + 1;
-  FX_LOGS(ERROR("test")) << "Hello";
-
-#ifdef __Fuchsia__
-  std::string log = RetrieveLogs(guid, std::move(remote));
-#else
-  std::string log;
-  ASSERT_TRUE(files::ReadFileToString(new_settings.log_file, &log));
-#endif
-  std::cerr << log;
-  auto expected = "ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" + std::to_string(line) +
-                  ")] Hello log_id=\"test\"";
-  EXPECT_THAT(log, testing::HasSubstr("ERROR: [sdk/lib/syslog/cpp/logging_unittest.cc(" +
-                                      std::to_string(line) + ")] Hello log_id=\"test\""));
-}
-
 TEST(StructuredLogging, LOGS) {
   std::string str;
   // 5mb log shouldn't crash
