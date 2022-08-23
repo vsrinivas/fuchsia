@@ -17,8 +17,11 @@ import (
 
 func argsForTest() OmahaToolArgs {
 	return OmahaToolArgs{
-		ToolPath:       filepath.Join(filepath.Join(filepath.Dir(os.Args[0]), "test_data", "system-tests"), "mock-omaha-server"),
-		PrivateKeyId:   "42",
+		ToolPath: filepath.Join(filepath.Join(filepath.Dir(os.Args[0]), "test_data", "system-tests"), "mock-omaha-server"),
+		// This must match the key_id in
+		// src/sys/pkg/bin/omaha-client:empty_eager_package_config, which relies
+		// on src/sys/pkg/bin/omaha-client/test_data/key_config.json.
+		PrivateKeyId:   "123456789",
 		PrivateKeyPath: filepath.Join(filepath.Join(filepath.Dir(os.Args[0]), "test_data", "system-tests"), "test_private_key.pem"),
 		AppId:          "some-app-id",
 		LocalHostname:  "localhost",
