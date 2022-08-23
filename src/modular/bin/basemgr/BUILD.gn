@@ -145,6 +145,7 @@ source_set("lib") {
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/modular/lib/async/cpp:future",
+    "//src/modular/lib/common:viewparams",
     "//src/modular/lib/fidl:app_client",
     "//src/modular/lib/fidl:environment",
     "//zircon/system/ulib/zx",

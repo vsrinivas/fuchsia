@@ -46,10 +46,7 @@ class SessionProvider {
   // start a new session.
   //
   // Returns fpromise::ok if a new session was started successfully.
-  StartSessionResult StartSession(
-      std::optional<fuchsia::ui::views::ViewToken> view_token,
-      std::optional<fuchsia::ui::views::ViewCreationToken> view_creation_token,
-      scenic::ViewRefPair view_ref_pair);
+  StartSessionResult StartSession(std::optional<ViewParams> view_params);
 
   // |AsyncHolder|
   // Asynchronously tears down the sessionmgr process. |callback| is invoked

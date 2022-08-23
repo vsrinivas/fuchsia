@@ -15,7 +15,6 @@
 #include <lib/fit/function.h>
 #include <lib/fpromise/promise.h>
 #include <lib/sys/inspect/cpp/component.h>
-#include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 
 #include "src/lib/fxl/macros.h"
@@ -31,6 +30,7 @@
 #include "src/modular/bin/sessionmgr/storage/story_storage.h"
 #include "src/modular/bin/sessionmgr/story_runner/story_provider_impl.h"
 #include "src/modular/lib/common/async_holder.h"
+#include "src/modular/lib/common/viewparams.h"
 #include "src/modular/lib/deprecated_service_provider/service_provider_impl.h"
 #include "src/modular/lib/fidl/app_client.h"
 #include "src/modular/lib/fidl/environment.h"
@@ -67,6 +67,13 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
       fuchsia::ui::views::ViewToken view_token, fuchsia::ui::views::ViewRefControl control_ref,
       fuchsia::ui::views::ViewRef view_ref) override;
 
+  // |Sessionmgr|
+  void InitializeWithoutView(
+      std::string session_id,
+      fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext> session_context,
+      fuchsia::sys::ServiceList v2_services_for_sessionmgr,
+      fidl::InterfaceRequest<fuchsia::io::Directory> svc_from_v1_sessionmgr) override;
+
   // InitializeInternal is called for each new session, denoted by a unique session_id. In other
   // words, it initializes a session, not a SessionmgrImpl (despite the class-scoped name).
   // (Ironically, the |finitish_initialization_| lambda does initialize some Sessionmgr-scoped
@@ -76,9 +83,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
       fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext> session_context,
       fuchsia::sys::ServiceList v2_services_for_sessionmgr,
       fidl::InterfaceRequest<fuchsia::io::Directory> svc_from_v1_sessionmgr,
-      std::optional<fuchsia::ui::views::ViewToken> view_token,
-      std::optional<fuchsia::ui::views::ViewCreationToken> view_creation_token,
-      scenic::ViewRefPair view_ref_pair);
+      std::optional<ViewParams> view_params);
 
   // Sequence of Initialize() broken up into steps for clarity.
   void InitializeSessionEnvironment(std::string session_id,
@@ -93,15 +98,10 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
       bool present_mods_as_stories);
   void InitializeSessionShell(
       std::optional<fuchsia::modular::session::AppConfig> session_shell_config,
-      std::optional<fuchsia::ui::views::ViewToken> view_token,
-      std::optional<fuchsia::ui::views::ViewCreationToken> view_creation_token,
-      scenic::ViewRefPair view_ref_pair);
+      std::optional<ViewParams> view_params);
   fuchsia::sys::ServiceList CreateSessionShellServiceList();
   void LaunchSessionShell(fuchsia::modular::session::AppConfig session_shell_config,
-                          fuchsia::sys::ServiceList service_list,
-                          std::optional<fuchsia::ui::views::ViewToken> view_token,
-                          std::optional<fuchsia::ui::views::ViewCreationToken> view_creation_token,
-                          scenic::ViewRefPair view_ref_pair);
+                          fuchsia::sys::ServiceList service_list, ViewParams view_params);
   void InitializePuppetMaster();
   void InitializeElementManager();
   void InitializeSessionCtl();

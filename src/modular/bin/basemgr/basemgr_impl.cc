@@ -81,6 +81,7 @@ BasemgrImpl::BasemgrImpl(modular::ModularConfigAccessor config_accessor,
                          fuchsia::hardware::power::statecontrol::AdminPtr device_administrator,
                          fuchsia::session::RestarterPtr session_restarter,
                          std::unique_ptr<ChildListener> child_listener,
+                         std::optional<fuchsia::ui::app::ViewProviderPtr> view_provider,
                          fit::function<void()> on_shutdown)
     : config_accessor_(std::move(config_accessor)),
       outgoing_services_(std::move(outgoing_services)),
@@ -90,6 +91,7 @@ BasemgrImpl::BasemgrImpl(modular::ModularConfigAccessor config_accessor,
       child_listener_(std::move(child_listener)),
       device_administrator_(std::move(device_administrator)),
       session_restarter_(std::move(session_restarter)),
+      view_provider_(std::move(view_provider)),
       on_shutdown_(std::move(on_shutdown)),
       session_provider_("SessionProvider"),
       executor_(async_get_default_dispatcher()),
@@ -232,8 +234,20 @@ BasemgrImpl::StartSessionResult BasemgrImpl::StartSession() {
 
     auto [view_creation_token, viewport_creation_token] = scenic::ViewCreationTokenPair::New();
 
-    auto start_session_result = session_provider_->StartSession(
-        std::nullopt, std::move(view_creation_token), scenic::ViewRefPair{});
+    std::optional<ViewParams> view_params = std::nullopt;
+    // Get the view from the v2 session shell if available.
+    if (view_provider_.has_value()) {
+      FX_LOGS(INFO) << "Creating Flatland view for v2 session shell.";
+      fuchsia::ui::app::CreateView2Args create_view_args;
+      create_view_args.set_view_creation_token(std::move(view_creation_token));
+      (*view_provider_)->CreateView2(std::move(create_view_args));
+    } else {
+      FX_LOGS(INFO)
+          << "No ViewProvider, sessionmgr will create Flatland view for v1 session shell.";
+      view_params = std::make_optional(std::move(view_creation_token));
+    }
+
+    auto start_session_result = session_provider_->StartSession(std::move(view_params));
     FX_CHECK(start_session_result.is_ok());
     inspector_->AddSessionStartedAt(zx_clock_get_monotonic());
 
@@ -247,8 +261,20 @@ BasemgrImpl::StartSessionResult BasemgrImpl::StartSession() {
     scenic::ViewRefPair view_ref_pair = scenic::ViewRefPair::New();
     auto view_ref_clone = fidl::Clone(view_ref_pair.view_ref);
 
-    auto start_session_result = session_provider_->StartSession(std::move(view_token), std::nullopt,
-                                                                std::move(view_ref_pair));
+    std::optional<ViewParams> view_params = std::nullopt;
+    // Get the view from the v2 session shell if available.
+    if (view_provider_.has_value()) {
+      FX_LOGS(INFO) << "Creating Gfx view for v2 session shell.";
+      (*view_provider_)
+          ->CreateViewWithViewRef(std::move(view_token.value), std::move(view_ref_pair.control_ref),
+                                  std::move(view_ref_pair.view_ref));
+    } else {
+      FX_LOGS(INFO) << "No ViewProvider, sessionmgr will create Gfx view for v1 session shell.";
+      view_params = std::make_optional(GfxViewParams{.view_token = std::move(view_token),
+                                                     .view_ref_pair = std::move(view_ref_pair)});
+    }
+
+    auto start_session_result = session_provider_->StartSession(std::move(view_params));
     FX_CHECK(start_session_result.is_ok());
     inspector_->AddSessionStartedAt(zx_clock_get_monotonic());
 

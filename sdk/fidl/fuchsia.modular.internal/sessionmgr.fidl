@@ -29,8 +29,12 @@ protocol Sessionmgr {
     /// PuppetMaster) so they can also be used by CFv2 components hosted by
     /// basemgr.
     ///
-    // TODO(fxbug.dev/16221): Address issues around client-generated session_id and
-    // initialization pattern of sessionmgr.
+    /// `view_creation_token` is a token for the Flatland view that is created
+    /// by the session shell launched by sessionmgr, and presented by basemgr
+    /// as the root view.
+    ///
+    /// This should be called when basemgr uses Flatland to present the
+    /// root view.
     Initialize(resource struct {
         session_id string;
         session_context client_end:SessionContext;
@@ -38,6 +42,13 @@ protocol Sessionmgr {
         services_from_sessionmgr server_end:fuchsia.io.Directory;
         view_creation_token fuchsia.ui.views.ViewCreationToken;
     });
+    /// Launches sessionmgr. See `Initialize`.
+    ///
+    /// `view_token`, `control_ref`, and `view_ref` are used to create the Gfx
+    /// session shell view, passed to the session shell component launched
+    /// by sessionmgr, and presented by basemgr as the root view.
+    ///
+    /// This should be called when basemgr uses Gfx to present the root view.
     InitializeLegacy(resource struct {
         session_id string;
         session_context client_end:SessionContext;
@@ -46,6 +57,19 @@ protocol Sessionmgr {
         view_token fuchsia.ui.views.ViewToken;
         control_ref fuchsia.ui.views.ViewRefControl;
         view_ref fuchsia.ui.views.ViewRef;
+    });
+    /// Launches sessionmgr. See `Initialize`.
+    ///
+    /// sessionmgr does not receive a view through this method.
+    ///
+    /// This should be called when using a v2 session shell component,
+    /// launched by basemgr, instead of a v1 shell launched by sessionmgr.
+    /// In this case, basemgr presents the shell's view directly.
+    InitializeWithoutView(resource struct {
+        session_id string;
+        session_context client_end:SessionContext;
+        additional_services_for_agents fuchsia.sys.ServiceList;
+        services_from_sessionmgr server_end:fuchsia.io.Directory;
     });
 };
 

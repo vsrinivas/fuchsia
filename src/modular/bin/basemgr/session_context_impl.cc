@@ -18,18 +18,12 @@ SessionContextImpl::SessionContextImpl(
     fuchsia::sys::Launcher* const launcher,
     fuchsia::modular::session::AppConfig sessionmgr_app_config,
     const modular::ModularConfigAccessor* const config_accessor,
-    std::optional<fuchsia::ui::views::ViewToken> view_token,
-    std::optional<fuchsia::ui::views::ViewCreationToken> view_creation_token,
-    scenic::ViewRefPair view_ref_pair, fuchsia::sys::ServiceList v2_services_for_sessionmgr,
+    std::optional<ViewParams> view_params, fuchsia::sys::ServiceList v2_services_for_sessionmgr,
     fidl::InterfaceRequest<fuchsia::io::Directory> svc_from_v1_sessionmgr_request,
     OnSessionShutdownCallback on_session_shutdown)
     : session_context_binding_(this),
       on_session_shutdown_(std::move(on_session_shutdown)),
       weak_factory_(this) {
-  // Exactly one of the tokens must be present.
-  // If view_token is present, use Gfx.  Otherwise, use Flatland.
-  FX_CHECK(view_token.has_value() != view_creation_token.has_value());
-
   sessions::ReportNewSessionToCobalt();
 
   // Create a PseudoDir containing startup.config. This directory will be injected into
@@ -43,17 +37,27 @@ SessionContextImpl::SessionContextImpl(
 
   // Initialize the Sessionmgr service.
   sessionmgr_app_->services().ConnectToService(sessionmgr_.NewRequest());
-  if (view_creation_token.has_value()) {
-    sessionmgr_->Initialize(sessions::kSessionId, session_context_binding_.NewBinding(),
-                            std::move(v2_services_for_sessionmgr),
-                            std::move(svc_from_v1_sessionmgr_request),
-                            std::move(*view_creation_token));
+  if (view_params.has_value()) {
+    if (auto* view_creation_token =
+            std::get_if<fuchsia::ui::views::ViewCreationToken>(&*view_params)) {
+      sessionmgr_->Initialize(sessions::kSessionId, session_context_binding_.NewBinding(),
+                              std::move(v2_services_for_sessionmgr),
+                              std::move(svc_from_v1_sessionmgr_request),
+                              std::move(*view_creation_token));
+    } else if (auto* gfx_view_params = std::get_if<GfxViewParams>(&*view_params)) {
+      sessionmgr_->InitializeLegacy(sessions::kSessionId, session_context_binding_.NewBinding(),
+                                    std::move(v2_services_for_sessionmgr),
+                                    std::move(svc_from_v1_sessionmgr_request),
+                                    std::move(gfx_view_params->view_token),
+                                    std::move(gfx_view_params->view_ref_pair.control_ref),
+                                    std::move(gfx_view_params->view_ref_pair.view_ref));
+    } else {
+      FX_LOGS(FATAL) << "ViewParams must be either a ViewCreationToken or GfxViewParams";
+    }
   } else {
-    sessionmgr_->InitializeLegacy(sessions::kSessionId, session_context_binding_.NewBinding(),
-                                  std::move(v2_services_for_sessionmgr),
-                                  std::move(svc_from_v1_sessionmgr_request), std::move(*view_token),
-                                  std::move(view_ref_pair.control_ref),
-                                  std::move(view_ref_pair.view_ref));
+    sessionmgr_->InitializeWithoutView(sessions::kSessionId, session_context_binding_.NewBinding(),
+                                       std::move(v2_services_for_sessionmgr),
+                                       std::move(svc_from_v1_sessionmgr_request));
   }
 
   sessionmgr_app_->SetAppErrorHandler([weak_this = weak_factory_.GetWeakPtr()] {

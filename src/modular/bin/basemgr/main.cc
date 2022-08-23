@@ -106,6 +106,18 @@ std::unique_ptr<modular::BasemgrImpl> CreateBasemgrImpl(
       component_context->svc().get(), loop->dispatcher(), std::move(children), backoff_base,
       inspector->CreateChildRestartTrackerNode());
 
+  // If sessionmgr is not configured to launch a session shell, basemgr should get the session
+  // shell view via ViewProvider exposed by a v2 component.
+  std::optional<fuchsia::ui::app::ViewProviderPtr> view_provider;
+  if (!config_accessor.session_shell_app_config().has_value()) {
+    view_provider = std::make_optional<fuchsia::ui::app::ViewProviderPtr>();
+    view_provider->set_error_handler([](zx_status_t error) {
+      FX_PLOGS(ERROR, error) << "Error on fuchsia.ui.app.ViewProvider.";
+    });
+    zx_status_t const status = component_context->svc()->Connect(view_provider->NewRequest());
+    FX_CHECK(status == ZX_OK) << "Failed to connect to fuchsia.ui.app.ViewProvider.";
+  }
+
 #ifndef USE_SCENE_MANAGER
   FX_CHECK(!use_flatland);
 #endif
@@ -119,6 +131,7 @@ std::unique_ptr<modular::BasemgrImpl> CreateBasemgrImpl(
 #endif
       component_context->svc()->Connect<fuchsia::hardware::power::statecontrol::Admin>(),
       component_context->svc()->Connect<fuchsia::session::Restarter>(), std::move(child_listener),
+      std::move(view_provider),
       /*on_shutdown=*/
       [loop, cobalt_cleanup = std::move(cobalt_cleanup), component_context]() mutable {
         cobalt_cleanup.call();

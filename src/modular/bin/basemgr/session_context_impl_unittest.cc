@@ -43,7 +43,8 @@ TEST_F(SessionContextImplTest, StartSessionmgr) {
 
   modular::SessionContextImpl impl(
       &launcher, std::move(sessionmgr_app_config), &modular_config_accessor,
-      std::make_optional(std::move(view_token)), std::nullopt, std::move(view_ref_pair),
+      std::make_optional(modular::GfxViewParams{.view_token = std::move(view_token),
+                                                .view_ref_pair = std::move(view_ref_pair)}),
       /*v2_services_for_sessionmgr=*/fuchsia::sys::ServiceList(),
       /*svc_from_v1_sessionmgr=*/nullptr,
       /*on_session_shutdown=*/[](modular::SessionContextImpl::ShutDownReason /* unused */) {});
@@ -72,7 +73,8 @@ TEST_F(SessionContextImplTest, SessionmgrCrashInvokesOnSessionShutdown) {
   bool on_session_shutdown_called = false;
   modular::SessionContextImpl impl(
       &launcher, std::move(sessionmgr_app_config), &modular_config_accessor,
-      std::make_optional(std::move(view_token)), std::nullopt, std::move(view_ref_pair),
+      std::make_optional(modular::GfxViewParams{.view_token = std::move(view_token),
+                                                .view_ref_pair = std::move(view_ref_pair)}),
       /*v2_services_for_sessionmgr=*/fuchsia::sys::ServiceList(),
       /*svc_from_v1_sessionmgr=*/nullptr,
       /*on_session_shutdown=*/

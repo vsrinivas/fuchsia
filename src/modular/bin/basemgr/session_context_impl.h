@@ -12,13 +12,13 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
-#include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/vfs/cpp/pseudo_dir.h>
 
 #include <optional>
 
 #include "src/lib/fxl/macros.h"
 #include "src/modular/lib/async/cpp/future.h"
+#include "src/modular/lib/common/viewparams.h"
 #include "src/modular/lib/fidl/app_client.h"
 #include "src/modular/lib/fidl/environment.h"
 #include "src/modular/lib/modular_config/modular_config_accessor.h"
@@ -47,9 +47,7 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
   SessionContextImpl(fuchsia::sys::Launcher* launcher,
                      fuchsia::modular::session::AppConfig sessionmgr_app_config,
                      const modular::ModularConfigAccessor* config_accessor,
-                     std::optional<fuchsia::ui::views::ViewToken> view_token,
-                     std::optional<fuchsia::ui::views::ViewCreationToken> view_creation_token,
-                     scenic::ViewRefPair view_ref_pair,
+                     std::optional<ViewParams> view_params,
                      fuchsia::sys::ServiceList v2_services_for_sessionmgr,
                      fidl::InterfaceRequest<fuchsia::io::Directory> svc_from_v1_sessionmgr,
                      OnSessionShutdownCallback on_session_shutdown);

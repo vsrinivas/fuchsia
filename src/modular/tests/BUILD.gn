@@ -331,6 +331,9 @@ rustc_test("basemgr_v2_test_bin") {
     "//sdk/fidl/fuchsia.modular.internal:fuchsia.modular.internal_rust",
     "//sdk/fidl/fuchsia.session:fuchsia.session_rust",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys_rust",
+    "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_rust",
+    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy_rust",
+    "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_rust",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
@@ -338,6 +341,7 @@ rustc_test("basemgr_v2_test_bin") {
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-component-test",
     "//src/lib/storage/vfs/rust:vfs",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
@@ -360,12 +364,18 @@ fuchsia_component("basemgr-with-critical-children") {
   deps = [ "//src/modular/bin/basemgr:basemgr_bin" ]
 }
 
+fuchsia_component("basemgr-with-viewprovider-from-parent") {
+  manifest = "meta/basemgr_with_viewprovider_from_parent.cml"
+  deps = [ "//src/modular/bin/basemgr:basemgr_bin" ]
+}
+
 fuchsia_test_package("basemgr_v2_test") {
   test_components = [ ":basemgr-v2-test" ]
 
   deps = [
     ":basemgr-with-critical-children",
     ":basemgr-with-eager-children",
+    ":basemgr-with-viewprovider-from-parent",
     "//src/cobalt/bin/testing/mock_cobalt:component_v2",
     "//src/modular/bin/basemgr:component_v2",
   ]

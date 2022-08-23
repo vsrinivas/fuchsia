@@ -43,9 +43,7 @@ SessionProvider::SessionProvider(fuchsia::sys::Launcher* const launcher,
 }
 
 SessionProvider::StartSessionResult SessionProvider::StartSession(
-    std::optional<fuchsia::ui::views::ViewToken> view_token,
-    std::optional<fuchsia::ui::views::ViewCreationToken> view_creation_token,
-    scenic::ViewRefPair view_ref_pair) {
+    std::optional<ViewParams> view_params) {
   if (is_session_running()) {
     FX_LOGS(WARNING) << "StartSession() called when session context already "
                         "exists. Try calling SessionProvider::Teardown()";
@@ -81,8 +79,7 @@ SessionProvider::StartSessionResult SessionProvider::StartSession(
   }
 
   session_context_ = std::make_unique<SessionContextImpl>(
-      launcher_, std::move(sessionmgr_app_config), config_accessor_, std::move(view_token),
-      std::move(view_creation_token), std::move(view_ref_pair),
+      launcher_, std::move(sessionmgr_app_config), config_accessor_, std::move(view_params),
       std::move(v2_services_for_sessionmgr), std::move(svc_from_v1_sessionmgr_dir_request),
       /*on_session_shutdown=*/
       [this](SessionContextImpl::ShutDownReason shutdown_reason) {

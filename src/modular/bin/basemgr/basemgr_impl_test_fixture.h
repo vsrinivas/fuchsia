@@ -83,6 +83,15 @@ class FakeSessionmgr : public fuchsia::modular::internal::testing::Sessionmgr_Te
     initialized_ = true;
   }
 
+  void InitializeWithoutView(
+      std::string session_id,
+      fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext> session_context,
+      fuchsia::sys::ServiceList v2_services_for_sessionmgr,
+      fidl::InterfaceRequest<fuchsia::io::Directory> svc_from_v1_sessionmgr) override {
+    v2_services_for_sessionmgr_ = std::move(v2_services_for_sessionmgr);
+    initialized_ = true;
+  }
+
   FakeComponentWithNamespace* component() { return &component_; }
   bool initialized() const { return initialized_; }
   std::optional<fuchsia::sys::ServiceList>& v2_services_for_sessionmgr() {
@@ -107,7 +116,7 @@ class BasemgrImplTestFixture : public gtest::RealLoopFixture {
         ModularConfigAccessor(std::move(config)), outgoing_directory_, &basemgr_inspector_, false,
         GetLauncher(), std::move(presenter_), std::move(device_administrator_),
         /*session_restarter_=*/nullptr,
-        /*child_listener=*/nullptr, std::move(on_shutdown_));
+        /*child_listener=*/nullptr, std::move(view_provider_), std::move(on_shutdown_));
   }
 
   fuchsia::modular::session::LauncherPtr GetSessionLauncher() {
@@ -137,6 +146,7 @@ class BasemgrImplTestFixture : public gtest::RealLoopFixture {
   BasemgrInspector basemgr_inspector_;
   fuchsia::ui::policy::PresenterPtr presenter_;
   fuchsia::hardware::power::statecontrol::AdminPtr device_administrator_;
+  fuchsia::ui::app::ViewProviderPtr view_provider_;
   sys::testing::FakeLauncher fake_launcher_;
   std::unique_ptr<BasemgrImpl> basemgr_impl_;
 };

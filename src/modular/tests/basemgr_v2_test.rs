@@ -8,17 +8,21 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio,
     fidl_fuchsia_modular_internal as fmodular, fidl_fuchsia_session as fsession,
-    fidl_fuchsia_sys as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_sys as fsys, fidl_fuchsia_ui_app as fuiapp, fidl_fuchsia_ui_policy as fuipolicy,
+    fidl_fuchsia_ui_views as fuiviews, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
         Capability, ChildOptions, ChildRef, LocalComponentHandles, RealmBuilder, Ref, Route,
     },
+    fuchsia_zircon as zx,
     futures::{channel::mpsc, future::join_all, prelude::*},
     std::sync::Arc,
     vfs::{directory::entry::DirectoryEntry, file::vmo::read_only_static, pseudo_directory},
 };
 
 const BASEMGR_URL: &str = "#meta/basemgr.cm";
+const BASEMGR_WITH_VIEWPROVIDER_FROM_PARENT_URL: &str =
+    "#meta/basemgr-with-viewprovider-from-parent.cm";
 const MOCK_COBALT_URL: &str = "#meta/mock_cobalt.cm";
 const SESSIONMGR_URL: &str = "fuchsia-pkg://fuchsia.com/sessionmgr#meta/sessionmgr.cmx";
 
@@ -30,34 +34,7 @@ struct TestFixture {
 
 impl TestFixture {
     async fn new(basemgr_url: &str) -> Result<TestFixture, Error> {
-        let config_data_dir = pseudo_directory! {
-            "basemgr" => pseudo_directory! {
-                "startup.config" => read_only_static(r#"{ "basemgr": { "enable_cobalt": false } }"#),
-            },
-        };
-
         let builder = RealmBuilder::new().await?;
-
-        // Add a local component that provides the `config-data` directory to the realm.
-        let config_data_server = builder
-            .add_local_child(
-                "config-data-server",
-                move |handles| {
-                    let proxy = spawn_vfs(config_data_dir.clone());
-                    async move {
-                        let _ = &handles;
-                        let mut fs = ServiceFs::new();
-                        fs.add_remote("config-data", proxy);
-                        fs.serve_connection(handles.outgoing_dir.into_channel())
-                            .expect("failed to serve config-data ServiceFs");
-                        fs.collect::<()>().await;
-                        Ok::<(), anyhow::Error>(())
-                    }
-                    .boxed()
-                },
-                ChildOptions::new(),
-            )
-            .await?;
 
         // Add mock_cobalt to the realm.
         let mock_cobalt =
@@ -95,18 +72,6 @@ impl TestFixture {
         builder
             .add_route(
                 Route::new()
-                    .capability(
-                        Capability::directory("config-data")
-                            .path("/config-data")
-                            .rights(fio::R_STAR_DIR),
-                    )
-                    .from(&config_data_server)
-                    .to(&basemgr),
-            )
-            .await?;
-        builder
-            .add_route(
-                Route::new()
                     .capability(Capability::storage("cache"))
                     .from(Ref::parent())
                     .to(&basemgr),
@@ -135,7 +100,6 @@ impl TestFixture {
             .add_route(
                 Route::new()
                     .capability(Capability::protocol_by_name("fuchsia.tracing.provider.Registry"))
-                    .capability(Capability::protocol_by_name("fuchsia.ui.policy.Presenter"))
                     .capability(Capability::protocol_by_name(
                         "fuchsia.hardware.power.statecontrol.Admin",
                     ))
@@ -147,7 +111,80 @@ impl TestFixture {
         return Ok(TestFixture { builder, basemgr, placeholder });
     }
 
-    async fn route_noop_sys_launcher(self) -> Result<TestFixture, Error> {
+    async fn with_config<Bytes>(self, config: Bytes) -> Result<TestFixture, Error>
+    where
+        Bytes: AsRef<[u8]> + Send + Sync + 'static,
+    {
+        let config_data_dir = pseudo_directory! {
+            "basemgr" => pseudo_directory! {
+                "startup.config" => read_only_static(config),
+            }
+        };
+
+        // Add a local component that provides the `config-data` directory to the realm.
+        let config_data_server = self
+            .builder
+            .add_local_child(
+                "config-data-server",
+                move |handles| {
+                    let proxy = spawn_vfs(config_data_dir.clone());
+                    async move {
+                        let _ = &handles;
+                        let mut fs = ServiceFs::new();
+                        fs.add_remote("config-data", proxy);
+                        fs.serve_connection(handles.outgoing_dir.into_channel())
+                            .expect("failed to serve config-data ServiceFs");
+                        fs.collect::<()>().await;
+                        Ok::<(), anyhow::Error>(())
+                    }
+                    .boxed()
+                },
+                ChildOptions::new(),
+            )
+            .await?;
+
+        self.builder
+            .add_route(
+                Route::new()
+                    .capability(
+                        Capability::directory("config-data")
+                            .path("/config-data")
+                            .rights(fio::R_STAR_DIR),
+                    )
+                    .from(&config_data_server)
+                    .to(&self.basemgr),
+            )
+            .await?;
+
+        Ok(self)
+    }
+
+    async fn with_default_config(self) -> Result<TestFixture, Error> {
+        self.with_config(r#"{ "basemgr": { "enable_cobalt": false } }"#).await
+    }
+
+    async fn with_noop_presenter(self) -> Result<TestFixture, Error> {
+        let presenter = self
+            .builder
+            .add_local_child(
+                "presenter",
+                move |handles| Box::pin(presenter_noop(handles)),
+                ChildOptions::new(),
+            )
+            .await?;
+        let () = self
+            .builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol::<fuipolicy::PresenterMarker>())
+                    .from(&presenter)
+                    .to(&self.basemgr),
+            )
+            .await?;
+        Ok(self)
+    }
+
+    async fn with_noop_sys_launcher(self) -> Result<TestFixture, Error> {
         let sys_launcher = self
             .builder
             .add_local_child(
@@ -160,7 +197,7 @@ impl TestFixture {
             .builder
             .add_route(
                 Route::new()
-                    .capability(Capability::protocol_by_name("fuchsia.sys.Launcher"))
+                    .capability(Capability::protocol::<fsys::LauncherMarker>())
                     .from(&sys_launcher)
                     .to(&self.basemgr),
             )
@@ -170,7 +207,7 @@ impl TestFixture {
 
     // Vend a placeholder implementation `fuchsia.session.Restarter`
     // because this test doesn't expect to have this protocol exercised.
-    async fn route_placeholder_restarter(self) -> Result<TestFixture, Error> {
+    async fn with_placeholder_restarter(self) -> Result<TestFixture, Error> {
         let () = self
             .builder
             .add_route(
@@ -185,7 +222,7 @@ impl TestFixture {
 
     // Vend a `fuchsia.session.Restarter` implementation that sends a message on
     // `restarter_sender` when the client calls `Restart`.
-    async fn route_restarter_with_sender(
+    async fn with_restarter_with_sender(
         self,
         sender: mpsc::Sender<()>,
     ) -> Result<TestFixture, Error> {
@@ -213,10 +250,17 @@ impl TestFixture {
 // Tests that the session launches sessionmgr as a child v1 component.
 #[fuchsia::test]
 async fn test_launch_sessionmgr() -> Result<(), Error> {
+    let fixture = TestFixture::new(BASEMGR_URL)
+        .await?
+        .with_default_config()
+        .await?
+        .with_noop_presenter()
+        .await?
+        .with_placeholder_restarter()
+        .await?;
+
     // Add a local component that serves `fuchsia.sys.Launcher` to the realm.
     let (launch_info_sender, launch_info_receiver) = mpsc::channel(1);
-    let fixture = TestFixture::new(BASEMGR_URL).await?.route_placeholder_restarter().await?;
-
     let sys_launcher = fixture
         .builder
         .add_local_child(
@@ -229,18 +273,20 @@ async fn test_launch_sessionmgr() -> Result<(), Error> {
         .builder
         .add_route(
             Route::new()
-                .capability(Capability::protocol_by_name("fuchsia.sys.Launcher"))
+                .capability(Capability::protocol::<fsys::LauncherMarker>())
                 .from(&sys_launcher)
                 .to(&fixture.basemgr),
         )
         .await?;
 
-    let _instance = fixture.builder.build().await?;
+    let instance = fixture.builder.build().await?;
 
     // The session should have started sessionmgr as a v1 component.
     let launch_info =
         launch_info_receiver.take(1).next().await.ok_or_else(|| anyhow!("expected LaunchInfo"))?;
     assert_eq!(SESSIONMGR_URL, launch_info.url);
+
+    instance.destroy().await?;
 
     Ok(())
 }
@@ -298,9 +344,13 @@ async fn test_launch_v2_eager_children() -> Result<(), Error> {
 
     let fixture = TestFixture::new(BASEMGR_WITH_EAGER_CHILDREN_URL)
         .await?
-        .route_placeholder_restarter()
+        .with_default_config()
         .await?
-        .route_noop_sys_launcher()
+        .with_noop_presenter()
+        .await?
+        .with_placeholder_restarter()
+        .await?
+        .with_noop_sys_launcher()
         .await?;
 
     let mut child_restart_futs = vec![];
@@ -372,9 +422,13 @@ async fn test_restart_session_after_critical_child_crashes() -> Result<(), Error
 
     let fixture = TestFixture::new(BASEMGR_WITH_CRITICAL_CHILDREN_URL)
         .await?
-        .route_restarter_with_sender(restart_sender)
+        .with_default_config()
         .await?
-        .route_noop_sys_launcher()
+        .with_noop_presenter()
+        .await?
+        .with_restarter_with_sender(restart_sender)
+        .await?
+        .with_noop_sys_launcher()
         .await?;
 
     let instance = fixture.builder.build().await?;
@@ -395,8 +449,12 @@ async fn test_restart_session_after_critical_child_crashes() -> Result<(), Error
 async fn test_restart_session_after_sessionmgr_crashes() -> Result<(), Error> {
     let (restart_sender, restart_receiver) = mpsc::channel(1);
 
-    let fixture =
-        TestFixture::new(BASEMGR_URL).await?.route_restarter_with_sender(restart_sender).await?;
+    let fixture = TestFixture::new(BASEMGR_URL)
+        .await?
+        .with_default_config()
+        .await?
+        .with_restarter_with_sender(restart_sender)
+        .await?;
 
     let sys_launcher = fixture
         .builder
@@ -446,9 +504,13 @@ async fn test_eager_children_restart_are_tracked_in_inspect() -> Result<(), Erro
 
     let fixture = TestFixture::new(BASEMGR_WITH_EAGER_CHILDREN_URL)
         .await?
-        .route_placeholder_restarter()
+        .with_default_config()
         .await?
-        .route_noop_sys_launcher()
+        .with_noop_presenter()
+        .await?
+        .with_placeholder_restarter()
+        .await?
+        .with_noop_sys_launcher()
         .await?;
 
     let instance = fixture.builder.build().await?;
@@ -494,6 +556,95 @@ async fn test_eager_children_restart_are_tracked_in_inspect() -> Result<(), Erro
     // ComponentController channel
     instance.destroy().await?;
 
+    Ok(())
+}
+
+// Tests that basemgr presents a view from a v2 session shell acquired through ViewProvider.
+#[fuchsia::test]
+async fn test_v2_session_shell() -> Result<(), Error> {
+    let fixture = TestFixture::new(BASEMGR_WITH_VIEWPROVIDER_FROM_PARENT_URL)
+        .await?
+        .with_default_config()
+        .await?
+        .with_placeholder_restarter()
+        .await?
+        .with_noop_sys_launcher()
+        .await?;
+
+    // Add a local component that serves `fuchsia.ui.policy.Presenter` to the realm.
+    let (holder_token_sender, holder_token_receiver) = mpsc::channel(1);
+    let presenter = fixture
+        .builder
+        .add_local_child(
+            "presenter",
+            move |handles| Box::pin(presenter_with_sender(holder_token_sender.clone(), handles)),
+            ChildOptions::new(),
+        )
+        .await?;
+    let () = fixture
+        .builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol::<fuipolicy::PresenterMarker>())
+                .from(&presenter)
+                .to(&fixture.basemgr),
+        )
+        .await?;
+
+    // Add a local component that serves `fuchsia.ui.app.ViewProvider` to the realm.
+    let (token_sender, token_receiver) = mpsc::channel(1);
+    let session_shell = fixture
+        .builder
+        .add_local_child(
+            "session_shell",
+            move |handles| Box::pin(view_provider_local_child(token_sender.clone(), handles)),
+            ChildOptions::new(),
+        )
+        .await?;
+    let () = fixture
+        .builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol::<fuiapp::ViewProviderMarker>())
+                .from(&session_shell)
+                .to(&fixture.basemgr),
+        )
+        .await?;
+
+    let _instance = fixture.builder.build().await?;
+
+    // basemgr should have created a view via ViewProvider and presented it via Presenter.
+    assert!(token_receiver.take(1).next().await.is_some());
+    assert!(holder_token_receiver.take(1).next().await.is_some());
+
+    Ok(())
+}
+
+// Serves an implementation of the `fuchsia.ui.app.ViewProvider` protocol that forwards
+// the view token of created views to `token_sender`.
+async fn view_provider_local_child(
+    token_sender: mpsc::Sender<zx::EventPair>,
+    handles: LocalComponentHandles,
+) -> Result<(), Error> {
+    let mut fs = ServiceFs::new();
+    fs.dir("svc").add_fidl_service(move |mut stream: fuiapp::ViewProviderRequestStream| {
+        let mut token_sender = token_sender.clone();
+        fasync::Task::local(async move {
+            while let Some(request) = stream.try_next().await.expect("failed to serve ViewProvider")
+            {
+                match request {
+                    fuiapp::ViewProviderRequest::CreateView { token, .. }
+                    | fuiapp::ViewProviderRequest::CreateViewWithViewRef { token, .. } => {
+                        token_sender.try_send(token).expect("failed to send view token");
+                    }
+                    _ => panic!("unexpected ViewProvider request"),
+                }
+            }
+        })
+        .detach();
+    });
+    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    fs.collect::<()>().await;
     Ok(())
 }
 
@@ -628,6 +779,60 @@ async fn sys_launcher_noop(handles: LocalComponentHandles) -> Result<(), Error> 
                         )
                         .await
                         .unwrap();
+                    }
+                }
+            }
+        })
+        .detach();
+    });
+    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    fs.collect::<()>().await;
+    Ok(())
+}
+
+// Implements a `fuchsia.ui.policy.Presenter` that does nothing.
+async fn presenter_noop(handles: LocalComponentHandles) -> Result<(), Error> {
+    let mut fs = ServiceFs::new();
+    fs.dir("svc").add_fidl_service(|mut stream: fuipolicy::PresenterRequestStream| {
+        fasync::Task::local(async move {
+            while let Some(request) = stream.try_next().await.expect("failed to serve Presenter") {
+                match request {
+                    fuipolicy::PresenterRequest::PresentView { .. }
+                    | fuipolicy::PresenterRequest::PresentOrReplaceView { .. }
+                    | fuipolicy::PresenterRequest::PresentOrReplaceView2 { .. } => {}
+                }
+            }
+        })
+        .detach();
+    });
+    fs.serve_connection(handles.outgoing_dir.into_channel())?;
+    fs.collect::<()>().await;
+    Ok(())
+}
+
+// Implements a `fuchsia.ui.policy.Presenter` that sends the presented ViewHolderToken
+// over a channel.
+async fn presenter_with_sender(
+    token_sender: mpsc::Sender<fuiviews::ViewHolderToken>,
+    handles: LocalComponentHandles,
+) -> Result<(), Error> {
+    let mut fs = ServiceFs::new();
+    fs.dir("svc").add_fidl_service(|mut stream: fuipolicy::PresenterRequestStream| {
+        let mut token_sender = token_sender.clone();
+        fasync::Task::local(async move {
+            while let Some(request) = stream.try_next().await.expect("failed to serve Presenter") {
+                match request {
+                    fuipolicy::PresenterRequest::PresentView { view_holder_token, .. }
+                    | fuipolicy::PresenterRequest::PresentOrReplaceView {
+                        view_holder_token, ..
+                    }
+                    | fuipolicy::PresenterRequest::PresentOrReplaceView2 {
+                        view_holder_token,
+                        ..
+                    } => {
+                        token_sender
+                            .try_send(view_holder_token)
+                            .expect("Failed to send ViewHolderToken");
                     }
                 }
             }
