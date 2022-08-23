@@ -231,6 +231,7 @@ if (is_kernel) {
       ":warnings",
       "arch/$zircon_cpu:abi",
       "arch/$zircon_cpu:kernel",
+      "//build/config:no-finite-loops",
 
       # include/lib/counters.h and kernel.ld depend on -fdata-sections.
       "//build/config/zircon:data_sections",

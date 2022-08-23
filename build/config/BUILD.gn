@@ -1130,6 +1130,12 @@ config("libcpp_remove_transitive_includes") {
   defines = [ "_LIBCPP_REMOVE_TRANSITIVE_INCLUDES" ]
 }
 
+# Infinite loops are undefined behavior in C++ and thus can be optimized away
+# by the compiler. This config inhibits that optimization.
+config("no-finite-loops") {
+  cflags = [ "-fno-finite-loops" ]
+}
+
 # Tools that must be executed locally.
 pool("local") {
   depth = default_concurrent_jobs.local
