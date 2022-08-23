@@ -101,7 +101,8 @@ std::unique_ptr<PlatformConfiguration> PlatformConfiguration::Create() {
   if (strstr(brand_string, "i5-7Y57") || strstr(brand_string, "i7-7Y75")) {
     return std::unique_ptr<PlatformConfiguration>(
         new PlatformConfiguration(kEvePL1MinMw, kEvePL1MaxMw));
-  } else if (strstr(brand_string, "i5-8200Y") || strstr(brand_string, "i7-8500Y")) {
+  } else if (strstr(brand_string, "i5-8200Y") || strstr(brand_string, "i7-8500Y") ||
+             strstr(brand_string, "m3-8100Y")) {
     return std::unique_ptr<PlatformConfiguration>(
         new PlatformConfiguration(kAtlasPL1MinMw, kAtlasPL1MaxMw));
   }
