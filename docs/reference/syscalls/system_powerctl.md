@@ -42,7 +42,7 @@ Set only the primary CPU as active.
 
 Only defined for x86-64.
 
-Currently no S-state transitions are supported.
+Currently only transitions to the S3 state are supported.
 
 Before calling this syscall the following steps should be taken:
 1. Enter ACPICA noncontested mode
