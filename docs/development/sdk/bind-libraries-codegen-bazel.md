@@ -31,31 +31,31 @@ when creating a child node for the child driver to bind to.
 #### The bind library
 
 ```bazel {:.devsite-disable-click-to-copy}
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/BUILD.bazel" region_tag="fuchsia_gizmo_library" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/lib/BUILD.bazel" region_tag="fuchsia_gizmo_library" %}
 ```
 
 #### The parent driver
 
 ```bazel {:.devsite-disable-click-to-copy}
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/BUILD.bazel" region_tag="parent_driver" highlight="9,10" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/parent/BUILD.bazel" region_tag="parent_driver" highlight="9,10" %}
 ```
 
 #### The child bind rules
 
 ```bazel {:.devsite-disable-click-to-copy}
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/BUILD.bazel" region_tag="bind_rules" highlight="6,7" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/child/BUILD.bazel" region_tag="bind_rules" highlight="6,7" %}
 ```
 
 ### parent-driver.cc
 
 ```cpp {:.devsite-disable-click-to-copy}
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/parent-driver.cc" region_tag="bind_imports" highlight="2" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/parent/parent-driver.cc" region_tag="bind_imports" highlight="2" %}
 
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/parent-driver.cc" region_tag="add_properties" adjust_indentation="auto" highlight="2,3,7" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/parent/parent-driver.cc" region_tag="add_properties" adjust_indentation="auto" highlight="2,3,7" %}
 ```
 
 ### child-driver.bind
 
 ```none {:.devsite-disable-click-to-copy}
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/child-driver.bind" region_tag="bind_rules" highlight="1,3,6,7,9" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/child/child-driver.bind" region_tag="bind_rules" highlight="1,3,6,7,9" %}
 ```

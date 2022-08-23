@@ -29,31 +29,31 @@ access constants for these bind library values from the parent driver.
 #### The FIDL library
 
 ```bazel {:.devsite-disable-click-to-copy}
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/BUILD.bazel" region_tag="fuchsia_gizmo_protocol" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/lib/BUILD.bazel" region_tag="fuchsia_gizmo_protocol" %}
 ```
 
 #### The parent driver
 
 ```bazel {:.devsite-disable-click-to-copy}
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/BUILD.bazel" region_tag="parent_driver" highlight="11,12,14,15" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/parent/BUILD.bazel" region_tag="parent_driver" highlight="11,12,14,15" %}
 ```
 
 #### The child bind rules
 
 ```bazel {:.devsite-disable-click-to-copy}
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/BUILD.bazel" region_tag="bind_rules" highlight="8,9,10,11" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/child/BUILD.bazel" region_tag="bind_rules" highlight="8,9,10,11" %}
 ```
 
 ### parent-driver.cc
 
 ```cpp {:.devsite-disable-click-to-copy}
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/parent-driver.cc" region_tag="bind_imports" highlight="1,3"%}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/parent/parent-driver.cc" region_tag="bind_imports" highlight="1,3"%}
 
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/parent-driver.cc" region_tag="add_properties" adjust_indentation="auto" highlight="5,6,9,10" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/parent/parent-driver.cc" region_tag="add_properties" adjust_indentation="auto" highlight="5,6,9,10" %}
 ```
 
 ### child-driver.bind
 
 ```none {:.devsite-disable-click-to-copy}
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/child-driver.bind" region_tag="bind_rules" highlight="2,4,8,10" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/child/child-driver.bind" region_tag="bind_rules" highlight="2,4,8,10" %}
 ```
