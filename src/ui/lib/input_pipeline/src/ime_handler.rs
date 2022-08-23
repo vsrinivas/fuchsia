@@ -505,7 +505,9 @@ mod tests {
                 key: Some(fidl_input::Key::CapsLock),
                 modifiers: Some(fidl_ui_input3::Modifiers::CAPS_LOCK),
                 lock_state: Some(fidl_ui_input3::LockState::CAPS_LOCK),
-                key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(0)),
+                key_meaning: Some(fidl_ui_input3::KeyMeaning::NonPrintableKey(
+                    fidl_ui_input3::NonPrintableKey::CapsLock,
+                )),
                 ..fidl_ui_input3::KeyEvent::EMPTY
             },
             fidl_ui_input3::KeyEvent {
@@ -522,7 +524,9 @@ mod tests {
                 type_: Some(fidl_ui_input3::KeyEventType::Released),
                 key: Some(fidl_input::Key::CapsLock),
                 lock_state: Some(fidl_ui_input3::LockState::CAPS_LOCK),
-                key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(0)),
+                key_meaning: Some(fidl_ui_input3::KeyMeaning::NonPrintableKey(
+                    fidl_ui_input3::NonPrintableKey::CapsLock,
+                )),
                 ..fidl_ui_input3::KeyEvent::EMPTY
             },
         ];
@@ -696,7 +700,9 @@ mod tests {
                 type_: Some(fidl_ui_input3::KeyEventType::Pressed),
                 key: Some(fidl_input::Key::LeftShift),
                 modifiers: Some(Modifiers::LEFT_SHIFT | Modifiers::SHIFT),
-                key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(0)),
+                key_meaning: Some(fidl_ui_input3::KeyMeaning::NonPrintableKey(
+                    fidl_ui_input3::NonPrintableKey::Shift,
+                )),
                 ..fidl_ui_input3::KeyEvent::EMPTY
             },
             fidl_ui_input3::KeyEvent {
@@ -704,7 +710,9 @@ mod tests {
                 type_: Some(fidl_ui_input3::KeyEventType::Pressed),
                 key: Some(fidl_input::Key::RightShift),
                 modifiers: Some(Modifiers::RIGHT_SHIFT | Modifiers::LEFT_SHIFT | Modifiers::SHIFT),
-                key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(0)),
+                key_meaning: Some(fidl_ui_input3::KeyMeaning::NonPrintableKey(
+                    fidl_ui_input3::NonPrintableKey::Shift,
+                )),
                 ..fidl_ui_input3::KeyEvent::EMPTY
             },
             fidl_ui_input3::KeyEvent {
@@ -758,7 +766,9 @@ mod tests {
                 timestamp: Some(event_time_i64),
                 type_: Some(fidl_ui_input3::KeyEventType::Pressed),
                 key: Some(fidl_input::Key::LeftCtrl),
-                key_meaning: Some(fidl_ui_input3::KeyMeaning::Codepoint(0)),
+                key_meaning: Some(fidl_ui_input3::KeyMeaning::NonPrintableKey(
+                    fidl_ui_input3::NonPrintableKey::Control,
+                )),
                 ..fidl_ui_input3::KeyEvent::EMPTY
             },
             fidl_ui_input3::KeyEvent {

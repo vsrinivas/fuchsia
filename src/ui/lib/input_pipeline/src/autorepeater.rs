@@ -22,7 +22,7 @@ use crate::input_device::{self, Handled, InputDeviceDescriptor, InputDeviceEvent
 use crate::keyboard_binding::KeyboardEvent;
 use anyhow::{anyhow, Context, Result};
 use fidl_fuchsia_settings as fsettings;
-use fidl_fuchsia_ui_input3::{KeyEventType, KeyMeaning};
+use fidl_fuchsia_ui_input3::{self as finput3, KeyEventType, KeyMeaning};
 use fuchsia_async::{Task, Time, Timer};
 use fuchsia_syslog::{fx_log_debug, fx_log_err, fx_log_info, fx_log_warn};
 use fuchsia_zircon as zx;
@@ -32,6 +32,11 @@ use futures::StreamExt;
 use std::cell::RefCell;
 use std::convert::TryInto;
 use std::rc::Rc;
+
+/// The value range reserved for the modifier key meanings.  See the documentation for
+/// `fuchsia.ui.input3/NonPrintableKey` for details.
+const RESERVED_MODIFIER_RANGE: std::ops::Range<u32> = finput3::NonPrintableKey::Alt.into_primitive()
+    ..finput3::NonPrintableKey::Enter.into_primitive();
 
 /// Typed autorepeat settings.  Use [Default::default()] and the `into_with_*`
 /// to create a new instance.
@@ -77,27 +82,19 @@ enum Repeatability {
     No,
 }
 
-// Determines whether the given key meaning corresponds to a key that should be repeated.
-//
-// Roughly, the criterion is: if the key may contribute to text editing, it should be repeatable.
-// The decisions taken below are a bit pragmatic, since our specification in the FIDL API is not
-// exactly clear on when a key is repeatable.  Instead our rules are implicit in the way the key
-// meaning is defined.
-//
-// To wit, nonzero code points are printable and therefore may repeat.
-// NonPrintableKey are, paradoxically, repeatable, since the current examples of keys that are
-// nonprintable are empirically repeatable.  Keys that are not repeatable have a zero as the
-// codepoint - this is not an API requirement, but stems from the way we currently use it, so we
-// may as well make it official.  The decisions may become obsolete as KeyMeaning evolves.
-//
-// TODO(fxbug.dev/89736): Sort out whether Left, Right, Up, Down etc should be nonprintable keys
-// or keys with codepoint zero.
+/// Determines whether the given key meaning corresponds to a key effect that
+/// should be repeated.
 fn repeatability(key_meaning: Option<KeyMeaning>) -> Repeatability {
     match key_meaning {
-        Some(KeyMeaning::Codepoint(0)) => Repeatability::No, // e.g. Shift
+        Some(KeyMeaning::Codepoint(0)) => Repeatability::No,
         Some(KeyMeaning::Codepoint(_)) => Repeatability::Yes, // A code point.
-        // This will need to be extended when more nonprintable keys are introduced.
-        Some(KeyMeaning::NonPrintableKey(_)) => Repeatability::Yes, // Tab, Enter, Backspace...
+        Some(KeyMeaning::NonPrintableKey(k)) => {
+            if RESERVED_MODIFIER_RANGE.contains(&k.into_primitive()) {
+                Repeatability::No
+            } else {
+                Repeatability::Yes
+            }
+        }
         None => Repeatability::Yes, // Printable with US QWERTY keymap.
     }
 }

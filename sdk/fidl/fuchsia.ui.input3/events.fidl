@@ -54,6 +54,18 @@ type KeyEventType = strict enum {
 /// values are allocated at once, and the keys with similar purpose are kept
 /// together.
 ///
+/// ## Reserved ranges
+///
+/// The space of possible values for [NonPrintableKey] is subdivided into a
+/// number of ranges, with the intention that the enum values are placed in
+/// the appropriate range when added.
+///
+/// * Special keys: 0x00-0x10
+/// * Modifier keys: 0x11-0x30
+/// * Whitespace keys: 0x31-0x40
+/// * Navigation keys: 0x61-0x80
+/// * General-purpose function keys: 0x9000-0x9FFF
+///
 /// [1]: https://www.w3.org/TR/uievents-key/#named-key-attribute-values
 /// [2]: https://www.w3.org/TR/uievents-key/#keys-multimedia
 type NonPrintableKey = flexible enum : uint32 {
@@ -76,7 +88,7 @@ type NonPrintableKey = flexible enum : uint32 {
 
     /// The Alt (Alternative) key.
     ///
-    /// This key enables the alternate modifier function for interpreting concurrent 
+    /// This key enables the alternate modifier function for interpreting concurrent
     /// or subsequent keyboard input.
     /// This key value is also used for the Apple Option key.
     @available(added=9)

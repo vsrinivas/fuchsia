@@ -51,6 +51,57 @@ impl AsRef<[Option<defs::KeyLevels>]> for Keymap<'_> {
     }
 }
 
+/// Attaches a fixed [KeyMeaning] to the given [Key] if one exists.
+///
+/// These are the default key meanings of keys on a US QWERTY keyboard. As such,
+/// we must try the key to key meaning mapping coming from the keymap first, to
+/// allow the keymap the option to move these keys around when this is desired.
+///
+/// We do not really expect these to happen frequently in standardized keymaps,
+/// but custom keymaps might do this (e.g. mapping Esc to CapsLock), and in
+/// general we should avoid putting arbitrary constraints on key maps if such
+/// are not necessary.
+fn try_into_nonprintable(key: Key) -> Option<KeyMeaning> {
+    match key {
+        Key::Enter => Some(NonPrintableKey::Enter),
+        Key::Tab => Some(NonPrintableKey::Tab),
+        Key::Backspace => Some(NonPrintableKey::Backspace),
+        Key::Up => Some(NonPrintableKey::Up),
+        Key::Down => Some(NonPrintableKey::Down),
+        Key::Left => Some(NonPrintableKey::Left),
+        Key::Right => Some(NonPrintableKey::Right),
+        Key::End => Some(NonPrintableKey::End),
+        Key::Home => Some(NonPrintableKey::Home),
+        Key::PageUp => Some(NonPrintableKey::PageUp),
+        Key::PageDown => Some(NonPrintableKey::PageDown),
+        Key::LeftAlt => Some(NonPrintableKey::Alt),
+        Key::RightAlt => Some(NonPrintableKey::Alt),
+        Key::RightCtrl => Some(NonPrintableKey::Control),
+        Key::LeftCtrl => Some(NonPrintableKey::Control),
+        Key::CapsLock => Some(NonPrintableKey::CapsLock),
+        Key::LeftShift => Some(NonPrintableKey::Shift),
+        Key::RightShift => Some(NonPrintableKey::Shift),
+        Key::LeftMeta => Some(NonPrintableKey::Meta),
+        Key::RightMeta => Some(NonPrintableKey::Meta),
+        Key::NumLock => Some(NonPrintableKey::NumLock),
+        Key::ScrollLock => Some(NonPrintableKey::ScrollLock),
+        Key::F1 => Some(NonPrintableKey::F1),
+        Key::F2 => Some(NonPrintableKey::F2),
+        Key::F3 => Some(NonPrintableKey::F3),
+        Key::F4 => Some(NonPrintableKey::F4),
+        Key::F5 => Some(NonPrintableKey::F5),
+        Key::F6 => Some(NonPrintableKey::F6),
+        Key::F7 => Some(NonPrintableKey::F7),
+        Key::F8 => Some(NonPrintableKey::F8),
+        Key::F9 => Some(NonPrintableKey::F9),
+        Key::F10 => Some(NonPrintableKey::F10),
+        Key::F11 => Some(NonPrintableKey::F11),
+        Key::F12 => Some(NonPrintableKey::F12),
+        _ => None,
+    }
+    .map(|k| KeyMeaning::NonPrintableKey(k))
+}
+
 impl<'a> Keymap<'a> {
     /// Creates a new keymap.
     fn new(map: &'a [Option<defs::KeyLevels>]) -> Self {
@@ -66,39 +117,27 @@ impl<'a> Keymap<'a> {
     ) -> Option<KeyMeaning> {
         let hid_usage = usages::input3_key_to_hid_usage(key);
 
-        match key {
-            // Nonprintable keys get their own key meaning.
-            Key::Enter => Some(KeyMeaning::NonPrintableKey(NonPrintableKey::Enter)),
-            Key::Tab => Some(KeyMeaning::NonPrintableKey(NonPrintableKey::Tab)),
-            Key::Backspace => Some(KeyMeaning::NonPrintableKey(NonPrintableKey::Backspace)),
-            Key::Up => Some(KeyMeaning::NonPrintableKey(NonPrintableKey::Up)),
-            Key::Down => Some(KeyMeaning::NonPrintableKey(NonPrintableKey::Down)),
-            Key::Left => Some(KeyMeaning::NonPrintableKey(NonPrintableKey::Left)),
-            Key::Right => Some(KeyMeaning::NonPrintableKey(NonPrintableKey::Right)),
-            Key::End => Some(KeyMeaning::NonPrintableKey(NonPrintableKey::End)),
-            Key::Home => Some(KeyMeaning::NonPrintableKey(NonPrintableKey::Home)),
-            Key::PageUp => Some(KeyMeaning::NonPrintableKey(NonPrintableKey::PageUp)),
-            Key::PageDown => Some(KeyMeaning::NonPrintableKey(NonPrintableKey::PageDown)),
-            // Printable keys get code points as key meanings.
-            _ => self
-                .hid_usage_to_code_point(hid_usage, modifier_state, lock_state)
-                .map(KeyMeaning::Codepoint)
-                .map_err(|e| {
-                    fx_log_err!(
-                        concat!(
-                            "keymaps::Keymap::apply: ",
-                            "Could not convert HID usage to code point: {:?}, ",
-                            "modifiers: {:?} ",
-                            "lock_state: {:?}",
-                        ),
-                        &hid_usage,
-                        modifier_state,
-                        lock_state,
-                    );
-                    e
-                })
-                .ok(),
-        }
+        // Try to apply the keymap first. Failing that, try fixed nonprintable
+        // keys.
+        self.hid_usage_to_code_point(hid_usage, modifier_state, lock_state)
+            .ok()
+            .and_then(|v| if v == EMPTY_CODEPOINT { None } else { Some(v) })
+            .map(KeyMeaning::Codepoint)
+            .or_else(|| try_into_nonprintable(key))
+            .or_else(|| {
+                fx_log_err!(
+                    concat!(
+                        "keymaps::Keymap::apply: no KeyMeaning for: ",
+                        "key: {:?}, HID usage: {:?}, ",
+                        "modifiers: {:?}, lock_state: {:?}",
+                    ),
+                    &key,
+                    &hid_usage,
+                    modifier_state,
+                    lock_state,
+                );
+                None
+            })
     }
 
     /// Converts a HID usage for a key to a Unicode code point where such a code point exists, based on
