@@ -199,10 +199,10 @@ impl VolumeChangeHandler {
                         Audience::Address(service::Address::Handler(SettingType::Audio)),
                     )
                     .send();
-                if let Ok((_payload, _)) = receptor.next_payload().await {
-                    self.play_volume_sound(new_user_volume);
+                if let Err(e) = receptor.next_payload().await {
+                    fx_log_err!("Failed to play sound after waiting for message response: {e:?}");
                 } else {
-                    fx_log_err!("Failed to play sound after waiting for message response");
+                    self.play_volume_sound(new_user_volume);
                 }
             }
 
