@@ -1,8 +1,8 @@
 ## Namespaces
 
-The namespace of a process contains its private view of the world, and controls
-how much of the Fuchsia system the process can influence. This effectively
-defines the rules of the sandbox in which that process runs.
+The [namespace][glossary.namespace] of a process contains its private view of
+the world, and controls how much of the Fuchsia system the process can influence.
+This effectively defines the rules of the sandbox in which that process runs.
 
 Namespaces are populated with various resource objects, including:
 
@@ -35,3 +35,5 @@ capabilities to access those objects.
   paths containing <code>../.</code> For more details, see
   <a href="/docs/concepts/filesystems/dotdot">dot-dot considered harmful</a>.<p>
 </aside>
+
+[glossary.namespace]: /docs/glossary/README.md#namespace
