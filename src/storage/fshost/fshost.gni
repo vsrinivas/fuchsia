@@ -1,0 +1,127 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//src/storage/fshost/generated_fshost_config.gni")
+import("//tools/cmc/build/cmc.gni")
+
+# Generates an fshost cml file.
+#
+# Parameters
+#
+#   options - a scope that can contain any fshost config option (see generated_fshost_config.gni).
+#             data_filesystem_format is mandatory.  The following options are also supported:
+#
+#     bootfs_only - if set, the blob and data partitions will not get mounted.
+#     no_watcher - disable the block watcher
+#
+#   testonly - the component will only be used for testing
+template("fshost_cml") {
+  cmc_merge(target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    sources = [
+      "//src/storage/fshost/meta/base_fshost.cml",
+      "//src/storage/fshost/meta/config.cml",
+      "//src/storage/fshost/meta/cpp_fshost.cml",
+    ]
+    if (!defined(invoker.testonly) || !invoker.testonly) {
+      sources += [ "//src/storage/fshost/meta/real_fshost.cml" ]
+    }
+    options = invoker.options
+    if (!defined(options.bootfs_only) || !options.bootfs_only) {
+      if (options.data_filesystem_format == "minfs") {
+        sources += [ "//src/storage/fshost/meta/minfs_fshost.cml" ]
+      } else if (options.data_filesystem_format == "fxfs") {
+        sources += [ "//src/storage/fshost/meta/fxfs_fshost.cml" ]
+      } else if (options.data_filesystem_format == "f2fs") {
+        sources += [ "//src/storage/fshost/meta/f2fs_fshost.cml" ]
+      }
+      sources += [ "//src/storage/fshost/meta/core_fshost.cml" ]
+    }
+    if (defined(options.no_watcher) && options.no_watcher) {
+      sources += [ "//src/storage/fshost/testing/meta/no_watcher.cml" ]
+    }
+    if (defined(options.use_disk_based_minfs_migration) &&
+        options.use_disk_based_minfs_migration) {
+      sources += [ "//src/storage/fshost/meta/minfs_fshost.cml" ]
+    }
+  }
+}
+
+# Generates an fshost component and matching config.  The parameters are the same as for
+# fshost_cml above.  This will produces the following targets:
+#
+#     <target-name>.cml      : the cml file
+#     <target-name>.manifest : the manifest (compiled cml file)
+#     <target-name>.config   : the config
+#     <target-name>.comp     : the component
+#     <target-name>          : a group encompassing the component and the config
+#
+# The component name will be <target-name>.
+template("fshost_component_and_config") {
+  _cml_target = "$target_name.cml"
+  _manifest_target = "$target_name.manifest"
+  _config_target = "$target_name.config"
+  _component_target = "$target_name.comp"
+  component_name = target_name
+
+  # The CML file
+  fshost_cml(_cml_target) {
+    forward_variables_from(invoker, "*")
+  }
+
+  # The manifest (compiled CML)
+  fuchsia_component_manifest(_manifest_target) {
+    forward_variables_from(invoker, [ "testonly" ])
+    target_outputs = get_target_outputs(":$_cml_target")
+    manifest = target_outputs[0]
+    deps = [ ":$_cml_target" ]
+  }
+
+  # The config
+  generated_fshost_config(_config_target) {
+    forward_variables_from(invoker.options,
+                           "*",
+                           [
+                             "bootfs_only",
+                             "no_watcher",
+                           ])
+  }
+
+  # The component
+  fuchsia_component(_component_target) {
+    forward_variables_from(invoker, [ "testonly" ])
+    deps = [ "//src/storage/fshost" ]
+    cm_label = ":$_manifest_target"
+  }
+
+  group(target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    deps = [
+      ":$_component_target",
+      ":$_config_target",
+    ]
+  }
+}
+
+default_integration_test_options = {
+  # Some of the tests require us to be able to match against multiple GPT devices.
+  gpt_all = true
+
+  # The test BlockDeviceManagerIntegration.MaxSize verifies that the minfs "max runtime bytes" gets
+  # applied correctly. It checks that the max size in FVM is set to this value. The
+  # "apply_limits_to_ramdisk" flag is required to apply the minfs limit even to a ramdisk which is
+  # used in tests (normally the limits apply only to physical devices).  This number applies to all
+  # tests in the fshost integration test, so all minfs partitions created must be smaller than this
+  # value, but all disks should be larger than this value.
+  minfs_maximum_runtime_bytes_override = 117440512
+
+  apply_limits_to_ramdisk = true
+  check_filesystems = true
+
+  # The BlockDeviceManagerIntegration.SetPartitionName test needs this.
+  allow_legacy_data_partition_names = true
+
+  use_native_fxfs_crypto = true
+}
