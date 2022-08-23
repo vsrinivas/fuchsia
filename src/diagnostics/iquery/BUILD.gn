@@ -76,9 +76,6 @@ rustc_library("lib") {
     "//src/developer/ffx/plugins/inspect/*",
     "//src/developer/remote-control/diagnostics-bridge/*",
     "//src/diagnostics/iquery/*",
-
-    # TODO(fxbug.dev/82964): remove.
-    "//src/developer/ffx/plugins/flutter/tunnel/*",
   ]
 
   deps = iquery_deps

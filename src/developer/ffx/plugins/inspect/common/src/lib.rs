@@ -66,11 +66,8 @@ impl DiagnosticsBridgeProvider {
     ) -> Self {
         Self { diagnostics_proxy, rcs_proxy }
     }
-}
 
-#[async_trait]
-impl DiagnosticsProvider for DiagnosticsBridgeProvider {
-    async fn snapshot<D>(
+    pub async fn snapshot_diagnostics_data<D>(
         &self,
         accessor_path: &Option<String>,
         selectors: &[String],
@@ -144,6 +141,20 @@ impl DiagnosticsProvider for DiagnosticsBridgeProvider {
                 return Ok(vec![]);
             }
         }
+    }
+}
+
+#[async_trait]
+impl DiagnosticsProvider for DiagnosticsBridgeProvider {
+    async fn snapshot<D>(
+        &self,
+        accessor_path: &Option<String>,
+        selectors: &[String],
+    ) -> Result<Vec<Data<D>>, Error>
+    where
+        D: diagnostics_data::DiagnosticsData,
+    {
+        self.snapshot_diagnostics_data::<D>(accessor_path, selectors).await
     }
 
     async fn get_accessor_paths(&self, paths: &Vec<String>) -> Result<Vec<String>, Error> {

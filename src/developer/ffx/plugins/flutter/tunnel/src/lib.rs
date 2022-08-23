@@ -4,7 +4,7 @@
 
 use {
     anyhow::{anyhow, Context, Result},
-    diagnostics_hierarchy::Property,
+    diagnostics_data::Inspect,
     errors::{ffx_error, FfxError},
     ffx_core::ffx_plugin,
     ffx_flutter_tunnel_args::TunnelCommand,
@@ -13,7 +13,6 @@ use {
     fidl_fuchsia_developer_ffx::{DaemonError, TargetAddrInfo, TargetProxy},
     fidl_fuchsia_developer_remotecontrol::{RemoteControlProxy, RemoteDiagnosticsBridgeProxy},
     fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address},
-    iquery::commands::Command as iq_cmd,
     netext::scope_id_to_name,
     std::net::{IpAddr, Ipv4Addr, SocketAddr},
     std::process::Command,
@@ -62,32 +61,30 @@ pub async fn tunnel_impl<W: std::io::Write>(
 ) -> Result<()> {
     let ffx: ffx_lib_args::Ffx = argh::from_env();
 
-    let show_cmd = iquery::commands::ShowCommand {
-        manifest: None,
-        selectors: vec![
-            String::from("assistant_*_runner.cmx"),
-            String::from("core/session-manager/session\\:session/flutter_*_runner"),
-            String::from("flutter_*_runner.cmx"),
-            String::from("g3_assistant_*_runner.cmx"),
-        ],
-        accessor_path: None,
-    };
     let provider = DiagnosticsBridgeProvider::new(diagnostics_proxy, rcs_proxy);
-    let result = show_cmd.execute(&provider).await.map_err(|e| anyhow!(ffx_error!("{}", e)))?;
+    let result = provider
+        .snapshot_diagnostics_data::<Inspect>(
+            &None,
+            &[
+                String::from("assistant_*_runner.cmx:root:vm_service_port"),
+                String::from(
+                    "core/session-manager/session\\:session/flutter_*_runner:root:vm_service_port",
+                ),
+                String::from("flutter_*_runner.cmx:root:vm_service_port"),
+                String::from("g3_assistant_*_runner.cmx:root:vm_service_port"),
+            ],
+        )
+        .await
+        .map_err(|e| anyhow!(ffx_error!("{}", e)))?;
     let mut vm_service_port: u16 = 0;
 
-    for item in result.into_iter() {
-        match &item.payload {
+    for item in result {
+        match item.payload {
             Some(hierarchy) => {
-                for property in &hierarchy.properties {
-                    match &property {
-                        Property::String(name, value) => {
-                            if name == "vm_service_port" {
-                                vm_service_port = value.parse::<u16>().unwrap();
-                                break;
-                            }
-                        }
-                        _ => (),
+                for property in hierarchy.properties {
+                    if property.name() == "vm_service_port" {
+                        vm_service_port = property.string().unwrap().parse::<u16>().unwrap();
+                        break;
                     }
                 }
             }
