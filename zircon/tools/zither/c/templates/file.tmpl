@@ -11,8 +11,9 @@
 #ifndef {{ $guard }}
 #define {{ $guard }}
 
-#include <stdbool.h>
-#include <stdint.h>
+{{ range $include := StandardIncludes . }}
+#include <{{$include}}>
+{{ end }}
 
 {{/*
     TODO(fxbug.dev/106538) We are not protected against cyclic includes here.

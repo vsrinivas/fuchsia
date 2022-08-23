@@ -29,6 +29,7 @@ func NewGenerator(formatter fidlgen.Formatter) *Generator {
 		"Append":               Append,
 		"PrimitiveTypeName":    PrimitiveTypeName,
 		"HeaderGuard":          HeaderGuard,
+		"StandardIncludes":     StandardIncludes,
 		"ConstName":            ConstName,
 		"ConstValue":           ConstValue,
 		"EnumName":             EnumName,
@@ -90,6 +91,20 @@ func HeaderGuard(summary zither.FileSummary) string {
 	nameParts := append(strings.Split(summary.Name, "."), "h")
 	parts := append(summary.Library.Parts(), nameParts...)
 	return fidlgen.ConstNameToAllCapsSnake(strings.Join(parts, "_")) + "_"
+}
+
+// StandardIncludes gives the list of language standard headers used by a file.
+func StandardIncludes(summary zither.FileSummary) []string {
+	var includes []string
+	for kind := range summary.TypeKinds {
+		switch kind {
+		case zither.TypeKindInteger:
+			includes = append(includes, "stdint.h")
+		case zither.TypeKindBool:
+			includes = append(includes, "stdbool.h")
+		}
+	}
+	return includes
 }
 
 // ConstName returns the name of a generated C "constant".

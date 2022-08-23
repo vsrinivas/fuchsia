@@ -8,7 +8,6 @@
 #ifndef ZITHER_ENUMS_ENUMS_H_
 #define ZITHER_ENUMS_ENUMS_H_
 
-#include <stdbool.h>
 #include <stdint.h>
 
 #if defined(__cplusplus)

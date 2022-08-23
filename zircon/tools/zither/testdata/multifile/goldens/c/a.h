@@ -8,7 +8,6 @@
 #ifndef ZITHER_MULTIFILE_A_H_
 #define ZITHER_MULTIFILE_A_H_
 
-#include <stdbool.h>
 #include <stdint.h>
 
 #if defined(__cplusplus)

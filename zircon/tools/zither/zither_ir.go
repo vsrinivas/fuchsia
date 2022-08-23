@@ -57,6 +57,11 @@ type FileSummary struct {
 	// depends on a declaration in the latter.
 	Deps map[string]struct{}
 
+	// TypeKinds gives the kinds of types contained in this file's declarations.
+	// This is useful for knowing the precise set of imports to make in the
+	// code generated from this file.
+	TypeKinds map[TypeKind]struct{}
+
 	// The contained declarations.
 	Decls []Decl
 }
@@ -148,9 +153,10 @@ func Summarize(ir fidlgen.Root, order DeclOrder) ([]FileSummary, error) {
 		file, ok := filesByName[name]
 		if !ok {
 			file = &FileSummary{
-				Library: libName,
-				Name:    name,
-				Deps:    make(map[string]struct{}),
+				Library:   libName,
+				Name:      name,
+				Deps:      make(map[string]struct{}),
+				TypeKinds: make(map[TypeKind]struct{}),
 			}
 			filesByName[name] = file
 		}
@@ -158,17 +164,23 @@ func Summarize(ir fidlgen.Root, order DeclOrder) ([]FileSummary, error) {
 	}
 
 	for _, decl := range decls {
+		typeKinds := make(map[TypeKind]struct{})
 		var summarized interface{}
 		var err error
 		switch decl := decl.(type) {
 		case *fidlgen.Const:
 			summarized, err = newConst(*decl, processed)
+			if err == nil {
+				typeKinds[summarized.(*Const).Kind] = struct{}{}
+			}
 		case *fidlgen.Enum:
 			summarized, err = newEnum(*decl)
+			typeKinds[TypeKindInteger] = struct{}{}
 		case *fidlgen.Bits:
 			summarized, err = newBits(*decl)
+			typeKinds[TypeKindInteger] = struct{}{}
 		case *fidlgen.Struct:
-			summarized, err = newStruct(*decl, processed)
+			summarized, err = newStruct(*decl, processed, typeKinds)
 		default:
 			return nil, fmt.Errorf("unsupported declaration type: %s", fidlgen.GetDeclType(decl))
 		}
@@ -179,6 +191,9 @@ func Summarize(ir fidlgen.Root, order DeclOrder) ([]FileSummary, error) {
 		file := getFile(decl)
 		d := Decl{summarized}
 		file.Decls = append(file.Decls, d)
+		for kind := range typeKinds {
+			file.TypeKinds[kind] = struct{}{}
+		}
 
 		// Now go back and record the dependents' dependency on this declaration.
 		dependents, ok := g.GetDirectDependents(decl.GetName())
@@ -453,7 +468,7 @@ type TypeDescriptor struct {
 	ElementCount *int
 }
 
-func deriveType(typ fidlgen.Type, decls declMap) (*TypeDescriptor, error) {
+func deriveType(typ fidlgen.Type, decls declMap, typeKinds map[TypeKind]struct{}) (*TypeDescriptor, error) {
 	desc := TypeDescriptor{}
 	switch typ.Kind {
 	case fidlgen.PrimitiveType:
@@ -483,7 +498,7 @@ func deriveType(typ fidlgen.Type, decls declMap) (*TypeDescriptor, error) {
 	case fidlgen.ArrayType:
 		desc.Kind = TypeKindArray
 		desc.ElementCount = typ.ElementCount
-		nested, err := deriveType(*typ.ElementType, decls)
+		nested, err := deriveType(*typ.ElementType, decls, typeKinds)
 		if err != nil {
 			return nil, err
 		}
@@ -491,6 +506,8 @@ func deriveType(typ fidlgen.Type, decls declMap) (*TypeDescriptor, error) {
 	default:
 		return nil, fmt.Errorf("%s: unsupported type kind: %s", desc.Type, typ.Kind)
 	}
+
+	typeKinds[desc.Kind] = struct{}{}
 	return &desc, nil
 }
 
@@ -518,7 +535,7 @@ type StructMember struct {
 	Comments []string
 }
 
-func newStruct(strct fidlgen.Struct, decls declMap) (*Struct, error) {
+func newStruct(strct fidlgen.Struct, decls declMap, typeKinds map[TypeKind]struct{}) (*Struct, error) {
 	if strct.IsAnonymous() {
 		return nil, fmt.Errorf("anonymous structs are not allowed: %s", strct.Name)
 	}
@@ -533,7 +550,7 @@ func newStruct(strct fidlgen.Struct, decls declMap) (*Struct, error) {
 		Comments: strct.DocComments(),
 	}
 	for _, m := range strct.Members {
-		typ, err := deriveType(m.Type, decls)
+		typ, err := deriveType(m.Type, decls, typeKinds)
 		if err != nil {
 			return nil, fmt.Errorf("%s.%s: failed to derive type: %w", s.Name, m.Name, err)
 		}

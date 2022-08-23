@@ -8,7 +8,6 @@
 #ifndef ZITHER_BITS_BITS_H_
 #define ZITHER_BITS_BITS_H_
 
-#include <stdbool.h>
 #include <stdint.h>
 
 #if defined(__cplusplus)
