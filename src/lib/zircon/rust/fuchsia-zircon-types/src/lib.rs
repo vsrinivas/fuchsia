@@ -1041,6 +1041,34 @@ pub struct zx_thread_state_general_regs_t {
     pub gs_base: u64,
 }
 
+#[cfg(target_arch = "x86_64")]
+impl From<&zx_restricted_state_t> for zx_thread_state_general_regs_t {
+    fn from(state: &zx_restricted_state_t) -> Self {
+        Self {
+            rdi: state.rdi,
+            rsi: state.rsi,
+            rbp: state.rbp,
+            rbx: state.rbx,
+            rdx: state.rdx,
+            rcx: state.rcx,
+            rax: state.rax,
+            rsp: state.rsp,
+            r8: state.r8,
+            r9: state.r9,
+            r10: state.r10,
+            r11: state.r11,
+            r12: state.r12,
+            r13: state.r13,
+            r14: state.r14,
+            r15: state.r15,
+            rip: state.ip,
+            rflags: state.flags,
+            fs_base: state.fs_base,
+            gs_base: state.gs_base,
+        }
+    }
+}
+
 #[cfg(target_arch = "aarch64")]
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
@@ -1051,6 +1079,60 @@ pub struct zx_thread_state_general_regs_t {
     pub pc: u64,
     pub cpsr: u64,
     pub tpidr: u64,
+}
+
+#[cfg(target_arch = "x86_64")]
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+pub struct zx_restricted_state_t {
+    pub rdi: u64,
+    pub rsi: u64,
+    pub rbp: u64,
+    pub rbx: u64,
+    pub rdx: u64,
+    pub rcx: u64,
+    pub rax: u64,
+    pub rsp: u64,
+    pub r8: u64,
+    pub r9: u64,
+    pub r10: u64,
+    pub r11: u64,
+    pub r12: u64,
+    pub r13: u64,
+    pub r14: u64,
+    pub r15: u64,
+    pub ip: u64,
+    pub flags: u64,
+    pub fs_base: u64,
+    pub gs_base: u64,
+}
+
+#[cfg(target_arch = "x86_64")]
+impl From<&zx_thread_state_general_regs_t> for zx_restricted_state_t {
+    fn from(registers: &zx_thread_state_general_regs_t) -> Self {
+        Self {
+            rdi: registers.rdi,
+            rsi: registers.rsi,
+            rbp: registers.rbp,
+            rbx: registers.rbx,
+            rdx: registers.rdx,
+            rcx: registers.rcx,
+            rax: registers.rax,
+            rsp: registers.rsp,
+            r8: registers.r8,
+            r9: registers.r9,
+            r10: registers.r10,
+            r11: registers.r11,
+            r12: registers.r12,
+            r13: registers.r13,
+            r14: registers.r14,
+            r15: registers.r15,
+            ip: registers.rip,
+            flags: registers.rflags,
+            fs_base: registers.fs_base,
+            gs_base: registers.gs_base,
+        }
+    }
 }
 
 #[cfg(target_arch = "x86_64")]
