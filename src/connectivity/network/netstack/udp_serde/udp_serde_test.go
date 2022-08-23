@@ -55,7 +55,7 @@ func TestSerializeThenDeserializeSendMsgMeta(t *testing.T) {
 			}
 
 			if err := SerializeSendMsgMeta(tcpip.NetworkProtocolNumber(netProto), addr, cmsgSet, buf); err != nil {
-				t.Fatalf("got SerializeSendMsgMeta(%d, %#v, %#v, _) = (%#v), want (%#v)", netProto, cmsgSet, addr, err, nil)
+				t.Fatalf("got SerializeSendMsgMeta(%d, %#v, %#v, _) = (%#v), want (%#v)", netProto, addr, cmsgSet, err, nil)
 			}
 
 			deserializedAddr, deserializedCmsgSet, err := DeserializeSendMsgMeta(buf)
@@ -98,7 +98,7 @@ func TestSerializeSendMsgMetaFailures(t *testing.T) {
 			err := SerializeSendMsgMeta(header.IPv4ProtocolNumber, addr, cmsgSet, buf)
 
 			if got, want := err, testCase.expectedErr; !errors.Is(err, testCase.expectedErr) {
-				t.Errorf("got SerializeSendMsgMeta(%d, %#v, _) = (%#v), want (%#v)", header.IPv4ProtocolNumber, addr, got, want)
+				t.Errorf("got SerializeSendMsgMeta(%d, %#v, %#v, _) = (%#v), want (%#v)", header.IPv4ProtocolNumber, addr, cmsgSet, got, want)
 			}
 		})
 	}
