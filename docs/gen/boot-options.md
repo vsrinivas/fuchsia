@@ -930,6 +930,11 @@ for a specific architecture.
 
 Note: The default value may vary for each architecture.
 
+### kernel.enable_suspend=\<bool>
+**Default:** `false`
+
+Enable the kernel to go to the S3 (Suspend to RAM) ACPI power state.
+
 ### kernel.wallclock=[auto | tsc | pit | hpet]
 **Default:** `auto`
 

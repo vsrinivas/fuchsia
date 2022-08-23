@@ -105,6 +105,10 @@ for a specific architecture.
 Note: The default value may vary for each architecture.
 )""")
 
+DEFINE_OPTION("kernel.enable_suspend", bool, x86_enable_suspend, {false}, R"""(
+Enable the kernel to go to the S3 (Suspend to RAM) ACPI power state.
+)""")
+
 DEFINE_OPTION("kernel.wallclock", WallclockType, x86_wallclock, {WallclockType::kAutoDetect}, R"""(
 This option can be used to force the selection of a particular wall clock on pc builds.
 )""")

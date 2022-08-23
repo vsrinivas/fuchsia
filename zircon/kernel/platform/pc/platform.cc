@@ -522,7 +522,7 @@ void platform_init(void) {
   printf("smbios: manufacturer=\"%s\" product=\"%s\"\n", manufacturer, product);
 }
 
-void platform_suspend(void) {
+void platform_prep_suspend(void) {
   pc_prep_suspend_timer();
   pc_suspend_debug();
 }

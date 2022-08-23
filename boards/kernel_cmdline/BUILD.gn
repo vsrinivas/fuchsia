@@ -34,6 +34,18 @@ kernel_cmdline("pmm-checker") {
   ]
 }
 
+kernel_cmdline("enable-suspend") {
+  args = [
+    "kernel.enable_suspend=true",
+
+    # Force ticks_get to use the syscall where we can apply an offset to ensure continuity of the
+    # monotonic clock over suspend and resume. This has a significant time cost and is only
+    # intended as a temporary measure to enable testing of suspend as it is introduced.
+    "vdso.ticks_get_force_syscall=true",
+  ]
+  deps = [ "//build/validate:non_production_tag" ]
+}
+
 declare_args() {
   # Used to control whether board definitions include PMM checker options.
   pmm_checker_from_board = true

@@ -113,6 +113,7 @@ config("kernel") {
 # NOTE: Bad indentation is intentional, to make code reviews easier.
 zx_library("x86") {
   sources = [
+    "acpi.S",
     "amd.cc",
     "arch.cc",
     "asm.S",

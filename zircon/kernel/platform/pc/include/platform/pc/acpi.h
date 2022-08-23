@@ -18,4 +18,16 @@ void PlatformInitAcpi(zx_paddr_t acpi_rsdp);
 // Get global acpi_lite instance.
 acpi_lite::AcpiParser& GlobalAcpiLiteParser();
 
+// Suspend the platform to the |target_s_state| sleep state.
+//
+// This function sets up the waking vector that will be used on resume, then disables interrupts so
+// that the platform and architecture hooks to prepare the system for suspend can be called, then
+// makes the sleep state transition. Before returning, this function calls on the architecture and
+// platform resume hooks and restores the interrupt state.
+//
+// This function returns ZX_OK after a successful resume, and ZX_ERR_INTERNAL otherwise.
+//
+// This function must be called with secondary CPUs disabled.
+zx_status_t PlatformSuspend(uint8_t target_s_state, uint8_t sleep_type_a, uint8_t sleep_type_b);
+
 #endif  // ZIRCON_KERNEL_PLATFORM_PC_INCLUDE_PLATFORM_PC_ACPI_H_

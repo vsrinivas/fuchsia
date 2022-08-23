@@ -27,7 +27,7 @@ void arch_late_init_percpu();
 
 // Called just before initiating a system suspend to give the arch layer a
 // chance to save state.  Must be called with interrupts disabled.
-void arch_suspend();
+void arch_prep_suspend();
 
 // Called immediately after resuming from a system suspend to let the arch layer
 // reinitialize arch components.  Must be called with interrupts disabled.

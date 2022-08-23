@@ -815,6 +815,8 @@ bool platform_usermode_can_access_tick_registers(void) { return (wall_clock == C
 
 static uint64_t saved_hpet_val;
 void pc_prep_suspend_timer(void) {
+  // TODO(89735): Once an offset is added for the TSC save the value of current_ticks to use as an
+  // offset on resume
   if (hpet_is_present()) {
     saved_hpet_val = hpet_get_value();
   }

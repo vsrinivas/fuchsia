@@ -257,7 +257,7 @@ void arch_enter_uspace(iframe_t* iframe) {
   __UNREACHABLE;
 }
 
-void arch_suspend(void) {
+void arch_prep_suspend(void) {
   DEBUG_ASSERT(arch_ints_disabled());
   apic_io_save();
 }

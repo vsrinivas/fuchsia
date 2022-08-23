@@ -5,8 +5,8 @@
 // https://opensource.org/licenses/MIT
 
 #include <bits.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/console.h>
-#include <platform.h>
 #include <pow2.h>
 #include <trace.h>
 
@@ -16,6 +16,7 @@
 #include <arch/x86/platform_access.h>
 #include <kernel/percpu.h>
 #include <kernel/timer.h>
+#include <platform/pc/acpi.h>
 
 #include "system_priv.h"
 
@@ -269,11 +270,69 @@ void print_command_usage() {
   }
 }
 
+// This thread performs the work for suspend/resume.  We use a separate thread
+// rather than the invoking thread to let us lean on the context switch code
+// path to persist all of the usermode thread state that is not saved on a plain
+// mode switch.
+zx_status_t suspend_thread(void* raw_arg) {
+  auto arg = reinterpret_cast<const zx_system_powerctl_arg_t*>(raw_arg);
+  uint8_t target_s_state = arg->acpi_transition_s_state.target_s_state;
+  uint8_t sleep_type_a = arg->acpi_transition_s_state.sleep_type_a;
+  uint8_t sleep_type_b = arg->acpi_transition_s_state.sleep_type_b;
+
+  return PlatformSuspend(target_s_state, sleep_type_a, sleep_type_b);
+}
+
+zx_status_t acpi_transition_s_state(const zx_system_powerctl_arg_t* arg) {
+  uint8_t target_s_state = arg->acpi_transition_s_state.target_s_state;
+  if (target_s_state == 0 || target_s_state > 5) {
+    TRACEF("Bad S-state: S%u\n", target_s_state);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // If not a shutdown, ensure CPU 0 is the only cpu left running.
+  if (target_s_state != 5 && mp_get_online_mask() != cpu_num_to_mask(0)) {
+    TRACEF("Too many CPUs running for state S%u\n", target_s_state);
+    return ZX_ERR_BAD_STATE;
+  }
+
+  // Currently only transitioning to the S3 state is supported.
+  if (target_s_state != 3) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  // Prepare a resume path and execute the suspend on a separate thread (see comment on
+  // |suspend_thread()| for explanation).
+  Thread* t = Thread::Create("suspend-thread", suspend_thread,
+                             const_cast<zx_system_powerctl_arg_t*>(arg), HIGHEST_PRIORITY);
+  if (!t) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  t->Resume();
+
+  zx_status_t retcode;
+  zx_status_t status = t->Join(&retcode, ZX_TIME_INFINITE);
+  ASSERT(status == ZX_OK);
+
+  if (retcode != ZX_OK) {
+    return retcode;
+  }
+
+  return ZX_OK;
+}
+
 }  // namespace
 
 zx_status_t arch_system_powerctl(uint32_t cmd, const zx_system_powerctl_arg_t* arg,
                                  MsrAccess* msr) {
   switch (cmd) {
+    case ZX_SYSTEM_POWERCTL_ACPI_TRANSITION_S_STATE:
+      if (gBootOptions->x86_enable_suspend) {
+        return acpi_transition_s_state(arg);
+      } else {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
     case ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1:
       return SetPkgPl1(arg, msr);
     default:
