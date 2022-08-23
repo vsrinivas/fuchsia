@@ -214,10 +214,8 @@ class Presentation : fuchsia::ui::policy::Presenter,
   // CreateAccessibilityViewHolder() it is instead connected to the a11y view.
   std::optional<scenic::ViewHolder> proxy_view_holder_;
 
-  // ViewHolder connected to the client View and the ViewRef referring to the client view. Both are
-  // std::nullopt until AttachClient() is called.
+  // ViewHolder connected to the client View; std::nullopt until AttachClient() is called.
   std::optional<scenic::ViewHolder> client_view_holder_;
-  std::optional<fuchsia::ui::views::ViewRef> client_view_ref_;
 
   fit::function<void()> create_a11y_view_holder_callback_ = nullptr;
 

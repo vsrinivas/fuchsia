@@ -6,6 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
+#include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/status.h>
@@ -28,6 +29,20 @@ namespace {
 
 // TODO(fxbug.dev/24474): Don't hardcode Z bounds in multiple locations.
 constexpr float kDefaultRootViewDepth = 1000;
+
+fuchsia::ui::gfx::ViewProperties ViewProperties(float min_x, float min_y, float min_z, float max_x,
+                                                float max_y, float max_z, float in_min_x,
+                                                float in_min_y, float in_min_z, float in_max_x,
+                                                float in_max_y, float in_max_z, bool is_focusable) {
+  fuchsia::ui::gfx::ViewProperties props;
+  props.bounding_box.min = scenic::NewVector3({min_x, min_y, min_z});
+  props.bounding_box.max = scenic::NewVector3({max_x, max_y, max_z});
+  props.inset_from_min = scenic::NewVector3({in_min_x, in_min_y, in_min_z});
+  props.inset_from_max = scenic::NewVector3({in_max_x, in_max_y, in_max_z});
+  props.focus_change = is_focusable;
+
+  return props;
+}
 
 }  // namespace
 
@@ -230,13 +245,6 @@ void Presentation::UpdateGraphState(GraphState updated_state) {
     create_a11y_view_holder_callback_();
   } else if (IsValidSceneGraph()) {
     injector_->MarkSceneReady();
-
-    if (client_view_ref_.has_value()) {
-      FX_LOGS(INFO) << "Transferring focus to client";
-      view_focuser_->RequestFocus(fidl::Clone(client_view_ref_.value()), [](auto) {});
-    } else {
-      FX_LOGS(WARNING) << "Cannot transfer focus to client: no view ref.";
-    }
   }
 }
 
@@ -269,8 +277,9 @@ void Presentation::SetViewHolderProperties(const DisplayMetrics& display_metrics
     const float raw_metrics_width = static_cast<float>(display_metrics.width_in_px());
     const float raw_metrics_height = static_cast<float>(display_metrics.height_in_px());
     FX_DCHECK(root_view_holder_);
-    root_view_holder_->SetViewProperties(0.f, 0.f, -kDefaultRootViewDepth, raw_metrics_width,
-                                         raw_metrics_height, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
+    root_view_holder_->SetViewProperties(ViewProperties(0.f, 0.f, -kDefaultRootViewDepth,
+                                                        raw_metrics_width, raw_metrics_height, 0.f,
+                                                        0.f, 0.f, 0.f, 0.f, 0.f, 0.f, false));
   }
 
   {  // Set all other views' resolutions to pips.
@@ -284,16 +293,19 @@ void Presentation::SetViewHolderProperties(const DisplayMetrics& display_metrics
 
     // Injector, a11y, proxy, and client views should all have the same dimensions.
     FX_DCHECK(injector_view_holder_);
-    injector_view_holder_->SetViewProperties(0.f, 0.f, -kDefaultRootViewDepth, metrics_width,
-                                             metrics_height, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
+    injector_view_holder_->SetViewProperties(ViewProperties(0.f, 0.f, -kDefaultRootViewDepth,
+                                                            metrics_width, metrics_height, 0.f, 0.f,
+                                                            0.f, 0.f, 0.f, 0.f, 0.f, false));
 
     FX_DCHECK(proxy_view_holder_);
-    proxy_view_holder_->SetViewProperties(0.f, 0.f, -kDefaultRootViewDepth, metrics_width,
-                                          metrics_height, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
+    proxy_view_holder_->SetViewProperties(ViewProperties(0.f, 0.f, -kDefaultRootViewDepth,
+                                                         metrics_width, metrics_height, 0.f, 0.f,
+                                                         0.f, 0.f, 0.f, 0.f, 0.f, false));
 
     if (client_view_holder_) {
-      client_view_holder_->SetViewProperties(0.f, 0.f, -kDefaultRootViewDepth, metrics_width,
-                                             metrics_height, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f, 0.f);
+      client_view_holder_->SetViewProperties(ViewProperties(0.f, 0.f, -kDefaultRootViewDepth,
+                                                            metrics_width, metrics_height, 0.f, 0.f,
+                                                            0.f, 0.f, 0.f, 0.f, 0.f, true));
     }
 
     FX_VLOGS(2) << "DisplayModel layout: " << metrics_width << ", " << metrics_height;
@@ -396,7 +408,15 @@ void Presentation::AttachClient(
     SetViewHolderProperties(display_metrics_);
   }
 
-  client_view_ref_ = std::move(view_ref);  // unconditional write, replacement semantics
+  if (view_ref) {
+    fuchsia::ui::views::FocuserSetAutoFocusRequest request;
+    request.set_view_ref(std::move(*view_ref));
+    view_focuser_->SetAutoFocus(std::move(request), [](auto result) {
+      if (result.is_err()) {
+        FX_LOGS(WARNING) << "Failed to set auto-focus for client root view";
+      }
+    });
+  }
 
   presentation_binding_.Bind(std::move(presentation_request));
   safe_presenter_proxy_.QueuePresent([] {});

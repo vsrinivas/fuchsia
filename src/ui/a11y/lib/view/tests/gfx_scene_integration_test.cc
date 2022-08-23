@@ -243,8 +243,8 @@ TEST_P(ClientAttachesFirst, SceneReconnectedAndClientRefocused) {
            ui_test_manager_->ViewIsRendering(a11y_view_registry_proxy_->a11y_view_ref_koid());
   });
 
-  // TODO(fxbug.dev/101865): Check that client view receives focus once we have
-  // resolved the flake in the root presenter variant of this test case.
+  FX_LOGS(INFO) << "Waiting for client view to receive focus";
+  RunLoopUntil([this] { return ui_test_manager_->ClientViewIsFocused(); });
 }
 
 // Root presenter waits for the client root view to attach before inserting the
