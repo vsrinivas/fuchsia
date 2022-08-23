@@ -39,19 +39,16 @@ auto DebugdataItem::AppendItems(DataZbi& zbi) -> fitx::result<DataZbi::Error> {
   ZX_ASSERT(payload.size_bytes() >= size);
 
   contents_ = payload.data();
+  size_t used_size = content_size_;
   payload = payload.subspan(content_size_);
 
-  auto add_string = [&payload](std::string_view str) {
+  for (std::string_view str : {sink_name_, vmo_name_, vmo_name_suffix_, log_}) {
+    used_size += str.size();
     payload = payload.subspan(str.copy(reinterpret_cast<char*>(payload.data()), payload.size()));
-  };
-
-  add_string(sink_name_);
-  add_string(vmo_name_);
-  add_string(vmo_name_suffix_);
-  add_string(log_);
+  }
 
   // Skip over any needed alignment padding.
-  payload = payload.subspan(ZBI_ALIGN(static_cast<uint32_t>(payload.size())) - payload.size());
+  payload = payload.subspan(ZBI_ALIGN(static_cast<uint32_t>(used_size)) - used_size);
 
   ZX_ASSERT_MSG(payload.size_bytes() >= sizeof(zbi_debugdata_t),
                 "%zu bytes left for %zu-byte trailer", payload.size_bytes(),

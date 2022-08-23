@@ -19,6 +19,11 @@ if (current_toolchain != default_toolchain) {
              toolchain_environment == "kernel.efi",
          "phys/test/BUILD.gn evaluated in $current_toolchain")
 
+  config("includes") {
+    visibility = [ ":*" ]
+    include_dirs = [ "." ]
+  }
+
   # This provides a PhysMain function appropriate for zbi_test() targets.
   source_set("qemu-test-main") {
     testonly = true
@@ -60,6 +65,7 @@ if (current_toolchain != default_toolchain) {
   source_set("test-main") {
     testonly = true
     public = [ "test-main.h" ]
+    public_configs = [ ":includes" ]
     public_deps = [
       "..:main",
       "..:symbolize",
@@ -70,6 +76,7 @@ if (current_toolchain != default_toolchain) {
   source_set("phys-unittest") {
     testonly = true
     public = [ "phys-unittest.h" ]
+    public_configs = [ ":includes" ]
     public_deps = [
       ":test-main",
       "//zircon/kernel/lib/ktl",
@@ -89,7 +96,6 @@ if (current_toolchain != default_toolchain) {
     }
 
     phys_zbi_test("zbi-$target_name") {
-      visibility = [ ":*" ]
       forward_variables_from(invoker, "*", [ "target_name" ])
     }
 
@@ -222,6 +228,7 @@ if (current_toolchain != default_toolchain) {
   source_set("turducken") {
     testonly = true
     public = [ "turducken.h" ]
+    public_configs = [ ":includes" ]
     public_deps = [
       "..:allocation",
       "..:symbolize",

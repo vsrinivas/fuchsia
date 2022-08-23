@@ -201,22 +201,13 @@ int TestMain(void* zbi, arch::EarlyTicks entry_ticks) {
   TurduckenTest test(zbi, entry_ticks);
   test.LogCmdLineArguments();
 
-  for (auto it = test.boot_zbi().begin(); it != test.boot_zbi().end(); ++it) {
-    if (it->header->type == test.embedded_type()) {
-      ZX_ASSERT(test.boot_zbi().take_error().is_ok());
-      return test.Main(it);
-    }
+  auto kernel_item = test.boot_zbi().begin();
+  while (kernel_item != test.boot_zbi().end() &&
+         kernel_item->header->type != test.embedded_type()) {
+    ++kernel_item;
   }
 
-  auto result = test.boot_zbi().take_error();
-  if (result.is_error()) {
-    printf("%s: Failed scanning ZBI: ", test.test_name());
-    zbitl::PrintViewError(result.error_value());
-  } else {
-    printf("%s: No ZBI_TYPE_STORAGE_KERNEL item found\n", test.test_name());
-  }
-
-  return -1;
+  return test.Main(kernel_item);
 }
 
 void TurduckenTestBase::LogCmdLineArguments() {
@@ -231,6 +222,20 @@ void TurduckenTestBase::LogCmdLineArguments() {
     }
   }
   ZX_ASSERT(boot_zbi().take_error().is_ok());
+}
+
+void TurduckenTestBase::LogBootZbiItems(Zbi::iterator match) {
+  for (Zbi::iterator it = boot_zbi_.begin(); it != boot_zbi_.end(); ++it) {
+    ktl::string_view type = zbitl::TypeName(it->header->type);
+    printf("%s: ZBI item: %2s %.*s (%#x) length=%#x flags=%#x\n", gSymbolize->name(),
+           it == match ? "=>" : "", static_cast<int>(type.size()), type.data(), it->header->type,
+           it->header->length, it->header->flags);
+  }
+  auto result = boot_zbi_.take_error();
+  if (result.is_error()) {
+    printf("%s: ZBI iteration error: ", gSymbolize->name());
+    zbitl::PrintViewError(result.error_value());
+  }
 }
 
 ktl::optional<uint64_t> TurduckenTestBase::ParseUint(ktl::string_view value_str) {

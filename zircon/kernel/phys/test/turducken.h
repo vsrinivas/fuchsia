@@ -87,6 +87,10 @@ class TurduckenTestBase {
   // Log the command-line arguments constructed from the boot-zbi(ZBI_TYPE_CMDLINE).
   void LogCmdLineArguments();
 
+  // Log a listing of incoming ZBI items, noting the indicated item.
+  void LogBootZbiItems(Zbi::iterator match);
+  void LogBootZbiItems() { LogBootZbiItems(boot_zbi_.end()); }
+
   // Unpack the embedded ZBI in the kernel_item (ZBI_TYPE_STORAGE_KERNEL).
   // Then append [first, last) to it, with extra_data_space capacity to spare.
   // Returns the new Zbi, whose storage is owned by the TurduckenTest object.

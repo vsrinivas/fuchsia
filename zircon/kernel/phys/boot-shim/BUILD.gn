@@ -5,7 +5,9 @@
 # https://opensource.org/licenses/MIT
 
 import("//build/testing/zbi_test.gni")
+import("//build/zbi/kernel_cmdline.gni")
 import("//zircon/kernel/phys/qemu.gni")
+import("//zircon/kernel/phys/test/turducken_zbi_test.gni")
 import("//zircon/kernel/phys/zbi_executable.gni")
 
 group("boot-shim") {
@@ -40,6 +42,8 @@ group("tests") {
   deps = [
     ":zbi-boot-shim-core-tests",
     ":zbi-boot-shim-phys-unittests",
+    ":zbi-debugdata-boot-shim-hello-world-test",
+    ":zbi-debugdata-boot-shim-test",
   ]
 
   if (current_cpu == "x64") {
@@ -62,4 +66,75 @@ zbi_test("zbi-boot-shim-core-tests") {
     ":zbi-boot-shim",
     "//zircon/system/utest/core:core-tests.zbi($default_toolchain)",
   ]
+}
+
+zbi_executable("debugdata-boot-shim-test") {
+  testonly = true
+
+  sources = [ "debugdata-boot-shim-test.cc" ]
+  deps = [
+    "//zircon/kernel/lib/arch",
+    "//zircon/kernel/phys/lib/boot-shim",
+    "//zircon/kernel/phys/test:turducken",
+  ]
+}
+
+# This brings the test program and the command-line to tell it to be the turkey
+# that publishes data for the duck to see.
+kernel_cmdline("debugdata-boot-shim-test.publish") {
+  visibility = [ ":*" ]
+  testonly = true
+  args = [ "debugdata.publish" ]
+  deps = [ ":debugdata-boot-shim-test" ]
+}
+
+# This just repacks the ZBI executable as a ZBI again, which doesn't change its
+# contents.  But it gets the file into a place where get_target_outputs() can
+# find it without being in the right phys toolchain.
+zbi("debugdata-boot-shim-test.zbi") {
+  visibility = [ ":*" ]
+  testonly = true
+  deps = [ ":debugdata-boot-shim-test" ]
+}
+
+# This just packs the same test as the turkey and the duck, the second instance
+# won't get the "publish" command line so it will check instead.
+turducken_zbi_test("zbi-debugdata-boot-shim-test") {
+  kernel = ":debugdata-boot-shim-test.publish"
+
+  # This needs a dependency on the zbi() target so it can use its output as an
+  # input.  data_deps vs deps keeps it from being folded as a zbi_input() into
+  # the outer ZBI being created.  The second output from the zbi() target is
+  # the JSON file; we only want the ZBI file, which is the first output.
+  data_deps = [ ":debugdata-boot-shim-test.zbi" ]
+  zbi_files = get_target_outputs(data_deps[0])
+  sources = [ zbi_files[0] ]
+}
+
+# This just repacks the hello-world-test ZBI executable as a ZBI again, which
+# doesn't change its contents.  But it gets the file into a place where
+# get_target_outputs() in this BUILD.gn file can find it.
+zbi("zbi-hello-world-test") {
+  visibility = [ ":*" ]
+  testonly = true
+  deps = [ "//zircon/kernel/phys/test:zbi-hello-world-test.executable(//zircon/kernel/phys:kernel.phys_$current_cpu)" ]
+}
+
+# This is the duck inside the turkey below.  It checks for the debugdata item
+# and then hands off to its chicken: the hello-world test.
+turducken_zbi_test("debugdata-boot-shim-test.hello-world-test") {
+  visibility = [ ":*" ]
+  kernel = ":debugdata-boot-shim-test"
+  data_deps = [ ":zbi-hello-world-test" ]
+  zbi_files = get_target_outputs(data_deps[0])
+  sources = [ zbi_files[0] ]
+}
+
+# This will add the debugdata, hand off the the duck above that checks it
+# and then hands off to hello-world-test.
+turducken_zbi_test("zbi-debugdata-boot-shim-hello-world-test") {
+  kernel = ":debugdata-boot-shim-test.publish"
+  data_deps = [ ":debugdata-boot-shim-test.hello-world-test.zbi" ]
+  zbi_files = get_target_outputs(data_deps[0])
+  sources = [ zbi_files[0] ]
 }

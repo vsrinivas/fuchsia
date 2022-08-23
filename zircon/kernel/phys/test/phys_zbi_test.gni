@@ -29,12 +29,13 @@ import("//zircon/kernel/phys/zbi_executable.gni")
 # Other parameters are as for zbi_executable().
 #
 template("phys_zbi_test") {
+  test_target = target_name
+
   if (defined(invoker.test_deps)) {
     test_deps = invoker.test_deps
   } else {
-    test_deps = [ ":$target_name.executable" ]
-    zbi_executable("$target_name.executable") {
-      visibility = [ ":*" ]
+    test_deps = [ ":$test_target.executable" ]
+    zbi_executable("$test_target.executable") {
       testonly = true
       deps = []
       forward_variables_from(invoker,
@@ -43,12 +44,18 @@ template("phys_zbi_test") {
                                "target_name",
                                "test_deps",
                                "timeout",
+                               "visibility",
                              ])
+      if (defined(visibility)) {
+        visibility += [ ":*" ]
+      }
       deps += [ "//zircon/kernel/phys/test:zbi-test-main" ]
     }
   }
 
-  zbi_test(target_name) {
+  zbi_test(test_target) {
+    forward_variables_from(invoker, [ "visibility" ])
+
     args = []
     deps = test_deps
 
