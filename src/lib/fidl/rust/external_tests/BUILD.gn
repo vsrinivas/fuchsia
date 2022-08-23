@@ -11,7 +11,9 @@ fidl("fidl.rust.test.external") {
   sources = [
     "data_types.test.fidl",
     "handle_rights.test.fidl",
+    "large_messages.test.fidl",
   ]
+  experimental_flags = [ "allow_overflowing" ]
   public_deps = [ "//zircon/vdso/zx" ]
 }
 
@@ -33,11 +35,13 @@ rustc_test("fidl_rust_external_tests_bin") {
   sources = [
     "src/data_types.rs",
     "src/handle_rights.rs",
+    "src/large_messages.rs",
     "src/lib.rs",
     "src/persistence.rs",
     "src/stream_handler_test.rs",
     "src/unknown_interactions.rs",
   ]
+  inputs = [ "src/large_string.txt" ]
 }
 
 fuchsia_unittest_package("fidl_rust_external_tests") {

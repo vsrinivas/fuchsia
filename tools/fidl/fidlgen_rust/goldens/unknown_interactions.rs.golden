@@ -3145,7 +3145,7 @@ impl UnknownInteractionsAjarProtocolSynchronousProxy {
         self.client.send(&mut (), 0x2275b8171ae4834f, fidl::encoding::DynamicFlags::FLEXIBLE)
     }
     pub fn r#strict_two_way(&self, ___deadline: zx::Time) -> Result<(), fidl::Error> {
-        let _value: () = self.client.send_query(
+        let _value: () = self.client.send_query::<_, _, false, false>(
             &mut (),
             0x50e66d328336038,
             fidl::encoding::DynamicFlags::empty(),
@@ -3154,7 +3154,7 @@ impl UnknownInteractionsAjarProtocolSynchronousProxy {
         Ok(())
     }
     pub fn r#strict_two_way_fields(&self, ___deadline: zx::Time) -> Result<(i32), fidl::Error> {
-        let _value: (i32,) = self.client.send_query(
+        let _value: (i32,) = self.client.send_query::<_, _, false, false>(
             &mut (),
             0x1947e36d61e4493a,
             fidl::encoding::DynamicFlags::empty(),
@@ -3167,7 +3167,7 @@ impl UnknownInteractionsAjarProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse), fidl::Error> {
         let _value: (UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse,) =
-            self.client.send_query(
+            self.client.send_query::<_, _, false, false>(
                 &mut (),
                 0x5177371967e0e6d1,
                 fidl::encoding::DynamicFlags::empty(),
@@ -3180,7 +3180,7 @@ impl UnknownInteractionsAjarProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsAjarProtocolStrictTwoWayTableResponse), fidl::Error> {
         let _value: (UnknownInteractionsAjarProtocolStrictTwoWayTableResponse,) =
-            self.client.send_query(
+            self.client.send_query::<_, _, false, false>(
                 &mut (),
                 0x6f8f9343b34e2ed4,
                 fidl::encoding::DynamicFlags::empty(),
@@ -3193,7 +3193,7 @@ impl UnknownInteractionsAjarProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsAjarProtocolStrictTwoWayErrResult), fidl::Error> {
         let _value: UnknownInteractionsAjarProtocolStrictTwoWayErrResultHandleWrapper =
-            self.client.send_query(
+            self.client.send_query::<_, _, false, false>(
                 &mut (),
                 0x5b47637577c69006,
                 fidl::encoding::DynamicFlags::empty(),
@@ -3206,7 +3206,7 @@ impl UnknownInteractionsAjarProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResult), fidl::Error> {
         let _value: UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResultHandleWrapper =
-            self.client.send_query(
+            self.client.send_query::<_, _, false, false>(
                 &mut (),
                 0x844ff7bb3f186d9,
                 fidl::encoding::DynamicFlags::empty(),
@@ -3219,7 +3219,7 @@ impl UnknownInteractionsAjarProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResult), fidl::Error> {
         let _value: UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResultHandleWrapper =
-            self.client.send_query(
+            self.client.send_query::<_, _, false, false>(
                 &mut (),
                 0x2cbfd5a859d4ac95,
                 fidl::encoding::DynamicFlags::empty(),
@@ -3232,7 +3232,7 @@ impl UnknownInteractionsAjarProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsAjarProtocolStrictTwoWayTableErrResult), fidl::Error> {
         let _value: UnknownInteractionsAjarProtocolStrictTwoWayTableErrResultHandleWrapper =
-            self.client.send_query(
+            self.client.send_query::<_, _, false, false>(
                 &mut (),
                 0x30c9e1b3da57dc37,
                 fidl::encoding::DynamicFlags::empty(),
@@ -3350,7 +3350,7 @@ impl UnknownInteractionsAjarProtocolProxyInterface for UnknownInteractionsAjarPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -3367,7 +3367,7 @@ impl UnknownInteractionsAjarProtocolProxyInterface for UnknownInteractionsAjarPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -3391,7 +3391,7 @@ impl UnknownInteractionsAjarProtocolProxyInterface for UnknownInteractionsAjarPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -3415,7 +3415,7 @@ impl UnknownInteractionsAjarProtocolProxyInterface for UnknownInteractionsAjarPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -3438,7 +3438,7 @@ impl UnknownInteractionsAjarProtocolProxyInterface for UnknownInteractionsAjarPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -3463,7 +3463,7 @@ impl UnknownInteractionsAjarProtocolProxyInterface for UnknownInteractionsAjarPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -3487,7 +3487,7 @@ impl UnknownInteractionsAjarProtocolProxyInterface for UnknownInteractionsAjarPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -3511,7 +3511,7 @@ impl UnknownInteractionsAjarProtocolProxyInterface for UnknownInteractionsAjarPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -5621,7 +5621,7 @@ impl UnknownInteractionsClosedProtocolSynchronousProxy {
         self.client.send(&mut (), 0x59282385962da24, fidl::encoding::DynamicFlags::empty())
     }
     pub fn r#strict_two_way(&self, ___deadline: zx::Time) -> Result<(), fidl::Error> {
-        let _value: () = self.client.send_query(
+        let _value: () = self.client.send_query::<_, _, false, false>(
             &mut (),
             0x5eda305d6b22f1f7,
             fidl::encoding::DynamicFlags::empty(),
@@ -5630,7 +5630,7 @@ impl UnknownInteractionsClosedProtocolSynchronousProxy {
         Ok(())
     }
     pub fn r#strict_two_way_fields(&self, ___deadline: zx::Time) -> Result<(i32), fidl::Error> {
-        let _value: (i32,) = self.client.send_query(
+        let _value: (i32,) = self.client.send_query::<_, _, false, false>(
             &mut (),
             0x1323afa3e0541253,
             fidl::encoding::DynamicFlags::empty(),
@@ -5643,7 +5643,7 @@ impl UnknownInteractionsClosedProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse), fidl::Error> {
         let _value: (UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse,) =
-            self.client.send_query(
+            self.client.send_query::<_, _, false, false>(
                 &mut (),
                 0x68b32554eb0f6fa7,
                 fidl::encoding::DynamicFlags::empty(),
@@ -5656,7 +5656,7 @@ impl UnknownInteractionsClosedProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsClosedProtocolStrictTwoWayTableResponse), fidl::Error> {
         let _value: (UnknownInteractionsClosedProtocolStrictTwoWayTableResponse,) =
-            self.client.send_query(
+            self.client.send_query::<_, _, false, false>(
                 &mut (),
                 0x6e4a94d44b69e785,
                 fidl::encoding::DynamicFlags::empty(),
@@ -5669,7 +5669,7 @@ impl UnknownInteractionsClosedProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsClosedProtocolStrictTwoWayErrResult), fidl::Error> {
         let _value: UnknownInteractionsClosedProtocolStrictTwoWayErrResultHandleWrapper =
-            self.client.send_query(
+            self.client.send_query::<_, _, false, false>(
                 &mut (),
                 0x4fa35d5433db4d3a,
                 fidl::encoding::DynamicFlags::empty(),
@@ -5682,7 +5682,7 @@ impl UnknownInteractionsClosedProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResult), fidl::Error> {
         let _value: UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResultHandleWrapper =
-            self.client.send_query(
+            self.client.send_query::<_, _, false, false>(
                 &mut (),
                 0xb22aebf23bb58fd,
                 fidl::encoding::DynamicFlags::empty(),
@@ -5695,7 +5695,7 @@ impl UnknownInteractionsClosedProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResult), fidl::Error> {
         let _value: UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResultHandleWrapper =
-            self.client.send_query(
+            self.client.send_query::<_, _, false, false>(
                 &mut (),
                 0xcd65d4d29a43c80,
                 fidl::encoding::DynamicFlags::empty(),
@@ -5708,7 +5708,7 @@ impl UnknownInteractionsClosedProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsClosedProtocolStrictTwoWayTableErrResult), fidl::Error> {
         let _value: UnknownInteractionsClosedProtocolStrictTwoWayTableErrResultHandleWrapper =
-            self.client.send_query(
+            self.client.send_query::<_, _, false, false>(
                 &mut (),
                 0x117dde20b92f7b90,
                 fidl::encoding::DynamicFlags::empty(),
@@ -5820,7 +5820,7 @@ impl UnknownInteractionsClosedProtocolProxyInterface for UnknownInteractionsClos
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -5837,7 +5837,7 @@ impl UnknownInteractionsClosedProtocolProxyInterface for UnknownInteractionsClos
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -5862,7 +5862,7 @@ impl UnknownInteractionsClosedProtocolProxyInterface for UnknownInteractionsClos
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -5887,7 +5887,7 @@ impl UnknownInteractionsClosedProtocolProxyInterface for UnknownInteractionsClos
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -5910,7 +5910,7 @@ impl UnknownInteractionsClosedProtocolProxyInterface for UnknownInteractionsClos
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -5935,7 +5935,7 @@ impl UnknownInteractionsClosedProtocolProxyInterface for UnknownInteractionsClos
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -5960,7 +5960,7 @@ impl UnknownInteractionsClosedProtocolProxyInterface for UnknownInteractionsClos
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -5985,7 +5985,7 @@ impl UnknownInteractionsClosedProtocolProxyInterface for UnknownInteractionsClos
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -7692,7 +7692,7 @@ impl UnknownInteractionsProtocolSynchronousProxy {
         self.client.send(&mut (), 0x818bb3a7a910446, fidl::encoding::DynamicFlags::FLEXIBLE)
     }
     pub fn r#strict_two_way(&self, ___deadline: zx::Time) -> Result<(), fidl::Error> {
-        let _value: () = self.client.send_query(
+        let _value: () = self.client.send_query::<_, _, false, false>(
             &mut (),
             0x734c996b0f37b942,
             fidl::encoding::DynamicFlags::empty(),
@@ -7701,7 +7701,7 @@ impl UnknownInteractionsProtocolSynchronousProxy {
         Ok(())
     }
     pub fn r#strict_two_way_fields(&self, ___deadline: zx::Time) -> Result<(i32), fidl::Error> {
-        let _value: (i32,) = self.client.send_query(
+        let _value: (i32,) = self.client.send_query::<_, _, false, false>(
             &mut (),
             0x334f4e7fff460ae3,
             fidl::encoding::DynamicFlags::empty(),
@@ -7714,7 +7714,7 @@ impl UnknownInteractionsProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsProtocolStrictTwoWayUnionResponse), fidl::Error> {
         let _value: (UnknownInteractionsProtocolStrictTwoWayUnionResponse,) =
-            self.client.send_query(
+            self.client.send_query::<_, _, false, false>(
                 &mut (),
                 0x2212805eca592cad,
                 fidl::encoding::DynamicFlags::empty(),
@@ -7727,7 +7727,7 @@ impl UnknownInteractionsProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsProtocolStrictTwoWayTableResponse), fidl::Error> {
         let _value: (UnknownInteractionsProtocolStrictTwoWayTableResponse,) =
-            self.client.send_query(
+            self.client.send_query::<_, _, false, false>(
                 &mut (),
                 0x746ebf8659ff23b7,
                 fidl::encoding::DynamicFlags::empty(),
@@ -7740,7 +7740,7 @@ impl UnknownInteractionsProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsProtocolStrictTwoWayErrResult), fidl::Error> {
         let _value: UnknownInteractionsProtocolStrictTwoWayErrResultHandleWrapper =
-            self.client.send_query(
+            self.client.send_query::<_, _, false, false>(
                 &mut (),
                 0x6d1c6002c51bb967,
                 fidl::encoding::DynamicFlags::empty(),
@@ -7753,7 +7753,7 @@ impl UnknownInteractionsProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsProtocolStrictTwoWayFieldsErrResult), fidl::Error> {
         let _value: UnknownInteractionsProtocolStrictTwoWayFieldsErrResultHandleWrapper =
-            self.client.send_query(
+            self.client.send_query::<_, _, false, false>(
                 &mut (),
                 0x2182a49480e5bd2b,
                 fidl::encoding::DynamicFlags::empty(),
@@ -7766,7 +7766,7 @@ impl UnknownInteractionsProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsProtocolStrictTwoWayUnionErrResult), fidl::Error> {
         let _value: UnknownInteractionsProtocolStrictTwoWayUnionErrResultHandleWrapper =
-            self.client.send_query(
+            self.client.send_query::<_, _, false, false>(
                 &mut (),
                 0x453af745d38b20ca,
                 fidl::encoding::DynamicFlags::empty(),
@@ -7779,7 +7779,7 @@ impl UnknownInteractionsProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsProtocolStrictTwoWayTableErrResult), fidl::Error> {
         let _value: UnknownInteractionsProtocolStrictTwoWayTableErrResultHandleWrapper =
-            self.client.send_query(
+            self.client.send_query::<_, _, false, false>(
                 &mut (),
                 0x4c26c7ab89cb68d8,
                 fidl::encoding::DynamicFlags::empty(),
@@ -7789,7 +7789,7 @@ impl UnknownInteractionsProtocolSynchronousProxy {
     }
     pub fn r#flexible_two_way(&self, ___deadline: zx::Time) -> Result<(), fidl::Error> {
         let _value: UnknownInteractionsProtocolFlexibleTwoWayResultWireHandleWrapper =
-            self.client.send_query(
+            self.client.send_query::<_, _, false, false>(
                 &mut (),
                 0x4a5bb3397008b7c,
                 fidl::encoding::DynamicFlags::FLEXIBLE,
@@ -7800,7 +7800,7 @@ impl UnknownInteractionsProtocolSynchronousProxy {
     }
     pub fn r#flexible_two_way_fields(&self, ___deadline: zx::Time) -> Result<(i32), fidl::Error> {
         let _value: UnknownInteractionsProtocolFlexibleTwoWayFieldsResultWireHandleWrapper =
-            self.client.send_query(
+            self.client.send_query::<_, _, false, false>(
                 &mut (),
                 0x3b13f82f44813a32,
                 fidl::encoding::DynamicFlags::FLEXIBLE,
@@ -7815,7 +7815,7 @@ impl UnknownInteractionsProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsProtocolFlexibleTwoWayUnionResponse), fidl::Error> {
         let _value: UnknownInteractionsProtocolFlexibleTwoWayUnionResultWireHandleWrapper =
-            self.client.send_query(
+            self.client.send_query::<_, _, false, false>(
                 &mut (),
                 0x44301e4e8d514fb6,
                 fidl::encoding::DynamicFlags::FLEXIBLE,
@@ -7830,7 +7830,7 @@ impl UnknownInteractionsProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsProtocolFlexibleTwoWayTableResponse), fidl::Error> {
         let _value: UnknownInteractionsProtocolFlexibleTwoWayTableResultWireHandleWrapper =
-            self.client.send_query(
+            self.client.send_query::<_, _, false, false>(
                 &mut (),
                 0x7f492934b6c76187,
                 fidl::encoding::DynamicFlags::FLEXIBLE,
@@ -7845,7 +7845,7 @@ impl UnknownInteractionsProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsProtocolFlexibleTwoWayErrResult), fidl::Error> {
         let _value: UnknownInteractionsProtocolFlexibleTwoWayErrResultWireHandleWrapper =
-            self.client.send_query(
+            self.client.send_query::<_, _, false, false>(
                 &mut (),
                 0x61240f878cc37c07,
                 fidl::encoding::DynamicFlags::FLEXIBLE,
@@ -7860,7 +7860,7 @@ impl UnknownInteractionsProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResult), fidl::Error> {
         let _value: UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResultWireHandleWrapper =
-            self.client.send_query(
+            self.client.send_query::<_, _, false, false>(
                 &mut (),
                 0xf2b9611a9089b05,
                 fidl::encoding::DynamicFlags::FLEXIBLE,
@@ -7876,7 +7876,7 @@ impl UnknownInteractionsProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult), fidl::Error> {
         let _value: UnknownInteractionsProtocolFlexibleTwoWayUnionErrResultWireHandleWrapper =
-            self.client.send_query(
+            self.client.send_query::<_, _, false, false>(
                 &mut (),
                 0x2172940a75f107d7,
                 fidl::encoding::DynamicFlags::FLEXIBLE,
@@ -7892,7 +7892,7 @@ impl UnknownInteractionsProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(UnknownInteractionsProtocolFlexibleTwoWayTableErrResult), fidl::Error> {
         let _value: UnknownInteractionsProtocolFlexibleTwoWayTableErrResultWireHandleWrapper =
-            self.client.send_query(
+            self.client.send_query::<_, _, false, false>(
                 &mut (),
                 0x6d8aab48e1693bf2,
                 fidl::encoding::DynamicFlags::FLEXIBLE,
@@ -8051,7 +8051,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -8068,7 +8068,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -8088,7 +8088,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -8108,7 +8108,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -8131,7 +8131,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -8154,7 +8154,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -8177,7 +8177,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -8200,7 +8200,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -8226,7 +8226,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -8252,7 +8252,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -8279,7 +8279,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -8306,7 +8306,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -8334,7 +8334,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -8363,7 +8363,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -8392,7 +8392,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -8421,7 +8421,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })

@@ -309,7 +309,7 @@ impl SimpleProtocolSynchronousProxy {
         mut b: i32,
         ___deadline: zx::Time,
     ) -> Result<(i32), fidl::Error> {
-        let _value: (i32,) = self.client.send_query(
+        let _value: (i32,) = self.client.send_query::<_, _, false, false>(
             &mut (a, b),
             0x7ee19cf19ae30276,
             fidl::encoding::DynamicFlags::empty(),
@@ -373,7 +373,7 @@ impl SimpleProtocolProxyInterface for SimpleProtocolProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })

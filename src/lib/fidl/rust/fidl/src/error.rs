@@ -45,6 +45,28 @@ pub enum Error {
     #[error("The FIDL object could not fit within the provided buffer range")]
     OutOfRange,
 
+    /// Overflowing FIDL messages must have exactly 1 handle, pointing to the overflow VMO.
+    #[error("Overflowing FIDL messages must have exactly 1 handle, pointing to the overflow VMO.")]
+    OverflowIncorrectHandleCount,
+
+    /// Overflowing FIDL messages must have exactly 16 bytes in the control plane message.
+    #[error("Overflowing FIDL messages must have exactly 16 bytes in the control plane message.")]
+    OverflowControlPlaneBodyNotEmpty,
+
+    /// Writing the overflow VMO failed.
+    #[error("Could not write the overflow VMO, due to status: {status}.")]
+    OverflowCouldNotWrite {
+        /// Status returned when either when creating the VMO, or writing to it.
+        status: zx_status::Status,
+    },
+
+    /// Reading the overflow VMO failed.
+    #[error("Could not read the overflow VMO, due to status: {status}.")]
+    OverflowCouldNotRead {
+        /// Status returned when either getting the VMO size, or reading from it.
+        status: zx_status::Status,
+    },
+
     /// Decoding the FIDL object did not use all of the bytes provided.
     #[error("Decoding the FIDL object did not use all of the bytes provided.")]
     ExtraBytes,

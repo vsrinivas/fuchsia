@@ -434,12 +434,13 @@ impl DenyEachBindingSynchronousProxy {
         mut a: bool,
         ___deadline: zx::Time,
     ) -> Result<(DenyEachBindingOnlyDenyCppResult), fidl::Error> {
-        let _value: DenyEachBindingOnlyDenyCppResultHandleWrapper = self.client.send_query(
-            &mut (a),
-            0x290bad96051b1b92,
-            fidl::encoding::DynamicFlags::empty(),
-            ___deadline,
-        )?;
+        let _value: DenyEachBindingOnlyDenyCppResultHandleWrapper =
+            self.client.send_query::<_, _, false, false>(
+                &mut (a),
+                0x290bad96051b1b92,
+                fidl::encoding::DynamicFlags::empty(),
+                ___deadline,
+            )?;
         Ok(_value.map(|_value| _value.0))
     }
     pub fn r#only_deny_dart(
@@ -447,12 +448,13 @@ impl DenyEachBindingSynchronousProxy {
         mut a: bool,
         ___deadline: zx::Time,
     ) -> Result<(DenyEachBindingOnlyDenyDartResult), fidl::Error> {
-        let _value: DenyEachBindingOnlyDenyDartResultHandleWrapper = self.client.send_query(
-            &mut (a),
-            0x75384066a26d87d7,
-            fidl::encoding::DynamicFlags::empty(),
-            ___deadline,
-        )?;
+        let _value: DenyEachBindingOnlyDenyDartResultHandleWrapper =
+            self.client.send_query::<_, _, false, false>(
+                &mut (a),
+                0x75384066a26d87d7,
+                fidl::encoding::DynamicFlags::empty(),
+                ___deadline,
+            )?;
         Ok(_value.map(|_value| _value.0))
     }
     pub fn r#only_deny_go(
@@ -460,12 +462,13 @@ impl DenyEachBindingSynchronousProxy {
         mut a: bool,
         ___deadline: zx::Time,
     ) -> Result<(DenyEachBindingOnlyDenyGoResult), fidl::Error> {
-        let _value: DenyEachBindingOnlyDenyGoResultHandleWrapper = self.client.send_query(
-            &mut (a),
-            0x657655b981478d99,
-            fidl::encoding::DynamicFlags::empty(),
-            ___deadline,
-        )?;
+        let _value: DenyEachBindingOnlyDenyGoResultHandleWrapper =
+            self.client.send_query::<_, _, false, false>(
+                &mut (a),
+                0x657655b981478d99,
+                fidl::encoding::DynamicFlags::empty(),
+                ___deadline,
+            )?;
         Ok(_value.map(|_value| _value.0))
     }
     pub fn r#only_deny_libfuzzer(
@@ -473,12 +476,13 @@ impl DenyEachBindingSynchronousProxy {
         mut a: bool,
         ___deadline: zx::Time,
     ) -> Result<(DenyEachBindingOnlyDenyLibfuzzerResult), fidl::Error> {
-        let _value: DenyEachBindingOnlyDenyLibfuzzerResultHandleWrapper = self.client.send_query(
-            &mut (a),
-            0x1e4f89c329617b1e,
-            fidl::encoding::DynamicFlags::empty(),
-            ___deadline,
-        )?;
+        let _value: DenyEachBindingOnlyDenyLibfuzzerResultHandleWrapper =
+            self.client.send_query::<_, _, false, false>(
+                &mut (a),
+                0x1e4f89c329617b1e,
+                fidl::encoding::DynamicFlags::empty(),
+                ___deadline,
+            )?;
         Ok(_value.map(|_value| _value.0))
     }
     pub fn r#only_deny_syzkaller(
@@ -486,12 +490,13 @@ impl DenyEachBindingSynchronousProxy {
         mut a: bool,
         ___deadline: zx::Time,
     ) -> Result<(DenyEachBindingOnlyDenySyzkallerResult), fidl::Error> {
-        let _value: DenyEachBindingOnlyDenySyzkallerResultHandleWrapper = self.client.send_query(
-            &mut (a),
-            0x202ee614a749e98a,
-            fidl::encoding::DynamicFlags::empty(),
-            ___deadline,
-        )?;
+        let _value: DenyEachBindingOnlyDenySyzkallerResultHandleWrapper =
+            self.client.send_query::<_, _, false, false>(
+                &mut (a),
+                0x202ee614a749e98a,
+                fidl::encoding::DynamicFlags::empty(),
+                ___deadline,
+            )?;
         Ok(_value.map(|_value| _value.0))
     }
 }
@@ -580,7 +585,7 @@ impl DenyEachBindingProxyInterface for DenyEachBindingProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -600,7 +605,7 @@ impl DenyEachBindingProxyInterface for DenyEachBindingProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -619,7 +624,7 @@ impl DenyEachBindingProxyInterface for DenyEachBindingProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -639,7 +644,7 @@ impl DenyEachBindingProxyInterface for DenyEachBindingProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -659,7 +664,7 @@ impl DenyEachBindingProxyInterface for DenyEachBindingProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })

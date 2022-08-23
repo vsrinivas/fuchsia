@@ -81,7 +81,7 @@ impl ExampleSynchronousProxy {
         mut s: &str,
         ___deadline: zx::Time,
     ) -> Result<(ExampleFooResult), fidl::Error> {
-        let _value: ExampleFooResultHandleWrapper = self.client.send_query(
+        let _value: ExampleFooResultHandleWrapper = self.client.send_query::<_, _, false, false>(
             &mut (s),
             0xf5f1179dc411e44,
             fidl::encoding::DynamicFlags::empty(),
@@ -147,7 +147,7 @@ impl ExampleProxyInterface for ExampleProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })

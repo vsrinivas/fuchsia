@@ -316,7 +316,7 @@ impl<T> ServerEnd<T> {
         ServerEnd { inner, phantom: PhantomData }
     }
 
-    /// Get a reference to the undelrying channel
+    /// Get a reference to the underlying channel
     pub fn channel(&self) -> &Channel {
         &self.inner
     }

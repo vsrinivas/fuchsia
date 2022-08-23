@@ -68,7 +68,7 @@ impl TopSynchronousProxy {
         TopEvent::decode(self.client.wait_for_event(deadline)?)
     }
     pub fn r#get_foo(&self, ___deadline: zx::Time) -> Result<(fidl_test_bottom::Foo), fidl::Error> {
-        let _value: (fidl_test_bottom::Foo,) = self.client.send_query(
+        let _value: (fidl_test_bottom::Foo,) = self.client.send_query::<_, _, false, false>(
             &mut (),
             0x245770d9d719c667,
             fidl::encoding::DynamicFlags::empty(),
@@ -134,7 +134,7 @@ impl TopProxyInterface for TopProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })

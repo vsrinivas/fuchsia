@@ -1326,7 +1326,7 @@ impl TestProtocolSynchronousProxy {
         &self,
         ___deadline: zx::Time,
     ) -> Result<(StrictBoundedXUnion), fidl::Error> {
-        let _value: (StrictBoundedXUnion,) = self.client.send_query(
+        let _value: (StrictBoundedXUnion,) = self.client.send_query::<_, _, false, false>(
             &mut (),
             0x816ec730baa90dd,
             fidl::encoding::DynamicFlags::empty(),
@@ -1338,7 +1338,7 @@ impl TestProtocolSynchronousProxy {
         &self,
         ___deadline: zx::Time,
     ) -> Result<(OlderSimpleUnion), fidl::Error> {
-        let _value: (OlderSimpleUnion,) = self.client.send_query(
+        let _value: (OlderSimpleUnion,) = self.client.send_query::<_, _, false, false>(
             &mut (),
             0x6ad517317388ea05,
             fidl::encoding::DynamicFlags::empty(),
@@ -1414,7 +1414,7 @@ impl TestProtocolProxyInterface for TestProtocolProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -1436,7 +1436,7 @@ impl TestProtocolProxyInterface for TestProtocolProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })

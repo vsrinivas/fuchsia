@@ -541,7 +541,7 @@ impl ChannelProtocolSynchronousProxy {
         mut b: i64,
         ___deadline: zx::Time,
     ) -> Result<(i64), fidl::Error> {
-        let _value: (i64,) = self.client.send_query(
+        let _value: (i64,) = self.client.send_query::<_, _, false, false>(
             &mut (a, b),
             0x7b8dd3d6c741c9c6,
             fidl::encoding::DynamicFlags::empty(),
@@ -554,7 +554,7 @@ impl ChannelProtocolSynchronousProxy {
         mut h: fidl::Handle,
         ___deadline: zx::Time,
     ) -> Result<(), fidl::Error> {
-        let _value: () = self.client.send_query(
+        let _value: () = self.client.send_query::<_, _, false, false>(
             &mut (HandleWrapperObjectTypeNONERights2147483648::<fidl::Handle>(h)),
             0x836fa31201a0a65,
             fidl::encoding::DynamicFlags::empty(),
@@ -568,7 +568,7 @@ impl ChannelProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(fidl::Socket), fidl::Error> {
         let _value: (HandleWrapperObjectTypeSOCKETRights2147483648<fidl::Socket>,) =
-            self.client.send_query(
+            self.client.send_query::<_, _, false, false>(
                 &mut (HandleWrapperObjectTypeSOCKETRights2147483648::<fidl::Socket>(a)),
                 0x66dbcccc06f7f14f,
                 fidl::encoding::DynamicFlags::empty(),
@@ -648,7 +648,7 @@ impl ChannelProtocolProxyInterface for ChannelProtocolProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -665,7 +665,7 @@ impl ChannelProtocolProxyInterface for ChannelProtocolProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -687,7 +687,7 @@ impl ChannelProtocolProxyInterface for ChannelProtocolProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -1586,7 +1586,7 @@ impl HandleRightsProtocolSynchronousProxy {
         ___deadline: zx::Time,
     ) -> Result<(fidl::Socket), fidl::Error> {
         let _value: (HandleWrapperObjectTypeSOCKETRights2<fidl::Socket>,) =
-            self.client.send_query(
+            self.client.send_query::<_, _, false, false>(
                 &mut (HandleWrapperObjectTypeSOCKETRights3::<fidl::Socket>(h)),
                 0x52a8f194ac143547,
                 fidl::encoding::DynamicFlags::empty(),
@@ -1666,7 +1666,7 @@ impl HandleRightsProtocolProxyInterface for HandleRightsProtocolProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -2296,7 +2296,7 @@ impl MethodWithUnionSynchronousProxy {
         mut u: &mut TheUnion,
         ___deadline: zx::Time,
     ) -> Result<(Option<Box<TheUnion>>), fidl::Error> {
-        let _value: (Option<Box<TheUnion>>,) = self.client.send_query(
+        let _value: (Option<Box<TheUnion>>,) = self.client.send_query::<_, _, false, false>(
             &mut (u),
             0x393e7f5b2b821218,
             fidl::encoding::DynamicFlags::empty(),
@@ -2365,7 +2365,7 @@ impl MethodWithUnionProxyInterface for MethodWithUnionProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -2686,7 +2686,7 @@ impl TransitionalSynchronousProxy {
         TransitionalEvent::decode(self.client.wait_for_event(deadline)?)
     }
     pub fn r#request(&self, mut x: i64, ___deadline: zx::Time) -> Result<(i64), fidl::Error> {
-        let _value: (i64,) = self.client.send_query(
+        let _value: (i64,) = self.client.send_query::<_, _, false, false>(
             &mut (x),
             0x512cc1ba467fef08,
             fidl::encoding::DynamicFlags::empty(),
@@ -2756,7 +2756,7 @@ impl TransitionalProxyInterface for TransitionalProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -3162,7 +3162,7 @@ impl WithAndWithoutRequestResponseSynchronousProxy {
         self.client.send(&mut (), 0x4b212a6c8c5f7bab, fidl::encoding::DynamicFlags::empty())
     }
     pub fn r#no_request_empty_response(&self, ___deadline: zx::Time) -> Result<(), fidl::Error> {
-        let _value: () = self.client.send_query(
+        let _value: () = self.client.send_query::<_, _, false, false>(
             &mut (),
             0x16a329d17f458668,
             fidl::encoding::DynamicFlags::empty(),
@@ -3174,7 +3174,7 @@ impl WithAndWithoutRequestResponseSynchronousProxy {
         &self,
         ___deadline: zx::Time,
     ) -> Result<(String), fidl::Error> {
-        let _value: (String,) = self.client.send_query(
+        let _value: (String,) = self.client.send_query::<_, _, false, false>(
             &mut (),
             0x7d6b2fcf0e2a65bd,
             fidl::encoding::DynamicFlags::empty(),
@@ -3190,7 +3190,7 @@ impl WithAndWithoutRequestResponseSynchronousProxy {
         mut arg: &str,
         ___deadline: zx::Time,
     ) -> Result<(), fidl::Error> {
-        let _value: () = self.client.send_query(
+        let _value: () = self.client.send_query::<_, _, false, false>(
             &mut (arg),
             0x27ee4d2bd405df5f,
             fidl::encoding::DynamicFlags::empty(),
@@ -3203,7 +3203,7 @@ impl WithAndWithoutRequestResponseSynchronousProxy {
         mut arg: &str,
         ___deadline: zx::Time,
     ) -> Result<(String), fidl::Error> {
-        let _value: (String,) = self.client.send_query(
+        let _value: (String,) = self.client.send_query::<_, _, false, false>(
             &mut (arg),
             0x590e91945d58f5b1,
             fidl::encoding::DynamicFlags::empty(),
@@ -3294,7 +3294,7 @@ impl WithAndWithoutRequestResponseProxyInterface for WithAndWithoutRequestRespon
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -3311,7 +3311,7 @@ impl WithAndWithoutRequestResponseProxyInterface for WithAndWithoutRequestRespon
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -3334,7 +3334,7 @@ impl WithAndWithoutRequestResponseProxyInterface for WithAndWithoutRequestRespon
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -3354,7 +3354,7 @@ impl WithAndWithoutRequestResponseProxyInterface for WithAndWithoutRequestRespon
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -4185,48 +4185,52 @@ impl WithErrorSyntaxSynchronousProxy {
         &self,
         ___deadline: zx::Time,
     ) -> Result<(WithErrorSyntaxResponseAsStructResult), fidl::Error> {
-        let _value: WithErrorSyntaxResponseAsStructResultHandleWrapper = self.client.send_query(
-            &mut (),
-            0x3b902a6d8d24693,
-            fidl::encoding::DynamicFlags::empty(),
-            ___deadline,
-        )?;
+        let _value: WithErrorSyntaxResponseAsStructResultHandleWrapper =
+            self.client.send_query::<_, _, false, false>(
+                &mut (),
+                0x3b902a6d8d24693,
+                fidl::encoding::DynamicFlags::empty(),
+                ___deadline,
+            )?;
         Ok(_value.map(|_value| (_value.0, _value.1, _value.2)))
     }
     pub fn r#error_as_primitive(
         &self,
         ___deadline: zx::Time,
     ) -> Result<(WithErrorSyntaxErrorAsPrimitiveResult), fidl::Error> {
-        let _value: WithErrorSyntaxErrorAsPrimitiveResultHandleWrapper = self.client.send_query(
-            &mut (),
-            0x602fd6bd920135e7,
-            fidl::encoding::DynamicFlags::empty(),
-            ___deadline,
-        )?;
+        let _value: WithErrorSyntaxErrorAsPrimitiveResultHandleWrapper =
+            self.client.send_query::<_, _, false, false>(
+                &mut (),
+                0x602fd6bd920135e7,
+                fidl::encoding::DynamicFlags::empty(),
+                ___deadline,
+            )?;
         Ok(_value.map(|_value| ()))
     }
     pub fn r#error_as_enum(
         &self,
         ___deadline: zx::Time,
     ) -> Result<(WithErrorSyntaxErrorAsEnumResult), fidl::Error> {
-        let _value: WithErrorSyntaxErrorAsEnumResultHandleWrapper = self.client.send_query(
-            &mut (),
-            0x4c371e1673212f43,
-            fidl::encoding::DynamicFlags::empty(),
-            ___deadline,
-        )?;
+        let _value: WithErrorSyntaxErrorAsEnumResultHandleWrapper =
+            self.client.send_query::<_, _, false, false>(
+                &mut (),
+                0x4c371e1673212f43,
+                fidl::encoding::DynamicFlags::empty(),
+                ___deadline,
+            )?;
         Ok(_value.map(|_value| ()))
     }
     pub fn r#handle_in_result(
         &self,
         ___deadline: zx::Time,
     ) -> Result<(WithErrorSyntaxHandleInResultResult), fidl::Error> {
-        let _value: WithErrorSyntaxHandleInResultResultHandleWrapper = self.client.send_query(
-            &mut (),
-            0x13092c5b835b0cbf,
-            fidl::encoding::DynamicFlags::empty(),
-            ___deadline,
-        )?;
+        let _value: WithErrorSyntaxHandleInResultResultHandleWrapper =
+            self.client.send_query::<_, _, false, false>(
+                &mut (),
+                0x13092c5b835b0cbf,
+                fidl::encoding::DynamicFlags::empty(),
+                ___deadline,
+            )?;
         Ok(_value.map(|_value| _value.0.into_inner()))
     }
 }
@@ -4305,7 +4309,7 @@ impl WithErrorSyntaxProxyInterface for WithErrorSyntaxProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -4325,7 +4329,7 @@ impl WithErrorSyntaxProxyInterface for WithErrorSyntaxProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -4345,7 +4349,7 @@ impl WithErrorSyntaxProxyInterface for WithErrorSyntaxProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -4365,7 +4369,7 @@ impl WithErrorSyntaxProxyInterface for WithErrorSyntaxProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -5072,7 +5076,7 @@ impl WithProtocolEndsSynchronousProxy {
             HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT<
                 Option<fidl::endpoints::ClientEnd<DiscoverableProtocolMarker>>,
             >,
-        ) = self.client.send_query(
+        ) = self.client.send_query::<_, _, false, false>(
             &mut (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
                 fidl::endpoints::ClientEnd<DiscoverableProtocolMarker>,
             >(in_)),
@@ -5091,7 +5095,7 @@ impl WithProtocolEndsSynchronousProxy {
             HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT<
                 fidl::endpoints::ServerEnd<DiscoverableProtocolMarker>,
             >,
-        ) = self.client.send_query(
+        ) = self.client.send_query::<_, _, false, false>(
             &mut (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
                 Option<fidl::endpoints::ServerEnd<DiscoverableProtocolMarker>>,
             >(in_)),
@@ -5106,7 +5110,7 @@ impl WithProtocolEndsSynchronousProxy {
         mut in_: &mut ProtocolEnds,
         ___deadline: zx::Time,
     ) -> Result<(ProtocolEnds), fidl::Error> {
-        let _value: (ProtocolEnds,) = self.client.send_query(
+        let _value: (ProtocolEnds,) = self.client.send_query::<_, _, false, false>(
             &mut (in_),
             0x3893f0baad26f5d5,
             fidl::encoding::DynamicFlags::empty(),
@@ -5205,7 +5209,7 @@ impl WithProtocolEndsProxyInterface for WithProtocolEndsProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -5237,7 +5241,7 @@ impl WithProtocolEndsProxyInterface for WithProtocolEndsProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -5259,7 +5263,7 @@ impl WithProtocolEndsProxyInterface for WithProtocolEndsProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })

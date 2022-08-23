@@ -1,0 +1,27 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fidl.rust.test.external;
+
+type LargeMessageTable = table {
+    1: str string:MAX;
+};
+
+type LargeMessageUnion = flexible union {
+    1: str string:MAX;
+};
+
+type LargeMessageStruct = struct {
+    str string:MAX;
+};
+
+protocol OverflowingProtocol {
+    @experimental_overflowing(request=true)
+    TwoWayRequestOnly(LargeMessageUnion) -> (table {});
+
+    @experimental_overflowing(response=true)
+    TwoWayResponseOnly(table {}) -> (LargeMessageTable);
+
+    @experimental_overflowing(request=true, response=true)
+    TwoWayBothRequestAndResponse(LargeMessageStruct) -> (LargeMessageStruct);
+};

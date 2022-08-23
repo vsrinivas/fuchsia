@@ -67,7 +67,7 @@ impl SubSynchronousProxy {
         SubEvent::decode(self.client.wait_for_event(deadline)?)
     }
     pub fn r#foo(&self, mut s: &str, ___deadline: zx::Time) -> Result<(i64), fidl::Error> {
-        let _value: (i64,) = self.client.send_query(
+        let _value: (i64,) = self.client.send_query::<_, _, false, false>(
             &mut (s),
             0x68a61c2a230db8b8,
             fidl::encoding::DynamicFlags::empty(),
@@ -131,7 +131,7 @@ impl SubProxyInterface for SubProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -442,7 +442,7 @@ impl Super_SynchronousProxy {
         Super_Event::decode(self.client.wait_for_event(deadline)?)
     }
     pub fn r#foo(&self, mut s: &str, ___deadline: zx::Time) -> Result<(i64), fidl::Error> {
-        let _value: (i64,) = self.client.send_query(
+        let _value: (i64,) = self.client.send_query::<_, _, false, false>(
             &mut (s),
             0x68a61c2a230db8b8,
             fidl::encoding::DynamicFlags::empty(),
@@ -506,7 +506,7 @@ impl Super_ProxyInterface for Super_Proxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })

@@ -318,7 +318,7 @@ impl ParentSynchronousProxy {
             HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT<
                 fidl::endpoints::ClientEnd<ChildMarker>,
             >,
-        ) = self.client.send_query(
+        ) = self.client.send_query::<_, _, false, false>(
             &mut (),
             0xc3cd963aafc873b,
             fidl::encoding::DynamicFlags::empty(),
@@ -334,7 +334,7 @@ impl ParentSynchronousProxy {
             HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT<
                 fidl::endpoints::ServerEnd<ChildMarker>,
             >,
-        ) = self.client.send_query(
+        ) = self.client.send_query::<_, _, false, false>(
             &mut (),
             0xf38d08d64f71c79,
             fidl::encoding::DynamicFlags::empty(),
@@ -451,7 +451,7 @@ impl ParentProxyInterface for ParentProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
@@ -478,7 +478,7 @@ impl ParentProxyInterface for ParentProxy {
         );
         QueryResponseFut(match send_result {
             Ok(res_fut) => future::maybe_done(
-                res_fut.and_then(|buf| decode_transaction_body_fut(buf, transform)),
+                res_fut.and_then(|buf| decode_transaction_body_fut::<_, _, false>(buf, transform)),
             ),
             Err(e) => MaybeDone::Done(Err(e)),
         })
