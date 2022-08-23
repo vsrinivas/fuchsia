@@ -84,8 +84,8 @@ class OpteeClientTestBase : public OpteeControllerBase, public zxtest::Test {
     return shared_memory_manager_->client_pool();
   }
 
-  zx_status_t RpmbConnectServer(fidl::ServerEnd<frpmb::Rpmb> server) const override {
-    return ZX_ERR_UNAVAILABLE;
+  zx::status<fidl::ClientEnd<frpmb::Rpmb>> RpmbConnectServer() const override {
+    return zx::error(ZX_ERR_UNAVAILABLE);
   }
 
   zx_device_t *GetDevice() const override { return parent_.get(); }
@@ -322,9 +322,13 @@ class OpteeClientTestRpmb : public OpteeClientTestBase {
     return CallResult{.return_code = kReturnOk};
   }
 
-  zx_status_t RpmbConnectServer(fidl::ServerEnd<frpmb::Rpmb> server) const override {
-    fidl::BindServer(rpmb_loop_.dispatcher(), std::move(server), fake_rpmb_.get());
-    return ZX_OK;
+  zx::status<fidl::ClientEnd<frpmb::Rpmb>> RpmbConnectServer() const override {
+    auto endpoints = fidl::CreateEndpoints<frpmb::Rpmb>();
+    if (endpoints.is_error()) {
+      return endpoints.take_error();
+    }
+    fidl::BindServer(rpmb_loop_.dispatcher(), std::move(endpoints->server), fake_rpmb_.get());
+    return zx::ok(std::move(endpoints->client));
   }
 
   void SetUp() override {

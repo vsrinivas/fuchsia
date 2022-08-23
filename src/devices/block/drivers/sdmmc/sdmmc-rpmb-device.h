@@ -8,7 +8,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/sdmmc/hw.h>
-#include <lib/svc/outgoing.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 
 #include <array>
 #include <cinttypes>
@@ -53,7 +53,7 @@ class RpmbDevice : public RpmbDeviceType {
   const std::array<uint8_t, SDMMC_CID_SIZE> cid_;
   const uint8_t rpmb_size_;
   const uint8_t reliable_write_sector_count_;
-  std::optional<svc::Outgoing> outgoing_;
+  std::optional<component::OutgoingDirectory> outgoing_;
   async::Loop loop_;
 };
 

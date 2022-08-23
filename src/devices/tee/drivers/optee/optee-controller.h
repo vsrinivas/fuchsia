@@ -97,8 +97,7 @@ class OpteeControllerBase {
   size_t CommandQueueSize() const;
   size_t CommandQueueWaitSize() const;
 
-  virtual zx_status_t RpmbConnectServer(
-      fidl::ServerEnd<fuchsia_hardware_rpmb::Rpmb> server) const = 0;
+  virtual zx::status<fidl::ClientEnd<fuchsia_hardware_rpmb::Rpmb>> RpmbConnectServer() const = 0;
   virtual zx_device_t* GetDevice() const = 0;
 
  private:
@@ -159,13 +158,13 @@ class OpteeController : public OpteeControllerBase,
 
   zx_device_t* GetDevice() const override { return zxdev(); }
 
-  zx_status_t RpmbConnectServer(
-      fidl::ServerEnd<fuchsia_hardware_rpmb::Rpmb> server) const override {
-    if (!server.is_valid()) {
-      return ZX_ERR_INVALID_ARGS;
+  zx::status<fidl::ClientEnd<fuchsia_hardware_rpmb::Rpmb>> RpmbConnectServer() const override {
+    auto service = DdkOpenFragmentFidlService<fuchsia_hardware_rpmb::Service>("rpmb");
+    if (service.is_error()) {
+      return service.take_error();
     }
 
-    return DdkConnectFragmentFidlProtocol("rpmb", std::move(server));
+    return service->connect_device();
   }
 
   const GetOsRevisionResult& os_revision() const { return os_revision_; }

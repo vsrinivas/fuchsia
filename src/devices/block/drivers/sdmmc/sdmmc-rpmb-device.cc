@@ -20,38 +20,48 @@ zx_status_t RpmbDevice::Create(zx_device_t* parent, SdmmcBlockDevice* sdmmc,
     zxlogf(ERROR, "failed to start RPMB thread: %d", status);
     return status;
   }
-  device->outgoing_.emplace(device->loop_.dispatcher());
-  device->outgoing_->svc_dir()->AddEntry(
-      fidl::DiscoverableProtocolName<fuchsia_hardware_rpmb::Rpmb>,
-      fbl::MakeRefCounted<fs::Service>(
-          [device = device.get()](fidl::ServerEnd<fuchsia_hardware_rpmb::Rpmb> request) mutable {
-            auto status = fidl::BindSingleInFlightOnly(device->loop_.dispatcher(),
-                                                       std::move(request), device);
-            if (status != ZX_OK) {
-              zxlogf(ERROR, "failed to bind channel: %d", status);
-            }
-            return status;
-          }));
+  device->outgoing_ = component::OutgoingDirectory::Create(device->loop_.dispatcher());
+
+  component::ServiceHandler handler;
+  fuchsia_hardware_rpmb::Service::Handler service(&handler);
+
+  auto device_handler = [device =
+                             device.get()](fidl::ServerEnd<fuchsia_hardware_rpmb::Rpmb> request) {
+    fidl::BindServer(device->loop_.dispatcher(), std::move(request), device);
+  };
+  auto result = service.add_device(device_handler);
+  ZX_ASSERT(result.is_ok());
+
+  result = device->outgoing_->AddService<fuchsia_hardware_rpmb::Service>(std::move(handler));
+  if (result.is_error()) {
+    zxlogf(ERROR, "Failed to add service to the outgoing directory");
+    return result.status_value();
+  }
 
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   if (endpoints.is_error()) {
     return endpoints.status_value();
   }
 
-  auto status = device->outgoing_->Serve(std::move(endpoints->server));
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to service the outoing directory");
-    return status;
+  result = device->outgoing_->Serve(std::move(endpoints->server));
+  if (result.is_error()) {
+    zxlogf(ERROR, "Failed to serve the outgoing directory");
+    return result.status_value();
   }
 
-  std::array offers = {
+  std::array protocol_offers = {
       fidl::DiscoverableProtocolName<fuchsia_hardware_rpmb::Rpmb>,
   };
 
-  status = device->DdkAdd(ddk::DeviceAddArgs("rpmb")
-                              .set_flags(DEVICE_ADD_MUST_ISOLATE)
-                              .set_fidl_protocol_offers(offers)
-                              .set_outgoing_dir(endpoints->client.TakeChannel()));
+  std::array offers = {
+      fuchsia_hardware_rpmb::Service::Name,
+  };
+
+  auto status = device->DdkAdd(ddk::DeviceAddArgs("rpmb")
+                                   .set_flags(DEVICE_ADD_MUST_ISOLATE)
+                                   .set_fidl_protocol_offers(protocol_offers)
+                                   .set_fidl_service_offers(offers)
+                                   .set_outgoing_dir(endpoints->client.TakeChannel()));
 
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to add RPMB partition device: %d", status);

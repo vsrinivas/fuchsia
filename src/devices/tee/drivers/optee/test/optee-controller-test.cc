@@ -15,6 +15,7 @@
 #include <lib/fidl/cpp/wire/client.h>
 #include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/sync/completion.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 #include <lib/zx/bti.h>
 #include <stdlib.h>
 #include <zircon/time.h>
@@ -169,6 +170,33 @@ class FakeSysmem : public ddk::SysmemProtocol<FakeSysmem> {
   zx_status_t SysmemUnregisterSecureMem() { return ZX_ERR_NOT_SUPPORTED; }
 };
 
+class FakeRpmbService {
+ public:
+  FakeRpmbService() : outgoing_(component::OutgoingDirectory::Create(loop_.dispatcher())) {}
+  ~FakeRpmbService() { loop_.Shutdown(); }
+
+  fidl::ClientEnd<fuchsia_io::Directory> Connect() {
+    component::ServiceHandler handler;
+    fuchsia_hardware_rpmb::Service::Handler service(&handler);
+
+    auto device_handler = [](fidl::ServerEnd<fuchsia_hardware_rpmb::Rpmb> request) {};
+    auto service_result = service.add_device(device_handler);
+    ZX_ASSERT((service_result.is_ok()));
+    service_result = outgoing_.AddService<fuchsia_hardware_rpmb::Service>(std::move(handler));
+    ZX_ASSERT(service_result.is_ok());
+
+    auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    ZX_ASSERT(endpoints.is_ok());
+    ZX_ASSERT(outgoing_.Serve(std::move(endpoints->server)).is_ok());
+
+    return std::move(endpoints->client);
+  }
+
+ private:
+  async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
+  component::OutgoingDirectory outgoing_;
+};
+
 class FakeDdkOptee : public zxtest::Test {
  public:
   FakeDdkOptee() : clients_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
@@ -177,9 +205,7 @@ class FakeDdkOptee : public zxtest::Test {
     ASSERT_OK(clients_loop_.StartThread());
     parent_->AddProtocol(ZX_PROTOCOL_PDEV, pdev_.proto_ops(), &pdev_, "pdev");
     parent_->AddProtocol(ZX_PROTOCOL_SYSMEM, sysmem_.proto_ops(), &sysmem_, "sysmem");
-    parent_->AddFidlProtocol(
-        fidl::DiscoverableProtocolName<fuchsia_hardware_rpmb::Rpmb>,
-        [](zx::channel) { return ZX_OK; }, "rpmb");
+    parent_->AddFidlService(fuchsia_hardware_rpmb::Service::Name, rpmb_service_.Connect(), "rpmb");
 
     ASSERT_OK(OpteeController::Create(nullptr, parent_.get()));
     optee_ = parent_->GetLatestChild()->GetDeviceContext<OpteeController>();
@@ -189,6 +215,7 @@ class FakeDdkOptee : public zxtest::Test {
  protected:
   FakePDev pdev_;
   FakeSysmem sysmem_;
+  FakeRpmbService rpmb_service_;
 
   std::shared_ptr<MockDevice> parent_ = MockDevice::FakeRootParent();
   OpteeController* optee_ = nullptr;
@@ -207,17 +234,7 @@ TEST_F(FakeDdkOptee, PmtUnpinned) {
   EXPECT_FALSE(fake_object::FakeHandleTable().Get(pmt_handle).is_ok());
 }
 
-TEST_F(FakeDdkOptee, RpmbTest) {
-  using Rpmb = fuchsia_hardware_rpmb::Rpmb;
-
-  EXPECT_EQ(optee_->RpmbConnectServer(fidl::ServerEnd<Rpmb>()), ZX_ERR_INVALID_ARGS);
-
-  auto endpoints = fidl::CreateEndpoints<Rpmb>();
-  ASSERT_TRUE(endpoints.is_ok());
-  auto [client_end, server_end] = std::move(endpoints.value());
-
-  EXPECT_EQ(optee_->RpmbConnectServer(std::move(server_end)), ZX_OK);
-}
+TEST_F(FakeDdkOptee, RpmbTest) { EXPECT_EQ(optee_->RpmbConnectServer().status_value(), ZX_OK); }
 
 TEST_F(FakeDdkOptee, MultiThreadTest) {
   zx::channel tee_app_client[2];

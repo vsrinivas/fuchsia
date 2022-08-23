@@ -530,21 +530,13 @@ zx_status_t OpteeClient::InitRpmbClient() {
     return ZX_OK;
   }
 
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_rpmb::Rpmb>();
-
-  if (endpoints.is_error()) {
-    LOG(ERROR, "failed to create channel pair (status: %s)", endpoints.status_string());
-    return endpoints.status_value();
-  }
-  auto [client_end, server_end] = std::move(endpoints.value());
-
-  zx_status_t status = controller_->RpmbConnectServer(std::move(server_end));
-  if (status != ZX_OK) {
-    LOG(ERROR, "failed to connect to RPMB server (status: %d)", status);
-    return status;
+  zx::status client_end = controller_->RpmbConnectServer();
+  if (client_end.is_error()) {
+    LOG(ERROR, "failed to connect to RPMB server (status: %s)", client_end.status_string());
+    return client_end.status_value();
   }
 
-  rpmb_client_ = fidl::WireSyncClient<fuchsia_hardware_rpmb::Rpmb>(std::move(client_end));
+  rpmb_client_ = fidl::BindSyncClient(std::move(*client_end));
 
   return ZX_OK;
 }

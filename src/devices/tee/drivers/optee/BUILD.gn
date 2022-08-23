@@ -108,6 +108,7 @@ test("optee-controller-test-bin") {
   deps = [
     ":optee_lib",
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
+    "//sdk/lib/sys/component/cpp",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake-resource",
     "//src/devices/testing/mock-ddk",
