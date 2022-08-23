@@ -242,7 +242,7 @@ template("zither_golden_test") {
         comparisons += [
           {
             golden = "${case_data_dir}/goldens/${case.backend}/${file}"
-            current = "${output_dir}/${output_namespace}/${file}"
+            candidate = "${output_dir}/${output_namespace}/${file}"
           },
         ]
       }

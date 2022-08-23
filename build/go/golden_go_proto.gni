@@ -14,19 +14,19 @@ import("//third_party/protobuf/proto_library.gni")
 #
 # Arguments are:
 #
-#   current (required)
-#     Path to the current version of the file. This is typically generated
+#   candidate (required)
+#     Path to the candidate version of the file. This is typically generated
 #     by another target that would be listed in deps.
 #
 #   golden (required)
-#     Path to reference file to compare with current one.
+#     Path to reference file to compare with candidate one.
 #
 #   deps
 #     Usual GN meaning.
 #
 template("_golden_go_proto_file") {
   assert(defined(invoker.golden), "golden is a required parameter")
-  assert(defined(invoker.current), "current is a required parameter")
+  assert(defined(invoker.candidate), "candidate is a required parameter")
 
   action(target_name) {
     forward_variables_from(invoker, "*")
@@ -36,7 +36,7 @@ template("_golden_go_proto_file") {
     stamp_file = "$target_gen_dir/$target_name.verified"
 
     inputs = [
-      current,
+      candidate,
       golden,
     ]
 
@@ -45,8 +45,8 @@ template("_golden_go_proto_file") {
     args = [
       "--golden",
       rebase_path(golden, root_build_dir),
-      "--current",
-      rebase_path(current, root_build_dir),
+      "--candidate",
+      rebase_path(candidate, root_build_dir),
       "--stamp",
       rebase_path(stamp_file, root_build_dir),
       "--fuchsia-dir",
@@ -111,7 +111,7 @@ template("golden_go_proto") {
     _golden_name = "${_name}_pb_go_diff"
     _golden_go_proto_file(_golden_name) {
       golden = "${_dir}/${_output}"
-      current = "${_proto_dir}/${golden}"
+      candidate = "${_proto_dir}/${golden}"
       deps = [ ":${_proto_name}" ]
     }
     _goldens += [ ":${_golden_name}" ]
@@ -126,7 +126,7 @@ template("golden_go_proto") {
     _golden_name = "${_target_name}_desc_pb_diff"
     golden_file(_golden_name) {
       golden = "${_dir}/${_target_name}.desc.pb"
-      current = "${target_out_dir}/${_proto_name}.desc.pb"
+      candidate = "${target_out_dir}/${_proto_name}.desc.pb"
       deps = [ ":${_proto_name}" ]
     }
 

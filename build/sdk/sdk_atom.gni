@@ -261,7 +261,7 @@ template("sdk_atom") {
     verify_api_target_name = "${target_name}_verify_api"
     golden_file(verify_api_target_name) {
       forward_variables_from(invoker, [ "testonly" ])
-      current = current_api_file
+      candidate = current_api_file
       golden = invoker.api
       warn_on_changes = warn_on_sdk_changes
 

@@ -31,7 +31,7 @@ template("cmx2cml_golden") {
   golden_file(target_name) {
     testonly = true
     golden = _golden_cml
-    current = _generated_cml
+    candidate = _generated_cml
     deps = [ ":$_converter_name" ]
   }
 }

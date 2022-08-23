@@ -23,7 +23,7 @@ golden_file("cml-refdoc-golden_test") {
   testonly = true
 
   golden = "src/test_data/cml_refdoc.golden.md"
-  current = "$root_build_dir/obj/tools/docsgen/cmldoc_out/index.md"
+  candidate = "$root_build_dir/obj/tools/docsgen/cmldoc_out/index.md"
 
   deps = [ "//tools/docsgen:invoke_cmldoc($default_toolchain)" ]
 }

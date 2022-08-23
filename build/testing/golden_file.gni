@@ -6,10 +6,10 @@ import("//build/testing/config.gni")
 
 # Defines a set of golden file comparisons to be executed during the build.
 # Fails if one of the provided `golden`'s contents is not equal to the
-# associated `current`'s.
+# associated `candidate`'s.
 #
 # If the `bless_goldens` build arg is true, the goldens will be updated with
-# the current files rather than failing the action.
+# the candidate files rather than failing the action.
 #
 # For more complex golden testing, see //build/testing/golden_test.gni.
 #
@@ -24,7 +24,7 @@ import("//build/testing/config.gni")
 #        - Required: The golden file against which to check.
 #        - Type: path
 #
-#      * current
+#      * candidate
 #        - Required: The file under test.
 #        - Type: path
 #
@@ -78,8 +78,8 @@ template("golden_files") {
     foreach(comparison, invoker.comparisons) {
       assert(defined(comparison.golden),
              "no `golden` given in comparison: $comparison")
-      assert(defined(comparison.current),
-             "no `current` given in comparison: $comparison")
+      assert(defined(comparison.candidate),
+             "no `candidate` given in comparison: $comparison")
 
       # Forward the rest to ensure that nothing else was defined, in which case
       # GN will provide an "unused" error.
@@ -87,10 +87,10 @@ template("golden_files") {
                              "*",
                              [
                                "golden",
-                               "current",
+                               "candidate",
                              ])
 
-      args += [ rebase_path(comparison.current, root_build_dir) + ":" +
+      args += [ rebase_path(comparison.candidate, root_build_dir) + ":" +
                 rebase_path(comparison.golden, root_build_dir) ]
     }
 
@@ -114,7 +114,7 @@ template("golden_files") {
 #    - Required: The golden file against which to check.
 #    - Type: path
 #
-#  * current
+#  * candidate
 #    - Required: The file under test.
 #    - Type: path
 #
@@ -128,7 +128,7 @@ template("golden_files") {
 #
 template("golden_file") {
   assert(defined(invoker.golden), "`golden` is a required parameter")
-  assert(defined(invoker.current), "`current` is a required parameter")
+  assert(defined(invoker.candidate), "`candidate` is a required parameter")
   golden_files(target_name) {
     forward_variables_from(invoker,
                            [
@@ -143,7 +143,7 @@ template("golden_file") {
         forward_variables_from(invoker,
                                [
                                  "golden",
-                                 "current",
+                                 "candidate",
                                ])
       },
     ]

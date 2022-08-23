@@ -576,7 +576,7 @@ template("_bind_library_cpp") {
                                "testonly",
                                "visibility",
                              ])
-      current = cpp_header_file
+      candidate = cpp_header_file
       golden = invoker.cpp_golden_file
       public_deps = [ ":${cpp_header_file_gen_target}" ]
     }
@@ -663,7 +663,7 @@ template("_bind_library_rust") {
                                "testonly",
                                "visibility",
                              ])
-      current = rust_file
+      candidate = rust_file
       golden = invoker.rust_golden_file
       public_deps = [ ":${rust_file_gen_target}" ]
     }

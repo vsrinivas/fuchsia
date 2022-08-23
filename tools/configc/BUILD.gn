@@ -101,7 +101,7 @@ cpp_config_client_lib_source("cpp_driver_config_lib") {
 golden_file("fidl_config_lib_golden_test") {
   golden = "goldens/config.fidl.golden"
   lib_outputs = get_target_outputs(":fidl_config_lib")
-  current = lib_outputs[0]
+  candidate = lib_outputs[0]
   deps = [ ":fidl_config_lib" ]
   testonly = true
 }
@@ -109,7 +109,7 @@ golden_file("fidl_config_lib_golden_test") {
 golden_file("rust_config_lib_golden_test") {
   golden = "goldens/config.rs.golden"
   lib_outputs = get_target_outputs(":rust_config_lib")
-  current = lib_outputs[0]
+  candidate = lib_outputs[0]
   deps = [ ":rust_config_lib" ]
   testonly = true
 }
@@ -117,7 +117,7 @@ golden_file("rust_config_lib_golden_test") {
 golden_file("cpp_elf_config_lib_cc_golden_test") {
   golden = "goldens/config.cc.elf.golden"
   lib_outputs = get_target_outputs(":cpp_elf_config_lib")
-  current = lib_outputs[0]
+  candidate = lib_outputs[0]
   deps = [ ":cpp_elf_config_lib" ]
   testonly = true
 }
@@ -125,7 +125,7 @@ golden_file("cpp_elf_config_lib_cc_golden_test") {
 golden_file("cpp_elf_config_lib_h_golden_test") {
   golden = "goldens/config.h.elf.golden"
   lib_outputs = get_target_outputs(":cpp_elf_config_lib")
-  current = lib_outputs[1]
+  candidate = lib_outputs[1]
   deps = [ ":cpp_elf_config_lib" ]
   testonly = true
 }
@@ -133,7 +133,7 @@ golden_file("cpp_elf_config_lib_h_golden_test") {
 golden_file("cpp_driver_config_lib_cc_golden_test") {
   golden = "goldens/config.cc.driver.golden"
   lib_outputs = get_target_outputs(":cpp_driver_config_lib")
-  current = lib_outputs[0]
+  candidate = lib_outputs[0]
   deps = [ ":cpp_driver_config_lib" ]
   testonly = true
 }
@@ -141,7 +141,7 @@ golden_file("cpp_driver_config_lib_cc_golden_test") {
 golden_file("cpp_driver_config_lib_h_golden_test") {
   golden = "goldens/config.h.driver.golden"
   lib_outputs = get_target_outputs(":cpp_driver_config_lib")
-  current = lib_outputs[1]
+  candidate = lib_outputs[1]
   deps = [ ":cpp_driver_config_lib" ]
   testonly = true
 }
@@ -169,7 +169,7 @@ dump_structured_config("dump_example_values") {
 
 golden_file("value_dump_golden_test") {
   golden = "goldens/dumped_values.json.golden"
-  current = _dumped_values
+  candidate = _dumped_values
   deps = [ ":dump_example_values" ]
   testonly = true
 }

@@ -9,13 +9,13 @@ import os
 import shutil
 import sys
 
-# Verifies that the current golden file matches the provided golden.
+# Verifies that the candidate golden file matches the provided golden.
 
 
-def print_failure_msg(golden, current, label):
-    # Use abspath in cp command so it works regardless of the current working
+def print_failure_msg(golden, candidate, label):
+    # Use abspath in cp command so it works regardless of the candidate working
     # directory.
-    current = os.path.abspath(current)
+    candidate = os.path.abspath(candidate)
     golden = os.path.abspath(golden)
     print(
         f"""
@@ -23,7 +23,7 @@ Please acknowledge this change by updating the golden.
 You can run this command:
 ```
 cp {golden} \\
-    {current}
+    {candidate}
 ```
 Or you can rebuild with `bless_goldens=true` in your GN args and {label} in your build graph.
 """)
@@ -48,7 +48,7 @@ def main():
     parser.add_argument(
         '--bless',
         help=
-        "Overwrites the golden with the current if they don't match - or creates it if it does not yet exist",
+        "Overwrites the golden with the candidate if they don't match - or creates it if it does not yet exist",
         action='store_true')
     parser.add_argument(
         '--warn',
@@ -65,8 +65,8 @@ def main():
                 '--comparison value \"%s\" must be given as \"FILE:GOLDEN\"' %
                 comparison)
             return 1
-        current, golden = tokens
-        inputs.extend([current, golden])
+        candidate, golden = tokens
+        inputs.extend([candidate, golden])
 
         golden_exists = os.path.exists(golden)
         if not golden_exists and args.bless:
@@ -77,16 +77,16 @@ def main():
             with open(golden, 'w'):
                 golden_exists = True
 
-        if not golden_exists or not filecmp.cmp(current, golden):
+        if not golden_exists or not filecmp.cmp(candidate, golden):
             diffs = True
             type = 'Warning' if args.warn or args.bless else 'Error'
             print('%s: Golden file mismatch' % type)
 
             if args.bless:
                 assert golden_exists  # Should have been created above.
-                shutil.copyfile(current, golden)
+                shutil.copyfile(candidate, golden)
             else:
-                print_failure_msg(golden, current, args.label)
+                print_failure_msg(golden, candidate, args.label)
 
     if diffs and not args.bless and not args.warn:
         return 1

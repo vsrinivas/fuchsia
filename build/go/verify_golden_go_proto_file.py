@@ -8,18 +8,18 @@ import os
 import shutil
 import sys
 
-# Verifies that the current golden go proto file matches the provided golden.
+# Verifies that the candidate golden go proto file matches the provided golden.
 # Intentionally ignores the version numbers of the protoc compiler and plugins
 # that are embedded in the files.
 
 MISMATCH_MSG = '''\
 Error: Golden file mismatch! To print the differences, run:
 
-  diff -burN {current_path} {golden_path}
+  diff -burN {candidate_path} {golden_path}
 
 To acknowledge this change, please run:
 
-  cp {current_path} {golden_path}
+  cp {candidate_path} {golden_path}
 
 '''
 
@@ -52,33 +52,33 @@ def main():
     parser.add_argument(
         '--golden', help='Path to the golden file', required=True)
     parser.add_argument(
-        '--current', help='Path to the local file', required=True)
+        '--candidate', help='Path to the local file', required=True)
     parser.add_argument(
         '--fuchsia-dir', help='Path to Fuchsia source directory')
     parser.add_argument(
         '--stamp', help='Path to the victory file', required=True)
     parser.add_argument(
         '--bless',
-        help="Overwrites current with golden if they don't match.",
+        help="Overwrites candidate with golden if they don't match.",
         action='store_true')
     args = parser.parse_args()
 
     golden = read_file(args.golden)
-    current = read_file(args.current)
+    candidate = read_file(args.candidate)
 
-    if golden != current:
+    if golden != candidate:
         if args.bless:
-            shutil.copyfile(args.current, args.golden)
+            shutil.copyfile(args.candidate, args.golden)
         else:
             # Compute paths relative to the Fuchsia directory for the message
             # below.
             fuchsia_dir = args.fuchsia_dir if args.fuchsia_dir else '../..'
             fuchsia_dir = os.path.abspath(fuchsia_dir)
             golden_path = os.path.relpath(args.golden, fuchsia_dir)
-            current_path = os.path.relpath(args.current, fuchsia_dir)
+            candidate_path = os.path.relpath(args.candidate, fuchsia_dir)
             print(
                 MISMATCH_MSG.format(
-                    current_path=current_path, golden_path=golden_path),
+                    candidate_path=candidate_path, golden_path=golden_path),
                 file=sys.stderr)
             return 1
 
