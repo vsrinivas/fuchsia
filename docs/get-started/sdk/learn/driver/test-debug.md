@@ -156,7 +156,7 @@ Print the contents of the request passed into the function:
 The command prints output containing the factorial input value:
 
 ```none {:.devsite-disable-click-to-copy}
-{request_ = (*)0x24302c4be78 ➔ {fuchsia_hardware_qemuedu:… = {input = 12}}}
+{request_ = (*)0x24302c4be78 ➔ {fuchsia_examples_qemuedu:… = {input = 12}}}
 ```
 
 Exit the debugger session and disconnect:
