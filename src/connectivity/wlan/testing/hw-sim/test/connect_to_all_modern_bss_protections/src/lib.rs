@@ -22,7 +22,7 @@ async fn connect_to_modern_wpa_network() {
     let psk = Some("0dc0d6eb90555ed6419756b9a15ec3e3209b63df707dd508d14581f8982721af");
 
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
-    let () = loop_until_iface_is_found().await;
+    let () = loop_until_iface_is_found(&mut helper).await;
 
     let combinations = vec![
         // TODO(fxbug.dev/101516): allow simulation for tkip

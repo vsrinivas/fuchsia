@@ -94,7 +94,7 @@ async fn ethernet_tx_rx() {
     init_syslog();
 
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
-    let () = loop_until_iface_is_found().await;
+    let () = loop_until_iface_is_found(&mut helper).await;
 
     connect_with_security_type(
         &mut helper,

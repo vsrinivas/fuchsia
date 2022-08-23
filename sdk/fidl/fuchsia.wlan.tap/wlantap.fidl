@@ -125,6 +125,12 @@ protocol WlantapPhy {
         txs fuchsia.wlan.common.WlanTxStatus;
     });
 
+    ScanComplete(struct {
+        wlan_softmac_id uint16;
+        scan_id uint64;
+        status zx.status;
+    });
+
     // wlan_softmac_protocol_ops_t
     // events indicating that the wlan-softmac device received interface request calls from the driver.
 
@@ -146,6 +152,10 @@ protocol WlantapPhy {
     /// Client: The device is to be configured with this BSS as it peer.
     -> ConfigureBss(struct {
         args ConfigureBssArgs;
+    });
+
+    -> StartScan(struct {
+        args StartScanArgs;
     });
 
     // TODO: ConfigureBeacon
@@ -178,6 +188,11 @@ type SetChannelArgs = struct {
 type ConfigureBssArgs = struct {
     wlan_softmac_id uint16;
     config fuchsia.wlan.internal.BssConfig;
+};
+
+type StartScanArgs = struct {
+    wlan_softmac_id uint16;
+    scan_id uint64;
 };
 
 type SetKeyArgs = struct {

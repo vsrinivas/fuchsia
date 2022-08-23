@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_tap::{
-        SetChannelArgs, TxArgs, WlanRxInfo, WlantapPhyConfig, WlantapPhyEvent, WlantapPhyProxy,
+        StartScanArgs, TxArgs, WlanRxInfo, WlantapPhyConfig, WlantapPhyEvent, WlantapPhyProxy,
     },
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::prelude::*,
@@ -97,7 +97,7 @@ pub fn create_rx_info(channel: &fidl_common::WlanChannel, rssi_dbm: i8) -> WlanR
     }
 }
 
-enum BeaconOrProbeResp<'a> {
+pub enum BeaconOrProbeResp<'a> {
     Beacon,
     ProbeResp { wsc_ie: Option<&'a [u8]> },
 }
@@ -192,6 +192,14 @@ pub fn send_beacon(
         generate_probe_or_beacon(BeaconOrProbeResp::Beacon, channel, bssid, ssid, protection)?;
     proxy.rx(0, &buf, &mut create_rx_info(channel, rssi_dbm))?;
     Ok(())
+}
+
+pub fn send_scan_complete(
+    scan_id: u64,
+    status: i32,
+    proxy: &WlantapPhyProxy,
+) -> Result<(), anyhow::Error> {
+    proxy.scan_complete(0, scan_id, status).map_err(|e| e.into())
 }
 
 pub fn send_probe_resp(
@@ -476,17 +484,16 @@ pub fn process_tx_auth_updates(
     Ok(())
 }
 
-pub fn handle_set_channel_event(
-    args: &SetChannelArgs,
+pub fn handle_start_scan_event(
+    args: &StartScanArgs,
     phy: &WlantapPhyProxy,
     ssid: &Ssid,
     bssid: &Bssid,
     protection: &Protection,
 ) {
-    debug!("Handling set channel event on channel {:?}", args.channel);
-    if args.channel.primary == CHANNEL.primary {
-        send_beacon(&args.channel, bssid, ssid, protection, &phy, 0).unwrap();
-    }
+    debug!("Handling start scan event with scan_id {:?}", args.scan_id);
+    send_beacon(&CHANNEL, bssid, ssid, protection, &phy, 0).unwrap();
+    send_scan_complete(args.scan_id, 0, &phy).unwrap();
 }
 
 pub fn handle_tx_event<F>(
@@ -662,8 +669,8 @@ pub fn handle_connect_events(
     update_sink: &mut Option<wlan_rsn::rsna::UpdateSink>,
 ) {
     match event {
-        WlantapPhyEvent::SetChannel { args } => {
-            handle_set_channel_event(&args, phy, ssid, bssid, protection)
+        WlantapPhyEvent::StartScan { args } => {
+            handle_start_scan_event(&args, phy, ssid, bssid, protection)
         }
         WlantapPhyEvent::Tx { args } => match authenticator {
             Some(_) => match update_sink {
@@ -853,7 +860,7 @@ pub fn rx_wlan_data_frame(
     Ok(())
 }
 
-pub async fn loop_until_iface_is_found() {
+pub async fn loop_until_iface_is_found(helper: &mut test_utils::TestHelper) {
     // Connect to the client policy service and get a client controller.
     let policy_provider = connect_to_protocol::<fidl_policy::ClientProviderMarker>()
         .expect("connecting to wlan policy");
@@ -872,7 +879,15 @@ pub async fn loop_until_iface_is_found() {
         let (scan_proxy, server_end) = create_proxy().unwrap();
         client_controller.scan_for_networks(server_end).expect("requesting scan");
 
-        match scan_proxy.get_next().await.expect("getting scan results") {
+        let fut = async move { scan_proxy.get_next().await.expect("getting scan results") };
+        pin_mut!(fut);
+
+        let phy = helper.proxy();
+        let scan_event = test_utils::phy_event_from_beacons(&phy, &[]);
+        match helper
+            .run_until_complete_or_timeout(10.seconds(), "receive a scan response", scan_event, fut)
+            .await
+        {
             Err(_) => {
                 retry.sleep_unless_after_deadline().await.unwrap_or_else(|_| {
                     panic!("Wlanstack did not recognize the interface in time")

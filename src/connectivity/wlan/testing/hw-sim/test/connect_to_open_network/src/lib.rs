@@ -16,7 +16,7 @@ async fn connect_to_open_network() {
     const BSS: Bssid = Bssid([0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f]);
 
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
-    let () = loop_until_iface_is_found().await;
+    let () = loop_until_iface_is_found(&mut helper).await;
 
     let () = connect_with_security_type(
         &mut helper,

@@ -153,15 +153,17 @@ async fn multiple_clients_ap() {
             "connecting to AP",
             EventHandlerBuilder::new()
                 .on_debug_name("client1")
-                .on_set_channel(
-                    Beacon::send_on_primary_channel(
-                        WLANCFG_DEFAULT_AP_CHANNEL.primary,
-                        &client1_proxy,
-                    )
-                    .bssid(AP_MAC_ADDR)
-                    .ssid(&AP_SSID)
-                    .protection(Open),
-                )
+                .on_start_scan(ScanResults::new(
+                    &client1_proxy,
+                    vec![BeaconInfo {
+                        primary_channel: WLANCFG_DEFAULT_AP_CHANNEL.primary,
+                        bssid: AP_MAC_ADDR,
+                        ssid: AP_SSID.clone(),
+                        protection: Open,
+                        rssi_dbm: 0,
+                        beacon_or_probe: BeaconOrProbeResp::ProbeResp { wsc_ie: None },
+                    }],
+                ))
                 .on_tx(Rx::send(&ap_proxy, WLANCFG_DEFAULT_AP_CHANNEL))
                 .build(),
             client1_connect_fut.and_then(|()| {
@@ -198,15 +200,17 @@ async fn multiple_clients_ap() {
             "connecting to AP",
             EventHandlerBuilder::new()
                 .on_debug_name("client2")
-                .on_set_channel(
-                    Beacon::send_on_primary_channel(
-                        WLANCFG_DEFAULT_AP_CHANNEL.primary,
-                        &client2_proxy,
-                    )
-                    .bssid(AP_MAC_ADDR)
-                    .ssid(&AP_SSID)
-                    .protection(Open),
-                )
+                .on_start_scan(ScanResults::new(
+                    &client2_proxy,
+                    vec![BeaconInfo {
+                        primary_channel: WLANCFG_DEFAULT_AP_CHANNEL.primary,
+                        bssid: AP_MAC_ADDR,
+                        ssid: AP_SSID.clone(),
+                        protection: Open,
+                        rssi_dbm: 0,
+                        beacon_or_probe: BeaconOrProbeResp::ProbeResp { wsc_ie: None },
+                    }],
+                ))
                 .on_tx(Rx::send(&ap_proxy, WLANCFG_DEFAULT_AP_CHANNEL))
                 .build(),
             client2_connect_fut.and_then(|()| {

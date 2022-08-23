@@ -6,6 +6,8 @@ use {
     fidl::endpoints::{create_endpoints, create_proxy},
     fidl_fuchsia_wlan_policy as fidl_policy,
     fuchsia_component::client::connect_to_protocol,
+    fuchsia_zircon::DurationNum,
+    pin_utils::pin_mut,
     wlan_hw_sim::*,
 };
 
@@ -14,8 +16,8 @@ use {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn run_without_regulatory_manager() {
     init_syslog();
-    let helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
-    let () = loop_until_iface_is_found().await;
+    let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
+    let () = loop_until_iface_is_found(&mut helper).await;
 
     // Connect to the client policy service and get a client controller.
     let policy_provider = connect_to_protocol::<fidl_policy::ClientProviderMarker>()
@@ -28,9 +30,24 @@ async fn run_without_regulatory_manager() {
 
     // Issue a scan request to verify that the scan module can function in the absence of the
     // regulatory manager.
-    let (scan_proxy, server_end) = create_proxy().unwrap();
-    client_controller.scan_for_networks(server_end).expect("requesting scan");
-    scan_proxy.get_next().await.expect("getting scan results").expect("scan failed");
+    let phy = helper.proxy();
+    let scan_event = test_utils::phy_event_from_beacons(&phy, &[]);
+    let fut = async move {
+        let (scan_proxy, server_end) = create_proxy().unwrap();
+        client_controller.scan_for_networks(server_end).expect("requesting scan");
+        loop {
+            let result = scan_proxy.get_next().await.expect("getting scan results");
+            let new_scan_results = result.expect("scanning failed");
+            if new_scan_results.is_empty() {
+                break;
+            }
+        }
+        return;
+    };
+    pin_mut!(fut);
+    helper
+        .run_until_complete_or_timeout(10.seconds(), "receive a scan response", scan_event, fut)
+        .await;
 
     helper.stop().await;
 }

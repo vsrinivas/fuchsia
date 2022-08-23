@@ -33,7 +33,7 @@ async fn simulate_scan() {
 
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
 
-    let () = loop_until_iface_is_found().await;
+    let () = loop_until_iface_is_found(&mut helper).await;
 
     let phy = helper.proxy();
     let beacons = [

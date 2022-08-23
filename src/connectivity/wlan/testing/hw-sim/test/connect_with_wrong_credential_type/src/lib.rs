@@ -39,7 +39,7 @@ async fn connect_future(
 async fn connecting_to_aps_with_wrong_credential_types() {
     init_syslog();
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
-    let () = loop_until_iface_is_found().await;
+    let () = loop_until_iface_is_found(&mut helper).await;
 
     let (client_controller, mut client_state_update_stream) = init_client_controller().await;
 

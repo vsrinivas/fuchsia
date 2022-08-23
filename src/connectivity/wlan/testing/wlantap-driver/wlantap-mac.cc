@@ -149,6 +149,24 @@ struct WlantapMacImpl : WlantapMac {
     return ZX_OK;
   }
 
+  static zx_status_t WlanSoftmacStartPassiveScan(void* ctx,
+                                                 const wlan_softmac_passive_scan_args_t* args,
+                                                 uint64_t* scan_id) {
+    auto& self = *static_cast<WlantapMacImpl*>(ctx);
+    *scan_id = 111;
+    self.listener_->WlantapMacStartScan(self.id_, *scan_id);
+    return ZX_OK;
+  }
+
+  static zx_status_t WlanSoftmacStartActiveScan(void* ctx,
+                                                const wlan_softmac_active_scan_args_t* args,
+                                                uint64_t* scan_id) {
+    auto& self = *static_cast<WlantapMacImpl*>(ctx);
+    *scan_id = 222;
+    self.listener_->WlantapMacStartScan(self.id_, *scan_id);
+    return ZX_OK;
+  }
+
   static zx_status_t WlanSoftmacSetKey(void* ctx, const wlan_key_config_t* key_config) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
     self.listener_->WlantapMacSetKey(self.id_, key_config);
@@ -207,6 +225,13 @@ struct WlantapMacImpl : WlantapMac {
     }
   }
 
+  virtual void ScanComplete(uint64_t scan_id, int32_t status) override {
+    std::lock_guard<std::mutex> guard(lock_);
+    if (ifc_.is_valid()) {
+      ifc_.ScanComplete(status, scan_id);
+    }
+  }
+
   void Unbind() {
     {
       std::lock_guard<std::mutex> guard(lock_);
@@ -257,6 +282,8 @@ zx_status_t CreateWlantapMac(zx_device_t* parent_phy, const wlan_common::WlanMac
       .set_key = &WlantapMacImpl::WlanSoftmacSetKey,
       .configure_assoc = &WlantapMacImpl::WlanSoftmacConfigureAssoc,
       .clear_assoc = &WlantapMacImpl::WlanSoftmacClearAssoc,
+      .start_passive_scan = &WlantapMacImpl::WlanSoftmacStartPassiveScan,
+      .start_active_scan = &WlantapMacImpl::WlanSoftmacStartActiveScan,
   };
   device_add_args_t args = {.version = DEVICE_ADD_ARGS_VERSION,
                             .name = name,

@@ -22,6 +22,7 @@ class WlantapMac {
     virtual void WlantapMacQueueTx(uint16_t id, const wlan_tx_packet_t* pkt) = 0;
     virtual void WlantapMacSetChannel(uint16_t id, const wlan_channel_t* channel) = 0;
     virtual void WlantapMacConfigureBss(uint16_t id, const bss_config_t* config) = 0;
+    virtual void WlantapMacStartScan(uint16_t id, uint64_t scan_id) = 0;
     virtual void WlantapMacSetKey(uint16_t id, const wlan_key_config_t* key_config) = 0;
   };
 
@@ -30,6 +31,8 @@ class WlantapMac {
   virtual void Status(uint32_t status) = 0;
 
   virtual void ReportTxStatus(const ::fuchsia::wlan::common::WlanTxStatus& ts) = 0;
+
+  virtual void ScanComplete(uint64_t scan_id, int32_t status) = 0;
 
   virtual void RemoveDevice() = 0;
 

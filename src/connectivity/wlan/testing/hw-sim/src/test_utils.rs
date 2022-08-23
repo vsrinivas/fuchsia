@@ -6,7 +6,7 @@ use {
         wlancfg_helper::{
             init_client_controller, start_ap_and_wait_for_confirmation, NetworkConfigBuilder,
         },
-        Beacon, EventHandlerBuilder, Sequence,
+        EventHandlerBuilder, ScanResults,
     },
     fidl::endpoints::create_proxy,
     fidl::prelude::*,
@@ -261,25 +261,23 @@ pub struct ScanTestBeacon {
     pub protection: Protection,
     pub rssi: Option<i8>,
 }
-fn phy_event_from_beacons<'a>(
+pub fn phy_event_from_beacons<'a>(
     phy: &'a Arc<wlantap::WlantapPhyProxy>,
     beacons: &[ScanTestBeacon],
 ) -> impl FnMut(wlantap::WlantapPhyEvent) + 'a {
-    let mut beacon_sequence = Sequence::start();
-    for beacon in beacons {
-        let mut beacon_to_send = Beacon::send_on_primary_channel(beacon.channel, phy)
-            .bssid(beacon.bssid)
-            .ssid(&beacon.ssid)
-            .protection(beacon.protection.clone());
-        match beacon.rssi {
-            Some(rssi) => {
-                beacon_to_send = beacon_to_send.rssi(rssi);
-            }
-            None => {}
-        }
-        beacon_sequence = beacon_sequence.then(beacon_to_send);
-    }
-    EventHandlerBuilder::new().on_set_channel(beacon_sequence).build()
+    let results = beacons
+        .iter()
+        .map(|beacon| crate::BeaconInfo {
+            primary_channel: beacon.channel,
+            bssid: beacon.bssid,
+            ssid: beacon.ssid.clone(),
+            protection: beacon.protection,
+            rssi_dbm: beacon.rssi.unwrap_or(0),
+            beacon_or_probe: crate::BeaconOrProbeResp::Beacon,
+        })
+        .collect();
+    let scan_results = ScanResults::new(phy, results);
+    EventHandlerBuilder::new().on_start_scan(scan_results).build()
 }
 
 pub type ScanResult = (Ssid, [u8; 6], bool, i8);

@@ -20,9 +20,15 @@ fn build_event_handler<'a>(
     phy: &'a WlantapPhyProxy,
 ) -> impl FnMut(wlantap::WlantapPhyEvent) + 'a {
     EventHandlerBuilder::new()
-        .on_set_channel(
-            Beacon::send_on_primary_channel(CHANNEL.primary, &phy).bssid(bssid).ssid(ssid),
-        )
+        .on_start_scan(ScanResults::new(
+            &phy,
+            vec![BeaconInfo {
+                primary_channel: CHANNEL.primary,
+                bssid,
+                ssid: ssid.clone(),
+                ..std::default::Default::default()
+            }],
+        ))
         .on_tx(MatchTx::new().on_mgmt(move |frame: &Vec<u8>| {
             match mac::MacFrame::parse(&frame[..], false) {
                 Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) => {
@@ -79,7 +85,7 @@ async fn connect_with_failed_association() {
     init_syslog();
 
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
-    let () = loop_until_iface_is_found().await;
+    let () = loop_until_iface_is_found(&mut helper).await;
 
     let (mut client_controller, mut client_state_update_stream) =
         wlan_hw_sim::init_client_controller().await;

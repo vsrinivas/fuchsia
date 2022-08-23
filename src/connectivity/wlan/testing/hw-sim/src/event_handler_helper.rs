@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{create_rx_info, send_beacon},
+    crate::{create_rx_info, send_beacon, send_probe_resp, send_scan_complete, BeaconOrProbeResp},
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_tap as wlantap,
     ieee80211::{Bssid, Ssid},
     std::collections::hash_map::HashMap,
@@ -113,59 +113,73 @@ impl<'a> Action<wlantap::SetChannelArgs> for MatchChannel<'a> {
     }
 }
 
-/// Beacon builds a action that can be passed to on_set_channel (or MatchChannel::on_channel) to
-///  send a beacon with the provided BSSID + SSID + protection.
-pub struct Beacon<'a> {
-    phy: &'a wlantap::WlantapPhyProxy,
-    primary_channel: u8,
-    bssid: Bssid,
-    ssid: Ssid,
-    protection: Protection,
-    rssi_dbm: i8,
+pub struct BeaconInfo<'a> {
+    pub primary_channel: u8,
+    pub bssid: Bssid,
+    pub ssid: Ssid,
+    pub protection: Protection,
+    pub rssi_dbm: i8,
+    pub beacon_or_probe: BeaconOrProbeResp<'a>,
 }
 
-impl<'a> Beacon<'a> {
-    pub fn send_on_primary_channel(primary_channel: u8, phy: &'a wlantap::WlantapPhyProxy) -> Self {
+impl<'a> std::default::Default for BeaconInfo<'a> {
+    fn default() -> Self {
         Self {
-            phy,
-            primary_channel,
-            bssid: Bssid([1; 6]),
+            primary_channel: 0,
+            bssid: Bssid([0; 6]),
             ssid: Ssid::empty(),
             protection: Protection::Open,
             rssi_dbm: 0,
+            beacon_or_probe: BeaconOrProbeResp::Beacon,
         }
-    }
-
-    pub fn bssid(self, bssid: Bssid) -> Self {
-        Self { bssid, ..self }
-    }
-
-    pub fn ssid(self, ssid: &Ssid) -> Self {
-        Self { ssid: ssid.clone(), ..self }
-    }
-
-    pub fn protection(self, protection: Protection) -> Self {
-        Self { protection, ..self }
-    }
-
-    pub fn rssi(self, rssi_dbm: i8) -> Self {
-        Self { rssi_dbm, ..self }
     }
 }
 
-impl<'a> Action<wlantap::SetChannelArgs> for Beacon<'a> {
-    fn run(&mut self, args: &wlantap::SetChannelArgs) {
-        if args.channel.primary == self.primary_channel {
-            send_beacon(
-                &args.channel,
-                &self.bssid,
-                &self.ssid,
-                &self.protection,
-                &self.phy,
-                self.rssi_dbm,
-            )
-            .unwrap();
+pub struct ScanResults<'a> {
+    phy: &'a wlantap::WlantapPhyProxy,
+    results: Vec<BeaconInfo<'a>>,
+    status: i32,
+}
+
+impl<'a> ScanResults<'a> {
+    pub fn new(phy: &'a wlantap::WlantapPhyProxy, results: Vec<BeaconInfo<'a>>) -> Self {
+        Self { phy, results, status: 0 }
+    }
+}
+
+impl<'a> Action<wlantap::StartScanArgs> for ScanResults<'a> {
+    fn run(&mut self, args: &wlantap::StartScanArgs) {
+        for result in &self.results[..] {
+            let channel = fidl_common::WlanChannel {
+                primary: result.primary_channel,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
+                secondary80: 0,
+            };
+            match result.beacon_or_probe {
+                BeaconOrProbeResp::Beacon => {
+                    send_beacon(
+                        &channel,
+                        &result.bssid,
+                        &result.ssid,
+                        &result.protection,
+                        &self.phy,
+                        result.rssi_dbm,
+                    )
+                    .unwrap();
+                }
+                BeaconOrProbeResp::ProbeResp { wsc_ie } => send_probe_resp(
+                    &channel,
+                    &result.bssid,
+                    &result.ssid,
+                    &result.protection,
+                    wsc_ie,
+                    &self.phy,
+                    result.rssi_dbm,
+                )
+                .unwrap(),
+            }
         }
+        send_scan_complete(args.scan_id, self.status, self.phy).unwrap();
     }
 }
 
@@ -251,6 +265,7 @@ impl<'a> Action<wlantap::TxArgs> for Rx<'a> {
 /// `TestHelper::run_until_complete_or_timeout`.
 pub struct EventHandlerBuilder<'a> {
     set_channel_action: Box<dyn Action<wlantap::SetChannelArgs> + 'a>,
+    start_scan_action: Box<dyn Action<wlantap::StartScanArgs> + 'a>,
     tx_action: Box<dyn Action<wlantap::TxArgs> + 'a>,
     phy_event_action: Box<dyn Action<wlantap::WlantapPhyEvent> + 'a>,
     debug_name: Option<String>,
@@ -260,6 +275,7 @@ impl<'a> EventHandlerBuilder<'a> {
     pub fn new() -> Self {
         Self {
             set_channel_action: Box::new(NoAction),
+            start_scan_action: Box::new(NoAction),
             tx_action: Box::new(NoAction),
             phy_event_action: Box::new(NoAction),
             debug_name: None,
@@ -269,6 +285,11 @@ impl<'a> EventHandlerBuilder<'a> {
     /// Sets the action for SetChannel events. Only one may be registered.
     pub fn on_set_channel(mut self, action: impl Action<wlantap::SetChannelArgs> + 'a) -> Self {
         self.set_channel_action = Box::new(action);
+        self
+    }
+
+    pub fn on_start_scan(mut self, action: impl Action<wlantap::StartScanArgs> + 'a) -> Self {
+        self.start_scan_action = Box::new(action);
         self
     }
 
@@ -313,9 +334,12 @@ impl<'a> EventHandlerBuilder<'a> {
                     self.tx_action.run(&args)
                 }
 
+                wlantap::WlantapPhyEvent::StartScan { ref args } => {
+                    self.start_scan_action.run(&args)
+                }
+
                 _ => {}
             }
-
             self.phy_event_action.run(&event)
         }
     }

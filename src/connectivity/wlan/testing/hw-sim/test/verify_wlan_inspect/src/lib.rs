@@ -60,6 +60,17 @@ fn build_event_handler<'a>(
     phy: &'a WlantapPhyProxy,
 ) -> impl FnMut(wlantap::WlantapPhyEvent) + 'a {
     EventHandlerBuilder::new()
+        .on_start_scan(ScanResults::new(
+            phy,
+            vec![BeaconInfo {
+                primary_channel: CHANNEL.primary,
+                bssid,
+                ssid: ssid.clone(),
+                protection: Protection::Open,
+                rssi_dbm: -10,
+                beacon_or_probe: BeaconOrProbeResp::ProbeResp { wsc_ie: Some(&WSC_IE_BODY) },
+            }],
+        ))
         .on_tx(MatchTx::new().on_mgmt(move |frame: &Vec<u8>| {
             match mac::MacFrame::parse(&frame[..], false) {
                 Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) => {
@@ -77,21 +88,6 @@ fn build_event_handler<'a>(
                             )
                             .expect("Error sending fake association response frame");
                         }
-                        Some(mac::MgmtBody::ProbeReq { .. }) => {
-                            // Normally, the AP would only send probe response on the channel it's
-                            // on, but our TestHelper doesn't have that feature yet and it
-                            // does not affect this test.
-                            send_probe_resp(
-                                &CHANNEL,
-                                &bssid,
-                                ssid,
-                                &Protection::Open,
-                                Some(WSC_IE_BODY),
-                                &phy,
-                                -10,
-                            )
-                            .expect("Error sending fake probe response frame");
-                        }
                         _ => (),
                     }
                 }
@@ -108,7 +104,7 @@ async fn verify_wlan_inspect() {
     init_syslog();
 
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
-    let () = loop_until_iface_is_found().await;
+    let () = loop_until_iface_is_found(&mut helper).await;
 
     let (client_controller, mut client_state_update_stream) =
         wlan_hw_sim::init_client_controller().await;

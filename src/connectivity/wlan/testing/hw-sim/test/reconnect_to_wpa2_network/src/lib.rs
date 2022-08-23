@@ -61,8 +61,8 @@ fn handle_phy_event(
     second_association_confirm_sender_wrapper: &mut Option<oneshot::Sender<()>>,
 ) {
     match event {
-        WlantapPhyEvent::SetChannel { args } => {
-            handle_set_channel_event(&args, phy, ssid, bssid, protection)
+        WlantapPhyEvent::StartScan { args } => {
+            handle_start_scan_event(&args, phy, ssid, bssid, protection)
         }
         WlantapPhyEvent::Tx { args } => handle_tx_event(
             &args,
@@ -142,7 +142,7 @@ async fn reconnect_to_wpa2_network() {
     let password = Some("wpa2good");
 
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
-    let () = loop_until_iface_is_found().await;
+    let () = loop_until_iface_is_found(&mut helper).await;
 
     let phy = helper.proxy();
 

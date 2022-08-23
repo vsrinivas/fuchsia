@@ -86,19 +86,18 @@ async fn verify_client_connects_to_ap(
         10.seconds(),
         "connecting to AP",
         |event| match event {
-            WlantapPhyEvent::SetChannel { args } => {
-                if args.channel.primary == WLANCFG_DEFAULT_AP_CHANNEL.primary {
-                    // TODO(fxbug.dev/35337): use beacon frame from configure_beacon
-                    send_beacon(
-                        &WLANCFG_DEFAULT_AP_CHANNEL,
-                        &AP_MAC_ADDR,
-                        &AP_SSID,
-                        &Wpa2Personal,
-                        &client_proxy,
-                        0,
-                    )
-                    .expect("sending beacon");
-                }
+            WlantapPhyEvent::StartScan { args } => {
+                // TODO(fxbug.dev/35337): use beacon frame from configure_beacon
+                send_beacon(
+                    &WLANCFG_DEFAULT_AP_CHANNEL,
+                    &AP_MAC_ADDR,
+                    &AP_SSID,
+                    &Wpa2Personal,
+                    &client_proxy,
+                    0,
+                )
+                .expect("sending beacon");
+                send_scan_complete(args.scan_id, 0, &client_proxy).expect("sending scan result");
             }
             evt => packet_forwarder(&ap_proxy, "frame client -> ap")(evt),
         },
@@ -318,7 +317,7 @@ async fn sim_client_vs_sim_ap() {
     let mut client_helper =
         test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
     let client_proxy = client_helper.proxy();
-    let () = loop_until_iface_is_found().await;
+    let () = loop_until_iface_is_found(&mut client_helper).await;
 
     let mut ap_helper =
         test_utils::TestHelper::begin_ap_test(default_wlantap_config_ap(), network_config).await;

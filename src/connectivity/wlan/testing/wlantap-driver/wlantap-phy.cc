@@ -335,6 +335,15 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     }
   }
 
+  virtual void ScanComplete(uint16_t wlan_softmac_id, uint64_t scan_id, int32_t st) override {
+    zxlogf(INFO, "%s: ScanComplete(%u)", name_.c_str(), st);
+    std::lock_guard<std::mutex> guard(wlan_softmac_lock_);
+    if (WlantapMac* wlan_softmac = wlan_softmac_devices_.Get(wlan_softmac_id)) {
+      wlan_softmac->ScanComplete(scan_id, st);
+    }
+    zxlogf(DEBUG, "%s: ScanComplete done", name_.c_str());
+  }
+
   // WlantapMac::Listener impl
 
   virtual void WlantapMacStart(uint16_t wlan_softmac_id) override {
@@ -408,6 +417,20 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
              .remote = config->remote,
          }});
     zxlogf(DEBUG, "%s: WlantapMacConfigureBss done", name_.c_str());
+  }
+
+  virtual void WlantapMacStartScan(uint16_t wlan_softmac_id, const uint64_t scan_id) override {
+    zxlogf(INFO, "%s: WlantapMacStartScan id=%u", name_.c_str(), wlan_softmac_id);
+    std::lock_guard<std::mutex> guard(lock_);
+    if (stopped_ || !user_binding_.is_bound()) {
+      zxlogf(INFO, "%s: WlantapMacStartScan ignored, shutting down", name_.c_str());
+      return;
+    }
+    user_binding_.events().StartScan({
+        .wlan_softmac_id = wlan_softmac_id,
+        .scan_id = scan_id,
+    });
+    zxlogf(DEBUG, "%s: WlantapMacStartScan done", name_.c_str());
   }
 
   virtual void WlantapMacSetKey(uint16_t wlan_softmac_id,
