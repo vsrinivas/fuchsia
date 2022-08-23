@@ -262,7 +262,12 @@ impl DiscoveryProxy {
                     }
                 },
             )
-            .inspect_err(|err| {
+            .inspect_err(move |err| {
+                // Due to fxbug.dev/99755, the subscription will close
+                // if the servicesubscriber that created it is closed.
+                // TODO(fxbug.dev/99755): Remove this line once fxbug.dev/99755 is fixed.
+                let _ = subscriber.clone();
+
                 error!("host_name_subscription: {:?}", err);
             });
 
@@ -376,7 +381,13 @@ impl DiscoveryProxy {
                         .await
                 }
             })
-            .inspect_err(|err| {
+            .inspect_err(move |err| {
+                // Due to fxbug.dev/99755, the subscription will close
+                // if the servicesubscriber that created it is closed.
+                // The bug tracking the specific issue this fixes is <b/241818894>.
+                // TODO(fxbug.dev/99755): Remove this line once fxbug.dev/99755 is fixed.
+                let _ = subscriber.clone();
+
                 error!("service_subscription: {:?}", err);
             });
 
@@ -394,7 +405,7 @@ impl DiscoveryProxy {
         // Trim the `local.` part.
         let mut instance_name = name_local_domain.trim_end_matches(LOCAL_DOMAIN);
 
-        // Remove the trailing `.udp.` or `.tcp.`
+        // Remove the trailing `._udp.` or `._tcp.`
         if let Some(i) = instance_name.trim_end_matches('.').rfind("._") {
             instance_name = &instance_name[..i];
         }
@@ -576,7 +587,7 @@ impl DiscoveryProxy {
 
         self.subscriptions.lock().retain(|k, v| {
             if let Poll::Ready(ret) = v.poll_unpin(cx) {
-                warn!("Subscription to {:?} has stopped: {:?}", k, ret);
+                warn!("Subscription to {:?} has stopped unexpectedly: {:?}", k, ret);
                 false
             } else {
                 true
