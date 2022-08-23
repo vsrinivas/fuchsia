@@ -252,7 +252,6 @@
             protocol: [
                 "fuchsia.ui.activity.control.Control",
                 "fuchsia.ui.activity.Provider",
-                "fuchsia.ui.activity.Tracker",
             ],
             from: "parent",
             to: "#session",

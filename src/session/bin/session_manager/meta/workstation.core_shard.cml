@@ -21,10 +21,7 @@
             to: [ "#session-manager" ],
         },
         {
-            protocol: [
-                "fuchsia.ui.activity.Provider",
-                "fuchsia.ui.activity.Tracker",
-            ],
+            protocol: [ "fuchsia.ui.activity.Provider" ],
             from: "#activity",
             to: "#session-manager",
         },
