@@ -82,7 +82,6 @@ group("cmx_allowlist") {
     "//src/connectivity/network/mdns/service:packet_reader_fuzzer_component_manifest_compile",
     "//src/connectivity/network/netstack:component-legacy_manifest_compile",
     "//src/connectivity/network/netstack3/core:fuzz-single-device_component_manifest_compile",
-    "//src/connectivity/wlan/testing/wlan-devmgr:wlan-devmgr_manifest_compile",
     "//src/connectivity/wlan/wlancfg:fuzz_saved_networks_manager_store_component_manifest_compile",
     "//src/developer/build_info:build-info-legacy_manifest_compile",
     "//src/developer/debug/zxdb/expr:expr_parser_fuzzer_component_manifest_compile",

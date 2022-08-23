@@ -67,7 +67,6 @@ executable("isolated_devmgr") {
   # STOP: Do not add any new entries to this allow list. Use //sdk/lib/driver_test_realm instead.
   visibility = [
     "//src/connectivity/openthread/tests/ot-devmgr/*",
-    "//src/connectivity/wlan/testing/wlan-devmgr/*",
     "//src/lib:lib",
     "//src/lib/isolated_devmgr/*",
     "//vendor/*",

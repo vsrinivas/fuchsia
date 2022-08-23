@@ -99,7 +99,7 @@ fuchsia_component("wlandevicemonitor-test-component") {
   deps = [
     ":bin_test",
     "//sdk/lib/driver_test_realm/simple",
-    "//src/connectivity/wlan/testing/wlan-devmgr:wlan_devmgr_deps",
+    "//src/connectivity/wlan/testing:wlan_test_driver_deps",
   ]
   manifest = "meta/wlandevicemonitor_bin_test.cml"
 }

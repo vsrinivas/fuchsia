@@ -10,7 +10,6 @@ rustc_library("wlantap-client") {
 
   deps = [
     "//sdk/fidl/fuchsia.wlan.tap:fuchsia.wlan.tap_rust",
-    "//src/connectivity/wlan/lib/isolated-devmgr",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/zircon/rust:fuchsia-zircon",

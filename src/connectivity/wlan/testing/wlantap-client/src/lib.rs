@@ -22,11 +22,6 @@ impl Wlantap {
         Ok(Self { file: OpenOptions::new().read(true).write(true).open(Path::new(PATH_STR))? })
     }
 
-    pub fn open_from_isolated_devmgr() -> Result<Self, Error> {
-        const PATH_STR: &str = "sys/test/wlantapctl";
-        Ok(Self { file: isolated_devmgr::IsolatedDeviceEnv::open_file(PATH_STR)? })
-    }
-
     pub fn create_phy(
         &self,
         mut config: wlantap::WlantapPhyConfig,
