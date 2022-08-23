@@ -128,6 +128,9 @@ async fn cleanup() -> Result<()> {
 pub async fn run(tests: Vec<TestCase>, timeout: Duration, case_timeout: Duration) -> Result<()> {
     let mut writer = std::io::stdout();
     let color = is_tty(&writer);
+    let green = green(color);
+    let red = red(color);
+    let nocol = nocol(color);
 
     let test_result = async {
         let num_tests = tests.len();
@@ -136,46 +139,26 @@ pub async fn run(tests: Vec<TestCase>, timeout: Duration, case_timeout: Duration
 
         let mut num_errs: usize = 0;
         for (i, tc) in tests.iter().enumerate().map(|(i, tc)| (i + 1, tc)) {
+            write!(&mut writer, "{nocol}{i}. {name} - ", name = tc.name)?;
+            writer.flush()?;
             match (tc.f)()
                 .on_timeout(case_timeout, || ffx_bail!("timed out after {:?}", case_timeout))
                 .await
             {
                 Ok(()) => {
-                    writeln!(
-                        &mut writer,
-                        "{}ok {}{} - {}",
-                        green(color),
-                        i,
-                        nocol(color),
-                        tc.name
-                    )?;
+                    writeln!(&mut writer, "{green}ok{nocol}",)?;
                 }
                 Err(err) => {
-                    writeln!(
-                        &mut writer,
-                        "{}not ok {}{} - {} {:?}",
-                        red(color),
-                        i,
-                        nocol(color),
-                        tc.name,
-                        err
-                    )?;
+                    writeln!(&mut writer, "{red}not ok{nocol}:\n{err:?}\n",)?;
                     num_errs = num_errs + 1;
                 }
             }
         }
 
         if num_errs != 0 {
-            ffx_bail!("{}{}/{} failed{}", red(color), num_errs, num_tests, nocol(color));
+            ffx_bail!("{red}{num_errs}/{num_tests} failed{nocol}");
         } else {
-            writeln!(
-                &mut writer,
-                "{}{}/{} passed{}",
-                green(color),
-                num_tests,
-                num_tests,
-                nocol(color)
-            )?;
+            writeln!(&mut writer, "{green}{num_tests}/{num_tests} passed{nocol}",)?;
         }
 
         Ok(())

@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::{assert_eq, test::*},
-    anyhow::*,
-};
+use crate::{assert_eq, test::*};
+use anyhow::*;
+use fuchsia_async::Duration;
 
 pub(crate) async fn test_echo() -> Result<()> {
     let isolate = new_isolate("daemon-echo").await?;
@@ -21,6 +20,11 @@ pub(crate) async fn test_config_flag() -> Result<()> {
     let isolate = new_isolate("daemon-config-flag").await?;
     let mut daemon = isolate.ffx_spawn(&["daemon", "start"])?;
 
+    // wait a bit to make sure the daemon has had a chance to start up, then check that it's
+    // still running
+    fuchsia_async::Timer::new(Duration::from_millis(100)).await;
+    assert_eq!(None, daemon.try_wait()?, "Daemon didn't stay up for at least 100ms after starting");
+
     // This should not terminate the daemon just started, as it won't
     // share an overnet socket with it.
     let mut ascendd_path2 = isolate.ascendd_path.clone();
@@ -34,10 +38,16 @@ pub(crate) async fn test_config_flag() -> Result<()> {
         ])
         .await?;
 
-    assert_eq!(None, daemon.try_wait()?);
+    // wait a bit again because the daemon doesn't immediately exit when it gets a stop message
+    fuchsia_async::Timer::new(Duration::from_millis(200)).await;
+    assert_eq!(
+        None,
+        daemon.try_wait()?,
+        "Daemon didn't stay up after the stop message was sent to the other daemon."
+    );
 
     let _out = isolate.ffx(&["daemon", "stop"]).await?;
-    daemon.wait()?;
+    fuchsia_async::unblock(move || daemon.wait()).await?;
 
     Ok(())
 }
