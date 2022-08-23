@@ -31,6 +31,18 @@ NodePtr FakeNode::CreateNewChildDest() {
   return graph_.CreateOrdinaryNode(std::nullopt, shared_from_this());
 }
 
+void FakeNode::DestroyChildSource(NodePtr child_source) {
+  if (on_destroy_child_source_) {
+    on_destroy_child_source_(child_source);
+  }
+}
+
+void FakeNode::DestroyChildDest(NodePtr child_dest) {
+  if (on_destroy_child_dest_) {
+    on_destroy_child_dest_(child_dest);
+  }
+}
+
 bool FakeNode::CanAcceptSource(NodePtr src) const {
   if (on_can_accept_source_) {
     return on_can_accept_source_(src);
@@ -94,6 +106,8 @@ FakeGraph::~FakeGraph() {
     // Clear closures that might have additional references.
     node->on_create_new_child_source_ = nullptr;
     node->on_create_new_child_dest_ = nullptr;
+    node->on_destroy_child_source_ = nullptr;
+    node->on_destroy_child_dest_ = nullptr;
     node->on_can_accept_source_ = nullptr;
     // Also clear PipelineStage sources. This is necessary in certain error-case tests, such as
     // tests that intentionally create cycles.

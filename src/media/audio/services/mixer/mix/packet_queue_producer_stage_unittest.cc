@@ -55,7 +55,7 @@ class PacketQueueProducerStageTest : public ::testing::Test {
   }
 
   void SendStartCommand(zx::time start_presentation_time, Fixed start_frame,
-                        fit::function<void()> callback = nullptr) {
+                        std::function<void()> callback = nullptr) {
     command_queue_->push(PacketQueueProducerStage::StartCommand{
         .start_presentation_time = start_presentation_time,
         .start_frame = start_frame,
@@ -63,7 +63,7 @@ class PacketQueueProducerStageTest : public ::testing::Test {
     });
   }
 
-  void SendStopCommand(Fixed stop_frame, fit::function<void()> callback = nullptr) {
+  void SendStopCommand(Fixed stop_frame, std::function<void()> callback = nullptr) {
     command_queue_->push(PacketQueueProducerStage::StopCommand{
         .stop_frame = stop_frame,
         .callback = std::move(callback),

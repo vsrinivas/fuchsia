@@ -39,6 +39,18 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
     on_create_new_child_dest_ = std::move(handler);
   }
 
+  // Register a handler for `DestroyChildSource`.
+  // If a handler is not registered, a default handler is used.
+  void SetOnDestroyChildSource(std::function<void(NodePtr)> handler) {
+    on_destroy_child_source_ = std::move(handler);
+  }
+
+  // Register a handler for `DestroyChildDest`.
+  // If a handler is not registered, a default handler is used.
+  void SetOnDestroyChildDest(std::function<void(NodePtr)> handler) {
+    on_destroy_child_dest_ = std::move(handler);
+  }
+
   // Register a handler for `CanAcceptSource`.
   // The default handler always returns true.
   void SetOnCreateCanAcceptSource(std::function<bool(NodePtr)> handler) {
@@ -54,18 +66,11 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
   }
 
  protected:
-  // Creates an ordinary child node to accept the next source edge.
-  // Returns nullptr if no more child source nodes can be created.
-  // REQUIRED: is_meta()
+  // Implements Node.
   NodePtr CreateNewChildSource() override;
-
-  // Creates an ordinary child node to accept the next destination edge.
-  // Returns nullptr if no more child destination nodes can be created.
-  // REQUIRED: is_meta()
   NodePtr CreateNewChildDest() override;
-
-  // Reports whether this node can accept source from the given src node.
-  // REQUIRED: !is_meta()
+  void DestroyChildSource(NodePtr child_source) override;
+  void DestroyChildDest(NodePtr child_dest) override;
   bool CanAcceptSource(NodePtr src) const override;
 
  private:
@@ -77,6 +82,8 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
   FakeGraph& graph_;
   std::function<NodePtr()> on_create_new_child_source_;
   std::function<NodePtr()> on_create_new_child_dest_;
+  std::function<void(NodePtr)> on_destroy_child_source_;
+  std::function<void(NodePtr)> on_destroy_child_dest_;
   std::function<bool(NodePtr)> on_can_accept_source_;
 };
 

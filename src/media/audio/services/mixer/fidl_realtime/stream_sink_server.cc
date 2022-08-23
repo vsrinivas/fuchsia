@@ -37,8 +37,8 @@ void StreamSinkServer::PutPacket(PutPacketRequestView request,
   ScopedThreadChecker checker(thread().checker());
 
   auto cleanup = fit::defer([this] {
-    if (on_method_complete_)
-      on_method_complete_();
+    ScopedThreadChecker checker(thread().checker());
+    ++fidl_calls_completed_;
   });
 
   // TODO(fxbug.dev/87651): For now, until the StreamSink API is finalized, we ignore errors in the
@@ -121,9 +121,8 @@ void StreamSinkServer::PutPacket(PutPacketRequestView request,
 void StreamSinkServer::End(EndRequestView request, EndCompleter::Sync& completer) {
   // This is a no-op. We don't need to tell the mix threads when a stream has "ended".
   // It's sufficient to let the queue stay empty.
-  if (on_method_complete_) {
-    on_method_complete_();
-  }
+  ScopedThreadChecker checker(thread().checker());
+  ++fidl_calls_completed_;
 }
 
 void StreamSinkServer::Clear(ClearRequestView request, ClearCompleter::Sync& completer) {
@@ -131,8 +130,8 @@ void StreamSinkServer::Clear(ClearRequestView request, ClearCompleter::Sync& com
   ScopedThreadChecker checker(thread().checker());
 
   auto cleanup = fit::defer([this] {
-    if (on_method_complete_)
-      on_method_complete_();
+    ScopedThreadChecker checker(thread().checker());
+    ++fidl_calls_completed_;
   });
 
   // Drop the fence after all queues have been cleared.

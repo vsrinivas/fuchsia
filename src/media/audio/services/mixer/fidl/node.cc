@@ -149,6 +149,7 @@ void Node::RemoveChildSource(NodePtr child_source) {
   const auto it = std::find(child_sources_.begin(), child_sources_.end(), child_source);
   FX_CHECK(it != child_sources_.end());
   child_sources_.erase(it);
+  DestroyChildSource(child_source);
 }
 
 void Node::RemoveChildDest(NodePtr child_dest) {
@@ -158,6 +159,7 @@ void Node::RemoveChildDest(NodePtr child_dest) {
   const auto it = std::find(child_dests_.begin(), child_dests_.end(), child_dest);
   FX_CHECK(it != child_dests_.end());
   child_dests_.erase(it);
+  DestroyChildDest(child_dest);
 }
 
 fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdge(

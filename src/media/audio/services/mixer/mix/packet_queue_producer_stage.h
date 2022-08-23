@@ -6,11 +6,11 @@
 #define SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_PACKET_QUEUE_PRODUCER_STAGE_H_
 
 #include <fidl/fuchsia.audio.mixer/cpp/wire.h>
-#include <lib/fit/function.h>
 #include <lib/fpromise/result.h>
 #include <lib/zx/time.h>
 
 #include <deque>
+#include <functional>
 #include <optional>
 #include <utility>
 
@@ -46,7 +46,7 @@ class PacketQueueProducerStage : public ProducerStage {
     Fixed start_frame;
     // Callback invoked after the producer has started.
     // Optional: can be nullptr.
-    fit::function<void()> callback;
+    std::function<void()> callback;
   };
 
   struct StopCommand {
@@ -56,7 +56,7 @@ class PacketQueueProducerStage : public ProducerStage {
     Fixed stop_frame;
     // Callback invoked after the producer has stopped.
     // Optional: can be nullptr.
-    fit::function<void()> callback;
+    std::function<void()> callback;
   };
 
   // Commands can arrive in any order, except for Start and Stop, which must arrive in an
@@ -93,7 +93,7 @@ class PacketQueueProducerStage : public ProducerStage {
 
   // Registers a callback to invoke when a packet underflows.
   // The duration estimates the packet's lateness relative to the system monotonic clock.
-  void SetUnderflowReporter(fit::function<void(zx::duration)> underflow_reporter) {
+  void SetUnderflowReporter(std::function<void(zx::duration)> underflow_reporter) {
     pending_packets_.SetUnderflowReporter(std::move(underflow_reporter));
   }
 
@@ -157,7 +157,7 @@ class PacketQueueProducerStage : public ProducerStage {
 
     // Callback invoked after this command is applied. This is always nullptr in
     // `last_pending_start_or_stop_`.
-    fit::function<void()> callback;
+    std::function<void()> callback;
   };
 
   // Asynchronous commands are received from pending_commands_. As commands are popped from this

@@ -38,6 +38,9 @@ class StreamSinkServer : public BaseFidlServer<StreamSinkServer, fuchsia_media2:
       std::shared_ptr<const FidlThread> thread,
       fidl::ServerEnd<fuchsia_media2::StreamSink> server_end, Args args);
 
+  // Returns the format of packets received by this StreamSink.
+  const Format& format() const { return format_; }
+
   // Adds an outgoing producer queue. Incoming FIDL commands are forwarded to each queue.
   void AddProducerQueue(std::shared_ptr<CommandQueue> q) TA_REQ(thread().checker());
 
@@ -54,6 +57,7 @@ class StreamSinkServer : public BaseFidlServer<StreamSinkServer, fuchsia_media2:
   static inline constexpr std::string_view kName = "StreamSinkServer";
   template <class ServerT, class ProtocolT>
   friend class BaseFidlServer;
+  friend class TestStreamSinkServerAndClient;
 
   explicit StreamSinkServer(Args args);
 
@@ -66,18 +70,17 @@ class StreamSinkServer : public BaseFidlServer<StreamSinkServer, fuchsia_media2:
   const TimelineRate frac_frames_per_media_ticks_;
   const std::unordered_map<uint32_t, std::shared_ptr<MemoryMappedBuffer>> payload_buffers_;
 
-  std::unordered_map<CommandQueue*, std::shared_ptr<CommandQueue>> queues_
-      TA_GUARDED(thread().checker());
+  TA_GUARDED(thread().checker())
+  std::unordered_map<CommandQueue*, std::shared_ptr<CommandQueue>> queues_;
 
   // The frame timestamp for the first frame in the next continuous packet.
   // Defaults to 0 for the first packet.
-  Fixed next_continuous_frame_{0};
+  TA_GUARDED(thread().checker()) Fixed next_continuous_frame_{0};
 
-  // If set, called after each FIDL method call completes. This is exclusively for tests: since
+  // Incremented after each FIDL method call completes. This is read exclusively in tests: since
   // StreamSink uses one-way protocols, tests cannot wait for FIDL call completion without a
   // backdoor like this.
-  friend class StreamSinkServerTest;
-  std::function<void()> on_method_complete_;
+  TA_GUARDED(thread().checker()) int64_t fidl_calls_completed_{0};
 };
 
 }  // namespace media_audio

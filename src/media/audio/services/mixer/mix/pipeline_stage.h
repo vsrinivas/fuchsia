@@ -201,6 +201,10 @@ class PipelineStage {
   virtual void UpdatePresentationTimeToFracFrame(std::optional<TimelineFunction> f) = 0;
 
   // Sets the stage's thread.
+  // TODO(fxbug.dev/87651): Clarify from which thread this can be called and make `thread_` and
+  // ordinary (non-atomic) field. Probably:
+  // - Pass to ctor so the initial value is always written safely
+  // - Must call from thread_, unless thread_ is the detached thread, then can call from anywhere
   void set_thread(ThreadPtr thread) { std::atomic_store(&thread_, std::move(thread)); }
 
   // TODO(fxbug.dev/87651): Add functionality to set presentation delay.

@@ -546,8 +546,15 @@ TEST_F(NodeDeleteEdgeTest, OrdinaryToMetaSuccess) {
   auto dest = graph.node(2);
 
   auto src_stage = src->fake_pipeline_stage();
-  auto dest_stage =
-      std::static_pointer_cast<FakeNode>(dest->child_sources()[0])->fake_pipeline_stage();
+  auto dest_child_source = std::static_pointer_cast<FakeNode>(dest->child_sources()[0]);
+  auto dest_stage = dest_child_source->fake_pipeline_stage();
+
+  bool dest_destroyed = false;
+  dest->SetOnDestroyChildSource(
+      [&dest_destroyed, expected = dest_child_source](NodePtr child_source) {
+        EXPECT_EQ(child_source, expected);
+        dest_destroyed = true;
+      });
 
   auto result = Node::DeleteEdge(q, src, dest, detached_thread_);
   ASSERT_TRUE(result.is_ok());
@@ -556,6 +563,7 @@ TEST_F(NodeDeleteEdgeTest, OrdinaryToMetaSuccess) {
   EXPECT_EQ(src->pipeline_stage_thread(), detached_thread_);
   EXPECT_EQ(dest->child_sources().size(), 0u);
   EXPECT_EQ(dest->child_dests().size(), 0u);
+  EXPECT_TRUE(dest_destroyed);
 
   CheckPipelineStagesAfterDelete(q, src_stage, dest_stage);
 }
@@ -597,8 +605,15 @@ TEST_F(NodeDeleteEdgeTest, MetaToOrdinarySuccess) {
   auto src = graph.node(1);
   auto dest = graph.node(2);
 
-  auto src_stage = std::static_pointer_cast<FakeNode>(src->child_dests()[0])->fake_pipeline_stage();
+  auto src_child_dest = std::static_pointer_cast<FakeNode>(src->child_dests()[0]);
+  auto src_stage = src_child_dest->fake_pipeline_stage();
   auto dest_stage = dest->fake_pipeline_stage();
+
+  bool src_destroyed = false;
+  src->SetOnDestroyChildDest([&src_destroyed, expected = src_child_dest](NodePtr child_dest) {
+    EXPECT_EQ(child_dest, expected);
+    src_destroyed = true;
+  });
 
   auto result = Node::DeleteEdge(q, src, dest, detached_thread_);
   ASSERT_TRUE(result.is_ok());
@@ -607,6 +622,7 @@ TEST_F(NodeDeleteEdgeTest, MetaToOrdinarySuccess) {
   EXPECT_EQ(src->child_dests().size(), 0u);
   EXPECT_EQ(dest->sources().size(), 0u);
   EXPECT_EQ(dest->pipeline_stage_thread(), fake_thread_);
+  EXPECT_TRUE(src_destroyed);
 
   CheckPipelineStagesAfterDelete(q, src_stage, dest_stage);
 }
@@ -659,9 +675,24 @@ TEST_F(NodeDeleteEdgeTest, MetaToMetaSuccess) {
   auto src = graph.node(1);
   auto dest = graph.node(2);
 
-  auto src_stage = std::static_pointer_cast<FakeNode>(src->child_dests()[0])->fake_pipeline_stage();
-  auto dest_stage =
-      std::static_pointer_cast<FakeNode>(dest->child_sources()[0])->fake_pipeline_stage();
+  auto src_child_dest = std::static_pointer_cast<FakeNode>(src->child_dests()[0]);
+  auto dest_child_source = std::static_pointer_cast<FakeNode>(dest->child_sources()[0]);
+
+  auto src_stage = src_child_dest->fake_pipeline_stage();
+  auto dest_stage = dest_child_source->fake_pipeline_stage();
+
+  bool src_destroyed = false;
+  src->SetOnDestroyChildDest([&src_destroyed, expected = src_child_dest](NodePtr child_dest) {
+    EXPECT_EQ(child_dest, expected);
+    src_destroyed = true;
+  });
+
+  bool dest_destroyed = false;
+  dest->SetOnDestroyChildSource(
+      [&dest_destroyed, expected = dest_child_source](NodePtr child_source) {
+        EXPECT_EQ(child_source, expected);
+        dest_destroyed = true;
+      });
 
   auto result = Node::DeleteEdge(q, src, dest, detached_thread_);
   ASSERT_TRUE(result.is_ok());
@@ -670,6 +701,8 @@ TEST_F(NodeDeleteEdgeTest, MetaToMetaSuccess) {
   EXPECT_EQ(src->child_dests().size(), 0u);
   EXPECT_EQ(dest->child_sources().size(), 0u);
   EXPECT_EQ(dest->child_dests().size(), 0u);
+  EXPECT_TRUE(src_destroyed);
+  EXPECT_TRUE(dest_destroyed);
 
   CheckPipelineStagesAfterDelete(q, src_stage, dest_stage);
 }

@@ -54,6 +54,7 @@ class TestServerAndClient {
   TestServerAndClient& operator=(TestServerAndClient&&) = default;
 
   ServerT& server() { return *server_; }
+  std::shared_ptr<ServerT> server_ptr() { return server_; }
   fidl::WireSyncClient<Protocol>& client() { return client_; }
 
  private:

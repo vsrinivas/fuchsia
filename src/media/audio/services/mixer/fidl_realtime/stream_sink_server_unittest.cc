@@ -13,7 +13,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/media/audio/services/common/testing/test_server_and_client.h"
+#include "src/media/audio/services/mixer/fidl_realtime/testing/test_stream_sink_server_and_client.h"
 #include "src/media/audio/services/mixer/mix/testing/test_fence.h"
 
 namespace media_audio {
@@ -63,104 +63,23 @@ MATCHER_P(PushPacketCommandEq, want_packet, "") {
 class StreamSinkServerTest : public ::testing::Test {
  public:
   void SetUp() {
-    zx::vmo vmo;
-    ASSERT_EQ(zx::vmo::create(kBufferSize, 0, &vmo), ZX_OK);
-
-    auto buffer_result = MemoryMappedBuffer::Create(vmo, false);
-    ASSERT_TRUE(buffer_result.is_ok()) << buffer_result.status_string();
-
-    buffer_ = *buffer_result;
-    thread_ = FidlThread::CreateFromNewThread("test_fidl_thread");
-    stream_sink_wrapper_ = std::make_unique<TestServerAndClient<StreamSinkServer>>(
-        thread_, StreamSinkServer::Args{
-                     .format = kFormat,
-                     .media_ticks_per_ns = kMediaTicksPerNs,
-                     .payload_buffers = {{{kBufferId, buffer_}}},
-                 });
-
-    stream_sink_server().on_method_complete_ = [this]() {
-      std::unique_lock<std::mutex> lock(mutex_);
-      calls_completed_++;
-      cvar_.notify_all();
-    };
+    stream_sink_ = std::make_unique<TestStreamSinkServerAndClient>(thread_, kBufferId, kBufferSize,
+                                                                   kFormat, kMediaTicksPerNs);
   }
 
-  void TearDown() {
-    // Close the client and wait until the server shuts down.
-    stream_sink_wrapper_.reset();
-  }
-
-  StreamSinkServer& stream_sink_server() { return stream_sink_wrapper_->server(); }
-  fidl::WireSyncClient<fuchsia_media2::StreamSink>& stream_sink_client() {
-    return stream_sink_wrapper_->client();
-  }
-
-  void* BufferOffset(int64_t offset) { return static_cast<char*>(buffer_->start()) + offset; }
-
-  void AddProducerQueue(std::shared_ptr<CommandQueue> q) {
-    libsync::Completion done;
-    thread_->PostTask([this, q, &done]() {
-      ScopedThreadChecker checker(stream_sink_server().thread().checker());
-      stream_sink_server().AddProducerQueue(q);
-      done.Signal();
-    });
-    ASSERT_EQ(done.Wait(zx::sec(5)), ZX_OK);
-  }
-
-  void RemoveProducerQueue(std::shared_ptr<CommandQueue> q) {
-    libsync::Completion done;
-    thread_->PostTask([this, q, &done]() {
-      ScopedThreadChecker checker(stream_sink_server().thread().checker());
-      stream_sink_server().RemoveProducerQueue(q);
-      done.Signal();
-    });
-    ASSERT_EQ(done.Wait(zx::sec(5)), ZX_OK);
-  }
-
-  void PutPacket(fuchsia_media2::wire::PayloadRange payload,
-                 fuchsia_media2::wire::PacketTimestamp timestamp, zx::eventpair fence) {
-    std::vector<fuchsia_media2::wire::PayloadRange> payloads{payload};
-    auto result = stream_sink_client()->PutPacket(
-        {
-            .payload = fidl::VectorView<fuchsia_media2::wire::PayloadRange>(arena_, payloads),
-            .timestamp = timestamp,
-        },
-        std::move(fence));
-
-    ASSERT_TRUE(result.ok()) << result.status_string();
-    ASSERT_TRUE(WaitForNextCall());
-  }
-
-  // Blocks until the next FIDL call is completed.
-  bool WaitForNextCall() {
-    std::unique_lock<std::mutex> lock(mutex_);
-    if (cvar_.wait_for(lock, std::chrono::seconds(5),
-                       [this] { return calls_completed_ > calls_delivered_; })) {
-      calls_delivered_++;
-      return true;
-    }
-    return false;
-  }
+  TestStreamSinkServerAndClient& stream_sink() { return *stream_sink_; }
 
  protected:
   fidl::Arena<> arena_;
 
  private:
-  std::shared_ptr<MemoryMappedBuffer> buffer_;
-  std::shared_ptr<FidlThread> thread_;
-  std::unique_ptr<TestServerAndClient<StreamSinkServer>> stream_sink_wrapper_;
-
-  // The following fields are guarded by mutex_.
-  // We can't check this statically because thread-safety analysis doesn't support std::unique_lock.
-  std::mutex mutex_;
-  std::condition_variable cvar_;
-  int64_t calls_completed_{0};
-  int64_t calls_delivered_{0};
+  std::shared_ptr<FidlThread> thread_ = FidlThread::CreateFromNewThread("test_fidl_thread");
+  std::unique_ptr<TestStreamSinkServerAndClient> stream_sink_;
 };
 
 TEST_F(StreamSinkServerTest, ExplicitTimestamp) {
   auto queue = std::make_shared<CommandQueue>();
-  AddProducerQueue(queue);
+  ASSERT_NO_FATAL_FAILURE(stream_sink().AddProducerQueue(queue));
 
   // This timestamp is equivalent to 1s, since there is 1 media tick per 10ms reference time.
   // See kMediaTicksPerNs.
@@ -170,7 +89,7 @@ TEST_F(StreamSinkServerTest, ExplicitTimestamp) {
 
   {
     SCOPED_TRACE("send a 10ms packet with an explicit timestamp");
-    ASSERT_NO_FATAL_FAILURE(PutPacket(
+    ASSERT_NO_FATAL_FAILURE(stream_sink().PutPacket(
         {
             .buffer_id = kBufferId,
             .offset = 0,
@@ -182,7 +101,7 @@ TEST_F(StreamSinkServerTest, ExplicitTimestamp) {
 
   {
     SCOPED_TRACE("send a 1-frame packet with a 'continuous' timestamp");
-    ASSERT_NO_FATAL_FAILURE(PutPacket(
+    ASSERT_NO_FATAL_FAILURE(stream_sink().PutPacket(
         {
             .buffer_id = kBufferId,
             .offset = 0,
@@ -223,14 +142,14 @@ TEST_F(StreamSinkServerTest, ExplicitTimestamp) {
 
 TEST_F(StreamSinkServerTest, ContinuousTimestamps) {
   auto queue = std::make_shared<CommandQueue>();
-  AddProducerQueue(queue);
+  ASSERT_NO_FATAL_FAILURE(stream_sink().AddProducerQueue(queue));
 
   TestFence packet0_fence;
   TestFence packet1_fence;
 
   {
     SCOPED_TRACE("send first 'continuous' packet");
-    ASSERT_NO_FATAL_FAILURE(PutPacket(
+    ASSERT_NO_FATAL_FAILURE(stream_sink().PutPacket(
         {
             .buffer_id = kBufferId,
             .offset = 0,
@@ -242,7 +161,7 @@ TEST_F(StreamSinkServerTest, ContinuousTimestamps) {
 
   {
     SCOPED_TRACE("send second 'continuous' packet");
-    ASSERT_NO_FATAL_FAILURE(PutPacket(
+    ASSERT_NO_FATAL_FAILURE(stream_sink().PutPacket(
         {
             .buffer_id = kBufferId,
             .offset = 0,
@@ -282,12 +201,12 @@ TEST_F(StreamSinkServerTest, ContinuousTimestamps) {
 
 TEST_F(StreamSinkServerTest, PayloadZeroOffset) {
   auto queue = std::make_shared<CommandQueue>();
-  AddProducerQueue(queue);
+  ASSERT_NO_FATAL_FAILURE(stream_sink().AddProducerQueue(queue));
 
   TestFence fence;
   {
     SCOPED_TRACE("send a packet with zero offset");
-    ASSERT_NO_FATAL_FAILURE(PutPacket(
+    ASSERT_NO_FATAL_FAILURE(stream_sink().PutPacket(
         {
             .buffer_id = kBufferId,
             .offset = 0,
@@ -300,19 +219,20 @@ TEST_F(StreamSinkServerTest, PayloadZeroOffset) {
   auto cmd0 = queue->pop();
   ASSERT_TRUE(cmd0);
   ASSERT_TRUE(std::holds_alternative<PushPacketCommand>(*cmd0));
-  ASSERT_EQ(std::get<PushPacketCommand>(*cmd0).packet.payload(), BufferOffset(0));
+  ASSERT_EQ(std::get<PushPacketCommand>(*cmd0).packet.payload(),
+            stream_sink().PayloadBufferOffset(0));
 }
 
 TEST_F(StreamSinkServerTest, PayloadNonzeroOffset) {
   auto queue = std::make_shared<CommandQueue>();
-  AddProducerQueue(queue);
+  ASSERT_NO_FATAL_FAILURE(stream_sink().AddProducerQueue(queue));
 
   // Send a packet with a non-zero offset.
   const uint32_t kOffset = 42;
   TestFence fence;
   {
     SCOPED_TRACE("send a packet with non-zero offset");
-    ASSERT_NO_FATAL_FAILURE(PutPacket(
+    ASSERT_NO_FATAL_FAILURE(stream_sink().PutPacket(
         {
             .buffer_id = kBufferId,
             .offset = kOffset,
@@ -325,21 +245,22 @@ TEST_F(StreamSinkServerTest, PayloadNonzeroOffset) {
   auto cmd0 = queue->pop();
   ASSERT_TRUE(cmd0);
   ASSERT_TRUE(std::holds_alternative<PushPacketCommand>(*cmd0));
-  ASSERT_EQ(std::get<PushPacketCommand>(*cmd0).packet.payload(), BufferOffset(kOffset));
+  ASSERT_EQ(std::get<PushPacketCommand>(*cmd0).packet.payload(),
+            stream_sink().PayloadBufferOffset(kOffset));
 }
 
 TEST_F(StreamSinkServerTest, MultipleQueues) {
   auto queue0 = std::make_shared<CommandQueue>();
   auto queue1 = std::make_shared<CommandQueue>();
-  AddProducerQueue(queue0);
-  AddProducerQueue(queue1);
+  ASSERT_NO_FATAL_FAILURE(stream_sink().AddProducerQueue(queue0));
+  ASSERT_NO_FATAL_FAILURE(stream_sink().AddProducerQueue(queue1));
 
   TestFence packet0_fence;
   TestFence packet1_fence;
 
   {
     SCOPED_TRACE("send first continuous packet");
-    ASSERT_NO_FATAL_FAILURE(PutPacket(
+    ASSERT_NO_FATAL_FAILURE(stream_sink().PutPacket(
         {
             .buffer_id = kBufferId,
             .offset = 0,
@@ -367,11 +288,11 @@ TEST_F(StreamSinkServerTest, MultipleQueues) {
   ASSERT_TRUE(packet0_fence.Wait(zx::sec(5)));
 
   // Now remove queue0.
-  RemoveProducerQueue(queue0);
+  ASSERT_NO_FATAL_FAILURE(stream_sink().RemoveProducerQueue(queue0));
 
   {
     SCOPED_TRACE("send second continuous packet");
-    ASSERT_NO_FATAL_FAILURE(PutPacket(
+    ASSERT_NO_FATAL_FAILURE(stream_sink().PutPacket(
         {
             .buffer_id = kBufferId,
             .offset = 0,
@@ -396,15 +317,15 @@ TEST_F(StreamSinkServerTest, MultipleQueues) {
 
 TEST_F(StreamSinkServerTest, Clear) {
   auto queue = std::make_shared<CommandQueue>();
-  AddProducerQueue(queue);
+  ASSERT_NO_FATAL_FAILURE(stream_sink().AddProducerQueue(queue));
 
   TestFence fence;
 
   // Send a clear command.
   {
-    auto result = stream_sink_client()->Clear(false, fence.Take());
+    auto result = stream_sink().client()->Clear(false, fence.Take());
     ASSERT_TRUE(result.ok()) << result.status_string();
-    ASSERT_TRUE(WaitForNextCall());
+    ASSERT_TRUE(stream_sink().WaitForNextCall());
   }
 
   auto cmd0 = queue->pop();
@@ -418,11 +339,11 @@ TEST_F(StreamSinkServerTest, Clear) {
 
 TEST_F(StreamSinkServerTest, InvalidInputNoPayloadBuffer) {
   auto queue = std::make_shared<CommandQueue>();
-  AddProducerQueue(queue);
+  ASSERT_NO_FATAL_FAILURE(stream_sink().AddProducerQueue(queue));
 
   TestFence fence;
 
-  auto result = stream_sink_client()->PutPacket(
+  auto result = stream_sink().client()->PutPacket(
       {
           .payload = fidl::VectorView<fuchsia_media2::wire::PayloadRange>(arena_, 0),
           .timestamp = fuchsia_media2::wire::PacketTimestamp::WithUnspecifiedContinuous({}),
@@ -430,16 +351,16 @@ TEST_F(StreamSinkServerTest, InvalidInputNoPayloadBuffer) {
       fence.Take());
 
   ASSERT_TRUE(result.ok()) << result.status_string();
-  ASSERT_TRUE(WaitForNextCall());
+  ASSERT_TRUE(stream_sink().WaitForNextCall());
   ASSERT_EQ(queue->pop(), std::nullopt);
 }
 
 TEST_F(StreamSinkServerTest, InvalidInputUnknownPayloadBufferId) {
   auto queue = std::make_shared<CommandQueue>();
-  AddProducerQueue(queue);
+  ASSERT_NO_FATAL_FAILURE(stream_sink().AddProducerQueue(queue));
 
   TestFence fence;
-  ASSERT_NO_FATAL_FAILURE(PutPacket(
+  ASSERT_NO_FATAL_FAILURE(stream_sink().PutPacket(
       {
           .buffer_id = kBufferId + 1,
           .offset = 0,
@@ -452,10 +373,10 @@ TEST_F(StreamSinkServerTest, InvalidInputUnknownPayloadBufferId) {
 
 TEST_F(StreamSinkServerTest, InvalidInputPayloadBelowRange) {
   auto queue = std::make_shared<CommandQueue>();
-  AddProducerQueue(queue);
+  ASSERT_NO_FATAL_FAILURE(stream_sink().AddProducerQueue(queue));
 
   TestFence fence;
-  ASSERT_NO_FATAL_FAILURE(PutPacket(
+  ASSERT_NO_FATAL_FAILURE(stream_sink().PutPacket(
       {
           .buffer_id = kBufferId,
           .offset = static_cast<uint64_t>(-1),
@@ -468,10 +389,10 @@ TEST_F(StreamSinkServerTest, InvalidInputPayloadBelowRange) {
 
 TEST_F(StreamSinkServerTest, InvalidInputPayloadAboveRange) {
   auto queue = std::make_shared<CommandQueue>();
-  AddProducerQueue(queue);
+  ASSERT_NO_FATAL_FAILURE(stream_sink().AddProducerQueue(queue));
 
   TestFence fence;
-  ASSERT_NO_FATAL_FAILURE(PutPacket(
+  ASSERT_NO_FATAL_FAILURE(stream_sink().PutPacket(
       {
           .buffer_id = kBufferId,
           .offset = kBufferSize - kFormat.bytes_per_frame() + 1,
@@ -484,10 +405,10 @@ TEST_F(StreamSinkServerTest, InvalidInputPayloadAboveRange) {
 
 TEST_F(StreamSinkServerTest, InvalidInputPayloadNonIntegralFrames) {
   auto queue = std::make_shared<CommandQueue>();
-  AddProducerQueue(queue);
+  ASSERT_NO_FATAL_FAILURE(stream_sink().AddProducerQueue(queue));
 
   TestFence fence;
-  ASSERT_NO_FATAL_FAILURE(PutPacket(
+  ASSERT_NO_FATAL_FAILURE(stream_sink().PutPacket(
       {
           .buffer_id = kBufferId,
           .offset = 0,

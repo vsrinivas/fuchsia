@@ -163,15 +163,32 @@ class Node {
 
   // Creates an ordinary child node to accept the next source edge.
   // Returns nullptr if no more child source nodes can be created.
+  //
   // REQUIRED: is_meta()
   virtual NodePtr CreateNewChildSource() = 0;
 
   // Creates an ordinary child node to accept the next destination edge.
   // Returns nullptr if no more child destination nodes can be created.
+  //
   // REQUIRED: is_meta()
   virtual NodePtr CreateNewChildDest() = 0;
 
+  // Called just after a source edge is removed from a meta node. This allows subclasses to delete
+  // any bookkeeping for that edge. This does not need to be reimplemented by all subclasses. The
+  // default implementation is a no-op.
+  //
+  // REQUIRED: is_meta()
+  virtual void DestroyChildSource(NodePtr child_source) {}
+
+  // Called just after a destination edge is removed from a meta node. This allows subclasses to
+  // delete any bookkeeping for that edge. This does not need to be reimplemented by all subclasses.
+  // The default implementation is a no-op.
+  //
+  // REQUIRED: is_meta()
+  virtual void DestroyChildDest(NodePtr child_dest) {}
+
   // Reports whether this node can accept source from the given src node.
+  //
   // REQUIRED: !is_meta()
   virtual bool CanAcceptSource(NodePtr src) const = 0;
 
