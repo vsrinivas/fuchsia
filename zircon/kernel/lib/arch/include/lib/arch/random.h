@@ -23,10 +23,14 @@ struct Random {
   // If this returns false, it's not safe to call Get()!
   [[gnu::const]] static bool Supported();
 
-  // Fetch a random value if it can be gotten quickly.
-  // Returns std::nullopt if no value is immediately available.
-  // Simply looping will eventually make one available.
-  static std::optional<uint64_t> Get();
+  // Fetch a random value if it can be gotten quickly.  If the hardware doesn't
+  // succeed on the first try, This does a recommended standard number of
+  // retries by default (argument is std::nullopt), or the exact number passed.
+  // Returns std::nullopt if no value is immediately available.  Simply looping
+  // will eventually make one available, but on a CPU not stressed with other
+  // uses of the RNG hardware the standard retries should suffice so this
+  // failing should be considered unusual.
+  static std::optional<uint64_t> Get(std::optional<unsigned int> retries = std::nullopt);
 };
 
 extern template struct Random<false>;

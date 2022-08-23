@@ -247,6 +247,8 @@ the identifiers are expected to be one of the following:
 
 **\[intel/vol4\]** ~ [Intel® 64 and IA-32 Architectures Software Developer's Manual Volume 4: Model-Specific Registers](https://software.intel.com/content/www/us/en/develop/download/intel-64-and-ia-32-architectures-software-developers-manual-volume-4-model-specific-registers.html), May 2020
 
+**\[intel/drng\]** ~ [Intel® Digital Random Number Generator (DRNG) Software Implementation Guide](https://www.intel.com/content/dam/develop/external/us/en/documents/drng-software-implementation-guide-2-1-185467.pdf), Oct 2018
+
 **\[amd/vol1\]** ~ [AMD64 Architecture Programmer’s Manual Volume 1: Application Programming](https://www.amd.com/system/files/TechDocs/24592.pdf), December 2017
 
 **\[amd/vol2\]** ~ [AMD64 Architecture Programmer’s Manual Volume 2: System Programming](https://www.amd.com/system/files/TechDocs/24593.pdf), May 2020

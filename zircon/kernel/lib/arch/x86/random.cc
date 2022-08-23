@@ -16,8 +16,22 @@ std::optional<uint64_t> UseIntrinsic() {
   return std::nullopt;
 }
 
-#ifdef __x86_64__
+// The `rdrand` and `rdseed` instructions might fail if the system is under
+// heavy load. Intel recommends wrapping them in a limited retry-loop to
+// increase the chance of success.
+//
+// [intel/drng] 5.2.1 Retry Recommendations
+// For rdrand, a failure after 10 retries would indicate a CPU issue.
+//
+// [intel/drng] 5.3.1 Retry Recommendations
+// For rdseed, the guideline is to retry with calls to "pause" in between, and
+// give up after a short number of retries.
+// It is common for rdseed to fail if it is being called faster than it can
+// generate values. There are no guarantees that it will ever succeed.
+template <bool Reseed>
+constexpr int kRetries = Reseed ? 200 : 10;
 
+#ifdef __x86_64__
 template <>
 [[gnu::target("rdrnd")]] std::optional<uint64_t> UseIntrinsic<true>() {
   unsigned long long int value;
@@ -47,8 +61,17 @@ bool Random<Reseed>::Supported() {
 }
 
 template <bool Reseed>
-std::optional<uint64_t> Random<Reseed>::Get() {
-  return UseIntrinsic<Reseed>();
+std::optional<uint64_t> Random<Reseed>::Get(std::optional<unsigned int> retries) {
+  unsigned int i = retries.value_or(kRetries<Reseed>);
+  do {
+    if (auto result = UseIntrinsic<Reseed>(); result.has_value()) {
+      return result;
+    }
+    if constexpr (Reseed) {
+      arch::Yield();
+    }
+  } while (i-- > 0);
+  return std::nullopt;
 }
 
 template struct Random<false>;

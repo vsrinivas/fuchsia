@@ -11,6 +11,10 @@
 namespace arch {
 namespace {
 
+// TODO(mcgrathr): citation about recommended retry counts
+template <bool Reseed>
+constexpr int kRetries = Reseed ? 200 : 10;
+
 // TODO(fxbug.dev/102847): GCC's <arm_acle.h> does have these, but we can't use
 // that header with -mgeneral-regs.
 #ifndef __clang__
@@ -26,13 +30,17 @@ bool Random<Reseed>::Supported() {
 }
 
 template <bool Reseed>
-std::optional<uint64_t> Random<Reseed>::Get() {
+std::optional<uint64_t> Random<Reseed>::Get(std::optional<unsigned int> retries) {
   constexpr auto intrinsic = Reseed ? __rndrrs : __rndr;
 
-  uint64_t value;
-  if (intrinsic(&value) == 0) {
-    return value;
-  }
+  unsigned int i = retries.value_or(kRetries<Reseed>);
+  do {
+    uint64_t value;
+    if (intrinsic(&value) == 0) {
+      return value;
+    }
+    arch::Yield();
+  } while (i-- > 0);
 
   return std::nullopt;
 }
