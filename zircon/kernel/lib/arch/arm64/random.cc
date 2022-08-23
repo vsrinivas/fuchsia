@@ -9,6 +9,16 @@
 #include <lib/arch/random.h>
 
 namespace arch {
+namespace {
+
+// TODO(fxbug.dev/102847): GCC's <arm_acle.h> does have these, but we can't use
+// that header with -mgeneral-regs.
+#ifndef __clang__
+inline int __rndr(uint64_t* ptr) { return __builtin_aarch64_rndr(ptr); }
+inline int __rndrrs(uint64_t* ptr) { return __builtin_aarch64_rndrrs(ptr); }
+#endif
+
+}  // namespace
 
 template <bool Reseed>
 bool Random<Reseed>::Supported() {
@@ -17,28 +27,14 @@ bool Random<Reseed>::Supported() {
 
 template <bool Reseed>
 std::optional<uint64_t> Random<Reseed>::Get() {
+  constexpr auto intrinsic = Reseed ? __rndrrs : __rndr;
+
   uint64_t value;
-  uint32_t flag;
-
-#define READ_REGISTER(regname)                 \
-  __asm__ volatile(                            \
-      ".arch armv8.5-a+rng\n\t"                \
-      "mrs %[value], " #regname                \
-      "\n\t"                                   \
-      "cset %w[flag], ne"                      \
-      : [value] "=r"(value), [flag] "=r"(flag) \
-      :                                        \
-      : "cc")
-
-  if constexpr (Reseed) {
-    READ_REGISTER(RNDRRS);
-  } else {
-    READ_REGISTER(RNDR);
+  if (intrinsic(&value) == 0) {
+    return value;
   }
 
-#undef READ_REGISTER
-
-  return flag ? std::make_optional(value) : std::nullopt;
+  return std::nullopt;
 }
 
 template struct Random<false>;

@@ -11,14 +11,21 @@
 namespace arch {
 namespace {
 
+template <bool Reseed>
+std::optional<uint64_t> UseIntrinsic() {
+  return std::nullopt;
+}
+
 #ifdef __x86_64__
 
-[[gnu::target("rdrnd")]] std::optional<uint64_t> Rdrand() {
+template <>
+[[gnu::target("rdrnd")]] std::optional<uint64_t> UseIntrinsic<true>() {
   unsigned long long int value;
   return _rdrand64_step(&value) ? std::make_optional(value) : std::nullopt;
 }
 
-[[gnu::target("rdseed")]] std::optional<uint64_t> Rdseed() {
+template <>
+[[gnu::target("rdseed")]] std::optional<uint64_t> UseIntrinsic<false>() {
   unsigned long long int value;
   return _rdseed64_step(&value) ? std::make_optional(value) : std::nullopt;
 }
@@ -41,10 +48,7 @@ bool Random<Reseed>::Supported() {
 
 template <bool Reseed>
 std::optional<uint64_t> Random<Reseed>::Get() {
-#ifdef __x86_64__
-  return Reseed ? Rdseed() : Rdrand();
-#endif
-  return std::nullopt;
+  return UseIntrinsic<Reseed>();
 }
 
 template struct Random<false>;

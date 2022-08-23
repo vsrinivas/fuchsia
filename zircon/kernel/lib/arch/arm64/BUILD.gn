@@ -9,29 +9,45 @@ import("//zircon/system/ulib/hwreg/hwreg_asm_header.gni")
 
 zx_library("arm64") {
   visibility = [ "../*" ]
-  sources = [
-    "cache-ops.S",
-    "cache.cc",
-  ]
+
   include_dirs = [
     "include",
     "../include",
   ]
 
-  deps = [ ":gen-arm64-system-asm" ]
+  sdk = "source"
+  sdk_headers = []
   public_deps = [ "//zircon/system/ulib/hwreg:headers" ]
 
-  sdk = "source"
-  sdk_headers = [
-    "lib/arch/asm.h",
-    "lib/arch/intrin.h",
-    "lib/arch/ticks.h",
-    "lib/arch/zbi-boot.h",
+  sources = [
+    "cache-ops.S",
+    "cache.cc",
   ]
 
+  deps = [ ":gen-arm64-system-asm" ]
+
   if (!is_host) {
-    sources += [ "random.cc" ]
+    deps += [ ":random" ]
   }
+}
+
+source_set("random") {
+  visibility = [ ":*" ]
+
+  include_dirs = [
+    "include",
+    "../include",
+  ]
+  deps = [ "//zircon/system/ulib/hwreg" ]
+
+  sources = [ "random.cc" ]
+
+  configs += [ ":random.config" ]
+}
+
+config("random.config") {
+  visibility = [ ":*" ]
+  cflags = [ "-march=armv8.5-a+rng" ]
 }
 
 hwreg_asm_header("gen-arm64-system-asm") {
