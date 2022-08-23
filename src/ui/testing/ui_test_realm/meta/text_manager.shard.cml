@@ -20,6 +20,7 @@
             protocol: [
                 "fuchsia.ui.input.ImeService",
                 "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.keyboard.focus.Controller",
             ],
             from: "#text-manager",
         },

@@ -17,6 +17,10 @@
             name: "input-helper",
             url: "#meta/input-helper.cm",
         },
+        {
+            name: "virtual-keyboard-manager",
+            url: "#meta/virtual_keyboard_manager.cm",
+        },
     ],
     offer: [
         {
@@ -59,6 +63,21 @@
             protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
             to: [ "#input-helper" ],
+        },
+        {
+            protocol: "fuchsia.tracing.provider.Registry",
+            from: "parent",
+            to: [ "#virtual-keyboard-manager" ],
+        },
+        {
+            protocol: [ "fuchsia.ui.focus.FocusChainListenerRegistry" ],
+            from: "#scenic",
+            to: [ "#virtual-keyboard-manager" ],
+        },
+        {
+            protocol: [ "fuchsia.ui.keyboard.focus.Controller" ],
+            from: "#text-manager",
+            to: [ "#virtual-keyboard-manager" ],
         },
     ],
     expose: [
