@@ -13,12 +13,11 @@ pub const SERIALIZE_FILE_NAME: &str = "engine.json";
 /// Return a PathBuf with the path to the instance directory for this engine. If the "create" flag
 /// is set, the directory and its ancestors will be created if it doesn't already exist.
 pub async fn get_instance_dir(
-    ffx_config: &FfxConfigWrapper,
+    _ffx_config: &FfxConfigWrapper,
     instance_name: &str,
     create: bool,
 ) -> Result<PathBuf> {
-    let root_dir = ffx_config
-        .get(EMU_INSTANCE_ROOT_DIR)
+    let root_dir: String = ffx_config::get(EMU_INSTANCE_ROOT_DIR)
         .await
         .context("Error encountered accessing FFX config for the emulator instance root.")?;
     let path = PathBuf::from(root_dir).join(&instance_name);
@@ -49,10 +48,9 @@ pub async fn clean_up_instance_dir(path: &PathBuf) -> Result<()> {
 }
 
 /// Retrieve a list of all of the names of instances currently present on the local system.
-pub async fn get_all_instances(ffx_config: &FfxConfigWrapper) -> Result<Vec<String>> {
+pub async fn get_all_instances(_ffx_config: &FfxConfigWrapper) -> Result<Vec<String>> {
     let mut result = Vec::new();
-    let root_dir = ffx_config
-        .get(EMU_INSTANCE_ROOT_DIR)
+    let root_dir: String = ffx_config::get(EMU_INSTANCE_ROOT_DIR)
         .await
         .context("Error encountered accessing FFX config for the emulator instance root.")?;
     let buf = PathBuf::from(root_dir);
@@ -79,19 +77,22 @@ pub async fn get_all_instances(ffx_config: &FfxConfigWrapper) -> Result<Vec<Stri
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ffx_config::{query, ConfigLevel};
+    use serde_json::json;
     use std::fs::{remove_file, File};
     use tempfile::tempdir;
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_instance_dir() -> Result<()> {
-        let mut config = FfxConfigWrapper::new();
+        let _env = ffx_config::test_init().await.unwrap();
+        let config = FfxConfigWrapper::new();
         let temp_dir = tempdir()
             .expect("Couldn't get a temporary directory for testing.")
             .path()
             .to_str()
             .expect("Couldn't convert Path to str")
             .to_string();
-        config.overrides.insert(EMU_INSTANCE_ROOT_DIR, temp_dir.clone());
+        query(EMU_INSTANCE_ROOT_DIR).level(Some(ConfigLevel::User)).set(json!(temp_dir)).await?;
 
         // Create a new directory.
         let path1 = get_instance_dir(&config, "create_me", true).await?;
@@ -123,14 +124,15 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_all_instances() -> Result<()> {
-        let mut config = FfxConfigWrapper::new();
+        let _env = ffx_config::test_init().await.unwrap();
+        let config = FfxConfigWrapper::new();
         let temp_dir = tempdir()
             .expect("Couldn't get a temporary directory for testing.")
             .path()
             .to_str()
             .expect("Couldn't convert Path to str")
             .to_string();
-        config.overrides.insert(EMU_INSTANCE_ROOT_DIR, temp_dir.clone());
+        query(EMU_INSTANCE_ROOT_DIR).level(Some(ConfigLevel::User)).set(json!(temp_dir)).await?;
 
         // Create three mock instance directories, and make sure they're all included.
         let path1 = PathBuf::from(&temp_dir).join("path1");
@@ -178,14 +180,12 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_clean_up_instance_dir() -> Result<()> {
-        let mut config = FfxConfigWrapper::new();
         let temp_dir = tempdir()
             .expect("Couldn't get a temporary directory for testing.")
             .path()
             .to_str()
             .expect("Couldn't convert Path to str")
             .to_string();
-        config.overrides.insert(EMU_INSTANCE_ROOT_DIR, temp_dir.clone());
 
         let path1 = PathBuf::from(&temp_dir).join("path1");
         create_dir_all(path1.as_path())?;
@@ -202,6 +202,7 @@ mod tests {
         // Clean up an existing, empty directory
         assert!(clean_up_instance_dir(&path1).await.is_ok());
         assert!(!path1.exists());
+        assert!(path2.exists());
 
         // Clean up an existing, populated directory
         assert!(clean_up_instance_dir(&path2).await.is_ok());
