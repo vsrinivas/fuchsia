@@ -106,12 +106,6 @@ config("compiler") {
   }
 
   if (is_fuchsia) {
-    # TODO(mcgrathr): These should all be default in the compiler driver.
-    ldflags += [
-      "-Wl,-z,combreloc",
-      "-Wl,-z,text",
-    ]
-
     # ld.bfd doesn't support -z relro for the targets we use it for.
     if (!is_gcc || linker == "gold") {
       ldflags += [ "-Wl,-z,relro" ]
@@ -129,6 +123,8 @@ config("compiler") {
         "-Wl,--eh-frame-hdr",
         "-Wl,--hash-style=gnu",
         "-Wl,-z,now",
+        "-Wl,-z,combreloc",
+        "-Wl,-z,text",
       ]
 
       # In the Clang toolchain assembly files with no explicit marker don't
@@ -306,7 +302,7 @@ config("no_maybe_uninitialized") {
 }
 
 config("machine") {
-  if (is_fuchsia) {
+  if (is_fuchsia && is_gcc) {
     # TODO(fxbug.dev/32157): Really need to get this nailed down once and for all
     # and set by default in the compiler driver (Clang at least).
     ldflags = [ "-Wl,-z,max-page-size=4096" ]
