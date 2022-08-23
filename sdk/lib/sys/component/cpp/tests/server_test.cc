@@ -10,9 +10,9 @@
 #include <lib/fdio/directory.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fit/defer.h>
-#include <lib/service/llcpp/service.h>
 #include <lib/sys/component/cpp/handlers.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 
 #include <iostream>
@@ -129,7 +129,7 @@ TEST_F(ServerTest, ConnectsToDefaultMember) {
 
   // Connect to the `EchoService` at the 'default' instance.
   zx::status<EchoService::ServiceClient> open_result =
-      service::OpenServiceAt<EchoService>(zx::unowned_channel(svc_local));
+      component::OpenServiceAt<EchoService>(zx::unowned_channel(svc_local));
   ASSERT_TRUE(open_result.is_ok());
 
   EchoService::ServiceClient service = std::move(open_result.value());
@@ -159,7 +159,7 @@ TEST_F(ServerTest, ConnectsToOtherMember) {
 
   // Connect to the `EchoService` at the 'default' instance.
   zx::status<EchoService::ServiceClient> open_result =
-      service::OpenServiceAt<EchoService>(zx::unowned_channel(svc_local), "other");
+      component::OpenServiceAt<EchoService>(zx::unowned_channel(svc_local), "other");
   ASSERT_TRUE(open_result.is_ok());
 
   EchoService::ServiceClient service = std::move(open_result.value());

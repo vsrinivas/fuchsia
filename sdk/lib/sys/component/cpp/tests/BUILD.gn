@@ -11,6 +11,7 @@ group("tests") {
 
   deps = [
     ":component_cpp_outgoing_directory_tests",
+    ":component_cpp_service_client_tests",
     ":component_cpp_testing_realm_builder_tests",
   ]
 }
@@ -295,4 +296,37 @@ fuchsia_test_package("component_cpp_outgoing_directory_tests") {
     ":outgoing_directory_integration_test",
   ]
   deps = [ ":cpp_echo_service_server" ]
+}
+
+fidl("fidl.service.test") {
+  testonly = true
+  visibility = [ ":*" ]
+  sources = [ "test.test.fidl" ]
+}
+
+test("service_client_test") {
+  sources = [
+    "client_test.cc",
+    "server_test.cc",
+  ]
+  deps = [
+    ":fidl.service.test_cpp_wire",
+    "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
+    "//src/lib/storage/vfs/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fidl-async",
+    "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/zxtest",
+  ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+}
+
+fuchsia_unittest_package("component_cpp_service_client_tests") {
+  deps = [ ":service_client_test" ]
 }

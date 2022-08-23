@@ -18,6 +18,7 @@ config("fidl-llcpp-deprecated-raw-channels") {
   visibility = [
     "//examples/drivers/dotmatrix_display:bin",
     "//examples/drivers/dotmatrix_display:bin2",
+    "//sdk/lib/sys/component/cpp/tests:service_client_test",
     "//src/bringup/bin/pwrbtn-monitor",
     "//src/bringup/bin/sysinfo",
     "//src/bringup/bin/sysinfo:test",
@@ -198,7 +199,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//zircon/system/utest/device-enumeration",
     "//zircon/system/utest/dlfcn",
     "//zircon/system/utest/miscsvc",
-    "//zircon/system/utest/service:service-llcpp-test",
     "//zircon/system/utest/svchost",
     "//zircon/third_party/uapp/dash",
   ]

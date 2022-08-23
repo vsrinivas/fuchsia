@@ -31,7 +31,6 @@ group("tests") {
     "psutils:tests",
     "pty:tests",
     "qsort:tests",
-    "service:tests",
     "stdio:stdio-test-package",
     "sysconf:tests",
     "thread-safe-deleter:tests",

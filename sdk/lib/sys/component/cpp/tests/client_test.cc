@@ -6,7 +6,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 
@@ -119,7 +119,7 @@ class ClientTest : public zxtest::Test {
 };
 
 TEST_F(ClientTest, ConnectsToDefault) {
-  zx::status<EchoService::ServiceClient> open_result = service::OpenServiceAt<EchoService>(svc_);
+  zx::status<EchoService::ServiceClient> open_result = component::OpenServiceAt<EchoService>(svc_);
   ASSERT_TRUE(open_result.is_ok());
 
   EchoService::ServiceClient service = std::move(open_result.value());
@@ -140,7 +140,7 @@ TEST_F(ClientTest, ConnectsToDefault) {
 
 TEST_F(ClientTest, ConnectsToOther) {
   zx::status<EchoService::ServiceClient> open_result =
-      service::OpenServiceAt<EchoService>(svc_, "other");
+      component::OpenServiceAt<EchoService>(svc_, "other");
   ASSERT_TRUE(open_result.is_ok());
 
   EchoService::ServiceClient service = std::move(open_result.value());
@@ -165,16 +165,16 @@ TEST_F(ClientTest, FilePathTooLong) {
 
   // Use an instance name that is too long.
   zx::status<EchoService::ServiceClient> open_result =
-      service::OpenServiceAt<EchoService>(svc_, illegal_path);
+      component::OpenServiceAt<EchoService>(svc_, illegal_path);
   ASSERT_TRUE(open_result.is_error());
   ASSERT_EQ(open_result.status_value(), ZX_ERR_INVALID_ARGS);
 
   // Use a service name that is too long.
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
-  ASSERT_EQ(
-      service::OpenNamedServiceAt(svc_, illegal_path, "default", std::move(remote)).status_value(),
-      ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(component::OpenNamedServiceAt(svc_, illegal_path, "default", std::move(remote))
+                .status_value(),
+            ZX_ERR_INVALID_ARGS);
 }
 
 //
@@ -196,7 +196,7 @@ TEST(SingletonService, DefaultPath) {
   ASSERT_STREQ(path, "/svc/mock", "protocol path should be /svc/mock");
 }
 
-// Using a local filesystem, test that |service::ConnectAt| successfully sends
+// Using a local filesystem, test that |component::ConnectAt| successfully sends
 // an open request using the path |fidl::DiscoverableProtocolName<MockProtocol>|,
 // when connecting to the |MockProtocol| service.
 TEST(SingletonService, ConnectAt) {
@@ -219,13 +219,13 @@ TEST(SingletonService, ConnectAt) {
   loop.StartThread("SingletonService/ConnectAt");
 
   // Test connecting to that protocol.
-  auto client_end = service::ConnectAt<MockProtocol>(directory->client);
+  auto client_end = component::ConnectAt<MockProtocol>(directory->client);
   ASSERT_OK(client_end.status_value());
 
   auto endpoints = fidl::CreateEndpoints<MockProtocol>();
   ASSERT_OK(endpoints.status_value());
   {
-    zx::status<> status = service::ConnectAt(directory->client, std::move(endpoints->server));
+    zx::status<> status = component::ConnectAt(directory->client, std::move(endpoints->server));
     ASSERT_OK(status.status_value());
   }
 
@@ -244,7 +244,7 @@ TEST(SingletonService, ConnectAt) {
 //
 
 TEST_F(ClientTest, CloneServiceDirectory) {
-  auto svc_clone = service::Clone(svc_);
+  auto svc_clone = component::Clone(svc_);
   ASSERT_OK(svc_clone.status_value());
   static_assert(
       std::is_same_v<decltype(svc_clone.value()), fidl::ClientEnd<fuchsia_io::Directory>&>);
@@ -252,7 +252,7 @@ TEST_F(ClientTest, CloneServiceDirectory) {
 
   // Test that we can connect to services in the |svc_clone| directory.
   // Refer to |MockEchoService| for the directory layout.
-  auto client_end = service::ConnectAt<Echo>(
+  auto client_end = component::ConnectAt<Echo>(
       *svc_clone, (std::string(EchoService::Name) + "/default/foo").c_str());
   ASSERT_OK(client_end.status_value());
   auto echo = fidl::BindSyncClient(std::move(*client_end));
@@ -266,9 +266,9 @@ TEST(CloneService, Error) {
   auto bad_endpoint = fidl::CreateEndpoints<fuchsia_io::Directory>();
   bad_endpoint->server.reset();
 
-  auto failure = service::Clone(bad_endpoint->client);
+  auto failure = component::Clone(bad_endpoint->client);
   ASSERT_EQ(ZX_ERR_PEER_CLOSED, failure.status_value());
 
-  auto invalid = service::MaybeClone(bad_endpoint->client);
+  auto invalid = component::MaybeClone(bad_endpoint->client);
   ASSERT_FALSE(invalid.is_valid());
 }
