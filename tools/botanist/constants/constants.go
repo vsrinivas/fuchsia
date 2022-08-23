@@ -14,6 +14,7 @@ const (
 	SerialReadErrorMsg        = "error reading serial log line"
 	FailedToExtendFVMMsg      = "failed to extend fvm.blk"
 	CommandExceededTimeoutMsg = "Command exceeded timeout"
+	FailedToServeMsg          = "[package server] failed to serve"
 
 	NodenameEnvKey      = "FUCHSIA_NODENAME"
 	SSHKeyEnvKey        = "FUCHSIA_SSH_KEY"

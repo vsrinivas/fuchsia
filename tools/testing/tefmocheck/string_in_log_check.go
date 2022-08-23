@@ -351,7 +351,7 @@ func infraToolLogChecks() []FailureModeCheck {
 		},
 		// For local package server failures.
 		&stringInLogCheck{
-			String: "botanist DEBUG: [package server] failed",
+			String: fmt.Sprintf("botanist ERROR: %s", botanistconstants.FailedToServeMsg),
 			Type:   swarmingOutputType,
 		},
 		// For fxbug.dev/65073.

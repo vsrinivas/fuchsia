@@ -23,6 +23,7 @@ import (
 	"cloud.google.com/go/storage"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/pmhttp"
+	"go.fuchsia.dev/fuchsia/tools/botanist/constants"
 	"go.fuchsia.dev/fuchsia/tools/lib/gcsutil"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
@@ -265,14 +266,14 @@ func NewPackageServer(ctx context.Context, repoPath, remoteRepoURL, remoteBlobUR
 	pkgSrvStarted := make(chan struct{})
 	go func() {
 		addr := fmt.Sprintf("0.0.0.0:%d", port)
-		logger.Debugf(ctx, "starting package server on %s", addr)
+		logger.Debugf(ctx, "[package server] starting on %s", addr)
 		l, err := net.Listen("tcp", addr)
 		if err != nil {
-			logger.Errorf(ctx, "listening on %s failed: %s", addr, err)
+			logger.Errorf(ctx, "%s: listening on %s failed: %s", constants.FailedToServeMsg, addr, err)
 		}
 		close(pkgSrvStarted)
 		if err := pkgSrv.Serve(l); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logger.Errorf(ctx, "package server failed: %s", err)
+			logger.Errorf(ctx, "%s: %s", constants.FailedToServeMsg, err)
 		}
 	}()
 
