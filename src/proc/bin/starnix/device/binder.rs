@@ -972,7 +972,9 @@ enum Command {
     Reply(TransactionData),
     /// Notifies a binder thread that a transaction has completed.
     TransactionComplete,
-    /// The transaction was well formed but failed. Possible causes are a non-existant handle, no
+    /// Notifies a binder thread that a oneway transaction has been sent.
+    OnewayTransactionComplete,
+    /// The transaction was well formed but failed. Possible causes are a nonexistent handle, no
     /// more memory available to allocate a buffer.
     FailedReply,
     /// Notifies the initiator of a transaction that the recipient is dead.
@@ -985,24 +987,26 @@ impl Command {
     /// Returns the command's BR_* code for serialization.
     fn driver_return_code(&self) -> binder_driver_return_protocol {
         match self {
-            Command::AcquireRef(..) => binder_driver_return_protocol_BR_ACQUIRE,
-            Command::ReleaseRef(..) => binder_driver_return_protocol_BR_RELEASE,
-            Command::Error(..) => binder_driver_return_protocol_BR_ERROR,
-            Command::OnewayTransaction(..) | Command::Transaction { .. } => {
+            Self::AcquireRef(..) => binder_driver_return_protocol_BR_ACQUIRE,
+            Self::ReleaseRef(..) => binder_driver_return_protocol_BR_RELEASE,
+            Self::Error(..) => binder_driver_return_protocol_BR_ERROR,
+            Self::OnewayTransaction(..) | Self::Transaction { .. } => {
                 binder_driver_return_protocol_BR_TRANSACTION
             }
-            Command::Reply(..) => binder_driver_return_protocol_BR_REPLY,
-            Command::TransactionComplete => binder_driver_return_protocol_BR_TRANSACTION_COMPLETE,
-            Command::FailedReply => binder_driver_return_protocol_BR_FAILED_REPLY,
-            Command::DeadReply => binder_driver_return_protocol_BR_DEAD_REPLY,
-            Command::DeadBinder(..) => binder_driver_return_protocol_BR_DEAD_BINDER,
+            Self::Reply(..) => binder_driver_return_protocol_BR_REPLY,
+            Self::TransactionComplete | Self::OnewayTransactionComplete => {
+                binder_driver_return_protocol_BR_TRANSACTION_COMPLETE
+            }
+            Self::FailedReply => binder_driver_return_protocol_BR_FAILED_REPLY,
+            Self::DeadReply => binder_driver_return_protocol_BR_DEAD_REPLY,
+            Self::DeadBinder(..) => binder_driver_return_protocol_BR_DEAD_BINDER,
         }
     }
 
     /// Serializes and writes the command into userspace memory at `buffer`.
     fn write_to_memory(&self, mm: &MemoryManager, buffer: &UserBuffer) -> Result<usize, Errno> {
         match self {
-            Command::AcquireRef(obj) | Command::ReleaseRef(obj) => {
+            Self::AcquireRef(obj) | Self::ReleaseRef(obj) => {
                 #[repr(C, packed)]
                 #[derive(AsBytes)]
                 struct AcquireRefData {
@@ -1022,7 +1026,7 @@ impl Command {
                     },
                 )
             }
-            Command::Error(error_val) => {
+            Self::Error(error_val) => {
                 #[repr(C, packed)]
                 #[derive(AsBytes)]
                 struct ErrorData {
@@ -1037,9 +1041,7 @@ impl Command {
                     &ErrorData { command: self.driver_return_code(), error_val: *error_val },
                 )
             }
-            Command::OnewayTransaction(data)
-            | Command::Transaction { data, .. }
-            | Command::Reply(data) => {
+            Self::OnewayTransaction(data) | Self::Transaction { data, .. } | Self::Reply(data) => {
                 #[repr(C, packed)]
                 #[derive(AsBytes)]
                 struct TransactionData {
@@ -1054,13 +1056,16 @@ impl Command {
                     &TransactionData { command: self.driver_return_code(), data: data.as_bytes() },
                 )
             }
-            Command::TransactionComplete | Command::FailedReply | Command::DeadReply => {
+            Self::TransactionComplete
+            | Self::OnewayTransactionComplete
+            | Self::FailedReply
+            | Self::DeadReply => {
                 if buffer.length < std::mem::size_of::<binder_driver_return_protocol>() {
                     return error!(ENOMEM);
                 }
                 mm.write_object(UserRef::new(buffer.address), &self.driver_return_code())
             }
-            Command::DeadBinder(cookie) => {
+            Self::DeadBinder(cookie) => {
                 #[repr(C, packed)]
                 #[derive(AsBytes)]
                 struct DeadBinderData {
@@ -1841,7 +1846,7 @@ impl BinderDriver {
 
         let command = if data.transaction_data.flags & transaction_flags_TF_ONE_WAY != 0 {
             // The caller is not expecting a reply.
-            binder_thread.write().enqueue_command(Command::TransactionComplete);
+            binder_thread.write().enqueue_command(Command::OnewayTransactionComplete);
 
             // Register the transaction buffer.
             target_proc.active_transactions.lock().insert(
@@ -1987,22 +1992,23 @@ impl BinderDriver {
                 &mut *proc_command_queue
             };
 
-            if let Some(command) = command_queue.front() {
+            if let Some(command) = command_queue.pop_front() {
                 // Attempt to write the command to the thread's buffer.
                 let bytes_written = command.write_to_memory(&current_task.mm, read_buffer)?;
 
-                // SAFETY: There is an item in the queue since we're in the `Some` branch.
-                match command_queue.pop_front().unwrap() {
+                match command {
                     Command::Transaction { sender, .. } => {
                         // The transaction is synchronous and we're expected to give a reply, so
                         // push the transaction onto the transaction stack.
-                        thread_state.transactions.push(TransactionRole::Receiver(sender));
+                        let tx = TransactionRole::Receiver(sender);
+                        thread_state.transactions.push(tx);
                     }
                     Command::Reply(..) | Command::TransactionComplete => {
                         // A transaction is complete, pop it from the transaction stack.
-                        thread_state.transactions.pop();
+                        thread_state.transactions.pop().expect("transaction stack underflow!");
                     }
                     Command::OnewayTransaction(..)
+                    | Command::OnewayTransactionComplete
                     | Command::AcquireRef(..)
                     | Command::ReleaseRef(..)
                     | Command::Error(..)
