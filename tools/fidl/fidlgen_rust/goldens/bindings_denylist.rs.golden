@@ -578,7 +578,7 @@ impl DenyEachBindingProxyInterface for DenyEachBindingProxy {
         ) -> Result<(DenyEachBindingOnlyDenyCppResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| _value.0))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (a),
             0x290bad96051b1b92,
             fidl::encoding::DynamicFlags::empty(),
@@ -598,7 +598,7 @@ impl DenyEachBindingProxyInterface for DenyEachBindingProxy {
         ) -> Result<(DenyEachBindingOnlyDenyDartResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| _value.0))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (a),
             0x75384066a26d87d7,
             fidl::encoding::DynamicFlags::empty(),
@@ -617,7 +617,7 @@ impl DenyEachBindingProxyInterface for DenyEachBindingProxy {
         ) -> Result<(DenyEachBindingOnlyDenyGoResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| _value.0))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (a),
             0x657655b981478d99,
             fidl::encoding::DynamicFlags::empty(),
@@ -637,7 +637,7 @@ impl DenyEachBindingProxyInterface for DenyEachBindingProxy {
         ) -> Result<(DenyEachBindingOnlyDenyLibfuzzerResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| _value.0))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (a),
             0x1e4f89c329617b1e,
             fidl::encoding::DynamicFlags::empty(),
@@ -657,7 +657,7 @@ impl DenyEachBindingProxyInterface for DenyEachBindingProxy {
         ) -> Result<(DenyEachBindingOnlyDenySyzkallerResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| _value.0))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (a),
             0x202ee614a749e98a,
             fidl::encoding::DynamicFlags::empty(),

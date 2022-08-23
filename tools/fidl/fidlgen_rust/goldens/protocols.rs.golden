@@ -641,7 +641,7 @@ impl ChannelProtocolProxyInterface for ChannelProtocolProxy {
         fn transform(result: Result<(i64,), fidl::Error>) -> Result<(i64), fidl::Error> {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (a, b),
             0x7b8dd3d6c741c9c6,
             fidl::encoding::DynamicFlags::empty(),
@@ -658,7 +658,7 @@ impl ChannelProtocolProxyInterface for ChannelProtocolProxy {
         fn transform(result: Result<(), fidl::Error>) -> Result<(), fidl::Error> {
             result.map(|_value| ())
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (HandleWrapperObjectTypeNONERights2147483648::<fidl::Handle>(h)),
             0x836fa31201a0a65,
             fidl::encoding::DynamicFlags::empty(),
@@ -680,7 +680,7 @@ impl ChannelProtocolProxyInterface for ChannelProtocolProxy {
         ) -> Result<(fidl::Socket), fidl::Error> {
             result.map(|_value| _value.0.into_inner())
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (HandleWrapperObjectTypeSOCKETRights2147483648::<fidl::Socket>(a)),
             0x66dbcccc06f7f14f,
             fidl::encoding::DynamicFlags::empty(),
@@ -1659,7 +1659,7 @@ impl HandleRightsProtocolProxyInterface for HandleRightsProtocolProxy {
         ) -> Result<(fidl::Socket), fidl::Error> {
             result.map(|_value| _value.0.into_inner())
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (HandleWrapperObjectTypeSOCKETRights3::<fidl::Socket>(h)),
             0x52a8f194ac143547,
             fidl::encoding::DynamicFlags::empty(),
@@ -2358,7 +2358,7 @@ impl MethodWithUnionProxyInterface for MethodWithUnionProxy {
         ) -> Result<(Option<Box<TheUnion>>), fidl::Error> {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (u),
             0x393e7f5b2b821218,
             fidl::encoding::DynamicFlags::empty(),
@@ -2749,7 +2749,7 @@ impl TransitionalProxyInterface for TransitionalProxy {
         fn transform(result: Result<(i64,), fidl::Error>) -> Result<(i64), fidl::Error> {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (x),
             0x512cc1ba467fef08,
             fidl::encoding::DynamicFlags::empty(),
@@ -3287,7 +3287,7 @@ impl WithAndWithoutRequestResponseProxyInterface for WithAndWithoutRequestRespon
         fn transform(result: Result<(), fidl::Error>) -> Result<(), fidl::Error> {
             result.map(|_value| ())
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x16a329d17f458668,
             fidl::encoding::DynamicFlags::empty(),
@@ -3304,7 +3304,7 @@ impl WithAndWithoutRequestResponseProxyInterface for WithAndWithoutRequestRespon
         fn transform(result: Result<(String,), fidl::Error>) -> Result<(String), fidl::Error> {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x7d6b2fcf0e2a65bd,
             fidl::encoding::DynamicFlags::empty(),
@@ -3327,7 +3327,7 @@ impl WithAndWithoutRequestResponseProxyInterface for WithAndWithoutRequestRespon
         fn transform(result: Result<(), fidl::Error>) -> Result<(), fidl::Error> {
             result.map(|_value| ())
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (arg),
             0x27ee4d2bd405df5f,
             fidl::encoding::DynamicFlags::empty(),
@@ -3347,7 +3347,7 @@ impl WithAndWithoutRequestResponseProxyInterface for WithAndWithoutRequestRespon
         fn transform(result: Result<(String,), fidl::Error>) -> Result<(String), fidl::Error> {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (arg),
             0x590e91945d58f5b1,
             fidl::encoding::DynamicFlags::empty(),
@@ -4302,7 +4302,7 @@ impl WithErrorSyntaxProxyInterface for WithErrorSyntaxProxy {
         ) -> Result<(WithErrorSyntaxResponseAsStructResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| (_value.0, _value.1, _value.2)))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x3b902a6d8d24693,
             fidl::encoding::DynamicFlags::empty(),
@@ -4322,7 +4322,7 @@ impl WithErrorSyntaxProxyInterface for WithErrorSyntaxProxy {
         ) -> Result<(WithErrorSyntaxErrorAsPrimitiveResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| ()))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x602fd6bd920135e7,
             fidl::encoding::DynamicFlags::empty(),
@@ -4342,7 +4342,7 @@ impl WithErrorSyntaxProxyInterface for WithErrorSyntaxProxy {
         ) -> Result<(WithErrorSyntaxErrorAsEnumResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| ()))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x4c371e1673212f43,
             fidl::encoding::DynamicFlags::empty(),
@@ -4362,7 +4362,7 @@ impl WithErrorSyntaxProxyInterface for WithErrorSyntaxProxy {
         ) -> Result<(WithErrorSyntaxHandleInResultResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| _value.0.into_inner()))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x13092c5b835b0cbf,
             fidl::encoding::DynamicFlags::empty(),
@@ -5200,7 +5200,7 @@ impl WithProtocolEndsProxyInterface for WithProtocolEndsProxy {
         {
             result.map(|_value| _value.0.into_inner())
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
                 fidl::endpoints::ClientEnd<DiscoverableProtocolMarker>,
             >(in_)),
@@ -5232,7 +5232,7 @@ impl WithProtocolEndsProxyInterface for WithProtocolEndsProxy {
         ) -> Result<(fidl::endpoints::ServerEnd<DiscoverableProtocolMarker>), fidl::Error> {
             result.map(|_value| _value.0.into_inner())
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (HandleWrapperObjectTypeCHANNELRightsCHANNEL_DEFAULT::<
                 Option<fidl::endpoints::ServerEnd<DiscoverableProtocolMarker>>,
             >(in_)),
@@ -5256,7 +5256,7 @@ impl WithProtocolEndsProxyInterface for WithProtocolEndsProxy {
         ) -> Result<(ProtocolEnds), fidl::Error> {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (in_),
             0x3893f0baad26f5d5,
             fidl::encoding::DynamicFlags::empty(),

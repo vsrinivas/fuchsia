@@ -444,7 +444,7 @@ impl ParentProxyInterface for ParentProxy {
         ) -> Result<(fidl::endpoints::ClientEnd<ChildMarker>), fidl::Error> {
             result.map(|_value| _value.0.into_inner())
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0xc3cd963aafc873b,
             fidl::encoding::DynamicFlags::empty(),
@@ -471,7 +471,7 @@ impl ParentProxyInterface for ParentProxy {
         ) -> Result<(fidl::endpoints::ServerEnd<ChildMarker>), fidl::Error> {
             result.map(|_value| _value.0.into_inner())
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0xf38d08d64f71c79,
             fidl::encoding::DynamicFlags::empty(),

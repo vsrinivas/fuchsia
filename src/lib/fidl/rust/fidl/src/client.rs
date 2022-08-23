@@ -266,7 +266,7 @@ impl Client {
 
     /// Send an encodable query and receive a decodable response, transforming
     /// the response with the specified function after decoding.
-    pub fn call_send_raw_query<E: Encodable>(
+    pub fn call_send_raw_query<E: Encodable, const OVERFLOWABLE: bool>(
         &self,
         msg: &mut E,
         ordinal: u64,
@@ -278,6 +278,11 @@ impl Client {
                 body: msg,
             };
             Encoder::encode(bytes, handles, msg)?;
+
+            if OVERFLOWABLE {
+                maybe_overflowing_after_encode(bytes, handles)?;
+            }
+
             Ok(())
         })
     }

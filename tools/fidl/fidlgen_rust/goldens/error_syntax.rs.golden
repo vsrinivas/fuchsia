@@ -189,7 +189,7 @@ impl ExampleUseOfErrorSyntaxProxyInterface for ExampleUseOfErrorSyntaxProxy {
         > {
             result.map(|_value| _value.map(|_value| _value.0))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (s),
             0x3179cf8f46814221,
             fidl::encoding::DynamicFlags::empty(),
@@ -209,7 +209,7 @@ impl ExampleUseOfErrorSyntaxProxyInterface for ExampleUseOfErrorSyntaxProxy {
         ) -> Result<(ExampleUseOfErrorSyntaxCallWhichMayFailResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| _value.0))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (s),
             0x3424ff83ce3004a2,
             fidl::encoding::DynamicFlags::empty(),

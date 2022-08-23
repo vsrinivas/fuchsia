@@ -3343,7 +3343,7 @@ impl UnknownInteractionsAjarProtocolProxyInterface for UnknownInteractionsAjarPr
         fn transform(result: Result<(), fidl::Error>) -> Result<(), fidl::Error> {
             result.map(|_value| ())
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x50e66d328336038,
             fidl::encoding::DynamicFlags::empty(),
@@ -3360,7 +3360,7 @@ impl UnknownInteractionsAjarProtocolProxyInterface for UnknownInteractionsAjarPr
         fn transform(result: Result<(i32,), fidl::Error>) -> Result<(i32), fidl::Error> {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x1947e36d61e4493a,
             fidl::encoding::DynamicFlags::empty(),
@@ -3384,7 +3384,7 @@ impl UnknownInteractionsAjarProtocolProxyInterface for UnknownInteractionsAjarPr
         {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x5177371967e0e6d1,
             fidl::encoding::DynamicFlags::empty(),
@@ -3408,7 +3408,7 @@ impl UnknownInteractionsAjarProtocolProxyInterface for UnknownInteractionsAjarPr
         {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x6f8f9343b34e2ed4,
             fidl::encoding::DynamicFlags::empty(),
@@ -3431,7 +3431,7 @@ impl UnknownInteractionsAjarProtocolProxyInterface for UnknownInteractionsAjarPr
         ) -> Result<(UnknownInteractionsAjarProtocolStrictTwoWayErrResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| ()))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x5b47637577c69006,
             fidl::encoding::DynamicFlags::empty(),
@@ -3456,7 +3456,7 @@ impl UnknownInteractionsAjarProtocolProxyInterface for UnknownInteractionsAjarPr
         {
             result.map(|_value| _value.map(|_value| _value.0))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x844ff7bb3f186d9,
             fidl::encoding::DynamicFlags::empty(),
@@ -3480,7 +3480,7 @@ impl UnknownInteractionsAjarProtocolProxyInterface for UnknownInteractionsAjarPr
         {
             result.map(|_value| _value.map(|_value| _value.0))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x2cbfd5a859d4ac95,
             fidl::encoding::DynamicFlags::empty(),
@@ -3504,7 +3504,7 @@ impl UnknownInteractionsAjarProtocolProxyInterface for UnknownInteractionsAjarPr
         {
             result.map(|_value| _value.map(|_value| _value.0))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x30c9e1b3da57dc37,
             fidl::encoding::DynamicFlags::empty(),
@@ -5813,7 +5813,7 @@ impl UnknownInteractionsClosedProtocolProxyInterface for UnknownInteractionsClos
         fn transform(result: Result<(), fidl::Error>) -> Result<(), fidl::Error> {
             result.map(|_value| ())
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x5eda305d6b22f1f7,
             fidl::encoding::DynamicFlags::empty(),
@@ -5830,7 +5830,7 @@ impl UnknownInteractionsClosedProtocolProxyInterface for UnknownInteractionsClos
         fn transform(result: Result<(i32,), fidl::Error>) -> Result<(i32), fidl::Error> {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x1323afa3e0541253,
             fidl::encoding::DynamicFlags::empty(),
@@ -5855,7 +5855,7 @@ impl UnknownInteractionsClosedProtocolProxyInterface for UnknownInteractionsClos
         {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x68b32554eb0f6fa7,
             fidl::encoding::DynamicFlags::empty(),
@@ -5880,7 +5880,7 @@ impl UnknownInteractionsClosedProtocolProxyInterface for UnknownInteractionsClos
         {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x6e4a94d44b69e785,
             fidl::encoding::DynamicFlags::empty(),
@@ -5903,7 +5903,7 @@ impl UnknownInteractionsClosedProtocolProxyInterface for UnknownInteractionsClos
         ) -> Result<(UnknownInteractionsClosedProtocolStrictTwoWayErrResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| ()))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x4fa35d5433db4d3a,
             fidl::encoding::DynamicFlags::empty(),
@@ -5928,7 +5928,7 @@ impl UnknownInteractionsClosedProtocolProxyInterface for UnknownInteractionsClos
         {
             result.map(|_value| _value.map(|_value| _value.0))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0xb22aebf23bb58fd,
             fidl::encoding::DynamicFlags::empty(),
@@ -5953,7 +5953,7 @@ impl UnknownInteractionsClosedProtocolProxyInterface for UnknownInteractionsClos
         {
             result.map(|_value| _value.map(|_value| _value.0))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0xcd65d4d29a43c80,
             fidl::encoding::DynamicFlags::empty(),
@@ -5978,7 +5978,7 @@ impl UnknownInteractionsClosedProtocolProxyInterface for UnknownInteractionsClos
         {
             result.map(|_value| _value.map(|_value| _value.0))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x117dde20b92f7b90,
             fidl::encoding::DynamicFlags::empty(),
@@ -8044,7 +8044,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         fn transform(result: Result<(), fidl::Error>) -> Result<(), fidl::Error> {
             result.map(|_value| ())
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x734c996b0f37b942,
             fidl::encoding::DynamicFlags::empty(),
@@ -8061,7 +8061,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         fn transform(result: Result<(i32,), fidl::Error>) -> Result<(i32), fidl::Error> {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x334f4e7fff460ae3,
             fidl::encoding::DynamicFlags::empty(),
@@ -8081,7 +8081,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         ) -> Result<(UnknownInteractionsProtocolStrictTwoWayUnionResponse), fidl::Error> {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x2212805eca592cad,
             fidl::encoding::DynamicFlags::empty(),
@@ -8101,7 +8101,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         ) -> Result<(UnknownInteractionsProtocolStrictTwoWayTableResponse), fidl::Error> {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x746ebf8659ff23b7,
             fidl::encoding::DynamicFlags::empty(),
@@ -8124,7 +8124,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         ) -> Result<(UnknownInteractionsProtocolStrictTwoWayErrResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| ()))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x6d1c6002c51bb967,
             fidl::encoding::DynamicFlags::empty(),
@@ -8147,7 +8147,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         ) -> Result<(UnknownInteractionsProtocolStrictTwoWayFieldsErrResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| _value.0))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x2182a49480e5bd2b,
             fidl::encoding::DynamicFlags::empty(),
@@ -8170,7 +8170,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         ) -> Result<(UnknownInteractionsProtocolStrictTwoWayUnionErrResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| _value.0))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x453af745d38b20ca,
             fidl::encoding::DynamicFlags::empty(),
@@ -8193,7 +8193,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
         ) -> Result<(UnknownInteractionsProtocolStrictTwoWayTableErrResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| _value.0))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x4c26c7ab89cb68d8,
             fidl::encoding::DynamicFlags::empty(),
@@ -8219,7 +8219,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
                 Ok(())
             })
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x4a5bb3397008b7c,
             fidl::encoding::DynamicFlags::FLEXIBLE,
@@ -8245,7 +8245,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
                 Ok(_value.0)
             })
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x3b13f82f44813a32,
             fidl::encoding::DynamicFlags::FLEXIBLE,
@@ -8272,7 +8272,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
                 Ok(_value.0)
             })
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x44301e4e8d514fb6,
             fidl::encoding::DynamicFlags::FLEXIBLE,
@@ -8299,7 +8299,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
                 Ok(_value.0)
             })
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x7f492934b6c76187,
             fidl::encoding::DynamicFlags::FLEXIBLE,
@@ -8327,7 +8327,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
                 Ok(_value.map(|_value| ()))
             })
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x61240f878cc37c07,
             fidl::encoding::DynamicFlags::FLEXIBLE,
@@ -8356,7 +8356,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
                 Ok(_value.map(|_value| _value.0))
             })
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0xf2b9611a9089b05,
             fidl::encoding::DynamicFlags::FLEXIBLE,
@@ -8385,7 +8385,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
                 Ok(_value.map(|_value| _value.0))
             })
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x2172940a75f107d7,
             fidl::encoding::DynamicFlags::FLEXIBLE,
@@ -8414,7 +8414,7 @@ impl UnknownInteractionsProtocolProxyInterface for UnknownInteractionsProtocolPr
                 Ok(_value.map(|_value| _value.0))
             })
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (),
             0x6d8aab48e1693bf2,
             fidl::encoding::DynamicFlags::FLEXIBLE,

@@ -633,7 +633,7 @@ impl SomeProtocolProxyInterface for SomeProtocolProxy {
         ) -> Result<(SomeProtocolSomeMethodResult), fidl::Error> {
             result.map(|_value| _value.map(|_value| _value.0))
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (union_member, table_member),
             0x22ea52ec7a5146d8,
             fidl::encoding::DynamicFlags::empty(),

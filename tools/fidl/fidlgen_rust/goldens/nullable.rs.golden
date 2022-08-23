@@ -366,7 +366,7 @@ impl SimpleProtocolProxyInterface for SimpleProtocolProxy {
         fn transform(result: Result<(i32,), fidl::Error>) -> Result<(i32), fidl::Error> {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (a, b),
             0x7ee19cf19ae30276,
             fidl::encoding::DynamicFlags::empty(),

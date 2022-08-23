@@ -263,7 +263,7 @@ impl ProtocolProxyInterface for ProtocolProxy {
         ) -> Result<(FlexibleFoo), fidl::Error> {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (s),
             0x9b8c7d3d118df13,
             fidl::encoding::DynamicFlags::empty(),
@@ -285,7 +285,7 @@ impl ProtocolProxyInterface for ProtocolProxy {
         ) -> Result<(StrictFoo), fidl::Error> {
             result.map(|_value| _value.0)
         }
-        let send_result = self.client.call_send_raw_query(
+        let send_result = self.client.call_send_raw_query::<_, false>(
             &mut (s),
             0x480c77690533acb7,
             fidl::encoding::DynamicFlags::empty(),
