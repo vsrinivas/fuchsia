@@ -66,9 +66,7 @@ pub fn open_file<'a>(
     Ok(node)
 }
 
-/// # Panics
-///
-/// Panics if any path component of `path` is not a valid utf-8 encoded string.
+/// DEPRECATED, do not use.  Use directory::create_directory_recursive.
 pub fn create_sub_directories(
     root_dir: &fio::DirectoryProxy,
     path: &Path,

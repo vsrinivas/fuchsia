@@ -1257,8 +1257,13 @@ pub mod capability_util {
     ) -> Result<(), anyhow::Error> {
         // Open file, and create subdirectories if required.
         let file_proxy = if let Some(directory) = path.parent() {
-            let subdir = fuchsia_fs::create_sub_directories(root, directory)
-                .map_err(|e| e.context(format!("failed to create subdirs for {:?}", path)))?;
+            let subdir = fuchsia_fs::directory::create_directory_recursive(
+                root,
+                directory.to_str().ok_or(anyhow!("{:?} is not a valid UTF-8 string", path))?,
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            )
+            .await
+            .map_err(|e| anyhow!(e).context(format!("failed to create subdirs for {:?}", path)))?;
             fuchsia_fs::directory::open_file(
                 &subdir,
                 path.file_name().unwrap().to_str().unwrap(),

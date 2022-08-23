@@ -81,13 +81,16 @@ impl StorageManager for InsecureKeyDirectoryStorageManager {
         match *state_lock {
             StorageManagerState::Uninitialized => {
                 self.store_correct_key(key).await?;
-                fuchsia_fs::create_sub_directories(&self.managed_dir, &Path::new(CLIENT_ROOT_PATH))
-                    .map_err(|e| {
-                        AccountManagerError::new(ApiError::Resource).with_cause(format_err!(
-                            "Failed to create client root directory: {:?}",
-                            e
-                        ))
-                    })?;
+                fuchsia_fs::directory::create_directory_recursive(
+                    &self.managed_dir,
+                    CLIENT_ROOT_PATH,
+                    fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                )
+                .await
+                .map_err(|e| {
+                    AccountManagerError::new(ApiError::Resource)
+                        .with_cause(format_err!("Failed to create client root directory: {:?}", e))
+                })?;
                 *state_lock = StorageManagerState::Available;
                 Ok(())
             }

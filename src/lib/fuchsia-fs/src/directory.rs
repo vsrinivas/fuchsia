@@ -160,6 +160,27 @@ pub async fn create_directory(
     node::verify_directory_describe_event(dir).await
 }
 
+/// Creates a directory named `path` (including all segments leading up to the terminal segment)
+/// within the `parent` directory.  Returns a connection to the terminal directory.
+pub async fn create_directory_recursive(
+    parent: &fio::DirectoryProxy,
+    path: &str,
+    flags: fio::OpenFlags,
+) -> Result<fio::DirectoryProxy, OpenError> {
+    let components = path.split("/");
+    let mut dir = None;
+    for part in components {
+        dir = Some({
+            let dir_ref = match dir.as_ref() {
+                Some(r) => r,
+                None => parent,
+            };
+            create_directory(dir_ref, part, flags).await?
+        })
+    }
+    dir.ok_or(OpenError::OpenError(zx_status::Status::INVALID_ARGS))
+}
+
 /// Opens the given `path` from the given `parent` directory as a [`FileProxy`]. The target is not
 /// verified to be any particular type and may not implement the fuchsia.io.File protocol.
 pub fn open_file_no_describe(
@@ -633,13 +654,12 @@ fn remove_dir_contents(dir: fio::DirectoryProxy) -> BoxFuture<'static, Result<()
 mod tests {
     use {
         super::*,
-        crate::create_sub_directories,
+        crate::write_file,
         anyhow::Context as _,
         assert_matches::assert_matches,
         fuchsia_async as fasync,
         futures::{channel::oneshot, stream::StreamExt},
         proptest::prelude::*,
-        std::path::Path,
         tempfile::TempDir,
         vfs::{
             directory::entry::DirectoryEntry,
@@ -1466,15 +1486,64 @@ mod tests {
         }
     }
 
+    #[fasync::run_singlethreaded(test)]
+    async fn create_directory_recursive_test() {
+        let tempdir = TempDir::new().unwrap();
+
+        let path = "path/to/example/dir";
+        let file_name = "example_file_name";
+        let data = "file contents";
+
+        let root_dir = open_in_namespace(
+            tempdir.path().to_str().unwrap(),
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+        )
+        .expect("open_in_namespace failed");
+
+        let sub_dir = create_directory_recursive(
+            &root_dir,
+            &path,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+        )
+        .await
+        .expect("create_directory_recursive failed");
+        let file = open_file(
+            &sub_dir,
+            &file_name,
+            fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::RIGHT_WRITABLE
+                | fio::OpenFlags::CREATE,
+        )
+        .await
+        .expect("open_file failed");
+
+        write_file(&file, &data).await.expect("writing to the file failed");
+
+        let contents = std::fs::read_to_string(tempdir.path().join(path).join(file_name))
+            .expect("read_to_string failed");
+        assert_eq!(&contents, &data, "File contents did not match");
+    }
+
     async fn create_nested_dir(tempdir: &TempDir) -> fio::DirectoryProxy {
         let dir = open_in_namespace(
             tempdir.path().to_str().unwrap(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("could not open tmp dir");
-        create_sub_directories(&dir, Path::new("emptydir")).expect("failed to create emptydir");
-        create_sub_directories(&dir, Path::new("subdir/subsubdir/emptydir"))
-            .expect("failed to create subdir/subsubdir/emptydir");
+        create_directory_recursive(
+            &dir,
+            "emptydir",
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+        )
+        .await
+        .expect("failed to create emptydir");
+        create_directory_recursive(
+            &dir,
+            "subdir/subsubdir/emptydir",
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+        )
+        .await
+        .expect("failed to create subdir/subsubdir/emptydir");
         create_file(&dir, "a").await;
         create_file(&dir, "b").await;
         create_file(&dir, "subdir/a").await;

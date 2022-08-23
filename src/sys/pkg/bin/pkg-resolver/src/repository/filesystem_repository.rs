@@ -83,9 +83,14 @@ where
             // This is needed because if there's no "/" in `path`, .parent() will return Some("")
             // instead of None.
             if !parent.as_os_str().is_empty() {
-                let _sub_dir = fuchsia_fs::create_sub_directories(&self.repo_proxy, parent)
-                    .context("creating sub directories")
-                    .map_err(make_opaque_error)?;
+                let _sub_dir = fuchsia_fs::directory::create_directory_recursive(
+                    &self.repo_proxy,
+                    parent.to_str().ok_or(make_opaque_error(anyhow!("Invalid path")))?,
+                    fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                )
+                .await
+                .context("creating sub directories")
+                .map_err(make_opaque_error)?;
             }
         }
 

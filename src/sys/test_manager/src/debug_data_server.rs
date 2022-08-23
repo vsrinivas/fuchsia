@@ -4,7 +4,7 @@
 
 use {
     crate::{run_events::RunEvent, self_diagnostics},
-    anyhow::{Context, Error},
+    anyhow::{anyhow, Context, Error},
     fidl::endpoints::{create_endpoints, ClientEnd},
     fidl_fuchsia_io as fio, fidl_fuchsia_test_internal as ftest_internal,
     fidl_fuchsia_test_manager as ftest_manager,
@@ -50,8 +50,13 @@ fn serve_debug_data(
                     async move {
                         if let Some(parent) = rel_file_path.parent() {
                             if !parent.as_os_str().is_empty() {
-                                fuchsia_fs::create_sub_directories(tmp_dir_root_ref, parent)
-                                    .context("create subdirectories")?;
+                                fuchsia_fs::directory::create_directory_recursive(
+                                    tmp_dir_root_ref,
+                                    parent.to_str().ok_or(anyhow!("Invalid path"))?,
+                                    fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                                )
+                                .await
+                                .context("create subdirectories")?;
                             }
                         }
                         let file = fuchsia_fs::open_file(
