@@ -364,31 +364,31 @@ typedef enum {
 // in the union. To ensure that it is set properly, the struct
 // should only be constructed with the supporting macros.
 typedef struct zx_device_str_prop_val {
-  uint8_t value_type;
+  uint8_t data_type;
   union {
     uint32_t int_val;
     const char* str_val;
     bool bool_val;
     const char* enum_val;
-  } value;
+  } data;
 } zx_device_str_prop_val_t;
 
 // Supporting macros to construct zx_device_str_prop_val_t.
-#define str_prop_int_val(val)                                                \
+#define str_prop_int_val(val)                                              \
+  zx_device_str_prop_val {                                                 \
+    .data_type = ZX_DEVICE_PROPERTY_VALUE_INT, .data = {.int_val = (val) } \
+  }
+#define str_prop_str_val(val)                                                 \
+  zx_device_str_prop_val {                                                    \
+    .data_type = ZX_DEVICE_PROPERTY_VALUE_STRING, .data = {.str_val = (val) } \
+  }
+#define str_prop_bool_val(val)                                               \
   zx_device_str_prop_val {                                                   \
-    .value_type = ZX_DEVICE_PROPERTY_VALUE_INT, .value = {.int_val = (val) } \
+    .data_type = ZX_DEVICE_PROPERTY_VALUE_BOOL, .data = {.bool_val = (val) } \
   }
-#define str_prop_str_val(val)                                                   \
-  zx_device_str_prop_val {                                                      \
-    .value_type = ZX_DEVICE_PROPERTY_VALUE_STRING, .value = {.str_val = (val) } \
-  }
-#define str_prop_bool_val(val)                                                 \
-  zx_device_str_prop_val {                                                     \
-    .value_type = ZX_DEVICE_PROPERTY_VALUE_BOOL, .value = {.bool_val = (val) } \
-  }
-#define str_prop_enum_val(val)                                                 \
-  zx_device_str_prop_val {                                                     \
-    .value_type = ZX_DEVICE_PROPERTY_VALUE_ENUM, .value = {.enum_val = (val) } \
+#define str_prop_enum_val(val)                                               \
+  zx_device_str_prop_val {                                                   \
+    .data_type = ZX_DEVICE_PROPERTY_VALUE_ENUM, .data = {.enum_val = (val) } \
   }
 
 typedef struct zx_device_str_prop {
@@ -535,18 +535,18 @@ typedef struct device_group_prop_key {
   union {
     uint32_t int_key;
     const char* str_key;
-  } key_value;
+  } data;
 } device_group_prop_key_t;
 
 // Supporting macros to construct device_group_prop_key_t.
-#define device_group_prop_int_key(val)                                          \
-  device_group_prop_key {                                                       \
-    .key_type = DEVICE_GROUP_PROPERTY_KEY_INT, .key_value = {.int_key = (val) } \
+#define device_group_prop_int_key(val)                                     \
+  device_group_prop_key {                                                  \
+    .key_type = DEVICE_GROUP_PROPERTY_KEY_INT, .data = {.int_key = (val) } \
   }
 
-#define device_group_prop_str_key(val)                                             \
-  device_group_prop_key {                                                          \
-    .key_type = DEVICE_GROUP_PROPERTY_KEY_STRING, .key_value = {.str_key = (val) } \
+#define device_group_prop_str_key(val)                                        \
+  device_group_prop_key {                                                     \
+    .key_type = DEVICE_GROUP_PROPERTY_KEY_STRING, .data = {.str_key = (val) } \
   }
 
 // Represents the condition for evaluating the property values in a device group.
@@ -566,22 +566,20 @@ typedef struct device_group_prop {
   size_t values_count;
 } device_group_prop_t;
 
+// Represents a transformed property in a device group fragment.
+// TODO(fxb/107076): Rename the property and transformation fields.
 typedef struct device_group_fragment {
   const char* name;
 
   const device_group_prop_t* props;
   size_t props_count;
+
 } device_group_fragment_t;
 
 typedef struct device_group_desc {
   // The first fragment is the primary fragment.
   const device_group_fragment_t* fragments;
   size_t fragments_count;
-
-  const zx_device_prop_t* props;
-  size_t props_count;
-  const zx_device_str_prop_t* str_props;
-  size_t str_props_count;
 
   bool spawn_colocated;
   const device_metadata_t* metadata_list;

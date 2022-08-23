@@ -45,23 +45,23 @@ static void ExpectProps(acpi::DeviceBuilder* b, std::vector<zx_device_prop_t> ex
   for (auto& expected_prop : expected_str) {
     for (auto& actual : str_props) {
       if (!strcmp(actual.key, expected_prop.key)) {
-        ASSERT_EQ(actual.property_value.value_type, expected_prop.property_value.value_type);
-        switch (actual.property_value.value_type) {
+        ASSERT_EQ(actual.property_value.data_type, expected_prop.property_value.data_type);
+        switch (actual.property_value.data_type) {
           case ZX_DEVICE_PROPERTY_VALUE_INT:
-            ASSERT_EQ(actual.property_value.value.int_val,
-                      expected_prop.property_value.value.int_val);
+            ASSERT_EQ(actual.property_value.data.int_val,
+                      expected_prop.property_value.data.int_val);
             break;
           case ZX_DEVICE_PROPERTY_VALUE_STRING:
-            ASSERT_STREQ(actual.property_value.value.str_val,
-                         expected_prop.property_value.value.str_val);
+            ASSERT_STREQ(actual.property_value.data.str_val,
+                         expected_prop.property_value.data.str_val);
             break;
           case ZX_DEVICE_PROPERTY_VALUE_BOOL:
-            ASSERT_EQ(actual.property_value.value.bool_val,
-                      expected_prop.property_value.value.bool_val);
+            ASSERT_EQ(actual.property_value.data.bool_val,
+                      expected_prop.property_value.data.bool_val);
             break;
           case ZX_DEVICE_PROPERTY_VALUE_ENUM:
-            ASSERT_STREQ(actual.property_value.value.enum_val,
-                         expected_prop.property_value.value.enum_val);
+            ASSERT_STREQ(actual.property_value.data.enum_val,
+                         expected_prop.property_value.data.enum_val);
             break;
           default:
             // This should never happen.

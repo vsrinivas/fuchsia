@@ -41,20 +41,9 @@ zx_status_t LeafDriver::Bind(void* ctx, zx_device_t* device) {
       ddk::DeviceGroupProperty::RejectValue(device_group_prop_int_key(20), str_prop_int_val(10)),
   };
 
-  zx_device_prop_t group_props[] = {
-      {BIND_USB_VID, 0, 100},
-      {20, 0, 5},
-  };
-
-  const zx_device_str_prop group_str_props[] = {
-      {"plover", str_prop_int_val(10)},
-  };
-
   status =
       dev->DdkAddDeviceGroup("device_group", ddk::DeviceGroupDesc("fragment-1", fragment_1_props)
                                                  .AddFragment("fragment-2", fragment_2_props)
-                                                 .set_props(group_props)
-                                                 .set_str_props(group_str_props)
                                                  .set_spawn_colocated(true));
   if (status != ZX_OK) {
     return status;

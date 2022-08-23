@@ -30,15 +30,15 @@ struct OwnedStringProp : zx_device_str_prop_t {
   }
 
   OwnedStringProp(OwnedStringProp& other) : zx_device_str_prop_t(other), value_(other.value_) {
-    if (property_value.value_type == ZX_DEVICE_PROPERTY_VALUE_STRING) {
-      property_value.value.str_val = value_.data();
+    if (property_value.data_type == ZX_DEVICE_PROPERTY_VALUE_STRING) {
+      property_value.data.str_val = value_.data();
     }
   }
 
   OwnedStringProp(OwnedStringProp&& other) noexcept
       : zx_device_str_prop_t(other), value_(std::move(other.value_)) {
-    if (property_value.value_type == ZX_DEVICE_PROPERTY_VALUE_STRING) {
-      property_value.value.str_val = value_.data();
+    if (property_value.data_type == ZX_DEVICE_PROPERTY_VALUE_STRING) {
+      property_value.data.str_val = value_.data();
     }
   }
 
@@ -46,8 +46,8 @@ struct OwnedStringProp : zx_device_str_prop_t {
     key = other.key;
     property_value = other.property_value;
     value_ = other.value_;
-    if (property_value.value_type == ZX_DEVICE_PROPERTY_VALUE_STRING) {
-      property_value.value.str_val = value_.data();
+    if (property_value.data_type == ZX_DEVICE_PROPERTY_VALUE_STRING) {
+      property_value.data.str_val = value_.data();
     }
     return *this;
   }
@@ -56,8 +56,8 @@ struct OwnedStringProp : zx_device_str_prop_t {
     key = other.key;
     property_value = other.property_value;
     value_ = std::move(other.value_);
-    if (property_value.value_type == ZX_DEVICE_PROPERTY_VALUE_STRING) {
-      property_value.value.str_val = value_.data();
+    if (property_value.data_type == ZX_DEVICE_PROPERTY_VALUE_STRING) {
+      property_value.data.str_val = value_.data();
     }
     return *this;
   }

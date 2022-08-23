@@ -660,8 +660,8 @@ static zx_status_t ecm_bind(void* ctx, zx_device_t* device) {
       .key = "fuchsia.ethernet.NETDEVICE_MIGRATION",
       .property_value =
           {
-              .value_type = ZX_DEVICE_PROPERTY_VALUE_BOOL,
-              .value = {.bool_val = true},
+              .data_type = ZX_DEVICE_PROPERTY_VALUE_BOOL,
+              .data = {.bool_val = true},
           },
   };
 

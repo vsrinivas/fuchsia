@@ -92,20 +92,20 @@ std::vector<fuchsia_driver_framework::wire::NodeProperty> CreateProperties(
     auto& ref = properties.emplace_back(arena).set_key(
         arena,
         fdf::wire::NodePropertyKey::WithStringValue(arena, fidl::StringView::FromExternal(key)));
-    switch (value.value_type) {
+    switch (value.data_type) {
       case ZX_DEVICE_PROPERTY_VALUE_BOOL:
-        ref.set_value(arena, fdf::wire::NodePropertyValue::WithBoolValue(value.value.bool_val));
+        ref.set_value(arena, fdf::wire::NodePropertyValue::WithBoolValue(value.data.bool_val));
         break;
       case ZX_DEVICE_PROPERTY_VALUE_STRING:
         ref.set_value(arena, fdf::wire::NodePropertyValue::WithStringValue(
-                                 arena, fidl::StringView::FromExternal(value.value.str_val)));
+                                 arena, fidl::StringView::FromExternal(value.data.str_val)));
         break;
       case ZX_DEVICE_PROPERTY_VALUE_INT:
-        ref.set_value(arena, fdf::wire::NodePropertyValue::WithIntValue(value.value.int_val));
+        ref.set_value(arena, fdf::wire::NodePropertyValue::WithIntValue(value.data.int_val));
         break;
       case ZX_DEVICE_PROPERTY_VALUE_ENUM:
         ref.set_value(arena, fdf::wire::NodePropertyValue::WithEnumValue(
-                                 arena, fidl::StringView::FromExternal(value.value.enum_val)));
+                                 arena, fidl::StringView::FromExternal(value.data.enum_val)));
         break;
       default:
         FDF_LOGL(ERROR, logger, "Unsupported property type, key: %s", key);

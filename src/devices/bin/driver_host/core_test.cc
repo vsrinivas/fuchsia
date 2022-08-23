@@ -314,16 +314,6 @@ TEST_F(CoreTest, AddDeviceGroup) {
 
   TestAddDeviceGroupCallback test_callback =
       [](fuchsia_device_manager::wire::DeviceGroupDescriptor device_group) {
-        // Check the device group properties.
-        EXPECT_EQ(1, device_group.props.count());
-        EXPECT_EQ(100, device_group.props.at(0).id);
-        EXPECT_EQ(10, device_group.props.at(0).value);
-
-        // Check the device group string properties.
-        ASSERT_EQ(1, device_group.str_props.count());
-        EXPECT_STREQ("plover", device_group.str_props.at(0).key.get());
-        EXPECT_EQ(10, device_group.str_props.at(0).value.int_value());
-
         ASSERT_EQ(2, device_group.fragments.count());
 
         // Checking the first fragment.
@@ -430,21 +420,9 @@ TEST_F(CoreTest, AddDeviceGroup) {
       fragment_2,
   };
 
-  const zx_device_prop_t group_props[] = {
-      {100, 0, 10},
-  };
-
-  const zx_device_str_prop group_str_props[] = {
-      {"plover", str_prop_int_val(10)},
-  };
-
   const device_group_desc group_desc = {
       .fragments = fragments,
       .fragments_count = std::size(fragments),
-      .props = group_props,
-      .props_count = std::size(group_props),
-      .str_props = group_str_props,
-      .str_props_count = std::size(group_str_props),
       .spawn_colocated = false,
       .metadata_list = nullptr,
       .metadata_count = 0,

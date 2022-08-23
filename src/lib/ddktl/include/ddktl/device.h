@@ -689,18 +689,6 @@ class DeviceGroupDesc {
     return *this;
   }
 
-  DeviceGroupDesc& set_props(cpp20::span<const zx_device_prop_t> props) {
-    desc_.props = props.data();
-    desc_.props_count = static_cast<uint32_t>(props.size());
-    return *this;
-  }
-
-  DeviceGroupDesc& set_str_props(cpp20::span<const zx_device_str_prop_t> props) {
-    desc_.str_props = props.data();
-    desc_.str_props_count = static_cast<uint32_t>(props.size());
-    return *this;
-  }
-
   DeviceGroupDesc& set_spawn_colocated(bool spawn_colocated) {
     desc_.spawn_colocated = spawn_colocated;
     return *this;

@@ -102,32 +102,32 @@ std::optional<fdm::wire::DeviceProperty> fidl_offer_to_device_prop(const char* f
 
 fuchsia_device_manager::wire::DeviceStrProperty convert_device_str_prop(
     const zx_device_str_prop_t& prop, fidl::AnyArena& allocator) {
-  ZX_ASSERT(property_value_type_valid(prop.property_value.value_type));
+  ZX_ASSERT(property_value_type_valid(prop.property_value.data_type));
 
   auto str_property = fuchsia_device_manager::wire::DeviceStrProperty{
       .key = fidl::StringView(allocator, prop.key),
   };
 
-  switch (prop.property_value.value_type) {
+  switch (prop.property_value.data_type) {
     case ZX_DEVICE_PROPERTY_VALUE_INT: {
       str_property.value = fuchsia_device_manager::wire::PropertyValue::WithIntValue(
-          prop.property_value.value.int_val);
+          prop.property_value.data.int_val);
       break;
     }
     case ZX_DEVICE_PROPERTY_VALUE_STRING: {
       str_property.value = fuchsia_device_manager::wire::PropertyValue::WithStrValue(
-          allocator, allocator, prop.property_value.value.str_val);
+          allocator, allocator, prop.property_value.data.str_val);
       break;
     }
     case ZX_DEVICE_PROPERTY_VALUE_BOOL: {
       str_property.value = fuchsia_device_manager::wire::PropertyValue::WithBoolValue(
-          prop.property_value.value.bool_val);
+          prop.property_value.data.bool_val);
       break;
     }
     case ZX_DEVICE_PROPERTY_VALUE_ENUM: {
       str_property.value = fuchsia_device_manager::wire::PropertyValue::WithEnumValue(
           fidl::ObjectView<fidl::StringView>(allocator, allocator,
-                                             prop.property_value.value.enum_val));
+                                             prop.property_value.data.enum_val));
       break;
     }
   }
@@ -141,12 +141,12 @@ zx::status<fdf::wire::DeviceGroupProperty> convert_device_group_property(
 
   switch (group_prop.key.key_type) {
     case DEVICE_GROUP_PROPERTY_KEY_INT: {
-      property_key = fdf::wire::NodePropertyKey::WithIntValue(group_prop.key.key_value.int_key);
+      property_key = fdf::wire::NodePropertyKey::WithIntValue(group_prop.key.data.int_key);
       break;
     }
     case DEVICE_GROUP_PROPERTY_KEY_STRING: {
       property_key = fdf::wire::NodePropertyKey::WithStringValue(allocator, allocator,
-                                                                 group_prop.key.key_value.str_key);
+                                                                 group_prop.key.data.str_key);
       break;
     }
     default: {
@@ -158,24 +158,24 @@ zx::status<fdf::wire::DeviceGroupProperty> convert_device_group_property(
       fidl::VectorView<fdf::wire::NodePropertyValue>(allocator, group_prop.values_count);
   for (size_t i = 0; i < group_prop.values_count; i++) {
     auto prop_val = group_prop.values[i];
-    switch (prop_val.value_type) {
+    switch (prop_val.data_type) {
       case ZX_DEVICE_PROPERTY_VALUE_INT: {
-        prop_vals[i] = fdf::wire::NodePropertyValue::WithIntValue(prop_val.value.int_val);
+        prop_vals[i] = fdf::wire::NodePropertyValue::WithIntValue(prop_val.data.int_val);
         break;
       }
       case ZX_DEVICE_PROPERTY_VALUE_STRING: {
         auto property_val =
-            fidl::ObjectView<fidl::StringView>(allocator, allocator, prop_val.value.str_val);
+            fidl::ObjectView<fidl::StringView>(allocator, allocator, prop_val.data.str_val);
         prop_vals[i] = fdf::wire::NodePropertyValue::WithStringValue(property_val);
         break;
       }
       case ZX_DEVICE_PROPERTY_VALUE_BOOL: {
-        prop_vals[i] = fdf::wire::NodePropertyValue::WithBoolValue(prop_val.value.bool_val);
+        prop_vals[i] = fdf::wire::NodePropertyValue::WithBoolValue(prop_val.data.bool_val);
         break;
       }
       case ZX_DEVICE_PROPERTY_VALUE_ENUM: {
         auto property_val =
-            fidl::ObjectView<fidl::StringView>(allocator, allocator, prop_val.value.enum_val);
+            fidl::ObjectView<fidl::StringView>(allocator, allocator, prop_val.data.enum_val);
         prop_vals[i] = fdf::wire::NodePropertyValue::WithEnumValue(property_val);
         break;
       }
@@ -396,7 +396,7 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
   fidl::Arena allocator;
   std::vector<fuchsia_device_manager::wire::DeviceStrProperty> str_props_list = {};
   for (size_t i = 0; i < add_args->str_prop_count; i++) {
-    if (!property_value_type_valid(add_args->str_props[i].property_value.value_type)) {
+    if (!property_value_type_valid(add_args->str_props[i].property_value.data_type)) {
       return ZX_ERR_INVALID_ARGS;
     }
     str_props_list.push_back(convert_device_str_prop(add_args->str_props[i], allocator));
@@ -1277,7 +1277,7 @@ zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>
 
   std::vector<fuchsia_device_manager::wire::DeviceStrProperty> str_props = {};
   for (size_t i = 0; i < comp_desc->str_props_count; i++) {
-    if (!property_value_type_valid(comp_desc->str_props[i].property_value.value_type)) {
+    if (!property_value_type_valid(comp_desc->str_props[i].property_value.data_type)) {
       return ZX_ERR_INVALID_ARGS;
     }
     str_props.push_back(convert_device_str_prop(comp_desc->str_props[i], allocator));
@@ -1329,9 +1329,7 @@ zx_status_t DriverHostContext::DeviceAddGroup(const fbl::RefPtr<zx_device_t>& de
     return ZX_ERR_INVALID_ARGS;
   }
 
-  if ((!group_desc->props && group_desc->props_count > 0) ||
-      (!group_desc->str_props && group_desc->str_props_count > 0) ||
-      (!group_desc->metadata_list && group_desc->metadata_count > 0)) {
+  if (!group_desc->metadata_list && group_desc->metadata_count > 0) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -1341,21 +1339,6 @@ zx_status_t DriverHostContext::DeviceAddGroup(const fbl::RefPtr<zx_device_t>& de
   }
 
   fidl::Arena allocator;
-
-  auto props = fidl::VectorView<fdm::wire::DeviceProperty>(allocator, group_desc->props_count);
-  for (size_t i = 0; i < group_desc->props_count; i++) {
-    props[i] = convert_device_prop(group_desc->props[i]);
-  }
-
-  auto str_props =
-      fidl::VectorView<fdm::wire::DeviceStrProperty>(allocator, group_desc->str_props_count);
-  for (size_t i = 0; i < group_desc->str_props_count; i++) {
-    if (!property_value_type_valid(group_desc->str_props[i].property_value.value_type)) {
-      return ZX_ERR_INVALID_ARGS;
-    }
-    str_props[i] = convert_device_str_prop(group_desc->str_props[i], allocator);
-  }
-
   auto fragments =
       fidl::VectorView<fdf::wire::DeviceGroupNode>(allocator, group_desc->fragments_count);
   for (size_t i = 0; i < group_desc->fragments_count; i++) {
@@ -1376,11 +1359,8 @@ zx_status_t DriverHostContext::DeviceAddGroup(const fbl::RefPtr<zx_device_t>& de
             group_desc->metadata_list[i].length)};
   }
 
-  fdm::wire::DeviceGroupDescriptor desc = {.props = props,
-                                           .str_props = str_props,
-                                           .fragments = fragments,
-                                           .spawn_colocated = group_desc->spawn_colocated,
-                                           .metadata = metadata};
+  fdm::wire::DeviceGroupDescriptor desc = {
+      .fragments = fragments, .spawn_colocated = group_desc->spawn_colocated, .metadata = metadata};
 
   auto response = client.sync()->AddDeviceGroup(fidl::StringView(allocator, name), std::move(desc));
   auto status = response.status();

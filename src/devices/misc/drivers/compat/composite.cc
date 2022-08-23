@@ -26,32 +26,32 @@ bool property_value_type_valid(uint32_t value_type) {
 
 fuchsia_device_manager::wire::DeviceStrProperty convert_device_str_prop(
     const zx_device_str_prop_t& prop, fidl::AnyArena& allocator) {
-  ZX_ASSERT(property_value_type_valid(prop.property_value.value_type));
+  ZX_ASSERT(property_value_type_valid(prop.property_value.data_type));
 
   auto str_property = fuchsia_device_manager::wire::DeviceStrProperty{
       .key = fidl::StringView(allocator, prop.key),
   };
 
-  switch (prop.property_value.value_type) {
+  switch (prop.property_value.data_type) {
     case ZX_DEVICE_PROPERTY_VALUE_INT: {
       str_property.value = fuchsia_device_manager::wire::PropertyValue::WithIntValue(
-          prop.property_value.value.int_val);
+          prop.property_value.data.int_val);
       break;
     }
     case ZX_DEVICE_PROPERTY_VALUE_STRING: {
       str_property.value = fuchsia_device_manager::wire::PropertyValue::WithStrValue(
-          allocator, allocator, prop.property_value.value.str_val);
+          allocator, allocator, prop.property_value.data.str_val);
       break;
     }
     case ZX_DEVICE_PROPERTY_VALUE_BOOL: {
       str_property.value = fuchsia_device_manager::wire::PropertyValue::WithBoolValue(
-          prop.property_value.value.bool_val);
+          prop.property_value.data.bool_val);
       break;
     }
     case ZX_DEVICE_PROPERTY_VALUE_ENUM: {
       str_property.value = fuchsia_device_manager::wire::PropertyValue::WithEnumValue(
           fidl::ObjectView<fidl::StringView>(allocator, allocator,
-                                             prop.property_value.value.enum_val));
+                                             prop.property_value.data.enum_val));
       break;
     }
   }

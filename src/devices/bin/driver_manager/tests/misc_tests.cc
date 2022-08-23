@@ -533,8 +533,6 @@ TEST(MiscTestCase, AddDeviceGroup) {
 
   fuchsia_device_manager::wire::DeviceGroupDescriptor group_desc =
       fuchsia_device_manager::wire::DeviceGroupDescriptor{
-          .props = props,
-          .str_props = str_props,
           .fragments = fragments,
           .spawn_colocated = false,
           .metadata = metadata,
