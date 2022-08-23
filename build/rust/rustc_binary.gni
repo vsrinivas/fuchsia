@@ -235,7 +235,6 @@ template("rustc_binary") {
     forward_variables_from(invoker,
                            [
                              "disable_clippy",
-                             "disable_rbe",
                              "edition",
                              "enforce_source_listing",
                              "features",
@@ -245,6 +244,14 @@ template("rustc_binary") {
                              "testonly",
                              "visibility",
                            ])
+
+    # TODO(b/218546002): re-enable after OOM fix
+    if (select_variant + [ "lto" ] - [ "lto" ] != select_variant) {
+      disable_rbe = true
+      not_needed(invoker, [ "disable_rbe" ])
+    } else if (defined(invoker.disable_rbe)) {
+      disable_rbe = invoker.disable_rbe
+    }
 
     configs = []
     configs = invoker.configs

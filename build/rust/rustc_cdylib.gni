@@ -178,6 +178,14 @@ template("rustc_cdylib") {
                              "testonly",
                              "visibility",
                            ])
+
+    # TODO(b/218546002): re-enable after OOM fix
+    if (select_variant + [ "lto" ] - [ "lto" ] != select_variant) {
+      disable_rbe = true
+      not_needed(invoker, [ "disable_rbe" ])
+    } else if (defined(invoker.disable_rbe)) {
+      disable_rbe = invoker.disable_rbe
+    }
   }
 
   public_hdrs = []
