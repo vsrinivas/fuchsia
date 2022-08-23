@@ -93,41 +93,17 @@ def main():
         'program':
             {
                 'runner': 'driver',
-                'binary': program,
                 'bind': bind,
                 'fallback': 'true' if args.fallback else 'false'
             },
         'use': []
     }
     if args.is_v1:
-        manifest["program"]["binary"] = "driver/compat.so"
         manifest["program"]["compat"] = program
         manifest["include"] = [
             'inspect/client.shard.cml',
             'syslog/client.shard.cml',
-        ]
-        manifest['use'] = [
-            {
-                'protocol': "fuchsia.device.fs.Exporter"
-            }, {
-                'service': "fuchsia.driver.compat.Service"
-            }, {
-                'protocol':
-                    "fuchsia.device.composite.DeprecatedCompositeCreator"
-            }, {
-                'protocol': "fuchsia.boot.Items"
-            }
-        ]
-        manifest['capabilities'] = [
-            {
-                'service': "fuchsia.driver.compat.Service"
-            }
-        ]
-        manifest['expose'] = [
-            {
-                'service': "fuchsia.driver.compat.Service",
-                'from': "self",
-            }
+            '//src/devices/lib/compat/compat.shard.cml',
         ]
     else:
         manifest["program"]["binary"] = program
