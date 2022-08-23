@@ -6,7 +6,7 @@ import("//build/components.gni")
 import("//build/dist/component_manifest_resources.gni")
 import("//build/dist/renamed_binary.gni")
 import("//build/test.gni")
-import("//src/storage/fshost/fshost.gni")
+import("//src/storage/fshost/generated_fshost_config.gni")
 import("//tools/cmc/build/cmc.gni")
 
 declare_args() {
@@ -285,16 +285,22 @@ fuchsia_unittest_component("copier-test") {
 # Generates a test component for the fshost integration tests.
 #
 #   test_component_name (required)
-#     [string] The name of the test component, e.g. "test-fshost". deps should include the target
-#     that builds the component.
+#     [string] The name of the test component, e.g. "test-fshost".
 #
-#   test_data_filesystem_format
+#   test_component_target (required)
+#     [string] The build target for the test component, e.g. "//src/storage/fshost/testing:test-fshost".
+#
+#   data_filesystem_format
 #     [string] One of "fxfs", "minfs", or "f2fs".
 #
-#   deps
 template("fshost_integration_test") {
+  assert(defined(invoker.test_component_name) &&
+             defined(invoker.test_component_target),
+         "Test component not specified")
   _test_bin = "${target_name}-bin"
   test(_test_bin) {
+    data_filesystem_format = invoker.data_filesystem_format
+    forward_variables_from(invoker, [ "test_component_name" ])
     sources = [
       "admin-server-test.cc",
       "block-device-manager-test.cc",
@@ -341,9 +347,9 @@ template("fshost_integration_test") {
     ]
 
     defines = [
-      "DATA_FILESYSTEM_FORMAT=\"${invoker.test_data_filesystem_format}\"",
-      "USE_DISK_BASED_MINFS_MIGRATION=false",
-      "TEST_COMPONENT_NAME=\"${invoker.test_component_name}\"",
+      "DATA_FILESYSTEM_FORMAT=\"$data_filesystem_format\"",
+      "USE_DISK_BASED_MINFS_MIGRATION=$use_disk_based_minfs_migration",
+      "TEST_COMPONENT_NAME=\"$test_component_name\"",
     ]
   }
 
@@ -376,58 +382,48 @@ template("fshost_integration_test") {
 
   fuchsia_component(target_name) {
     testonly = true
+    forward_variables_from(invoker, [ "test_component_target" ])
     manifest = _manifest
     deps = [
       ":$_manifest_target",
       ":$_test_bin",
       "//src/storage/testing:storage_driver_test_realm",
+      test_component_target,
     ]
-    if (defined(invoker.deps)) {
-      deps += invoker.deps
-    }
-  }
-}
-
-# Generates an integration test with a custom fshost
-#
-#   options - specifies the options for the custom fshost. See fshost.gni
-template("fshost_integration_test_with_custom_fshost") {
-  test_component_name = "$target_name.fshost"
-
-  fshost_component_and_config(test_component_name) {
-    testonly = true
-    forward_variables_from(invoker, [ "options" ])
-  }
-
-  fshost_integration_test(target_name) {
-    _options = invoker.options
-    test_data_filesystem_format = _options.data_filesystem_format
-    deps = [ ":$test_component_name" ]
   }
 }
 
 fshost_integration_test("fshost-integration-test") {
   test_component_name = "test-fshost"
-  test_data_filesystem_format = "minfs"
-  deps = [ "//src/storage/fshost/testing:test-fshost" ]
+  test_component_target = "//src/storage/fshost/testing:test-fshost"
+
+  # Ideally these would come from the configuration of "test_component_target".
+  data_filesystem_format = "minfs"
 }
 
 fshost_integration_test("fshost-fxfs-integration-test") {
   test_component_name = "test-fshost-fxfs"
-  test_data_filesystem_format = "fxfs"
-  deps = [ "//src/storage/fshost/testing:test-fshost-fxfs" ]
+  test_component_target = "//src/storage/fshost/testing:test-fshost-fxfs"
+
+  # Ideally these would come from the configuration of "test_component_target".
+  data_filesystem_format = "fxfs"
 }
 
-fshost_integration_test_with_custom_fshost(
-    "fshost-fxfs-legacy-crypto-integration-test") {
-  options = default_integration_test_options
-  options.data_filesystem_format = "fxfs"
-  options.use_native_fxfs_crypto = false
+fshost_integration_test("fshost-fxfs-legacy-crypto-integration-test") {
+  test_component_name = "test-fshost-fxfs-legacy-crypto"
+  test_component_target =
+      "//src/storage/fshost/testing:test-fshost-fxfs-legacy-crypto"
+
+  # Ideally these would come from the configuration of "test_component_target".
+  data_filesystem_format = "fxfs"
 }
 
-fshost_integration_test_with_custom_fshost("fshost-f2fs-integration-test") {
-  options = default_integration_test_options
-  options.data_filesystem_format = "f2fs"
+fshost_integration_test("fshost-f2fs-integration-test") {
+  test_component_name = "test-fshost-f2fs"
+  test_component_target = "//src/storage/fshost/testing:test-fshost-f2fs"
+
+  # Ideally these would come from the configuration of "test_component_target".
+  data_filesystem_format = "f2fs"
 }
 
 test("disk-migration-test") {
@@ -500,20 +496,28 @@ fuchsia_test_package("fshost-tests") {
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire_testing",
     "//src/developer/forensics/public/fakes:fake_crash_reporter",
-    "//src/security/policy/zxcrypt:null",
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
     "//src/storage/blobfs:decompressor-sandbox",
   ]
 }
 
-fshost_cml("fshost.cml") {
-  options = {
-    bootfs_only = bootfs_only
-
-    # Use global arg settings
-    data_filesystem_format = data_filesystem_format
-    use_disk_based_minfs_migration = use_disk_based_minfs_migration
+cmc_merge("fshost.cml") {
+  sources = [
+    "meta/base_fshost.cml",
+    "meta/config.cml",
+    "meta/cpp_fshost.cml",
+    "meta/real_fshost.cml",
+  ]
+  if (!bootfs_only) {
+    if (data_filesystem_format == "fxfs" || rust_fshost) {
+      sources += [ "meta/fxfs_fshost.cml" ]
+    } else if (data_filesystem_format == "f2fs") {
+      sources += [ "meta/f2fs_fshost.cml" ]
+    } else {
+      sources += [ "meta/minfs_fshost.cml" ]
+    }
+    sources += [ "meta/core_fshost.cml" ]
   }
 }
 
