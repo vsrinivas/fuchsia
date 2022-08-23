@@ -157,7 +157,7 @@ template("generate_chromium_targets") {
     }
 
     icu_tzdata_config_data("tzdata_for_chrome_browser") {
-      for_pkg = "chrome_browser"
+      for_pkg = "chrome"
     }
 
     generate_package_flavors("chrome_browser") {
@@ -204,7 +204,6 @@ template("generate_chromium_targets") {
         # The targets below have exactly the same contents, so will not be taking
         # extra storage in configurations that use them both.
         ":tzdata_for_base_unittests",
-        ":tzdata_for_chromium_tests_base_unittests",
         ":tzdata_for_media_unittests",
       ]
     }
@@ -227,11 +226,6 @@ template("generate_chromium_targets") {
       log_settings = {
         max_severity = "ERROR"
       }
-    }
-
-    icu_tzdata_config_data("tzdata_for_chromium_tests_base_unittests") {
-      for_pkg = "chromium_tests_base_unittests"
-      testonly = true
     }
 
     icu_tzdata_config_data("tzdata_for_base_unittests") {
