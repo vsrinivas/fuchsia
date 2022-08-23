@@ -16,6 +16,9 @@ using OpenAt = fit::function<zx_status_t(const std::string& path,
 zx_status_t ParseConfig(const std::string& data, OpenAt open_at,
                         fuchsia::virtualization::GuestConfig* cfg);
 
+fuchsia::virtualization::GuestConfig MergeConfigs(fuchsia::virtualization::GuestConfig base,
+                                                  fuchsia::virtualization::GuestConfig overrides);
+
 void SetDefaults(fuchsia::virtualization::GuestConfig* cfg);
 
 }  // namespace guest_config

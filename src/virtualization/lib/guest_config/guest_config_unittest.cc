@@ -7,7 +7,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-class GuestConfigParserTest : public ::testing::Test {
+class GuestConfigTest : public ::testing::Test {
  protected:
   std::vector<std::string> paths_;
   fuchsia::virtualization::GuestConfig config_;
@@ -25,7 +25,7 @@ class GuestConfigParserTest : public ::testing::Test {
   }
 };
 
-TEST_F(GuestConfigParserTest, DefaultValues) {
+TEST_F(GuestConfigTest, DefaultValues) {
   ASSERT_EQ(ZX_OK, ParseConfig("{}"));
   ASSERT_FALSE(config_.has_kernel_type());
   ASSERT_FALSE(config_.has_kernel());
@@ -37,7 +37,7 @@ TEST_F(GuestConfigParserTest, DefaultValues) {
             config_.guest_memory());
 }
 
-TEST_F(GuestConfigParserTest, ParseConfig) {
+TEST_F(GuestConfigTest, ParseConfig) {
   ASSERT_EQ(ZX_OK, ParseConfig(
                        R"JSON({
           "zircon": "zircon_path",
@@ -55,7 +55,7 @@ TEST_F(GuestConfigParserTest, ParseConfig) {
   ASSERT_EQ("kernel cmdline", config_.cmdline());
 }
 
-TEST_F(GuestConfigParserTest, BlockSpecJson) {
+TEST_F(GuestConfigTest, BlockSpecJson) {
   ASSERT_EQ(ZX_OK, ParseConfig(
                        R"JSON({
           "block": [
@@ -76,4 +76,41 @@ TEST_F(GuestConfigParserTest, BlockSpecJson) {
   ASSERT_EQ(fuchsia::virtualization::BlockFormat::FILE, spec1.format);
 
   EXPECT_THAT(paths_, testing::ElementsAre("/pkg/data/foo", "/dev/class/block/001"));
+}
+
+TEST_F(GuestConfigTest, MergeConfigs_Simple) {
+  // Use an empty base config.
+  fuchsia::virtualization::GuestConfig base;
+  fuchsia::virtualization::GuestConfig override;
+  override.set_default_net(true);
+  override.set_virtio_balloon(true);
+  override.set_virtio_console(true);
+  override.set_virtio_gpu(true);
+  override.set_virtio_rng(true);
+  override.set_virtio_vsock(true);
+  override.set_virtio_sound(true);
+  override.set_virtio_sound_input(true);
+  override.set_cmdline_add({"a", "b", "c"});
+
+  auto merged = guest_config::MergeConfigs(std::move(base), std::move(override));
+  EXPECT_TRUE(merged.default_net());
+  EXPECT_TRUE(merged.virtio_balloon());
+  EXPECT_TRUE(merged.virtio_console());
+  EXPECT_TRUE(merged.virtio_gpu());
+  EXPECT_TRUE(merged.virtio_rng());
+  EXPECT_TRUE(merged.virtio_vsock());
+  EXPECT_TRUE(merged.virtio_sound());
+  EXPECT_TRUE(merged.virtio_sound_input());
+  EXPECT_THAT(merged.cmdline_add(), ::testing::ElementsAre("a", "b", "c"));
+}
+
+TEST_F(GuestConfigTest, MergeConfigs_ArrayAppend) {
+  // Use an empty base config.
+  fuchsia::virtualization::GuestConfig base;
+  base.set_cmdline_add({"a", "b", "c"});
+  fuchsia::virtualization::GuestConfig override;
+  override.set_cmdline_add({"d", "e", "f"});
+
+  auto merged = guest_config::MergeConfigs(std::move(base), std::move(override));
+  EXPECT_THAT(merged.cmdline_add(), ::testing::ElementsAre("a", "b", "c", "d", "e", "f"));
 }

@@ -457,4 +457,50 @@ zx_status_t ParseConfig(const std::string& data, OpenAt open_at, GuestConfig* cf
   return ZX_OK;
 }
 
+fuchsia::virtualization::GuestConfig MergeConfigs(fuchsia::virtualization::GuestConfig base,
+                                                  fuchsia::virtualization::GuestConfig overrides) {
+#define COPY_GUEST_CONFIG_FIELD(field_name)                                \
+  do {                                                                     \
+    if (overrides.has_##field_name()) {                                    \
+      base.set_##field_name(std::move(*overrides.mutable_##field_name())); \
+    }                                                                      \
+  } while (0)
+#define APPEND_GUEST_CONFIG_FIELD(field_name)                                 \
+  do {                                                                        \
+    if (overrides.has_##field_name()) {                                       \
+      base.mutable_##field_name()->insert(                                    \
+          base.mutable_##field_name()->end(),                                 \
+          std::make_move_iterator(overrides.mutable_##field_name()->begin()), \
+          std::make_move_iterator(overrides.mutable_##field_name()->end()));  \
+    }                                                                         \
+  } while (0)
+
+  COPY_GUEST_CONFIG_FIELD(kernel_type);
+  COPY_GUEST_CONFIG_FIELD(kernel);
+  COPY_GUEST_CONFIG_FIELD(ramdisk);
+  COPY_GUEST_CONFIG_FIELD(dtb_overlay);
+  COPY_GUEST_CONFIG_FIELD(cmdline);
+  APPEND_GUEST_CONFIG_FIELD(cmdline_add);
+  COPY_GUEST_CONFIG_FIELD(cpus);
+  COPY_GUEST_CONFIG_FIELD(guest_memory);
+  APPEND_GUEST_CONFIG_FIELD(block_devices);
+  APPEND_GUEST_CONFIG_FIELD(net_devices);
+  COPY_GUEST_CONFIG_FIELD(wayland_device);
+  COPY_GUEST_CONFIG_FIELD(magma_device);
+  COPY_GUEST_CONFIG_FIELD(default_net);
+  COPY_GUEST_CONFIG_FIELD(virtio_balloon);
+  COPY_GUEST_CONFIG_FIELD(virtio_console);
+  COPY_GUEST_CONFIG_FIELD(virtio_gpu);
+  COPY_GUEST_CONFIG_FIELD(virtio_rng);
+  COPY_GUEST_CONFIG_FIELD(virtio_vsock);
+  COPY_GUEST_CONFIG_FIELD(virtio_sound);
+  COPY_GUEST_CONFIG_FIELD(virtio_sound_input);
+  APPEND_GUEST_CONFIG_FIELD(vsock_listeners);
+
+#undef COPY_GUEST_CONFIG_FIELD
+#undef APPEND_GUEST_CONFIG_FIELD
+
+  return base;
+}
+
 }  // namespace guest_config
