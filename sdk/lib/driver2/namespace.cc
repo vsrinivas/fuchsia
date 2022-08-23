@@ -6,20 +6,6 @@
 
 namespace driver {
 
-namespace internal {
-
-zx::status<> DirectoryOpenFunc(zx::unowned_channel dir, fidl::StringView path, zx::channel remote) {
-  constexpr fuchsia_io::wire::OpenFlags flags =
-      fuchsia_io::wire::OpenFlags::kRightReadable | fuchsia_io::wire::OpenFlags::kRightWritable;
-  fidl::UnownedClientEnd<fuchsia_io::Directory> dir_end(dir);
-  fidl::ServerEnd<fuchsia_io::Node> node_end(std::move(remote));
-  fidl::WireResult<fuchsia_io::Directory::Open> result =
-      fidl::WireCall<fuchsia_io::Directory>(dir_end)->Open(flags, 0755u, path, std::move(node_end));
-  return zx::make_status(result.status());
-}
-
-}  // namespace internal
-
 zx::status<Namespace> Namespace::Create(
     fidl::VectorView<fuchsia_component_runner::wire::ComponentNamespaceEntry>& entries) {
   fdio_ns_t* ns;
@@ -27,7 +13,13 @@ zx::status<Namespace> Namespace::Create(
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  Namespace self(ns);
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (endpoints.is_error()) {
+    return endpoints.take_error();
+  }
+
+  Namespace self(ns, std::move(endpoints->client));
   for (auto& entry : entries) {
     std::string path(entry.path().data(), entry.path().size());
     status = fdio_ns_bind(ns, path.data(), entry.directory().TakeChannel().release());
@@ -35,10 +27,19 @@ zx::status<Namespace> Namespace::Create(
       return zx::error(status);
     }
   }
+  auto result = self.Open(
+      "/svc",
+      fuchsia_io::wire::OpenFlags::kRightReadable | fuchsia_io::wire::OpenFlags::kRightWritable,
+      endpoints->server.TakeChannel());
+  if (result.is_error()) {
+    return result.take_error();
+  }
+
   return zx::ok(std::move(self));
 }
 
-Namespace::Namespace(fdio_ns_t* ns) : ns_(ns) {}
+Namespace::Namespace(fdio_ns_t* ns, fidl::ClientEnd<fuchsia_io::Directory> svc_dir)
+    : ns_(ns), svc_dir_(std::move(svc_dir)) {}
 
 Namespace::~Namespace() {
   if (ns_ != nullptr) {
@@ -46,21 +47,22 @@ Namespace::~Namespace() {
   }
 }
 
-Namespace::Namespace(Namespace&& other) noexcept : ns_(other.ns_) { other.ns_ = nullptr; }
+Namespace::Namespace(Namespace&& other) noexcept
+    : ns_(other.ns_), svc_dir_(std::move(other.svc_dir_)) {
+  other.ns_ = nullptr;
+}
 
 Namespace& Namespace::operator=(Namespace&& other) noexcept {
   this->~Namespace();
   ns_ = other.ns_;
   other.ns_ = nullptr;
+  svc_dir_ = std::move(other.svc_dir_);
   return *this;
 }
 
-zx::status<> Namespace::Connect(std::string_view path, zx::channel server_end,
-                                fuchsia_io::wire::OpenFlags flags) const {
-  // TODO(https://fxbug.dev/103308): should this call fdio_ns_service_connect
-  // instead? The flags argument would need to be removed.
-  zx_status_t status =
-      fdio_ns_open(ns_, path.data(), static_cast<uint32_t>(flags), server_end.release());
+zx::status<> Namespace::Open(const char* path, fuchsia_io::wire::OpenFlags flags,
+                             zx::channel server_end) const {
+  zx_status_t status = fdio_ns_open(ns_, path, static_cast<uint32_t>(flags), server_end.release());
   return zx::make_status(status);
 }
 

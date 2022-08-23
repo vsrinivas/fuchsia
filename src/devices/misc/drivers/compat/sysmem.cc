@@ -10,8 +10,7 @@ namespace compat {
 
 zx_status_t Sysmem::SysmemConnect(zx::channel allocator_request) {
   return driver_->driver_namespace()
-      .Connect(fidl::DiscoverableProtocolDefaultPath<fuchsia_sysmem::Allocator>,
-               std::move(allocator_request))
+      .Connect(fidl::ServerEnd<fuchsia_sysmem::Allocator>(std::move(allocator_request)))
       .status_value();
 }
 

@@ -56,8 +56,7 @@ void ConnectToParentDevices(async_dispatcher_t* dispatcher, const driver::Namesp
                             ConnectCallback cb) {
   std::vector<ParentDevice> devices;
 
-  auto result = ns->Connect<fuchsia_io::Directory>(
-      std::string("/svc/").append(fuchsia_driver_compat::Service::Name));
+  auto result = ns->Connect<fuchsia_io::Directory>(fuchsia_driver_compat::Service::Name);
 
   if (result.is_error()) {
     cb(result.take_error());
@@ -78,11 +77,11 @@ void ConnectToParentDevices(async_dispatcher_t* dispatcher, const driver::Namesp
             continue;
           }
           auto result = ns->Connect<fuchsia_driver_compat::Device>(
-              std::string("/svc/")
-                  .append(fuchsia_driver_compat::Service::Name)
+              std::string(fuchsia_driver_compat::Service::Name)
                   .append("/")
                   .append(name)
-                  .append("/device"));
+                  .append("/device")
+                  .c_str());
           if (result.is_error()) {
             cb(result.take_error());
             return;

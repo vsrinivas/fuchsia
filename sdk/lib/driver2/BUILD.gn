@@ -61,10 +61,12 @@ sdk_source_set("llcpp") {
     "//sdk/fidl/fuchsia.data:fuchsia.data_cpp_wire",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_cpp_wire",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_driver",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_cpp_wire",
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit-promise",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/syslog/structured_backend",
   ]
 }

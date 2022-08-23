@@ -65,10 +65,7 @@ class LeafDriver {
     ZX_ASSERT((*dispatcher_->options() & FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS) ==
               FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS);
 
-    std::string_view path = fidl::DiscoverableProtocolDefaultPath<ft::Handshake>;
-    fuchsia_io::wire::OpenFlags flags = fuchsia_io::wire::OpenFlags::kRightReadable;
-
-    auto result = ns_.Connect<ft::Handshake>(path, flags);
+    auto result = ns_.Connect<ft::Handshake>();
     if (result.is_error()) {
       return result.status_value();
     }

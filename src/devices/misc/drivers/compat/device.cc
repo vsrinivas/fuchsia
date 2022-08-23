@@ -721,13 +721,13 @@ zx_status_t Device::ConnectFragmentFidl(const char* fragment_name, const char* p
     }
   }
 
-  auto connect_string = std::string("/svc/")
-                            .append(fuchsia_driver_compat::Service::Name)
+  auto connect_string = std::string(fuchsia_driver_compat::Service::Name)
                             .append("/")
                             .append(fragment_name)
                             .append("/device");
 
-  auto device = driver_->driver_namespace().Connect<fuchsia_driver_compat::Device>(connect_string);
+  auto device =
+      driver_->driver_namespace().Connect<fuchsia_driver_compat::Device>(connect_string.c_str());
   if (device.status_value() != ZX_OK) {
     FDF_LOG(ERROR, "Error connecting: %s", device.status_string());
     return device.status_value();
@@ -759,9 +759,10 @@ zx_status_t Device::OpenFragmentFidlService(const char* fragment_name, const cha
     }
   }
 
-  auto service_path = std::string("/svc/").append(service_name).append("/").append(fragment_name);
+  auto service_path = std::string(service_name).append("/").append(fragment_name);
 
-  auto result = driver_->driver_namespace().Connect(service_path, std::move(request));
+  auto result = driver_->driver_namespace().Connect(
+      fidl::ServerEnd<fuchsia_io::Directory>(std::move(request)), service_path.c_str());
   if (result.is_error()) {
     FDF_LOG(ERROR, "Error connecting: %s", result.status_string());
     return result.status_value();

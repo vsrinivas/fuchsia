@@ -13,30 +13,43 @@ namespace driver {
 
 namespace internal {
 
-// Connects to the given `path` in `ns`, and returns a fpromise::result containing a
+// Connects to the given `protocol_name` in `ns`, and returns a fpromise::result containing a
 // fidl::WireSharedClient on success.
-template <typename T>
-fpromise::result<fidl::WireSharedClient<T>, zx_status_t> ConnectWithResult(
-    const driver::Namespace& ns, async_dispatcher_t* dispatcher, std::string_view path,
-    fuchsia_io::wire::OpenFlags flags) {
-  auto result = ns.Connect<T>(path, flags);
+template <typename Protocol>
+fpromise::result<fidl::WireSharedClient<Protocol>, zx_status_t> ConnectWithResult(
+    const driver::Namespace& ns, async_dispatcher_t* dispatcher, const char* protocol_name) {
+  auto result = ns.Connect<Protocol>(protocol_name);
   if (result.is_error()) {
     return fpromise::error(result.status_value());
   }
-  fidl::WireSharedClient<T> client(std::move(*result), dispatcher);
+  fidl::WireSharedClient<Protocol> client(std::move(*result), dispatcher);
   return fpromise::ok(std::move(client));
 }
 
+// Opens the given `path` in `ns`, and returns a fpromise::result containing a
+// fidl::WireSharedClient on success.
+fpromise::result<fidl::WireSharedClient<fuchsia_io::File>, zx_status_t> OpenWithResult(
+    const driver::Namespace& ns, async_dispatcher_t* dispatcher, const char* path,
+    fuchsia_io::wire::OpenFlags flags);
+
 }  // namespace internal
 
-// Connects to the given `path` in `ns`, and returns a fpromise::promise containing a
+// Connects to the given `protocol_name` in `ns`, and returns a fpromise::promise containing a
 // fidl::WireSharedClient on success.
-template <typename T>
-fpromise::promise<fidl::WireSharedClient<T>, zx_status_t> Connect(
+template <typename Protocol>
+fpromise::promise<fidl::WireSharedClient<Protocol>, zx_status_t> Connect(
     const driver::Namespace& ns, async_dispatcher_t* dispatcher,
-    std::string_view path = fidl::DiscoverableProtocolDefaultPath<T>,
+    const char* protocol_name = fidl::DiscoverableProtocolName<Protocol>) {
+  return fpromise::make_result_promise(
+      internal::ConnectWithResult<Protocol>(ns, dispatcher, protocol_name));
+}
+
+// Opens the given `path` in `ns`, and returns a fpromise::promise containing a
+// fidl::WireSharedClient on success.
+inline fpromise::promise<fidl::WireSharedClient<fuchsia_io::File>, zx_status_t> Open(
+    const driver::Namespace& ns, async_dispatcher_t* dispatcher, const char* path,
     fuchsia_io::wire::OpenFlags flags = fuchsia_io::wire::OpenFlags::kRightReadable) {
-  return fpromise::make_result_promise(internal::ConnectWithResult<T>(ns, dispatcher, path, flags));
+  return fpromise::make_result_promise(internal::OpenWithResult(ns, dispatcher, path, flags));
 }
 
 // Adds a child to `client`, using `args`. `controller` must be provided, but

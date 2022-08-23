@@ -82,11 +82,19 @@ TEST_F(DevfsExporterTest, Create) {
 
   driver::testing::Directory svc_directory;
   svc_directory.SetOpenHandler([this, &exporter_binding](std::string path, auto object) {
-    EXPECT_EQ(fidl::DiscoverableProtocolName<fuchsia_device_fs::Exporter>, path);
+    EXPECT_EQ(path, fidl::DiscoverableProtocolName<fuchsia_device_fs::Exporter>);
     exporter_binding.Bind(object.TakeChannel(), dispatcher());
   });
   fidl::Binding<fio::Directory> svc_binding(&svc_directory);
-  svc_binding.Bind(svc->server.TakeChannel(), dispatcher());
+
+  driver::testing::Directory svc_directory2;
+  svc_directory2.SetOpenHandler([this, &svc_binding](std::string path, auto object) {
+    EXPECT_EQ(path, ".");
+    svc_binding.Bind(object.TakeChannel(), dispatcher());
+  });
+  fidl::Binding<fio::Directory> svc_binding2(&svc_directory2);
+
+  svc_binding2.Bind(svc->server.TakeChannel(), dispatcher());
 
   auto outgoing = component::OutgoingDirectory::Create(dispatcher());
   auto status =
@@ -143,11 +151,19 @@ TEST_F(DevfsExporterTest, Create_ServiceNotFound) {
 
   driver::testing::Directory svc_directory;
   svc_directory.SetOpenHandler([this, &exporter_binding](std::string path, auto object) {
-    EXPECT_EQ(fidl::DiscoverableProtocolName<fuchsia_device_fs::Exporter>, path);
+    EXPECT_EQ(path, fidl::DiscoverableProtocolName<fuchsia_device_fs::Exporter>);
     exporter_binding.Bind(object.TakeChannel(), dispatcher());
   });
   fidl::Binding<fio::Directory> svc_binding(&svc_directory);
-  svc_binding.Bind(svc->server.TakeChannel(), dispatcher());
+
+  driver::testing::Directory svc_directory2;
+  svc_directory2.SetOpenHandler([this, &svc_binding](std::string path, auto object) {
+    EXPECT_EQ(path, ".");
+    svc_binding.Bind(object.TakeChannel(), dispatcher());
+  });
+  fidl::Binding<fio::Directory> svc_binding2(&svc_directory2);
+
+  svc_binding2.Bind(svc->server.TakeChannel(), dispatcher());
 
   auto outgoing = component::OutgoingDirectory::Create(dispatcher());
   auto status =
@@ -186,11 +202,19 @@ TEST_F(DevfsExporterTest, Create_ServiceFailure) {
 
   driver::testing::Directory svc_directory;
   svc_directory.SetOpenHandler([this, &exporter_binding](std::string path, auto object) {
-    EXPECT_EQ(fidl::DiscoverableProtocolName<fuchsia_device_fs::Exporter>, path);
+    EXPECT_EQ(path, fidl::DiscoverableProtocolName<fuchsia_device_fs::Exporter>);
     exporter_binding.Bind(object.TakeChannel(), dispatcher());
   });
   fidl::Binding<fio::Directory> svc_binding(&svc_directory);
-  svc_binding.Bind(svc->server.TakeChannel(), dispatcher());
+
+  driver::testing::Directory svc_directory2;
+  svc_directory2.SetOpenHandler([this, &svc_binding](std::string path, auto object) {
+    EXPECT_EQ(path, ".");
+    svc_binding.Bind(object.TakeChannel(), dispatcher());
+  });
+  fidl::Binding<fio::Directory> svc_binding2(&svc_directory2);
+
+  svc_binding2.Bind(svc->server.TakeChannel(), dispatcher());
 
   auto outgoing = component::OutgoingDirectory::Create(dispatcher());
   auto status =

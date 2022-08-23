@@ -212,9 +212,9 @@ zx::status<> Driver::Run(fidl::ServerEnd<fio::Directory> outgoing_dir,
     }
   }
 
-  auto loader_vmo = driver::Connect<fio::File>(ns_, dispatcher_, kLibDriverPath, kOpenFlags)
+  auto loader_vmo = driver::Open(ns_, dispatcher_, kLibDriverPath, kOpenFlags)
                         .and_then(fit::bind_member<&Driver::GetBuffer>(this));
-  auto driver_vmo = driver::Connect<fio::File>(ns_, dispatcher_, driver_path, kOpenFlags)
+  auto driver_vmo = driver::Open(ns_, dispatcher_, std::string(driver_path).c_str(), kOpenFlags)
                         .and_then(fit::bind_member<&Driver::GetBuffer>(this));
   auto start_driver =
       join_promises(std::move(root_resource), std::move(loader_vmo), std::move(driver_vmo))
@@ -537,7 +537,7 @@ zx::status<zx::vmo> Driver::LoadFirmware(Device* device, const char* filename, s
   std::string full_filename = "/pkg/lib/firmware/";
   full_filename.append(filename);
   fpromise::result connect_result = fpromise::run_single_threaded(
-      driver::Connect<fio::File>(ns_, dispatcher_, full_filename, kOpenFlags));
+      driver::Open(ns_, dispatcher_, full_filename.c_str(), kOpenFlags));
   if (connect_result.is_error()) {
     return zx::error(connect_result.take_error());
   }
@@ -565,7 +565,7 @@ void Driver::LoadFirmwareAsync(Device* device, const char* filename,
                                load_firmware_callback_t callback, void* ctx) {
   std::string firmware_path = "/pkg/lib/firmware/";
   firmware_path.append(filename);
-  executor_.schedule_task(driver::Connect<fio::File>(ns_, dispatcher_, firmware_path, kOpenFlags)
+  executor_.schedule_task(driver::Open(ns_, dispatcher_, firmware_path.c_str(), kOpenFlags)
                               .and_then(fit::bind_member<&Driver::GetBuffer>(this))
                               .and_then([callback, ctx](FileVmo& result) {
                                 callback(ctx, ZX_OK, result.vmo.release(), result.size);

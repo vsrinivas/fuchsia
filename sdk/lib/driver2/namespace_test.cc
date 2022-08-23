@@ -18,12 +18,18 @@ TEST(NamespaceTest, CreateAndConnect) {
 
   auto pkg = fidl::CreateEndpoints<fuchsia_io::Directory>();
   EXPECT_EQ(ZX_OK, pkg.status_value());
+  auto svc = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  EXPECT_EQ(ZX_OK, svc.status_value());
   fidl::Arena arena;
-  fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(arena, 1);
+  fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(arena, 2);
   ns_entries[0].Allocate(arena);
   ns_entries[0].set_path(arena, "/pkg").set_directory(std::move(pkg->client));
+  ns_entries[1].Allocate(arena);
+  ns_entries[1].set_path(arena, "/svc").set_directory(std::move(svc->client));
   auto ns = driver::Namespace::Create(ns_entries);
   ASSERT_TRUE(ns.is_ok());
+
+  svc->server.TakeChannel().reset();
 
   driver::testing::Directory pkg_directory;
   fidl::Binding<fio::Directory> pkg_binding(&pkg_directory);
@@ -34,7 +40,9 @@ TEST(NamespaceTest, CreateAndConnect) {
     EXPECT_EQ("path-exists", path);
     server_end = std::move(object.TakeChannel());
   });
-  auto client_end = ns->Connect<frunner::ComponentRunner>("/pkg/path-exists");
+
+  auto client_end =
+      ns->Open<fuchsia_io::File>("/pkg/path-exists", fuchsia_io::wire::OpenFlags::kRightReadable);
   EXPECT_TRUE(client_end.is_ok());
   loop.RunUntilIdle();
   zx_info_handle_basic_t client_info = {}, server_info = {};
@@ -45,7 +53,7 @@ TEST(NamespaceTest, CreateAndConnect) {
   EXPECT_EQ(client_info.koid, server_info.related_koid);
 
   auto not_found_client_end = ns->Connect<frunner::ComponentRunner>("/svc/path-does-not-exist");
-  EXPECT_EQ(ZX_ERR_NOT_FOUND, not_found_client_end.error_value());
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED, not_found_client_end.error_value());
 }
 
 TEST(NamespaceTest, CreateFailed) {
