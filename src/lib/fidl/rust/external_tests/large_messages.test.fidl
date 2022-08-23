@@ -24,4 +24,10 @@ protocol OverflowingProtocol {
 
     @experimental_overflowing(request=true, response=true)
     TwoWayBothRequestAndResponse(LargeMessageStruct) -> (LargeMessageStruct);
+
+    @experimental_overflowing(request=true)
+    OneWayCall(LargeMessageTable);
+
+    @experimental_overflowing(response=true)
+    -> OnOneWayReplyEvent(LargeMessageUnion);
 };

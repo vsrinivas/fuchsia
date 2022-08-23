@@ -67,7 +67,7 @@ pub(crate) fn write_epitaph_impl<T: ChannelLike>(
         header: TransactionHeader::new(0, encoding::EPITAPH_ORDINAL, DynamicFlags::empty()),
         body: &mut EpitaphBody { error: status },
     };
-    encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+    encoding::with_tls_encoded::<_, _, false>(&mut msg, |bytes, handles| {
         channel.write_etc(&*bytes, &mut *handles).map_err(Error::ServerEpitaphWrite)
     })
 }

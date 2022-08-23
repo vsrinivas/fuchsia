@@ -77,12 +77,17 @@ pub fn with_tls_decode_buf<R>(f: impl FnOnce(&mut Vec<u8>, &mut Vec<HandleInfo>)
 ///
 /// This function may not be called recursively.
 #[inline]
-pub fn with_tls_encoded<T, E: From<Error>>(
+pub fn with_tls_encoded<T, E: From<Error>, const OVERFLOWABLE: bool>(
     val: &mut impl Encodable,
     f: impl FnOnce(&mut Vec<u8>, &mut Vec<HandleDisposition<'static>>) -> std::result::Result<T, E>,
 ) -> std::result::Result<T, E> {
     with_tls_encode_buf(|bytes, handles| {
         Encoder::encode(bytes, handles, val)?;
+
+        if OVERFLOWABLE {
+            maybe_overflowing_after_encode(bytes, handles)?;
+        }
+
         f(bytes, handles)
     })
 }

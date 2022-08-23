@@ -186,7 +186,7 @@ impl {{ $protocol.Name }}SynchronousProxy {
             {{- end -}}
             Ok({{ template "ResponseValue" $method }})
         {{- else -}}
-            self.client.send(&mut (
+            self.client.send::<_, {{- $method.Overflowing.OnRequestEncode -}}>(&mut (
                 {{- range $index, $request := $method.Request -}}
                 {{- template "WrappedName" $request -}},
                 {{- end -}}
@@ -326,7 +326,7 @@ impl {{ $protocol.Name}}ProxyInterface for {{ $protocol.Name}}Proxy {
         mut {{ $request.Name }}: {{ $request.BorrowedType }},
         {{- end }}
     ) -> Result<(), fidl::Error> {
-        self.client.send(&mut (
+        self.client.send::<_, {{- $method.Overflowing.OnRequestEncode -}}>(&mut (
         {{- range $index, $request := $method.Request -}}
         {{- if ne $index 0 }}, {{ end -}}
         {{- template "WrappedName" $request -}}
@@ -433,7 +433,11 @@ impl {{ $protocol.Name }}Event {
                 ) = fidl::encoding::Decodable::new_empty();
                 fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "{{ $protocol.ECI }}{{ $method.CamelName }}Event");
                 fidl::trace_blob!("fidl:blob", "decode", bytes);
-                fidl::encoding::Decoder::decode_into(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
+                fidl::encoding::{{- if $method.Overflowing.OnResponseDecode -}}
+                maybe_overflowing_decode
+                {{- else -}}
+                Decoder::decode_into
+                {{- end -}}(&tx_header, _body_bytes, _handles, &mut out_tuple)?;
                 fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => _handles.len() as u32);
                 Ok((
                     {{ $protocol.Name }}Event::{{ $method.CamelName }} {
@@ -550,15 +554,11 @@ impl futures::Stream for {{ $protocol.Name }}RequestStream {
                     ) = fidl::encoding::Decodable::new_empty();
                     fidl::duration_begin!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "{{ $protocol.ECI }}{{ $method.CamelName }}Request");
                     fidl::trace_blob!("fidl:blob", "decode", bytes);
-                    {{- if $method.Overflowing.OnRequestDecode }}
-                    if let Err(err) = fidl::encoding::maybe_overflowing_decode(
-                        &header,
-                        _body_bytes,
-                        handles,
-                        &mut req) { return std::task::Poll::Ready(Some(Err(err))); }
-                    {{- else }}
-                    fidl::encoding::Decoder::decode_into(&header, _body_bytes, handles, &mut req)?;
-                    {{- end }}
+                    fidl::encoding::{{- if $method.Overflowing.OnRequestDecode -}}
+                    maybe_overflowing_decode
+                    {{- else -}}
+                    Decoder::decode_into
+                    {{- end -}}(&header, _body_bytes, handles, &mut req)?;
                     fidl::duration_end!("fidl", "decode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
                     let control_handle = {{ $protocol.Name }}ControlHandle {
                         inner: this.inner.clone(),
@@ -781,7 +781,7 @@ impl {{ $protocol.Name }}ControlHandle {
             body: &mut response,
         };
 
-        fidl::encoding::with_tls_encoded(&mut msg, |bytes, handles| {
+        fidl::encoding::with_tls_encoded::<_, _, {{- $method.Overflowing.OnResponseEncode -}}>(&mut msg, |bytes, handles| {
             self.inner.channel().write_etc(&*bytes, &mut *handles).map_err(fidl::Error::ServerResponseWrite)
         })?;
 
