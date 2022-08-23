@@ -534,13 +534,11 @@ TEST(PointUnity, TotalResponse) {
                        AudioResult::SinadPointUnity.data(), AudioResult::PhasePointUnity.data());
 
   EvaluateFreqRespResults(AudioResult::FreqRespPointUnity.data(),
-                          AudioResult::kPrevFreqRespPointUnity.data());
+                          AudioResult::kPrevFreqRespUnity.data());
 
-  EvaluateSinadResults(AudioResult::SinadPointUnity.data(),
-                       AudioResult::kPrevSinadPointUnity.data());
+  EvaluateSinadResults(AudioResult::SinadPointUnity.data(), AudioResult::kPrevSinadUnity.data());
 
-  EvaluatePhaseResults(AudioResult::PhasePointUnity.data(),
-                       AudioResult::kPrevPhasePointUnity.data());
+  EvaluatePhaseResults(AudioResult::PhasePointUnity.data(), AudioResult::kPrevPhaseUnity.data());
 }
 
 // Measure Freq Response, SINAD and Phase Response for Sinc sampler, no rate conversion.
@@ -549,11 +547,11 @@ TEST(SincUnity, TotalResponse) {
                        AudioResult::SinadSincUnity.data(), AudioResult::PhaseSincUnity.data());
 
   EvaluateFreqRespResults(AudioResult::FreqRespSincUnity.data(),
-                          AudioResult::kPrevFreqRespSincUnity.data());
+                          AudioResult::kPrevFreqRespUnity.data());
 
-  EvaluateSinadResults(AudioResult::SinadSincUnity.data(), AudioResult::kPrevSinadSincUnity.data());
+  EvaluateSinadResults(AudioResult::SinadSincUnity.data(), AudioResult::kPrevSinadUnity.data());
 
-  EvaluatePhaseResults(AudioResult::PhaseSincUnity.data(), AudioResult::kPrevPhaseSincUnity.data());
+  EvaluatePhaseResults(AudioResult::PhaseSincUnity.data(), AudioResult::kPrevPhaseUnity.data());
 }
 
 // Measure Freq Response, SINAD, Out-of-band Rejection and Phase Response for Sinc sampler for

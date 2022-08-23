@@ -41,10 +41,9 @@ void MixerTestsRecap::PrintFrequencyResponseSummary() {
   for (auto idx = begin_idx; idx < end_idx; ++idx) {
     auto freq_idx = FrequencySet::UseFullFrequencySet ? idx : FrequencySet::kSummaryIdxs[idx];
     printf("\n   %6d Hz", FrequencySet::kRefFreqsTranslated[freq_idx]);
-    if (AudioResult::kPrevFreqRespPointUnity[freq_idx] !=
-        -std::numeric_limits<double>::infinity()) {
+    if (AudioResult::kPrevFreqRespUnity[freq_idx] != -std::numeric_limits<double>::infinity()) {
       printf("   %6.3lf (%6.3lf)", AudioResult::FreqRespPointUnity[freq_idx],
-             AudioResult::kPrevFreqRespPointUnity[freq_idx]);
+             AudioResult::kPrevFreqRespUnity[freq_idx]);
     }
   }
 
@@ -62,9 +61,9 @@ void MixerTestsRecap::PrintFrequencyResponseSummary() {
     auto freq_idx = FrequencySet::UseFullFrequencySet ? idx : FrequencySet::kSummaryIdxs[idx];
     printf("\n   %6d Hz", FrequencySet::kRefFreqsTranslated[freq_idx]);
 
-    if (AudioResult::kPrevFreqRespSincUnity[freq_idx] != -std::numeric_limits<double>::infinity()) {
+    if (AudioResult::kPrevFreqRespUnity[freq_idx] != -std::numeric_limits<double>::infinity()) {
       printf("   %6.3lf (%6.3lf)", AudioResult::FreqRespSincUnity[freq_idx],
-             AudioResult::kPrevFreqRespSincUnity[freq_idx]);
+             AudioResult::kPrevFreqRespUnity[freq_idx]);
     } else {
       printf("                  ");
     }
@@ -139,9 +138,9 @@ void MixerTestsRecap::PrintSinadSummary() {
   for (auto idx = begin_idx; idx < end_idx; ++idx) {
     auto freq_idx = FrequencySet::UseFullFrequencySet ? idx : FrequencySet::kSummaryIdxs[idx];
     printf("\n   %6d Hz ", FrequencySet::kRefFreqsTranslated[freq_idx]);
-    if (AudioResult::kPrevSinadPointUnity[freq_idx] != -std::numeric_limits<double>::infinity()) {
+    if (AudioResult::kPrevSinadUnity[freq_idx] != -std::numeric_limits<double>::infinity()) {
       printf("   %6.2lf  (%6.2lf)", AudioResult::SinadPointUnity[freq_idx],
-             AudioResult::kPrevSinadPointUnity[freq_idx]);
+             AudioResult::kPrevSinadUnity[freq_idx]);
     }
   }
 
@@ -159,9 +158,9 @@ void MixerTestsRecap::PrintSinadSummary() {
     auto freq_idx = FrequencySet::UseFullFrequencySet ? idx : FrequencySet::kSummaryIdxs[idx];
     printf("\n   %6d Hz ", FrequencySet::kRefFreqsTranslated[freq_idx]);
 
-    if (AudioResult::kPrevSinadSincUnity[freq_idx] != -std::numeric_limits<double>::infinity()) {
+    if (AudioResult::kPrevSinadUnity[freq_idx] != -std::numeric_limits<double>::infinity()) {
       printf("   %6.2lf  (%6.2lf)", AudioResult::SinadSincUnity[freq_idx],
-             AudioResult::kPrevSinadSincUnity[freq_idx]);
+             AudioResult::kPrevSinadUnity[freq_idx]);
     } else {
       printf("                   ");
     }
@@ -288,9 +287,9 @@ void MixerTestsRecap::PrintPhaseResponseSummary() {
   for (auto idx = begin_idx; idx < end_idx; ++idx) {
     auto freq_idx = FrequencySet::UseFullFrequencySet ? idx : FrequencySet::kSummaryIdxs[idx];
     printf("\n   %6d Hz ", FrequencySet::kRefFreqsTranslated[freq_idx]);
-    if (AudioResult::kPrevPhasePointUnity[freq_idx] != -std::numeric_limits<double>::infinity()) {
+    if (AudioResult::kPrevPhaseUnity[freq_idx] != -std::numeric_limits<double>::infinity()) {
       printf("   %6.3lf  (%6.3lf)", AudioResult::PhasePointUnity[freq_idx],
-             AudioResult::kPrevPhasePointUnity[freq_idx]);
+             AudioResult::kPrevPhaseUnity[freq_idx]);
     }
   }
 
@@ -308,9 +307,9 @@ void MixerTestsRecap::PrintPhaseResponseSummary() {
     auto freq_idx = FrequencySet::UseFullFrequencySet ? idx : FrequencySet::kSummaryIdxs[idx];
     printf("\n   %6d Hz ", FrequencySet::kRefFreqsTranslated[freq_idx]);
 
-    if (AudioResult::kPrevPhaseSincUnity[freq_idx] != -std::numeric_limits<double>::infinity()) {
+    if (AudioResult::kPrevPhaseUnity[freq_idx] != -std::numeric_limits<double>::infinity()) {
       printf("   %6.3lf  (%6.3lf)", AudioResult::PhaseSincUnity[freq_idx],
-             AudioResult::kPrevPhaseSincUnity[freq_idx]);
+             AudioResult::kPrevPhaseUnity[freq_idx]);
     } else {
       printf("                   ");
     }

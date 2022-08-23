@@ -183,7 +183,7 @@ class AudioResult {
   // sent at 0 dBFS: thus, output results closer to 0 are better.
   static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespPointUnity;
 
-  // Same as the above section, but for Windowed Sinc
+  // Same as the above, but for Windowed Sinc.
   static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespSincUnity;
   static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespSincDown0;
   static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> FreqRespSincDown1;
@@ -202,10 +202,7 @@ class AudioResult {
   //
   // These are previous-cached results for frequency response, for this sampler and rate ratio. If
   // any result magnitude is LESS than this value, the test case fails. Ideal results: 0.0 for all.
-  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespPointUnity;
-
-  // Same as the above section, but for Windows Sinc
-  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespSincUnity;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespUnity;
   static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespSincDown0;
   static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespSincDown1;
   static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevFreqRespSincDown2;
@@ -235,7 +232,7 @@ class AudioResult {
   // noise. Results are ratios of signal-to-other, measured in dBr, so larger values are better.
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadPointUnity;
 
-  // Same as the above section, but for Windowed Sinc
+  // Same as the above, but for Windowed Sinc.
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadSincUnity;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadSincDown0;
   static std::array<double, FrequencySet::kNumReferenceFreqs> SinadSincDown1;
@@ -247,10 +244,7 @@ class AudioResult {
 
   // Previous-cached SINAD results for this sampler and rate conversion ratio, in dBr. If current
   // result is LESS than this value, the test case fails.
-  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadPointUnity;
-
-  // Same as the above section, but for Windowed Sinc
-  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadSincUnity;
+  static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadUnity;
   static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadSincDown0;
   static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadSincDown1;
   static const std::array<double, FrequencySet::kNumReferenceFreqs> kPrevSinadSincDown2;
@@ -276,6 +270,7 @@ class AudioResult {
 
   static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhasePointUnity;
 
+  // Same as the above, but for Windowed Sinc.
   static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhaseSincUnity;
   static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhaseSincDown0;
   static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhaseSincDown1;
@@ -286,9 +281,7 @@ class AudioResult {
   static std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> PhaseSincUp3;
 
   // For Phase, measured value must exceed or equal the below cached value.
-  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhasePointUnity;
-
-  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhaseSincUnity;
+  static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhaseUnity;
   static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhaseSincDown0;
   static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhaseSincDown1;
   static const std::array<double, FrequencySet::kFirstOutBandRefFreqIdx> kPrevPhaseSincDown2;
