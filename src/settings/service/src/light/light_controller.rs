@@ -170,8 +170,16 @@ impl LightController {
     async fn set(&self, name: String, state: Vec<LightState>) -> SettingHandlerResult {
         let id = fuchsia_trace::Id::new();
         let mut light_info = self.data_cache.lock().await;
-        let current = light_info.as_mut().unwrap();
+        // TODO(fxbug.dev/107540) Deduplicate the code here and in mic_mute if possible.
+        if light_info.is_none() {
+            drop(light_info);
+            let _ = self.restore().await?;
+            light_info = self.data_cache.lock().await;
+        }
 
+        let current = light_info
+            .as_mut()
+            .ok_or_else(|| ControllerError::UnexpectedError("missing data cache".into()))?;
         let mut entry = match current.light_groups.entry(name.clone()) {
             Entry::Vacant(_) => {
                 // Reject sets if the light name is not known.
@@ -281,7 +289,15 @@ impl LightController {
     async fn on_mic_mute(&self, mic_mute: bool) -> SettingHandlerResult {
         let id = fuchsia_trace::Id::new();
         let mut light_info = self.data_cache.lock().await;
-        let current = light_info.as_mut().unwrap();
+        if light_info.is_none() {
+            drop(light_info);
+            let _ = self.restore().await?;
+            light_info = self.data_cache.lock().await;
+        }
+
+        let current = light_info
+            .as_mut()
+            .ok_or_else(|| ControllerError::UnexpectedError("missing data cache".into()))?;
         for light in current
             .light_groups
             .values_mut()
