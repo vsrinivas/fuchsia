@@ -112,9 +112,9 @@ class KTrace<true> : public KTraceBase {
 };
 
 // Gets a reference to the thread that the user is asserting is the new owner of
-// the futex.  The thread must belong to the same process as the caller as
-// futexes may not be owned by threads from another process.  In addition, the
-// new potential owner thread must have been started.  Threads which have not
+// the futex.  The thread must have the same futex context as the caller since
+// futexes may not be owned by threads with different futex contexts.  In addition,
+// the new potential owner thread must have been started.  Threads which have not
 // started yet may not be the owner of a futex.
 //
 // Do this before we enter any potentially blocking locks.  Right now, this
@@ -138,10 +138,11 @@ zx_status_t ValidateFutexOwner(zx_handle_t new_owner_handle,
     return status;
   }
 
-  // Make sure that the proposed owner of the futex is running in our process,
+  // Make sure that the proposed owner of the futex shares our futex context,
   // and that it has been started.
   const auto& new_owner = *thread_dispatcher;
-  if ((new_owner->process() != up) || !new_owner->HasStarted()) {
+  if ((&new_owner->process()->futex_context() != &up->futex_context()) ||
+      !new_owner->HasStarted()) {
     thread_dispatcher->reset();
     return ZX_ERR_INVALID_ARGS;
   }
