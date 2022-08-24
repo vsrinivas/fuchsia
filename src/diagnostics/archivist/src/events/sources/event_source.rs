@@ -29,12 +29,14 @@ impl EventSource {
     pub async fn new(legacy_proxy: fsys::EventSourceProxy) -> Result<Self, Error> {
         // Connect to /events/event_stream which contains our newer FIDL protocol
         let event_streams = Some(vec![
-            connect_to_protocol_at_path::<fsys::EventStream2Marker>("/events/event_stream")?,
             connect_to_protocol_at_path::<fsys::EventStream2Marker>(
-                "/events/capability_requested_event_stream",
+                "/events/lifecycle_event_stream",
             )?,
             connect_to_protocol_at_path::<fsys::EventStream2Marker>(
-                "/events/directory_ready_event_stream",
+                "/events/log_sink_requested_event_stream",
+            )?,
+            connect_to_protocol_at_path::<fsys::EventStream2Marker>(
+                "/events/diagnostics_ready_event_stream",
             )?,
         ]);
         Ok(Self {
