@@ -151,7 +151,7 @@ bool FormatPrettyComponent(const std::string& name, OutputBuffer* out) {
 OutputBuffer FormatFunctionName(const Function* function,
                                 const FormatFunctionNameOptions& options) {
   OutputBuffer result;
-  if (!FormatClangLambda(function, &result))
+  if (!options.name.enable_pretty || !FormatClangLambda(function, &result))
     result = FormatIdentifier(function->GetIdentifier(), options.name);
 
   const auto& params = function->parameters();
@@ -195,13 +195,13 @@ OutputBuffer FormatIdentifier(const ParsedIdentifier& identifier,
                               const FormatIdentifierOptions& options) {
   OutputBuffer result;
   if (options.show_global_qual && identifier.qualification() == IdentifierQualification::kGlobal)
-    result.Append(identifier.GetSeparator());
+    result.Append(Syntax::kOperatorNormal, identifier.GetSeparator());
 
   const auto& comps = identifier.components();
   for (size_t i = 0; i < comps.size(); i++) {
     const auto& comp = comps[i];
     if (i > 0)
-      result.Append(identifier.GetSeparator());
+      result.Append(Syntax::kOperatorNormal, identifier.GetSeparator());
 
     if (comp.special() == SpecialIdentifier::kNone) {
       // Name.
@@ -209,7 +209,7 @@ OutputBuffer FormatIdentifier(const ParsedIdentifier& identifier,
       if (name.empty()) {
         // Provide names for anonymous components.
         result.Append(Syntax::kComment, kAnonIdentifierComponentName);
-      } else if (!FormatPrettyComponent(comp.name(), &result)) {
+      } else if (!options.enable_pretty || !FormatPrettyComponent(comp.name(), &result)) {
         // Normal name.
         bool needs_escaping = NeedsEscaping(name);
         if (needs_escaping)

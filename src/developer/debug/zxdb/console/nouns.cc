@@ -115,6 +115,7 @@ bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   opts.frame.loc = FormatLocationOptions(cmd.target());
   opts.frame.loc.func.name.elide_templates = true;
   opts.frame.loc.func.name.bold_last = true;
+  opts.frame.loc.func.name.enable_pretty = true;
   opts.frame.loc.func.params = cmd.HasSwitch(kForceTypes) ? FormatFunctionNameOptions::kParamTypes
                                                           : FormatFunctionNameOptions::kElideParams;
 
@@ -129,6 +130,7 @@ bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
     opts.frame.detail = FormatFrameOptions::kSimple;
     if (cmd.HasSwitch(kVerboseSwitch)) {
       opts.frame.loc.func.name.elide_templates = false;
+      opts.frame.loc.func.name.enable_pretty = false;
       opts.frame.loc.func.params = FormatFunctionNameOptions::kParamTypes;
     }
 

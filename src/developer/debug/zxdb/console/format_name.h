@@ -25,6 +25,11 @@ struct FormatIdentifierOptions {
   // The last component of function name is normally the most important, and with long templates
   // it can be difficult to find. Setting this marks that bold.
   bool bold_last = false;
+
+  // Enables rewriting certain very verbose parts of generated names like lambdas. The removed
+  // information seldom has any user value so most callers will want this enabled. But it means that
+  // the symbols won't strictly match the symbol file if they are being correlated to external data.
+  bool enable_pretty = true;
 };
 
 // Formats the given string as an identifier, with any template annotations dimmed.

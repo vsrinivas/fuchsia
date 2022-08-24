@@ -62,7 +62,8 @@ TEST(FormatName, Regular) {
 
   elide_param_opts.name.bold_last = true;
   EXPECT_EQ(
-      "kNormal \"ns::\", "
+      "kNormal \"ns\", "
+      "kOperatorNormal \"::\", "
       "kHeading \"Function\", "
       "kComment \"<int>(…)\"",
       FormatFunctionName(function.get(), elide_param_opts).GetDebugString());
@@ -86,7 +87,12 @@ TEST(FormatName, GCCLambda) {
   function->set_assigned_name("operator()");
   SymbolTestParentSetter function_parent(function, closure);
 
-  EXPECT_EQ("λ()", FormatFunctionName(function.get(), FormatFunctionNameOptions()).AsString());
+  FormatFunctionNameOptions opts;
+  opts.name.enable_pretty = true;
+  EXPECT_EQ("λ()", FormatFunctionName(function.get(), opts).AsString());
+
+  opts.name.enable_pretty = false;
+  EXPECT_EQ("$(<lambda()>)::operator()()", FormatFunctionName(function.get(), opts).AsString());
 }
 
 TEST(FormatName, RustClosure) {
@@ -103,8 +109,15 @@ TEST(FormatName, RustClosure) {
       "fn_env#0}>>");
   SymbolTestParentSetter closure_parent(closure, enclosing);
 
-  EXPECT_EQ("EnclosingFunction::λ()",
-            FormatFunctionName(closure.get(), FormatFunctionNameOptions()).AsString());
+  FormatFunctionNameOptions opts;
+  opts.name.enable_pretty = true;
+  EXPECT_EQ("EnclosingFunction::λ()", FormatFunctionName(closure.get(), opts).AsString());
+
+  opts.name.enable_pretty = false;
+  EXPECT_EQ(
+      "EnclosingFunction::$({closure#0}<core::future::from_generator::GenFuture<regulatory_region::"
+      "main::func::{async_fn_env#0}>>)()",
+      FormatFunctionName(closure.get(), opts).AsString());
 }
 
 TEST(FormatName, FormatIdentifier) {
@@ -131,9 +144,10 @@ TEST(FormatName, FormatIdentifier) {
   Err err = ExprParser::ParseIdentifier("::Foo<int, char*>::Bar<>", &ident);
   ASSERT_FALSE(err.has_error());
   EXPECT_EQ(
-      "kNormal \"::Foo\", "
+      "kOperatorNormal \"::\", "
+      "kNormal \"Foo\", "
       "kComment \"<int, char*>\", "
-      "kNormal \"::\", "
+      "kOperatorNormal \"::\", "
       "kHeading \"Bar\", "
       "kComment \"<>\"",
       FormatIdentifier(ident, bold_global_opts).GetDebugString());
@@ -154,7 +168,7 @@ TEST(FormatName, FormatIdentifier) {
   anon.AppendComponent(ParsedIdentifierComponent("Function"));
   EXPECT_EQ(
       "kComment \"$anon\", "
-      "kNormal \"::\", "
+      "kOperatorNormal \"::\", "
       "kHeading \"Function\"",
       FormatIdentifier(anon, bold_no_global_opts).GetDebugString());
 }
@@ -180,11 +194,12 @@ TEST(FormatName, FormatSpecialIdentifier) {
   ident.AppendComponent(ParsedIdentifierComponent(SpecialIdentifier::kMain));
   EXPECT_EQ(
       "kComment \"$anon\", "  // $anon always dim.
-      "kNormal \"::\", "
+      "kOperatorNormal \"::\", "
       "kComment \"$plt(\", "            // PLT annotation dim
       "kNormal \"zx_channel_write\", "  // PLT function name regular.
       "kComment \")\", "
-      "kNormal \"::$main\"",
+      "kOperatorNormal \"::\", "
+      "kNormal \"$main\"",
       FormatIdentifier(ident, global_opts).GetDebugString());
 }
 

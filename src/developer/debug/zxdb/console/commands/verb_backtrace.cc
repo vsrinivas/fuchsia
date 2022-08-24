@@ -67,6 +67,7 @@ Err RunVerbBacktrace(ConsoleContext* context, const Command& cmd) {
   opts.frame.loc = FormatLocationOptions(cmd.target());
   opts.frame.loc.func.name.elide_templates = true;
   opts.frame.loc.func.name.bold_last = true;
+  opts.frame.loc.func.name.enable_pretty = true;
   opts.frame.loc.func.params = cmd.HasSwitch(kForceAllTypes)
                                    ? FormatFunctionNameOptions::kParamTypes
                                    : FormatFunctionNameOptions::kElideParams;
@@ -75,6 +76,7 @@ Err RunVerbBacktrace(ConsoleContext* context, const Command& cmd) {
   if (cmd.HasSwitch(kVerboseBacktrace)) {
     opts.frame.detail = FormatFrameOptions::kVerbose;
     opts.frame.loc.func.name.elide_templates = false;
+    opts.frame.loc.func.name.enable_pretty = false;
     opts.frame.loc.func.params = FormatFunctionNameOptions::kParamTypes;
   }
 
