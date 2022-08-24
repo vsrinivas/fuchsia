@@ -8,7 +8,7 @@
 //!
 //! [Fuchsia RFC-0127]: https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0127_structured_configuration
 
-mod field;
+pub mod field;
 
 use crate::field::{config_value_from_json_value, FieldError};
 use cm_rust::{ConfigDecl, ValueSpec, ValuesData};

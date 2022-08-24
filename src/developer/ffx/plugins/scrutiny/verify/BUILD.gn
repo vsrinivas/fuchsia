@@ -30,6 +30,7 @@ ffx_plugin("ffx_scrutiny_verify") {
     "args/route_sources.rs",
     "args/routes.rs",
     "args/static_pkgs.rs",
+    "args/structured_config.rs",
   ]
 
   sources = [
@@ -41,5 +42,6 @@ ffx_plugin("ffx_scrutiny_verify") {
     "src/routes/allowlist.rs",
     "src/routes/mod.rs",
     "src/static_pkgs.rs",
+    "src/structured_config.rs",
   ]
 }

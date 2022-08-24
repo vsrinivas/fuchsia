@@ -1150,6 +1150,16 @@ pub enum Value {
     Vector(VectorValue),
 }
 
+impl Value {
+    /// Return the type of this value.
+    pub fn ty(&self) -> ConfigValueType {
+        match self {
+            Self::Single(sv) => sv.ty(),
+            Self::Vector(vv) => vv.ty(),
+        }
+    }
+}
+
 impl fmt::Display for Value {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -1173,6 +1183,24 @@ pub enum SingleValue {
     Int32(i32),
     Int64(i64),
     String(String),
+}
+
+impl SingleValue {
+    fn ty(&self) -> ConfigValueType {
+        match self {
+            SingleValue::Bool(_) => ConfigValueType::Bool,
+            SingleValue::Uint8(_) => ConfigValueType::Uint8,
+            SingleValue::Uint16(_) => ConfigValueType::Uint16,
+            SingleValue::Uint32(_) => ConfigValueType::Uint32,
+            SingleValue::Uint64(_) => ConfigValueType::Uint64,
+            SingleValue::Int8(_) => ConfigValueType::Int8,
+            SingleValue::Int16(_) => ConfigValueType::Int16,
+            SingleValue::Int32(_) => ConfigValueType::Int32,
+            SingleValue::Int64(_) => ConfigValueType::Int64,
+            // We substitute the max size limit because the value itself doesn't carry the info.
+            SingleValue::String(_) => ConfigValueType::String { max_size: std::u32::MAX },
+        }
+    }
 }
 
 impl fmt::Display for SingleValue {
@@ -1207,6 +1235,54 @@ pub enum VectorValue {
     Int32Vector(Vec<i32>),
     Int64Vector(Vec<i64>),
     StringVector(Vec<String>),
+}
+
+impl VectorValue {
+    fn ty(&self) -> ConfigValueType {
+        // We substitute the max size limit because the value itself doesn't carry the info.
+        match self {
+            VectorValue::BoolVector(_) => ConfigValueType::Vector {
+                nested_type: ConfigNestedValueType::Bool,
+                max_count: std::u32::MAX,
+            },
+            VectorValue::Uint8Vector(_) => ConfigValueType::Vector {
+                nested_type: ConfigNestedValueType::Uint8,
+                max_count: std::u32::MAX,
+            },
+            VectorValue::Uint16Vector(_) => ConfigValueType::Vector {
+                nested_type: ConfigNestedValueType::Uint16,
+                max_count: std::u32::MAX,
+            },
+            VectorValue::Uint32Vector(_) => ConfigValueType::Vector {
+                nested_type: ConfigNestedValueType::Uint32,
+                max_count: std::u32::MAX,
+            },
+            VectorValue::Uint64Vector(_) => ConfigValueType::Vector {
+                nested_type: ConfigNestedValueType::Uint64,
+                max_count: std::u32::MAX,
+            },
+            VectorValue::Int8Vector(_) => ConfigValueType::Vector {
+                nested_type: ConfigNestedValueType::Int8,
+                max_count: std::u32::MAX,
+            },
+            VectorValue::Int16Vector(_) => ConfigValueType::Vector {
+                nested_type: ConfigNestedValueType::Int16,
+                max_count: std::u32::MAX,
+            },
+            VectorValue::Int32Vector(_) => ConfigValueType::Vector {
+                nested_type: ConfigNestedValueType::Int32,
+                max_count: std::u32::MAX,
+            },
+            VectorValue::Int64Vector(_) => ConfigValueType::Vector {
+                nested_type: ConfigNestedValueType::Int64,
+                max_count: std::u32::MAX,
+            },
+            VectorValue::StringVector(_) => ConfigValueType::Vector {
+                nested_type: ConfigNestedValueType::String { max_size: std::u32::MAX },
+                max_count: std::u32::MAX,
+            },
+        }
+    }
 }
 
 impl fmt::Display for VectorValue {

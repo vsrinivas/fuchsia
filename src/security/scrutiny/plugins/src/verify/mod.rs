@@ -15,6 +15,7 @@ use {
             component_resolvers::ComponentResolversController,
             route_sources::RouteSourcesController,
             structured_config::ExtractStructuredConfigController,
+            structured_config::VerifyStructuredConfigController,
         },
     },
     cm_fidl_analyzer::{
@@ -33,6 +34,7 @@ pub use controller::{
         RouteSourceError, Source, VerifyRouteSourcesResult, VerifyRouteSourcesResults,
     },
     structured_config::ExtractStructuredConfigResponse,
+    structured_config::VerifyStructuredConfigResponse,
 };
 
 plugin!(
@@ -47,6 +49,7 @@ plugin!(
             "/verify/capability_routes" => CapabilityRouteController::default(),
             "/verify/route_sources" => RouteSourcesController::default(),
             "/verify/component_resolvers" => ComponentResolversController::default(),
+            "/verify/structured_config" => VerifyStructuredConfigController::default(),
 
             // This doesn't actually verify anything, but we need the verify model to get
             // V2ComponentModel, and depending on this plugin in `toolkit` doesn't work.

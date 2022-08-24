@@ -256,6 +256,23 @@ template("scrutiny_verifiers") {
       verifiers += [ ":${invoker.assembly_image_name}_verify_static_pkgs" ]
     }
 
+    # TODO(https://fxrev.dev/713604) make this argument required
+    if (defined(invoker.structured_config_policy) &&
+        invoker.structured_config_policy != "") {
+      verify_assembled_structured_config(
+          "${invoker.assembly_image_name}_verify_assembled_structured_config") {
+        testonly = invoker.testonly
+        update_package_target = invoker.update_package_target
+        image_assembler_target =
+            ":${invoker.assembly_image_name}.image_assembler"
+        assembly_image_name = invoker.assembly_image_name
+        policy = invoker.structured_config_policy
+      }
+      verifiers += [
+        ":${invoker.assembly_image_name}_verify_assembled_structured_config",
+      ]
+    }
+
     extract_assembled_structured_config(
         "${invoker.assembly_image_name}_extract_assembled_structured_config") {
       testonly = invoker.testonly
@@ -272,6 +289,7 @@ template("scrutiny_verifiers") {
                [
                  "route_sources_config",
                  "static_pkgs_goldens",
+                 "structured_config_policy",
                  "update_package_target",
                  "verify_component_resolvers_allowlist",
                  "verify_routes_component_tree_config",

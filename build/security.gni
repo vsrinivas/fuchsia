@@ -125,6 +125,10 @@ declare_args() {
   # 5. delete 'product.txt.orig' and remove it from this list.
   recovery_static_pkgs_goldens = []
 
+  # An optional file path to the structured configuration policy to be used on the
+  # assembled fuchsia system. Defaults to no enforcement.
+  fuchsia_structured_config_policy = ""
+
   # An optional file path to the route_sources verifier configuration to be used
   # on the assembled fuchsia system.
   fuchsia_route_sources_config = ""

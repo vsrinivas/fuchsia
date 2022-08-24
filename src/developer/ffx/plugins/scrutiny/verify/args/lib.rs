@@ -8,6 +8,7 @@ pub mod kernel_cmdline;
 pub mod route_sources;
 pub mod routes;
 pub mod static_pkgs;
+pub mod structured_config;
 
 use {argh::FromArgs, ffx_core::ffx_command, std::path::PathBuf};
 
@@ -37,4 +38,5 @@ pub enum SubCommand {
     RouteSources(route_sources::Command),
     Routes(routes::Command),
     StaticPkgs(static_pkgs::Command),
+    StructuredConfig(structured_config::Command),
 }

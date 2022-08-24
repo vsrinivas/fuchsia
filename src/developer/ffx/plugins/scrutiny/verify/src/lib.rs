@@ -16,6 +16,7 @@ mod kernel_cmdline;
 mod route_sources;
 mod routes;
 mod static_pkgs;
+mod structured_config;
 
 #[ffx_plugin()]
 pub async fn scrutiny_verify(cmd: Command) -> Result<()> {
@@ -43,6 +44,9 @@ pub async fn scrutiny_verify(cmd: Command) -> Result<()> {
         SubCommand::RouteSources(subcommand) => route_sources::verify(subcommand, tmp_dir).await,
         SubCommand::Routes(subcommand) => routes::verify(subcommand, tmp_dir).await,
         SubCommand::StaticPkgs(subcommand) => static_pkgs::verify(subcommand, tmp_dir).await,
+        SubCommand::StructuredConfig(subcommand) => {
+            structured_config::verify(subcommand, tmp_dir).await
+        }
     }?;
 
     if let Some(depfile_path) = cmd.depfile.as_ref() {
@@ -67,6 +71,7 @@ pub async fn scrutiny_verify(cmd: Command) -> Result<()> {
             SubCommand::RouteSources(subcommand) => &subcommand.build_path,
             SubCommand::Routes(subcommand) => &subcommand.build_path,
             SubCommand::StaticPkgs(subcommand) => &subcommand.build_path,
+            SubCommand::StructuredConfig(subcommand) => &subcommand.build_path,
         };
         let relative_dep_paths: Vec<PathBuf> =
             deps_set.into_iter().map(|dep_path| relativize_path(build_path, dep_path)).collect();

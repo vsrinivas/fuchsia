@@ -113,7 +113,40 @@ if (is_fuchsia) {
 if (is_host) {
   group("host_tests") {
     testonly = true
-    deps = [ ":check_extracted_config" ]
+    deps = [
+      ":check_extracted_config",
+      ":check_failing_policy",
+      ":verifier_pass",
+    ]
+  }
+
+  configured_url =
+      "fuchsia-pkg://fuchsia.com/${package_name}#meta/${component_name}.cm"
+  configured_key = "asserted_by_scrutiny_test"
+
+  labels = {
+    extractor = ":extractor($target_toolchain)"
+    image_assembler = ":assembly.image_assembler($target_toolchain)"
+    update_package = ":update($target_toolchain)"
+  }
+
+  files = {
+    ffx = "$root_build_dir/host-tools/ffx"
+
+    update_package_target_out_dir =
+        get_label_info(labels.update_package, "target_out_dir")
+    update_package_dir = "$update_package_target_out_dir/update"
+
+    image_assembler_target_out_dir =
+        get_label_info(labels.image_assembler, "target_out_dir")
+    assembly_image_name = "assembly"
+    image_assembler_dir = "$image_assembler_target_out_dir/$assembly_image_name"
+
+    update_package = "$update_package_dir/update.far"
+    blobfs = [
+      "$image_assembler_dir/blob.blk",
+      "$update_package_dir/gen/update.blob.blk",
+    ]
   }
 
   python_binary("check_extracted_config_bin") {
@@ -125,33 +158,95 @@ if (is_host) {
     deps = [ ":check_extracted_config_bin" ]
   }
 
-  extractor_label = ":extractor($target_toolchain)"
   extracted_config_target_dir =
-      get_label_info(extractor_label, "target_out_dir")
+      get_label_info(labels.extractor, "target_out_dir")
   extracted_config_path = "$extracted_config_target_dir/structured_config.json"
   host_test_data("extracted_config") {
     sources = [ extracted_config_path ]
-    deps = [ extractor_label ]
+    deps = [ labels.extractor ]
   }
-  python_binary = get_target_outputs(":check_extracted_config_bin")
-  python_binary = python_binary[0]
+  check_extracted_python_binary =
+      get_target_outputs(":check_extracted_config_bin")
+  check_extracted_python_binary = check_extracted_python_binary[0]
 
   host_test("check_extracted_config") {
     binary_path = python_exe_src
     args = [
-      rebase_path(python_binary, root_build_dir),
+      rebase_path(check_extracted_python_binary, root_build_dir),
       "--extracted-config",
       rebase_path(extracted_config_path, root_build_dir),
       "--expected-url",
-      "fuchsia-pkg://fuchsia.com/${package_name}#meta/${component_name}.cm",
+      configured_url,
       "--expected-key",
-      "asserted_by_scrutiny_test",
+      configured_key,
       "--expected-value",
       expected_value,
     ]
     deps = [
       ":extracted_config",
       ":test_bin",
+      "//build/python:interpreter",
+    ]
+  }
+
+  verify_assembled_structured_config("verifier_pass") {
+    testonly = true
+    update_package_target = labels.update_package
+    image_assembler_target = labels.image_assembler
+    assembly_image_name = "assembly"
+    policy = "passing_policy.json5"
+  }
+
+  python_binary("check_failed_verifier_bin") {
+    main_source = "check_failed_verifier_policy.py"
+  }
+
+  host_test_data("failed_policy_test_data") {
+    sources = get_target_outputs(":check_failed_verifier_bin")
+    sources += files.blobfs
+    sources += [
+      "failing_policy.json5",
+      files.ffx,
+      files.update_package,
+    ]
+    deps = [
+      ":check_failed_verifier_bin",
+      "//src/developer/ffx:host",
+      labels.image_assembler,
+      labels.update_package,
+    ]
+  }
+
+  check_failed_verifier_binary =
+      get_target_outputs(":check_failed_verifier_bin")
+  check_failed_verifier_binary = check_failed_verifier_binary[0]
+  host_test("check_failing_policy") {
+    binary_path = python_exe_src
+
+    depfile = "$target_out_dir/check_failed_policy.d"
+    args = [
+      rebase_path(check_failed_verifier_binary, root_build_dir),
+      "--ffx-bin",
+      rebase_path(files.ffx, root_build_dir),
+      "--policy",
+      rebase_path("failing_policy.json5", root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
+      "--update-package",
+      rebase_path(files.update_package, root_build_dir),
+      "--failed-url",
+      configured_url,
+      "--failed-key",
+      configured_key,
+      "--blobfs",
+    ]
+    foreach(blobfs, files.blobfs) {
+      args += [ rebase_path(blobfs, root_build_dir) ]
+    }
+    depfile = [ depfile ]
+
+    deps = [
+      ":failed_policy_test_data",
       "//build/python:interpreter",
     ]
   }

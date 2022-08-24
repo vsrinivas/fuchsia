@@ -641,6 +641,7 @@ if (is_fuchsia) {
 
     route_sources_config = fuchsia_route_sources_config
     static_pkgs_goldens = fuchsia_static_pkgs_goldens
+    structured_config_policy = fuchsia_structured_config_policy
     verify_component_resolvers_allowlist =
         fuchsia_verify_component_resolvers_allowlist
     verify_routes_component_tree_config =

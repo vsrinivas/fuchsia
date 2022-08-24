@@ -57,6 +57,7 @@ if (is_host) {
       "//third_party/rust_crates:url",
       "//third_party/rust_crates:uuid",
       "//tools/lib/cm_fidl_analyzer",
+      "//tools/lib/config_value_file",
     ]
 
     non_rust_deps = [ "//src/lib/chunked-compression" ]
@@ -67,6 +68,7 @@ if (is_host) {
       "//src/lib/zerocopy",
       "//src/security/scrutiny/testing",
       "//src/sys/lib/fuchsia-zbi/abi",
+      "//third_party/rust_crates:assert_matches",
       "//third_party/rust_crates:sha2",
       "//third_party/rust_crates:tempfile",
       "//tools/lib/cml",
