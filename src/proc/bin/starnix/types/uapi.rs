@@ -54,7 +54,7 @@ pub struct stat_t {
     pub _pad3: [i64; 3],
 }
 
-#[derive(Debug, Default, Clone, Copy, AsBytes, FromBytes, PartialEq)]
+#[derive(Debug, Default, Clone, Copy, AsBytes, FromBytes, Eq, PartialEq)]
 #[repr(C)]
 pub struct statfs {
     pub f_type: i64,
@@ -195,7 +195,7 @@ impl sockaddr_vm {
 
 pub type socklen_t = u32;
 
-#[derive(Clone, Debug, Default, PartialEq, AsBytes, FromBytes)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, AsBytes, FromBytes)]
 #[repr(C)]
 pub struct ucred {
     pub pid: pid_t,

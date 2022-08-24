@@ -271,7 +271,7 @@ impl UnixControlData {
 }
 
 /// A `Packet` stores an arbitrary sequence of bytes.
-#[derive(Clone, PartialEq, Debug, Default)]
+#[derive(Clone, Eq, PartialEq, Debug, Default)]
 pub struct MessageData {
     /// The bytes in this packet.
     bytes: Vec<u8>,

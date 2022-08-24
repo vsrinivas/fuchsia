@@ -6,7 +6,7 @@ use crate::fs::{FdFlags, FdNumber};
 use crate::task::CurrentTask;
 use crate::types::{FileMode, OpenFlags, Signal, UserAddress};
 
-#[derive(PartialEq, Debug)]
+#[derive(Eq, PartialEq, Debug)]
 pub struct SyscallResult(u64);
 pub const SUCCESS: SyscallResult = SyscallResult(0);
 

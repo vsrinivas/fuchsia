@@ -127,7 +127,7 @@ impl SignalState {
     }
 }
 
-#[derive(Clone, Debug, Default, PartialEq, AsBytes, FromBytes)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, AsBytes, FromBytes)]
 #[repr(C)]
 pub struct SignalInfoHeader {
     pub signo: u32,
@@ -200,7 +200,7 @@ impl SignalInfo {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum SignalDetail {
     None,
     SigChld { pid: pid_t, uid: uid_t, status: i32 },

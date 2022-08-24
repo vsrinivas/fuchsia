@@ -45,7 +45,7 @@ impl WaitCallback {
 }
 
 /// Reason for interrupting a waiter.
-#[derive(PartialEq, Copy, Clone)]
+#[derive(Eq, PartialEq, Copy, Clone)]
 pub enum InterruptionType {
     Signal,
     Exit,
@@ -113,11 +113,7 @@ impl Waiter {
     ///
     /// If the wait is interrupted (see [`Waiter::interrupt`]), this function returns
     /// EINTR.
-    pub fn wait_until(
-        &self,
-        current_task: &CurrentTask,
-        deadline: zx::Time,
-    ) -> Result<(), Errno> {
+    pub fn wait_until(&self, current_task: &CurrentTask, deadline: zx::Time) -> Result<(), Errno> {
         {
             let mut state = current_task.write();
             assert!(!state.signals.waiter.is_valid());
