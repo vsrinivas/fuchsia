@@ -14,6 +14,7 @@ use {
     rustyline::Helper,
     std::borrow::Cow::{self, Borrowed},
     std::cell::RefCell,
+    std::collections::BTreeMap,
     std::collections::{HashMap, VecDeque},
     std::path::{Path, PathBuf},
     std::sync::{Arc, Mutex},
@@ -40,25 +41,28 @@ impl Completer for FuzzHelper {
             None => {
                 let mut commands = self.make_commands();
                 commands.sort();
-                return Ok((line.len(), find_matching(token, commands)));
+                let pairs = find_matching(&token, commands);
+                return Ok((line.len(), trim_replacements(&token, pairs)));
             }
         };
 
         // Next, consume tokens to get the expected type and/or possible completions.
         let expected = self.parse_completed_tokens(&command);
         let (expected, mut completions) = self.parse_incomplete_token(&token, expected);
+        completions.extend(self.get_parameter_completions(&expected));
+        let mut pairs = find_matching(&token, completions);
 
-        // If the token is expected to be a file or path, use the filename completer. Otherwise,
-        // get any additional completions and find matching suggestions.
-        let additional = match expected {
+        // If the token is expected to be a file or path, use the filename completer.
+        match expected {
             Some(ParameterType::Input) | Some(ParameterType::Path) => {
-                return self.file_completer.complete(line, line.len());
+                if let Ok((_, paths)) = self.file_completer.complete(line, line.len()) {
+                    pairs.extend(paths);
+                }
             }
-            Some(expected) => self.get_parameter_completions(expected),
-            None => Vec::new(),
+            _ => {}
         };
-        completions.extend(additional);
-        Ok((line.len(), find_matching(token, completions)))
+
+        Ok((line.len(), trim_replacements(&token, pairs)))
     }
 }
 
@@ -181,10 +185,10 @@ impl FuzzHelper {
     }
 
     // Returns completions for different expected parameter types.
-    fn get_parameter_completions(&self, expected: ParameterType) -> Vec<String> {
+    fn get_parameter_completions(&self, expected: &Option<ParameterType>) -> Vec<String> {
         match expected {
-            ParameterType::Opt => options::NAMES.iter().map(|s| s.to_string()).collect(),
-            ParameterType::Url => get_fuzzer_urls(&self.fuchsia_dir)
+            Some(ParameterType::Opt) => options::NAMES.iter().map(|s| s.to_string()).collect(),
+            Some(ParameterType::Url) => get_fuzzer_urls(&self.fuchsia_dir)
                 .unwrap_or(Vec::new())
                 .into_iter()
                 .map(|s| s.to_string())
@@ -194,23 +198,23 @@ impl FuzzHelper {
     }
 }
 
-fn find_matching(search_term: Option<String>, mut candidates: Vec<String>) -> Vec<Pair> {
-    match search_term {
-        Some(search_term) => {
-            candidates.retain(|command| command.starts_with(&search_term));
-            candidates
-                .into_iter()
-                .map(|command| Pair {
-                    display: command.clone(),
-                    replacement: command.trim_start_matches(&search_term).to_string(),
-                })
-                .collect()
-        }
-        None => candidates
-            .into_iter()
-            .map(|command| Pair { display: command.clone(), replacement: command.clone() })
-            .collect(),
+fn find_matching(token: &Option<String>, mut candidates: Vec<String>) -> Vec<Pair> {
+    if let Some(token) = token {
+        candidates.retain(|command| command.starts_with(token));
     }
+    candidates
+        .into_iter()
+        .map(|command| Pair { display: command.clone(), replacement: command.clone() })
+        .collect()
+}
+
+fn trim_replacements(token: &Option<String>, pairs: Vec<Pair>) -> Vec<Pair> {
+    let mut sorted = BTreeMap::new();
+    let token = token.as_ref().map_or("", |t| t);
+    for pair in pairs.into_iter() {
+        sorted.insert(pair.display, pair.replacement.trim_start_matches(token).to_string());
+    }
+    sorted.into_iter().map(|(display, replacement)| Pair { display, replacement }).collect()
 }
 
 impl Hinter for FuzzHelper {
@@ -271,7 +275,6 @@ mod test_fixtures {
     pub enum Replacements {
         Exact,
         ExceptPrefix(String),
-        Custom(Vec<String>),
     }
 
     impl Replacements {
@@ -306,14 +309,11 @@ mod test_fixtures {
         expected_displays.sort();
 
         let mut expected_replacements: Vec<String> = match expected_replacements {
-            Replacements::Exact => expected_displays.iter().map(|s| s.to_string()).collect(),
+            Replacements::Exact => expected_displays.to_vec(),
             Replacements::ExceptPrefix(common) => expected_displays
                 .iter()
                 .map(|s| s.trim_start_matches(&common).to_string())
                 .collect(),
-            Replacements::Custom(expected_replacements) => {
-                expected_replacements.iter().map(|s| s.to_string()).collect()
-            }
         };
         expected_replacements.sort();
 
@@ -331,10 +331,7 @@ mod test_fixtures {
 
         let cmdline = format!("{} {}/t", cmd, test_dir.to_string_lossy());
         let result = helper.complete(&cmdline, 0).context("failed to complete cmdline")?;
-
-        let replacements =
-            test_files.iter().map(|s| format!("{}/{}", test_dir.to_string_lossy(), s)).collect();
-        verify_pairs(result.1, test_files, Replacements::Custom(replacements));
+        verify_pairs(result.1, test_files, Replacements::except("t"));
         Ok(())
     }
 }

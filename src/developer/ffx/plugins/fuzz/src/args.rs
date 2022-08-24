@@ -279,6 +279,13 @@ impl Autocomplete for GetShellSubcommand {
 }
 
 /// Command to set a configuration option on a fuzzer.
+///
+/// Values for options which take a size can be written as <N>[units], where N is a number and
+/// units is one of 'gb', 'mb', 'kb', or 'b' (the default).
+///
+/// Values for options which take a time can be written as <N>[units], where N is a number and
+/// units is one of 'd', 'h', 's', 'ms', 'us' or 'ns' (the default).
+///
 #[valid_when(FuzzerState::Idle)]
 #[derive_subcommand]
 #[derive(Clone, Debug, FromArgs, PartialEq)]
@@ -399,7 +406,7 @@ pub struct MinimizeShellSubcommand {
 }
 
 impl Autocomplete for MinimizeShellSubcommand {
-    const POSITIONAL_TYPES: &'static [ParameterType] = &[];
+    const POSITIONAL_TYPES: &'static [ParameterType] = &[ParameterType::Input];
     const OPTION_TYPES: &'static [(&'static str, Option<ParameterType>)] =
         &[("--runs", Some(ParameterType::Any)), ("--time", Some(ParameterType::Any))];
 }
