@@ -180,7 +180,7 @@ template("rustc_cdylib") {
                            ])
 
     # TODO(b/218546002): re-enable after OOM fix
-    if (select_variant + [ "lto" ] - [ "lto" ] != select_variant) {
+    if (toolchain_variant.tags + [ "lto" ] != toolchain_variant.tags) {
       disable_rbe = true
       not_needed(invoker, [ "disable_rbe" ])
     } else if (defined(invoker.disable_rbe)) {
