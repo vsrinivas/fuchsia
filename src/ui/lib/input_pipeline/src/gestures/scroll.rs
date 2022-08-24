@@ -196,6 +196,17 @@ impl Movement {
 
         None
     }
+
+    fn has_delta_on_reverse_direction(&self, want_direction: ScrollDirection) -> bool {
+        let dx = self.to.x - self.from.x;
+        let dy = self.to.y - self.from.y;
+        match want_direction {
+            ScrollDirection::Up => dy > 0.0,
+            ScrollDirection::Down => dy < 0.0,
+            ScrollDirection::Left => dx > 0.0,
+            ScrollDirection::Right => dx < 0.0,
+        }
+    }
 }
 
 impl InitialContender {
@@ -436,12 +447,7 @@ impl gesture_arena::Winner for Winner {
                     Ok(m) => m,
                 };
 
-                let directions: Vec<Option<ScrollDirection>> = movements
-                    .into_iter()
-                    .map(|m| m.direction(self.limit_tangent_for_direction))
-                    .collect();
-
-                if directions.iter().any(|&d| d != Some(self.direction)) {
+                if movements.iter().any(|m| m.has_delta_on_reverse_direction(self.direction)) {
                     return ProcessNewEventResult::EndGesture(
                         EndGestureEvent::UnconsumedEvent(event),
                         "inconsistent direction",
@@ -565,7 +571,7 @@ fn touchpad_event_to_mouse_scroll_event(
 mod tests {
     use {
         super::*, crate::touch_binding, assert_matches::assert_matches, fuchsia_zircon as zx,
-        pretty_assertions::assert_eq, test_case::test_case,
+        test_case::test_case,
     };
 
     const MIN_MOVEMENT_IN_MM: f32 = 10.0;
@@ -921,7 +927,7 @@ mod tests {
             },
         ]);
 
-        assert_eq!(
+        pretty_assertions::assert_eq!(
             got.generated_events,
             vec![
                 // Finger hold, expect no scroll delta.
@@ -973,7 +979,7 @@ mod tests {
                 },
             ]
         );
-        assert_eq!(got.recognized_gesture, RecognizedGesture::Scroll);
+        pretty_assertions::assert_eq!(got.recognized_gesture, RecognizedGesture::Scroll);
     }
 
     #[fuchsia::test]
@@ -1012,27 +1018,10 @@ mod tests {
             timestamp: zx::Time::ZERO,
             pressed_buttons: vec![],
             contacts: vec![
-                make_touch_contact(1, Position{x: 1.0, y: 1.0}),
-                make_touch_contact(2, Position{x: 5.0, y: 5.0}),
-            ],
-        };"finger hold")]
-    #[test_case(TouchpadEvent{
-                timestamp: zx::Time::ZERO,
-                pressed_buttons: vec![],
-                contacts: vec![
-                    make_touch_contact(1, Position{x: 10.0, y: 10.0}),
-                    make_touch_contact(2, Position{x: 15.0, y: 15.0}),
-                ],
-            };"no direction")]
-    #[test_case(
-        TouchpadEvent{
-            timestamp: zx::Time::ZERO,
-            pressed_buttons: vec![],
-            contacts: vec![
                 make_touch_contact(1, Position{x: 1.0, y: 11.0}),
                 make_touch_contact(2, Position{x: 5.0, y: -6.0}),
             ],
-        };"different direction")]
+        };"1 finger reverse direction")]
     #[test_case(
         TouchpadEvent{
             timestamp: zx::Time::ZERO,
@@ -1041,7 +1030,7 @@ mod tests {
                 make_touch_contact(1, Position{x: 1.0, y: 11.0}),
                 make_touch_contact(2, Position{x: 5.0, y: 16.0}),
             ],
-        };"wrong direction")]
+        };"2 fingers reverse direction")]
     #[fuchsia::test]
     fn winner_process_new_event_end_gesture_some(event: TouchpadEvent) {
         let winner: Box<dyn gesture_arena::Winner> = Box::new(Winner {
@@ -1060,16 +1049,83 @@ mod tests {
         );
     }
 
-    #[test_case(TouchpadEvent{
-        timestamp: zx::Time::ZERO,
-        pressed_buttons: vec![],
-        contacts: vec![
-            make_touch_contact(1, Position{x: 1.0, y: -11.0}),
-            make_touch_contact(2, Position{x: 5.0, y: -5.0}),
-        ],
-    };"on direction")]
+    #[test_case(
+        TouchpadEvent{
+            timestamp: zx::Time::ZERO,
+            pressed_buttons: vec![],
+            contacts: vec![
+                make_touch_contact(1, Position{x: 1.0, y: 1.0}),
+                make_touch_contact(2, Position{x: 5.0, y: 5.0}),
+            ],
+        } => MouseEvent {
+            timestamp: zx::Time::from_nanos(0),
+            mouse_data: mouse_binding::MouseEvent {
+                location: mouse_binding::MouseLocation::Relative(
+                    mouse_binding::RelativeLocation {
+                        counts: Position { x: 0.0, y: 0.0 },
+                        millimeters: Position { x: 0.0, y: 0.0 },
+                    }
+                ),
+                wheel_delta_v: wheel_delta_mm(0.0),
+                wheel_delta_h: None,
+                phase: mouse_binding::MousePhase::Wheel,
+                affected_buttons: hashset! {},
+                pressed_buttons: hashset! {},
+                is_precision_scroll: Some(mouse_binding::PrecisionScroll::Yes),
+            },
+        };"finger hold")]
+    #[test_case(
+        TouchpadEvent{
+            timestamp: zx::Time::ZERO,
+            pressed_buttons: vec![],
+            contacts: vec![
+                make_touch_contact(1, Position{x: 10.0, y: -10.0}),
+                make_touch_contact(2, Position{x: 15.0, y: -15.0}),
+            ],
+        } => MouseEvent {
+            timestamp: zx::Time::from_nanos(0),
+            mouse_data: mouse_binding::MouseEvent {
+                location: mouse_binding::MouseLocation::Relative(
+                    mouse_binding::RelativeLocation {
+                        counts: Position { x: 0.0, y: 0.0 },
+                        millimeters: Position { x: 0.0, y: 0.0 },
+                    }
+                ),
+                wheel_delta_v: wheel_delta_mm(-15.5),
+                wheel_delta_h: None,
+                phase: mouse_binding::MousePhase::Wheel,
+                affected_buttons: hashset! {},
+                pressed_buttons: hashset! {},
+                is_precision_scroll: Some(mouse_binding::PrecisionScroll::Yes),
+            },
+        };"direction contact1 only")]
+    #[test_case(
+        TouchpadEvent{
+            timestamp: zx::Time::ZERO,
+            pressed_buttons: vec![],
+            contacts: vec![
+                make_touch_contact(1, Position{x: 1.0, y: -11.0}),
+                make_touch_contact(2, Position{x: 5.0, y: -5.0}),
+            ],
+        } => MouseEvent {
+            timestamp: zx::Time::from_nanos(0),
+            mouse_data: mouse_binding::MouseEvent {
+                location: mouse_binding::MouseLocation::Relative(
+                    mouse_binding::RelativeLocation {
+                        counts: Position { x: 0.0, y: 0.0 },
+                        millimeters: Position { x: 0.0, y: 0.0 },
+                    }
+                ),
+                wheel_delta_v: wheel_delta_mm(-11.0),
+                wheel_delta_h: None,
+                phase: mouse_binding::MousePhase::Wheel,
+                affected_buttons: hashset! {},
+                pressed_buttons: hashset! {},
+                is_precision_scroll: Some(mouse_binding::PrecisionScroll::Yes),
+            },
+        };"on direction")]
     #[fuchsia::test]
-    fn winner_process_new_event_continue_gesture(event: TouchpadEvent) {
+    fn winner_process_new_event_continue_gesture(event: TouchpadEvent) -> MouseEvent {
         let winner: Box<dyn gesture_arena::Winner> = Box::new(Winner {
             limit_tangent_for_direction: LIMIT_TANGENT_FOR_DIRECTION,
             direction: ScrollDirection::Up,
@@ -1087,28 +1143,7 @@ mod tests {
             ProcessNewEventResult::EndGesture(..) => {
                 panic!("Got {:?}, want ContinueGesture()", got)
             }
-            ProcessNewEventResult::ContinueGesture(got_mouse_event, _) => {
-                pretty_assertions::assert_eq!(
-                    got_mouse_event.unwrap(),
-                    MouseEvent {
-                        timestamp: zx::Time::from_nanos(0),
-                        mouse_data: mouse_binding::MouseEvent {
-                            location: mouse_binding::MouseLocation::Relative(
-                                mouse_binding::RelativeLocation {
-                                    counts: Position { x: 0.0, y: 0.0 },
-                                    millimeters: Position { x: 0.0, y: 0.0 },
-                                }
-                            ),
-                            wheel_delta_v: wheel_delta_mm(-11.0),
-                            wheel_delta_h: None,
-                            phase: mouse_binding::MousePhase::Wheel,
-                            affected_buttons: hashset! {},
-                            pressed_buttons: hashset! {},
-                            is_precision_scroll: Some(mouse_binding::PrecisionScroll::Yes),
-                        },
-                    }
-                );
-            }
+            ProcessNewEventResult::ContinueGesture(got_mouse_event, _) => got_mouse_event.unwrap(),
         }
     }
 }
