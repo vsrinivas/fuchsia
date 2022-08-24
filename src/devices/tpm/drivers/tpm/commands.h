@@ -40,6 +40,9 @@ struct TpmShutdownCmd {
   }
 } __PACKED;
 
+/// TpmVendorCmd expects |data_src| to not include a header instead
+/// the constructor will generate a no-session based TPM header from
+/// the provided |command_code|.
 struct TpmVendorCmd {
   TpmCmdHeader hdr;
   uint8_t data[fuchsia_tpm::wire::kMaxVendorCommandLen];
@@ -52,6 +55,23 @@ struct TpmVendorCmd {
     memcpy(data, data_src.data(), data_src.size_bytes());
   }
 } __PACKED;
+
+/// TpmCmd expects |data_src| to include a valid TPM header and will
+/// use this to populate |hdr| and |data|.
+struct TpmCmd {
+  TpmCmdHeader hdr;
+  uint8_t data[fuchsia_tpm::wire::kMaxVendorCommandLen];
+
+  TpmCmd(cpp20::span<const uint8_t> data_src) {
+    ZX_ASSERT(data_src.size_bytes() > sizeof(hdr));
+    ZX_ASSERT(data_src.size_bytes() < sizeof(hdr) + sizeof(data));
+    memcpy(&hdr, data_src.data(), sizeof(hdr));
+    if (data_src.size_bytes() > sizeof(hdr)) {
+      size_t bytes_to_write = data_src.size_bytes() - sizeof(hdr);
+      memcpy(data, data_src.data() + sizeof(hdr), bytes_to_write);
+    }
+  }
+};
 
 struct TpmResponseHeader {
   uint16_t tag;

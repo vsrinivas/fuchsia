@@ -8,6 +8,9 @@ using zx;
 /// Arbitrarily large value which should be enough to handle any vendor
 /// commands.
 const MAX_VENDOR_COMMAND_LEN uint32 = 65535;
+/// Arbitrarily large value which should be enough to handle any tpm
+/// commands.
+const MAX_COMMAND_LEN uint32 = 65535;
 
 /// TPM response codes are fairly complex.
 /// See Section 6.6, "TPM_RC (Response Codes)" of the "Trusted Platform Module Library
@@ -25,13 +28,28 @@ protocol TpmDevice {
     }) error zx.status;
 
     /// Execute a vendor command.
+    /// This method will construct a header for the TPM command from the
+    /// command_code. The data section should just contain the body of
+    /// the command and not the header.
     /// Returns ZX_ERR_BUFFER_TOO_SMALL if the TPM responded with data that
     /// wouldn't fit in the response buffer.
+    @deprecated("use fuchsia.tpm.ExecuteCommand instead")
     ExecuteVendorCommand(struct {
         command_code uint16;
         data vector<uint8>:MAX_VENDOR_COMMAND_LEN;
     }) -> (struct {
         result TpmRc;
         data vector<uint8>:MAX_VENDOR_COMMAND_LEN;
+    }) error zx.status;
+
+    /// Execute a complete command.
+    /// This method expects a complete command passed in data including
+    /// any header required.
+    /// Returns ZX_ERR_BUFFER_TOO_SMALL if the TPM responded with data that
+    /// wouldn't fit in the response buffer.
+    ExecuteCommand(struct {
+        data vector<uint8>:MAX_COMMAND_LEN;
+    }) -> (struct {
+        data vector<uint8>:MAX_COMMAND_LEN;
     }) error zx.status;
 };

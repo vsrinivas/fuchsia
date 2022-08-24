@@ -136,6 +136,28 @@ void TpmDevice::ExecuteVendorCommand(ExecuteVendorCommandRequestView request,
                });
 }
 
+void TpmDevice::ExecuteCommand(ExecuteCommandRequestView request,
+                               ExecuteCommandCompleter::Sync &completer) {
+  auto cmd = std::make_unique<TpmCmd>(
+      cpp20::span<const uint8_t>(request->data.data(), request->data.count()));
+  auto async = completer.ToAsync();
+  // Ignore commands that are smaller than the minimum command header size.
+  if (request->data.count() < sizeof(TpmCmdHeader)) {
+    async.ReplyError(ZX_ERR_OUT_OF_RANGE);
+  }
+  QueueCommand(std::move(cmd),
+               [async = std::move(async)](zx_status_t status, TpmResponseHeader *hdr) mutable {
+                 if (status != ZX_OK) {
+                   async.ReplyError(status);
+                   return;
+                 }
+                 TpmVendorResponse *vendor = reinterpret_cast<TpmVendorResponse *>(hdr);
+                 auto vector_view = fidl::VectorView<uint8_t>::FromExternal(
+                     (uint8_t *)vendor, vendor->hdr.ResponseSize());
+                 async.ReplySuccess(vector_view);
+               });
+}
+
 void TpmDevice::CommandThread(ddk::InitTxn txn) {
   zx_status_t status = DoInit();
   txn.Reply(status);

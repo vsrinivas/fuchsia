@@ -452,6 +452,7 @@ mod tests {
                         .send(&mut Ok((0x1ae0, 0x0028, 0x00)))
                         .expect("Responding to request"),
                     TpmDeviceRequest::ExecuteVendorCommand { .. } => todo!(),
+                    TpmDeviceRequest::ExecuteCommand { .. } => todo!(),
                 }
             }
         }

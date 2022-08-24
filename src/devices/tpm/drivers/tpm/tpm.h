@@ -51,6 +51,7 @@ class TpmDevice : public DeviceType {
   void GetDeviceId(GetDeviceIdRequestView request, GetDeviceIdCompleter::Sync& completer);
   void ExecuteVendorCommand(ExecuteVendorCommandRequestView request,
                             ExecuteVendorCommandCompleter::Sync& completer);
+  void ExecuteCommand(ExecuteCommandRequestView request, ExecuteCommandCompleter::Sync& completer);
 
  private:
   template <typename CmdType>
