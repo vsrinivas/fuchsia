@@ -63,7 +63,10 @@ func NewInstallerConfig(fs *flag.FlagSet) (*InstallerConfig, error) {
 	fs.StringVar(&c.keyPath, "vbmeta-key", filepath.Join(testDataPath, "atx_psk.pem"), "path to the vbmeta private key")
 	fs.StringVar(&c.omahaAddress, "omaha-address", ":0", "which address to serve omaha server on (default random)")
 	fs.StringVar(&c.omahaToolPath, "omaha-tool-path", filepath.Join(filepath.Join(filepath.Dir(os.Args[0]), "test_data", "system-tests"), "mock-omaha-server"), "the path of the mock-omaha-server binary to invoke.")
-	fs.StringVar(&c.privateKeyId, "omaha-key-id", "42", "the integer private key ID to use for CUP within Omaha requests.")
+	// This must match the key_id in
+	// src/sys/pkg/bin/omaha-client:empty_eager_package_config, which relies
+	// on src/sys/pkg/bin/omaha-client/test_data/key_config.json.
+	fs.StringVar(&c.privateKeyId, "omaha-key-id", "123456789", "the integer private key ID to use for CUP within Omaha requests.")
 	fs.StringVar(&c.privateKeyPath, "omaha-key-path", filepath.Join(filepath.Join(filepath.Dir(os.Args[0]), "test_data", "system-tests"), "test_private_key.pem"), "the path of the private key .pem to use for CUP within Omaha requests.")
 	fs.StringVar(&c.zbiToolPath, "zbitool-path", filepath.Join(testDataPath, "zbi"), "path to the zbi binary")
 	fs.BoolVar(&c.omahaRequireCup, "require-cup", false, "if true, mock-omaha-server will assert that all incoming requests have CUP enabled.")
