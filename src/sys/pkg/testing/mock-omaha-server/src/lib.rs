@@ -206,7 +206,18 @@ fn make_etag(
 
     let (public_key_id_str, _nonce_str) = cup2key_val.split_once(':').unwrap();
     let public_key_id: PublicKeyId = public_key_id_str.parse().unwrap();
-    let private_key: &PrivateKey = private_keys.find(public_key_id)?;
+    let private_key: &PrivateKey = match private_keys.find(public_key_id) {
+        Some(pk) => Some(pk),
+        None => {
+            tracing::error!(
+                "Could not find public_key_id {:?} in the private_keys map, which only knows about the latest key_id {:?} and the historical key_ids {:?}",
+                public_key_id,
+                private_keys.latest.id,
+                private_keys.historical.iter().map(|pkid| pkid.id).collect::<Vec<_>>(),
+                );
+            None
+        }
+    }?;
 
     let request_hash = Sha256::digest(&request_body);
     let response_hash = Sha256::digest(&response_data);
