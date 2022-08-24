@@ -5,6 +5,11 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.tpm") {
-  sources = [ "tpm.fidl" ]
+  sources = [
+    "command.fidl",
+    "deprovision.fidl",
+    "provision.fidl",
+    "tpm.fidl",
+  ]
   public_deps = [ "//zircon/vdso/zx" ]
 }

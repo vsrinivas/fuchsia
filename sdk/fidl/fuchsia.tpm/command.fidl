@@ -1,0 +1,25 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.tpm;
+
+using zx;
+
+/// A larger than required TPM maximum command buffer.
+const MAX_TPM_COMMAND_LEN uint32 = 20000;
+
+/// Fuchsia implementation of the TCG TSS 2.0 TPM Command Transmission
+/// Interface API Specification. This is intended to be used by TSS 2.0
+/// compliant libraries to implement userland TPM libraries. 
+@discoverable
+protocol Command {
+    /// Submit a TPM2 command to be executed by the Resource Manager & TAB.
+    /// Error conditions:
+    /// ZX_UNAVAILABLE will be returned if the TPM cannot be accessed.
+    /// ZX_TIMED_OUT will be returned if the TPM hardware hits the TCG timeouts.
+    Transmit(struct {
+        data vector<byte>:MAX_TPM_COMMAND_LEN;
+    }) -> (struct {
+        data vector<byte>:MAX_TPM_COMMAND_LEN;
+    }) error zx.status;
+};

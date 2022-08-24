@@ -1,0 +1,30 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.tpm;
+
+using zx;
+
+/// Defines the ownership status of the TPM.
+type OwnershipStatus = flexible enum : uint8 {
+    /// The TPM does not have an owner.
+    UNOWNED = 1;
+    /// The TPM is owned by Fuchsia.
+    OWNED = 2;
+    /// The TPM is owned by a non-Fuchsia operating system.
+    PRE_OWNED = 3;
+};
+
+/// The fuchsia.tpm.Provision interface is intended to check if the TPM has
+/// an owner and to take ownership of the TPM if it isn't owned.
+@discoverable
+protocol Provision {
+    /// Returns the OwnershipStatus of the TPM.
+    IsOwned() -> (struct {
+        ownership OwnershipStatus;
+    }) error zx.status;
+
+    /// TakeOwnership is a one time setup call that is required on operating
+    /// system install or after a factory reset.
+    TakeOwnership(table {}) -> (struct {}) error zx.status;
+};
