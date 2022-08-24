@@ -130,6 +130,14 @@ class ScreenCapture2IntegrationTest : public gtest::RealLoopFixture {
     screen_capture_ = realm_.Connect<fuchsia::ui::composition::internal::ScreenCapture>();
     screen_capture_.set_error_handler(
         [](zx_status_t status) { FAIL() << "Lost connection to ScreenCapture"; });
+
+    // Set up error handling.
+    root_session_.events().OnError = [](fuchsia::ui::composition::FlatlandError error) {
+      FX_LOGS(ERROR) << "Root session error: " << static_cast<int>(error);
+    };
+    child_session_.events().OnError = [](fuchsia::ui::composition::FlatlandError error) {
+      FX_LOGS(ERROR) << "Child session error: " << static_cast<int>(error);
+    };
   }
 
   void BlockingPresent(fuchsia::ui::composition::FlatlandPtr& flatland) {
