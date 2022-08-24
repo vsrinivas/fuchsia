@@ -1053,17 +1053,4 @@
             from: "#network",
         },
     ],
-    environments: [
-        {
-            name: "universe-resolver-env",
-            extends: "realm",
-            resolvers: [
-                {
-                    resolver: "full-resolver",
-                    from: "#full-resolver",
-                    scheme: "fuchsia-pkg",
-                },
-            ],
-        },
-    ],
 }

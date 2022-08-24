@@ -3,16 +3,16 @@
 // found in the LICENSE file.
 {
     environments: [
-        // Create an environment usable by core children
-        // that offers everything offered by the `universe-resolver-env`.
+        // Create an environment usable by core children that offers everything offered by the
+        // `core-env` (as configured by the core-env-full-resolver shard, not the
+        // core-env-base-resolver shard).
         // Depending on build configurations, a different core shard may define
         // the `laboratory-env` and add other capabilities to the environment
         // (for example, Dart implementations add the dart runner).
         //
         // TODO(fxbug.dev/105062): There is no way to inherit environments
         // within a single realm (core, in this case) so this environment must
-        // include the resolver that is used when creating `universe-resolver-env`
-        // so core children that used `universe-resolver-env` can still use `laboratory-env`.
+        // include the resolver that is used when creating `core-env`.
         // The linked bug proposes implementing some way to inherit capabilities
         // from one environment to another.
         {
