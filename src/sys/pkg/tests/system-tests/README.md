@@ -141,36 +141,42 @@ OTA-ed. Until this is implemented, the `bin/` directory contains some helper
 scripts that bring up an OTA-able Fuchsia emulator. Follow these instructions to
 it.
 
-The `run-emu` script will create a Fuchsia EFI image, launch QEMU, then run the
-paver. To create the image the script wraps `fx make-fuchsia-vol`. To launch
-QEMU there is a modified version of `run-zircon` (also in the `bin/` directory)
-that uses OVMF to allow us to run the bootloader. Any arguments you pass to the
-script will be passed through to QEMU.
-
-One thing to note, by default, you won't see any terminal output in the emulator
-after an OTA. To restore this behavior, you need an extra build argument to send
-output to the terminal:
+The `create-emu` script will create a Fuchsia EFI image:
 
 ```
-% fx set ... \
-  --with //src/sys/pkg:tests \
-  --args 'dev_bootfs_labels+=["//src/zircon/kernel/cmdline:serial-legacy"]'
-% fx build
+% ./bin/create-emu \
+  --image-dir some/directory/to/store/the/vm/image \
+  "$OTHER_ARGS[@]}"
 ```
 
-With all that setup, you now should be able to run the tests. First, launch the
-emulator:
+This image can then be used by running `run-emu`:
 
 ```
-% ./bin/run-emu
+% ./bin/run-emu \
+  --image-dir some/directory/to/store/the/vm/image \
+  "$OTHER_ARGS[@]}"
 ```
 
-In a new terminal, run the tests. For example, to run the upgrade tests:
+If you don't need to save the Fuchsia image, you can instead use
+`run-transient-emu` to avoid having to create an image:
+
+```
+% ./bin/run-transient-emu "$OTHER_ARGS[@]}"
+```
+
+Each script supports `--help` to see other supported flags.
+
+These scripts wrap `fx make-fuchsia-vol` to create the Fuchsia image, and
+`bin/run-zircon` to run QEMU. `bin/run-zircon` is a modified version of
+`//zircon/scripts/run-zircon`, which uses [OVMF] to provide a virtual UEFI
+instance that supports ABR partitions.
+
+Once the VM has finished paving, you can then use it with the upgrade tests:
 
 ```
 % $(fx get-build-dir)/host_x64/system_tests_upgrade \
-  --ssh-private-key ~/.ssh/fuchsia_ed25519 \
-  --downgrade-builder-name fuchsia/global.ci/core.x64-release-nuc_in_basic_envs \
+  --ssh-private-key ~/fuchsia/.ssh/pkey \
+  --downgrade-builder-name fuchsia/global.ci/workstation_eng.x64-release-e2e-isolated \
   --upgrade-fuchsia-build-dir $(fx get-build-dir) \
   --device fuchsia-5254-0063-5e7a
 ```

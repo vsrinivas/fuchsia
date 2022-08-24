@@ -224,7 +224,7 @@ fi
 ARGS+=" -device virtio-rng-pci"
 
 if (( !$GRAPHICS  )); then
-    ARGS+=" -nographic"
+    ARGS+=" -nographic -vga none"
 else
     ARGS+=" -serial stdio"
     if [[ "$ARCH" == "x64" && $VIRTIO == 0 ]]; then

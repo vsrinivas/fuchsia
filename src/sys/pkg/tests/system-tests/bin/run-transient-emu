@@ -1,0 +1,74 @@
+#!/bin/bash
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Run, inspect and debug
+### run a transient fuchsia image in qemu
+## run a transient fuchsia image in qemu
+##
+## usage: run-transient-emu [run-zircon arguments...]
+##
+##     --image-size   total image size in bytes (default 4 GiB)
+##     --abr-size     abr partition size in bytes (default 256 MiB)
+##     --fvm-size     fvm partition size in bytes (default 0, 0 means fill)
+##
+## This command delegates to //src/sys/pkg/tests/system-tests/run-zircon. Flags
+## are documented in that script, and can be discovered by passing -h or
+## --help.
+##
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/../../../../../../tools/devshell/lib/vars.sh" || exit $?
+fx-config-read
+
+trailing_args=()
+
+while (($#)); do
+  case "$1" in
+    -h|--help)
+      fx-command-help
+      echo
+      echo "additional flags that are passed on to run-zircon:"
+      echo
+      "${FUCHSIA_DIR}/src/sys/pkg/tests/system-tests/bin/run-zircon" -h
+      exit 1
+      ;;
+    *)
+      trailing_args+=("$1")
+      ;;
+  esac
+  shift
+done
+
+IMGDIR="$(mktemp -d ${FUCHSIA_BUILD_DIR}/tmp.XXX)"
+if [[ ! -d "${IMGDIR}" ]]; then
+  fx-error "Failed to create temporary directory"
+  exit 1
+fi
+
+function cleanup() {
+  # want to make sure we kill any long running processes if this shell dies.
+  local child_pids=$(jobs -p)
+  if [[ -n "${child_pids}" ]]; then
+    # Note: child_pids must be expanded to args here.
+    kill ${child_pids} 2> /dev/null
+    wait 2> /dev/null
+  fi
+
+  rm -rf "${IMGDIR}"
+}
+trap cleanup EXIT
+
+# Create the Fuchsia image. We run in the foreground rather than exec so we can
+# clean up the tempdir on error.
+"${FUCHSIA_DIR}/src/sys/pkg/tests/system-tests/bin/create-emu" \
+  --image-dir "${IMGDIR}" \
+  "${trailing_args[@]}"
+
+# Run the Fuchsia image in QEMU. We run in the foreground rather than exec so we can
+# clean up the tempdir on error.
+"${FUCHSIA_DIR}/src/sys/pkg/tests/system-tests/bin/run-emu" \
+  --image-dir "${IMGDIR}" \
+  "${trailing_args[@]}"
