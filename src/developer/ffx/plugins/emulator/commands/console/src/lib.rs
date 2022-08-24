@@ -6,7 +6,6 @@ use anyhow::{anyhow, Result};
 use errors::ffx_bail;
 use ffx_core::ffx_plugin;
 use ffx_emulator_commands::get_engine_by_name;
-use ffx_emulator_common::config::FfxConfigWrapper;
 use ffx_emulator_config::EngineConsoleType;
 use ffx_emulator_console_args::ConsoleCommand;
 
@@ -41,12 +40,11 @@ fn get_console_type(cmd: &ConsoleCommand) -> Result<EngineConsoleType> {
 
 #[ffx_plugin("emu.console.enabled")]
 pub async fn console(mut cmd: ConsoleCommand) -> Result<()> {
-    let ffx_config = FfxConfigWrapper::new();
     let console = match get_console_type(&cmd) {
         Ok(c) => c,
         Err(e) => ffx_bail!("{:?}", e),
     };
-    match get_engine_by_name(&ffx_config, &mut cmd.name).await {
+    match get_engine_by_name(&mut cmd.name).await {
         Ok(engine) => engine.attach(console),
         Err(e) => ffx_bail!("{:?}", e),
     }

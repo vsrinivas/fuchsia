@@ -5,19 +5,13 @@
 //! This library contains the shared functions that are specific to commands.
 
 use anyhow::{anyhow, Context, Result};
-use ffx_emulator_common::{
-    config::FfxConfigWrapper,
-    instances::{get_all_instances, get_instance_dir},
-};
+use ffx_emulator_common::instances::{get_all_instances, get_instance_dir};
 use ffx_emulator_config::EmulatorEngine;
 use ffx_emulator_engines::serialization::read_from_disk;
 
-pub async fn get_engine_by_name(
-    ffx_config: &FfxConfigWrapper,
-    name: &mut Option<String>,
-) -> Result<Box<dyn EmulatorEngine>> {
+pub async fn get_engine_by_name(name: &mut Option<String>) -> Result<Box<dyn EmulatorEngine>> {
     if name.is_none() {
-        let mut all_instances = match get_all_instances(ffx_config).await {
+        let mut all_instances = match get_all_instances().await {
             Ok(list) => list,
             Err(e) => {
                 return Err(anyhow!("Error encountered looking up emulator instances: {:?}", e))
@@ -38,7 +32,7 @@ pub async fn get_engine_by_name(
 
     // If we got this far, name is set to either what the user asked for, or the only one running.
     let local_name = name.clone().unwrap();
-    let instance_dir = get_instance_dir(ffx_config, &local_name, false).await?;
+    let instance_dir = get_instance_dir(&local_name, false).await?;
     if !instance_dir.exists() {
         Err(anyhow!(
             "{:?} isn't a valid instance. Please check your spelling and try again. \

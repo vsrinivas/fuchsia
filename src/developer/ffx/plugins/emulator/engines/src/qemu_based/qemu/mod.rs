@@ -10,10 +10,7 @@
 use crate::{qemu_based::QemuBasedEngine, serialization::SerializingEngine};
 use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
-use ffx_emulator_common::{
-    config::{FfxConfigWrapper, QEMU_TOOL},
-    process,
-};
+use ffx_emulator_common::{config::QEMU_TOOL, process};
 use ffx_emulator_config::{
     CpuArchitecture, EmulatorConfiguration, EmulatorEngine, EngineConsoleType, EngineType,
     PointingDevice,
@@ -27,8 +24,6 @@ use std::{
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct QemuEngine {
-    #[serde(skip)]
-    pub(crate) ffx_config: FfxConfigWrapper,
     #[serde(default)]
     pub(crate) emulator_binary: PathBuf,
     pub(crate) emulator_configuration: EmulatorConfiguration,
@@ -51,7 +46,8 @@ impl QemuEngine {
 
         // Realistically, the file is always in a directory, so the empty path is a reasonable
         // fallback since it will "never" happen
-        let qemu_x64_path = match self.ffx_config.get_host_tool(QEMU_TOOL).await {
+        let sdk = ffx_config::get_sdk().await?;
+        let qemu_x64_path = match sdk.get_host_tool(QEMU_TOOL) {
             Ok(qemu_path) => qemu_path.canonicalize().context(format!(
                 "Failed to canonicalize the path to the emulator binary: {:?}",
                 qemu_path
@@ -80,7 +76,7 @@ impl EmulatorEngine for QemuEngine {
             bail!("Giving up finding emulator binary. Tried {:?}", self.emulator_binary)
         }
 
-        <Self as QemuBasedEngine>::stage(&mut self.emulator_configuration, &self.ffx_config).await
+        <Self as QemuBasedEngine>::stage(&mut self.emulator_configuration).await
     }
 
     async fn start(

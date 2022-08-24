@@ -8,7 +8,7 @@
 use crate::{qemu_based::QemuBasedEngine, serialization::SerializingEngine};
 use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
-use ffx_emulator_common::{config, config::FfxConfigWrapper, process};
+use ffx_emulator_common::{config, process};
 use ffx_emulator_config::{EmulatorConfiguration, EmulatorEngine, EngineConsoleType, EngineType};
 use fidl_fuchsia_developer_ffx as ffx;
 use serde::{Deserialize, Serialize};
@@ -16,8 +16,6 @@ use std::{path::PathBuf, process::Command};
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
 pub struct FemuEngine {
-    #[serde(skip)]
-    pub(crate) ffx_config: FfxConfigWrapper,
     #[serde(default)]
     pub(crate) emulator_binary: PathBuf,
     pub(crate) emulator_configuration: EmulatorConfiguration,
@@ -28,7 +26,8 @@ pub struct FemuEngine {
 #[async_trait]
 impl EmulatorEngine for FemuEngine {
     async fn stage(&mut self) -> Result<()> {
-        self.emulator_binary = match self.ffx_config.get_host_tool(config::FEMU_TOOL).await {
+        let sdk = ffx_config::get_sdk().await?;
+        self.emulator_binary = match sdk.get_host_tool(config::FEMU_TOOL) {
             Ok(aemu_path) => aemu_path.canonicalize().context(format!(
                 "Failed to canonicalize the path to the emulator binary: {:?}",
                 aemu_path
@@ -42,7 +41,7 @@ impl EmulatorEngine for FemuEngine {
             bail!("Giving up finding emulator binary. Tried {:?}", self.emulator_binary)
         }
 
-        <Self as QemuBasedEngine>::stage(&mut self.emulator_configuration, &self.ffx_config).await
+        <Self as QemuBasedEngine>::stage(&mut self.emulator_configuration).await
     }
 
     async fn start(

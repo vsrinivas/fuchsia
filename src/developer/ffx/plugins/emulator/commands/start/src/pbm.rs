@@ -7,7 +7,7 @@
 use anyhow::{bail, Context, Result};
 use ffx_emulator_common::instances::get_instance_dir;
 use ffx_emulator_common::{
-    config::{FfxConfigWrapper, EMU_UPSCRIPT_FILE, KVM_PATH},
+    config::{EMU_UPSCRIPT_FILE, KVM_PATH},
     split_once,
     tuntap::tap_available,
 };
@@ -20,10 +20,7 @@ use port_picker::{is_free_tcp_port, pick_unused_port};
 use std::{collections::hash_map::DefaultHasher, env, hash::Hasher, path::PathBuf, time::Duration};
 
 /// Create a RuntimeConfiguration based on the command line args.
-pub(crate) async fn make_configs(
-    cmd: &StartCommand,
-    ffx_config: &FfxConfigWrapper,
-) -> Result<EmulatorConfiguration> {
+pub(crate) async fn make_configs(cmd: &StartCommand) -> Result<EmulatorConfiguration> {
     let bundle: pbms::VirtualDeviceProduct =
         pbms::VirtualDeviceProduct::new(&cmd.product_bundle).await?;
     if cmd.verbose {
@@ -45,7 +42,7 @@ pub(crate) async fn make_configs(
 
     // Integrate the values from command line flags into the emulation configuration, and
     // return the result to the caller.
-    emu_config = apply_command_line_options(emu_config, cmd, ffx_config)
+    emu_config = apply_command_line_options(emu_config, cmd)
         .await
         .context("problem with apply command lines")?;
 
@@ -61,7 +58,6 @@ pub(crate) async fn make_configs(
 async fn apply_command_line_options(
     mut emu_config: EmulatorConfiguration,
     cmd: &StartCommand,
-    fcw: &FfxConfigWrapper,
 ) -> Result<EmulatorConfiguration> {
     // Clone any fields that can simply copy over.
     emu_config.host.acceleration = cmd.accel.clone();
@@ -75,7 +71,7 @@ async fn apply_command_line_options(
         // expect the log file to exist ahead of time.
         emu_config.host.log = PathBuf::from(env::current_dir()?).join(log);
     } else {
-        let instance = get_instance_dir(&fcw, &cmd.name, false).await?;
+        let instance = get_instance_dir(&cmd.name, false).await?;
         emu_config.host.log = instance.join("emulator.log");
     }
 
@@ -284,7 +280,6 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_apply_command_line_options() -> Result<()> {
         let _env = ffx_config::test_init().await.unwrap();
-        let ffx_config = FfxConfigWrapper::new();
 
         // Set up some test data to be applied.
         let mut cmd = StartCommand {
@@ -318,7 +313,7 @@ mod tests {
         assert_eq!(emu_config.runtime.upscript, None);
 
         // Apply the test data, which should change everything in the config.
-        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await?;
+        let opts = apply_command_line_options(emu_config.clone(), &cmd).await?;
         assert_eq!(opts.host.acceleration, AccelerationMode::Hyper);
         assert_eq!(opts.host.gpu, GpuType::Host);
         assert_eq!(opts.host.log, PathBuf::from("/path/to/log"));
@@ -337,13 +332,13 @@ mod tests {
             .set(json!("/path/to/upscript".to_string()))
             .await?;
 
-        let opts = apply_command_line_options(opts, &cmd, &ffx_config).await?;
+        let opts = apply_command_line_options(opts, &cmd).await?;
         assert_eq!(opts.runtime.upscript, Some(PathBuf::from("/path/to/upscript")));
 
         // "console" and "monitor" are exclusive, so swap them and reapply.
         cmd.console = false;
         cmd.monitor = true;
-        let opts = apply_command_line_options(opts, &cmd, &ffx_config).await?;
+        let opts = apply_command_line_options(opts, &cmd).await?;
         assert_eq!(opts.runtime.console, ConsoleType::Monitor);
 
         // Test relative file paths
@@ -356,7 +351,7 @@ mod tests {
 
         cmd.log = Some(PathBuf::from("tmp.log"));
         cmd.config = Some(PathBuf::from("tmp.template"));
-        let result = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await;
+        let result = apply_command_line_options(emu_config.clone(), &cmd).await;
         assert!(result.is_ok(), "{:?}", result.err());
         let opts = result.unwrap();
         assert_eq!(opts.host.log, temp_path.join("tmp.log"));
@@ -364,7 +359,7 @@ mod tests {
 
         cmd.log = Some(PathBuf::from("relative/path/to/emulator.file"));
         cmd.config = Some(PathBuf::from("relative/path/to/emulator.template"));
-        let result = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await;
+        let result = apply_command_line_options(emu_config.clone(), &cmd).await;
         assert!(result.is_ok(), "{:?}", result.err());
         let opts = result.unwrap();
         assert_eq!(opts.host.log, temp_path.join("relative/path/to/emulator.file"));
@@ -374,7 +369,7 @@ mod tests {
         env::set_current_dir(&long_path).context("Error setting cwd in test")?;
         cmd.log = Some(PathBuf::from("../other/file.log"));
         cmd.config = Some(PathBuf::from("relative/../path/to/../template.file"));
-        let result = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await;
+        let result = apply_command_line_options(emu_config.clone(), &cmd).await;
         assert!(result.is_ok(), "{:?}", result.err());
         let opts = result.unwrap();
         // As mentioned in the code, it'd be nice to canonicalize this, but since the file doesn't
@@ -388,7 +383,7 @@ mod tests {
         // Test absolute path
         cmd.log = Some(long_path.join("absolute.file"));
         cmd.config = Some(long_path.join("absolute.template"));
-        let result = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await;
+        let result = apply_command_line_options(emu_config.clone(), &cmd).await;
         assert!(result.is_ok(), "{:?}", result.err());
         let opts = result.unwrap();
         assert_eq!(opts.host.log, long_path.join("absolute.file"));
@@ -408,8 +403,6 @@ mod tests {
         // The file at KVM_PATH is only tested for writability. It need not have contents.
         let file = File::create(&file_path).expect("Create temp file");
         let mut perms = file.metadata().expect("Get file metadata").permissions();
-
-        let ffx_config = FfxConfigWrapper::new();
 
         query(KVM_PATH)
             .level(Some(ConfigLevel::User))
@@ -438,22 +431,22 @@ mod tests {
 
         emu_config.device.cpu.architecture = CpuArchitecture::X64;
         emu_config.host.architecture = CpuArchitecture::X64;
-        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await?;
+        let opts = apply_command_line_options(emu_config.clone(), &cmd).await?;
         assert_eq!(opts.host.acceleration, AccelerationMode::Hyper);
 
         emu_config.device.cpu.architecture = CpuArchitecture::X64;
         emu_config.host.architecture = CpuArchitecture::Arm64;
-        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await?;
+        let opts = apply_command_line_options(emu_config.clone(), &cmd).await?;
         assert_eq!(opts.host.acceleration, AccelerationMode::None);
 
         emu_config.device.cpu.architecture = CpuArchitecture::Arm64;
         emu_config.host.architecture = CpuArchitecture::Arm64;
-        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await?;
+        let opts = apply_command_line_options(emu_config.clone(), &cmd).await?;
         assert_eq!(opts.host.acceleration, AccelerationMode::Hyper);
 
         emu_config.device.cpu.architecture = CpuArchitecture::Arm64;
         emu_config.host.architecture = CpuArchitecture::X64;
-        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await?;
+        let opts = apply_command_line_options(emu_config.clone(), &cmd).await?;
         assert_eq!(opts.host.acceleration, AccelerationMode::None);
 
         perms.set_readonly(true);
@@ -461,44 +454,44 @@ mod tests {
 
         emu_config.device.cpu.architecture = CpuArchitecture::X64;
         emu_config.host.architecture = CpuArchitecture::X64;
-        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await?;
+        let opts = apply_command_line_options(emu_config.clone(), &cmd).await?;
         assert_eq!(opts.host.acceleration, AccelerationMode::None);
 
         emu_config.device.cpu.architecture = CpuArchitecture::X64;
         emu_config.host.architecture = CpuArchitecture::Arm64;
-        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await?;
+        let opts = apply_command_line_options(emu_config.clone(), &cmd).await?;
         assert_eq!(opts.host.acceleration, AccelerationMode::None);
 
         emu_config.device.cpu.architecture = CpuArchitecture::Arm64;
         emu_config.host.architecture = CpuArchitecture::Arm64;
-        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await?;
+        let opts = apply_command_line_options(emu_config.clone(), &cmd).await?;
         assert_eq!(opts.host.acceleration, AccelerationMode::None);
 
         emu_config.device.cpu.architecture = CpuArchitecture::Arm64;
         emu_config.host.architecture = CpuArchitecture::X64;
-        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await?;
+        let opts = apply_command_line_options(emu_config.clone(), &cmd).await?;
         assert_eq!(opts.host.acceleration, AccelerationMode::None);
 
         emu_config.host.os = OperatingSystem::MacOS;
 
         emu_config.device.cpu.architecture = CpuArchitecture::X64;
         emu_config.host.architecture = CpuArchitecture::X64;
-        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await?;
+        let opts = apply_command_line_options(emu_config.clone(), &cmd).await?;
         assert_eq!(opts.host.acceleration, AccelerationMode::Hyper);
 
         emu_config.device.cpu.architecture = CpuArchitecture::X64;
         emu_config.host.architecture = CpuArchitecture::Arm64;
-        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await?;
+        let opts = apply_command_line_options(emu_config.clone(), &cmd).await?;
         assert_eq!(opts.host.acceleration, AccelerationMode::None);
 
         emu_config.device.cpu.architecture = CpuArchitecture::Arm64;
         emu_config.host.architecture = CpuArchitecture::Arm64;
-        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await?;
+        let opts = apply_command_line_options(emu_config.clone(), &cmd).await?;
         assert_eq!(opts.host.acceleration, AccelerationMode::Hyper);
 
         emu_config.device.cpu.architecture = CpuArchitecture::Arm64;
         emu_config.host.architecture = CpuArchitecture::X64;
-        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await?;
+        let opts = apply_command_line_options(emu_config.clone(), &cmd).await?;
         assert_eq!(opts.host.acceleration, AccelerationMode::None);
 
         Ok(())

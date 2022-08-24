@@ -6,13 +6,11 @@ use anyhow::Result;
 use errors::ffx_bail;
 use ffx_core::ffx_plugin;
 use ffx_emulator_commands::get_engine_by_name;
-use ffx_emulator_common::config::FfxConfigWrapper;
 use ffx_emulator_show_args::ShowCommand;
 
 #[ffx_plugin()]
 pub async fn show(mut cmd: ShowCommand) -> Result<()> {
-    let ffx_config = FfxConfigWrapper::new();
-    match get_engine_by_name(&ffx_config, &mut cmd.name).await {
+    match get_engine_by_name(&mut cmd.name).await {
         Ok(engine) => {
             engine.show();
         }

@@ -14,10 +14,7 @@ use qemu_based::qemu::QemuEngine;
 use serialization::read_from_disk;
 
 use anyhow::{bail, Context, Result};
-use ffx_emulator_common::{
-    config::FfxConfigWrapper,
-    instances::{get_instance_dir, SERIALIZE_FILE_NAME},
-};
+use ffx_emulator_common::instances::{get_instance_dir, SERIALIZE_FILE_NAME};
 use ffx_emulator_config::FlagData;
 use ffx_emulator_config::{
     DeviceConfig, EmulatorConfiguration, EmulatorEngine, EngineType, GuestConfig, HostConfig,
@@ -55,7 +52,6 @@ use ffx_emulator_config::{
 pub struct EngineBuilder {
     emulator_configuration: EmulatorConfiguration,
     engine_type: EngineType,
-    ffx_config: FfxConfigWrapper,
 }
 
 impl EngineBuilder {
@@ -64,7 +60,6 @@ impl EngineBuilder {
         Self {
             emulator_configuration: EmulatorConfiguration::default(),
             engine_type: EngineType::default(),
-            ffx_config: FfxConfigWrapper::new(),
         }
     }
 
@@ -83,12 +78,6 @@ impl EngineBuilder {
     /// Set the type of the engine to be built.
     pub fn engine_type(mut self, engine_type: EngineType) -> EngineBuilder {
         self.engine_type = engine_type;
-        self
-    }
-
-    /// Set the FfxConfigWrapper to be used when building this engine.
-    pub fn ffx_config(mut self, ffx_config: FfxConfigWrapper) -> EngineBuilder {
-        self.ffx_config = ffx_config;
         self
     }
 
@@ -117,7 +106,7 @@ impl EngineBuilder {
         let name = &self.emulator_configuration.runtime.name;
         self.emulator_configuration.runtime.engine_type = self.engine_type;
         self.emulator_configuration.runtime.instance_directory =
-            get_instance_dir(&self.ffx_config, name, true).await?;
+            get_instance_dir(name, true).await?;
 
         // Make sure we don't overwrite an existing instance.
         let filepath =
@@ -145,13 +134,11 @@ impl EngineBuilder {
         let engine: Box<dyn EmulatorEngine> = match self.engine_type {
             EngineType::Femu => Box::new(FemuEngine {
                 emulator_configuration: self.emulator_configuration,
-                ffx_config: self.ffx_config,
                 engine_type: self.engine_type,
                 ..Default::default()
             }),
             EngineType::Qemu => Box::new(QemuEngine {
                 emulator_configuration: self.emulator_configuration,
-                ffx_config: self.ffx_config,
                 engine_type: self.engine_type,
                 ..Default::default()
             }),

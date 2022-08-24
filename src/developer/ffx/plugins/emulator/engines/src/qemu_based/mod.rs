@@ -17,7 +17,7 @@ use errors::ffx_bail;
 use ffx_config::SshKeyFiles;
 use ffx_emulator_common::{
     config,
-    config::{FfxConfigWrapper, EMU_START_TIMEOUT},
+    config::EMU_START_TIMEOUT,
     dump_log_to_out, host_is_mac, process,
     target::{add_target, is_active, remove_target},
     tuntap::{tap_ready, TAP_INTERFACE_NAME},
@@ -253,10 +253,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
         Ok(())
     }
 
-    async fn stage(
-        emu_config: &mut EmulatorConfiguration,
-        _ffx_config: &FfxConfigWrapper,
-    ) -> Result<()> {
+    async fn stage(emu_config: &mut EmulatorConfiguration) -> Result<()> {
         let name = &emu_config.runtime.name;
         let guest = &emu_config.guest;
         let device = &emu_config.device;

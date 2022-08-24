@@ -4,7 +4,7 @@
 
 //! This module has common functions for helping commands resolve the emulator
 //! instance that command is targeting, either by name or by default.
-use crate::config::{FfxConfigWrapper, EMU_INSTANCE_ROOT_DIR};
+use crate::config::EMU_INSTANCE_ROOT_DIR;
 use anyhow::{Context, Result};
 use std::{fs::create_dir_all, path::PathBuf};
 
@@ -12,11 +12,7 @@ pub const SERIALIZE_FILE_NAME: &str = "engine.json";
 
 /// Return a PathBuf with the path to the instance directory for this engine. If the "create" flag
 /// is set, the directory and its ancestors will be created if it doesn't already exist.
-pub async fn get_instance_dir(
-    _ffx_config: &FfxConfigWrapper,
-    instance_name: &str,
-    create: bool,
-) -> Result<PathBuf> {
+pub async fn get_instance_dir(instance_name: &str, create: bool) -> Result<PathBuf> {
     let root_dir: String = ffx_config::get(EMU_INSTANCE_ROOT_DIR)
         .await
         .context("Error encountered accessing FFX config for the emulator instance root.")?;
@@ -48,7 +44,7 @@ pub async fn clean_up_instance_dir(path: &PathBuf) -> Result<()> {
 }
 
 /// Retrieve a list of all of the names of instances currently present on the local system.
-pub async fn get_all_instances(_ffx_config: &FfxConfigWrapper) -> Result<Vec<String>> {
+pub async fn get_all_instances() -> Result<Vec<String>> {
     let mut result = Vec::new();
     let root_dir: String = ffx_config::get(EMU_INSTANCE_ROOT_DIR)
         .await
@@ -85,7 +81,6 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_instance_dir() -> Result<()> {
         let _env = ffx_config::test_init().await.unwrap();
-        let config = FfxConfigWrapper::new();
         let temp_dir = tempdir()
             .expect("Couldn't get a temporary directory for testing.")
             .path()
@@ -95,23 +90,23 @@ mod tests {
         query(EMU_INSTANCE_ROOT_DIR).level(Some(ConfigLevel::User)).set(json!(temp_dir)).await?;
 
         // Create a new directory.
-        let path1 = get_instance_dir(&config, "create_me", true).await?;
+        let path1 = get_instance_dir("create_me", true).await?;
         assert_eq!(path1, PathBuf::from(&temp_dir).join("create_me"));
         assert!(path1.exists());
 
         // Look for a dir that doesn't exist, but don't create it.
-        let path2 = get_instance_dir(&config, "dont_create", false).await?;
+        let path2 = get_instance_dir("dont_create", false).await?;
         assert!(!path2.exists());
 
         // Look for a dir that already exists, but don't allow creation.
-        let mut path3 = get_instance_dir(&config, "create_me", false).await?;
+        let mut path3 = get_instance_dir("create_me", false).await?;
         assert_eq!(path3, PathBuf::from(&temp_dir).join("create_me"));
         assert!(path3.exists());
 
         // Get an existing directory, but set the create flag too. Make sure it didn't get replaced.
         path3 = path3.join("foo.txt");
         let _ = File::create(&path3)?;
-        let path4 = get_instance_dir(&config, "create_me", true).await?;
+        let path4 = get_instance_dir("create_me", true).await?;
         assert!(path4.exists());
         assert!(path3.exists());
         assert_eq!(path4, PathBuf::from(&temp_dir).join("create_me"));
@@ -125,7 +120,6 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_all_instances() -> Result<()> {
         let _env = ffx_config::test_init().await.unwrap();
-        let config = FfxConfigWrapper::new();
         let temp_dir = tempdir()
             .expect("Couldn't get a temporary directory for testing.")
             .path()
@@ -150,7 +144,7 @@ mod tests {
         let file3_path = path3.join(SERIALIZE_FILE_NAME);
         let _file3 = File::create(&file3_path)?;
 
-        let instances = get_all_instances(&config).await?;
+        let instances = get_all_instances().await?;
         assert!(instances.contains(&"path1".to_string()));
         assert!(instances.contains(&"path2".to_string()));
         assert!(instances.contains(&"path3".to_string()));
@@ -159,7 +153,7 @@ mod tests {
         // Remove the file for path2, and make sure it's excluded from the results.
         assert!(remove_file(&file2_path).is_ok());
 
-        let instances = get_all_instances(&config).await?;
+        let instances = get_all_instances().await?;
         assert!(instances.contains(&"path1".to_string()));
         assert!(!instances.contains(&"path2".to_string()));
         assert!(instances.contains(&"path3".to_string()));
@@ -169,7 +163,7 @@ mod tests {
         let file_path = PathBuf::from(&temp_dir).join("empty_file");
         let _empty_file = File::create(&file_path)?;
 
-        let instances = get_all_instances(&config).await?;
+        let instances = get_all_instances().await?;
         assert!(instances.contains(&"path1".to_string()));
         assert!(!instances.contains(&"path2".to_string()));
         assert!(instances.contains(&"path3".to_string()));

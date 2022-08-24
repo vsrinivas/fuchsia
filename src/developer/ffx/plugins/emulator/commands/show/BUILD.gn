@@ -12,7 +12,6 @@ if (is_host) {
     deps = [
       "//src/developer/ffx/lib/errors:lib",
       "//src/developer/ffx/plugins/emulator/commands:ffx_emulator_commands",
-      "//src/developer/ffx/plugins/emulator/common:ffx_emulator_common",
     ]
     args_sources = [ "src/args.rs" ]
     sources = [ "src/lib.rs" ]

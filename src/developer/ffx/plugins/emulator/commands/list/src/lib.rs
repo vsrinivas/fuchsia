@@ -6,8 +6,6 @@ use anyhow::Result;
 use cfg_if::cfg_if;
 use errors::ffx_bail;
 use ffx_core::ffx_plugin;
-
-use ffx_emulator_common::config::FfxConfigWrapper;
 use ffx_emulator_config::EmulatorEngine;
 use ffx_emulator_list_args::ListCommand;
 
@@ -21,15 +19,14 @@ use mockall::{automock, predicate::*};
 mod modules {
     use super::*;
 
-    pub(super) async fn get_all_instances(ffx_config: &FfxConfigWrapper) -> Result<Vec<String>> {
-        ffx_emulator_common::instances::get_all_instances(ffx_config).await
+    pub(super) async fn get_all_instances() -> Result<Vec<String>> {
+        ffx_emulator_common::instances::get_all_instances().await
     }
 
     pub(super) async fn get_engine_by_name(
-        ffx_config: &FfxConfigWrapper,
         name: &mut Option<String>,
     ) -> Result<Box<dyn EmulatorEngine>> {
-        ffx_emulator_commands::get_engine_by_name(ffx_config, name).await
+        ffx_emulator_commands::get_engine_by_name(name).await
     }
 }
 
@@ -65,14 +62,13 @@ pub async fn exec_list_impl<W: std::io::Write, E: std::io::Write>(
     writer: &mut W,
     error_writer: &mut E,
 ) -> Result<()> {
-    let ffx_config = FfxConfigWrapper::new();
-    let instance_list: Vec<Option<String>> = match get_all_instances(&ffx_config).await {
+    let instance_list: Vec<Option<String>> = match get_all_instances().await {
         Ok(list) => list.into_iter().map(|v| Some(v)).collect(),
         Err(e) => ffx_bail!("Error encountered looking up emulator instances: {:?}", e),
     };
     let mut broken = false;
     for mut some_name in instance_list {
-        match get_engine_by_name(&ffx_config, &mut some_name).await {
+        match get_engine_by_name(&mut some_name).await {
             Ok(engine) => {
                 let name = some_name.unwrap();
                 if engine.is_running() {
@@ -182,7 +178,7 @@ mod tests {
 
         // no existing instances
         let ctx = mock_modules::get_all_instances_context();
-        ctx.expect().returning(|_| Ok(vec![]));
+        ctx.expect().returning(|| Ok(vec![]));
 
         let engine_ctx = mock_modules::get_engine_by_name_context();
         engine_ctx.expect().times(0);
@@ -203,10 +199,10 @@ mod tests {
         let _m = get_lock(&MTX);
 
         let ctx = mock_modules::get_all_instances_context();
-        ctx.expect().returning(|_| Ok(vec!["notrunning_emu".to_string()]));
+        ctx.expect().returning(|| Ok(vec!["notrunning_emu".to_string()]));
 
         let engine_ctx = mock_modules::get_engine_by_name_context();
-        engine_ctx.expect().returning(|_, _| Ok(Box::new(TestEngine { running_flag: false })));
+        engine_ctx.expect().returning(|_| Ok(Box::new(TestEngine { running_flag: false })));
 
         let mut stdout: Vec<u8> = vec![];
         let mut stderr: Vec<u8> = vec![];
@@ -225,10 +221,10 @@ mod tests {
         let _m = get_lock(&MTX);
 
         let ctx = mock_modules::get_all_instances_context();
-        ctx.expect().returning(|_| Ok(vec!["running_emu".to_string()]));
+        ctx.expect().returning(|| Ok(vec!["running_emu".to_string()]));
 
         let engine_ctx = mock_modules::get_engine_by_name_context();
-        engine_ctx.expect().returning(|_, _| Ok(Box::new(TestEngine { running_flag: true })));
+        engine_ctx.expect().returning(|_| Ok(Box::new(TestEngine { running_flag: true })));
 
         let mut stdout: Vec<u8> = vec![];
         let mut stderr: Vec<u8> = vec![];
@@ -248,10 +244,10 @@ mod tests {
         let _m = get_lock(&MTX);
 
         let ctx = mock_modules::get_all_instances_context();
-        ctx.expect().returning(|_| Ok(vec!["error_emu".to_string()]));
+        ctx.expect().returning(|| Ok(vec!["error_emu".to_string()]));
 
         let engine_ctx = mock_modules::get_engine_by_name_context();
-        engine_ctx.expect().returning(|_, _| Err(anyhow!("This instance cannot be parsed")));
+        engine_ctx.expect().returning(|_| Err(anyhow!("This instance cannot be parsed")));
 
         let mut stdout: Vec<u8> = vec![];
         let mut stderr: Vec<u8> = vec![];

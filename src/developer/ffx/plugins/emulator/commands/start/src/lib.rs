@@ -6,7 +6,6 @@ use crate::{editor::edit_configuration, pbm::make_configs};
 use anyhow::Result;
 use errors::ffx_bail;
 use ffx_core::ffx_plugin;
-use ffx_emulator_common::config::FfxConfigWrapper;
 use ffx_emulator_config::EngineType;
 use ffx_emulator_engines::EngineBuilder;
 use ffx_emulator_start_args::StartCommand;
@@ -18,8 +17,7 @@ mod pbm;
 
 #[ffx_plugin(TargetCollectionProxy = "daemon::protocol")]
 pub async fn start(cmd: StartCommand, proxy: TargetCollectionProxy) -> Result<()> {
-    let config = FfxConfigWrapper::new();
-    let emulator_configuration = match make_configs(&cmd, &config).await {
+    let emulator_configuration = match make_configs(&cmd).await {
         Ok(config) => config,
         Err(e) => {
             ffx_bail!("{:?}", e);
