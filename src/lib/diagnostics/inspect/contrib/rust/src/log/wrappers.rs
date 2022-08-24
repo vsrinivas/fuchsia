@@ -27,7 +27,7 @@ impl<T: AsRef<[u8]>> WriteInspect for InspectBytes<T> {
 /// Example:
 /// ```
 /// let list = ["foo", "bar", "baz"];
-/// inspect_insert!(node_writer, some_list: list);
+/// inspect_insert!(node_writer, some_list: InspectList(&list));
 /// ```
 ///
 /// The above code snippet would create the following child under node_writer:
