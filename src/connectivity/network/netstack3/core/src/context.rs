@@ -1493,17 +1493,17 @@ pub(crate) mod testutil {
         /// Panics if 1,000,000 steps are performed without becoming idle.
         /// Also panics under the same conditions as [`step`].
         pub(crate) fn run_until_idle<
-            FH: FnMut(&mut Ctx, RecvMeta, Buf<Vec<u8>>) + Copy,
-            FT: FnMut(&mut Ctx, &mut (), Ctx::TimerId) + Copy,
+            FH: FnMut(&mut Ctx, RecvMeta, Buf<Vec<u8>>),
+            FT: FnMut(&mut Ctx, &mut (), Ctx::TimerId),
         >(
             &mut self,
-            handle_frame: FH,
-            handle_timer: FT,
+            mut handle_frame: FH,
+            mut handle_timer: FT,
         ) where
             Ctx::TimerId: core::fmt::Debug,
         {
             for _ in 0..1_000_000 {
-                if self.step(handle_frame, handle_timer).is_idle() {
+                if self.step(&mut handle_frame, &mut handle_timer).is_idle() {
                     return;
                 }
             }
