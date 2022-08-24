@@ -38,7 +38,10 @@ if (is_host) {
       "//third_party/rust_crates:tracing-subscriber",
     ]
 
-    test_deps = [ "//src/lib/fuchsia-async" ]
+    test_deps = [
+      "//src/lib/fuchsia-async",
+      "//third_party/rust_crates:futures",
+    ]
 
     inputs = [
       "testdata/test1_ed25519",

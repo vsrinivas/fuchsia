@@ -2,22 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::environment::Environment,
-    crate::runtime::populate_runtime_config,
-    crate::storage::{Config, ConfigMap},
-    anyhow::{anyhow, Context, Result},
-    async_lock::RwLock,
-    serde_json::Value,
-    std::sync::Arc,
-    std::{
-        collections::HashMap,
-        path::{Path, PathBuf},
-        sync::Mutex,
-        time::{Duration, Instant},
-    },
-    tempfile::NamedTempFile,
+use crate::runtime::populate_runtime_config;
+use crate::storage::{Config, ConfigMap};
+use crate::{
+    environment::{Environment, EnvironmentContext},
+    BuildOverride,
 };
+use anyhow::{anyhow, bail, Context, Result};
+use async_lock::{RwLock, RwLockUpgradableReadGuard};
+use serde_json::Value;
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+    sync::Arc,
+    sync::Mutex,
+    time::{Duration, Instant},
+};
+use tempfile::{NamedTempFile, TempDir};
 
 // Timeout for the config cache.
 pub const CONFIG_CACHE_TIMEOUT: Duration = Duration::from_secs(3);
@@ -30,13 +31,25 @@ struct CacheItem {
 type Cache = RwLock<HashMap<Option<PathBuf>, CacheItem>>;
 
 lazy_static::lazy_static! {
-    static ref ENV_FILE: Mutex<Option<PathBuf>> = Mutex::default();
-    static ref RUNTIME: Mutex<ConfigMap> = Mutex::default();
+    static ref ENV: Mutex<Option<EnvironmentContext>> = Mutex::default();
     static ref CACHE: Cache = RwLock::default();
 }
 
-pub fn env_file() -> Option<PathBuf> {
-    ENV_FILE.lock().unwrap().as_ref().map(|p| p.to_path_buf())
+pub fn global_env_context() -> Option<EnvironmentContext> {
+    ENV.lock().unwrap().clone()
+}
+
+pub async fn global_env() -> Result<Environment> {
+    let context =
+        global_env_context().context("Tried to load global environment before configuration")?;
+
+    match context.load().await {
+        Err(err) => {
+            tracing::error!("failed to load environment, reverting to default: {}", err);
+            Environment::new_empty(context).await
+        }
+        Ok(ctx) => Ok(ctx),
+    }
 }
 
 /// A structure that holds information about the test config environment for the duration
@@ -44,8 +57,10 @@ pub fn env_file() -> Option<PathBuf> {
 /// may fail.
 #[must_use = "This object must be held for the duration of a test (ie. `let _env = ffx_config::test_init()`) for it to operate correctly."]
 pub struct TestEnv {
-    env_file: NamedTempFile,
-    _user_file: NamedTempFile,
+    pub env_file: NamedTempFile,
+    pub context: EnvironmentContext,
+    pub isolate_root: TempDir,
+    pub user_file: NamedTempFile,
     _guard: async_lock::MutexGuardArc<()>,
 }
 
@@ -53,14 +68,28 @@ impl TestEnv {
     async fn new(_guard: async_lock::MutexGuardArc<()>) -> Result<Self> {
         let env_file = NamedTempFile::new().context("tmp access failed")?;
         let user_file = NamedTempFile::new().context("tmp access failed")?;
+        let isolate_root = tempfile::tempdir()?;
+
         Environment::init_env_file(env_file.path()).await.context("initializing env file")?;
 
         // Point the user config at a temporary file.
-        let mut env = Environment::load(env_file.path()).await.context("opening env file")?;
-        env.set_user(Some(user_file.path()));
+        let user_file_path = user_file.path().to_owned();
+        let context = EnvironmentContext::isolated(
+            isolate_root.path().to_owned(),
+            ConfigMap::default(),
+            Some(env_file.path().to_owned()),
+        );
+        let test_env = TestEnv { env_file, context, user_file, isolate_root, _guard };
+
+        let mut env = test_env.load().await;
+        env.set_user(Some(&user_file_path));
         env.save().await.context("saving env file")?;
 
-        Ok(TestEnv { env_file, _user_file: user_file, _guard })
+        Ok(test_env)
+    }
+
+    pub async fn load(&self) -> Environment {
+        self.context.load().await.expect("opening test env file")
     }
 }
 
@@ -68,30 +97,19 @@ impl Drop for TestEnv {
     fn drop(&mut self) {
         // after the test, wipe out all the test configuration we set up. Explode if things aren't as we
         // expect them.
-        let mut env = ENV_FILE.lock().expect("Poisoned lock");
+        let mut env = ENV.lock().expect("Poisoned lock");
         let env_prev = env.clone();
         *env = None;
         drop(env);
 
-        let mut runtime = RUNTIME.lock().expect("Poisoned lock");
-        let runtime_prev = runtime.clone();
-        *runtime = ConfigMap::default();
-        drop(runtime);
-
-        // do these checks outside the mutex lock so we can't poison them.
-        assert_eq!(
-            env_prev.as_deref(),
-            Some(self.env_file.path()),
-            "env path changed from {expected} to {other:?} during test run somehow.",
-            expected = self.env_file.path().display(),
-            other = env_prev
-        );
-        assert_eq!(
-            runtime_prev,
-            ConfigMap::default(),
-            "runtime args changed from an empty map to {other:?} during test run somehow.",
-            other = runtime_prev
-        );
+        if let Some(env_prev) = env_prev {
+            assert_eq!(
+                env_prev,
+                self.context,
+                "environment context changed from isolated environment to {other:?} during test run somehow.",
+                other = env_prev
+            );
+        }
 
         // since we're not running in async context during drop, we can't clear the cache unfortunately.
     }
@@ -102,46 +120,8 @@ impl Drop for TestEnv {
 pub async fn init(
     runtime: &[String],
     runtime_overrides: Option<String>,
-    env: PathBuf,
-) -> Result<()> {
-    // explode if we ever try to overwrite the global configuration
-    assert!(
-        init_impl(runtime, runtime_overrides, env).await?.is_none(),
-        "Tried to re-initialize the global configuration outside of a test!"
-    );
-    Ok(())
-}
-
-/// When running tests we usually just want to initialize a blank slate configuration, so
-/// use this for tests. You must hold the returned object object for the duration of the test, not doing so
-/// will result in strange behaviour.
-pub async fn test_init() -> Result<TestEnv> {
-    lazy_static::lazy_static! {
-        static ref TEST_LOCK: Arc<async_lock::Mutex<()>> = Arc::default();
-    }
-    let env = TestEnv::new(TEST_LOCK.lock_arc().await).await?;
-
-    // force an overwrite of the configuration setup
-    init_impl(&[], None, env.env_file.path().to_owned()).await?;
-    // force clearing the cache as well
-    invalidate().await;
-
-    Ok(env)
-}
-
-/// Invalidate the cache. Call this if you do anything that might make a cached config go stale
-/// in a critical way, like changing the environment.
-pub async fn invalidate() {
-    CACHE.write().await.clear();
-}
-
-/// Actual implementation of initializing the global environment. Returns the previously set env
-/// file, if there is one, or an error if something actionable went wrong.
-async fn init_impl(
-    runtime: &[String],
-    runtime_overrides: Option<String>,
-    env: PathBuf,
-) -> Result<Option<PathBuf>> {
+    env: Option<PathBuf>,
+) -> Result<EnvironmentContext> {
     let mut populated_runtime = Value::Null;
     runtime.iter().chain(&runtime_overrides).try_for_each(|r| {
         if let Some(v) = populate_runtime_config(&Some(r.clone()))? {
@@ -154,13 +134,48 @@ async fn init_impl(
         Value::Object(runtime) => runtime,
         _ => return Err(anyhow!("Invalid runtime configuration: must be an object")),
     };
-    *RUNTIME.lock().expect("Poisoned lock") = populated_runtime;
+    let context = EnvironmentContext::detect(populated_runtime, std::env::current_dir()?, env)?;
 
+    init_impl(&context).await?;
+
+    Ok(context)
+}
+
+/// When running tests we usually just want to initialize a blank slate configuration, so
+/// use this for tests. You must hold the returned object object for the duration of the test, not doing so
+/// will result in strange behaviour.
+pub async fn test_init() -> Result<TestEnv> {
+    lazy_static::lazy_static! {
+        static ref TEST_LOCK: Arc<async_lock::Mutex<()>> = Arc::default();
+    }
+    let env = TestEnv::new(TEST_LOCK.lock_arc().await).await?;
+
+    // force an overwrite of the configuration setup
+    init_impl(&env.context).await?;
+    // force clearing the cache as well
+    invalidate().await;
+
+    Ok(env)
+}
+
+/// Invalidate the cache. Call this if you do anything that might make a cached config go stale
+/// in a critical way, like changing the environment.
+pub async fn invalidate() {
+    CACHE.write().await.clear();
+}
+
+async fn init_impl(context: &EnvironmentContext) -> Result<()> {
+    let env = context.env_path()?;
     if !env.is_file() {
         tracing::debug!("initializing environment {}", env.display());
         Environment::init_env_file(&env).await?;
     }
-    Ok(ENV_FILE.lock().unwrap().replace(env))
+    let mut env_lock = ENV.lock().unwrap();
+    if env_lock.is_some() {
+        bail!("Attempted to set the global environment more than once in a process invocation, outside of a test");
+    }
+    env_lock.replace(context.clone());
+    Ok(())
 }
 
 fn is_cache_item_expired(item: &CacheItem, now: Instant) -> bool {
@@ -168,67 +183,43 @@ fn is_cache_item_expired(item: &CacheItem, now: Instant) -> bool {
 }
 
 async fn read_cache(
+    guard: &impl std::ops::Deref<Target = HashMap<Option<PathBuf>, CacheItem>>,
     build_dir: Option<&Path>,
     now: Instant,
-    cache: &Cache,
 ) -> Option<Arc<RwLock<Config>>> {
-    let read_guard = cache.read().await;
-    (*read_guard)
+    guard
         .get(&build_dir.map(Path::to_owned)) // TODO(mgnb): get rid of this allocation when we can
         .filter(|item| !is_cache_item_expired(item, now))
         .map(|item| item.config.clone())
 }
 
-pub(crate) async fn load_config(build_dir: Option<&Path>) -> Result<Arc<RwLock<Config>>> {
-    load_config_with_instant(build_dir, Instant::now(), &CACHE).await
+pub(crate) async fn load_config(
+    environment: Environment,
+    build_override: Option<BuildOverride<'_>>,
+) -> Result<Arc<RwLock<Config>>> {
+    load_config_with_instant(&environment, build_override, Instant::now(), &CACHE).await
 }
 
 async fn load_config_with_instant(
-    build_dir: Option<&Path>,
+    env: &Environment,
+    build_override: Option<BuildOverride<'_>>,
     now: Instant,
     cache: &Cache,
 ) -> Result<Arc<RwLock<Config>>> {
-    let cache_hit = read_cache(build_dir, now, cache).await;
+    let guard = cache.upgradable_read().await;
+    let build_dir = env.override_build_dir(build_override);
+    let cache_hit = read_cache(&guard, build_dir, now).await;
     match cache_hit {
         Some(h) => Ok(h),
         None => {
-            {
-                let mut write_guard = cache.write().await;
-                // Check again if in the time it took to get the lock this config was written
-                let write = (*write_guard)
-                    .get(&build_dir.map(Path::to_owned)) // TODO(mgnb): get rid of this allocation when we can
-                    .map_or(true, |item| is_cache_item_expired(item, now));
-                if write {
-                    let runtime = RUNTIME.lock().unwrap().clone();
-                    let env_path = env_file().context(
-                        "Tried to load from config cache with no environment configured.",
-                    )?;
+            let mut guard = RwLockUpgradableReadGuard::upgrade(guard).await;
+            let config = Arc::new(RwLock::new(Config::from_env(&env)?));
 
-                    let env = match Environment::load(&env_path).await {
-                        Ok(env) => env,
-                        Err(err) => {
-                            tracing::error!(
-                                "failed to load environment, reverting to default: {}",
-                                err
-                            );
-                            Environment::new_empty(Some(&env_path))
-                        }
-                    };
-
-                    (*write_guard).insert(
-                        build_dir.map(Path::to_owned), // TODO(mgnb): get rid of this allocation when we can,
-                        CacheItem {
-                            created: now,
-                            config: Arc::new(RwLock::new(Config::from_env(
-                                &env, build_dir, runtime,
-                            )?)),
-                        },
-                    );
-                }
-            }
-            read_cache(build_dir, now, cache)
-                .await
-                .ok_or(anyhow!("reading config value from cache after initialization"))
+            guard.insert(
+                build_dir.map(Path::to_owned), // TODO(mgnb): get rid of this allocation when we can,
+                CacheItem { created: now, config: config.clone() },
+            );
+            Ok(config)
         }
     }
 }
@@ -239,11 +230,19 @@ async fn load_config_with_instant(
 mod test {
     use {super::*, futures::future::join_all, std::time::Duration};
 
-    async fn load(now: Instant, key: Option<&Path>, cache: &Cache) {
+    async fn load(now: Instant, key: &Option<PathBuf>, cache: &Cache) {
+        let env = Environment::new_empty(EnvironmentContext::default())
+            .await
+            .expect("Empty and anonymous environment shouldn't fail to load");
         let tests = 25;
         let mut futures = Vec::new();
         for _x in 0..tests {
-            futures.push(load_config_with_instant(key, now, cache));
+            futures.push(load_config_with_instant(
+                &env,
+                key.as_deref().map(BuildOverride::Path),
+                now,
+                cache,
+            ));
         }
         let result = join_all(futures).await;
         assert_eq!(tests, result.len());
@@ -256,7 +255,7 @@ mod test {
         now: Instant,
         expected_len_before: usize,
         expected_len_after: usize,
-        key: Option<&Path>,
+        key: &Option<PathBuf>,
         cache: &Cache,
     ) {
         {
@@ -285,20 +284,20 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_config_one_at_a_time() {
-        let _env = test_init().await.unwrap();
+        let _test_env = test_init().await.unwrap();
         let tests = 10;
         let (now, build_dirs, cache) = setup(tests);
         for x in 0..tests {
-            load_and_test(now, x, x + 1, build_dirs[x].as_deref(), &cache).await;
+            load_and_test(now, x, x + 1, &build_dirs[x], &cache).await;
         }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_config_many_at_a_time() {
-        let _env = test_init().await.unwrap();
+        let _test_env = test_init().await.unwrap();
         let tests = 25;
         let (now, build_dirs, cache) = setup(tests);
-        let futures = build_dirs.iter().map(|x| load(now, x.as_deref(), &cache));
+        let futures = build_dirs.iter().map(|x| load(now, x, &cache));
         let result = join_all(futures).await;
         assert_eq!(tests, result.len());
         let read_guard = cache.read().await;
@@ -307,31 +306,24 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_config_timeout() {
-        let _env = test_init().await.unwrap();
+        let _test_env = test_init().await.unwrap();
         let tests = 1;
         let (now, build_dirs, cache) = setup(tests);
-        load_and_test(now, 0, 1, build_dirs[0].as_deref(), &cache).await;
+        load_and_test(now, 0, 1, &build_dirs[0], &cache).await;
         let timeout = now.checked_add(CONFIG_CACHE_TIMEOUT).expect("timeout should not overflow");
         let after_timeout = timeout
             .checked_add(Duration::from_millis(1))
             .expect("after timeout should not overflow");
-        load_and_test(timeout, 1, 1, build_dirs[0].as_deref(), &cache).await;
-        load_and_test(after_timeout, 1, 1, build_dirs[0].as_deref(), &cache).await;
+        load_and_test(timeout, 1, 1, &build_dirs[0], &cache).await;
+        load_and_test(after_timeout, 1, 1, &build_dirs[0], &cache).await;
     }
 
-    #[test]
-    fn test_expiration_check_does_not_panic() -> Result<()> {
-        let tests = 1;
-        let (now, build_dirs, _cache) = setup(tests);
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_expiration_check_does_not_panic() -> Result<()> {
+        let now = Instant::now();
         let later = now.checked_add(Duration::from_millis(1)).expect("timeout should not overflow");
-        let item = CacheItem {
-            created: later,
-            config: Arc::new(RwLock::new(Config::from_env(
-                &Environment::default(),
-                build_dirs[0].as_deref(),
-                ConfigMap::default(),
-            )?)),
-        };
+        let cfg = Config::from_env(&Environment::new_empty(EnvironmentContext::default()).await?)?;
+        let item = CacheItem { created: later, config: Arc::new(RwLock::new(cfg)) };
         assert!(!is_cache_item_expired(&item, now));
         Ok(())
     }

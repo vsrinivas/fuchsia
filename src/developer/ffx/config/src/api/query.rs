@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 use crate::{
-    api::ConfigResult, cache::load_config, check_config_files, nested::RecursiveMap, validate_type,
-    ConfigError, ConfigLevel, ConfigValue, ValueStrategy,
+    api::ConfigResult,
+    cache::{global_env, load_config},
+    nested::RecursiveMap,
+    validate_type, ConfigError, ConfigLevel, ConfigValue, ValueStrategy,
 };
 use anyhow::{bail, Result};
 use serde_json::Value;
@@ -71,7 +73,7 @@ impl<'a> ConfigQuery<'a> {
     }
 
     async fn get_config(&self) -> ConfigResult {
-        let config = load_config(self.get_build_dir().await.as_deref()).await?;
+        let config = load_config(global_env().await?, self.build).await?;
         let read_guard = config.read().await;
         let result = match self {
             Self { name: Some(name), level: None, select, .. } => read_guard.get(*name, *select),
@@ -161,9 +163,9 @@ impl<'a> ConfigQuery<'a> {
     /// Set the queried location to the given Value.
     pub async fn set(&self, value: Value) -> Result<()> {
         let (key, level) = self.validate_write_query()?;
-        let build_dir = self.get_build_dir().await;
-        check_config_files(&level, build_dir.as_deref()).await?;
-        let config = load_config(build_dir.as_deref()).await?;
+        let mut env = global_env().await?;
+        env.populate_defaults(&level).await?;
+        let config = load_config(env, self.build).await?;
         let mut write_guard = config.write().await;
         write_guard.set(key, level, value)?;
         write_guard.save().await
@@ -172,8 +174,7 @@ impl<'a> ConfigQuery<'a> {
     /// Remove the value at the queried location.
     pub async fn remove(&self) -> Result<()> {
         let (key, level) = self.validate_write_query()?;
-        let build_dir = self.get_build_dir().await;
-        let config = load_config(build_dir.as_deref()).await?;
+        let config = load_config(global_env().await?, self.build).await?;
         let mut write_guard = config.write().await;
         write_guard.remove(key, level)?;
         write_guard.save().await
@@ -183,9 +184,9 @@ impl<'a> ConfigQuery<'a> {
     /// if necessary.
     pub async fn add(&self, value: Value) -> Result<()> {
         let (key, level) = self.validate_write_query()?;
-        let build_dir = self.get_build_dir().await;
-        check_config_files(&level, build_dir.as_deref()).await?;
-        let config = load_config(build_dir.as_deref()).await?;
+        let mut env = global_env().await?;
+        env.populate_defaults(&level).await?;
+        let config = load_config(env, self.build).await?;
         let mut write_guard = config.write().await;
         if let Some(mut current) = write_guard.get_in_level(key, level) {
             if current.is_object() {
@@ -204,19 +205,6 @@ impl<'a> ConfigQuery<'a> {
         };
 
         write_guard.save().await
-    }
-    /// Returns the build directory if this query is for a level that might include the build directory,
-    /// and a build directory is configured or given (even if it's configured to default).
-    /// Searches for the default build dir if necessary, using [`crate::default_build_dir`].
-    pub async fn get_build_dir(&self) -> Option<PathBuf> {
-        match (self.level, self.build) {
-            (_, Some(BuildOverride::NoBuild)) => None,
-            (None | Some(ConfigLevel::Build), Some(BuildOverride::Path(path))) => {
-                Some(path.to_owned())
-            }
-            (None | Some(ConfigLevel::Build), None) => crate::default_build_dir().await,
-            _ => None,
-        }
     }
 }
 
