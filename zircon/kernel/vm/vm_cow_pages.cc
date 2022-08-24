@@ -5538,7 +5538,6 @@ VmCowPagesContainer::~VmCowPagesContainer() {
 
 bool VmCowPagesContainer::RemovePageForEviction(vm_page_t* page, uint64_t offset,
                                                 VmCowPages::EvictionHintAction hint_action) {
-  VM_KTRACE_DURATION(2, "VMCPC::RemovePageForEviction", (uint64_t)page, offset);
   // While the caller must have a ref on VmCowPagesContainer, the caller doesn't need to have a ref
   // on VmCowPages, for RemovePageForEviction() in particular.
   DEBUG_ASSERT(ref_count_debug() >= 1);
@@ -5547,7 +5546,6 @@ bool VmCowPagesContainer::RemovePageForEviction(vm_page_t* page, uint64_t offset
 
 zx_status_t VmCowPagesContainer::ReplacePage(vm_page_t* before_page, uint64_t offset,
                                              bool with_loaned, vm_page_t** after_page) {
-  VM_KTRACE_DURATION(2, "VMCPC::ReplacePage", (uint64_t)before_page, with_loaned);
   // While the caller must have a ref on VmCowPagesContainer, the caller doesn't need to have a ref
   // on VmCowPages, for ReplacePage() in particular.
   DEBUG_ASSERT(ref_count_debug() >= 1);

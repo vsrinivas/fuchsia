@@ -11,7 +11,6 @@
 #include <object/thread_dispatcher.h>
 #include <vm/page.h>
 #include <vm/stack_owned_loaned_pages_interval.h>
-#include <vm/vm.h>
 
 #include <ktl/enforce.h>
 
@@ -64,7 +63,6 @@ StackOwnedLoanedPagesInterval* StackOwnedLoanedPagesInterval::maybe_current() {
 
 // static
 void StackOwnedLoanedPagesInterval::WaitUntilContiguousPageNotStackOwned(vm_page_t* page) {
-  VM_KTRACE_DURATION(2, "SOLPI:WaitUntilNotStackOwned", (uint64_t)page, 0);
   // Due to not holding the PmmNode lock, we can't check loaned directly, and it may have been unset
   // recently in any case, but in that case we'll notice via !is_stack_owned() instead.
   //
@@ -119,14 +117,8 @@ void StackOwnedLoanedPagesInterval::WaitUntilContiguousPageNotStackOwned(vm_page
   // This is a brief wait that's guaranteed not to get stuck (short of bugs elsewhere), with
   // priority inheritance propagated to the owning thread.  So no need for a deadline or
   // interruptible.
-  // For debugging: Wait in increments of a second to see if we're stuck here for long.
-  uint64_t blocked = 0;
-  zx_status_t block_status = ZX_OK;
-  while ((block_status = stack_owner.owned_wait_queue_->Block(
-              Deadline::after(ZX_SEC(1)), Interruptible::No)) == ZX_ERR_TIMED_OUT) {
-    blocked++;
-    printf("[ppb] Page %p blocked waiting on stack owner for %zu second(s).\n", page, blocked);
-  }
+  zx_status_t block_status =
+      stack_owner.owned_wait_queue_->Block(Deadline::infinite(), Interruptible::No);
   // For this wait queue, no other status is possible since no other status is ever passed to
   // OwnedWaitQueue::WakeAll() for this wait queue and Block() doesn't have any other sources of
   // failures assuming no bugs here.
