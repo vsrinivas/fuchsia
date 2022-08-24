@@ -1720,7 +1720,24 @@ mod test {
     use super::*;
     use fuchsia_zircon_status as zx_status;
     use futures::FutureExt;
+    use std::mem::ManuallyDrop;
     use zx_status::Status;
+
+    /// Returns a "handle" which mimics a closed handle.
+    ///
+    /// This handle is not a real handle, and will cause panics most places it is used. It should
+    /// be impossible to get this kind of handle safely, but some tests want to assert what happens
+    /// if you try to use a closed handle.
+    ///
+    /// The result is wrapped in a ManuallyDrop because you should avoid dropping the resulting
+    /// handle because that too will trigger a panic.
+    #[deny(unsafe_op_in_unsafe_fn)]
+    unsafe fn mimic_closed_handle() -> std::mem::ManuallyDrop<Handle> {
+        // This corresponds to the last id we would allocate in its shard; this test won't generate that many handles at once.
+        let raw_unallocated_handle = u32::MAX;
+        let unallocated_handle = unsafe { Handle::from_raw(raw_unallocated_handle) };
+        std::mem::ManuallyDrop::new(unallocated_handle)
+    }
 
     #[test]
     fn channel_create_not_closed() {
@@ -1734,7 +1751,7 @@ mod test {
         let (a, _b) = Channel::create().unwrap();
         let a_copy = Channel::from(unsafe { Handle::from_raw(a.0) });
         // Prevent trying to close a twice at the end of the test.
-        let a_copy = std::mem::ManuallyDrop::new(a_copy);
+        let a_copy = ManuallyDrop::new(a_copy);
         drop(a);
         assert_eq!(a_copy.is_closed(), true);
     }
@@ -1999,14 +2016,10 @@ mod test {
 
     #[cfg(not(target_os = "fuchsia"))]
     #[test]
-    fn unallocated_handle_is_dangling() {
-        // This corresponds to the last id we would allocate in its shard; this test won't generate that many handles at once.
-        let raw_unallocated_handle = u32::MAX;
-        let unallocated_handle = unsafe { Handle::from_raw(raw_unallocated_handle) };
-        // Use ManuallyDrop to avoid dropping this "handle" and panicking.
-        let unallocated_handle = std::mem::ManuallyDrop::new(unallocated_handle);
+    fn closed_handle_is_dangling() {
+        let closed_handle = unsafe { mimic_closed_handle() };
 
-        assert!(unallocated_handle.is_dangling());
+        assert!(closed_handle.is_dangling());
     }
 
     #[test]
@@ -2063,19 +2076,11 @@ mod test {
             zx_status::Status::BAD_HANDLE
         );
 
-        let (c, _) = Channel::create().unwrap();
-        let raw = c.raw_handle();
-
-        // Close the handle
-        drop(c);
-
-        unsafe {
-            let closed_handle = Handle::from_raw(raw);
-            assert_eq!(
-                closed_handle.replace(Rights::TRANSFER).unwrap_err(),
-                zx_status::Status::BAD_HANDLE
-            );
-        }
+        let closed_handle = unsafe { mimic_closed_handle() };
+        assert_eq!(
+            ManuallyDrop::into_inner(closed_handle).replace(Rights::TRANSFER).unwrap_err(),
+            zx_status::Status::BAD_HANDLE
+        );
     }
 
     #[test]
