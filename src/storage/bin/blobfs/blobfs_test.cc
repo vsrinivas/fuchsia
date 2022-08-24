@@ -148,5 +148,19 @@ TEST_F(BlobfsComponentTest, RequestsBeforeStartupAreQueuedAndServicedAfter) {
   ASSERT_EQ(shutdown_res.status(), ZX_OK);
 }
 
+TEST_F(BlobfsComponentTest, SendingInvalidChannelIsAnError) {
+  fuchsia_fs_startup::wire::FormatOptions format_options;
+  auto format_res = startup_client()->Format({}, std::move(format_options));
+  ASSERT_NE(format_res.status(), ZX_OK);
+
+  fuchsia_fs_startup::wire::CheckOptions check_options;
+  auto check_res = startup_client()->Check({}, std::move(check_options));
+  ASSERT_NE(check_res.status(), ZX_OK);
+
+  fuchsia_fs_startup::wire::StartOptions start_options;
+  auto start_res = startup_client()->Start({}, std::move(start_options));
+  ASSERT_NE(start_res.status(), ZX_OK);
+}
+
 }  // namespace
 }  // namespace blobfs

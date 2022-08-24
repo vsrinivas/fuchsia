@@ -88,6 +88,7 @@ void StartupService::Start(StartRequestView request, StartCompleter::Sync& compl
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Could not initialize block device";
     completer.ReplyError(status);
+    return;
   }
   zx::status<> res = configure_(
       std::move(device), MergeComponentConfigIntoMountOptions(
@@ -106,6 +107,7 @@ void StartupService::Format(FormatRequestView request, FormatCompleter::Sync& co
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Could not initialize block device: " << zx_status_get_string(status);
     completer.ReplyError(status);
+    return;
   }
   status = FormatFilesystem(device.get(), ParseFormatOptions(std::move(request->options)));
   if (status != ZX_OK) {
@@ -123,6 +125,7 @@ void StartupService::Check(CheckRequestView request, CheckCompleter::Sync& compl
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Could not initialize block device";
     completer.ReplyError(status);
+    return;
   }
   // Blobfs supports none of the check options.
   MountOptions options;
