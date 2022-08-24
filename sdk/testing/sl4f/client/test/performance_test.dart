@@ -362,7 +362,8 @@ void main(List<String> args) {
         'One way to update the expectation file is to run the test locally'
         ' with this environment variable set:\n'
         'FUCHSIA_EXPECTED_METRIC_NAMES_DEST_DIR='
-        '\$(pwd)/src/tests/end_to_end/perf/expected_metric_names';
+        '\$(pwd)/src/tests/end_to_end/perf/expected_metric_names\n\n'
+        'See https://fuchsia.dev/fuchsia-src/development/performance/metric_name_expectations';
     expect(
         () => allowlist
             .check(Set.from(['fuchsia.suite1: foo', 'fuchsia.suite1: new'])),
