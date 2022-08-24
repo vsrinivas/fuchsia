@@ -26,8 +26,6 @@ struct Args {
   // A list of absolute paths (in devmgr's view of the filesystem) to load
   // drivers from. If any paths are specified DriverManager will not search /boot/drivers/.
   fbl::Vector<const char*> load_drivers;
-  // Do not exit driver manager after suspending the system.
-  bool no_exit_after_suspend = false;
   // An absolute path (in devmgr's view of the filesystem) for which driver
   // should be bound to the sys_device (the top-level device for most
   // devices).  If nullptr, this uses devmgr's default.

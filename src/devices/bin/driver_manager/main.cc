@@ -153,8 +153,6 @@ struct DriverManagerArgs {
   // If any of these drivers are set, then driver_search_paths default will not
   // be used.
   fbl::Vector<const char*> load_drivers;
-  // Do not exit driver manager after suspending the system.
-  bool no_exit_after_suspend = false;
   // Path prefix for binaries/drivers/libraries etc.
   std::string path_prefix = "/boot/";
   // Use this driver as the sys_device driver.  If nullptr, the default will
@@ -169,13 +167,11 @@ struct DriverManagerArgs {
 DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
   enum {
     kLoadDriver,
-    kNoExitAfterSuspend,
     kSysDeviceDriver,
     kUseDriverIndex,
   };
   option options[] = {
       {"load-driver", required_argument, nullptr, kLoadDriver},
-      {"no-exit-after-suspend", no_argument, nullptr, kNoExitAfterSuspend},
       {"sys-device-driver", required_argument, nullptr, kSysDeviceDriver},
       {"use-driver-index", no_argument, nullptr, kUseDriverIndex},
       {0, 0, 0, 0},
@@ -201,9 +197,6 @@ DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
     switch (opt) {
       case kLoadDriver:
         args.load_drivers.push_back(optarg);
-        break;
-      case kNoExitAfterSuspend:
-        args.no_exit_after_suspend = true;
         break;
       case kSysDeviceDriver:
         check_not_duplicated(args.sys_device_driver);
@@ -256,20 +249,18 @@ int main(int argc, char** argv) {
         driver_manager_args.path_prefix + "driver/platform-bus.so";
   }
 
-  SuspendCallback suspend_callback = [&driver_manager_args](zx_status_t status) {
+  SuspendCallback suspend_callback = [](zx_status_t status) {
     if (status != ZX_OK) {
       // TODO(https://fxbug.dev/56208): Change this log back to error once isolated devmgr is fixed.
       LOGF(WARNING, "Error suspending devices while stopping the component:%s",
            zx_status_get_string(status));
     }
-    if (!driver_manager_args.no_exit_after_suspend) {
-      LOGF(INFO, "Exiting driver manager gracefully");
-      // TODO(fxb:52627) This event handler should teardown devices and driver hosts
-      // properly for system state transitions where driver manager needs to go down.
-      // Exiting like so, will not run all the destructors and clean things up properly.
-      // Instead the main devcoordinator loop should be quit.
-      exit(0);
-    }
+    LOGF(INFO, "Exiting driver manager gracefully");
+    // TODO(fxb:52627) This event handler should teardown devices and driver hosts
+    // properly for system state transitions where driver manager needs to go down.
+    // Exiting like so, will not run all the destructors and clean things up properly.
+    // Instead the main devcoordinator loop should be quit.
+    exit(0);
   };
 
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);

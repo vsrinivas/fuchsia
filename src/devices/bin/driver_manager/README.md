@@ -23,10 +23,6 @@ through isolated Driver Manager for testing.
 Load a driver with this path. If this is set then DriverManager will not search
 /boot/drivers/ for drivers.
 
-### --no-exit-after-suspend=\<bool\>
-
-Do not exit Driver Manager after suspending the system.
-
 ### --sys-device-driver=\<bool\>
 
 Use this driver as the sys_device driver.  If nullptr, the default will be used.
