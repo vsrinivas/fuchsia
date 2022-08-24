@@ -2377,7 +2377,7 @@
   gerrit_change_id: ['696482']
   status: 'Accepted'
   reviewers: ['aaronwood@google.com', 'adamperry@google.com', 'ampearce@google.com', 'awolter@google.com', 'ddorwin@google.com', 'fmil@google.com', 'geb@google.com', 'jsankey@google.com', 'kpozin@google.com', 'wez@google.com', 'yaar@google.com', 'ypomortsev@google.com']
-  submitted: '2022-08-15'
+  submitted: '2022-06-30'
   reviewed: '2022-08-15'
 
 - name: 'RFC-0184'
