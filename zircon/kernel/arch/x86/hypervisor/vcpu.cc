@@ -810,7 +810,7 @@ zx::status<ktl::unique_ptr<V>> Vcpu::Create(G& guest, hypervisor::Id<uint16_t>& 
   VmxRegion* region = vcpu->vmcs_page_.template VirtualAddress<VmxRegion>();
   region->revision_id = vmx_info.revision_id;
 
-  zx_paddr_t pml4_address = gpas.arch_table_phys();
+  zx_paddr_t pml4_address = gpas.arch_aspace().arch_table_phys();
   status = vmcs_init(vcpu->vmcs_page_.PhysicalAddress(), vpid, is_base, entry,
                      guest.MsrBitmapsAddress(), pml4_address, &vcpu->vmx_state_,
                      &vcpu->host_msr_page_, &vcpu->guest_msr_page_, vcpu->extended_register_state_);
@@ -929,7 +929,7 @@ void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
               reinterpret_cast<uint64_t>(&percpu->default_tss));
 
       // Invalidate TLB mappings for the EPT.
-      zx_paddr_t pml4_address = guest_.AddressSpace().arch_table_phys();
+      zx_paddr_t pml4_address = guest_.AddressSpace().arch_aspace().arch_table_phys();
       invept(InvEpt::SINGLE_CONTEXT, ept_pointer_from_pml4(pml4_address));
       break;
     }

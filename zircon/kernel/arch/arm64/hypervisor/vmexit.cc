@@ -184,7 +184,7 @@ zx_status_t handle_system_instruction(uint32_t iss, uint64_t& hcr, GuestState* g
       if (mmu_enabled && dcaches_enabled) {
         // Clean/invalidate the pages. We don't strictly need the clean, but it
         // doesn't hurt.
-        clean_invalidate_cache(gpas->arch_table_phys(), MMU_GUEST_TOP_SHIFT);
+        clean_invalidate_cache(gpas->arch_aspace().arch_table_phys(), MMU_GUEST_TOP_SHIFT);
 
         // Stop trapping MMU register accesses to improve performance.
         //
@@ -255,7 +255,7 @@ zx_status_t handle_system_instruction(uint32_t iss, uint64_t& hcr, GuestState* g
       // been cleaned.
       uint64_t set_way = BITS_SHIFT(reg, 31, 4);
       if (set_way == 0) {
-        clean_invalidate_cache(gpas->arch_table_phys(), MMU_GUEST_TOP_SHIFT);
+        clean_invalidate_cache(gpas->arch_aspace().arch_table_phys(), MMU_GUEST_TOP_SHIFT);
       }
 
       // If the MMU or caches are off, start monitoring guest SCTLR register

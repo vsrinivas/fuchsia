@@ -36,11 +36,13 @@ static bool hypervisor_supported() {
 }
 
 static zx::status<hypervisor::GuestPhysicalAddressSpace> create_gpas() {
+  auto gpas = hypervisor::GuestPhysicalAddressSpace::Create();
 #if ARCH_ARM64
-  return hypervisor::GuestPhysicalAddressSpace::Create(1 /* vmid */);
-#elif ARCH_X86
-  return hypervisor::GuestPhysicalAddressSpace::Create();
+  if (gpas.is_ok()) {
+    gpas->arch_aspace().arch_set_asid(1);
+  }
 #endif
+  return gpas;
 }
 
 static zx_status_t create_vmo(size_t vmo_size, fbl::RefPtr<VmObjectPaged>* vmo) {

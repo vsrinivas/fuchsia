@@ -57,11 +57,7 @@ class GuestPtr {
 
 class GuestPhysicalAddressSpace {
  public:
-  static zx::status<GuestPhysicalAddressSpace> Create(
-#ifdef ARCH_ARM64
-      uint16_t vmid
-#endif
-  );
+  static zx::status<GuestPhysicalAddressSpace> Create();
   ~GuestPhysicalAddressSpace();
 
   GuestPhysicalAddressSpace() = default;
@@ -72,10 +68,7 @@ class GuestPhysicalAddressSpace {
   GuestPhysicalAddressSpace& operator=(const GuestPhysicalAddressSpace&) = delete;
 
   size_t size() const { return guest_aspace_->size(); }
-  zx_paddr_t arch_table_phys() const { return guest_aspace_->arch_aspace().arch_table_phys(); }
-#if ARCH_ARM64
-  uint16_t arch_asid() const { return guest_aspace_->arch_aspace().arch_asid(); }
-#endif
+  ArchVmAspace& arch_aspace() { return guest_aspace_->arch_aspace(); }
   fbl::RefPtr<VmAddressRegion> RootVmar() const { return guest_aspace_->RootVmar(); }
 
   bool IsMapped(zx_gpaddr_t guest_paddr) const;

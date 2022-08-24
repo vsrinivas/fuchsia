@@ -36,11 +36,12 @@ zx::status<ktl::unique_ptr<Guest>> Guest::Create() {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
 
-  auto gpas = hypervisor::GuestPhysicalAddressSpace::Create(vmid->val());
+  auto gpas = hypervisor::GuestPhysicalAddressSpace::Create();
   if (gpas.is_error()) {
     return gpas.take_error();
   }
   guest->gpas_ = ktl::move(*gpas);
+  guest->gpas_.arch_aspace().arch_set_asid(vmid->val());
 
   zx_paddr_t gicv_paddr;
   zx_status_t status = gic_get_gicv(&gicv_paddr);

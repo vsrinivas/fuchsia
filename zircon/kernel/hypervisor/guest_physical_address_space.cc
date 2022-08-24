@@ -26,18 +26,11 @@ constexpr uint kGuestMmuFlags =
 
 namespace hypervisor {
 
-zx::status<GuestPhysicalAddressSpace> GuestPhysicalAddressSpace::Create(
-#if ARCH_ARM64
-    uint16_t vmid
-#endif
-) {
+zx::status<GuestPhysicalAddressSpace> GuestPhysicalAddressSpace::Create() {
   auto guest_aspace = VmAspace::Create(VmAspace::Type::GuestPhysical, "guest_physical");
   if (!guest_aspace) {
     return zx::error(ZX_ERR_NO_MEMORY);
   }
-#if ARCH_ARM64
-  guest_aspace->arch_aspace().arch_set_asid(vmid);
-#endif
   GuestPhysicalAddressSpace gpas;
   gpas.guest_aspace_ = ktl::move(guest_aspace);
   return zx::ok(ktl::move(gpas));
