@@ -10,6 +10,7 @@ use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_debug as fnet_debug;
 use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
 use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
+use fidl_fuchsia_netemul_network as fnetemul_network;
 use fuchsia_zircon as zx;
 use futures::TryStreamExt as _;
 use net_declare::fidl_mac;
@@ -202,4 +203,50 @@ async fn get_mac_netemul_endpoint<N: Netstack, E: netemul::Endpoint>(name: &str)
         .await
         .expect("add to stack");
     assert_matches!(get_mac(id.into(), &debug_interfaces).await, Ok(Some(DEFAULT_MAC)));
+}
+
+#[variants_test]
+async fn get_port<N: Netstack, E: netemul::Endpoint>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
+    let debug_interfaces =
+        realm.connect_to_protocol::<fnet_debug::InterfacesMarker>().expect("connect to protocol");
+
+    let device = sandbox.create_endpoint::<E, _>(name).await.expect("create netemul endpoint");
+    // Retain `_control` and `_device_control` to keep the FIDL channel open.
+    let (id, _control, _device_control) = device
+        .add_to_stack(&realm, netemul::InterfaceConfig::default())
+        .await
+        .expect("add to stack");
+
+    {
+        let (port, server_end) = fidl::endpoints::create_proxy().expect("create_proxy");
+        debug_interfaces.get_port(id, server_end).expect("calling get_port");
+
+        let result = port.get_info().await;
+        if E::NETEMUL_BACKING == fnetemul_network::EndpointBacking::Ethertap {
+            // Port should be closed for Ethernet endpoints.
+            assert_matches!(
+                result,
+                Err(fidl::Error::ClientChannelClosed {
+                    status: zx::Status::NOT_SUPPORTED,
+                    protocol_name: _
+                })
+            );
+        } else {
+            assert_matches!(result, Ok(fhardware_network::PortInfo { .. }));
+        }
+    }
+    {
+        let (port, server_end) = fidl::endpoints::create_proxy().expect("create_proxy");
+        // Try some bogus identifier.
+        debug_interfaces.get_port(id + 100, server_end).expect("calling get_port");
+        assert_matches!(
+            port.get_info().await,
+            Err(fidl::Error::ClientChannelClosed {
+                status: zx::Status::NOT_FOUND,
+                protocol_name: _
+            })
+        );
+    }
 }

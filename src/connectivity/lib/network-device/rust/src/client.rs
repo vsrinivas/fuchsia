@@ -48,8 +48,16 @@ impl Client {
     /// Connects to the specified `port`.
     pub fn connect_port(&self, port: Port) -> Result<netdev::PortProxy> {
         let (port_proxy, port_server) = fidl::endpoints::create_proxy::<netdev::PortMarker>()?;
-        let () = self.device.get_port(&mut port.into(), port_server)?;
-        Ok(port_proxy)
+        self.connect_port_server_end(port, port_server).map(move |()| port_proxy)
+    }
+
+    /// Connects to the specified `port` with the provided `server_end`.
+    pub fn connect_port_server_end(
+        &self,
+        port: Port,
+        server_end: fidl::endpoints::ServerEnd<netdev::PortMarker>,
+    ) -> Result<()> {
+        Ok(self.device.get_port(&mut port.into(), server_end)?)
     }
 
     /// Retrieves information about the underlying network device.

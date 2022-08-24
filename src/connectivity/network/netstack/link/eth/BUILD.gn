@@ -20,6 +20,7 @@ go_library("eth") {
     "//src/connectivity/network/netstack/sync",
     "//src/connectivity/network/netstack/testutil",
     "//src/connectivity/network/netstack/tracing",
+    "//src/lib/component",
     "//src/lib/syslog/go",
     "//third_party/golibs:github.com/google/go-cmp",
     "//third_party/golibs:gvisor.dev/gvisor",

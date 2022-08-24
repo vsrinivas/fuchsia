@@ -6,11 +6,12 @@
 
 use async_utils::channel::TrySend as _;
 use fidl::endpoints::{ControlHandle as _, ProtocolMarker as _, ServerEnd};
+use fidl_fuchsia_hardware_network as fhardware_network;
 use fidl_fuchsia_net_debug as fnet_debug;
 use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
 use fuchsia_zircon as zx;
 use futures::TryStreamExt as _;
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 
 use crate::bindings::{
     devices::LOOPBACK_MAC, interfaces_admin, util::IntoFidl, DeviceSpecificInfo, Netstack,
@@ -30,6 +31,9 @@ pub(crate) async fn serve(
             }
             fnet_debug::InterfacesRequest::GetMac { id, responder } => {
                 responder_send!(responder, &mut handle_get_mac(&ns, id).await);
+            }
+            fnet_debug::InterfacesRequest::GetPort { id, port, control_handle: _ } => {
+                handle_get_port(&ns, id, port).await;
             }
         }
         Ok(())
@@ -87,4 +91,30 @@ async fn handle_get_mac(ns: &Netstack, interface_id: u64) -> fnet_debug::Interfa
             };
             Some(Box::new(mac.into_fidl()))
         })
+}
+
+async fn handle_get_port(
+    ns: &Netstack,
+    interface_id: u64,
+    port: ServerEnd<fhardware_network::PortMarker>,
+) {
+    let ctx = ns.ctx.lock().await;
+    let port_handler =
+        ctx.non_sync_ctx.devices.get_device(interface_id).ok_or(zx::Status::NOT_FOUND).and_then(
+            |device_info| match device_info.info() {
+                DeviceSpecificInfo::Loopback(_) | DeviceSpecificInfo::Ethernet(_) => {
+                    Err(zx::Status::NOT_SUPPORTED)
+                }
+                DeviceSpecificInfo::Netdevice(info) => Ok(&info.handler),
+            },
+        );
+    match port_handler {
+        Ok(port_handler) => port_handler.connect_port(port).unwrap_or_else(
+            |e: netdevice_client::Error| warn!(err = ?e, "failed to connect to port"),
+        ),
+        Err(epitaph) => {
+            port.close_with_epitaph(epitaph)
+                .unwrap_or_else(|e| warn!(err = ?e, "failed to send epitaph"));
+        }
+    }
 }

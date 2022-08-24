@@ -15,6 +15,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
+	"fidl/fuchsia/hardware/network"
 	"fidl/fuchsia/net/debug"
 	"fidl/fuchsia/net/interfaces/admin"
 
@@ -54,4 +55,27 @@ func (ci *debugInterfacesImpl) GetMac(_ fidl.Context, nicid uint64) (debug.Inter
 		return debug.InterfacesGetMacResultWithResponse(response), nil
 	}
 	return debug.InterfacesGetMacResultWithErr(debug.InterfacesGetMacErrorNotFound), nil
+}
+
+func (ci *debugInterfacesImpl) GetPort(_ fidl.Context, nicid uint64, request network.PortWithCtxInterfaceRequest) error {
+	closeRequest := func(epitaph zx.Status) {
+		if err := component.CloseWithEpitaph(request.Channel, epitaph); err != nil {
+			_ = syslog.WarnTf(debug.InterfacesName, "GetPort(%d) close error: %s", nicid, err)
+		}
+	}
+
+	nicInfo, ok := ci.ns.stack.NICInfo()[tcpip.NICID(nicid)]
+	if !ok {
+		closeRequest(zx.ErrNotFound)
+		return nil
+	}
+
+	ifs := nicInfo.Context.(*ifState)
+	if ifs.controller == nil {
+		closeRequest(zx.ErrNotSupported)
+		return nil
+	}
+
+	ifs.controller.ConnectPort(request)
+	return nil
 }

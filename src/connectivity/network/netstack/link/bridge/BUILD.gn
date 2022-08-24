@@ -15,6 +15,7 @@ go_library("bridge") {
     "//src/connectivity/network/netstack/link",
     "//src/connectivity/network/netstack/sync",
     "//src/connectivity/network/netstack/util",
+    "//src/lib/component",
     "//src/lib/syslog/go",
     "//third_party/golibs:gvisor.dev/gvisor",
   ]

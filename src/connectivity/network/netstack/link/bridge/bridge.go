@@ -15,11 +15,13 @@ import (
 	"math"
 	"sort"
 	"strings"
+	"syscall/zx"
 
 	"fidl/fuchsia/hardware/network"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
+	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -29,6 +31,8 @@ import (
 
 var _ stack.LinkEndpoint = (*Endpoint)(nil)
 var _ link.Controller = (*Endpoint)(nil)
+
+const tag = "bridge"
 
 type Endpoint struct {
 	links           map[tcpip.LinkAddress]*BridgeableEndpoint
@@ -103,7 +107,7 @@ func (*Endpoint) Up() error {
 
 // TODO(https://fxbug.dev/86388): Implement disabling the bridge.
 func (*Endpoint) Down() error {
-	_ = syslog.Warnf("disabling bridges is unimplemented, the bridge will still be usable")
+	_ = syslog.WarnTf(tag, "disabling bridges is unimplemented, the bridge will still be usable")
 	return nil
 }
 
@@ -116,6 +120,12 @@ func (*Endpoint) SetPromiscuousMode(bool) error {
 
 func (*Endpoint) DeviceClass() network.DeviceClass {
 	return network.DeviceClassBridge
+}
+
+func (*Endpoint) ConnectPort(port network.PortWithCtxInterfaceRequest) {
+	if err := component.CloseWithEpitaph(port.Channel, zx.ErrNotSupported); err != nil {
+		_ = syslog.WarnTf(tag, "ConnectPort: CloseWithEpitaph(_, _) = %s", err)
+	}
 }
 
 func (ep *Endpoint) MTU() uint32 {
@@ -168,12 +178,12 @@ func (ep *Endpoint) WritePackets(pkts stack.PacketBufferList) (int, tcpip.Error)
 		case nil:
 		case *tcpip.ErrClosedForSend:
 			// TODO(https://fxbug.dev/86959): Handle bridged interface removal.
-			_ = syslog.Warnf("WritePackets on bridged endpoint returned ClosedForSend")
+			_ = syslog.WarnTf(tag, "WritePackets on bridged endpoint returned ClosedForSend")
 		default:
 			if firstErr == nil {
 				firstErr = err
 			} else {
-				_ = syslog.Warnf("already observed WritePackets error = %s, dropping error = %s", firstErr, err)
+				_ = syslog.WarnTf(tag, "already observed WritePackets error = %s, dropping error = %s", firstErr, err)
 			}
 		}
 	}
@@ -274,7 +284,7 @@ func (ep *Endpoint) DeliverNetworkPacketToBridge(rxEP *BridgeableEndpoint, proto
 		case *tcpip.ErrClosedForSend:
 			// TODO(https://fxbug.dev/86959): Handle bridged interface removal.
 		default:
-			_ = syslog.Warnf("failed to write to bridged endpoint %p: %s", l, err)
+			_ = syslog.WarnTf(tag, "failed to write to bridged endpoint %p: %s", l, err)
 		}
 	}
 }

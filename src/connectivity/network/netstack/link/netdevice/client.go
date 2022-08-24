@@ -523,6 +523,12 @@ func (p *Port) DeviceClass() network.DeviceClass {
 	return p.portInfo.Class
 }
 
+func (p *Port) ConnectPort(port network.PortWithCtxInterfaceRequest) {
+	if err := p.port.Clone(context.Background(), port); err != nil {
+		_ = syslog.WarnTf(tag, "ConnectPort: port.Clone() = %s", err)
+	}
+}
+
 // Close closes the client and disposes of all its resources.
 func (c *Client) Close() error {
 	running, err := c.closeInner()

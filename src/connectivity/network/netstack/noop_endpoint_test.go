@@ -101,6 +101,10 @@ func (*noopController) DeviceClass() network.DeviceClass {
 	return network.DeviceClassVirtual
 }
 
+func (*noopController) ConnectPort(port network.PortWithCtxInterfaceRequest) {
+	_ = port.Close()
+}
+
 var _ link.Observer = (*noopObserver)(nil)
 
 type noopObserver struct {

@@ -6,6 +6,7 @@ library fuchsia.net.debug;
 
 using fuchsia.net;
 using fuchsia.net.interfaces.admin;
+using fuchsia.hardware.network;
 
 /// Network interface debugging functionality.
 ///
@@ -36,4 +37,17 @@ protocol Interfaces {
         /// `id` does not identify an interface.
         NOT_FOUND = 1;
     };
+
+    /// Provides access to the port backing an interface.
+    ///
+    /// `port` is closed with `ZX_ERR_NOT_FOUND` if an interface referenced by
+    /// `id` does not exist or `ZX_ERR_NOT_SUPPORTED` if it is not backed by a
+    /// [`fuchsia.hardware.network/Port`].
+    ///
+    /// + request `id` identifies the interface whose port is granted.
+    /// + request `port` grants access to the interface's device port.
+    GetPort(resource struct {
+        id fuchsia.net.interface_id;
+        port server_end:fuchsia.hardware.network.Port;
+    });
 };

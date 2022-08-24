@@ -303,6 +303,14 @@ impl PortHandler {
         );
         session.detach(port_id).await
     }
+
+    pub(crate) fn connect_port(
+        &self,
+        port: fidl::endpoints::ServerEnd<fhardware_network::PortMarker>,
+    ) -> Result<(), netdevice_client::Error> {
+        let Self { id: _, port_id, inner: Inner { device, session: _, state: _ } } = self;
+        device.connect_port_server_end(*port_id, port)
+    }
 }
 
 impl std::fmt::Debug for PortHandler {

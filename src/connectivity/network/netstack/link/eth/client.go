@@ -20,6 +20,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/tracing/trace"
+	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	"fidl/fuchsia/hardware/ethernet"
@@ -423,6 +424,12 @@ func (c *Client) DeviceClass() network.DeviceClass {
 		return network.DeviceClassWlan
 	}
 	return network.DeviceClassEthernet
+}
+
+func (*Client) ConnectPort(port network.PortWithCtxInterfaceRequest) {
+	if err := component.CloseWithEpitaph(port.Channel, zx.ErrNotSupported); err != nil {
+		_ = syslog.WarnTf(tag, "ConnectPort: CloseWithEpitaph(_, _) = %s", err)
+	}
 }
 
 func (c *Client) RxStats() *fifo.RxStats {

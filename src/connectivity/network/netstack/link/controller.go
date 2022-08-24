@@ -14,6 +14,7 @@ type Controller interface {
 	Down() error
 	SetPromiscuousMode(bool) error
 	DeviceClass() network.DeviceClass
+	ConnectPort(network.PortWithCtxInterfaceRequest)
 }
 
 type Observer interface {

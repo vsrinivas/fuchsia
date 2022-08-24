@@ -10,6 +10,7 @@ fidl("fuchsia.net.debug") {
   sources = [ "interfaces.fidl" ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.hardware.network",
     "//sdk/fidl/fuchsia.net",
     "//sdk/fidl/fuchsia.net.interfaces.admin",
   ]
