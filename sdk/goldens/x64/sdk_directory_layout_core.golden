@@ -5,7 +5,6 @@ LICENSE.vulkan
 NOTICE.fuchsia
 PATENTS
 README.md
-arch/x64/dist/VkLayer_compact_image.so
 arch/x64/dist/VkLayer_image_pipe_swapchain.so
 arch/x64/dist/VkLayer_khronos_validation.so
 arch/x64/dist/libasync-default.so
@@ -492,6 +491,7 @@ fidl/fuchsia.hardware.goldfish/overview.fidl
 fidl/fuchsia.hardware.light/light.fidl
 fidl/fuchsia.hardware.light/meta.json
 fidl/fuchsia.hardware.network/device.fidl
+fidl/fuchsia.hardware.network/diagnostics.fidl
 fidl/fuchsia.hardware.network/frames.fidl
 fidl/fuchsia.hardware.network/instance.fidl
 fidl/fuchsia.hardware.network/mac.fidl
@@ -1348,7 +1348,6 @@ pkg/vfs_cpp/vmo_file.cc
 pkg/vulkan/client.shard.cml
 pkg/vulkan/meta.json
 pkg/vulkan/vulkan.json
-pkg/vulkan_layers/data/vulkan/explicit_layer.d/VkLayer_compact_image.json
 pkg/vulkan_layers/data/vulkan/explicit_layer.d/VkLayer_image_pipe_swapchain.json
 pkg/vulkan_layers/data/vulkan/explicit_layer.d/VkLayer_khronos_validation.json
 pkg/vulkan_layers/meta.json

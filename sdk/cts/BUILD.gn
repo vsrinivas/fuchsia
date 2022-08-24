@@ -137,5 +137,8 @@ group("verify_idk_deps") {
 # We do not want failures from these tests to break the tree.
 group("fyi") {
   testonly = true
-  deps = [ ":verify_idk_deps" ]
+  deps = [
+    ":idk_dep_goldens",
+    ":verify_idk_deps",
+  ]
 }

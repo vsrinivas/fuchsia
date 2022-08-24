@@ -50,8 +50,6 @@ fidl/fuchsia.debugdata/meta.json
 fidl/fuchsia.debugdata/publisher.fidl
 fidl/fuchsia.diagnostics.types/component.fidl
 fidl/fuchsia.diagnostics.types/meta.json
-fidl/fuchsia.io/connection-info.fidl
-fidl/fuchsia.io/connection-options.fidl
 fidl/fuchsia.io/directory.fidl
 fidl/fuchsia.io/directory2.fidl
 fidl/fuchsia.io/file2.fidl
@@ -62,8 +60,8 @@ fidl/fuchsia.io/meta.json
 fidl/fuchsia.io/node-protocols.fidl
 fidl/fuchsia.io/node.fidl
 fidl/fuchsia.io/node2.fidl
-fidl/fuchsia.io/overview.fidl
 fidl/fuchsia.io/rights-abilities.fidl
+fidl/fuchsia.io/rights-request.fidl
 fidl/fuchsia.ldsvc/ldsvc.fidl
 fidl/fuchsia.ldsvc/meta.json
 fidl/fuchsia.mem/buffer.fidl
@@ -88,6 +86,8 @@ fidl/fuchsia.sys/service_provider.fidl
 fidl/fuchsia.sys/types.fidl
 fidl/fuchsia.test/meta.json
 fidl/fuchsia.test/suite.fidl
+fidl/fuchsia.unknown/meta.json
+fidl/fuchsia.unknown/unknown.fidl
 fidl/fuchsia.url/meta.json
 fidl/fuchsia.url/url.fidl
 fidl/zx/meta.json
@@ -213,12 +213,12 @@ pkg/fidl_cpp/include/lib/fidl/cpp/internal/proxy.h
 pkg/fidl_cpp/include/lib/fidl/cpp/internal/proxy_controller.h
 pkg/fidl_cpp/include/lib/fidl/cpp/internal/stub.h
 pkg/fidl_cpp/include/lib/fidl/cpp/internal/stub_controller.h
-pkg/fidl_cpp/include/lib/fidl/cpp/internal/transport_err_hlcpp.h
 pkg/fidl_cpp/include/lib/fidl/cpp/internal/weak_stub_controller.h
 pkg/fidl_cpp/include/lib/fidl/cpp/member_connector.h
 pkg/fidl_cpp/include/lib/fidl/cpp/service_connector.h
 pkg/fidl_cpp/include/lib/fidl/cpp/service_handler_base.h
 pkg/fidl_cpp/include/lib/fidl/cpp/type_converter.h
+pkg/fidl_cpp/include/lib/fidl/cpp/unknown_interactions_hlcpp.h
 pkg/fidl_cpp/internal/message_handler.cc
 pkg/fidl_cpp/internal/message_reader.cc
 pkg/fidl_cpp/internal/pending_response.cc
