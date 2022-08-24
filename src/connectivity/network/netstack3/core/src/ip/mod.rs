@@ -2237,6 +2237,22 @@ pub(crate) trait BufferIpLayerHandler<I: Ip, C, B: BufferMut>: IpDeviceIdContext
 
 impl<
         B: BufferMut,
+        C: IpLayerNonSyncContext<Ipv4, <SC as IpDeviceIdContext<Ipv4>>::DeviceId>,
+        SC: BufferIpDeviceContext<Ipv4, C, B> + IpStateContext<Ipv4, C::Instant> + NonTestCtxMarker,
+    > BufferIpLayerHandler<Ipv4, C, B> for SC
+{
+    fn send_ip_packet_from_device<S: Serializer<Buffer = B>>(
+        &mut self,
+        ctx: &mut C,
+        meta: SendIpPacketMeta<Ipv4, SC::DeviceId, Option<SpecifiedAddr<Ipv4Addr>>>,
+        body: S,
+    ) -> Result<(), S> {
+        send_ipv4_packet_from_device(self, ctx, meta, body)
+    }
+}
+
+impl<
+        B: BufferMut,
         C: IpLayerNonSyncContext<Ipv6, <SC as IpDeviceIdContext<Ipv6>>::DeviceId>,
         SC: BufferIpDeviceContext<Ipv6, C, B> + IpStateContext<Ipv6, C::Instant> + NonTestCtxMarker,
     > BufferIpLayerHandler<Ipv6, C, B> for SC

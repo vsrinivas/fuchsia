@@ -768,13 +768,13 @@ mod tests {
         icmp::{IcmpEchoRequest, IcmpPacketBuilder, IcmpUnusedCode},
         ip::Ipv4Proto,
     };
-    use specialize_ip_macro::{ip_test, specialize_ip_address};
+    use specialize_ip_macro::ip_test;
 
     use super::*;
     use crate::{
         context::testutil::{DummyNetwork, DummyNetworkLinks},
         device::testutil::receive_frame_or_panic,
-        ip::socket::BufferIpSocketHandler,
+        ip::{socket::BufferIpSocketHandler, BufferIpLayerHandler},
         TimerIdInner,
     };
 
@@ -1038,44 +1038,39 @@ mod tests {
         assert!(net.step(receive_frame_or_panic, handle_timer).is_idle());
     }
 
+    fn send_packet<A: IpAddress>(
+        sync_ctx: &mut DummySyncCtx,
+        ctx: &mut DummyNonSyncCtx,
+        src_ip: SpecifiedAddr<A>,
+        dst_ip: SpecifiedAddr<A>,
+        device: DeviceId,
+    ) where
+        DummySyncCtx:
+            BufferIpLayerHandler<A::Version, DummyNonSyncCtx, Buf<Vec<u8>>, DeviceId = DeviceId>,
+    {
+        let meta = SendIpPacketMeta {
+            device,
+            src_ip: Some(src_ip),
+            dst_ip,
+            next_hop: dst_ip,
+            proto: IpProto::Udp.into(),
+            ttl: None,
+            mtu: None,
+        };
+        BufferIpLayerHandler::<A::Version, _, _>::send_ip_packet_from_device(
+            sync_ctx,
+            ctx,
+            meta,
+            Buf::new(vec![1, 2, 3, 4], ..),
+        )
+        .unwrap();
+    }
+
     #[ip_test]
-    fn test_send_to_many<I: Ip + TestIpExt>() {
-        #[specialize_ip_address]
-        fn send_packet<A: IpAddress>(
-            sync_ctx: &mut DummySyncCtx,
-            ctx: &mut DummyNonSyncCtx,
-            src_ip: SpecifiedAddr<A>,
-            dst_ip: SpecifiedAddr<A>,
-            device: DeviceId,
-        ) {
-            let meta = SendIpPacketMeta {
-                device,
-                src_ip: Some(src_ip),
-                dst_ip,
-                next_hop: dst_ip,
-                proto: IpProto::Udp.into(),
-                ttl: None,
-                mtu: None,
-            };
-            #[ipv4addr]
-            crate::ip::send_ipv4_packet_from_device(
-                sync_ctx,
-                ctx,
-                meta,
-                Buf::new(vec![1, 2, 3, 4], ..),
-            )
-            .unwrap();
-
-            #[ipv6addr]
-            crate::ip::send_ipv6_packet_from_device(
-                sync_ctx,
-                ctx,
-                meta,
-                Buf::new(vec![1, 2, 3, 4], ..),
-            )
-            .unwrap();
-        }
-
+    fn test_send_to_many<I: Ip + TestIpExt>()
+    where
+        DummySyncCtx: BufferIpLayerHandler<I, DummyNonSyncCtx, Buf<Vec<u8>>, DeviceId = DeviceId>,
+    {
         let device_builder_id = 0;
         let device = DeviceId::new_ethernet(device_builder_id);
         let mac_a = UnicastAddr::new(Mac::new([2, 3, 4, 5, 6, 7])).unwrap();

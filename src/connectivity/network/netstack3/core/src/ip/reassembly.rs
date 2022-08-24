@@ -837,7 +837,7 @@ mod tests {
         ipv4::{Ipv4Packet, Ipv4PacketBuilder},
         ipv6::{Ipv6Packet, Ipv6PacketBuilder},
     };
-    use specialize_ip_macro::{ip_test, specialize_ip};
+    use specialize_ip_macro::ip_test;
 
     use super::*;
     use crate::{
@@ -938,10 +938,12 @@ mod tests {
     /// specialized with.
     ///
     /// See [`process_ipv4_fragment`] and [`process_ipv6_fragment`] which will
-    /// be called when `process_ip_fragment` is specialized for `Ipv4` and
-    /// `Ipv6`, respectively.
-    #[specialize_ip]
-    fn process_ip_fragment<I: Ip, SC: FragmentContext<I, C>, C: FragmentNonSyncContext<I>>(
+    /// be called when `I` is `Ipv4` and `Ipv6`, respectively.
+    fn process_ip_fragment<
+        I: TestIpExt,
+        SC: FragmentContext<I, C>,
+        C: FragmentNonSyncContext<I>,
+    >(
         sync_ctx: &mut SC,
         ctx: &mut C,
         fragment_id: u16,
@@ -949,11 +951,7 @@ mod tests {
         m_flag: bool,
         expected_result: ExpectedResult,
     ) {
-        #[ipv4]
-        process_ipv4_fragment(sync_ctx, ctx, fragment_id, fragment_offset, m_flag, expected_result);
-
-        #[ipv6]
-        process_ipv6_fragment(sync_ctx, ctx, fragment_id, fragment_offset, m_flag, expected_result);
+        I::process_ip_fragment(sync_ctx, ctx, fragment_id, fragment_offset, m_flag, expected_result)
     }
 
     /// Generates and processes an IPv4 fragment packet.
@@ -1071,12 +1069,58 @@ mod tests {
 
     trait TestIpExt: crate::testutil::TestIpExt {
         const HEADER_LENGTH: usize;
+
+        fn process_ip_fragment<SC: FragmentContext<Self, C>, C: FragmentNonSyncContext<Self>>(
+            sync_ctx: &mut SC,
+            ctx: &mut C,
+            fragment_id: u16,
+            fragment_offset: u16,
+            m_flag: bool,
+            expected_result: ExpectedResult,
+        );
     }
+
     impl TestIpExt for Ipv4 {
         const HEADER_LENGTH: usize = packet_formats::ipv4::HDR_PREFIX_LEN;
+
+        fn process_ip_fragment<SC: FragmentContext<Self, C>, C: FragmentNonSyncContext<Self>>(
+            sync_ctx: &mut SC,
+            ctx: &mut C,
+            fragment_id: u16,
+            fragment_offset: u16,
+            m_flag: bool,
+            expected_result: ExpectedResult,
+        ) {
+            process_ipv4_fragment(
+                sync_ctx,
+                ctx,
+                fragment_id,
+                fragment_offset,
+                m_flag,
+                expected_result,
+            )
+        }
     }
     impl TestIpExt for Ipv6 {
         const HEADER_LENGTH: usize = packet_formats::ipv6::IPV6_FIXED_HDR_LEN;
+
+        fn process_ip_fragment<SC: FragmentContext<Self, C>, C: FragmentNonSyncContext<Self>>(
+            sync_ctx: &mut SC,
+            ctx: &mut C,
+            fragment_id: u16,
+            fragment_offset: u16,
+            m_flag: bool,
+            expected_result: ExpectedResult,
+        ) {
+            process_ipv6_fragment(
+                sync_ctx,
+                ctx,
+                fragment_id,
+                fragment_offset,
+                m_flag,
+                expected_result,
+            )
+        }
     }
 
     /// Tries to reassemble the packet with the given fragment ID.
@@ -1394,7 +1438,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_ip_overlapping_single_fragment<I: Ip>() {
+    fn test_ip_overlapping_single_fragment<I: Ip + TestIpExt>() {
         let MockCtx { mut sync_ctx, mut non_sync_ctx } =
             MockCtx::<I>::with_sync_ctx(MockSyncCtx::<I>::default());
         let fragment_id = 5;
