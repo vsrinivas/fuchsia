@@ -362,17 +362,18 @@ uint32_t EngineCommandStreamer::GetRingbufferHeadPointer() {
 }
 
 bool EngineCommandStreamer::Reset() {
-  registers::GraphicsDeviceResetControl::Engine engine;
-
+  uint8_t bit;
   switch (id()) {
     case RENDER_COMMAND_STREAMER:
-      engine = registers::GraphicsDeviceResetControl::RCS;
+      bit = registers::GraphicsDeviceResetControl::kRcsResetBit;
       break;
     case VIDEO_COMMAND_STREAMER:
-      engine = registers::GraphicsDeviceResetControl::VCS;
+      if (DeviceId::is_gen12(owner_->device_id())) {
+        bit = registers::GraphicsDeviceResetControl::kVcs0ResetBitGen12;
+      } else {
+        bit = registers::GraphicsDeviceResetControl::kVcsResetBit;
+      }
       break;
-    default:
-      return DRETF(false, "Reset for %s not implemented", Name());
   }
 
   registers::ResetControl::request(register_io(), mmio_base());
@@ -395,12 +396,11 @@ bool EngineCommandStreamer::Reset() {
 
   bool reset_complete = false;
   if (ready_for_reset) {
-    registers::GraphicsDeviceResetControl::initiate_reset(register_io(), engine);
+    registers::GraphicsDeviceResetControl::initiate_reset(register_io(), bit);
     start = std::chrono::high_resolution_clock::now();
 
     do {
-      reset_complete =
-          registers::GraphicsDeviceResetControl::is_reset_complete(register_io(), engine);
+      reset_complete = registers::GraphicsDeviceResetControl::is_reset_complete(register_io(), bit);
       if (reset_complete) {
         break;
       }

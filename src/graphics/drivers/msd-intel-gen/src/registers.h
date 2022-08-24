@@ -409,30 +409,19 @@ class ResetControl {
 // from intel-gfx-prm-osrc-skl-vol02c-commandreference-registers-part1.pdf p.755
 class GraphicsDeviceResetControl {
  public:
-  enum Engine { RCS, VCS };
-
   static constexpr uint32_t kOffset = 0x941C;
   static constexpr uint32_t kRcsResetBit = 1;
-  static constexpr uint32_t kVcsResetBit = 1 << 1;
+  static constexpr uint32_t kVcsResetBit = 2;
+  static constexpr uint32_t kVcs0ResetBitGen12 = 5;
 
-  static void initiate_reset(magma::RegisterIo* register_io, Engine engine) {
-    switch (engine) {
-      case RCS:
-        register_io->Write32((1 << kRcsResetBit), kOffset);
-        break;
-      case VCS:
-        register_io->Write32((1 << kVcsResetBit), kOffset);
-        break;
-    }
+  static void initiate_reset(magma::RegisterIo* register_io, uint8_t bit) {
+    DASSERT(bit == kRcsResetBit || bit == kVcsResetBit || bit == kVcs0ResetBitGen12);
+    register_io->Write32((1 << bit), kOffset);
   }
 
-  static bool is_reset_complete(magma::RegisterIo* register_io, Engine engine) {
-    switch (engine) {
-      case RCS:
-        return (register_io->Read32(kOffset) & (1 << kRcsResetBit)) == 0;
-      case VCS:
-        return (register_io->Read32(kOffset) & (1 << kVcsResetBit)) == 0;
-    }
+  static bool is_reset_complete(magma::RegisterIo* register_io, uint8_t bit) {
+    DASSERT(bit == kRcsResetBit || bit == kVcsResetBit || bit == kVcs0ResetBitGen12);
+    return (register_io->Read32(kOffset) & (1 << bit)) == 0;
   }
 };
 
