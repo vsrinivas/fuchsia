@@ -235,9 +235,35 @@ class AutoVmcs : public hypervisor::StateInvalidator {
   interrupt_saved_state_t int_state_;
 };
 
+// INVVPID invalidation types.
+//
+// From Volume 3, Section 30.3: There are four INVVPID types currently defined:
+// • Individual-address invalidation: If the INVVPID type is 0, the logical
+//   processor invalidates mappings for the linear address and VPID specified in
+//   the INVVPID descriptor. In some cases, it may invalidate mappings for other
+//   linear addresses (or other VPIDs) as well.
+// * Single-context invalidation: If the INVVPID type is 1, the logical
+//   processor invalidates all mappings tagged with the VPID specified in the
+//   INVVPID descriptor. In some cases, it may invalidate mappings for other
+//   VPIDs as well.
+// * All-contexts invalidation: If the INVVPID type is 2, the logical processor
+//   invalidates all mappings tagged with all VPIDs except VPID 0000H. In some
+//   cases, it may invalidate translations with VPID 0000H as well.
+// * Single-context invalidation, retaining global translations: If the INVVPID
+//   type is 3, the logical processor invalidates all mappings tagged with the
+//   VPID specified in the INVVPID descriptor except global translations. In
+//   some cases, it may invalidate global translations (and mappings with other
+//   VPIDs) as well.
+enum class InvVpid : uint64_t {
+  INDIVIDUAL_ADDRESS = 0,
+  SINGLE_CONTEXT = 1,
+  ALL_CONTEXTS = 2,
+  SINGLE_CONTEXT_RETAIN_GLOBALS = 3,
+};
+
+void invvpid(InvVpid invalidation, uint16_t vpid, zx_vaddr_t address);
 // Constructs an EPTP from a physical EPT PML4.
 uint64_t ept_pointer_from_pml4(paddr_t pml4_address);
-
 bool cr0_is_invalid(AutoVmcs& vmcs, uint64_t cr0_value);
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_VCPU_PRIV_H_

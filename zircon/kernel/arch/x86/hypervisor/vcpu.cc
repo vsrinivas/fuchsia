@@ -41,44 +41,6 @@ constexpr uint32_t kInterruptTypeHardwareException = 3u << 8;
 constexpr uint32_t kInterruptTypeSoftwareException = 6u << 8;
 constexpr uint16_t kBaseProcessorVpid = 1;
 
-// INVVPID invalidation types.
-//
-// From Volume 3, Section 30.3: There are four INVVPID types currently defined:
-// • Individual-address invalidation: If the INVVPID type is 0, the logical
-//   processor invalidates mappings for the linear address and VPID specified in
-//   the INVVPID descriptor. In some cases, it may invalidate mappings for other
-//   linear addresses (or other VPIDs) as well.
-// * Single-context invalidation: If the INVVPID type is 1, the logical
-//   processor invalidates all mappings tagged with the VPID specified in the
-//   INVVPID descriptor. In some cases, it may invalidate mappings for other
-//   VPIDs as well.
-// * All-contexts invalidation: If the INVVPID type is 2, the logical processor
-//   invalidates all mappings tagged with all VPIDs except VPID 0000H. In some
-//   cases, it may invalidate translations with VPID 0000H as well.
-// * Single-context invalidation, retaining global translations: If the INVVPID
-//   type is 3, the logical processor invalidates all mappings tagged with the
-//   VPID specified in the INVVPID descriptor except global translations. In
-//   some cases, it may invalidate global translations (and mappings with other
-//   VPIDs) as well.
-enum class InvVpid : uint64_t {
-  INDIVIDUAL_ADDRESS = 0,
-  SINGLE_CONTEXT = 1,
-  ALL_CONTEXTS = 2,
-  SINGLE_CONTEXT_RETAIN_GLOBALS = 3,
-};
-
-void invvpid(InvVpid invalidation, uint16_t vpid, zx_gpaddr_t address) {
-  uint8_t err;
-  uint64_t descriptor[] = {vpid, address};
-
-  __asm__ __volatile__("invvpid %[descriptor], %[invalidation]"
-                       : "=@ccna"(err)  // Set `err` on error (C or Z flag set)
-                       : [descriptor] "m"(descriptor), [invalidation] "r"(invalidation)
-                       : "cc");
-
-  ASSERT(!err);
-}
-
 void vmptrld(paddr_t pa) {
   uint8_t err;
 
@@ -622,6 +584,18 @@ void interrupt_cpus(Thread* thread, cpu_num_t last_cpu) TA_REQ(ThreadLock::Get()
 }
 
 }  // namespace
+
+void invvpid(InvVpid invalidation, uint16_t vpid, zx_vaddr_t address) {
+  uint8_t err;
+  uint64_t descriptor[] = {vpid, address};
+
+  __asm__ __volatile__("invvpid %[descriptor], %[invalidation]"
+                       : "=@ccna"(err)  // Set `err` on error (C or Z flag set)
+                       : [descriptor] "m"(descriptor), [invalidation] "r"(invalidation)
+                       : "cc");
+
+  ASSERT(!err);
+}
 
 uint64_t ept_pointer_from_pml4(paddr_t pml4_address) {
   return
