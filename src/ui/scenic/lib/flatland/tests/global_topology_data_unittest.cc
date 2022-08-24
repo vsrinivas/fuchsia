@@ -1204,11 +1204,18 @@ TEST(GlobalTopologyDataTest, PartialScreenViews_HaveCorrectTransforms) {
     auto koid = view_kv.first;
     glm::mat4 local_from_world_transform = view_kv.second.local_from_world_transform;
 
-    // The significant two values in the following expected arrays are the 4th and 3rd elements from
-    // the end. Those represent the translation in the X and Y directions respectively.
-
+    // Following Scenic naming semantics, a local_from_world matrix is equivalent to a
+    // world_to_local matrix. A world_to_local matrix multiplied by a world point gives you that
+    // point in the local coordinate space. Another way of saying the same thing is that a
+    // world_to_local matrix describes the transformation of the world in local space.
+    //
+    // Therefore, since we build the expected_local_from_world transform by applying commands to go
+    // from the world coordinate space to the local one, that is the same as describing the
+    // transformation of the local in world space, which is the *opposite* of describing the
+    // transformation of the world in local space, so we must invert.
     if (koid == view_ref_A_koid) {
       glm::mat4 expected_local_from_world = glm::mat4(1.f);
+      expected_local_from_world = glm::inverse(expected_local_from_world);
 
       for (size_t i = 0; i < 4; ++i) {
         EXPECT_TRUE(glm::all(glm::epsilonEqual(expected_local_from_world[i],
@@ -1219,6 +1226,7 @@ TEST(GlobalTopologyDataTest, PartialScreenViews_HaveCorrectTransforms) {
     } else if (koid == view_ref_B_koid) {
       glm::mat4 expected_local_from_world = glm::mat4(1.f);
       expected_local_from_world = glm::scale(expected_local_from_world, glm::vec3(3, 2, 1));
+      expected_local_from_world = glm::inverse(expected_local_from_world);
 
       for (size_t i = 0; i < 4; ++i) {
         EXPECT_TRUE(glm::all(glm::epsilonEqual(expected_local_from_world[i],
@@ -1229,6 +1237,7 @@ TEST(GlobalTopologyDataTest, PartialScreenViews_HaveCorrectTransforms) {
     } else if (koid == view_ref_C_koid) {
       glm::mat4 expected_local_from_world = glm::mat4(1.f);
       expected_local_from_world = glm::translate(expected_local_from_world, glm::vec3(10, 0, 0));
+      expected_local_from_world = glm::inverse(expected_local_from_world);
 
       for (size_t i = 0; i < 4; ++i) {
         EXPECT_TRUE(glm::all(glm::epsilonEqual(expected_local_from_world[i],
@@ -1240,6 +1249,7 @@ TEST(GlobalTopologyDataTest, PartialScreenViews_HaveCorrectTransforms) {
       glm::mat4 expected_local_from_world = glm::mat4(1.f);
       expected_local_from_world = glm::scale(expected_local_from_world, glm::vec3(4, 3, 1));
       expected_local_from_world = glm::translate(expected_local_from_world, glm::vec3(10, 5, 0));
+      expected_local_from_world = glm::inverse(expected_local_from_world);
 
       for (size_t i = 0; i < 4; ++i) {
         EXPECT_TRUE(glm::all(glm::epsilonEqual(expected_local_from_world[i],
@@ -1250,6 +1260,7 @@ TEST(GlobalTopologyDataTest, PartialScreenViews_HaveCorrectTransforms) {
     } else if (koid == view_ref_E_koid) {
       glm::mat4 expected_local_from_world = glm::mat4(1.f);
       expected_local_from_world = glm::translate(expected_local_from_world, glm::vec3(15, 5, 0));
+      expected_local_from_world = glm::inverse(expected_local_from_world);
 
       for (size_t i = 0; i < 4; ++i) {
         EXPECT_TRUE(glm::all(glm::epsilonEqual(expected_local_from_world[i],

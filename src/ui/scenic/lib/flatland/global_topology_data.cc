@@ -475,12 +475,12 @@ view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
 
     view_tree.emplace(
         view_ref_koid,
-        view_tree::ViewNode{
-            .parent = parent_koid,
-            .bounding_box = {.min = {0, 0}, .max = {max_width, max_height}},
-            .local_from_world_transform = Convert2DTransformTo3D(global_matrix_vector[i]),
-            .view_ref = view_ref,
-            .debug_name = debug_name});
+        view_tree::ViewNode{.parent = parent_koid,
+                            .bounding_box = {.min = {0, 0}, .max = {max_width, max_height}},
+                            .local_from_world_transform =
+                                glm::inverse(Convert2DTransformTo3D(global_matrix_vector[i])),
+                            .view_ref = view_ref,
+                            .debug_name = debug_name});
   }
 
   // Fill in the children by deriving it from the parents of each node.

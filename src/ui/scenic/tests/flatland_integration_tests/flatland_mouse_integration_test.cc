@@ -1129,10 +1129,10 @@ TEST_F(FlatlandMouseIntegrationTest, PartialScreenViews) {
 
   // Creates this matrix which depicts a 5x5 translation from the input viewport to the context
   // view:
-  // 1 0 5
-  // 0 1 5
+  // 1 0 -5
+  // 0 1 -5
   // 0 0 1
-  std::array<float, 9> viewport_to_context_transform = {1, 0, 0, 0, 1, 0, 5, 5, 1};
+  std::array<float, 9> viewport_to_context_transform = {1, 0, 0, 0, 1, 0, -5, -5, 1};
 
   RegisterInjector(fidl::Clone(context_view_ref), fidl::Clone(target_view_ref),
                    fupi_DispatchPolicy::MOUSE_HOVER_AND_LATCH_IN_TARGET, button_vec,
