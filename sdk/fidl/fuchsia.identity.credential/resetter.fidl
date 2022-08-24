@@ -14,7 +14,7 @@ type ResetError = flexible enum : uint32 {
 /// Reset is a small protocol intended to be used exclusively on factory reset
 /// to reset any hardware backed credentials.
 @discoverable
-protocol Reset {
+protocol Resetter {
     /// Resets the sytem credential state. This is used when performing
     /// a factory reset.
     Reset() -> (struct {}) error ResetError;

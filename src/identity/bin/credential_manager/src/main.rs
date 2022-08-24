@@ -19,7 +19,7 @@ use {
         provision::provision,
     },
     anyhow::{Context, Error},
-    fidl_fuchsia_identity_credential::{ManagerRequestStream, ResetRequestStream},
+    fidl_fuchsia_identity_credential::{ManagerRequestStream, ResetterRequestStream},
     fidl_fuchsia_io as fio,
     fidl_fuchsia_tpm_cr50::PinWeaverMarker,
     fuchsia_async as fasync,
@@ -35,7 +35,7 @@ pub const HASH_TREE_PATH: &str = "/data/hash_tree";
 
 enum Services {
     CredentialManager(ManagerRequestStream),
-    Reset(ResetRequestStream),
+    Resetter(ResetterRequestStream),
 }
 
 #[fasync::run_singlethreaded]
@@ -71,7 +71,7 @@ async fn main() -> Result<(), Error> {
 
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(Services::CredentialManager);
-    fs.dir("svc").add_fidl_service(Services::Reset);
+    fs.dir("svc").add_fidl_service(Services::Resetter);
     inspect_runtime::serve(&INSPECTOR, &mut fs)?;
     fs.take_and_serve_directory_handle().context("serving directory handle")?;
     // It is important that this remains `for_each` to create a sequential queue and prevent
@@ -81,7 +81,7 @@ async fn main() -> Result<(), Error> {
             Services::CredentialManager(stream) => {
                 credential_manager.handle_requests_for_stream(stream).await
             }
-            Services::Reset(stream) => {
+            Services::Resetter(stream) => {
                 credential_manager.handle_requests_for_reset_stream(stream).await
             }
         }

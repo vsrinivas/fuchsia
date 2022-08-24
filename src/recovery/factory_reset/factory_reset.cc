@@ -9,6 +9,7 @@
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <fuchsia/fs/cpp/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
+#include <fuchsia/identity/credential/cpp/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
@@ -89,9 +90,11 @@ zx_status_t ShredFxfsDevice(fbl::unique_fd fd) {
 }
 
 FactoryReset::FactoryReset(fbl::unique_fd dev_fd,
-                           fuchsia::hardware::power::statecontrol::AdminPtr admin) {
+                           fuchsia::hardware::power::statecontrol::AdminPtr admin,
+                           fuchsia::identity::credential::ResetterPtr cred_reset) {
   dev_fd_ = std::move(dev_fd);
   admin_ = std::move(admin);
+  cred_reset_ = std::move(cred_reset);
 }
 
 zx_status_t FactoryReset::Shred() const {
@@ -156,6 +159,19 @@ void FactoryReset::Reset(ResetCallback callback) {
     callback(std::move(status));
     return;
   }
+
+  // Not all product.board configurations have a credential manager. Only if the credential
+  // manager is bound attempt to clear the credentials.
+  if (cred_reset_.is_bound()) {
+    cred_reset_->Reset([&callback](fuchsia::identity::credential::Resetter_Reset_Result status) {
+      if (status.is_err()) {
+        FX_LOGS(ERROR) << "fuchsia.identity.credential.Resetter.Reset call failed: "
+                       << status.err();
+        callback(status.err());
+      }
+    });
+  }
+
   // Reboot to initiate the recovery.
   FX_LOGS(ERROR) << "Requesting reboot...";
   admin_->Reboot(fuchsia::hardware::power::statecontrol::RebootReason::FACTORY_DATA_RESET,

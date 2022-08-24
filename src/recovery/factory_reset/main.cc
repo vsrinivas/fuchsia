@@ -22,7 +22,9 @@ int main(int argc, const char** argv) {
       sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
   auto admin = context->svc()->Connect<fuchsia::hardware::power::statecontrol::Admin>();
-  factory_reset::FactoryReset factory_reset(std::move(dev_fd), std::move(admin));
+  auto cred_reset = context->svc()->Connect<fuchsia::identity::credential::Resetter>();
+  factory_reset::FactoryReset factory_reset(std::move(dev_fd), std::move(admin),
+                                            std::move(cred_reset));
   fidl::BindingSet<fuchsia::recovery::FactoryReset> bindings;
   context->outgoing()->AddPublicService(bindings.GetHandler(&factory_reset));
   loop.Run();

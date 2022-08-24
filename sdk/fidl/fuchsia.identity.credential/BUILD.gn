@@ -9,7 +9,7 @@ fidl("fuchsia.identity.credential") {
   sources = [
     "common.fidl",
     "manager.fidl",
-    "reset.fidl",
+    "resetter.fidl",
   ]
   public_deps = [ "//zircon/vdso/zx" ]
 }

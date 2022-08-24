@@ -57,5 +57,9 @@
             protocol: "fuchsia.identity.account.AccountManager",
             from: "#password_authenticator",
         },
+        {
+            protocol: "fuchsia.identity.credential.Resetter",
+            from: "#credential_manager",
+        },
     ],
 }

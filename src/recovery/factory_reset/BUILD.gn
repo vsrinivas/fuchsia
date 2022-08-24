@@ -24,6 +24,9 @@ source_set("lib") {
 
     # <factory_reset.h> has #include <fbl/unique_fd.h>
     "//zircon/system/ulib/fbl",
+
+    # Used on workstation to reset credential manager on clear.
+    "//sdk/fidl/fuchsia.identity.credential",
   ]
 
   deps = [

@@ -13,7 +13,7 @@ use {
     anyhow::{anyhow, Context, Error},
     fidl_fuchsia_identity_credential::{
         self as fcred, CredentialError, ManagerRequest, ManagerRequestStream, ResetError,
-        ResetRequest, ResetRequestStream,
+        ResetterRequest, ResetterRequestStream,
     },
     fidl_fuchsia_tpm_cr50::TryAuthResponse,
     fuchsia_async::{self as fasync, DurationExt},
@@ -115,9 +115,12 @@ where
         }
     }
 
-    /// Handles the special Reset FIDL requests which reset the state of
+    /// Handles the special Resetter FIDL requests which reset the state of
     /// CredentialManager both on-disk and on-chip.
-    pub async fn handle_requests_for_reset_stream(&self, mut request_stream: ResetRequestStream) {
+    pub async fn handle_requests_for_reset_stream(
+        &self,
+        mut request_stream: ResetterRequestStream,
+    ) {
         while let Some(request) = request_stream.try_next().await.expect("read request") {
             self.handle_reset_request(request)
                 .unwrap_or_else(|e| {
@@ -160,11 +163,11 @@ where
         Ok(())
     }
 
-    /// Process a single Reset FIDL request and send a reply. This request can
+    /// Process a single Resetter FIDL request and send a reply. This request can
     /// only be the reset method.
-    async fn handle_reset_request(&self, request: ResetRequest) -> Result<(), Error> {
+    async fn handle_reset_request(&self, request: ResetterRequest) -> Result<(), Error> {
         match request {
-            ResetRequest::Reset { responder } => {
+            ResetterRequest::Reset { responder } => {
                 let mut resp = self.reset().await;
                 responder.send(&mut resp).context("sending Reset response")?;
                 self.diagnostics.incoming_reset_outcome(IncomingResetMethod::Reset, resp);
