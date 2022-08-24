@@ -9,6 +9,8 @@
     program: {
         runner: "elf",
         binary: "bin/hwstress",
+        forward_stdout_to: "log",
+        forward_stderr_to: "log",
     },
     use: [
         {
