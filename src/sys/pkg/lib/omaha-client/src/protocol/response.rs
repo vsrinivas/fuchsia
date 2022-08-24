@@ -85,9 +85,10 @@ impl App {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
 #[serde(field_identifier, rename_all = "lowercase")]
 pub enum OmahaStatus {
+    #[default]
     Ok,
     /// The product is recognized, but due to policy restrictions the server must refuse to give a
     /// meaningful response.
@@ -95,12 +96,6 @@ pub enum OmahaStatus {
     /// No update is available for this client at this time.
     NoUpdate,
     Error(String),
-}
-
-impl Default for OmahaStatus {
-    fn default() -> Self {
-        OmahaStatus::Ok
-    }
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]

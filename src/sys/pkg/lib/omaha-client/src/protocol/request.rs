@@ -92,20 +92,15 @@ pub struct RequestWrapper {
 }
 
 /// Enum of the possible reasons that this update request was initiated.
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "lowercase")]
 pub enum InstallSource {
     /// This update check was triggered "on demand", by a user.
     OnDemand,
 
     /// This update check was triggered as part of a background task, unattended by a user.
+    #[default]
     ScheduledTask,
-}
-
-impl Default for InstallSource {
-    fn default() -> Self {
-        InstallSource::ScheduledTask
-    }
 }
 
 /// Information about the platform / operating system.
@@ -306,9 +301,10 @@ impl Event {
 /// The type of event that is being reported.  These are specified by the Omaha protocol.
 ///
 /// See https://github.com/google/omaha/blob/HEAD/doc/ServerProtocolV3.md#event-request
-#[derive(Debug, Clone, Eq, PartialEq, Serialize_repr)]
+#[derive(Debug, Default, Clone, Eq, PartialEq, Serialize_repr)]
 #[repr(u8)]
 pub enum EventType {
+    #[default]
     Unknown = 0,
 
     /// The initial download of the application is complete.
@@ -331,18 +327,13 @@ pub enum EventType {
     RebootedAfterUpdate = 54,
 }
 
-impl Default for EventType {
-    fn default() -> Self {
-        EventType::Unknown
-    }
-}
-
 /// The result of event that is being reported.  These are specified by the Omaha protocol.
 ///
 /// See https://github.com/google/omaha/blob/HEAD/doc/ServerProtocolV3.md#event-request
-#[derive(Debug, Clone, Eq, PartialEq, Serialize_repr)]
+#[derive(Debug, Default, Clone, Eq, PartialEq, Serialize_repr)]
 #[repr(u8)]
 pub enum EventResult {
+    #[default]
     Error = 0,
     Success = 1,
     SuccessAndRestartRequired = 2,
@@ -355,17 +346,12 @@ pub enum EventResult {
     UpdateDeferred = 9,
 }
 
-impl Default for EventResult {
-    fn default() -> Self {
-        EventResult::Error
-    }
-}
-
 /// The error code of the event.  These are application specific.
-#[derive(Debug, Clone, Eq, PartialEq, Serialize_repr)]
+#[derive(Debug, Default, Clone, Eq, PartialEq, Serialize_repr)]
 #[repr(i32)]
 pub enum EventErrorCode {
     /// Error when parsing Omaha response.
+    #[default]
     ParseResponse = 0,
     /// Error when constructing install plan.
     ConstructInstallPlan = 1,
@@ -373,12 +359,6 @@ pub enum EventErrorCode {
     Installation = 2,
     /// The update is denied by policy.
     DeniedByPolicy = 3,
-}
-
-impl Default for EventErrorCode {
-    fn default() -> Self {
-        EventErrorCode::ParseResponse
-    }
 }
 
 /// The GUID used in Omaha protocol for sessionid and requestid.
