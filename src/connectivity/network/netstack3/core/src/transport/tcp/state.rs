@@ -136,14 +136,14 @@ pub(crate) struct Listen {
 
 /// Dispositions of [`Listen::on_segment`].
 #[cfg_attr(test, derive(Debug, PartialEq, Eq))]
-enum ListenOnSegmentDisposition<I: Instant> {
+pub(crate) enum ListenOnSegmentDisposition<I: Instant> {
     SendSynAckAndEnterSynRcvd(Segment<()>, SynRcvd<I, Infallible>),
     SendRst(Segment<()>),
     Ignore,
 }
 
 impl Listen {
-    fn on_segment<I: Instant>(
+    pub(crate) fn on_segment<I: Instant>(
         &self,
         Segment { seq, ack, wnd: _, contents }: Segment<impl Payload>,
         now: I,
@@ -414,6 +414,24 @@ pub(crate) struct SynRcvd<I: Instant, ActiveOpen> {
     simultaneous_open: Option<ActiveOpen>,
 }
 
+impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen> From<SynRcvd<I, Infallible>>
+    for State<I, R, S, ActiveOpen>
+{
+    fn from(
+        SynRcvd { iss, irs, timestamp, retrans_timer, simultaneous_open }: SynRcvd<I, Infallible>,
+    ) -> Self {
+        match simultaneous_open {
+            None => State::SynRcvd(SynRcvd {
+                iss,
+                irs,
+                timestamp,
+                retrans_timer,
+                simultaneous_open: None,
+            }),
+            Some(infallible) => match infallible {},
+        }
+    }
+}
 enum FinQueued {}
 
 impl FinQueued {

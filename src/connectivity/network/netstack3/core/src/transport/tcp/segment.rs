@@ -13,8 +13,7 @@ use crate::transport::tcp::{
 };
 
 /// A TCP segment.
-#[derive(Debug, PartialEq, Eq)]
-#[cfg_attr(test, derive(Clone, Copy))]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub(crate) struct Segment<P: Payload> {
     /// The sequence number of the segment.
     pub(crate) seq: SeqNum,
@@ -32,8 +31,7 @@ pub(super) const MAX_PAYLOAD_AND_CONTROL_LEN: usize = 1 << 31;
 const MAX_PAYLOAD_AND_CONTROL_LEN_U32: u32 = MAX_PAYLOAD_AND_CONTROL_LEN as u32;
 
 /// The contents of a TCP segment that takes up some sequence number space.
-#[derive(Debug, PartialEq, Eq)]
-#[cfg_attr(test, derive(Clone, Copy))]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub(crate) struct Contents<P: Payload> {
     /// The control flag of the segment.
     control: Option<Control>,
