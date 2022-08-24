@@ -879,6 +879,7 @@ config("Wno-conversion") {
     "//third_party/ogg/*",
     "//third_party/opus/*",
     "//third_party/rust_crates/compat/brotli:*",
+    "//third_party/tpm2-tss/*",
     "//third_party/zstd:*",
     "//tools/bootserver_old:*",
     "//tools/fidlcat:*",
