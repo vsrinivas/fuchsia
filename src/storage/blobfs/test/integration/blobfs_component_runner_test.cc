@@ -33,6 +33,9 @@ class FakeDriverManagerAdmin final
     completer.Reply(ZX_OK);
   }
 
+  void SuspendWithoutExit(SuspendWithoutExitRequestView request,
+                          SuspendWithoutExitCompleter::Sync& completer) override {}
+
   bool UnregisterWasCalled() { return unregister_was_called_; }
 
  private:

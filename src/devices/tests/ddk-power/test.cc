@@ -38,7 +38,6 @@ class PowerTestCase : public zxtest::Test {
   ~PowerTestCase() override = default;
   void SetUp() override {
     IsolatedDevmgr::Args args;
-    args.no_exit_after_suspend = true;
 
     board_test::DeviceEntry dev = {};
     dev.vid = PDEV_VID_TEST;
@@ -105,12 +104,13 @@ class PowerTestCase : public zxtest::Test {
   }
 
   void SetTerminationSystemState(SystemPowerState state) {
-    ASSERT_NE(devmgr.svc_root_dir().channel(), ZX_HANDLE_INVALID);
-    auto svc = service::ConnectAt<fuchsia_io::Directory>(devmgr.svc_root_dir(), "svc");
-    ASSERT_OK(svc.status_value());
-    auto local = service::ConnectAt<device_manager_fidl::SystemStateTransition>(*svc);
-    ASSERT_OK(local.status_value());
-    auto system_state_transition_client = fidl::BindSyncClient(std::move(*local));
+    auto connection = fidl::CreateEndpoints<device_manager_fidl::SystemStateTransition>();
+    ASSERT_EQ(ZX_OK, connection.status_value());
+    ASSERT_EQ(ZX_OK,
+              devmgr.Connect(
+                  fidl::DiscoverableProtocolName<fuchsia_device_manager::SystemStateTransition>,
+                  connection->server.TakeHandle()));
+    auto system_state_transition_client = fidl::BindSyncClient(std::move(connection->client));
     auto resp = system_state_transition_client->SetTerminationSystemState(state);
     ASSERT_OK(resp.status());
     ASSERT_FALSE(resp->is_error());
@@ -459,11 +459,7 @@ TEST_F(PowerTestCase, SystemSuspend_SuspendReasonReboot) {
 
   SetTerminationSystemState(SystemPowerState::kReboot);
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
-  ASSERT_NE(devmgr.component_lifecycle_svc().channel(), ZX_HANDLE_INVALID);
-  auto result = fidl::WireCall<lifecycle_fidl::Lifecycle>(devmgr.component_lifecycle_svc())->Stop();
-  ASSERT_OK(result.status());
+  ASSERT_OK(devmgr.SuspendDriverManager());
 
   // Wait till child2's suspend event is called.
   WaitForDeviceSuspendCompletion(zx::unowned(child2_device_handle));
@@ -521,11 +517,7 @@ TEST_F(PowerTestCase, SystemSuspend_SuspendReasonRebootRecovery) {
 
   SetTerminationSystemState(SystemPowerState::kRebootRecovery);
 
-  zx::channel local, remote;
-  ASSERT_OK(zx::channel::create(0, &local, &remote));
-  ASSERT_NE(devmgr.component_lifecycle_svc().channel(), ZX_HANDLE_INVALID);
-  auto result = fidl::WireCall<lifecycle_fidl::Lifecycle>(devmgr.component_lifecycle_svc())->Stop();
-  ASSERT_OK(result.status());
+  ASSERT_OK(devmgr.SuspendDriverManager());
 
   // Wait till child2's suspend event is called.
   WaitForDeviceSuspendCompletion(zx::unowned(child2_device_handle));

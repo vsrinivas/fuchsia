@@ -23,4 +23,8 @@ protocol Administrator {
     UnregisterSystemStorageForShutdown() -> (struct {
         status zx.status;
     });
+
+    /// Tell DriverManager to go through the suspend process, but don't exit
+    /// afterwards. This is used in tests to check that suspend works correctly.
+    SuspendWithoutExit();
 };

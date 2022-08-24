@@ -1018,6 +1018,15 @@ void Coordinator::UnregisterSystemStorageForShutdown(
   suspend_resume_manager_->suspend_handler().UnregisterSystemStorageForShutdown(
       [completer = completer.ToAsync()](zx_status_t status) mutable { completer.Reply(status); });
 }
+void Coordinator::SuspendWithoutExit(SuspendWithoutExitRequestView request,
+                                     SuspendWithoutExitCompleter::Sync& completer) {
+  LOGF(INFO, "Received administrator suspend event");
+  suspend_resume_manager()->Suspend(
+      suspend_resume_manager()->GetSuspendFlagsFromSystemPowerState(shutdown_system_state()),
+      [](zx_status_t status) {
+        LOGF(INFO, "Administrator suspend completed with status: %s", zx_status_get_string(status));
+      });
+}
 
 zx::status<> Coordinator::PublishDriverDevelopmentService(
     const fbl::RefPtr<fs::PseudoDir>& svc_dir) {

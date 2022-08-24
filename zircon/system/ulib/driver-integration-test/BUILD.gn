@@ -29,10 +29,7 @@ zx_library("driver-integration-test") {
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 
   # STOP: Do not add any new entries to this allow list. Use //sdk/lib/driver_test_realm instead.
-  visibility = [
-    "//src/devices/tests/ddk-power/*",
-    "//zircon/system/ulib/driver-integration-test/test/*",
-  ]
+  visibility = [ "//zircon/system/ulib/driver-integration-test/test/*" ]
 }
 
 group("tests") {

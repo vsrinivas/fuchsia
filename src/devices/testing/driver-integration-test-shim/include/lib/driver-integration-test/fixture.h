@@ -67,6 +67,8 @@ class IsolatedDevmgr {
     return fidl::ClientEnd<fuchsia_io::Directory>(root.TakeChannel());
   }
 
+  zx_status_t SuspendDriverManager();
+
  private:
   // `loop_` must come before `realm_` so that they are destroyed in order.
   // That is, `realm_` needs to be destroyed before `loop_` because it will

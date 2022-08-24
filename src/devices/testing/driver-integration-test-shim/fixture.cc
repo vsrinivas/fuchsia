@@ -5,6 +5,7 @@
 #include "include/lib/driver-integration-test/fixture.h"
 
 #include <fidl/fuchsia.board.test/cpp/wire.h>
+#include <fidl/fuchsia.device.manager/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <fuchsia/driver/test/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
@@ -153,6 +154,25 @@ zx_status_t IsolatedDevmgr::Create(Args* args, IsolatedDevmgr* out) {
   }
 
   *out = std::move(devmgr);
+  return ZX_OK;
+}
+
+zx_status_t IsolatedDevmgr::SuspendDriverManager() {
+  auto endpoints = fidl::CreateEndpoints<fuchsia_device_manager::Administrator>();
+  if (endpoints.is_error()) {
+    return endpoints.error_value();
+  }
+  zx_status_t status =
+      realm_->Connect(fidl::DiscoverableProtocolName<fuchsia_device_manager::Administrator>,
+                      endpoints->server.TakeChannel());
+  if (status != ZX_OK) {
+    return status;
+  }
+  auto result = fidl::WireCall(endpoints->client)->SuspendWithoutExit();
+  if (!result.ok()) {
+    return result.status();
+  }
+
   return ZX_OK;
 }
 

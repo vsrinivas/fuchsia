@@ -280,6 +280,8 @@ class Coordinator : public CompositeManagerBridge,
   void UnregisterSystemStorageForShutdown(
       UnregisterSystemStorageForShutdownRequestView request,
       UnregisterSystemStorageForShutdownCompleter::Sync& completer) override;
+  void SuspendWithoutExit(SuspendWithoutExitRequestView request,
+                          SuspendWithoutExitCompleter::Sync& completer) override;
 
   zx_status_t NewDriverHost(const char* name, fbl::RefPtr<DriverHost>* out);
 
