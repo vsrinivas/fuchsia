@@ -28,6 +28,10 @@ group("tests") {
 }
 
 if (target_cpu == "x64") {
+  static_library("restricted_trampoline") {
+    sources = [ "execution/trampoline_x64.S" ]
+  }
+
   rustc_binary("starnix_runner_bin") {
     name = "starnix_runner"
     edition = "2021"
@@ -97,6 +101,8 @@ if (target_cpu == "x64") {
       "//third_party/rust_crates:tracing-mutex",
     ]
 
+    non_rust_deps = [ ":restricted_trampoline" ]
+
     sources = [
       "auth.rs",
       "collections/mod.rs",
@@ -125,6 +131,7 @@ if (target_cpu == "x64") {
       "execution/exception_executor.rs",
       "execution/galaxy.rs",
       "execution/mod.rs",
+      "execution/restricted_executor.rs",
       "execution/serve_protocols.rs",
       "execution/shared.rs",
       "fs/anon_node.rs",

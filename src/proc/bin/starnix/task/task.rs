@@ -23,8 +23,9 @@ use crate::signals::types::*;
 use crate::task::*;
 use crate::types::*;
 
+#[derive(Clone)]
 pub struct CurrentTask {
-    task: Arc<Task>,
+    pub task: Arc<Task>,
 
     /// A copy of the registers associated with the Zircon thread. Up-to-date values can be read
     /// from `self.handle.read_state_general_regs()`. To write these values back to the thread, call
@@ -127,7 +128,7 @@ pub struct Task {
     pub thread_group: Arc<ThreadGroup>,
 
     /// A handle to the underlying Zircon thread object.
-    pub thread: zx::Thread,
+    pub thread: RwLock<Option<zx::Thread>>,
 
     /// The file descriptor table for this task.
     pub files: Arc<FdTable>,
@@ -177,7 +178,7 @@ impl Task {
         command: CString,
         argv: Vec<CString>,
         thread_group: Arc<ThreadGroup>,
-        thread: zx::Thread,
+        thread: Option<zx::Thread>,
         files: Arc<FdTable>,
         mm: Arc<MemoryManager>,
         // The only case where fs should be None if when building the initial task that is the
@@ -198,7 +199,7 @@ impl Task {
         let result = CurrentTask::new(Task {
             id,
             thread_group,
-            thread,
+            thread: RwLock::new(thread),
             files,
             mm,
             fs,

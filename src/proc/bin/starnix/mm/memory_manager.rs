@@ -805,7 +805,7 @@ impl MemoryManager {
         let user_vmar_info = user_vmar.info()?;
         Ok(MemoryManager {
             root_vmar,
-            base_addr: UserAddress::from_ptr(info.base),
+            base_addr: UserAddress::from_ptr(user_vmar_info.base),
             futex: FutexTable::default(),
             state: RwLock::new(MemoryManagerState {
                 user_vmar,

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#[cfg(not(feature = "restricted_mode"))]
 use crate::logging::strace;
 use crate::signals::*;
 use crate::task::*;
@@ -239,6 +240,7 @@ pub fn send_signal(task: &Task, siginfo: SignalInfo) {
     }
 }
 
+#[cfg(not(feature = "restricted_mode"))]
 pub fn force_signal(current_task: &CurrentTask, mut siginfo: SignalInfo) {
     strace!(current_task, "forced signal {:?}", siginfo);
     siginfo.force = true;

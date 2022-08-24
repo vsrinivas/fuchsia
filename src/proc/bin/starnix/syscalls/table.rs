@@ -6,12 +6,12 @@ use paste::paste;
 use zerocopy::{AsBytes, FromBytes};
 
 use crate::fs::FdNumber;
-use crate::syscalls::{CurrentTask, SyscallResult};
+use crate::syscalls::{decls::Syscall, CurrentTask, SyscallResult};
 use crate::types::*;
 
 macro_rules! syscall_match {
     {
-        $current_task:ident; $syscall_number:ident; $args:ident;
+        $current_task:ident; $syscall_number:expr; $args:ident;
         $($call:ident [$num_args:tt],)*
     } => {
         paste! {
@@ -40,8 +40,7 @@ macro_rules! syscall_match {
 
 pub fn dispatch_syscall(
     current_task: &mut CurrentTask,
-    syscall_number: u64,
-    args: (u64, u64, u64, u64, u64, u64),
+    syscall: &Syscall,
 ) -> Result<SyscallResult, Errno> {
     use crate::fs::socket::syscalls::*;
     use crate::fs::syscalls::*;
@@ -51,8 +50,9 @@ pub fn dispatch_syscall(
     use crate::syscalls::time::*;
     use crate::task::syscalls::*;
 
+    let args = (syscall.arg0, syscall.arg1, syscall.arg2, syscall.arg3, syscall.arg4, syscall.arg5);
     syscall_match! {
-        current_task; syscall_number; args;
+        current_task; syscall.decl.number; args;
         accept4[4],
         accept[3],
         access[2],

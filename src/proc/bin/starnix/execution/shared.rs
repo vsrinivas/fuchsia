@@ -17,10 +17,107 @@ use zerocopy::AsBytes;
 use crate::fs::ext4::ExtFilesystem;
 use crate::fs::fuchsia::{create_file_from_handle, RemoteFs, SyslogFile};
 use crate::fs::*;
+use crate::logging::strace;
 use crate::mm::{DesiredAddress, MappingOptions, PAGE_SIZE};
+use crate::signals::dequeue_signal;
+use crate::syscalls::{
+    decls::{Syscall, SyscallDecl},
+    table::dispatch_syscall,
+};
 use crate::task::*;
 use crate::types::*;
 use crate::vmex_resource::VMEX_RESOURCE;
+
+/// Contains context to track the most recently failing system call.
+///
+/// When a task exits with a non-zero exit code, this context is logged to help debugging which
+/// system call may have triggered the failure.
+pub struct ErrorContext {
+    /// The system call that failed.
+    pub syscall: Syscall,
+
+    /// The error that was returned for the system call.
+    pub error: Errno,
+}
+
+/// Executes the provided `syscall` in `current_task`.
+///
+/// Returns an `ErrorContext` if the system call returned an error.
+pub fn execute_syscall(
+    current_task: &mut CurrentTask,
+    syscall_decl: &'static SyscallDecl,
+) -> Option<ErrorContext> {
+    let syscall = Syscall {
+        decl: syscall_decl,
+        arg0: current_task.registers.rdi,
+        arg1: current_task.registers.rsi,
+        arg2: current_task.registers.rdx,
+        arg3: current_task.registers.r10,
+        arg4: current_task.registers.r8,
+        arg5: current_task.registers.r9,
+    };
+
+    // The `rax` register read from the thread's state is clobbered by zircon with
+    // ZX_ERR_BAD_SYSCALL, but it really should be the syscall number.
+    current_task.registers.rax = syscall.decl.number;
+
+    // `orig_rax` should hold the original value loaded into `rax` by the userspace process.
+    current_task.registers.orig_rax = syscall.decl.number;
+
+    strace!(current_task, "{:?}", syscall);
+    match dispatch_syscall(current_task, &syscall) {
+        Ok(return_value) => {
+            strace!(current_task, "-> {:#x}", return_value.value(),);
+            current_task.registers.rax = return_value.value();
+            None
+        }
+        Err(errno) => {
+            strace!(current_task, "!-> {:?}", errno,);
+            current_task.registers.rax = errno.return_value();
+            Some(ErrorContext { error: errno, syscall })
+        }
+    }
+}
+
+/// Finishes `current_task` updates after system call dispatch.
+///
+/// Returns an `ExitStatus` if the task is meant to exit.
+pub fn process_completed_syscall(
+    current_task: &mut CurrentTask,
+    error_context: &Option<ErrorContext>,
+) -> Result<Option<ExitStatus>, Errno> {
+    block_while_stopped(current_task);
+
+    // Checking for a signal might cause the task to exit, so check before processing exit
+    if current_task.read().exit_status.is_none() {
+        dequeue_signal(current_task);
+    }
+
+    if let Some(exit_status) = current_task.read().exit_status.as_ref() {
+        tracing::debug!("{:?} exiting with status {:?}", current_task, exit_status);
+        if let Some(error_context) = error_context {
+            match exit_status {
+                ExitStatus::Exit(value) if *value == 0 => {}
+                _ => {
+                    tracing::debug!(
+                        "{:?} last failing syscall before exit: {:?}, failed with {:?}",
+                        current_task,
+                        error_context.syscall,
+                        error_context.error
+                    );
+                }
+            };
+        }
+        return Ok(Some(exit_status.clone()));
+    }
+
+    // Handle the debug address after the thread is set up to continue, because
+    // `set_process_debug_addr` expects the register state to be in a post-syscall state (most
+    // importantly the instruction pointer needs to be "correct").
+    set_process_debug_addr(current_task)?;
+
+    Ok(None)
+}
 
 /// Sets the ZX_PROP_PROCESS_DEBUG_ADDR of the process.
 ///
@@ -226,4 +323,32 @@ pub fn create_filesystem_from_spec<'a>(
         _ => create_filesystem(task, fs_src.as_bytes(), fs_type.as_bytes(), b"")?,
     };
     Ok((mount_point.as_bytes(), fs))
+}
+
+/// Block the execution of `current_task` as long as the task is stopped and not terminated.
+pub fn block_while_stopped(current_task: &CurrentTask) {
+    // Early exit test to avoid creating a port when we don't need to sleep. Testing in the loop
+    // after adding the waiter to the wait queue is still important to deal with race conditions
+    // where the condition becomes true between checking it and starting the wait.
+    // TODO(tbodt): Find a less hacky way to do this. There might be some way to create one port
+    // per task and use it every time the current task needs to sleep.
+    if current_task.read().exit_status.is_some() {
+        return;
+    }
+    if !current_task.thread_group.read().stopped {
+        return;
+    }
+
+    let waiter = Waiter::new_ignoring_signals();
+    loop {
+        current_task.thread_group.write().stopped_waiters.wait_async(&waiter);
+        if current_task.read().exit_status.is_some() {
+            return;
+        }
+        if !current_task.thread_group.read().stopped {
+            return;
+        }
+        // Result is not needed, as this is not in a syscall.
+        let _: Result<(), Errno> = waiter.wait(current_task);
+    }
 }

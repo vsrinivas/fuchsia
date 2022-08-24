@@ -18,25 +18,11 @@ use std::sync::Arc;
 
 use super::shared::*;
 use crate::logging::set_zx_name;
-use crate::logging::strace;
 use crate::mm::MemoryManager;
 use crate::signals::*;
-use crate::syscalls::decls::{Syscall, SyscallDecl};
-use crate::syscalls::table::dispatch_syscall;
+use crate::syscalls::decls::SyscallDecl;
 use crate::task::*;
 use crate::types::*;
-
-/// Contains context to track the most recently failing system call.
-///
-/// When a task exits with a non-zero exit code, this context is logged to help debugging which
-/// system call may have triggered the failure.
-struct ErrorContext {
-    /// The system call that failed.
-    syscall: Syscall,
-
-    /// The error that was returned for the system call.
-    error: Errno,
-}
 
 /// Spawns a thread that executes `current_task`.
 ///
@@ -83,52 +69,20 @@ where
 /// Returns an exception channel for the thread. This channel is used to monitor, and handle,
 /// "bad syscall" exceptions.
 fn start_task_thread(current_task: &CurrentTask) -> Result<zx::Channel, zx::Status> {
-    let exceptions = current_task.thread.create_exception_channel()?;
-    let suspend_token = current_task.thread.suspend()?;
+    let thread_lock = current_task.thread.read();
+    let thread = thread_lock.as_ref().ok_or(zx::Status::BAD_HANDLE)?;
+    let exceptions = thread.create_exception_channel()?;
+    let suspend_token = thread.suspend()?;
     if current_task.id == current_task.thread_group.leader {
-        current_task.thread_group.process.start(
-            &current_task.thread,
-            0,
-            0,
-            zx::Handle::invalid(),
-            0,
-        )?;
+        current_task.thread_group.process.start(&thread, 0, 0, zx::Handle::invalid(), 0)?;
     } else {
-        current_task.thread.start(0, 0, 0, 0)?;
+        thread.start(0, 0, 0, 0)?;
     }
-    current_task.thread.wait_handle(zx::Signals::THREAD_SUSPENDED, zx::Time::INFINITE)?;
-    current_task.thread.write_state_general_regs(current_task.registers.into())?;
+    thread.wait_handle(zx::Signals::THREAD_SUSPENDED, zx::Time::INFINITE)?;
+    thread.write_state_general_regs(current_task.registers.into())?;
     mem::drop(suspend_token);
     set_zx_name(&fuchsia_runtime::thread_self(), current_task.command().as_bytes());
     Ok(exceptions)
-}
-
-/// Block the exception handler as long as the task is stopped and not terminated.
-fn block_while_stopped(current_task: &CurrentTask) {
-    // Early exit test to avoid creating a port when we don't need to sleep. Testing in the loop
-    // after adding the waiter to the wait queue is still important to deal with race conditions
-    // where the condition becomes true between checking it and starting the wait.
-    // TODO(tbodt): Find a less hacky way to do this. There might be some way to create one port
-    // per task and use it every time the current task needs to sleep.
-    if current_task.read().exit_status.is_some() {
-        return;
-    }
-    if !current_task.thread_group.read().stopped {
-        return;
-    }
-
-    let waiter = Waiter::new_ignoring_signals();
-    loop {
-        current_task.thread_group.write().stopped_waiters.wait_async(&waiter);
-        if current_task.read().exit_status.is_some() {
-            return;
-        }
-        if !current_task.thread_group.read().stopped {
-            return;
-        }
-        // Result is not needed, as this is not in a syscall.
-        let _: Result<(), Errno> = waiter.wait(current_task);
-    }
 }
 
 /// Runs an exception handling loop for the given task.
@@ -162,7 +116,8 @@ fn run_exception_loop(
 
         let thread = exception.get_thread()?;
         assert!(
-            thread.get_koid() == current_task.thread.get_koid(),
+            // The thread is always `Some` at this point.
+            thread.get_koid() == current_task.thread.read().as_ref().unwrap().get_koid(),
             "Exception thread did not match task thread."
         );
 
@@ -170,52 +125,13 @@ fn run_exception_loop(
         current_task.registers = thread.read_state_general_regs()?.into();
 
         let syscall_decl = SyscallDecl::from_number(report.context.synth_data as u64);
-        // The `rax` register read from the thread's state is clobbered by zircon with
-        // ZX_ERR_BAD_SYSCALL, but it really should be the syscall number.
-        current_task.registers.rax = syscall_decl.number;
 
-        // `orig_rax` should hold the original value loaded into `rax` by the userspace process.
-        current_task.registers.orig_rax = syscall_decl.number;
-
-        let regs = &current_task.registers;
         match info.type_ {
             ZX_EXCP_POLICY_ERROR
                 if report.context.synth_code == ZX_EXCP_POLICY_CODE_BAD_SYSCALL =>
             {
-                let start_time = zx::Time::get_monotonic();
-                let args = (regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);
-
-                let syscall = Syscall {
-                    decl: syscall_decl,
-                    arg0: args.0,
-                    arg1: args.1,
-                    arg2: args.2,
-                    arg3: args.3,
-                    arg4: args.4,
-                    arg5: args.5,
-                };
-                strace!(current_task, "{:?}", syscall);
-
-                match dispatch_syscall(current_task, syscall.decl.number, args) {
-                    Ok(return_value) => {
-                        strace!(
-                            current_task,
-                            "-> {:#x} ({}ms)",
-                            return_value.value(),
-                            (zx::Time::get_monotonic() - start_time).into_millis()
-                        );
-                        current_task.registers.rax = return_value.value();
-                    }
-                    Err(errno) => {
-                        strace!(
-                            current_task,
-                            "!-> {:?} ({}ms)",
-                            errno,
-                            (zx::Time::get_monotonic() - start_time).into_millis()
-                        );
-                        current_task.registers.rax = errno.return_value();
-                        error_context = Some(ErrorContext { error: errno, syscall });
-                    }
+                if let Some(new_error_context) = execute_syscall(current_task, syscall_decl) {
+                    error_context = Some(new_error_context);
                 }
             }
 
@@ -239,49 +155,16 @@ fn run_exception_loop(
             }
         }
 
-        block_while_stopped(current_task);
-
-        // Checking for a signal might cause the task to exit, so check before processing exit
-        if current_task.read().exit_status.is_none() {
-            dequeue_signal(current_task);
-        }
-
-        {
-            let task_state = current_task.read();
-            if let Some(exit_status) = task_state.exit_status.as_ref() {
-                let exit_status = exit_status.clone();
-                match exit_status {
-                    ExitStatus::CoreDump(_) => {
-                        exception.set_exception_state(&ZX_EXCEPTION_STATE_TRY_NEXT)?
-                    }
-                    _ => exception.set_exception_state(&ZX_EXCEPTION_STATE_THREAD_EXIT)?,
+        if let Some(exit_status) = process_completed_syscall(current_task, &error_context)? {
+            match exit_status {
+                ExitStatus::CoreDump(_) => {
+                    exception.set_exception_state(&ZX_EXCEPTION_STATE_TRY_NEXT)?
                 }
-
-                // `strace!` acquires a read lock on `current_task`'s state, so drop the lock to
-                // avoid re-entrancy.
-                drop(task_state);
-                tracing::debug!("{:?} exiting with status {:?}", current_task, exit_status);
-                if let Some(error_context) = error_context {
-                    match exit_status {
-                        ExitStatus::Exit(value) if value == 0 => {}
-                        _ => {
-                            tracing::debug!(
-                                "{:?} last failing syscall before exit: {:?}, failed with {:?}",
-                                current_task,
-                                error_context.syscall,
-                                error_context.error
-                            );
-                        }
-                    };
-                }
-                return Ok(exit_status);
+                _ => exception.set_exception_state(&ZX_EXCEPTION_STATE_THREAD_EXIT)?,
             }
-        }
 
-        // Handle the debug address after the thread is set up to continue, because
-        // `set_process_debug_addr` expects the register state to be in a post-syscall state (most
-        // importantly the instruction pointer needs to be "correct").
-        set_process_debug_addr(current_task)?;
+            return Ok(exit_status);
+        }
 
         thread.write_state_general_regs(current_task.registers.into())?;
         exception.set_exception_state(&ZX_EXCEPTION_STATE_HANDLED)?;
@@ -296,7 +179,7 @@ fn run_exception_loop(
 /// for the created thread.
 pub fn create_zircon_thread(
     parent: &Task,
-) -> Result<(zx::Thread, Arc<ThreadGroup>, Arc<MemoryManager>), Errno> {
+) -> Result<(Option<zx::Thread>, Arc<ThreadGroup>, Arc<MemoryManager>), Errno> {
     let thread = parent
         .thread_group
         .process
@@ -305,7 +188,7 @@ pub fn create_zircon_thread(
 
     let thread_group = parent.thread_group.clone();
     let mm = parent.mm.clone();
-    Ok((thread, thread_group, mm))
+    Ok((Some(thread), thread_group, mm))
 }
 
 /// Creates a new process in the job associated with `kernel`.
@@ -324,7 +207,7 @@ pub fn create_zircon_process(
     process_group: Arc<ProcessGroup>,
     signal_actions: Arc<SignalActions>,
     name: &CString,
-) -> Result<(zx::Thread, Arc<ThreadGroup>, Arc<MemoryManager>), Errno> {
+) -> Result<(Option<zx::Thread>, Arc<ThreadGroup>, Arc<MemoryManager>), Errno> {
     let (process, root_vmar) = kernel
         .job
         .create_child_process(zx::ProcessOptions::empty(), name.as_bytes())
@@ -338,7 +221,7 @@ pub fn create_zircon_process(
     let thread_group =
         ThreadGroup::new(kernel.clone(), process, parent, pid, process_group, signal_actions);
 
-    Ok((thread, thread_group, mm))
+    Ok((Some(thread), thread_group, mm))
 }
 
 /// Converts a `zx::MessageBuf` into an exception info by transmuting a copy of the bytes.

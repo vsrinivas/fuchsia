@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_zircon::{self as zx, AsHandleRef};
+use fuchsia_zircon::{self as zx, AsHandleRef, Process};
 use once_cell::sync::OnceCell;
 use std::collections::HashSet;
 use std::ffi::CStr;
@@ -19,6 +19,10 @@ use crate::types::{DeviceType, Errno, OpenFlags};
 pub struct Kernel {
     /// The Zircon job object that holds the processes running in this kernel.
     pub job: zx::Job,
+
+    /// The main starnix process. This process is used to create new processes when using the
+    /// restricted executor.
+    pub starnix_process: Process,
 
     /// The processes and threads running in this kernel, organized by pid_t.
     pub pids: RwLock<PidTable>,
@@ -70,6 +74,9 @@ impl Kernel {
 
         Ok(Kernel {
             job,
+            starnix_process: Process::from(
+                fuchsia_runtime::process_self().duplicate(zx::Rights::SAME_RIGHTS).expect(""),
+            ),
             pids: RwLock::new(PidTable::new()),
             default_abstract_socket_namespace: AbstractUnixSocketNamespace::new(unix_address_maker),
             default_abstract_vsock_namespace: AbstractVsockSocketNamespace::new(
