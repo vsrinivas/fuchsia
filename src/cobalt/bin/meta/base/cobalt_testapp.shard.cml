@@ -32,7 +32,7 @@
             from: "parent",
             to: "#realm_builder",
             rights: [ "r*" ],
-            subdir: "cobalt",
+            subdir: "cobalt_tests",
         },
         {
             storage: "data",

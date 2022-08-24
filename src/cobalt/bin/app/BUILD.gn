@@ -18,6 +18,13 @@ declare_args() {
 # Generates the global_metrics_registry.pb file.
 metrics_registry("global_metrics_registry") {
   global = true
+
+  # Remove test projects from the registry.
+  exclude_projects = [
+    "1:7",
+    "1:657579885",
+    "1:929352809",
+  ]
 }
 
 # Include the global_metrics_registry.pb in the config data for Cobalt.

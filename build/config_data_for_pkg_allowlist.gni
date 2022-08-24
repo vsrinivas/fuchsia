@@ -20,6 +20,7 @@ config_data_for_pkg_allowlist = [
   "basemgr",
   "chrome",
   "cobalt",
+  "cobalt_tests",
   "dart_aot_product_runner",
   "dart_aot_runner",
   "dart_jit_product_runner",

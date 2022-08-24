@@ -3,8 +3,31 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/config.gni")
 import("//build/fuzzing/fuzzer.gni")
 import("//src/sys/core/build/core_shard.gni")
+import("//third_party/cobalt/metrics_registry.gni")
+
+# Generates the global_metrics_registry.pb file.
+metrics_registry("global_metrics_registry") {
+  global = true
+}
+
+# Include the global_metrics_registry.pb in the config data for Cobalt.
+config_data("cobalt_registry") {
+  for_pkg = "cobalt_tests"
+  deps = [ ":global_metrics_registry" ]
+  sources = [ "$target_gen_dir/global_metrics_registry.pb" ]
+  outputs = [ "global_metrics_registry.pb" ]
+}
+
+# In the default config, Cobalt will upload all metrics (including max_release_stage=DEBUG metrics)
+config_data("config") {
+  for_pkg = "cobalt_tests"
+
+  sources = [ "app/configs/default_config.json" ]
+  outputs = [ "config.json" ]
+}
 
 group("tests") {
   testonly = true
@@ -91,11 +114,12 @@ fuchsia_test_package("cobalt_tests") {
     ":cobalt_testapp_no_network",
   ]
   deps = [
+    ":cobalt_registry",
+    ":config",
     ":testapp_metrics_registry",
     ":variants_no_network_components",
     "app:analyzer_devel_public",
     "app:cobalt_devel_environment",
-    "app:global_metrics_registry",
     "app:shuffler_devel_public",
     "app:testapp_metrics_registry",
   ]
