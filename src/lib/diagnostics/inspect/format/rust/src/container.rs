@@ -76,11 +76,11 @@ pub mod target {
         }
     }
 
-    // A type alias to the concrete type used as the data container in a production
-    // environment.
-    //
-    // On Fuchsia: Arc<Mapping>.
-    // On Host: Arc<Mutex<Vec<u8>>>.
+    /// A type alias to the concrete type used as the data container in a production
+    /// environment.
+    ///
+    /// On Fuchsia: Arc<Mapping>.
+    /// On Host: Arc<Mutex<Vec<u8>>>.
     pub type Container = Arc<Mapping>;
 }
 
@@ -140,11 +140,11 @@ pub mod target {
         }
     }
 
-    // A type alias to the concrete type used as the data container in a production
-    // environment.
-    //
-    // On Fuchsia: Arc<Mapping>.
-    // On Host: Arc<Mutex<Vec<u8>>>.
+    /// A type alias to the concrete type used as the data container in a production
+    /// environment.
+    ///
+    /// On Fuchsia: Arc<Mapping>.
+    /// On Host: Arc<Mutex<Vec<u8>>>.
     pub type Container = Arc<Mutex<Vec<u8>>>;
 }
 

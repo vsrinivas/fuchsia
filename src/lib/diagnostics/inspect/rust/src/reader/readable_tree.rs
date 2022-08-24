@@ -6,10 +6,7 @@
 //! that can be interpreted using the `fuchsia.inspect.Tree` protocol.
 
 use {
-    crate::{
-        reader::{snapshot::BackingBuffer, ReaderError},
-        Inspector,
-    },
+    crate::{reader::ReaderError, Inspector},
     async_trait::async_trait,
 };
 
@@ -19,26 +16,25 @@ use {
     fuchsia_zircon as zx,
 };
 
-pub trait SnapshotSource {
-    // Copy bytes from self to dest.
+/// Provides functions for reading a snapshot.
+pub trait ReadSnapshot {
+    /// Copy bytes from self to dest.
     fn read_bytes(&self, dest: &mut [u8], offset: u64) -> Result<(), ReaderError>;
 
+    /// Returns the size of ths snapshot source or an error if it's not possible to get it.
     fn size(&self) -> Result<u64, ReaderError>;
-
-    // Convert data into a BackingBuffer.
-    fn to_backing_buffer(&self) -> Result<BackingBuffer, ReaderError>;
 }
 
 #[cfg(target_os = "fuchsia")]
 mod target {
-    use super::SnapshotSource;
-    use crate::reader::{snapshot::BackingBuffer, ReaderError};
+    use super::ReadSnapshot;
+    use crate::reader::ReaderError;
     use fuchsia_zircon as zx;
 
-    // A type alias representing a data source that can be snapshotted.
-    pub type SnapshotSourceT = zx::Vmo;
+    /// A type alias representing a data source that can be snapshotted.
+    pub type SnapshotSource = zx::Vmo;
 
-    impl SnapshotSource for SnapshotSourceT {
+    impl ReadSnapshot for SnapshotSource {
         fn read_bytes(&self, dest: &mut [u8], offset: u64) -> Result<(), ReaderError> {
             self.read(dest, offset).map_err(ReaderError::Vmo)
         }
@@ -46,26 +42,22 @@ mod target {
         fn size(&self) -> Result<u64, ReaderError> {
             self.get_size().map_err(ReaderError::Vmo)
         }
-
-        fn to_backing_buffer(&self) -> Result<BackingBuffer, ReaderError> {
-            BackingBuffer::try_from(self).map_err(ReaderError::Vmo)
-        }
     }
 }
 
 #[cfg(not(target_os = "fuchsia"))]
 mod target {
-    use super::SnapshotSource;
-    use crate::reader::{snapshot::BackingBuffer, ReaderError};
+    use super::ReadSnapshot;
+    use crate::reader::ReaderError;
     use inspect_format::ReadableBlockContainer;
     use std::sync::Arc;
     use std::sync::Mutex;
     use std::vec::Vec;
 
-    // A type alias representing a data source that can be snapshotted.
-    pub type SnapshotSourceT = Arc<Mutex<Vec<u8>>>;
+    /// A type alias representing a data source that can be snapshotted.
+    pub type SnapshotSource = Arc<Mutex<Vec<u8>>>;
 
-    impl SnapshotSource for SnapshotSourceT {
+    impl ReadSnapshot for SnapshotSource {
         fn read_bytes(&self, dest: &mut [u8], offset: u64) -> Result<(), ReaderError> {
             let offset = offset as usize;
             if offset >= ReadableBlockContainer::size(self) {
@@ -80,12 +72,6 @@ mod target {
         fn size(&self) -> Result<u64, ReaderError> {
             Ok(ReadableBlockContainer::size(self) as u64)
         }
-
-        fn to_backing_buffer(&self) -> Result<BackingBuffer, ReaderError> {
-            Ok(BackingBuffer::from(
-                self.try_lock().map_err(|_| ReaderError::MissingHeaderOrLocked)?.clone(),
-            ))
-        }
     }
 }
 
@@ -98,7 +84,7 @@ pub trait ReadableTree: Sized {
     async fn tree_names(&self) -> Result<Vec<String>, ReaderError>;
 
     /// Returns the vmo of the current root node.
-    async fn vmo(&self) -> Result<SnapshotSourceT, ReaderError>;
+    async fn vmo(&self) -> Result<SnapshotSource, ReaderError>;
 
     /// Loads the lazy link of the given `name`.
     async fn read_tree(&self, name: &str) -> Result<Self, ReaderError>;
@@ -106,7 +92,7 @@ pub trait ReadableTree: Sized {
 
 #[async_trait]
 impl ReadableTree for Inspector {
-    async fn vmo(&self) -> Result<SnapshotSourceT, ReaderError> {
+    async fn vmo(&self) -> Result<SnapshotSource, ReaderError> {
         #[cfg(target_os = "fuchsia")]
         return self.duplicate_vmo().ok_or(ReaderError::DuplicateVmo);
 

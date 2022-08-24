@@ -7,16 +7,19 @@
 
 use {
     crate::{
-        reader::{error::ReaderError, SnapshotSource, SnapshotSourceT},
+        reader::{error::ReaderError, ReadSnapshot, SnapshotSource},
         Inspector,
     },
     inspect_format::{constants, utils, Block, BlockType, Container, ReadableBlockContainer},
-    std::cmp,
-    std::convert::TryFrom,
+    std::{
+        cmp,
+        convert::TryFrom,
+        sync::{Arc, Mutex},
+    },
 };
 
 #[cfg(target_os = "fuchsia")]
-use {fuchsia_zircon as zx, fuchsia_zircon::Vmo, mapped_vmo::Mapping, std::sync::Arc};
+use {fuchsia_zircon as zx, fuchsia_zircon::Vmo, mapped_vmo::Mapping};
 
 pub use crate::reader::tree_reader::SnapshotTree;
 
@@ -50,16 +53,22 @@ impl Snapshot {
     /// Try to take a consistent snapshot of the given VMO once.
     ///
     /// Returns a Snapshot on success or an Error if a consistent snapshot could not be taken.
-    pub fn try_once_from_vmo(source: &impl SnapshotSource) -> Result<Snapshot, ReaderError> {
+    pub fn try_once_from_vmo<'a, T>(source: &'a T) -> Result<Snapshot, ReaderError>
+    where
+        T: ReadSnapshot + 'a,
+        &'a T: TryInto<BackingBuffer>,
+    {
         Snapshot::try_once_with_callback(source, &mut || {})
     }
 
-    fn try_once_with_callback<F>(
-        source: &impl SnapshotSource,
+    fn try_once_with_callback<'a, F, T>(
+        source: &'a T,
         read_callback: &mut F,
     ) -> Result<Snapshot, ReaderError>
     where
         F: FnMut() -> (),
+        T: ReadSnapshot + 'a,
+        &'a T: TryInto<BackingBuffer>,
     {
         // Read the generation count one time
         let mut header_bytes: [u8; 32] = [0; 32];
@@ -69,7 +78,7 @@ impl Snapshot {
 
         if let Ok(gen) = generation {
             if gen == constants::VMO_FROZEN {
-                match source.to_backing_buffer() {
+                match source.try_into() {
                     Ok(buffer) => return Ok(Snapshot { buffer }),
                     // on error, try and read via the full snapshot algo
                     Err(_) => {}
@@ -104,12 +113,14 @@ impl Snapshot {
         Err(ReaderError::InconsistentSnapshot)
     }
 
-    fn try_from_with_callback<F>(
-        source: &impl SnapshotSource,
+    fn try_from_with_callback<'a, F, T>(
+        source: &'a T,
         mut read_callback: F,
     ) -> Result<Snapshot, ReaderError>
     where
         F: FnMut() -> (),
+        T: ReadSnapshot + 'a,
+        &'a T: TryInto<BackingBuffer>,
     {
         let mut i = 0;
         loop {
@@ -177,10 +188,10 @@ impl TryFrom<Vec<u8>> for Snapshot {
 }
 
 /// Construct a snapshot from a VMO.
-impl TryFrom<&SnapshotSourceT> for Snapshot {
+impl TryFrom<&SnapshotSource> for Snapshot {
     type Error = ReaderError;
 
-    fn try_from(source: &SnapshotSourceT) -> Result<Self, Self::Error> {
+    fn try_from(source: &SnapshotSource) -> Result<Self, Self::Error> {
         Snapshot::try_from_with_callback(source, || {})
     }
 }
@@ -278,15 +289,22 @@ impl ReadableBlockContainer for &BackingBuffer {
 
 #[cfg(target_os = "fuchsia")]
 impl TryFrom<&Vmo> for BackingBuffer {
-    type Error = zx::Status;
+    type Error = ReaderError;
     fn try_from(vmo: &zx::Vmo) -> Result<Self, Self::Error> {
-        let mapped = Arc::new(Mapping::create_from_vmo(
-            vmo,
-            vmo.get_size()? as usize,
-            zx::VmarFlags::PERM_READ,
-        )?);
+        let mapping = vmo
+            .get_size()
+            .and_then(|size| Mapping::create_from_vmo(vmo, size as usize, zx::VmarFlags::PERM_READ))
+            .map_err(ReaderError::Vmo)?;
+        Ok(BackingBuffer::from(Arc::new(mapping)))
+    }
+}
 
-        return Ok(BackingBuffer::from(mapped));
+impl TryFrom<&Arc<Mutex<Vec<u8>>>> for BackingBuffer {
+    type Error = ReaderError;
+    fn try_from(other: &Arc<Mutex<Vec<u8>>>) -> Result<BackingBuffer, Self::Error> {
+        Ok(BackingBuffer::from(
+            other.try_lock().map_err(|_| ReaderError::MissingHeaderOrLocked)?.clone(),
+        ))
     }
 }
 

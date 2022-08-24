@@ -45,7 +45,7 @@ use fuchsia_zircon::Vmo;
 pub use {
     crate::reader::{
         error::ReaderError,
-        readable_tree::{ReadableTree, SnapshotSource, SnapshotSourceT},
+        readable_tree::{ReadSnapshot, ReadableTree, SnapshotSource},
         tree_reader::read,
         tree_reader::read_with_timeout,
     },
@@ -546,9 +546,8 @@ mod tests {
     use {
         super::*,
         crate::{
-            assert_data_tree, assert_json_diff, reader::readable_tree::SnapshotSource,
-            ArrayProperty, ExponentialHistogramParams, HistogramProperty, Inspector,
-            LinearHistogramParams, StringReference,
+            assert_data_tree, assert_json_diff, ArrayProperty, ExponentialHistogramParams,
+            HistogramProperty, Inspector, LinearHistogramParams, StringReference,
         },
         anyhow::Error,
         futures::prelude::*,
