@@ -45,9 +45,9 @@ message LineRange {
   int32 last = 2;
 
   // Meaning of values:
-  // * positive: the lines are covered.
-  // * zero: the lines are instrumented but not covered by tests.
-  // * negative: if the lines are uncoverable or uninstrumented
+  // - positive: the lines are covered.
+  // - zero: the lines are instrumented but not covered by tests.
+  // - negative: if the lines are uncoverable or uninstrumented
   //
   // If the coverage tool doesn't support counting how many times a line was
   // executed, the value could only be 1 or 0; otherwise the value could be
@@ -157,14 +157,14 @@ message CoverageSummary {
 }
 
 // Represents the summary metrics for:
-// * A single directory and its immediate children.
-// * All directories mapping to a single crbug component.
+// - A single directory and its immediate children.
+// - All directories mapping to a single crbug component.
 message GroupCoverageSummary {
   // Two cases:
-  // * The full path of the directory relative to the root of the code base.
-  //   For a directory, this should end with a "/", e.g. "//base/".
-  //   For the root directory, this should be "//".
-  // * The full path of the crbug component like "Blink>Storage>AppCache".
+  //   - The full path of the directory relative to the root of the code base.
+  //     For a directory, this should end with a "/", e.g. "//base/".
+  //     For the root directory, this should be "//".
+  //   - The full path of the crbug component like "Blink>Storage>AppCache".
   string path = 1;
 
   // The coverage metrics for its sub directories.
