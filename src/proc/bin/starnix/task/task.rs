@@ -985,7 +985,7 @@ impl cmp::PartialEq for Task {
     fn eq(&self, other: &Self) -> bool {
         let ptr: *const Task = self;
         let other_ptr: *const Task = other;
-        return ptr == other_ptr;
+        ptr == other_ptr
     }
 }
 

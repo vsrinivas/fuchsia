@@ -70,7 +70,7 @@ pub fn sys_gettimeofday(
     if !user_tz.is_null() {
         not_implemented!(current_task, "gettimeofday does not implement tz argument");
     }
-    return Ok(());
+    Ok(())
 }
 
 pub fn sys_clock_nanosleep(

@@ -188,7 +188,7 @@ impl EpollFileObject {
         let mut state = self.state.write();
         let key = as_epoll_key(&file);
         match state.wait_objects.entry(key) {
-            Entry::Occupied(_) => return error!(EEXIST),
+            Entry::Occupied(_) => error!(EEXIST),
             Entry::Vacant(entry) => {
                 let wait_object = entry.insert(WaitObject {
                     target: Arc::downgrade(file),
@@ -225,7 +225,7 @@ impl EpollFileObject {
                 wait_object.events = FdEvents::from(epoll_event.events);
                 self.wait_on_file(current_task, key, wait_object)
             }
-            Entry::Vacant(_) => return error!(ENOENT),
+            Entry::Vacant(_) => error!(ENOENT),
         }
     }
 
@@ -405,7 +405,7 @@ impl FileOps for EpollFileObject {
     ) -> WaitKey {
         let present_events = self.query_events(current_task);
         if events & present_events && !options.contains(WaitAsyncOptions::EDGE_TRIGGERED) {
-            return waiter.wake_immediately(present_events.mask(), handler);
+            waiter.wake_immediately(present_events.mask(), handler)
         } else {
             let mut state = self.state.write();
             state.waiters.wait_async_mask(waiter, events.mask(), handler)

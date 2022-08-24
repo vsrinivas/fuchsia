@@ -190,7 +190,7 @@ impl DeviceOps for Arc<DevPtsDevice> {
             _ if id.major() < DEVPTS_FIRST_MAJOR
                 || id.major() >= DEVPTS_FIRST_MAJOR + DEVPTS_MAJOR_COUNT =>
             {
-                return error!(ENODEV);
+                error!(ENODEV)
             }
             // /dev/pts/??
             _ => {

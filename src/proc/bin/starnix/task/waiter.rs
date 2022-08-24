@@ -428,7 +428,8 @@ impl WaitQueue {
                     limit -= 1;
                     return entry.persistent;
                 }
-                return true;
+
+                true
             })
         });
     }

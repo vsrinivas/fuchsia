@@ -78,7 +78,7 @@ impl MessageQueue {
             }
             *address = message.address.clone();
         }
-        return true;
+        true
     }
 
     /// Reads messages until there are no more messages, a message with ancillary data is

@@ -28,7 +28,7 @@ pub fn sys_uname(current_task: &CurrentTask, name: UserRef<utsname_t>) -> Result
     init_array(&mut result.version, "starnix");
     init_array(&mut result.machine, "x86_64");
     current_task.mm.write_object(name, &result)?;
-    return Ok(());
+    Ok(())
 }
 
 pub fn sys_getrandom(

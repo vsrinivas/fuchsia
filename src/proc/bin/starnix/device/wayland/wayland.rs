@@ -151,7 +151,6 @@ async fn serve_view_provider(
                             Ok(_) => {}
                             Err(e) => {
                                 tracing::error!("Got an error when creating view: {:?}", e);
-                                return;
                             }
                         }
                     });
@@ -162,7 +161,6 @@ async fn serve_view_provider(
                             Ok(_) => {}
                             Err(e) => {
                                 tracing::error!("Got an error when creating view: {:?}", e);
-                                return;
                             }
                         }
                     });

@@ -181,7 +181,7 @@ impl SocketOps for VsockSocket {
                     ancillary_data: vec![],
                 })
             }
-            _ => return error!(EBADF),
+            _ => error!(EBADF),
         }
     }
 

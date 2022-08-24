@@ -818,7 +818,7 @@ impl TermIOS for uapi::termios {
         self.c_lflag & flags == flags
     }
     fn is_eof(&self, c: RawByte) -> bool {
-        return c == self.c_cc[VEOF as usize] && self.c_cc[VEOF as usize] != DISABLED_CHAR;
+        c == self.c_cc[VEOF as usize] && self.c_cc[VEOF as usize] != DISABLED_CHAR
     }
     fn is_terminating(&self, character_bytes: &[RawByte]) -> bool {
         // All terminating characters are 1 byte.

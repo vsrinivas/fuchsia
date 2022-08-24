@@ -223,7 +223,7 @@ impl UnixControlData {
                 Ok(UnixControlData::Credentials(credentials))
             }
             SCM_SECURITY => Ok(UnixControlData::Security(message.data)),
-            _ => return error!(EINVAL),
+            _ => error!(EINVAL),
         }
     }
 

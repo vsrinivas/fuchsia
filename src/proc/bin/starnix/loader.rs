@@ -90,7 +90,7 @@ fn populate_initial_stack(
     stack_pointer -= stack_pointer.ptr() % 16;
     write_stack(main_data.as_slice(), stack_pointer)?;
 
-    return Ok(stack_pointer);
+    Ok(stack_pointer)
 }
 
 struct LoadedElf {

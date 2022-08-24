@@ -898,7 +898,7 @@ impl MemoryManager {
         }
 
         state.brk = Some(brk);
-        return Ok(brk.current);
+        Ok(brk.current)
     }
 
     pub fn snapshot_to(&self, target: &MemoryManager) -> Result<(), Errno> {

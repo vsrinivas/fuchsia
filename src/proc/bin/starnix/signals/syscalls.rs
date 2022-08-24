@@ -458,9 +458,9 @@ where
     }
 
     if sent_signal {
-        return Ok(());
+        Ok(())
     } else {
-        return Err(last_error);
+        Err(last_error)
     }
 }
 

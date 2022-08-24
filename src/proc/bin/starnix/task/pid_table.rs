@@ -39,7 +39,7 @@ impl PidTable {
     pub fn allocate_pid(&mut self) -> pid_t {
         // TODO: wrap the pid number and check for collisions
         self.last_pid += 1;
-        return self.last_pid;
+        self.last_pid
     }
 
     pub fn get_task(&self, pid: pid_t) -> Option<Arc<Task>> {

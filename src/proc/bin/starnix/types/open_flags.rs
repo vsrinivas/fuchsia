@@ -40,12 +40,12 @@ bitflags! {
 impl OpenFlags {
     pub fn can_read(&self) -> bool {
         let access_mode = self.bits() & Self::ACCESS_MASK.bits();
-        return access_mode == uapi::O_RDONLY || access_mode == uapi::O_RDWR;
+        access_mode == uapi::O_RDONLY || access_mode == uapi::O_RDWR
     }
 
     pub fn can_write(&self) -> bool {
         let access_mode = self.bits() & Self::ACCESS_MASK.bits();
-        return access_mode == uapi::O_WRONLY || access_mode == uapi::O_RDWR;
+        access_mode == uapi::O_WRONLY || access_mode == uapi::O_RDWR
     }
 }
 

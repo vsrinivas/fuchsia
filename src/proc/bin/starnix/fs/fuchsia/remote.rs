@@ -102,7 +102,7 @@ fn get_zxio_signals_from_events(events: FdEvents) -> zxio::zxio_signals_t {
         signals |= ZxioSignals::READ_DISABLED;
     }
 
-    return signals.bits();
+    signals.bits()
 }
 
 fn get_events_from_zxio_signals(signals: zxio::zxio_signals_t) -> FdEvents {
@@ -357,9 +357,9 @@ impl RemoteDirectoryIterator {
                 };
                 let result = iterator.next();
                 match result {
-                    Some(Ok(v)) => return Some(Ok(v)),
-                    Some(Err(status)) => return Some(Err(from_status_like_fdio!(status))),
-                    None => return None,
+                    Some(Ok(v)) => Some(Ok(v)),
+                    Some(Err(status)) => Some(Err(from_status_like_fdio!(status))),
+                    None => None,
                 }
             }
         }

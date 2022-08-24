@@ -36,14 +36,14 @@ pub fn duration_from_timespec(ts: timespec) -> Result<zx::Duration, Errno> {
     if ts.tv_sec < 0 || ts.tv_nsec < 0 {
         return error!(EINVAL);
     }
-    return Ok(zx::Duration::from_seconds(ts.tv_sec) + zx::Duration::from_nanos(ts.tv_nsec));
+    Ok(zx::Duration::from_seconds(ts.tv_sec) + zx::Duration::from_nanos(ts.tv_nsec))
 }
 
 pub fn duration_from_timeval(tv: timeval) -> Result<zx::Duration, Errno> {
     if tv.tv_usec >= MICROS_PER_SECOND {
         return error!(EINVAL);
     }
-    return Ok(zx::Duration::from_seconds(tv.tv_sec) + zx::Duration::from_micros(tv.tv_usec));
+    Ok(zx::Duration::from_seconds(tv.tv_sec) + zx::Duration::from_micros(tv.tv_usec))
 }
 
 pub fn duration_from_poll_timeout(timeout_ms: i32) -> Result<zx::Duration, Errno> {
