@@ -63,9 +63,9 @@ class CreateCobaltConfigTest : public gtest::TestLoopFixture {
           return loader_sync;
         },
         UploadScheduleConfig{target_interval, min_interval, initial_interval, jitter},
-        event_aggregator_backfill_days, use_memory_observation_store,
-        max_bytes_per_observation_store, cobalt::kDefaultStorageQuotas, product_name, board_name,
-        version,
+        event_aggregator_backfill_days, /*test_dont_backfill_empty_reports=*/false,
+        use_memory_observation_store, max_bytes_per_observation_store,
+        cobalt::kDefaultStorageQuotas, product_name, board_name, version,
         std::make_unique<ActivityListenerImpl>(dispatcher(), context_provider_.context()->svc()),
         std::make_unique<DiagnosticsImpl>(inspect::Node()));
   }
@@ -173,7 +173,8 @@ class CobaltAppTest : public gtest::TestLoopFixture {
             context_provider_.TakeContext(), dispatcher(), lifecycle_.NewRequest(dispatcher()),
             []() { /* Stub shutdown callback */ }, inspector_.GetRoot().CreateChild("cobalt_app"),
             inspect::Node(), std::unique_ptr<testing::FakeCobaltService>(fake_service_),
-            std::unique_ptr<FakeFuchsiaSystemClock>(clock_), true, false) {}
+            std::unique_ptr<FakeFuchsiaSystemClock>(clock_), true,
+            /*test_dont_backfill_empty_reports=*/false, false) {}
 
  protected:
   void SetUp() override {

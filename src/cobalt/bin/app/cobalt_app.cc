@@ -66,10 +66,11 @@ CobaltConfig CobaltApp::CreateCobaltConfig(
     async_dispatcher_t* dispatcher, const std::string& global_metrics_registry_path,
     const FuchsiaConfigurationData& configuration_data, FuchsiaSystemClockInterface* system_clock,
     FuchsiaHTTPClient::LoaderFactory http_loader_factory, UploadScheduleConfig upload_schedule_cfg,
-    size_t event_aggregator_backfill_days, bool use_memory_observation_store,
-    size_t max_bytes_per_observation_store, StorageQuotas storage_quotas,
-    const std::string& product_name, const std::string& board_name, const std::string& version,
-    std::unique_ptr<ActivityListenerImpl> listener, std::unique_ptr<DiagnosticsImpl> diagnostics) {
+    size_t event_aggregator_backfill_days, bool test_dont_backfill_empty_reports,
+    bool use_memory_observation_store, size_t max_bytes_per_observation_store,
+    StorageQuotas storage_quotas, const std::string& product_name, const std::string& board_name,
+    const std::string& version, std::unique_ptr<ActivityListenerImpl> listener,
+    std::unique_ptr<DiagnosticsImpl> diagnostics) {
   // |target_pipeline| is the pipeline used for sending data to cobalt. In particular, it is the
   // source of the encryption keys, as well as determining the destination for generated
   // observations (either clearcut, or the local filesystem).
@@ -118,6 +119,7 @@ CobaltConfig CobaltApp::CreateCobaltConfig(
       .global_registry = ReadRegistry(global_metrics_registry_path),
 
       .local_aggregation_backfill_days = event_aggregator_backfill_days,
+      .test_dont_backfill_empty_reports = test_dont_backfill_empty_reports,
 
       .validated_clock = system_clock,
 
@@ -134,9 +136,10 @@ lib::statusor::StatusOr<std::unique_ptr<CobaltApp>> CobaltApp::CreateCobaltApp(
     fidl::InterfaceRequest<fuchsia::process::lifecycle::Lifecycle> lifecycle_handle,
     fit::callback<void()> shutdown, inspect::Node inspect_node,
     UploadScheduleConfig upload_schedule_cfg, size_t event_aggregator_backfill_days,
-    bool start_event_aggregator_worker, bool use_memory_observation_store,
-    size_t max_bytes_per_observation_store, StorageQuotas storage_quotas,
-    const std::string& product_name, const std::string& board_name, const std::string& version) {
+    bool start_event_aggregator_worker, bool test_dont_backfill_empty_reports,
+    bool use_memory_observation_store, size_t max_bytes_per_observation_store,
+    StorageQuotas storage_quotas, const std::string& product_name, const std::string& board_name,
+    const std::string& version) {
   inspect::Node inspect_config_node = inspect_node.CreateChild("configuration_data");
   inspect_config_node.RecordString("product_name", product_name);
   inspect_config_node.RecordString("board_name", board_name);
@@ -160,18 +163,19 @@ lib::statusor::StatusOr<std::unique_ptr<CobaltApp>> CobaltApp::CreateCobaltApp(
             context_ptr->svc()->Connect(loader_sync.NewRequest());
             return loader_sync;
           },
-          upload_schedule_cfg, event_aggregator_backfill_days, use_memory_observation_store,
-          max_bytes_per_observation_store, storage_quotas, product_name, board_name, version,
+          upload_schedule_cfg, event_aggregator_backfill_days, test_dont_backfill_empty_reports,
+          use_memory_observation_store, max_bytes_per_observation_store, storage_quotas,
+          product_name, board_name, version,
           std::make_unique<ActivityListenerImpl>(dispatcher, context->svc()),
           std::make_unique<DiagnosticsImpl>(inspect_node.CreateChild("core")))));
 
   cobalt_service->SetDataCollectionPolicy(configuration_data.GetDataCollectionPolicy());
 
-  return std::unique_ptr<CobaltApp>(
-      new CobaltApp(std::move(context), dispatcher, std::move(lifecycle_handle),
-                    std::move(shutdown), std::move(inspect_node), std::move(inspect_config_node),
-                    std::move(cobalt_service), std::move(validated_clock),
-                    start_event_aggregator_worker, configuration_data.GetWatchForUserConsent()));
+  return std::unique_ptr<CobaltApp>(new CobaltApp(
+      std::move(context), dispatcher, std::move(lifecycle_handle), std::move(shutdown),
+      std::move(inspect_node), std::move(inspect_config_node), std::move(cobalt_service),
+      std::move(validated_clock), start_event_aggregator_worker, test_dont_backfill_empty_reports,
+      configuration_data.GetWatchForUserConsent()));
 }
 
 CobaltApp::CobaltApp(
@@ -180,7 +184,8 @@ CobaltApp::CobaltApp(
     fit::callback<void()> shutdown, inspect::Node inspect_node, inspect::Node inspect_config_node,
     std::unique_ptr<CobaltServiceInterface> cobalt_service,
     std::unique_ptr<FuchsiaSystemClockInterface> validated_clock,
-    bool start_event_aggregator_worker, bool watch_for_user_consent)
+    bool start_event_aggregator_worker, bool test_dont_backfill_empty_reports,
+    bool watch_for_user_consent)
     : context_(std::move(context)),
       inspect_node_(std::move(inspect_node)),
       inspect_config_node_(std::move(inspect_config_node)),

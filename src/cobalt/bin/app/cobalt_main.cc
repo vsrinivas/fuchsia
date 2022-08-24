@@ -70,6 +70,8 @@ constexpr std::string_view kTestOnlyFakeClockFlagName = "test_only_use_fake_cloc
 
 constexpr std::string_view kRequireLifecycleService = "require_lifecycle_service";
 
+constexpr std::string_view kTestDontBackfillEmptyReports = "test_dont_backfill_empty_reports";
+
 // We want to only upload every hour. This is the interval that will be
 // approached by the uploader.
 const std::chrono::hours kScheduleIntervalDefault(1);
@@ -246,6 +248,8 @@ int main(int argc, const char** argv) {
 
   bool use_fake_clock = command_line.HasOption(kTestOnlyFakeClockFlagName);
 
+  bool test_dont_backfill_empty_reports = command_line.HasOption(kTestDontBackfillEmptyReports);
+
   FX_LOGS(INFO) << "Cobalt is starting with the following parameters: "
                 << "schedule_interval=" << schedule_interval.count()
                 << " seconds, min_interval=" << min_interval.count()
@@ -257,11 +261,16 @@ int main(int argc, const char** argv) {
                 << ", storage_quotas.total_capacity_bytes=" << storage_quotas.total_capacity_bytes
                 << ", event_aggregator_backfill_days=" << event_aggregator_backfill_days
                 << ", start_event_aggregator_worker=" << start_event_aggregator_worker
-                << ", test_only_use_fake_clock=" << use_fake_clock << ".";
+                << ", test_only_use_fake_clock=" << use_fake_clock
+                << ", test_dont_backfill_empty_reports=" << test_dont_backfill_empty_reports << ".";
 
   if (use_fake_clock) {
     FX_LOGS(WARNING) << "Using a fake clock. This should only be enabled in tests.";
     ReplaceRuntimeClock();
+  }
+
+  if (test_dont_backfill_empty_reports) {
+    FX_LOGS(WARNING) << "Not backfilling empty reports. This should only be enabled in tests.";
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
@@ -342,8 +351,8 @@ int main(int argc, const char** argv) {
           std::move(context), loop.dispatcher(), std::move(lifecycle_handle),
           [loop = &loop]() { loop->Quit(); }, inspector.root().CreateChild("cobalt_app"),
           upload_schedule, event_aggregator_backfill_days, start_event_aggregator_worker,
-          use_memory_observation_store, max_bytes_per_observation_store, storage_quotas, product,
-          boardname, version);
+          test_dont_backfill_empty_reports, use_memory_observation_store,
+          max_bytes_per_observation_store, storage_quotas, product, boardname, version);
 
   if (!app.ok()) {
     FX_LOGS(FATAL) << "Failed to construct the cobalt app: " << app.status();

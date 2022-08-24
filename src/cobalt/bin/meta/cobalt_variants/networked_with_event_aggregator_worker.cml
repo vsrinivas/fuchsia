@@ -16,6 +16,7 @@
             "--min_interval_seconds=0",
             "--event_aggregator_backfill_days=0",
             "--start_event_aggregator_worker=true",
+            "--test_dont_backfill_empty_reports=true",
         ],
     },
 }

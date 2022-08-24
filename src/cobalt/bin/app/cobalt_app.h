@@ -62,6 +62,10 @@ class CobaltApp {
   // |start_event_aggregator_worker| If true, starts the EventAggregatorManager's worker thread
   //                                 after constructing the EventAggregatorManager.
   //
+  // |test_dont_backfill_empty_reports| If true, reports that have never had any events will be
+  //                                    skipped in the observation generation backfill. Only enable
+  //                                    this in tests.
+  //
   // |use_memory_observation_store| If this is true, the observation stores will be in-memory
   //                                only, otherwise they will be file-system backed.
   //
@@ -89,9 +93,10 @@ class CobaltApp {
       fidl::InterfaceRequest<fuchsia::process::lifecycle::Lifecycle> lifecycle_handle,
       fit::callback<void()> shutdown, inspect::Node inspect_node,
       UploadScheduleConfig upload_schedule_cfg, size_t event_aggregator_backfill_days,
-      bool start_event_aggregator_worker, bool use_memory_observation_store,
-      size_t max_bytes_per_observation_store, StorageQuotas storage_quotas,
-      const std::string& product_name, const std::string& board_name, const std::string& version);
+      bool start_event_aggregator_worker, bool test_dont_backfill_empty_reports,
+      bool use_memory_observation_store, size_t max_bytes_per_observation_store,
+      StorageQuotas storage_quotas, const std::string& product_name, const std::string& board_name,
+      const std::string& version);
 
  private:
   friend class CobaltAppTest;
@@ -103,10 +108,10 @@ class CobaltApp {
       FuchsiaSystemClockInterface* validated_clock,
       utils::FuchsiaHTTPClient::LoaderFactory http_loader_factory,
       UploadScheduleConfig upload_schedule_cfg, size_t event_aggregator_backfill_days,
-      bool use_memory_observation_store, size_t max_bytes_per_observation_store,
-      StorageQuotas storage_quotas, const std::string& product_name, const std::string& board_name,
-      const std::string& version, std::unique_ptr<ActivityListenerImpl> listener,
-      std::unique_ptr<DiagnosticsImpl> diagnostics);
+      bool test_dont_backfill_empty_reports, bool use_memory_observation_store,
+      size_t max_bytes_per_observation_store, StorageQuotas storage_quotas,
+      const std::string& product_name, const std::string& board_name, const std::string& version,
+      std::unique_ptr<ActivityListenerImpl> listener, std::unique_ptr<DiagnosticsImpl> diagnostics);
 
   CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispatcher_t* dispatcher,
             fidl::InterfaceRequest<fuchsia::process::lifecycle::Lifecycle> lifecycle_handle,
@@ -114,7 +119,8 @@ class CobaltApp {
             inspect::Node inspect_config_node,
             std::unique_ptr<CobaltServiceInterface> cobalt_service,
             std::unique_ptr<FuchsiaSystemClockInterface> validated_clock,
-            bool start_event_aggregator_worker, bool watch_for_user_consent);
+            bool start_event_aggregator_worker, bool test_dont_backfill_empty_reports,
+            bool watch_for_user_consent);
 
   static encoder::ClientSecret getClientSecret();
 
