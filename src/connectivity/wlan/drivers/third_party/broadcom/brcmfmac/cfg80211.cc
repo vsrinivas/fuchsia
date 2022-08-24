@@ -5751,6 +5751,13 @@ static void brcmf_register_event_handlers(struct brcmf_cfg80211_info* cfg) {
 }
 
 static void brcmf_deinit_cfg_mem(struct brcmf_cfg80211_info* cfg) {
+  // Delete (which also causes a stop) all timers first. Their callbacks may use the data being
+  // free'd below so we must ensure they are not called after those free calls.
+  delete cfg->disconnect_timer;
+  delete cfg->escan_timer;
+  delete cfg->signal_report_timer;
+  delete cfg->ap_start_timer;
+  delete cfg->connect_timer;
   free(cfg->conf);
   cfg->conf = nullptr;
   free(cfg->extra_buf);
@@ -5759,11 +5766,6 @@ static void brcmf_deinit_cfg_mem(struct brcmf_cfg80211_info* cfg) {
   cfg->wowl.nd = nullptr;
   free(cfg->wowl.nd_info);
   cfg->wowl.nd_info = nullptr;
-  delete cfg->disconnect_timer;
-  delete cfg->escan_timer;
-  delete cfg->signal_report_timer;
-  delete cfg->ap_start_timer;
-  delete cfg->connect_timer;
 }
 
 static zx_status_t brcmf_init_cfg_mem(struct brcmf_cfg80211_info* cfg) {

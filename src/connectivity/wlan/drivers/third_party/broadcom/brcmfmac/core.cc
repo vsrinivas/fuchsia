@@ -299,7 +299,9 @@ zx_status_t brcmf_start_xmit(struct brcmf_pub* drvr,
     BRCMF_ERR("xmit rejected state=%d", drvr->bus_if->state);
     for (auto& frame : frames) {
       brcmf_if* ifp = brcmf_get_ifp(drvr, frame.PortId());
-      ++ifp->ndev->stats.tx_dropped;
+      if (ifp) {
+        ++ifp->ndev->stats.tx_dropped;
+      }
     }
     brcmf_tx_complete(drvr, frames, ZX_ERR_UNAVAILABLE);
     return ZX_ERR_UNAVAILABLE;
