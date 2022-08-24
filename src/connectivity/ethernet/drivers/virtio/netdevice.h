@@ -39,7 +39,7 @@ using DeviceType = ddk::Device<NetworkDevice, ddk::GetProtocolable, ddk::Unbinda
 class NetworkDevice : public Device,
                       // Mixins for protocol device:
                       public DeviceType,
-                      // Mixin for Ethernet banjo protocol:
+                      // Mixin for Network device banjo protocol:
                       public ddk::NetworkDeviceImplProtocol<NetworkDevice, ddk::base_protocol>,
                       public ddk::NetworkPortProtocol<NetworkDevice>,
                       public ddk::MacAddrProtocol<NetworkDevice> {
