@@ -12,6 +12,7 @@
 #include <ktl/move.h>
 #include <vm/fault.h>
 #include <vm/page_source.h>
+#include <vm/physmap.h>
 #include <vm/vm_object_physical.h>
 
 #include <ktl/enforce.h>
@@ -21,6 +22,11 @@ namespace {
 constexpr uint kInterruptMmuFlags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
 constexpr uint kGuestMmuFlags =
     ARCH_MMU_FLAG_CACHED | ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
+constexpr uint kContiguousMmuFlags = ARCH_MMU_FLAG_CACHED | ARCH_MMU_FLAG_PERM_READ |
+                                     ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_PERM_EXECUTE;
+
+static_assert(PHYSMAP_SIZE % PAGE_SIZE == 0, "Physmap is not a multiple of the page size");
+constexpr size_t kNumPhysmapPages = PHYSMAP_SIZE / PAGE_SIZE;
 
 }  // namespace
 
@@ -192,6 +198,30 @@ fbl::RefPtr<VmMapping> GuestPhysicalAddressSpace::FindMapping(zx_gpaddr_t guest_
     }
   }
   return nullptr;
+}
+
+zx::status<DirectAddressSpace> DirectAddressSpace::Create() {
+  auto guest_aspace = VmAspace::Create(VmAspace::Type::GuestPhysical, "guest_physical");
+  if (!guest_aspace) {
+    return zx::error(ZX_ERR_NO_MEMORY);
+  }
+  zx_status_t status = guest_aspace->arch_aspace().MapContiguous(0, 0, kNumPhysmapPages,
+                                                                 kContiguousMmuFlags, nullptr);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  DirectAddressSpace direct_aspace;
+  direct_aspace.guest_aspace_ = ktl::move(guest_aspace);
+  return zx::ok(ktl::move(direct_aspace));
+}
+
+DirectAddressSpace::~DirectAddressSpace() {
+  if (guest_aspace_) {
+    zx_status_t status = guest_aspace_->arch_aspace().Unmap(
+        0, kNumPhysmapPages, ArchVmAspace::EnlargeOperation::Yes, nullptr);
+    DEBUG_ASSERT(status == ZX_OK);
+    guest_aspace_->Destroy();
+  }
 }
 
 }  // namespace hypervisor

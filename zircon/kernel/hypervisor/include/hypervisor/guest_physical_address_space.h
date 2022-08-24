@@ -83,6 +83,25 @@ class GuestPhysicalAddressSpace {
   fbl::RefPtr<VmAspace> guest_aspace_;
 };
 
+class DirectAddressSpace {
+ public:
+  static zx::status<DirectAddressSpace> Create();
+  ~DirectAddressSpace();
+
+  DirectAddressSpace() = default;
+  DirectAddressSpace(DirectAddressSpace&&) = default;
+  DirectAddressSpace& operator=(DirectAddressSpace&&) = default;
+
+  DirectAddressSpace(const DirectAddressSpace&) = delete;
+  DirectAddressSpace& operator=(const DirectAddressSpace&) = delete;
+
+  size_t size() const { return guest_aspace_->size(); }
+  ArchVmAspace& arch_aspace() { return guest_aspace_->arch_aspace(); }
+
+ private:
+  fbl::RefPtr<VmAspace> guest_aspace_;
+};
+
 }  // namespace hypervisor
 
 #endif  // ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_GUEST_PHYSICAL_ADDRESS_SPACE_H_

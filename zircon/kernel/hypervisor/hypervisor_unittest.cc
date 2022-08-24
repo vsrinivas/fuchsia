@@ -427,6 +427,17 @@ template <typename T>
   return true;
 }
 
+static bool direct_address_space_create() {
+  BEGIN_TEST;
+
+#ifdef ARCH_X86
+  auto direct_aspace = hypervisor::DirectAddressSpace::Create();
+  EXPECT_EQ(ZX_OK, direct_aspace.status_value(), "Failed to create DirectAddressSpace\n");
+#endif  // ARCH_X86
+
+  END_TEST;
+}
+
 static bool id_allocator_alloc_and_free() {
   BEGIN_TEST;
 
@@ -655,6 +666,7 @@ HYPERVISOR_UNITTEST(guest_physical_address_space_uncached)
 HYPERVISOR_UNITTEST(guest_physical_address_space_uncached_device)
 HYPERVISOR_UNITTEST(guest_physical_address_space_write_combining)
 HYPERVISOR_UNITTEST(guest_physical_address_space_protect)
+HYPERVISOR_UNITTEST(direct_address_space_create)
 HYPERVISOR_UNITTEST(id_allocator_alloc_and_free)
 HYPERVISOR_UNITTEST(id_allocator_alloc_and_migrate)
 HYPERVISOR_UNITTEST(interrupt_bitmap)
