@@ -473,8 +473,8 @@ TEST(Inspect, CreateStatsNode) {
   expected.size = 2 * kPageSize;
   expected.maximum_size = 2 * kPageSize;
   expected.dynamic_child_count = 1u;
-  expected.allocated_blocks = 383u;
-  expected.deallocated_blocks = 4u;
+  expected.allocated_blocks = 381u;
+  expected.deallocated_blocks = 2u;
   expected.failed_allocations = 2u;
   CheckStats(&hierarchy, &expected);
 }
