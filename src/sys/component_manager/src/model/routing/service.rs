@@ -84,16 +84,15 @@ pub struct FilteredServiceDirectory {
 
 impl FilteredServiceDirectory {
     /// Returns true if the requested path matches an allowed instance.
-    pub fn path_matches_allowed_instance(self: &Self, target_path: &String) -> bool {
-        if target_path.is_empty() {
+    pub fn path_matches_allowed_instance(self: &Self, path: &String) -> bool {
+        if path.is_empty() {
             return false;
         }
-        if self.source_instance_filter.is_empty() {
-            // If an instance was renamed the original name shouldn't be usable.
-            !self.instance_name_source_to_target.contains_key(target_path)
-        } else {
-            self.source_instance_filter.contains(target_path)
+        // If an instance was renamed the original name shouldn't be usable.
+        if self.instance_name_source_to_target.contains_key(path) {
+            return false;
         }
+        self.source_instance_filter.is_empty() || self.source_instance_filter.contains(path)
     }
 }
 
@@ -172,17 +171,6 @@ impl Directory for FilteredServiceDirectory {
             Ok(dirent_vec) => {
                 for dirent in dirent_vec {
                     let entry_name = dirent.name;
-                    // If entry_name is the same as one of the target values in an instance rename, skip it.
-                    // we prefer target renames over original source instance names in the case of a conflict.
-                    if let Some(source_name) = self.instance_name_target_to_source.get(&entry_name)
-                    {
-                        // If the source and target name are the same, then there is no conflict to resolve,
-                        // and we allow the no-op source to target name translation to happen below.
-                        if source_name != &entry_name {
-                            continue;
-                        }
-                    }
-
                     let target_entry_name_vec = self
                         .instance_name_source_to_target
                         .get(&entry_name)
