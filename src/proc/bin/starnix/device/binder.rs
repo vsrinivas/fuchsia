@@ -754,6 +754,10 @@ impl HandleTable {
         });
 
         if let Some(existing_idx) = existing_idx {
+            // Increment the number of strong reference, as the caller expects having a strong
+            // reference to it.
+            // The incrementation cannot fail as the index has just been computed and checked.
+            self.inc_strong(existing_idx).expect("inc_strong");
             return Handle::Object { index: existing_idx };
         }
 
@@ -2698,6 +2702,42 @@ mod tests {
         let driver = BinderDriver::new();
         let binder_proc = driver.create_process(1);
         assert!(binder_proc.handles.lock().get(3).is_none());
+    }
+
+    #[fuchsia::test]
+    fn handle_is_not_dropped_after_transaction_finishes_if_it_already_existed() {
+        let driver = BinderDriver::new();
+        let proc_1 = driver.create_process(1);
+        let proc_2 = driver.create_process(2);
+
+        let transaction_ref = Arc::new(BinderObject::new(
+            &proc_1,
+            LocalBinderObject {
+                weak_ref_addr: UserAddress::from(0xffffffffffffffff),
+                strong_ref_addr: UserAddress::from(0x1111111111111111),
+            },
+        ));
+
+        // Insert the transaction once.
+        let _ = proc_2.handles.lock().insert_for_transaction(transaction_ref.clone());
+
+        // Insert the same object.
+        let handle = proc_2.handles.lock().insert_for_transaction(transaction_ref.clone());
+
+        // The object should be present in the handle table until a strong decrement.
+        assert!(Arc::ptr_eq(
+            &proc_2.handles.lock().get(handle.object_index()).expect("valid object"),
+            &transaction_ref
+        ));
+
+        // Drop the transaction reference.
+        proc_2.handles.lock().dec_strong(handle.object_index()).expect("dec_strong");
+
+        // The handle should not have been dropped, as it was already in the table beforehand.
+        assert!(Arc::ptr_eq(
+            &proc_2.handles.lock().get(handle.object_index()).expect("valid object"),
+            &transaction_ref
+        ));
     }
 
     #[fuchsia::test]
