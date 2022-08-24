@@ -13,6 +13,7 @@
 .flutter_tool_state
 .fx
 .fx-build-dir
+.fx-build-metrics-config
 .fx-metrics-config
 .fx-multi-list
 .fx-remote-config

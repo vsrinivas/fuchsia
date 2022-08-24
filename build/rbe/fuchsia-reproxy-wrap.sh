@@ -10,6 +10,38 @@ set -e
 script="$0"
 script_dir="$(dirname "$script")"
 
+# The project_root must cover all inputs, prebuilt tools, and build outputs.
+# This should point to $FUCHSIA_DIR for the Fuchsia project.
+# ../../ because this script lives in build/rbe.
+# The value is an absolute path.
+project_root="$(readlink -f "$script_dir"/../..)"
+
+# realpath doesn't ship with Mac OS X (provided by coreutils package).
+# We only want it for calculating relative paths.
+# Work around this using Python.
+if which realpath 2>&1 > /dev/null
+then
+  function relpath() {
+    local -r from="$1"
+    local -r to="$2"
+    # Preserve symlinks.
+    realpath -s --relative-to="$from" "$to"
+  }
+else
+  # Point to our prebuilt python3.
+  python="$(ls "$project_root"/prebuilt/third_party/python3/*/bin/python3)" || {
+    echo "*** Python interpreter not found under $project_root/prebuilt/third_party/python3."
+    exit 1
+  }
+  function relpath() {
+    local -r from="$1"
+    local -r to="$2"
+    "$python" -c "import os; print(os.path.relpath('$to', start='$from'))"
+  }
+fi
+
+project_root_rel="$(relpath . "$project_root")"
+
 # defaults
 config="$script_dir"/fuchsia-re-client.cfg
 
@@ -29,7 +61,10 @@ esac
 PREBUILT_SUBDIR="$PREBUILT_OS"-"$PREBUILT_ARCH"
 
 # location of reclient binaries relative to output directory where build is run
-reclient_bindir="$script_dir"/../../prebuilt/proprietary/third_party/reclient/"$PREBUILT_SUBDIR"
+readonly reclient_bindir="$project_root_rel"/prebuilt/proprietary/third_party/reclient/"$PREBUILT_SUBDIR"
+
+# Configuration for RBE metrics and logs collection.
+readonly fx_build_metrics_config="$project_root_rel"/.fx-build-metrics-config
 
 usage() {
   cat <<EOF
@@ -122,11 +157,34 @@ EOF
   exit 1
 }
 
+# If configured, collect reproxy logs.
+BUILD_METRICS_ENABLED=0
+if [[ -f "$fx_build_metrics_config" ]]
+then source "$fx_build_metrics_config"
+fi
+
+test "$BUILD_METRICS_ENABLED" = 0 || {
+  if which uuidgen 2>&1 > /dev/null
+  then build_uuid="$(uuidgen)"
+  else
+    cat <<EOF
+'$uuidgen' is required for logs collection, but missing.
+On Debian/Ubuntu platforms, try: 'sudo apt install uuid-runtime'
+EOF
+    exit 1
+  fi
+}
+
 # Use the same config for bootstrap as for reproxy
 "$bootstrap" --re_proxy="$reproxy" --cfg="$reproxy_cfg" "${bootstrap_options[@]}"
 # b/188923283 -- added --cfg to shut down properly
 shutdown() {
   "$bootstrap" --shutdown --cfg="$reproxy_cfg"
+
+  test "$BUILD_METRICS_ENABLED" = 0 || {
+    # TODO(https://fxbug.dev/93886): actually upload logs, using $build_uuid
+    :
+  }
 }
 
 # EXIT also covers INT

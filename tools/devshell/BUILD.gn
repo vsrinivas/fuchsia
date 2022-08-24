@@ -151,6 +151,7 @@ host_script_test_data("fx_bash_tests") {
       # find tools/devshell/tests -name "*_test" -type f | xargs cat | awk '/^[ ]*BT_FILE_DEPS=/{flag=1;next}/[ ]*\)/{flag=0}flag'  | grep "tools/devshell" | sort -u | sed 's/[ ]*"\(.*\)".*/  "\/\/\1",/'
 
       files = [
+        "//tools/devshell/build-metrics",
         "//tools/devshell/contrib/blobstats",
         "//tools/devshell/contrib/ffx",
         "//tools/devshell/contrib/format-code",
