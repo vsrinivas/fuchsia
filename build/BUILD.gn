@@ -261,7 +261,6 @@ group("deprecated_zx_wrapper_allowlist") {
     "//zircon/system/ulib/debugdata/*",
     "//zircon/system/ulib/devmgr-integration-test/*",
     "//zircon/system/ulib/devmgr-launcher/*",
-    "//zircon/system/ulib/driver-integration-test/*",
     "//zircon/system/ulib/driver-unit-test/*",
     "//zircon/system/ulib/edid/*",
     "//zircon/system/ulib/elf-search/*",

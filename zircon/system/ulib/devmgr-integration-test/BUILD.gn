@@ -83,7 +83,6 @@ zx_library("devmgr-integration-test") {
     "//src/lib/isolated_devmgr/*",
     "//vendor/*",
     "//zircon/system/ulib/devmgr-integration-test/test/*",
-    "//zircon/system/ulib/driver-integration-test/*",
   ]
 
   # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.

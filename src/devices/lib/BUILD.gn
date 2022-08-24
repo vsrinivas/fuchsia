@@ -27,6 +27,5 @@ group("tests") {
     "mmio:tests",
     "synchronous-executor:tests",
     "//zircon/system/ulib/devmgr-integration-test:tests",
-    "//zircon/system/ulib/driver-integration-test:tests",
   ]
 }
