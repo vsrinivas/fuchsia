@@ -300,10 +300,12 @@ Status LibFuzzerRunner::CollectStatus() {
   auto elapsed = zx::clock::get_monotonic() - start_;
   status.set_elapsed(elapsed.to_nsecs());
 
-  auto stats = process_.GetStats();
-  if (stats.is_ok()) {
-    std::vector<ProcessStats> process_stats({stats.take_value()});
-    status.set_process_stats(std::move(process_stats));
+  if (process_.IsAlive()) {
+    auto stats = process_.GetStats();
+    if (stats.is_ok()) {
+      std::vector<ProcessStats> process_stats({stats.take_value()});
+      status.set_process_stats(std::move(process_stats));
+    }
   }
 
   return status;
