@@ -597,16 +597,6 @@ void invvpid(InvVpid invalidation, uint16_t vpid, zx_vaddr_t address) {
   ASSERT(!err);
 }
 
-uint64_t ept_pointer_from_pml4(paddr_t pml4_address) {
-  return
-      // Physical address of the PML4 page, page aligned.
-      pml4_address |
-      // Use write-back memory type for paging structures.
-      VMX_MEMORY_TYPE_WRITE_BACK << 0 |
-      // Page walk length of 4 (defined as N minus 1).
-      3u << 3;
-}
-
 AutoVmcs::AutoVmcs(paddr_t vmcs_address) : vmcs_address_(vmcs_address) {
   DEBUG_ASSERT(!arch_ints_disabled());
   int_state_ = arch_interrupt_save();

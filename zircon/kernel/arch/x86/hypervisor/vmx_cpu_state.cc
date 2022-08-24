@@ -170,6 +170,16 @@ void invept_from_pml4(paddr_t ept_pml4) {
   }
 }
 
+uint64_t ept_pointer_from_pml4(paddr_t pml4_address) {
+  return
+      // Physical address of the PML4 page, page aligned.
+      pml4_address |
+      // Use write-back memory type for paging structures.
+      VMX_MEMORY_TYPE_WRITE_BACK << 0 |
+      // Page walk length of 4 (defined as N minus 1).
+      3u << 3;
+}
+
 VmxInfo::VmxInfo() {
   // From Volume 3, Appendix A.1.
   uint64_t basic_info = read_msr(X86_MSR_IA32_VMX_BASIC);
