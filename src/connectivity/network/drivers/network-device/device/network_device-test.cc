@@ -257,6 +257,11 @@ class NetworkDeviceTest : public ::testing::Test {
     static_cast<internal::DeviceInterface*>(device_.get())->evt_rx_queue_packet_ = std::move(h);
   }
 
+  void SetBacktraceCallback(fit::function<void()> cb) {
+    auto* dev = static_cast<internal::DeviceInterface*>(device_.get());
+    dev->diagnostics().trigger_stack_trace_ = std::move(cb);
+  }
+
  protected:
   FakeNetworkDeviceImpl impl_;
   FakeNetworkPortImpl port13_;
@@ -3072,6 +3077,24 @@ TEST_F(NetworkDeviceTest, PortGetTxCounters) {
   }
   assert_counters(std::size(kDescriptors), std::size(kDescriptors) * kTxLength,
                   "remaining buffers");
+}
+
+TEST_F(NetworkDeviceTest, LogDebugInfoToSyslog) {
+  ASSERT_OK(CreateDeviceWithPort13());
+  bool bt_requested = false;
+  SetBacktraceCallback([&bt_requested]() { bt_requested = true; });
+  zx::status port = OpenPort(kPort13);
+  ASSERT_OK(port.status_value());
+  fidl::WireSyncClient port_connection = std::move(port.value());
+
+  zx::status endpoints = fidl::CreateEndpoints<netdev::Diagnostics>();
+  ASSERT_OK(endpoints.status_value());
+  auto [client_end, server_end] = std::move(endpoints.value());
+  ASSERT_OK(port_connection->GetDiagnostics(std::move(server_end)).status());
+
+  fidl::WireSyncClient diagnostics = fidl::BindSyncClient(std::move(client_end));
+  ASSERT_OK(diagnostics->LogDebugInfoToSyslog().status());
+  EXPECT_TRUE(bt_requested);
 }
 
 }  // namespace testing

@@ -12,6 +12,7 @@
 #include "data_structs.h"
 #include "definitions.h"
 #include "device_port.h"
+#include "diagnostics_service.h"
 #include "port_watcher.h"
 #include "public/locks.h"
 #include "public/network_device.h"
@@ -179,6 +180,8 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
     }
   }
 
+  DiagnosticsService& diagnostics() { return diagnostics_; }
+
  private:
   friend testing::NetworkDeviceTest;
   friend testing::FakeNetworkDeviceImpl;
@@ -273,6 +276,7 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
   device_info_t device_info_{};
   // dispatcher used for slow-path operations:
   async_dispatcher_t* const dispatcher_;
+  DiagnosticsService diagnostics_;
   const ddk::NetworkDeviceImplProtocolClient device_;
   std::array<netdev::wire::RxAcceleration, netdev::wire::kMaxAccelFlags> accel_rx_;
   std::array<netdev::wire::TxAcceleration, netdev::wire::kMaxAccelFlags> accel_tx_;

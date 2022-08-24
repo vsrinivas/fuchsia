@@ -260,4 +260,9 @@ void DevicePort::GetCounters(GetCountersRequestView _request,
   completer.Reply(rsp);
 }
 
+void DevicePort::GetDiagnostics(GetDiagnosticsRequestView request,
+                                GetDiagnosticsCompleter::Sync& _completer) {
+  parent_->diagnostics().Bind(std::move(request->diagnostics));
+}
+
 }  // namespace network::internal

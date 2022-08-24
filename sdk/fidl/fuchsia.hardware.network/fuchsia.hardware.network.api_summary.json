@@ -199,6 +199,15 @@
         "strictness": "strict"
     },
     {
+        "declaration": "() -> ()",
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.network/Diagnostics.LogDebugInfoToSyslog"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.hardware.network/Diagnostics"
+    },
+    {
         "kind": "struct",
         "name": "fuchsia.hardware.network/Empty"
     },
@@ -400,6 +409,11 @@
         "declaration": "(server_end:fuchsia.hardware.network/Device device)",
         "kind": "protocol/member",
         "name": "fuchsia.hardware.network/Port.GetDevice"
+    },
+    {
+        "declaration": "(server_end:fuchsia.hardware.network/Diagnostics diagnostics)",
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.network/Port.GetDiagnostics"
     },
     {
         "declaration": "() -> (fuchsia.hardware.network/PortInfo info)",

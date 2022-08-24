@@ -171,4 +171,11 @@ protocol Port {
         /// The total number of egress bytes on this port.
         4: tx_bytes uint64;
     });
+    /// Grants access to [`Diagnostics`] for this port.
+    ///
+    /// + request `diagnostics` grants access to diagnostics information.
+    @available(added=HEAD)
+    GetDiagnostics(resource struct {
+        diagnostics server_end:Diagnostics;
+    });
 };
