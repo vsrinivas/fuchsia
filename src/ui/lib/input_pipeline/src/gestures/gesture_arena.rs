@@ -18,7 +18,7 @@ use {
 pub fn make_input_handler() -> std::rc::Rc<dyn crate::input_handler::InputHandler> {
     // TODO(https://fxbug.dev/105092): Remove log message.
     fx_log_info!("touchpad: created input handler");
-    std::rc::Rc::new(_GestureArena::new_internal(|| {
+    std::rc::Rc::new(GestureArena::new_internal(|| {
         vec![
             Box::new(click::InitialContender {
                 max_finger_displacement_in_mm: SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM,
@@ -128,11 +128,8 @@ pub(super) enum RecognizedGesture {
 
 #[derive(Debug)]
 pub(super) struct ProcessBufferedEventsResult {
-    #[allow(dead_code)] // Unread until we implement the gesture arena.
     pub(super) generated_events: Vec<MouseEvent>,
-    #[allow(dead_code)] // Unread until we implement the gesture arena.
     pub(super) winner: Option<Box<dyn Winner>>,
-    #[allow(dead_code)] // Unread until we implement the gesture arena.
     pub(super) recognized_gesture: RecognizedGesture, // for latency breakdown
 }
 
@@ -239,7 +236,6 @@ enum MutableState {
         buffered_events: Vec<TouchpadEvent>,
     },
 
-    #[allow(dead_code)]
     /// The matching gesture has been identified, and is still in progress.
     Forwarding { winner: Box<dyn Winner> },
 
@@ -256,19 +252,19 @@ enum StateName {
     Invalid,
 }
 
-struct _GestureArena<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> {
+struct GestureArena<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> {
     contender_factory: ContenderFactory,
     mutable_state: RefCell<MutableState>,
 }
 
-impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> _GestureArena<ContenderFactory> {
+impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> GestureArena<ContenderFactory> {
     #[cfg(test)]
-    fn new_for_test(contender_factory: ContenderFactory) -> _GestureArena<ContenderFactory> {
+    fn new_for_test(contender_factory: ContenderFactory) -> GestureArena<ContenderFactory> {
         Self::new_internal(contender_factory)
     }
 
-    fn new_internal(contender_factory: ContenderFactory) -> _GestureArena<ContenderFactory> {
-        _GestureArena { contender_factory, mutable_state: RefCell::new(MutableState::Idle) }
+    fn new_internal(contender_factory: ContenderFactory) -> GestureArena<ContenderFactory> {
+        GestureArena { contender_factory, mutable_state: RefCell::new(MutableState::Idle) }
     }
 }
 
@@ -373,7 +369,7 @@ impl std::convert::From<MouseEvent> for input_device::InputEvent {
     }
 }
 
-impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> _GestureArena<ContenderFactory> {
+impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> GestureArena<ContenderFactory> {
     fn handle_event_while_idle(&self, new_event: TouchpadEvent) -> (MutableState, Vec<MouseEvent>) {
         let (contenders, matched_contenders) = (self.contender_factory)()
             .into_iter()
@@ -568,7 +564,7 @@ impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> _GestureArena<ContenderF
 
 #[async_trait(?Send)]
 impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> UnhandledInputHandler
-    for _GestureArena<ContenderFactory>
+    for GestureArena<ContenderFactory>
 {
     /// Interprets `TouchpadEvent`s, and sends corresponding `MouseEvent`s downstream.
     async fn handle_unhandled_input_event(
@@ -1073,8 +1069,8 @@ mod tests {
         use {
             super::{
                 super::{
-                    ExamineEventResult, MutableState, TouchpadEvent, UnhandledInputHandler,
-                    _GestureArena,
+                    ExamineEventResult, GestureArena, MutableState, TouchpadEvent,
+                    UnhandledInputHandler,
                 },
                 utils::{
                     make_touchpad_descriptor, make_unhandled_mouse_event,
@@ -1097,7 +1093,7 @@ mod tests {
                 contender_factory_called.set(true);
                 Vec::new()
             };
-            let arena = Rc::new(_GestureArena::new_for_test(contender_factory));
+            let arena = Rc::new(GestureArena::new_for_test(contender_factory));
             arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
             assert!(contender_factory_called.get());
         }
@@ -1109,7 +1105,7 @@ mod tests {
                 contender_factory_called.set(true);
                 Vec::new()
             };
-            let arena = Rc::new(_GestureArena::new_for_test(contender_factory));
+            let arena = Rc::new(GestureArena::new_for_test(contender_factory));
             arena.handle_unhandled_input_event(make_unhandled_mouse_event()).await;
             assert!(!contender_factory_called.get());
         }
@@ -1118,8 +1114,7 @@ mod tests {
         async fn calls_examine_event_on_contender() {
             let contender = StubContender::new();
             let contender_factory = ContenderFactoryOnce::new(vec![contender.clone()]);
-            let arena =
-                Rc::new(_GestureArena::new_for_test(|| contender_factory.make_contenders()));
+            let arena = Rc::new(GestureArena::new_for_test(|| contender_factory.make_contenders()));
             contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
             arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
             assert_eq!(contender.calls_received(), 1);
@@ -1131,8 +1126,7 @@ mod tests {
             let second_contender = StubContender::new();
             let contender_factory =
                 ContenderFactoryOnce::new(vec![first_contender.clone(), second_contender.clone()]);
-            let arena =
-                Rc::new(_GestureArena::new_for_test(|| contender_factory.make_contenders()));
+            let arena = Rc::new(GestureArena::new_for_test(|| contender_factory.make_contenders()));
             first_contender.set_next_result(ExamineEventResult::MatchedContender(
                 StubMatchedContender::new().into(),
             ));
@@ -1147,8 +1141,7 @@ mod tests {
             // Create a gesture arena which will instantiate a `StubContender`.
             let initial_contender = StubContender::new();
             let contender_factory = ContenderFactoryOnce::new(vec![initial_contender.clone()]);
-            let arena =
-                Rc::new(_GestureArena::new_for_test(|| contender_factory.make_contenders()));
+            let arena = Rc::new(GestureArena::new_for_test(|| contender_factory.make_contenders()));
 
             // Configure `initial_contender` to return a new `StubContender` when
             // `examine_event()` is called.
@@ -1180,8 +1173,7 @@ mod tests {
             // Create a gesture arena which will instantiate a `StubContender`.
             let initial_contender = StubContender::new();
             let contender_factory = ContenderFactoryOnce::new(vec![initial_contender.clone()]);
-            let arena =
-                Rc::new(_GestureArena::new_for_test(|| contender_factory.make_contenders()));
+            let arena = Rc::new(GestureArena::new_for_test(|| contender_factory.make_contenders()));
 
             // Configure `initial_contender` to return a `StubMatchedContender` when
             // `examine_event()` is called.
@@ -1213,8 +1205,7 @@ mod tests {
             // Create a gesture arena which will instantiate a `StubContender`.
             let initial_contender = StubContender::new();
             let contender_factory = ContenderFactoryOnce::new(vec![initial_contender.clone()]);
-            let arena =
-                Rc::new(_GestureArena::new_for_test(|| contender_factory.make_contenders()));
+            let arena = Rc::new(GestureArena::new_for_test(|| contender_factory.make_contenders()));
 
             // Create the event which will be sent to the arena.
             let touchpad_event = input_device::UnhandledInputEvent {
@@ -1262,8 +1253,7 @@ mod tests {
         async fn generates_no_events_on_mismatch() {
             let contender = StubContender::new();
             let contender_factory = ContenderFactoryOnce::new(vec![contender.clone()]);
-            let arena =
-                Rc::new(_GestureArena::new_for_test(|| contender_factory.make_contenders()));
+            let arena = Rc::new(GestureArena::new_for_test(|| contender_factory.make_contenders()));
             contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
             assert_eq!(
                 arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await,
@@ -1275,8 +1265,7 @@ mod tests {
         async fn generates_no_events_when_entering_matching() {
             let contender = StubContender::new();
             let contender_factory = ContenderFactoryOnce::new(vec![contender.clone()]);
-            let arena =
-                Rc::new(_GestureArena::new_for_test(|| contender_factory.make_contenders()));
+            let arena = Rc::new(GestureArena::new_for_test(|| contender_factory.make_contenders()));
             contender.set_next_result(ExamineEventResult::Contender(StubContender::new().into()));
             assert_eq!(
                 arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await,
@@ -1288,8 +1277,7 @@ mod tests {
         async fn enters_idle_on_mismatch() {
             let contender = StubContender::new();
             let contender_factory = ContenderFactoryOnce::new(vec![contender.clone()]);
-            let arena =
-                Rc::new(_GestureArena::new_for_test(|| contender_factory.make_contenders()));
+            let arena = Rc::new(GestureArena::new_for_test(|| contender_factory.make_contenders()));
             contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
             arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
             assert_matches!(*arena.mutable_state.borrow(), MutableState::Idle);
@@ -1299,8 +1287,7 @@ mod tests {
         async fn enters_matching_on_contender_result() {
             let contender = StubContender::new();
             let contender_factory = ContenderFactoryOnce::new(vec![contender.clone()]);
-            let arena =
-                Rc::new(_GestureArena::new_for_test(|| contender_factory.make_contenders()));
+            let arena = Rc::new(GestureArena::new_for_test(|| contender_factory.make_contenders()));
             contender.set_next_result(ExamineEventResult::Contender(StubContender::new().into()));
             arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
             assert_matches!(*arena.mutable_state.borrow(), MutableState::Matching { .. });
@@ -1310,8 +1297,7 @@ mod tests {
         async fn enters_matching_on_matched_contender_result() {
             let contender = StubContender::new();
             let contender_factory = ContenderFactoryOnce::new(vec![contender.clone()]);
-            let arena =
-                Rc::new(_GestureArena::new_for_test(|| contender_factory.make_contenders()));
+            let arena = Rc::new(GestureArena::new_for_test(|| contender_factory.make_contenders()));
             contender.set_next_result(ExamineEventResult::MatchedContender(
                 StubMatchedContender::new().into(),
             ));
@@ -1324,9 +1310,9 @@ mod tests {
         use {
             super::{
                 super::{
-                    Contender, ExamineEventResult, MouseEvent, MutableState,
+                    Contender, ExamineEventResult, GestureArena, MouseEvent, MutableState,
                     ProcessBufferedEventsResult, RecognizedGesture, TouchpadEvent,
-                    UnhandledInputHandler, VerifyEventResult, _GestureArena, PRIMARY_BUTTON,
+                    UnhandledInputHandler, VerifyEventResult, PRIMARY_BUTTON,
                 },
                 utils::{
                     make_touchpad_descriptor, make_unhandled_mouse_event,
@@ -1348,8 +1334,8 @@ mod tests {
             matched_contenders: Vec<StubMatchedContender>,
             buffered_events: Vec<TouchpadEvent>,
             contender_forever: Option<ContenderForever>,
-        ) -> Rc<_GestureArena<impl Fn() -> Vec<Box<dyn Contender>>>> {
-            Rc::new(_GestureArena {
+        ) -> Rc<GestureArena<impl Fn() -> Vec<Box<dyn Contender>>>> {
+            Rc::new(GestureArena {
                 contender_factory: || {
                     // Note: printing instead of panic()-ing here yields better
                     // failure messages from the tests.
@@ -1832,8 +1818,8 @@ mod tests {
         use {
             super::{
                 super::{
-                    Contender, EndGestureEvent, ExamineEventResult, MouseEvent, MutableState,
-                    ProcessNewEventResult, TouchpadEvent, UnhandledInputHandler, _GestureArena,
+                    Contender, EndGestureEvent, ExamineEventResult, GestureArena, MouseEvent,
+                    MutableState, ProcessNewEventResult, TouchpadEvent, UnhandledInputHandler,
                 },
                 utils::{
                     make_unhandled_mouse_event, make_unhandled_touchpad_event, ContenderForever,
@@ -1867,9 +1853,9 @@ mod tests {
         fn make_forwarding_arena(
             winner: StubWinner,
             contender: Option<Box<dyn Contender>>,
-        ) -> Rc<_GestureArena<impl Fn() -> Vec<Box<dyn Contender>>>> {
+        ) -> Rc<GestureArena<impl Fn() -> Vec<Box<dyn Contender>>>> {
             let contender = Cell::new(contender);
-            Rc::new(_GestureArena {
+            Rc::new(GestureArena {
                 contender_factory: move || vec![contender.take().expect("`contender` is None")],
                 mutable_state: RefCell::new(MutableState::Forwarding { winner: winner.into() }),
             })
@@ -2169,7 +2155,7 @@ mod tests {
     mod touchpad_event_payload {
         use {
             super::{
-                super::{ExamineEventResult, UnhandledInputHandler, _GestureArena},
+                super::{ExamineEventResult, GestureArena, UnhandledInputHandler},
                 utils::{ContenderFactoryOnce, StubContender},
             },
             crate::{input_device, touch_binding, Position},
@@ -2249,8 +2235,7 @@ mod tests {
         ) {
             let contender = StubContender::new();
             let contender_factory = ContenderFactoryOnce::new(vec![contender.clone()]);
-            let arena =
-                Rc::new(_GestureArena::new_for_test(|| contender_factory.make_contenders()));
+            let arena = Rc::new(GestureArena::new_for_test(|| contender_factory.make_contenders()));
             contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
             arena
                 .handle_unhandled_input_event(make_unhandled_touchpad_event(
@@ -2315,8 +2300,7 @@ mod tests {
         ) {
             let contender = StubContender::new();
             let contender_factory = ContenderFactoryOnce::new(vec![contender.clone()]);
-            let arena =
-                Rc::new(_GestureArena::new_for_test(|| contender_factory.make_contenders()));
+            let arena = Rc::new(GestureArena::new_for_test(|| contender_factory.make_contenders()));
             contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
             arena
                 .handle_unhandled_input_event(make_unhandled_touchpad_event(
