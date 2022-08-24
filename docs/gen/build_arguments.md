@@ -132,7 +132,7 @@ example, because the package is in base).
 
 **Current value (from the default):** `true`
 
-From //build/security.gni:218
+From //build/security.gni:222
 
 ### avb_algorithm
 
@@ -229,7 +229,7 @@ is generally available.
 
 **Current value (from the default):** `false`
 
-From //build/security.gni:223
+From //build/security.gni:227
 
 ### basic_env_names
 The list of environment names to include in "basic_envs".
@@ -1070,9 +1070,9 @@ From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.
 
 ### crashpad_http_transport_impl
 
-**Current value (from the default):** `"libcurl"`
+**Current value (from the default):** `"socket"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/475c8166e9aa77d31cf81f444e5a25b44fb22419/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:19](https://fuchsia.googlesource.com/third_party/crashpad/+/475c8166e9aa77d31cf81f444e5a25b44fb22419/util/net/tls.gni#19)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
@@ -2696,7 +2696,7 @@ on the assembled fuchsia system.
 
 **Current value (from the default):** `""`
 
-From //build/security.gni:130
+From //build/security.gni:134
 
 ### fuchsia_sdk_root
 Consumers of the Fuchsia SDK instantiate templates for various SDK parts at
@@ -2730,11 +2730,19 @@ above changes.
 
 From //build/security.gni:111
 
+### fuchsia_structured_config_policy
+An optional file path to the structured configuration policy to be used on the
+assembled fuchsia system. Defaults to no enforcement.
+
+**Current value (from the default):** `""`
+
+From //build/security.gni:130
+
 ### fuchsia_verify_component_resolvers_allowlist
 
 **Current value (from the default):** `"//src/security/policy/component_resolvers_policy.json5"`
 
-From //build/security.gni:188
+From //build/security.gni:192
 
 ### fuchsia_verify_routes_component_tree_config
 An optional component tree configuration file used to finalize dynamic
@@ -2745,13 +2753,13 @@ routes in the fuchsia component tree.
 
 **Current value (from the default):** `""`
 
-From //build/security.gni:173
+From //build/security.gni:177
 
 ### fuchsia_verify_routes_exceptions_allowlist
 
 **Current value (from the default):** `"//src/security/policy/build/verify_routes_exceptions_allowlist.json5"`
 
-From //build/security.gni:142
+From //build/security.gni:146
 
 ### fuchsia_verify_routes_exceptions_allowlist_bootfs
 Same as fuchsia_verify_routes_exceptions_allowlist, except this allowlist
@@ -2759,7 +2767,7 @@ gets added in bootfs_only builds.
 
 **Current value (from the default):** `"//src/security/policy/build/verify_routes_exceptions_allowlist_bootfs.json5"`
 
-From //build/security.gni:154
+From //build/security.gni:158
 
 ### fuchsia_verify_routes_exceptions_allowlist_product
 Same as fuchsia_verify_routes_exceptions_allowlist, except these allowlists
@@ -2767,7 +2775,7 @@ get added according to product-specific configuration.
 
 **Current value (from the default):** `[]`
 
-From //build/security.gni:162
+From //build/security.gni:166
 
 ### fuchsia_zbi_bootfs_filelist_goldens
 An optional list of golden files for fuchsia.zbi bootFS file list. If
@@ -2833,7 +2841,7 @@ is generally available.
 
 **Current value (from the default):** `false`
 
-From //build/security.gni:228
+From //build/security.gni:232
 
 ### futex_tracing_enabled
 Enables kernel tracing of futex interactions
@@ -5505,7 +5513,7 @@ on the assembled recovery system.
 
 **Current value (from the default):** `""`
 
-From //build/security.gni:134
+From //build/security.gni:138
 
 ### recovery_static_pkgs_goldens
 An optional list of golden files for recovery.zbi static pkgs list. If
@@ -5530,7 +5538,7 @@ From //build/security.gni:126
 
 **Current value (from the default):** `"//src/security/policy/component_resolvers_policy.json5"`
 
-From //build/security.gni:196
+From //build/security.gni:200
 
 ### recovery_verify_routes_component_tree_config
 An optional component tree configuration file used to finalize dynamic
@@ -5541,13 +5549,13 @@ routes in the fuchsia component tree.
 
 **Current value (from the default):** `""`
 
-From //build/security.gni:180
+From //build/security.gni:184
 
 ### recovery_verify_routes_exceptions_allowlist
 
 **Current value (from the default):** `"//src/security/policy/build/verify_routes_exceptions_allowlist.json5"`
 
-From //build/security.gni:150
+From //build/security.gni:154
 
 ### recovery_verify_routes_exceptions_allowlist_bootfs
 Same as recovery_verify_routes_exceptions_allowlist, except this allowlist
@@ -5555,7 +5563,7 @@ gets added in bootfs_only builds.
 
 **Current value (from the default):** `"//src/security/policy/build/verify_routes_exceptions_allowlist_bootfs.json5"`
 
-From //build/security.gni:158
+From //build/security.gni:162
 
 ### recovery_verify_routes_exceptions_allowlist_product
 Same as recovery_verify_routes_exceptions_allowlist, except these allowlists
@@ -5563,7 +5571,7 @@ get added according to product-specific configuration.
 
 **Current value (from the default):** `[]`
 
-From //build/security.gni:166
+From //build/security.gni:170
 
 ### recovery_zbi_bootfs_filelist_goldens
 An optional list of golden files for recovery.zbi bootFS file list. If
@@ -6257,7 +6265,7 @@ Default value is 'all', it is preferable to set to 'none' for production
 
 **Current value (from the default):** `"all"`
 
-From //build/security.gni:209
+From //build/security.gni:213
 
 ### thinlto_cache_dir
 ThinLTO cache directory path.
@@ -6526,7 +6534,7 @@ VkInstances or VkDevice will fail.
 This argument will affect all vulkan_{executable/test} build targets.
 
 
-**Current value (from the default):** `false`
+**Current value (from the default):** `true`
 
 From //src/lib/vulkan/build/config.gni:40
 
