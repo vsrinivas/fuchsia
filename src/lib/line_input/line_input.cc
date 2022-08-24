@@ -643,7 +643,7 @@ std::string LineInputEditor::GetReverseHistoryPrompt() const {
   std::string buf;
   buf.reserve(64);
 
-  buf += "(reverse-i-search)`";
+  buf += "(reverse-i-search)'";
   buf += reverse_history_input_;
   buf += "': ";
 

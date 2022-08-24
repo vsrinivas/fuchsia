@@ -487,7 +487,7 @@ TEST(LineInput, ReverseHistory_Select) {
 
   EXPECT_FALSE(input.OnInputStr("post"));
   ASSERT_TRUE(input.in_reverse_history_mode());
-  EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)`post': ");
+  EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)'post': ");
   EXPECT_EQ(input.reverse_history_index(), 3u);
   // Pos:                                        |       v
   EXPECT_EQ(input.GetReverseHistorySuggestion(), "prefix postfix3");
@@ -518,7 +518,7 @@ TEST(LineInput, ReverseHistory_SpecificSearch) {
 
   input.OnInput('f');
   ASSERT_TRUE(input.in_reverse_history_mode());
-  EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)`f': ");
+  EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)'f': ");
   EXPECT_EQ(input.reverse_history_index(), 1u);
   // Pos:                                        |  v
   EXPECT_EQ(input.GetReverseHistorySuggestion(), "different");
@@ -526,7 +526,7 @@ TEST(LineInput, ReverseHistory_SpecificSearch) {
 
   input.OnInput('i');
   ASSERT_TRUE(input.in_reverse_history_mode());
-  EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)`fi': ");
+  EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)'fi': ");
   EXPECT_EQ(input.reverse_history_index(), 2u);
   // Pos:                                        |         v
   EXPECT_EQ(input.GetReverseHistorySuggestion(), "other prefix");
@@ -534,7 +534,7 @@ TEST(LineInput, ReverseHistory_SpecificSearch) {
 
   input.OnInput('x');
   ASSERT_TRUE(input.in_reverse_history_mode());
-  EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)`fix': ");
+  EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)'fix': ");
   EXPECT_EQ(input.reverse_history_index(), 2u);
   // Pos:                                        |         v
   EXPECT_EQ(input.GetReverseHistorySuggestion(), "other prefix");
@@ -542,7 +542,7 @@ TEST(LineInput, ReverseHistory_SpecificSearch) {
 
   input.OnInput('3');
   ASSERT_TRUE(input.in_reverse_history_mode());
-  EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)`fix3': ");
+  EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)'fix3': ");
   EXPECT_EQ(input.reverse_history_index(), 3u);
   // Pos:                                        |           v
   EXPECT_EQ(input.GetReverseHistorySuggestion(), "prefix postfix3");
@@ -550,7 +550,7 @@ TEST(LineInput, ReverseHistory_SpecificSearch) {
 
   input.OnInput('3');
   ASSERT_TRUE(input.in_reverse_history_mode());
-  EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)`fix33': ");
+  EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)'fix33': ");
   EXPECT_EQ(input.reverse_history_index(), 0u);
   EXPECT_EQ(input.GetReverseHistorySuggestion(), "");
   EXPECT_EQ(input.pos(), 0u);
@@ -558,7 +558,7 @@ TEST(LineInput, ReverseHistory_SpecificSearch) {
   // Deleting should return to the suggestion.
   input.OnInput(SpecialCharacters::kKeyBackspace);
   ASSERT_TRUE(input.in_reverse_history_mode());
-  EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)`fix3': ");
+  EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)'fix3': ");
   EXPECT_EQ(input.reverse_history_index(), 3u);
   // Pos:                                        |           v
   EXPECT_EQ(input.GetReverseHistorySuggestion(), "prefix postfix3");
@@ -582,7 +582,7 @@ TEST(LineInput, ReverseHistory_RepeatedSearch) {
 
   // We should be in reverse history mode, but no suggestion should be made.
   ASSERT_TRUE(input.in_reverse_history_mode());
-  EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)`': ");
+  EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)'': ");
   EXPECT_EQ(input.reverse_history_index(), 0u);
   EXPECT_EQ(input.GetReverseHistorySuggestion(), "");
   EXPECT_EQ(input.pos(), 0u);
@@ -590,7 +590,7 @@ TEST(LineInput, ReverseHistory_RepeatedSearch) {
   // Start writing should match.
   input.OnInput('f');
   ASSERT_TRUE(input.in_reverse_history_mode());
-  EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)`f': ");
+  EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)'f': ");
   EXPECT_EQ(input.reverse_history_index(), 1u);
   // Pos:                                        |  v
   EXPECT_EQ(input.GetReverseHistorySuggestion(), "different");
@@ -599,7 +599,7 @@ TEST(LineInput, ReverseHistory_RepeatedSearch) {
   // Ctrl-R should move to the next suggestion.
   input.OnInput(SpecialCharacters::kKeyControlR);
   ASSERT_TRUE(input.in_reverse_history_mode());
-  EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)`f': ");
+  EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)'f': ");
   EXPECT_EQ(input.reverse_history_index(), 2u);
   // Pos:                                        |         v
   EXPECT_EQ(input.GetReverseHistorySuggestion(), "other prefix");
@@ -608,7 +608,7 @@ TEST(LineInput, ReverseHistory_RepeatedSearch) {
   input.OnInput(SpecialCharacters::kKeyControlR);
   input.OnInput(SpecialCharacters::kKeyControlR);
   ASSERT_TRUE(input.in_reverse_history_mode());
-  EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)`f': ");
+  EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)'f': ");
   EXPECT_EQ(input.reverse_history_index(), 4u);
   // Pos:                                        |   v
   EXPECT_EQ(input.GetReverseHistorySuggestion(), "prefix postfix2");
@@ -618,7 +618,7 @@ TEST(LineInput, ReverseHistory_RepeatedSearch) {
   input.OnInput(SpecialCharacters::kKeyControlR);
   input.OnInput(SpecialCharacters::kKeyControlR);
   ASSERT_TRUE(input.in_reverse_history_mode());
-  EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)`f': ");
+  EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)'f': ");
   EXPECT_EQ(input.reverse_history_index(), 0u);
   EXPECT_EQ(input.GetReverseHistorySuggestion(), "");
   EXPECT_EQ(input.pos(), 0u);
@@ -627,7 +627,7 @@ TEST(LineInput, ReverseHistory_RepeatedSearch) {
   input.OnInput(SpecialCharacters::kKeyControlR);
   input.OnInput(SpecialCharacters::kKeyControlR);
   ASSERT_TRUE(input.in_reverse_history_mode());
-  EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)`f': ");
+  EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)'f': ");
   EXPECT_EQ(input.reverse_history_index(), 2u);
   // Pos:                                        |         v
   EXPECT_EQ(input.GetReverseHistorySuggestion(), "other prefix");
@@ -636,7 +636,7 @@ TEST(LineInput, ReverseHistory_RepeatedSearch) {
   // Deleting should show no suggestion.
   input.OnInput(SpecialCharacters::kKeyBackspace);
   ASSERT_TRUE(input.in_reverse_history_mode());
-  EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)`': ");
+  EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)'': ");
   EXPECT_EQ(input.reverse_history_index(), 0u);
   EXPECT_EQ(input.GetReverseHistorySuggestion(), "");
   EXPECT_EQ(input.pos(), 0u);
