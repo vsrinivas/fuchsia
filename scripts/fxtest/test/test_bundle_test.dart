@@ -67,16 +67,7 @@ void main() {
           testDef.createExecutionHandle().getInvocationTokens([]);
       expect(
         commandTokens.fullCommand,
-        [
-          'fx',
-          'ffx',
-          'test',
-          'run',
-          '--disable-output-directory',
-          '--parallel',
-          '2',
-          componentUrl
-        ].join(' '),
+        ['fx', 'ffx', 'test', 'run', '--parallel', '2', componentUrl].join(' '),
       );
 
       final testDef2 = TestDefinition.fromJson(
@@ -105,7 +96,6 @@ void main() {
           'ffx',
           'test',
           'run',
-          '--disable-output-directory',
           "'--some-flag'",
           "'some_val'",
           componentUrl
@@ -138,15 +128,7 @@ void main() {
           .getInvocationTokens([]);
       expect(
         commandTokens.fullCommand,
-        [
-          'fx',
-          'ffx',
-          'test',
-          'run',
-          '--disable-output-directory',
-          '--parallel 5',
-          componentUrl
-        ].join(' '),
+        ['fx', 'ffx', 'test', 'run', '--parallel 5', componentUrl].join(' '),
       );
     });
 

@@ -153,7 +153,6 @@ class ExecutionHandle {
       'ffx',
       'test',
       'run',
-      '--disable-output-directory'
     ]..addAll(runnerFlags.map((flag) => "'$flag'"));
     return CommandTokens(['fx', ...subCommand, ...flags, handle]);
   }

@@ -175,6 +175,9 @@ author.''')
       defaultsTo: false,
       help: '''fallback to using run-test-suite instead of ffx test. This option
 is a temporary escape hatch.''')
+  ..addOption('ffx-output-directory',
+      defaultsTo: null,
+      help: '''directory to collect test outputs produced by ffx test''')
   ..addOption('timeout',
       defaultsTo: '0',
       help: '''test timeout in seconds. The test is killed if not completed when

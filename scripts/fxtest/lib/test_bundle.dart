@@ -166,6 +166,14 @@ class TestBundle {
       _extraFlags = testsConfig.testArguments.passThroughArgs;
     }
 
+    List<String> runnerFlags =
+        List.from(testsConfig.runnerTokens[testDefinition.testType] ?? []);
+    final dynRunnerFlags =
+        testsConfig.dynamicRunnerTokens[testDefinition.testType] ?? [];
+    for (var dynRunnerFlag in dynRunnerFlags) {
+      runnerFlags.addAll(dynRunnerFlag.generateTokens());
+    }
+
     return TestBundle(
       testDefinition,
       confidence: confidence ?? 1,
@@ -176,7 +184,7 @@ class TestBundle {
       fxPath: fxPath,
       raiseOnFailure: testsConfig.flags.shouldFailFast,
       shouldRestrictLogs: testsConfig.flags.shouldRestrictLogs,
-      runnerFlags: testsConfig.runnerTokens[testDefinition.testType] ?? [],
+      runnerFlags: runnerFlags,
       realtimeOutputSink: realtimeOutputSink ?? (String val) => null,
       testRunner: testRunnerBuilder(testsConfig),
       timeElapsedSink: timeElapsedSink,

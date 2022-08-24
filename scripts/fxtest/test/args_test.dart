@@ -228,7 +228,7 @@ void main() {
       // [FakeTestRunner] passes args through to its stdout, so we can check
       // that the args were in fact passed through by evaluating that
       expect(resultEvent.message,
-          'ffx test run --disable-output-directory fuchsia-pkg://fuchsia.com/fancy#meta/test.cm -- --xyz');
+          "ffx test run '--disable-output-directory' fuchsia-pkg://fuchsia.com/fancy#meta/test.cm -- --xyz");
     });
 
     test('when there are pass-thru commands for component tests', () async {
@@ -555,6 +555,36 @@ void main() {
           isNot(contains('--test-filter')));
       expect(
           testsConfig.runnerTokens[TestType.suite], contains('--run-disabled'));
+    });
+
+    test('with --ffx-output-directory', () {
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: ['--ffx-output-directory', '/tmp'],
+        fxEnv: FakeFxEnv.shared,
+      );
+      expect(testsConfig.flags.ffxOutputDirectory, '/tmp');
+      expect(testsConfig.runnerTokens[TestType.suite],
+          isNot(contains('--disable-output-directory')));
+      expect(testsConfig.dynamicRunnerTokens[TestType.suite], hasLength(1));
+      expect(testsConfig.dynamicRunnerTokens[TestType.suite]![0],
+          isA<FfxOutputDirectoryToken>());
+      expect(
+          testsConfig.dynamicRunnerTokens[TestType.suite]![0].generateTokens(),
+          ['--output-directory', '/tmp/0']);
+      expect(
+          testsConfig.dynamicRunnerTokens[TestType.suite]![0].generateTokens(),
+          ['--output-directory', '/tmp/1']);
+    });
+
+    test('without --ffx-output-directory', () {
+      var testsConfig = TestsConfig.fromRawArgs(
+        rawArgs: [],
+        fxEnv: FakeFxEnv.shared,
+      );
+      expect(testsConfig.flags.ffxOutputDirectory, isNull);
+      expect(testsConfig.runnerTokens[TestType.suite],
+          contains('--disable-output-directory'));
+      expect(testsConfig.dynamicRunnerTokens[TestType.suite], hasLength(0));
     });
   });
 

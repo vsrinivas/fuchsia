@@ -6,6 +6,7 @@ import 'package:args/args.dart';
 import 'package:fxtest/fxtest.dart';
 import 'package:fxutils/fxutils.dart';
 import 'package:io/ansi.dart' as ansi;
+import 'package:path/path.dart' as p;
 
 // ignore: prefer_generic_function_type_aliases
 typedef String Stylizer(String value, Iterable<ansi.AnsiCode> codes,
@@ -52,6 +53,7 @@ class Flags {
   final List<String>? testFilter;
   final String? count;
   final String? parallel;
+  final String? ffxOutputDirectory;
   final bool runDisabledTests;
   final bool fallbackUseRunTestSuite;
 
@@ -85,6 +87,7 @@ class Flags {
     this.testFilter,
     this.count,
     this.parallel,
+    this.ffxOutputDirectory,
     this.runDisabledTests = false,
     this.fallbackUseRunTestSuite = false,
   });
@@ -124,6 +127,7 @@ class Flags {
         timeout: int.parse(argResults['timeout'] ?? '0'),
         count: argResults['count'],
         parallel: argResults['parallel'],
+        ffxOutputDirectory: argResults['ffx-output-directory'],
         runDisabledTests: argResults['also-run-disabled-tests'],
         fallbackUseRunTestSuite: argResults['use-run-test-suite']);
   }
@@ -157,7 +161,30 @@ class Flags {
   testFilter: $testFilter
   count: $count
   parallel: $parallel
+  ffxOutputDirectory: $ffxOutputDirectory
+  fallbackUseRunTestSuite: $fallbackUseRunTestSuite
 >''';
+}
+
+/// Tokens generated at invocation time, for example, to provide tests with
+/// isolated resources.
+abstract class DynamicRunnerToken {
+  List<String> generateTokens();
+}
+
+/// Tokens for ffx test that produce an isolated output directory for each
+/// invocation of ffx test run.
+class FfxOutputDirectoryToken implements DynamicRunnerToken {
+  final String rootDirectory;
+  int _nextDirectoryId;
+
+  FfxOutputDirectoryToken(this.rootDirectory) : _nextDirectoryId = 0;
+
+  List<String> generateTokens() {
+    final directoryName = p.join(rootDirectory, '$_nextDirectoryId');
+    _nextDirectoryId += 1;
+    return ['--output-directory', directoryName];
+  }
 }
 
 /// The parsed parameters passed by our test-running user for evaluation
@@ -187,12 +214,14 @@ class Flags {
 class TestsConfig {
   final Flags flags;
   final Map<TestType, List<String>> runnerTokens;
+  final Map<TestType, List<DynamicRunnerToken>> dynamicRunnerTokens;
   final TestArguments testArguments;
   final IFxEnv fxEnv;
   final List<List<MatchableArgument>> testArgumentGroups;
   TestsConfig({
     required this.flags,
     required this.runnerTokens,
+    required this.dynamicRunnerTokens,
     required this.testArguments,
     required this.testArgumentGroups,
     required this.fxEnv,
@@ -227,6 +256,7 @@ class TestsConfig {
     }
 
     var v2runnerTokens = <String>[];
+    var v2dynamicTokens = <DynamicRunnerToken>[];
 
     if (flags.testFilter != null) {
       for (var filter in flags.testFilter!) {
@@ -265,6 +295,12 @@ class TestsConfig {
         ..add('--min-severity-logs')
         ..add(flags.minSeverityLogs.toString());
     }
+    var ffxOutputDirectory = flags.ffxOutputDirectory;
+    if (ffxOutputDirectory != null && !flags.fallbackUseRunTestSuite) {
+      v2dynamicTokens.add(FfxOutputDirectoryToken(ffxOutputDirectory));
+    } else if (!flags.fallbackUseRunTestSuite) {
+      v2runnerTokens.add('--disable-output-directory');
+    }
 
     return TestsConfig(
       flags: flags,
@@ -272,6 +308,10 @@ class TestsConfig {
       runnerTokens: {
         TestType.component: v1runnerTokens,
         TestType.suite: v2runnerTokens
+      },
+      dynamicRunnerTokens: {
+        TestType.component: [],
+        TestType.suite: v2dynamicTokens,
       },
       testArguments: _testArguments,
       testArgumentGroups: _testArgumentsCollector.collect(),
