@@ -51,6 +51,9 @@ class EngineCommandStreamer : public HardwareStatusPage::Owner {
 
   uint64_t GetActiveHeadPointer();
 
+  // Returns the head pointer for the context that's active on this engine.
+  uint32_t GetRingbufferHeadPointer();
+
   bool IsIdle() { return inflight_command_sequences_.empty(); }
 
   // Initialize backing store for the given context on this engine command streamer.

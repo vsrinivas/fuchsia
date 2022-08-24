@@ -250,6 +250,15 @@ class ActiveHeadPointer {
   }
 };
 
+class RingbufferHead {
+ public:
+  static constexpr uint32_t kOffset = 0x34;
+
+  static uint32_t read(magma::RegisterIo* reg_io, uint32_t mmio_base) {
+    return reg_io->Read32(mmio_base + kOffset);
+  }
+};
+
 // from intel-gfx-prm-osrc-kbl-vol02c-commandreference-registers-part1.pdf p.81
 class AllEngineFault : public hwreg::RegisterBase<AllEngineFault, uint32_t> {
  public:
@@ -320,10 +329,17 @@ class ForceWake {
 };
 
 // from intel-gfx-prm-osrc-bdw-vol02c-commandreference-registers_4.pdf p.618
+// https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-tgl-vol02c-commandreference-registers-part1_0.pdf
+// p.1034
 class GraphicsMode {
  public:
   static constexpr uint32_t kOffset = 0x29C;
-  static constexpr uint32_t kExeclistEnable = 1 << 15;
+  static constexpr uint32_t kExeclistEnableGen9 = 1 << 15;
+  static constexpr uint32_t kExeclistDisableLegacyGen11 = 1 << 3;
+
+  static uint32_t read(magma::RegisterIo* reg_io, uint32_t mmio_base) {
+    return reg_io->Read32(mmio_base + kOffset);
+  }
 
   static void write(magma::RegisterIo* reg_io, uint32_t mmio_base, uint16_t mask, uint16_t val) {
     uint32_t val32 = mask;

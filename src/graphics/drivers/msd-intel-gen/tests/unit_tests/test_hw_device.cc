@@ -36,22 +36,27 @@ class TestMsdIntelDevice : public testing::Test {
 
       std::unique_ptr<MsdIntelDevice> device =
           MsdIntelDevice::Create(platform_device->GetDeviceHandle(), kEnableDeviceThread);
-      EXPECT_NE(device, nullptr);
+      ASSERT_TRUE(device);
 
-      EXPECT_TRUE(device->WaitIdleForTest());
+      ASSERT_TRUE(device->WaitIdleForTest());
 
       // check that the render init batch succeeded.
       constexpr uint32_t kRenderCsDefaultSeqNo = 0x1000;
       constexpr uint32_t kVideoCsDefaultSeqNo = kRenderCsDefaultSeqNo + 1;
       constexpr uint32_t kRenderCsRenderInitBatchSeqNo = kVideoCsDefaultSeqNo + 1;
-      EXPECT_EQ(device->render_engine_cs()->hardware_status_page()->read_sequence_number(),
-                kRenderCsRenderInitBatchSeqNo);
+      if (DeviceId::is_gen9(device->device_id())) {
+        ASSERT_EQ(device->render_engine_cs()->hardware_status_page()->read_sequence_number(),
+                  kRenderCsRenderInitBatchSeqNo);
+      } else {
+        ASSERT_EQ(device->render_engine_cs()->hardware_status_page()->read_sequence_number(),
+                  kRenderCsDefaultSeqNo);
+      }
 
       // test register access
       uint32_t expected = 0xabcd1234;
       device->register_io()->Write32(expected, 0x4f100);
       uint32_t value = device->register_io()->Read32(0x4f100);
-      EXPECT_EQ(expected, value);
+      ASSERT_EQ(expected, value);
     }
   }
 
@@ -219,21 +224,21 @@ class TestMsdIntelDevice : public testing::Test {
     for (uint32_t iteration = 0; iteration < num_iterations; iteration++) {
       auto dst_mapping =
           AddressSpace::MapBufferGpu(device->gtt(), MsdIntelBuffer::Create(PAGE_SIZE, "dst"));
-      ASSERT_NE(dst_mapping, nullptr);
+      ASSERT_TRUE(dst_mapping);
 
       void* dst_cpu_addr;
-      EXPECT_TRUE(dst_mapping->buffer()->platform_buffer()->MapCpu(&dst_cpu_addr));
+      ASSERT_TRUE(dst_mapping->buffer()->platform_buffer()->MapCpu(&dst_cpu_addr));
 
       auto batch_buffer =
           std::shared_ptr<MsdIntelBuffer>(MsdIntelBuffer::Create(PAGE_SIZE, "batchbuffer"));
-      ASSERT_NE(batch_buffer, nullptr);
+      ASSERT_TRUE(batch_buffer);
 
       void* batch_cpu_addr;
       ASSERT_TRUE(batch_buffer->platform_buffer()->MapCpu(&batch_cpu_addr));
       uint32_t* batch_ptr = reinterpret_cast<uint32_t*>(batch_cpu_addr);
 
       auto batch_mapping = AddressSpace::MapBufferGpu(device->gtt(), batch_buffer);
-      ASSERT_NE(batch_mapping, nullptr);
+      ASSERT_TRUE(batch_mapping);
 
       uint32_t expected_val = 0x8000000 + iteration;
       uint64_t offset =
@@ -263,19 +268,19 @@ class TestMsdIntelDevice : public testing::Test {
       reinterpret_cast<uint32_t*>(dst_cpu_addr)[offset / sizeof(uint32_t)] = 0xdeadbeef;
       device->register_io()->Write32(0xdeadbeef, kScratchRegOffset);
 
-      EXPECT_TRUE(TestEngineCommandStreamer::ExecBatch(
+      ASSERT_TRUE(TestEngineCommandStreamer::ExecBatch(
           command_streamer, std::unique_ptr<SimpleMappedBatch>(new SimpleMappedBatch(
                                 device->global_context(), std::move(batch_mapping)))));
 
-      EXPECT_TRUE(device->WaitIdleForTest());
+      ASSERT_TRUE(device->WaitIdleForTest());
 
-      EXPECT_EQ(ringbuffer->head(), ringbuffer->tail());
+      ASSERT_EQ(ringbuffer->head(), ringbuffer->tail());
 
-      EXPECT_EQ(expected_val, device->register_io()->Read32(kScratchRegOffset))
+      ASSERT_EQ(expected_val, device->register_io()->Read32(kScratchRegOffset))
           << " iteration " << iteration;
 
       uint32_t target_val = reinterpret_cast<uint32_t*>(dst_cpu_addr)[offset / sizeof(uint32_t)];
-      EXPECT_EQ(target_val, expected_val);
+      ASSERT_EQ(target_val, expected_val);
 
       if (ringbuffer->tail() < tail_start) {
         DLOG("ringbuffer wrapped tail_start 0x%x tail 0x%x", tail_start, ringbuffer->tail());
@@ -316,13 +321,13 @@ class TestMsdIntelDevice : public testing::Test {
     const uint32_t kScratchRegOffset = command_streamer->mmio_base() + 0x600;
     device->register_io()->Write32(0xdeadbeef, kScratchRegOffset);
 
-    static constexpr uint32_t expected_val = 0x8000000;
+    ringbuffer->Write32(0);  // precede load with noop
+    static constexpr uint32_t kExpectedVal = 0x8000000;
     constexpr uint32_t kCommandType = 0x22;     // store to mmio
     constexpr uint32_t kEncodedLength = 3 - 2;  // per instruction encoding
     ringbuffer->Write32((kCommandType << 23) | kEncodedLength);
     ringbuffer->Write32(kScratchRegOffset);
-    ringbuffer->Write32(expected_val);
-    ringbuffer->Write32(0);
+    ringbuffer->Write32(kExpectedVal);
 
     TestEngineCommandStreamer::SubmitContext(command_streamer, device->global_context().get(),
                                              ringbuffer->tail());
@@ -330,7 +335,7 @@ class TestMsdIntelDevice : public testing::Test {
     auto start = std::chrono::steady_clock::now();
     // Check the register change first, the active head may fluctuate while the
     // context is loading.
-    while (expected_val != device->register_io()->Read32(kScratchRegOffset)) {
+    while (kExpectedVal != device->register_io()->Read32(kScratchRegOffset)) {
       if (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() -
                                                                 start)
               .count() > 100) {
@@ -339,8 +344,8 @@ class TestMsdIntelDevice : public testing::Test {
       std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
-    EXPECT_EQ(ringbuffer->tail(), command_streamer->GetActiveHeadPointer());
-    EXPECT_EQ(expected_val, device->register_io()->Read32(kScratchRegOffset));
+    EXPECT_EQ(ringbuffer->tail(), command_streamer->GetRingbufferHeadPointer());
+    EXPECT_EQ(kExpectedVal, device->register_io()->Read32(kScratchRegOffset));
   }
 
   void ProcessRequest() {
@@ -561,16 +566,16 @@ TEST_F(TestMsdIntelDevice, QueryTimestamp) { TestMsdIntelDevice::QueryTimestamp(
 
 class TestMsdIntelDevice_RenderCommandStreamer : public TestMsdIntelDevice {};
 
+TEST_F(TestMsdIntelDevice_RenderCommandStreamer, RegisterWrite) {
+  TestMsdIntelDevice::RegisterWrite(RENDER_COMMAND_STREAMER);
+}
+
 TEST_F(TestMsdIntelDevice_RenderCommandStreamer, BatchBuffer) {
   TestMsdIntelDevice::BatchBuffer(false, RENDER_COMMAND_STREAMER);
 }
 
 TEST_F(TestMsdIntelDevice_RenderCommandStreamer, WrapRingbuffer) {
   TestMsdIntelDevice::BatchBuffer(true, RENDER_COMMAND_STREAMER);
-}
-
-TEST_F(TestMsdIntelDevice_RenderCommandStreamer, RegisterWrite) {
-  TestMsdIntelDevice::RegisterWrite(RENDER_COMMAND_STREAMER);
 }
 
 TEST_F(TestMsdIntelDevice_RenderCommandStreamer, HangcheckTimeout) {
@@ -583,16 +588,16 @@ TEST_F(TestMsdIntelDevice_RenderCommandStreamer, SpuriousHangcheckTimeout) {
 
 class TestMsdIntelDevice_VideoCommandStreamer : public TestMsdIntelDevice {};
 
+TEST_F(TestMsdIntelDevice_VideoCommandStreamer, RegisterWrite) {
+  TestMsdIntelDevice::RegisterWrite(VIDEO_COMMAND_STREAMER);
+}
+
 TEST_F(TestMsdIntelDevice_VideoCommandStreamer, BatchBuffer) {
   TestMsdIntelDevice::BatchBuffer(false, VIDEO_COMMAND_STREAMER);
 }
 
 TEST_F(TestMsdIntelDevice_VideoCommandStreamer, WrapRingbuffer) {
   TestMsdIntelDevice::BatchBuffer(true, VIDEO_COMMAND_STREAMER);
-}
-
-TEST_F(TestMsdIntelDevice_VideoCommandStreamer, RegisterWrite) {
-  TestMsdIntelDevice::RegisterWrite(VIDEO_COMMAND_STREAMER);
 }
 
 TEST_F(TestMsdIntelDevice_VideoCommandStreamer, HangcheckTimeout) {

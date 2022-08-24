@@ -261,10 +261,9 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
     constexpr uint32_t kDeviceId = 0x1916;
     auto init_batch = render_cs->CreateRenderInitBatch(kDeviceId);
 
-    {
-      std::unique_ptr<RenderInitBatch> expected_batch;
-      if (DeviceId::is_gen9(kDeviceId))
-        expected_batch = std::unique_ptr<RenderInitBatch>(new RenderInitBatchGen9());
+    if (DeviceId::is_gen9(kDeviceId)) {
+      std::unique_ptr<RenderInitBatch> expected_batch =
+          std::unique_ptr<RenderInitBatch>(new RenderInitBatchGen9());
       ASSERT_NE(expected_batch, nullptr);
       EXPECT_EQ(init_batch->size(), expected_batch->size());
     }

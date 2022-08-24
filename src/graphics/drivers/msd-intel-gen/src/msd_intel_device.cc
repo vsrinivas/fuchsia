@@ -295,6 +295,9 @@ void MsdIntelDevice::InitEngine(EngineCommandStreamer* engine) {
 }
 
 bool MsdIntelDevice::RenderInitBatch() {
+  if (DeviceId::is_gen12(device_id_))
+    return true;
+
   auto init_batch = render_engine_cs_->CreateRenderInitBatch(device_id_);
   if (!init_batch)
     return DRETF(false, "failed to create render init batch");
@@ -688,13 +691,18 @@ bool MsdIntelDevice::InitContextForEngine(MsdIntelContext* context,
 
   // TODO(fxbug.dev/80906): any workarounds or cache config for VCS?
   if (command_streamer->id() == RENDER_COMMAND_STREAMER) {
-    if (!command_streamer->InitContextWorkarounds(context))
-      return DRETF(false, "failed to init workarounds");
+    if (DeviceId::is_gen9(device_id_)) {
+      // TODO(fxbug.dev/82881) - workarounds for gen12
+      if (!command_streamer->InitContextWorkarounds(context))
+        return DRETF(false, "failed to init workarounds");
 
-    if (!command_streamer->InitContextCacheConfig(context))
-      return DRETF(false, "failed to init cache config");
+      // TODO(fxbug.dev/82881) - cache config for gen12
+      if (!command_streamer->InitContextCacheConfig(context))
+        return DRETF(false, "failed to init cache config");
 
-    command_streamer->InitIndirectContext(context, indirect_context_batch_);
+      // TODO(fxbug.dev/82881) - indirect context for gen12
+      command_streamer->InitIndirectContext(context, indirect_context_batch_);
+    }
   }
 
   return true;

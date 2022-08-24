@@ -171,7 +171,6 @@ class TestHwCommandBuffer : public ::testing::Test {
     ASSERT_TRUE(target_buffer_mapping->buffer()->platform_buffer()->MapCpu(&target_cpu_addr));
 
     gpu_addr_t target_gpu_addr = target_buffer_mapping->gpu_addr();
-    DLOG("target_gpu_addr 0x%lx", target_gpu_addr);
     *reinterpret_cast<uint32_t*>(target_cpu_addr) = 0;
 
     auto batch_buf_index = TestCommandBuffer::batch_buffer_resource_index(cmd_buf_.get());
@@ -212,9 +211,7 @@ class TestHwCommandBuffer : public ::testing::Test {
 
   void SetUp() override {
     auto platform_device = TestPlatformPciDevice::GetInstance();
-    if (!platform_device)
-      DLOG("TestCommandBuffer: No platform device");
-    DLOG("creating helper");
+    ASSERT_TRUE(platform_device);
     helper_ = CommandBufferHelper::Create(platform_device);
   }
 

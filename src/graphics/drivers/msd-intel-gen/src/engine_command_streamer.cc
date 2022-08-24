@@ -100,6 +100,24 @@ bool EngineCommandStreamer::InitContextCacheConfig(MsdIntelContext* context) {
 void EngineCommandStreamer::InitHardware() {
   Reset();
 
+  if (DeviceId::is_gen12(owner_->device_id())) {
+    // Delay after reset needed for the graphics mode write to take.
+    std::this_thread::sleep_for(std::chrono::microseconds(50));
+
+    // Disabling legacy gives us the 12 CSB count (see hardware status page), and seems necessary
+    // at least for the video engine.
+    registers::GraphicsMode::write(register_io(), mmio_base_,
+                                   registers::GraphicsMode::kExeclistDisableLegacyGen11,
+                                   registers::GraphicsMode::kExeclistDisableLegacyGen11);
+
+    uint32_t val = registers::GraphicsMode::read(register_io(), mmio_base_);
+    DASSERT(val & registers::GraphicsMode::kExeclistDisableLegacyGen11);
+  } else {
+    registers::GraphicsMode::write(register_io(), mmio_base_,
+                                   registers::GraphicsMode::kExeclistEnableGen9,
+                                   registers::GraphicsMode::kExeclistEnableGen9);
+  }
+
   uint32_t gtt_addr = magma::to_uint32(hardware_status_page_mapping()->gpu_addr());
   registers::HardwareStatusPageAddress::write(register_io(), mmio_base_, gtt_addr);
 
@@ -108,10 +126,6 @@ void EngineCommandStreamer::InitHardware() {
   hardware_status_page()->write_sequence_number(initial_sequence_number);
 
   DLOG("initialized engine sequence number: 0x%x", initial_sequence_number);
-
-  registers::GraphicsMode::write(register_io(), mmio_base_,
-                                 registers::GraphicsMode::kExeclistEnable,
-                                 registers::GraphicsMode::kExeclistEnable);
 
   registers::HardwareStatusMask::write(register_io(), mmio_base_,
                                        registers::InterruptRegisterBase::USER,
@@ -341,6 +355,10 @@ void EngineCommandStreamer::SubmitExeclists(MsdIntelContext* context) {
 
 uint64_t EngineCommandStreamer::GetActiveHeadPointer() {
   return registers::ActiveHeadPointer::read(register_io(), mmio_base_);
+}
+
+uint32_t EngineCommandStreamer::GetRingbufferHeadPointer() {
+  return registers::RingbufferHead::read(register_io(), mmio_base_);
 }
 
 bool EngineCommandStreamer::Reset() {
