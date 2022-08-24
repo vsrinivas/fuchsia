@@ -443,7 +443,7 @@ void SegmentManager::ClearPrefreeSegments() {
       block_t num_of_blocks =
           (safemath::CheckSub<block_t>(end, start) * superblock_info_->GetBlocksPerSeg())
               .ValueOrDie();
-      fs_->MakeOperation(storage::OperationType::kTrim, StartBlock(start), num_of_blocks);
+      fs_->MakeTrimOperation(StartBlock(start), num_of_blocks);
     } else {
       // In kMountForceLfs mode, a section is reusable only when all segments of the section are
       // free. Therefore, trim operation is performed in section unit only in this case.
@@ -455,7 +455,7 @@ void SegmentManager::ClearPrefreeSegments() {
           block_t num_of_blocks = safemath::CheckMul<block_t>(superblock_info_->GetSegsPerSec(),
                                                               superblock_info_->GetBlocksPerSeg())
                                       .ValueOrDie();
-          fs_->MakeOperation(storage::OperationType::kTrim, StartBlock(start_segno), num_of_blocks);
+          fs_->MakeTrimOperation(StartBlock(start_segno), num_of_blocks);
         }
         start = safemath::CheckAdd(start_segno, superblock_info_->GetSegsPerSec()).ValueOrDie();
       }
@@ -915,12 +915,12 @@ zx_status_t SegmentManager::DoWritePage(LockedPage &page, block_t old_blkaddr, b
   }
 
   // writeout dirty page into bdev
-  return fs_->MakeOperation(storage::OperationType::kWrite, page, *new_blkaddr, p_type);
+  return fs_->MakeWriteOperation(page, *new_blkaddr, p_type);
 }
 
 zx_status_t SegmentManager::WriteMetaPage(LockedPage &page, bool is_reclaim) {
   block_t blkaddr = static_cast<block_t>(page->GetIndex());
-  return fs_->MakeOperation(storage::OperationType::kWrite, page, blkaddr, PageType::kMeta);
+  return fs_->MakeWriteOperation(page, blkaddr, PageType::kMeta);
 }
 
 zx_status_t SegmentManager::WriteNodePage(LockedPage &page, uint32_t nid, block_t old_blkaddr,
@@ -944,7 +944,7 @@ zx_status_t SegmentManager::WriteDataPage(VnodeF2fs *vnode, LockedPage &page, ni
 }
 
 zx_status_t SegmentManager::RewriteDataPage(LockedPage &page, block_t old_blk_addr) {
-  return fs_->MakeOperation(storage::OperationType::kWrite, page, old_blk_addr, PageType::kData);
+  return fs_->MakeWriteOperation(page, old_blk_addr, PageType::kData);
 }
 
 void SegmentManager::RecoverDataPage(Summary &sum, block_t old_blkaddr, block_t new_blkaddr) {

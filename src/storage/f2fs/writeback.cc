@@ -21,9 +21,9 @@ zx::status<> Writer::EnqueuePage(LockedPage &page, block_t blk_addr, PageType ty
   auto ret = write_buffer_->ReserveWriteOperation(page.release(), blk_addr);
   if (ret.is_error()) {
 #ifdef __Fuchsia__
-    ZX_ASSERT_MSG(0, "Writer fails to reserve buffers.. %s", ret.status_string());
+    ZX_ASSERT_MSG(false, "Writer failed to reserve buffers. %s", ret.status_string());
 #endif
-    return zx::error(ret.status_value());
+    return ret.take_error();
   } else if (ret.value() >= kDefaultBlocksPerSegment / 2) {
     // Submit Pages once they are merged as much as a half of segment.
     ScheduleSubmitPages(nullptr, type);
@@ -44,11 +44,12 @@ fpromise::promise<> Writer::SubmitPages(sync_completion_t *completion, PageType 
         zx_status_t ret = ZX_OK;
         if (!operations.IsEmpty()) {
           if (ret = transaction_handler_->RunRequests(operations.TakeOperations()); ret != ZX_OK) {
-            FX_LOGS(WARNING) << "[f2fs] RunRequest fails with " << ret;
+            FX_LOGS(WARNING) << "[f2fs] Write IO error. " << ret;
           }
           operations.Completion(ret, [ret, type](fbl::RefPtr<Page> page) {
             if (ret != ZX_OK && page->IsUptodate()) {
-              if (type == PageType::kMeta || ret == ZX_ERR_UNAVAILABLE) {
+              if (type == PageType::kMeta || type == PageType::kNrPageType ||
+                  ret == ZX_ERR_UNAVAILABLE) {
                 // When it fails to write metadata or the block device is not available,
                 // set kCpErrorFlag to enter read-only mode.
                 page->GetVnode().Vfs()->GetSuperblockInfo().SetCpFlags(CpFlag::kCpErrorFlag);
@@ -89,9 +90,39 @@ void Writer::ScheduleWriteback(fpromise::promise<> task) {
 }
 
 void Writer::ScheduleSubmitPages(sync_completion_t *completion, PageType type) {
-  auto task = (type == PageType::kNrPageType) ? SubmitPages(completion, PageType::kMeta)
-                                              : SubmitPages(completion, type);
+  auto task = SubmitPages(completion, type);
   ScheduleTask(std::move(task));
+}
+
+Reader::Reader(Bcache *bc, size_t capacity) : transaction_handler_(bc) {
+  buffer_ = std::make_unique<StorageBuffer>(bc, capacity, kBlockSize, "ReadBuffer");
+}
+
+zx::status<std::vector<LockedPage>> Reader::SubmitPages(std::vector<LockedPage> pages,
+                                                        std::vector<block_t> addrs) {
+  auto operation_or = buffer_->ReserveReadOperations(pages, std::move(addrs));
+  if (operation_or.is_error()) {
+    // If every Page in |pages| targets to either kNullAddr or kNewAddr, it returns
+    // |ZX_ERR_CANCELED| as no IO is required. In this case, return zx::ok() with |pages|.
+    if (operation_or.status_value() != ZX_ERR_CANCELED) {
+      return operation_or.take_error();
+    }
+  } else {
+    ZX_DEBUG_ASSERT(!operation_or.value().IsEmpty());
+    zx_status_t ret;
+    ret = transaction_handler_->RunRequests(operation_or.value().TakeOperations());
+    operation_or.value().Completion(ret, [ret](fbl::RefPtr<Page> page) {
+      if (ret == ZX_OK) {
+        page->SetUptodate();
+      }
+      return ZX_OK;
+    });
+    if (ret != ZX_OK) {
+      FX_LOGS(WARNING) << "[f2fs] Read IO error. " << ret;
+      return zx::error(ret);
+    }
+  }
+  return zx::ok(std::move(pages));
 }
 
 }  // namespace f2fs

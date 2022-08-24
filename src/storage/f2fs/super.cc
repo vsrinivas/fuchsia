@@ -23,6 +23,7 @@ void F2fs::PutSuper() {
     });
   }
   writer_.reset();
+  reader_.reset();
   ResetPsuedoVnodes();
   GetVCache().Reset();
 
@@ -350,9 +351,10 @@ zx_status_t F2fs::FillSuper() {
 
   node_vnode_ = std::make_unique<VnodeF2fs>(this, GetSuperblockInfo().GetNodeIno());
   meta_vnode_ = std::make_unique<VnodeF2fs>(this, GetSuperblockInfo().GetMetaIno());
+  reader_ = std::make_unique<Reader>(bc_.get(), kDefaultBlocksPerSegment);
   writer_ = std::make_unique<Writer>(
       bc_.get(),
-      (safemath::CheckMul<size_t>(superblock_info_->GetActiveLogs(), kDefaultBlocksPerSegment) * 2)
+      safemath::CheckMul<size_t>(superblock_info_->GetActiveLogs(), kDefaultBlocksPerSegment)
           .ValueOrDie());
 
   if (err = GetValidCheckpoint(); err != ZX_OK) {

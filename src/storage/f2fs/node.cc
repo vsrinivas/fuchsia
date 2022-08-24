@@ -876,15 +876,20 @@ zx_status_t NodeManager::NewNodePage(VnodeF2fs &vnode, nid_t nid, uint32_t ofs, 
   return ZX_OK;
 }
 
-zx_status_t NodeManager::ReadNodePage(LockedPage &page, nid_t nid, int type) {
+zx::status<LockedPage> NodeManager::ReadNodePage(LockedPage page, nid_t nid, int type) {
   NodeInfo ni;
 
   GetNodeInfo(nid, ni);
 
-  if (ni.blk_addr == kNullAddr)
-    return ZX_ERR_NOT_FOUND;
+  if (ni.blk_addr == kNullAddr) {
+    return zx::error(ZX_ERR_NOT_FOUND);
+  }
 
-  return fs_->MakeOperation(storage::OperationType::kRead, page, ni.blk_addr, PageType::kNode);
+  auto page_or = fs_->MakeReadOperation(std::move(page), ni.blk_addr, PageType::kNode);
+  if (page_or.is_error()) {
+    return page_or.take_error();
+  }
+  return zx::ok(std::move(*page_or));
 }
 
 zx_status_t NodeManager::GetNodePage(nid_t nid, LockedPage *out) {
@@ -893,15 +898,16 @@ zx_status_t NodeManager::GetNodePage(nid_t nid, LockedPage *out) {
     return ret;
   }
 
-  if (zx_status_t ret = ReadNodePage(page, nid, kReadSync); ret != ZX_OK) {
-    return ret;
+  auto page_or = ReadNodePage(std::move(page), nid, kReadSync);
+  if (page_or.is_error()) {
+    return page_or.status_value();
   }
 
-  ZX_DEBUG_ASSERT(nid == page.GetPage<NodePage>().NidOfNode());
+  ZX_DEBUG_ASSERT(nid == (*page_or).GetPage<NodePage>().NidOfNode());
 #if 0  // porting needed
   // mark_page_accessed(page);
 #endif
-  *out = std::move(page);
+  *out = std::move(*page_or);
   return ZX_OK;
 }
 

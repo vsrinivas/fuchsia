@@ -649,22 +649,23 @@ TEST_F(NodeManagerTest, TruncateExceptionCase) {
   ASSERT_EQ(fs_->GetNodeManager().TruncateInodeBlocks(*vnode, indirect_index_invalid_lv4),
             ZX_ERR_NOT_FOUND);
 
+  block_t fault_addr = kNewAddr - 1;
   // 2. Check exception case of TruncatePartialNodes()
-  FaultInjectToDnodeAndTruncate(node_manager, vnode, indirect_index_lv3 + kNidsPerBlock, kNewAddr,
+  FaultInjectToDnodeAndTruncate(node_manager, vnode, indirect_index_lv3 + kNidsPerBlock, fault_addr,
                                 ZX_ERR_OUT_OF_RANGE);
-  FaultInjectToDnodeAndTruncate(node_manager, vnode, indirect_index_lv2 + kNidsPerBlock, kNewAddr,
+  FaultInjectToDnodeAndTruncate(node_manager, vnode, indirect_index_lv2 + kNidsPerBlock, fault_addr,
                                 ZX_ERR_OUT_OF_RANGE);
   --indirect_node_cnt;
 
   // 3. Check exception case of TruncateNodes()
-  FaultInjectToDnodeAndTruncate(node_manager, vnode, indirect_index_lv3, kNewAddr,
+  FaultInjectToDnodeAndTruncate(node_manager, vnode, indirect_index_lv3, fault_addr,
                                 ZX_ERR_OUT_OF_RANGE);
-  FaultInjectToDnodeAndTruncate(node_manager, vnode, indirect_index_lv2, kNewAddr,
+  FaultInjectToDnodeAndTruncate(node_manager, vnode, indirect_index_lv2, fault_addr,
                                 ZX_ERR_OUT_OF_RANGE);
   --indirect_node_cnt;
 
   // 4. Check exception case of TruncateDnode()
-  FaultInjectToDnodeAndTruncate(node_manager, vnode, indirect_index_lv1_2nd, kNewAddr,
+  FaultInjectToDnodeAndTruncate(node_manager, vnode, indirect_index_lv1_2nd, fault_addr,
                                 ZX_ERR_OUT_OF_RANGE);
   --indirect_node_cnt;
 

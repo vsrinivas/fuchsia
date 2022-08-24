@@ -314,10 +314,13 @@ class F2fs : public fs::Vfs {
   // Flush all dirty data Pages for dirty vnodes that meet |operation|.if_vnode and if_page.
   pgoff_t SyncDirtyDataPages(WritebackOperation &operation);
 
-  zx_status_t MakeOperation(storage::OperationType op, LockedPage &page, block_t blk_addr,
-                            PageType type, block_t nblocks = 1);
-
-  zx_status_t MakeOperation(storage::OperationType op, block_t blk_addr, block_t nblocks = 1);
+  zx::status<std::vector<LockedPage>> MakeReadOperations(std::vector<LockedPage> pages,
+                                                         std::vector<block_t> addrs, PageType type,
+                                                         bool is_sync = true);
+  zx::status<LockedPage> MakeReadOperation(LockedPage page, block_t blk_addr, PageType type,
+                                           bool is_sync = true);
+  zx_status_t MakeWriteOperation(LockedPage &page, block_t blk_addr, PageType type);
+  zx_status_t MakeTrimOperation(block_t blk_addr, block_t nblocks);
 
   void ScheduleWriterSubmitPages(sync_completion_t *completion = nullptr,
                                  PageType type = PageType::kNrPageType) {
@@ -334,8 +337,6 @@ class F2fs : public fs::Vfs {
   std::atomic_flag &GetStopReclaimFlag() { return stop_reclaim_flag_; }
 
  private:
-  zx_status_t MakeReadOperation(LockedPage &page, block_t blk_addr, bool is_sync = true);
-  zx_status_t MakeWriteOperation(LockedPage &page, block_t blk_addr, PageType type);
   std::mutex checkpoint_mutex_;
   std::atomic_flag stop_reclaim_flag_ = ATOMIC_FLAG_INIT;
   std::binary_semaphore writeback_flag_{1};
@@ -355,6 +356,7 @@ class F2fs : public fs::Vfs {
   std::unique_ptr<GcManager> gc_manager_;
 
   VnodeCache vnode_cache_;
+  std::unique_ptr<Reader> reader_;
   std::unique_ptr<Writer> writer_;
 
 #ifdef __Fuchsia__

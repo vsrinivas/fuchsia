@@ -674,12 +674,12 @@ zx_status_t FsckWorker::CheckDataBlock(uint32_t block_address, uint32_t &child_c
 
   if (TestValidBitmap(BlkoffFromMain(*segment_manager_, block_address), sit_area_bitmap_.get()) ==
       0x0) {
-    ZX_ASSERT_MSG(0, "SIT bitmap is 0x0. block_address[0x%x]\n", block_address);
+    ZX_ASSERT_MSG(false, "SIT bitmap is 0x0. block_address[0x%x]\n", block_address);
   }
 
   if (TestValidBitmap(BlkoffFromMain(*segment_manager_, block_address),
                       fsck_.main_area_bitmap.get()) != 0) {
-    ZX_ASSERT_MSG(0, "Duplicated data block. pnid[0x%x] index[0x%x] block_address[0x%x]\n",
+    ZX_ASSERT_MSG(false, "Duplicated data block. pnid[0x%x] index[0x%x] block_address[0x%x]\n",
                   parent_nid, index_in_node, block_address);
   }
   SetValidBitmap(BlkoffFromMain(*segment_manager_, block_address), fsck_.main_area_bitmap.get());
@@ -740,7 +740,7 @@ int FsckWorker::FsckChkXattrBlk(uint32_t ino, uint32_t x_nid, uint32_t *block_co
   if (TestValidBitmap(x_nid, fsck->nat_area_bitmap) != 0x0) {
     ClearValidBitmap(x_nid, fsck->nat_area_bitmap);
   } else {
-    ZX_ASSERT_MSG(0, "xattr_nid duplicated [0x%x]\n", x_nid);
+    ZX_ASSERT_MSG(false, "xattr_nid duplicated [0x%x]\n", x_nid);
   }
 
   *block_count = *block_count + 1;
@@ -750,7 +750,7 @@ int FsckWorker::FsckChkXattrBlk(uint32_t ino, uint32_t x_nid, uint32_t *block_co
   ZX_ASSERT(GetNodeInfo(x_nid, &ni) >= 0);
 
   if (TestValidBitmap(BlkoffFromMain(superblock_info, ni.blk_addr), fsck->main_area_bitmap) != 0) {
-    ZX_ASSERT_MSG(0,
+    ZX_ASSERT_MSG(false,
                   "Duplicated node block for x_attr. "
                   "x_nid[0x%x] block addr[0x%x]\n",
                   x_nid, ni.blk_addr);

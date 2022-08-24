@@ -252,7 +252,7 @@ DirEntry *Dir::ParentDir(fbl::RefPtr<Page> *out) {
   }
 
   LockedPage page;
-  if (GetLockDataPage(0, &page) != ZX_OK) {
+  if (GetLockedDataPage(0, &page) != ZX_OK) {
     return nullptr;
   }
 
@@ -572,7 +572,7 @@ bool Dir::IsEmptyDir() {
   for (uint64_t bidx = 0; bidx < nblock; ++bidx) {
     LockedPage dentry_page;
 
-    if (zx_status_t ret = GetLockDataPage(bidx, &dentry_page); ret != ZX_OK) {
+    if (zx_status_t ret = GetLockedDataPage(bidx, &dentry_page); ret != ZX_OK) {
       if (ret == ZX_ERR_NOT_FOUND)
         continue;
       else
@@ -619,7 +619,7 @@ zx_status_t Dir::Readdir(fs::VdirCookie *cookie, void *dirents, size_t len, size
 
   for (uint64_t n = (pos / kNrDentryInBlock); n < npages; ++n) {
     LockedPage dentry_page;
-    if (ret = GetLockDataPage(n, &dentry_page); ret != ZX_OK)
+    if (ret = GetLockedDataPage(n, &dentry_page); ret != ZX_OK)
       continue;
 
     start_bit_pos = bit_pos;

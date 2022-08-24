@@ -109,7 +109,7 @@ class NodeManager {
   void NodeInfoFromRawNat(NodeInfo &ni, RawNatEntry &raw_ne);
   zx_status_t BuildNodeManager();
   void DestroyNodeManager();
-  zx_status_t ReadNodePage(LockedPage &page, nid_t nid, int type);
+  zx::status<LockedPage> ReadNodePage(LockedPage page, nid_t nid, int type);
   zx_status_t GetNodePage(nid_t nid, LockedPage *out);
 
   zx::status<bool> IsSameDnode(VnodeF2fs &vnode, pgoff_t index, uint32_t node_offset);

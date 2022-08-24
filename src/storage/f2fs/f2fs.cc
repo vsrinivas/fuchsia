@@ -301,44 +301,32 @@ bool F2fs::IsValid() const {
 }
 
 // Fill the locked page with data located in the block address.
-zx_status_t F2fs::MakeReadOperation(LockedPage& page, block_t blk_addr, bool is_sync) {
+zx::status<LockedPage> F2fs::MakeReadOperation(LockedPage page, block_t blk_addr, PageType type,
+                                               bool is_sync) {
   if (page->IsUptodate()) {
-    return ZX_OK;
+    return zx::ok(std::move(page));
   }
+  std::vector<block_t> addrs = {blk_addr};
+  std::vector<LockedPage> pages;
+  pages.push_back(std::move(page));
+  auto pages_or = MakeReadOperations(std::move(pages), std::move(addrs), type, is_sync);
+  if (pages_or.is_error()) {
+    return pages_or.take_error();
+  }
+  return zx::ok(std::move((*pages_or)[0]));
+}
 
-  if (blk_addr >= GetBc().Maxblk()) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-
-  // TODO: Request multiple Pages.
-  zx_status_t ret = GetBc().Readblk(blk_addr, page->GetAddress());
-  if (ret == ZX_OK && is_sync) {
-    page->SetUptodate();
-  }
-  return ret;
+zx::status<std::vector<LockedPage>> F2fs::MakeReadOperations(std::vector<LockedPage> pages,
+                                                             std::vector<block_t> addrs,
+                                                             PageType type, bool is_sync) {
+  return reader_->SubmitPages(std::move(pages), std::move(addrs));
 }
 
 zx_status_t F2fs::MakeWriteOperation(LockedPage& page, block_t blk_addr, PageType type) {
   return writer_->EnqueuePage(page, blk_addr, type).status_value();
 }
 
-zx_status_t F2fs::MakeOperation(storage::OperationType op, LockedPage& page, block_t blk_addr,
-                                PageType type, block_t nblocks) {
-  // TODO: verify_block_addr(superblock_info, blk_addr);
-  switch (op) {
-    case storage::OperationType::kWrite:
-      return MakeWriteOperation(page, blk_addr, type);
-    case storage::OperationType::kRead:
-      return MakeReadOperation(page, blk_addr, true);
-    default:
-      return ZX_ERR_INVALID_ARGS;
-  };
-}
-
-zx_status_t F2fs::MakeOperation(storage::OperationType op, block_t blk_addr, block_t nblocks) {
-  if (op != storage::OperationType::kTrim) {
-    return ZX_ERR_INVALID_ARGS;
-  }
+zx_status_t F2fs::MakeTrimOperation(block_t blk_addr, block_t nblocks) {
   return GetBc().Trim(blk_addr, nblocks);
 }
 

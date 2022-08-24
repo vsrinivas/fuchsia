@@ -156,12 +156,12 @@ class VnodeF2fs : public fs::Vnode,
 
   void UpdateExtentCache(block_t blk_addr, pgoff_t fofs);
   zx_status_t FindDataPage(pgoff_t index, fbl::RefPtr<Page> *out);
-  zx_status_t GetLockDataPage(pgoff_t index, LockedPage *out);
+  zx_status_t GetLockedDataPage(pgoff_t index, LockedPage *out);
+  zx::status<std::vector<LockedPage>> GetLockedDataPages(pgoff_t start, pgoff_t end);
   zx_status_t GetNewDataPage(pgoff_t index, bool new_i_size, LockedPage *out);
 
   zx_status_t DoWriteDataPage(LockedPage &page);
   zx_status_t WriteDataPage(LockedPage &page, bool is_reclaim = false);
-  zx_status_t LoadDataPage(LockedPage &page, const block_t block_address);
   zx::status<std::vector<LockedPage>> WriteBegin(const size_t offset, const size_t len);
 
   virtual zx_status_t RecoverInlineData(NodePage &node_page) __TA_EXCLUDES(mutex_) {

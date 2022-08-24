@@ -207,7 +207,7 @@ zx::status<zx::vmo> VnodeF2fs::PopulateAndGetMmappedVmo(const size_t offset, con
   pgoff_t block_index = safemath::CheckDiv<pgoff_t>(offset, kBlockSize).ValueOrDie();
   for (size_t copied_bytes = 0; copied_bytes < length; copied_bytes += kBlockSize, ++block_index) {
     LockedPage data_page;
-    if (zx_status_t status = GetLockDataPage(block_index, &data_page); status != ZX_OK) {
+    if (zx_status_t status = GetLockedDataPage(block_index, &data_page); status != ZX_OK) {
       // If |data_page| is not a valid Page, just grab one.
       if (status = GrabCachePage(block_index, &data_page); status != ZX_OK) {
         return zx::error(status);
@@ -216,10 +216,11 @@ zx::status<zx::vmo> VnodeF2fs::PopulateAndGetMmappedVmo(const size_t offset, con
       ZX_DEBUG_ASSERT(!data_page->IsUptodate());
       data_page->SetMmapped();
     } else {
-      ZX_DEBUG_ASSERT(data_page->IsUptodate());
-      // If it is a valid Page, fill |vmo| with |data_page|.
       data_page->SetMmapped();
-      vmo.write(data_page->GetAddress(), copied_bytes, kBlockSize);
+      // If it is a valid Page, fill |vmo| with |data_page|.
+      if (data_page->IsUptodate()) {
+        vmo.write(data_page->GetAddress(), copied_bytes, kBlockSize);
+      }
     }
   }
   return zx::ok(std::move(vmo));

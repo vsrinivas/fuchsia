@@ -53,6 +53,25 @@ class Writer {
 #endif  // __Fuchsia__
 };
 
+class Reader {
+ public:
+  Reader(Bcache *bc, size_t capacity);
+  Reader() = delete;
+  Reader(const Reader &) = delete;
+  Reader &operator=(const Reader &) = delete;
+  Reader(const Reader &&) = delete;
+  Reader &operator=(const Reader &&) = delete;
+
+  // It makes read operations from |writer_buffer_| and passes them to RunReqeusts()
+  // synchronously.
+  zx::status<std::vector<LockedPage>> SubmitPages(std::vector<LockedPage> pages,
+                                                  std::vector<block_t> addrs);
+
+ private:
+  fs::TransactionHandler *transaction_handler_ = nullptr;
+  std::unique_ptr<StorageBuffer> buffer_;
+};
+
 }  // namespace f2fs
 
 #endif  // SRC_STORAGE_F2FS_WRITEBACK_H_

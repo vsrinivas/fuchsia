@@ -354,7 +354,7 @@ zx_status_t GcManager::GcDataSegment(const SummaryBlock &sum_blk, unsigned int s
     }
 
     LockedPage data_page;
-    if (auto err = vnode->GetLockDataPage(start_bidx + ofs_in_node, &data_page); err != ZX_OK) {
+    if (auto err = vnode->GetLockedDataPage(start_bidx + ofs_in_node, &data_page); err != ZX_OK) {
       continue;
     }
 

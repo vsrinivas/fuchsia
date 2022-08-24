@@ -310,35 +310,43 @@ zx_status_t File::Read(void *data, size_t len, size_t off, size_t *out_actual) {
   size_t off_in_block = safemath::CheckMod<size_t>(off, kBlockSize).ValueOrDie();
   size_t off_in_buf = 0;
   size_t left = std::min(len, GetSize() - off);
+  auto pages_or = GetLockedDataPages(block_index_start, block_index_end);
 
+  if (pages_or.is_error()) {
+    *out_actual = 0;
+    return pages_or.status_value();
+  }
+
+  size_t i = 0;
   for (pgoff_t n = block_index_start; n < block_index_end; ++n) {
     bool is_empty_page = false;
-    LockedPage data_page;
-    if (zx_status_t ret = GetLockDataPage(n, &data_page); ret != ZX_OK) {
-      if (ret == ZX_ERR_NOT_FOUND) {  // truncated page
-        is_empty_page = true;
-      } else {
-        *out_actual = off_in_buf;
-        return ret;
-      }
+    // Set |is_empty_page| to true for truncated Pages.
+    if (pages_or.value().size() <= i || pages_or.value()[i]->GetKey() != n) {
+      is_empty_page = true;
     }
-
     size_t cur_len = safemath::CheckSub<size_t>(kBlockSize, off_in_block).ValueOrDie();
     cur_len = std::min(cur_len, left);
 
     if (is_empty_page) {
-      memset(static_cast<char *>(data) + off_in_buf, 0, cur_len);
+      // Zero the range of truncated Pages.
+      std::memset(static_cast<char *>(data) + off_in_buf, 0, cur_len);
+    } else if (pages_or.value()[i]->IsUptodate()) {
+      // Copy data from valid Pages.
+      std::memcpy(static_cast<char *>(data) + off_in_buf,
+                  pages_or.value()[i++]->GetAddress<char>() + off_in_block, cur_len);
     } else {
-      memcpy(static_cast<char *>(data) + off_in_buf, data_page->GetAddress<char>() + off_in_block,
-             cur_len);
+      // Zero the range of invalid Pages.
+      std::memset(static_cast<char *>(data) + off_in_buf, 0, cur_len);
+      ++i;
     }
 
     off_in_buf += cur_len;
     left -= cur_len;
     off_in_block = 0;
 
-    if (left == 0)
+    if (left == 0) {
       break;
+    }
   }
 
   *out_actual = off_in_buf;
@@ -366,6 +374,7 @@ zx_status_t File::DoWrite(const void *data, size_t len, size_t offset, size_t *o
   const pgoff_t block_index_end = CheckedDivRoundUp<pgoff_t>(offset_end, kBlockSize);
 
   std::vector<LockedPage> data_pages;
+  data_pages.reserve(block_index_end - block_index_start);
   if (auto result = WriteBegin(offset, len); result.is_error()) {
     *out_actual = 0;
     return result.error_value();
