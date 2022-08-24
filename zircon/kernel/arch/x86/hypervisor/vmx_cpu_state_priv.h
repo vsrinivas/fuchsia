@@ -44,6 +44,7 @@ struct VmxInfo {
 struct EptInfo {
   bool page_walk_4;
   bool write_back;
+  bool large_pages;
   bool invept;
   bool invvpid;
 

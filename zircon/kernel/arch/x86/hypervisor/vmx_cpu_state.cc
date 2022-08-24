@@ -74,6 +74,12 @@ zx::status<> vmxon_task(void* context, cpu_num_t cpu_num) {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
+  // Check that use of large pages is supported.
+  if (!ept_info.large_pages) {
+    dprintf(CRITICAL, "hypervisor: EPT large pages not supported\n");
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
+  }
+
   // Check that the INVEPT instruction is supported.
   if (!ept_info.invept) {
     dprintf(CRITICAL, "hypervisor: INVEPT instruction not supported\n");
@@ -179,6 +185,11 @@ EptInfo::EptInfo() {
   uint64_t ept_info = read_msr(X86_MSR_IA32_VMX_EPT_VPID_CAP);
   page_walk_4 = BIT_SHIFT(ept_info, 6);
   write_back = BIT_SHIFT(ept_info, 14);
+  large_pages =
+      // 2mb pages are supported.
+      BIT_SHIFT(ept_info, 16) &&
+      // 1gb pages are supported.
+      BIT_SHIFT(ept_info, 17);
   invept =
       // INVEPT instruction is supported.
       BIT_SHIFT(ept_info, 20) &&
