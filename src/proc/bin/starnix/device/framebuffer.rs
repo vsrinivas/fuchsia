@@ -30,9 +30,10 @@ impl Framebuffer {
         info.xres_virtual = info.xres;
         info.yres_virtual = info.yres;
         info.bits_per_pixel = 32;
-        info.red = fb_bitfield { offset: 0, length: 8, msb_right: 0 };
+        info.blue = fb_bitfield { offset: 0, length: 8, msb_right: 0 };
         info.green = fb_bitfield { offset: 8, length: 8, msb_right: 0 };
         info.red = fb_bitfield { offset: 16, length: 8, msb_right: 0 };
+        info.transp = fb_bitfield { offset: 24, length: 8, msb_right: 0 };
 
         let vmo_len = info.xres * info.yres * (info.bits_per_pixel / 8);
         let vmo = zx::Vmo::create(vmo_len as u64).map_err(|s| match s {
