@@ -4,6 +4,10 @@
 
 # Allowlist for config_data#for_pkg values.
 # See: https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0182_deprecate_config-data
+# Need to use config-data?
+# At this time OWNERS will approve all additions, no questions asked.
+# In the future a migration guide will be provided and some requests to add
+# new uses of config-data will be denied.
 
 # Generated with:
 # find . -name "*.gn" | xargs sed -n -e 's|for_pkg = "\([^"]*\)"|"\1",|p' | tr -d " " | sort | uniq
