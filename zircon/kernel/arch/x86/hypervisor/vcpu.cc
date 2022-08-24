@@ -343,6 +343,7 @@ zx_status_t vmcs_init(paddr_t vmcs_address, hypervisor::Id<uint16_t>& vpid, bool
   // Combined mappings for the current VPID are invalidated even if EPT is
   // not in use.
   vmcs.Write(VmcsField16::VPID, vpid.val());
+  invvpid(InvVpid::SINGLE_CONTEXT, vpid.val(), 0);
 
   // From Volume 3, Section 28.2: The extended page-table mechanism (EPT) is a
   // feature that can be used to support the virtualization of physical
@@ -353,11 +354,6 @@ zx_status_t vmcs_init(paddr_t vmcs_address, hypervisor::Id<uint16_t>& vpid, bool
   // physical addresses that are used to access memory.
   const auto eptp = ept_pointer_from_pml4(pml4_address);
   vmcs.Write(VmcsField64::EPT_POINTER, eptp);
-
-  // From Volume 3, Section 28.3.3.4: Software can use an INVEPT with type all
-  // "all-context" to prevent undesired retention of cached EPT information.
-  // We only care about invalidating information associated with this EPTP.
-  invept(InvEpt::SINGLE_CONTEXT, eptp);
 
   // Setup MSR handling.
   vmcs.Write(VmcsField64::MSR_BITMAPS_ADDRESS, msr_bitmaps_address);
@@ -928,9 +924,8 @@ void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
       vmwrite(static_cast<uint64_t>(VmcsFieldXX::HOST_TR_BASE),
               reinterpret_cast<uint64_t>(&percpu->default_tss));
 
-      // Invalidate TLB mappings for the EPT.
-      zx_paddr_t pml4_address = guest_.AddressSpace().arch_aspace().arch_table_phys();
-      invept(InvEpt::SINGLE_CONTEXT, ept_pointer_from_pml4(pml4_address));
+      // Invalidate TLB mappings for the VPID.
+      invvpid(InvVpid::SINGLE_CONTEXT, vpid_.val(), 0);
       break;
     }
     case Thread::MigrateStage::Exiting: {

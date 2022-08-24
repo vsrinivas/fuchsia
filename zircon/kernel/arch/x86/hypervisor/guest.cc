@@ -60,6 +60,8 @@ zx::status<ktl::unique_ptr<G>> Guest::Create() {
     return gpas.take_error();
   }
   guest->gpas_ = ktl::move(*gpas);
+  // Invalidate the EPT across all CPUs.
+  invept_from_pml4(guest->gpas_.arch_aspace().arch_table_phys());
 
   // Setup common MSR bitmaps.
   VmxInfo vmx_info;
