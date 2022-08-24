@@ -9,5 +9,5 @@ extend uint fuchsia.BIND_PCI_VID {
 };
 
 extend uint fuchsia.BIND_PCI_DID {
-  SD8897 = 0x912d,
+  SD8987 = 0x912d,
 };

@@ -58,15 +58,10 @@ mlan_public = [
 
 # SDIO chipsets running on a 64bit processor with support for STA and UAP.
 source_set("mlan_sdio") {
-  defines = [
-    "SDIO",
-    "STA_SUPPORT",
-    "UAP_SUPPORT",
-    "MLAN_64BIT",
-  ]
   sources = mlan_sources
   public = mlan_public
   public_deps = []
+  deps = [ "//src/lib/ddk" ]
 
   # Suppress warnings to avoid making changes to the mlan code for easier
   # merge with future uprevs from vendor.
@@ -80,4 +75,7 @@ source_set("mlan_sdio") {
   configs +=
       [ "//build/config:Wno-incompatible-pointer-types-discards-qualifiers" ]
   configs += [ "//build/config:Wno-address-of-packed-member" ]
+  public_configs = [
+    "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac:mlan_sdio_config",
+  ]
 }

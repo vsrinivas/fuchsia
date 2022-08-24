@@ -5134,7 +5134,7 @@ wlan_misc_ioctl_cwmode_ctrl(pmlan_adapter pmadapter, pmlan_ioctl_req pioctl_req)
  *
  *  @return             MLAN_STATUS_SUCCESS or FAIL
  */
-inline mlan_status
+static inline mlan_status
 push_n(pmlan_adapter pmadapter, mef_stack *s, t_u8 len, t_u8 *val)
 {
 	if ((s->sp + len) <= MAX_NUM_STACK_BYTES) {
@@ -5157,7 +5157,7 @@ push_n(pmlan_adapter pmadapter, mef_stack *s, t_u8 len, t_u8 *val)
  *
  *  @return             MLAN_STATUS_SUCCESS or FAIL
  */
-inline mlan_status
+static inline mlan_status
 mef_push(pmlan_adapter pmadapter, mef_stack *s, mef_op *op)
 {
 	mlan_status ret = MLAN_STATUS_SUCCESS;

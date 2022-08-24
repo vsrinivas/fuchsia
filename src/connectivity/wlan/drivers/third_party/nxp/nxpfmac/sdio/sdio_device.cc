@@ -11,32 +11,16 @@
 // NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
 // OF THIS SOFTWARE.
 
-#include "sdio_device.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/sdio/sdio_device.h"
 
 #include <lib/async-loop/default.h>
-#include <lib/zircon-internal/align.h>
 
-#include <limits>
-#include <string>
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/debug.h"
 
-#include <ddktl/init-txn.h>
-
-namespace wlan {
-namespace nxpfmac {
+namespace wlan::nxpfmac {
 
 SdioDevice::SdioDevice(zx_device_t* parent) : Device(parent) {}
 
-SdioDevice::~SdioDevice() = default;
-
-void SdioDevice::Shutdown() {
-  if (async_loop_) {
-    // Explicitly destroy the async loop before further shutdown to prevent asynchronous tasks
-    // from using resources as they are being deallocated.
-    async_loop_.reset();
-  }
-}
-
-// static
 zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
   zx_status_t status = ZX_OK;
 
@@ -48,7 +32,10 @@ zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
   std::unique_ptr<SdioDevice> device(new SdioDevice(parent_device));
   device->async_loop_ = std::move(async_loop);
 
-  if ((status = device->DdkAdd(ddk::DeviceAddArgs("nxpfmac_sdio-wlanphy"))) != ZX_OK) {
+  if ((status = device->DdkAdd(
+           ddk::DeviceAddArgs("nxpfmac_sdio-wlanphy").set_proto_id(ZX_PROTOCOL_WLANPHY_IMPL))) !=
+      ZX_OK) {
+    NXPF_ERR("DdkAdd failed: %s", zx_status_get_string(status));
     return status;
   }
   device.release();  // This now has its lifecycle managed by the devhost.
@@ -59,21 +46,52 @@ zx_status_t SdioDevice::Create(zx_device_t* parent_device) {
 
 async_dispatcher_t* SdioDevice::GetDispatcher() { return async_loop_->dispatcher(); }
 
-zx_status_t SdioDevice::Init() { return ZX_OK; }
+zx_status_t SdioDevice::Init(mlan_device* mlan_dev) {
+  if (bus_) {
+    NXPF_ERR("SDIO device already initialized");
+    return ZX_ERR_ALREADY_EXISTS;
+  }
 
-zx_status_t SdioDevice::DeviceAdd(device_add_args_t* args, zx_device_t** out_device) {
-  return device_add(parent(), args, out_device);
-}
+  zx_status_t status = SdioBus::Create(parent(), mlan_dev, &bus_);
+  if (status != ZX_OK) {
+    NXPF_ERR("Failed to create SDIO bus: %s", zx_status_get_string(status));
+    return status;
+  }
 
-void SdioDevice::DeviceAsyncRemove(zx_device_t* dev) { device_async_remove(dev); }
-
-zx_status_t SdioDevice::LoadFirmware(const char* path, zx_handle_t* fw, size_t* size) {
+  if (!IS_SD(mlan_dev->card_type)) {
+    NXPF_ERR("Card type %u is NOT an SD card!", mlan_dev->card_type);
+    return ZX_ERR_INTERNAL;
+  }
   return ZX_OK;
 }
 
-zx_status_t SdioDevice::DeviceGetMetadata(uint32_t type, void* buf, size_t buflen, size_t* actual) {
-  return device_get_metadata(zxdev(), type, buf, buflen, actual);
+zx_status_t SdioDevice::LoadFirmware(const char* path, zx::vmo* out_fw, size_t* out_size) {
+  zx_handle_t vmo = ZX_HANDLE_INVALID;
+  zx_status_t status = load_firmware(zxdev(), path, &vmo, out_size);
+  if (status != ZX_OK) {
+    NXPF_ERR("Failed loading firmware file '%s': %s", path, zx_status_get_string(status));
+    return status;
+  }
+
+  *out_fw = zx::vmo(vmo);
+
+  return ZX_OK;
 }
 
-}  // namespace nxpfmac
-}  // namespace wlan
+void SdioDevice::Shutdown() {
+  if (async_loop_) {
+    // Explicitly destroy the async loop before further shutdown to prevent asynchronous tasks
+    // from using resources as they are being deallocated.
+    async_loop_.reset();
+  }
+  // Then destroy the bus. This should perform a clean shutdown.
+  bus_.reset();
+}
+
+zx_status_t SdioDevice::OnMlanRegistered(void* mlan_adapter) {
+  return bus_->OnMlanRegistered(mlan_adapter);
+}
+
+zx_status_t SdioDevice::OnFirmwareInitialized() { return bus_->OnFirmwareInitialized(); }
+
+}  // namespace wlan::nxpfmac

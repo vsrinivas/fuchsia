@@ -20,6 +20,7 @@
 #include <zircon/types.h>
 
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/device.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/sdio/sdio_bus.h"
 
 namespace wlan::nxpfmac {
 
@@ -30,7 +31,6 @@ class SdioDevice : public Device {
  public:
   SdioDevice(const SdioDevice& device) = delete;
   SdioDevice& operator=(const SdioDevice& other) = delete;
-  ~SdioDevice() override;
 
   // Static factory function for SdioDevice instances. This factory does not return an owned
   // instance, as on successful invocation the instance will have its lifecycle managed by the
@@ -41,19 +41,18 @@ class SdioDevice : public Device {
   async_dispatcher_t* GetDispatcher() override;
   // DeviceInspect* GetInspect() override;
 
-  // Trampolines for DDK functions, for platforms that support them
-  zx_status_t Init() override;
-  zx_status_t DeviceAdd(device_add_args_t* args, zx_device_t** out_device) override;
-  void DeviceAsyncRemove(zx_device_t* dev) override;
-  zx_status_t LoadFirmware(const char* path, zx_handle_t* fw, size_t* size) override;
-  zx_status_t DeviceGetMetadata(uint32_t type, void* buf, size_t buflen, size_t* actual) override;
-
  protected:
+  zx_status_t Init(mlan_device* mlan_dev) override;
+  zx_status_t LoadFirmware(const char* path, zx::vmo* out_fw, size_t* out_size) override;
+
   void Shutdown() override;
+  zx_status_t OnMlanRegistered(void* mlan_adapter) override;
+  zx_status_t OnFirmwareInitialized() override;
 
  private:
   explicit SdioDevice(zx_device_t* parent);
 
+  std::unique_ptr<SdioBus> bus_;
   std::unique_ptr<async::Loop> async_loop_;
 };
 
