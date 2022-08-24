@@ -64,6 +64,7 @@
                 "fuchsia.paver.Paver",
                 "fuchsia.power.profile.Watcher",
                 "fuchsia.power.systemmode.ClientConfigurator",
+                "fuchsia.thermal.ClientStateConnector",
             ],
             from: "parent",
             to: "#session-manager",
@@ -178,11 +179,6 @@
         {
             protocol: [ "fuchsia.media.sounds.Player" ],
             from: "#soundplayer",
-            to: "#session-manager",
-        },
-        {
-            protocol: "fuchsia.thermal.ClientStateConnector",
-            from: "#audio_core",
             to: "#session-manager",
         },
         {
