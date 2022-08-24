@@ -253,7 +253,7 @@ zx_status_t zxio_create_with_type(zxio_storage_t* storage, zxio_object_type_t ty
     case ZXIO_OBJECT_TYPE_SYNCHRONOUS_DATAGRAM_SOCKET: {
       zx::eventpair event(va_arg(args, zx_handle_t));
       zx::channel client(va_arg(args, zx_handle_t));
-      if (!event.is_valid() || !client.is_valid() || storage == nullptr) {
+      if (storage == nullptr || !event.is_valid() || !client.is_valid()) {
         return ZX_ERR_INVALID_ARGS;
       }
       return zxio_synchronous_datagram_socket_init(
@@ -275,14 +275,14 @@ zx_status_t zxio_create_with_type(zxio_storage_t* storage, zxio_object_type_t ty
     }
     case ZXIO_OBJECT_TYPE_DIR: {
       zx::handle control(va_arg(args, zx_handle_t));
-      if (!control.is_valid() || storage == nullptr) {
+      if (storage == nullptr || !control.is_valid()) {
         return ZX_ERR_INVALID_ARGS;
       }
       return zxio_dir_init(storage, control.release());
     }
     case ZXIO_OBJECT_TYPE_NODE: {
       zx::handle control(va_arg(args, zx_handle_t));
-      if (!control.is_valid() || storage == nullptr) {
+      if (storage == nullptr || !control.is_valid()) {
         return ZX_ERR_INVALID_ARGS;
       }
       return zxio_remote_init(storage, control.release(), ZX_HANDLE_INVALID);
@@ -291,7 +291,7 @@ zx_status_t zxio_create_with_type(zxio_storage_t* storage, zxio_object_type_t ty
       zx::socket socket(va_arg(args, zx_handle_t));
       zx::channel client(va_arg(args, zx_handle_t));
       zx_info_socket_t* info = va_arg(args, zx_info_socket_t*);
-      if (!socket.is_valid() || !client.is_valid() || storage == nullptr || info == nullptr) {
+      if (storage == nullptr || !socket.is_valid() || !client.is_valid() || info == nullptr) {
         return ZX_ERR_INVALID_ARGS;
       }
       return zxio_stream_socket_init(
@@ -301,7 +301,7 @@ zx_status_t zxio_create_with_type(zxio_storage_t* storage, zxio_object_type_t ty
     case ZXIO_OBJECT_TYPE_PIPE: {
       zx::socket socket(va_arg(args, zx_handle_t));
       zx_info_socket_t* info = va_arg(args, zx_info_socket_t*);
-      if (!socket.is_valid() || storage == nullptr || info == nullptr) {
+      if (storage == nullptr || !socket.is_valid() || info == nullptr) {
         return ZX_ERR_INVALID_ARGS;
       }
       return zxio_pipe_init(storage, std::move(socket), *info);
@@ -309,7 +309,7 @@ zx_status_t zxio_create_with_type(zxio_storage_t* storage, zxio_object_type_t ty
     case ZXIO_OBJECT_TYPE_RAW_SOCKET: {
       zx::eventpair event(va_arg(args, zx_handle_t));
       zx::channel client(va_arg(args, zx_handle_t));
-      if (!event.is_valid() || !client.is_valid() || storage == nullptr) {
+      if (storage == nullptr || !event.is_valid() || !client.is_valid()) {
         return ZX_ERR_INVALID_ARGS;
       }
       return zxio_raw_socket_init(
@@ -319,7 +319,7 @@ zx_status_t zxio_create_with_type(zxio_storage_t* storage, zxio_object_type_t ty
     case ZXIO_OBJECT_TYPE_PACKET_SOCKET: {
       zx::eventpair event(va_arg(args, zx_handle_t));
       zx::channel client(va_arg(args, zx_handle_t));
-      if (!event.is_valid() || !client.is_valid() || storage == nullptr) {
+      if (storage == nullptr || !event.is_valid() || !client.is_valid()) {
         return ZX_ERR_INVALID_ARGS;
       }
       return zxio_packet_socket_init(
@@ -329,7 +329,7 @@ zx_status_t zxio_create_with_type(zxio_storage_t* storage, zxio_object_type_t ty
     case ZXIO_OBJECT_TYPE_VMO: {
       zx::vmo vmo(va_arg(args, zx_handle_t));
       zx::stream stream(va_arg(args, zx_handle_t));
-      if (!vmo.is_valid() || !stream.is_valid() || storage == nullptr) {
+      if (storage == nullptr || !vmo.is_valid() || !stream.is_valid()) {
         return ZX_ERR_INVALID_ARGS;
       }
       return zxio_vmo_init(storage, std::move(vmo), std::move(stream));
