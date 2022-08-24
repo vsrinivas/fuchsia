@@ -4,8 +4,6 @@
 #![warn(clippy::all)]
 
 use diagnostics_log::{self, Interest, PublishOptions, Severity};
-use std::thread::sleep;
-use std::time::Duration;
 
 #[fuchsia::main(logging = false)]
 async fn main() {
@@ -18,7 +16,4 @@ async fn main() {
     tracing::debug!("my debug message.");
     tracing::info!("my info message.");
     tracing::warn!("my warn message.");
-
-    // TODO(fxbug.dev/76579): Wait for logs to route. Remove this once the bug is fixed.
-    sleep(Duration::from_millis(1000));
 }
