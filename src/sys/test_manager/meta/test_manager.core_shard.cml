@@ -55,9 +55,10 @@
             to: "#test_manager",
             scope: "#test_manager",
         },
+
+        // From appmgr
         {
             protocol: [
-                "fuchsia.intl.PropertyProvider",
                 "fuchsia.media.SessionAudioConsumerFactory",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Loader",
@@ -66,6 +67,8 @@
             to: "#test_manager",
             dependency: "weak_for_migration",
         },
+
+        // From optional core components
         {
             protocol: [
                 "fuchsia.media.Audio",
@@ -75,33 +78,36 @@
             ],
             from: "#audio_core",
             to: "#test_manager",
+            source_availability: "unknown",
+        },
+        {
+            protocol: "fuchsia.factory.WeaveFactoryStoreProvider",
+            from: "#factory_store_providers",
+            to: "#test_manager",
+            source_availability: "unknown",
         },
         {
             protocol: "fuchsia.feedback.CrashReporter",
             from: "#feedback",
             to: "#test_manager",
+            source_availability: "unknown",
         },
         {
             protocol: "fuchsia.component.resolution.Resolver",
             from: "#full-resolver",
             to: "#test_manager",
+            source_availability: "unknown",
         },
         {
-            storage: "tmp",
-            from: "self",
+            protocol: "fuchsia.intl.PropertyProvider",
+            from: "#intl",
             to: "#test_manager",
+            source_availability: "unknown",
         },
         {
             protocol: "fuchsia.tracing.provider.Registry",
             from: "#trace_manager",
             to: "#test_manager",
-        },
-        {
-            protocol: [ "fuchsia.factory.WeaveFactoryStoreProvider" ],
-            from: "#factory_store_providers",
-            to: [ "#test_manager" ],
-
-            // the source component isn't available on all boards
             source_availability: "unknown",
         },
 
@@ -112,6 +118,75 @@
             directory: "config-data",
             from: "parent",
             to: "#test_manager",
+        },
+        {
+            protocol: "fuchsia.fonts.Provider",
+            from: "#font_provider",
+            to: "#test_manager",
+            source_availability: "unknown",
+        },
+        {
+            protocol: "fuchsia.exception.Handler",
+            from: "#exceptions",
+            to: "#test_manager",
+            source_availability: "unknown",
+        },
+        {
+            protocol: [
+                "fuchsia.hwinfo.Board",
+                "fuchsia.hwinfo.Device",
+                "fuchsia.hwinfo.Product",
+            ],
+            from: "#hwinfo",
+            to: "#test_manager",
+            source_availability: "unknown",
+        },
+        {
+            protocol: "fuchsia.memorypressure.Provider",
+            from: "#memory_monitor",
+            to: "#test_manager",
+            source_availability: "unknown",
+        },
+        {
+            protocol: "fuchsia.process.Resolver",
+            from: "#process_resolver",
+            to: "#test_manager",
+            source_availability: "unknown",
+        },
+        {
+            protocol: [
+                "fuchsia.settings.Display",
+                "fuchsia.settings.Intl",
+                "fuchsia.settings.Privacy",
+            ],
+            from: "#setui_service",
+            to: "#test_manager",
+            source_availability: "unknown",
+        },
+        {
+            protocol: "fuchsia.sysmem.Allocator",
+            from: "#sysmem_connector",
+            to: "#test_manager",
+            source_availability: "unknown",
+        },
+        {
+            protocol: [
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "#ui",
+            to: "#test_manager",
+
+            // TODO(fxbug.dev/107526): break the cycle
+            dependency: "weak",
+            source_availability: "unknown",
+        },
+        {
+            protocol: "fuchsia.vulkan.loader.Loader",
+            from: "#vulkan_loader",
+            to: "#test_manager",
+            source_availability: "unknown",
         },
 
         // Needed by some non-hermetic tests
@@ -149,72 +224,6 @@
             from: "parent",
             to: "#test_manager",
         },
-        {
-            protocol: [ "fuchsia.fonts.Provider" ],
-            from: "#font_provider",
-            to: "#test_manager",
-        },
-        {
-            protocol: [ "fuchsia.exception.Handler" ],
-            from: "#exceptions",
-            to: "#test_manager",
-        },
-        {
-            protocol: [ "fuchsia.process.Resolver" ],
-            from: "#process_resolver",
-            to: "#test_manager",
-        },
-        {
-            protocol: "fuchsia.sysmem.Allocator",
-            from: "#sysmem_connector",
-            to: "#test_manager",
-        },
-        {
-            protocol: [
-                "fuchsia.hwinfo.Board",
-                "fuchsia.hwinfo.Device",
-                "fuchsia.hwinfo.Product",
-            ],
-            from: "#hwinfo",
-            to: "#test_manager",
-        },
-        {
-            protocol: [
-                "fuchsia.settings.Display",
-                "fuchsia.settings.Intl",
-                "fuchsia.settings.Privacy",
-            ],
-            from: "#setui_service",
-            to: "#test_manager",
-        },
-        {
-            protocol: "fuchsia.memorypressure.Provider",
-            from: "#memory_monitor",
-            to: "#test_manager",
-        },
-        {
-            protocol: "fuchsia.vulkan.loader.Loader",
-            from: "#vulkan_loader",
-            to: "#test_manager",
-        },
-        {
-            protocol: [
-                "fuchsia.ui.composition.Allocator",
-                "fuchsia.ui.composition.Flatland",
-                "fuchsia.ui.scenic.Scenic",
-            ],
-            from: "#ui",
-            to: "#test_manager",
-            dependency: "weak",
-            source_availability: "unknown",
-        },
-        {
-            directory: "dev",
-            from: "parent",
-            as: "dev-display-controller",
-            to: "#test_manager",
-            subdir: "class/display-controller",
-        },
 
         // Needed for driver tests.
         {
@@ -233,6 +242,13 @@
             directory: "build-info",
             from: "parent",
             to: "#test_manager",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-display-controller",
+            to: "#test_manager",
+            subdir: "class/display-controller",
         },
         {
             directory: "dev",
@@ -410,6 +426,11 @@
                 "tzdata-icu-44-le",
             ],
             from: "#tzdata-provider",
+            to: "#test_manager",
+        },
+        {
+            storage: "tmp",
+            from: "self",
             to: "#test_manager",
         },
     ],
