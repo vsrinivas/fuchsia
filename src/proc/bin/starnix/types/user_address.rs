@@ -57,9 +57,9 @@ impl Default for UserAddress {
     }
 }
 
-impl Into<UserAddress> for u64 {
-    fn into(self) -> UserAddress {
-        UserAddress(self)
+impl From<u64> for UserAddress {
+    fn from(value: u64) -> Self {
+        UserAddress(value)
     }
 }
 
