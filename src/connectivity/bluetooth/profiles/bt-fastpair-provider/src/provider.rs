@@ -120,16 +120,16 @@ impl Provider {
         &mut self,
         request: Vec<u8>,
     ) -> Result<(SharedSecret, KeyBasedPairingRequest), Error> {
-        // There must be a local Host to facilitate pairing.
-        let local_address = self.host_watcher.address().ok_or(Error::internal("No active host"))?;
+        // There must be an active local Host to facilitate pairing.
+        let discoverable =
+            self.host_watcher.pairing_mode().ok_or(Error::internal("No active host"))?;
 
         let (encrypted_request, remote_public_key) = parse_key_based_pairing_request(request)?;
         let keys_to_try = if let Some(key) = remote_public_key {
             debug!("Trying remote public key");
             // The Public/Private key pairing flow is only accepted if the local Host is
             // discoverable.
-            // This unwrap is safe because the active Host is guaranteed to exist at this point.
-            if !self.host_watcher.pairing_mode().unwrap() {
+            if !discoverable {
                 return Err(Error::internal("Active host is not discoverable"));
             }
 
@@ -141,7 +141,7 @@ impl Provider {
         };
 
         for key in keys_to_try {
-            match decrypt_key_based_pairing_request(&encrypted_request, &key, &local_address) {
+            match decrypt_key_based_pairing_request(&encrypted_request, &key) {
                 Ok(request) => {
                     debug!("Found a valid key for pairing");
                     // Refresh the LRU position of the key that successfully decrypted the request
@@ -179,6 +179,14 @@ impl Provider {
             }
         };
 
+        // There must be an active local Host and PairingManager to facilitate pairing.
+        let local_address = if let Some(addr) = self.host_watcher.address() {
+            addr
+        } else {
+            warn!("No active local Host available to start key-based pairing");
+            response(Err(gatt::Error::UnlikelyError));
+            return;
+        };
         let pairing = if let Some(p) = self.pairing.inner_mut() {
             p
         } else {
@@ -187,13 +195,34 @@ impl Provider {
             return;
         };
 
+        // Some key-based pairing requests require additional steps.
+        // TODO(fxbug.dev/96217): Track the salt in `request` to prevent replay attacks.
+        match request.action {
+            KeyBasedPairingAction::SeekerInitiatesPairing { received_provider_address } => {
+                if local_address.bytes() != &received_provider_address {
+                    // TODO(fxbug.dev/107656): Currently, we don't know the local device's random LE
+                    // address. `local_address` will always be the public address. The remote peer
+                    // can either send the public address or random address.
+                    // Reject the key-based pairing request when the `sys.HostWatcher` API supports
+                    // reporting the random address.
+                    warn!(
+                        "Received address doesn't match local ({:?} != {:?})",
+                        received_provider_address, local_address,
+                    );
+                }
+            }
+            KeyBasedPairingAction::ProviderInitiatesPairing { .. } => {
+                // TODO(fxbug.dev96222): Use `sys.Access/Pair` to pair to peer.
+            }
+            KeyBasedPairingAction::RetroactiveWrite { .. } => {
+                // TODO(fxbug.dev/99731): Support retroactive account key writes.
+            }
+        }
+
         // Notify the GATT service that the write request was successfully processed.
         response(Ok(()));
 
-        let encrypted_response = key_based_pairing_response(
-            &key,
-            self.host_watcher.address().expect("active host"), // Guaranteed to exist.
-        );
+        let encrypted_response = key_based_pairing_response(&key, local_address);
         if let Err(e) = self.gatt.notify_key_based_pairing(peer_id, encrypted_response) {
             warn!("Error notifying GATT characteristic: {:?}", e);
             return;
@@ -202,18 +231,6 @@ impl Provider {
         match pairing.new_pairing_procedure(peer_id, key) {
             Ok(_) => info!("Successfully started key-based pairing"),
             Err(e) => warn!("Couldn't start key-based pairing: {:?}", e),
-        }
-
-        // Some key-based pairing requests require additional steps.
-        // TODO(fxbug.dev/96217): Track the salt in `request` to prevent replay attacks.
-        match request.action {
-            KeyBasedPairingAction::SeekerInitiatesPairing => {} // Seeker initiates subsequent flow
-            KeyBasedPairingAction::ProviderInitiatesPairing { .. } => {
-                // TODO(fxbug.dev96222): Use `sys.Access/Pair` to pair to peer.
-            }
-            KeyBasedPairingAction::RetroactiveWrite { .. } => {
-                // TODO(fxbug.dev/99731): Support retroactive account key writes.
-            }
         }
     }
 

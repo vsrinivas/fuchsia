@@ -62,8 +62,13 @@ bitfield! {
 /// characteristic.
 #[derive(Debug, PartialEq)]
 pub enum KeyBasedPairingAction {
-    SeekerInitiatesPairing,
+    /// Seeker has requested to start Fast Pair. It will initiate the pairing flow. The
+    /// `received_provider_address` can either be the Public or Random address.
+    SeekerInitiatesPairing { received_provider_address: [u8; 6] },
+    /// Seeker has requested to start Fast Pair. The Provider will initiate the pairing flow.
     ProviderInitiatesPairing { seeker_address: Address },
+    /// Seeker has already paired to the Provider device and wants to retroactively save a Fast Pair
+    /// Account Key for this Provider device.
     RetroactiveWrite { seeker_address: Address },
     // TODO(fxbug.dev/99734): Add Device Action requests.
 }
@@ -80,20 +85,19 @@ pub struct KeyBasedPairingRequest {
 pub fn decrypt_key_based_pairing_request(
     encrypted_request: &[u8; GATT_REQUEST_BUFFER_SIZE],
     key: &SharedSecret,
-    local_address: &Address,
 ) -> Result<KeyBasedPairingRequest, Error> {
     let request = key.decrypt(encrypted_request);
     let message_type = MessageType::try_from(request[0])?;
     match message_type {
         MessageType::Pairing => {
             let flags = KeyBasedPairingFlags(request[1]);
-            debug!("Key-based pairing request: {:?}", flags);
-            let mut received_local_address_bytes = [0; 6];
-            received_local_address_bytes.copy_from_slice(&request[2..8]);
-
-            if local_address.bytes() != &received_local_address_bytes {
-                return Err(Error::internal("Invalid local address"));
-            }
+            debug!(?flags, "Key-based pairing request");
+            let mut received_provider_address = [0; 6];
+            received_provider_address.copy_from_slice(&request[2..8]);
+            // The received Provider address can be either the Public or Random address. It is
+            // received in Big Endian. All BT addresses saved in the Sapphire stack are in Little
+            // Endian.
+            received_provider_address.reverse();
 
             if flags.provider_initiates_bonding() || flags.retroactive_write() {
                 let mut seeker_address_bytes = [0; 6];
@@ -109,12 +113,13 @@ pub fn decrypt_key_based_pairing_request(
 
             // Otherwise, this is a standard request to start key-based pairing.
             return Ok(KeyBasedPairingRequest {
-                action: KeyBasedPairingAction::SeekerInitiatesPairing,
+                action: KeyBasedPairingAction::SeekerInitiatesPairing { received_provider_address },
                 _salt: request[8..].to_vec(),
             });
         }
         MessageType::DeviceAction => {
-            debug!("Device Action request: Flags({})", request[1]);
+            let raw_flags = request[1];
+            debug!(?raw_flags, "Device Action request");
             // TODO(fxbug.dev/99734): Support Device Action requests.
             return Err(Error::internal("Device Action requests not supported"));
         }
@@ -176,8 +181,10 @@ pub fn key_based_pairing_response(key: &SharedSecret, local_address: Address) ->
     let mut response = [0; GATT_RESPONSE_BUFFER_SIZE];
     // First byte indicates key-based pairing response.
     response[0] = 0x01;
-    // Next 6 bytes is the local BR/EDR address.
-    response[1..7].copy_from_slice(local_address.bytes());
+    // Next 6 bytes is the local BR/EDR address in Big Endian.
+    let mut local_address_bytes = local_address.bytes().clone();
+    local_address_bytes.reverse();
+    response[1..7].copy_from_slice(&local_address_bytes);
     // Final 9 bytes is a randomly generated salt value.
     fuchsia_zircon::cprng_draw(&mut response[7..16]);
     key.encrypt(&response).to_vec()
@@ -190,7 +197,7 @@ pub fn passkey_response(key: &SharedSecret, passkey: u32) -> Vec<u8> {
     let mut response = [0; GATT_RESPONSE_BUFFER_SIZE];
     // First byte indicates Provider passkey.
     response[0] = u8::from(&PasskeyType::Provider);
-    // Next 3 bytes is the passkey.
+    // Next 3 bytes is the passkey in Big Endian.
     response[1..4].copy_from_slice(&passkey.to_be_bytes()[1..4]);
     // Final 12 bytes is a randomly generated salt value.
     fuchsia_zircon::cprng_draw(&mut response[4..16]);
@@ -256,7 +263,7 @@ pub(crate) mod tests {
         let random_request = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16];
         let encrypted_request = key.encrypt(&random_request);
 
-        let request = decrypt_key_based_pairing_request(&encrypted_request, &key, &LOCAL_ADDRESS);
+        let request = decrypt_key_based_pairing_request(&encrypted_request, &key);
         assert_matches!(request, Err(Error::Packet));
     }
 
@@ -272,7 +279,7 @@ pub(crate) mod tests {
         ];
         let encrypted_request = key.encrypt(&device_action);
 
-        let request = decrypt_key_based_pairing_request(&encrypted_request, &key, &LOCAL_ADDRESS);
+        let request = decrypt_key_based_pairing_request(&encrypted_request, &key);
         assert_matches!(request, Err(Error::InternalError(_)));
     }
 
@@ -283,26 +290,10 @@ pub(crate) mod tests {
         0xaa, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc, 0xdd, 0xdd, // Salt
     ];
 
-    const LOCAL_ADDRESS: Address = Address::Public([0x1, 0x2, 0x3, 0x4, 0x5, 0x6]);
-
-    #[test]
-    fn decrypt_request_invalid_address() {
-        let key = example_aes_key();
-        let random_address = Address::Public([0x1, 0x2, 0x1, 0x2, 0x1, 0x2]);
-        // The address in `KEY_BASED_PAIRING_REQUEST` differs from `random_address`.
-        let encrypted_request = key.encrypt(&KEY_BASED_PAIRING_REQUEST);
-
-        let request = decrypt_key_based_pairing_request(&encrypted_request, &key, &random_address);
-        assert_matches!(request, Err(Error::InternalError(_)));
-    }
-
     #[test]
     fn decrypt_request_not_encrypted() {
-        let request = decrypt_key_based_pairing_request(
-            &KEY_BASED_PAIRING_REQUEST,
-            &example_aes_key(),
-            &LOCAL_ADDRESS,
-        );
+        let request =
+            decrypt_key_based_pairing_request(&KEY_BASED_PAIRING_REQUEST, &example_aes_key());
         assert_matches!(request, Err(_));
     }
 
@@ -312,10 +303,12 @@ pub(crate) mod tests {
         // The request is formatted and encrypted OK.
         let encrypted_request = key.encrypt(&KEY_BASED_PAIRING_REQUEST);
 
-        let request = decrypt_key_based_pairing_request(&encrypted_request, &key, &LOCAL_ADDRESS)
+        let request = decrypt_key_based_pairing_request(&encrypted_request, &key)
             .expect("successful decryption");
+        // Received provider address should be saved in Little Endian.
+        let received_provider_address = [0x06, 0x05, 0x04, 0x03, 0x02, 0x01];
         let expected_request = KeyBasedPairingRequest {
-            action: KeyBasedPairingAction::SeekerInitiatesPairing,
+            action: KeyBasedPairingAction::SeekerInitiatesPairing { received_provider_address },
             _salt: vec![0xaa, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc, 0xdd, 0xdd],
         };
         assert_eq!(request, expected_request);
@@ -329,7 +322,7 @@ pub(crate) mod tests {
         retroactive_pairing_request[1] = 0x10; // Retroactive pairing flags
         let encrypted_request = key.encrypt(&retroactive_pairing_request);
 
-        let request = decrypt_key_based_pairing_request(&encrypted_request, &key, &LOCAL_ADDRESS)
+        let request = decrypt_key_based_pairing_request(&encrypted_request, &key)
             .expect("successful decryption");
         let expected_request = KeyBasedPairingRequest {
             action: KeyBasedPairingAction::RetroactiveWrite {
@@ -349,7 +342,7 @@ pub(crate) mod tests {
         provider_pairing_request[1] = 0x40; // Provider initiates pairing flags
         let encrypted_request = key.encrypt(&provider_pairing_request);
 
-        let request = decrypt_key_based_pairing_request(&encrypted_request, &key, &LOCAL_ADDRESS)
+        let request = decrypt_key_based_pairing_request(&encrypted_request, &key)
             .expect("successful decryption");
         let expected_request = KeyBasedPairingRequest {
             action: KeyBasedPairingAction::ProviderInitiatesPairing {
@@ -442,5 +435,43 @@ pub(crate) mod tests {
         let encrypted_buf = encrypt_message(&ACCOUNT_KEY_REQUEST);
         let result = decrypt_account_key_request(encrypted_buf.to_vec(), &example_aes_key());
         assert_matches!(result, Ok(_));
+    }
+
+    #[test]
+    fn key_based_pairing_notification_data() {
+        let key = example_aes_key();
+        let address = Address::Public([1, 2, 3, 4, 5, 6]);
+
+        // The response is encrypted.
+        let response = key_based_pairing_response(&key, address);
+        let mut response_buf: [u8; 16] = Default::default();
+        response_buf.copy_from_slice(&response[..]);
+        let decrypted_response = key.decrypt(&response_buf);
+
+        // Only compare the first 7 bytes since the remaining is a randomly generated salt.
+        let expected = [
+            0x01, // Key-based pairing response
+            0x06, 0x05, 0x04, 0x03, 0x02, 0x01, // Address in Big Endian
+        ];
+        assert_eq!(decrypted_response[..7], expected);
+    }
+
+    #[test]
+    fn passkey_notification_data() {
+        let key = example_aes_key();
+        let passkey = 0x123456;
+
+        // The response is encrypted.
+        let response = passkey_response(&key, passkey);
+        let mut response_buf: [u8; 16] = Default::default();
+        response_buf.copy_from_slice(&response[..]);
+        let decrypted_response = key.decrypt(&response_buf);
+
+        // Only compare the first 4 bytes since the remaining is a randomly generated salt.
+        let expected = [
+            0x03, // Provider's passkey
+            0x12, 0x34, 0x56, // Passkey in Big Endian bytes
+        ];
+        assert_eq!(decrypted_response[..4], expected);
     }
 }
