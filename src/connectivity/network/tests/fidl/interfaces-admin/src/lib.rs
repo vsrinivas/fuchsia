@@ -4,11 +4,13 @@
 
 #![cfg(test)]
 
+use assert_matches::assert_matches;
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_debug as fnet_debug;
 use fidl_fuchsia_net_interfaces_admin as finterfaces_admin;
 use fidl_fuchsia_netemul_network as fnetemul_network;
 use fuchsia_async::TimeoutExt as _;
+use fuchsia_zircon_status as zx_status;
 use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
 use net_declare::{fidl_ip, fidl_mac, fidl_subnet, std_ip_v6, std_socket_addr};
 use net_types::ip::IpAddress as _;
@@ -358,6 +360,54 @@ async fn add_address_offline<E: netemul::Endpoint>(name: &str) {
     )
     .await
     .expect("wait for ASSIGNED address assignment state");
+}
+
+// Verify that a request to `WatchAddressAssignmentState` while an existing
+// request is pending causes the `AddressStateProvider` protocol to close.
+#[variants_test]
+async fn duplicate_watch_address_assignment_state<E: netemul::Endpoint>(name: &str) {
+    // TODO(https://fxbug.dev/105011): Test against Netstack3 once
+    // `WatchAddressAssignmentState` is supported.
+    type N = Netstack2;
+    let sandbox = netemul::TestSandbox::new().expect("new sandbox");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
+    let device = sandbox.create_endpoint::<E, _>(name).await.expect("create endpoint");
+    let interface = device.into_interface_in_realm(&realm).await.expect("add endpoint to Netstack");
+    assert!(interface.control().enable().await.expect("send enable").expect("enable"));
+    let () = interface.set_link_up(true).await.expect("bring device up");
+
+    const VALID_ADDRESS_PARAMETERS: fidl_fuchsia_net_interfaces_admin::AddressParameters =
+        fidl_fuchsia_net_interfaces_admin::AddressParameters::EMPTY;
+    let address = fidl_subnet!("1.1.1.1/32");
+    let address_state_provider = interfaces::add_address_wait_assigned(
+        interface.control(),
+        address,
+        VALID_ADDRESS_PARAMETERS,
+    )
+    .await
+    .expect("add address failed unexpectedly");
+
+    // Invoke `WatchAddressAssignmentState` twice and assert that the two
+    // requests and the AddressStateProvider protocol are closed.
+    assert_matches!(
+        futures::future::join(
+            address_state_provider.watch_address_assignment_state(),
+            address_state_provider.watch_address_assignment_state(),
+        )
+        .await,
+        (
+            Err(fidl::Error::ClientChannelClosed { status: zx_status::Status::PEER_CLOSED, .. }),
+            Err(fidl::Error::ClientChannelClosed { status: zx_status::Status::PEER_CLOSED, .. }),
+        )
+    );
+    assert_matches!(
+        address_state_provider
+            .take_event_stream()
+            .try_next()
+            .await
+            .expect("read AddressStateProvider event"),
+        None
+    );
 }
 
 #[variants_test]
