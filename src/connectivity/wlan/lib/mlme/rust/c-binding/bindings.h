@@ -242,6 +242,16 @@ extern "C" wlan_mlme_handle_t *start_ap_sta_for_test(rust_device_interface_t dev
 
 extern "C" void stop_ap_sta(wlan_mlme_handle_t *sta);
 
+/**
+ * FFI interface: Stop and delete an AP MLME via the MlmeHandle. Takes ownership
+ * and invalidates the passed MlmeHandle.
+ *
+ * # Safety
+ *
+ * This fn accepts a raw pointer that is held by the FFI caller as a handle to
+ * the MLME. This API is fundamentally unsafe, and relies on the caller to
+ * pass the correct pointer and make no further calls on it later.
+ */
 extern "C" void delete_ap_sta(wlan_mlme_handle_t *sta);
 
 extern "C" void ap_sta_queue_eth_frame_tx(wlan_mlme_handle_t *sta, wlan_span_t frame);
@@ -260,6 +270,16 @@ extern "C" wlan_mlme_handle_t *start_client_mlme_for_test(wlan_client_mlme_confi
 
 extern "C" void stop_client_mlme(wlan_mlme_handle_t *mlme);
 
+/**
+ * FFI interface: Stop and delete a Client MLME via the MlmeHandle. Takes ownership
+ * and invalidates the passed MlmeHandle.
+ *
+ * # Safety
+ *
+ * This fn accepts a raw pointer that is held by the FFI caller as a handle to
+ * the MLME. This API is fundamentally unsafe, and relies on the caller to
+ * pass the correct pointer and make no further calls on it later.
+ */
 extern "C" void delete_client_mlme(wlan_mlme_handle_t *mlme);
 
 extern "C" void client_mlme_queue_eth_frame_tx(wlan_mlme_handle_t *mlme, wlan_span_t frame);
@@ -270,6 +290,16 @@ extern "C" void client_mlme_run_until_stalled(wlan_mlme_handle_t *mlme);
 
 extern "C" mlme_sequence_manager_t *mlme_sequence_manager_new(void);
 
+/**
+ * FFI interface: Delete a SequenceManager. Takes ownership and invalidates the
+ * passed pointer.
+ *
+ * # Safety
+ *
+ * This fn accepts a raw pointer that is held by the FFI caller. This API is
+ * fundamentally unsafe, and relies on the caller to pass the correct pointer
+ * and make no further calls on it later.
+ */
 extern "C" void mlme_sequence_manager_delete(mlme_sequence_manager_t *mgr);
 
 extern "C" uint32_t mlme_sequence_manager_next_sns1(mlme_sequence_manager_t *mgr,

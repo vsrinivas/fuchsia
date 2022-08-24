@@ -1124,10 +1124,6 @@ impl States {
                 }
                 _ => self,
             },
-            event => {
-                error!("unsupported event, {:?}, this should NOT happen", event);
-                self
-            }
         }
     }
 
@@ -1307,9 +1303,8 @@ mod tests {
             block_ack::{write_addba_req_body, ADDBA_REQ_FRAME_LEN},
             buffer::FakeBufferProvider,
             client::{
-                channel_listener::ChannelListenerState, channel_scheduler::ChannelScheduler,
-                scanner::Scanner, test_utils::drain_timeouts, Client, ClientConfig, Context,
-                ParsedConnectRequest, TimedEventClass,
+                channel_switch::ChannelState, scanner::Scanner, test_utils::drain_timeouts, Client,
+                Context, ParsedConnectRequest, TimedEventClass,
             },
             device::{Device, FakeDevice},
             test_utils::{fake_control_handle, MockWlanRxInfo},
@@ -1344,8 +1339,7 @@ mod tests {
         timer: Option<Timer<TimedEvent>>,
         time_stream: TimeStream<TimedEvent>,
         scanner: Scanner,
-        chan_sched: ChannelScheduler,
-        channel_state: ChannelListenerState,
+        channel_state: ChannelState,
     }
 
     impl MockObjects {
@@ -1356,7 +1350,6 @@ mod tests {
                 timer: Some(timer),
                 time_stream,
                 scanner: Scanner::new(IFACE_MAC),
-                chan_sched: ChannelScheduler::new(),
                 channel_state: Default::default(),
             }
         }
@@ -1384,7 +1377,7 @@ mod tests {
 
         fn make_ctx_with_device(&mut self, device: Device) -> Context {
             Context {
-                config: ClientConfig { ensure_on_channel_time: 0 },
+                _config: Default::default(),
                 device,
                 buf_provider: FakeBufferProvider::new(),
                 timer: self.timer.take().unwrap(),
@@ -1507,7 +1500,7 @@ mod tests {
         let device = m.fake_device.as_device_fail_wlan_tx();
         let mut ctx = m.make_ctx_with_device(device);
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
 
         let state = Joined;
         let _state = state.start_authenticating(&mut sta).expect_err("should fail authenticating");
@@ -1543,7 +1536,7 @@ mod tests {
             security_ie: vec![],
         };
         let mut sta = Client::new(connect_req, IFACE_MAC, fake_client_capabilities());
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let state = Joined;
 
         assert!(m.fake_device.bss_cfg.is_some());
@@ -1570,7 +1563,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let mut state = open_authenticating(&mut sta);
 
         assert!(m.fake_device.bss_cfg.is_some());
@@ -1608,7 +1601,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let mut state = open_authenticating(&mut sta);
 
         assert!(m.fake_device.bss_cfg.is_some());
@@ -1637,7 +1630,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
 
         assert!(m.fake_device.bss_cfg.is_some());
         let mut state = Associating::default();
@@ -1683,7 +1676,7 @@ mod tests {
         let mut sta = make_protected_client_station();
         sta.client_capabilities.0.capability_info =
             mac::CapabilityInfo(0).with_ess(true).with_ibss(true);
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let mut state = Associating::default();
 
         assert!(m.fake_device.bss_cfg.is_some());
@@ -1744,7 +1737,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
 
         let mut state = Associating::default();
 
@@ -1774,7 +1767,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
 
         let mut state = Associating::default();
 
@@ -1806,7 +1799,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
 
         let mut state = Associating::default();
 
@@ -1828,7 +1821,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
 
         let mut state = Associating::default();
 
@@ -1850,12 +1843,7 @@ mod tests {
         let mut mock = MockObjects::new(&exec);
         let mut ctx = mock.make_ctx();
         let mut station = make_client_station();
-        let mut client = station.bind(
-            &mut ctx,
-            &mut mock.scanner,
-            &mut mock.chan_sched,
-            &mut mock.channel_state,
-        );
+        let mut client = station.bind(&mut ctx, &mut mock.scanner, &mut mock.channel_state);
 
         let frame = {
             let mut buffer = [0u8; ADDBA_REQ_FRAME_LEN];
@@ -1908,7 +1896,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let mut state = Associated(empty_association(&mut sta));
 
         assert!(m.fake_device.bss_cfg.is_some());
@@ -1951,7 +1939,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let mut state = Associated(empty_association(&mut sta));
 
         assert!(m.fake_device.bss_cfg.is_some());
@@ -1994,7 +1982,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let state = Associated(empty_association(&mut sta));
 
         let data_frame = make_data_frame_single_llc(None, None);
@@ -2011,7 +1999,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let state =
             Associated(Association { controlled_port_open: true, ..empty_association(&mut sta) });
 
@@ -2036,7 +2024,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let state = Associated(empty_association(&mut sta));
 
         let (src_addr, dst_addr, eapol_frame) = make_eapol_frame(IFACE_MAC);
@@ -2063,7 +2051,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let state = Associated(empty_association(&mut sta));
 
         let (src_addr, dst_addr, eapol_frame) = make_eapol_frame(IFACE_MAC);
@@ -2090,7 +2078,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let state =
             Associated(Association { controlled_port_open: true, ..empty_association(&mut sta) });
 
@@ -2124,7 +2112,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let state = Associated(Association {
             aid: 42,
             controlled_port_open: true,
@@ -2154,7 +2142,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let state = Associated(Association {
             aid: 42,
             controlled_port_open: true,
@@ -2194,7 +2182,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
 
         // Closed Controlled port
         let state = Associated(empty_association(&mut sta));
@@ -2230,7 +2218,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
 
         // Foreign data frame
         let state = States::from(statemachine::testing::new_state(Associated(Association {
@@ -2269,7 +2257,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let mut state = States::from(statemachine::testing::new_state(Joined));
 
         // (sme->mlme) Send a reconnect request
@@ -2301,7 +2289,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let mut state =
             States::from(statemachine::testing::new_state(open_authenticating(&mut sta)));
 
@@ -2331,7 +2319,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let mut state =
             States::from(statemachine::testing::new_state(open_authenticating(&mut sta)));
 
@@ -2363,7 +2351,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let mut state =
             States::from(statemachine::testing::new_state(open_authenticating(&mut sta)));
 
@@ -2392,7 +2380,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let mut state =
             States::from(statemachine::testing::new_state(open_authenticating(&mut sta)));
 
@@ -2442,7 +2430,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let mut state =
             States::from(statemachine::testing::new_state(open_authenticating(&mut sta)));
 
@@ -2475,7 +2463,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let mut state = States::from(statemachine::testing::new_state(Associating::default()));
 
         // Successful: Associating > Associated
@@ -2514,7 +2502,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let mut state = States::from(statemachine::testing::new_state(Associating::default()));
 
         assert!(m.fake_device.bss_cfg.is_some());
@@ -2545,7 +2533,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let mut state = States::from(statemachine::testing::new_state(Associating::default()));
 
         assert!(m.fake_device.bss_cfg.is_some());
@@ -2573,7 +2561,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let mut state = States::from(statemachine::testing::new_state(Associating::default()));
 
         assert!(m.fake_device.bss_cfg.is_some());
@@ -2599,7 +2587,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let mut state = States::from(statemachine::testing::new_state(Associating::default()));
 
         assert!(m.fake_device.bss_cfg.is_some());
@@ -2636,7 +2624,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let mut state =
             States::from(statemachine::testing::new_state(Associated(empty_association(&mut sta))));
 
@@ -2740,7 +2728,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let mut state =
             States::from(statemachine::testing::new_state(Associated(empty_association(&mut sta))));
 
@@ -2810,7 +2798,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let mut state =
             States::from(statemachine::testing::new_state(Associated(empty_association(&mut sta))));
 
@@ -2870,7 +2858,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let association = Association {
             aid: 42,
             assoc_resp_ies: vec![
@@ -2909,7 +2897,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let mut state =
             States::from(statemachine::testing::new_state(Associated(empty_association(&mut sta))));
 
@@ -2950,7 +2938,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let state = States::from(statemachine::testing::new_state(Associated(Association {
             controlled_port_open: true,
             ..empty_association(&mut sta)
@@ -2994,7 +2982,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let state =
             States::from(statemachine::testing::new_state(Associated(empty_association(&mut sta))));
 
@@ -3019,7 +3007,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let state =
             States::from(statemachine::testing::new_state(Associated(empty_association(&mut sta))));
 
@@ -3039,7 +3027,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let state =
             States::from(statemachine::testing::new_state(Associated(empty_association(&mut sta))));
 
@@ -3060,7 +3048,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let state = States::from(statemachine::testing::new_state(Joined));
 
         let eth_frame = &[100; 14]; // long enough for ethernet header.
@@ -3081,7 +3069,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let state = States::from(statemachine::testing::new_state(Joined));
 
         assert!(m.fake_device.bss_cfg.is_some());
@@ -3100,7 +3088,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let state = States::from(statemachine::testing::new_state(open_authenticating(&mut sta)));
 
         assert!(m.fake_device.bss_cfg.is_some());
@@ -3121,7 +3109,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let state = States::from(statemachine::testing::new_state(Associating::default()));
 
         assert!(m.fake_device.bss_cfg.is_some());
@@ -3142,7 +3130,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx_with_bss();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let state = States::from(statemachine::testing::new_state(Associated(Association {
             controlled_port_open: true,
             ..empty_association(&mut sta)
@@ -3195,7 +3183,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
 
         let state = States::from(statemachine::testing::new_state(Joined));
         let _state = state.handle_mlme_msg(&mut sta, fake_mlme_eapol_req(&exec));
@@ -3218,7 +3206,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
 
         let state =
             States::from(statemachine::testing::new_state(Associated(empty_association(&mut sta))));
@@ -3233,7 +3221,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
 
         let state =
             States::from(statemachine::testing::new_state(Associated(empty_association(&mut sta))));
@@ -3283,7 +3271,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
 
         let state = States::from(statemachine::testing::new_state(Joined));
         let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_keys_req(&exec));
@@ -3305,7 +3293,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
 
         let state =
             States::from(statemachine::testing::new_state(Associated(empty_association(&mut sta))));
@@ -3320,7 +3308,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
 
         let state =
             States::from(statemachine::testing::new_state(Associated(empty_association(&mut sta))));
@@ -3364,7 +3352,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
 
         let state =
             States::from(statemachine::testing::new_state(Associated(empty_association(&mut sta))));
@@ -3416,7 +3404,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
 
         let state = States::from(statemachine::testing::new_state(Joined));
         let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_ctrl_port_open(true, &exec));
@@ -3438,7 +3426,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
 
         let state =
             States::from(statemachine::testing::new_state(Associated(empty_association(&mut sta))));
@@ -3453,7 +3441,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
 
         let state =
             States::from(statemachine::testing::new_state(Associated(empty_association(&mut sta))));
@@ -3470,7 +3458,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let state = States::from(statemachine::testing::new_state(Associated(Association {
             aid: 1,
             ..empty_association(&mut sta)
@@ -3511,7 +3499,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let state = States::from(statemachine::testing::new_state(Associated(Association {
             aid: 1,
             ..empty_association(&mut sta)
@@ -3549,7 +3537,7 @@ mod tests {
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
         let mut sta = make_protected_client_station();
-        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
 
         let state = States::from(State::from(statemachine::testing::new_state(Associated(
             empty_association(&mut sta),

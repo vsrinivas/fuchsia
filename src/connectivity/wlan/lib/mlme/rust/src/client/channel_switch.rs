@@ -9,6 +9,11 @@ use {
     zerocopy::ByteSlice,
 };
 
+#[derive(Default)]
+pub struct ChannelState {
+    pub(crate) main_channel: Option<banjo_common::WlanChannel>,
+}
+
 #[derive(Debug, PartialEq)]
 pub struct ChannelSwitch {
     pub channel_switch_count: u8,

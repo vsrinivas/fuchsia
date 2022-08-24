@@ -1494,7 +1494,7 @@ mod tests {
 
         assert_variant!(ap.handle_mlme_msg(mlme_req), Ok(()));
         let resp = assert_variant!(exec.run_until_stalled(&mut query_fut), Poll::Ready(Ok(r)) => r);
-        assert_eq!(resp.scan_offload.supported, false);
+        assert_eq!(resp.scan_offload.supported, true);
         assert_eq!(resp.probe_response_offload.supported, false);
     }
 
