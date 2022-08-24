@@ -1275,7 +1275,7 @@ func (c *compiler) compileProtocol(p fidlgen.Protocol) *Protocol {
 		var ok bool
 		transport, ok = transports[t]
 		if !ok {
-			panic("transport not found")
+			panic(fmt.Sprintf("transport %s not found", t))
 		}
 	}
 	r.Transport = transport
