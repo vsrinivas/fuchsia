@@ -36,6 +36,18 @@ class RegisterTracer : public magma::RegisterIo::Hook {
   std::vector<Operation> trace_;
 };
 
+TEST(RegisterIo, ReadUnalignedUint64) {
+  auto mmio = MockMmio::Create(4096);
+
+  constexpr uint64_t kVal = 0xabcd1234beaf5678;
+  mmio->Write32(kVal & 0xFFFFFFFF, 4);
+  mmio->Write32(kVal >> 32, 8);
+
+  magma::RegisterIo register_io(std::move(mmio));
+
+  EXPECT_EQ(kVal, register_io.Read64(4));
+}
+
 TEST(RegisterIo, TemplatedHooks) {
   magma::RegisterIo register_io(MockMmio::Create(4096));
 

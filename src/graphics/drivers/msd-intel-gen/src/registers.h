@@ -80,6 +80,7 @@ class PatIndex {
 
 // from intel-gfx-prm-osrc-bdw-vol02c-commandreference-registers_4.pdf p.438
 // and intel-gfx-prm-osrc-bdw-vol02d-commandreference-structures_3.pdf p.107
+// Note: this register exists in all hardware but ExeclistSubmitQueue is used from gen12.
 class ExeclistSubmitPort {
  public:
   static constexpr uint32_t kSubmitOffset = 0x230;
@@ -115,7 +116,50 @@ class ExeclistSubmitPort {
   }
 };
 
-class ExeclistStatus {
+// https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-tgl-vol02c-commandreference-registers-part1_0.pdf
+// p.896
+// https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-tgl-vol02d-commandreference-structures_0.pdf
+// p.275
+class ExeclistSubmitQueue {
+ public:
+  static constexpr uint32_t kOffset = 0x510;
+
+  enum EngineType {
+    RENDER = 0,
+    VIDEO = 1,
+  };
+
+  static constexpr uint64_t context_descriptor(EngineType type, uint32_t instance,
+                                               uint32_t context_id, gpu_addr_t gpu_addr) {
+    constexpr uint32_t kValid = 1;
+    constexpr uint32_t kLegacyMode48bitPpgtt = 3 << 3;
+    constexpr uint32_t kLegacyModePpgttEnable = 1 << 8;
+    constexpr uint64_t kContextIdShift = 37;
+    constexpr uint64_t kEngineClassShift = 61;
+    constexpr uint64_t kEngineInstanceShift = 48;
+
+    DASSERT(gpu_addr < (1ul << 32) && (gpu_addr & 0xFFF) == 0);
+    DASSERT(context_id < (1u << 11));
+    DASSERT(instance < (1u << 6));
+
+    uint64_t desc = gpu_addr;
+    desc |= kValid | kLegacyMode48bitPpgtt | kLegacyModePpgttEnable;
+    desc |= static_cast<uint64_t>(context_id) << kContextIdShift;
+    desc |= static_cast<uint64_t>(type) << kEngineClassShift;
+    desc |= static_cast<uint64_t>(instance) << kEngineInstanceShift;
+    return desc;
+  }
+
+  // May be expanded up to 8 descriptors at consecutive addresses.
+  static void write(magma::RegisterIo* reg_io, uint32_t mmio_base, uint64_t descriptor) {
+    reg_io->Write32(magma::lower_32_bits(descriptor), mmio_base + kOffset);
+    reg_io->Write32(magma::upper_32_bits(descriptor), mmio_base + kOffset + sizeof(uint32_t));
+  }
+};
+
+// https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-kbl-vol02c-commandreference-registers-part1.pdf
+// p.616
+class ExeclistStatusGen9 {
  public:
   static constexpr uint32_t kOffset = 0x234;
   static constexpr uint32_t kExeclistCurrentPointerShift = 0;
@@ -139,6 +183,39 @@ class ExeclistStatus {
 
   static bool execlist_queue_full(uint64_t status) {
     return (status >> kExeclistQueueFullShift) & 0x1;
+  }
+};
+
+// https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-tgl-vol02c-commandreference-registers-part1_0.pdf
+// p.892
+class ExeclistStatusGen12 : public hwreg::RegisterBase<ExeclistStatusGen12, uint64_t> {
+ public:
+  DEF_FIELD(63, 32, context_id);
+  DEF_BIT(30, pending_load);
+  DEF_BIT(27, arb_enable);
+  DEF_FIELD(26, 12, last_context_switch_reason);
+  DEF_FIELD(11, 8, active_context_offset);
+  DEF_BIT(7, active_context);
+  DEF_BIT(4, valid_exec_queue_dupe);
+  DEF_BIT(3, valid_exec_queue);
+  DEF_BIT(2, preempt_to_idle_pending);
+  DEF_BIT(1, two_pending_loads);
+  DEF_BIT(0, exec_queue_invalid);
+
+  static auto GetAddr(uint32_t mmio_base) {
+    return hwreg::RegisterAddr<ExeclistStatusGen12>(mmio_base + 0x234);
+  }
+};
+
+// https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-tgl-vol02c-commandreference-registers-part1_0.pdf
+// p.889
+class ExeclistControl {
+ public:
+  static constexpr uint32_t kOffset = 0x550;
+  static constexpr uint32_t kLoad = 1;
+
+  static void load(magma::RegisterIo* reg_io, uint32_t mmio_base) {
+    reg_io->Write32(kLoad, mmio_base + kOffset);
   }
 };
 

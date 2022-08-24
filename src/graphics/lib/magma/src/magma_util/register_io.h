@@ -31,6 +31,11 @@ class RegisterIo {
   }
 
   uint64_t Read64(uint32_t offset) {
+    if (offset & 0x7) {
+      uint64_t value = Read32(offset + 4);
+      value = (value << 32) | Read32(offset);
+      return value;
+    }
     uint64_t val = mmio_->Read64(offset);
     if (hook_)
       hook_->Read64(val, offset);

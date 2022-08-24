@@ -274,13 +274,19 @@ void EngineCommandStreamer::SubmitExeclists(MsdIntelContext* context) {
   auto start = std::chrono::high_resolution_clock::now();
 
   for (bool busy = true; busy;) {
-    constexpr uint32_t kTimeoutUs = 100;
-    uint64_t status = registers::ExeclistStatus::read(register_io(), mmio_base());
+    if (DeviceId::is_gen12(owner_->device_id())) {
+      auto reg = registers::ExeclistStatusGen12::GetAddr(mmio_base_).ReadFrom(register_io());
+      busy = !reg.exec_queue_invalid();
+    } else {
+      uint64_t status = registers::ExeclistStatusGen9::read(register_io(), mmio_base());
 
-    busy = registers::ExeclistStatus::execlist_write_pointer(status) ==
-               registers::ExeclistStatus::execlist_current_pointer(status) &&
-           registers::ExeclistStatus::execlist_queue_full(status);
+      busy = registers::ExeclistStatusGen9::execlist_write_pointer(status) ==
+                 registers::ExeclistStatusGen9::execlist_current_pointer(status) &&
+             registers::ExeclistStatusGen9::execlist_queue_full(status);
+    }
+
     if (busy) {
+      constexpr uint32_t kTimeoutUs = 100;
       if (std::chrono::duration<double, std::micro>(std::chrono::high_resolution_clock::now() -
                                                     start)
               .count() > kTimeoutUs) {
@@ -290,16 +296,47 @@ void EngineCommandStreamer::SubmitExeclists(MsdIntelContext* context) {
     }
   }
 
-  DLOG("SubmitExeclists context descriptor id 0x%lx", gpu_addr >> 12);
+  DLOG("%s: SubmitExeclists context gpu_addr 0x%lx", Name(), gpu_addr);
 
-  // Use most significant bits of context gpu_addr as globally unique context id
-  DASSERT(PAGE_SIZE == 4096);
-  uint64_t descriptor0 = registers::ExeclistSubmitPort::context_descriptor(
-      gpu_addr, magma::to_uint32(gpu_addr >> 12),
-      context->exec_address_space()->type() == ADDRESS_SPACE_PPGTT);
-  uint64_t descriptor1 = 0;
+  if (DeviceId::is_gen12(owner_->device_id())) {
+    // We don't have a globally unique context id that fits in 11 bits, so just use an
+    // incrementing counter.
+    uint32_t context_id = hw_context_id_counter_++;
+    if (context_id == 0x7FF) {
+      hw_context_id_counter_ = 1;
+      context_id = hw_context_id_counter_++;
+    }
 
-  registers::ExeclistSubmitPort::write(register_io(), mmio_base_, descriptor1, descriptor0);
+    registers::ExeclistSubmitQueue::EngineType type;
+    switch (id()) {
+      case RENDER_COMMAND_STREAMER:
+        type = registers::ExeclistSubmitQueue::RENDER;
+        break;
+      case VIDEO_COMMAND_STREAMER:
+        type = registers::ExeclistSubmitQueue::VIDEO;
+        break;
+    }
+    uint64_t descriptor = registers::ExeclistSubmitQueue::context_descriptor(type, /*instance=*/0,
+                                                                             context_id, gpu_addr);
+
+    registers::ExeclistSubmitQueue::write(register_io(), mmio_base_, descriptor);
+    registers::ExeclistControl::load(register_io(), mmio_base_);
+
+    DLOG("%s: SubmitExeclists loaded gen12 descriptor 0x%016lx context_id 0x%x gpu_addr 0x%lx",
+         Name(), descriptor, context_id, gpu_addr);
+  } else {
+    // Use most significant bits of context gpu_addr as globally unique context id
+    uint32_t context_id = magma::to_uint32(gpu_addr >> 12);
+
+    uint64_t descriptor0 = registers::ExeclistSubmitPort::context_descriptor(
+        gpu_addr, context_id, context->exec_address_space()->type() == ADDRESS_SPACE_PPGTT);
+    uint64_t descriptor1 = 0;
+
+    registers::ExeclistSubmitPort::write(register_io(), mmio_base_, descriptor1, descriptor0);
+
+    DLOG("%s: SubmitExeclists submitted descriptor 0x%016lx context_id 0x%x", Name(), descriptor0,
+         context_id);
+  }
 }
 
 uint64_t EngineCommandStreamer::GetActiveHeadPointer() {
