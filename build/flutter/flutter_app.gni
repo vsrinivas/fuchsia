@@ -18,7 +18,7 @@ import("//build/flutter/flutter_component.gni")
 #     Name of the Dart file containing the main function.
 #
 #   meta (required)
-#     A list containing 1 scope with the path to the cml file associated with
+#     A list containing 1 scope with the path to the cmx file associated with
 #     the flutter app.
 #
 #   package_name (optional)

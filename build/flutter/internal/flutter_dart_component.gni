@@ -183,8 +183,12 @@ template("flutter_dart_component") {
   _manifest_extension = get_path_info(invoker.manifest, "extension")
   _merged_target_name = "${target_name}_merged.${_manifest_extension}"
 
-  _merge_manifests =
-      [ invoker.manifest ] + [ rebase_path(build_cfg.runtime_meta, ".") ]
+  _merge_manifests = [ invoker.manifest ]
+  if (_manifest_extension == "cml") {
+    _merge_manifests += [ rebase_path(build_cfg.runtime_meta, ".") ]
+  } else {
+    _merge_manifests += [ rebase_path(build_cfg.runtime_meta_v1, ".") ]
+  }
 
   # Add test runtime shard to make sure test component's fuchsia.test.Suite
   # protocol is exposed for the test_manager to use.
