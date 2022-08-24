@@ -32,7 +32,7 @@ that a function is instantiated with. We could imagine code along the lines of:
 
 ```
 /// Get the IPv4 address associated with this Ethernet device.
-pub fn get_ip_addr<A: IpAddr>(state: &mut StackState, device_id: u64) -> Option<A>;
+pub fn get_ip_addr<A: IpAddress>(state: &mut StackState, device_id: u64) -> Option<A>;
 
 pub fn get_ip_addr<Ipv4Addr>(state: &mut StackState, device_id: u64) -> Option<Ipv4Addr> {
     get_device_state(state, device_id).ipv4_addr
@@ -44,36 +44,49 @@ pub fn get_ip_addr<Ipv6Addr>(state: &mut StackState, device_id: u64) -> Option<I
 ```
 
 This is a feature called "bare function specialization", and it unfortunately
-doesn't yet exist in Rust. However, a function called "impl specialization" does
-exist, and we can leverage it to accomplish something similar. While the details
-of implementing this logic using impl specialization involve some annoying
-boilerplate, we provide the `specialize_ip!` and `specialize_ip_addr!` macros to
-make it easier. Using `specialize_ip_addr!`, the above hypothetical code can be
-written today as:
+doesn't yet exist in Rust. It's possible to emulate this with the unstable
+[`min_specialization` feature][min_specialization], but since that's unlikely to
+be stabilized soon, we rely on extension traits and matching on the IP version
+instead. The latter is fairly simple:
 
 ```
+/// Returns the bytes of the address as a Vec<u8>
+pub fn get_addr_bytes<A: IpAddress>(a: A) -> Vec<u8> {
+    match IpAddr::from(a) {
+        IpAddr::V4(a) => a.ipv4_bytes().to_vec(),
+        IpAddr::V6(a) => a.ipv6_bytes().to_vec(),
+    }
+}
+```
+
+Using extension traits requires a bit more boilerplate:
+```
+trait IpAddressExt: IpAddress {
+    fn get_ip_addr(state: &EthernetDeviceState) -> Option<Self>;
+}
+
+impl IpAddressExt for Ipv4Addr {
+    fn get_ip_addr(state: &EthernetDeviceState) -> Option<Self> {
+        state.ipv4_addr
+    }
+}
+
+impl IpAddressExt for Ipv6Addr {
+    fn get_ip_addr(state: &EthernetDeviceState) -> Option<Self> {
+        state.ipv6_addr
+    }
+}
+
 /// Get the IPv4 address associated with this Ethernet device.
-pub fn get_ip_addr<A: IpAddr>(state: &mut StackState, device_id: u64) -> Option<A> {
-    specialize_ip_addr!(
-        fn get_ip_addr(state: &EthernetDeviceState) -> Option<Self> {
-            Ipv4Addr => { state.ipv4_addr }
-            Ipv6Addr => { state.ipv6_addr }
-        }
-    );
+pub fn get_ip_addr<A: IpAddressExt>(state: &mut StackState, device_id: u64) -> Option<A> {
+    // Note the bound on `A`: using `IpAddressExt` lets us call this method.
     A::get_ip_addr(get_device_state(state, device_id))
 }
 ```
 
-`get_ip_addr` is added as an associated function on the `IpAddr` trait, where
-the implementation for `Ipv4Addr` is given in the first block, and the
-implementation for `Ipv6Addr` is given in the second block. This allows us to
-invoke it as `A::get_ip_addr`.
+`get_ip_addr` is added as an associated function on the `IpAddressExt` trait,
+which is implemented separately for `Ipv4Addr` and `Ipv6Addr`. The trait bound
+for the free function `get_ip_addr` is `A: IpAddressExt`, which allows it to
+invoke the trait method as `A::get_ip_addr`.
 
-A few oddities to note: For reasons having to do with limitations of Rust
-macros, the type which implements `IpAddr` must be written as `Self` in the
-function definition. That's where the `Option<Self>` comes from. The body is
-structured like a sort of type-level macro, where the branches are labeled by
-the concrete types - `Ipv4Addr` or `Ipv6Addr` - that the function is
-instantiated with. Finally, the blocks associated with these labels become the
-function bodies, and so must return, in this case, `Option<Ipv4Addr>` or
-`Option<Ipv6Addr>` respectively.
+[min_specialization]: https://github.com/rust-lang/rust/issues/31844

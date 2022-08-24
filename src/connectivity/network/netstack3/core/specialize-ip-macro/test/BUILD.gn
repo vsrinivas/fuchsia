@@ -9,9 +9,6 @@ rustc_test("specialize-ip-macro_test") {
   version = "0.1.0"
   edition = "2021"
 
-  configs -= [ "//build/config/rust:no_features" ]
-  configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
-
   deps = [
     "//src/connectivity/network/netstack3/core/specialize-ip-macro",
     "//third_party/rust_crates:test-case",
