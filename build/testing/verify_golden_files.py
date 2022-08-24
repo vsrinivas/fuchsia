@@ -22,8 +22,8 @@ def print_failure_msg(golden, candidate, label):
 Please acknowledge this change by updating the golden.
 You can run this command:
 ```
-cp {golden} \\
-    {candidate}
+cp {candidate} \\
+    {golden}
 ```
 Or you can rebuild with `bless_goldens=true` in your GN args and {label} in your build graph.
 """)
