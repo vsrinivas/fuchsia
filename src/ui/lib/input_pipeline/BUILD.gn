@@ -84,6 +84,7 @@ rustc_library("input_pipeline") {
     "src/fake_input_device_binding.rs",
     "src/fake_input_handler.rs",
     "src/focus_listener.rs",
+    "src/gestures/args.rs",
     "src/gestures/click.rs",
     "src/gestures/gesture_arena.rs",
     "src/gestures/mod.rs",
