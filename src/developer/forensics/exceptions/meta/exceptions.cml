@@ -24,9 +24,13 @@
             protocol: [
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.process.Launcher",
-                "fuchsia.sys.internal.CrashIntrospect",
                 "fuchsia.sys2.CrashIntrospect",
             ],
+        },
+        {
+            // TODO(fxbug.dev/107391): remove this
+            protocol: "fuchsia.sys.internal.CrashIntrospect",
+            availability: "optional",
         },
         {
             directory: "config-data",

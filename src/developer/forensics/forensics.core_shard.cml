@@ -57,12 +57,11 @@
             to: "#feedback",
         },
         {
-            protocol: "fuchsia.sys.internal.CrashIntrospect",
-            from: "self",
-            to: "#exceptions",
-
             // This comes from appmgr.
-            dependency: "weak_for_migration",
+            protocol: "fuchsia.sys.internal.CrashIntrospect",
+            from: "void",
+            to: "#exceptions",
+            availability: "optional",
         },
         {
             protocol: [
