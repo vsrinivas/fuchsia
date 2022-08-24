@@ -254,6 +254,7 @@ void RxQueue::CompleteRxList(const rx_buffer_t* rx_buffer_list, size_t count) {
     }
 
     primary_session->AssertParentControlLockShared(*parent_);
+    parent_->NotifyPortRxFrame(rx_buffer.meta.port, total_length);
     const RxFrameInfo frame_info = {
         .meta = rx_buffer.meta,
         .port_id_salt = parent_->GetPortSalt(rx_buffer.meta.port),

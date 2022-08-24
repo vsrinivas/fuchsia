@@ -392,6 +392,11 @@
         "name": "fuchsia.hardware.network/Port.Clone"
     },
     {
+        "declaration": "() -> (fuchsia.hardware.network/PortGetCountersResponse payload)",
+        "kind": "protocol/member",
+        "name": "fuchsia.hardware.network/Port.GetCounters"
+    },
+    {
         "declaration": "(server_end:fuchsia.hardware.network/Device device)",
         "kind": "protocol/member",
         "name": "fuchsia.hardware.network/Port.GetDevice"
@@ -419,6 +424,30 @@
     {
         "kind": "protocol",
         "name": "fuchsia.hardware.network/Port"
+    },
+    {
+        "declaration": "uint64",
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/PortGetCountersResponse.rx_bytes"
+    },
+    {
+        "declaration": "uint64",
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/PortGetCountersResponse.rx_frames"
+    },
+    {
+        "declaration": "uint64",
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/PortGetCountersResponse.tx_bytes"
+    },
+    {
+        "declaration": "uint64",
+        "kind": "table/member",
+        "name": "fuchsia.hardware.network/PortGetCountersResponse.tx_frames"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.hardware.network/PortGetCountersResponse"
     },
     {
         "declaration": "uint8",

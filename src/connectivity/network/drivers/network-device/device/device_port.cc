@@ -242,4 +242,22 @@ void DevicePort::Clone(CloneRequestView request, CloneCompleter::Sync& _complete
   Bind(std::move(request->port));
 }
 
+void DevicePort::GetCounters(GetCountersRequestView _request,
+                             GetCountersCompleter::Sync& completer) {
+  fidl::WireTableFrame<netdev::wire::PortGetCountersResponse> frame;
+  netdev::wire::PortGetCountersResponse rsp(
+      fidl::ObjectView<fidl::WireTableFrame<netdev::wire::PortGetCountersResponse>>::FromExternal(
+          &frame));
+  uint64_t tx_frames = counters_.tx_frames;
+  rsp.set_tx_frames(fidl::ObjectView<uint64_t>::FromExternal(&tx_frames));
+  uint64_t tx_bytes = counters_.tx_bytes;
+  rsp.set_tx_bytes(fidl::ObjectView<uint64_t>::FromExternal(&tx_bytes));
+  uint64_t rx_frames = counters_.rx_frames;
+  rsp.set_rx_frames(fidl::ObjectView<uint64_t>::FromExternal(&rx_frames));
+  uint64_t rx_bytes = counters_.rx_bytes;
+  rsp.set_rx_bytes(fidl::ObjectView<uint64_t>::FromExternal(&rx_bytes));
+
+  completer.Reply(rsp);
+}
+
 }  // namespace network::internal

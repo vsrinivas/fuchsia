@@ -906,6 +906,16 @@ bool DeviceInterface::ContinueTeardown(network::internal::DeviceInterface::Teard
   return false;
 }
 
+void DeviceInterface::NotifyPortRxFrame(uint8_t base_id, uint64_t frame_length) {
+  WithPort(base_id, [&frame_length](const std::unique_ptr<DevicePort>& port) {
+    if (port) {
+      DevicePort::Counters& counters = port->counters();
+      counters.rx_frames.fetch_add(1);
+      counters.rx_bytes.fetch_add(frame_length);
+    }
+  });
+}
+
 zx::status<AttachedPort> DeviceInterface::AcquirePort(
     netdev::wire::PortId port_id, cpp20::span<const netdev::wire::FrameType> rx_frame_types) {
   return WithPort(port_id.base,

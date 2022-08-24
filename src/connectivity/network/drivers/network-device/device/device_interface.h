@@ -157,6 +157,10 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
     return ports_[base_id].salt;
   }
 
+  // Notifies of |frame_length| bytes received on port with |base_id|.
+  void NotifyPortRxFrame(uint8_t base_id, uint64_t frame_length)
+      __TA_REQUIRES_SHARED(control_lock_);
+
   // Acquires a port for use in a Session.
   //
   // Sessions are notified of ports that are no longer safe to use by the DeviceInterface through

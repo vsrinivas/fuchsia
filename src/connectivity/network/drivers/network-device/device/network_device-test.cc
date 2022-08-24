@@ -2939,5 +2939,140 @@ TEST_F(NetworkDeviceTest, PortIdSaltChangesOnFlap) {
   }
 }
 
+TEST_F(NetworkDeviceTest, PortGetRxCounters) {
+  ASSERT_OK(CreateDeviceWithPort13());
+
+  TestSession session;
+  ASSERT_OK(OpenSession(&session));
+  ASSERT_OK(AttachSessionPort(session, port13_));
+
+  zx::status port = OpenPort(kPort13);
+  ASSERT_OK(port.status_value());
+  fidl::WireSyncClient port_connection = std::move(port.value());
+
+  constexpr uint16_t kDescriptors[] = {kDescriptorIndex0, kDescriptorIndex1, kDescriptorIndex2,
+                                       kDescriptorIndex3};
+  for (const uint16_t desc : kDescriptors) {
+    session.ResetDescriptor(desc);
+  }
+  size_t actual;
+  ASSERT_OK(session.SendRx(kDescriptors, std::size(kDescriptors), &actual));
+  ASSERT_EQ(actual, std::size(kDescriptors));
+  ASSERT_OK(WaitRxAvailable());
+
+  constexpr uint32_t kReturnLength = 17;
+
+  auto prepare_return_buffer = [this]() -> std::unique_ptr<RxReturn> {
+    std::unique_ptr buffer = impl_.PopRxBuffer();
+    if (!buffer) {
+      return nullptr;
+    }
+    buffer->SetReturnLength(kReturnLength);
+    return std::make_unique<RxReturn>(std::move(buffer), kPort13);
+  };
+
+  auto assert_counters = [&port_connection](uint64_t frames, uint64_t bytes,
+                                            std::string_view scope) {
+    SCOPED_TRACE(scope);
+    fidl::WireResult r = port_connection->GetCounters();
+    ASSERT_OK(r.status());
+    fidl::WireResponse rsp = std::move(r.value());
+    ASSERT_TRUE(rsp.has_rx_bytes());
+    EXPECT_EQ(rsp.rx_bytes(), bytes);
+    ASSERT_TRUE(rsp.has_rx_frames());
+    EXPECT_EQ(rsp.rx_frames(), frames);
+
+    ASSERT_TRUE(rsp.has_tx_frames());
+    EXPECT_EQ(rsp.tx_frames(), 0u);
+    ASSERT_TRUE(rsp.has_tx_bytes());
+    EXPECT_EQ(rsp.tx_bytes(), 0u);
+  };
+  // Counters should all be zero on creation.
+  assert_counters(0, 0, "initial zeroes");
+
+  // Return a single descriptor and assert the counters.
+  {
+    std::unique_ptr<RxReturn> buffer = prepare_return_buffer();
+    ASSERT_TRUE(buffer);
+    RxReturnTransaction txn(&impl_);
+    txn.Enqueue(std::move(buffer));
+    txn.Commit();
+  }
+  assert_counters(1, kReturnLength, "single buffer");
+
+  // Return all the remaining descriptors and assert the counters.
+  {
+    RxReturnTransaction txn(&impl_);
+    for (size_t i = 1; i < std::size(kDescriptors); i++) {
+      std::unique_ptr<RxReturn> buffer = prepare_return_buffer();
+      ASSERT_TRUE(buffer);
+      txn.Enqueue(std::move(buffer));
+    }
+    txn.Commit();
+  }
+  assert_counters(std::size(kDescriptors), std::size(kDescriptors) * kReturnLength,
+                  "remaining buffers");
+}
+
+TEST_F(NetworkDeviceTest, PortGetTxCounters) {
+  ASSERT_OK(CreateDeviceWithPort13());
+
+  TestSession session;
+  ASSERT_OK(OpenSession(&session));
+  ASSERT_OK(AttachSessionPort(session, port13_));
+
+  zx::status port = OpenPort(kPort13);
+  ASSERT_OK(port.status_value());
+  fidl::WireSyncClient port_connection = std::move(port.value());
+
+  constexpr uint32_t kTxLength = 17;
+  const netdev::wire::PortId port_id = GetSaltedPortId(kPort13);
+
+  constexpr uint16_t kDescriptors[] = {kDescriptorIndex0, kDescriptorIndex1, kDescriptorIndex2,
+                                       kDescriptorIndex3};
+  for (const uint16_t desc_idx : kDescriptors) {
+    buffer_descriptor_t& desc = session.ResetDescriptor(desc_idx);
+    desc.port_id.base = port_id.base;
+    desc.port_id.salt = port_id.salt;
+    desc.data_length = kTxLength;
+  }
+
+  auto assert_counters = [&port_connection](uint64_t frames, uint64_t bytes,
+                                            std::string_view scope) {
+    SCOPED_TRACE(scope);
+    fidl::WireResult r = port_connection->GetCounters();
+    ASSERT_OK(r.status());
+    fidl::WireResponse rsp = std::move(r.value());
+    ASSERT_TRUE(rsp.has_tx_bytes());
+    EXPECT_EQ(rsp.tx_bytes(), bytes);
+    ASSERT_TRUE(rsp.has_tx_frames());
+    EXPECT_EQ(rsp.tx_frames(), frames);
+
+    ASSERT_TRUE(rsp.has_rx_frames());
+    EXPECT_EQ(rsp.rx_frames(), 0u);
+    ASSERT_TRUE(rsp.has_rx_bytes());
+    EXPECT_EQ(rsp.rx_bytes(), 0u);
+  };
+  // Counters should all be zero on creation.
+  assert_counters(0, 0, "initial zeroes");
+
+  // Send a single descriptor and assert the counters.
+  {
+    ASSERT_OK(session.SendTx(kDescriptors[0]));
+    ASSERT_OK(WaitTx());
+  }
+  assert_counters(1, kTxLength, "single buffer");
+
+  // Return all the remaining descriptors and assert the counters.
+  {
+    size_t actual = 0;
+    ASSERT_OK(session.SendTx(std::begin(kDescriptors) + 1, std::size(kDescriptors) - 1, &actual));
+    ASSERT_EQ(actual, std::size(kDescriptors) - 1);
+    ASSERT_OK(WaitTx());
+  }
+  assert_counters(std::size(kDescriptors), std::size(kDescriptors) * kTxLength,
+                  "remaining buffers");
+}
+
 }  // namespace testing
 }  // namespace network

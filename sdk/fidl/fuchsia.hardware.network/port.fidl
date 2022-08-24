@@ -159,4 +159,16 @@ protocol Port {
     Clone(resource struct {
         port server_end:Port;
     });
+    /// Retrieves a snapshot of traffic counters on this port.
+    @available(added=10)
+    GetCounters() -> (table {
+        /// The total number of ingress frames on this port.
+        1: rx_frames uint64;
+        /// The total number of ingress bytes on this port.
+        2: rx_bytes uint64;
+        /// The total number of egress frames on this port.
+        3: tx_frames uint64;
+        /// The total number of egress bytes on this port.
+        4: tx_bytes uint64;
+    });
 };

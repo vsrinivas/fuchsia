@@ -31,6 +31,13 @@ class DevicePort : public fidl::WireServer<netdev::Port> {
   netdev::wire::PortId id() const { return id_; }
   ddk::NetworkPortProtocolClient& impl() { return port_; }
 
+  struct Counters {
+    std::atomic<uint64_t> rx_frames = 0;
+    std::atomic<uint64_t> rx_bytes = 0;
+    std::atomic<uint64_t> tx_frames = 0;
+    std::atomic<uint64_t> tx_bytes = 0;
+  };
+
   // Notifies port of status changes notifications from the network device implementation.
   void StatusChanged(const port_status_t& new_status);
   // Starts port teardown process.
@@ -66,6 +73,9 @@ class DevicePort : public fidl::WireServer<netdev::Port> {
   void GetMac(GetMacRequestView request, GetMacCompleter::Sync& _completer) override;
   void GetDevice(GetDeviceRequestView request, GetDeviceCompleter::Sync& _completer) override;
   void Clone(CloneRequestView request, CloneCompleter::Sync& _completer) override;
+  void GetCounters(GetCountersRequestView request, GetCountersCompleter::Sync& completer) override;
+
+  Counters& counters() { return counters_; }
 
  private:
   // Helper class to keep track of clients bound to DevicePort.
@@ -101,6 +111,7 @@ class DevicePort : public fidl::WireServer<netdev::Port> {
   async_dispatcher_t* const dispatcher_;
   const netdev::wire::PortId id_;
   ddk::NetworkPortProtocolClient port_;
+  Counters counters_;
   std::unique_ptr<MacAddrDeviceInterface> mac_ __TA_GUARDED(lock_);
   BindingList bindings_ __TA_GUARDED(lock_);
 

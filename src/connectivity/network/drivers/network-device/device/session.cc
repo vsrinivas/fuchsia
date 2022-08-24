@@ -268,7 +268,6 @@ zx_status_t Session::FetchTx(TxQueue::SessionTransaction& transaction) {
   uint16_t req_header_length = parent_->info().tx_head_length;
   uint16_t req_tail_length = parent_->info().tx_tail_length;
 
-  uint32_t total_length = 0;
   SharedAutoLock lock(&parent_->control_lock());
   for (uint16_t desc_idx : descriptors) {
     buffer_descriptor_t* const desc_ptr = checked_descriptor(desc_idx);
@@ -381,6 +380,7 @@ zx_status_t Session::FetchTx(TxQueue::SessionTransaction& transaction) {
 
     bool add_head_space = buffer->head_length != 0;
     buffer_descriptor_t* part_iter = desc_ptr;
+    uint32_t total_length = 0;
     for (;;) {
       buffer_descriptor_t& part_desc = *part_iter;
       auto* cur = const_cast<buffer_region_t*>(&buffer->data_list[buffer->data_count]);
@@ -427,6 +427,12 @@ zx_status_t Session::FetchTx(TxQueue::SessionTransaction& transaction) {
                  parent_->info().min_tx_buffer_length);
       return ZX_ERR_IO_INVALID;
     }
+
+    port.WithPort([&total_length](DevicePort& p) {
+      DevicePort::Counters& counters = p.counters();
+      counters.tx_frames.fetch_add(1);
+      counters.tx_bytes.fetch_add(total_length);
+    });
     transaction.Push(desc_idx);
   }
 
