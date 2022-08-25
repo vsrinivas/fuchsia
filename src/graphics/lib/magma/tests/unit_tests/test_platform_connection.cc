@@ -164,7 +164,7 @@ class TestPlatformConnection {
 
     uint32_t handle;
     EXPECT_TRUE(buf->duplicate_handle(&handle));
-    EXPECT_EQ(client_connection_->ImportObject(handle, magma::PlatformObject::BUFFER),
+    EXPECT_EQ(client_connection_->ImportObject(handle, magma::PlatformObject::BUFFER, buf->id()),
               MAGMA_STATUS_OK);
     EXPECT_EQ(client_connection_->GetError(), MAGMA_STATUS_OK);
     FlowControlCheck(1, buf->size());
@@ -207,8 +207,9 @@ class TestPlatformConnection {
 
     uint32_t handle;
     EXPECT_TRUE(semaphore->duplicate_handle(&handle));
-    EXPECT_EQ(client_connection_->ImportObject(handle, magma::PlatformObject::SEMAPHORE),
-              MAGMA_STATUS_OK);
+    EXPECT_EQ(
+        client_connection_->ImportObject(handle, magma::PlatformObject::SEMAPHORE, semaphore->id()),
+        MAGMA_STATUS_OK);
     EXPECT_EQ(client_connection_->GetError(), MAGMA_STATUS_OK);
     FlowControlCheckOneMessage();
   }

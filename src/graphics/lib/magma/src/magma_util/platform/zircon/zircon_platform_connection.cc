@@ -256,39 +256,6 @@ void ZirconPlatformConnection::FlowControl(uint64_t size) {
   }
 }
 
-void ZirconPlatformConnection::ImportObject(ImportObjectRequestView request,
-                                            ImportObjectCompleter::Sync& completer) {
-  DLOG("ZirconPlatformConnection: ImportObject");
-
-  auto object_type = GetObjectType(request->object_type);
-  if (!object_type) {
-    SetError(&completer, MAGMA_STATUS_INVALID_ARGS);
-    return;
-  }
-
-  uint64_t size = 0;
-
-  if (object_type == magma::PlatformObject::BUFFER) {
-    zx::unowned_vmo vmo(request->object.get());
-    zx_status_t status = vmo->get_size(&size);
-    if (status != ZX_OK) {
-      SetError(&completer, MAGMA_STATUS_INVALID_ARGS);
-      return;
-    }
-  }
-
-  uint64_t id;
-  if (!magma::PlatformObject::IdFromHandle(request->object.get(), &id)) {
-    SetError(&completer, MAGMA_STATUS_INVALID_ARGS);
-    return;
-  }
-
-  FlowControl(size);
-
-  if (!delegate_->ImportObject(request->object.release(), *object_type, id))
-    SetError(&completer, MAGMA_STATUS_INVALID_ARGS);
-}
-
 void ZirconPlatformConnection::ImportObject2(ImportObject2RequestView request,
                                              ImportObject2Completer::Sync& completer) {
   DLOG("ZirconPlatformConnection: ImportObject2");

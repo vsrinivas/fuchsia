@@ -21,8 +21,6 @@ class PrimaryWrapper : public fidl::WireAsyncEventHandler<fuchsia_gpu_magma::Pri
  public:
   PrimaryWrapper(zx::channel channel, uint64_t max_inflight_messages, uint64_t max_inflight_bytes);
 
-  // DEPRECATED
-  magma_status_t ImportObject(zx::handle handle, magma::PlatformObject::Type object_type);
   magma_status_t ImportObject(zx::handle handle, magma::PlatformObject::Type object_type,
                               uint64_t object_id);
   magma_status_t ReleaseObject(uint64_t object_id, magma::PlatformObject::Type object_type);

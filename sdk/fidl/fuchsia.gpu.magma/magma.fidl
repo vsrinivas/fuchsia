@@ -197,12 +197,6 @@ alias PerformanceCounterSet = vector<uint64>:64;
 /// If a system driver error occurs, or if the client sends a message that the client should have
 /// known is invalid, the connection will be closed and a zx.status sent via epitaph.
 protocol Primary {
-    /// DEPRECATED.
-    ImportObject(resource struct {
-        object zx.handle;
-        object_type ObjectType;
-    });
-
     /// Imports an object for use in the system driver.
     ImportObject2(resource struct {
         object zx.handle;

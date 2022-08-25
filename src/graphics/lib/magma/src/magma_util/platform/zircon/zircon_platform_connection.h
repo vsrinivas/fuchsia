@@ -135,8 +135,6 @@ class ZirconPlatformConnection : public fidl::WireServer<fuchsia_gpu_magma::Prim
 
   bool AsyncTaskHandler(async_dispatcher_t* dispatcher, AsyncTask* task, zx_status_t status);
 
-  void ImportObject(ImportObjectRequestView request,
-                    ImportObjectCompleter::Sync& _completer) override;
   void ImportObject2(ImportObject2RequestView request,
                      ImportObject2Completer::Sync& _completer) override;
   void ReleaseObject(ReleaseObjectRequestView request,

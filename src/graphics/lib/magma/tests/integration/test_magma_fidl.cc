@@ -180,7 +180,7 @@ TEST_F(TestMagmaFidl, ImportObjectInvalidType) {
   zx::vmo vmo;
   ASSERT_EQ(ZX_OK, zx::vmo::create(4 /*size*/, 0 /*options*/, &vmo));
   constexpr auto kInvalidObjectType = fuchsia_gpu_magma::ObjectType(1000);
-  auto wire_result = primary_->ImportObject(std::move(vmo), kInvalidObjectType);
+  auto wire_result = primary_->ImportObject2(std::move(vmo), kInvalidObjectType, /*id=*/1);
   EXPECT_TRUE(wire_result.ok());
   EXPECT_TRUE(CheckForUnbind());
 }
@@ -192,8 +192,8 @@ TEST_F(TestMagmaFidl, ImportReleaseBuffer) {
     zx::vmo vmo;
     ASSERT_EQ(ZX_OK, zx::vmo::create(4 /*size*/, 0 /*options*/, &vmo));
     buffer_id = fsl::GetKoid(vmo.get());
-    auto wire_result =
-        primary_->ImportObject(std::move(vmo), fuchsia_gpu_magma::wire::ObjectType::kBuffer);
+    auto wire_result = primary_->ImportObject2(
+        std::move(vmo), fuchsia_gpu_magma::wire::ObjectType::kBuffer, buffer_id);
     EXPECT_TRUE(wire_result.ok());
     EXPECT_FALSE(CheckForUnbind());
   }
@@ -221,8 +221,8 @@ TEST_F(TestMagmaFidl, ImportReleaseSemaphore) {
     zx::event event;
     ASSERT_EQ(ZX_OK, zx::event::create(0 /*options*/, &event));
     event_id = fsl::GetKoid(event.get());
-    auto wire_result =
-        primary_->ImportObject(std::move(event), fuchsia_gpu_magma::wire::ObjectType::kEvent);
+    auto wire_result = primary_->ImportObject2(
+        std::move(event), fuchsia_gpu_magma::wire::ObjectType::kEvent, event_id);
     EXPECT_TRUE(wire_result.ok());
     EXPECT_FALSE(CheckForUnbind());
   }
@@ -272,8 +272,8 @@ TEST_F(TestMagmaFidl, MapUnmapGpu) {
     zx::vmo vmo;
     ASSERT_EQ(ZX_OK, zx::vmo::create(4 /*size*/, 0 /*options*/, &vmo));
     buffer_id = fsl::GetKoid(vmo.get());
-    auto wire_result =
-        primary_->ImportObject(std::move(vmo), fuchsia_gpu_magma::wire::ObjectType::kBuffer);
+    auto wire_result = primary_->ImportObject2(
+        std::move(vmo), fuchsia_gpu_magma::wire::ObjectType::kBuffer, buffer_id);
     EXPECT_TRUE(wire_result.ok());
     EXPECT_FALSE(CheckForUnbind());
   }
@@ -314,8 +314,8 @@ TEST_F(TestMagmaFidl, MapUnmap) {
 
     range = {.buffer_id = fsl::GetKoid(vmo.get()), .offset = 0, .size = length};
 
-    auto wire_result =
-        primary_->ImportObject(std::move(vmo), fuchsia_gpu_magma::wire::ObjectType::kBuffer);
+    auto wire_result = primary_->ImportObject2(
+        std::move(vmo), fuchsia_gpu_magma::wire::ObjectType::kBuffer, range.buffer_id);
     EXPECT_TRUE(wire_result.ok());
     EXPECT_FALSE(CheckForUnbind());
   }
@@ -367,8 +367,8 @@ TEST_F(TestMagmaFidl, ExecuteCommand) {
     zx::vmo vmo;
     ASSERT_EQ(ZX_OK, zx::vmo::create(4096, 0 /*options*/, &vmo));
     buffer_id = fsl::GetKoid(vmo.get());
-    auto wire_result =
-        primary_->ImportObject(std::move(vmo), fuchsia_gpu_magma::wire::ObjectType::kBuffer);
+    auto wire_result = primary_->ImportObject2(
+        std::move(vmo), fuchsia_gpu_magma::wire::ObjectType::kBuffer, buffer_id);
     EXPECT_TRUE(wire_result.ok());
     EXPECT_FALSE(CheckForUnbind());
   }
@@ -438,8 +438,8 @@ TEST_F(TestMagmaFidl, BufferRangeOp) {
     zx::vmo vmo_dupe;
     ASSERT_EQ(ZX_OK, vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_dupe));
 
-    auto wire_result =
-        primary_->ImportObject(std::move(vmo_dupe), fuchsia_gpu_magma::wire::ObjectType::kBuffer);
+    auto wire_result = primary_->ImportObject2(
+        std::move(vmo_dupe), fuchsia_gpu_magma::wire::ObjectType::kBuffer, buffer_id);
     EXPECT_TRUE(wire_result.ok());
     EXPECT_FALSE(CheckForUnbind());
   }
@@ -511,8 +511,8 @@ TEST_F(TestMagmaFidl, FlowControl) {
       zx::vmo vmo;
       ASSERT_EQ(ZX_OK, zx::vmo::create(4 /*size*/, 0 /*options*/, &vmo));
       buffer_id = fsl::GetKoid(vmo.get());
-      auto wire_result =
-          primary_->ImportObject(std::move(vmo), fuchsia_gpu_magma::wire::ObjectType::kBuffer);
+      auto wire_result = primary_->ImportObject2(
+          std::move(vmo), fuchsia_gpu_magma::wire::ObjectType::kBuffer, buffer_id);
       EXPECT_TRUE(wire_result.ok());
     }
 
