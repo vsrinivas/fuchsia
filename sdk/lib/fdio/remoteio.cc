@@ -73,6 +73,9 @@ static zx_status_t ZxioAllocator(zxio_object_type_t type, zxio_storage_t** out_s
     case ZXIO_OBJECT_TYPE_SERVICE:
       io = fbl::MakeRefCounted<fdio_internal::remote>();
       break;
+    case ZXIO_OBJECT_TYPE_STREAM_SOCKET:
+      io = fdio_stream_socket_allocate();
+      break;
     case ZXIO_OBJECT_TYPE_SYNCHRONOUS_DATAGRAM_SOCKET:
       io = fdio_synchronous_datagram_socket_allocate();
       break;
@@ -108,35 +111,10 @@ zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node, fio::wire::No
     ZX_ASSERT(context == nullptr);
     return zx::error(status);
   }
+
   // Otherwise, ZxioAllocator has allocated an fdio instance that we now own.
   fdio_ptr io = fbl::ImportFromRawPtr(static_cast<fdio*>(context));
-  switch (status) {
-    case ZX_OK: {
-      return zx::ok(std::move(io));
-    }
-    case ZX_ERR_NOT_SUPPORTED: {
-      zx::handle retrieved_handle;
-      status = io->unwrap(retrieved_handle.reset_and_get_address());
-      if (status != ZX_OK) {
-        return zx::error(status);
-      }
-      node = fidl::ClientEnd<fio::Node>(zx::channel(std::move(retrieved_handle)));
-      break;
-    }
-    default: {
-      return zx::error(status);
-    }
-  }
-
-  switch (info.Which()) {
-    case fio::wire::NodeInfo::Tag::kStreamSocket: {
-      auto& socket = info.stream_socket().socket;
-      return fdio_stream_socket_create(std::move(socket),
-                                       fidl::ClientEnd<fsocket::StreamSocket>(node.TakeChannel()));
-    }
-    default:
-      return zx::error(ZX_ERR_NOT_SUPPORTED);
-  }
+  return zx::make_status(status, std::move(io));
 }
 
 zx::status<fdio_ptr> fdio::create_with_on_open(fidl::ClientEnd<fio::Node> node) {

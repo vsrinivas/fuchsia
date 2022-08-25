@@ -178,12 +178,23 @@ int socket(int domain, int type, int protocol) {
           if (!response.has_socket()) {
             return ERROR(ZX_ERR_NOT_SUPPORTED);
           }
-          zx::status<fdio_ptr> io_result =
-              fdio_stream_socket_create(std::move(response.socket()), std::move(control));
-          if (io_result.is_error()) {
-            return ERROR(io_result.status_value());
+          io = fdio_stream_socket_allocate();
+          if (io == nullptr) {
+            return ERROR(ZX_ERR_NO_MEMORY);
           }
-          io = io_result.value();
+          zx::socket& socket = response.socket();
+          zx_info_socket_t info;
+          if (zx_status_t status =
+                  socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
+              status != ZX_OK) {
+            return ERROR(status);
+          }
+          if (zx_status_t status =
+                  zxio::CreateStreamSocket(&io->zxio_storage(), std::move(socket), info,
+                                           /*is_connected=*/false, std::move(control));
+              status != ZX_OK) {
+            return ERROR(status);
+          }
         } break;
         default:
           return ERRNO(EPROTONOSUPPORT);
@@ -500,12 +511,22 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict addr
   if (!response.has_socket()) {
     return ERROR(ZX_ERR_NOT_SUPPORTED);
   }
-  zx::status io_result =
-      fdio_stream_socket_create(std::move(response.socket()), std::move(control));
-  if (io_result.is_error()) {
-    return ERROR(io_result.status_value());
+  fdio_ptr accepted_io = fdio_stream_socket_allocate();
+  if (accepted_io == nullptr) {
+    return ERROR(ZX_ERR_NO_MEMORY);
   }
-  fdio_ptr accepted_io = io_result.value();
+  zx::socket& socket = response.socket();
+  zx_info_socket_t info;
+  if (zx_status_t status = socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
+      status != ZX_OK) {
+    return ERROR(status);
+  }
+  if (zx_status_t status =
+          zxio::CreateStreamSocket(&accepted_io->zxio_storage(), std::move(socket), info,
+                                   /*is_connected=*/true, std::move(control));
+      status != ZX_OK) {
+    return ERROR(status);
+  }
 
   if (flags & SOCK_NONBLOCK) {
     accepted_io->ioflag() |= IOFLAG_NONBLOCK;

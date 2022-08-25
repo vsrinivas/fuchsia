@@ -212,6 +212,32 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node, fio::wire
     case fio::wire::NodeInfo::Tag::kService: {
       return zxio_remote_init(storage, node.TakeChannel().release(), ZX_HANDLE_INVALID);
     }
+    case fio::wire::NodeInfo::Tag::kStreamSocket: {
+      zx::socket& socket = info.stream_socket().socket;
+      zx_info_socket_t info;
+      bool is_connected;
+      zx_status_t status = socket.wait_one(ZX_USER_SIGNAL_3, zx::time::infinite_past(), nullptr);
+      // TODO(tamird): Transferring a listening or connecting socket to another process doesn't work
+      // correctly since those states can't be observed here.
+      switch (status) {
+        case ZX_OK:
+          is_connected = true;
+          break;
+        case ZX_ERR_TIMED_OUT:
+          is_connected = false;
+          break;
+        default:
+          return status;
+      }
+      if (zx_status_t status =
+              socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
+          status != ZX_OK) {
+        return status;
+      }
+      return zxio_stream_socket_init(
+          storage, std::move(socket), info, is_connected,
+          fidl::ClientEnd<fuchsia_posix_socket::StreamSocket>(node.TakeChannel()));
+    }
     case fio::wire::NodeInfo::Tag::kSynchronousDatagramSocket: {
       return zxio_synchronous_datagram_socket_init(
           storage, std::move(info.synchronous_datagram_socket().event),
@@ -237,10 +263,6 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node, fio::wire
       return zxio_vmofile_init(storage, fidl::BindSyncClient(std::move(control)),
                                std::move(file.vmo), file.offset, file.length,
                                response.value()->offset_from_start);
-    }
-    default: {
-      zxio_handle_holder_init(storage, node.TakeChannel());
-      return ZX_ERR_NOT_SUPPORTED;
     }
   }
 }
@@ -289,14 +311,15 @@ zx_status_t zxio_create_with_type(zxio_storage_t* storage, zxio_object_type_t ty
     }
     case ZXIO_OBJECT_TYPE_STREAM_SOCKET: {
       zx::socket socket(va_arg(args, zx_handle_t));
-      zx::channel client(va_arg(args, zx_handle_t));
       zx_info_socket_t* info = va_arg(args, zx_info_socket_t*);
-      if (storage == nullptr || !socket.is_valid() || !client.is_valid() || info == nullptr) {
+      bool is_connected = va_arg(args, int);
+      zx::channel client(va_arg(args, zx_handle_t));
+      if (storage == nullptr || !socket.is_valid() || info == nullptr || !client.is_valid()) {
         return ZX_ERR_INVALID_ARGS;
       }
       return zxio_stream_socket_init(
-          storage, std::move(socket),
-          fidl::ClientEnd<fuchsia_posix_socket::StreamSocket>(std::move(client)), *info);
+          storage, std::move(socket), *info, is_connected,
+          fidl::ClientEnd<fuchsia_posix_socket::StreamSocket>(std::move(client)));
     }
     case ZXIO_OBJECT_TYPE_PIPE: {
       zx::socket socket(va_arg(args, zx_handle_t));

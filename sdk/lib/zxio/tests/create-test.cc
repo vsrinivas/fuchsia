@@ -8,7 +8,6 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zxio/cpp/create_with_type.h>
-#include <lib/zxio/types.h>
 #include <lib/zxio/zxio.h>
 #include <zircon/syscalls/types.h>
 #include <zircon/types.h>
@@ -171,7 +170,7 @@ TEST_F(CreateWithTypeStreamSocketTest, InvalidStorage) {
   zx_handle_t socket_handle = socket().release();
   zx_handle_t channel_handle = channel().release();
   ASSERT_STATUS(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_STREAM_SOCKET, socket_handle,
-                                      channel_handle, &info()),
+                                      &info(), /*is_connected=*/false, channel_handle),
                 ZX_ERR_INVALID_ARGS);
   AssertSocketClosed();
   AssertChannelClosed();
@@ -180,7 +179,7 @@ TEST_F(CreateWithTypeStreamSocketTest, InvalidStorage) {
 TEST_F(CreateWithTypeStreamSocketTest, InvalidSocket) {
   zx_handle_t channel_handle = channel().release();
   ASSERT_STATUS(zxio_create_with_type(&storage(), ZXIO_OBJECT_TYPE_STREAM_SOCKET, ZX_HANDLE_INVALID,
-                                      channel_handle, &info()),
+                                      &info(), /*is_connected=*/false, channel_handle),
                 ZX_ERR_INVALID_ARGS);
   AssertChannelClosed();
 }
@@ -188,16 +187,16 @@ TEST_F(CreateWithTypeStreamSocketTest, InvalidSocket) {
 TEST_F(CreateWithTypeStreamSocketTest, InvalidChannel) {
   zx_handle_t socket_handle = socket().release();
   ASSERT_STATUS(zxio_create_with_type(&storage(), ZXIO_OBJECT_TYPE_STREAM_SOCKET, socket_handle,
-                                      ZX_HANDLE_INVALID, &info()),
+                                      &info(), /*is_connected=*/false, ZX_HANDLE_INVALID),
                 ZX_ERR_INVALID_ARGS);
   AssertSocketClosed();
 }
 
-TEST_F(CreateWithTypeStreamSocketTest, Info) {
+TEST_F(CreateWithTypeStreamSocketTest, InvalidInfo) {
   zx_handle_t socket_handle = socket().release();
   zx_handle_t channel_handle = channel().release();
   ASSERT_STATUS(zxio_create_with_type(&storage(), ZXIO_OBJECT_TYPE_STREAM_SOCKET, socket_handle,
-                                      channel_handle, nullptr),
+                                      nullptr, /*is_connected=*/false, channel_handle),
                 ZX_ERR_INVALID_ARGS);
   AssertSocketClosed();
   AssertChannelClosed();

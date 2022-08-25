@@ -95,22 +95,6 @@ TEST_F(SynchronousDatagramSocketTest, CreateWithTypeWrapper) {
 
 namespace {
 
-class StreamSocketServer final
-    : public fidl::testing::WireTestBase<fuchsia_posix_socket::StreamSocket> {
- public:
-  StreamSocketServer() = default;
-
-  void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) final {
-    ADD_FAILURE("unexpected message received: %s", name.c_str());
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
-    completer.ReplySuccess();
-    completer.Close(ZX_OK);
-  }
-};
-
 class StreamSocketTest : public zxtest::Test {
  public:
   void SetUp() final {
@@ -125,7 +109,8 @@ class StreamSocketTest : public zxtest::Test {
   }
 
   void Init() {
-    ASSERT_OK(zxio_stream_socket_init(&storage_, TakeSocket(), TakeClientEnd(), info()));
+    ASSERT_OK(zxio_stream_socket_init(&storage_, TakeSocket(), info(), /*is_connected=*/false,
+                                      TakeClientEnd()));
     zxio_ = &storage_.io;
   }
 
@@ -150,7 +135,7 @@ class StreamSocketTest : public zxtest::Test {
   zx_info_socket_t info_;
   zx::socket socket_, peer_;
   fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client_end_;
-  StreamSocketServer server_;
+  zxio_tests::StreamSocketServer server_;
   async::Loop control_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
 };
 
@@ -178,12 +163,14 @@ TEST_F(StreamSocketTest, Borrow) {
 
 TEST_F(StreamSocketTest, CreateWithType) {
   ASSERT_OK(zxio_create_with_type(storage(), ZXIO_OBJECT_TYPE_STREAM_SOCKET, TakeSocket().release(),
-                                  TakeClientEnd().TakeChannel().release(), &info()));
+                                  &info(), /*is_connected=*/false,
+                                  TakeClientEnd().TakeChannel().release()));
   ASSERT_OK(zxio_close(&storage()->io));
 }
 
 TEST_F(StreamSocketTest, CreateWithTypeWrapper) {
-  ASSERT_OK(zxio::CreateStreamSocket(storage(), TakeSocket(), TakeClientEnd(), info()));
+  ASSERT_OK(zxio::CreateStreamSocket(storage(), TakeSocket(), info(), /*is_connected=*/false,
+                                     TakeClientEnd()));
   ASSERT_OK(zxio_close(&storage()->io));
 }
 

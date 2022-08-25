@@ -11,7 +11,6 @@
 #include <fidl/fuchsia.posix.socket/cpp/wire.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zxio/ops.h>
-#include <lib/zxio/types.h>
 #include <threads.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -62,12 +61,19 @@ static_assert(sizeof(zxio_datagram_socket_t) <= sizeof(zxio_storage_t),
 
 // stream socket (channel backed) --------------------------------------------
 
+enum class zxio_stream_socket_state_t {
+  UNCONNECTED,
+  LISTENING,
+  CONNECTING,
+  CONNECTED,
+};
+
 // A |zxio_t| backend that uses a fuchsia.posix.socket.StreamSocket object.
 using zxio_stream_socket_t = struct zxio_stream_socket {
   zxio_t io;
-
   zxio_pipe_t pipe;
-
+  std::mutex state_lock;
+  zxio_stream_socket_state_t state __TA_GUARDED(state_lock);
   fidl::WireSyncClient<fuchsia_posix_socket::StreamSocket> client;
 };
 

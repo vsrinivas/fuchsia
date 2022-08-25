@@ -276,11 +276,15 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
 }();
 
 zx_status_t zxio_stream_socket_init(zxio_storage_t* storage, zx::socket socket,
-                                    fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client,
-                                    const zx_info_socket_t& info) {
+                                    const zx_info_socket_t& info, const bool is_connected,
+                                    fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client) {
+  zxio_stream_socket_state_t state = is_connected ? zxio_stream_socket_state_t::CONNECTED
+                                                  : zxio_stream_socket_state_t::UNCONNECTED;
   auto zs = new (storage) zxio_stream_socket_t{
       .io = {},
       .pipe = {},
+      .state_lock = {},
+      .state = state,
       .client = fidl::BindSyncClient(std::move(client)),
   };
   zxio_init(&zs->io, &zxio_stream_socket_ops);

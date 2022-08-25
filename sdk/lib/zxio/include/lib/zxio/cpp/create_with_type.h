@@ -12,7 +12,6 @@
 #include <lib/zx/eventpair.h>
 #include <lib/zx/stream.h>
 #include <lib/zx/vmo.h>
-#include <lib/zxio/types.h>
 #include <lib/zxio/zxio.h>
 #include <zircon/syscalls/object.h>
 
@@ -43,10 +42,10 @@ inline zx_status_t CreateNode(zxio_storage_t* storage, fidl::ClientEnd<fuchsia_i
 }
 
 inline zx_status_t CreateStreamSocket(zxio_storage_t* storage, zx::socket socket,
-                                      fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client,
-                                      zx_info_socket_t& info) {
-  return zxio_create_with_type(storage, ZXIO_OBJECT_TYPE_STREAM_SOCKET, socket.release(),
-                               client.TakeChannel().release(), &info);
+                                      zx_info_socket_t& info, const bool is_connected,
+                                      fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client) {
+  return zxio_create_with_type(storage, ZXIO_OBJECT_TYPE_STREAM_SOCKET, socket.release(), &info,
+                               is_connected, client.TakeChannel().release());
 }
 
 inline zx_status_t CreatePipe(zxio_storage_t* storage, zx::socket socket, zx_info_socket_t& info) {

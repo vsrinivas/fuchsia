@@ -73,6 +73,9 @@ zx_status_t zxio_create_with_allocator(fidl::ClientEnd<fuchsia_io::Node> node,
     case fio::wire::NodeInfo::Tag::kService:
       type = ZXIO_OBJECT_TYPE_SERVICE;
       break;
+    case fio::wire::NodeInfo::Tag::kStreamSocket:
+      type = ZXIO_OBJECT_TYPE_STREAM_SOCKET;
+      break;
     case fio::wire::NodeInfo::Tag::kSynchronousDatagramSocket:
       type = ZXIO_OBJECT_TYPE_SYNCHRONOUS_DATAGRAM_SOCKET;
       break;
@@ -81,8 +84,6 @@ zx_status_t zxio_create_with_allocator(fidl::ClientEnd<fuchsia_io::Node> node,
       break;
     case fio::wire::NodeInfo::Tag::kVmofileDeprecated:
       type = ZXIO_OBJECT_TYPE_VMOFILE;
-      break;
-    default:
       break;
   }
   zx_status_t status = allocator(type, &storage, out_context);

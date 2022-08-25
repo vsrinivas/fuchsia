@@ -92,43 +92,6 @@ TEST(CreateWithAllocator, Vmo) {
   ASSERT_OK(zxio_close(io));
 }
 
-TEST(CreateWithAllocator, Unsupported) {
-  auto node_ends = fidl::CreateEndpoints<fuchsia_io::Node>();
-  ASSERT_OK(node_ends.status_value());
-  auto [node_client, node_server] = std::move(node_ends.value());
-
-  zx::socket socket0, socket1;
-  ASSERT_OK(zx::socket::create(0u, &socket0, &socket1));
-
-  auto node_info = fuchsia_io::wire::NodeInfo::WithStreamSocket({
-      .socket = std::move(socket0),
-  });
-
-  auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {
-    *out_storage = new zxio_storage_t;
-    *out_context = *out_storage;
-    return ZX_OK;
-  };
-
-  void* context = nullptr;
-  zx_status_t status =
-      zxio_create_with_allocator(std::move(node_client), node_info, allocator, &context);
-  EXPECT_STATUS(status, ZX_ERR_NOT_SUPPORTED);
-  ASSERT_NE(context, nullptr);
-
-  // The socket in node_info should be preserved.
-  EXPECT_EQ(node_info.Which(), fuchsia_io::wire::NodeInfo::Tag::kStreamSocket);
-  EXPECT_TRUE(node_info.stream_socket().socket.is_valid());
-
-  std::unique_ptr<zxio_storage_t> storage(static_cast<zxio_storage_t*>(context));
-  zxio_t* zxio = &(storage->io);
-
-  zx::channel recaptured_handle;
-  ASSERT_OK(zxio_release(zxio, recaptured_handle.reset_and_get_address()));
-  EXPECT_TRUE(recaptured_handle.is_valid());
-  ASSERT_OK(zxio_close(zxio));
-}
-
 namespace {
 
 class TestDirectoryServer final : public zxio_tests::TestDirectoryServerBase {
@@ -600,6 +563,50 @@ TEST(CreateWithAllocator, DatagramSocket) {
 
   // The socket in node_info should be consumed by zxio.
   EXPECT_FALSE(node_info.datagram_socket().socket.is_valid());
+
+  std::unique_ptr<zxio_storage_t> storage(static_cast<zxio_storage_t*>(context));
+  zxio_t* zxio = &(storage->io);
+
+  ASSERT_OK(zxio_close(zxio));
+  control_loop.Shutdown();
+}
+
+TEST(CreateWithAllocator, StreamSocket) {
+  zx::status socket_ends = fidl::CreateEndpoints<fuchsia_posix_socket::StreamSocket>();
+  ASSERT_OK(socket_ends.status_value());
+  auto [socket_client, socket_server] = std::move(socket_ends.value());
+
+  zx::socket socket, peer;
+  ASSERT_OK(zx::socket::create(ZX_SOCKET_STREAM, &socket, &peer));
+  zx_info_socket_t info;
+  ASSERT_OK(socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr));
+
+  fuchsia_io::wire::StreamSocket stream_info{.socket = std::move(socket)};
+  fuchsia_io::wire::NodeInfo node_info =
+      fuchsia_io::wire::NodeInfo::WithStreamSocket(std::move(stream_info));
+
+  auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {
+    if (type != ZXIO_OBJECT_TYPE_STREAM_SOCKET) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    *out_storage = new zxio_storage_t;
+    *out_context = *out_storage;
+    return ZX_OK;
+  };
+
+  async::Loop control_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  zxio_tests::StreamSocketServer server;
+  fidl::BindServer(control_loop.dispatcher(), std::move(socket_server), &server);
+  control_loop.StartThread("stream_socket_control_thread");
+
+  void* context = nullptr;
+  ASSERT_OK(
+      zxio_create_with_allocator(fidl::ClientEnd<fuchsia_io::Node>(socket_client.TakeChannel()),
+                                 node_info, allocator, &context));
+  ASSERT_NE(context, nullptr);
+
+  // The socket in node_info should be consumed by zxio.
+  EXPECT_FALSE(node_info.stream_socket().socket.is_valid());
 
   std::unique_ptr<zxio_storage_t> storage(static_cast<zxio_storage_t*>(context));
   zxio_t* zxio = &(storage->io);

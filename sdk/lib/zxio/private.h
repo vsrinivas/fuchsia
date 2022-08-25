@@ -12,6 +12,7 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zx/event.h>
+#include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/cpp/vector.h>
 #include <lib/zxio/extensions.h>
 #include <lib/zxio/zxio.h>
@@ -137,8 +138,8 @@ zx_status_t zxio_datagram_socket_init(zxio_storage_t* storage, zx::socket socket
 // stream socket (channel backed) --------------------------------------------
 
 zx_status_t zxio_stream_socket_init(zxio_storage_t* storage, zx::socket socket,
-                                    fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client,
-                                    const zx_info_socket_t& info);
+                                    const zx_info_socket_t& info, bool is_connected,
+                                    fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client);
 
 // raw socket (channel backed) -------------------------------------------------
 
