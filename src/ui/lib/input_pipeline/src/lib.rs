@@ -27,6 +27,7 @@ pub mod input_handler;
 pub mod inspect_handler;
 pub mod keyboard_handler;
 pub mod keymap_handler;
+mod light_sensor;
 pub mod media_buttons_handler;
 pub mod modifier_handler;
 pub mod mouse_injector_handler;

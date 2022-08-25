@@ -56,6 +56,7 @@ rustc_library("input_pipeline") {
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:rust_icu_sys",
     "//third_party/rust_crates:rust_icu_unorm2",
+    "//third_party/rust_crates:serde",
   ]
 
   test_deps = [
@@ -103,6 +104,9 @@ rustc_library("input_pipeline") {
     "src/keyboard_handler.rs",
     "src/keymap_handler.rs",
     "src/lib.rs",
+    "src/light_sensor.rs",
+    "src/light_sensor/types.rs",
+    "src/light_sensor/types/types_tests.rs",
     "src/media_buttons_handler.rs",
     "src/modifier_handler.rs",
     "src/mouse_binding.rs",
