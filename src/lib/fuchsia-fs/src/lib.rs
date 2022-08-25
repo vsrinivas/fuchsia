@@ -16,9 +16,9 @@
 use {
     anyhow::{format_err, Error},
     fidl::encoding::Persistable,
-    fidl::endpoints::{create_proxy, Proxy, ServerEnd},
+    fidl::endpoints::Proxy,
     fidl_fuchsia_io as fio,
-    std::path::{Component, Path},
+    std::path::Path,
 };
 
 pub mod directory;
@@ -64,41 +64,6 @@ pub fn open_file<'a>(
     let path = check_path(path)?;
     let node = directory::open_file_no_describe(dir, path, flags)?;
     Ok(node)
-}
-
-/// DEPRECATED, do not use.  Use directory::create_directory_recursive.
-pub fn create_sub_directories(
-    root_dir: &fio::DirectoryProxy,
-    path: &Path,
-) -> Result<fio::DirectoryProxy, Error> {
-    if path.components().next().is_none() {
-        return Err(format_err!("path must not be empty"));
-    }
-    let mut dir = None;
-    for part in path.components() {
-        if let Component::Normal(part) = part {
-            dir = Some({
-                let dir_ref = match dir.as_ref() {
-                    Some(r) => r,
-                    None => root_dir,
-                };
-                let (subdir, local_server_end) = create_proxy::<fio::DirectoryMarker>()?;
-                dir_ref.open(
-                    fio::OpenFlags::DIRECTORY
-                        | fio::OpenFlags::RIGHT_READABLE
-                        | fio::OpenFlags::RIGHT_WRITABLE
-                        | fio::OpenFlags::CREATE,
-                    fio::MODE_TYPE_DIRECTORY,
-                    part.to_str().unwrap(),
-                    ServerEnd::new(local_server_end.into_channel()),
-                )?;
-                subdir
-            });
-        } else {
-            return Err(format_err!("invalid item in path: {:?}", part));
-        }
-    }
-    Ok(dir.unwrap())
 }
 
 pub async fn read_file(file: &fio::FileProxy) -> Result<String, Error> {
@@ -336,34 +301,6 @@ mod tests {
             }
             assert_eq!(file_proxy.close().await?, Ok(()));
         }
-        Ok(())
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn create_sub_directories_test() -> Result<(), Error> {
-        let tempdir = TempDir::new()?;
-
-        let path = Path::new("path/to/example/dir");
-        let file_name = Path::new("example_file_name");
-        let data = "file contents";
-
-        let root_dir = crate::directory::open_in_namespace(
-            tempdir.path().to_str().unwrap(),
-            OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
-        )?;
-
-        let sub_dir = create_sub_directories(&root_dir, &path)?;
-        let file = open_file(
-            &sub_dir,
-            &file_name,
-            OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE,
-        )?;
-
-        write_file(&file, &data).await.expect("writing to the file failed");
-
-        let contents = std::fs::read_to_string(tempdir.path().join(path).join(file_name))?;
-        assert_eq!(&contents, &data, "File contents did not match");
-
         Ok(())
     }
 
