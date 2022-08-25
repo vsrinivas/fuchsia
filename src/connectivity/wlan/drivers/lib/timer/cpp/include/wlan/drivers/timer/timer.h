@@ -9,6 +9,7 @@
 #include <lib/sync/completion.h>
 #include <zircon/status.h>
 
+#include <functional>
 #include <mutex>
 
 namespace wlan::drivers::timer {
@@ -25,11 +26,14 @@ namespace wlan::drivers::timer {
 // order in which they are scheduled will determine the outcome.
 class Timer : private async_task_t {
  public:
-  using Callback = void (*)(void*);
+  using FunctionPtr = void (*)(void*);
 
   // Create a timer where `callback` will be called on `dispatcher`. The `context` parameter will
   // be provided in the call.
-  explicit Timer(async_dispatcher_t* dispatcher, Callback callback, void* context);
+  Timer(async_dispatcher_t* dispatcher, FunctionPtr callback, void* context);
+  // Create a timer where `callback` will be called on `dispatcher`.
+  Timer(async_dispatcher_t* dispatcher, std::function<void()>&& callback);
+
   ~Timer();
 
   // Copying and moving cannot be done safely as the asynchronous tasks rely on the specific pointer
@@ -78,8 +82,7 @@ class Timer : private async_task_t {
   zx_duration_t interval_ = 0;
   sync_completion_t finished_;
 
-  Callback callback_ = nullptr;
-  void* context_ = nullptr;
+  std::function<void()> callback_;
 };
 
 }  // namespace wlan::drivers::timer

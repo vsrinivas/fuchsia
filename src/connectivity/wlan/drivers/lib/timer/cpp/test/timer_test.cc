@@ -16,7 +16,7 @@ namespace {
 using wlan::drivers::timer::Timer;
 
 struct TimerInfo {
-  TimerInfo(async_dispatcher_t* dispatcher, Timer::Callback callback)
+  TimerInfo(async_dispatcher_t* dispatcher, Timer::FunctionPtr callback)
       : timer(dispatcher, callback, this) {}
   Timer timer;
   sync_completion_t completion;
@@ -31,7 +31,7 @@ class TimerTest : public zxtest::Test {
   }
 
  protected:
-  std::unique_ptr<TimerInfo> CreateTimer(Timer::Callback callback) {
+  std::unique_ptr<TimerInfo> CreateTimer(Timer::FunctionPtr callback) {
     auto info = std::make_unique<TimerInfo>(dispatcher_loop_->dispatcher(), callback);
     return info;
   }
@@ -40,6 +40,20 @@ class TimerTest : public zxtest::Test {
 };
 
 TEST(TimerTest, Constructible) { Timer timer(nullptr, nullptr, nullptr); }
+
+TEST_F(TimerTest, Lambda) {
+  sync_completion_t completion;
+  Timer timer(dispatcher_loop_->dispatcher(), [&] { sync_completion_signal(&completion); });
+
+  constexpr zx_duration_t kDelay = ZX_MSEC(3);
+  zx_time_t start = zx_clock_get_monotonic();
+  timer.StartOneshot(kDelay);
+  ASSERT_OK(sync_completion_wait(&completion, ZX_TIME_INFINITE));
+  zx_time_t end = zx_clock_get_monotonic();
+
+  // Ensure that at least the specified amount of time has passed.
+  ASSERT_GE(end - start, kDelay);
+}
 
 TEST_F(TimerTest, OneShot) {
   auto callback = [](void* context) {

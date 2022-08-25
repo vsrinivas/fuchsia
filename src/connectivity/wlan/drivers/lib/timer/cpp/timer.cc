@@ -9,11 +9,13 @@
 
 namespace wlan::drivers::timer {
 
-Timer::Timer(async_dispatcher_t* dispatcher, Callback callback, void* context)
+Timer::Timer(async_dispatcher_t* dispatcher, FunctionPtr callback, void* context)
+    : Timer(dispatcher, [=]() { callback(context); }) {}
+
+Timer::Timer(async_dispatcher_t* dispatcher, std::function<void()>&& callback)
     : async_task_t{{ASYNC_STATE_INIT}, &Timer::Handler, 0},
       dispatcher_(dispatcher),
-      callback_(callback),
-      context_(context) {}
+      callback_(std::move(callback)) {}
 
 Timer::~Timer() {
   zx_status_t status = Stop();
@@ -151,7 +153,7 @@ void Timer::Handler(async_dispatcher_t* dispatcher, async_task_t* task, zx_statu
   // We intentionally keep the mutex held here to prevent tricky race conditions. This is fine since
   // it's a recursive mutex. Calls to Start and Stop from the callback will still work while at the
   // same time preventing other threads from getting through at the wrong time.
-  timer->callback_(timer->context_);
+  timer->callback_();
 
   if (!timer->scheduled_ && timer->is_periodic_) {
     // The periodic timer should only be restarted if scheduled_ is false, otherwise a new timer was
