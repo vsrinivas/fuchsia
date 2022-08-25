@@ -719,7 +719,7 @@ pub fn sys_setsockopt(
 
 pub fn sys_shutdown(current_task: &CurrentTask, fd: FdNumber, how: u32) -> Result<(), Errno> {
     let file = current_task.files.get(fd)?;
-    let socket = file.node().socket().ok_or(errno!(ENOTSOCK))?;
+    let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
     let how = match how {
         SHUT_RD => SocketShutdownFlags::READ,
         SHUT_WR => SocketShutdownFlags::WRITE,

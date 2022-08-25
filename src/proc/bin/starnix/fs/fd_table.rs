@@ -85,7 +85,8 @@ impl FdTable {
         let _removed_file;
         let result = {
             let mut table = self.table.write();
-            let file = table.get(&oldfd).map(|entry| entry.file.clone()).ok_or(errno!(EBADF))?;
+            let file =
+                table.get(&oldfd).map(|entry| entry.file.clone()).ok_or_else(|| errno!(EBADF))?;
             let fd = if let Some(fd) = newfd {
                 _removed_file = table.remove(&fd);
                 fd
@@ -104,7 +105,7 @@ impl FdTable {
 
     pub fn get_with_flags(&self, fd: FdNumber) -> Result<(FileHandle, FdFlags), Errno> {
         let table = self.table.read();
-        table.get(&fd).map(|entry| (entry.file.clone(), entry.flags)).ok_or(errno!(EBADF))
+        table.get(&fd).map(|entry| (entry.file.clone(), entry.flags)).ok_or_else(|| errno!(EBADF))
     }
 
     pub fn get_unless_opath(&self, fd: FdNumber) -> Result<FileHandle, Errno> {
@@ -122,7 +123,7 @@ impl FdTable {
             let mut table = self.table.write();
             table.remove(&fd)
         };
-        removed.ok_or(errno!(EBADF)).map(|_| {})
+        removed.ok_or_else(|| errno!(EBADF)).map(|_| {})
     }
 
     pub fn get_fd_flags(&self, fd: FdNumber) -> Result<FdFlags, Errno> {
@@ -136,7 +137,7 @@ impl FdTable {
             .map(|entry| {
                 entry.flags = flags;
             })
-            .ok_or(errno!(EBADF))
+            .ok_or_else(|| errno!(EBADF))
     }
 
     fn get_lowest_available_fd(&self, table: &HashMap<FdNumber, FdTableEntry>) -> FdNumber {

@@ -378,7 +378,7 @@ impl SocketOps for UnixSocket {
             UnixSocketState::Listening(queue) => queue,
             _ => return error!(EINVAL),
         };
-        let socket = queue.sockets.pop_front().ok_or(errno!(EAGAIN))?;
+        let socket = queue.sockets.pop_front().ok_or_else(|| errno!(EAGAIN))?;
         let unix_socket = downcast_socket_to_unix(&socket);
         unix_socket.lock().credentials = Some(credentials);
         Ok(socket)
@@ -590,7 +590,7 @@ impl SocketOps for UnixSocket {
             task: &Task,
             user_opt: UserBuffer,
         ) -> Result<T, Errno> {
-            let user_ref = UserRef::<T>::from_buf(user_opt).ok_or(errno!(EINVAL))?;
+            let user_ref = UserRef::<T>::from_buf(user_opt).ok_or_else(|| errno!(EINVAL))?;
             Ok(task.mm.read_object(user_ref)?)
         }
 

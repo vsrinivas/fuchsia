@@ -82,7 +82,7 @@ impl FsNodeOps for ExtDirectory {
         let entry = dir_entries
             .iter()
             .find(|e| e.name_bytes() == name)
-            .ok_or(errno!(ENOENT, String::from_utf8_lossy(name)))?;
+            .ok_or_else(|| errno!(ENOENT, String::from_utf8_lossy(name)))?;
         let ext_node = ExtNode::new(self.inner.fs(), entry.e2d_ino.into())?;
         let inode_num = ext_node.inode_num as ino_t;
         node.fs().get_or_create_node(Some(inode_num as ino_t), |inode_num| {

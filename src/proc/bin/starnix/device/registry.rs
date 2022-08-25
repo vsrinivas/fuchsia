@@ -153,7 +153,7 @@ impl DeviceOps for Arc<RwLock<MiscRegistry>> {
         flags: OpenFlags,
     ) -> Result<Box<dyn FileOps>, Errno> {
         let state = self.read();
-        let device = state.misc_devices.get(&id.minor()).ok_or(errno!(ENODEV))?;
+        let device = state.misc_devices.get(&id.minor()).ok_or_else(|| errno!(ENODEV))?;
         device.open(current_task, id, node, flags)
     }
 }

@@ -40,7 +40,7 @@ impl FileOps for SignalFd {
                 .write()
                 .signals
                 .take_next_where(|sig| sig.signal.is_in_set(self.mask))
-                .ok_or(errno!(EAGAIN))?;
+                .ok_or_else(|| errno!(EAGAIN))?;
             let mut siginfo = signalfd_siginfo {
                 ssi_signo: signal.signal.number(),
                 ssi_errno: signal.errno,

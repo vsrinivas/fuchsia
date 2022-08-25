@@ -268,7 +268,8 @@ impl Socket {
         user_opt: UserBuffer,
     ) -> Result<(), Errno> {
         let read_timeval = || {
-            let timeval_ref = UserRef::<timeval>::from_buf(user_opt).ok_or(errno!(EINVAL))?;
+            let timeval_ref =
+                UserRef::<timeval>::from_buf(user_opt).ok_or_else(|| errno!(EINVAL))?;
             let duration = duration_from_timeval(task.mm.read_object(timeval_ref)?)?;
             Ok(if duration == zx::Duration::default() { None } else { Some(duration) })
         };

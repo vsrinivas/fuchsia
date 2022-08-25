@@ -232,7 +232,8 @@ impl DmaBufFile {
         mut buffer_collection_info: fsysmem::BufferCollectionInfo2,
         buffer_collection_import_token: fuicomp::BufferCollectionImportToken,
     ) -> Result<FdNumber, Errno> {
-        let vmo = Arc::new(buffer_collection_info.buffers[0].vmo.take().ok_or(errno!(EINVAL))?);
+        let vmo =
+            Arc::new(buffer_collection_info.buffers[0].vmo.take().ok_or_else(|| errno!(EINVAL))?);
         current_task.files.add_with_flags(
             BufferCollectionFile::new(current_task, buffer_collection_import_token, vmo)?,
             FdFlags::empty(),

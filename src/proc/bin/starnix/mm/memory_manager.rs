@@ -298,7 +298,8 @@ impl MemoryManagerState {
         }
 
         // There is space to grow in-place. The old range must be one contiguous mapping.
-        let (original_range, mapping) = self.mappings.get(&old_addr).ok_or(errno!(EINVAL))?;
+        let (original_range, mapping) =
+            self.mappings.get(&old_addr).ok_or_else(|| errno!(EINVAL))?;
         if old_range.end > original_range.end {
             return error!(EFAULT);
         }
@@ -316,7 +317,7 @@ impl MemoryManagerState {
             let new_vmo_size = original_mapping
                 .vmo_offset
                 .checked_add(final_length as u64)
-                .ok_or(errno!(EINVAL))?;
+                .ok_or_else(|| errno!(EINVAL))?;
             original_mapping
                 .vmo
                 .set_size(new_vmo_size)
@@ -359,7 +360,8 @@ impl MemoryManagerState {
         dst_length: usize,
     ) -> Result<UserAddress, Errno> {
         let src_range = src_addr..src_addr.checked_add(src_length).ok_or_else(|| errno!(EINVAL))?;
-        let (original_range, src_mapping) = self.mappings.get(&src_addr).ok_or(errno!(EINVAL))?;
+        let (original_range, src_mapping) =
+            self.mappings.get(&src_addr).ok_or_else(|| errno!(EINVAL))?;
         let original_range = original_range.clone();
         let src_mapping = src_mapping.clone();
 
@@ -488,7 +490,7 @@ impl MemoryManagerState {
         if length == 0 {
             return error!(EINVAL);
         }
-        let end_addr = addr.checked_add(length).ok_or(errno!(EINVAL))?;
+        let end_addr = addr.checked_add(length).ok_or_else(|| errno!(EINVAL))?;
         let mut unmap_length = length;
 
         // Find the private, anonymous mapping that will get its tail cut off by this unmap call.
@@ -574,7 +576,7 @@ impl MemoryManagerState {
         length: usize,
         flags: zx::VmarFlags,
     ) -> Result<(), Errno> {
-        let (_, mapping) = self.mappings.get(&addr).ok_or(errno!(EINVAL))?;
+        let (_, mapping) = self.mappings.get(&addr).ok_or_else(|| errno!(EINVAL))?;
 
         // SAFETY: This is safe because the vmar belongs to a different process.
         unsafe { self.user_vmar.protect(addr.ptr(), length, flags) }.map_err(|s| match s {
@@ -855,7 +857,7 @@ impl MemoryManager {
             return Ok(brk.current);
         }
 
-        let (range, mapping) = state.mappings.get(&brk.current).ok_or(errno!(EFAULT))?;
+        let (range, mapping) = state.mappings.get(&brk.current).ok_or_else(|| errno!(EFAULT))?;
 
         brk.current = addr;
 
@@ -1072,7 +1074,7 @@ impl MemoryManager {
         name: CString,
     ) -> Result<(), Errno> {
         let mut state = self.state.write();
-        let (range, mapping) = state.mappings.get_mut(&addr).ok_or(errno!(EINVAL))?;
+        let (range, mapping) = state.mappings.get_mut(&addr).ok_or_else(|| errno!(EINVAL))?;
         if range.end - addr < length {
             return error!(EINVAL);
         }
@@ -1117,7 +1119,7 @@ impl MemoryManager {
     #[cfg(test)]
     pub fn get_mapping_name(&self, addr: UserAddress) -> Result<CString, Errno> {
         let state = self.state.read();
-        let (_, mapping) = state.mappings.get(&addr).ok_or(errno!(EFAULT))?;
+        let (_, mapping) = state.mappings.get(&addr).ok_or_else(|| errno!(EFAULT))?;
         Ok(mapping.name.clone())
     }
 
@@ -1177,7 +1179,7 @@ impl MemoryManager {
     ) -> Result<&'a [u8], Errno> {
         let actual = self.state.read().read_memory_partial(string.addr(), buffer)?;
         let buffer = &mut buffer[..actual];
-        let null_index = memchr::memchr(b'\0', buffer).ok_or(errno!(ENAMETOOLONG))?;
+        let null_index = memchr::memchr(b'\0', buffer).ok_or_else(|| errno!(ENAMETOOLONG))?;
         Ok(&buffer[..null_index])
     }
 

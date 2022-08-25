@@ -90,7 +90,7 @@ bitflags! {
 }
 
 fn parse_id_number(id: Option<&str>) -> Result<u32, Errno> {
-    let id_str = id.ok_or(errno!(EINVAL))?;
+    let id_str = id.ok_or_else(|| errno!(EINVAL))?;
     let id_no: u32 = id_str.parse().map_err(|_| errno!(EINVAL))?;
     if id_str != id_no.to_string() {
         return error!(EINVAL);

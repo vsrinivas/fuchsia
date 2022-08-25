@@ -114,7 +114,7 @@ fn get_task_or_current(current_task: &CurrentTask, pid: pid_t) -> Result<Arc<Tas
     if pid == 0 {
         Ok(current_task.task_arc_clone())
     } else {
-        current_task.get_task(pid).ok_or(errno!(ESRCH))
+        current_task.get_task(pid).ok_or_else(|| errno!(ESRCH))
     }
 }
 
@@ -345,7 +345,7 @@ pub fn sys_getitimer(
     user_curr_value: UserRef<itimerval>,
 ) -> Result<(), Errno> {
     let itimers = current_task.thread_group.read().itimers;
-    let timer = itimers.get(which as usize).ok_or(errno!(EINVAL))?;
+    let timer = itimers.get(which as usize).ok_or_else(|| errno!(EINVAL))?;
     current_task.mm.write_object(user_curr_value, timer)?;
     Ok(())
 }
@@ -749,7 +749,7 @@ pub fn sys_capget(
     let header = current_task.mm.read_object(user_header)?;
     let target_task: Arc<Task> = match header.pid {
         0 => current_task.task_arc_clone(),
-        pid => current_task.get_task(pid).ok_or(errno!(EINVAL))?,
+        pid => current_task.get_task(pid).ok_or_else(|| errno!(EINVAL))?,
     };
 
     let (permitted, effective, inheritable) = {

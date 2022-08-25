@@ -416,7 +416,7 @@ impl ThreadGroup {
 
     pub fn set_itimer(self: &Arc<Self>, which: u32, value: itimerval) -> Result<itimerval, Errno> {
         let mut state = self.write();
-        let timer = state.itimers.get_mut(which as usize).ok_or(errno!(EINVAL))?;
+        let timer = state.itimers.get_mut(which as usize).ok_or_else(|| errno!(EINVAL))?;
         let old_value = *timer;
         *timer = value;
         Ok(old_value)
@@ -760,7 +760,7 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
                 t.upgrade().expect("Weak references to task in ThreadGroup must always be valid")
             })
             .or_else(|| self.tasks().next())
-            .ok_or(errno!(ESRCH))
+            .ok_or_else(|| errno!(ESRCH))
     }
 
     /// Return the appropriate task in |thread_group| to send the given signal.

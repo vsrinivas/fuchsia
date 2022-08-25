@@ -140,11 +140,11 @@ pub fn sys_time(
 ///
 /// Returns EINVAL if no such task can be found.
 fn get_thread_cpu_time(current_task: &CurrentTask, pid: pid_t) -> Result<i64, Errno> {
-    let task = current_task.get_task(pid).ok_or(errno!(EINVAL))?;
+    let task = current_task.get_task(pid).ok_or_else(|| errno!(EINVAL))?;
     let thread = task.thread.read();
     Ok(thread
         .as_ref()
-        .ok_or(errno!(EINVAL))?
+        .ok_or_else(|| errno!(EINVAL))?
         .get_runtime_info()
         .map_err(|status| from_status_like_fdio!(status))?
         .cpu_time)
@@ -156,7 +156,7 @@ fn get_thread_cpu_time(current_task: &CurrentTask, pid: pid_t) -> Result<i64, Er
 ///
 /// Returns EINVAL if no such process can be found.
 fn get_process_cpu_time(current_task: &CurrentTask, pid: pid_t) -> Result<i64, Errno> {
-    let task = current_task.get_task(pid).ok_or(errno!(EINVAL))?;
+    let task = current_task.get_task(pid).ok_or_else(|| errno!(EINVAL))?;
     Ok(task
         .thread_group
         .process

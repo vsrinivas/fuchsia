@@ -109,7 +109,7 @@ impl SocketOps for VsockSocket {
             VsockSocketState::Listening(queue) => queue,
             _ => return error!(EINVAL),
         };
-        let socket = queue.sockets.pop_front().ok_or(errno!(EAGAIN))?;
+        let socket = queue.sockets.pop_front().ok_or_else(|| errno!(EAGAIN))?;
         Ok(socket)
     }
 

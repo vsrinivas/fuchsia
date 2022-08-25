@@ -274,11 +274,12 @@ pub fn sys_kill(
         pid if pid > 0 => {
             // "If pid is positive, then signal sig is sent to the process with
             // the ID specified by pid."
-            let target_thread_group = &pids.get_task(pid).ok_or(errno!(ESRCH))?.thread_group;
+            let target_thread_group =
+                &pids.get_task(pid).ok_or_else(|| errno!(ESRCH))?.thread_group;
             let target = target_thread_group
                 .read()
                 .get_signal_target(&unchecked_signal)
-                .ok_or(errno!(ESRCH))?;
+                .ok_or_else(|| errno!(ESRCH))?;
             if !current_task.can_signal(&target, &unchecked_signal) {
                 return error!(EPERM);
             }
@@ -341,7 +342,7 @@ pub fn sys_tkill(
     if tid <= 0 {
         return error!(EINVAL);
     }
-    let target = current_task.get_task(tid).ok_or(errno!(ESRCH))?;
+    let target = current_task.get_task(tid).ok_or_else(|| errno!(ESRCH))?;
     if !current_task.can_signal(&target, &unchecked_signal) {
         return error!(EPERM);
     }
@@ -359,7 +360,7 @@ pub fn sys_tgkill(
         return error!(EINVAL);
     }
 
-    let target = current_task.get_task(tid).ok_or(errno!(ESRCH))?;
+    let target = current_task.get_task(tid).ok_or_else(|| errno!(ESRCH))?;
     if target.get_pid() != tgid {
         return error!(EINVAL);
     }
@@ -408,7 +409,7 @@ pub fn sys_rt_tgsigqueueinfo(
         force: false,
     };
 
-    let target = current_task.get_task(tid).ok_or(errno!(ESRCH))?;
+    let target = current_task.get_task(tid).ok_or_else(|| errno!(ESRCH))?;
     if target.get_pid() != tgid {
         return error!(EINVAL);
     }
@@ -445,7 +446,7 @@ where
     // success (at least one signal was sent), zero is returned."
     for thread_group in thread_groups {
         let target =
-            thread_group.read().get_signal_target(unchecked_signal).ok_or(errno!(ESRCH))?;
+            thread_group.read().get_signal_target(unchecked_signal).ok_or_else(|| errno!(ESRCH))?;
         if !task.can_signal(&target, &unchecked_signal) {
             last_error = errno!(EPERM);
             continue;

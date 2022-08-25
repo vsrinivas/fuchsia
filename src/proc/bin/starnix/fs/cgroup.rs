@@ -182,7 +182,7 @@ impl FileOps for ControlGroupFile {
 
         let pid_string = std::str::from_utf8(&buf).map_err(|_| errno!(EINVAL))?;
         let pid = pid_string.parse::<pid_t>().map_err(|_| errno!(ENOENT))?;
-        let task = current_task.get_task(pid).ok_or(errno!(EINVAL))?;
+        let task = current_task.get_task(pid).ok_or_else(|| errno!(EINVAL))?;
 
         // TODO(lindkvist): The task needs to be removed form any existing control group before
         // being added to a new one.

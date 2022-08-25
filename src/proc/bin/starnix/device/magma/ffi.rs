@@ -125,7 +125,7 @@ pub fn device_import(
     let entry = std::fs::read_dir("/dev/class/gpu")
         .map_err(|_| errno!(EINVAL))?
         .next()
-        .ok_or(errno!(EINVAL))?
+        .ok_or_else(|| errno!(EINVAL))?
         .map_err(|_| errno!(EINVAL))?;
 
     let path = entry.path().into_os_string().into_string().map_err(|_| errno!(EINVAL))?;

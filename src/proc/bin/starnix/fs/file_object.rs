@@ -296,7 +296,7 @@ macro_rules! fileops_impl_seekable {
                     offset.checked_add(stat.st_size as crate::types::off_t)
                 }
             }
-            .ok_or(errno!(EINVAL))?;
+            .ok_or_else(|| errno!(EINVAL))?;
 
             if new_offset < 0 {
                 return error!(EINVAL);
@@ -879,7 +879,7 @@ impl FileObject {
             SeekOrigin::CUR => (*current_offset).checked_add(offset),
             SeekOrigin::END => Some(MAX_LFS_FILESIZE as i64),
         }
-        .ok_or(errno!(EINVAL))?;
+        .ok_or_else(|| errno!(EINVAL))?;
 
         if new_offset < 0 {
             return error!(EINVAL);

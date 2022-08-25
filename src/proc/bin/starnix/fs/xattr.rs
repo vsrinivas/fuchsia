@@ -16,7 +16,7 @@ pub struct MemoryXattrStorage {
 impl MemoryXattrStorage {
     pub fn get_xattr(&self, name: &FsStr) -> Result<FsString, Errno> {
         let xattrs = self.xattrs.lock();
-        Ok(xattrs.get(name).ok_or(errno!(ENODATA))?.clone())
+        Ok(xattrs.get(name).ok_or_else(|| errno!(ENODATA))?.clone())
     }
 
     pub fn set_xattr(&self, name: &FsStr, value: &FsStr, op: XattrOp) -> Result<(), Errno> {

@@ -219,7 +219,7 @@ impl UnixControlData {
                 }
 
                 let credentials = ucred::read_from(&message.data[..std::mem::size_of::<ucred>()])
-                    .ok_or(errno!(EINVAL))?;
+                    .ok_or_else(|| errno!(EINVAL))?;
                 Ok(UnixControlData::Credentials(credentials))
             }
             SCM_SECURITY => Ok(UnixControlData::Security(message.data)),

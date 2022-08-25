@@ -68,7 +68,7 @@ impl FileOps for MemoryDirectoryFile {
             SeekOrigin::CUR => (*current_offset).checked_add(offset),
             SeekOrigin::END => None,
         }
-        .ok_or(errno!(EINVAL))?;
+        .ok_or_else(|| errno!(EINVAL))?;
 
         if new_offset < 0 {
             return error!(EINVAL);

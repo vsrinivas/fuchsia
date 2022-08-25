@@ -399,7 +399,7 @@ impl FileOps for RemoteDirectoryObject {
             SeekOrigin::CUR => (*current_offset).checked_add(offset),
             SeekOrigin::END => None,
         }
-        .ok_or(errno!(EINVAL))?;
+        .ok_or_else(|| errno!(EINVAL))?;
 
         if new_offset < 0 {
             return error!(EINVAL);
@@ -450,7 +450,7 @@ impl FileOps for RemoteDirectoryObject {
         let mut iterator = self.iterator.lock();
 
         let mut add_entry = |entry: &ZxioDirent| {
-            let inode_num: ino_t = entry.id.ok_or(errno!(EIO))?;
+            let inode_num: ino_t = entry.id.ok_or_else(|| errno!(EIO))?;
             let entry_type = DirectoryEntryType::UNKNOWN;
             sink.add(inode_num, sink.offset() + 1, entry_type, &entry.name)?;
             Ok(())

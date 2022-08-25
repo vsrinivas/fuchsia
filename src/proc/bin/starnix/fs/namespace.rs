@@ -599,10 +599,12 @@ mod test {
         let mut context = LookupContext::default();
         let pts =
             dev.lookup_child(&current_task, &mut context, b"pts").expect("failed to lookup pts");
-        let pts_parent = pts.parent().ok_or(errno!(ENOENT)).expect("failed to get parent of pts");
+        let pts_parent =
+            pts.parent().ok_or_else(|| errno!(ENOENT)).expect("failed to get parent of pts");
         assert!(Arc::ptr_eq(&pts_parent.entry, &dev.entry));
 
-        let dev_parent = dev.parent().ok_or(errno!(ENOENT)).expect("failed to get parent of dev");
+        let dev_parent =
+            dev.parent().ok_or_else(|| errno!(ENOENT)).expect("failed to get parent of dev");
         assert!(Arc::ptr_eq(&dev_parent.entry, &ns.root().entry));
         Ok(())
     }

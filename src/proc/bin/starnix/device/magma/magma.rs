@@ -328,7 +328,7 @@ pub fn get_image_info(
         fsysmem::CoherencyDomain::Inaccessible => MAGMA_COHERENCY_DOMAIN_INACCESSIBLE,
     };
 
-    let vmo = collection_info.buffers[0].vmo.take().ok_or(errno!(EINVAL))?;
+    let vmo = collection_info.buffers[0].vmo.take().ok_or_else(|| errno!(EINVAL))?;
     Ok((vmo, image_info))
 }
 

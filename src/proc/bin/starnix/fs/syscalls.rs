@@ -689,7 +689,7 @@ fn read_xattr_name<'a>(
     if name.len() < 1 {
         return error!(ERANGE);
     }
-    let dot_index = memchr::memchr(b'.', name).ok_or(errno!(ENOTSUP))?;
+    let dot_index = memchr::memchr(b'.', name).ok_or_else(|| errno!(ENOTSUP))?;
     if name[dot_index + 1..].len() == 0 {
         return error!(EINVAL);
     }
@@ -1421,7 +1421,7 @@ pub fn sys_epoll_pwait(
 
     let timeout = duration_from_poll_timeout(timeout)?;
     let file = current_task.files.get(epfd)?;
-    let epoll_file = file.downcast_file::<EpollFileObject>().ok_or(errno!(EINVAL))?;
+    let epoll_file = file.downcast_file::<EpollFileObject>().ok_or_else(|| errno!(EINVAL))?;
 
     let active_events = if !user_sigmask.is_null() {
         let signal_mask = current_task.mm.read_object(user_sigmask)?;
