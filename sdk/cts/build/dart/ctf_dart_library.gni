@@ -1,13 +1,15 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+import("//build/dart/dart_library.gni")
+import("//sdk/cts/build/ctf_element.gni")
+import("//sdk/cts/build/ctf_version.gni")
+import("//sdk/cts/build/write_ctf_file.gni")
 
-import("//build/dart/test.gni")
-import("//sdk/cts/build/cts_element.gni")
-import("//sdk/cts/build/cts_version.gni")
-import("//sdk/cts/build/write_cts_file.gni")
-
-template("cts_dart_test") {
+# A Dart library that can be used in CTS.
+#
+# An equivalent to dart_library, but ensures dependencies are allowed in CTS.
+template("cts_dart_library") {
   invoker_deps = []
   if (defined(invoker.deps)) {
     invoker_deps += invoker.deps
@@ -31,7 +33,7 @@ template("cts_dart_test") {
   write_cts_file(write_file_target) {
   }
 
-  dart_test(target_name) {
+  dart_library(target_name) {
     forward_variables_from(invoker, "*")
     if (!defined(non_dart_deps)) {
       non_dart_deps = []

@@ -2,21 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_test.gni")
-import("//sdk/cts/build/cts_element.gni")
-import("//sdk/cts/build/cts_version.gni")
-import("//sdk/cts/build/write_cts_file.gni")
+import("//build/rust/rustc_library.gni")
+import("//sdk/cts/build/ctf_element.gni")
+import("//sdk/cts/build/ctf_version.gni")
+import("//sdk/cts/build/write_ctf_file.gni")
 
-# A Rust test binary that can be used in CTS.
+# A Rust library that can be used in CTS.
 #
-# An equivalent to the in tree rustc_test, but ensures dependencies are allowed
+# An equivalent to the in tree rustc_library, but ensures dependencies are allowed
 # in CTS.
 #
-# See rustc_test() for parameters.
-template("cts_rustc_test") {
+# See rustc_library() for parameters.
+template("cts_rustc_library") {
   invoker_deps = []
   if (defined(invoker.deps)) {
     invoker_deps += invoker.deps
+  }
+  if (defined(invoker.test_deps)) {
+    invoker_deps += invoker.test_deps
   }
   if (defined(invoker.non_rust_deps)) {
     invoker_deps += invoker.non_rust_deps
@@ -37,7 +40,7 @@ template("cts_rustc_test") {
   write_cts_file(write_file_target) {
   }
 
-  rustc_test(target_name) {
+  ructc_library(target_name) {
     forward_variables_from(invoker, "*")
     if (!defined(non_rust_deps)) {
       non_rust_deps = []
@@ -50,6 +53,6 @@ template("cts_rustc_test") {
   }
 }
 
-set_defaults("cts_rustc_test") {
-  configs = default_executable_configs + default_rust_configs
+set_defaults("cts_rustc_library") {
+  configs = default_common_binary_configs + default_rust_configs
 }

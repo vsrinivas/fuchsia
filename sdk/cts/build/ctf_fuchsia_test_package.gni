@@ -4,9 +4,9 @@
 
 import("//build/components.gni")
 import("//build/components/fuchsia_package_archive.gni")
-import("//sdk/cts/build/cts_element.gni")
-import("//sdk/cts/build/cts_version.gni")
-import("//sdk/cts/build/write_cts_file.gni")
+import("//sdk/cts/build/ctf_element.gni")
+import("//sdk/cts/build/ctf_version.gni")
+import("//sdk/cts/build/write_ctf_file.gni")
 
 # Defines a Fuchsia package containing a test.
 #

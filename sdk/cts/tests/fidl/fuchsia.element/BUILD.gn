@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//sdk/cts/build/cts.gni")
+import("//sdk/cts/build/ctf.gni")
 
 cts_executable("element-manager-test-bin") {
   output_name = "element-manager-test"

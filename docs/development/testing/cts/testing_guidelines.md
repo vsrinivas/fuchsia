@@ -13,7 +13,7 @@ tests only depend on API elements that are available via an SDK, or allowlisted
 for use within the CTF.  All build targets must use the `cts_` rule variants
 found in `//sdk/cts/build` instead of the standard fuchsia.git rules (i.e., use
 `cts_fuchsia_component`, `cts_executable`, and so on). The allowlist for non-SDK
-code can be found in `//sdk/cts/build/allowed_cts_deps.gni`.  Test authors who
+code can be found in `//sdk/cts/build/allowed_ctf_deps.gni`.  Test authors who
 believe they need an additional inclusion should file a bug in the
 [CTF bug component].
 

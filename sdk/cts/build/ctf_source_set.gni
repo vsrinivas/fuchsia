@@ -2,24 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//sdk/cts/build/cts_element.gni")
-import("//sdk/cts/build/cts_version.gni")
-import("//sdk/cts/build/write_cts_file.gni")
+import("//sdk/cts/build/ctf_element.gni")
+import("//sdk/cts/build/ctf_version.gni")
+import("//sdk/cts/build/write_ctf_file.gni")
 
-# An executable that can be used in CTS.
+# A source_set that can be used in CTS.
 #
-# An equivalent to the built-in executable, but ensures dependencies are allowed
+# An equivalent to the built-in source_set, but ensures dependencies are allowed
 # in CTS.
 #
 # Example:
 # ```
-# cts_executable("my-test") {
-#   deps = [ "//zircon/system/ulib/zxtest" ]
-#   sources = [ "//sdk/cts/tests/my_test/my_test.cc" ]
-#   testonly = true
+# cts_source_set("my-source-set") {
+#   sources = [
+#     "//sdk/cts/tests/my_test/my_lib.h",
+#     "//sdk/cts/tests/my_test/my_lib.cc",
+#   ]
 # }
 # ```
-template("cts_executable") {
+template("cts_source_set") {
   invoker_deps = []
   if (defined(invoker.deps)) {
     invoker_deps += invoker.deps
@@ -43,13 +44,10 @@ template("cts_executable") {
   write_cts_file(write_file_target) {
   }
 
-  executable(target_name) {
-    forward_variables_from(invoker, "*")
+  source_set(target_name) {
+    forward_variables_from(invoker, "*", [ "non_cts_deps" ])
     if (!defined(deps)) {
       deps = []
-    }
-    if (defined(non_cts_deps)) {
-      deps += non_cts_deps
     }
 
     if (defined(verify_target)) {
@@ -59,6 +57,6 @@ template("cts_executable") {
   }
 }
 
-set_defaults("cts_executable") {
-  configs = default_executable_configs
+set_defaults("cts_source_set") {
+  configs = default_common_binary_configs
 }

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//sdk/cts/build/cts.gni")
+import("//sdk/cts/build/ctf.gni")
 
 cts_rustc_binary("echo_server_testing") {
   testonly = true

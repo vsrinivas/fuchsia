@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/build_api_module.gni")
-import("//sdk/cts/build/cts.gni")
+import("//sdk/cts/build/ctf.gni")
 import("//sdk/cts/build/verify_sdk_compatibility.gni")
 
 _idk_deps = [

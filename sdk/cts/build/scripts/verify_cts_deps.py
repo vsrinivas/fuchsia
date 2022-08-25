@@ -31,8 +31,8 @@ class VerifyCtsDeps:
       cts_file (string): The path to (including) the file to be generated.
       invoker_label (string): The label of the invoker of cts_element.
       deps (list(string)): A list of fully qualified GN labels.
-      allowed_cts_deps(list(string)): A list of allowed deps found in //sdk/cts/allowed_cts_deps.gni"
-      allowed_cts_dirs(list(string)): A list of allowed directories found in //sdk/cts/allowed_cts_dirs.gni"
+      allowed_cts_deps(list(string)): A list of allowed deps found in //sdk/cts/allowed_ctf_deps.gni"
+      allowed_cts_dirs(list(string)): A list of allowed directories found in //sdk/cts/allowed_ctf_dirs.gni"
       sdk_manifests(list(string)): A list of absolute paths to SDK manifest files.
 
     Raises: ValueError if any parameter is empty, if root_build_dir does not exist, or if the sdk_manifests do not exist.

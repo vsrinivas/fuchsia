@@ -1093,7 +1093,7 @@ Usage:
 
 **Current value (from the default):** `""`
 
-From //sdk/cts/build/cts_version.gni:16
+From //sdk/cts/build/ctf_version.gni:16
 
 ### current_cpu
 

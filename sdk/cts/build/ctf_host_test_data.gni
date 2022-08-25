@@ -1,18 +1,18 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+import("//build/host.gni")
+import("//build/testing/host_test_data.gni")
+import("//sdk/cts/build/ctf_element.gni")
+import("//sdk/cts/build/ctf_version.gni")
+import("//sdk/cts/build/write_ctf_file.gni")
 
-import("//build/components.gni")
-import("//sdk/cts/build/cts_element.gni")
-import("//sdk/cts/build/cts_version.gni")
-import("//sdk/cts/build/write_cts_file.gni")
-
-# A Fuchsia package that can be used in CTS.
+# Defines host_test_data that can be used in the CTS.
 #
-# An equivalent to fuchsia_package, but ensures dependencies are allowed in CTS.
-template("cts_fuchsia_package") {
-  assert(defined(invoker.package_name), "package_name must be defined.")
-
+# An equivalent to host_test_data, but ensures dependencies are allowed in the CTS.
+#
+# See host_test_data() for parameters.
+template("cts_host_test_data") {
   if (!defined(invoker.deps)) {
     invoker.deps = []
   }
@@ -32,7 +32,7 @@ template("cts_fuchsia_package") {
   write_cts_file(write_file_target) {
   }
 
-  fuchsia_package(target_name) {
+  host_test_data(target_name) {
     forward_variables_from(invoker, "*")
 
     if (defined(verify_target)) {
