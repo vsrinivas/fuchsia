@@ -602,7 +602,7 @@ state_implementation!(Terminal, TerminalMutableState, {
 
         if !self.termios.has_output_flags(OPOST) {
             queue.read_buffer.extend_from_slice(buffer);
-            if queue.read_buffer.len() > 0 {
+            if !queue.read_buffer.is_empty() {
                 queue.readable = true;
             }
             return (buffer.len(), PendingSignals::new());
@@ -610,7 +610,7 @@ state_implementation!(Terminal, TerminalMutableState, {
 
         let mut return_value = 0;
         let mut signals = PendingSignals::new();
-        while buffer.len() > 0 {
+        while !buffer.is_empty() {
             let size = compute_next_character_size(buffer, &self.termios);
             let mut character_bytes = buffer[..size].to_vec();
             return_value += size;
@@ -663,7 +663,7 @@ state_implementation!(Terminal, TerminalMutableState, {
             }
             queue.read_buffer.append(&mut character_bytes);
         }
-        if queue.read_buffer.len() > 0 {
+        if !queue.read_buffer.is_empty() {
             queue.readable = true;
         }
         (return_value, signals)
@@ -691,7 +691,7 @@ state_implementation!(Terminal, TerminalMutableState, {
 
         let mut return_value = 0;
         let mut signals = PendingSignals::new();
-        while buffer.len() > 0 && queue.read_buffer.len() < CANON_MAX_BYTES {
+        while !buffer.is_empty() && queue.read_buffer.len() < CANON_MAX_BYTES {
             let size = compute_next_character_size(buffer, &self.termios);
             let mut character_bytes = buffer[..size].to_vec();
             // It is guaranteed that character_bytes has at least one element.
@@ -755,7 +755,7 @@ state_implementation!(Terminal, TerminalMutableState, {
             }
         }
         // In noncanonical mode, everything is readable.
-        if !self.termios.has_local_flags(ICANON) && queue.read_buffer.len() > 0 {
+        if !self.termios.has_local_flags(ICANON) && !queue.read_buffer.is_empty() {
             queue.readable = true;
         }
 

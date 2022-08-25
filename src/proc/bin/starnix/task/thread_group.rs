@@ -678,7 +678,7 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
         if options.wait_for_exited {
             if let Some(child) = match selector {
                 ProcessSelector::Any => {
-                    if self.zombie_children.len() > 0 {
+                    if !self.zombie_children.is_empty() {
                         Some(self.zombie_children.len() - 1)
                     } else {
                         None

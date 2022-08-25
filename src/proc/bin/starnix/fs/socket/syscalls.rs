@@ -409,7 +409,7 @@ fn recvmsg_internal(
         if message_bytes.len() < expected_size {
             message_header.msg_flags |= MSG_CTRUNC as u64;
         }
-        if message_bytes.len() > 0 {
+        if !message_bytes.is_empty() {
             current_task
                 .mm
                 .write_memory(message_header.msg_control + cmsg_bytes_written, &message_bytes)?;

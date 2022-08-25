@@ -696,7 +696,7 @@ impl fmt::Debug for DirEntry {
         let mut builder = f.debug_struct("DirEntry");
         builder.field("id", &(self as *const DirEntry));
         builder.field("local_name", &String::from_utf8_lossy(&self.local_name()));
-        if parents.len() > 0 {
+        if !parents.is_empty() {
             builder.field("parents", &parents);
         }
         builder.finish()

@@ -70,7 +70,7 @@ impl TmpFs {
         let fs = FileSystem::new_with_permanent_entries(kernel, Arc::new(TmpFs(())));
         fs.set_root(TmpfsDirectory::new());
         let root_node = &fs.root().node;
-        if data.len() > 0 {
+        if !data.is_empty() {
             for option in data.split(|c| *c == b',') {
                 let mut splitted_option = option.split(|c| *c == b'=');
                 match splitted_option.next() {

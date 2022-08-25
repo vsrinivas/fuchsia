@@ -539,7 +539,7 @@ mod test {
         let pkg = open_pkg();
         let data = directory_read_file(&pkg, "bin/syncio_lib_test", zx::Time::INFINITE)?;
 
-        assert!(data.len() > 0);
+        assert!(!data.is_empty());
         Ok(())
     }
 

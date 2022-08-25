@@ -288,7 +288,7 @@ impl VsockSocketInner {
             VsockSocketState::Disconnected => FdEvents::empty(),
             VsockSocketState::Connected(file) => file.query_events(current_task),
             VsockSocketState::Listening(queue) => {
-                if queue.sockets.len() > 0 {
+                if !queue.sockets.is_empty() {
                     FdEvents::POLLIN
                 } else {
                     FdEvents::empty()

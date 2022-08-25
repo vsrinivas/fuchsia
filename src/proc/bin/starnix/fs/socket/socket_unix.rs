@@ -820,7 +820,7 @@ impl UnixSocketInner {
 
         match &self.state {
             UnixSocketState::Listening(queue) => {
-                if queue.sockets.len() > 0 {
+                if !queue.sockets.is_empty() {
                     present_events |= FdEvents::POLLIN;
                 }
             }

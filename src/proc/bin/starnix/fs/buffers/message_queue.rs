@@ -124,7 +124,7 @@ impl MessageQueue {
                 break;
             }
 
-            if message.ancillary_data.len() > 0 {
+            if !message.ancillary_data.is_empty() {
                 ancillary_data = message.ancillary_data;
                 break;
             }
@@ -172,7 +172,7 @@ impl MessageQueue {
                 break;
             }
 
-            if message.ancillary_data.len() > 0 {
+            if !message.ancillary_data.is_empty() {
                 ancillary_data = message.ancillary_data.clone();
                 break;
             }
@@ -308,7 +308,7 @@ impl MessageQueue {
         if self.available_capacity() > 0 {
             events |= FdEvents::POLLOUT;
         }
-        if self.len() > 0 {
+        if !self.is_empty() {
             events |= FdEvents::POLLIN;
         }
         events

@@ -166,7 +166,7 @@ impl SocketAddress {
         match self {
             SocketAddress::Unspecified => AF_UNSPEC.to_ne_bytes().to_vec(),
             SocketAddress::Unix(name) => {
-                if name.len() > 0 {
+                if !name.is_empty() {
                     let template = sockaddr_un::default();
                     let path_length = std::cmp::min(template.sun_path.len() - 1, name.len());
                     let mut bytes = vec![0u8; SA_FAMILY_SIZE + path_length + 1];

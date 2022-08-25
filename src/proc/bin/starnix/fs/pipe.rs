@@ -111,7 +111,7 @@ impl Pipe {
     }
 
     fn is_readable(&self) -> bool {
-        self.messages.len() > 0 || (self.writer_count == 0 && self.had_writer)
+        !self.messages.is_empty() || (self.writer_count == 0 && self.had_writer)
     }
 
     fn is_writable(&self) -> bool {
@@ -160,7 +160,7 @@ impl Pipe {
 
         if self.is_readable() {
             let writer_closed = self.writer_count == 0 && self.had_writer;
-            let has_data = self.messages.len() > 0;
+            let has_data = !self.messages.is_empty();
             if writer_closed {
                 events |= FdEvents::POLLHUP;
             }
