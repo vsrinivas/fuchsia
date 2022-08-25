@@ -295,7 +295,7 @@ impl DirectoryDelegate for SeLinuxClassDirectoryDelegate {
 }
 
 fn parse_int(buf: &[u8]) -> Result<u32, Errno> {
-    let i = buf.iter().position(|c| !char::from(*c).is_digit(10)).unwrap_or(buf.len());
+    let i = buf.iter().position(|c| !char::from(*c).is_ascii_digit()).unwrap_or(buf.len());
     std::str::from_utf8(&buf[..i]).unwrap().parse::<u32>().map_err(|_| errno!(EINVAL))
 }
 
