@@ -57,6 +57,7 @@ sdk://pkg/syslog
 sdk://pkg/syslog_structured_backend
 sdk://pkg/trace
 sdk://pkg/trace-engine
+sdk://pkg/utf-utils
 sdk://pkg/zx
 sdk://pkg/zx-status
 sdk://pkg/zxc

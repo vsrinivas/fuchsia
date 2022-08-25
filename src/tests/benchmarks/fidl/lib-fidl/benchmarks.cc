@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fidl/coding.h>
+#include <lib/utf-utils/utf-utils.h>
+#include <zircon/assert.h>
 
 #include <perftest/perftest.h>
 #include <test/benchmarkfidl/cpp/fidl.h>
@@ -16,7 +17,7 @@ namespace {
     while (state->KeepRunning()) {                                               \
       const char* bytes = lib_fidl_microbenchmarks::Name##_S_##Num;              \
       uint32_t num_bytes = sizeof(lib_fidl_microbenchmarks::Name##_S_##Num) - 1; \
-      ZX_ASSERT(fidl_validate_string(bytes, num_bytes));                         \
+      ZX_ASSERT(utfutils_is_valid_utf8(bytes, num_bytes));                       \
     }                                                                            \
     return true;                                                                 \
   }

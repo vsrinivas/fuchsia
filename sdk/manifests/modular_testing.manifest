@@ -34,5 +34,6 @@ sdk://pkg/modular_testing_cpp
 sdk://pkg/stdcompat
 sdk://pkg/sys_cpp
 sdk://pkg/sys_service_cpp
+sdk://pkg/utf-utils
 sdk://pkg/vfs_cpp
 sdk://pkg/zx

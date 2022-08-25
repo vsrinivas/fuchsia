@@ -7,8 +7,8 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <lib/fidl/coding.h>  // for fidl_validate_string() to validate paths as UTF8.
 #include <lib/fit/function.h>
+#include <lib/utf-utils/utf-utils.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -215,7 +215,7 @@ bool IsValidName(std::string_view name) {
   if (name == ".." || name == ".") {
     return false;
   }
-  if (!fidl_validate_string(name.data(), name.length())) {
+  if (!utfutils_is_valid_utf8(name.data(), name.length())) {
     return false;
   }
   // * It cannot contain "/".
@@ -247,7 +247,7 @@ bool IsValidCanonicalPath(std::string_view path) {
     return false;
   }
 
-  if (!fidl_validate_string(path.data(), path.length())) {
+  if (!utfutils_is_valid_utf8(path.data(), path.length())) {
     return false;
   }
 

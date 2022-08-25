@@ -187,6 +187,7 @@ sdk://pkg/trace
 sdk://pkg/trace-engine
 sdk://pkg/trace-provider-so
 sdk://pkg/tree_service_common
+sdk://pkg/utf-utils
 sdk://pkg/vfs_cpp
 sdk://pkg/vulkan
 sdk://pkg/vulkan_layers

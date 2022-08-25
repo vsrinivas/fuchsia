@@ -148,6 +148,9 @@ sdk_source_set("wire") {
     # <lib/fidl/cpp/wire/wire_messaging.h> has #include <lib/fit/function.h>.
     "//sdk/lib/fit",
 
+    # Validating UTF-8 strings.
+    "//sdk/lib/utf-utils",
+
     # Syscall headers.
     "//src/zircon/lib/zircon",
 

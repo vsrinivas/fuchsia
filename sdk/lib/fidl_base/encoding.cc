@@ -7,6 +7,7 @@
 #include <lib/fidl/visitor.h>
 #include <lib/fidl/walker.h>
 #include <lib/stdcompat/variant.h>
+#include <lib/utf-utils/utf-utils.h>
 #include <stdalign.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
@@ -131,7 +132,7 @@ class FidlEncoder final
     // TODO(fxbug.dev/52215): For strings, it would most likely be more efficient
     // to validate and copy at the same time.
     if (unlikely(pointee_type == PointeeType::kString)) {
-      bool valid = fidl_validate_string(reinterpret_cast<char*>(object_ptr), inline_size);
+      bool valid = utfutils_is_valid_utf8(reinterpret_cast<char*>(object_ptr), inline_size);
       if (!valid) {
         SetError("encoder encountered invalid UTF8 string");
         return Status::kConstraintViolationError;

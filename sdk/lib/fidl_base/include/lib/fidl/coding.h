@@ -75,16 +75,6 @@ zx_status_t internal__fidl_validate__v2__may_break(const fidl_type_t* type, cons
                                                    uint32_t num_bytes, uint32_t num_handles,
                                                    const char** out_error_msg);
 
-// Validates a FIDL string, and verifies that it is a well-formed UTF-8 code
-// unit sequence. That is respect the UTF-8 encoding, and be formed solely of
-// unicode scalar value, i.e. any Unicode code point except high-surrogate
-// and low-surrogate code points.
-//
-// The |data| is not modified.
-//
-// See also http://www.unicode.org/versions/Unicode13.0.0/ch03.pdf#G7404
-bool fidl_validate_string(const char* data, uint64_t size);
-
 // Stores the name of a fidl type into the provided buffer.
 // Truncates the name if it is too long to fit into the buffer.
 // Returns the number of characters written into the buffer.

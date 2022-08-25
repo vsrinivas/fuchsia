@@ -494,7 +494,7 @@ struct NaturalCodingTraits<::std::string, Constraint> final {
       encoder->SetError(kCodingErrorStringLimitExceeded);
       return;
     }
-    bool valid = fidl_validate_string(value->data(), value->size());
+    bool valid = utfutils_is_valid_utf8(value->data(), value->size());
     if (!valid) {
       encoder->SetError(kCodingErrorStringNotValidUtf8);
       return;
@@ -540,7 +540,7 @@ struct NaturalCodingTraits<::std::string, Constraint> final {
       return;
     }
     char* payload = decoder->template GetPtr<char>(base);
-    bool valid = fidl_validate_string(payload, string->size);
+    bool valid = utfutils_is_valid_utf8(payload, string->size);
     if (!valid) {
       decoder->SetError(kCodingErrorStringNotValidUtf8);
       return;

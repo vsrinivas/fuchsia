@@ -20,6 +20,7 @@ group("tests") {
     "sys/component:tests",
     "sys/inspect:tests",
     "syslog:tests",
+    "utf-utils:tests",
     "zxio:tests",
   ]
 }

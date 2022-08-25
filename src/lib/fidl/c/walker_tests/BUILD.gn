@@ -134,7 +134,6 @@ source_set("host_test_sources") {
     "encoding_tests.cc",
     "fidl_align_tests.cc",
     "fidl_coded_types.cc",
-    "validate_string_tests.cc",
     "validating_tests.cc",
   ]
   public_deps = [

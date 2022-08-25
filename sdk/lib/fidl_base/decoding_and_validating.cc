@@ -7,6 +7,7 @@
 #include <lib/fidl/visitor.h>
 #include <lib/fidl/walker.h>
 #include <lib/stdcompat/variant.h>
+#include <lib/utf-utils/utf-utils.h>
 #include <stdalign.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
@@ -203,8 +204,8 @@ class FidlDecoder final : public BaseVisitor<WireFormatVersion, Byte> {
       }
     }
     if (unlikely(pointee_type == PointeeType::kString)) {
-      bool valid = fidl_validate_string(reinterpret_cast<const char*>(&bytes_[next_out_of_line_]),
-                                        inline_size);
+      bool valid = utfutils_is_valid_utf8(reinterpret_cast<const char*>(&bytes_[next_out_of_line_]),
+                                          inline_size);
       if (!valid) {
         SetError("encountered invalid UTF8 string");
         return Status::kConstraintViolationError;

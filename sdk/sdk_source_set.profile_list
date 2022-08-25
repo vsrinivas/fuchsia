@@ -136,7 +136,6 @@ src:../../zircon/system/ulib/fidl/formatting.cc
 src:../../zircon/system/ulib/fidl/handle_close_many.cc
 src:../../zircon/system/ulib/fidl/internal.c
 src:../../zircon/system/ulib/fidl/txn_header.c
-src:../../zircon/system/ulib/fidl/validate_string.cc
 src:../../zircon/system/ulib/fidl/walker.cc
 src:../../zircon/system/ulib/fidl/include/lib/fidl/coding.h
 src:../../zircon/system/ulib/fidl/include/lib/fidl/coding_unstable.h

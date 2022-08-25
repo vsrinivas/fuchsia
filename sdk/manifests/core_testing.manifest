@@ -39,5 +39,6 @@ sdk://pkg/sys_component_cpp_testing
 sdk://pkg/sys_cpp
 sdk://pkg/sys_cpp_testing
 sdk://pkg/sys_service_cpp
+sdk://pkg/utf-utils
 sdk://pkg/vfs_cpp
 sdk://pkg/zx

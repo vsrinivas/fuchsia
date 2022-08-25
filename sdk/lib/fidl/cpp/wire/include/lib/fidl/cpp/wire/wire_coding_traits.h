@@ -12,6 +12,7 @@
 #include <lib/fidl/cpp/wire/vector_view.h>
 #include <lib/fidl/cpp/wire/wire_decoder.h>
 #include <lib/fidl/cpp/wire/wire_encoder.h>
+#include <lib/utf-utils/utf-utils.h>
 #include <zircon/types.h>
 
 #ifdef __Fuchsia__
@@ -276,7 +277,7 @@ struct WireCodingTraits<fidl::StringView, Constraint, IsRecursive> final {
     if (unlikely(value->data() == nullptr || encoder->HasError())) {
       return;
     }
-    if (unlikely(!fidl_validate_string(value->data(), value->size()))) {
+    if (unlikely(!utfutils_is_valid_utf8(value->data(), value->size()))) {
       encoder->SetError(kCodingErrorStringNotValidUtf8);
       return;
     }
@@ -289,7 +290,7 @@ struct WireCodingTraits<fidl::StringView, Constraint, IsRecursive> final {
     if (unlikely(string->data == nullptr || decoder->HasError())) {
       return;
     }
-    if (unlikely(!fidl_validate_string(string->data, string->size))) {
+    if (unlikely(!utfutils_is_valid_utf8(string->data, string->size))) {
       decoder->SetError(kCodingErrorStringNotValidUtf8);
       return;
     }
